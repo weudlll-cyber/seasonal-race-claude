@@ -203,7 +203,10 @@ line numbers are the address; read the value there.
       check across the whole race, flagging any frame whose pan displacement exceeds N× the local
       median outside the enumerable deliberate cuts (the `cut` grammar, LEAD_CHANGE's snap). The same
       pinned-offset-plus-moving-target pattern exists at every entry into a T-space-lerped state.
-- [ ] **A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT.** FINISH-MOTION-1 caught a
+- [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — same reason as the juxtaposition
+      rule above.** Its "proposed convention" is a standing obligation on every block that re-mints,
+      and adopting it is his call rather than a night's tidying.
+      **A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT.** FINISH-MOTION-1 caught a
       108 px regression in the RESTING frame only by accident, while measuring something else — the
       camera fingerprint moved, as intended, so the regression would have been read as intended too.
       **Proposed convention:** any block that re-mints a fingerprint names one or two specific
@@ -240,11 +243,16 @@ line numbers are the address; read the value there.
       **Not acted on:** one occurrence is an anecdote. If it happens again, the fix is to stop
       spawning per-event — read `.git/HEAD` and `.git/index` directly for the common case and shell
       out only when they change.
-- [ ] **NOT the OneDrive/ReparsePoint condition — recorded so it is not blamed by default.**
-      `.git` IS a reparse point on this machine and ten worktree stubs already resist deletion for
-      that reason, so it was the natural suspect and was tested: a fresh process on the same tree,
-      with the failing server's exact 104-variable environment, read the identity correctly. The exit
-      code names a process-creation failure, not a filesystem one. Two OneDrive findings, not three.
+      **AND IT IS NOT THE OneDrive/ReparsePoint CONDITION — folded in here 2026-08-23, because it
+      was a separate open item and is not a separate observation.** `.git` IS a reparse point on this
+      machine and the worktree stubs already resist deletion for that reason, so it was the natural
+      suspect and was TESTED: a fresh process on the same tree, with the failing server's exact
+      104-variable environment, read the identity correctly. The exit code names a process-creation
+      failure, not a filesystem one. **Two OneDrive findings, not three** — and this half exists to
+      stop the third being invented every time somebody meets the first.
+      **verify:** none — this is a WATCH, and it closes when a second occurrence happens or the
+      machine is retired, neither of which a command can tell you. Said explicitly rather than
+      carrying a check that cannot fail.
 
 ## Measurement and guard residuals (2026-08-05)
 
@@ -269,7 +277,11 @@ line numbers are the address; read the value there.
       `corridor-truth` and `corridor-truth --company-only` print the SAME identity line and produce
       different numbers, so identity alone is insufficient. Caveat: a hash nobody quotes is a dead
       instrument (Lesson 196), so it is only worth adding alongside the convention below.
-- [ ] **The juxtaposition rule for reports.** Not "every number carries its identity", which is
+- [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — this needs his word.** It writes
+      a NEW STANDING RULE into a canonical document, which changes what every future block must do.
+      BACKLOG-HONEST-1 STEP E put it in bucket (i) on the grounds that it is "a convention, no code";
+      that was wrong about the axis that matters. A rule is not small because it is short.
+      **The juxtaposition rule for reports.** Not "every number carries its identity", which is
       ceremony — most figures sit under a shared header that already covers them. The narrow rule
       that catches the real failure: **when a report puts two numbers side by side, they must either
       share one stated identity or carry different ones visibly.** The hazard lives in comparison, not
