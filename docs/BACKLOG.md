@@ -1232,15 +1232,28 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
 ### Phase V (Verification Sprint)
 
-Systematic testing of still-unverified areas:
+Systematic testing of still-unverified areas.
 
-- **V-1** — PlayerSetup B-1 loading-saved-lists bug
+**FOUR OF THESE ARE NOT INDEPENDENT WORK** (marked below): V-1, V-2, V-4 and V-5 are the
+VERIFICATION of B-1, B-2, B-4 and B-5, and listing both as open counts one task twice. V-3 was
+answered by the config. **V-6 to V-9 are genuinely independent** — they verify areas no B- item
+covers.
+
+- **V-1** — PlayerSetup B-1 loading-saved-lists bug. **NOT INDEPENDENTLY OPEN — downstream of
+  B-1**, which is the work; this is its verification and cannot start until B-1 lands.
 - **V-2** — TrackSelector B-2 custom track behavior. **NOT INDEPENDENTLY OPEN — downstream of
   B-2 above**, which is the work; this is its verification and cannot start until B-2 lands. Track
   it there. *(The same shape holds for V-1↔B-1, V-4↔B-4 and V-5↔B-5 below.)*
 - **V-3** — Result screen winner count B-3 (configurable?)
-- **V-4** — Branding profiles B-4 (per old ROADMAP done, reality check says open)
-- **V-5** — System backup/restore/reset B-5 (data loss risk)
+- **V-4** ✅ ~~Branding profiles B-4 (per old ROADMAP done, reality check says open)~~ —
+  **CLOSED WITH B-4 above, and the parenthetical is the interesting part: the old ROADMAP was RIGHT
+  and the reality check was WRONG.** Confirmed at source 2026-08-23 — both `RaceScreen/index.jsx`
+  and `ResultScreen/index.jsx` resolve the active brand. **The general rule:** a "reality check" that
+  contradicts a record is a claim like any other and needs its own evidence; this one was carried as
+  fact for months.
+- **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
+  downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
+  doing, which is why this line is kept rather than struck.)*
 - **V-6** — Multiple dev panel sections — visual verification
 - **V-7** — Physics + collision behavior — smoke test
 - **V-8** — localStorage persistence edge cases — stress test
