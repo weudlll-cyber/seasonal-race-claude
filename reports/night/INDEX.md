@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [DECISIONS-2026-08-23.md](DECISIONS-2026-08-23.md) — **sixteen owner decisions of 2026-08-23,
+  written where they will be found** (PIECE 1 of that night's chain). Recorded as **D10–D24** in
+  `docs/BACKLOG.md`; every one of the thirteen rows in PART ONE's "NEEDS HIS WORD" index is now
+  answered, so the index was rewritten to carry what is still his (two rows) beside every old row and
+  the decision that took it. **Two new standing rules** — R16 (two numbers side by side share one
+  identity) and R17 (a re-minting block names what must not move) — plus **R5a, every acceptance is a
+  sample**, which retires the "three of ten tracks" framing as a documentation count rather than a
+  record of what he watched. **Three corrections nobody asked for:** the host Race Settings panel
+  carries three controls and not one, `server/` is NOT audited by nothing (SERVER-AUDIT-1 closed
+  that), and the docs map claimed VERIFY-RULES stopped at R11. **And one claim in the engine had gone
+  untrue:** the authored `cameraPlan` is not "currently UNCONSUMED" — the roles are consumed and the
+  BEATS are discarded by `comebackDetector.setPlan`, so the camera re-infers from rank history what
+  the plan already states and the `resolve` beat never reaches it. That is the open point the owner's
+  comeback definition leaves, and nothing was proposed about it.
+
 - [NIGHT-2026-08-22.md](NIGHT-2026-08-22.md) — **the morning sheet for the night of 2026-08-22.**
   A chain of independent pieces off master `2c1122e2`, each on its own branch, verified, reported
   and merged before the next begins. **This file is the deliverable even if the night is stopped

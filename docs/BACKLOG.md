@@ -25,7 +25,8 @@ considered separately, and that would not be true.
 
 ## NEEDS HIS WORD — decide these first
 
-**Two sections are entirely his and lead PART ONE.** The rest of the items that need his word are
+**ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,
+and one of its four questions is still open. The rest of the items that need his word are
 **indexed here and left where they are**, which is a deliberate choice rather than a shortcut:
 
 **WHY THEY ARE NOT MOVED.** Each of them sits inside a section whose surrounding text is the evidence
@@ -35,23 +36,40 @@ and leaving the evidence behind would make the decision look smaller than it is*
 how a question gets answered without being understood. So they are linked from here and kept in
 place. *(Conservative option at a fork, stated as required.)*
 
-**THE INDEX — every open item below that only he can move:**
+**IT SAID "TWO SECTIONS" UNTIL 2026-08-23.** The second was *Owner eye-test coverage*, which is
+now closed by D13 and lives in PART TWO.
+
+**THE INDEX — every open item below that only he can move.** **REWRITTEN 2026-08-23: every row the
+previous version carried has been answered**, and the answers are PART TWO's DECISIONS D10–D24. The
+table is not deleted-and-forgotten — each old row is listed below with the decision that took it,
+because a question that vanishes from an index looks like a question nobody asked.
 
 | the question | where it lives |
 | --- | --- |
-| the action dial: what it maps onto · discrete or continuous *(answered)* · what it does to the fairness gate · saved races and replays | **HOW MUCH ACTION**, immediately below |
-| the proposed owner eye-test session — three of ten tracks seen, two states never | **Owner eye-test coverage**, below |
-| should `npm run dev` REFUSE to start when the build identity is unreadable | *Build-identity residuals* — **answered NO, see PART TWO D5** |
-| the juxtaposition rule for reports — a NEW standing rule | *Measurement and guard residuals* |
-| a re-minting block names invariants that must not move — a NEW standing rule | *Instrument coverage residuals* |
-| the company guarantee on a SPREAD field, and the 5 → 15 recommendation | *Camera residuals after CAMERA-COMPANY-ONLY-3* |
-| camera timing levers — the comeback shot appears late (tune by eye) | *Race-Action Arc* |
-| E3 — the `trajectoryMult` half: intended dramaturgy, or a seam to smooth? | *Race-Action Arc* |
-| OUTCOME climb-capacity — drama-at-leader vs deep-band reach | *Race-Action Arc* |
-| the audit-gate policy for DEV dependencies, and the body-parser LOW advisory | *Before the VPS migration* |
-| the seed for the normal "Start Race" path, and seed persistence | *Planned — needs spec* |
-| merge ROADMAP into BACKLOG | *Documentation* |
-| `D7d` — 100-racer performance: three mechanisms, none built, direction is his | *Race-Action Arc* |
+| the authored BEATS never reach the camera — hand them through, or leave the detector inferring? | **PART TWO D14** — the open point it leaves. **His call, and it needs his eye afterwards.** |
+| a normal race now draws and shows a seed — does it read right on screen? | `feat/race-seed`, **unmerged**; see `reports/night/SEED-REAL-RACE-1.md` |
+
+**AND THESE ARE NO LONGER HIS — they are waiting on a MEASUREMENT or on a later block, not on a
+word from him:**
+
+| the question | what it is waiting on now |
+| --- | --- |
+| the action dial: what it maps onto | the table in `reports/night/ACTION-KEYS-1.md`, then a design block — **PART TWO D10** |
+| the action dial vs the fairness gate | **answered — PART TWO D11.** The dial is bound by the gate; each stage passes on its own or does not ship |
+| saved races and replays under the dial | **half answered — PART TWO D12.** The stage is stored with the race; what happens to the FINGERPRINTS is a ship question and stays open |
+| the proposed owner eye-test session | **superseded — PART TWO D13**, and replaced by a standing principle ([VERIFY-RULES.md R5a](VERIFY-RULES.md)) |
+| should `npm run dev` REFUSE to start when the build identity is unreadable | **answered NO — PART TWO D5** |
+| the juxtaposition rule for reports | **adopted — PART TWO D19**, now [VERIFY-RULES.md R16](VERIFY-RULES.md) |
+| a re-minting block names invariants that must not move | **adopted — PART TWO D20**, now [VERIFY-RULES.md R17](VERIFY-RULES.md) |
+| the company guarantee on a SPREAD field, and the 5 → 15 recommendation | **his 5 stands — PART TWO D15.** The item stays open **on a measurement**, not on his word |
+| camera timing levers — the comeback shot appears late | **replaced — PART TWO D14.** The sliders would have shown the wrong thing sooner |
+| E3 — the `trajectoryMult` half | **accepted as design — PART TWO D16.** Documented in [RACE-ACTION.md](RACE-ACTION.md) |
+| OUTCOME climb-capacity — drama-at-leader vs deep-band reach | **closed — PART TWO D17.** The lever it proposed is not ordered |
+| the audit-gate policy for DEV dependencies | **answered — PART TWO D21.** Dev advisories report; the build is not ordered here |
+| the `body-parser` LOW advisory | **answered — PART TWO D22.** No action; revisit at the next `server/` bump |
+| the seed for the normal "Start Race" path, and seed persistence | **build it — PART TWO D23.** Built on `feat/race-seed`, unmerged, his eye owed |
+| merge ROADMAP into BACKLOG | **approved as work — PART TWO D24.** Its own piece |
+| `D7d` — 100-racer performance | **downgraded to an observation — PART TWO D18.** Nothing is ordered |
 
 **Nothing else in PART ONE is blocked on any of these.**
 
@@ -90,47 +108,52 @@ line numbers are the address; read the value there.
 
 - **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx:930` renders the **Race Settings**
   panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
-  and carries exactly ONE control today — Race Duration, at `RaceSettings.jsx:32`.** This is the
-  surface the requirement names, and it is nearly empty, which is the useful part of this fact.
+  and carries THREE controls today — Race Duration, Number of Winners, and an optional Event Name.**
+  This is the surface the requirement names, and it is nearly empty, which is the useful part of
+  this fact.
+  **CORRECTED 2026-08-23, re-counted at source.** It said *"exactly ONE control today — Race
+  Duration, at `RaceSettings.jsx:32`"*. The line number was right and the count was wrong: the same
+  file renders a winners stepper and an event-name field below it. **The correction is kept visible
+  because of what it nearly cost** — the sentence was the evidence for "the host surface is nearly
+  empty", and a wrong count is a bad reason for a right conclusion. The conclusion survives the
+  correction; three controls is still nearly empty beside the Dev Screen.
 
 - **DEVELOPER-FACING:** `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` and
   `BehaviorTuningSection.jsx`. Every candidate above is reachable here today, and reaching them
   requires the Dev Screen — which is exactly what the order says is not enough.
 
-### The open questions — QUESTIONS ONLY, no answers proposed
+### The open questions — THREE OF FOUR ARE NOW ANSWERED (2026-08-23)
 
-1. **What does one dial map onto?** The candidates are not independent: `gapReroll*` and the pulk
-   rotation both close gaps, by different means. A single control is a mapping decision, not a
-   selection.
+**Struck rather than deleted, per D4.** Each answer names the decision that took it; the reasoning
+lives there and is not restated here.
+
+1. **What does one dial map onto?** **STILL OPEN — but no longer his to answer unaided
+   (PART TWO D10).** The candidates are not independent: `gapReroll*` and the pulk rotation both
+   close gaps, by different means. A single control is a mapping decision, not a selection — and it
+   is a decision that cannot be taken from a reading of `defaults.js`. **It waits on a
+   MEASUREMENT:** which candidate keys move the project's own action measure at all, by how much,
+   and where two of them do the same job. That table is
+   `reports/night/ACTION-KEYS-1.md`; the design block starts from it.
 2. **~~Is the range discrete or continuous?~~ ANSWERED — THREE STAGES: quiet / medium / wild.**
-   On record since **2026-07-06**. **The reason is the gate, and it is why this is settled and the
-   other three are not:** a STAGE can be measured against the fairness gate one stage at a time, so
-   three stages means three gate runs with a verdict each. A continuous dial has no such
-   decomposition — it would have to be sampled, and every value between the samples would ship
-   unmeasured. Race Duration beside it being discrete is a consistency argument; the gate is the
-   reason.
-3. **What does the dial do to the band-fairness promise and its gate?** `docs/FAIRNESS.md` binds the
-   shipped world to band arrival with a gate. **A host-movable action control can move a racer off its
-   drawn band, so either the dial is bounded by the gate or the gate becomes a function of the dial.**
-   Neither is chosen here, and this is the question that most needs answering before anything is built.
-4. **What happens to a saved race, a replay, and the fingerprints** when the dial moves? Not
-   investigated.
+   On record since **2026-07-06**. **The reason is the gate:** a STAGE can be measured against the
+   fairness gate one stage at a time, so three stages means three gate runs with a verdict each. A
+   continuous dial has no such decomposition — it would have to be sampled, and every value between
+   the samples would ship unmeasured. Race Duration beside it being discrete is a consistency
+   argument; the gate is the reason. **And D11 is what makes that reason pay off** — see below.
+3. **~~What does the dial do to the band-fairness promise and its gate?~~ ANSWERED — THE DIAL IS
+   BOUND BY THE GATE (PART TWO D11).** Of the two options this question named, the owner took the
+   first: **each of the three stages must pass the fairness gate on its own, or that stage does not
+   ship.** The gate does NOT become a function of the dial, and its thresholds — which live in
+   [FAIRNESS.md](FAIRNESS.md) and nowhere else — are untouched by it.
+4. **What happens to a saved race, a replay, and the fingerprints when the dial moves?**
+   **HALF ANSWERED.** The **stage is stored with the race**, like the seed, so a replay is
+   unambiguous (PART TWO D12). **The FINGERPRINT half is still open and is deliberately not
+   answered here** — a host-facing control that moves the race is a ship-ceremony question
+   ([SHIP-CEREMONY.md](SHIP-CEREMONY.md)), not a storage one, and it is the design block's to
+   raise once the mapping in 1 exists.
 
-**NOTHING ABOVE IS A PROPOSAL.** It is the record of an order and the facts a later block starts from.
-
----
-
-## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1)
-
-**verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
-
-- [ ] **PROPOSED OWNER SESSION — his time, not scheduled here.** Writing §7.3 down made the gap
-      concrete: his eye has covered **three of ten tracks** (mountainstreet, searound, City Circuit),
-      and **COMEBACK_ZOOM and LEAD_CHANGE have never had a targeted pass**. Every "owner-approved"
-      claim in the repo is evidence about the track and state it was given on, and nothing more.
-      **The session, if he wants it:** one race per unseen track (dirt-oval, garden-path, ice-track,
-      luger-hill, river-run, seatrack, space-sprint) plus one pass watching the two unseen states.
-      Reference: [CAMERA_DIRECTOR.md §8.3](CAMERA_DIRECTOR.md) (was §7.3 until ONE-TRUTH-2 renumbered a duplicated section 7).
+**NOTHING ABOVE IS A PROPOSAL.** It is the record of an order, the facts a later block starts from,
+and the four decisions of 2026-08-23 that narrowed it.
 
 ---
 
@@ -188,7 +211,11 @@ line numbers are the address; read the value there.
 
 **verify (section-wide):** `git grep -c "" docs/ROADMAP.md docs/BACKLOG.md` for the sizes that make the merge a real pass rather than a rename — **still open while both files exist separately.**
 
-- [ ] **Merge ROADMAP into BACKLOG — DECIDED, and deliberately NOT done here.** The two documents
+- [ ] **Merge ROADMAP into BACKLOG — APPROVED AS WORK 2026-08-23 (PART TWO D24), and still
+      deliberately NOT done here.** *(The approval changes nothing about the reasoning below; what it
+      settles is that the merge WILL happen and gets its own piece. It was deliberately not done
+      inside the 2026-08-23 documents piece, which was already rewriting a dozen entries in this
+      file — a dropped item and an edited item would have been indistinguishable in that diff.)* The two documents
       half-own "what is done and what is next": this file owns the open work with its evidence,
       [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
       that boundary in both files' `**Owns:**` lines rather than merging them, **on the owner's
@@ -207,15 +234,6 @@ line numbers are the address; read the value there.
       check across the whole race, flagging any frame whose pan displacement exceeds N× the local
       median outside the enumerable deliberate cuts (the `cut` grammar, LEAD_CHANGE's snap). The same
       pinned-offset-plus-moving-target pattern exists at every entry into a T-space-lerped state.
-
-- [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — same reason as the juxtaposition
-      rule above.** Its "proposed convention" is a standing obligation on every block that re-mints,
-      and adopting it is his call rather than a night's tidying.
-      **A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT.** FINISH-MOTION-1 caught a
-      108 px regression in the RESTING frame only by accident, while measuring something else — the
-      camera fingerprint moved, as intended, so the regression would have been read as intended too.
-      **Proposed convention:** any block that re-mints a fingerprint names one or two specific
-      invariants that must NOT move, and measures them. Costs a few lines per block.
 
 - [ ] **Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
       finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
@@ -257,7 +275,7 @@ line numbers are the address; read the value there.
 
 ## Measurement and guard residuals (2026-08-05)
 
-**verify (section-wide):** mixed. The two standing-rule proposals cannot have one — a rule is adopted, not checked. The rest name their own instrument in the item text.
+**verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
 
 - [ ] **THREE DRIVER COPIES REMAIN, BY DELIBERATE CHOICE — meet the argument before "finishing the
       job".** `camera-fingerprint.mjs` and `render-fingerprint.mjs` are **the gate the consolidation
@@ -274,19 +292,11 @@ line numbers are the address; read the value there.
       everyone believed was happening. **The config must be in the hash, not just the identity** —
       `corridor-truth` and `corridor-truth --company-only` print the SAME identity line and produce
       different numbers, so identity alone is insufficient. Caveat: a hash nobody quotes is a dead
-      instrument (Lesson 196), so it is only worth adding alongside the convention below.
-
-- [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — this needs his word.** It writes
-      a NEW STANDING RULE into a canonical document, which changes what every future block must do.
-      BACKLOG-HONEST-1 STEP E put it in bucket (i) on the grounds that it is "a convention, no code";
-      that was wrong about the axis that matters. A rule is not small because it is short.
-      **The juxtaposition rule for reports.** Not "every number carries its identity", which is
-      ceremony — most figures sit under a shared header that already covers them. The narrow rule
-      that catches the real failure: **when a report puts two numbers side by side, they must either
-      share one stated identity or carry different ones visibly.** The hazard lives in comparison, not
-      in isolation — a number alone can be wrong, but it cannot mislead by comparison. In practice: a
-      table gets one identity line above it; a table mixing arms gets an identity column. NIGHT-1
-      needed the second and did not have it, which is the instance this comes from.
+      instrument (Lesson 196), so it is only worth adding alongside a convention that makes somebody
+      quote it. **That convention now EXISTS** — the juxtaposition rule, adopted 2026-08-23 as
+      [VERIFY-RULES.md R16](VERIFY-RULES.md). *(This line used to say "the convention below"; the
+      convention moved to PART TWO when it was adopted, and a dangling "below" is exactly the drift
+      this file keeps paying for.)*
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
@@ -317,6 +327,10 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       observation corrects mine**: on a spread field it clearly binds and widens a lot at 5.
       **Measure the spread-field case across field sizes BEFORE anyone changes his value**, and show
       him the result. `minRacersVisible` keeps the value his eye settled on until then.
+      **RE-AFFIRMED 2026-08-23 — PART TWO D15: his 5 STANDS.** What that decision settles is the
+      ORDER, not the value: nobody changes it first and measures afterwards. **So this item is no
+      longer waiting on his word — it is waiting on the measurement**, and it stays open until that
+      measurement exists and he has seen it.
 
 - [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
       the build and the camera path, never which guarantee ran. That gap is what made
@@ -505,13 +519,41 @@ verified against `git log` / `git tag`.
 
 - **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
-- **Camera timing levers — comeback shot appears late (tune by eye, no code)** 🔜 _(added 2026-07-15, from B4)_ — the comeback shot only appears late, and the cause is NOT the plan but two existing DevScreen sliders. `outcomePhaseThreshold` (default 0.65) gates reactive comeback detection, but the authored climb starts around progress ~0.28, and the slider floor is 0.5 — so the first ~0.28–0.5 of the climb is unreachable by slider alone. `comebackWeight` (0.6) loses the weighted candidate contest to `battleWeight` (0.8) during PULK, so even a fired comeback candidate does not win the lens. Verified beat timing (from the generator itself): a comebacker HOLDS its deep rank from `anchorProgress` (0.25) until its `peak` beat (~0.28–0.67, usually in PULK), then climbs to its `resolve` beat (~0.69–0.91, in OUTCOME). **Owner decision needed:** tune the two sliders by eye (does showing the climb beat keeping the front battle?) before any further code.
+- **~~Camera timing levers — comeback shot appears late (tune by eye, no code)~~ REPLACED 2026-08-23 by the owner's DEFINITION of a comeback — PART TWO D14.** 🔜 _(added 2026-07-15, from B4; replaced 2026-08-23)_
 
-- **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest.
+  **THE REQUIREMENT, in his terms: a comeback is a racer STORMING FROM FAR BACK TO THE FRONT.** A
+  racer climbing slowly from progress ~0.28 is **not** a comeback. That is the bar the shot has to
+  clear, and it is what the old item was missing.
 
-- **E3 — PULK→OUTCOME speed differential** 🔽 **NARROWED (owner-approved 2026-07-31): the rowBonus half SHIPPED; the OPEN remainder is ONLY the `trajectoryMult` half.** Do NOT re-open the shipped rowBonus/rowEnvMult smoothing (default ON, `v-rowenv-default-on-complete`) — that part is done and fairness-verified. The single open question is the larger `trajectoryMult` differential (pack pinned 1.0 in PULK → P-controller in OUTCOME): accept-as-design or smooth. Full history: _(added 2026-07-14 reconciliation)_ — verified design: in PULK the pack's `trajectoryMult` is pinned to 1.0 and rowBonus is 0 (racePlanner.js:474); in OUTCOME both return (trajectory rises via the P-controller gain 2.0, rowBonus full). Racers are genuinely faster in OUTCOME than in PULK — a real speed step at the boundary, not an onset artifact. **Owner decision:** intended dramaturgy (accept + document as design) or a seam to smooth? Log the decision either way. **UPDATE 2026-07-18/19:** the **rowBonus/rowEnvMult sub-step** (~0.5–1.5% on back rows) is smoothed by a 1s `easeInOutCubic` in the SHARED `raceStep.js` (`computeRowEnvSmoothed`; config `enableRowEnvSmooth` + DevScreen toggle). Sim sweep (SLEW 1%/frame vs EASING 1s, 4 tracks × 100 races) confirmed both fairness-neutral (B1/B2 within 0.6pp, Holm 0). Shipped dormant first (`v-rowenv-easing-complete`), then **flipped to DEFAULT ON 2026-07-19** after owner eye-test (`v-rowenv-default-on-complete`; re-gate B1 −0.4pp, B2 −0.2pp vs instant, both within noise; DevScreen toggle flips OFF for comparison). The larger **`trajectoryMult` differential** (pack pinned 1.0 → P-controller in OUTCOME) is untouched and remains the open part of E3.
+  **Why the old proposal is retired rather than scheduled.** It was: lower `outcomePhaseThreshold`
+  (which gates reactive comeback detection, and whose slider floor sits above the start of the
+  authored climb) and re-weight `comebackWeight` against `battleWeight` (which it loses to during
+  PULK, so even a fired candidate does not win the lens). **Both changes make the SLOW CLIMB visible
+  EARLIER — and against the definition above that is the wrong thing, sooner.** It would cost the
+  front battle the weight contest was protecting and buy an event that is not the event.
+  *(Values deliberately not restated: they live in `client/src/modules/storage/defaults.js`, which
+  is their one home.)*
 
-- **OUTCOME climb-capacity investigation (2026-07-17/18) — deep-band band-reach vs `choreoOutcomeStart`** 🔜 — B3–B5 band-reach degrades as `choreoOutcomeStart` rises (SWEEP 2). **Two fixes MEASURED + REJECTED:** (a) _band-checkpoint proportionalization_ (Phase 1 dry-run, 6 variants × 4 tracks × 40 races): max +0.3pp B3 = noise — band-reach is **endpoint-determined** (the servo steers to the Fisher-Yates target over [choreoOutcomeStart→finish]); the checkpoint only reshapes the mid-race curve, not the destination. (b) _unified speed-ramping_ (remove the distributed smoothers, replace with one global 0.5%/frame cap; 4 variants × 4 tracks × 100 races): **−5pp B2, −9pp B3** — the distributed smoothers are load-bearing for servo accuracy (Lesson 177). **Faller diagnosis (mountainstreet, N=100):** fallers **UNDERSHOOT** (a climb-capacity deficit, NOT "enter OUTCOME too fast"); worst on the long open 60-racer track. **Open lever:** add OUTCOME servo runway/authority for deep bands — earlier per-band steering onset and/or higher `trajectoryMult` authority for B3–B5 — measured against band-reach. Reports under `results/` (gitignored). **NOTE (2026-07-20):** this is the remaining open action item after B2-Heroes shipped (below); the two share the "deep bands need more servo authority" diagnosis but B2-Heroes solves front-action a different way (authored attackers, not deep-band climb-capacity). Deferred pending owner decision on drama-at-leader vs. deep-band reach.
+  **The beat timing is still true and is kept, because it is what the OPEN POINT below is about:**
+  a comebacker HOLDS its deep rank from its `anchor` beat until its `peak` beat (usually in PULK),
+  then climbs to its `resolve` beat (in OUTCOME). **The `resolve` beat is the storm he is
+  describing.**
+
+  **THE OPEN POINT — the authored BEATS never reach the camera.** Full evidence, established at
+  source and re-verified on 2026-08-23, is in **PART TWO D14**: the generator emits role AND beats,
+  the FULL `cameraPlan` IS delivered to the director, and `comebackDetector.setPlan` keeps only
+  `role === 'comebacker'` and **discards the beats** — so the camera re-infers from rank history
+  what the plan already stated, and the `resolve` beat never arrives at all.
+  **NOTHING IS PROPOSED AND NOTHING IS BUILT.** Whether the beats get handed through is his call,
+  and it needs his eye afterwards.
+  **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns
+  only the two JSDoc `@param` lines and no code that reads them.**
+
+- **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest. **AND SO DOES THE OPEN POINT IT NOW CARRIES (PART TWO D14):** the beats a faller shot would need are delivered to the director and discarded by `comebackDetector.setPlan` along with everybody else's.
+
+- **E3 — PULK→OUTCOME speed differential** ✅ **CLOSED 2026-08-23 — ACCEPTED AS DESIGN (PART TWO D16).** The remaining open half was the `trajectoryMult` differential: the pack is pinned to 1.0 in PULK and the P-controller returns at the boundary, so racers are genuinely faster in OUTCOME than in PULK — a real speed step, not an onset artefact. **The owner's verdict is that the step is INTENDED DRAMATURGY**, and it is documented as design in the living document that owns the mechanism, [RACE-ACTION.md](RACE-ACTION.md) § *Phase discipline — how forces fade*. **DO NOT RE-OPEN EITHER HALF.** The other half — the `rowBonus`/`rowEnvMult` sub-step — was smoothed by a 1 s `easeInOutCubic` in the shared `raceStep.js` (`computeRowEnvSmoothed`, config `enableRowEnvSmooth` + DevScreen toggle), shipped dormant at `v-rowenv-easing-complete` and flipped to default ON on 2026-07-19 at `v-rowenv-default-on-complete` after an owner eye-test; a 4-track × 100-race sim sweep (SLEW 1%/frame vs EASING 1 s) confirmed both arms fairness-neutral. Design verified at source: `racePlanner.js`, the PULK branch that pins the pack and zeroes rowBonus.
+
+- **OUTCOME climb-capacity investigation (2026-07-17/18) — deep-band band-reach vs `choreoOutcomeStart`** ✅ **CLOSED 2026-08-23 BY THE OWNER (PART TWO D17).** — B3–B5 band-reach degrades as `choreoOutcomeStart` rises (SWEEP 2). **Two fixes MEASURED + REJECTED:** (a) _band-checkpoint proportionalization_ (Phase 1 dry-run, 6 variants × 4 tracks × 40 races): max +0.3pp B3 = noise — band-reach is **endpoint-determined** (the servo steers to the Fisher-Yates target over [choreoOutcomeStart→finish]); the checkpoint only reshapes the mid-race curve, not the destination. (b) _unified speed-ramping_ (remove the distributed smoothers, replace with one global 0.5%/frame cap; 4 variants × 4 tracks × 100 races): **−5pp B2, −9pp B3** — the distributed smoothers are load-bearing for servo accuracy (Lesson 177). **Faller diagnosis (mountainstreet, N=100):** fallers **UNDERSHOOT** (a climb-capacity deficit, NOT "enter OUTCOME too fast"); worst on the long open 60-racer track. **Open lever:** add OUTCOME servo runway/authority for deep bands — earlier per-band steering onset and/or higher `trajectoryMult` authority for B3–B5 — measured against band-reach. Reports under `results/` (gitignored). **NOTE (2026-07-20):** this is the remaining open action item after B2-Heroes shipped (below); the two share the "deep bands need more servo authority" diagnosis but B2-Heroes solves front-action a different way (authored attackers, not deep-band climb-capacity). **~~Deferred pending owner decision on drama-at-leader vs. deep-band reach.~~ THAT STATUS WAS WRONG AND IS CORRECTED: it is decided, and the OPEN LEVER above is NOT ORDERED.** Nobody is to build OUTCOME servo runway or extra `trajectoryMult` authority for B3–B5 on the strength of this item. **What survives it are two general findings, which is why the entry is kept in full:** band-reach is ENDPOINT-determined (the servo steers to the Fisher-Yates target over [`choreoOutcomeStart` → finish]), so a mid-race checkpoint reshapes the curve and not the destination; and the distributed smoothers are load-bearing for servo accuracy (Lesson 177).
 
 - **Built, measured, shelved — then REMOVED (dead-mechanisms cleanup, 2026-07-23):** the **pack strictness release** — non-hero pack runs strictness-0 inside band — **broke B2 band-reach** on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame edge-leak** (92% of leaks after progress 0.90; free racers at the band edge get shuffled out with no runway — diagnosis archived under `reports/exp-archive/`). Dominated by B2-attackers (more action, cleaner fairness). The **universal band-arrival** variant — free B1-heroes + normal pack inside their assigned band — held fairness (immediate re-steer) but cost **−6% action**. Both were deleted with their config keys and DevScreen control; the re-steer threshold survives because the live B2-attacker release reads it. Recoverable at tag `pre/dead-mechanisms-cleanup`.
 
@@ -643,21 +685,36 @@ All 5 geometries drawn and saved in the track editor:
 
 ### CI / dependency hygiene — owner decisions (from the 2026-07-22 audit episode)
 
-Both open, both the owner's call. Context: CI's `npm audit --audit-level=high` step failed on five
+**BOTH ARE NOW DECIDED — 2026-08-23, PART TWO D21 and D22 — and both are struck below rather than
+deleted (D4).** Context: CI's `npm audit --audit-level=high` step failed on five
 consecutive runs (back to 2026-07-20) with no code change on our side — two fresh upstream
 advisories against DEV dependencies (`js-yaml` GHSA-52cp-r559-cp3m, `brace-expansion`
 GHSA-3jxr-9vmj-r5cp). Fixed lockfile-only in `869615b`.
 
-- **Audit-gate policy for DEV dependencies.** ⏳ OPEN. Today the gate is hard-blocking regardless of
-  whether the advisory touches shipped code, so any new upstream advisory against a build/test-only
-  package stops CI until someone bumps a lockfile. Options: keep it hard (maximum pressure to stay
-  current), or split the step — hard-fail on runtime dependencies, report-only on `dev` ones. Trade-off
-  is prompt patching vs. unrelated red builds blocking merges.
+**AND THE THIRD GAP THIS EPISODE NAMED IS ALREADY CLOSED — stated here because a reader arriving at
+the audit questions will look for it.** CHECK-AUDIT-1 found that **`server/` was audited by
+nothing**; SERVER-AUDIT-1 closed it, and it was re-confirmed at source on 2026-08-23:
+`scripts/audit-gate.mjs` takes a `--tree=` argument, `.github/workflows/ci.yml` runs it with
+`--tree=server` on every push and pull request, and `audit-schedule.yml` runs **both** trees daily
+under `--report-only`. The struck entry is in PART TWO, *Before the VPS migration*.
 
-- **`body-parser` LOW runtime advisory (GHSA-v422-hmwv-36x6) in `server/`.** ⏳ OPEN. Below the
-  `high` gate, so CI is unaffected and it was deliberately NOT bundled into the CI-unblock commit —
-  unlike the two client fixes this is a **runtime** dependency, so the bump deserves its own decision
-  and its own verification rather than riding along in a chore commit.
+- [x] ~~**Audit-gate policy for DEV dependencies.** ⏳ OPEN.~~ **ANSWERED 2026-08-23 — PART TWO D21:
+  DEV DEPENDENCIES REPORT, THEY DO NOT BLOCK.** His reason is that a dev dependency never runs in
+  front of a viewer, so the split he chose is the second of the two options this item listed:
+  hard-fail on runtime dependencies, report-only on `dev` ones. The trade-off it named — prompt
+  patching vs. unrelated red builds blocking merges — is decided in favour of not blocking.
+  **THE POLICY QUESTION IS CLOSED; THE BUILD IS NOT ORDERED HERE.** What it needs is already
+  half-present and is written down in D21 so the next block does not re-derive it:
+  `scripts/audit-gate.mjs` already runs `npm audit --omit=dev` alongside the full audit and annotates
+  each blocking line `PRODUCTION` / `dev-only` / `reachability UNKNOWN`; the PASS/FAIL policy simply
+  does not read that annotation yet, and `reachability UNKNOWN` must not become dev-only by default.
+
+- [x] ~~**`body-parser` LOW runtime advisory (GHSA-v422-hmwv-36x6) in `server/`.** ⏳ OPEN.~~
+  **RECORDED, NO ACTION — 2026-08-23, PART TWO D22.** Below the `high` gate, so CI is unaffected and
+  the gate prints it as an advisory line. It was deliberately NOT bundled into the CI-unblock commit,
+  and it stays unbundled: unlike the two client fixes this is a **runtime** dependency, so the bump
+  deserves its own decision and its own verification rather than riding along in a chore commit.
+  **It is revisited when `server/` is next bumped for another reason**, not on its own schedule.
 
 ### Browser seed — follow-ups (noted, NOT built; owner decision)
 
@@ -665,14 +722,22 @@ Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → _Br
 An empty seed field draws a fresh seed per race and shows it in the HUD; a typed number fixes the
 race. Typed values persist for the browser session. Status of the follow-ups:
 
-- **Seed for the normal "Start Race" path.** ⏳ OPEN — owner decision. It still hardcodes
-  `racePlanSeed: 0`, so a real race is never reproducible. Options: adopt the Quick-Test model (draw
-  a seed per race, display it), or leave it unseeded on purpose. This changes what a "normal" race
-  is, not just how it is logged — hence not bundled with the Quick-Test work.
+**THE FIRST TWO WERE DECIDED TOGETHER ON 2026-08-23 — PART TWO D23 — because they are one thing:**
+a real race gets a real seed, and the seed outlives the browser session. **BUILT on `feat/race-seed`
+and NOT MERGED — it waits for his eye.** See
+`reports/night/SEED-REAL-RACE-1.md`.
 
-- **Seed persistence beyond the session.** ⏳ OPEN — owner decision. Currently `sessionStorage`, so a
-  fresh browser session starts from an empty (random) field. Promote to `localStorage` or a URL
-  parameter only if eye-tests need a pinned seed to survive a restart.
+- [x] ~~**Seed for the normal "Start Race" path.** ⏳ OPEN — owner decision.~~ **DECIDED
+  2026-08-23 — BUILD IT (PART TWO D23).** Of the two options this item named — adopt the Quick-Test
+  model, or leave it unseeded on purpose — he took the first, and the reason is the one the item
+  understated: it hardcoded `racePlanSeed: 0`, so **no race he watches is reproducible, including
+  the ones he judges.** The Quick-Test model is adopted rather than a second one invented: same
+  semantics, same module.
+
+- [x] ~~**Seed persistence beyond the session.** ⏳ OPEN — owner decision.~~ **DECIDED 2026-08-23
+  — IT MUST OUTLIVE THE SESSION (PART TWO D23).** The condition this item set — *only if eye-tests
+  need a pinned seed to survive a restart* — is exactly the case he described: he watches a normal
+  race, closes the browser, comes back and re-runs that race. `sessionStorage` cannot serve that.
 
 - **Replaying a browser seed in the sim.** The two engines are deterministic _individually_, but a
   browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
@@ -746,15 +811,24 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
 
-- 🔜 **D7d** — 100-racer performance. **THE LIVE ENTRY** (a status echo of it also sits in
-  *Order of Next Steps*; edit only this one).
-  - Spatial grid for O(N) avoidance performance
-  - Smarter camera for pack overview
-  - LOD or similar strategies for 100 racers
+- 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
+  PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
+  only this one).
+  **His decision rests on his own use: he runs 100-racer races routinely and has seen nothing
+  wrong.** So the three mechanisms below are **NOT ORDERED**, no direction is given on them, and
+  nobody is to build one against a performance problem nobody has observed. **If it ever bites it
+  shows as STUTTER — and then it is a MEASUREMENT question, not this item.**
+  - ~~Spatial grid for O(N) avoidance performance~~ — not ordered
+  - ~~Smarter camera for pack overview~~ — not ordered
+  - ~~LOD or similar strategies for 100 racers~~ — not ordered
 
-  **verify:** `git grep -lni "spatial grid\|spatialGrid" -- 'client/src/**'` — **still open while it
-  returns nothing.** Checked 2026-08-23: nothing, and `\bLOD\b` over `client/src/**` is also empty,
-  so neither named mechanism exists. The pattern can match; it is ordinary vocabulary.
+  **verify:** `git grep -lni "spatial grid\|spatialGrid" -- 'client/src/**'` — it returns nothing, and
+  `\bLOD\b` over `client/src/**` is also empty (checked 2026-08-23), so neither named mechanism
+  exists. **That command no longer decides an OPEN item** — it now only confirms the observation's
+  premise, which is that none of this was ever built. The pattern can match; it is ordinary
+  vocabulary.
+  **A NAMING COLLISION, so it is not read as a cross-reference:** this item is `D7d`, a Phase-D
+  sub-item. It has nothing to do with **decision D7** in PART TWO.
 
 - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
   Builds on override pattern (B-7).
@@ -987,9 +1061,10 @@ from D3.5.5.
 6. ✅ **D7a-Plus** per-type sprite minimum size + live preview — PR #35, master `27cba65`
 7. ✅ **D7b** lane-free + physicalY avoidance — PR #37
 8. ✅ **D7c** row start + speed bonus + track capacity — PR #39
-9. 🔜 **D7d** — 100-racer performance. **DUPLICATE — the live entry is in the Race-Action Arc
-   section above**, which carries the three sub-items (spatial grid, pack-overview camera, LOD).
-   This line is a status echo; do not edit it independently.
+9. 👁 **D7d** — 100-racer performance — **an OBSERVATION since 2026-08-23 (PART TWO D18), not a
+   work item.** **DUPLICATE — the live entry is in the Race-Action Arc section above**, which carries
+   the three sub-items (spatial grid, pack-overview camera, LOD), all three not ordered. This line is
+   a status echo; do not edit it independently.
 10. ✅ **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4) — Master `c857a7e`
 11. ✅ **Quick wins post-VRE** (server vitest v4, backend validation, window.alert, JSON.parse, doc drift)
 12. ✅ **Error boundary** (deep audit HIGH finding addressed — top-level React error boundary, PR #51)
@@ -1401,7 +1476,255 @@ full suite clean under the same load, and the suite then passed twice with the c
 cannot be checked by a command.** It closes when it happens a third time and is diagnosed, or when
 nobody has seen it for long enough to stop caring.
 
+### D10 · The action dial's MAPPING is decided by MEASUREMENT, not at the desk · 2026-08-23
+
+**His decision: the question stays OPEN, and it stops being his to answer unaided.** The HOW MUCH
+ACTION section's question 1 — _what does one dial map onto_ — was written as a design question and
+was therefore stuck: the candidate keys plainly overlap (`gapReroll*` and the pulk rotation close
+gaps by different means), and no amount of reading `defaults.js` settles which of them a host would
+actually feel.
+
+**So the next step is a measurement, not a proposal.** Which candidate keys move visible action at
+all, by how much, and where two of them do the same job, is a question an existing harness can
+answer. The dial cannot be designed before that table exists, and it is not designed here.
+
+**The measurement is `reports/night/ACTION-KEYS-1.md`** (2026-08-23, read-only:
+no default moved, no key wired, no mapping proposed). Question 1 is re-stated in place as _waiting
+on the table_ rather than as _waiting on him_.
+
+### D11 · The action dial is BOUND BY THE FAIRNESS GATE — the gate does not become a function of the dial · 2026-08-23
+
+**This answers HOW MUCH ACTION question 3, which the section itself called the one that most needed
+answering before anything is built.** The section put two options side by side — bound the dial by
+the gate, or make the gate a function of the dial. **He took the first.**
+
+**The rule, in the form a later block must apply it: EACH OF THE THREE STAGES MUST PASS THE FAIRNESS
+GATE ON ITS OWN, OR THAT STAGE DOES NOT SHIP.** Not the dial as a whole, not the middle stage as a
+proxy for the other two — each stage, its own gate run, its own verdict. A stage that cannot pass is
+dropped or re-mapped; the gate is not moved to accommodate it.
+
+**Why this is consistent with the stage decision already on record.** Question 2 was answered on
+2026-07-06 with _three stages, quiet / medium / wild_, and its stated reason was exactly this: a
+STAGE can be measured against the gate one stage at a time. That reason only pays off if the gate is
+the thing the stages are measured AGAINST. A gate parameterised by the dial would have made the
+2026-07-06 decision pointless — three gate runs, each against a different bar, is one gate run's
+worth of evidence spread over three verdicts.
+
+**What it does NOT decide:** what the stages map onto (D10), or what the gate's thresholds are.
+Those live in [FAIRNESS.md](FAIRNESS.md) and are unchanged by this.
+
+### D12 · The chosen action stage is STORED WITH THE RACE, like the seed · 2026-08-23
+
+**This answers the first half of HOW MUCH ACTION question 4.** A race records which stage it ran, in
+the race payload, beside the seed — so a replay is unambiguous and a saved result can say what it
+was a result OF.
+
+**Why it is the seed's shape and not a global setting.** A setting read at replay time answers "what
+is the dial on now", which is a question about the machine rather than about the race. The project
+has already paid for that distinction once: a stored camera config silently beats `defaults.js` per
+key, forever, so "the default says X" and "this race ran X" are different claims. A value carried by
+the race cannot drift away from the race.
+
+**What it does NOT decide:** what happens to the FINGERPRINTS when the dial moves — the second half
+of question 4, which stays open and is a ship-ceremony question, not a storage one.
+
+### D13 · The proposed owner eye-test session is SUPERSEDED — and EVERY ACCEPTANCE IS A SAMPLE · 2026-08-23
+
+**The session is not scheduled, and it is not deferred either — it is replaced by a standing
+principle**, because the thing the session was meant to buy (coverage) is not buyable that way.
+
+**HIS PRINCIPLE, in his terms: EVERY ACCEPTANCE IS A SAMPLE. A verdict covers the track, the state
+AND THE SEED it was given on. The same track with another seed can look entirely different.** So a
+pass is evidence about one draw from a distribution, and a session of ten more races would produce
+ten more samples rather than a covered surface.
+
+**It is a caveat on every "owner-approved" claim in this repository, and it is written where blocks
+are bound**: [VERIFY-RULES.md R5a](VERIFY-RULES.md). Everywhere else points there.
+
+**AND THE "THREE OF TEN TRACKS" FRAMING IS RETIRED, because it was never a record of what he
+watched.** It came from a documentation COUNT taken on 2026-08-05 — the tracks that happened to be
+named in write-ups — not from any log of races he sat through. Counting mentions and reporting the
+result as coverage is the same error in a smaller frame: it reads as a measurement and is an
+artefact of who wrote what down. **No replacement number is offered**, because the honest one is not
+known and a made-up one would be worse than none.
+
+### D14 · COMEBACK is defined by the owner: STORMING FROM FAR BACK TO THE FRONT · 2026-08-23
+
+**His definition, and it is now the requirement:** a comeback is a racer **storming from far back to
+the front**. A racer climbing slowly from progress ~0.28 is **not** a comeback — it is a racer
+moving up, which is a different and much more common thing.
+
+**What this closes.** The Race-Action Arc item _"camera timing levers — the comeback shot appears
+late (tune the two sliders by eye)"_ is REPLACED, not scheduled. Its whole proposal was to show the
+authored climb EARLIER by lowering `outcomePhaseThreshold` and re-weighting `comebackWeight`.
+Against this definition that proposal shows **the wrong thing sooner**: the slow climb from ~0.28 is
+not the event the shot is for, so making it visible earlier buys nothing and costs the front battle
+the weight contest was protecting.
+
+**THE OPEN POINT THIS LEAVES — established at source 2026-08-23 and re-verified before it was
+written here. Nothing is proposed and nothing is built; whether to act on it is his, and it needs
+his eye afterwards.**
+
+The generator authors each hero with a ROLE **and BEATS** — `anchor`, `peak`, `resolve`
+(`client/src/modules/heroCurveGenerator.js`, `buildCameraPlan`). The **full** `cameraPlan` IS
+delivered to the director: `client/src/screens/RaceScreen/index.jsx:1002` calls
+`CameraDirector.setCameraPlan(cp)` once the heroes are cast mid-race. But
+`client/src/modules/camera/comebackDetector.js` (`setPlan`) reads **only** `role === 'comebacker'`
+and keeps the indices — **the beats are discarded on arrival.**
+
+**So the camera still has to INFER from rank history what the plan already states.** The detector
+holds a rolling rank window and reports the best current climber that passes its gates
+(`comebackDetector.js`, `recordRanks`) — which is a reconstruction of timing information that was
+handed to it and dropped. **And the `resolve` beat — the storm the owner is describing — never
+reaches the camera at all.** The authored beat that says _this racer arrives at the front, here_ is
+the one signal the definition above is about, and it is the one that is thrown away.
+
+**verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns only
+the two JSDoc `@param` lines** (in `CameraDirector.js` and `comebackDetector.js`) and no code that
+reads them. That is today's output. The day a camera file reads a beat, this point is answered.
+
+### D15 · The company guarantee on a SPREAD field — his 5 STANDS, unchanged · 2026-08-23
+
+**Re-affirmed, no change.** `minRacersVisible` keeps the value his eye settled on until the
+spread-field case is measured across field sizes and he has seen the result. The recommendation to
+raise 5 → 15 came from a pack-case measurement only (n = 65, where the guarantee binds ~0%), and his
+observation corrects it: on a spread field it clearly binds and widens a lot at 5.
+
+**The open item is unchanged and stays open** — see _Camera residuals after CAMERA-COMPANY-ONLY-3_.
+What is decided is that **nobody changes the value first and measures afterwards.**
+
+### D16 · The PULK→OUTCOME speed step is ACCEPTED AS DESIGN — E3 is closed · 2026-08-23
+
+**His decision: intended dramaturgy.** Racers are genuinely faster in OUTCOME than in PULK — the
+pack's `trajectoryMult` is pinned to 1.0 in PULK and the P-controller returns at the boundary — and
+that step is **wanted**, not a seam to smooth.
+
+**Documented as design in the living document that owns the mechanism**:
+[RACE-ACTION.md](RACE-ACTION.md) § _Phase discipline — how forces fade_. This backlog does not
+restate it.
+
+**E3 is now closed in both halves.** The `rowBonus`/`rowEnvMult` half shipped on 2026-07-19
+(`v-rowenv-default-on-complete`) and was already out of scope for re-opening; the `trajectoryMult`
+half — the only remaining open question — is this decision. **Do not re-open either half.**
+
+### D17 · OUTCOME climb-capacity — drama-at-leader vs deep-band reach: CLOSED BY THE OWNER · 2026-08-23
+
+**Closed. The backlog's "deferred pending owner decision" was the wrong status and is corrected.**
+The investigation stands as evidence — two fixes measured and rejected, the faller-undershoot
+diagnosis, the endpoint-determined finding — and **the open LEVER it proposed is not ordered.**
+Nobody is to build OUTCOME servo runway or extra `trajectoryMult` authority for B3–B5 on the
+strength of that item.
+
+**What survives it, because it is a general finding rather than a work item:** band-reach is
+ENDPOINT-determined (the servo steers to the Fisher-Yates target over
+[`choreoOutcomeStart` → finish]), so a mid-race checkpoint reshapes the curve and not the
+destination; and the distributed smoothers are load-bearing for servo accuracy (Lesson 177). Both
+are kept in PART TWO for exactly the reason PART TWO exists.
+
+### D18 · 100-racer performance (`D7d`) is an OBSERVATION, not a work item · 2026-08-23
+
+**His decision, and it rests on his own use: he runs 100-racer races routinely and has seen nothing
+wrong.** So the three unbuilt mechanisms the item lists — spatial grid for O(N) avoidance, a smarter
+pack-overview camera, LOD — are **not ordered**, and no direction is given on them.
+
+**If it ever bites, it shows as STUTTER, and then it is a MEASUREMENT question** — not a design
+question, and not this item. Nobody is to build a mechanism against a performance problem nobody has
+observed.
+
+**A NAMING COLLISION, stated so it is not mistaken for a cross-reference:** the backlog item is
+called **`D7d`** (a Phase-D sub-item) and has nothing to do with **decision D7** above.
+
+### D19 · ADOPTED — the juxtaposition rule for reports, in its NARROW form · 2026-08-23
+
+**Adopted as a standing rule on every future block.** Written into the canonical document that binds
+blocks — [VERIFY-RULES.md R16](VERIFY-RULES.md) — and not restated here.
+
+**The narrow form is the whole point, and the wide one is explicitly rejected:** _"every number
+carries its identity"_ is ceremony, because most figures sit under a shared header that already
+covers them. The rule adopted is **two numbers placed side by side must come from the same run or
+carry their provenance visibly** — the hazard lives in comparison, not in isolation.
+
+### D20 · ADOPTED — a block that re-mints a fingerprint names invariants that must NOT move · 2026-08-23
+
+**Adopted as a standing rule on every future block.** Written into
+[VERIFY-RULES.md R17](VERIFY-RULES.md) and not restated here.
+
+**The failure it closes, which is the reason it is a rule and not advice:** a fingerprint EXPECTED to
+move stops guarding what moved with it. FINISH-MOTION-1 caught a 108 px regression in the resting
+frame **by accident**, while measuring something else — the camera fingerprint had moved as intended,
+so the regression would have read as intended too.
+
+### D21 · Audit gate — DEV dependencies REPORT, they do not BLOCK · 2026-08-23
+
+**His decision, and his reason: a dev dependency never runs in front of a viewer.** So a fresh
+upstream advisory against a build- or test-only package must not stop CI. The split he chose:
+**hard-fail on runtime dependencies, report-only on dev ones.**
+
+**The question is closed; the BUILD is not ordered here** and is not bundled into a documentation
+piece. What it needs is small and is already half-present: `scripts/audit-gate.mjs` **already
+computes reachability** — it runs `npm audit --omit=dev` alongside the full audit and annotates every
+blocking line `PRODUCTION` / `dev-only` / `reachability UNKNOWN` — but the PASS/FAIL policy does not
+read that annotation yet. **`reachability UNKNOWN` must not be treated as dev-only**; the gate
+already refuses to claim "dev-only" without having looked, and the split must inherit that.
+
+**AND THE OTHER HALF OF THAT ITEM WAS ALREADY CLOSED, so nothing is left open for it.** The gap the
+item named — **`server/` is audited by nothing** — was closed by SERVER-AUDIT-1 and re-confirmed at
+source 2026-08-23: `scripts/audit-gate.mjs` takes `--tree=`, `.github/workflows/ci.yml` runs it with
+`--tree=server` on every push and pull request, and `audit-schedule.yml` runs **both** trees daily
+with `--report-only`. See PART TWO, _Before the VPS migration_, where that line is already struck.
+
+### D22 · The `body-parser` LOW advisory — RECORDED, no action, revisit at the next version bump · 2026-08-23
+
+**No work.** GHSA-v422-hmwv-36x6 in `server/` sits below the `high` gate, so CI is unaffected and the
+gate prints it as an advisory line. It is a **runtime** dependency, which is why it was never bundled
+into a lockfile chore commit — and it stays that way. **It is revisited when `server/` is next bumped
+for another reason**, not on its own schedule.
+
+### D23 · The seed for a normal race — BUILD IT, and make it OUTLIVE THE SESSION · 2026-08-23
+
+**His decision on both halves of the browser-seed follow-up, taken together because they are one
+thing.** The normal "Start Race" path hardcodes `racePlanSeed: 0`, so **no race he watches is
+reproducible — including the ones he judges**. That is decided against: a normal race draws a seed,
+the same way Quick Test already does, and the seed survives the browser being closed.
+
+**Adopt the Quick-Test model rather than inventing a second one** — same semantics, same code
+(`client/src/screens/SetupScreen/quickTestSeed.js`): an empty field draws a fresh seed per race, a
+typed value fixes the race, seed 0 stays the legacy unseeded value and is not reachable from the
+field.
+
+**Built on `feat/race-seed`, and NOT MERGED — it waits for his eye.** See
+`reports/night/SEED-REAL-RACE-1.md`.
+
+### D24 · Merge ROADMAP into BACKLOG — APPROVED as work, and deliberately NOT done here · 2026-08-23
+
+**Approved.** The intended landing is unchanged from what DOC-ORDER-1 recorded: **BACKLOG owns
+both**, with ROADMAP reduced to a phase-status table.
+
+**It is not done in the same piece that edits BACKLOG**, and that is the conservative choice rather
+than a delay: a real merge is a careful pass over two large files with a high chance of silently
+dropping an item, and doing it inside a block that is also rewriting a dozen entries in the target
+file would make it impossible to tell a dropped item from an edited one. It gets its own piece.
+
 ---
+
+
+## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
+
+**verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
+
+- [x] ~~**PROPOSED OWNER SESSION — his time, not scheduled here.**~~ **SUPERSEDED, NOT SCHEDULED —
+      see PART TWO D13.** The session was one race per unseen track (dirt-oval, garden-path,
+      ice-track, luger-hill, river-run, seatrack, space-sprint) plus one pass watching COMEBACK_ZOOM
+      and LEAD_CHANGE, and it is replaced by a standing principle rather than booked:
+      **every acceptance is a sample** ([VERIFY-RULES.md R5a](VERIFY-RULES.md)). Ten more races
+      would have produced ten more samples, not a covered surface.
+      **AND THE THREE-OF-TEN-TRACKS FRAMING IS RETIRED WITH IT.** It came from a documentation
+      COUNT on 2026-08-05 — the tracks that happened to be named in write-ups — not from any record
+      of what he watched. **No replacement number is offered**; the honest one is not known.
+      The sentence the item was built around SURVIVES, because it is the principle in miniature:
+      every "owner-approved" claim in the repo is evidence about the track and state it was given
+      on, and nothing more — and now, explicitly, about the SEED as well.
+      Reference: [CAMERA_DIRECTOR.md §8.3](CAMERA_DIRECTOR.md) (was §7.3 until ONE-TRUTH-2 renumbered a duplicated section 7).
 
 
 ## Documentation (2026-08-07, from DOC-ORDER-1)
@@ -1451,6 +1774,17 @@ nobody has seen it for long enough to stop caring.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
+- [x] ~~**A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT** — proposed convention:
+      any block that re-mints names one or two specific invariants that must NOT move, and measures
+      them.~~ **ADOPTED 2026-08-23 — PART TWO D20.** It is now a standing rule with a home:
+      [VERIFY-RULES.md R17](VERIFY-RULES.md). **The evidence it was built on is kept because it is
+      the reason the rule exists:** FINISH-MOTION-1 caught a 108 px regression in the RESTING frame
+      only by accident, while measuring something else — the camera fingerprint moved, as intended,
+      so the regression would have been read as intended too.
+      *(It was RE-SORTED out of "small and self-contained" on 2026-08-23 on the grounds that a
+      standing obligation on every future block is his call rather than a night's tidying. That
+      re-sort was right, and the decision came the same day.)*
+
 - [x] ~~**THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE.**~~ **CLOSED by `b9579f59`
       (FINISH-WINDOW-1 A) — confirmed at source 2026-08-23:** `render-fingerprint.mjs` now drives
       **5600** frames and samples **sixteen** points running past 5450, ten of them beyond the old
@@ -1471,6 +1805,18 @@ nobody has seen it for long enough to stop caring.
       fallback was dead because git prints the literal `HEAD`.
 
 ## Measurement and guard residuals (2026-08-05)
+
+- [x] ~~**The juxtaposition rule for reports.**~~ **ADOPTED 2026-08-23 — PART TWO D19**, in the
+      NARROW form the item argued for, and it now lives in [VERIFY-RULES.md R16](VERIFY-RULES.md).
+      **The argument is kept because it is what makes the rule narrow:** not "every number carries
+      its identity", which is ceremony — most figures sit under a shared header that already covers
+      them. **The hazard lives in COMPARISON, not in isolation:** a number alone can be wrong, but it
+      cannot mislead by comparison. In practice a table gets one identity line above it, and a table
+      mixing arms gets an identity column. NIGHT-1 needed the second and did not have it, which is
+      the instance this came from.
+      *(RE-SORTED out of bucket (i) on 2026-08-23 — BACKLOG-HONEST-1 STEP E had called it "a
+      convention, no code", which was wrong about the axis that matters. A rule is not small because
+      it is short.)*
 
 - [x] **DONE (ONE-DRIVER-1) — four measurement scripts now share one driver, and the race identity
       is printed.** `scripts/lib/raceDriver.mjs`; `corridor-truth`, `edge-crossing`, `tracking-lag`

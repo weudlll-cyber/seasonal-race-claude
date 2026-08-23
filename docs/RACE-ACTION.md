@@ -222,6 +222,29 @@ leaks past that boundary into the OUTCOME phase, where the backstop takes sole r
 the finish. This clean handoff is what prevents the two systems from fighting each other at the end of the
 race.
 
+### The speed step at the OUTCOME boundary is DESIGN, not a seam
+
+**The field is genuinely faster in OUTCOME than in PULK, and that is intended.** Through the PULK
+window the non-hero pack's trajectory multiplier is pinned to neutral and its row bonus is held at
+zero; at the OUTCOME boundary both return — the multiplier to the backstop's P-controller, the row
+bonus to full. The result is a real step in speed at the boundary, not an onset artifact of the
+smoothing.
+
+**Why it is wanted.** The contest window and the backstop are two different acts. PULK is a fight at
+a held tempo: pinning the pack is what gives the attacker slots and the settle-brake a stable
+reference to work against, and it is why a pass there reads as a pass rather than as everyone
+speeding up at once. OUTCOME is the run to the line, and the field arriving there with more pace is
+the dramaturgical point of the boundary — the race lifts when the ending starts. Smoothing the step
+away would cost the lift and buy nothing the eye was asking for.
+
+**Owner decision, 2026-08-23: accepted as design.** The question had been open as "intended
+dramaturgy, or a seam to smooth?" and this is the answer. The neighbouring sub-step — the row-bonus
+and row-envelope component, worth roughly a percent on the back rows — was a different question and
+was smoothed, by a one-second eased ramp in the shared step, shipped default-on in July 2026. That
+half is done; this half is design. Neither is re-opened.
+
+### Determinism
+
 The whole mechanism is deterministic. Every selection — which racer is an attacker, which is braking, which
 outsider is chosen — is made from rank, signed track distance, and racer index. No randomness is drawn
 during the race. Given the same seed, the same race unfolds identically every time, which is what makes the

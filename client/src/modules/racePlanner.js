@@ -728,8 +728,17 @@ export function createTrajectoryController(racePlan) {
         plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
         // B4a foresight pipeline: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
         // the generator already emits — ONE source, populated here beside _heroCurves/_heroRoles, never
-        // recomputed, never read by physics. Delivered to the CameraDirector (setCameraPlan) but currently
-        // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
+        // recomputed, never read by physics. Delivered to the CameraDirector (setCameraPlan).
+        //
+        // THE ROLES ARE CONSUMED; THE BEATS ARE NOT. (This comment said "currently UNCONSUMED" until
+        // 2026-08-23, which stopped being true when B4 landed.) `comebackDetector.setPlan` reads
+        // `role === 'comebacker'` and keeps those indices as the primary comeback candidates; the
+        // per-hero `beats` array (anchor / peak / resolve) is dropped on arrival, so the camera still
+        // infers from rank history what this plan already states, and the `resolve` beat never reaches
+        // it at all. Open point, with the evidence, in docs/BACKLOG.md PART TWO D14 — nothing is
+        // proposed here and nothing is built.
+        //
+        // The channel is also the prerequisite for the planned B4b faller shot, because b1Indices
         // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
         plan._cameraPlan = gen.cameraPlan ?? null;
         for (const r of racers) {
@@ -1264,7 +1273,10 @@ export function createTrajectoryController(racePlan) {
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
     getHeroRoles: () => plan._heroRoles ?? null,
-    // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector.
+    // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector,
+    // which passes it to comebackDetector.setPlan — where the ROLES are consumed and the BEATS are
+    // DISCARDED. See the note at the assignment of `_cameraPlan` above; the open point is
+    // docs/BACKLOG.md PART TWO D14.
     getCameraPlan: () => plan._cameraPlan ?? null,
     collectTelemetry,
     seed: plan.seed,
