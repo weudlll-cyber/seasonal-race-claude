@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ROADMAP-OPEN-1.md](ROADMAP-OPEN-1.md) — **`docs/OPEN.md`, the one list he reads** (2026-08-23,
+  NIGHT-2026-08-23 piece 4, documents only). **The other half of PIECE 3's trade:** folding ROADMAP in
+  left `BACKLOG.md` at 3078 lines — right for one owner of a subject, wrong for a person deciding what
+  to do next.
+  **One page, grouped by what HE has to do with it:** **9** need only his word · **13 + 5** are ready
+  to build (the 5 being verifications of work that already shipped) · **8** need measuring first ·
+  **6** are too large without his direction. **Cheapest first inside each group.**
+  **DERIVED AND SAYS SO TWICE** — header carries the generation date and master sha, footer says how it
+  is regenerated; **no verdict invented, nothing re-checked.** All **15** cross-document anchors
+  validated against real headings with GitHub's slug rules, **0 bad**. *(The first checker reported 15
+  failures and the CHECKER was wrong — it collapsed whitespace where GitHub emits one hyphen per space.
+  Recorded because a validator wrong in the safe direction is the more dangerous kind.)*
+  **The proposal the brief asked for is a NO with a third option:** a prose-drift guard is impossible
+  and a generate-and-compare guard destroys the only property the page has (his language, not the
+  backlog's); **guarding the COUNTS** would catch the real failure without claiming anything about
+  wording, at R11's cost of taxing the act of writing an item down — **his call.**
+  **P2 was acted on rather than proposed:** the page now names the three kinds of entry it leaves off.
+  **P3 converges with PIECE 3's P3 from the opposite direction** — both land on restructuring by
+  audience rather than by subject.
+
 - [ROADMAP-FOLD-1.md](ROADMAP-FOLD-1.md) — **one home for what is done and what is next**
   (2026-08-23, NIGHT-2026-08-23 piece 3, documents only). Executes the owner's **D24**: BACKLOG owns
   both, ROADMAP reduced to a phase-status table.
