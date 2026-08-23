@@ -154,6 +154,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BRAKE-DEPTH-MERGE-1.md](BRAKE-DEPTH-MERGE-1.md) — **the naturalness-floor observer onto master**
+  (2026-08-23, NIGHT-2026-08-23 piece 9). `--brake-depth` was written by BRAKE-CURVE-1 and left
+  unmerged because that block's permission covered its report only. **It measures the constraint that
+  now binds the whole action dial**, so it lands on master like `--early-decided` before it.
+  **One cherry-pick (`7e8b8dda`), 43 lines, no behaviour change.** World fingerprint
+  **`dc4647be0f55ebdb`, unmoved** — proved on the branch before merging and independently by
+  BRAKE-CURVE-1 two days earlier. **verify PASS 12 / FAIL 0**; **client suite run anyway** (218 files,
+  4199 tests) **although R15 would skip it** — recorded as a deliberate over-run, not as required.
+  **Documented beside the observer family in `SIM.md`** with the two cautions that cost time to learn:
+  the bound is NOT the ±12% envelope but a floor that EXPANDS with the brake, and `minSpeedFactor` is
+  the REALISED factor while the fast clamp covers only `spreadFactor × governorMult` — **so a maximum
+  slightly above the computed cap is expected, not a breach.** 3 proposals.
+
 - [LADDER-VALIDATION-1.md](LADDER-VALIDATION-1.md) — **the middle stage, on every track the game
   ships** (2026-08-23, NIGHT-2026-08-23 piece 1). Two arms — SHIPPED and MIDDLE STAGE (shipped brake +
   `pulkChallengerBoost=0.12`) — **all 10 tracks at their own default racer, N=100, 80 racers on open
