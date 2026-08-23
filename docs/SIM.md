@@ -551,6 +551,18 @@ Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1
 
 ---
 
+---
+
+### Early-decided grid (`--early-decided`) — who was in front, at a given progress
+
+**Flag:** `--early-decided` (read-only; **requires `--gap-metrics`**). Records the **top-FIFTEEN racer indices on a 0.01 progress grid** — 100 rows per race, written as `gapMetrics.earlyDecidedGrid`. Unset → zero extra work, byte-identical run (the world fingerprint was proved unmoved when it landed).
+
+**What it is FOR.** Nothing else in the tree records racer IDENTITY at a progress point: gap-metrics samples GAPS at its checkpoints (`frontGaps` is an array of distances), action-metrics keeps only first/last/min/max rank per racer, and hero-map covers heroes only. So questions of the form _"of the racers who finish in the top five, how many were already there at progress p?"_ had no instrument until this one. It rides INSIDE the gap-metrics block and reuses that block's own `gmOrder` and its checkpoint trigger, so **"position at progress p" has one definition in the tree, not two**.
+
+**Why fifteen and not five.** The width is the point: one grid answers both the narrow reading (top-5 membership) and the front-GROUP reading, without a second run or a second definition. Which cut defines "the leading group" is an open owner question, and the observer refuses to choose one for him.
+
+**How the first block read it:** at progress **0.60 / 0.70 / 0.80 / 0.90**, plus a derived _last-unsettled_ point at 0.01 resolution, and counts of racers entering or leaving the final top five after 0.80 and 0.90. **At N=30 an individual percentage carries a Wilson 95% interval of roughly ±16 points** — the distributions and the trend across checkpoints are what that N supports; a few points between two cells do not exist at it. Baseline figures: [EARLY-DECIDED-1](../reports/evolution/EARLY-DECIDED-1.md).
+
 ### The Action axis (`--action=<0..1>`) — reserved stub
 
 **Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default). One owner-facing scalar `action` (0 = calm → 1 = wild), intended as the prototype of a future SetupScreen "Action" slider. Unset → no-op (byte-identical run).
