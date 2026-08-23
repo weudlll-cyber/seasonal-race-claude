@@ -15,7 +15,7 @@ import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../modules/storage/useServerTracks.js';
-import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
+import { KEYS, storageGet, storageSet, storageRemove } from '../../modules/storage/storage.js';
 import {
   DEFAULT_RACE_DEFAULTS,
   DEFAULT_BRANDING,
@@ -95,6 +95,36 @@ function SetupScreen() {
     duration: raceDefaults.duration,
     winners: raceDefaults.winners,
     eventName: '',
+  });
+
+  // ── SEED-REAL-RACE-1: the normal "Start Race" path draws a seed ─────────────────────────────
+  //
+  // It used to pass `racePlanSeed: 0` — the unseeded path — so a real race was never reproducible,
+  // including the ones the owner judges. The semantics are Quick-Test's, unchanged and shared
+  // (`quickTestSeed.js`): empty field ⇒ draw one fresh seed here, BEFORE the race starts, so the
+  // race stays a pure function of it; a typed number fixes the race; 0 is unreachable from the
+  // field.
+  //
+  // BOTH VALUES LIVE IN localStorage, NOT sessionStorage, and that is the point of the change
+  // rather than a detail of it. His case is "watch a race, close the browser, come back, re-run
+  // that race" — a session store loses exactly that. The TYPED field persists so a pinned seed
+  // survives a restart; the seed the last race actually RAN with is written separately, because a
+  // DRAWN seed is deliberately never written back into the field (the field must stay empty so the
+  // next race draws again instead of pinning itself to the first draw).
+  const [raceSeed, setRaceSeed] = useState(() =>
+    sanitizeQuickTestSeedInput(storageGet(KEYS.RACE_SEED, '') ?? '')
+  );
+  useEffect(() => {
+    // Removed rather than stored as '': an empty field is the meaningful "random" state, and an
+    // empty string in storage would be a second way to spell it.
+    if (raceSeed === '') storageRemove(KEYS.RACE_SEED);
+    else storageSet(KEYS.RACE_SEED, raceSeed);
+  }, [raceSeed]);
+  // The seed the LAST race ran with — drawn or typed. Read once at mount and kept in state so the
+  // panel can offer it back; updated on start so returning from a race shows the new value.
+  const [lastRaceSeed, setLastRaceSeed] = useState(() => {
+    const v = Number(storageGet(KEYS.LAST_RACE_SEED, 0));
+    return Number.isSafeInteger(v) && v > 0 ? v : null;
   });
 
   // Seed eventName from the active brand profile; clear unconditionally when no profile is active.
@@ -401,6 +431,9 @@ function SetupScreen() {
       runoutZone: behaviorConfig.runoutZone,
     });
     const realizedDurationSec = startModel.realizedDurationSec;
+    // Resolved before the payload is built so the SAME value goes into the race and into the
+    // last-race record — one draw, two consumers, no chance of them disagreeing.
+    const startSeed = resolveQuickTestSeed(raceSeed).seed;
     const race = {
       racers: players,
       trackId: selectedTrackId,
@@ -424,10 +457,18 @@ function SetupScreen() {
       paceScale: startModel.paceScale,
       trackSurfaceClasses: selectedTrack?.surfaceClasses ?? [],
       racePlanEnabled: realizedDurationSec >= racePlanMinDur,
-      racePlanSeed: 0,
+      // SEED-REAL-RACE-1. Was a hardcoded 0 — the unseeded path — until 2026-08-23. The draw
+      // happens HERE, once, before the race exists, so the race itself is a pure function of the
+      // value that travels in this payload.
+      racePlanSeed: startSeed,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
+    // The seed this race RAN with, in a store that survives the tab closing. Written for a drawn
+    // seed as well as a typed one — the drawn case is the whole reason the key exists, because the
+    // field stays empty and would otherwise be the only record.
+    storageSet(KEYS.LAST_RACE_SEED, startSeed);
+    setLastRaceSeed(startSeed);
     navigate('/race');
   }
 
@@ -928,7 +969,13 @@ function SetupScreen() {
           {activeTab === 2 && (
             <>
               <h2 className={styles.panelTitle}>Race Settings</h2>
-              <RaceSettings settings={raceSettings} onChange={setRaceSettings} />
+              <RaceSettings
+                settings={raceSettings}
+                onChange={setRaceSettings}
+                seed={raceSeed}
+                onSeedChange={setRaceSeed}
+                lastRaceSeed={lastRaceSeed}
+              />
             </>
           )}
         </section>

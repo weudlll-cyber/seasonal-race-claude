@@ -116,6 +116,12 @@
   font-family: monospace;
 }
 
+/* SEED-REAL-RACE-1: the seed this race ran with. Monospace like the time, because it is a number
+   to be read off and typed back in rather than skimmed. */
+.race-seed {
+  font-family: monospace;
+}
+
 /* Podium Section */
 .podium-section {
   display: flex;

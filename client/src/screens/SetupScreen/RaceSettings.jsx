@@ -3,10 +3,15 @@
 // Path:        client/src/screens/SetupScreen/RaceSettings.jsx
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: Race configuration controls — duration, winner count, event name
+// Description: Race configuration controls — duration, winner count, event name, race seed
 // ============================================================
 
 import styles from './SetupScreen.module.css';
+import {
+  sanitizeQuickTestSeedInput,
+  QUICK_TEST_SEED_MIN,
+  QUICK_TEST_SEED_MAX,
+} from './quickTestSeed.js';
 
 const DURATION_OPTIONS = [
   { value: 30, label: '30 s' },
@@ -18,7 +23,7 @@ const DURATION_OPTIONS = [
 const MIN_WINNERS = 1;
 const MAX_WINNERS = 20;
 
-function RaceSettings({ settings, onChange }) {
+function RaceSettings({ settings, onChange, seed = '', onSeedChange, lastRaceSeed = null }) {
   const { duration, winners, eventName } = settings;
 
   function set(patch) {
@@ -65,6 +70,36 @@ function RaceSettings({ settings, onChange }) {
             +
           </button>
         </div>
+      </div>
+
+      {/* Race seed — SEED-REAL-RACE-1.
+          Text + numeric keypad rather than type="number": an empty field is a real, meaningful
+          state here ("draw a fresh one"), and number inputs make emptiness awkward. Same reasoning,
+          and the same sanitizer, as the Quick-Test field. */}
+      <div className={styles.settingGroup}>
+        <span className={styles.settingLabel}>Race Seed (optional)</span>
+        <input
+          className={styles.textInput}
+          type="text"
+          inputMode="numeric"
+          placeholder="random"
+          aria-label="Race seed"
+          title={`Leave empty and every race draws its own seed — the race screen shows it, and this panel remembers the last one. Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to run that exact race again.`}
+          value={seed}
+          onChange={(e) => onSeedChange?.(sanitizeQuickTestSeedInput(e.target.value))}
+        />
+        {lastRaceSeed != null && (
+          <div className={styles.settingHint}>
+            Last race: <strong>{lastRaceSeed}</strong>{' '}
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => onSeedChange?.(String(lastRaceSeed))}
+            >
+              run it again
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Optional event / branding name */}

@@ -725,7 +725,22 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 **THE FIRST TWO WERE DECIDED TOGETHER ON 2026-08-23 — PART TWO D23 — because they are one thing:**
 a real race gets a real seed, and the seed outlives the browser session. **BUILT on `feat/race-seed`
 and NOT MERGED — it waits for his eye.** See
-`reports/night/SEED-REAL-RACE-1.md`.
+[SEED-REAL-RACE-1](../reports/night/SEED-REAL-RACE-1.md).
+
+**WHAT SHIPPED ON THAT BRANCH, so the two items above can be read against something concrete.** The
+normal start path resolves its seed through the SAME module Quick Test uses
+(`client/src/screens/SetupScreen/quickTestSeed.js`) — empty field draws, typed value fixes, 0
+unreachable. The field is a host-facing control in the **Race Settings** panel, and it persists in
+`localStorage`; the seed the last race actually RAN with is kept under its own key, because a DRAWN
+seed is never written back into the field and would otherwise have no record. It is shown on the
+**Result screen** beside track and time, stored on the race-history entry, and offered back in the
+setup panel as *"Last race: N — run it again"*. **The third follow-up below is untouched.**
+
+**THE FALLBACK FOR AN OLDER STORED RACE, decided and proved rather than left implicit:** a payload
+with no `racePlanSeed` keeps the legacy meaning — **0, unseeded** — and is **never back-filled**.
+Handing a stored race a seed it never ran with would be a worse lie than "not reproducible", so the
+result screen and the history entry both apply `> 0` rather than `!= null` and report such a race as
+having no seed at all.
 
 - [x] ~~**Seed for the normal "Start Race" path.** ⏳ OPEN — owner decision.~~ **DECIDED
   2026-08-23 — BUILD IT (PART TWO D23).** Of the two options this item named — adopt the Quick-Test

@@ -3,10 +3,22 @@
 // Path:        client/src/screens/SetupScreen/quickTestSeed.js
 // Project:     RaceArena
 // Created:     2026-07-22
-// Description: Quick-Test seed field semantics. Empty field = draw a fresh random seed per
+// Description: Race seed field semantics. Empty field = draw a fresh random seed per
 //              race (every race differs, but each one is replayable by typing the seed the
 //              HUD shows). Typed number = fixed seed. Seed 0 (the legacy unseeded path) is
-//              not reachable from Quick-Test.
+//              not reachable from either seed field.
+//
+// IT SERVES BOTH START PATHS SINCE 2026-08-23 (SEED-REAL-RACE-1), and the file keeps its
+// Quick-Test name deliberately. "Start Race" used to hardcode racePlanSeed: 0, so no race the
+// owner watched was reproducible — including the ones he judged. It now resolves its seed through
+// the SAME functions, because the alternative was a second set of semantics for the same idea and
+// the two would have drifted the first time one of them was fixed.
+//
+// WHY NOT RENAME IT to raceSeed.js, which is what the names now describe. The path is quoted as an
+// ADDRESS in the append-only lab journal — reports/parity/DIVERGENCE-AUDIT.md and
+// reports/parity/STEP-ORDER-ARC.md both cite `quickTestSeed.js` with line numbers — and those
+// reports are never rewritten. A rename would leave them pointing at nothing, which trades a stale
+// name here for a broken address there. Conservative option at a fork, stated rather than assumed.
 // ============================================================
 
 // The minimum typed/drawn seed (0 = the unseeded legacy path, deliberately unreachable from Quick-Test).
