@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ONE-HOME-FIVE-MORE-1.md](ONE-HOME-FIVE-MORE-1.md) — **the HIS arm had SEVEN homes, not two**
+  (2026-08-23, NIGHT-2026-08-23 piece 8). Of the three quantities the brief named, **two were already
+  closed** (the endgame threshold reads the config in both harnesses; `frameBox.mjs` exists) — and the
+  third was closed **against a wrong count**.
+  **ONE-HOME-THREE-TRUTHS-1 recorded the HIS duplication as "exactly two, byte-for-byte" and converted
+  two files. Five more instruments each carried their own `const HIS` AND their own private
+  `setPath`:** endgame-width-truth, floor-reach-truth, label-names-truth, line-visible-truth,
+  pan-lag-account. **It did not under-deliver on what it saw — it stated a COUNT as exact after
+  finding two.**
+  **NOTHING HAD DRIFTED, which is what made the fix safe, stated with its numbers:** all seven `HIS`
+  arrays hash to `1bc93ac237ab`, all seven `setPath` bodies to `4fe5495156b2`, verified BEFORE
+  deletion. Had one differed, the right action was to report the divergence and touch nothing.
+  **THE FINGERPRINTS ARE NOT THE PROOF HERE AND THE REPORT SAYS SO** — `engine-reach --check` reports
+  all five paths outside the engine hull, so a green fingerprint would have proved nothing. **The proof
+  is the instruments’ own output: each run on master’s version and the converted one, byte-compared —
+  1.16 MB across five instruments, not one differing byte.**
+  3 proposals, including a one-line guard that would have caught all five on the day the home was
+  created, and the observation that **"exactly two" is the class of claim this project keeps getting
+  wrong** — three instances tonight alone.
+
 - [BRAKE-DEPTH-MERGE-1.md](BRAKE-DEPTH-MERGE-1.md) — **the naturalness-floor observer onto master**
   (2026-08-23, NIGHT-2026-08-23 piece 9). `--brake-depth` was written by BRAKE-CURVE-1 and left
   unmerged because that block's permission covered its report only. **It measures the constraint that
