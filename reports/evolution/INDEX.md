@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LADDER-VALIDATION-1.md](LADDER-VALIDATION-1.md) — **the middle stage, on every track the game
+  ships** (2026-08-23, NIGHT-2026-08-23 piece 1). Two arms — SHIPPED and MIDDLE STAGE (shipped brake +
+  `pulkChallengerBoost=0.12`) — **all 10 tracks at their own default racer, N=100, 80 racers on open
+  tracks and 40 on closed. 20 cells, all completed.**
+  **THE MIDDLE STAGE HOLDS EVERYWHERE — it is not a two-track result.** Leading-group pair swaps
+  **+10.2% to +21.8%**, changes of first place **+13.9% to +26.3%**, **20 of 20 cells on those two cuts
+  outside their intervals, agreeing in sign on every track.**
+  **It costs no measurable band arrival anywhere:** **10 of 10 UNDECIDED** at intervals of ±0.99 to
+  ±1.75pp, largest movement 1.38pp either way.
+  **AND IT IS NATURALNESS-FREE AT DOUBLE THE FIELD, which was the open question: 0 of 100 races below
+  the 0.80 floor on every track, both arms, both field sizes — 2000 races, not one dip.** The fast side
+  sits pinned at **1.1816–1.1819** against the computed cap of ≈1.1813, exactly as ENVELOPE-ONE-SIDED-1
+  predicted at source the same night.
+  **THE START-ROW WATCHDOG IS SILENT ON 8 OF 10 TRACKS, and it is the SHIPPED world that silences it** —
+  a known finding whose SCALE is new (ACTION-FAIRNESS-1 had it for dirt-oval alone). Where it can speak
+  (city-circuit, ice-track) the arm is clean. **More races would make this worse, not better.**
+  **FIELD SIZE AND TOPOLOGY ARE CONFOUNDED BY THE DESIGN** (40 closed / 80 open) and the report refuses
+  to attribute the gap to either — **but one clean within-track test exists:** river-run at 40 racers
+  (+12.7%) against 80 racers (**+12.4%**). **The effect holds when the field doubles.** No track
+  reverses.
+  **A CONFORMITY ENTRY WORTH READING:** the sweep was never slow, and the report says so — three
+  claims that it had stalled, two withdrawn ETAs, a contention diagnosis and a request that the owner
+  close his browser, **all from elapsed times estimated rather than read. The grid took 86 minutes.**
+  4 proposals, the first being that the start-row watchdog is now the thing to fix next.
+
 - [DEAD-CODE-SHEET-1.md](DEAD-CODE-SHEET-1.md) — **the verified set, re-established, as a sheet he can
   act on in two minutes** (2026-08-23, NIGHT-2026-08-23 piece 6, documents only).
   **NOTHING DELETED AND NO DELETION PROPOSED.** DEAD-CODE-VERIFIED-1's nine survivors — 8 files with no
