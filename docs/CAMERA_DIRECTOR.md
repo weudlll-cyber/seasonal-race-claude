@@ -948,7 +948,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a58d911d 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b24645ff 2026-08-23 depends=client/src/modules/camera/ -->
 
 **RE-STAMPED, NOT RE-MEASURED, FOR THE MAX_CAM_ZOOM NOTE (2026-08-23) — and this is the strongest
 version of that argument the stamp has carried.** That change adds a COMMENT to
