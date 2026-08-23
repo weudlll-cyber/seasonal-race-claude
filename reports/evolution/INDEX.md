@@ -154,6 +154,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [PERF-INVENTORY-1.md](PERF-INVENTORY-1.md) — **what is in `reports/perf`, and what a retention
+  rule would have to keep. NOTHING DELETED, NOTHING MOVED** (2026-08-23). 326 files, 11.8 MB,
+  787,963 lines, spanning 2026-06-06 to 2026-08-10. **99% of the bytes are machine output and 1% is
+  the thinking**: 315 raw files against **11 `.md` evaluations** (2,546 lines), which are the only
+  content a re-run cannot reproduce. **THE ELEVEN ARE INDEXED NOWHERE, and by declaration rather
+  than oversight** — `check-index.mjs:130` calls the directory "measurements, not write-ups", which
+  is wrong about exactly those eleven. **AND "re-derivable" does not survive contact with a timing
+  benchmark:** PHYS-BENCH-1 records that phys-bench cannot resolve 15% here because its own control
+  reads +9-14%, so a re-run gives different numbers and cannot settle whether the old one was right
+  — which cuts against the tidy answer and is stated for that reason. `06` and `09` never existed.
+  Proposal: keep every `.md` forever; prune a raw chain only once its evaluation names it; the 24
+  `.cpuprofile` files (3.14 MB, referenced by nothing) are the first candidates. The cheapest true
+  step is none of that — it is correcting the archive description. One question for the owner.
+
 - [LF-ENTRY-EXPLAINED-1.md](LF-ENTRY-EXPLAINED-1.md) — **`_lfEntryByState` is not read at all**
   (2026-08-23). Driven on two contrasting tracks through the whole race: `_lerpPhase` is `entry` on
   **ZERO of 5588 and 3862 frames** under the shipped config. It is reachable only under
