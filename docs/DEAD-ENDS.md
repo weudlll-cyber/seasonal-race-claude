@@ -265,7 +265,9 @@ instrument, and the two reports inventory what was already ruled out.
 
 ## L. Neighbour-limited pair loop by a sorted t-window (2026-06-06, reverted `fb988587`)
 
-**What was built.** Report [08-neighbor-pairloop](../reports/perf/08-neighbor-pairloop.md): the pair
+**What was built.** Report `08-neighbor-pairloop` — **deleted 2026-08-23 by the owner's perf clear-out
+(PERF-CLEAR-1) and recorded in [reports/perf/DELETED.md](../reports/perf/DELETED.md); the account
+below is now the only surviving one, which is why it is not shortened.** The pair
 loop sorted the field by `t` each step and evaluated only pairs inside a window `T_WINDOW = 0.09`,
 with the pair body wrapped in an `evalPair` closure so the walk could be done in two passes.
 

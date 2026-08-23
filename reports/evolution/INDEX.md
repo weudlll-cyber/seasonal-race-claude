@@ -154,6 +154,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [PERF-CLEAR-1.md](PERF-CLEAR-1.md) — **the perf archive cleared by the owner’s criterion: ten of
+  eleven write-ups deleted, one kept, and NO raw chain deleted** (2026-08-23). **All eleven named
+  `feat/open-track-overlap`, which resolves nowhere** — merged at `bc53ae1` and gone as a ref — so
+  eight had no referent at all. **`11`/`12` had resolving commits but their SUBJECT is gone:** they
+  measured the mixed-unit `dT×tWeight + dY×yWeight` metric, and `raceBehavior.js:911` is the code
+  that replaced it. **`01` survives** — commit `3eac3f2` resolves and its R4 catch-up guard is live
+  at `index.jsx:982` — and now carries a header naming both, plus an index entry in
+  `reports/README.md`. **THE AGE RULE DELETED NOTHING, and that was not expected:** every one of the
+  315 raw files was added on 2026-08-09 or 2026-08-10, so the directory only LOOKS ancient — its
+  write-ups are June, its raw is August. Two conservative boundary choices are stated. The archive
+  description (`check-index.mjs:130`) called eleven write-ups "measurements, not write-ups", which
+  is why the only irreplaceable content was invisible; corrected. `docs/DEAD-ENDS.md` had the one
+  LIVING link to a deleted file — **repointed at the tombstone, not deleted**. Tombstone:
+  `reports/perf/DELETED.md`. 2 proposals.
+
 - [ZOOM-RATE-1.md](ZOOM-RATE-1.md) — **`d ln(width)/dt` is a first-class quantity now. INSTRUMENT
   ONLY, WIRED INTO NOTHING** (2026-08-23). `scripts/zoom-rate-truth.mjs`, on the shared driver, in
   the `*-truth.mjs` family. **The zoom is stationary about two-thirds of the time**, so the

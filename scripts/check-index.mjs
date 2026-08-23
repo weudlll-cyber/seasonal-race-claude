@@ -127,7 +127,15 @@ const ARCHIVED = {
     "per-track survey tables from the closed-track pass — evidence for reports that are themselves indexed",
   greenfield:
     "the greenfield night run's raw arms and tables; the verdict is an indexed evolution report",
-  perf: "captured performance logs and frame traces — measurements, not write-ups",
+  // PERF-CLEAR-1 (2026-08-23) corrected this description, which said "measurements, not write-ups"
+  // and was wrong about the eleven .md files the directory then held — they were write-ups, and they
+  // were the only content in there a re-run could not reproduce. The owner's clear-out removed ten of
+  // them (no resolvable referent, or a referent whose subject no longer exists) and kept one, which
+  // is indexed like any other report. What remains is what the old sentence claimed: raw chains, plus
+  // one indexed write-up and a tombstone.
+  perf:
+    "raw performance chains and profiles — machine output, re-runnable. The one surviving write-up " +
+    "(01-tier1-wave1.md) is INDEXED; DELETED.md records the ten that were removed and why",
   "exp-archive": "superseded experiment write-ups, kept so a killed branch can be re-read",
   "phase1-metrics": "the Phase-1 metric dumps; superseded by REBASELINE.md",
 };
