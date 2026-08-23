@@ -8,6 +8,13 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-23.md](NIGHT-2026-08-23.md) — **the morning sheet for the night of 2026-08-23**
+  (the ladder's validation, and everything that needed no word from him). **Not a findings report: it
+  is the running state of that night's chain** — what is done, what is running, what is left, and the
+  questions that need his word with the one question each. Updated after every piece, its own commit
+  on master, so it is the deliverable even if the night is stopped after one piece. The pieces'
+  findings live in their own reports in [../evolution/INDEX.md](../evolution/INDEX.md).
+
 - [ACTION-KEYS-1.md](ACTION-KEYS-1.md) — **which candidate keys actually make action** (2026-08-23,
   PIECE 3 of that night's chain, plus the owner's addendum). Answers **D10**: the dial's mapping is
   decided by measurement, and this is the table a design block starts from. **Read-only — no default
