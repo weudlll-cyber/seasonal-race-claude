@@ -7,9 +7,58 @@
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.
 
+**SINCE 2026-08-23 THIS FILE HAS TWO PARTS.** PART ONE is everything still open; PART TWO is
+everything closed, with what closed it. A subject appears in exactly one of them.
+
 ---
 
+# PART ONE — OPEN
+
+**Everything still live.** The items needing HIS WORD come first; the rest follow in the order
+they were already in. **A subject appears in exactly one of the two parts** — if you cannot find
+something here, it is in PART TWO with what closed it.
+
+**On `verify:` lines.** An open item carries either a command whose output decides it, or a
+stated reason why no command can. Where a whole section shares one reason, it is stated once at
+the section head rather than copied onto every item — copying it would suggest each was
+considered separately, and that would not be true.
+
+## NEEDS HIS WORD — decide these first
+
+**Two sections are entirely his and lead PART ONE.** The rest of the items that need his word are
+**indexed here and left where they are**, which is a deliberate choice rather than a shortcut:
+
+**WHY THEY ARE NOT MOVED.** Each of them sits inside a section whose surrounding text is the evidence
+for it — the audit episode that produced the CI questions, the sweep that produced the OUTCOME
+climb-capacity question, the beat timing behind the comeback-shot question. **Cutting the item out
+and leaving the evidence behind would make the decision look smaller than it is**, which is exactly
+how a question gets answered without being understood. So they are linked from here and kept in
+place. *(Conservative option at a fork, stated as required.)*
+
+**THE INDEX — every open item below that only he can move:**
+
+| the question | where it lives |
+| --- | --- |
+| the action dial: what it maps onto · discrete or continuous *(answered)* · what it does to the fairness gate · saved races and replays | **HOW MUCH ACTION**, immediately below |
+| the proposed owner eye-test session — three of ten tracks seen, two states never | **Owner eye-test coverage**, below |
+| should `npm run dev` REFUSE to start when the build identity is unreadable | *Build-identity residuals* — **answered NO, see PART TWO D5** |
+| the juxtaposition rule for reports — a NEW standing rule | *Measurement and guard residuals* |
+| a re-minting block names invariants that must not move — a NEW standing rule | *Instrument coverage residuals* |
+| the company guarantee on a SPREAD field, and the 5 → 15 recommendation | *Camera residuals after CAMERA-COMPANY-ONLY-3* |
+| camera timing levers — the comeback shot appears late (tune by eye) | *Race-Action Arc* |
+| E3 — the `trajectoryMult` half: intended dramaturgy, or a seam to smooth? | *Race-Action Arc* |
+| OUTCOME climb-capacity — drama-at-leader vs deep-band reach | *Race-Action Arc* |
+| the audit-gate policy for DEV dependencies, and the body-parser LOW advisory | *Before the VPS migration* |
+| the seed for the normal "Start Race" path, and seed persistence | *Planned — needs spec* |
+| merge ROADMAP into BACKLOG | *Documentation* |
+| `D7d` — 100-racer performance: three mechanisms, none built, direction is his | *Race-Action Arc* |
+
+**Nothing else in PART ONE is blocked on any of these.**
+
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
+
+**verify (section-wide):** no command can decide these — **they are design questions, not claims about the tree.** The section closes when the dial is specified, and question 2 is already answered in place.
+
 
 **THE REQUIREMENT, in his terms.** One control over **how much race action a race has**, reachable by
 a **normal host** in the ordinary setup flow — **not a developer knob**. It has been raised before and
@@ -43,6 +92,7 @@ line numbers are the address; read the value there.
   panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
   and carries exactly ONE control today — Race Duration, at `RaceSettings.jsx:32`.** This is the
   surface the requirement names, and it is nearly empty, which is the useful part of this fact.
+
 - **DEVELOPER-FACING:** `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` and
   `BehaviorTuningSection.jsx`. Every candidate above is reachable here today, and reaching them
   requires the Dev Screen — which is exactly what the order says is not enough.
@@ -69,6 +119,22 @@ line numbers are the address; read the value there.
 **NOTHING ABOVE IS A PROPOSAL.** It is the record of an order and the facts a later block starts from.
 
 ---
+
+## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1)
+
+**verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
+
+- [ ] **PROPOSED OWNER SESSION — his time, not scheduled here.** Writing §7.3 down made the gap
+      concrete: his eye has covered **three of ten tracks** (mountainstreet, searound, City Circuit),
+      and **COMEBACK_ZOOM and LEAD_CHANGE have never had a targeted pass**. Every "owner-approved"
+      claim in the repo is evidence about the track and state it was given on, and nothing more.
+      **The session, if he wants it:** one race per unseen track (dirt-oval, garden-path, ice-track,
+      luger-hill, river-run, seatrack, space-sprint) plus one pass watching the two unseen states.
+      Reference: [CAMERA_DIRECTOR.md §8.3](CAMERA_DIRECTOR.md) (was §7.3 until ONE-TRUTH-2 renumbered a duplicated section 7).
+
+---
+
+## THE REST — open, in the order they were already in
 
 ## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
 
@@ -120,17 +186,8 @@ line numbers are the address; read the value there.
 
 ## Documentation (2026-08-07, from DOC-ORDER-1)
 
-- [x] ~~**Authentication and authorization — DESIGN EXISTS, nothing is built.**~~ **NEVER TRUE as
-      written today — established at source 2026-08-23.** `server/src/auth/` holds `authRouter.js`,
-      `csrf.js`, `guards.js`, `paths.js` and their tests, and **37 commits** touch that directory
-      from `d0a57d44` onward. **The POINTER below is why this line is kept**, and it is the useful
-      part: the full v3.2 design
-      (route inventory, session model, CSRF posture, the E2E test prerequisites) is
-      [archive/AUTH.md](archive/AUTH.md). It was moved to the archive on 2026-08-07 because it
-      described a RaceArena that does not exist while sitting among the documents that describe the
-      one that does — **archived is not abandoned**: if auth is built, that document is the starting
-      point and this line is how you find it. Related: **Q-16** below (the CORS wildcard, deliberately
-      accepted for local-only operation) becomes binding the moment this is built.
+**verify (section-wide):** `git grep -c "" docs/ROADMAP.md docs/BACKLOG.md` for the sizes that make the merge a real pass rather than a rename — **still open while both files exist separately.**
+
 - [ ] **Merge ROADMAP into BACKLOG — DECIDED, and deliberately NOT done here.** The two documents
       half-own "what is done and what is next": this file owns the open work with its evidence,
       [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
@@ -141,61 +198,8 @@ line numbers are the address; read the value there.
       is worse than the boundary that exists today. When it happens, the intended landing is that
       **BACKLOG owns both**, with ROADMAP reduced to a phase-status table.
 
-## The owner's camera-defaults session (2026-08-06, from MERGE-AND-GUARD-1)
-
-> **His words:** once the camera is finished, all camera defaults get set to his taste **in one
-> sitting**. This section exists so that sitting costs ONE ceremony instead of one per knob.
-
-- [x] **CLOSED 2026-08-22 by `46736d81`** — the shipped default is 5 (`defaults.js:883`) and
-      `git ls-remote --heads origin | grep -c min-racers-visible` returns 0, so the branch is gone from
-      the origin. **~~FIRST ITEM — `minRacersVisible` is already done and waiting.~~** The reasoning below
-      is kept because it states a general rule about branches that outlive their decision. Branch
-      **`feat/min-racers-visible-5`** (`c57e37d4`) sets the shipped default to the value his own
-      recorded verdict names — his words on 2026-08-05, _"`minRacersVisible` stays at 5"_, against a
-      source that said 3 ([CAMERA_DIRECTOR.md §8.1](CAMERA_DIRECTOR.md)). It is **committed,
-      measured, NOT minted and NOT merged**, deliberately.
-      **What it costs, and why it belongs in the sitting rather than alone:** it moves **TWO**
-      fingerprints, not one — the camera one AND the **render** one, because
-      `scripts/render-fingerprint.mjs` builds a real `CameraDirector`, so any change to the shot
-      changes the draw-call transform on every sampled frame. **Any camera-default change has this
-      property**, which is the whole argument for batching them: one re-mint of two fingerprints and
-      one eye test can cover every knob he changes that day, where doing them one at a time pays the
-      ceremony over and over.
-      Already measured on that branch: the world fingerprint does NOT move, and the full client
-      suite passes unchanged. What is still owed is the mint, and his eye on the state the knob
-      governs (the company guarantee, in both the torn-apart and tight-pack regimes he named).
-
-## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1)
-
-- [ ] **PROPOSED OWNER SESSION — his time, not scheduled here.** Writing §7.3 down made the gap
-      concrete: his eye has covered **three of ten tracks** (mountainstreet, searound, City Circuit),
-      and **COMEBACK_ZOOM and LEAD_CHANGE have never had a targeted pass**. Every "owner-approved"
-      claim in the repo is evidence about the track and state it was given on, and nothing more.
-      **The session, if he wants it:** one race per unseen track (dirt-oval, garden-path, ice-track,
-      luger-hill, river-run, seatrack, space-sprint) plus one pass watching the two unseen states.
-      Reference: [CAMERA_DIRECTOR.md §8.3](CAMERA_DIRECTOR.md) (was §7.3 until ONE-TRUTH-2 renumbered a duplicated section 7).
-
-## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
-
-- [x] ~~**The two finish knobs read alike and govern different moments.**~~ **CLOSED by
-      `82a03eb7` (ENDING-HOLD-1, 2026-08-12) — confirmed at source 2026-08-23**, not taken from the
-      report that claimed it: both controls are now numbered by ending phase in
-      `CameraAdvancedSection.jsx` (`:1491` and `:1635`), and the two labels this item quoted exist
-      nowhere in the tree. **The rule it stated stands and is why the line is kept:** two controls
-      governing different moments must not be able to read as one control at a glance — a tooltip
-      that explains the difference is not a substitute for a label that shows it.
-
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
-- [x] ~~**THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE.**~~ **CLOSED by `b9579f59`
-      (FINISH-WINDOW-1 A) — confirmed at source 2026-08-23:** `render-fingerprint.mjs` now drives
-      **5600** frames and samples **sixteen** points running past 5450, ten of them beyond the old
-      ceiling, so the 3466–5218 finish window this item named is covered. **The rule it stated
-      stands:** an instrument that cannot reach a phase did not clear that phase — it was silent
-      about it, and silence is not a pass. The fix
-      needs a DECISION, not a patch: a second sample set that runs past the finish, or one
-      event-anchored sample ("the frame after FINISH_OVERVIEW begins") — which the harness's own
-      header argues against on reproducibility grounds ("fixed indices, never events").
 - [ ] **NOTHING MEASURES MOTION, only per-frame VALUES.** A 2708 px one-frame step was invisible to
       the camera fingerprint (which hashes state, and duly hashed it as just another frame) and
       survived repeated refactoring of `CameraDirector.js`. `scripts/finish-motion-truth.mjs` is now
@@ -203,6 +207,7 @@ line numbers are the address; read the value there.
       check across the whole race, flagging any frame whose pan displacement exceeds N× the local
       median outside the enumerable deliberate cuts (the `cut` grammar, LEAD_CHANGE's snap). The same
       pinned-offset-plus-moving-target pattern exists at every entry into a T-space-lerped state.
+
 - [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — same reason as the juxtaposition
       rule above.** Its "proposed convention" is a standing obligation on every block that re-mints,
       and adopting it is his call rather than a night's tidying.
@@ -211,6 +216,7 @@ line numbers are the address; read the value there.
       camera fingerprint moved, as intended, so the regression would have been read as intended too.
       **Proposed convention:** any block that re-mints a fingerprint names one or two specific
       invariants that must NOT move, and measures them. Costs a few lines per block.
+
 - [ ] **Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
       finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
       garden-path with the finish accounting instrumented — a measurement, not a grep, so no
@@ -221,12 +227,6 @@ line numbers are the address; read the value there.
 
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
-- [x] **DONE — the build badge's failure path carries its reason.** `git()` captured stderr and the
-      exit status instead of discarding both; every failure returns the unknown identity WITH a
-      one-line cause; the dev server prints the identity it will serve at start-up and warns when the
-      reason changes. Also fixed two things the tests found: a failing `status --porcelain` used to
-      be reported as `dirty: false` (a clean tree it had never looked at), and the `|| 'detached'`
-      fallback was dead because git prints the literal `HEAD`.
 - [ ] **THE BADGE STILL HAS NO WATCHER — both of its failures were found by the owner's eye.**
       It lied confidently (BUILD-TRUTH-1), then failed silently (BUILD-UNKNOWN-1), and in both cases
       the alarm was a human noticing something on screen. The start-up line helps only if somebody
@@ -234,6 +234,7 @@ line numbers are the address; read the value there.
       is unreadable? Cheap to build, and it converts "a colour fifteen hours later" into "it did not
       start". The argument against is that it blocks work on a machine with a transient git fault —
       which is exactly the fault we just had. See BUILD-UNKNOWN-1 §P1.
+
 - [ ] **`0xC0000142` on this machine — watch for a second occurrence before treating it as a
       pattern.** A 15-hour dev server became permanently unable to spawn ANY child process
       (STATUS_DLL_INIT_FAILED) while the machine was otherwise healthy: 1485 handles, 485 MB, 9.7 GB
@@ -256,12 +257,8 @@ line numbers are the address; read the value there.
 
 ## Measurement and guard residuals (2026-08-05)
 
-- [x] **DONE (ONE-DRIVER-1) — four measurement scripts now share one driver, and the race identity
-      is printed.** `scripts/lib/raceDriver.mjs`; `corridor-truth`, `edge-crossing`, `tracking-lag`
-      and `his-shot-truth` ported with all seven captured outputs reproducing exactly and all three
-      fingerprints bit-identical. The deliverable turned out to be the IDENTITY, not the
-      deduplication: the four were never meant to be identical (`his-shot-truth` runs the owner's
-      n=65 context), and the defect was that nothing said so where the numbers are read.
+**verify (section-wide):** mixed. The two standing-rule proposals cannot have one — a rule is adopted, not checked. The rest name their own instrument in the item text.
+
 - [ ] **THREE DRIVER COPIES REMAIN, BY DELIBERATE CHOICE — meet the argument before "finishing the
       job".** `camera-fingerprint.mjs` and `render-fingerprint.mjs` are **the gate the consolidation
       is measured against**: a tool that changes in the same commit it is meant to validate cannot
@@ -270,6 +267,7 @@ line numbers are the address; read the value there.
       identity from the **owner's marker** rather than from constants, so it has no drift to fix and
       it is his live repro tool; the cost of touching it exceeds one fewer copy. **Neither is an
       oversight. Anyone closing this must answer both arguments, not just count the copies.**
+
 - [ ] **The race-identity HASH: `sha(identity + canonical(cameraConfig))`.** Printing the identity
       made "did these two numbers come from the same race?" readable; a hash would make it
       mechanical, which matters because this project has been bitten three times by a human check
@@ -277,6 +275,7 @@ line numbers are the address; read the value there.
       `corridor-truth` and `corridor-truth --company-only` print the SAME identity line and produce
       different numbers, so identity alone is insufficient. Caveat: a hash nobody quotes is a dead
       instrument (Lesson 196), so it is only worth adding alongside the convention below.
+
 - [ ] **RE-SORTED 2026-08-23 OUT OF "small and self-contained" — this needs his word.** It writes
       a NEW STANDING RULE into a canonical document, which changes what every future block must do.
       BACKLOG-HONEST-1 STEP E put it in bucket (i) on the grounds that it is "a convention, no code";
@@ -288,19 +287,6 @@ line numbers are the address; read the value there.
       in isolation — a number alone can be wrong, but it cannot mislead by comparison. In practice: a
       table gets one identity line above it; a table mixing arms gets an identity column. NIGHT-1
       needed the second and did not have it, which is the instance this comes from.
-- [x] **DONE — `check-index` now passes BOTH directions** (verified 2026-08-22 by
-      OPEN-ITEMS-2026-08-22 against the source, not the report). `scripts/check-index.mjs:18` states
-      it, and its run line reports dangling links as well as unindexed reports. The text below is
-      kept because its REASONING — a partial guard is indistinguishable from a complete one while
-      everything is clean — is the general rule, and it is why the fix was worth making.
-      ~~It walks `reports/evolution/*.md` and asserts each is referenced from `INDEX.md`; an INDEX
-      line naming a report that does not exist is invisible to it.~~ Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
-      applies: **until it is closed, the guard should say inside itself which direction it does not
-      check** — a partial guard is indistinguishable from a complete one while everything is clean
-      (Lesson 201). Note `check-doc-links` already catches a _dangling link_, so the uncovered case is
-      an INDEX entry that names a report in prose, or links a path that resolves to something else.
-
----
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
@@ -321,6 +307,7 @@ line numbers are the address; read the value there.
 
 ## Camera residuals after CAMERA-COMPANY-ONLY-3 (2026-08-05)
 
+
 Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
 - [ ] **The company guarantee on a SPREAD field has never been measured.** The owner approved the
@@ -330,11 +317,13 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       observation corrects mine**: on a spread field it clearly binds and widens a lot at 5.
       **Measure the spread-field case across field sizes BEFORE anyone changes his value**, and show
       him the result. `minRacersVisible` keeps the value his eye settled on until then.
+
 - [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
       the build and the camera path, never which guarantee ran. That gap is what made
       CAMERA-COMPANY-ONLY-2 halt a shippable block. The HUD `cfg` fingerprint may already separate
       behaviours — if it does, putting it in the line is the cheap honest fix. **An owner's PASS is
       the most expensive input this project consumes and it is currently recorded nowhere.**
+
 - [ ] **A Dev Screen change does not reach a running race.** *(**verify:**
       `git grep -n "loadCameraConfig()" -- client/src/screens/RaceScreen/index.jsx` — **still open
       while the line is a `useState` with no setter**; re-confirmed at `:220` on 2026-08-23.)* `RaceScreen` reads the camera config
@@ -342,25 +331,11 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       supports live-apply via `updateConfig`. **Every A/B the owner has ever run has been two races
       when it could have been one race and a toggle.** One line, and it is the highest-leverage
       change on this list.
+
 - [ ] **"Road edge out of frame" should be a standing measurement.** The control number is the
       argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
       Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
       happens, and this one was never measured that way — only its effect on zoom was.
-- [x] ~~**`MAX_CAM_ZOOM` is the real limiter at the tight end of the control.**~~ **CLOSED
-      2026-08-23 — the fact is now written on the constant itself** (`camera/projection.js`), which
-      is where anyone tuning the low end will meet it, rather than in a backlog nobody reads while
-      editing. **The value is not restated here; read it there.**
-      **AND THE ITEM'S OWN NUMBER DID NOT REPRODUCE.** It said "every track delivers 85.3 world px
-      rather than the nominal 75". Re-measured, the answer is **track-dependent**: at 0.25 corridors
-      the cap binds on searound, dirt-oval and city-circuit and does NOT bind on river-run or
-      space-sprint. **That is a more useful fact than the one recorded** — the same setting means
-      different things on different tracks at the tight end, which is the exact class of problem
-      CAMERA-ZOOM-UNIT-1 raised this constant to remove, reappearing below the range that block
-      checked. The 85.3 figure was not chased; what is written is what was re-measured.
-      **verify:** `grep -c "BUT IT DOES BIND" client/src/modules/camera/projection.js` — **still
-      closed while it returns 1.**
-
----
 
 ## Before the VPS migration
 
@@ -376,18 +351,6 @@ happens only after development is finished. Every entry below is harmless while 
 becomes a real question the moment it is not. Recorded 2026-08-04 (CAMERA-ANCHOR-TRUTH-1); the
 measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.md) §10.
 
-- [x] ~~**`server/` is audited by nothing.**~~ **CLOSED — confirmed at source 2026-08-23:**
-      `ci.yml:212` runs `audit-gate.mjs --tree=server`, the `Server tests` job (`ci.yml:151`) runs
-      the server suite, and the HIGH advisories below are closed (`ci.yml:205-207`, lockfile-only
-      moves) with the gate now BLOCKING rather than reporting. **The historical text is kept
-      unedited below** because it records what was true when it was written. ORIGINAL:
-      **`server/` is audited by nothing.** `scripts/audit-gate.mjs` hard-codes `client/`, and no CI
-      job covers the server at all — its own `vitest` suite runs nowhere either. It currently carries
-      **2 highs**: `ip-address` (**runtime**, via `express-rate-limit`, SSRF / trust-boundary bypass
-      in IP classification — and the production config enables trust-proxy, so the IP it classifies
-      comes from a header) and `postcss` (dev-only, via `vite`). Both clear with a plain
-      `npm audit fix` — no `--force`, no breaking change. Not urgent while nothing is reachable; a
-      **blocker** before anything is.
 - [ ] **`deploy.yml.disabled` cannot run — four independent blockers, and it is now DE-REGISTERED
       too** *(**verify:** `ls .github/workflows/deploy.yml.disabled && ls scripts/deploy.sh` — **still
       open while the first succeeds and the second fails**; re-confirmed 2026-08-23, and note it also
@@ -400,36 +363,14 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
       The file is kept on purpose as the record of an intent; its header says all of this, and the
       `.disabled` suffix now says it to GitHub as well. Reviving it needs the rename back AND all
       four cleared — the rename alone would register a workflow that still cannot work.
+
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
-- [x] ~~**The build cannot be read from OUTSIDE the browser.**~~ **CLOSED 2026-08-23
-      (BUILD-FROM-OUTSIDE-1): `/api/health` now names the build.** `server/src/buildIdentity.js`
-      reads `RA_BUILD_COMMIT` / `RA_BUILD_BRANCH` / `RA_BUILD_DIRTY` and the endpoint reports them.
-      **IT NEVER GUESSES, and that rule is borrowed rather than invented** — with nothing supplied it
-      answers `unknown` **and a reason naming the variable**, and `dirty` is OMITTED when it was not
-      determined rather than defaulting to `false`. That is the correction
-      `client/vite-plugin-ra-build.js` already paid for: its first version reported a clean tree it
-      had not been able to look at. **Shelling out to `git` was deliberately NOT done** — it would
-      work in development and quietly report the deploy host's checkout, or nothing, in production.
-      **verify:** `curl -s localhost:4000/api/health` — **still closed while the payload carries a
-      `build` object**; `grep -c "build: buildIdentity()" server/src/app.js` is the offline form.
-
-      **THE ITEM WAS WRONG ABOUT ITS OWN OTHER HALF, and that is worth keeping.** As written it said
-      the app ships no build identifier at all. **It does, and it always did on the client**: the
-      build PILL is drawn into the shipped race picture — `renderRaceFrame.js:500` calls
-      `formatBuildLabel(buildBadge)` from `modules/buildInfo.js`, fed by the `virtual:ra-build`
-      module. **The real gap was never "no identifier", it was "no identifier reachable from
-      outside the browser"**, which is the half now closed. `__APP_VERSION__` and `BUILD_ID` still
-      do not exist and are not needed: the endpoint reports the identity directly.
-
-      **The general rule this closes with:** an instrument that answers a question INSIDE the
-      product does not answer it for anyone holding a URL, and the two are different requirements
-      that read as one.
-
----
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
+
+**verify (section-wide):** the ARC is closed and the section head says so; what remains open here is a successor CANDIDATE, which is a direction rather than a claim, so no command decides it.
 
 - ❌ **Three flag-gated finale builds (fixed dice overlay → DevScreen toggle → adaptive spread-scaled
   gates) all REVERTED after the decisive adaptive SCREEN failed its pre-registered bar.** Act 2 added
@@ -449,6 +390,8 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
 ## Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26, reverted)
 
+**verify (section-wide):** as above — the arc is reverted and closed; the open lines are leads for a future block, not statements about today's tree.
+
 - ❌ **AFF built flag-gated (default OFF, byte-identical) then REVERTED after a NEGATIVE SCREEN.** The
   code-verified diagnosis: making the pack's target rank follow the live field drives `rankError→0`, which
   _removes_ the servo's within-band restoring force rather than adding contest — so band-reach fell below
@@ -456,56 +399,37 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   family as the retired B2 pack-release / universal band-arrival). Build reverted for source hygiene,
   recoverable @`cd520e0`; the lab journal stays in [reports/evolution/](../reports/evolution/)
   (AFF-DESIGN-CC, AFF-SCREEN, AFF-NEXT-CC).
+
 - 🔜 **Successor candidate (future act, not scheduled):** finale-window / front-band contest that ADDS a
   bounded chase term while KEEPING the static endpoint pin — see AFF-NEXT-CC.md.
 
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
-- ✅ **Gap-reroll is the shipped default: symmetric, G=0.5, strength=1.0** (`storage/defaults.js`
-  `gapRerollEnabled: true`). Closes the "gap-reroll default ON" item.
-  **FLIPPED 2026-07-26** to the confirmed candidate G=0.5/s=1.0 after the ten-track confirm gate (was
-  0.75/0.5, retuned 2026-07-23 from the original ship values G=1.5/s=1.0). Confirm gate: pooled band-reach
-  71.8%→72.7%, dead finales 14.1%→10.0%, runaway 10.1%→6.8%, every guardrail better, Holm unchanged 3/10 —
-  see [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md).
-- ✅ **Retune gate (2026-07-23): G 1.5→0.75, strength 1.0→0.5.** Cause: at s=1.0 the correction
-  `frac = min(1, strength·(gap−G))` saturates above `G+1`, so **46% of leader corrections were full
-  slams to the band floor** — the "escapes, then gets visibly braked" the owner reported. G alone
-  cannot fix it (lowering G lowers the saturation point too; measured: corrections got _harder_).
-  Gate: 400 races/arm, 4 tracks, paired seeds, 40 closed / 60 open fields —
-  **pooled band-reach 71.6% vs 71.6% (fairness exactly neutral), Holm 2/4 in both arms**;
-  **tiltSaturated 46.0%→18.7%**, tilt frac median 0.906→0.371, escapeDepth median 2.71→1.97 L and
-  **worst case 12.07→7.29 L (−40%)**, front-group-at-line 3.86→4.05, runaway 9.5%→8.3%,
-  parade 1.3%→0.8%, duo 6.3%→4.0%, dead finales 14.7%→14.5%.
-  Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
-  _(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
-  this change.)_ Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
-  — both now on **master** (ported in the greenfield wrap, 2026-07-23). _(These retune-gate figures are
-  PRE-UNIFICATION and retained only as the 2026-07-23 decision record; the current baseline is
-  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) + GS-CONFIRM-GATE.md.)_
+**verify (section-wide):** the feature shipped; the open items are follow-up MEASUREMENTS, and a measurement is its own check — each names the harness that would run it.
+
 - **Shipped-default fingerprints (current):** the ON hash moved with every world change since the retune
   (plan-grid unification → speed/duration ship → step-order alignment → speed-150 → the 2026-07-26 flip) —
   the current pair is recorded in [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) §3 and
   the flip's docs commit; the **OFF** invariant is **`f8f7d9c2fd3283e9`** (byte-identical to the pre-feature
   world, `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`). Historical ON hashes
   `e93ffa70dad562a1` (retune) and `efd0f4ad8eca08fa` (G=1.5/s=1.0) are superseded.
+
 - **Sim follows the shipped default.** `sim-fairness.mjs` never read `gapRerollEnabled`; it does now,
   so a flagless sim run reproduces the shipped game. **A flagless run is therefore no longer the OFF
   world** — OFF arms must pass `--gapRerollEnabled=false`, and every OFF arm in
   `exp-runaway-leader.mjs` was updated so the committed baselines stay reproducible.
+
 - ⚠️ **MEASUREMENT CAVEAT — quote the headline with this qualifier.** The **23.0% → 8.3% runaway**
   result (N=200, all 10 tracks) was measured **pre-branch-priority-fix**. The fix was validated as
   **within-noise and directionally favourable** on a 4-track paired test at identical seeds
   (A0, `67a1053`): **8.3% → 7.5%, 5/400 flips, all away from runaway, −0.55 sd**. The other 6 tracks
   are untested post-fix. A full 10-track re-measurement is **not** required before shipping, but the
   headline is a pre-fix number and should never be quoted bare.
-- ✅ **Owner browser eye-check PASSED**; shipped at `247b843`, tagged `backup/g-retune-shipped-247b843`.
 
 ## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
 
-- ✅ **DONE (CAMERA-HYGIENE-1) — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Shipped as
-  `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` with `client/src/modules/engineInputs.test.js`, which
-  reads `raceCore.js`'s own imports and fails when it names a module the list does not — so adding an
-  engine input forces a decision instead of a silence. Original entry:
+**verify (section-wide):** each item IS a proposed instrument, so the check is "does the script exist": `ls scripts/` against the name in the item.
+
 - ⛔️ _(superseded by the line above)_ **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
   tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
   `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
@@ -520,15 +444,6 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   nothing established it; see [CAMERA-MINT-TRIPWIRE-1](../reports/evolution/CAMERA-MINT-TRIPWIRE-1.md)).
   Owner asked for this to be done properly in the hygiene phase rather than tacked onto a camera block.
 
-- ✅ **DONE — HUD config-fingerprint badge** (shipped `42500f4d`, "replay UX + rowCount unification",
-  behaviour-neutral). `configFingerprintBadge()` in `client/src/modules/exportRaceConfig.js` is rendered in
-  the race HUD (`client/src/screens/RaceScreen/index.jsx`, under the seed badge). It shows a short
-  RACE-relevant world hash plus a SPLIT off-default count: `raceCount` — the number of off-default keys that
-  actually break apples-to-apples with a default-config sim run, shown in the prominent **RED** state — and a
-  never-red `cosmeticCount` for camera / frame-timing drift. This is exactly the "make config drift visible
-  without anyone having to suspect it first" item: the owner-config parity audit
-  (`reports/greenfield/owner-config/`) found a persisted setting silently cancelling a shipped benefit, caught
-  only because someone diffed the world; the badge surfaces that class of drift live.
 - 🔜 **Paired per-seed delta evaluation in the gate driver.** `exp-gate-retune.mjs` already runs
   **truly paired** arms — identical seed sequence per track, per-race seeds recorded — but then
   aggregates each arm _independently_ and compares the aggregates. The pairing is currently an
@@ -536,6 +451,7 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   the SAME race) and reporting their distribution would cut the variance the comparison has to see
   through, and would surface the flip-level detail the branch-priority A0 check had to be run by hand
   to get. Identified in `reports/proposals/review-pre-greenfield-proto-gate-driver-bf4ff90-copilot.md`.
+
 - Reporting discipline for both: see the **Reporting rule** in SWEEP-HARNESS.md — episode- and
   tilt-derived metrics are mechanically G-coupled and comparable only at fixed G; gate primaries must
   be G-independent; "Holm" in these drivers is a flagged-track count, not a family-wise procedure.
@@ -544,15 +460,8 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
 ## Front Act / C1 — July 2026
 
-- ✅ **Gap-reroll branch-priority fix** — when both `gapBehind > G` and `gapAhead > G` the LARGER
-  imbalance now decides the tilt direction (ties keep the old gapBehind-first behaviour). The old
-  unconditional `gapBehind` return braked racers that had broken from the pack while still behind the
-  leader — the chase-suppression the small-G diagnostic measured at 6.6x. Regression tests pin both
-  the fixed case and the unchanged ones. **Consequence:** the confirmed `G=1.5 s=1.0` gap-reroll
-  numbers predate the fix and need re-measuring before they are quoted again.
-- ✅ **`contestWindowStart`** — the front act's own config key, read by the front-battle observer.
-  Initialised to the shipped `choreoResolveB2` so committed baselines stay comparable. **Kept**
-  through the dead-mechanisms cleanup: the observer is live, so the key stays.
+**verify (section-wide):** a design direction from a closed arc — no command decides whether it should be built.
+
 - ❌ **B1 lead rotation + role-biased scheduled dice — REMOVED (2026-07-23).** Built sim-first,
   default OFF, byte-identical. Measured as the WORST arm of the greenfield night run (a suppressor,
   not a lever), so the whole mechanism — keys, generator code, servo hooks, telemetry observer, and
@@ -565,6 +474,9 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
 ## Race-Action Arc (feat/race-action) — June 2026
 
+**verify (section-wide):** **the largest open section, and mostly owner decisions and sweep results.** No per-item command: an item here closes on a measured sweep or his verdict, both of which are named in the item text. Treat the section as a reading list, not a checklist.
+
+
 Catch-up for the period since the last backlog refresh. Full per-commit detail is in
 ROADMAP.md (**Phase D** and **Phase R** sections); only hashes are repeated here. All hashes
 verified against `git log` / `git tag`.
@@ -572,68 +484,52 @@ verified against `git log` / `git tag`.
 **✅ Completed**
 
 - **Phase D — server-side storage migration** (groups/brands/racers): D1 `999f45e`, D2 `c263106`, D3 `6f4deb3`, D4 `ee3735d`, D5 `6aa8bc1`, D6a `5d75d12`, D6b `d22ecee` (2026-06-14/15).
+
 - **Lateral physics redesign** — Layer 1 Soft Steering (`35b6b29` → default `8ad6a62`) + Layer 2 Hard Separation (`82c1806`/`f535fc2`/`0815aac`/`07bf2f1`/`bf44a8b`); legacy forces removed in Commit A `bc68c37` + Commit B `f311622` (2026-06-25/28).
+
 - **Controller on closed tracks** — C0 leader-progress phase clock `14f3c6f`, C0-fix `712f334` (2026-06-21/22).
+
 - **Closed-track geometry expansion (3072px world)** — garden-path `8f73dc7`, dirt-oval `72da109`, city-circuit `1b3260e`, ice-track `b06d946`; cumulative-t fix `9a4148e` (2026-06-28/30).
+
 - **§4a soft-steering asymmetric fix** `aef203a` + cleanup/regression test `0b33f3c` (2026-06-30).
+
 - **Sim browser-parity** — passThroughCount telemetry `f7b6100`, finishT/speed parity `8f57cba`, shared-config defaults `9cfa953` (2026-06-30).
+
 - **Reviewed, no fix needed** — controller-on-closed phase timing confirmed correct (leader-progress based, `14f3c6f`); sim determinism verified resolved (likely side-effect of Commit A `bc68c37`, no commit to cite).
+
 - **Cleanup-C (auth)** — items 7-8 `3729d1c` (tag `backup/cleanup-c-paths-cli`), item 9 dead `randomUUID` import removed `0dda9db` (tag `backup/cleanup-c-dead-import`), recover-admin hardening follow-up `16d3bf9` (tag `backup/recover-admin-hardening`). All committed **and tagged** — supersedes the older "awaiting Copilot review + tag" status. Verified: `randomUUID` now appears only in `*.test.js`, not production `authRouter.js`.
+
 - **Governor vision-pivot → race-action director** — ⚠️ **SUPERSEDED/HISTORICAL:** this reactive governor/director was replaced by choreo + PulkLeadRotation and then **removed entirely** in THE GREAT PULK CLEANUP (Stages 1–6); the commits below are history, none of the governor/director knobs or streams survive. (anchor `d9c9cd3` = `stable/pre-governor-04jul`). Governor core `307d6dc`/`294550a`/`0da9048`/`24c99b6`/`9947892`; **Stage C** leader-brake retired → pure tail-lift `a0105ed`; **Stage A1** contest-injector director (rank-blind, own master + `DIRECTOR_SEED_XOR`) `a7e4a64`; **Sim-1** front-action metric + governor telemetry propagation fix (read-only) `b930b1b`. Full detail in ROADMAP §R.7. The pivot idea (a limiter cannot create a contest) endures — see LESSONS 160.
 
 **🔜 / ⏳ Open**
 
-- **Re-Gate on `9cfa953`** ✅ **CLOSED — SUPERSEDED (owner-approved 2026-07-31).** It would have re-run all four closed tracks under a `corridorEnd=1.0` / `bonusMult=2.0` browser-faithful config — but that configuration **predates the plan-grid unification AND the speed-150 re-baseline**, so the world it would have gated no longer exists. Four full gates have since run over the successor worlds: the speed-150 [REBASELINE](../reports/parity/REBASELINE.md), the gap-reroll ten-track confirm gate, the COMBO15 N=100 gate ([FAIR-ARRIVAL-GATE](../reports/evolution/FAIR-ARRIVAL-GATE.md)), and the definitive N=300 [HOLM-300-COMBINED](../reports/evolution/HOLM-300-COMBINED.md). **Superseded, not abandoned** — the fairness question it raised has been answered on the worlds that actually shipped, at higher power (N=300) than it asked for. (Historical: `9cfa953` is an ancestor of master; it discarded the provisional `8f57cba`-era sweeps.)
-- **Master-merge** of `feat/race-action` → `master` — ✅ **DONE (confirmed 2026-07-14)** — merged to `master` by fast-forward at `e1d5a2b`, anchored by tags `race-action-complete` and `v1-race-action-merged`; `feat/race-action` deleted (local + remote); the repo is now master-only. Later cleanup (e2e retirement, doc refresh, planning-audit) continued on `master` past the merge point.
 - **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
-- **B4 — camera foresight (consume the authored cameraPlan)** ✅ **DONE (`b4-complete` = master `03e28cf`, 2026-07-15)** — the authored `cameraPlan` is now plumbed generator → `racePlanner` (`_cameraPlan` + `getCameraPlan`) → `RaceScreen` (`setCameraPlan`, delivered mid-race: heroes are cast mid-race, so the plan is null at init) → `CameraDirector` (`updateRacePlan(b1Indices, cameraPlan)` + storage). **First consumer:** in `_detectComebackRacer` the cast comebacker set (heroes with `role: 'comebacker'`) is the PRIMARY candidate; the `b1Indices` scan stays the FALLBACK when the plan names no comebacker (assigned winner already up front ⇒ cast `sovereign-lead`) or no plan exists. **Why:** the old scan searched ALL front-band finishers, which include the sovereign-leads — one that dips and recovers reads as a large gain and could win the scan, so the camera cut to a "comeback" that was noise. Only WHO is watched changed; the reality bar (window, min-gain, start-gap, current-rank, largest-real-gain tiebreak) is untouched. **Evidence:** comeback-reality sweep (200 races / 367 comebackers, seed=1) — the cast comebacker is the top climber in 94–100% of races and lands within ~0.45 ranks of its authored target. Tooling: `scripts/sim/observers/comeback-reality.mjs` + `--comeback-reality` (needs `--hero-map`), see docs/SIM.md; full numbers in `results/comeback-reality-sweep-2026-07-14/report.md` (gitignored). Owner eye-test PASS. **NOT shipped (tried, measured, removed):** a foresight PRE-ARM + `cameraForesight` flag + DevScreen toggle — the Owner eye-test (ON vs OFF, same seed) showed no visible difference, so it was trimmed out (branch history `7c50605`, `be71a26`, `bccc171`).
+
 - **Camera timing levers — comeback shot appears late (tune by eye, no code)** 🔜 _(added 2026-07-15, from B4)_ — the comeback shot only appears late, and the cause is NOT the plan but two existing DevScreen sliders. `outcomePhaseThreshold` (default 0.65) gates reactive comeback detection, but the authored climb starts around progress ~0.28, and the slider floor is 0.5 — so the first ~0.28–0.5 of the climb is unreachable by slider alone. `comebackWeight` (0.6) loses the weighted candidate contest to `battleWeight` (0.8) during PULK, so even a fired comeback candidate does not win the lens. Verified beat timing (from the generator itself): a comebacker HOLDS its deep rank from `anchorProgress` (0.25) until its `peak` beat (~0.28–0.67, usually in PULK), then climbs to its `resolve` beat (~0.69–0.91, in OUTCOME). **Owner decision needed:** tune the two sliders by eye (does showing the climb beat keeping the front battle?) before any further code.
+
 - **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest.
+
 - **E3 — PULK→OUTCOME speed differential** 🔽 **NARROWED (owner-approved 2026-07-31): the rowBonus half SHIPPED; the OPEN remainder is ONLY the `trajectoryMult` half.** Do NOT re-open the shipped rowBonus/rowEnvMult smoothing (default ON, `v-rowenv-default-on-complete`) — that part is done and fairness-verified. The single open question is the larger `trajectoryMult` differential (pack pinned 1.0 in PULK → P-controller in OUTCOME): accept-as-design or smooth. Full history: _(added 2026-07-14 reconciliation)_ — verified design: in PULK the pack's `trajectoryMult` is pinned to 1.0 and rowBonus is 0 (racePlanner.js:474); in OUTCOME both return (trajectory rises via the P-controller gain 2.0, rowBonus full). Racers are genuinely faster in OUTCOME than in PULK — a real speed step at the boundary, not an onset artifact. **Owner decision:** intended dramaturgy (accept + document as design) or a seam to smooth? Log the decision either way. **UPDATE 2026-07-18/19:** the **rowBonus/rowEnvMult sub-step** (~0.5–1.5% on back rows) is smoothed by a 1s `easeInOutCubic` in the SHARED `raceStep.js` (`computeRowEnvSmoothed`; config `enableRowEnvSmooth` + DevScreen toggle). Sim sweep (SLEW 1%/frame vs EASING 1s, 4 tracks × 100 races) confirmed both fairness-neutral (B1/B2 within 0.6pp, Holm 0). Shipped dormant first (`v-rowenv-easing-complete`), then **flipped to DEFAULT ON 2026-07-19** after owner eye-test (`v-rowenv-default-on-complete`; re-gate B1 −0.4pp, B2 −0.2pp vs instant, both within noise; DevScreen toggle flips OFF for comparison). The larger **`trajectoryMult` differential** (pack pinned 1.0 → P-controller in OUTCOME) is untouched and remains the open part of E3.
+
 - **OUTCOME climb-capacity investigation (2026-07-17/18) — deep-band band-reach vs `choreoOutcomeStart`** 🔜 — B3–B5 band-reach degrades as `choreoOutcomeStart` rises (SWEEP 2). **Two fixes MEASURED + REJECTED:** (a) _band-checkpoint proportionalization_ (Phase 1 dry-run, 6 variants × 4 tracks × 40 races): max +0.3pp B3 = noise — band-reach is **endpoint-determined** (the servo steers to the Fisher-Yates target over [choreoOutcomeStart→finish]); the checkpoint only reshapes the mid-race curve, not the destination. (b) _unified speed-ramping_ (remove the distributed smoothers, replace with one global 0.5%/frame cap; 4 variants × 4 tracks × 100 races): **−5pp B2, −9pp B3** — the distributed smoothers are load-bearing for servo accuracy (Lesson 177). **Faller diagnosis (mountainstreet, N=100):** fallers **UNDERSHOOT** (a climb-capacity deficit, NOT "enter OUTCOME too fast"); worst on the long open 60-racer track. **Open lever:** add OUTCOME servo runway/authority for deep bands — earlier per-band steering onset and/or higher `trajectoryMult` authority for B3–B5 — measured against band-reach. Reports under `results/` (gitignored). **NOTE (2026-07-20):** this is the remaining open action item after B2-Heroes shipped (below); the two share the "deep bands need more servo authority" diagnosis but B2-Heroes solves front-action a different way (authored attackers, not deep-band climb-capacity). Deferred pending owner decision on drama-at-leader vs. deep-band reach.
-- **B2-attacker "Attack & Fall" heroes — front-action feature** ✅ **SHIPPED ON (`v-b2-heroes-complete` = master `8bf54ca`, 2026-07-20)** — extra choreographed heroes cast from FRONT-post-chaos B2-finishers (`heroCurveGenerator.js castHeroes` + `attackerTiming`, bypasses the 0.80 B2 resolve for role `attacker-b2`) that climb to ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release: the servo frees them the moment they re-enter B2 on the way down — `racePlanner.js` `atkParams` branch). **Shipped ON: `b2AttackHeroes=3`, `b2AttackPeakRank=5`, `b2AttackFinalRank=7`, `b2AttackBandArrival=true`** — the sim-validated winner: **+21% top-5 OUTCOME action** vs the no-attacker floor, with **B1/B2 band-reach ≥70% on all four tracks** and **Holm at the pre-existing 2/4 baseline** (no regression). count=0 restores the pre-feature game byte-identical. **New shipped-default fingerprint `72c3360fb75225ef`** (count=3); count=0 is still `4ec8e64dd2641ad3`. **3-phase validation** (exploration N=50 → count-confirm N=100 → hybrid N=100): finalRank (release height) is the action knob, NOT peak depth; count scales super-additively (1→+7%, 2→+10%, 3→+21%); band-arrival ties fixed-final on fairness and is simpler (no finalRank pinning). Web: DevScreen B2-count slider (PULK card) + hero-highlight rings (Camera Advanced). Tooling: `scripts/exp-b2-attack.mjs` (`--phase 1a/1b/holm3/2/fr/ba/uba`); reports in `exp-b2-attack-results/PHASE{1A,1B,2}-REPORT.md`. Owner eye-test PASS. Tests 3203/3203. _(Cleanup 2026-07-20: the `exp-b2-attack.mjs` driver was removed from tracking — recoverable at commit `c441e7c~1` (git history) — and the result tables were archived to `reports/exp-archive/exp-b2-attack-results/`. Investigation CLOSED; findings preserved.)_
+
 - **Built, measured, shelved — then REMOVED (dead-mechanisms cleanup, 2026-07-23):** the **pack strictness release** — non-hero pack runs strictness-0 inside band — **broke B2 band-reach** on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame edge-leak** (92% of leaks after progress 0.90; free racers at the band edge get shuffled out with no runway — diagnosis archived under `reports/exp-archive/`). Dominated by B2-attackers (more action, cleaner fairness). The **universal band-arrival** variant — free B1-heroes + normal pack inside their assigned band — held fairness (immediate re-steer) but cost **−6% action**. Both were deleted with their config keys and DevScreen control; the re-steer threshold survives because the live B2-attacker release reads it. Recoverable at tag `pre/dead-mechanisms-cleanup`.
+
 - **Closure principle (validated 3 ways): action lives in ORCHESTRATION, not liberation.** Servo steering along authored curves CREATES top-5 churn; freeing racers (strictness 0 inside band) causes SETTLEMENT and REDUCES action. Evidence: B2-attackers +21% (scripted climb-and-fall); the pack strictness release broke B2 fairness (free); universal band-arrival −6% action (free). **Future front-action work must AUTHOR scenarios (curves/casting), not liberate constraints (release the servo).** See LESSONS if extended.
-- **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:772); the stale "NOT committed to the feature branch" clause is gone.
-- **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — ✅ **DONE (2026-07-14 audit)** — `trackClosedSsf` no longer exists in scripts/sim-fairness.mjs (removed); `trackNaturalBase` is now `isOpen ? … : undefined` (open-only, line ~2644); and the `expectedMinSF` derivation uses the per-combo `nRacers` (line ~566), not the global `N_RACERS`.
-- **Browser `index.jsx` inert `??` fallback mismatches** — ✅ **DONE (2026-07-14 audit)** — the fallback now reads `bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0` (RaceScreen/index.jsx:697), matching the real shared default; an added comment mandates the fallbacks mirror `DEFAULT_RACE_DYNAMICS_CONFIG`. (Old line refs ~662-666 have drifted.)
+
 - **`rubberBandEndgameThreshold` field split** — ⚠️ **SUPERSEDED / MOOT (2026-07-14 audit)** — the rubber-band FORCE is removed (`raceRubberBand.js` deleted; no `flatBoost`/`rubberBand` in source); with no force there is nothing to give a dedicated endgame threshold to, and the old `index.jsx` cross-reuse of `endgameThreshold` for a rubber-band gate no longer exists. NOTE: the camera BATTLE-gate `endgameThreshold` read by `CameraDirector.js` is a DIFFERENT, still-live thing and is unaffected. Its value lives in `client/src/modules/storage/defaults.js` and is deliberately not restated here — it moved on 2026-08-18 (ENDGAME-THRESHOLD-095) and the line numbers this note used to carry went stale long before that.
-- **Race-action direction decision** — ✅ **RESOLVED (SUPERSEDED twice)** — first resolved by the governor vision-pivot (race-action director, not Slipstream-vs-Hazard-Zones); that reactive director was then itself removed in THE GREAT PULK CLEANUP. The current shipped direction is choreo + PulkLeadRotation. Decision closed either way. See ROADMAP §R.7.
+
 - **Governor/director — open items (from the pivot):** ⚠️ **SUPERSEDED (2026-07-14 audit)** — this whole block references the REMOVED reactive governor/director. That mechanism was replaced by choreo + PulkLeadRotation and then removed entirely in THE GREAT PULK CLEANUP, Stages 1–6 (`14cf58c` S1, `c8649dc` S2, `d32e165` S3, `e4caaaf`/`399c266`/`0b42f72` S5b, `9f71e3e` S6a). None of the reactive knobs (spread-cap, anchor-to-front, contest-injector, tail-lift, the ~15 governor values) survive in source. The one surviving `raceGovernor.js` is the NEW PULK-phase contest director (`applyPulkLeadRotation`), a different mechanism.
   - ~~**Stage C2 — generous front spread-cap**~~ — superseded (reactive governor removed).
   - ~~**A1b — anchor-to-front**~~ — superseded (reactive director anchor removed).
   - ~~**The Action sweep** over the ~15 governor/director values~~ — superseded (those values no longer exist).
   - **DevScreen knob-reduction** — ✅ **DONE, on the new world (2026-07-14 audit)** — realised in PULK CLEANUP Stage 5b-ii/5b-iii (`399c266`/`0b42f72`): DevScreen collapsed to one PULK Phase card with 5 visible controls and pinned internals (see DynamicsTuningSection.jsx:128-130, "reset only the 5 VISIBLE controls … pinned internals … have no DevScreen control"). Realised on choreo+pulk, NOT the removed governor knobs listed here.
   - ~~**OUTCOME decompression**~~ — superseded (the reactive director that clustered the front is gone).
-- **`results/` not gitignored** (hygiene, reported by Sim-1) — ✅ **DONE (2026-07-14 audit)** — `results/` IS gitignored (`.gitignore:37`).
-- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, FORCE-MAP — then named KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
-
----
-
-## Phase L — Local Backend
-
-| Item                      | Status     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ✅ **L.1**                | PR #43     | Backend skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, frontend config hook in `client/src/services/api.js`.                                                                                                                                                                                                                                                                                                               |
-| ✅ **L.2**                | PR #44     | Track API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Space track migrated from snapshot. 12 backend tests.                                                                                                                                                                                                                                                                                                                             |
-| ✅ **L.3**                | PR #44     | Frontend integration: `trackLoader.js`, `useServerTracks` hook. SetupScreen + TrackManager + RaceHistory use combined list. Geometry caching in localStorage. 14 tests.                                                                                                                                                                                                                                                                                                  |
-| ✅ **L.4**                | PR #44     | Offline cache: `trackCache.js` — background images as data-URLs, 3 MB limit with LRU eviction, quota guard. `getTrackBackgroundUrl` offline-aware. 6 tests.                                                                                                                                                                                                                                                                                                              |
-| ✅ **L.4-BgCacheRemoved** | 2026-06-18 | Background-image caching removed entirely (trackCache.js deleted). Default backgrounds are 4–10 MB; localStorage quota is 5–10 MB — structurally too small even after JPEG downscale. Geometry cache kept; offline races run without background image. One-time localStorage cleanup in main.jsx removes legacy `racearena:cache:backgrounds` key.                                                                                                                       |
-| ✅ **L.5**                | PR #44     | Write path: POST/PUT/DELETE + background upload endpoints (server). TrackEditor async-save to server, retry UI when server not reachable. Migration on first connect (localStorage custom tracks → server, markers). Cache cleanup: deleted server tracks are removed from localStorage + background cache. TrackManager Edit opens TrackEditor (/track-editor?load=), Delete calls API. Server badge removed. 10 MB image limit. +23 frontend tests, +16 backend tests. |
-| ✅ **L.6-Bug1**           | PR #44     | Edit consistency: Edit now opens the metadata modal for ALL track types (Default, Local, Server). In the modal the "Edit Geometry" / "Draw Geometry" button navigates to the track editor. +8 tests.                                                                                                                                                                                                                                                                     |
-| ✅ **L.6-Bug2**           | PR #44     | Geometry index sync: `cacheTrackGeometry` now registers server geometries in `racearena:trackGeometries:index` via `registerInIndex`. `removeCachedTrackData` deregisters via `unregisterFromIndex`. As a result server geometries appear in the modal dropdown + "📐 Edit Geometry" button correctly. Edit-Geometry button in button row without marginLeft:auto. +7 tests.                                                                                             |
-| ✅ **L.6-Bug2-UX**        | PR #44     | Edit modal UX: Edit-Geometry button below track geometry dropdown (not in action row). Effects display removed; note "Background image and effects are managed in the Track Editor" added. Action row now only contains Save/Cancel. +5 tests.                                                                                                                                                                                                                           |
-| ✅ **L.6-VIS**            | PR #44     | Track editor visibility improvement (iter 2): A1 — 60% black overlay. A2 — lines magenta (#FF00FF) instead of light blue. A3 — white outline behind each line (outline 5–6px, color 3–4px). A4 — width boundaries 1→3, center line + curves 3→4. A5 — control points white/dark unchanged. `drawStaticScene` in `trackEditorDraw.js` (testability). +18 tests.                                                                                                           |
-| ✅ **L.6-BgBug**          | PR #44     | Image upload reset track: `handleBgUpload` deleted `centerPoints`/`innerPoints`/`outerPoints` when image dimensions differed from editor world. Fix: reset block + `window.confirm` dialog removed — dimension change accepted, track preserved. +1 regression test.                                                                                                                                                                                                     |
-| ✅ **L.7-Bug2**           | PR #62     | Default tracks without geometry: all 5 default tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) had `geometryId: null` — never playable. All 5 geometries drawn in the track editor and committed as server JSON + background images (2026-05-02). Tracks remain editable.                                                                                                                                                                         |
-| ⏳ **L.8-Hybrid**         | planned    | Hybrid concept: default tracks should work "offline-first" (without backend). Currently default tracks are metadata-only in code, server tracks fully on backend. When backend is unreachable, custom tracks are not playable. Discussed 2026-04-29.                                                                                                                                                                                                                     |
-| ⏳ **L.9-Status**         | planned    | Server connection status visible in UI: display whether backend is reachable (green/red dot or similar), so the user knows why custom tracks are not loading. Discussed 2026-04-29.                                                                                                                                                                                                                                                                                      |
-
-> ⚠️ **Add auth before VPS deployment!** Currently every browser visitor has full write access to all tracks (no auth on write endpoints). Phase 5 must implement JWT/auth before go-live. |
-
----
 
 ## Hot — next PR
+
+**verify (section-wide):** per-item checks are not written here — this section is a QUEUE, and its items are verified by the PR that takes them.
+
 
 ### 1 — Camera Phase + RaceScreen Refactor ✅ Shipped (PR-A1…PR-F) — only PR-G (UI bugs) open
 
@@ -648,14 +544,10 @@ Authoritative specification in `docs/CAMERA_DIRECTOR.md` (13 sections, all §13.
 
 **3 structural bugs identified** (empirically from code analysis):
 
-- ✅ **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — **fixed** `overviewClosedTrackZoom=1.3` multiplier, schema v15, DevScreen slider. (2026-05-27, squash `749c2a4`)
-- ✅ **Bug B** (River Run P2): zoom inversion on large open tracks — **fixed** action camera for open tracks with 1.5× base zoom. (2026-05-04, PR #73 `2d79678`)
-- ✅ **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — **fixed** top-3 focus group. (2026-05-04, PR #73 `80dcb8d`)
-
-**Q-25 root cause identified and solution decided:**
-
 - `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in `defaults.js:112` → Fix: `maxScale=10.0`
+
 - Space Sprint at ~131 px/s (reference), race duration ~144s
+
 - Open tracks: duration slider in setup screen, finishT dynamically from track physics
 
 **Camera direction philosophy decided (TENDENCY LOGIC, not constraint system):**
@@ -665,18 +557,6 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 
 **Sub-PR plan (9 PRs):**
 
-- ✅ PR-A1: Q-25 fix (maxScale=10) + duration slider + finishT for open tracks (2026-05-03)
-- ✅ PR-A2-Diagnose: read-only PR → `archive/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
-- ✅ PR-A2: Speed pipeline architecture refactor — `computeRaceBaseSpeed`, speedScaleFactor removed, closed-track duration slider (Model D), SpeedScaleSection removed (2026-05-03). **Fix commit 2026-05-04:** speedMultiplier normalization + spreadMinFactor (E1+E2).
-- ✅ PR-A2.5: Arc-length-uniform spline resampling + relative jitter (2026-05-04)
-- ✅ PR-A2.6: Race dynamics — spreadFactor re-roll (±85%, 5s transition) + speedBonusMult separation (2026-05-04). draftingBoost unchanged 1.10.
-- ✅ PR-A3: Dev panel reorganization (tier system, Race Tuning section, raceDynamicsConfig). (2026-05-04)
-- ✅ **Phase 4 (Timing Tunables + Plan-B Pan):** 7 timing tunables, battleMaxDurationMs, OVERVIEW jitter, diagnosis HUD, `_computePanScale` removed, trivial pan formula. (2026-05-06) — Branch: `diagnosis/camera-tuning-effectiveness`
-- ✅ PR-B: Camera bug fixes (Bug A+B+C) — PR #73 `feat/pr-b-camera-reform` + PR #74 `fix/pr-b-closed-track-regression` (2026-05-04)
-- ✅ PR-C: RaceScreen split (Q-7 refactor, no behavior change) — `e180a6b` chore/hygiene (2026-05-25)
-- ✅ PR-D: Camera state machine (OVERVIEW random jitter, tension-strength logic, findBattleCandidate) — OVERVIEW jitter `d6f4d20` Phase 4 (2026-05-06) + direction system/findBattleCandidate `07bea7b` Phase 3B (2026-05-22)
-- ✅ PR-E: Sprite corridor [min+max] + tag visibility iter 1 (B-UX1) + dev panel sliders — `SpriteSizeRangeSection` + `NameTagVisibilitySection` in Phase 4 `d6f4d20` (2026-05-06). `tagVisibleMaxCount` tunable live.
-- ✅ PR-F: Dev panel camera tunables + HUD overlay — Phase 4 `d6f4d20` (7 timing tunables + battleMaxDurationMs + OVERVIEW cooldown sliders) + 3 HUD components in Phase 3B `07bea7b`
 - PR-G: UI bugs (Cancel Race + Fullscreen API)
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
@@ -689,14 +569,19 @@ Currently all configured players are always shown — there is no mechanism for 
 **Use cases:**
 
 - Tournament with multiple groups: only Group A races in round 1, Group B in round 2
+
 - Ad-hoc race with participants from the full roster
+
 - Quick selection without manually deselecting all inactive players
 
 **Requirements (spec still pending):**
 
 - Player groups definable in `PlayerGroupsManager` (group name + player assignment)
+
 - Setup screen: selection filter "Which group races?" before race start
+
 - No change to the race engine — only which players end up in `sessionStorage.activeRace`
+
 - UI principle 1: everything configurable (group names, sizes, assignments) without code changes
 
 **Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
@@ -714,6 +599,7 @@ from U[spreadMin, spreadMax]).
 If user complaints about race duration deviations ever arise:
 
 - Calibrate `race_baseSpeed` formula to **race end** instead of median (different `E[min_n]` correction)
+
 - Race end would then be within a ±5% guarantee
 
 **Effort:** 1–2 days. Including re-verification of all race tests.
@@ -732,43 +618,12 @@ Three conceptual problems were uncovered while attempting to draw default track 
 
 **TLH-1 — Backend Fixes + Migration (Sub-PR 1) ✅**
 
-- ✅ Server boot migration: 5 default tracks created as server records (idempotent via one-shot marker `.tlh1-defaults-migrated`)
-- ✅ PUT `/api/tracks/:id`: `geometryId` taken from client if present in body; otherwise `existing.geometryId` kept
-- ✅ DELETE + `removeCachedTrackData`: geometry is NEVER automatically deleted — only background cache
-- ✅ Auto-backup: on every PUT/POST to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-mmm-<id>.json`
-- ✅ atomicWriteJson OneDrive fallback: renameSync error → direct writeFileSync
-- ✅ 10 new backend tests (geometryId ×3, backup ×3, default seed ×4), 1 new client unit test
-
-**TLH-2 — UI Flow + Cleanup (Sub-PR 2) ✅**
-
-- ✅ Edit modal: geometry dropdown replaced with status display ("Geometry: drawn (XX pts)" / "Geometry: not yet drawn" + "Draw/Edit Geometry" button)
-- ✅ Track editor: two-mode — load mode (`?load=<id>`) shows "Editing: X" without name input, new mode shows "New Track" with name input
-- ✅ Track editor load path: two-path load — (1) geometry cache, (2) direct server track state for `geometryId: null` tracks
-- ✅ Track editor save path: load mode → PUT with geometryId generation on first draw; new mode → POST
-- ✅ 17 new unit tests (12 TrackEditor.loadmode.test.jsx + 5 net TrackManager.test.jsx)
-
-**TLH-2 Post-Merge Bug Fixes (branch extension after browser test)**
-
-- ✅ F2: `hasGeo` read `innerPoints.length` (always 0 due to `toSummary` strip) → now `geometryId != null` + `pointCount` via extended `toSummary`
-- ✅ F4: track editor opened scrolled to canvas (no scroll reset on navigation) → `window.scrollTo(0,0)` on mount + `scrollIntoView` on `serverError`
-- ✅ F1-revised: save in load mode was blocked when no background → background only required in new mode; load mode always saveable
-- ✅ Lesson 39 + 40 documented in LESSONS.md
-- ✅ F2 follow-up: `autoMaxRacers` in `handleEdit` used `isServer ? track` as EditorShape input → crash (TypeError: `undefined.length`) because `toSummary` strips `innerPoints`. Fix: always use geometry cache instead of server summary. L39 extended with audit pattern.
-
-**Track Delete Safeguards (PR #58) ✅**
-
-- ✅ "Remove background" button in track editor (next to background upload, appears when image is loaded)
-- ✅ `DELETE /api/tracks/:id/background` endpoint — removes only the image, leaves track record intact
-- ✅ `DELETE /api/tracks/:id` returns 403 for default tracks (`isDefault: true`) — prevents accidental deletion
-- ✅ `migrateDefaultTracks()` runs on every boot (idempotent) — restores missing default records
-- ✅ React key=null fix in TrackManager geometry select
-- ✅ Background image useEffect race condition fix (L43) — cancelled flag prevents stale onerror callbacks
-
-**TLH-3 — Code Fallback + Status Banner + Export (Sub-PR 3) ⏳ deferred until after Camera Phase**
-
 - Frontend load order: server → cache → code bundle (`defaultTracks.js`)
+
 - Code bundle initially with empty geometries (bootstrap)
+
 - Status banner when code bundle mode is active: "Server unavailable — showing default tracks (limited functionality)"
+
 - Export button in dev screen: writes current server tracks as JSON snapshot (user commits manually)
 
 > **Order matters:** TLH-1 makes the system safe (backup + no data loss bugs), TLH-2 makes it usable (correct UI flow), TLH-3 makes it resilient (offline fallback). TLH-3 was deferred until after the Camera Phase. See `docs/TRACK_LIFECYCLE.md` for the full spec.
@@ -777,19 +632,14 @@ Three conceptual problems were uncovered while attempting to draw default track 
 
 All 5 geometries drawn and saved in the track editor:
 
-- ✅ Dirt Oval
-- ✅ River Run
-- ✅ Space Sprint
-- ✅ Garden Path
-- ✅ City Circuit
-
-Additionally: Space (Custom Track) already present.
-
 - **D7d** — 100-racer performance (spatial grid, smarter camera, LOD) — deferred until after Camera Phase
 
 ---
 
 ## Ready — spec exists, concept decided
+
+**verify (section-wide):** these carry a spec but no acceptance number, so a command can say whether the code exists and not whether it is right. Each needs its spec read before a check can be written.
+
 
 ### CI / dependency hygiene — owner decisions (from the 2026-07-22 audit episode)
 
@@ -803,6 +653,7 @@ GHSA-3jxr-9vmj-r5cp). Fixed lockfile-only in `869615b`.
   package stops CI until someone bumps a lockfile. Options: keep it hard (maximum pressure to stay
   current), or split the step — hard-fail on runtime dependencies, report-only on `dev` ones. Trade-off
   is prompt patching vs. unrelated red builds blocking merges.
+
 - **`body-parser` LOW runtime advisory (GHSA-v422-hmwv-36x6) in `server/`.** ⏳ OPEN. Below the
   `high` gate, so CI is unaffected and it was deliberately NOT bundled into the CI-unblock commit —
   unlike the two client fixes this is a **runtime** dependency, so the bump deserves its own decision
@@ -814,15 +665,15 @@ Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → _Br
 An empty seed field draws a fresh seed per race and shows it in the HUD; a typed number fixes the
 race. Typed values persist for the browser session. Status of the follow-ups:
 
-- ✅ **Random-seed draw for Quick-Test** — done 2026-07-22. Empty field = random-but-replayable; the
-  drawn seed is shown in the HUD and can be typed back to reproduce the race exactly.
 - **Seed for the normal "Start Race" path.** ⏳ OPEN — owner decision. It still hardcodes
   `racePlanSeed: 0`, so a real race is never reproducible. Options: adopt the Quick-Test model (draw
   a seed per race, display it), or leave it unseeded on purpose. This changes what a "normal" race
   is, not just how it is logged — hence not bundled with the Quick-Test work.
+
 - **Seed persistence beyond the session.** ⏳ OPEN — owner decision. Currently `sessionStorage`, so a
   fresh browser session starts from an empty (random) field. Promote to `localStorage` or a URL
   parameter only if eye-tests need a pinned seed to survive a restart.
+
 - **Replaying a browser seed in the sim.** The two engines are deterministic _individually_, but a
   browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
   timestep). Making one seed mean one race in both engines is a separate, larger piece of work.
@@ -836,6 +687,9 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 ---
 
 ## Completed Items (Phase Completions)
+
+**verify (section-wide):** the section is a record; the one open line is a pointer into it.
+
 
 | Item                            | PR     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -875,58 +729,22 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
 ---
 
-## EditorShape Centerline Arc-Length Mismatch Fix ✅
-
-**Status:** ✅ DONE — `aeb49c4` (2026-05-29, in master). Backup tag `backup/pre-centerline-fix` preserved for reference.
-
-**Root cause (historical):** `EditorShape` constructor re-samples `innerPoints` and `outerPoints` each with their own arc-length parameterization (`catmullRomSpline(..., 500)`). At U-turns the inner boundary is shorter than the outer boundary. At the same T fraction, `inner[T]` is further around the bend than `outer[T]`. `getPosition(T, 0)` midpoint therefore zigzags off the actual centerline — measured at 73.7 px lateral oscillation at Luger Hill's tightest U-turn (Lesson 97).
-
-**Fix applied (option a):** When a track provides `centerPoints`, `EditorShape` re-samples them as a third arc-length-uniform curve `_center = catmullRomSpline(track.centerPoints)`. `getPosition(t, 0)` returns position directly from `_center` instead of interpolating inner/outer midpoint. Perpendicular offsets use `angle − π/2` (CW = toward outer, matching convention). `_precomputeAngles` uses `_center[i]` tangents when available. Tracks without `centerPoints` fall back to existing midpoint behavior — no regression on Dirt Oval, River Run, City Circuit, Space Sprint, Garden Path.
-
-**Reference:** Lessons 97–99, commits `b4ebdb4` + `aeb49c4`, Luger Hill `90d3020197da.json`.
-
----
-
-## Phase 3B — Open Follow-up Items
-
-| Item                                 | Priority                  | Description                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ✅ **chore/sprite-scale-relative**   | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
-| ✅ **Phase 3D**                      | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items.                                                                                                                                                                                                                                                                 |
-| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `archive/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
-| ✅ **Bug A**                         | Done 2026-05-27 `749c2a4` | OVERVIEW pan no-op on closed tracks — `overviewClosedTrackZoom=1.3` multiplier in all three closed-track OVERVIEW branches + transition snap. Schema v15. DevScreen slider. 2134/2134 tests ✅.                                                                                                                                              |
-| ✅ **Bug 1**                         | Done 2026-05-27 `2f417ba` | LEAD_CHANGE spriteScale dead config — `_leadChangeZoom` added to all three `_computeZoomLevels` branches; `_transition` hard-cut and `_setTargets` LEAD_CHANGE now use `_leadChangeZoom` instead of `_leaderZoom`. No config or schema change (schema v14 LEAD_CHANGE spriteScale field now takes effect). +3 tests. 2137/2137 ✅.           |
-| **COMEBACK vs LEADER_ZOOM priority** | Medium                    | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM?                                                                                                    |
-| **Sim parity open track ranking**    | Medium                    | Open track ranking (projected world position) is not yet mirrored in sim-fairness.mjs. Sim still uses raw t-value for standings. For correct fairness statements on open tracks, the sim standings must match the browser standings (sim-browser parity rule).                                                                               |
-
----
-
-## Phase 3D — Open Follow-up Items
-
-| Item                                      | Priority | Description                                                                                                                                                                                                                         |
-| ----------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **FINISH_OVERVIEW timing calibration**    | Medium   | `finishOverviewLookbackPx` and `finishOverviewZoomOutDurationMs` are starting defaults. Check in real races: is the leader visible at the edge of the frame when the pan ends? Is the zoom-out speed appropriate? Adjust if needed. |
-| **COMEBACK frequency analysis**           | Medium   | After threshold relaxations (outcomePhaseThreshold 0.75→0.65, comebackMinStartGap 0.40→0.25) check: how often does COMEBACK activate now? Too frequent = operator irritation. Sim parity for COMEBACK trigger not yet achieved.     |
-| **BATTLE rank span empirical validation** | Low      | `battleMaxRankSpan: 5` is a starting default. Measure in 20-racer races with real pack situations whether rank span 5 filters correctly or is too restrictive.                                                                      |
-
----
-
 ## Planned — needs spec
+
+**verify (section-wide):** no `verify:` line is possible for this section and that is the section's own name: these items have **no spec**, so there is nothing a command could compare the tree against. An item leaves here by being specified, not by being checked.
+
 
 ### Phase D (Racer Design Development)
 
 - **D3.6** — File reorganization: `racer-types/` → `racer-configs/` (39 files).
   Separates configuration from engine code. Small standalone PR.
+
 - **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
   zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
   once Visual Racer Effects is complete.
   _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
-- ✅ **D7a** — Proportional sprite scaling + min-size floor + zoom ratios + label scaling (PR #33, master `a49baa0`)
-- ✅ **D7a-Plus** — Per-type minTargetScreenPx with live preview (PR #35, master `27cba65`)
-- ✅ **D7b** — Lane-free: physicalY replaces lane system (PR #37)
-- ✅ **D7c** — Row start + speed bonus + track capacity (PR #39)
 
 - 🔜 **D7d** — 100-racer performance. **THE LIVE ENTRY** (a status echo of it also sits in
   *Order of Next Steps*; edit only this one).
@@ -937,6 +755,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   **verify:** `git grep -lni "spatial grid\|spatialGrid" -- 'client/src/**'` — **still open while it
   returns nothing.** Checked 2026-08-23: nothing, and `\bLOD\b` over `client/src/**` is also empty,
   so neither named mechanism exists. The pattern can match; it is ordinary vocabulary.
+
 - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
   Builds on override pattern (B-7).
   ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
@@ -944,27 +763,6 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
 
 ### Phase B (Wiring Gaps + UX Improvements)
-
-- **B-UX1** — ~~Name tag readability (iteration 1, to be implemented in PR-E of the camera
-  phase)~~ **SUPERSEDED by the LABEL arc** — `nameTagLayout.js` ships with an occlusion test, and
-  `reports/evolution/INDEX.md` carries LABEL-OVERLAP-3, LABEL-NAMES-2 and LABEL-OVERLAP-FIX-1 among
-  others. **The SUBJECT is live and its defects are real; this line's framing is not** — the PR-E of
-  a camera phase it names has long since closed. Follow the arc, not this line.
-  - Spec in `docs/CAMERA_DIRECTOR.md §6.3`
-  - Top-N tags visible (N = `tagVisibleCount`, default = lead group = clamp(round(N×0.1), 3, 10))
-  - `tagVisibleCount` as dev panel slider
-  - No "own player" (project principle 3) — all racers treated equally
-  - All other racers without tag
-
-- **B-UX1-Iter2** — ~~Name tags state-dependent strategy (iteration 2, after iteration 1)~~
-  **SUPERSEDED by the same arc.** `labelNamesWhenRoom` and the PHOTO_FINISH `exemptAll` path are
-  exactly a state-dependent strategy, and both carry measured numbers in the CORRECTIONS block of
-  `reports/evolution/INDEX.md`.
-  - Spec in `docs/CAMERA_DIRECTOR.md §6.4`
-  - OVERVIEW: top-3 only or no tags; LEADER_ZOOM: lead group prominent;
-    BATTLE_ZOOM: involved racers prominent; zoom out: anti-overlap when space permits
-  - User explicitly wants to implement this once iteration 1 is stable
-  - Priority: after PR-E (camera phase)
 
 - **B-UX-Pause** — Pause + resume race
   - During a running race, pause button → freeze rAF loop, resume → continue
@@ -1016,62 +814,39 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
 
 - **B-2** — TrackSelector: custom track behavior when geometry is missing
-- **B-4** ✅ ~~Apply branding profiles to race/result screen (UI exists, wiring missing)~~ —
-  **DONE, confirmed at source 2026-08-23:** `RaceScreen/index.jsx` and `ResultScreen/index.jsx` both
-  resolve the active brand via `resolveActiveBrandProfile`, and the race screen additionally draws
-  `BrandLogoOverlay.jsx` and `CeremonyBrandCard.jsx`. **See V-4 below**, which recorded the opposite
-  and was wrong.
+
 - **B-5** — System backup/restore/reset: end-to-end verified (UI-only so far)
 
 ### Phase Q (Quality Hygiene)
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
 
-- ✅ **RaceScreen/index.jsx split** (Q-7) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted `drawing/` modules: `overlayRendering.js`, `particleRendering.js`, `racerRendering.js`, `priorityModeOverlay.js`, `battleDiagRendering.js`. Camera modules: `CameraDirectorDiag.js`, `cameraTimingComputation.js`.
-- ✅ **TrackEditor.jsx split** (Q-6) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted: `TrackEditorToolbar.jsx` (224 lines), `TrackEditorSaveBar.jsx` (116 lines), `useViewport.js` (138 lines), `useTrackIO.js` (206 lines).
 - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
+
 - **Q-19 — TrackEditor.effects.test.jsx flaky** — **CANNOT ESTABLISH, 2026-08-23, and that is
   about the evidence and not about effort.** The file passes **11/11 in isolation** and the full
   client suite ran green **three times** on 2026-08-22/23. **Three green runs cannot settle an
   intermittent failure.** *What would decide it:* repeated full-suite runs under the parallel
   configuration, counting failures — a MEASUREMENT, so it is not a verdict item. — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
 
-- ✅ **Q-6** — TrackEditor.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
-- ✅ **Q-7** — RaceScreen/index.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
 - **Q-8** — Watch list: TrackManager.jsx and BrandingProfiles.jsx. **THE LOC FIGURES ARE REMOVED
   RATHER THAN UPDATED.** Recorded as 535 and 330; measured 2026-08-23 as **654** and **559** — both
   now past the 400-line threshold this watch exists to enforce, having grown while the watch
   produced no action. **A watch that produces no action is a comment.**
   **verify:** `git grep -c "" -- <file>` — **still open while either exceeds 400.**
   Consider refactor at next extension.
+
 - **Q-9** — Watch: `racer-types/index.js` — candidate for splitting. Recorded at 286 LOC;
   **540 on 2026-08-23**, nearly doubled.
   **verify:** `git grep -c "" -- client/src/modules/racer-types/index.js` — **still open above 400.**
   (override API vs. registry vs. boot logic). Not a problem today, monitor.
+
 - **Q-10** — Watch: `RacerEditModal.jsx`. Recorded at 302 LOC and described as *already 75% of
   the 400-LOC threshold*; measured 2026-08-23 at **670 — 68% PAST it**, and the file has moved to
   `client/src/screens/DevScreen/sections/`.
   **verify:** `git grep -c "" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx` —
   **still open above 400.**
   Keep an eye on it at D8 (full config editor).
-- **Q-26** ✅ ~~Default tracks without backgrounds (fresh install)~~ — **DONE, confirmed at
-  source 2026-08-23:** all ten seed geometries carry `backgroundImageFile` and all ten image files
-  exist in `server/seeds/backgrounds/`.
-  **verify:** compare `ls server/seeds/backgrounds/*.jpg | wc -l` against
-  `ls server/seeds/tracks/*.json | wc -l` — **still closed while they are equal.**
-
-  Code defaults in `defaults.js` have no `backgroundImage` field. With a running server they are
-  automatically migrated to the backend (`migrateDefaultTracks()` runs idempotently on every boot) and
-  user-edited server versions fully replace them (`getInitialTracks()` filters out code defaults
-  when the server delivers the same ID).
-
-  **Problem only occurs when:** fresh install or deleted server state. Then the user sees
-  code defaults without backgrounds. In normal operation (server started at least once) the user
-  sees exclusively server tracks with backgrounds. Verified in PR-A2.8 diagnosis.
-
-  **Newly understood as a special case:** The more general problem is background caching for offline play
-  (all tracks, not just defaults). Separate planning and solution alternatives there — see
-  **"Background cache for offline play"** below.
 
 - **Background cache for offline play** _(Low priority)_
 
@@ -1100,64 +875,17 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Deliberately deferred in PR-A2.9 — no acute UX blocker. Fix: compression + git replace of originals. Small standalone PR.
   _(Priority: low)_
 
-- **Q-11** ✅ ~~`reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)~~ — **DONE
-  2026-08-23, and this line was STRUCK WRONGLY EARLIER THE SAME NIGHT — the correction is kept
-  because it is the more useful record.** BACKLOG-HONEST-1 struck it as already done on the evidence
-  that `TrackEditor.jsx` held one `new FileReader` and **two** `onerror` handlers. **It did: both
-  were on `img`, neither on the reader.** Counting `onerror` without checking WHOSE it was is the
-  whole mistake, and a grep that answers the wrong question answers it confidently.
-  **Actually closed by the same block's later piece**, which wired `reader.onerror` in all three
-  sites — this one, `SystemSettings.jsx` and `BrandingProfiles.jsx` — each reporting through the
-  error channel its own file already had, with `client/src/screens/DevScreen/sections/fileReadFailure.test.jsx`
-  guarding them.
-  **verify:** for each of those three files, `grep -c "new FileReader"` and `grep -c "reader\.onerror"`
-  — **still closed while they are EQUAL.** Comparing against a bare `onerror` count is what went
-  wrong the first time.
-  FileReader errors are silently swallowed; only `img.onerror` catches load errors.
-  Defensive hygiene, low priority.
 - **Q-20** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
+
 - **Q-12** — localStorage quota with large data-URL images
   Tracks now store data-URLs (1–5 MB possible for high-resolution images).
   No quota handling implemented. Info-level, not an acute blocker.
-- **Q-16** ✅ ~~CORS wildcard on all backend endpoints~~ — **NEVER TRUE as written today,
-  established at source 2026-08-23.** `server/src/auth/csrf.js:26` builds `corsOptions` from an
-  explicit allow-list and **denies** when the list is empty; `app.js:31-36` then stacks
-  `csrfOriginGuard`, `requireAuth` and `requireAdmin` above every route. No `origin: '*'` and no
-  bare `cors()` exist in the tree.
-  **verify:** `git grep -n "origin: '\*'\|cors()" -- 'server/src/**'` — **still closed while it
-  returns nothing**; the pattern can match, it is ordinary Express.
-  `app.use(cors())` without origin restriction — any browser tab can access all API write endpoints
-  (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
-  Fix: `cors({ origin: 'http://localhost:5173' })` for dev, env var for VPS.
-  **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
-  _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
-
-- **Q-17** ✅ ~~Missing `reader.onerror` handlers in SystemSettings.jsx and TrackEditor.jsx~~ —
-  **DONE 2026-08-23. It was worse than it said and is now closed in full.** Not two sites but
-  **THREE**: `SystemSettings.jsx`, `TrackEditor.jsx`, and **`BrandingProfiles.jsx`, which this item
-  never named**. All three created a `FileReader`, wired `onload`, and wired no `onerror` — so a
-  failed read settled nothing at all: no message, no state change, indistinguishable from a broken
-  button.
-  **The general rule this closes with, and it is why the line is kept:** an upload has TWO failure
-  modes, and they are not the same failure. A file that cannot be READ never reaches the decoder; a
-  file that reads and cannot be DECODED is a different message. TrackEditor reported only the second
-  for as long as this item was open. See **Q-11** above for the mis-strike that happened on the way.
-  `FileReader.onload` handlers are without `onerror` counterpart. Errors when reading (corrupt file,
-  permission problem) are silently ignored. Q-11 is specific to TrackEditor background images;
-  Q-17 extends to SystemSettings JSON import. Low priority — no data loss, just poor
-  UX (no error message on import error).
-  _(Deep audit 2026-05-01, Severity: LOW)_
 
 - **Q-18** — RaceScreen integration test infrastructure
   RaceScreen has 0 unit tests despite core game logic (finish detection, phase transitions, storage write).
   Blocker: canvas + rAF in jsdom requires `vi.stubGlobal` + mock rAF. Suggestion: 3 minimal tests
   (session load → race init, finish detection, sessionStorage write on race end).
   _(Deep audit 2026-05-01, Severity: MEDIUM — confirmed in TEST-RaceScreen backlog)_
-
-- ✅ **Q-19** — TrackEditor.effects.test.jsx flaky — **fixed PR #55 (2026-05-01)**
-  Root cause: `fetch` stub from `trackLoader.test.js` leaked into TrackEditor worker via missing
-  `vi.unstubAllGlobals()` in `beforeEach`. Fix: `vi.unstubAllGlobals()` added in `beforeEach`.
-  _(Discovered PR #50, fixed PR #55)_
 
 - **Q-20** — Server test backup cleanup not crash-resistant (TLH-1)
   `afterAll` in `tracks.test.js` cleans up backup files via `rmSync`, but only on normal
@@ -1196,14 +924,6 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   option, (b) atomic save (rollback geometry if background fails). Effort: small–medium.
   _(Arose 2026-05-02 after background diagnosis dirt-oval, Severity: MEDIUM)_
 
-- ✅ **Q-25** — Open track too fast / race duration too short (PR-A1)
-  Root cause (canvas hypothesis empirically disproved): `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in
-  `defaults.js` capped Space Sprint at 4.0 instead of the physically correct ssf=9.886. Space Sprint
-  ran at 323 px/s instead of ~131 px/s and lasted ~58s instead of ~144s.
-  Fix: `maxScale=10.0` + duration slider for open tracks + `openTrackFinishT` integration in RaceScreen.
-  Canvas coordinate system hypothesis disproved — Space Sprint geometry uses world coordinates 256..5707,
-  not canvas-bound. _(Fixed in PR-A1, 2026-05-03)_
-
 - **Q-13** — Sprite frame animation stutters with large sprites
   On 6000-tracks sprites become very large — frame changes appear jerky.
   **Structural solution in PR-E of the camera phase:** `maxTargetScreenPx` as upper camera zoom limit
@@ -1212,72 +932,31 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Fallback solutions (basePeriodMs scaling, frame interpolation) only if
   maxTargetScreenPx calibration is insufficient.
 
-- ✅ **Q-15** — Visual system architectural debt — structurally addressed by D7a (PR #33).
-  4 multiplicative scaling factors reduced to one pipeline (computeRenderDisplayScale).
-  cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminated. Closed/open track math pipelines unified
-  through consistent effZoom-based calculation.
-
-- **Q-28** ✅ ~~Shared HTTP helper for API services~~ — **DONE, established at source
-  2026-08-23:** `client/src/services/apiClient.js` exports `apiCall` and **all seven** API services
-  import it. **The general rule this closes with:** a negative from the wrong NAME is not a
-  negative — the first search for this looked for `apiFetch`/`httpClient` and found nothing while
-  the helper sat there under a third name.
-  **verify:** `git grep -c "fetch(" -- 'client/src/services/*.js'` — **still closed while exactly
-  one file answers** (`apiClient.js`); a second file means a service has gone around it. _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
-  `client/src/services/surfaceClassApi.js` and `client/src/services/trackApi.js` share 48 lines of
-  identical `apiCall`/`withTimeout` infrastructure — both services copied the same HTTP wrapper.
-  Fix: extract shared helper (e.g. `services/apiUtils.js`), update both callers.
-  Estimated effort: ~1h.
-
 - **Q-29** — Shared RangeSliderSection component _(Post-Phase-4 audit 2026-05-06, Severity: LOW)_
   Three Phase-4 Dev-Screen sections share a 36-line slider pattern:
   `NameTagVisibilitySection.jsx`, `SpriteSizeRangeSection.jsx`, `CameraZoomTuningSection.jsx`.
   Extract into a shared `RangeSliderSection` component before more Dev-Screen sections are added.
   Estimated effort: ~2h.
 
-- **Q-30** — ~~React 18 → 19 **+ react-router-dom 6 → 7**~~ **HALF DONE: the ROUTER migration
-  shipped.** `client/package.json` already declares react-router-dom 7 (read the version there, not
-  here). React and react-dom are still on 18, so **this item survives as the React half only**.
-  **verify:** `grep -n '"react"' client/package.json` — **still open while it reads `^18`.** _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
-  Current: `react@18.3.1`, `react-dom@18.3.1`, `react-router-dom@6.30.3`. Latest: `react@19.2.6`,
-  `react-router-dom@7.15.0`. Both have breaking API changes — no npm-audit vulnerability, but the
-  version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
-  avoid accumulating migration debt. Estimated effort: 1–2 days (route definitions + React API).
-
-- **Q-31** — Long files — updated watch list after chore/hygiene-i18n-audit (2026-05-25, squash `e180a6b`). Q-6 and Q-7 resolved ✅.
-  - ✅ `TrackEditor/TrackEditor.jsx`: split → `TrackEditorToolbar.jsx` (224), `TrackEditorSaveBar.jsx` (116), `useViewport.js` (138), `useTrackIO.js` (206) (Q-6 done)
-  - ✅ `RaceScreen/index.jsx`: drawing modules extracted to `drawing/` (5 modules) + `camera/` (2 modules) (Q-7 done)
-  - ✅ `DevScreen/sections/RaceTuningSection.jsx`: 1269 → **44 lines** (thin coordinator); logic split into `BehaviorTuningSection.jsx` (610), `DynamicsTuningSection.jsx` (607), `SubCard.jsx` (41)
-  - `SetupScreen/SetupScreen.jsx`: **~809 lines** — watch list (no split yet)
-  - `DevScreen/sections/TrackManager.jsx`: **~727 lines** — watch list, Q-8
-
-### Phase V (Verification Sprint)
-
-Systematic testing of still-unverified areas.
-
-**FOUR OF THESE ARE NOT INDEPENDENT WORK** (marked below): V-1, V-2, V-4 and V-5 are the
-VERIFICATION of B-1, B-2, B-4 and B-5, and listing both as open counts one task twice. V-3 was
-answered by the config. **V-6 to V-9 are genuinely independent** — they verify areas no B- item
-covers.
-
 - **V-1** — PlayerSetup B-1 loading-saved-lists bug. **NOT INDEPENDENTLY OPEN — downstream of
   B-1**, which is the work; this is its verification and cannot start until B-1 lands.
+
 - **V-2** — TrackSelector B-2 custom track behavior. **NOT INDEPENDENTLY OPEN — downstream of
   B-2 above**, which is the work; this is its verification and cannot start until B-2 lands. Track
   it there. *(The same shape holds for V-1↔B-1, V-4↔B-4 and V-5↔B-5 below.)*
+
 - **V-3** — Result screen winner count B-3 (configurable?)
-- **V-4** ✅ ~~Branding profiles B-4 (per old ROADMAP done, reality check says open)~~ —
-  **CLOSED WITH B-4 above, and the parenthetical is the interesting part: the old ROADMAP was RIGHT
-  and the reality check was WRONG.** Confirmed at source 2026-08-23 — both `RaceScreen/index.jsx`
-  and `ResultScreen/index.jsx` resolve the active brand. **The general rule:** a "reality check" that
-  contradicts a record is a claim like any other and needs its own evidence; this one was carried as
-  fact for months.
+
 - **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
   doing, which is why this line is kept rather than struck.)*
+
 - **V-6** — Multiple dev panel sections — visual verification
+
 - **V-7** — Physics + collision behavior — smoke test
+
 - **V-8** — localStorage persistence edge cases — stress test
+
 - **V-9** — Fullscreen toggle — functionally unverified
 
 ### Phase T (Tooltip Retrofit)
@@ -1286,13 +965,19 @@ All existing dev screen fields that are unclear without a label. Uses `InfoToolt
 from D3.5.5.
 
 - **T-1** — RaceDefaults fields
+
 - **T-2** — TrackManager fields
+
 - **T-3** — BrandingProfiles fields
+
 - **T-4** — SystemSettings fields
 
 ---
 
 ## Order of Next Steps
+
+**verify (section-wide):** a sequencing note, not a claim — it closes when the order is no longer useful.
+
 
 1. ✅ **B-Wave** (B-1, B-3, B-10..B-15) — PR #25, master `697e081`
 2. ✅ **B-16 + B-17** — PR #26, master `7cdde15`
@@ -1349,21 +1034,10 @@ from D3.5.5.
 
 ---
 
-## Clean-State Audit 2026-06-04 — Follow-up Items
-
-Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`.
-
-| Item                                                | Priority | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Fix d11-ux-verification.spec.js**                 | Medium   | V1–V3 E2E tests assert physics defaults that were already stale on 2026-06-04 (homeForceStrength=0.018, avoidanceDistance=0.35, etc.). These will fail when run against the current app. Fix: update `DEFAULT_CFG` constants and test assertions to match current `DEFAULT_RACE_BEHAVIOR_CONFIG`. Requires browser verification. Lesson L124.                                                                                                                              |
-| ✅ **npm audit fix (react-router)**                 | Done     | Patched in follow-up commit on `chore/clean-state-2026-06-04`. 0 vulnerabilities.                                                                                                                                                                                                                                                                                                                                                                                          |
-| ✅ **Dead fallback constants in CameraDirector.js** | Done     | 18 constants prefixed with `_` in follow-up commit on `chore/clean-state-2026-06-04`.                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Speed-bonus Rear-Bias calibration**               | Medium   | 4 of 5 fairness failures in the Phase 2 sim are Rear-Bias (back rows winning more often than expected): elephant×DirtOval, dragon×GardenPath, plane×LugerHill, horse×IceTrack. Root cause is NOT the 8 physics avoidance params — investigate `speedBonusFactor` and `maxCapacityFactor` in `DEFAULT_ROW_LAYOUT_CONFIG` (rowLayout.js). A targeted sim sweep on those two params (not a full 8-param LHS) is the next step.                                                |
-| **Browser-check Ice Track × horse geometry**        | Medium   | The 100-race sim found p=0.001 Rear-Bias for horse on Ice Track (χ²=21.3, df=5) — the strongest single failure. Horse has adequate laps (~4.5) and the track is slightly WIDER than Dirt Oval where horse passes. Track geometry (specific corner sequence or straight layout) is the suspected cause. Open Ice Track in a browser, run a race with horse, and observe whether any starting position shows a systematic advantage. If confirmed, consider a geometry edit. |
-
----
-
 ## Physics — Open Issues
+
+**verify (section-wide):** each needs a sim run to decide, and the item names it; no grep can substitute.
+
 
 ### P-1 — Longitudinal overlap during passing on open tracks _(backlogged 2026-06-05)_ — ⚠️ **ROOT-CAUSE PARTIALLY MOOT — RE-VERIFY (2026-07-14 audit)**
 
@@ -1435,6 +1109,7 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 **Two distinct phenomena — do not conflate:**
 
 - **(a) Same-lap pack crowding on short closed tracks** (5–8% honest overlap): many bodies on a short perimeter (path ≤ 3300 px). Measured directly: max spread is 0.2–0.55 laps, 100% same-lap events, 0% cross-lap. NOT caused by lapping — lapping does not occur in 60s homogeneous fields. Not a physics bug.
+
 - **(b) Longitudinal rendered-body overlap during open-track overtaking** (P-1 bug): rubber-band overcomes speed brake, dT → 0 at crossing, ~31.7 px body overlap per pair on screen. Pre-existing physics issue, still open.
 
 **Reference:** `reports/closed-track-overview/14-full-diagnosis.md` §Q8, `reports/closed-track-overview/15-topdown-overlap.md`, `reports/phase1-metrics/03-n50-lapping-confirmation.md`
@@ -1442,6 +1117,8 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 ---
 
 ## Known Limitations — Deliberately Accepted
+
+**verify (section-wide):** no `verify:` line by construction — an accepted limitation is not a defect waiting for a check; it closes only when somebody decides it is no longer acceptable.
 
 - **SEC-2 — Race state manipulation via React DevTools** _(audit-2026-04-29, Severity: High — accepted)_
   `g.current.racers` in RaceScreen lives as a mutable `useRef`. Technically proficient guests can use
@@ -1479,47 +1156,44 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 ---
 
-## Racer Editor — Open Points
-
-Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
-
-| Item                                 | Priority        | Description                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ✅ **RE-1** Extended coat palette    | Done 2026-05-30 | `STANDARD_COAT_PALETTE` expanded to 20 colors for all vehicle types. Pattern infrastructure (solid/stripes/dots) implemented in `spriteTinter.js` + `coatAssignment.js`; patterns disabled (`assignPattern` always returns `'solid'`) — too visually dominant at 40 px display size (Lesson 105). Re-enable by updating `assignPattern` when sprite display sizes are larger or tiles are retuned. |
-| **RE-2** Frame-sequence mode         | Low             | Alternative to spritesheet upload: import individual PNG frames (1–16). Builder stitches them into a sheet internally. Useful for frame-by-frame artwork.                                                                                                                                                                                                                                          |
-| **RE-3** Speed equalization          | Low             | Option in RacerMetadataPanel to normalize speedMultiplier so user-created types race at the same average pace as built-in types. Auto-computes from median built-in `speedMultiplier`.                                                                                                                                                                                                             |
-| **RE-4** D3.6 migration refactor     | Medium          | Migrate all built-in types (HorseRacerType, DuckRacerType, SnailRacerType, …) from class files to `SpriteRacerType` config objects. Remove per-type class files. See ROADMAP.md D3.6.                                                                                                                                                                                                              |
-| **RE-5** Mask-mode support in Editor | Low             | Expose tintMode='mask' option in SpriteGeneratorPanel; add mask PNG upload field. Currently mask mode is available in code but not exposed in the Racer Editor UI.                                                                                                                                                                                                                                 |
-
----
-
 ## Parking Lot — Future / Unclear Scope
 
+**verify (section-wide):** no `verify:` line: the scope is undecided, so there is nothing definite enough to test.
+
 - Phase 5: server, leaderboard, Socket.IO (architecture planned, no code)
-- Phase 7: custom sprite upload ✅ delivered as standalone Racer Editor Phase 1+2 (2026-05-28)
+
 - i18n (English + German base) — app language is English, documentation can be both
+
 - Multi-tenant isolation (per-organizer track sets and branding)
+
 - Mobile / tablet responsive tuning
+
 - Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
 
 ---
 
 ## 2026-07-10 — added (INFRA: sim-trust)
 
+**verify (section-wide):** these are sim-trust follow-ups whose check is a parity or fingerprint run named in the item, not a text search.
+
 - **FORCE-PARITY latent seams** (`archive/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
   `computeFinishT` hardcodes its own `runoutZone` while the browser reads `behaviorConfig.runoutZone` —
   identical at default, diverges if the owner ever changes it (open tracks only). O2 (`--rerollVariant=2`
   sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),
   O5 (auxiliary sweep scripts omit the phase-split), O6 (shared-module parity conditional on geometry).
+
 - **Repository hygiene** — needs a curation pass: **170 tags on origin, 180 local** (10 unpushed local
   tags; `git tag | wc -l` = 180, `git ls-remote --tags` = 170) and **6 remote branches**. Which tags are
   meaningful, and which branches are dead, is **UNVERIFIED** — keep it that way until whoever prunes
   proves each one; produce a KEEP-LIST of the live rollback anchors first. (Do not prune on any inherited
   count — they have not matched twice now.)
+
 - **Pre-existing start-row WIN bias on luger-hill and dirt-oval** — present under v4-OFF (shipped
   default): `startRowUnfair = true` on both across all three arms in the night sweep. Independent of
   cohesion; a fairness item in its own right.
+
 - **PHOTO_FINISH DevScreen accordion** — to be added.
+
 - **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
 
 ### Re-apply --jobs parallelism cleanly (perf)
@@ -1539,94 +1213,10 @@ branch.
 (default config) now yields `72c3360fb75225ef`. The pre-feature `4ec8e64dd2641ad3` now requires
 `b2AttackHeroes` at zero. Pin the parity gate to the current default hash (or run with count=0 for `4ec8e64`).
 
-## 2026-07-20 — added (runaway baseline + cleanup)
-
-### Runaway phase — ✅ CLOSED 2026-07-29 (solved by the shipped gap-reroll; Distance Leash REJECTED)
-
-**CLOSED.** The runaway problem was solved by the **gap-reroll cohesion mechanism** shipped as a default
-(`gapRerollEnabled` ON, G=0.5 / strength=1.0, 2026-07-26): the N=200 × 10-track confirm cut runaway-winner
-**23.5% → 8.3%** and generalized cleanly across tracks. The **Distance Leash** below was built sim-only and
-**REJECTED** — it made runaway WORSE (braking rank-1 dumps the leader into the pack and promotes a fresh
-escapee, and its outcome window engaged after the gap had already formed, Lesson 179); the **Late Challenger**
-was never needed once gap-reroll shipped. COMBO15's v2 duration-relative PULK watchdog (`chaosGap ≤ ship×1.5`,
-[FAIRNESS.md](FAIRNESS.md)) is the permanent guard against a disproportionate early breakaway. The material
-below is retained as the lab-journal record of the phase; no further work is planned. Endpoint anchor:
-`backup/exp-runaway-baseline-complete` (`f40a7a6`).
-
-<details><summary>Lab-journal record (the original open-phase plan — superseded by the gap-reroll ship)</summary>
-
-Baseline established: **runawayWinnerRate = 23.5%** overall (open 18% / closed 28–30%) via the
-`--runaway-parade` observer (`scripts/sim/observers/runaway-parade.mjs`, baseline in
-`exp-runaway-leader-results/`). **Goal:** keep the leader catchable without breaking fairness. **Key
-constraint (Lesson 179):** the decisive lead forms **before progress 0.90** — a ≥3-length lead at 0.90
-converted to an unchallenged win in ~94/99 races — so a leash that only engages after 0.90 arrives too
-late; contest the gap EARLIER. **Concept + two independent reviews + decision:**
-`reports/proposals/RUNAWAY-CONCEPT.md` (+ `CONCEPT-REVIEW-CC-RUNAWAY.md`, `CONCEPT-REVIEW-COPILOT-RUNAWAY.md`).
-
-**ACTIVE — Mechanism A: Front-Cluster Distance Leash (BUILD, modified).** The load-bearing, gap-space
-mechanism (the metric lives in gap-space; the servo is rank-space and length-blind today). Design:
-**leash on the current rank-1 racer (hero or not); leader-only PROPORTIONAL gap-brake with hysteresis;
-reuse the 1 s `trajectoryMult` slew; window [0.6, ~0.92]; B1 floor; shared length scale via
-`raceLengths.js` threaded parity-safe into `update()` and both callers** (`index.jsx`, `sim-fairness.mjs`).
-Flag-gated (`frontLeash*`), default OFF → byte-identical. This is the next build step.
-
-**✅ CLOSED — SUPERSEDED (owner-approved 2026-07-31). Mechanism B: Late Challenger.** The runaway phase was
-closed by the shipped **gap-reroll** cohesion mechanism (runaway-winner **23% → 8.3%**), and the Late Challenger
-was never needed once it shipped; the definitive N=300 [HOLM-300-COMBINED](../reports/evolution/HOLM-300-COMBINED.md)
-measures runaway at **0% on all four quartet tracks**. The problem it was designed to solve no longer occurs.
-Historical design retained below. — Reactive form REJECTED (fights the once-per-race,
-boundary-anchored generator; near-empty feasibility budget that late; rank-space curves can't express
-"within ~1 length"). Unconditional-closer form DEFERRED. **Re-entry condition (historical):** revisit ONLY if
-measurement after A ships shows the front present in RANK but still not contesting in LENGTH at the line.
-
-**Success metrics:** runawayWinnerRate 23.5% → <10% (no track >15%); top-5 action ≥ baseline;
-paradeFinishRate ≤ 2%; B1/B2 band-reach clearing the gate, Holm ≤2/4; flags OFF → fingerprint `72c3360fb75225ef`.
-_(Casting-yield criterion dropped for A — A casts nothing and no `castingYield` metric exists; it
-re-applies only if B is ever built. Note: leash brake authority is −15% / minMult 0.85, not "+10%".)_
-Measure with the runaway-parade observer + `exp-runaway-leader` on the f40a7a6 seeds; determinism per sweep.
-Per Lesson 178, AUTHOR the contest (leash the leader), don't LIBERATE constraints.
-
-**STATUS 2026-07-20 — leash FAILED; diagnostics done; gap-cap re-roll bias now the active mechanism.**
-Phase-1a leash sweep FAILED (runaway worsened 22.5%→~30%; braking rank-1 reshuffles a bigger runaway).
-Two read-only diagnostics followed: **formation** (`b4a1327`) — the 3.0L gap forms LATE, median progress
-0.783 (in-window, so leash timing wasn't the issue); **speed-source** (`9b51380`) — the escape is
-NATURAL (spreadFactor ≈ band ceiling 1.080 vs chasers 1.031; areaBonusPost EXONERATED = 1.0 late; servo
-already brakes the leader). New product metric surfaced: racers within 3.0L of P1 at 0.90 = median **0**
-in runaways (vs 2 non-runaway). → **ACTIVE mechanism: gap-cap re-roll bias** (`docs/CONCEPT-COHESION.md`),
-the drift instrument that re-draws spreadFactor. Built SIM-only, flag-gated (`--gapRerollThresholdLengths /
---gapRerollMode / --gapRerollStrength`), scheduled-rolls-only (owner fairness decision), OFF = byte-identical
-(fingerprint `72c3360fb75225ef`). Phase-2 exploration sweep (symmetric/down × G 1.5/2.0, N=50) in
-`exp-runaway-leader-results/phase2-gapreroll/`. NEW first-class gate added: within-3.0L runaway median ≥ 2.
-Concept + CC/Copilot reviews: `reports/proposals/GAP-REROLL-CONCEPT.md` (+ reviews). Both reviews
-independently favored this over the leash (right instrument for the measured drift cause).
-
-**STATUS 2026-07-21 — window-basis bug fixed + N=200 confirmation + BROWSER WIRING DONE; eye-test pending.**
-The closed-track 0-biased-rolls bug (windowEnd on target vs realized duration) was fixed (`9ff3bf3`) — one
-duration basis, both engines. N=200 confirmation on ALL 10 tracks (`3464295`): **symmetric/G=1.5/strength=1.0
-→ runawayWinnerRate 23%→8.3%**, generalizes cleanly (6 new tracks behave like their groups), action IMPROVED
-(+0.53), 73% of V0-runaways converted (escapee still wins/podiums in a contest). **Browser wiring + DevScreen
-controls now DONE (default OFF, fingerprint `72c3360fb75225ef` re-verified, one-clock window in both engines)
-— OWNER EYE-TEST PENDING.** _(Secondary open observations, NOT gate-blockers for the eye-test: **searound
-sits at ~15.5%**, just over the 15% per-track cap — the only track over; **Holm 3/10** (V0 2/10, one extra
-flagged track). Band-reach — the PRIMARY fairness gate — HOLDS above the floor on all tracks for strength 1.0; s075
-dips to 69.7% so s10 is the cleaner candidate.)_ Next after eye-test: owner ship decision → backup tag.
-
-</details>
-
-### Parade-finish — observe only 🔍 _(no action)_
-
-`paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
-spread ≤0.10 over the final 5%). Rare and not obviously bad — **track it via `--runaway-parade`, do not
-chase it.** Revisit only if a runaway fix pushes it up.
-
-### Sim `--out` forced under repo ROOT 🔧 — ✅ DONE (HYGIENE-1 STEP 4, 2026-07-29)
-
-`sim-fairness.mjs` now honours an absolute `--out` (skips the ROOT join when the path is absolute), and its
-scratch OUT_DIR **defaults off the OneDrive tree** (`$RA_SCRATCH_DIR` or `<os-tmp>/racearena-scratch`,
-env-overridable); a relative `--out` still resolves under repo ROOT for back-compat. Added `--purge-tmp` to
-wipe the scratch dir, and `scripts/audit-local.mjs` reports scratch/tmp size. See reports/evolution/HYGIENE-1.md.
-
 ## 2026-07-31 — added (DOC-SYNC-2: long-term items, owner's hand)
+
+**verify (section-wide):** **his own list, in his words.** No command decides any of them; they close when he says so.
+
 
 These lived only in the planner's chat-side handoff and had no home in the repo. All are **UNSCHEDULED —
 owner's hand**: parked here with enough context to be actionable months from now, none scheduled.
@@ -1635,26 +1225,32 @@ owner's hand**: parked here with enough context to be actionable months from now
   prints "Some chunks are larger than 500 kB after minification"; `dist/assets/index-*.js` ≈ 763 kB / 222 kB
   gzip). Split via dynamic `import()` / route-level code-splitting (or `build.rolldownOptions.output.codeSplitting`)
   so the first paint doesn't pull the whole app. Pure build/perf work, no behaviour change.
+
 - ⏳ **Coarser fairness bands.** A product-level simplification the owner has raised: reduce the number of
   finishing-place bands so "reached your band" is a coarser, more forgiving promise. Would touch the band
   definition used by `computeZoneSuccessRate` / the draw and would re-baseline every fairness number — a
   deliberate product decision, not a tuning tweak. Owner to decide the band count before any work starts.
+
 - ⏳ **The story layer (owner-cast narrative toolkit).** The banked owner-cast toolkit for authored race
   stories: the **multi-role rule** (a racer may hold several narrative roles across the race provided their
   windows are DISJOINT, smoothly welded, and resolve to ONE endpoint — no contradictory simultaneous roles);
   **comebacker** and **fallbacker** definitions (a racer authored to climb, or to slide, over a bounded window);
   and the **drawn-not-patterned** counts (how many of each role per race are DRAWN from a distribution, never a
   fixed recurring pattern the eye learns). Design-first; no mechanism until the owner fixes the definitions.
+
 - ⏳ **CAMERA-GLIDE-PATH-1 — view-change detour.** A camera view change travels fast but takes a visible
   DETOUR rather than the direct line. Standing hypothesis: the pan is interpolated in **track space (T-lerp)**
   and so follows the curvature of the track, instead of on a straight **screen-space** line between the two
   view positions. Investigate by tracing the pan interpolation space; candidate fix is to lerp the screen-space
   target, not the track parameter. Owner-visible feel item.
+
 - ⏳ **Camera block reset.** Parked camera item (block reset) from the camera saga handoff — needs the owner to
   restate the exact symptom before it is actionable; recorded here so it is not lost.
+
 - ⏳ **Camera-weights design question — relative vs absolute weighting (deferred).** Whether the camera's
   subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
   A design question the owner deferred; no implementation until it is answered.
+
 - ⏳ **Start-row gradient project — SHELVED WITH DOCUMENTATION, opens only on the owner's explicit word.** The
   definitive N=300 native pooled Holm found a small PRE-EXISTING start-row gradient on searound / luger-hill /
   seatrack (space-sprint clean); owner verdict 2026-07-31 = document and shelf. Canonical home: the
@@ -1662,3 +1258,642 @@ owner's hand**: parked here with enough context to be actionable months from now
   [HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md)). Candidate direction on record if it ever
   opens: **chaos traffic for the rear rows** (give the back rows more chaos-window mixing), which would aim to
   raise the bar to "silent even at N=300". Do NOT start without the owner's explicit word.
+
+---
+
+# PART TWO — CLOSED
+
+**Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item
+names what closed it and when, and any reasoning that states a general rule is kept, because the
+rule outlives the item.
+
+**Why keep it at all:** a struck claim with its cause is the only thing that stops the same
+proposal arriving again in six months looking new.
+
+## DECISIONS — 2026-08-23 (the owner's, recorded so they stop being re-proposed)
+
+**These are DECISIONS, not open items.** Each carries its date. Where an open item existed for the
+same subject it has been closed and points here. **A decision recorded is a decision that does not
+have to be made twice** — which is the whole reason this section exists rather than the items simply
+being deleted.
+
+---
+
+### D1 · The track-width overshoot comments — a RIDE-ALONG, not a piece of its own · 2026-08-23
+
+**The finding (CORRIDOR-DIAG-ARMED-1):** two comments say `getActualTrackWidth()` overshoots the
+stored width *for open tracks*. Measured over all ten committed geometries, **it overshoots on every
+one of them** — closed tracks by up to **12.8%**, open ones by 22.7–49.7%.
+
+**His decision: the next change that touches either line corrects the comment. No piece is opened
+for it.**
+
+**The two sites, so it is findable from both:**
+
+  - `client/src/screens/RaceScreen/index.jsx` — the comment above `trackWidthPx`
+  - `scripts/sim-fairness.mjs` — the comment above `geometricTrackWidth`
+
+**verify:** `git grep -n "overestimates for open" -- client/src scripts` — **this decision is
+discharged when it returns nothing.** Until then the comments are simply imprecise, which is why
+this is a ride-along and not a defect.
+
+### D2 · `RaceScreen` is not testable — the finding STAYS, nothing is done · 2026-08-23
+
+**His decision: keep the finding, do no work.** It is recorded so the next person who meets the wall
+knows it is known and does not spend the evening rediscovering it. **No rewrite is implied and none
+is proposed.**
+
+The evidence is in PART ONE and is deliberately left there rather than moved here: the finding is
+still true, so it is not closed — **what is closed is the question of whether to act on it.**
+
+### D3 · `deploy.yml.disabled` gets no `permissions:` block · 2026-08-23
+
+**His reasoning, recorded as his:** the file is disabled, so **no run can exercise an edit to it**,
+and an unverifiable security change is false comfort. **It belongs to whoever re-enables it.**
+
+CI-PERMISSIONS-1 had already left it alone for the same reason and put the question to him; this is
+the answer. **The general rule it leaves behind:** a security control you cannot exercise is not a
+control, it is a note — and a note is better written where the work will happen than in a file
+nobody runs.
+
+### D4 · The backlog MAY grow when it retires an item · 2026-08-23
+
+**His decision: struck history is KEPT.** Striking a claim in place and recording what closed it
+takes more lines than the claim did — `docs/BACKLOG.md` grew by 132 lines while retiring 16 items on
+2026-08-22 — and that trade is accepted.
+
+**This is the rule PART TWO of this file is built on.** Nothing is deleted from CLOSED.
+
+### D5 · A Dev Screen change reaching a RUNNING race is NOT wanted · 2026-08-23
+
+**Declined on 2026-08-22 and again on 2026-08-23.** Closed as a DECISION and not as a fix, so it
+stops being re-proposed — it has been offered as "one line, the highest-leverage line in the file"
+more than once, and it will read that way again to the next person who finds it.
+
+**The related question is answered too: `npm run dev` should NOT refuse to start when the build
+identity is unreadable — NO, for now.** The silent failure that question guarded against was
+removed by BUILD-FROM-OUTSIDE-1: the identity is now reported by `/api/health`, and an unreadable
+one says so with a reason rather than failing quietly.
+
+### D6 · The fairness SPLIT will NOT be measured · 2026-08-23
+
+**His reasoning, recorded as his: what matters is that the race is fair, not where the fairness
+comes from — and the measurement costs hours for an answer he does not need.**
+
+**THE FINDING IS FILED SO IT IS NOT REDISCOVERED AS AN OPEN QUESTION.** It is not that the
+measurement is hard; it is that **the regulator has no external switch**:
+
+  - `DEFAULT_CONTROLLER_PARAMS` — carrying `gain`, `maxMult`, `minMult`, `bandStrictness` — is a
+    **module constant in `client/src/modules/racePlanner.js`**, not a key in `defaults.js`.
+  - `createRacePlan` accepts `config.controllerParams`, and **the only supplier of it in the whole
+    tree is `client/src/modules/racePlanner.test.js`** — a unit test proving the hook works. No
+    production caller, no harness, no CLI.
+  - **`bandStrictness` is not the lever it looks like.** It changes what the regulator *aims at*
+    (exact rank → band edge), not whether it runs: the multiplier is still `1 + gain·(error/nActive)`.
+    **The lever that would neutralise it is `gain`.**
+
+**WHAT IT WOULD TAKE, so the work is already scoped if it is ever needed:** one line in a harness
+passing `controllerParams` through to `createRacePlan`. **That harness is `scripts/sim-fairness.mjs`,
+which is inside the world fingerprint's declared reach** — so the change needs its own piece with
+the fingerprint proved unmoved, which is exactly why it was not done inside a read-only measurement.
+
+### D7 · `_lfEntryByState` is DOCUMENTED IN PLACE, not deleted · 2026-08-23
+
+**His decision.** The reason is now written beside it in `client/src/modules/camera/CameraDirector.js`
+and is repeated here because it is the kind of reason that gets lost:
+
+**The reader is LIVE** (`_lerpFactorForState`), and the older transition grammar is **a shipped
+CONFIG SWITCH** (`defaults.js`, `'glide'` shipped) **rather than removed code** — so deleting the map
+would change behaviour the moment that switch is flipped. **It is consumed on zero frames of a
+shipped race today**, and that is a fact about the shipped *value*, not about the code being dead.
+
+### D8 · `reports/perf` — superseded by PERF-CLEAR-1 · 2026-08-23
+
+**The rule as it was actually applied:** a write-up that cannot be reproduced is kept only if it
+names a source state that RESOLVES TODAY *and* the thing it measured still exists. Raw chains older
+than two weeks go regardless.
+
+**Applied:** ten of eleven write-ups deleted, one kept, **and no raw chain deleted** — every raw file
+turned out to be two weeks old or younger. See **[../reports/perf/DELETED.md](../reports/perf/DELETED.md)**
+for the file-by-file record and `reports/evolution/PERF-CLEAR-1.md` for the classification.
+
+### D9 · The server suite failing twice at different tests is a WATCH, not a defect · 2026-08-23
+
+**No work.** It failed twice on 2026-08-23 at *different* tests (`sessionInvalidation`, then
+`recoverAdmin`), both 5-second timeouts in bcrypt-heavy auth tests, while background sim processes
+were competing for the cores. It did not reproduce: both files pass in isolation, master passed the
+full suite clean under the same load, and the suite then passed twice with the change in place.
+
+**verify:** none, and that is stated rather than papered over — **a flake that did not reproduce
+cannot be checked by a command.** It closes when it happens a third time and is diagnosed, or when
+nobody has seen it for long enough to stop caring.
+
+---
+
+
+## Documentation (2026-08-07, from DOC-ORDER-1)
+
+- [x] ~~**Authentication and authorization — DESIGN EXISTS, nothing is built.**~~ **NEVER TRUE as
+      written today — established at source 2026-08-23.** `server/src/auth/` holds `authRouter.js`,
+      `csrf.js`, `guards.js`, `paths.js` and their tests, and **37 commits** touch that directory
+      from `d0a57d44` onward. **The POINTER below is why this line is kept**, and it is the useful
+      part: the full v3.2 design
+      (route inventory, session model, CSRF posture, the E2E test prerequisites) is
+      [archive/AUTH.md](archive/AUTH.md). It was moved to the archive on 2026-08-07 because it
+      described a RaceArena that does not exist while sitting among the documents that describe the
+      one that does — **archived is not abandoned**: if auth is built, that document is the starting
+      point and this line is how you find it. Related: **Q-16** below (the CORS wildcard, deliberately
+      accepted for local-only operation) becomes binding the moment this is built.
+
+## The owner's camera-defaults session (2026-08-06, from MERGE-AND-GUARD-1)
+
+- [x] **CLOSED 2026-08-22 by `46736d81`** — the shipped default is 5 (`defaults.js:883`) and
+      `git ls-remote --heads origin | grep -c min-racers-visible` returns 0, so the branch is gone from
+      the origin. **~~FIRST ITEM — `minRacersVisible` is already done and waiting.~~** The reasoning below
+      is kept because it states a general rule about branches that outlive their decision. Branch
+      **`feat/min-racers-visible-5`** (`c57e37d4`) sets the shipped default to the value his own
+      recorded verdict names — his words on 2026-08-05, _"`minRacersVisible` stays at 5"_, against a
+      source that said 3 ([CAMERA_DIRECTOR.md §8.1](CAMERA_DIRECTOR.md)). It is **committed,
+      measured, NOT minted and NOT merged**, deliberately.
+      **What it costs, and why it belongs in the sitting rather than alone:** it moves **TWO**
+      fingerprints, not one — the camera one AND the **render** one, because
+      `scripts/render-fingerprint.mjs` builds a real `CameraDirector`, so any change to the shot
+      changes the draw-call transform on every sampled frame. **Any camera-default change has this
+      property**, which is the whole argument for batching them: one re-mint of two fingerprints and
+      one eye test can cover every knob he changes that day, where doing them one at a time pays the
+      ceremony over and over.
+      Already measured on that branch: the world fingerprint does NOT move, and the full client
+      suite passes unchanged. What is still owed is the mint, and his eye on the state the knob
+      governs (the company guarantee, in both the torn-apart and tight-pack regimes he named).
+
+## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
+
+- [x] ~~**The two finish knobs read alike and govern different moments.**~~ **CLOSED by
+      `82a03eb7` (ENDING-HOLD-1, 2026-08-12) — confirmed at source 2026-08-23**, not taken from the
+      report that claimed it: both controls are now numbered by ending phase in
+      `CameraAdvancedSection.jsx` (`:1491` and `:1635`), and the two labels this item quoted exist
+      nowhere in the tree. **The rule it stated stands and is why the line is kept:** two controls
+      governing different moments must not be able to read as one control at a glance — a tooltip
+      that explains the difference is not a substitute for a label that shows it.
+
+## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
+
+- [x] ~~**THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE.**~~ **CLOSED by `b9579f59`
+      (FINISH-WINDOW-1 A) — confirmed at source 2026-08-23:** `render-fingerprint.mjs` now drives
+      **5600** frames and samples **sixteen** points running past 5450, ten of them beyond the old
+      ceiling, so the 3466–5218 finish window this item named is covered. **The rule it stated
+      stands:** an instrument that cannot reach a phase did not clear that phase — it was silent
+      about it, and silence is not a pass. The fix
+      needs a DECISION, not a patch: a second sample set that runs past the finish, or one
+      event-anchored sample ("the frame after FINISH_OVERVIEW begins") — which the harness's own
+      header argues against on reproducibility grounds ("fixed indices, never events").
+
+## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
+
+- [x] **DONE — the build badge's failure path carries its reason.** `git()` captured stderr and the
+      exit status instead of discarding both; every failure returns the unknown identity WITH a
+      one-line cause; the dev server prints the identity it will serve at start-up and warns when the
+      reason changes. Also fixed two things the tests found: a failing `status --porcelain` used to
+      be reported as `dirty: false` (a clean tree it had never looked at), and the `|| 'detached'`
+      fallback was dead because git prints the literal `HEAD`.
+
+## Measurement and guard residuals (2026-08-05)
+
+- [x] **DONE (ONE-DRIVER-1) — four measurement scripts now share one driver, and the race identity
+      is printed.** `scripts/lib/raceDriver.mjs`; `corridor-truth`, `edge-crossing`, `tracking-lag`
+      and `his-shot-truth` ported with all seven captured outputs reproducing exactly and all three
+      fingerprints bit-identical. The deliverable turned out to be the IDENTITY, not the
+      deduplication: the four were never meant to be identical (`his-shot-truth` runs the owner's
+      n=65 context), and the defect was that nothing said so where the numbers are read.
+
+- [x] **DONE — `check-index` now passes BOTH directions** (verified 2026-08-22 by
+      OPEN-ITEMS-2026-08-22 against the source, not the report). `scripts/check-index.mjs:18` states
+      it, and its run line reports dangling links as well as unindexed reports. The text below is
+      kept because its REASONING — a partial guard is indistinguishable from a complete one while
+      everything is clean — is the general rule, and it is why the fix was worth making.
+      ~~It walks `reports/evolution/*.md` and asserts each is referenced from `INDEX.md`; an INDEX
+      line naming a report that does not exist is invisible to it.~~ Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
+      applies: **until it is closed, the guard should say inside itself which direction it does not
+      check** — a partial guard is indistinguishable from a complete one while everything is clean
+      (Lesson 201). Note `check-doc-links` already catches a _dangling link_, so the uncovered case is
+      an INDEX entry that names a report in prose, or links a path that resolves to something else.
+
+---
+
+## Camera residuals after CAMERA-COMPANY-ONLY-3 (2026-08-05)
+
+- [x] ~~**`MAX_CAM_ZOOM` is the real limiter at the tight end of the control.**~~ **CLOSED
+      2026-08-23 — the fact is now written on the constant itself** (`camera/projection.js`), which
+      is where anyone tuning the low end will meet it, rather than in a backlog nobody reads while
+      editing. **The value is not restated here; read it there.**
+      **AND THE ITEM'S OWN NUMBER DID NOT REPRODUCE.** It said "every track delivers 85.3 world px
+      rather than the nominal 75". Re-measured, the answer is **track-dependent**: at 0.25 corridors
+      the cap binds on searound, dirt-oval and city-circuit and does NOT bind on river-run or
+      space-sprint. **That is a more useful fact than the one recorded** — the same setting means
+      different things on different tracks at the tight end, which is the exact class of problem
+      CAMERA-ZOOM-UNIT-1 raised this constant to remove, reappearing below the range that block
+      checked. The 85.3 figure was not chased; what is written is what was re-measured.
+      **verify:** `grep -c "BUT IT DOES BIND" client/src/modules/camera/projection.js` — **still
+      closed while it returns 1.**
+
+---
+
+## Before the VPS migration
+
+- [x] ~~**`server/` is audited by nothing.**~~ **CLOSED — confirmed at source 2026-08-23:**
+      `ci.yml:212` runs `audit-gate.mjs --tree=server`, the `Server tests` job (`ci.yml:151`) runs
+      the server suite, and the HIGH advisories below are closed (`ci.yml:205-207`, lockfile-only
+      moves) with the gate now BLOCKING rather than reporting. **The historical text is kept
+      unedited below** because it records what was true when it was written. ORIGINAL:
+      **`server/` is audited by nothing.** `scripts/audit-gate.mjs` hard-codes `client/`, and no CI
+      job covers the server at all — its own `vitest` suite runs nowhere either. It currently carries
+      **2 highs**: `ip-address` (**runtime**, via `express-rate-limit`, SSRF / trust-boundary bypass
+      in IP classification — and the production config enables trust-proxy, so the IP it classifies
+      comes from a header) and `postcss` (dev-only, via `vite`). Both clear with a plain
+      `npm audit fix` — no `--force`, no breaking change. Not urgent while nothing is reachable; a
+      **blocker** before anything is.
+
+- [x] ~~**The build cannot be read from OUTSIDE the browser.**~~ **CLOSED 2026-08-23
+      (BUILD-FROM-OUTSIDE-1): `/api/health` now names the build.** `server/src/buildIdentity.js`
+      reads `RA_BUILD_COMMIT` / `RA_BUILD_BRANCH` / `RA_BUILD_DIRTY` and the endpoint reports them.
+      **IT NEVER GUESSES, and that rule is borrowed rather than invented** — with nothing supplied it
+      answers `unknown` **and a reason naming the variable**, and `dirty` is OMITTED when it was not
+      determined rather than defaulting to `false`. That is the correction
+      `client/vite-plugin-ra-build.js` already paid for: its first version reported a clean tree it
+      had not been able to look at. **Shelling out to `git` was deliberately NOT done** — it would
+      work in development and quietly report the deploy host's checkout, or nothing, in production.
+      **verify:** `curl -s localhost:4000/api/health` — **still closed while the payload carries a
+      `build` object**; `grep -c "build: buildIdentity()" server/src/app.js` is the offline form.
+
+      **THE ITEM WAS WRONG ABOUT ITS OWN OTHER HALF, and that is worth keeping.** As written it said
+      the app ships no build identifier at all. **It does, and it always did on the client**: the
+      build PILL is drawn into the shipped race picture — `renderRaceFrame.js:500` calls
+      `formatBuildLabel(buildBadge)` from `modules/buildInfo.js`, fed by the `virtual:ra-build`
+      module. **The real gap was never "no identifier", it was "no identifier reachable from
+      outside the browser"**, which is the half now closed. `__APP_VERSION__` and `BUILD_ID` still
+      do not exist and are not needed: the endpoint reports the identity directly.
+
+      **The general rule this closes with:** an instrument that answers a question INSIDE the
+      product does not answer it for anyone holding a URL, and the two are different requirements
+      that read as one.
+
+---
+
+## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
+
+- ✅ **Gap-reroll is the shipped default: symmetric, G=0.5, strength=1.0** (`storage/defaults.js`
+  `gapRerollEnabled: true`). Closes the "gap-reroll default ON" item.
+  **FLIPPED 2026-07-26** to the confirmed candidate G=0.5/s=1.0 after the ten-track confirm gate (was
+  0.75/0.5, retuned 2026-07-23 from the original ship values G=1.5/s=1.0). Confirm gate: pooled band-reach
+  71.8%→72.7%, dead finales 14.1%→10.0%, runaway 10.1%→6.8%, every guardrail better, Holm unchanged 3/10 —
+  see [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md).
+
+- ✅ **Retune gate (2026-07-23): G 1.5→0.75, strength 1.0→0.5.** Cause: at s=1.0 the correction
+  `frac = min(1, strength·(gap−G))` saturates above `G+1`, so **46% of leader corrections were full
+  slams to the band floor** — the "escapes, then gets visibly braked" the owner reported. G alone
+  cannot fix it (lowering G lowers the saturation point too; measured: corrections got _harder_).
+  Gate: 400 races/arm, 4 tracks, paired seeds, 40 closed / 60 open fields —
+  **pooled band-reach 71.6% vs 71.6% (fairness exactly neutral), Holm 2/4 in both arms**;
+  **tiltSaturated 46.0%→18.7%**, tilt frac median 0.906→0.371, escapeDepth median 2.71→1.97 L and
+  **worst case 12.07→7.29 L (−40%)**, front-group-at-line 3.86→4.05, runaway 9.5%→8.3%,
+  parade 1.3%→0.8%, duo 6.3%→4.0%, dead finales 14.7%→14.5%.
+  Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
+  _(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
+  this change.)_ Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
+  — both now on **master** (ported in the greenfield wrap, 2026-07-23). _(These retune-gate figures are
+  PRE-UNIFICATION and retained only as the 2026-07-23 decision record; the current baseline is
+  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) + GS-CONFIRM-GATE.md.)_
+
+- ✅ **Owner browser eye-check PASSED**; shipped at `247b843`, tagged `backup/g-retune-shipped-247b843`.
+
+## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
+
+- ✅ **DONE (CAMERA-HYGIENE-1) — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Shipped as
+  `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` with `client/src/modules/engineInputs.test.js`, which
+  reads `raceCore.js`'s own imports and fails when it names a module the list does not — so adding an
+  engine input forces a decision instead of a silence. Original entry:
+
+- ✅ **DONE — HUD config-fingerprint badge** (shipped `42500f4d`, "replay UX + rowCount unification",
+  behaviour-neutral). `configFingerprintBadge()` in `client/src/modules/exportRaceConfig.js` is rendered in
+  the race HUD (`client/src/screens/RaceScreen/index.jsx`, under the seed badge). It shows a short
+  RACE-relevant world hash plus a SPLIT off-default count: `raceCount` — the number of off-default keys that
+  actually break apples-to-apples with a default-config sim run, shown in the prominent **RED** state — and a
+  never-red `cosmeticCount` for camera / frame-timing drift. This is exactly the "make config drift visible
+  without anyone having to suspect it first" item: the owner-config parity audit
+  (`reports/greenfield/owner-config/`) found a persisted setting silently cancelling a shipped benefit, caught
+  only because someone diffed the world; the badge surfaces that class of drift live.
+
+## Front Act / C1 — July 2026
+
+- ✅ **Gap-reroll branch-priority fix** — when both `gapBehind > G` and `gapAhead > G` the LARGER
+  imbalance now decides the tilt direction (ties keep the old gapBehind-first behaviour). The old
+  unconditional `gapBehind` return braked racers that had broken from the pack while still behind the
+  leader — the chase-suppression the small-G diagnostic measured at 6.6x. Regression tests pin both
+  the fixed case and the unchanged ones. **Consequence:** the confirmed `G=1.5 s=1.0` gap-reroll
+  numbers predate the fix and need re-measuring before they are quoted again.
+
+- ✅ **`contestWindowStart`** — the front act's own config key, read by the front-battle observer.
+  Initialised to the shipped `choreoResolveB2` so committed baselines stay comparable. **Kept**
+  through the dead-mechanisms cleanup: the observer is live, so the key stays.
+
+## Race-Action Arc (feat/race-action) — June 2026
+
+- **Re-Gate on `9cfa953`** ✅ **CLOSED — SUPERSEDED (owner-approved 2026-07-31).** It would have re-run all four closed tracks under a `corridorEnd=1.0` / `bonusMult=2.0` browser-faithful config — but that configuration **predates the plan-grid unification AND the speed-150 re-baseline**, so the world it would have gated no longer exists. Four full gates have since run over the successor worlds: the speed-150 [REBASELINE](../reports/parity/REBASELINE.md), the gap-reroll ten-track confirm gate, the COMBO15 N=100 gate ([FAIR-ARRIVAL-GATE](../reports/evolution/FAIR-ARRIVAL-GATE.md)), and the definitive N=300 [HOLM-300-COMBINED](../reports/evolution/HOLM-300-COMBINED.md). **Superseded, not abandoned** — the fairness question it raised has been answered on the worlds that actually shipped, at higher power (N=300) than it asked for. (Historical: `9cfa953` is an ancestor of master; it discarded the provisional `8f57cba`-era sweeps.)
+
+- **Master-merge** of `feat/race-action` → `master` — ✅ **DONE (confirmed 2026-07-14)** — merged to `master` by fast-forward at `e1d5a2b`, anchored by tags `race-action-complete` and `v1-race-action-merged`; `feat/race-action` deleted (local + remote); the repo is now master-only. Later cleanup (e2e retirement, doc refresh, planning-audit) continued on `master` past the merge point.
+
+- **B4 — camera foresight (consume the authored cameraPlan)** ✅ **DONE (`b4-complete` = master `03e28cf`, 2026-07-15)** — the authored `cameraPlan` is now plumbed generator → `racePlanner` (`_cameraPlan` + `getCameraPlan`) → `RaceScreen` (`setCameraPlan`, delivered mid-race: heroes are cast mid-race, so the plan is null at init) → `CameraDirector` (`updateRacePlan(b1Indices, cameraPlan)` + storage). **First consumer:** in `_detectComebackRacer` the cast comebacker set (heroes with `role: 'comebacker'`) is the PRIMARY candidate; the `b1Indices` scan stays the FALLBACK when the plan names no comebacker (assigned winner already up front ⇒ cast `sovereign-lead`) or no plan exists. **Why:** the old scan searched ALL front-band finishers, which include the sovereign-leads — one that dips and recovers reads as a large gain and could win the scan, so the camera cut to a "comeback" that was noise. Only WHO is watched changed; the reality bar (window, min-gain, start-gap, current-rank, largest-real-gain tiebreak) is untouched. **Evidence:** comeback-reality sweep (200 races / 367 comebackers, seed=1) — the cast comebacker is the top climber in 94–100% of races and lands within ~0.45 ranks of its authored target. Tooling: `scripts/sim/observers/comeback-reality.mjs` + `--comeback-reality` (needs `--hero-map`), see docs/SIM.md; full numbers in `results/comeback-reality-sweep-2026-07-14/report.md` (gitignored). Owner eye-test PASS. **NOT shipped (tried, measured, removed):** a foresight PRE-ARM + `cameraForesight` flag + DevScreen toggle — the Owner eye-test (ON vs OFF, same seed) showed no visible difference, so it was trimmed out (branch history `7c50605`, `be71a26`, `bccc171`).
+
+- **B2-attacker "Attack & Fall" heroes — front-action feature** ✅ **SHIPPED ON (`v-b2-heroes-complete` = master `8bf54ca`, 2026-07-20)** — extra choreographed heroes cast from FRONT-post-chaos B2-finishers (`heroCurveGenerator.js castHeroes` + `attackerTiming`, bypasses the 0.80 B2 resolve for role `attacker-b2`) that climb to ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release: the servo frees them the moment they re-enter B2 on the way down — `racePlanner.js` `atkParams` branch). **Shipped ON: `b2AttackHeroes=3`, `b2AttackPeakRank=5`, `b2AttackFinalRank=7`, `b2AttackBandArrival=true`** — the sim-validated winner: **+21% top-5 OUTCOME action** vs the no-attacker floor, with **B1/B2 band-reach ≥70% on all four tracks** and **Holm at the pre-existing 2/4 baseline** (no regression). count=0 restores the pre-feature game byte-identical. **New shipped-default fingerprint `72c3360fb75225ef`** (count=3); count=0 is still `4ec8e64dd2641ad3`. **3-phase validation** (exploration N=50 → count-confirm N=100 → hybrid N=100): finalRank (release height) is the action knob, NOT peak depth; count scales super-additively (1→+7%, 2→+10%, 3→+21%); band-arrival ties fixed-final on fairness and is simpler (no finalRank pinning). Web: DevScreen B2-count slider (PULK card) + hero-highlight rings (Camera Advanced). Tooling: `scripts/exp-b2-attack.mjs` (`--phase 1a/1b/holm3/2/fr/ba/uba`); reports in `exp-b2-attack-results/PHASE{1A,1B,2}-REPORT.md`. Owner eye-test PASS. Tests 3203/3203. _(Cleanup 2026-07-20: the `exp-b2-attack.mjs` driver was removed from tracking — recoverable at commit `c441e7c~1` (git history) — and the result tables were archived to `reports/exp-archive/exp-b2-attack-results/`. Investigation CLOSED; findings preserved.)_
+
+- **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:772); the stale "NOT committed to the feature branch" clause is gone.
+
+- **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — ✅ **DONE (2026-07-14 audit)** — `trackClosedSsf` no longer exists in scripts/sim-fairness.mjs (removed); `trackNaturalBase` is now `isOpen ? … : undefined` (open-only, line ~2644); and the `expectedMinSF` derivation uses the per-combo `nRacers` (line ~566), not the global `N_RACERS`.
+
+- **Browser `index.jsx` inert `??` fallback mismatches** — ✅ **DONE (2026-07-14 audit)** — the fallback now reads `bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0` (RaceScreen/index.jsx:697), matching the real shared default; an added comment mandates the fallbacks mirror `DEFAULT_RACE_DYNAMICS_CONFIG`. (Old line refs ~662-666 have drifted.)
+
+- **Race-action direction decision** — ✅ **RESOLVED (SUPERSEDED twice)** — first resolved by the governor vision-pivot (race-action director, not Slipstream-vs-Hazard-Zones); that reactive director was then itself removed in THE GREAT PULK CLEANUP. The current shipped direction is choreo + PulkLeadRotation. Decision closed either way. See ROADMAP §R.7.
+
+- **`results/` not gitignored** (hygiene, reported by Sim-1) — ✅ **DONE (2026-07-14 audit)** — `results/` IS gitignored (`.gitignore:37`).
+
+- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, FORCE-MAP — then named KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
+
+---
+
+## Hot — next PR
+
+- ✅ **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — **fixed** `overviewClosedTrackZoom=1.3` multiplier, schema v15, DevScreen slider. (2026-05-27, squash `749c2a4`)
+
+- ✅ **Bug B** (River Run P2): zoom inversion on large open tracks — **fixed** action camera for open tracks with 1.5× base zoom. (2026-05-04, PR #73 `2d79678`)
+
+- ✅ **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — **fixed** top-3 focus group. (2026-05-04, PR #73 `80dcb8d`)
+
+**Q-25 root cause identified and solution decided:**
+
+- ✅ PR-A1: Q-25 fix (maxScale=10) + duration slider + finishT for open tracks (2026-05-03)
+
+- ✅ PR-A2-Diagnose: read-only PR → `archive/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
+
+- ✅ PR-A2: Speed pipeline architecture refactor — `computeRaceBaseSpeed`, speedScaleFactor removed, closed-track duration slider (Model D), SpeedScaleSection removed (2026-05-03). **Fix commit 2026-05-04:** speedMultiplier normalization + spreadMinFactor (E1+E2).
+
+- ✅ PR-A2.5: Arc-length-uniform spline resampling + relative jitter (2026-05-04)
+
+- ✅ PR-A2.6: Race dynamics — spreadFactor re-roll (±85%, 5s transition) + speedBonusMult separation (2026-05-04). draftingBoost unchanged 1.10.
+
+- ✅ PR-A3: Dev panel reorganization (tier system, Race Tuning section, raceDynamicsConfig). (2026-05-04)
+
+- ✅ **Phase 4 (Timing Tunables + Plan-B Pan):** 7 timing tunables, battleMaxDurationMs, OVERVIEW jitter, diagnosis HUD, `_computePanScale` removed, trivial pan formula. (2026-05-06) — Branch: `diagnosis/camera-tuning-effectiveness`
+
+- ✅ PR-B: Camera bug fixes (Bug A+B+C) — PR #73 `feat/pr-b-camera-reform` + PR #74 `fix/pr-b-closed-track-regression` (2026-05-04)
+
+- ✅ PR-C: RaceScreen split (Q-7 refactor, no behavior change) — `e180a6b` chore/hygiene (2026-05-25)
+
+- ✅ PR-D: Camera state machine (OVERVIEW random jitter, tension-strength logic, findBattleCandidate) — OVERVIEW jitter `d6f4d20` Phase 4 (2026-05-06) + direction system/findBattleCandidate `07bea7b` Phase 3B (2026-05-22)
+
+- ✅ PR-E: Sprite corridor [min+max] + tag visibility iter 1 (B-UX1) + dev panel sliders — `SpriteSizeRangeSection` + `NameTagVisibilitySection` in Phase 4 `d6f4d20` (2026-05-06). `tagVisibleMaxCount` tunable live.
+
+- ✅ PR-F: Dev panel camera tunables + HUD overlay — Phase 4 `d6f4d20` (7 timing tunables + battleMaxDurationMs + OVERVIEW cooldown sliders) + 3 HUD components in Phase 3B `07bea7b`
+
+- ✅ Server boot migration: 5 default tracks created as server records (idempotent via one-shot marker `.tlh1-defaults-migrated`)
+
+- ✅ PUT `/api/tracks/:id`: `geometryId` taken from client if present in body; otherwise `existing.geometryId` kept
+
+- ✅ DELETE + `removeCachedTrackData`: geometry is NEVER automatically deleted — only background cache
+
+- ✅ Auto-backup: on every PUT/POST to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-mmm-<id>.json`
+
+- ✅ atomicWriteJson OneDrive fallback: renameSync error → direct writeFileSync
+
+- ✅ 10 new backend tests (geometryId ×3, backup ×3, default seed ×4), 1 new client unit test
+
+**TLH-2 — UI Flow + Cleanup (Sub-PR 2) ✅**
+
+- ✅ Edit modal: geometry dropdown replaced with status display ("Geometry: drawn (XX pts)" / "Geometry: not yet drawn" + "Draw/Edit Geometry" button)
+
+- ✅ Track editor: two-mode — load mode (`?load=<id>`) shows "Editing: X" without name input, new mode shows "New Track" with name input
+
+- ✅ Track editor load path: two-path load — (1) geometry cache, (2) direct server track state for `geometryId: null` tracks
+
+- ✅ Track editor save path: load mode → PUT with geometryId generation on first draw; new mode → POST
+
+- ✅ 17 new unit tests (12 TrackEditor.loadmode.test.jsx + 5 net TrackManager.test.jsx)
+
+**TLH-2 Post-Merge Bug Fixes (branch extension after browser test)**
+
+- ✅ F2: `hasGeo` read `innerPoints.length` (always 0 due to `toSummary` strip) → now `geometryId != null` + `pointCount` via extended `toSummary`
+
+- ✅ F4: track editor opened scrolled to canvas (no scroll reset on navigation) → `window.scrollTo(0,0)` on mount + `scrollIntoView` on `serverError`
+
+- ✅ F1-revised: save in load mode was blocked when no background → background only required in new mode; load mode always saveable
+
+- ✅ Lesson 39 + 40 documented in LESSONS.md
+
+- ✅ F2 follow-up: `autoMaxRacers` in `handleEdit` used `isServer ? track` as EditorShape input → crash (TypeError: `undefined.length`) because `toSummary` strips `innerPoints`. Fix: always use geometry cache instead of server summary. L39 extended with audit pattern.
+
+**Track Delete Safeguards (PR #58) ✅**
+
+- ✅ "Remove background" button in track editor (next to background upload, appears when image is loaded)
+
+- ✅ `DELETE /api/tracks/:id/background` endpoint — removes only the image, leaves track record intact
+
+- ✅ `DELETE /api/tracks/:id` returns 403 for default tracks (`isDefault: true`) — prevents accidental deletion
+
+- ✅ `migrateDefaultTracks()` runs on every boot (idempotent) — restores missing default records
+
+- ✅ React key=null fix in TrackManager geometry select
+
+- ✅ Background image useEffect race condition fix (L43) — cancelled flag prevents stale onerror callbacks
+
+**TLH-3 — Code Fallback + Status Banner + Export (Sub-PR 3) ⏳ deferred until after Camera Phase**
+
+- ✅ Dirt Oval
+
+- ✅ River Run
+
+- ✅ Space Sprint
+
+- ✅ Garden Path
+
+- ✅ City Circuit
+
+Additionally: Space (Custom Track) already present.
+
+## Ready — spec exists, concept decided
+
+- ✅ **Random-seed draw for Quick-Test** — done 2026-07-22. Empty field = random-but-replayable; the
+  drawn seed is shown in the HUD and can be typed back to reproduce the race exactly.
+
+## Planned — needs spec
+
+- ✅ **D7a** — Proportional sprite scaling + min-size floor + zoom ratios + label scaling (PR #33, master `a49baa0`)
+
+- ✅ **D7a-Plus** — Per-type minTargetScreenPx with live preview (PR #35, master `27cba65`)
+
+- ✅ **D7b** — Lane-free: physicalY replaces lane system (PR #37)
+
+- ✅ **D7c** — Row start + speed bonus + track capacity (PR #39)
+
+- **B-UX1** — ~~Name tag readability (iteration 1, to be implemented in PR-E of the camera
+  phase)~~ **SUPERSEDED by the LABEL arc** — `nameTagLayout.js` ships with an occlusion test, and
+  `reports/evolution/INDEX.md` carries LABEL-OVERLAP-3, LABEL-NAMES-2 and LABEL-OVERLAP-FIX-1 among
+  others. **The SUBJECT is live and its defects are real; this line's framing is not** — the PR-E of
+  a camera phase it names has long since closed. Follow the arc, not this line.
+  - Spec in `docs/CAMERA_DIRECTOR.md §6.3`
+  - Top-N tags visible (N = `tagVisibleCount`, default = lead group = clamp(round(N×0.1), 3, 10))
+  - `tagVisibleCount` as dev panel slider
+  - No "own player" (project principle 3) — all racers treated equally
+  - All other racers without tag
+
+- **B-UX1-Iter2** — ~~Name tags state-dependent strategy (iteration 2, after iteration 1)~~
+  **SUPERSEDED by the same arc.** `labelNamesWhenRoom` and the PHOTO_FINISH `exemptAll` path are
+  exactly a state-dependent strategy, and both carry measured numbers in the CORRECTIONS block of
+  `reports/evolution/INDEX.md`.
+  - Spec in `docs/CAMERA_DIRECTOR.md §6.4`
+  - OVERVIEW: top-3 only or no tags; LEADER_ZOOM: lead group prominent;
+    BATTLE_ZOOM: involved racers prominent; zoom out: anti-overlap when space permits
+  - User explicitly wants to implement this once iteration 1 is stable
+  - Priority: after PR-E (camera phase)
+
+- **B-4** ✅ ~~Apply branding profiles to race/result screen (UI exists, wiring missing)~~ —
+  **DONE, confirmed at source 2026-08-23:** `RaceScreen/index.jsx` and `ResultScreen/index.jsx` both
+  resolve the active brand via `resolveActiveBrandProfile`, and the race screen additionally draws
+  `BrandLogoOverlay.jsx` and `CeremonyBrandCard.jsx`. **See V-4 below**, which recorded the opposite
+  and was wrong.
+
+- ✅ **RaceScreen/index.jsx split** (Q-7) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted `drawing/` modules: `overlayRendering.js`, `particleRendering.js`, `racerRendering.js`, `priorityModeOverlay.js`, `battleDiagRendering.js`. Camera modules: `CameraDirectorDiag.js`, `cameraTimingComputation.js`.
+
+- ✅ **TrackEditor.jsx split** (Q-6) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted: `TrackEditorToolbar.jsx` (224 lines), `TrackEditorSaveBar.jsx` (116 lines), `useViewport.js` (138 lines), `useTrackIO.js` (206 lines).
+
+- ✅ **Q-6** — TrackEditor.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
+
+- ✅ **Q-7** — RaceScreen/index.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
+
+- **Q-26** ✅ ~~Default tracks without backgrounds (fresh install)~~ — **DONE, confirmed at
+  source 2026-08-23:** all ten seed geometries carry `backgroundImageFile` and all ten image files
+  exist in `server/seeds/backgrounds/`.
+  **verify:** compare `ls server/seeds/backgrounds/*.jpg | wc -l` against
+  `ls server/seeds/tracks/*.json | wc -l` — **still closed while they are equal.**
+
+  Code defaults in `defaults.js` have no `backgroundImage` field. With a running server they are
+  automatically migrated to the backend (`migrateDefaultTracks()` runs idempotently on every boot) and
+  user-edited server versions fully replace them (`getInitialTracks()` filters out code defaults
+  when the server delivers the same ID).
+
+  **Problem only occurs when:** fresh install or deleted server state. Then the user sees
+  code defaults without backgrounds. In normal operation (server started at least once) the user
+  sees exclusively server tracks with backgrounds. Verified in PR-A2.8 diagnosis.
+
+  **Newly understood as a special case:** The more general problem is background caching for offline play
+  (all tracks, not just defaults). Separate planning and solution alternatives there — see
+  **"Background cache for offline play"** below.
+
+- **Q-11** ✅ ~~`reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)~~ — **DONE
+  2026-08-23, and this line was STRUCK WRONGLY EARLIER THE SAME NIGHT — the correction is kept
+  because it is the more useful record.** BACKLOG-HONEST-1 struck it as already done on the evidence
+  that `TrackEditor.jsx` held one `new FileReader` and **two** `onerror` handlers. **It did: both
+  were on `img`, neither on the reader.** Counting `onerror` without checking WHOSE it was is the
+  whole mistake, and a grep that answers the wrong question answers it confidently.
+  **Actually closed by the same block's later piece**, which wired `reader.onerror` in all three
+  sites — this one, `SystemSettings.jsx` and `BrandingProfiles.jsx` — each reporting through the
+  error channel its own file already had, with `client/src/screens/DevScreen/sections/fileReadFailure.test.jsx`
+  guarding them.
+  **verify:** for each of those three files, `grep -c "new FileReader"` and `grep -c "reader\.onerror"`
+  — **still closed while they are EQUAL.** Comparing against a bare `onerror` count is what went
+  wrong the first time.
+  FileReader errors are silently swallowed; only `img.onerror` catches load errors.
+  Defensive hygiene, low priority.
+
+- **Q-16** ✅ ~~CORS wildcard on all backend endpoints~~ — **NEVER TRUE as written today,
+  established at source 2026-08-23.** `server/src/auth/csrf.js:26` builds `corsOptions` from an
+  explicit allow-list and **denies** when the list is empty; `app.js:31-36` then stacks
+  `csrfOriginGuard`, `requireAuth` and `requireAdmin` above every route. No `origin: '*'` and no
+  bare `cors()` exist in the tree.
+  **verify:** `git grep -n "origin: '\*'\|cors()" -- 'server/src/**'` — **still closed while it
+  returns nothing**; the pattern can match, it is ordinary Express.
+  `app.use(cors())` without origin restriction — any browser tab can access all API write endpoints
+  (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
+  Fix: `cors({ origin: 'http://localhost:5173' })` for dev, env var for VPS.
+  **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
+  _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
+
+- **Q-17** ✅ ~~Missing `reader.onerror` handlers in SystemSettings.jsx and TrackEditor.jsx~~ —
+  **DONE 2026-08-23. It was worse than it said and is now closed in full.** Not two sites but
+  **THREE**: `SystemSettings.jsx`, `TrackEditor.jsx`, and **`BrandingProfiles.jsx`, which this item
+  never named**. All three created a `FileReader`, wired `onload`, and wired no `onerror` — so a
+  failed read settled nothing at all: no message, no state change, indistinguishable from a broken
+  button.
+  **The general rule this closes with, and it is why the line is kept:** an upload has TWO failure
+  modes, and they are not the same failure. A file that cannot be READ never reaches the decoder; a
+  file that reads and cannot be DECODED is a different message. TrackEditor reported only the second
+  for as long as this item was open. See **Q-11** above for the mis-strike that happened on the way.
+  `FileReader.onload` handlers are without `onerror` counterpart. Errors when reading (corrupt file,
+  permission problem) are silently ignored. Q-11 is specific to TrackEditor background images;
+  Q-17 extends to SystemSettings JSON import. Low priority — no data loss, just poor
+  UX (no error message on import error).
+  _(Deep audit 2026-05-01, Severity: LOW)_
+
+- ✅ **Q-19** — TrackEditor.effects.test.jsx flaky — **fixed PR #55 (2026-05-01)**
+  Root cause: `fetch` stub from `trackLoader.test.js` leaked into TrackEditor worker via missing
+  `vi.unstubAllGlobals()` in `beforeEach`. Fix: `vi.unstubAllGlobals()` added in `beforeEach`.
+  _(Discovered PR #50, fixed PR #55)_
+
+- ✅ **Q-25** — Open track too fast / race duration too short (PR-A1)
+  Root cause (canvas hypothesis empirically disproved): `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in
+  `defaults.js` capped Space Sprint at 4.0 instead of the physically correct ssf=9.886. Space Sprint
+  ran at 323 px/s instead of ~131 px/s and lasted ~58s instead of ~144s.
+  Fix: `maxScale=10.0` + duration slider for open tracks + `openTrackFinishT` integration in RaceScreen.
+  Canvas coordinate system hypothesis disproved — Space Sprint geometry uses world coordinates 256..5707,
+  not canvas-bound. _(Fixed in PR-A1, 2026-05-03)_
+
+- ✅ **Q-15** — Visual system architectural debt — structurally addressed by D7a (PR #33).
+  4 multiplicative scaling factors reduced to one pipeline (computeRenderDisplayScale).
+  cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminated. Closed/open track math pipelines unified
+  through consistent effZoom-based calculation.
+
+- **Q-28** ✅ ~~Shared HTTP helper for API services~~ — **DONE, established at source
+  2026-08-23:** `client/src/services/apiClient.js` exports `apiCall` and **all seven** API services
+  import it. **The general rule this closes with:** a negative from the wrong NAME is not a
+  negative — the first search for this looked for `apiFetch`/`httpClient` and found nothing while
+  the helper sat there under a third name.
+  **verify:** `git grep -c "fetch(" -- 'client/src/services/*.js'` — **still closed while exactly
+  one file answers** (`apiClient.js`); a second file means a service has gone around it. _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
+  `client/src/services/surfaceClassApi.js` and `client/src/services/trackApi.js` share 48 lines of
+  identical `apiCall`/`withTimeout` infrastructure — both services copied the same HTTP wrapper.
+  Fix: extract shared helper (e.g. `services/apiUtils.js`), update both callers.
+  Estimated effort: ~1h.
+
+- **Q-30** — ~~React 18 → 19 **+ react-router-dom 6 → 7**~~ **HALF DONE: the ROUTER migration
+  shipped.** `client/package.json` already declares react-router-dom 7 (read the version there, not
+  here). React and react-dom are still on 18, so **this item survives as the React half only**.
+  **verify:** `grep -n '"react"' client/package.json` — **still open while it reads `^18`.** _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
+  Current: `react@18.3.1`, `react-dom@18.3.1`, `react-router-dom@6.30.3`. Latest: `react@19.2.6`,
+  `react-router-dom@7.15.0`. Both have breaking API changes — no npm-audit vulnerability, but the
+  version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
+  avoid accumulating migration debt. Estimated effort: 1–2 days (route definitions + React API).
+
+- **Q-31** — Long files — updated watch list after chore/hygiene-i18n-audit (2026-05-25, squash `e180a6b`). Q-6 and Q-7 resolved ✅.
+  - ✅ `TrackEditor/TrackEditor.jsx`: split → `TrackEditorToolbar.jsx` (224), `TrackEditorSaveBar.jsx` (116), `useViewport.js` (138), `useTrackIO.js` (206) (Q-6 done)
+  - ✅ `RaceScreen/index.jsx`: drawing modules extracted to `drawing/` (5 modules) + `camera/` (2 modules) (Q-7 done)
+  - ✅ `DevScreen/sections/RaceTuningSection.jsx`: 1269 → **44 lines** (thin coordinator); logic split into `BehaviorTuningSection.jsx` (610), `DynamicsTuningSection.jsx` (607), `SubCard.jsx` (41)
+  - `SetupScreen/SetupScreen.jsx`: **~809 lines** — watch list (no split yet)
+  - `DevScreen/sections/TrackManager.jsx`: **~727 lines** — watch list, Q-8
+
+### Phase V (Verification Sprint)
+
+Systematic testing of still-unverified areas.
+
+**FOUR OF THESE ARE NOT INDEPENDENT WORK** (marked below): V-1, V-2, V-4 and V-5 are the
+VERIFICATION of B-1, B-2, B-4 and B-5, and listing both as open counts one task twice. V-3 was
+answered by the config. **V-6 to V-9 are genuinely independent** — they verify areas no B- item
+covers.
+
+- **V-4** ✅ ~~Branding profiles B-4 (per old ROADMAP done, reality check says open)~~ —
+  **CLOSED WITH B-4 above, and the parenthetical is the interesting part: the old ROADMAP was RIGHT
+  and the reality check was WRONG.** Confirmed at source 2026-08-23 — both `RaceScreen/index.jsx`
+  and `ResultScreen/index.jsx` resolve the active brand. **The general rule:** a "reality check" that
+  contradicts a record is a claim like any other and needs its own evidence; this one was carried as
+  fact for months.
+
+## Parking Lot — Future / Unclear Scope
+
+- Phase 7: custom sprite upload ✅ delivered as standalone Racer Editor Phase 1+2 (2026-05-28)
