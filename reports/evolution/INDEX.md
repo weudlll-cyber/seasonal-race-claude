@@ -154,6 +154,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BACKLOG-SORTED-1.md](BACKLOG-SORTED-1.md) — **the backlog is two parts now, and nine owner
+  decisions are on the record** (2026-08-23). PART ONE OPEN / PART TWO CLOSED, **proved rather than
+  asserted: 234 subjects before and after, 141 open and 93 closed in both, 0 appearing twice, 0
+  verdict/part disagreements, 93 of 93 closed items naming what closed them, and every open section
+  carrying a `verify:` line or a stated reason none can exist.** THAT PROOF FOUND TWO DEFECTS AND
+  THEY WERE FIXED BEFORE IT PASSED: the decisions block added five phantom subjects (sub-bullets at
+  column 0), and 15 open sections had no verify note. **THE ONE JUDGEMENT CALL WENT CONSERVATIVE:**
+  the 22 his-word items are INDEXED at the top of PART ONE and left in place, because each sits
+  inside the evidence for it and cutting it out would make the decision look smaller than it is.
+  **D2 is not a plain closure** — the `RaceScreen` finding STAYS open because it is still true;
+  what closes is the question of acting on it. **D6 files the fairness-split finding with its
+  scoping** so it is never rediscovered as an open question. One source edit, a comment on
+  `_lfEntryByState`; routing selected the camera and render fingerprints and both came back
+  BYTE-IDENTICAL. 2 proposals.
+
 - [PERF-CLEAR-1.md](PERF-CLEAR-1.md) — **the perf archive cleared by the owner’s criterion: ten of
   eleven write-ups deleted, one kept, and NO raw chain deleted** (2026-08-23). **All eleven named
   `feat/open-track-overlap`, which resolves nowhere** — merged at `bc53ae1` and gone as a ref — so

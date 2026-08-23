@@ -583,6 +583,26 @@ export class CameraDirector {
     this._phasedByState = t.phasedByState;
     this._tcByState = t.tcByState;
     this._lfByState = t.lfByState;
+    // ── `_lfEntryByState` IS CONSUMED ON ZERO FRAMES OF A SHIPPED RACE, AND IT STAYS ────────────
+    //
+    // Measured 2026-08-23 (LF-ENTRY-EXPLAINED-1): driven through a whole race on two contrasting
+    // tracks, `_lerpPhase` is `'entry'` on NONE of 5588 frames (dirt-oval) and NONE of 3862
+    // (river-run). `_transition` sets `'entry'`, and the grammar branch further down overwrites it
+    // to `'glide'` or `'tracking'` before a frame is drawn.
+    //
+    // THE OWNER DECIDED ON 2026-08-23 TO DOCUMENT IT HERE RATHER THAN DELETE IT, and the reason is
+    // not sentiment:
+    //   * THE READER IS LIVE — `_lerpFactorForState` selects this map whenever the phase is
+    //     `'entry'`. This is not unreachable code.
+    //   * THE OLDER GRAMMAR IS A SHIPPED CONFIG SWITCH, NOT REMOVED CODE. `cameraTransitionGrammar`
+    //     in storage/defaults.js ships `'glide'`, and framingConfig.js resolves anything that is
+    //     neither `'cut'` nor `'glide'` to `'legacy'` — which is the one value that leaves this map
+    //     reachable. Forced to `'legacy'`, entry appears on 16.3% and 9.4% of frames.
+    //   * SO DELETING THE MAP WOULD CHANGE BEHAVIOUR THE MOMENT THAT SWITCH IS FLIPPED, silently
+    //     and in the direction of a harsher arrival — which is what a config switch exists to let
+    //     somebody try.
+    //
+    // The zero is a fact about the shipped VALUE of that switch, not about this code being dead.
     this._lfEntryByState = t.lfEntryByState;
     this._entryConvergenceZoom = t.entryConvergenceZoom;
     this._entryConvergencePx = t.entryConvergencePx;

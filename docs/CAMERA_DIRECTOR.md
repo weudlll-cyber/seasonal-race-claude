@@ -948,7 +948,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b24645ff 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ fd9037d5 2026-08-23 depends=client/src/modules/camera/ -->
+**RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
+`camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
+delete it — and **not one executable character changed**. It was not left as an argument from the
+diff: `npm run verify`'s own routing selected the CAMERA and RENDER fingerprints, because that file
+is inside both closures, and **both came back byte-identical to the values in
+[fingerprints.json](fingerprints.json)**. A frame sequence that hashes identically cannot have a
+different tracking lag, so the measurement whose answer cannot have changed is not run.
+
+Stamped at the parent commit `fd9037d5` per the guard's two-step; the SHA is corrected to this
+change's own commit in the follow-up.
+
 
 **RE-STAMPED, NOT RE-MEASURED, FOR THE MAX_CAM_ZOOM NOTE (2026-08-23) — and this is the strongest
 version of that argument the stamp has carried.** That change adds a COMMENT to
