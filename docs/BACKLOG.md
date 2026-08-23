@@ -159,6 +159,56 @@ and the four decisions of 2026-08-23 that narrowed it.
 
 ## THE REST — open, in the order they were already in
 
+## A seed alone does not reproduce a race (2026-08-23, from SEED-REAL-RACE-1)
+
+**verify (section-wide):** the item names its own command. **This is a FINDING, not a proposal** —
+nothing is designed here, no key is added, and no change is implied.
+
+- [ ] **A SEED IS NOT A RACE IDENTIFIER. It is one of six inputs, and the other five do not travel
+      with it.** SEED-REAL-RACE-1 made a normal race carry a seed and made that seed outlive the
+      browser session, which is what D23 asked for. **What it did not do — and could not, being
+      scoped to the seed — is make "seed 4242" mean one race.** Re-running the race a seed names
+      needs the track, the racer type, the field SIZE, the NAME LIST, the canonical duration input
+      and the config that was in force. Established at source 2026-08-23; every address below was
+      read, not recalled.
+
+  **THE NAME LIST IS THE ONE THAT SURPRISES PEOPLE, so it is first.** A racer's NAME is a PHYSICS
+  INPUT: `stablePairBit` in `client/src/modules/raceBehavior.js` builds its key from
+  `String(a.name ?? a.id ?? a.index)` and hashes it, and that bit decides the tie-break side of a
+  near-coincident same-lane pair. Rename a racer and the race changes. So "the same seed with the
+  same twenty players" is only the same race if it is the same twenty NAMES.
+
+  **WHERE EACH INPUT LIVES TODAY, and whether anything durable keeps it:**
+
+  | input | in the live race payload (`sessionStorage['activeRace']`) | in the durable record (`racearena:raceHistory` entry) |
+  | --- | --- | --- |
+  | seed | `racePlanSeed` | `seed` ✅ *(added by SEED-REAL-RACE-1)* |
+  | track | `trackId` + `geometryId` | `trackId` ✅ — **but not `geometryId`**, and a track's geometry can be re-drawn |
+  | racer type | `racerTypeId` | **absent** ❌ |
+  | field size | `racers.length` | `playerCount` ✅ |
+  | the NAME LIST, in start order | `racers[].name`, index-ordered | **lost** ❌ — `finishOrder[].name` holds the same set in FINISH order, which is a permutation of the order the plan was built on |
+  | duration / laps | `targetLaps` (closed) or `targetDurationSec` (open) — the two canonical operator inputs | **absent** ❌ — the entry's `duration` is `elapsedTime`, the REALIZED seconds, which is an OUTPUT and not an input |
+  | the config in force | not in the payload at all | **absent** ❌ |
+
+  **THE CONFIG ROW IS THE WIDEST HOLE, and it is not new.** A stored config beats `defaults.js` per
+  key, forever, because the loaders write whole objects — so two races with the same seed, track and
+  roster still differ if a dynamics value was touched between them, and nothing on screen says so.
+  The HUD's `cfg` fingerprint pill already answers "is this the default world"; it is not recorded
+  with the race.
+
+  **WHY THIS IS FILED RATHER THAN FIXED.** Three of the six gaps are one field each on an existing
+  object and would be cheap; the config one is a design question with at least three defensible
+  answers (store the whole object, store its fingerprint, store only what differs from the shipped
+  default), and picking one is not a night's tidying. **Nothing here is proposed.**
+
+  **verify:** `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx`
+  — **still open while it returns nothing**, which is today's output. The day the durable record
+  carries the race's inputs rather than only its outputs, this closes. **The pattern can match**:
+  the same grep over `client/src/screens/SetupScreen/SetupScreen.jsx` returns the lines that build
+  the payload.
+
+---
+
 ## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
 
 - [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
