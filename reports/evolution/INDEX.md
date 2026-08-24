@@ -154,6 +154,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-LEVEL-SET-1.md](RUNIN-LEVEL-SET-1.md) — **the owner's rule of 2026-08-24, measured before
+  it is built** (2026-08-24, MEASURE ONLY, nothing built or changed, no key added; **1,260 races,
+  521,320 run-in frames**, the same corpus, pool 12 from 14 cores). His rule: any racer at most ONE
+  RACER LENGTH behind the leader ALONG the track must be in frame, however far to the side he runs.
+  **IT HOLDS ALL TWELVE OF HIS RACES — 568 winner-off frames to 0** — and every top-five finisher in
+  all twelve too.
+  **AND IT COSTS THE FINISH LINE NOTHING: 85.7% of frames today, 85.8% under the rule**, no track
+  losing ground and six gaining. That answers RUNIN-CONTENDER-GUARANTEE-1's open question and it is
+  the opposite of that block's contender-SOLE reading (14.5-32.7%) — because a widen-only ceiling can
+  only make a fixed world point easier to contain.
+  **IT ADDRESSES HIS FAULT AND NOT SOMETHING ELSE: of the frames where it widens, 80.9% do so because
+  the binding member is farther to the SIDE than behind** (dirt-oval 89.2%, river-run 87.5%,
+  space-sprint 44.6% — its road runs down the screen). It widens on 9.4% of frames in 1,047 episodes
+  of a mean 47 frames, concentrated on river-run 20.1%, mountainstreet 16.3%, luger-hill 13.7% —
+  exactly the tracks LATE-LEAD-AXIS-1 named — and is **TIGHTER than today on 59.2%**, which is what a
+  fixed width cap cannot do.
+  **BUT IT NEEDS THE PRESENCE REPAIR TO DELIVER ANY OF IT.** As a SPAN guarantee it removes **11 of
+  126** winner-off races; measured from the anchor, **93**. The membership change is the smaller half;
+  **the CAMERA-ANCHOR-TRUTH-1 repair `pairGuarantee` never received is most of the value.**
+  **THE SET:** the rule is `_abreastContenders` condition 1 ALONE — the free-lane test is an
+  across-track condition and he has said the across-track distance decides nothing — evaluated live,
+  with no minimum of two. One racer on 39.1% of frames, three or more on 37.2%, against the shipped
+  rule's "two on 77.2%". The winner is in it on **100.0%** of last-quarter frames, so no hindsight is
+  needed. **Costs the forward view nothing** — room ahead 395 -> 410 world px. **Gap flagged twice
+  now: the rule is silent on the 37.6%** of frames where only the leader is left. 7 proposals.
+
 - [RUNIN-CONTENDER-GUARANTEE-1.md](RUNIN-CONTENDER-GUARANTEE-1.md) — **the shape of "everyone who
   can still win stays in frame", measured before anything is built** (2026-08-24, MEASURE ONLY,
   nothing built or changed; **1,260 races, 521,320 run-in frames**, the same seeds as
