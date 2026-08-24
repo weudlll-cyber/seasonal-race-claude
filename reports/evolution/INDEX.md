@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-CONTENDERS-1.md](RUNIN-CONTENDERS-1.md) — **is the contender set wrong, or merely generous?**
+  (2026-08-24, MEASURE ONLY, nothing changed; 160 races over 10 tracks x 8 seeds x {20,40}, pool 12
+  from 14 cores, 170 s). **THE ANSWER IS NEITHER, AND THE TERM IS NAMED.** Over the closing stretch
+  the width is set by the ACTIVE STATE'S OWN ZOOM on **94.6% of frames at 20 racers and 97.2% at 40**;
+  the contender guarantee sets it on **5.4% and 2.9%**. So membership in either direction moves one
+  frame in twenty and neither case is the reason a finish reads far away.
+  **CASE B BARELY EXISTS:** of 324 set members, **ONE** finished more than five body lengths back, and
+  nothing in the set ever finished more than ten back in 144 races. The set is almost always exactly
+  TWO — 75% of races at 20, 93% at 40 — which is the geometric rule admitting nobody and the FALLBACK
+  PAIR running. Median member cost 0.00000 ln, **but 48 of 82 priceable members cost >0.01 ln at their
+  worst frame and the top is 2.23 ln** — a third member is expensive when it exists, which is rare.
+  **CASE A IS REAL BUT SMALL:** winner outside the set in **4 of 144 races (2.8%)**, a non-set racer
+  within one body length in **29.2%** of 20-racer races.
+  **THE OWNER'S CASE ACQUITS THE SET ENTIRELY.** Seed 9888: the winner was IN the set from capture,
+  and was off canvas for **481 frames at progress 0.815-0.908** — on frames where the set DID NOT YET
+  EXIST — while the camera was locked on COMEBACK subject 12, who himself finished 0.89 body lengths
+  back. At the lead change (0.979) the winner was **on canvas within 0.02 of centre**, which corrects
+  the brief's timing and moves the cause from the set to the comeback shot's exclusivity.
+  **"20 and not 40" DOES NOT HOLD PER TRACK** — it reverses on four of nine; what differs is that the
+  finish is tighter at 20 (2.01 vs 1.74 racers within one body length).
+  **garden-path produced no winner in 16 of 16 races** and is unmeasured. `RUNIN-LATE-LEAD-1`, cited
+  by the brief, **exists nowhere in the tree**. 6 proposals, each costed against his forward view.
+
 - [ACTION-BADGE-1.md](ACTION-BADGE-1.md) — **why the config badge says two deviating values on WILD**
   (2026-08-24, READ-ONLY, nothing changed, NOT MERGED). **THE BADGE IS RIGHT AND THE PREMISE OF THE
   QUESTION IS NOT.** It compares the config the RACE WAS HANDED, not the stored blob:
