@@ -46,6 +46,10 @@ export const FRAME_CAMERA_FIELDS = [
   'comebackLockedRacerIndex',
   // The director's own diagnostic HUD state.
   'hudState',
+  // RUNIN-NAMES-1: has the run-in's CLOSING ZOOM arrived at its target? One-way within a race. The
+  // renderer uses it to decide what a label SAYS — names from the arrival, numbers before it — and
+  // for nothing else. It is the director's own arrival, not a zoom the renderer re-tests.
+  'runInArrived',
 ];
 
 /**

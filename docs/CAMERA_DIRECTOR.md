@@ -948,7 +948,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ fa14ca0c 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/ -->
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the

@@ -1977,6 +1977,50 @@ values.)*
 ---
 
 
+### D26 · The config badge's "2 race" on WILD is CORRECT and is NOT being reworded · 2026-08-24
+
+**His decision: leave it. Nothing is proposed here and nothing is built.**
+
+**THE FRICTION, in one sentence.** The config badge counts KEYS that are off default, while the Race
+Action stage is ONE host decision that sets TWO keys — so a `wild` race honestly reads `2 race`, and
+the owner, who made one choice, reads it as two.
+
+**IT IS NOT A DEFECT, and that was established at source rather than assumed.**
+[ACTION-BADGE-1](../reports/evolution/ACTION-BADGE-1.md) answered three questions with file:line
+evidence:
+
+- **The badge compares the config the RACE WAS HANDED, not the stored blob.** `RaceScreen/index.jsx`
+  builds the badge's world with the race's stage, and `exportRaceConfig.js` applies the stage inside
+  it — the badge and the race come from one gather. **So the two deviating keys are the STAGE'S OWN
+  VALUES, not a hand-set slider that leaked.** The count would be exactly two on a completely
+  untouched install with the stage on `wild`.
+- **The stage wins on BOTH start paths**, and they converge on ONE application line, so they cannot
+  disagree. **No leak was found on either.**
+- **The count is right; only the WORDING misleads** — the pill says how MANY keys are off default,
+  never WHICH, and never that the stage caused them. The key names are already computed and carried,
+  and simply never displayed.
+
+**WHY IT IS NOT BEING REWORDED — his reason, and it is about the surface's future rather than about
+the wording.** These HUD diagnostics are **test tooling**. They are eventually going behind the dev
+toggle, together with the Quick Test bar, and will not be on screen during a presented race at all.
+**Improving a display that is on its way out is not worth the work.**
+
+**THIS COUNTS AS HANDLED WHEN THAT MOVE HAPPENS.** Whoever hides them does not need to reword
+anything first, and should not treat this as an open item blocking the move.
+
+**THE MOVE ITSELF HAS NO ENTRY ANYWHERE IN THIS TREE — searched, not assumed** (`docs/` returns
+nothing for the Quick Test bar going behind a dev toggle). So this decision is filed here rather
+than beside it, and it names the surfaces so that whoever does the move lands on it:
+
+- the in-race pill column — `client/src/screens/RaceScreen/renderRaceFrame.js`, `drawHudPills`, the
+  `cfg` row among them
+- the Quick Test bar — `client/src/screens/SetupScreen/SetupScreen.jsx`
+
+**WHAT WOULD REOPEN IT.** Only one thing: the diagnostics staying on screen for a presented race
+after all. The reason to leave the wording alone is that nobody outside development will read it;
+if that stops being true, the reason stops holding and the wording question comes back — with the
+key names already available to whoever picks it up.
+
 ## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
 
 **verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
