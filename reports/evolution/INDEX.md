@@ -154,6 +154,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [PREVIEW-REBUILD-1.md](PREVIEW-REBUILD-1.md) — **the preview names a build that can be resolved**
+  (2026-08-23, NIGHT-2026-08-23 piece 10). The build on 4173 served a pill naming a **deleted branch**.
+  Rebuilt from master: **`build eae16783 · master`**, clean tree, no `+dirty`, verified in the SERVED
+  artefact rather than in `client/dist` (`serve-production.mjs` copies out of OneDrive, so the source
+  bundle is the wrong file to check).
+  **A SECOND STALENESS WAS FOUND THAT THE REBUILD ALONE WOULD NOT HAVE FIXED.** `/api/health` was
+  answering with **no `build` object at all**, while `server/src/app.js:44` has
+  `build: buildIdentity()` — **the API process predated BUILD-FROM-OUTSIDE-1 and had never been
+  restarted.** The backlog’s own `verify:` line for that item queries the running server and **would
+  have failed all week while passing against the source.** Two stale API processes were found and
+  stopped. All three surfaces now agree on `eae16783 · master`.
+  3 proposals, including that **the check which catches a stale server cannot live in `npm run verify`**
+  (no running server) but could live in the dev-start path, and that the identity carries a commit but
+  **no start TIME** — which is what would have made this self-evident.
+
 - [LATE-LEAD-CHANGE-1.md](LATE-LEAD-CHANGE-1.md) — **the winner at the line, and why the release rule
   is not the answer** (2026-08-23, NIGHT-2026-08-23 piece 7, diagnose only).
   **THE WINNER WAS NEVER RELEASED.** `winnerIdx = 13`; the released set is eighteen of the nineteen
