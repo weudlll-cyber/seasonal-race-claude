@@ -948,7 +948,22 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b80377ba 2026-08-25 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EXACTLY ONE FIGURE MOVED: PHOTO_FINISH median
+3.08 -> 3.00 pp (2026-08-25).** Every other state is identical to the digit, both percentiles and all
+six frame counts included — 10923, 159, 17169, 9373, 4323, 1865 — and PHOTO_FINISH's own frame count
+is unchanged, so the state ran exactly as long and followed a little closer while it did.
+
+**IT WAS RUN, AND THIS TIME IT HAD TO BE.** Every earlier entry here could rest on the CAMERA
+fingerprint coming back byte-identical. That sentence is unavailable to this block: **the camera
+fingerprint MOVED** (see [fingerprints.json](fingerprints.json) for where the values live), because
+the block adds a width authority that composes during the run-in. So the only honest answer was the
+measurement.
+
+**AND THE SIGNATURE IS THE DESIGN'S, which is the reason to believe it.** The new term is scoped to
+the run-in, whose window opens at the endgame threshold — by which point every state except
+PHOTO_FINISH and LEADER_ZOOM has left. A figure moving in BATTLE_ZOOM or OVERVIEW would have been
+evidence of a leak rather than of a better shot. The table below carries the new figure.
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the
@@ -1117,7 +1132,7 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 3.08      | 8.79   |
+| PHOTO_FINISH  | 1865   | 3.00      | 8.79   |
 
 (ENDGAME-LAND-CLEAN-1's run, which differs from ENDGAME-SCHEDULE-1's only in PHOTO_FINISH's two
 percentiles — that run read 3.54 / 8.91. The PHOTO-FINISH-STATE-1 run the paragraph below describes read

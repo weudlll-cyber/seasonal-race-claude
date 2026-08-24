@@ -154,6 +154,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-LEVEL-SET-BUILD-1.md](RUNIN-LEVEL-SET-BUILD-1.md) — **the owner's rule BUILT, with the
+  repair that makes it work** (2026-08-25, `feat/runin-level-set-1`, **BUILT AND PUSHED, NOT MERGED —
+  his eye decides**; 1,260 races on the built code + 180 on an archived master tree, pool 12 from 14
+  cores). **ON THE BUILT CODE IT HOLDS ALL TWELVE OF HIS RACES: 568 winner-off frames -> 0**, every
+  top-five finisher with them, and **the finish line is IDENTICAL to master at 85.7%**.
+  **BOTH HALVES SHIPPED TOGETHER.** `pairGuarantee` and `contenderGuarantee` now take an anchor and
+  measure PRESENCE via `presenceCeilingFrom` — `halfCorridorCeiling` with a different vector, same
+  helper, same zero-room skip — with `null` meaning today's span behaviour exactly, so no existing
+  caller moves. Membership is `_abreastContenders` condition 1 alone, and the unit is defined ONCE as
+  `CameraDirector.contactLengthBetween`, read by all three sites. **No config key, no default moved.**
+  **THE SET IS LIVE, NOT PINNED, and the reason is recorded**: the pin protects the ANCHOR from
+  re-sorting, this term never touches the anchor, and a pinned set could never admit a racer arriving
+  late alongside — the case the rule exists for. Churn is absorbed by an EASED RELEASE over
+  `runInOpenMs` with instant admit; the churn test caught a real bug where an empty set threw the
+  release state away.
+  **ONE NEW COST, MEASURED AND NOT REPAIRED:** the width can leap in a SINGLE FRAME when a racer
+  arrives at the boundary — worst step 0.061 -> 0.670 ln on river-run, and **26 of 1,260 races carry a
+  step over 0.4 ln**. That is the hopping two earlier blocks removed; the candidates all trade against
+  the rule, so it is reported for his eye rather than shaped blind.
+  **FINGERPRINTS: world `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED** (measured, not
+  argued from routing); **camera MOVED to `738fd0a6a928ab7a` and render to `6a086a0e7747f387` —
+  EXPECTED, and NOT re-minted**, because a visible change needs his eye first. verify: 13 PASS, 11
+  SKIP. 881 camera tests green, 17 new, each with its sabotage.
+  **ONE FIGURE DID NOT REPRODUCE AND IT IS A FINDING:** the measurement predicted 33 residual
+  winner-off races, the build gives 91 — because that figure rested on HINDSIGHT ("or who wins") the
+  build cannot have, and the counterfactual had no pan smoother. Also: **dirt-oval, his reference
+  track, is UNCHANGED**. 6 proposals.
+
 - [RUNIN-LEVEL-SET-1.md](RUNIN-LEVEL-SET-1.md) — **the owner's rule of 2026-08-24, measured before
   it is built** (2026-08-24, MEASURE ONLY, nothing built or changed, no key added; **1,260 races,
   521,320 run-in frames**, the same corpus, pool 12 from 14 cores). His rule: any racer at most ONE

@@ -49,7 +49,18 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b80377ba 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-25)** — all four phase-6 durations and all four zoom-out leads.
+
+**IT WAS RUN RATHER THAN ARGUED.** Every earlier entry here could rest on the CAMERA fingerprint
+coming back byte-identical; that sentence is unavailable to this block, because **the camera
+fingerprint MOVED**. The measurement is the answer instead of the inference.
+
+**And the reason it did not move is structural rather than lucky.** The new width authority is scoped
+to the run-in, and `_updateRunIn` releases at the FIRST crossing — phase 6 begins after the winner is
+home, so the two windows do not overlap by a single frame, which is what this section says a few
+paragraphs down for a different reason.
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the
