@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CLEANUP-2026-08-24.md](CLEANUP-2026-08-24.md) — **one sweep: the upstream, the branches, the tag
+  family, and everything only the local machine could see** (2026-08-24, refs and docs only, NO
+  SOURCE CHANGE — so no fingerprints, no browser gate, no client suite, and the reason is stated).
+  **THE HEADLINE IS ONE UNTRACKED FILE.** `sweep.mjs` drove LADDER-VALIDATION-1 and existed in **NO
+  commit anywhere**, in a worktree on a scratch disk — while [RACE-ACTION.md](../../docs/RACE-ACTION.md)
+  §6 already cites its result as the reason the ladder's middle rung cleared the fairness gate.
+  Committed, pushed, and anchored by `archive/ladder-validation-sweep`.
+  **THE FIRST ORPHAN COUNT WAS A ZERO AND THE ZERO WAS WRONG** — a `rev-list` over 1548 SHAs failed
+  with its error swallowed; a control of two known-unreachable commits caught it. Redone as set
+  membership: **383 orphans**, of which 289 are dropped-stash remains. **None is lost work**: the two
+  my memory flagged as open owner decisions are both superseded — FRONT-GROUP-4 by an identical
+  diffstat inside `archive/front-group`, and `minRacersVisible` **3→5 ALREADY SHIPPED**, which
+  corrects a stale memory.
+  **THE TAG-FAMILY PREMISE DID NOT HOLD:** no commit carries three names — `v-ship-race-action` is
+  alone on `99fe0489`, the older two share `e1d5a2bf` six weeks earlier, and both are cited by name
+  in BACKLOG. **Proposal: keep all three, change nothing.** Separate finding: the register records
+  one tag by its TAG-OBJECT sha and others by COMMIT sha, which `check-tags` cannot catch.
+  **Deleted only what was proved contained**: two branches whose sole file is byte-identical to
+  master's, two ancestors of master. 5 proposals.
+
 - [RACE-ACTION-CONTROL-1.md](RACE-ACTION-CONTROL-1.md) — **the owner's Race Action selector: three
   stages, on the Dev Screen, stored with the race** (2026-08-24, BUILT, **NOT MERGED — his eye
   decides**). `quiet` / `medium` / `wild`, chosen by the host who presents a race. **ALL FOUR

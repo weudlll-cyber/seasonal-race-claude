@@ -114,6 +114,26 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### CLEANUP-2026-08-24 — the sweep driver that was on one disk (2026-08-24)
+
+**A cleanup sweep found a harness that existed in NO commit anywhere and whose output is cited
+in shipped documentation.** `sweep.mjs` drove LADDER-VALIDATION-1 — ten tracks, two arms, N=100 —
+and [RACE-ACTION.md](RACE-ACTION.md) section 6 rests on its result when it says the ladder's middle
+rung held band arrival on all ten tracks. It was untracked, in a worktree, on a scratch disk. It is
+committed and anchored here.
+
+**The branch it came from is gone and that costs nothing**: `night/sweep-tree`'s other commit
+(`--brake-depth`) is byte-identical to master's copy of the file it touches, so the only unique
+thing on the branch was the driver, and the driver is what this tag holds. `diag/brake-curve-1`
+carried the SAME change and was deleted outright for the same reason.
+
+- `archive/ladder-validation-sweep` (`31e6cae6`, 2026-08-24) — **the LADDER-VALIDATION-1 sweep
+  driver**, saved from a scratch disk where it existed in no commit. Keep it: it is the instrument
+  behind a claim that is already in shipped documentation, and without it that claim cannot be
+  reproduced. The 86 MB of output it wrote is deliberately NOT in here — derived data, regenerable,
+  and its location is recorded in
+  [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md).
+
 ### RACE-ACTION — the host picks the race's action, and quiet is what shipped (2026-08-24)
 
 **A control named "Race Action" with three stages — `quiet`, `medium`, `wild` — chosen by the host
