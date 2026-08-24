@@ -154,6 +154,35 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-CONTENDER-GUARANTEE-1.md](RUNIN-CONTENDER-GUARANTEE-1.md) — **the shape of "everyone who
+  can still win stays in frame", measured before anything is built** (2026-08-24, MEASURE ONLY,
+  nothing built or changed; **1,260 races, 521,320 run-in frames**, the same seeds as
+  LATE-LEAD-HUNT-1, pool 12 from 14 cores). **IT WORKS FOR HIS CASE.** Of the 12 races where the
+  winner is outside the picture at the line it would have kept him in frame in **11**; the twelfth
+  fails for a diagnosable reason and the fix makes it **12 of 12**.
+  **THE DEFECT IS NOT THE AXIS — `pairGuarantee` HAS ALWAYS BEEN BOTH-AXIS.** It fits the full 2-D
+  separation vector. What it does not do is take an ANCHOR: it guarantees the set's **SPAN**, not its
+  **PRESENCE**, so a pair running wide TOGETHER has a small span and a large common offset the
+  guarantee cannot see. That is the repair CAMERA-ANCHOR-TRUTH-1 already made to `corridorGuarantee`
+  and `pairGuarantee` never received. Over 480 races on the four affected tracks the winner is off
+  frame in **60 races today → 49 under the span guarantee → 7 measured from the anchor**; the set
+  sits a mean **78.3 world px from its own anchor**. The code already names the failure:
+  `lateralShiftToFit` says *"no shift fits everyone, which means the ZOOM guarantee should have
+  widened and did not."*
+  **IT IS NOT THE FALLBACK IN DIFFERENT CLOTHES:** tighter than today on **59.8%** of frames, wider
+  on 3.3%, and the widening lands exactly on the tracks LATE-LEAD-AXIS-1 named. **ACROSS-track binds
+  on 79.1%** of frames (river-run 97.4%, space-sprint 17.3%).
+  **BUT IT CANNOT BE THE SOLE AUTHOR OF THE WIDTH, and that is said plainly:** as a pure demand the
+  finish line is in frame on only **14.5–32.7%** of frames against **83–85%** today, which breaks his
+  own requirement 5. It must stay a widen-only ceiling composed with the terms already there.
+  **THE SET, AT SOURCE:** `_abreastContenders` admits almost exactly **two on 77.2%** of frames and is
+  **captured once at the PHOTO_FINISH transition and never re-sorted**; the predictive rule in
+  `_updateContention` can only ever REMOVE. **The hindsight in "or who wins" is nearly free** — the
+  winner is already in the predictive set on **100.0%** of last-quarter frames.
+  **COSTS THE FORWARD VIEW NOTHING** — the placement is a FRACTION of the frame, so a widen cannot
+  move it; room ahead 395 → 397 world px. **Gap flagged: the requirement says nothing about the
+  36.9%** of frames where only one racer can still win. 7 proposals.
+
 - [LATE-LEAD-AXIS-1.md](LATE-LEAD-AXIS-1.md) — **the same 1,435 hits, re-sliced by DIRECTION rather
   than by timing** (2026-08-24, RE-COMPUTATION AND ONE DOCUMENT; **no race re-run**, nothing changed).
   **THE OWNER'S CASE IS REAL, SEPARATE, AND RARE:** a top-5 finisher leaves the frame **ACROSS the
