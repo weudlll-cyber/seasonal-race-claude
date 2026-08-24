@@ -215,6 +215,9 @@ export function renderRaceFrame(ctx, f) {
     for (const r of st.racers) if ((r?.t ?? 0) > (leader?.t ?? 0)) leader = r;
     focusRacerIndex = leader?.index ?? null;
   }
+  // RUNIN-NAMES-1: read ONCE, here, and used by the two layout parameters below. The director owns
+  // the arrival; this file owns only what a label says because of it.
+  const namesFromArrival = !!camera?.runInArrived;
   ctx.save();
   ctx.font = `bold ${tagFontPx}px sans-serif`;
   const measureTagText = (txt) => ctx.measureText(txt).width;
@@ -245,7 +248,30 @@ export function renderRaceFrame(ctx, f) {
     // LABEL-DEGRADE-1: the wider form on offer — the racer's NAME — when the toggle is on. Passing
     // null keeps the layout byte-for-byte what it was, which is what makes the toggle a real
     // comparison rather than two code paths that merely look alike.
-    wideLabelOf: cameraConfig?.labelNamesWhenRoom ? (r) => r.name ?? '' : null,
+    //
+    // RUNIN-NAMES-1 ADDS ONE TERM AND NO SECOND MECHANISM. From the moment the run-in's closing zoom
+    // has ARRIVED, the name is on offer for every racer whatever the toggle says — because from that
+    // moment the owner's requirement is names, not "names if the operator enabled them". Before the
+    // arrival this expression is exactly what it was, so every label before it is unchanged to the
+    // pixel. A racer with no name still yields '' here, which the layout already treats as "no wide
+    // form on offer" (it requires `length > 0`), so a nameless racer keeps its NUMBER rather than
+    // showing an empty label — that is the existing rule, not a new branch.
+    // AFTER THE ARRIVAL EVERY RACER HAS A WIDE FORM, and for the nameless one it is his NUMBER.
+    // The reason is "hide no label": the blanket exemption below only reaches racers that HAVE a
+    // wide form, so a nameless racer would fall through to the ordinary clearance test and — in a
+    // field where everyone else now holds a full-width name — be dropped entirely. Measured: two
+    // nameless racers in a packed field of six lost their labels altogether. Giving him his number
+    // as the wide form puts him under the same exemption, so he keeps it.
+    //
+    // HE STILL DRAWS A NUMBER, and that falls out rather than being arranged: `racerRendering.js`
+    // re-derives the wide text as `r.name ?? ''`, which is empty for him, so the draw falls back to
+    // the number label — the same string this measured. The layout reasons about the box that gets
+    // drawn, which is the one-home rule `labelBoxWidth` exists to keep.
+    wideLabelOf: namesFromArrival
+      ? (r) => (r.name && r.name.length > 0 ? r.name : raceNumberLabel(r.raceNumber))
+      : cameraConfig?.labelNamesWhenRoom
+        ? (r) => r.name ?? ''
+        : null,
     wideForms: tagWideForms,
     // LABEL-FOCUS-1: the racer the camera is ON keeps its name for the whole race. The director
     // already names its subject — `anchorRacerIndex`, from CAMERA-FOCUS-1 — and it is deliberately
@@ -268,7 +294,21 @@ export function renderRaceFrame(ctx, f) {
     // its name unconditionally, through `exempt` above, which is untouched. Every other name at the
     // finish is now drawn when it fits and withheld when it does not — which is what the exemption
     // was trying to buy and, at 1951 px, was not delivering.
-    exemptAll: false,
+    // ── RUNIN-NAMES-1: THE BLANKET EXEMPTION RETURNS, WITH A TRIGGER THAT IS NOT A ZOOM GUESS ────
+    //
+    // The paragraph above is why it left, and none of it is withdrawn: keyed to `PHOTO_FINISH` the
+    // exemption fired in the WIDEST shot of the race, where 40 of 41 names overlapped and 9 were
+    // clipped off the canvas. What was wrong was the TRIGGER — a STATE standing in for a WIDTH —
+    // not the idea that at the closing shot every racer should be named.
+    //
+    // The trigger now is the director's own arrival latch: the run-in's closing zoom has reached the
+    // width it was closing to. That is a statement about the WIDTH, made by the one thing that
+    // authors it, so it cannot drift the way `state === 'PHOTO_FINISH'` did when the guarantee
+    // widened that shot underneath it.
+    //
+    // OVERLAP IS NOT A DEFECT HERE and no de-overlap rule is added: at the arrival width the picture
+    // is readable and knowing who is coming is the point. Nothing is hidden, nothing is shrunk.
+    exemptAll: namesFromArrival,
   });
   ctx.restore();
 

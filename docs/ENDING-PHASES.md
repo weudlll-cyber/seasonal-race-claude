@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ fa14ca0c 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/CameraDirector.js -->
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the

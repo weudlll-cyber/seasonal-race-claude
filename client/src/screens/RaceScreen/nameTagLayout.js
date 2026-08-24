@@ -482,6 +482,29 @@ export function computeTagLayout({
       continue;
     }
 
+    // ── `exemptAll` DROPS NOBODY, EVEN A RACER WITH NO WIDER FORM (RUNIN-NAMES-1) ──────────────
+    //
+    // The branch above needs `e.wide`, and `e.wide` exists only when the wide form is STRICTLY
+    // WIDER than the narrow one. A racer with no name has neither — his wide form resolves to his
+    // own number, the same string at the same width — so he fell through to the criterion and was
+    // DROPPED: measured, two nameless racers in a packed field of six lost their labels entirely,
+    // while every named racer around them held a full-width box by exemption. That is the exemption
+    // making things WORSE for exactly the racer it cannot help.
+    //
+    // "Exempt everyone" has to mean everyone. He is placed with the form he has — his number — and
+    // is not judged against the picture.
+    //
+    // SCOPED TO `exemptAll` ON PURPOSE. The per-racer `exempt` above is LABEL-FOCUS-1's, it is the
+    // only exemption that runs before the closing zoom arrives, and RUNIN-NAMES-1 must leave every
+    // pre-arrival label exactly as it was. Widening that one too would have been the tidier-looking
+    // change and would have moved a picture this block promised not to touch.
+    if (!e.wide && exemptAll) {
+      placed.push(e);
+      claimed.push(e);
+      shown.add(e.index);
+      continue;
+    }
+
     let nameClear = false;
     if (e.wide) {
       let clear = true;

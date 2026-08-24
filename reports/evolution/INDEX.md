@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-NAMES-1.md](RUNIN-NAMES-1.md) — **names instead of numbers once the closing zoom has
+  arrived** (2026-08-24, BUILT, **NOT MERGED — it waits for his eye**; branch pushed).
+  **TWO OF THE BRIEF'S PREMISES DID NOT HOLD.** The photo-finish names mechanism it says to reuse
+  **had been DELETED** by LABEL-OVERLAP-FIX-1, because LABEL-OVERLAP-3 measured that shot at 1951
+  world px — the WIDEST of the race — with 40 of 41 names overlapping. What survives is the layout's
+  `exemptAll` PARAMETER, kept on purpose with both arms pinned, and that is what is reused: the
+  deleted thing was the TRIGGER, and this gives it one that is a statement about the WIDTH instead
+  of a STATE standing in for one.
+  **THE TRIGGER WAS CHOSEN BY MEASUREMENT AND THREE CANDIDATES WERE REFUTED**, each over ten tracks
+  x two seeds: `stateBinding` fires at run-in OPEN and is not monotone; restricted to the close it
+  fires on 7 of 18; and **`_runInProgress >= 1` — the schedule's own sentence in its own units —
+  fires on 6 of 18 AND ALL SIX ARE PHOTO FINISHES**, so it fails "must fire in both cases" by
+  construction. Chosen: a one-way `runInArrived` latch on the close having run and the leader
+  reaching the line, which is where §3b defines the arrival.
+  **THE RENDER FINGERPRINT CANNOT SEE THIS CHANGE AND ITS SILENCE IS NOT A PASS** — the harness
+  builds the renderer's `camera` as a hand-written THREE-FIELD LITERAL instead of calling
+  `frameCameraInputs`, so `runInArrived`, `state` and `anchorRacerIndex` are all undefined there.
+  That is FRAME-INPUTS-1's own defect, still live in the instrument; **LABEL-FOCUS-1 has never been
+  exercised by it either.** Not fixed here (it would move the hash and conflate an instrument repair
+  with a label change) — proposal 1. **CAMERA unmoved, world not selected.**
+  Replaced as evidence by an end-to-end seam measurement: **36 of 36 finishing races switch, 18
+  photo-finish and 18 non-photo-finish, 0 of 40 ever revert.** 10 sabotages, 10 caught — **and two
+  of the tests were worthless until the sabotages showed they replicated the production line instead
+  of calling it.** 5 proposals.
+
 - [CLEANUP-2026-08-24.md](CLEANUP-2026-08-24.md) — **one sweep: the upstream, the branches, the tag
   family, and everything only the local machine could see** (2026-08-24, refs and docs only, NO
   SOURCE CHANGE — so no fingerprints, no browser gate, no client suite, and the reason is stated).
