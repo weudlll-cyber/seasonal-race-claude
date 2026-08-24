@@ -366,7 +366,19 @@ not reproduce because it rested on hindsight the build cannot have (§4).
 
 ## 12. HAND-OFF — what the owner is being asked to judge
 
-**The dev server is running this branch as a PRODUCTION build. The badge is in §12's note below.**
+**THE DEV SERVER IS RUNNING THIS BRANCH AS A PRODUCTION BUILD.**
+
+| | |
+| --- | --- |
+| where | **`http://localhost:4173`** — the preview server, on the project's standing port |
+| API | `http://localhost:4000`, already up |
+| **the badge** | **`6078cd6a`** · branch `feat/runin-level-set-1` · **`dirty: false`** · `reason: null` |
+
+It is a real production bundle (`vite build`, then `vite preview`), not the dev server: the build
+identity is read once at build time and ships with the bundle, which is why the badge can be trusted
+here in a way a long-running dev server's cannot (BUILD-TRUTH-1). **`dirty: false` means the bundle
+was built from a clean tree at exactly the commit named** — the report he is reading and the code he
+is watching are the same thing.
 
 **WHAT NO MEASUREMENT CAN ANSWER: does the wider frame look right?** Every number in this report is
 geometry.
