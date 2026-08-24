@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LATE-LEAD-HUNT-1.md](LATE-LEAD-HUNT-1.md) — **races where a top finisher was outside the camera at
+  the finish** (2026-08-24, SEARCH AND DIAGNOSE ONLY, nothing changed; **1,260 races**, 240 seeds on
+  dirt-oval 20 plus 60 on every other cell, pool 12 from 14 cores). **IT IS NOT RARE AND IT
+  REPRODUCES:** a top-5 finisher is fully off canvas during the closing stretch in **663 of 1,260
+  races**, and the WINNER himself in **10.0%**. Per position, off / clipped: P1 10.0/26.6, P2
+  12.1/42.1, P3 18.6/55.6, P4 29.8/65.6, P5 43.3/77.1 — reported per position so the owner draws the
+  "top places" line himself. **THE HIT LIST IS FIRST IN THE REPORT** with seeds he can type in.
+  **THERE ARE TWO FAULTS, NOT ONE, AND THEY DO NOT OVERLAP — the in-between group is EMPTY.**
+  **GROUP A** (250 hits) is the run-in's opening glide: u<=0.05, hits the FRONT (P1 is its largest
+  group), off the RIGHT, camera anchored elsewhere on 82% of frames. **GROUP B** (1,185 hits, 48.9%
+  of races) is the forward view's own cost: still off at the line, hits the BACK of the top five, off
+  the LEFT, and the racer is NEVER the subject — `anchoredOnHim` is **0.0%**, no anchor at all on 96%.
+  `state` sets the width on **95.3%** of all off-frames; the contender guarantee on 3.6%, matching
+  RUNIN-CONTENDERS-1.
+  **THE FAULT IS PRESENT ON BOTH TREES — NOTHING REMOVED IT.** The cleanest hit (dirt-oval 20 seed
+  230, P3 off 118 frames) is **byte-identical** on master-as-of-2026-08-23 and today, 21 of 21 races
+  checked, so there was nothing to bisect. **And one third of the brief's premise was wrong:
+  SEED-REAL-RACE-1 had ALREADY shipped by 2026-08-23.** Today's non-reproduction is the seed, not the
+  tree — and before that ship a normal Start Race drew no recoverable seed, which is why his race is
+  lost. **dirt-oval at 20 is the LOWEST hit rate of any cell (30.4%)**; it is worse nearly everywhere
+  else. garden-path produced no finishing order in 0 of 120 races and is unmeasured, a third
+  consecutive sweep. 6 proposals, each costed against the forward view.
+
 - [RUNIN-CONTENDERS-1.md](RUNIN-CONTENDERS-1.md) — **is the contender set wrong, or merely generous?**
   (2026-08-24, MEASURE ONLY, nothing changed; 160 races over 10 tracks x 8 seeds x {20,40}, pool 12
   from 14 cores, 170 s). **THE ANSWER IS NEITHER, AND THE TERM IS NAMED.** Over the closing stretch
