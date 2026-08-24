@@ -157,6 +157,40 @@ and the four decisions of 2026-08-23 that narrowed it.
 
 ---
 
+## THE CLOSING PHASE ENDS WHATEVER WAS RUNNING (2026-08-24, the owner's instruction)
+
+**verify (section-wide):** none yet, and the reason is the item itself — the shot this produces has
+never been seen, so there is nothing to assert about it. The measurement named below comes first.
+
+**THE REQUIREMENT, in his terms — his instruction of 2026-08-24.** **AT THE START OF THE CLOSING
+PHASE, WHATEVER CAMERA PHASE IS RUNNING MUST BE ENDED — whichever one it was.** No carrying the
+previous subject into the run-in.
+
+- [ ] **The requirement above is RECORDED, NOT BUILT, and this entry deliberately proposes nothing.**
+      Under the project's own rule the visible consequence is measured before it is built, and the
+      one thing nobody knows is exactly the visible consequence — see the last bullet.
+
+- [ ] **WHAT THE MEASUREMENT ALREADY SAYS ABOUT THE COST AND THE BENEFIT.** From
+      [LATE-LEAD-HUNT-1](../reports/evolution/LATE-LEAD-HUNT-1.md) and
+      [LATE-LEAD-AXIS-1](../reports/evolution/LATE-LEAD-AXIS-1.md), over 1,260 races:
+      the **opening-glide group is 250 hits**; its **median length is 32 frames** (mean 30.3 — the
+      figure was carried as 29 and did not reproduce on recomputation, LATE-LEAD-AXIS-1 §9); the
+      camera is **anchored on somebody else on 82% of its frames**; and **it hits P1 hardest — 114 of
+      the 250 hits are the winner**. LATE-LEAD-AXIS-1 adds the direction: **90.7% of the group's
+      frames are a racer thrown off the AHEAD end of the frame**, and **all 103 of the winner's
+      along-track cases are in this group and none of them reaches the line.** So the group this
+      requirement is aimed at is short, front-loaded, and carries the previous shot's subject
+      visibly — which is what "anchored on somebody else" means in one number.
+
+- [ ] **WHAT IS NOT KNOWN, and it is the whole of what stands between this entry and a build:
+      NOBODY HAS SEEN WHAT THE SHOT LOOKS LIKE WHEN THE PREVIOUS PHASE IS CUT RATHER THAN ALLOWED TO
+      FINISH.** Every number above measures the glide as it is; none of them measures the alternative.
+      The project's own standing warning applies — a big zoom change needs a glide or an anchor, and
+      cutting a phase removes one of the two. **Per the project's rule the visible consequence gets
+      measured before that is built.** Nothing here proposes how.
+
+---
+
 ## THE REST — open, in the order they were already in
 
 ## A seed alone does not reproduce a race (2026-08-23, from SEED-REAL-RACE-1)

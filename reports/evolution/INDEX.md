@@ -154,6 +154,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LATE-LEAD-AXIS-1.md](LATE-LEAD-AXIS-1.md) — **the same 1,435 hits, re-sliced by DIRECTION rather
+  than by timing** (2026-08-24, RE-COMPUTATION AND ONE DOCUMENT; **no race re-run**, nothing changed).
+  **THE OWNER'S CASE IS REAL, SEPARATE, AND RARE:** a top-5 finisher leaves the frame **ACROSS the
+  track in 211 of 1,260 races (16.7%)**, the WINNER in **15 (1.2%)**, and in **12 of those he is
+  still outside the picture AT THE LINE (0.95%)**. **EVERY ONE of the 12 winner-off-at-the-line races
+  is an across-track departure — not one is along-track**, while all 103 of the winner's along-track
+  cases are the opening glide and are over before the line.
+  **THE LABEL COULD NOT BE TRUSTED AND THE PREVIOUS READING WAS WRONG ON THREE TRACKS.** The render
+  transform carries no rotation (`renderRaceFrame.js:153`), so a stored side names a WORLD AXIS and
+  only the track's heading converts it: on **space-sprint** `left`/`right` is ACROSS and
+  `top`/`bottom` is ALONG — the pairs are swapped — and on **city-circuit** and **garden-path**
+  `left` is AHEAD, not behind. So LATE-LEAD-HUNT-1's pooled "Group B is off the LEFT — behind" mixes
+  three meanings of one word.
+  **THE TIMING SPLIT DOES NOT SURVIVE; IT CUTS ACROSS.** Group A survives and sharpens (90.7% of its
+  frames are along-track AHEAD, not "off the right"). **Group B does NOT survive as one thing**: 767
+  hits are the forward view's along-behind cost, **267 are across-track with a different ceiling and
+  a different anchor profile**. **The honest count is THREE faults, not two.**
+  **BOTH ACROSS SIDES ARE CAPTURED** (12,618 vs 8,821 frames, a 59/41 split); the along pair is
+  two-sided too (behind 50,727, ahead 7,805). **One lower bound only: space-sprint's zero**, because
+  the one-side-per-frame priority `top→bottom→left→right` favours ALONG on the one track where
+  top/bottom is the along pair.
+  **AT SOURCE: THE FULL TRACK WIDTH IS NEVER GUARANTEED IN FRAME DURING THE RUN-IN**, on two
+  independent grounds — `_guaranteeCeiling` returns Infinity for every single-anchor state
+  (`CameraDirector.js:2488`, owner-approved CAMERA-COMPANY-ONLY-3) **and** the scheduled endgame
+  replaces every guarantee with its own width (`:4280`). **The four tracks whose leader shot is
+  narrower than their road carry 216 of the 275 across-track hits; the four whose shot is wider carry
+  12.** Worked example: **river-run 20 seed 49** — the winner leaves over the TOP, P4 over the BOTTOM,
+  in one race. **Also corrected: `binding` does not name the author of the width on a scheduled
+  frame**, so LATE-LEAD-HUNT-1's gloss of its own 95.3% is wrong although the figure is right. The
+  owner's 2026-08-24 phase rule is recorded as a REQUIREMENT in [BACKLOG.md](../../docs/BACKLOG.md).
+  7 proposals.
+
 - [LATE-LEAD-HUNT-1.md](LATE-LEAD-HUNT-1.md) — **races where a top finisher was outside the camera at
   the finish** (2026-08-24, SEARCH AND DIAGNOSE ONLY, nothing changed; **1,260 races**, 240 seeds on
   dirt-oval 20 plus 60 on every other cell, pool 12 from 14 cores). **IT IS NOT RARE AND IT
