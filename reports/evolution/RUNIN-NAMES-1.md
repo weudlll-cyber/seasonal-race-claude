@@ -281,8 +281,14 @@ is scoped so nothing pre-arrival moves.
 
 Production build of this branch, served on the standing preview port; API on 4000.
 
-**Badge: `build 39ba2d80 · feat/runin-names-1`** — no `+dirty`, read from the identity baked into the
-served bundle rather than from `git log`.
+**Badge: `build 53e09ecc · feat/runin-names-1`** — no `+dirty`, so the picture on screen is
+reproducible from that commit, and that commit is at origin.
+
+**Verified serving, not merely started:** one listener on each port; `http://localhost:4173/` serves
+`assets/index-JA1iTCSK.js`; fetching that JS over HTTP shows
+`commit:―53e09ecc―, branch:―feat/runin-names-1―, dirty:false`, and the string `runInArrived` is
+present in the bundle — so the switch is actually in the build he will judge. `GET /api/health` on
+4000 answers 200.
 
 **What the owner will look at:** watch a race to the line. Through the whole closing sweep the labels
 are numbers; at the crossing every racer's label becomes its name, overlap and all, and stays a name
