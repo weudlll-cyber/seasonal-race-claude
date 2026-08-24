@@ -500,9 +500,21 @@ let hardErrors = 0;
 // every race still advances in exact 1/60 s steps whatever the machine is doing. That is the
 // property that makes this safe, and it is the same property that makes a run repeatable — at real
 // 60 fps, contention would change dt, and the camera is known to diverge on any frame-timing change.
+// FIELD SIZE. The default is the shipped canonical per topology - 40 closed, 100 open - and that is
+// what every sweep in the record was taken at. `--racers=<n>` overrides it for ONE reason: an owner
+// case is reported at a field size the sweep does not use, and a race at a different field size is a
+// DIFFERENT RACE, not the same race observed differently. Read-only: it changes what is measured, not
+// how, and unset it is byte-identical to before (LATE-LEAD-CHANGE-1, 2026-08-23).
+const RACERS_ARG = (process.argv.find((a) => a.startsWith("--racers=")) ?? "").slice(9);
+const RACERS_OVERRIDE = RACERS_ARG ? Number(RACERS_ARG) : null;
+if (RACERS_OVERRIDE !== null && !(RACERS_OVERRIDE > 0))
+  throw new Error(`--racers must be a positive integer, got ${RACERS_ARG}`);
+
 const WORK = [];
 for (const arm of ARMS)
-  for (const geo of TRACKS) for (const seed of SEEDS) WORK.push({ arm, geo, seed, N: geo.closed ? 40 : 100 });
+  for (const geo of TRACKS)
+    for (const seed of SEEDS)
+      WORK.push({ arm, geo, seed, N: RACERS_OVERRIDE ?? (geo.closed ? 40 : 100) });
 // ORDERED BY VALUE, because a sweep of this length will sometimes be stopped part-way and what it
 // has finished by then should be the part worth having. Seed 9 first — it is the race the owner
 // reported and the one every other camera table in this repository uses — then the rest in order.

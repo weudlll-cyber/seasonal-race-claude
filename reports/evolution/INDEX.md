@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LATE-LEAD-CHANGE-1.md](LATE-LEAD-CHANGE-1.md) — **the winner at the line, and why the release rule
+  is not the answer** (2026-08-23, NIGHT-2026-08-23 piece 7, diagnose only).
+  **THE WINNER WAS NEVER RELEASED.** `winnerIdx = 13`; the released set is eighteen of the nineteen
+  non-leaders and **13 is not in it.** The contention watch held him for the whole endgame, exactly as
+  designed — so the diagnosis re-aims at the capture rule, which is the brief’s own instruction for
+  this outcome.
+  **AND THE CASE ONLY EXISTS AT HIS FIELD SIZE.** Same track, seed and arm: at **40 racers** — what the
+  nightly sweep runs on a closed track — invariant 6 is **clean** and the winner sits at (0.555, 0.479);
+  at **20 racers** it is **77 violations, item 9 FAIL**, winner at **(0.639, 0.879)**. **The sweep
+  cannot see this defect at all**, because `viewer-invariants.mjs:505` set the field from topology
+  alone. A read-only `--racers=` flag was added — without it the case cannot be reproduced.
+  **HE DOES NOT LEAVE THE FRAME — HE IS NEVER CENTRED IN IT.** Vertical position is FLAT across the
+  crossing (0.894→0.879, then 0.878–0.881 for a hundred-plus frames): a **standing offset**, not an
+  excursion, and about **3× the horizontal one**. Left in FRAME space deliberately — converting to
+  track space needs the per-frame heading, and FRONT-GROUP-1 already paid for that confusion.
+  **AN INVARIANT DID FIRE** (invariant 6, 77 violations) — the guard works; it has simply never been
+  pointed at a field size where the defect exists.
+  **The re-aim:** at the crossing `camZoom` = `photoFinishZoom` = 17.06 against a `leaderZoom` of 9.10,
+  and the pinned `PHOTO_FINISH` pair is the candidate — **a racer who takes the lead after shot entry
+  is not in it.** Stated as a reading, not a measurement; **nothing records which racers the pair
+  contains**, which is proposal 1.
+  **(e) and (f) NOT DONE**, with costs named (a 3.5-hour sweep; an experiment). 4 proposals.
+
 - [ONE-HOME-FIVE-MORE-1.md](ONE-HOME-FIVE-MORE-1.md) — **the HIS arm had SEVEN homes, not two**
   (2026-08-23, NIGHT-2026-08-23 piece 8). Of the three quantities the brief named, **two were already
   closed** (the endgame threshold reads the config in both harnesses; `frameBox.mjs` exists) — and the
