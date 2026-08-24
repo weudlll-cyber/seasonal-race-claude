@@ -154,6 +154,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ACTION-BADGE-1.md](ACTION-BADGE-1.md) — **why the config badge says two deviating values on WILD**
+  (2026-08-24, READ-ONLY, nothing changed, NOT MERGED). **THE BADGE IS RIGHT AND THE PREMISE OF THE
+  QUESTION IS NOT.** It compares the config the RACE WAS HANDED, not the stored blob:
+  `RaceScreen/index.jsx:483` builds its world with `buildWorldConfig({ raceActionStage })` and
+  `exportRaceConfig.js:83-86` applies the stage inside it. **So the two deviating keys are the
+  STAGE'S OWN VALUES, not the hand-set sliders** — the count would be exactly 2 on a completely
+  untouched install with the stage on wild.
+  **THE STAGE WINS ON BOTH PATHS AND THEY CONVERGE ON ONE LINE**, so they cannot disagree: Start Race
+  (`SetupScreen.jsx:468`) and Quick Test (`:561`) both reach `RaceScreen/index.jsx:476`, where
+  `raceActionStage.js:79` spreads the stage's values LAST. **NO LEAK — the block does not stop.** The
+  one raw reader is `DiagnoseVerteilung.jsx:140`, an admin-only distribution study that renders no
+  watched race; recorded so nobody later reads a slider-shaped result out of it.
+  **THE COUNT IS CORRECT; ONLY THE WORDING MISLEADS** — the pill says how MANY, never WHICH, and
+  never that the stage caused them, **while `raceKeys` already carries the names
+  (`configFingerprint.js:44`) and is simply never displayed.**
+  **THE TEN-SECOND CHECK, and its answer is the reverse of the intuition:** clearing both sliders with
+  the stage still WILD leaves the badge at `2 race`; setting the stage to QUIET returns it to
+  `defaults` with the sliders still moved. 5 proposals, none built.
+||||||| 5204b10b
 - [RUNIN-NAMES-1.md](RUNIN-NAMES-1.md) — **names instead of numbers once the closing zoom has
   arrived** (2026-08-24, BUILT, **NOT MERGED — it waits for his eye**; branch pushed).
   **TWO OF THE BRIEF'S PREMISES DID NOT HOLD.** The photo-finish names mechanism it says to reuse

@@ -1986,7 +1986,7 @@ Action stage is ONE host decision that sets TWO keys — so a `wild` race honest
 the owner, who made one choice, reads it as two.
 
 **IT IS NOT A DEFECT, and that was established at source rather than assumed.**
-`ACTION-BADGE-1`, on the branch `diag/action-badge-1`, answered three questions with file:line
+[ACTION-BADGE-1](../reports/evolution/ACTION-BADGE-1.md) answered three questions with file:line
 evidence:
 
 - **The badge compares the config the RACE WAS HANDED, not the stored blob.** `RaceScreen/index.jsx`
