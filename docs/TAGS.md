@@ -136,7 +136,7 @@ its attribution are in [RACE-ACTION.md](RACE-ACTION.md) §6, and the envelope it
 **`wild`'s fairness breadth is NOT established** — two tracks at N=30, band arrival UNDECIDED, which
 means smaller than that instrument sees, not unchanged.
 
-- `v-ship-race-action` (`b49bf4a5`, 2026-08-24) — **the ship.** The return point is
+- `v-ship-race-action` (`99fe0489`, 2026-08-24) — **the ship.** The return point is
   `v-ship-race-action^1`, which restores a game with no host-facing action control at all: one fixed
   contest configuration, no stage stored with the race, and no way to reach the envelope breach. No
   fingerprint moves across it, so it restores no world — it restores the absence of a choice.
