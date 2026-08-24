@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ROW-BONUS-TIMING-1.md](ROW-BONUS-TIMING-1.md) — **when is the start-row deficit made up, and what
+  is left over?** (2026-08-24, measurement only, NO RACES RUN — derived from the layout and the shipped
+  configuration, then validated against races already on disk).
+  **THERE IS NO LEFTOVER. THE BONUS IS EXACTLY CONSUMED AT THE FINISH LINE, BY CONSTRUCTION.** The
+  catch-up point is **progress 1.000 for every rear row on every track** — exactly, not approximately:
+  the deficit `N·δ` and the bonus `b_N` both carry the factor `N`, so **N cancels** and
+  `τ_catch / τ_finish = 1/f` with the shipped `f = 1.0`.
+  **SO THE SWITCH-OFF HAS NOTHING TO SWITCH OFF** — "once its purpose is served" IS the finish line. A
+  cut-off at the catch-up point is a no-op; any earlier one under-compensates. **That is the addendum’s
+  "impossible rather than merely worse" case, and it is the switch-off, not the fade.**
+  **THE (c) VERDICT IS NO.** The leftover is identically zero, so it explains nothing. Testing the bonus
+  SIZE instead: r = **0.909** over ten tracks, **0.587** without luger-hill, **0.100** without
+  luger-hill and searound. **Two tracks carry the whole correlation; among the other eight there is
+  none.**
+  **AND IT QUESTIONS ITS OWN PREDECESSOR.** Lining up three measures: finishing TIME flat on 9 of 10,
+  mean RANK flat on 9 of 10, **position-within-band tilts on 7 of 10 — and it is the only CONDITIONED
+  one** (measured on arrivals alone). So ROW-ADVANTAGE-1’s reading may be a selection effect rather than
+  an advantage in the race. **Stated as unestablished, and it is proposal 1.**
+  **THE FADE (owner’s addendum), on the same data:** a linear fade delivers `p/2` of today’s total —
+  **50% short over the whole race**. Re-sizing to `2b/p` puts **luger-hill at 27.79% at p=0.50, breaching
+  the ±20% envelope** — the only track that does, exactly as he guessed. **Visibility: a hard switch is
+  a step of 0.0695 = SEVEN TIMES the project’s own 1%-per-frame slew limit; the fade is 1/518 of it.**
+  Neither shape recommended. 4 proposals, including a third shape (mirror the compensation onto row 0,
+  halving the peak deviation) and the band-based cut-off carried to him as his question.
+
 - [ROW-ADVANTAGE-1.md](ROW-ADVANTAGE-1.md) — **how big is the start-row advantage?** (2026-08-24,
   measurement only). The watchdog answers *"is a difference detectable"* and gets more sensitive with N,
   so at N=100 the shipped world trips it on 8 of 10 tracks and no arm can be told from its baseline.
