@@ -1469,9 +1469,13 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
   proves each one; produce a KEEP-LIST of the live rollback anchors first. (Do not prune on any inherited
   count — they have not matched twice now.)
 
-- **Pre-existing start-row WIN bias on luger-hill and dirt-oval** — present under v4-OFF (shipped
-  default): `startRowUnfair = true` on both across all three arms in the night sweep. Independent of
-  cohesion; a fairness item in its own right.
+- ~~**Pre-existing start-row WIN bias on luger-hill and dirt-oval**~~ — ✅ **CLOSED 2026-08-24 by his
+  decision D25** (PART TWO). It was recorded from `startRowUnfair = true` under v4-OFF. **Two things
+  are now known that were not when it was written:** the watchdog that produced that flag **trips on
+  the shipped world on 8 of 10 tracks** at the definitive N, so the flag carried no information about
+  any arm; and the effect it was reaching for **has since been measured as a magnitude** rather than a
+  detection — see D25 and the two reports it points at. **The general rule it leaves behind: a
+  detection test that trips on the baseline has stopped being evidence about anything else.**
 
 - **PHOTO_FINISH DevScreen accordion** — to be added.
 
@@ -1532,7 +1536,11 @@ owner's hand**: parked here with enough context to be actionable months from now
   subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
   A design question the owner deferred; no implementation until it is answered.
 
-- ⏳ **Start-row gradient project — SHELVED WITH DOCUMENTATION, opens only on the owner's explicit word.** The
+- ~~⏳ **Start-row gradient project — SHELVED WITH DOCUMENTATION, opens only on the owner's explicit
+  word.**~~ — ✅ **CLOSED 2026-08-24 by his decision D25** (PART TWO): the start-row advantage is
+  acceptable and nothing changes. **The reasoning below is kept because it states what was known when
+  it was shelved**, and because D25 rests on newer evidence rather than replacing this. The
+  original entry read: The
   definitive N=300 native pooled Holm found a small PRE-EXISTING start-row gradient on searound / luger-hill /
   seatrack (space-sprint clean); owner verdict 2026-07-31 = document and shelf. Canonical home: the
   [FAIRNESS.md start-row-gradient residual subsection](FAIRNESS.md) (evidence
@@ -1551,7 +1559,11 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
-## DECISIONS — 2026-08-23 (the owner's, recorded so they stop being re-proposed)
+## DECISIONS — the owner's, recorded so they stop being re-proposed
+
+**Every entry carries its own date.** The section was headed *2026-08-23* until **D25 was added on
+2026-08-24**; the date moved onto the entries, where it belongs, rather than the heading growing a
+range.
 
 **These are DECISIONS, not open items.** Each carries its date. Where an open item existed for the
 same subject it has been closed and points here. **A decision recorded is a decision that does not
@@ -1910,6 +1922,57 @@ both**, with ROADMAP reduced to a phase-status table.
 than a delay: a real merge is a careful pass over two large files with a high chance of silently
 dropping an item, and doing it inside a block that is also rewriting a dozen entries in the target
 file would make it impossible to tell a dropped item from an edited one. It gets its own piece.
+
+---
+
+### D25 · The start-row advantage is ACCEPTABLE — the row bonus, the row gap and the row count all stay · 2026-08-24
+
+**His decision: the start-row advantage as it stands is acceptable. NOTHING IS CHANGED** — not the row
+speed bonus, not the row gap, not the row count. **This is a decision, not a fix**, and it closes the
+start-row fairness line.
+
+**The evidence is in two reports and is NOT restated here:**
+[ROW-ADVANTAGE-1](../reports/evolution/ROW-ADVANTAGE-1.md) (the size, per row and per track) and
+[ROW-BONUS-TIMING-1](../reports/evolution/ROW-BONUS-TIMING-1.md) (the timing, and the two candidate
+shapes). **What is recorded here is what a later reader needs in order not to reopen this blind.**
+
+**THE COMPENSATION IS EXACT, BY DERIVATION RATHER THAN BY MEASUREMENT.** The row deficit and the row
+bonus both scale with the row number, so the row number cancels: **the catch-up point is the finish
+line, on every track, for every rear row, and there is no leftover uplift.** It is algebra over the
+shipped configuration, not a result that a larger sample could move.
+
+**AND THE RACES AGREE WITH THE DERIVATION.** Finishing time is **flat across start rows on 9 of 10
+tracks**, which is precisely what exact compensation requires.
+
+**`luger-hill` IS THE SINGLE EXCEPTION, AND ITS SIGN IS THE OPPOSITE OF THE WORRY.** It carries **nine
+start rows against the usual four**, and its deviation is **UNDER-compensation** — so on that track the
+**front** rows are slightly favoured, not the back. **Anyone reopening this on the assumption that the
+rear rows are advantaged should read that sentence first.**
+
+**OPEN BUT NOT PURSUED — one question is genuinely unsettled, and the owner accepted the current state
+rather than spend on it.** Whether the position-within-band tilt is a real row advantage or a
+**selection effect** is not established. It appears **only in the one measure conditioned on band
+arrival**; the two unconditioned measures show nothing outside luger-hill. **Settling it needs an
+unconditioned position measure and NO races** — it is cheap, and it is not being done because the
+decision above makes the answer non-actionable, not because it is hard. **If this line ever reopens,
+that is the first thing to run.**
+
+**AVAILABLE IF IT IS EVER NEEDED — recorded as a fact, proposing nothing.** The start-row deficit has
+exactly one reachable lever. The row **COUNT** follows from track width and sprite size and is **not
+freely choosable**. The row **GAP** is sprite size × `rowGapMultiplier`
+(`client/src/modules/storage/defaults.js`, the `DEFAULT_ROW_LAYOUT_CONFIG` block) — and that
+multiplier **is a set value**, so it is **the one place the size of the deficit can be reached from**.
+*(The value is deliberately not quoted here: `defaults.js` owns it, and this file states no config
+values.)*
+
+**CARRIED FORWARD AS CLOSED — the two shapes he asked about, so neither is proposed again:**
+
+- **The SWITCH-OFF is a no-op.** "Switch it off once its purpose is served" resolves to the finish
+  line, because that is where the catch-up happens. **There is nothing left to switch off**, and any
+  earlier cut-off is not a switch-off but an under-compensation.
+- **The FADE halves the compensation** unless it is re-sized to start higher — and the re-sized
+  variant **breaches the ±20% naturalness envelope on luger-hill**, the nine-row track, which is
+  exactly where it would breach first if anywhere.
 
 ---
 
