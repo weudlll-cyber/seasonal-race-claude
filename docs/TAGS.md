@@ -139,7 +139,7 @@ what settles the tag: every accepted presentation ship in it carries one — `v-
 the direct analogue, also a label change — and `v-ship-fallback-mirrors` and `v-ship-endgame-fallback`
 both say in as many words that no fingerprint moves across them.
 
-- `v-ship-runin-names` (`126574f8`, 2026-08-24) — **the ship.** The return point is
+- `v-ship-runin-names` (`a49a7d89`, 2026-08-24) — **the ship.** The return point is
   `v-ship-runin-names^1`, which restores a race whose labels are NUMBERS all the way through the
   finish and the whole ending — including while the rest of the field is still crossing, which is the
   stretch this ship exists for. No fingerprint moves across it, so it restores no world and no shot;

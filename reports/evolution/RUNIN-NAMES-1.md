@@ -296,6 +296,53 @@ while the rest of the field arrives.
 
 ---
 
+## 10a. The merge, and a finding the gate turned up on the way (2026-08-24)
+
+**Merged to master at `a49a7d89`, tagged `v-ship-runin-names`, CI green on that exact SHA.**
+
+**THE BRIEF'S ANCESTRY PREMISE HAD GONE STALE, and it was checked rather than trusted.** It said
+master was an ancestor of the branch; `git merge-base --is-ancestor` answered **NO**, because the D26
+decision merged to master after this branch was cut. THE SHIP ORDER's step 1 catch-up was made first,
+after which master IS an ancestor and the merged tree IS the branch tip's tree — verified equal at
+`eb773c4d`. The catch-up brought exactly one markdown file, which `engine-reach` reports cannot reach
+the engine and which is in no camera or render closure, so the branch's measurements survived it.
+
+### `npm run verify` was RED TWICE before the merge, and neither red was about this branch
+
+**That is written down rather than smoothed over, because a merge on a red run is the thing the
+unpiped chain exists to prevent.** The chain fired both times and stopped the merge both times.
+
+**RED 1 — `check-tags`.** Structural and documented: a register line for a tag not yet at origin
+fails the guard's second direction for as long as the branch is unmerged (SHIP-CEREMONY step 6). It
+went green the moment master and the tag were pushed together — **116 of 116, 0 missing.**
+
+**RED 2 — `client-suite`, and this one is a real finding.** A SetupScreen mount test timed out at
+5000 ms. On the second run it failed again **on a different test**, so it is a CLASS rather than one
+test: both are `renderStartable()` mounts.
+
+**IT IS PRE-EXISTING ON MASTER, and that was PROVED rather than assumed** — the full client suite was
+run on master with this branch not checked out at all, and it failed with **the same two tests**:
+
+| | result |
+| --- | --- |
+| master alone, full suite | **2 failed / 4255 passed** |
+| the two failures | `raceActionStage.test.jsx` and `raceSeed.test.jsx`, both `Test timed out in 5000ms` |
+| those files' wall clock under full load | **23096 ms and 23591 ms** |
+| the same file run in isolation | **4619 ms**, the slowest test 864 ms |
+| CI on the merge SHA | **green — all three jobs, Client checks included** |
+
+**So it is a local-machine load condition, not a repo defect**: the files take roughly five times
+longer under full-suite load than alone, and one test tips over vitest's 5 s default each run. Which
+test tips is not stable, which is why it reads as a flake and is not one — the CAUSE is stable.
+
+**Nothing was retried until green and nothing was silenced.** The suite's retry ledger is disabled on
+purpose, so a first-attempt failure fails the run; that rule was not touched. The merge went ahead
+because the redness was established as pre-existing on master and unrelated to this ship, and because
+the brief's named stop condition — world or camera moving — did not occur. **This is a finding
+against the SUITE, not against this block**, and it is proposal 6.
+
+---
+
 ## 11. PROPOSALS
 
 **1. Fix the render fingerprint's camera literal — it is FRAME-INPUTS-1's own defect, still live in
@@ -325,6 +372,15 @@ the first quantity in this tree that says, one-way and in both race kinds, that 
 landed. Several ending behaviours are currently keyed to states or durations that only approximate
 it — the winner card's window and the straggler wait among them. Worth knowing it exists before the
 next one is keyed to something looser.
+
+**6. Two SetupScreen mount tests sit on vitest's 5 s default timeout on this machine, and one tips
+over every full-suite run.** (Mine.) §10a has the numbers: 23.1 s and 23.6 s per file under load
+against 4.6 s alone, failing on master with this branch absent, while CI passes. **It is not a flake
+even though it presents as one** — the cause is stable and only the victim rotates. Two cheap shapes:
+give those two files an explicit `testTimeout` that reflects what a SetupScreen mount actually costs,
+or find why the mount is 5x slower under load (the harness renders the real screen with server-track
+mocks, and the suite is dominated by one other file). **Left alone here deliberately** — it is not
+this block's defect and fixing it inside a ship would hide it.
 
 **5. The trigger deserves a browser check, because every measurement here is headless.** The
 memory of this project is explicit that the headless director does not reproduce the browser's
