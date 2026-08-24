@@ -114,6 +114,34 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RACE-ACTION — the host picks the race's action, and quiet is what shipped (2026-08-24)
+
+**A control named "Race Action" with three stages — `quiet`, `medium`, `wild` — chosen by the host
+who presents a race.** It sits in the Dev Screen's **Race Defaults** section, which is operator-tier,
+so every signed-in account reaches it including a restricted one; the two underlying sliders stay
+untouched in the admin-only Race Tuning section. The chosen stage travels WITH the race, like the
+seed, so a replay is unambiguous and the result screen can say which stage ran.
+
+**NOTHING MINTED, AND THAT IS THE PROOF RATHER THAN A SKIPPED STEP.** All four instruments were
+measured on the branch tip — which IS the merged tree, master being an ancestor — and all four came
+back byte-identical. `quiet` is the shipped configuration and it is the default, so a race started
+without touching the control is the race that ran before the control existed. Values live in
+[fingerprints.json](fingerprints.json).
+
+**WHY THIS IS TAGGED THOUGH NO FINGERPRINT MOVED.** The instruments declare themselves blind to
+"configs other than the shipped default", so their silence is not evidence about `medium` and `wild`
+— it is the instrument being blind by design. The behaviour a host can now reach IS new, and
+`wild` deliberately breaches the ±20% naturalness envelope: the accepted exception, its evidence and
+its attribution are in [RACE-ACTION.md](RACE-ACTION.md) §6, and the envelope itself is untouched.
+**`wild`'s fairness breadth is NOT established** — two tracks at N=30, band arrival UNDECIDED, which
+means smaller than that instrument sees, not unchanged.
+
+- `v-ship-race-action` (`b49bf4a5`, 2026-08-24) — **the ship.** The return point is
+  `v-ship-race-action^1`, which restores a game with no host-facing action control at all: one fixed
+  contest configuration, no stage stored with the race, and no way to reach the envelope breach. No
+  fingerprint moves across it, so it restores no world — it restores the absence of a choice.
+  See [RACE-ACTION-CONTROL-1](../reports/evolution/RACE-ACTION-CONTROL-1.md).
+
 ### COORD-SYSTEM — one ruler for the wrapper (2026-08-14)
 
 **The owner judged it on a production build on 2026-08-14 and accepted it.** The overlays inside
