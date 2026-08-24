@@ -167,6 +167,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   my memory flagged as open owner decisions are both superseded — FRONT-GROUP-4 by an identical
   diffstat inside `archive/front-group`, and `minRacersVisible` **3→5 ALREADY SHIPPED**, which
   corrects a stale memory.
+  **AND `git worktree list` LIED THE SAME WAY** — it reported "two worktrees, no stale registrations"
+  while **53 admin directories** sat under `.git/worktrees/`; it silently omits any whose `gitdir` is
+  gone, and only `git worktree prune` failing with 53 Permission-denied lines revealed them. All 52
+  remaining were proved inert (43 ORIG_HEADs in master, 4 anchored by archive tags, 3 superseded) and
+  removed; prune now runs silently. **Two confident absences in one block, both artefacts of the tool.**
   **THE TAG-FAMILY PREMISE DID NOT HOLD:** no commit carries three names — `v-ship-race-action` is
   alone on `99fe0489`, the older two share `e1d5a2bf` six weeks earlier, and both are cited by name
   in BACKLOG. **Proposal: keep all three, change nothing.** Separate finding: the register records
