@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ROW-ADVANTAGE-1.md](ROW-ADVANTAGE-1.md) — **how big is the start-row advantage?** (2026-08-24,
+  measurement only). The watchdog answers *"is a difference detectable"* and gets more sensitive with N,
+  so at N=100 the shipped world trips it on 8 of 10 tracks and no arm can be told from its baseline.
+  **This measures the SIZE instead**, on all ten tracks at the field size each topology uses.
+  **HIS READING HOLDS FOR THE HEADLINE NUMBER AND MISSES A REAL EFFECT UNDERNEATH IT.** Band arrival is
+  **flat across rows on 9 of 10 tracks** (only searound separates, −4.9pp ±3.5) — confirming that a
+  large row effect would have shown there. **But position INSIDE the band is not flat: all 10 tracks
+  lean the same way, 7 outside their intervals.**
+  **AND THE ADVANTAGE RUNS BACKWARDS — the BACK rows are favoured, not the front.** True of band
+  position on 10 of 10, of mean rank wherever it separates, and of the one win gap big enough to see
+  (mountainstreet, first row 17 of 100 against last row 37).
+  **Small on nine tracks, LARGE on luger-hill:** front row lands **4.18 ±1.14 places** further back
+  inside its own band, finishes **4.32 ±2.09** places worse, and **wins 2 races in 100 where an even
+  share is 11.** It also has **9 rows**, the most of any track.
+  **The mechanism, offered as a reading and NOT tested:** `computeSpeedBonus` gives rear rows a
+  WHOLE-RACE speed bonus to cancel a FIXED start distance — different shapes, so the rear racer is
+  faster in every mid-race interaction too. It predicts the track ordering by row count, and the
+  prediction holds.
+  **THE WIN COLUMN — the owner’s own sentence form — is the weakest number here** (±6 to ±16 per 100),
+  so nine "level" readings are the instrument’s floor, not evidence of evenness; said plainly rather
+  than left to reassure. **No threshold proposed, Holm watchdog deliberately not run.** **No races were
+  re-run** — LADDER-VALIDATION-1’s shipped arm is exactly this configuration and the protocol was
+  verified against the data before re-use. 4 proposals, including that `posInBand` measures fairness
+  QUALITY where the gate measures only INCIDENCE.
+
 - [PREVIEW-REBUILD-1.md](PREVIEW-REBUILD-1.md) — **the preview names a build that can be resolved**
   (2026-08-23, NIGHT-2026-08-23 piece 10). The build on 4173 served a pill naming a **deleted branch**.
   Rebuilt from master: **`build eae16783 · master`**, clean tree, no `+dirty`, verified in the SERVED
