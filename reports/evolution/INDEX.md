@@ -154,6 +154,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RACE-ACTION-CONTROL-1.md](RACE-ACTION-CONTROL-1.md) — **the owner's Race Action selector: three
+  stages, on the Dev Screen, stored with the race** (2026-08-24, BUILT, **NOT MERGED — his eye
+  decides**). `quiet` / `medium` / `wild`, chosen by the host who presents a race. **ALL FOUR
+  FINGERPRINTS BYTE-IDENTICAL** — world `dc4647be0f55ebdb`, world-off `854018ee5d3d83e1`, camera
+  `0434cd0385eacc7b`, render `57b2eb101d806b22` — which is the proof the control is inert at its
+  default and a race started without touching it is the race that ran before it existed.
+  **THE PLACEMENT WAS ESTABLISHED AT SOURCE, not assumed:** there are exactly two roles, the Dev
+  Screen gates sections by `tier` with the default DENY, and **seven** sections carry
+  `tier: 'operator'`. It went into **Race Defaults** — the first of them, so a restricted account
+  LANDS on it. The two sliders stay untouched in the admin-only Race Tuning section.
+  **`quiet` READS THE SHIPPED VALUES FROM `defaults.js`** rather than restating them, so
+  "quiet == shipped" cannot drift.
+  **THE STAGE WINS OVER THE SLIDERS on the race path, and that is a decision with a cost** — it is
+  what makes a stored stage a complete description of the race rather than a hint, and it is
+  proposal 3 if he wants it the other way.
+  **16 SABOTAGES, 16 CAUGHT.** **One guard tripped** (`ceremony-counts`, a generated file COUNT) and
+  was reported, not adjusted — its own generator was run.
+  **`wild` BREACHES THE ±20% ENVELOPE DELIBERATELY** and is recorded as an accepted exception in
+  [RACE-ACTION.md](../../docs/RACE-ACTION.md) §6 with its evidence, its date and its attribution; the
+  envelope itself is untouched. **AND `wild`'s FAIRNESS BREADTH IS NOT ESTABLISHED** — two tracks at
+  N=30, band arrival UNDECIDED, which means "smaller than that instrument sees", not "unchanged".
+  Not run here; the cost is named and the call is his. 5 proposals, including a real engine-reach
+  hole with a known first instance.
+
 - [ROW-BONUS-TIMING-1.md](ROW-BONUS-TIMING-1.md) — **when is the start-row deficit made up, and what
   is left over?** (2026-08-24, measurement only, NO RACES RUN — derived from the layout and the shipped
   configuration, then validated against races already on disk).

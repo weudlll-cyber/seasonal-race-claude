@@ -44,6 +44,7 @@ import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { normalizeRaceActionStage } from '../../modules/raceActionStage.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import {
   sanitizeQuickTestSeedInput,
@@ -461,6 +462,10 @@ function SetupScreen() {
       // happens HERE, once, before the race exists, so the race itself is a pure function of the
       // value that travels in this payload.
       racePlanSeed: startSeed,
+      // RACE-ACTION-CONTROL-1: the host's Race Action stage travels WITH the race, exactly like the
+      // seed above and for the same reason — a race that cannot say which stage it ran cannot be
+      // replayed. Normalised at the boundary so the payload always carries one of the three ids.
+      raceActionStage: normalizeRaceActionStage(raceDefaults.raceActionStage),
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -550,6 +555,10 @@ function SetupScreen() {
       // a pure function of it (RaceScreen seeds Math.random from this value). The drawn seed is not
       // written back into the field, so the next Quick-Test draws a fresh one.
       racePlanSeed: resolveQuickTestSeed(quickTestSeed).seed,
+      // RACE-ACTION-CONTROL-1 — the same stage the normal path carries. Quick Test is the harness
+      // path the camera-replay tool records against, so leaving it out would make a Quick-Test
+      // recording silently un-replayable the moment the host is on a non-quiet stage.
+      raceActionStage: normalizeRaceActionStage(raceDefaults.raceActionStage),
       timestamp: new Date().toISOString(),
     };
 

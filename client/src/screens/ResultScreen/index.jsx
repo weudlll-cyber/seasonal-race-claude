@@ -41,6 +41,7 @@ import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProf
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import './ResultScreen.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { normalizeRaceActionStage } from '../../modules/raceActionStage.js';
 import { DEFAULT_RACE_DEFAULTS, DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 
 /**
@@ -214,6 +215,10 @@ function ResultScreen() {
       // before the seed existed, and for the legacy unseeded value 0 — a race that cannot be
       // reproduced should say so rather than claim seed zero, which reads like a seed.
       seed: Number(parsed.race?.racePlanSeed) > 0 ? Number(parsed.race.racePlanSeed) : null,
+      // RACE-ACTION-CONTROL-1: the Race Action stage this race ran, stored beside the seed because
+      // the two together are what makes an entry reproducible. An entry from before this change has
+      // no stage in its payload and normalises to the shipped one — which is what it ran.
+      raceActionStage: normalizeRaceActionStage(parsed.race?.raceActionStage),
       winners: order
         .slice(0, parsed.race?.winners ?? DEFAULT_RACE_DEFAULTS.winners)
         .map((r) => r.name),
@@ -240,6 +245,12 @@ function ResultScreen() {
   // `> 0` rather than `!= null`: 0 is the legacy UNSEEDED value, and printing "Seed 0" would offer
   // a number that reproduces nothing.
   const raceSeed = Number(race?.racePlanSeed) > 0 ? Number(race.racePlanSeed) : null;
+  // RACE-ACTION-CONTROL-1: which of the three stages this race ran, shown beside the seed on the
+  // screen the owner already reads after every race — the answer to "which one was that?". Shown
+  // for every race including quiet: a pill that appeared only on the loud stages would leave the
+  // quiet case ambiguous between "quiet" and "this build has no stages".
+  const raceActionStage = normalizeRaceActionStage(race?.raceActionStage);
+  const raceActionLabel = raceActionStage.charAt(0).toUpperCase() + raceActionStage.slice(1);
 
   return (
     <div className="screen screen--result">
@@ -262,6 +273,9 @@ function ResultScreen() {
                 <span className="race-track">{race.trackName || 'Track'}</span>
                 <span className="race-time">{elapsedTime}s</span>
                 {raceSeed != null && <span className="race-seed">Seed {raceSeed}</span>}
+                <span className="race-action-stage" data-testid="result-race-action-stage">
+                  Action: {raceActionLabel}
+                </span>
               </div>
             )}
           </div>
@@ -271,6 +285,9 @@ function ResultScreen() {
               <span className="race-track">{race.trackName || 'Track'}</span>
               <span className="race-time">{elapsedTime}s</span>
               {raceSeed != null && <span className="race-seed">Seed {raceSeed}</span>}
+              <span className="race-action-stage" data-testid="result-race-action-stage">
+                Action: {raceActionLabel}
+              </span>
             </div>
           )
         )}

@@ -182,6 +182,40 @@ the slow bound. **The gap is in what the code would PERMIT, not in what the ship
 code should gain a floor or this document should keep describing an asymmetric guarantee is an open
 question for the owner; this section only records which one is true today.
 
+### The WILD stage is an ACCEPTED breach of the slow side (the owner, 2026-08-24)
+
+**This is the one place in the shipped product where the naturalness envelope above is knowingly
+broken, and it is recorded here — beside the rule — so that a later reader neither "fixes" it away
+nor reads the rule as unbroken.**
+
+**What breaches.** The `wild` stage of the Race Action control (section 11) raises the challenger
+boost and the leader brake together. `BRAKE-CURVE-1` and `WILD-STAGE-1` measured the consequence: at
+these values a racer goes under the 0.80 slow bound in **22 of 30 races**. This is exactly the gap
+the subsection above describes — the slow side has no floor in code, so nothing objected, and the
+stage is what turns that permission into a shipped configuration. `quiet` and `medium` do not
+approach the bound.
+
+**Why it stands.** The owner judged all three stages on a production build on **2026-08-24** and
+accepted `wild` deliberately: **he could not see the effect, and found that race the most
+exciting.** That is the third sacred property being ranked below the eye by the only person entitled
+to rank it — not an oversight, and not a measurement anybody failed to take.
+
+**What is NOT weakened by this entry.** The ±20 percent envelope stands exactly as section 2 and the
+subsection above state it. No guard was silenced, no clamp was loosened, and no value in
+`defaults.js` moved to accommodate the stage. `quiet` remains the shipped configuration and the
+default, and all four fingerprints are byte-identical across the change that introduced the control
+([RACE-ACTION-CONTROL-1](../reports/evolution/RACE-ACTION-CONTROL-1.md)) — the breach is reachable
+only when a host deliberately selects it.
+
+**THE FAIRNESS BREADTH FOR `wild` IS NOT ESTABLISHED, and that is a different question from the
+envelope.** The owner bound this control to the fairness gate: a stage ships only if it passes.
+`quiet` is the shipped world and `medium` held band arrival on all ten tracks at N=100
+(`LADDER-VALIDATION-1`). **`WILD-STAGE-1` covered TWO tracks at N=30 and found band arrival
+UNDECIDED — which means "smaller than that instrument can see", NOT "unchanged"** (an N=30 arm
+inside its interval is undecided, never a null result). A validation run over all ten tracks at the
+gate's own N is what would answer it; whether that run happens is the owner's call and it has not
+been taken. Until it is, `wild` is accepted on his eye, not on the gate.
+
 The physics is never weakened to force a pass through. If an attacker simply cannot deliver the overtake
 within the envelope — for example against a leader riding a strong draw — a **deadlock timeout** releases the
 slot rather than pushing harder. This is the operational form of the third sacred property: the system
@@ -297,18 +331,45 @@ justified deviations rather than three separate limits that must each be reasone
 slated to get its own tuning surface in the developer screen. That work is deferred to a later phase; the
 finish behavior today is functional but not yet independently tunable.
 
-## 11. The single Action slider (vision, not yet built)
+## 11. The Race Action control — three stages, BUILT
 
-The intended endpoint for race-action tuning is a single **Action** slider on the setup screen, ranging from
-0 to 100 percent, that a game master can use to make a race more or less eventful without any risk of
-breaking fairness or naturalness. Rather than exposing the individual knobs above — which interact in ways
-that are easy to get wrong — the slider would present one intuitive control.
+**The host who presents a race picks how eventful it is, from a control named "Race Action" with
+three stages: `quiet`, `medium`, `wild`.** It is on the Dev Screen in the **Race Defaults** section,
+which is operator-tier — so every signed-in account reaches it, including a restricted one. The
+values each stage stands for live in `defaults.js` (`RACE_ACTION_STAGES`) and nowhere else; `quiet`
+reads the shipped values from the dynamics defaults rather than restating them, so "quiet ==
+shipped" cannot drift.
 
-Internally, the slider's primary lever is `pulkLeadRotationDropDepthLengths`: turning up Action reaches the
-rotation deeper into the field for more sweeping lead changes, turning it down keeps the fight tight at the
-front. Around that primary lever the slider would orchestrate the related knobs so that any position on the
-slider remains inside the fairness and naturalness guarantees by construction.
+**The default is `quiet`, and a race started without touching the control is byte-identical to a race
+started before the control existed** — proved by all four fingerprints coming back unmoved
+([RACE-ACTION-CONTROL-1](../reports/evolution/RACE-ACTION-CONTROL-1.md), 2026-08-24).
 
-This is a design target, not a shipped feature. The underlying depth lever exists and works, but the
-developer-screen pinning of the supporting knobs and the setup-screen wiring of the slider itself are not yet
-built. Until they are, race-action is tuned through the individual configuration knobs described in section 8.
+**The chosen stage is stored WITH the race**, like the seed, so a replay is unambiguous and the
+result screen can say which stage ran. A race stored before this change carries no stage and loads
+as `quiet`.
+
+**The two underlying keys keep their Dev Screen sliders** in the admin-tier Race Tuning section for
+tuning, and the sim and the harnesses read them exactly as before. On the browser race path the
+stage is what the engine runs, which is what makes the three stages the only reachable combinations
+and a stored stage a complete description of the race — see `client/src/modules/raceActionStage.js`,
+which states the precedence and what it costs.
+
+**`wild` breaches the naturalness envelope deliberately and is accepted on the owner's eye rather
+than on the gate** — the exception, its evidence and the unmeasured fairness breadth are in
+[section 6](#the-wild-stage-is-an-accepted-breach-of-the-slow-side-the-owner-2026-08-24).
+
+### The continuous slider is still the longer-term vision, and still not built
+
+The eventual endpoint remains a single **Action** slider on the SETUP screen, ranging over a
+continuous span rather than three stops, whose primary lever is `pulkLeadRotationDropDepthLengths` —
+turning it up reaches the rotation deeper into the field for more sweeping lead changes, turning it
+down keeps the fight tight at the front. Around that primary lever the slider would orchestrate the
+related knobs so that any position remains inside the fairness and naturalness guarantees by
+construction.
+
+**The three-stage control does NOT make that slider redundant, and it is not a first cut of it.**
+They pull different levers: the stages ride the two contest strengths, the slider's design rides the
+settle-brake depth. What the stages establish is the SHAPE — a host-facing control that is stored
+with the race and reachable without a slider — and the open question the slider inherits is the one
+section 6 names: a continuous control cannot be bounded "by construction" while the slow side of the
+envelope has no floor in code.

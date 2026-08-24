@@ -32,6 +32,12 @@ export const DEFAULT_RACE_DEFAULTS = {
   autoAdvanceDelay: 5,
   soundEffects: true,
   language: 'en',
+  // RACE-ACTION-CONTROL-1: the host's Race Action stage for the next race. One of
+  // RACE_ACTION_STAGE_IDS below; 'quiet' is the shipped configuration, so a race started without
+  // touching the control is byte-identical to a race started before this key existed. The chosen
+  // stage travels WITH the race (SetupScreen writes it into the race payload, like the seed), so a
+  // replay is unambiguous and a race stored before this change reads back as 'quiet'.
+  raceActionStage: 'quiet',
 };
 
 export const DEFAULT_BRANDING = [];
@@ -1069,6 +1075,40 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // (B1/B2 within 0.6pp, Holm 0). SHIPPED DEFAULT true 2026-07-19 (owner eye-tested; re-gate B1 -0.4pp,
   // B2 -0.2pp vs instant, both within noise). DevScreen toggle flips it OFF for comparison.
   enableRowEnvSmooth: true,
+};
+
+// ── RACE-ACTION-CONTROL-1: the three Race Action stages ────────────────────────────────────────
+//
+// The host picks ONE of these on the Dev Screen and it travels with the race. Each stage is a
+// COMPLETE statement of the two contest strengths it owns, which is what makes a stored stage a
+// full description of the race's action configuration rather than a hint about it — the reason the
+// stage is stored with the race at all. The three entries are the ONLY reachable combinations.
+//
+// QUIET READS THE SHIPPED VALUES FROM `DEFAULT_RACE_DYNAMICS_CONFIG` ABOVE rather than restating
+// them, so "quiet == shipped" cannot drift: change a shipped default and quiet follows it in the
+// same edit. The two keys keep their own Dev Screen sliders in the admin-tier Race Tuning section
+// for tuning; at race start the chosen stage is what the engine runs (see raceActionStage.js, which
+// states why the stage wins and what that costs).
+//
+// The owner judged all three on a production build on 2026-08-24 and accepted them. WILD BREACHES
+// THE DOCUMENTED NATURALNESS ENVELOPE DELIBERATELY — the accepted exception, its evidence and its
+// unmeasured fairness breadth are recorded in docs/RACE-ACTION.md, which is where the envelope
+// lives. Do not "fix" the stage away from here.
+export const RACE_ACTION_STAGE_IDS = ['quiet', 'medium', 'wild'];
+
+export const RACE_ACTION_STAGES = {
+  quiet: {
+    pulkChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,
+    pulkLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
+  },
+  medium: {
+    pulkChallengerBoost: 0.12,
+    pulkLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
+  },
+  wild: {
+    pulkChallengerBoost: 0.12,
+    pulkLeaderBrake: 0.15,
+  },
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {
