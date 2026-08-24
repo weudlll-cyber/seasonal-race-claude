@@ -240,6 +240,20 @@ export class CameraDirector {
     // window is the same span the move it schedules occupies and no new number is introduced.
     this._progTrail = [];
     this._runInAfterDeadline = false;
+    // ── RUNIN-NAMES-1: THE CLOSING ZOOM HAS ARRIVED AT ITS TARGET ────────────────────────────────
+    //
+    // A ONE-WAY LATCH, for the same reason every other run-in flag beside it is one: an arrival that
+    // could un-happen is not an arrival, and this strand's whole history is per-frame questions that
+    // should have been asked once.
+    //
+    // WHAT IT MEANS: the schedule's CLOSE segment has run and the leader has reached the line —
+    // which is, by §3b's own construction, exactly where the close arrives at its endpoint. That
+    // endpoint is `_photoFinishZoom` when the race is a photo finish and `_leaderZoom` when it is
+    // not, so the WIDTH arrived at differs by race while the arrival EVENT is the same one.
+    //
+    // IT DECIDES NO PICTURE. Nothing in the camera reads it; it is published for the renderer, which
+    // uses it to decide what a LABEL SAYS. Read RUNIN-NAMES-1 before giving it any other job.
+    this._runInArrived = false;
     this._runInWidenU = 0; // the widen's carried parameter — advances only on frames it can run
     this._runInWidenPrevP = null;
     this._runInWidenInert = false; // the widen could not run last frame; re-anchor when it can
@@ -859,6 +873,18 @@ export class CameraDirector {
     } else {
       this._diagLeaderProgress = 0;
     }
+    // RUNIN-NAMES-1: latch the closing zoom's ARRIVAL. Both terms already exist and neither is a
+    // number chosen here: `_runInAfterDeadline` is the schedule's own "the close is running" (it is
+    // set in `_scheduleTargetZoom` and, being a latch, survives the frames the schedule does not
+    // run), and the leader reaching the line is where §3b says the close arrives — "both the close's
+    // parameter and the leader's walk back reach 1 exactly at the line".
+    //
+    // WHY NOT `_runInProgress >= 1`, which is the same sentence in the schedule's own units:
+    // MEASURED, it reaches 1 on 6 of 18 finishing races and ALL SIX ARE PHOTO FINISHES — the
+    // photo-finish shot keeps the schedule composing past the line, while every other race stops
+    // composing ON the crossing frame and freezes the parameter at 0.9969-0.9994. A trigger that
+    // fires only on photo finishes is the one thing this must not be.
+    if (this._runInAfterDeadline && this._diagLeaderProgress >= 1) this._runInArrived = true;
     this._diagIsExternalOutcomePhase = !!raceState?.isOutcomePhase;
     const stateAge = ts - this.stateEnteredAt;
     const stateCap = this._maxStateDurationByState[this.state] ?? this._maxStateDuration;
@@ -3821,6 +3847,20 @@ export class CameraDirector {
   }
 
   /** CAMERA-FOCUS-4 LIVE TRUTH: resolved leader forward-framing fraction (null when centred). */
+  /**
+   * RUNIN-NAMES-1 — has the run-in's closing zoom arrived at its target?
+   *
+   * PUBLISHED FOR THE RENDERER, and for nothing in the camera. `frameCameraInputs` reads it off the
+   * director by name, so it is a getter rather than an underscore field: the renderer's contract is
+   * the DECLARED list in `frameCameraInputs.js`, and a private field on that list would be reaching
+   * through the class rather than reading its surface.
+   *
+   * @returns {boolean} true from the arrival onward, for the rest of the race
+   */
+  get runInArrived() {
+    return this._runInArrived;
+  }
+
   get leaderForwardFrac() {
     return this._leaderForwardFrac;
   }
