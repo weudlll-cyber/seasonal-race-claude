@@ -143,6 +143,19 @@ dated exception.
 
 Evidence: [reports/evolution/HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md).
 
+**CLOSED 2026-08-24 — his decision D25**, recorded in [BACKLOG.md](BACKLOG.md) PART TWO, which is its
+one home; it is not restated here. **The start-row advantage was measured as a MAGNITUDE rather than a
+detection, judged acceptable, and nothing was changed.**
+
+**Two things a reader of the paragraphs above should carry forward, because they change how those
+paragraphs read:**
+
+- **The Holm flag above is not evidence about any arm.** At the definitive N the same test trips on
+  the SHIPPED world on 8 of 10 tracks. **A detection test that trips on the baseline has stopped being
+  evidence about anything else** — which is why the line was closed on a magnitude and not on this flag.
+- **On `luger-hill` the deviation is UNDER-compensation, so the FRONT rows are slightly favoured there
+  — not the rear.** Anyone reopening this on the opposite assumption should start from D25.
+
 ---
 
 ## Where the definition lives in code and reports
