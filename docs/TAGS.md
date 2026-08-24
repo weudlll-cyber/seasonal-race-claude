@@ -114,6 +114,37 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RUNIN-NAMES — names instead of numbers once the closing zoom has arrived (2026-08-24)
+
+**THE OWNER JUDGED IT ON THE PRODUCTION BUILD ON 2026-08-24 AND ACCEPTED IT — names included, and
+staying through to the result screen.** From the moment the run-in's closing zoom arrives at its
+target, every racer shows its NAME instead of its number, overlap allowed, for the rest of the race.
+Before that moment every label is what it was.
+
+**NOTHING MINTED, AND THE INSTRUMENT THAT SHOULD HAVE SEEN IT IS BLIND.** CAMERA came back
+byte-identical, which is the requirement — nothing here touches the shot. RENDER also came back
+byte-identical and **that is not evidence of anything**: `scripts/render-fingerprint.mjs` builds the
+renderer's `camera` argument as a hand-written three-field literal instead of calling
+`frameCameraInputs`, so `runInArrived` is undefined inside it and the switch never fires there. That
+is FRAME-INPUTS-1's own defect, still live in the harness, and it means `LABEL-FOCUS-1` has never
+been exercised by that instrument either. Values live in [fingerprints.json](fingerprints.json).
+
+**WHAT REPLACED IT AS EVIDENCE:** the seam measured end to end through the real director and the real
+`frameCameraInputs` — 36 of 36 finishing races switch, 18 photo-finish arrivals and 18
+non-photo-finish, and 0 of 40 ever revert.
+
+**A PRESENTATION SHIP STILL GETS A TAG.** The ceremony's own scope says camera and other presentation
+work skips the ceremony but not the mint, and the mint was done and moved nothing. The register is
+what settles the tag: every accepted presentation ship in it carries one — `v-ship-label-overlap` is
+the direct analogue, also a label change — and `v-ship-fallback-mirrors` and `v-ship-endgame-fallback`
+both say in as many words that no fingerprint moves across them.
+
+- `v-ship-runin-names` (`126574f8`, 2026-08-24) — **the ship.** The return point is
+  `v-ship-runin-names^1`, which restores a race whose labels are NUMBERS all the way through the
+  finish and the whole ending — including while the rest of the field is still crossing, which is the
+  stretch this ship exists for. No fingerprint moves across it, so it restores no world and no shot;
+  it restores what the labels SAY. See [RUNIN-NAMES-1](../reports/evolution/RUNIN-NAMES-1.md).
+
 ### CLEANUP-2026-08-24 — the sweep driver that was on one disk (2026-08-24)
 
 **A cleanup sweep found a harness that existed in NO commit anywhere and whose output is cited
