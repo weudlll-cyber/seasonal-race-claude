@@ -11,10 +11,20 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
+import { RACE_ACTION_STAGE_IDS } from '../../../modules/storage/defaults.js';
+import { normalizeRaceActionStage } from '../../../modules/raceActionStage.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
+
+// RACE-ACTION-CONTROL-1. Labels and blurbs only — the STAGE IDS come from defaults.js and the values
+// they stand for live there too, so this file states no config value and cannot go stale against it.
+const RACE_ACTION_LABELS = {
+  quiet: { label: 'Quiet', hint: 'The shipped race.' },
+  medium: { label: 'Medium', hint: 'A livelier front fight.' },
+  wild: { label: 'Wild', hint: 'The most eventful race.' },
+};
 
 function RaceDefaults() {
   const [defaults, setDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
@@ -48,6 +58,36 @@ function RaceDefaults() {
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        {/* Race Action — RACE-ACTION-CONTROL-1 */}
+        <div className={s.formGroup} data-testid="race-action-control">
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Race Action
+            <InfoTooltip text="How eventful the racing is. Quiet is the shipped race. Medium and Wild push the front fight harder — the same fair finish, more of a contest getting there. The stage you pick here is stored with each race, so the result screen can tell you which one ran." />
+          </label>
+          <div className={s.optionPills}>
+            {RACE_ACTION_STAGE_IDS.map((id) => {
+              const active = normalizeRaceActionStage(defaults.raceActionStage) === id;
+              return (
+                <button
+                  key={id}
+                  data-testid={`race-action-${id}`}
+                  aria-pressed={active}
+                  className={`${s.optionPill} ${active ? s.optionPillActive : ''}`}
+                  onClick={() => set({ raceActionStage: id })}
+                >
+                  {RACE_ACTION_LABELS[id].label}
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', margin: '0.4rem 0 0' }}>
+            {RACE_ACTION_LABELS[normalizeRaceActionStage(defaults.raceActionStage)].hint}
+          </p>
+        </div>
+
         {/* Duration */}
         <div className={s.formGroup}>
           <label

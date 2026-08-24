@@ -122,6 +122,13 @@
   font-family: monospace;
 }
 
+/* RACE-ACTION-CONTROL-1: which Race Action stage this race ran. Not monospace — unlike the seed it
+   is a word to be read, not a value to be typed back in. */
+.race-action-stage {
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+}
+
 /* Podium Section */
 .podium-section {
   display: flex;

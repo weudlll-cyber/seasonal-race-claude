@@ -21,7 +21,9 @@ import {
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_CONFIG_WORLD,
+  DEFAULT_RACE_DEFAULTS,
 } from './storage/defaults.js';
+import { applyRaceActionStage } from './raceActionStage.js';
 import {
   WORLD_SCHEMA_VERSION,
   hashWorld,
@@ -56,13 +58,32 @@ function effectiveRacerTypes() {
   return out;
 }
 
+// RACE-ACTION-CONTROL-1: which Race Action stage this world describes. The race path passes the
+// stage the RACE was started with (it travels in the race payload); the Dev Screen export passes
+// nothing and gets the stage the NEXT race would run, read from the stored race defaults. Either way
+// the blob below describes a race that can actually happen, which is this module's whole promise.
+function storedRaceActionStage() {
+  const defaults = storageGet(KEYS.RACE_DEFAULTS) ?? {};
+  return defaults.raceActionStage ?? DEFAULT_RACE_DEFAULTS.raceActionStage;
+}
+
 // Build the world blob. Deterministic: NO timestamp inside (a timestamp would change the hash on every
 // export and break the flip-and-restore guarantee). Keys mirror raceConfigWorld.WORLD_CONFIG_KEYS.
-export function buildWorldConfig() {
+//
+// THE ACTION STAGE IS APPLIED HERE, and it has to be. This module's contract — stated at the top of
+// the file and in the DevScreen panel — is that the blob is "the config the game actually reads when
+// a race starts", gathered by calling the SAME loaders the race path calls. Since RACE-ACTION-CONTROL-1
+// the race path applies the stage on top of `loadRaceDynamicsConfig()`, so an export that skipped it
+// would describe a race nobody ran the moment the host left `quiet` — the exact silent divergence
+// raceConfigWorld.js exists to prevent. At `quiet` on the shipped configuration this changes nothing.
+export function buildWorldConfig({ raceActionStage } = {}) {
   return {
     schemaVersion: WORLD_SCHEMA_VERSION,
     configs: {
-      raceDynamicsConfig: loadRaceDynamicsConfig(),
+      raceDynamicsConfig: applyRaceActionStage(
+        loadRaceDynamicsConfig(),
+        raceActionStage ?? storedRaceActionStage()
+      ),
       raceBehaviorConfig: loadRaceBehaviorConfig(),
       rowLayoutConfig: loadRowLayoutConfig(),
       baseSpeedConfig: loadBaseSpeedConfig(),

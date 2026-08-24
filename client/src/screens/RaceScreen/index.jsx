@@ -38,6 +38,7 @@ import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { computeRacerLayout, computeBodyNarrowRef } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { applyRaceActionStage, normalizeRaceActionStage } from '../../modules/raceActionStage.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -467,14 +468,19 @@ export default function RaceScreen() {
     const behaviorConfig = loadRaceBehaviorConfig();
     behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = loadRowLayoutConfig();
-    const dynamicsConfig = loadRaceDynamicsConfig();
+    // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
+    // than from the live Dev Screen setting — so changing the control while a race is on screen
+    // cannot change the race on screen, and a replayed payload runs the stage it recorded. A payload
+    // from before this change carries no stage and normalises to the shipped one.
+    const raceActionStage = normalizeRaceActionStage(raceData.raceActionStage);
+    const dynamicsConfig = applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
     const frameTimingConfig = loadFrameTimingConfig();
 
     // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
     // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
     // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
     // badge and the marker can never disagree about what this race was configured with.
-    const cfgWorld = buildWorldConfig();
+    const cfgWorld = buildWorldConfig({ raceActionStage });
     const cfgBadge = configFingerprintBadge(cfgWorld);
     const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
 
