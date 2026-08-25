@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ENGINE-REACH-DATA-1.md](ENGINE-REACH-DATA-1.md) — **the arbiter answers its own question correctly;
+  verify asks it a different one** (2026-08-26, `diag/engine-reach-data-1`, PIECE 6 of
+  NIGHT-2026-08-25, DIAGNOSE AND DESIGN ONLY — nothing repaired, no hull widened).
+  **A WRONG QUESTION, NOT A WRONG ANSWER.** `engine-reach.mjs` computes the static import closure of
+  `raceCore.js` (36 files) and answers *"what does the engine read"* exactly. **`verify` consumes that
+  as *"can this change alter a race"***, and the two come apart for everything reaching the engine as
+  DATA or as a payload assembled elsewhere. A JSON file has no imports; the walk's root cannot see
+  `client/src/screens/` or `server/` at all.
+  **RUN, NOT REASONED — three `--check` verdicts, all identical, TWO OF THEM WRONG:**
+  `server/seeds/tracks/garden-path.json`, **`client/src/modules/racerNames.js`** and
+  **`client/src/modules/racer-types/beetle.js`** each return *"cannot reach the engine at all"*. Names
+  are hashed by `stablePairBit` (**RUNIN-NAMES-1: renaming changed the winner in 14 of 24 races**); a
+  racer's `getSpeedMultiplier` feeds the duration model. **`racerNames.js` sits INSIDE the directory the
+  walk is rooted in** — the boundary is code-versus-data, not client-versus-server.
+  **THE PROJECT MET THIS CLASS BEFORE.** FP-HULL-1 (2026-08-14) fixed the driver case by having guards
+  `--declare` their entry points — one home. **But that widens the hull with CODE to walk from, and a
+  JSON file has nothing to walk**, which is why the gap survived it.
+  **THE SMALLEST HONEST CHANGE: a `reachData` sibling on the declaration FP-HULL-1 already built**,
+  matched literally rather than walked, and honest about being a maintained LIST. Deliberately NOT
+  field-level: `garden-path.json`'s icon is inert and its `defaultLaps` is not, and over-triggering is
+  the cheap error.
+  **COST MEASURED: 69 commits of 2,021 (3.4%), 7 in the last 30 days** — and some of those ought to
+  have minted. 4 proposals, 3 of them the block's own; the cheapest is to make the arbiter say which
+  question it answered.
+
 - [GARDEN-PATH-BEETLE-SKIN-1.md](GARDEN-PATH-BEETLE-SKIN-1.md) — **the track wears the beetle it
   races, and no existing installation will ever see it** (2026-08-26, `feat/garden-path-beetle-skin-1`,
   PIECE 5 of NIGHT-2026-08-25, **BUILT AND MERGED** — 1 file, 2 insertions, 2 deletions).
