@@ -1,8 +1,8 @@
 {
   "id": "garden-path",
   "name": "Garden Path",
-  "icon": "🐌",
-  "description": "A leisurely (yet surprisingly competitive) crawl through the roses.",
+  "icon": "🪲",
+  "description": "A leisurely (yet surprisingly competitive) scuttle through the roses.",
   "color": "#16a34a",
   "defaultRacerTypeId": "beetle",
   "defaultWinners": 3,
