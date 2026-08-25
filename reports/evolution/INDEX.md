@@ -154,6 +154,40 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-SEED13-ANATOMY-1.md](RUNIN-SEED13-ANATOMY-1.md) — **he saw two things on one race; both are
+  real and only one of them is new** (2026-08-25, `diag/runin-seed13-anatomy-1`, DIAGNOSIS ONLY —
+  nothing built, no key, no default, no fingerprint; report merged, branch pushed unmerged; 8 races
+  traced frame by frame, browser camera seeding, 14 cores). `river-run` 20 seed 13, the race he
+  confirmed by eye on the served build `c0cef7b8`.
+  **EVENT ONE — the step is the RULE WORKING, and its price is a racer's presence.** 0.150 s before the
+  line **#5 Thunder** crosses the one-racer-length boundary **by 0.10 px** (gap 28.6 -> 28.4 against a
+  length of 28.5) and the shot cuts **197.7 -> 386.3 px in one frame**, unsmoothed by construction —
+  during the run-in the delivered width IS the demanded width. **It is expensive because the anchor is
+  the PAIR MIDPOINT, not the leader**: it already leans toward #16 Flare (72 px left), and Thunder
+  arrives 61 px RIGHT, so he is **107 px from the camera's actual subject** against Flare's 34 and the
+  leader's 42. **His demand did not grow — it was 386.4 px while he was still outside the set.** The
+  width followed a membership threshold, not the racing. **Frozen at two members the same race holds
+  197 px — and Thunder sits 21-24 px BELOW THE BOTTOM EDGE on every frame to the crossing.**
+  **EVENT TWO — the one nobody had measured, and it is the bigger of the two.** At the crossing the
+  run-in hands the width back in ONE frame (386 -> 120 px). While the zoom closes, the pan target is
+  resolved at the PREVIOUS frame's zoom and drawn at this one's, and the error is multiplied by the
+  subject's ~3,545 px from the world origin: **the aim is thrown up to 2,427 px**, the subject reaches
+  **973 px off his mark** and the leader is **off canvas for 21 frames**. The size arrives first — from
+  0.43 s the width is flat within 1% while **the picture still slides 336 px over 1.4 s**. That is his
+  sentence exactly. **The anchor NEVER changes** (one re-target, at 1.77 s, after the event) and the
+  run-in's placement schedule is not running in this state, so **nothing in the design asked for it**.
+  **Re-stating the aim at the drawn zoom removes 90-97% of it — the correction is ALREADY IN THE FILE
+  and scoped to the frames where the schedule composes, i.e. it stops one frame before the largest
+  zoom move of the race.**
+  **EVENT TWO IS GENERAL, NOT SEED 13's.** All 8 races swing; **`river-run` seed 49 — §14's own
+  counter-case, with no width step — swings 959 px, within 2% of seed 13.** The swing is ordered by
+  ONE quantity, the width the run-in hands back from. **dirt-oval is mild (202 px, home in 0.6 s, never
+  off canvas)**, as it was for the step. **Event one does not CAUSE event two but nearly doubles it**
+  (973 px vs 565 px frozen).
+  **THE FRAME CLOCK SPLITS THEM:** event one is identical at 50/60/90 Hz and under jitter; **event two
+  grows as the frame rate falls — 655 px at 90 Hz, 1,163 px at 50 Hz** — so his browser's swing may
+  exceed the measured figure. 5 proposals, 3 of them the block's own; none ordered.
+
 - [TRACK-DEFAULTS-REACH-1.md](TRACK-DEFAULTS-REACH-1.md) — **the seed is not what a running race
   reads** (2026-08-25, DIAGNOSIS, no default changed, nothing merged, no rebuild). The owner reported
   garden-path still running snail and 4 laps after GARDEN-PATH-DEFAULTS-1. **He was right, and the
