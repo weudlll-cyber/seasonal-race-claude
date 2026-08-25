@@ -248,6 +248,92 @@ export function corridorGuarantee(
 }
 
 /**
+ * ONE SUBJECT, MEASURED FROM THE ANCHOR — the PRESENCE computation (RUNIN-LEVEL-SET-BUILD-1).
+ *
+ * THIS IS `halfCorridorCeiling` WITH A DIFFERENT VECTOR, and that is the whole claim. Both ask the
+ * same question of the same helper in the same shape:
+ *
+ *   halfCorridorCeiling   direction = the corridor perpendicular   extent = half a track width
+ *   presenceCeilingFrom   direction = anchor -> this subject       extent = his own displacement
+ *
+ * and both then divide `roomFromPointAlong(at, direction)` by the screen length that extent needs,
+ * and both SKIP a side whose room is 0 rather than returning a ceiling of 0 — the decision
+ * `halfCorridorCeiling` and `companyGuarantee` already make, for the reason stated there: the anchor
+ * is outside the safe region on that side, no zoom repairs it, and collapsing the shot is worse.
+ *
+ * WHY IT IS NEEDED AT ALL. `pairGuarantee` below fits the vector BETWEEN two subjects, so it
+ * guarantees their SPAN. A span is not a presence: two racers running wide TOGETHER have a small
+ * span and sit far from where the camera looks, so the span is satisfied while both are off screen.
+ * Measured over 1,260 races (RUNIN-LEVEL-SET-1), the span reading removes 11 of 126 races in which
+ * the winner is off frame at the line and this one removes 93. `lateralShiftToFit` at the foot of
+ * this file already named the symptom: *"no shift fits everyone, which means the ZOOM guarantee
+ * should have widened and did not."*
+ *
+ * @param {{x:number,y:number}} pt  the subject, in world coordinates
+ * @param {{x:number,y:number}} anchorWorld  the world point the framing is built around
+ * @param {{x:number,y:number}} anchorAt  where that point sits IN FRAME, in screen px
+ * @param {number} padding  world px added to the displacement, so a body fits and not a centre point
+ * @returns {number} cam.zoom ceiling; Infinity when the subject constrains nothing
+ */
+function presenceCeilingFrom(
+  pt,
+  anchorWorld,
+  anchorAt,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  innerFramePct,
+  padding
+) {
+  const dx = pt.x - anchorWorld.x;
+  const dy = pt.y - anchorWorld.y;
+  const world = Math.hypot(dx, dy);
+  const pad = padding > 0 ? padding : 0;
+  // Sitting on the anchor: only the padding constrains, and it does so in every direction, so the
+  // worst orientation is the honest answer — the same case `pairGuarantee` handles for co-located
+  // contenders, resolved the same way.
+  if (!(world > 0)) {
+    if (!(pad > 0)) return Infinity;
+    const axis = (ux, uy) => {
+      const vx = ux * pad * axisX;
+      const vy = uy * pad * axisY;
+      const need = Math.hypot(vx, vy);
+      if (!(need > 0)) return Infinity;
+      const room = roomFromPointAlong(
+        anchorAt.x,
+        anchorAt.y,
+        vx,
+        vy,
+        frameW,
+        frameH,
+        clamp01(innerFramePct)
+      );
+      return room > 0 ? room / need : Infinity;
+    };
+    return Math.min(axis(1, 0), axis(0, 1), axis(-1, 0), axis(0, -1));
+  }
+  // THE EXTENT IS THE DISPLACEMENT PLUS THE PADDING, along the displacement's own direction — the
+  // identical construction `pairGuarantee` uses on the separation, with the same units.
+  const total = world + pad;
+  const vx = (dx / world) * total * axisX;
+  const vy = (dy / world) * total * axisY;
+  const needed = Math.hypot(vx, vy);
+  if (!(needed > 0)) return Infinity;
+  const room = roomFromPointAlong(
+    anchorAt.x,
+    anchorAt.y,
+    vx,
+    vy,
+    frameW,
+    frameH,
+    clamp01(innerFramePct)
+  );
+  if (!(room > 0)) return Infinity;
+  return room / needed;
+}
+
+/**
  * Half a corridor to each side of the anchor along `perp`, each against the room that direction
  * actually has. Split out so the no-heading fallback runs the identical rule on both axes.
  */
@@ -313,8 +399,24 @@ function halfCorridorCeiling(
  * `pairGuarantee` was written to stop doing — two racers side by side across a diagonal corridor need
  * far less zoom-out than their bounding box implies. The cost is O(n^2) over a handful of points.
  *
+ * ── THE ANCHORED ARM (RUNIN-LEVEL-SET-BUILD-1), and it is OFF unless an anchor is passed ────────
+ *
+ * With `anchorWorld`/`anchorAt` supplied this stops asking about SPANS and asks about PRESENCE:
+ * every subject measured against the room the frame actually has from where the anchor sits, via
+ * `presenceCeilingFrom`. **A span is not a presence**, and the difference is not academic — see that
+ * function's header for the 11-versus-93 measurement.
+ *
+ * TWO CONSEQUENCES WORTH NAMING. It needs only ONE subject to constrain, not two, because a lone
+ * racer can be off frame while a lone span cannot exist; and it is O(n) rather than O(n^2), because
+ * each subject is measured against the anchor instead of against every other subject.
+ *
+ * **DEFAULT `null` MEANS TODAY'S BEHAVIOUR, EXACTLY.** Every existing caller passes no anchor and
+ * runs the unchanged pairwise span code below, so nothing outside the run-in moves a pixel.
+ *
  * @param {Array<{x:number,y:number}|null>} pts  the contenders
- * @returns {number} cam.zoom ceiling; Infinity when fewer than two are present
+ * @param {{x:number,y:number}|null} [anchorWorld=null]  the world point the framing is built around
+ * @param {{x:number,y:number}|null} [anchorAt=null]  where that point sits in frame, in screen px
+ * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
  */
 export function contenderGuarantee(
   pts,
@@ -323,9 +425,30 @@ export function contenderGuarantee(
   frameW,
   frameH,
   innerFramePct = 1,
-  padding = 0
+  padding = 0,
+  anchorWorld = null,
+  anchorAt = null
 ) {
   const live = (pts ?? []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (anchorWorld && anchorAt) {
+    if (live.length < 1) return Infinity;
+    let ceil = Infinity;
+    for (const p of live) {
+      const c = presenceCeilingFrom(
+        p,
+        anchorWorld,
+        anchorAt,
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        padding
+      );
+      if (c < ceil) ceil = c;
+    }
+    return ceil;
+  }
   if (live.length < 2) return Infinity;
   let ceiling = Infinity;
   for (let i = 0; i < live.length; i++) {
@@ -346,8 +469,47 @@ export function contenderGuarantee(
   return ceiling;
 }
 
-export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct = 1, padding = 0) {
+export function pairGuarantee(
+  a,
+  b,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  innerFramePct = 1,
+  padding = 0,
+  anchorWorld = null,
+  anchorAt = null
+) {
   if (!a || !b) return Infinity;
+  // THE ANCHORED ARM — see `contenderGuarantee`'s header. Two subjects, each measured for PRESENCE
+  // from the anchor rather than against each other's SPAN. `null` is today's behaviour, exactly.
+  if (anchorWorld && anchorAt) {
+    return Math.min(
+      presenceCeilingFrom(
+        a,
+        anchorWorld,
+        anchorAt,
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        padding
+      ),
+      presenceCeilingFrom(
+        b,
+        anchorWorld,
+        anchorAt,
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        padding
+      )
+    );
+  }
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy);
