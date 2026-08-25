@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b80377ba 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 6078cd6a 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
 **RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-25)** — all four phase-6 durations and all four zoom-out leads.
 

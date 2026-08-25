@@ -431,3 +431,127 @@ of leaving it: nothing measurable. Cost of finding out: a signed-lap comparison 
 **6. river-run and mountainstreet are the standing eye-test pair for width work.** (Mine.) They take
 20.1% and 16.3% of the corpus's widening between them, the fault they carry is the one the owner
 reported, and dirt-oval is the control that must not move. **Cost: none; it is a viewing order.**
+
+---
+
+## 14. THE WIDTH STEP — THE HIT LIST (added 2026-08-25)
+
+**§8 gave the size and the rate and named no seeds, so watching for it meant starting races at random.
+This section is the seeds.** The ranking comes from the built-code sweep already on disk; **the "when"
+did not, and is the one thing that needed re-running** — the sweep stored per-race aggregates only, so
+it could rank the steps and could not say where in the race they fall. **Only the 26 races on the hit
+list were re-run**, plus dirt-oval's own worst and two counter-cases.
+
+### WATCH THIS ONE FIRST — `river-run`, 20 racers, **seed 13**
+
+**What he will see:** at **97% of the way through the closing move** — the last half-second before the
+line — **the shot suddenly widens.** The visible world goes from **198 to 386 px across the frame in
+ONE frame**: everything on screen — racers, road, the finish gate — **drops to 51% of its size between
+two frames.** There is no glide; it is a cut.
+
+**And it does not come back.** The release is eased, but the race ends first: the shot holds the new
+width through the crossing. **He should expect the finish to be watched from twice as far out as the
+approach was.**
+
+**Why it happens, measured rather than inferred:** on that exact frame the level set grows from **2
+members to 3** — a third racer comes within one racer length of the leader, the guarantee admits him
+instantly so he cannot be cut, and the width it needs arrives in a single step.
+
+### THE COUNTER-CASE — `river-run`, 20 racers, **seed 49**
+
+**The race he has already watched**, and the one to compare against. Same track, same field size, and
+the rule is working just as hard — it binds on **82%** of the closing frames against seed 13's 96%.
+**Its largest single-frame move is 5%** (388 → 406 px), which is below what an eye separates.
+
+**So the difference is not "the rule is on" versus "the rule is off" — it is on in both.** Seed 49 is
+what the guarantee looks like when it widens smoothly; seed 13 is what it looks like when a racer
+arrives late. **If seed 49 reads as fine and seed 13 does not, the admit is the thing to shape and
+nothing else is.**
+
+### THE FULL HIT LIST — 26 races, ranked by the size of the single-frame step
+
+`×width` is what the visible world width is multiplied by; **`shrinks to` is what everything on screen
+becomes in one frame.** `u` is the run-in's own parameter — 0 when the closing window opens, 1 at the
+line.
+
+| # | track | n | seed | step (ln) | shot goes | ×width | shrinks to | at u | recovers? |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | space-sprint | 20 | **1** | 1.47 | 228 → 988 px | ×4.34 | 23% | 0.000 | 4.45 s |
+| 2 | seatrack | 20 | **53** | 1.35 | 172 → 661 px | ×3.84 | 26% | 0.000 | 5.10 s |
+| 3 | mountainstreet | 20 | **32** | 0.86 | 157 → 370 px | ×2.36 | 42% | 0.821 | **never** |
+| 4 | mountainstreet | 20 | **24** | 0.85 | 121 → 283 px | ×2.35 | 43% | 0.980 | **never** |
+| 5 | luger-hill | 40 | **33** | 0.85 | 165 → 385 px | ×2.33 | 43% | 0.000 | 4.35 s |
+| 6 | seatrack | 20 | **16** | 0.83 | 215 → 492 px | ×2.29 | 44% | 0.000 | 3.63 s |
+| 7 | luger-hill | 40 | **47** | 0.78 | 126 → 273 px | ×2.17 | 46% | 0.942 | **never** |
+| 8 | seatrack | 20 | **35** | 0.72 | 373 → 769 px | ×2.06 | 49% | 0.000 | 4.93 s |
+| **9** | **river-run** | **20** | **13** | **0.67** | **198 → 386 px** | **×1.95** | **51%** | **0.972** | **never** |
+| 10 | mountainstreet | 20 | **15** | 0.59 | 165 → 298 px | ×1.81 | 55% | 0.825 | **never** |
+| 11 | river-run | 20 | **8** | 0.58 | 215 → 385 px | ×1.79 | 56% | 0.000 | 3.32 s |
+| 12 | seatrack | 20 | **7** | 0.57 | 213 → 379 px | ×1.78 | 56% | 0.994 | **never** |
+| 13 | river-run | 20 | **18** | 0.57 | 350 → 198 px | ×0.57 | **177% — it TIGHTENS** | 0.981 | **never** |
+| 14 | seatrack | 40 | **13** | 0.56 | 183 → 320 px | ×1.75 | 57% | 0.000 | 3.75 s |
+| 15 | city-circuit | 20 | **7** | 0.55 | 153 → 265 px | ×1.73 | 58% | 0.978 | **never** |
+| 16 | ice-track | 20 | **22** | 0.54 | 207 → 121 px | ×0.58 | **171% — it TIGHTENS** | 0.979 | **never** |
+| 17 | searound | 40 | **56** | 0.50 | 380 → 231 px | ×0.61 | **165% — it TIGHTENS** | 0.926 | **never** |
+| 18 | river-run | 20 | **23** | 0.49 | 173 → 281 px | ×1.63 | 62% | 0.000 | **never** |
+| 19 | mountainstreet | 20 | **25** | 0.47 | 156 → 249 px | ×1.60 | 63% | 0.986 | **never** |
+| 20 | luger-hill | 40 | **21** | 0.47 | 168 → 268 px | ×1.59 | 63% | 0.799 | 0.70 s |
+| 21 | city-circuit | 20 | **34** | 0.45 | 124 → 195 px | ×1.56 | 64% | 0.950 | **never** |
+| 22 | searound | 20 | **45** | 0.44 | 150 → 233 px | ×1.56 | 64% | 0.922 | **never** |
+| 23 | seatrack | 20 | **18** | 0.44 | 201 → 130 px | ×0.65 | **155% — it TIGHTENS** | 0.977 | **never** |
+| 24 | searound | 20 | **54** | 0.44 | 154 → 239 px | ×1.55 | 65% | 0.836 | **never** |
+| 25 | river-run | 20 | **1** | 0.42 | 262 → 397 px | ×1.52 | 66% | 0.965 | **never** |
+| 26 | river-run | 20 | **58** | 0.41 | 130 → 196 px | ×1.50 | 67% | 0.898 | **never** |
+
+### THE WORST ON EACH TRACK — because dirt-oval and river-run are the ones he watches
+
+| track | n | seed | ×width | shot goes | at u | recovers? |
+| --- | --- | --- | --- | --- | --- | --- |
+| space-sprint | 20 | 1 | ×4.34 | 228 → 988 px | 0.000 | 4.45 s |
+| seatrack | 20 | 53 | ×3.84 | 172 → 661 px | 0.000 | 5.10 s |
+| mountainstreet | 20 | 32 | ×2.36 | 157 → 370 px | 0.821 | never |
+| luger-hill | 40 | 33 | ×2.33 | 165 → 385 px | 0.000 | 4.35 s |
+| **river-run** | 20 | **13** | **×1.95** | 198 → 386 px | 0.972 | never |
+| city-circuit | 20 | 7 | ×1.73 | 153 → 265 px | 0.978 | never |
+| ice-track | 20 | 22 | ×0.58 | 207 → 121 px | 0.979 | never |
+| searound | 40 | 56 | ×0.61 | 380 → 231 px | 0.926 | never |
+| **dirt-oval** | 20 | **171** | **×0.69** | 229 → 159 px | 0.957 | never |
+
+**ON DIRT-OVAL — the track he watches most — THIS DOES NOT HAPPEN AT THE REPORTABLE SIZE.** Not one
+of its 240 swept races reaches the 0.4 ln threshold. Its worst is seed 171 at **×0.69**, and it is a
+TIGHTENING rather than a widening. **If he watches only dirt-oval he will not see this at all**, which
+is worth knowing before he concludes it is not there.
+
+### WHAT THE RE-RUN CORRECTS IN §8
+
+**§8 said the width can leap "when a racer arrives at the boundary". That is right, and now it is
+measured rather than inferred — but it is not the whole set.**
+
+- **19 of the 22 widenings land on the exact frame the level set GAINS a member.** The instant-admit
+  is the cause, confirmed.
+- **Four of the 26 are TIGHTENINGS, not widenings** (rows 13, 16, 17, 23), and three of those four
+  land on the frame the set LOSES a member. §8 described only the widening half.
+- **Eight of the 26 happen at u ≈ 0**, on the first frames of the closing window rather than at a late
+  arrival, and **those are the ones that recover** — a median of 4.35 s, comfortably inside the race.
+- **The other 18 happen late — median u = 0.965 — and 17 of them NEVER recover before the line.**
+  §8 said the release is eased over the run-in's own span; that is true of the mechanism and mostly
+  false of what is seen, **because the race ends before the ease finishes.**
+
+**So the honest one-line description of the risk is narrower and worse than §8's:** not "the width can
+leap", but **"in about one race in fifty the shot cuts to a new width in the last few percent before
+the line, and stays there through the finish."**
+
+### SOURCE HYGIENE FOR THIS SECTION
+
+**The ranking used no new races** — it is `maxStepLn` from the built-code sweep already on disk (1,260
+races). **What that data could NOT answer is the whole of what he needed:** it stores per-race
+aggregates and no per-frame series, so it has the SIZE of the worst step and not its PLACE, its
+before-and-after width, or whether it recovers. **Those required re-running, and only the listed races
+were re-run** — the 26, plus dirt-oval's own worst and two counter-cases, 29 in total, by
+`scripts/diag/level-step-when.mjs`.
+
+**One correction made in the writing of this section.** The first summary of the direction was
+inverted: it read the sign of the change in cam.zoom as the sign of the change in WIDTH, and a rising
+zoom is a tightening shot. It reported 4 widenings and 22 tightenings; measuring the visible world
+width directly gives **22 widenings and 4 tightenings**. Recorded because the two would have sent him
+looking for the opposite thing on screen.

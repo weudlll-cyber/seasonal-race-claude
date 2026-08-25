@@ -948,7 +948,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b80377ba 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6078cd6a 2026-08-25 depends=client/src/modules/camera/ -->
 **RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EXACTLY ONE FIGURE MOVED: PHOTO_FINISH median
 3.08 -> 3.00 pp (2026-08-25).** Every other state is identical to the digit, both percentiles and all
 six frame counts included — 10923, 159, 17169, 9373, 4323, 1865 — and PHOTO_FINISH's own frame count
