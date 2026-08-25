@@ -154,6 +154,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [OWNER-FINDINGS-2026-08-25.md](OWNER-FINDINGS-2026-08-25.md) — **the day's findings, collected into
+  one page he can work down** (2026-08-26, `docs/owner-findings-2026-08-25`, PIECE 8 of
+  NIGHT-2026-08-25, COLLECTION ONLY — no work proposed, no verdict invented). The deliverable is the
+  new dated section in [docs/BACKLOG.md](../../docs/BACKLOG.md); this report says what was gathered,
+  what was linked rather than copied, and what was left out.
+  **THIRTEEN ITEMS, each carrying exactly three things** — what it is in one sentence, what establishes
+  it (a link or a source address, never a restated table), and **what it needs next: MEASURING,
+  BUILDING, or ONLY HIS WORD.** **Six need only his word; three need building; one needs measuring
+  when he wants it; three are context for an item above them.**
+  All eight mandatory subjects are present, with the harness's 200 s ceiling and hardcoded lap count
+  recorded **WITH his own judgement that his 120 s tests came out nearly the same**, so nobody
+  re-opens it as an emergency. Five further findings from the night are in as well.
+  **ONE HOME PER SUBJECT WAS ENFORCED, INCLUDING ONE CORRECTION IN PLACE:** the older entry *"A seed
+  alone does not reproduce a race"* said **six** inputs; RACE-IDENTITY-1 established **nine**, and the
+  older entry was corrected where it stands rather than duplicated — the backlog's PART ONE is a living
+  list, and nothing in `reports/` was touched.
+  **22 proposals exist across the source reports and NOT ONE is repeated in the backlog** — a proposal
+  in a backlog reads as a decision already taken.
+  **The closing observation: four of the thirteen are the same defect in four costumes** — a guarantee
+  with more than one owner, where the copy that stopped being true was not the copy anyone read.
+
 - [RENDER-FINGERPRINT-BLIND-1.md](RENDER-FINGERPRINT-BLIND-1.md) — **the fingerprint still carries the
   literal FRAME-INPUTS-1 was built to delete** (2026-08-26, `diag/render-fingerprint-blind-1`, PIECE 7
   of NIGHT-2026-08-25, DIAGNOSE AND DESIGN ONLY — nothing repaired, nothing minted).
