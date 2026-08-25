@@ -154,6 +154,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GARDEN-PATH-DEFAULTS-1.md](GARDEN-PATH-DEFAULTS-1.md) — **beetle, and two laps** (2026-08-25,
+  `feat/garden-path-defaults-1`, **BUILT AND MINTED, PUSHED, NOT MERGED — his eye decides**).
+  **THE OWNER'S DECISION of 2026-08-25**, both parts: on `garden-path` the default racer becomes
+  **BEETLE** and the default lap count becomes **2**. Two lines in
+  `server/seeds/tracks/garden-path.json` — the one place that owns a track record, since
+  `server/data/**` is a gitignored runtime dir and `defaults.js` holds no per-track values. No new
+  key, no other track touched. **`beetle` is legal here**, established by running the setup screen's
+  own surface-class filter: garden-path carries `earth` and so does the beetle.
+  **THE DURATION TABLE:** snail 106 / 212 / 318 / **424** s at 1-4 laps; beetle 35 / **71** / 106 /
+  141. The snail row cross-checks exactly against the live UI reading GARDEN-PATH-NO-FINISH-1 took.
+  **garden-path goes from 4.9x the longest closed track to the SECOND SHORTEST** — searound 62,
+  garden-path 71, ice-track 74, city-circuit 78, dirt-oval 87.
+  **WHAT EACH CHANGE CONTRIBUTES, and they are NOT interchangeable: the racer change ALONE is
+  sufficient** (beetle at 4 laps = 141 s, inside the harness ceiling and still clearly the longest
+  closed track); **the lap change alone is NOT** (snail at 2 laps = 212 s, still over). Both together
+  = 71 s, x0.17 of today. That table is there so a single change can be dropped without reopening the
+  question.
+  **ALL FOUR FINGERPRINTS MOVED AND ALL FOUR WERE RE-MINTED** on the branch, engine-verified with
+  `--mint`: world `bc01b74fd4f3cfc8`, world-off `daf78ff18eca83c6`, camera `c6033c1f5c4d67f2`, render
+  `1f55627fe213a31c`. Right, because every instrument runs all ten tracks AT TRACK DEFAULTS.
+  **AND `verify`'s ROUTING SKIPPED ALL FOUR — reported as a finding:** the instruments read
+  `server/data/tracks` (gitignored) while the shipped change is in `server/seeds/tracks`, so routing
+  cannot connect them; every value was run by hand.
+  **It now finishes inside the 200 s harness ceiling as a CONSEQUENCE** — the ceiling and the
+  hardcoded 2-lap assumption are untouched and still named as defects. 6 tests with their sabotage
+  RUN (four of six go red on revert; the two that stay green are the two that should). 6 proposals.
+
 - [GARDEN-PATH-NO-FINISH-1.md](GARDEN-PATH-NO-FINISH-1.md) — **the harness gives up 200 seconds into
   a 212-second race** (2026-08-25, DIAGNOSE ONLY, nothing repaired, no production file touched).
   **THE OWNER IS RIGHT AND THE HARNESS IS WRONG.** `garden-path`'s default racer is the **snail at
