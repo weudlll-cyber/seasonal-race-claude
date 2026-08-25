@@ -234,6 +234,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   this project's guards and has never been extended to its measurement harnesses.** 6 proposals; the
   ceiling fix forces a coverage-versus-cost choice that is deliberately left to the owner.
 
+- [RUNIN-LEVEL-SET-BUILD-1.md](RUNIN-LEVEL-SET-BUILD-1.md) — **the owner's rule BUILT, with the
+  repair that makes it work** (2026-08-25, `feat/runin-level-set-1`, **THE REPORT ONLY IS ON MASTER —
+  the build is NOT merged and waits on his eye**). On the built code it holds **all twelve** of his
+  races, 568 winner-off frames to 0, with the finish line identical to master at 85.7%. Both halves
+  ship together: `pairGuarantee` takes an anchor and measures PRESENCE, and membership is
+  `_abreastContenders` condition 1 alone with the unit defined once. The set is LIVE, not pinned, with
+  an eased release absorbing churn, and all four fingerprints moved and were minted ON THAT BRANCH.
+  **SECTION 14, added 2026-08-25, is the HIT LIST for the one cost it adds.** The report had given the
+  step's size and its rate and named no seeds, so watching for it meant starting races at random. The
+  ranking came from the built-code sweep already on disk; **the WHEN did not** — per-race aggregates
+  carry no per-frame series — so only the 26 listed races were re-run, plus dirt-oval's own worst and
+  two counter-cases. **Watch `river-run` 20 seed 13 first: at 97% through the closing move the shot
+  widens 198 -> 386 px of visible world in ONE frame, everything on screen dropping to 51%, and it
+  does NOT come back, because the race ends before the eased release finishes.** On that frame the
+  level set grows from 2 members to 3, so the instant-admit is the cause, measured rather than
+  inferred. **The counter-case is `river-run` 20 seed 49** — the race he has already watched, same
+  track, the rule binding just as hard (82% against 96%), largest single-frame move 5%. **On
+  `dirt-oval`, the track he watches most, it does not happen at the reportable size at all** — none of
+  its 240 swept races reaches the threshold and its worst is a TIGHTENING.
+  **The re-run also CORRECTS section 8:** 19 of the 22 widenings land on the exact frame the set GAINS
+  a member; **four of the 26 are tightenings, not widenings**, three of them on the frame the set
+  LOSES one; and eight happen at u ~ 0 and recover, while the other 18 happen late (median u 0.965)
+  and **17 of those never recover before the line**. So the risk is narrower and worse than §8 said:
+  in about one race in fifty the shot cuts to a new width in the last few percent and stays there
+  through the finish.
+
 - [RUNIN-LEVEL-SET-1.md](RUNIN-LEVEL-SET-1.md) — **the owner's rule of 2026-08-24, measured before
   it is built** (2026-08-24, MEASURE ONLY, nothing built or changed, no key added; **1,260 races,
   521,320 run-in frames**, the same corpus, pool 12 from 14 cores). His rule: any racer at most ONE
