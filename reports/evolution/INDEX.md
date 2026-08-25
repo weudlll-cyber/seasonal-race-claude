@@ -154,6 +154,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [TRACK-DEFAULTS-REACH-1.md](TRACK-DEFAULTS-REACH-1.md) — **the seed is not what a running race
+  reads** (2026-08-25, DIAGNOSIS, no default changed, nothing merged, no rebuild). The owner reported
+  garden-path still running snail and 4 laps after GARDEN-PATH-DEFAULTS-1. **He was right, and the
+  cause outranks the track change.**
+  **THERE ARE FOUR PLACES, and the fourth decides:** the shipped seed (read **only on first boot into
+  an EMPTY data dir** — `seedRuntime.js`: *"Existing destination files are never overwritten"*); the
+  gitignored live record under `server/data/tracks` (read **once, at API process boot** —
+  `tracks.js:55`, `const tracksMap = loadAllTracks()` at module scope); **the in-memory `tracksMap`,
+  which every request is served from** (`:539`); and the client's localStorage caches, overwritten
+  from the API on each page load. There is **no migration path** — `.tlh1-defaults-migrated` is
+  written and never read, *"no behavior gating"*.
+  **WHAT HE WAS LOOKING AT: the in-memory Map**, built 2026-08-24 14:16:31 from the record as it then
+  stood — `snail`, no `defaultLaps`, legacy `defaultDuration: 120` resolving to **4 laps** — while
+  both files on disk had said `beetle` / `defaultLaps: 2` since 2026-08-25 20:15:41. The process had
+  no way to know.
+  **THE DEFECT THAT OUTRANKS THE TRACK: editing a shipped track seed changes nothing any existing
+  instance can see — user OR instrument — and no supported mechanism ever delivers it.** The seed is
+  copied only into an empty data dir; `raceDriver.loadTracks()` prefers the live record too, which is
+  why routing could not connect the seed change to the fingerprints. garden-path's defaults changed on
+  his machine only because the gitignored live record was ALSO hand-edited — a step no user or CI run
+  performs. **And the drift was already real:** his record carried the legacy field while the seed had
+  moved to the modern one, with nothing comparing them.
+  **FIXED BY RESTARTING THE API ONLY** — no default, no seed, no rebuild; the bundle was never the
+  problem, since defaults are fetched at runtime. Restarted with the project's own documented dev env
+  (fixed session secret + both client origins); cross-origin verified 200 from the browser. 4
+  proposals, the first being that a shipped default needs a delivery mechanism at all.
+
 - [GARDEN-PATH-DEFAULTS-1.md](GARDEN-PATH-DEFAULTS-1.md) — **beetle, and two laps** (2026-08-25,
   `feat/garden-path-defaults-1`, **BUILT AND MINTED, PUSHED, NOT MERGED — his eye decides**).
   **THE OWNER'S DECISION of 2026-08-25**, both parts: on `garden-path` the default racer becomes
