@@ -4,7 +4,7 @@
   "icon": "🐌",
   "description": "A leisurely (yet surprisingly competitive) crawl through the roses.",
   "color": "#16a34a",
-  "defaultRacerTypeId": "snail",
+  "defaultRacerTypeId": "beetle",
   "defaultWinners": 3,
   "difficulty": "easy",
   "surfaceClasses": [
@@ -1695,5 +1695,5 @@
   "width": 198,
   "pathLengthPx": 4772.736772587987,
   "maxRacers": null,
-  "defaultLaps": 4
+  "defaultLaps": 2
 }
