@@ -259,9 +259,13 @@ include a tenth track it has never seen.
 
 | | |
 | --- | --- |
-| where | **`http://localhost:4173`** |
-| API | `http://localhost:4000` |
-| **the badge** | *(recorded below, from the built bundle)* |
+| where | **`http://localhost:4173`** — serving, confirmed |
+| API | `http://localhost:4000`, already up |
+| **the badge** | **`d73ec6a9`** · branch `feat/garden-path-defaults-1` · **`dirty: false`** |
+
+A real production bundle (`vite build`, then `vite preview`), not the dev server: the identity is read
+once at build time and ships with the bundle, so it cannot go stale under him (BUILD-TRUTH-1).
+**`dirty: false` means the bundle was built from a clean tree at exactly the commit this report names.**
 
 **THIS REPLACES THE EARLIER EYE-TEST BUILD.** `feat/runin-level-set-1` was on 4173 for
 RUNIN-LEVEL-SET-BUILD-1; that branch is pushed and unmerged and can be rebuilt whenever he wants it
