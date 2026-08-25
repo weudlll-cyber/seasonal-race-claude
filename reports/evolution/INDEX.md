@@ -154,6 +154,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GATE-RED-1.md](GATE-RED-1.md) — **nothing in the tests got slower; the suite stopped running them
+  one at a time** (2026-08-26, `diag/gate-red-1`, PIECE 1 of NIGHT-2026-08-25, DIAGNOSE ONLY — no
+  timeout raised, no test skipped, no cost factor touched).
+  **THE COMMIT IS NAMEABLE: `20868394` (2026-08-18, `fix(TEST-ACCOUNTS-1)`) dropped
+  `--no-file-parallelism` from `server/package.json`** — correctly, because it had made isolation real
+  with a per-file users store, and it proved that with eight runs. **What it did not measure is WALL
+  CLOCK**, and that is the only thing that changed: sixteen bcrypt-heavy files went from one-at-a-time
+  to as-many-as-the-machine-has-cores.
+  **bcrypt cost 12 = 247 ms per hash, 246 ms per compare, and it was NEVER raised** — `usersStore.js:18`,
+  one commit in its entire history (`c674b78d`). A login-and-change test spends 4-8 of those calls.
+  **THE PROOF, one flag and nothing else, on today's master:** the worst unprotected test
+  (`recoverAdmin :: sets role to admin`) runs **1,006 ms alone**, **1,754 ms serial**, **1,213 ms at
+  two workers**, and **2,897-4,979 ms at fourteen** — against a 5,000 ms default. **A margin of 21 ms.**
+  Serial puts **zero of 673 tests over 2.5 s**; default puts fourteen.
+  **(c) CI IS GREEN AND THE GREEN IS NOT HOLLOW** — same command, same `BCRYPT_COST`, same absent
+  `testTimeout`. The difference is **CORE COUNT, and it works backwards**: vitest sizes its pool from
+  the CPU count, so the 14-core dev machine crowds the suite and the 2-core runner cannot.
+  **THE SECOND FINDING, and it is why the GATE rather than the suite is where it shows:**
+  `verify.mjs:246` and `ci.yml:184` both still assert the flag exists — and **`verify.mjs` SCHEDULES on
+  it**, running the server suite NON-EXCLUSIVELY alongside the fingerprint jobs because it believes the
+  suite is single-worker. **A guarantee with three owners and no home.**
+  Also: `2aafe1af` diagnosed this contention exactly **one day before the flag was dropped** and fixed
+  only its own two files — the only two of sixteen with a raised timeout.
+  **One measurement of mine is discarded and reported rather than deleted:** a timing at `75685b5b` ran
+  `npx vitest run` directly, bypassing the very flag under test, and would have blamed the wrong commit.
+  5 proposals, 3 of them the block's own; none ordered, none built.
+
 - [RUNIN-CHANCE-SET-1.md](RUNIN-CHANCE-SET-1.md) — **the chance test was already in the tree, and it
   is pointed backwards** (2026-08-26, `diag/runin-chance-set-1`, MEASURE ONLY — nothing built, no key,
   no default, no fingerprint; report merged, branch pushed unmerged; 1,140 races x 4 arms, 449,545
