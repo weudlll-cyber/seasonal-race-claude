@@ -259,6 +259,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and **17 of those never recover before the line**. So the risk is narrower and worse than §8 said:
   in about one race in fifty the shot cuts to a new width in the last few percent and stays there
   through the finish.
+  **SECTION 15, added 2026-08-25 after he ran seed 13 and saw nothing: THE BROWSER RUNS THE SAME RACE
+  AND A DIFFERENT CAMERA.** The suspicion was checked first. Dumped from the running app's own
+  `sessionStorage.activeRace` and put beside what the harness feeds, **every race field agrees** —
+  track, geometry, racer type, mode, target duration, plan enabled, plan seed 13, action stage, field
+  size, the NAME LIST, and the realized duration **to the last decimal**. **One field differs: the
+  CAMERA SEED.** Since his decision of 2026-08-23 the browser derives it from the race seed
+  (`RaceScreen/index.jsx:610`), while `resolveIdentity` still defaults to the pre-decision constant
+  1439767152 — **a value the product cannot produce for any race**. By his own rule that difference is
+  the finding and the step is unproven.
+  **RE-MEASURED THE BROWSER'S WAY, SIX OF THE 26 EVAPORATE — including §14's rank one**, space-sprint
+  20 seed 1, from ×4.34 to ×0.96. Five of the six are steps at u ≈ 0, which are the run-in ENGAGING
+  and therefore camera-seed properties; **17 of the 18 LATE steps survive**, because a racer crossing
+  the one-racer-length boundary is a property of the race. **§14's tables must be read with §15
+  beside them.**
+  **AND YET FOR THE RACE HE RAN IT CHANGES NOTHING:** river-run 20 seed 13 is 0.670 ln, ×1.95, at
+  u 0.972 under BOTH seeds, identically. **So neither possibility is established and the pleasant one
+  is not assumed** — the step is not a harness artefact for that race, and it is not too brief either,
+  since it never recovers before the crossing. What remains is unexplained and on the browser side:
+  which build 4173 served when he ran it (it has served `d73ec6a9`, which lacks the feature entirely),
+  whether the seed field carried 13 at all (an empty field draws a fresh random seed, which §14 never
+  said), and frame timing, which no harness reproduces.
+  **THE FINDING THAT OUTLIVES THE STEP: every camera measurement taken through the shared harness
+  since 2026-08-23 has run a camera seed the product cannot produce.** Same-seed A/B comparisons stay
+  valid and the fingerprints pin a constant on purpose; what it invalidates is any harness claim about
+  what a PARTICULAR race looks like to him. Nothing changed, nothing proposed.
 
 - [RUNIN-LEVEL-SET-1.md](RUNIN-LEVEL-SET-1.md) — **the owner's rule of 2026-08-24, measured before
   it is built** (2026-08-24, MEASURE ONLY, nothing built or changed, no key added; **1,260 races,
