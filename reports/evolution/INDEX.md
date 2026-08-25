@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RENDER-FINGERPRINT-BLIND-1.md](RENDER-FINGERPRINT-BLIND-1.md) — **the fingerprint still carries the
+  literal FRAME-INPUTS-1 was built to delete** (2026-08-26, `diag/render-fingerprint-blind-1`, PIECE 7
+  of NIGHT-2026-08-25, DIAGNOSE AND DESIGN ONLY — nothing repaired, nothing minted).
+  **THE SAME BUG, THE SAME SHAPE, THE SAME THREE FIELDS.** `frameCameraInputs.js:38` declares six
+  members; `render-fingerprint.mjs:445` hand-writes **three** — leaving `state`, `anchorRacerIndex`
+  and `runInArrived` **undefined inside the instrument**. FRAME-INPUTS-1 exists because RaceScreen
+  did exactly this. **The game was repaired; the instrument that exists to catch this class kept it.**
+  **TWO LIVE BLINDNESSES, traced to the lines that read them.** `anchorRacerIndex` undefined ⇒ the
+  leader fallback fires on every fingerprint frame, so **LABEL-FOCUS-1 has never been exercised**
+  (`renderRaceFrame.js:212`). `runInArrived` undefined ⇒ `namesFromArrival` false always, so
+  **RUNIN-NAMES-1's entire visible change is a state the instrument cannot enter** (`:220`, `:311`).
+  **It came back unmoved for RUNIN-NAMES-1 because the input that feature reads is undefined inside
+  it — not evidence of no change, not evidence of anything.**
+  **ONE EXPECTATION CORRECTED IN PLACE: `camera.state` is INERT today.** The renderer no longer reads
+  it — `exemptAll` was deliberately re-pointed to `namesFromArrival` (`:284-311`). **Two live, one
+  latent, not three.**
+  **WHY NO GUARD CAUGHT IT:** `frameCameraInputs.test.js:66` checks the LIST against the RENDERER and
+  never the CALLER against the list — the same shape as PIECE 6, one layer down.
+  **A repair is one line and a MINT that needs his word**, and it breaks the recorded series
+  incommensurably. **What it would have caught: both features — and the original FRAME-INPUTS-1
+  defect itself**, which the owner had to report by eye. 4 proposals, 3 of them the block's own; the
+  cheapest declares the blindness in the instrument's own `blind` array tonight.
+
 - [ENGINE-REACH-DATA-1.md](ENGINE-REACH-DATA-1.md) — **the arbiter answers its own question correctly;
   verify asks it a different one** (2026-08-26, `diag/engine-reach-data-1`, PIECE 6 of
   NIGHT-2026-08-25, DIAGNOSE AND DESIGN ONLY — nothing repaired, no hull widened).
