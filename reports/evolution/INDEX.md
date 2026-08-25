@@ -154,6 +154,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GARDEN-PATH-BEETLE-SKIN-1.md](GARDEN-PATH-BEETLE-SKIN-1.md) — **the track wears the beetle it
+  races, and no existing installation will ever see it** (2026-08-26, `feat/garden-path-beetle-skin-1`,
+  PIECE 5 of NIGHT-2026-08-25, **BUILT AND MERGED** — 1 file, 2 insertions, 2 deletions).
+  Icon 🐌 → 🪲 and *crawl* → *scuttle* in `server/seeds/tracks/garden-path.json`. **`server/data/**` is
+  gitignored, so the seed is the one copy the repository owns**, and no live record was hand-edited —
+  that is what made yesterday's change look delivered when it was not. The icon is not chosen but
+  looked up: `Beetle 🪲` is the racer type's own label. His sentence is otherwise untouched; one verb
+  moved.
+  **AN EXISTING INSTALLATION WILL NEVER SEE IT.** `seedRuntime.js:36` — `if (existsSync(dest)) continue;`
+  — copies a seed only into a destination that does not yet exist. **New installations only**, and the
+  owner's own instance keeps the snail until its data dir is deleted.
+  **FINGERPRINTS: none move, for TWO independent reasons, and one of them is a defect.** Icon and
+  description are presentation and no fingerprint hashes them — that reason is sufficient and correct.
+  But all three fingerprints resolve their track dir to `server/data/tracks` when it exists, **so they
+  read the copy this change deliberately did not touch**: had the change moved the engine they would
+  have reported it unmoved. The gate said `nothing changed` about a commit that changed something.
+  **THE RIGHT VERDICT BY ACCIDENT** — PIECE 6's subject, caught live.
+  **GATE: exit 0, PASS 5 / FAIL 0 / SKIP 19, and `server-suite` RAN and PASSED in 31.9 s** — the first
+  non-docs diff of the night. No bcrypt timeout was forgiven because none occurred; that is luck, not
+  a fix. 3 proposals, 2 of them the block's own.
+
 - [HARNESS-CAMERA-SEED-1.md](HARNESS-CAMERA-SEED-1.md) — **nineteen instruments describe a picture no
   race can produce, and the fingerprints are not among them** (2026-08-26, `diag/harness-camera-seed-1`,
   PIECE 4 of NIGHT-2026-08-25, DIAGNOSE ONLY — nothing fixed, no default changed).
