@@ -555,3 +555,125 @@ inverted: it read the sign of the change in cam.zoom as the sign of the change i
 zoom is a tightening shot. It reported 4 widenings and 22 tightenings; measuring the visible world
 width directly gives **22 widenings and 4 tightenings**. Recorded because the two would have sent him
 looking for the opposite thing on screen.
+
+---
+
+## 15. THE BROWSER AGAINST THE HARNESS, FOR THE RACE HE RAN (added 2026-08-25)
+
+**He ran `river-run`, 20 racers, seed 13 through Quick Test on the served build and saw nothing
+unusual.** §14 says that race steps ×1.95 in one frame at 97% of the closing move. **The second
+possibility was checked first: that the browser is not running the race the harness measured.**
+
+### THE COMPARISON, BEFORE ANY CONCLUSION
+
+Column A is the payload the running app actually built, dumped from `sessionStorage.activeRace` after
+a real Quick Test on the isolated e2e instance. Column B is what `scripts/lib/raceDriver.mjs` feeds
+the same race.
+
+| field | **the browser (Quick Test)** | **the harness** | |
+| --- | --- | --- | --- |
+| track id | `river-run` | `river-run` | same |
+| geometry id | `custom-dea6b35a-…f58eec` | `custom-dea6b35a-…f58eec` | same |
+| racer type | `duck` | `duck` | same |
+| race mode / laps | `time`, `targetLaps` null | open ⇒ `laps: 1` + requested seconds | same in effect |
+| target duration | 60 s | 60 s | same |
+| **realized duration** | **59.99999999999999 s** | **59.99999999999999 s** | **same to the last digit** |
+| race plan enabled | `true` | `true` | same |
+| race plan seed | **13** | **13** | same |
+| race action stage | `quiet` | not passed ⇒ engine default, `quiet` | same in effect |
+| field size | 20 | 20 | same |
+| **name list** | Turbo, Blaze, Rocket, Flash, Speedy, Thunder, Nitro, Drift … | **identical** | **same** |
+| **CAMERA SEED** | **`cameraSeedForRace(13)` = 2246822502** | **1439767152** | **DIFFERENT** |
+
+**THE RACE IS THE SAME RACE.** Every field that feeds the physics agrees, including the name list —
+which matters because a racer's NAME is an engine input — and the realized duration agrees to the
+last decimal place.
+
+**ONE FIELD DIFFERS, AND IT IS THE CAMERA'S SEED.** Since the owner's decision of 2026-08-23 the
+browser derives it from the race seed (`RaceScreen/index.jsx:610`, `cameraSeedForRace(racePlanSeed)`).
+**`resolveIdentity` in the shared harness driver still defaults to the pre-decision constant
+1439767152** — a value the product cannot produce for any race. **So by the owner's own rule, the
+difference is the finding and the step is unproven.**
+
+### WHAT THAT DIFFERENCE ACTUALLY DOES — measured, not assumed
+
+The 29 races were re-run with the camera seed derived the way the browser derives it.
+
+| | over 0.4 ln under the harness seed | still over under the **browser** seed |
+| --- | --- | --- |
+| **steps at u ≈ 0** (tied to when the run-in ENGAGES) | 8 | **3** |
+| **steps late in the closing stretch** (a racer arrives at the boundary) | 18 | **17** |
+| total | 26 | **20** |
+
+**Six of the twenty-six evaporate**, and five of those six are the u ≈ 0 kind:
+
+| race | u | harness | browser |
+| --- | --- | --- | --- |
+| space-sprint 20 seed 1 — **§14's number one** | 0.000 | 1.47 | **0.04** |
+| luger-hill 40 seed 33 | 0.000 | 0.85 | **0.03** |
+| seatrack 20 seed 16 | 0.000 | 0.83 | **0.08** |
+| seatrack 20 seed 35 | 0.000 | 0.72 | **0.09** |
+| searound 40 seed 56 | 0.926 | 0.50 | **0.04** |
+| river-run 20 seed 23 | 0.000 | 0.49 | **0.04** |
+
+**That split has a mechanism and it is not a coincidence.** A step at u ≈ 0 is the run-in engaging,
+and WHEN it engages depends on the width the camera happens to be at — which is a camera-seed
+property. A late step is a racer crossing the one-racer-length boundary, which is a property of the
+RACE, and the race is identical. **So the early steps are camera-seed artefacts and the late ones are
+not.**
+
+**§14's headline number is one of the casualties.** Its rank 1 — space-sprint 20 seed 1 at ×4.34 —
+is **×0.96 under the seeding the product uses**, i.e. nothing at all. §14's table and its
+worst-per-track table must be read with this section beside them.
+
+### AND YET, FOR THE RACE HE RAN, IT CHANGES NOTHING
+
+| river-run 20 seed 13 | step | ×width | at u |
+| --- | --- | --- | --- |
+| harness camera seed 1439767152 | 0.670 ln | ×1.95 | 0.972 |
+| **browser camera seed 2246822502** | **0.670 ln** | **×1.95** | **0.972** |
+
+**Identical.** The one field that differs does not differ for this race's outcome, so the
+camera-seed finding — real, and larger than this step — **does not explain what he saw.**
+
+### SO NEITHER OF THE TWO POSSIBILITIES IS ESTABLISHED, AND THE PLEASANT ONE IS NOT ASSUMED
+
+- **"The browser is not running the race the harness measured" — NOT established for seed 13.** Every
+  race field matches, and the step reproduces exactly under the browser's own camera seeding.
+- **"The step happens but is too brief to notice" — NOT established either, and the data points the
+  other way.** It does not recover: `recoverFrames` is null, meaning the shot holds the new width
+  from u 0.972 **through the crossing**. It is not a flicker; it is the last stretch of the race
+  watched from twice as far out.
+
+**What remains is unexplained, and it is on the browser side.** Three candidates, none of them
+resolvable from here, listed so he can eliminate them rather than so one can be chosen:
+
+1. **WHICH BUILD WAS ON 4173 WHEN HE RAN IT.** Port 4173 has served three different bundles today:
+   `d73ec6a9` (the garden-path branch, which does **not** contain the level-set guarantee at all),
+   then `074c12ef`, then `c0cef7b8` (both of which do). **A run against `d73ec6a9` would show no step
+   because the feature is not in it.** The badge is on the HUD and settles it in one glance.
+2. **WHETHER THE SEED FIELD ACTUALLY CARRIED 13.** `quickTestSeed.js` is explicit: *"Empty field =
+   draw a fresh random seed per race."* **Quick Test does not take a seed from anywhere else** — the
+   number has to be typed into the race-seed field before pressing it. **§14 named seeds and never
+   said this**, which is an omission in that section rather than a fact about the build.
+3. **FRAME TIMING, which no harness reproduces.** The harness runs a fixed 60 Hz clock; the browser
+   runs `requestAnimationFrame` with a physics accumulator capped at two catch-up steps per frame, so
+   the camera samples the race at different instants under load. `cameraSeed.js` records the measured
+   size of this class of divergence: *"two runs of race seed 9 differing only in the camera seed
+   diverged at physics step 967 with 165 steps running a DIFFERENT STATE."* **Same seed is not the
+   same frame sequence.**
+
+### THE FINDING THAT OUTLIVES THIS STEP
+
+**Every camera measurement this project has taken through the shared harness since 2026-08-23 has run
+a camera seed the product cannot produce.** The owner's decision that day tied the camera's seed to
+the race's; `resolveIdentity` was never updated and still defaults to the constant that decision
+replaced. **Here that changed 6 of 26 results and removed the largest one.**
+
+It does not invalidate everything: measurements that compare two arms under the *same* fixed seed
+remain internally valid, and the fingerprints deliberately pin a constant because they exist to be
+compared with themselves. **What it invalidates is any harness claim about what a particular race
+LOOKS LIKE to the owner**, because that race's camera in his browser is seeded from its race seed and
+the harness's is not. §14 was exactly such a claim.
+
+**Nothing is changed and nothing is proposed here.** The harness default is left as it is.

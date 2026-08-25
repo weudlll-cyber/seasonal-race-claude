@@ -17,6 +17,7 @@ const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const { DEFAULT_CAMERA_CONFIG } = await import(u("client/src/modules/storage/defaults.js"));
 const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/racerNames.js"));
 const { projectionForTrack } = await import(u("client/src/modules/camera/projection.js"));
+const { cameraSeedForRace } = await import(u("client/src/modules/camera/cameraSeed.js"));
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 const CH = 720;
 
@@ -26,6 +27,10 @@ const CASES = (arg("cases", "") || "").split(",").filter(Boolean).map((s) => {
   return { track, racers: Number(n), seed: Number(seed) };
 });
 const OUT = arg("out", "c:/tmp/level-step-when");
+// --browser-cam derives the camera seed from the RACE seed, which is what RaceScreen does
+// (index.jsx: cameraSeedForRace(racePlanSeed)). Without it, resolveIdentity default 1439767152 is
+// used — a value the product cannot produce for any race since the owner decision of 2026-08-23.
+const BROWSER_CAM = process.argv.includes("--browser-cam");
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const rows = [];
@@ -33,7 +38,11 @@ const rows = [];
 for (const c of CASES) {
   const geo = tracks.get(c.track);
   if (!geo) continue;
-  const identity = resolveIdentity({ racers: c.racers, raceSeed: c.seed, racerType: TRACK_DEFAULT_RACER, roster: ROSTER, note: "level-step-when" });
+  const identity = resolveIdentity({
+    racers: c.racers, raceSeed: c.seed, racerType: TRACK_DEFAULT_RACER, roster: ROSTER,
+    cameraSeed: BROWSER_CAM ? cameraSeedForRace(c.seed) : undefined,
+    note: BROWSER_CAM ? "level-step-when (browser camera seed)" : "level-step-when",
+  });
   const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
   const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, !geo.closed);
   // THE SHOT'S OWN UNIT: world px across the SHORT screen axis, which is what `visibleCorridors`
