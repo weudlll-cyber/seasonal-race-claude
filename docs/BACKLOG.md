@@ -193,6 +193,42 @@ previous subject into the run-in.
 
 ## THE REST — open, in the order they were already in
 
+## A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
+
+**verify (section-wide):** none — nothing here is a change. **Both entries are FINDINGS, not
+proposals.** No work is proposed for either, no key is added, and nothing is designed.
+
+- [ ] **EDITING A SHIPPED TRACK SEED CHANGES NOTHING THAT ANY EXISTING INSTALLATION CAN SEE, and no
+      mechanism ever delivers it.** Three facts, each read at source: `seedRuntime.js` copies a seed
+      into the data directory **only when the destination does not exist** — *"Existing destination
+      files are never overwritten"*; `server/src/routes/tracks.js` builds its track map **once, at
+      process start** (`const tracksMap = loadAllTracks()` at module scope) and serves every read
+      from that map; and **there is no migration** — `.tlh1-defaults-migrated` is written and never
+      read, its own comment saying *"Legacy marker — no behavior gating; kept for operational
+      reference only."* **So a shipped default reaches fresh installs and nobody else.**
+      **THE EVIDENCE IS THIS BLOCK ITSELF.** garden-path's defaults moved on the owner's machine only
+      because the gitignored live record under `server/data/tracks` was **hand-edited** — a step no
+      user and no CI run performs — and even then only after the API process was restarted. **He
+      watched the old track for thirty hours**, and nothing in the repository could have told him:
+      the commit was correct, the seed was correct, and the picture was not.
+      **IT IS THE SAME ROOT CAUSE AS `verify`'s ROUTING NOT SEEING A TRACK CHANGE.** Routing and the
+      mint tripwire both compute their reach from the **transitive import closure** of the engine,
+      and a track record is never imported — it is read from disk at runtime. Measured here:
+      `verify` skipped all four fingerprint guards for a change that moved all four, and
+      `node scripts/engine-reach.mjs --check server/seeds/tracks/garden-path.json` exits **1**,
+      *"cannot reach the engine at all"*, for that same change. **A data file can move the world
+      without being reachable, and every instrument that decides by import closure is blind to it.**
+      **AND THE DRIFT WAS ALREADY REAL.** The owner's live record still carried the legacy
+      `defaultDuration` while the shipped seed had long since moved to `defaultLaps` — both resolving
+      to the same lap count, so nothing showed — **with nothing anywhere comparing the two.**
+
+- [ ] **garden-path still wears the snail.** Its icon is 🐌 and its description reads *"A leisurely
+      (yet surprisingly competitive) crawl through the roses"*, while the track's default racer is
+      now the **beetle**. The owner named two changes on 2026-08-25 and neither was the icon or the
+      description, so neither was touched; `scripts/track-defaults.test.mjs` pins both so that a
+      later block cannot quietly tidy them without saying so. **Small, visible, and recorded only so
+      that it reads as a decision rather than an oversight.**
+
 ## A seed alone does not reproduce a race (2026-08-23, from SEED-REAL-RACE-1)
 
 **verify (section-wide):** the item names its own command. **This is a FINDING, not a proposal** —
