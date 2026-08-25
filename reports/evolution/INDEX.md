@@ -154,6 +154,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HARNESS-LOUD-ZERO-1.md](HARNESS-LOUD-ZERO-1.md) — **the driver knows why it stopped and has never
+  been able to say so** (2026-08-26, `diag/harness-loud-zero-1`, PIECE 2 of NIGHT-2026-08-25, DESIGN
+  ONLY — nothing built, no harness changed).
+  **THE FUNNEL IS ONE LOOP AND NOBODY LISTENS TO IT.** 56 files import `raceDriver.mjs`, **44 call
+  `runRace`**, and **exactly 1 captures its return — the driver's own test.** `runRace` ends on THREE
+  conditions (all finished / the 200 s ceiling / the callback stopping it) and returns one
+  indistinguishable `{frames, endTs}`.
+  **38 OF 44 HARNESSES CANNOT FAIL FOR ANY REASON.** The idiom is `continue` + print a survivor count,
+  with nothing comparing produced against requested — written independently by three authors this
+  month (`level-step-when`, `level-set-built`, `chance-set`).
+  **THE CANONICAL INSTANCE NO LONGER REPRODUCES, and that is the finding.** GARDEN-PATH-NO-FINISH-1's
+  360-of-360 silent discards are gone: garden-path now completes **20/20** in 5,473 frames, and all 120
+  of its cells in RUNIN-CHANCE-SET-1's sweep carried full data. **Because GARDEN-PATH-DEFAULTS-1 made
+  it a beetle** — the harness's hardcoded `laps: 2` never moved; the racer got faster. **The silence
+  was never fixed; the symptom moved out from under it**, and revert the default and 360 discards
+  return.
+  **THE DESIGN: loudness belongs in `runRace`, not in 44 harnesses** — record `stoppedBy`, and THROW on
+  the ceiling unless the caller declares `allowUnfinished`. Certain about a truncated race, uncertain
+  about an empty cell, so it fails on the first and only reports the second.
+  **COST MEASURED: 0 of 1,140 cells on today's master** (120 before 2026-08-25; 360 across the three
+  sweeps that met it). The 7 deliberate early-exit harnesses are untouched because `callback` is a
+  distinct reason from `ceiling`.
+  **Cannot catch:** wrong-but-FULL cells (that is PIECE 4), and the hardcoded `laps: shape.isOpen ? 1 : 2`
+  which ignores every track's `defaultLaps` and would leave no cell empty. 4 proposals, 3 of them the
+  block's own. **Corrects a standing note and my own earlier statement that garden-path yields nothing.**
+
 - [GATE-RED-1.md](GATE-RED-1.md) — **nothing in the tests got slower; the suite stopped running them
   one at a time** (2026-08-26, `diag/gate-red-1`, PIECE 1 of NIGHT-2026-08-25, DIAGNOSE ONLY — no
   timeout raised, no test skipped, no cost factor touched).
