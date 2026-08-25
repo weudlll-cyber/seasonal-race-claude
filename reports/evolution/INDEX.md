@@ -154,6 +154,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RACE-IDENTITY-1.md](RACE-IDENTITY-1.md) — **the seed pins the dice, not the race** (2026-08-26,
+  `diag/race-identity-1`, PIECE 3 of NIGHT-2026-08-25, DESIGN ONLY — nothing built, no key, no payload
+  changed).
+  **NINE INPUTS DECIDE A RACE AND EXACTLY ONE TRAVELS WITH THE SEED.** geometry, racer type, the name
+  list IN ORDER, field size, seed, `raceActionStage`, the canonical lap/duration input,
+  `racePlanEnabled`, and the world config. **Two are worse than absent — `raceActionStage` and the
+  world config are STORED HOST PREFERENCES**, so the same seed on two machines is two races.
+  **HIS BELIEF ABOUT QUICK TEST IS RIGHT, WITH TWO CONDITIONS THAT DO NOT TRAVEL.** The list is taken
+  from the head of a roster in declaration order — **no shuffle anywhere** — but `quickTestNameSet`
+  picks among THREE rosters, and any real player in the lobby takes the head positions AND is filtered
+  out of the fill, **re-indexing the whole field**. It holds when the lobby is empty and the roster is
+  `current`.
+  **ORDER IS PHYSICS, at source:** `stablePairBit` (`raceBehavior.js:219`) hashes `r.name`, and
+  `r.index < leader.index` decides which member of a mutually-approaching pair yields. The racer type
+  does NOT change the names — but on an OPEN track it moves the target duration, so **racer type and
+  duration are not independent fields**.
+  **RESULTS, NOT INPUTS: `realizedDurationSec` and `paceScale`** — `raceCore.js:110` re-derives them and
+  never reads the payload's copies. **The trap: the realized duration is what the HUD shows, and
+  `RaceScreen:563` feeds a typed duration in as `requestedSeconds`** — a different input, silently
+  producing a different race.
+  **Quick Test can be pinned in ~30-40 characters; the normal path CANNOT be pinned short at all**,
+  because its field is arbitrary user names. Recommendation: both forms, **with the short one refusing
+  to be issued when it would lie**. 4 proposals, 3 of them the block's own.
+
 - [HARNESS-LOUD-ZERO-1.md](HARNESS-LOUD-ZERO-1.md) — **the driver knows why it stopped and has never
   been able to say so** (2026-08-26, `diag/harness-loud-zero-1`, PIECE 2 of NIGHT-2026-08-25, DESIGN
   ONLY — nothing built, no harness changed).
