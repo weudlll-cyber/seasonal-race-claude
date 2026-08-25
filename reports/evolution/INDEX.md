@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HARNESS-CAMERA-SEED-1.md](HARNESS-CAMERA-SEED-1.md) — **nineteen instruments describe a picture no
+  race can produce, and the fingerprints are not among them** (2026-08-26, `diag/harness-camera-seed-1`,
+  PIECE 4 of NIGHT-2026-08-25, DIAGNOSE ONLY — nothing fixed, no default changed).
+  **43 of 53 `resolveIdentity` callers take the constant 1439767152.** 34 are camera-dependent, 9 are
+  camera-blind. Of the ten that pass a seed explicitly, **exactly ONE derives it the way the product
+  does — `check-runin-frame.mjs`, and it is a VERIFY GUARD.** Six others restate the constant by hand.
+  **THE BRIEF'S OWN PREMISE IS WRONG AND THAT CHANGES THE ANSWER: the fingerprints are NOT pinned to
+  this default — they never read it.** `camera-fingerprint.mjs:112` and `render-fingerprint.mjs:181`
+  each carry a private `CAM_SEED`, and neither imports the driver. **Changing the default moves no
+  fingerprint.** The real obstacle is different: ~19 instruments' published tables would stop matching
+  the tools that produced them, and the reports are append-only.
+  **VOID (19): the whole recent camera line** — `late-lead-hunt`, `late-lead-axis`, `runin-contenders`,
+  `runin-contender-guarantee`, `runin-level-set`, `binding-census`, `width-authority` and twelve more.
+  **VALID (13): same-seed A/B, where the constant cancels.**
+  **HOW WRONG, measured twice: §15 saw 6 of 26 steps evaporate; RUNIN-CHANCE-SET-1 re-derived the hit
+  list and got 30 — A DIFFERENT POPULATION, not a subset.** A void claim is not slightly off; it is
+  about different races. **His twelve are the exception and survive re-measurement.**
+  4 proposals, 3 of them the block's own; the cheapest is to label the camera category in
+  `formatIdentity` so future reports carry their own warning.
+
 - [RACE-IDENTITY-1.md](RACE-IDENTITY-1.md) — **the seed pins the dice, not the race** (2026-08-26,
   `diag/race-identity-1`, PIECE 3 of NIGHT-2026-08-25, DESIGN ONLY — nothing built, no key, no payload
   changed).
