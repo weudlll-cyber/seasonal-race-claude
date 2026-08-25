@@ -154,6 +154,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-CHANCE-SET-1.md](RUNIN-CHANCE-SET-1.md) — **the chance test was already in the tree, and it
+  is pointed backwards** (2026-08-26, `diag/runin-chance-set-1`, MEASURE ONLY — nothing built, no key,
+  no default, no fingerprint; report merged, branch pushed unmerged; 1,140 races x 4 arms, 449,545
+  run-in frames per arm, browser camera seeding, 14 cores, 56 min).
+  **(a) THE REQUIREMENT IS IMPLEMENTED AND USED ONE WAY ONLY.** `_updateContentionWatch`
+  (`CameraDirector.js:2619`) computes `gapNow + (vLeader-vR)*msToLine <= contactLength` every 250 ms
+  and `contentionWatch` defaults to **true** — but `_contentionOut` only GROWS, so it can only ever
+  RELEASE. **Nothing admits on it.** Every membership rule (`withinOneLength`, `_levelContenders`,
+  `_abreastContenders`, the photo-finish gate) is pure current state.
+  **THE RECORD CORRECTION IS BIGGER THAN THE ONE ASKED FOR: this is the THIRD block to find it.**
+  RUNIN-CONTENDER-GUARANTEE-1 §2 established it at source; RUNIN-LEVEL-SET-1 measured its
+  distribution as *"the previous block's predictive set"* and recorded the convergence. **The
+  one-length rule was adopted as the buildable form of the requirement while the tree already held
+  the requirement's own test, documented twice.** The one-length rule IS its zero-closing-rate case.
+  **(d) THE STEP MOVES 30 -> 18 races over 0.4 ln** (p95 0.211 -> 0.164), **and the width is FREE**:
+  mean ln(camZoom) 0.8853 vs 0.8848, one part in two thousand, because the rule is TWO-SIDED — it
+  drops a level-but-fading racer on 23.8% of seed 13's frames. **(g) ALL TWELVE HOLD, 372 -> 0**, and
+  population winner-off is IDENTICAL to the build (89 races / 1,890 frames).
+  **(e) SEED 13: the cut at the line is GONE and a ×1.80 cut opens at u=0.734 instead.** Thunder is a
+  member from u=0.081. **(c) THE WARNING IS REAL AND BUYS NOTHING: median 2.28 s** before the
+  one-length line — nearly twice `runInOpenMs` — and the width throws it away, because **membership
+  arrives gradually and the width does not.** 3 of the 13 fixes come from the REMOVAL half alone.
+  **(f) price: 3.67 vs 3.01 members/race, +1.6% member-frames, 4.5% -> 5.8% spent on racers finishing
+  6th+.** `union` (admit on either, remove on neither) is DOMINATED on every axis — refuse it.
+  **ONE RACE MADE WORSE** (space-sprint-20-18, 0.046 -> 0.852) and **15 of 30 untouched by every arm**,
+  one of which steps 0.927 with the feature OFF. 5 proposals, 3 of them the block's own; none ordered.
+  **Corrections: garden-path DOES yield run-in data** (120 races, ~415 frames each) — reaching the
+  endgame window and finishing every racer are different things; and the §14 hit list was re-derived
+  under the browser seed rather than reused.
+
 - [RUNIN-SEED13-ANATOMY-1.md](RUNIN-SEED13-ANATOMY-1.md) — **he saw two things on one race; both are
   real and only one of them is new** (2026-08-25, `diag/runin-seed13-anatomy-1`, DIAGNOSIS ONLY —
   nothing built, no key, no default, no fingerprint; report merged, branch pushed unmerged; 8 races
