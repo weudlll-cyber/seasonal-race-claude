@@ -154,6 +154,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GARDEN-PATH-NO-FINISH-1.md](GARDEN-PATH-NO-FINISH-1.md) — **the harness gives up 200 seconds into
+  a 212-second race** (2026-08-25, DIAGNOSE ONLY, nothing repaired, no production file touched).
+  **THE OWNER IS RIGHT AND THE HARNESS IS WRONG.** `garden-path`'s default racer is the **snail at
+  0.3x** and the track is authored long (`defaultDuration` 120 where every other closed track is 60).
+  `scripts/lib/raceDriver.mjs:303` stops every race at **200 s of wall clock**; the product's own
+  setup screen estimates **106 / 212 / 318 / 424 s** at 1 / 2 / 3 / 4 laps — so the ceiling is below
+  the product's own estimate at every lap count above one. **CONFIRMED IN A REAL BROWSER** on the
+  isolated e2e instance: first crossing at 578 s of wall clock with 10 finish times on the board.
+  **WHAT "NO FINISHING ORDER" IS, at source:** the loop is stopped from OUTSIDE at 12,001 frames with
+  `finishedCount` **0/20** and the leader only **74-79%** round, so the end condition is never
+  reached, there is no order to discard, and the caller's `filter(r => r.finishRank > 0)` being empty
+  makes it `return null` — the race never reaches the output at all, which is why the track vanishes
+  from every per-track table instead of showing a zero.
+  **AND THE HARNESS IS NOT EVEN RUNNING THE SAME RACE:** `laps: shape.isOpen ? 1 : 2` is hardcoded,
+  while the product runs the track's own default of **4**. It agrees with the product on the four
+  other closed tracks by coincidence.
+  **BLAST RADIUS: NOTHING TO WITHDRAW.** garden-path contributed ZERO races throughout and every
+  report said so; **360 of 360 lost, all 18 other cells at 100%**. What is lost is coverage, totally.
+  The margin elsewhere (next-worst 43.6% of the ceiling) is real but **unguarded**.
+  **WHY NOBODY SAW IT — the durable finding: the repository already knew.**
+  `scripts/camera-fingerprint.mjs:327` says garden-path *"does not finish inside the harness's 200 s
+  wall-clock ceiling"* — a comment in ONE script, never reaching the shared driver every sweep
+  imports. Each sweep printed `races 0` and exited 0. **Lesson 187's loud-failure rule is written into
+  this project's guards and has never been extended to its measurement harnesses.** 6 proposals; the
+  ceiling fix forces a coverage-versus-cost choice that is deliberately left to the owner.
+
 - [RUNIN-LEVEL-SET-1.md](RUNIN-LEVEL-SET-1.md) — **the owner's rule of 2026-08-24, measured before
   it is built** (2026-08-24, MEASURE ONLY, nothing built or changed, no key added; **1,260 races,
   521,320 run-in frames**, the same corpus, pool 12 from 14 cores). His rule: any racer at most ONE
