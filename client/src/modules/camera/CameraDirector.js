@@ -232,6 +232,12 @@ export class CameraDirector {
     this._runInEngaged = false;
     this._runInComposingNow = false;
     this._runInProgress = null;
+    // RUNIN-LEVEL-SET-BUILD-1: the level guarantee's held ceiling and its eased release.
+    // All three are null outside the run-in, which is what makes the rest of the race untouched.
+    this._levelHeld = null;
+    this._levelRiseFrom = null;
+    this._levelRiseAt = 0;
+    this._levelSet = 0;
     // RUNIN-HOLD-1: the run-in HOLDS its opening shot and then closes in ONE sweep. Both fields are
     // one-way latches, for the same reason `_runInProgress` is clamped monotone — a close that could
     // restart is not a sweep.
@@ -2608,7 +2614,7 @@ export class CameraDirector {
       const vR = rateOf(r);
       if (vR === null) continue;
       const gapNow = shortestArcDeltaT(leader.t, r.t) * pathLen;
-      const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+      const contactLength = CameraDirector.contactLengthBetween(leader, r);
       if (!(contactLength > 0)) continue;
       const projected = gapNow + (vLeader - vR) * msToLine;
       if (projected > contactLength) {
@@ -2686,6 +2692,188 @@ export class CameraDirector {
     };
   }
 
+  /**
+   * ONE RACER LENGTH, between these two — the run-in's unit, defined ONCE (RUNIN-LEVEL-SET-BUILD-1).
+   *
+   * `pairContact`'s own along-track touch distance, `halfLengthA + halfLengthB`, i.e. exactly one
+   * body length between two equal racers. It was written out at two call sites before this block
+   * added a third that had to agree with both; a unit stated three times is a unit that can drift,
+   * and the owner's rule is expressed IN this unit, so it is now stated once and read.
+   */
+  static contactLengthBetween(a, b) {
+    return ((a?.drawnBodyLengthPx ?? 0) + (b?.drawnBodyLengthPx ?? 0)) / 2;
+  }
+
+  /**
+   * THE OWNER'S RULE OF 2026-08-24, as a predicate: is `r` at most ONE RACER LENGTH behind `leader`
+   * along the track? **Along-track only. His words: the across-track distance decides nothing about
+   * membership, because a racer's lane says nothing about his chance.**
+   */
+  static withinOneLength(leader, r, pathLenPx) {
+    const contact = CameraDirector.contactLengthBetween(leader, r);
+    if (!(contact > 0) || !(pathLenPx > 0)) return false;
+    return shortestArcDeltaT(leader.t, r.t) * pathLenPx <= contact;
+  }
+
+  /**
+   * THE LEVEL SET — the owner's rule of 2026-08-24, as a membership.
+   *
+   * *"Any racer at most ONE RACER LENGTH behind the leader ALONG THE TRACK must be in frame, however
+   * far to the side he is running."*
+   *
+   * IT IS `_abreastContenders` CONDITION 1 ALONE. That method carries a second condition — ON A FREE
+   * LANE — which is an ACROSS-TRACK test, and the owner has now excluded across-track distance from
+   * deciding membership: a racer's lane says nothing about his chance. Condition 2 stays where it is
+   * and keeps deciding the PHOTO_FINISH framing set; it simply has no part in this rule.
+   *
+   * **LIVE, NOT PINNED — decided deliberately; see the report's pin-or-live section.** The shipped
+   * contender set is captured once at the PHOTO_FINISH transition and never re-sorted, because
+   * re-sorting moves the ANCHOR (the pair midpoint) and that is steering. This set never touches the
+   * anchor — it returns a width ceiling and nothing else — so the pin's reason does not reach it.
+   * And a pinned set would fail the rule by construction: a racer who closes to within a length
+   * AFTER the pin could never be admitted, and arriving late alongside is precisely the case.
+   *
+   * @returns {Array<{x:number,y:number}>} the leader and everyone level with him; never null
+   */
+  _levelContenders(racers) {
+    if (!racers?.length) return [];
+    let leader = null;
+    let maxT = -Infinity;
+    for (const r of racers) {
+      if (r.t > maxT) {
+        maxT = r.t;
+        leader = r;
+      }
+    }
+    if (!leader) return [];
+    const pathLen = leader.pathLengthPx ?? 0;
+    // THE SAME GEOMETRY GUARD `_abreastContenders` CARRIES, for the same reason: without
+    // `pathLengthPx` and a drawn body the rule cannot be applied, and a caller supplying neither
+    // (a director test on bare shapes, `camera-replay`'s marker fields) would otherwise pass EVERY
+    // racer and frame the whole field. Five FINISH-PAIR-1 tests went red on exactly that.
+    if (!(pathLen > 0) || !((leader.drawnBodyLengthPx ?? 0) > 0)) return [];
+    const out = [leader];
+    for (const r of racers) {
+      if (r === leader || r.index === leader.index) continue;
+      if (CameraDirector.withinOneLength(leader, r, pathLen)) out.push(r);
+    }
+    return out;
+  }
+
+  /**
+   * THE LEVEL GUARANTEE — the width that keeps every member of that set IN FRAME.
+   *
+   * A PRESENCE GUARANTEE, NOT A SPAN ONE, and that distinction is the larger half of this build.
+   * `contenderGuarantee` is given the anchor, so each member is measured against the room the frame
+   * actually has from where the subject sits — `presenceCeilingFrom` in framingRule.js, which is
+   * `halfCorridorCeiling` with a different vector. Without the anchor it would fit the span BETWEEN
+   * members, which two racers running wide TOGETHER satisfy while both are off screen: measured over
+   * 1,260 races, span removes 11 of 126 winner-off races and presence removes 93.
+   *
+   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing, so **every frame before the
+   * closing stretch is what it was, to the pixel** — asserted by a test rather than asserted here.
+   *
+   * WIDEN-ONLY BY CONSTRUCTION: it returns a CEILING on cam.zoom, and the caller composes it with
+   * `Math.min`. It can make the shot wider and it has no way to make it tighter. That is what keeps
+   * the finish line — a version that could tighten would lose it, measured at 14.5-32.7% of frames
+   * against today's 85.7% (RUNIN-CONTENDER-GUARANTEE-1 §6).
+   *
+   * ── THE RELEASE IS EASED, WHICH IS WHAT MAKES A LIVE SET SAFE ─────────────────────────────────
+   *
+   * Membership is live, so a racer hovering at exactly one body length joins and leaves repeatedly.
+   * Admitting him is instant — he must not be cut while the camera thinks about it — but RELEASING
+   * him is eased, so the width cannot pump. The ceiling may FALL (widen) on any frame and may RISE
+   * (tighten) only along a smoothstep.
+   *
+   * **NO NEW CONSTANT.** The span is `runInOpenMs`, the owner's own 1-1.5 s, which already paces the
+   * opening glide and already times `_contentionWeight`'s release of a racer who has dropped out of
+   * contention. The ease is the same `3u^2 - 2u^3` the schedule uses, so nothing here can disagree
+   * with the rest of the endgame about the shape of a move. The interpolation is in LOG space,
+   * because a scale change is perceived logarithmically and this file says so in three other places.
+   *
+   * IT RELEASES TO THE SHOT THAT WOULD OTHERWISE BE, not to infinity: `preLevel` is the width every
+   * other authority has already agreed on, so at the end of the ease this term is exactly non-binding
+   * and hands back without a step.
+   *
+   * @param {number} preLevel  the cam.zoom every other authority has settled on this frame
+   * @returns {number} the cam.zoom ceiling to compose with `Math.min`
+   */
+  _levelCeiling(racers, subjects, frameSize, preLevel, ts) {
+    if (!this._runInComposingNow || !subjects?.point || !(preLevel > 0)) {
+      this._levelHeld = null;
+      this._levelRiseFrom = null;
+      this._levelSet = 0;
+      return Infinity;
+    }
+    const set = this._levelContenders(racers);
+    this._levelSet = set.length;
+    // ── NOBODY LEVEL MEANS NOTHING TO GUARANTEE, AND THAT IS THE RULE WORKING ─────────────────
+    //
+    // The set always holds the leader, so fewer than two members means nobody is within a racer
+    // length of him. His rule then says nothing about the width and today's shot stands — it is not
+    // a gap to be filled with a default. Without this the leader's own PADDING would still constrain
+    // (he sits on the anchor, so only his body's half-width is left to fit) and the term would
+    // quietly widen races with nobody in contention at all. Caught by a test that asserted exactly
+    // that and failed.
+    //
+    // IT DOES NOT SHORT-CIRCUIT, and that was a bug the churn test caught. Returning Infinity here
+    // THREW AWAY the release state, so a racer hovering at the boundary snapped the guarantee off and
+    // on and the ease never ran at all — the single worst frame-to-frame move was as large as with no
+    // ease whatsoever. An empty set is not "no guarantee", it is "release toward the shot that would
+    // otherwise be", and the code below already knows how to do that.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      this._forwardFracNow(),
+      this._headingScreen(subjects.t)
+    );
+    const raw =
+      set.length >= 2
+        ? contenderGuarantee(
+            set,
+            this._proj.axisX,
+            this._proj.axisY,
+            frameSize.width,
+            frameSize.height,
+            this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
+            this._drawnBodyWidthRefPx,
+            subjects.point,
+            at
+          )
+        : Infinity;
+    // Never more constraining than the rule asks, never tighter than the shot would have been.
+    const target = Math.min(Number.isFinite(raw) ? raw : Infinity, preLevel);
+    // Never fired, and nothing to fire for: the ordinary case, and it must cost exactly nothing.
+    if (this._levelHeld === null && !(target < preLevel)) return Infinity;
+    if (this._levelHeld === null || target <= this._levelHeld) {
+      this._levelHeld = target;
+      this._levelRiseFrom = null;
+      return this._levelHeld;
+    }
+    if (this._levelRiseFrom === null) {
+      this._levelRiseFrom = this._levelHeld;
+      this._levelRiseAt = ts;
+    }
+    const dur = this._runInOpenMs;
+    if (!(dur > 0)) {
+      this._levelHeld = target;
+      this._levelRiseFrom = null;
+      return this._levelHeld;
+    }
+    const k = Math.min(1, Math.max(0, (ts - this._levelRiseAt) / dur));
+    const e = k * k * (3 - 2 * k);
+    this._levelHeld = this._levelRiseFrom * Math.pow(target / this._levelRiseFrom, e);
+    if (k >= 1) this._levelRiseFrom = null;
+    // Arrived: the term is exactly non-binding, so it hands back and stops existing rather than
+    // sitting at the delivered width pretending to hold it.
+    if (this._levelHeld >= preLevel - 1e-12) {
+      this._levelHeld = null;
+      this._levelRiseFrom = null;
+      return Infinity;
+    }
+    return this._levelHeld;
+  }
+
   _abreastContenders(ordered) {
     const tw = this._trackWidthPx;
     const leader = ordered[0];
@@ -2716,7 +2904,7 @@ export class CameraDirector {
       // racers. Not a new number and not a lap fraction.
       if (r !== leader) {
         const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
-        const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+        const contactLength = CameraDirector.contactLengthBetween(leader, r);
         if (!(contactLength > 0) || gapPx > contactLength) continue;
       }
       // ── CONDITION 2: ON A FREE LANE ───────────────────────────────────────────────────────
@@ -4391,6 +4579,28 @@ export class CameraDirector {
     }
     this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
+    // BELOW `_runInBinding` ON PURPOSE. That flag means "the SCHEDULE is what the width
+    // authorities settled on", and `update()` reads it to choose an anchor. Composing above it
+    // would flip it to false on every frame this guarantee widens and quietly move the anchor —
+    // a side effect nobody asked for. The level term reports itself separately on the probe.
+    // ── THE OWNER'S RULE OF 2026-08-24, APPLIED LAST (RUNIN-LEVEL-SET-BUILD-1) ────────────────
+    //
+    // AFTER THE RATCHET, AND THAT IS THE DELIBERATE PART. The ratchet is requirement 3 — once the
+    // close begins the shot never re-opens — and it is computed from, and stored as, the SCHEDULE's
+    // own width. Composing here leaves that untouched: `_runInRatchet` still carries the schedule's
+    // monotone curve, so when this guarantee releases the shot returns to exactly that curve rather
+    // than to a value the guarantee moved. What it does mean is that a racer who would be CUT can
+    // re-open the delivered picture, and requirement 3 yields to him.
+    //
+    // THAT ORDER IS NOT NEW AND IT IS NOT MINE. `_corridorWidthCap` already states the same
+    // precedence in the same file: **THE CONTENDERS WIN IF THEY CONFLICT** — *"his first rule is
+    // that ALL participants must be visible, and the corridor is only his shortcut for 'certainly
+    // enough'."* This is that rule with the owner's own membership in place of the shortcut.
+    //
+    // THE COST IS REAL AND IT IS MEASURED, not waved past — see the report's re-open section.
+    const _levelCeil = this._levelCeiling(racers, subjects, frameSize, guaranteed, ts);
+    const _preLevel = guaranteed;
+    if (Number.isFinite(_levelCeil) && _levelCeil < guaranteed) guaranteed = _levelCeil;
     // ── WHAT ACTUALLY DECIDED THE DELIVERED ZOOM (ZOOM-PACE-5) ─────────────────────────────────
     //
     // THIS FIELD LIED, AND IT COST THREE REPORTS AND TWO NO-OP BUILDS. It was the argmin over
@@ -4416,7 +4626,16 @@ export class CameraDirector {
             ? 'line-after-cap'
             : 'guarantee-after-cap';
     }
+    // RUNIN-LEVEL-SET-BUILD-1, diagnostic only and read by nothing in the camera: what the level
+    // guarantee asked for, whether it decided the delivered width, and how many racers were level.
+    // Named rather than left to an argmin, because RUNIN-CONTENDER-GUARANTEE-1 recorded what an
+    // unnamed term costs a later diagnosis.
+    if (Number.isFinite(_levelCeil) && guaranteed < _preLevel - 1e-12) _binding = 'level';
     this._framingProbe = {
+      levelCeiling: _levelCeil,
+      levelBound: Number.isFinite(_levelCeil) && guaranteed < _preLevel - 1e-12,
+      levelSetSize: this._levelSet,
+      levelPreWidth: _preLevel,
       ceilings: _ceilings,
       wouldHave: _wouldHave,
       scheduled: _scheduled,
