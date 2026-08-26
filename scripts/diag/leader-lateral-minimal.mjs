@@ -76,6 +76,24 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
 const OUT = arg("out", "c:/tmp/lat");
 const TAG = arg("tag", "lat");
 const FROM_U = Number(arg("from", "0.10"));
+// LEADER-LATERAL-BUILD-1: both of the rule's numbers are sweepable, so the shipped defaults are read
+// off an arm rather than picked. Omitting them leaves the shipped values in place.
+const MARGIN = arg("lateral-margin", null);
+const CAP = arg("lateral-cap", null);
+const CFG =
+  MARGIN === null && CAP === null
+    ? DEFAULT_CAMERA_CONFIG
+    : {
+        ...DEFAULT_CAMERA_CONFIG,
+        cameraStateProfiles: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+          LEADER_ZOOM: {
+            ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+            ...(MARGIN === null ? {} : { leaderLateralMarginPx: Number(MARGIN) }),
+            ...(CAP === null ? {} : { leaderLateralMaxPx: Number(CAP) }),
+          },
+        },
+      };
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const out = [];
@@ -96,7 +114,7 @@ for (const c of CASES) {
     cameraSeed: cameraSeedForRace(c.seed),
     note: "leader-lateral-minimal (browser camera seed)",
   });
-  const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
+  const race = buildRace(geo, identity, CFG);
   const { cd } = race;
   const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, !geo.closed);
   const CW = identity.canvasW;
@@ -105,10 +123,14 @@ for (const c of CASES) {
 
   const rows = [];
   let prevLeaderIdx = null;
+  // THE PICTURE'S OWN MOVEMENT, for the before/after gate: how far a fixed world point slides on
+  // screen from one frame to the next. This is the measure the run-in work used and the one that
+  // stopped the setback, so a repair that trades a clip for a jolt is caught by it and not by taste.
+  let prevOff = null;
   runRace(
     race,
     identity,
-    DEFAULT_CAMERA_CONFIG,
+    CFG,
     ({ cd, st, frame }) => {
       const fp = cd._framingProbe;
       if (!fp) return;
@@ -194,6 +216,9 @@ for (const c of CASES) {
       const leadChanged = prevLeaderIdx !== null && leader.index !== prevLeaderIdx;
       prevLeaderIdx = leader.index;
 
+      const camStep = prevOff === null ? null : Math.hypot(cd.offsetX - prevOff.x, cd.offsetY - prevOff.y);
+      prevOff = { x: cd.offsetX, y: cd.offsetY };
+
       rows.push({
         frame,
         state,
@@ -208,6 +233,11 @@ for (const c of CASES) {
         // Today's own lateral shift, for the comparison in (b) — the mechanism already exists, it
         // simply does not have the leader in its subject list.
         todayShift: Number.isFinite(cd._lastLateralShift) ? +cd._lastLateralShift.toFixed(2) : null,
+        camStep: camStep === null ? null : +camStep.toFixed(2),
+        // LEADER-LATERAL-BUILD-1: how much of the shift this rule contributed, and whether the bound
+        // held it back — so "still clipped" can be attributed instead of guessed at.
+        leaderExtra: Number.isFinite(cd._lastLeaderLateralExtra) ? +cd._lastLeaderLateralExtra.toFixed(2) : null,
+
         halfLen: +halfLen.toFixed(1),
         halfWid: +halfWid.toFixed(1),
         zoom: +cd.zoom.toFixed(5),

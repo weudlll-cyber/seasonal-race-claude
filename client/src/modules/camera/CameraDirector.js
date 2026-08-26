@@ -92,6 +92,7 @@ import {
   anchorScreenPoint,
   pointGuarantee,
   lateralShiftToFit,
+  lateralAdmissibleForBody,
 } from './framingRule.js';
 import {
   ceremonySchedule,
@@ -301,6 +302,7 @@ export class CameraDirector {
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
+    this._lastLeaderLateralExtra = 0;
     this.targetOffsetX = 0;
     this.offsetY = 0;
     this.targetOffsetY = 0;
@@ -562,6 +564,8 @@ export class CameraDirector {
     this._transitionGrammar = f.transitionGrammar;
     this._glideDurationMs = f.glideDurationMs;
     this._leaderForwardFrac = f.leaderForwardFrac;
+    this._leaderLateralMaxPx = f.leaderLateralMaxPx;
+    this._leaderLateralMarginPx = f.leaderLateralMarginPx;
   }
 
   /**
@@ -2220,7 +2224,7 @@ export class CameraDirector {
    *
    * @returns {{x:number,y:number}} the pan target, shifted along the perpendicular when it must be
    */
-  _applyLateralGuarantee(panTarget, headingT, subjects, camZoom, frameSize) {
+  _applyLateralGuarantee(panTarget, headingT, subjects, camZoom, frameSize, anchorRacer = null) {
     if (!panTarget || !this._shape) return panTarget;
     const heading = this._headingAt(headingT);
     if (!heading) return panTarget;
@@ -2266,12 +2270,103 @@ export class CameraDirector {
     if (offsets.length === 0) return panTarget;
 
     const d = lateralShiftToFit(offsets, roomPlus, roomMinus, scale);
+    // ── LEADER-LATERAL-BUILD-1: AND NOW THE LEADER, WHO WAS NEVER AN INPUT ────────────────────
+    //
+    // WHY HE COULD NOT SIMPLY JOIN `offsets`, measured before this was written rather than after.
+    // Adding him to the list above changes the answer on 0 of 2,019 frames on space-sprint seed 6,
+    // for two independent reasons, either of which alone is fatal:
+    //
+    //   1. THE CORRIDOR EDGES ARE ALWAYS IN THE LIST, and `lateralShiftToFit` intersects intervals,
+    //      so only the EXTREMES decide. The leader lies inside the corridor on every frame measured
+    //      (0 of 2,019 outside it, body included), so his interval is a superset of theirs and he
+    //      cannot narrow it.
+    //   2. THE CORRIDOR DOES NOT FIT THE FRAME — on 100% of LEADER_ZOOM frames, because the shot is
+    //      deliberately narrower than the road (it holds 0.78 of the corridor on space-sprint, 0.55
+    //      on river-run). So the helper is permanently in its "split the difference" branch, which
+    //      averages `lo` and `hi` and is therefore decided by the extremes alone, again.
+    //
+    // So he gets his OWN interval, from his own drawn body against the real frame, and the corridor's
+    // answer is CLAMPED into it. That ordering is the owner's rule exactly: whenever `d` already
+    // keeps him whole the clamp is inert and the picture is untouched — which is 95.8% of frames —
+    // and when it does not, the camera moves the least that fixes it.
+    let dFinal = d;
+    if (anchorRacer) {
+      const effXa = this._proj.effX(camZoom);
+      const effYa = this._proj.effY(camZoom);
+      const hs = this._headingScreen(headingT);
+      const hl = hs ? Math.hypot(hs.x, hs.y) : 0;
+      if (hl > 0) {
+        // ── HIS BODY WHERE THE PIPELINE WILL ACTUALLY PUT IT ─────────────────────────────────
+        //
+        // The first cut of this placed him relative to `anchorScreenPoint` — the point the framing
+        // rule WANTS the anchor at — and it was wrong in a way that made the whole rule inert: it
+        // reported "he fits" on all 395 frames that still clipped, because the pan is not resolved
+        // that way. `resolveCamera` and `_offsetYFor` both CENTRE the pan target and then clamp it
+        // to the world bounds; the forward framing comes from the bias having already moved the
+        // target world point, not from placing it off-centre. So the base here is the centred,
+        // clamped camera, which is the same arithmetic those two do.
+        //
+        // The linear model behind the interval — shift the target by `d`, every other point moves
+        // `-v*d` on screen — holds exactly while that clamp is off. Against a world edge the clamp
+        // absorbs part of the shift and the step under-delivers; it never over-delivers, so the
+        // failure is a leader still partly clipped rather than a camera that lurches.
+        const fw = frameSize.width;
+        const fh = frameSize.height;
+        const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - fw / effXa);
+        const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - fh / effYa);
+        const camXb = Math.max(
+          this._worldBounds.minX,
+          Math.min(camXMax, panTarget.x - fw / (2 * effXa))
+        );
+        const camYb = Math.max(
+          this._worldBounds.minY,
+          Math.min(camYMax, panTarget.y - fh / (2 * effYa))
+        );
+        const body = {
+          cx: (anchorRacer.x - camXb) * effXa,
+          cy: (anchorRacer.y - camYb) * effYa,
+          ux: hs.x / hl,
+          uy: hs.y / hl,
+          halfLen: ((anchorRacer.drawnBodyLengthPx ?? 0) / 2) * effXa,
+          halfWid: ((anchorRacer.drawnBodyWidthPx ?? 0) / 2) * effYa,
+        };
+        // THE MARGIN, which is what makes the promise arrive rather than merely be made. This rule
+        // decides the pan TARGET; the picture reaches that target through the pan smoother and is
+        // therefore always some way behind it. A guarantee written exactly at the frame edge is
+        // broken by that trailing before it is drawn — measured: with no margin the rule reported
+        // "he fits" on 383 of the 394 frames that still clipped. `innerFramePct` does this same job
+        // for every other subject; this is that idea, sized for this one from the measured trailing.
+        const { lo, hi } = lateralAdmissibleForBody(
+          body,
+          vx,
+          vy,
+          fw,
+          fh,
+          this._leaderLateralMarginPx
+        );
+        if (lo <= hi) {
+          const want = Math.min(hi, Math.max(lo, d));
+          // THE BOUND, on the EXTRA movement only — today's corridor shift is not this piece's to
+          // bound. Past it he stays partly clipped, deliberately: a camera that swings is the worse
+          // failure, and the note on `lateralAdmissibleForBody` records what an unbounded rectangle
+          // test did to this mechanism the first time.
+          const cap = this._leaderLateralMaxPx;
+          const extra = Math.max(-cap, Math.min(cap, want - d));
+          dFinal = d + extra;
+        }
+        // No admissible interval means no sideways move fits him: he is lost ALONG the track. Leave
+        // the shift alone — that residual belongs to the zoom guarantee, not to the pan.
+      }
+    }
     // Diagnostic only — read by nothing in the camera. VIEWER-INVARIANTS-2 needed to know whether
     // the lateral guarantee was the term steering the pan at the end of a race; it was not, and a
     // reading of the code could not have settled that either way.
-    this._lastLateralShift = Number.isFinite(d) ? d : 0;
-    if (!Number.isFinite(d) || d === 0) return panTarget;
-    return { x: panTarget.x + perp.x * d, y: panTarget.y + perp.y * d };
+    this._lastLateralShift = Number.isFinite(dFinal) ? dFinal : 0;
+    // LEADER-LATERAL-BUILD-1, diagnostic only: how much of that shift is the leader's doing, so a
+    // trace can separate this rule's contribution from the corridor's instead of inferring it.
+    this._lastLeaderLateralExtra = Number.isFinite(dFinal - d) ? dFinal - d : 0;
+    if (!Number.isFinite(dFinal) || dFinal === 0) return panTarget;
+    return { x: panTarget.x + perp.x * dFinal, y: panTarget.y + perp.y * dFinal };
   }
 
   /**
@@ -4784,7 +4879,17 @@ export class CameraDirector {
     const afterBias = panTarget;
 
     // ── AND ACROSS IT: shift off the centreline only when a guaranteed subject needs it ────────
-    panTarget = this._applyLateralGuarantee(panTarget, headingT, subjects, guaranteed, frameSize);
+    // LEADER-LATERAL-BUILD-1 — scoped to LEADER_ZOOM. LEAD_CHANGE and OVERVIEW keep their current
+    // behaviour: they are named as out of this piece, and OVERVIEW shares the 'leader' anchor, so
+    // keying off the anchor kind rather than the state would have widened the change silently.
+    panTarget = this._applyLateralGuarantee(
+      panTarget,
+      headingT,
+      subjects,
+      guaranteed,
+      frameSize,
+      this.state === CAM_STATE.LEADER_ZOOM ? this._focusAnchorRacer(racers) : null
+    );
     this._framingProbe.anchorPoint = anchorPoint;
     this._framingProbe.afterBias = afterBias;
     this._framingProbe.afterLateral = panTarget;

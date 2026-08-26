@@ -1011,7 +1011,20 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ db59a328 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 966ee56f 2026-08-26 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
+2089/2.81/8.59. Run rather than argued: the change moves the pan target in `LEADER_ZOOM`, which is
+the state this table's third row measures, so no byte-identical argument was available.
+
+**AND THE REASON IT DID NOT MOVE IS A COUNT, NOT A CLAIM.** "The change cannot have affected this"
+would have been wrong — it can, and does. Instrumented on this harness's own race (n=40, seed 5601,
+all ten tracks), the leader's lateral guarantee **fires on 178 of 14,795 `LEADER_ZOOM` frames, 1.20%**,
+and every racer in it carries a drawn body, so the rule is genuinely exercised here rather than
+silently inert. 178 frames is 1.3% of the 13,282 this row pools, which is far too few to move a median
+and, at two decimal places, a p95 as well. The figure is unmoved because the rule is RARE, which is
+the whole design — not because it is absent.
+
 **RE-MEASURED IN FULL FOR RUNIN-EASED-ADMIT-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
 2089/2.81/8.59. Run rather than argued: the change is inside `client/src/modules/camera/` and moves
@@ -1678,11 +1691,45 @@ cannot: what actually reaches the canvas. Run it on any block whose diff can rea
 
 **Protected — a change breaks a test:** the zoom unit's invariance; the six-state framing table;
 corridor / pair / company guarantees on every heading; the company guarantee inside its region; the
-lateral guarantee's arithmetic and its one-dimensionality; the min-draw floor and its
+lateral guarantee's arithmetic and `lateralShiftToFit`'s one-dimensionality (see the LEADER-LATERAL-BUILD-1 note below for the one deliberate exception); the min-draw floor and its
 zoom-independence; name-tag layout, occlusion and the start-formation exception; the config loader's
 defaults-under / stored-over / unknown-ignored rule; every framing validation band and its
 reject-not-clamp behaviour; the engine-input list; the detour recorder's non-interference; the
 render path's `detectBattleGroup` contract; and every camera decision at once, via the fingerprint.
+
+**LEADER-LATERAL-BUILD-1 — the leader's own lateral guarantee, and the one place this design is
+deliberately two-dimensional.** `LEADER_ZOOM` names the leader as its anchor but runs the CORRIDOR
+guarantee, and CAMERA-LATERAL-1 pins the anchor to the centreline, so until this block the leader's
+sideways position was an input to nothing. Adding him to `_applyLateralGuarantee`'s subject list does
+NOT fix it — measured at 0 changed frames of 2,019 — for two independent reasons: the corridor edges
+are always in that list and `lateralShiftToFit` intersects intervals, so a subject lying inside them
+cannot narrow the answer; and the corridor does not fit the frame on 100% of `LEADER_ZOOM` frames, so
+the helper is permanently in its "split the difference" branch, which is decided by the extremes
+alone.
+
+So he gets his own interval from `lateralAdmissibleForBody`, computed on his four drawn body corners
+against the real frame, and the corridor's answer is CLAMPED into it. Three properties make that safe
+rather than a return of the defect the one-dimensionality note warns about:
+
+- **An empty interval is honoured, not worked around.** When no sideways move fits him he is being
+  lost ALONG the track and the shift is left alone. That residual belongs to the zoom.
+- **The step is BOUNDED** (`leaderLateralMaxPx`). A rectangle test will rescue an along-track loss by
+  sliding a long way sideways — that is the recorded 500 world px chase — and the bound is what stops
+  it. Past the bound the leader stays partly clipped, deliberately.
+- **It is scoped to `LEADER_ZOOM`** at the call site, by state and not by anchor kind, because
+  OVERVIEW shares the `leader` anchor and is not in this rule.
+
+A margin (`leaderLateralMarginPx`) keeps his body inside the edge because the guarantee is computed on
+the pan TARGET while the picture arrives through the smoother, always some way behind it. With no
+margin the rule reports "he fits" on 383 of the 394 frames that still clipped — the promise is made at
+the edge and broken before it is drawn. This is the job `innerFramePct` does for every other subject.
+
+Measured over ten tracks x ten races: the clip rate falls **4.18% -> 1.29%** pooled (69.1% of clipped
+frames removed; space-sprint 15.4% -> 3.3%), the camera holds the centre on **90.27%** of frames, the
+along-track residual is **unchanged at 830 frames**, and the picture's largest single-frame movement is
+unchanged — 93 of 100 races carry a >=120 px frame in BOTH arms, which is pre-existing pan motion. No
+extra easing was added and none is needed: the shift moves the pan TARGET, and the existing pan
+smoother is what turns it into a travel.
 
 Added by CAMERA-ANCHOR-TRUTH-1: **the state machine's five transition reasons and its hold gate**
 (`decideTransition` returns `{action, reason}`, and precedence — which was behaviour hiding in the
