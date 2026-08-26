@@ -154,6 +154,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ENGINE-REACH-DATA-FIX-1.md](ENGINE-REACH-DATA-FIX-1.md) — **a guard now selects on what its code
+  NAMES, not only on what it imports** (2026-08-26, `fix/engine-reach-data-1`, **BUILT AND MERGED**).
+  **THE HISTORICAL FAILURE, REPLAYED AND EXIT-CODED.** `ba4a4442` (the garden-path icon) changed one
+  file under `server/seeds/` and broke `scripts/track-defaults.test.mjs`; `script-suite` routes on
+  `scripts/`, so it was never selected and **master's CI was red for a day while the merge reported
+  green**. Now: `script-suite` **NOT selected before → selected after**, with the arbiter naming its
+  reason — *"falls under `server/seeds/tracks`, named by `track-defaults.test.mjs`"*. 5 guards → 12.
+  **THE RULE IS DERIVED, NOT LISTED.** `scripts/lib/dataReach.mjs` records every TRACKED path a
+  guard's code constructs from the repository root; suite entries derive from the `dirs` already
+  declared. **No list of data directories exists** — a list is a second owner, and that is the defect
+  being repaired here for the fourth time.
+  **FOUR NARROWINGS, EACH FORCED BY A NUMBER:** only identifiers bound to `import.meta.url` (bare
+  `join(root,…)` treated `mkdtempSync` fixtures as repo paths → **27 of 40 commits**); the binding
+  followed as a **FIXPOINT** (`sim-fairness` reaches ROOT in 3 hops — a one-hop test **silently
+  dropped the world fingerprint**, the case the piece exists for); **no bare path-shaped strings**
+  (fixture keys and function arguments → 17 of 40); and **only what an import closure CANNOT reach**
+  — caught by the repo's OWN test asserting a non-hull client file must not select a guard.
+  **DYNAMIC IMPORTS ARE EDGES.** `render-fingerprint` depends on `racerNames.js` via
+  `await import(u(...))`; `engine-reach`'s own `hasDynamicImport` had flagged that file and **nothing
+  acted on the flag**.
+  **COST MEASURED, NOT ESTIMATED: 6 of 120 commits (5.0%), mean +11.3 s** — against the 3.4%
+  predicted. **95% of commits unaffected.** The transitive dynamic case was measured at **109 added
+  entries** for `script-suite` and REFUSED at that price.
+  **CORRECTS ENGINE-REACH-DATA-1:** `racerNames.js` should NOT select the world fingerprint —
+  `sim-fairness` takes its roster from an env var and never reads that file. It CAN move the render
+  fingerprint, which does, and that is now routed.
+  **DEPARTS FROM THE PROPOSAL IT WAS ASKED TO BUILD**, with the reason: `reachData` globs are a
+  hand-kept list, and would not have selected `script-suite` — the guard that actually catches the
+  failure. Gate exit 0, 44/44 routing tests, no fingerprint moved. 4 proposals, 3 the block's own.
+
 - [GATE-SERIAL-BCRYPT-1.md](GATE-SERIAL-BCRYPT-1.md) — **the gate has teeth again, the suite is not
   slower, and the disease was oversubscription** (2026-08-26, `fix/gate-serial-bcrypt-1`, **BUILT AND
   MERGED**; no timeout raised, no test marked slow or skipped, `BCRYPT_COST` untouched).
