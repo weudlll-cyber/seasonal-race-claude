@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEADER-LAG-TRUTH-1.md](LEADER-LAG-TRUTH-1.md) — **the clipped frames ARE the gap's tail, and the
+  gap is NOT tracking lag** (2026-08-26, `diag/leader-lag-truth-1`, MEASURE ONLY — nothing built, no
+  default, key or fingerprint touched; 10 tracks x 10 races, 140,740 `LEADER_ZOOM` mid-race frames).
+  Below 100 px of gap **0.0%** of 66,215 frames clip; above 500 px, **92.5%** — so the tail is real.
+  But **84-90% of that gap is the framing rule's own target**, not the smoother trailing it: in
+  `LEADER_ZOOM` the pan is anchored to the corridor CENTRELINE (`CameraDirector.js:4471`,
+  CAMERA-LATERAL-1) while the state's guarantee is CORRIDOR, so `_applyLateralGuarantee` fits the
+  corridor and **nothing in that state takes the leader's sideways position as an input at all**. He
+  is lost SIDEWAYS on **79-98.5%** of clipped frames on the four tracks that clip most. **Both
+  smoothers were swept to the floor and BOTH refuted** — a 5x faster pan removes 11% of the gap where
+  the closed form says 86%, and the world-space focal smoother turned fully OFF leaves the anchor's
+  offset from the leader unchanged. **0 of 5,886 clipped frames would clip with a perfect camera**, so
+  the sprite never clips alone — but it sets the TOLERANCE, and space-sprint's is 3.1x tighter than
+  river-run's, which is why near-identical gap distributions clip at 15.4% and 4.6%. Explains
+  [LEADER-WHOLE-SETBACK-BUILD-1](LEADER-WHOLE-SETBACK-BUILD-1.md) (it moved the anchor ALONG the track
+  when he is lost ACROSS it) and [LEADER-CORRIDORS-DEFAULT-1](LEADER-CORRIDORS-DEFAULT-1.md) (no
+  corridor setting can close a promise his body was never in). **Removing 70% of the gap clears 95% of
+  the frames; no camera speed is the lever.** Owner decision open: the repair hands back exactly what
+  CAMERA-LATERAL-1 bought.
+
 - [LEADER-WHOLE-SETBACK-1.md](LEADER-WHOLE-SETBACK-1.md) — **the setback is small, it BUYS forward
   view rather than costing it, and applied raw it is a 617 px jolt** (2026-08-26,
   `diag/leader-whole-setback-1`, MEASURE ONLY — nothing built, no default changed, no key, no
