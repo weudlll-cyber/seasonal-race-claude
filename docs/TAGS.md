@@ -145,7 +145,7 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
-- `v-ship-leader-lateral` (`PROVISIONAL`, 2026-08-26) — **the ship.** The owner judged the build on a
+- `v-ship-leader-lateral` (`334525df`, 2026-08-26) — **the ship.** The owner judged the build on a
   production build (`3dc061f4`) on 2026-08-26 and accepted it: space-sprint looks right to him. The
   return point is `v-ship-leader-lateral^1`, and it restores a mid-race picture in which **nothing in
   `LEADER_ZOOM` takes the leader's sideways position as an input to anything** — the state names him
@@ -159,8 +159,8 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
   races carry a ≥120 px single-frame movement in BOTH arms and the largest median change anywhere is
   10.07 → 10.15 px, so no easing was added — the pan smoother already turns the target step into a
   travel. Camera and render fingerprints move; **world and world-off do not**, which is the check that
-  a camera repair touches no race. The SHA is provisional at the parent and is corrected to the merge
-  commit after CI goes green, per THE SHIP ORDER step 11.
+  a camera repair touches no race. The SHA was provisional and was corrected to the merge commit
+  `334525df` after CI went green for it, per THE SHIP ORDER step 11.
 
 - `v-ship-runin-calm` (`341060f6`, 2026-08-26) — **the ship.** The return
   point is
