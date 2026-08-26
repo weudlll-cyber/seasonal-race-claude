@@ -132,11 +132,24 @@ test("garden-path is no longer the outlier it was — one racer, one lap count, 
   for (const t of closed) assert.equal(trackDefaultLaps(t), 2, `${t.id} now agrees on laps`);
   assert.equal(gp.defaultDuration, undefined, "the legacy duration field is not reintroduced");
 
-  // NOTHING ELSE MOVED IN THE RECORD. The icon and the description still say snail, deliberately:
-  // the owner named two changes and these are not among them. Asserted so that a later block cannot
-  // quietly "tidy" them without saying so.
-  assert.equal(gp.icon, "🐌");
-  assert.match(gp.description, /crawl through the roses/);
+  // THE SKIN NOW MATCHES THE RACER (GARDEN-PATH-BEETLE-SKIN-1, 2026-08-26).
+  //
+  // This pair used to assert the SNAIL, with the note that the owner had named two changes and the
+  // skin was not among them — "asserted so that a later block cannot quietly 'tidy' them without
+  // saying so". **It did its job and the answer came back: not quietly.** He instructed the icon and
+  // the description explicitly on 2026-08-26, and GARDEN-PATH-BEETLE-SKIN-1 changed exactly those
+  // two fields in `server/seeds/tracks/garden-path.json` and reported them.
+  //
+  // THE ASSERTION IS UPDATED, NOT REMOVED, and the purpose is unchanged: a future block still cannot
+  // move this skin without turning this test red and having to say why.
+  //
+  // WHY IT WAS RED ON MASTER FOR A DAY, which is the part worth keeping. That merge went green
+  // because `verify` routes `script-suite` on changes under `scripts/` and the change was under
+  // `server/seeds/` — so the one guard that could catch it was never selected. Same shape as
+  // ENGINE-REACH-DATA-1: a data file is invisible to routing built on code paths. It surfaced only
+  // when GATE-SERIAL-BCRYPT-1 touched `scripts/` and pulled this suite into the run.
+  assert.equal(gp.icon, "🪲");
+  assert.match(gp.description, /scuttle through the roses/);
 });
 
 test("an explicitly chosen racer or lap count still overrides the default", () => {
