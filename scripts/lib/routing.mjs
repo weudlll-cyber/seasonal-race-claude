@@ -67,6 +67,7 @@ import { readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { engineReach } from "../engine-reach.mjs";
+import { dataReach } from "./dataReach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SCRIPTS = join(ROOT, "scripts");
@@ -143,6 +144,7 @@ export function declaredPathProblems(d) {
 export const SUITE_GUARDS = [
   {
     id: "client-suite",
+    suite: true,
     covers:
       "every vitest test under client/, and everything they import — including the configuration that decides how the suite runs",
     blind: [
@@ -163,6 +165,7 @@ export const SUITE_GUARDS = [
     // they looked like coverage and were none (CHECK-AUDIT-1). Run green on master as they stood
     // (615/615, 41.8 s), so they were wired unchanged; nothing in them was edited to make that true.
     id: "server-suite",
+    suite: true,
     covers:
       "every vitest test under server/, and everything they import — including the configuration that decides how the suite runs",
     blind: [
@@ -181,6 +184,7 @@ export const SUITE_GUARDS = [
   },
   {
     id: "script-suite",
+    suite: true,
     covers: "every scripts/**/*.test.mjs, and the scripts they exercise",
     blind: [
       "it runs the guards' TESTS, not the guards against this repo — a guard can pass its own tests and still be failing on the tree; that is what the guard tasks are for",
@@ -263,6 +267,39 @@ export function declarationOf(relScript) {
   }
 }
 
+/**
+ * Every test file under a declared directory — the ENTRIES of a suite guard.
+ *
+ * DERIVED FROM WHAT THE GUARD ALREADY DECLARES. A suite's `dirs` is the tree it runs; its entries
+ * are the test files in that tree. Nothing new is declared and there is no list to fall off.
+ */
+function testFilesUnder(dirs) {
+  const out = [];
+  const walk = (abs, relPath) => {
+    let entries;
+    try {
+      entries = readdirSync(abs);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      if (name === "node_modules" || name === ".git" || name === "dist") continue;
+      const childAbs = `${abs}/${name}`;
+      const childRel = relPath ? `${relPath}/${name}` : name;
+      let st;
+      try {
+        st = statSync(childAbs);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) walk(childAbs, childRel);
+      else if (/\.test\.(mjs|jsx?|tsx?)$/.test(name)) out.push(childRel);
+    }
+  };
+  for (const d of dirs) walk(`${ROOT}/${d.replace(/\/$/, "")}`, d.replace(/\/$/, ""));
+  return out;
+}
+
 /** Turn a declaration into a resolved guard: a concrete file set plus a `matches(file)`. */
 export function resolveGuard(d) {
   // SELF IS NOT DECLARED AND CANNOT BE FORGOTTEN — the closure of the file the declaration lives in.
@@ -271,10 +308,36 @@ export function resolveGuard(d) {
   const files = new Set([...self, ...reached, ...(d.files ?? [])]);
   const dirs = d.dirs ?? [];
   const notDirs = d.notDirs ?? [];
+
+  // ── ENGINE-REACH-DATA-FIX-1: WHAT THE GUARD'S CODE NAMES, NOT ONLY WHAT IT IMPORTS ───────────
+  //
+  // An import closure cannot reach a JSON file, so nothing that ships as DATA selected any guard.
+  // Measured cost of that hole: the 2026-08-25 garden-path icon change broke
+  // `scripts/track-defaults.test.mjs`, `script-suite` was not selected because it routes on
+  // `scripts/` and the change was under `server/seeds/`, and **master's CI was red for a day while
+  // the merge reported green**.
+  //
+  // So a guard also selects on any TRACKED repository path its own code names. Entries are the
+  // guard's own closure, its declared reach, and — for a suite — the test files under the tree it
+  // runs, which is derived from the `dirs` it already declares. `dataReach` explains itself: it
+  // records which file named each path, so a selection can be justified rather than asserted.
+  const suiteEntries = d.suite ? testFilesUnder(dirs) : [];
+  const named =
+    d.everything || (!self.length && !reached.length && !suiteEntries.length)
+      ? { paths: [], from: {} }
+      : dataReach([...self, ...reached, ...suiteEntries]);
+  // Only paths the guard does not ALREADY match are worth carrying — the rest change nothing and
+  // would make the reported reason longer without making it truer.
+  const dataDirs = named.paths.filter(
+    (p) => !dirs.some((x) => p.startsWith(x)) && !files.has(p)
+  );
+
   const matches = (f) => {
     if (notDirs.some((p) => f.startsWith(p))) return false;
     if (files.has(f)) return true;
-    return dirs.some((p) => f.startsWith(p));
+    if (dirs.some((p) => f.startsWith(p))) return true;
+    // A directory the code named matches its contents; a file matches itself.
+    return dataDirs.some((p) => f === p || f.startsWith(`${p}/`));
   };
   return {
     ...d,
@@ -282,6 +345,8 @@ export function resolveGuard(d) {
     files: [...files].sort(),
     dirs,
     notDirs,
+    dataDirs,
+    dataFrom: named.from,
     // `everything` is declared by the containment guard alone: a stray fingerprint copy can be
     // pasted into any file, so no subset of paths would be safe to skip.
     matches: d.everything ? () => true : matches,
