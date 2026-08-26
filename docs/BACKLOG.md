@@ -23,46 +23,51 @@ stated reason why no command can. Where a whole section shares one reason, it is
 the section head rather than copied onto every item — copying it would suggest each was
 considered separately, and that would not be true.
 
-## THE CLIENT SUITE HAS THE CROWDING CLIFF TOO — a gate that has stopped gating, in a second place
+## THE CLIENT SUITE STARVES ITSELF — measured 2026-08-27, and the remedy is known
 
-**Found 2026-08-26 by LEADER-LATERAL-BUILD-1, which merged past it.** `verify` returns **both answers
-for one tree**. On the identical commit `3dc061f4` it returned FAIL twice and then **PASS 20 / FAIL 0**;
-on `c50e5a28` — a commit that changed `docs/TAGS.md`, `docs/fingerprints.json` and two report files,
-**zero lines of client or server source** — the same two tests went red again.
+**MEASURED by [GATE-CLIENT-CROWDING-2](../reports/evolution/GATE-CLIENT-CROWDING-2.md)** — nine full
+suite runs in three arms, using GATE-SERIAL-BCRYPT-1's own instrument. **The hypothesis the first
+entry wrote down is confirmed, and the entry below is rewritten to separate what is now measured from
+what is still guessed.**
 
-**The two tests are always the same:** `client/src/screens/SetupScreen/raceActionStage.test.jsx` and
-`raceSeed.test.jsx`, both failing with `Test timed out in 5000ms`. They are React render tests; the
-failure is a timeout, never an assertion.
+**WHAT IS MEASURED.**
 
-**This is GATE-SERIAL-BCRYPT-1's shape in a second suite.** That block fixed it for the server suite
-by bounding the bcrypt group to three workers and running the suite alone under `verify` — margin
-21 ms → 1,232 ms, and the suite got FASTER. Nothing equivalent has been done for the client suite,
-and the cliff is now visible there.
+- **The resource is CPU, and the suite is competing with itself.** Not memory — free RAM held at
+  7.4–7.9 GB of 33.8 throughout and no processes accumulated. The machine has 14 cores, vitest takes
+  roughly one worker per core, and the suite holds **15 tests that pass beyond 5,000 ms** and so carry
+  their own extended timeouts. The heaviest runs **113,789 ms unbounded and 49,482 ms bounded** —
+  2.3× faster with fewer things beside it, which is what tells oversubscription from a slow test.
+- **The two tests that kept failing are STARVED, not hung.** `raceSeed.test.jsx` reached **10,457 ms**
+  and `raceActionStage.test.jsx` **8,511 ms** against a 5,000 ms limit.
+- **Bounding the suite's own workers fixes it.** `--maxWorkers=4`: **0 failures in 3 runs**, against
+  **20 failures in 6 unbounded runs**. Margin against the unchanged 5,000 ms default, measured the way
+  the server repair measured it: **−5,457 ms → +598 ms**.
+- **It costs about 29% wall clock** (mean 313 s → 403 s). The server case cost nothing; this one does.
+- **Why external load never reproduced it:** outside load makes the scheduler share, the suite's own
+  thirteen workers make it oversubscribe. Every earlier attempt loaded the machine from outside and
+  came back green, which is why this looked incoherent.
 
-**IT IS NOT ONLY VERIFY'S PARALLELISM, which is what makes it worth a proper look.** The suite failed
-on a run where `verify` gave it exclusivity (`client-suite (ran alone)`, 330 s), and a full
-`npx vitest run` **alone** also failed 2 of 4,314 — while an earlier full alone run passed 228/4,314,
-and the two files run as a two-file selection pass 24/24 every time. The suite carries single tests of
-56–75 s (the golden real-arm arm); the plausible mechanism is those starving a 5 s React render test
-of a worker, but **that is a hypothesis, not a measurement.**
+**WHAT IS STILL GUESSED.**
 
-**WHAT COULD NOT BE REPRODUCED, so nobody repeats the attempt:** it does not appear on master.
-`verify` on master refuses outright (VERIFY-BASE-1 — nothing changed, every guard skips); forced onto
-master's tree with `--base=b49bf4a5` it returned PASS 22 / FAIL 0; and the two tests under a
-deliberate 13-core load returned 24/24.
+- **That 4 is the right bound.** It was the first value probed, not a tuned one, and +598 ms is a
+  third of the margin the server suite considers safe. **The sweep has not been run.**
+- **That bounding is the best remedy rather than the first one that works.** Three files carry all the
+  load; splitting them into a serial project — the shape `server/test/suiteShape.mjs` already
+  implements — might cost far less than 29%. Uncosted.
+- **That three green runs mean the suite is trustworthy.** Three runs is three runs. The server repair
+  used four per arm.
 
-**WHY THIS MATTERS MORE THAN A RED GATE.** Red stops you. Non-deterministic teaches you to re-run
-until green, and a gate you re-run until it agrees with you is not a gate. It is also how a real
-regression gets waved through as "that flaky client thing" — the exact failure mode
-GATE-SERIAL-BCRYPT-1 was written to end.
+**NEEDS: HIS WORD ON THE TRADE, and it is a real trade this time** — about 29% wall clock on every
+client-suite run, against a gate that currently returns both answers for one tree. The server repair
+did not need this question because bounding there was free.
 
-**THE FIX IS NOT A TIMEOUT.** Raising the 5 s bound, marking a test slow or skipping one would hide
-the cliff rather than remove it, and the standing rule from the server-suite repair is that the 5 s
-timeout stays. The server-suite answer — bound the heavy group's workers, give the suite exclusivity,
-measure the margin before and after — is the shape to copy.
+**THE FIX IS STILL NOT A TIMEOUT.** Nothing here was a defect in the code under test; everything was a
+timeout caused by starvation. Raising the 5 s bound, marking a test slow or skipping one would hide
+the cliff rather than remove it, and the standing rule from the server repair is that the 5 s timeout
+stays.
 
-**verify:** run `npm run verify` three times on an unchanged tree; any run that disagrees with another
-is this item. The margin measurement GATE-SERIAL-BCRYPT-1 used is the instrument to reuse.
+**verify:** `node scripts/diag/suite-timing.mjs --suite=client --runs=3 --label=x` — and the same with
+`--extra=--maxWorkers=4`. Any run whose failure count differs from another arm's is this item.
 
 ---
 
