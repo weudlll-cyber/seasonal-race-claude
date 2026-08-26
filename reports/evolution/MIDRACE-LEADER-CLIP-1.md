@@ -334,3 +334,126 @@ is two episodes, because once the state changes the shot's subject has changed w
 
 **Noticed and left:** the stale conflict marker in `reports/evolution/INDEX.md`
 (`||||||| 5204b10b`) — seventh report to record it.
+
+---
+
+# ADDENDUM, 2026-08-26 (second) — HIS HYPOTHESIS, TESTED: right that the setting drives it, wrong about the mechanism and wrong about the direction
+
+**His idea:** "World in shot (corridors)" sets the frame width, but the leader's PLACEMENT is computed
+from the DEFAULT rather than the value in force — so a tighter setting shrinks the frame while he is
+still pushed the same distance forward, and he runs out of the picture ahead of himself.
+
+**Verdict in one line: the setting really does drive the clipping, strongly and monotonically — but
+not by the mechanism he named, and the shipped DEFAULT is the worst case rather than the safe one.**
+
+## AT SOURCE — what the placement actually derives from
+
+**It derives from neither the setting in force nor the setting's default. It derives from a separate
+key**, `leaderForwardFrac` (shipped 0.66), which has nothing to do with `visibleCorridors`:
+
+```
+_forwardFracNow()  →  this._leaderForwardFrac                    // one global key, not per state
+anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen)
+  shift = (forwardFrac - 0.5) * frameExtentAlong(ux, uy, frameW, frameH)
+```
+
+**And the offset is a FRACTION OF THE FRAME, not an absolute distance.** The call site passes the
+CANVAS dimensions — a fixed 1280×720 store — so `shift` is a fraction of the SCREEN and is *invariant*
+to the zoom. At 0.66 the leader is placed 16% of the frame's extent ahead of centre whether the shot
+shows 120 world px or 600.
+
+**So the specific defect he described is not present:** there is no absolute forward offset being
+measured against a variable frame, and no default being read where a live value should be. On the two
+things he named — a default instead of the value in force, and an absolute instead of a fraction —
+**his reading is wrong on both.**
+
+## BUT THE COUPLING IS REAL, AND IT IS THE SPRITE
+
+What the setting changes is not where he is put but **how big he is drawn there**. The frame is a
+fixed 1280×720; a tighter `visibleCorridors` means more magnification, so the same racer occupies more
+of it. Measured on these runs, for a 36-world-px body:
+
+| setting | leader's drawn length on screen |
+| --- | --- |
+| 0.40 | **216 px** |
+| 0.55 | 157 px |
+| **0.75 — shipped default** | **115 px** |
+| 0.85 — his current | 102 px |
+| 1.20 | 72 px |
+| 2.00 | 43 px |
+
+**A body five times larger at a fixed screen offset is what crosses the edge.** He is right that
+tightening the setting pushes the leader out of the picture; he is wrong that it happens because his
+placement stops tracking the setting. It happens because his SIZE tracks it and his placement does
+not. That is consistent with the first pass's finding that his centre is off canvas on only 0.58% of
+LEADER_ZOOM frames while 4.18% are clipped — the sprite overflows while the racer stays inside.
+
+## THE TEST — clip rate per setting, his three states, the two worst races
+
+`space-sprint` seed 6 and `river-run` seed 9, LEADER_ZOOM's `visibleCorridors` swept and **nothing
+else changed**:
+
+| setting | space-sprint s6 LEADER_ZOOM | river-run s9 LEADER_ZOOM | LEAD_CHANGE (both) | OVERVIEW |
+| --- | --- | --- | --- | --- |
+| 0.40 | **83.6%** (1464/1751) | **41.0%** (610/1486) | 4.6% / 0.0% | — |
+| 0.55 | 70.0% | 29.1% | 4.6% / 0.0% | — |
+| **0.75 — SHIPPED DEFAULT** | **33.9%** (594/1751) | **18.2%** (270/1486) | 4.6% / 0.0% | — |
+| **0.85 — his current** | **14.7%** (257/1751) | **0.0%** (0/1486) | 4.6% / 0.0% | — |
+| 1.20 | 2.3% | 0.0% | 4.6% / 0.0% | — |
+| 2.00 | 2.2% | 0.0% | 4.6% / 0.0% | — |
+
+**HIS PREDICTION IS DISPROVED, and plainly: the default does NOT show zero clipping. It shows the
+worst clipping of any setting he is likely to use** — 33.9% on space-sprint and 18.2% on river-run.
+
+**The direction is inverted.** He supposed his setting was tighter than the default and that this
+caused the clipping. **0.85 is WIDER than the shipped 0.75**, and moving from the default to his
+setting *reduces* clipping — to zero on river-run seed 9, and by more than half on space-sprint.
+
+**LEAD_CHANGE is flat across the whole sweep** (4.6% and 0.0%), which is the control: only
+LEADER_ZOOM's key was overridden, and only LEADER_ZOOM moved. **OVERVIEW never occurs in these two
+races**, so this test says nothing about it — its 0.93% from the first pass stands unexamined here.
+
+## WHAT THE SETTING WAS DURING THE EIGHT MEASURED TRACKS — and it is a finding
+
+**Every figure in this report, including the whole ten-track corpus, ran at the SHIPPED DEFAULTS.**
+The harness builds each race with `DEFAULT_CAMERA_CONFIG` and overrides nothing. So the 13.10% pooled
+figure, the 4.18% LEADER_ZOOM rate and every per-track number describe **the shipped configuration,
+not his**.
+
+**That cuts both ways and both halves matter.** The corpus is the right measurement for deciding
+whether the game ships a defect — and it is the *wrong* measurement for explaining what he sees,
+because at his 0.85 one of the two worst races stops clipping entirely. **If he is running 0.85, the
+mid-race clipping he reports is not the clipping this report measured**, and the gap between his
+report and these numbers is itself unexplained: he sees something at a setting where river-run seed 9
+measures zero. Space-sprint still clips 14.7% at 0.85, so that is the candidate — but it is a
+candidate, not an explanation, and it is worth asking him which track he was watching.
+
+## WHAT A FIX WOULD HAVE TO PROMISE — unchanged, and now better aimed
+
+The previous addendum's three requirements stand. This test adds one qualification: **a fix must
+promise something about the subject's drawn SIZE relative to the frame, because that is the quantity
+the setting moves.** Bounding the forward placement would not help — the placement is already a frame
+fraction and is already invariant. **No repair is proposed and no key is moved.**
+
+## VERIFICATION FOR THIS ADDENDUM
+
+**Measure-only.** No product file was touched, no key or default moved: the sweep passes an override
+object into the harness for the duration of a run and the shipped `defaults.js` is untouched — `git
+diff` over `client/` and `server/` is empty. No fingerprints, no browser gate, no client suite, for
+the same reason as the first addendum: the tree they would measure is identical to the one they
+already agree with.
+
+**Not established:** the delivered placement's invariance was read at source rather than measured
+frame by frame — the intended point is provably a frame fraction, but the pan smoother's delivered
+position was not separately checked across settings. Two races only, both chosen as worst cases, so
+the rates here are not a population. OVERVIEW is untested, as noted. And the sweep moved LEADER_ZOOM's
+key alone; the other states keep their shipped corridors throughout.
+
+## SOURCE HYGIENE FOR THIS ADDENDUM
+
+`scripts/diag/midrace-leader-clip.mjs` gains one optional flag, `--leader-corridors=`, which
+overrides exactly one key and defaults to leaving the shipped configuration alone — so every earlier
+run in this report remains reproducible by omitting it. No other change.
+
+**Noticed and left:** the stale conflict marker in `reports/evolution/INDEX.md`
+(`||||||| 5204b10b`) — eighth report to record it.
