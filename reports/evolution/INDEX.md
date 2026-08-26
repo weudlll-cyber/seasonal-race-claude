@@ -171,6 +171,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [GARDEN-PATH-ICON-1.md](GARDEN-PATH-ICON-1.md) — **the icon was already fixed in the repo, and that
+  is WHY he still sees a snail** (2026-08-27; `engine-reach --check` selected NOTHING, so no
+  fingerprint was in reach and none was minted). The seed has read `🪲` and "scuttle" since
+  GARDEN-PATH-BEETLE-SKIN-1. **The running app never received it and never will**:
+  `server/src/seedRuntime.js` copies a record only `if (!existsSync(dest))`, so once
+  `server/data/tracks/garden-path.json` exists **no seed edit can reach it** — not by restarting, not
+  by re-seeding. **The proof is that the two halves landed differently**: the runtime record's
+  `defaultRacerTypeId` IS `beetle` (applied to live data, which is why races got shorter and four
+  fingerprints moved) while its icon and description stayed snail, because the skin piece changed only
+  the seed. **That is a delivery mechanism that silently drops updates**, and the icon is just where it
+  became visible. Fixed: the stale repo fixture `sampleTracks.js` (which contradicted the shipped seed)
+  and the gitignored runtime copy. **NOT fixed and named**: the other nine tracks have the same
+  exposure and were not audited. 4 proposals, 3 the block's own.
+
 - [GATE-CLIENT-CROWDING-2.md](GATE-CLIENT-CROWDING-2.md) — **the hypothesis is CONFIRMED, the
   resource is named, and the server's remedy is the right shape** (2026-08-27, measure only — nothing
   fixed, no timeout raised, nothing skipped; nine full suite runs in three arms using
