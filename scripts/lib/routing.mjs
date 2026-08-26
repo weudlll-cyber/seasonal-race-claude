@@ -399,6 +399,10 @@ export function reasonFor(g, hits) {
         g.dirs.length ? `dirs=${g.dirs.join(",")}` : null,
         g.notDirs.length ? `except=${g.notDirs.join(",")}` : null,
         g.reach?.length ? `reach=${g.reach.length} entry point(s)` : null,
+        // ENGINE-REACH-DATA-FIX-1: the paths this guard's code NAMES but does not import. Printed
+        // because the whole defect was a routing decision nobody could see — a guard that selects
+        // for a reason it cannot state is one nobody will notice going stale.
+        g.dataDirs?.length ? `names=${g.dataDirs.length} path(s) it does not import` : null,
       ]
         .filter(Boolean)
         .join(" · ");
