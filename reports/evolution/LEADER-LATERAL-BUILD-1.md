@@ -215,6 +215,27 @@ is in the hull and byte-identical against HEAD whatever the branch is doing. Bot
 for the reason they were written. **This would have gone red for the next block to ship a default
 too**, which is why it is repaired here rather than noted and left.
 
+## THE GATE, REPORTED AS IT ACTUALLY STANDS
+
+**`npm run verify` is NOT green under its own parallelism, and the residue is not this change.** Final
+run: **PASS 19, FAIL 1** — `client-suite`. `script-suite` passes once the engine-reach fixture above is
+pinned, and every guard that touches the camera passes, including `camera-fingerprint`,
+`check-runin-frame` and `render-fingerprint`.
+
+The `client-suite` residue is two React tests in `src/screens/SetupScreen/` —
+`raceActionStage.test.jsx` and `raceSeed.test.jsx` — **timing out at 5,000 ms**. Neither touches the
+camera. Evidence that it is contention and not a regression:
+
+- A **different** test failed on each of three runs; the two above did not fail together every time.
+- Both pass **alone** (24/24) and **together** (24/24).
+- The **whole client suite alone is 228 files / 4,314 tests green** — 227/4,302 before this branch,
+  plus this block's one file and 12 tests.
+
+This is the same signature the server-suite bcrypt timeouts had before they were bounded to three
+workers, and the standing rule applies: **the 5-second timeout is not to be raised.** I have not
+touched it, and I am not claiming a green gate — I am reporting the failure, its cause, and the
+alone-runs that isolate it.
+
 ## SOURCE HYGIENE — including what I noticed and left
 
 - `lateralShiftToFit` is **unchanged**. The new helper sits beside it in `framingRule.js` so lateral
