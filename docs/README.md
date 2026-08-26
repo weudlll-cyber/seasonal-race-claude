@@ -98,7 +98,7 @@ What a stranger needs in order to understand and change RaceArena.
 
 | document                     | what it owns                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [ROADMAP.md](ROADMAP.md)     | Phases and their completion status.                                                                                          |
+| [ROADMAP.md](ROADMAP.md)     | **A REDIRECT — owns nothing.** Phases and their status are in [BACKLOG.md](BACKLOG.md) PART TWO.                              |
 | [BACKLOG.md](BACKLOG.md)     | The living list of open work, with the evidence behind each item.                                                            |
 | [DEAD-ENDS.md](DEAD-ENDS.md) | **Required before any race-mechanism proposal.** What was already built, measured and retired — so it is not proposed again. |
 
