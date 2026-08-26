@@ -171,6 +171,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [GATE-CLIENT-CROWDING-2.md](GATE-CLIENT-CROWDING-2.md) — **the hypothesis is CONFIRMED, the
+  resource is named, and the server's remedy is the right shape** (2026-08-27, measure only — nothing
+  fixed, no timeout raised, nothing skipped; nine full suite runs in three arms using
+  GATE-SERIAL-BCRYPT-1's instrument, PARAMETERISED rather than copied). **The resource is CPU and the
+  suite competes with ITSELF**: 14 cores, ~one worker each, and 15 tests that pass beyond 5,000 ms and
+  carry their own timeouts. The heaviest runs **113,789 ms unbounded and 49,482 ms bounded** — 2.3x
+  faster with less beside it, which is what distinguishes oversubscription from a slow test. **The two
+  failing tests are STARVED, not hung** — 10,457 ms and 8,511 ms against a 5,000 ms limit. **Bounding
+  workers to 4: 0 failures in 3 runs against 20 in 6**, margin **−5,457 ms → +598 ms** measured the
+  way the server repair measured it. **Cost ~29% wall clock**, where the server's cost was zero — so
+  this one is a real trade and needs his word. **Why external load never reproduced it:** outside load
+  makes the scheduler share; thirteen vitest workers make it oversubscribe. The backlog entry is
+  rewritten to separate what is measured from what is still guessed (that 4 is right; that bounding
+  beats splitting the three heavy files; that three green runs are enough). 4 proposals, 2 the block's
+  own.
+
 - [ROADMAP-FOLD-2.md](ROADMAP-FOLD-2.md) — **the last 10% of a merge already filed as DONE, and the
   last 10% was the whole problem** (2026-08-27, documents only; no gate can answer differently for a
   `docs/` change). ROADMAP-FOLD-1 moved 35 sections on 2026-08-23 and left a **74-line phase-status
