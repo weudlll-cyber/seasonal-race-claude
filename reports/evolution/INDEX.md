@@ -154,6 +154,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MIDRACE-LEADER-CLIP-1.md](MIDRACE-LEADER-CLIP-1.md) — **nothing guarantees the leader mid-race, and
+  he is clipped 13% of the time** (2026-08-26, `diag/midrace-leader-clip-1`, MEASURE ONLY — nothing
+  built, no key, no fingerprint; read-only, so no browser gate and no client suite, and the reason is
+  stated; 100 races, 335,596 mid-race frames, browser camera seeding, 14 cores; report merged, branch
+  pushed unmerged).
+  **THE THIRD GUARANTEE IN THIS STRAND FOUND TO PROMISE LESS THAN EVERYONE ASSUMED, and this time it
+  promises NOTHING.** The leader is **never guaranteed WHOLE anywhere**: every term in
+  `framingRule.js` works on POINTS and not one reads a racer's drawn size. Whether he is even PRESENT
+  depends on the state — in **BATTLE_ZOOM the anchor is the pair-midpoint and the guarantee is PAIR,
+  which the leader need not be in**, and in COMEBACK_ZOOM the anchor is someone else entirely.
+  **AND THAT IS EXACTLY WHERE THE CLIPPING IS:** on all ten tracks **the leader was the ANCHOR on 0%
+  of clipped frames**, BATTLE_ZOOM accounts for 82–95% of them, and the width was set by `state` on
+  78–86%. The mechanism is not a guarantee failing; it is one that was never asked to cover him.
+  **THE RATE: 43,972 of 335,596 mid-race frames — 13.10% — over 378 episodes, median 63 frames (~1 s
+  at 60 Hz), longest 900 (fifteen seconds).** Worst: space-sprint **32.04%** (seed 6 at 45.7%),
+  seatrack 19.31% (s6 32.5%), searound 15.65%, city-circuit 13.59% (s9 38.8%); river-run is the
+  mildest at 6.96%. **HIS DESCRIPTION UNDERSTATES IT: 54% of the clipped frames have his CENTRE off
+  the canvas** — absent, not clipped — which is ~7% of all mid-race frames.
+  **LATERAL OR AHEAD? AHEAD, on 7 of 10 tracks** (2 mixed, and **river-run — his usual test track — is
+  the one LATERAL exception**). The overflow is decomposed against the track's screen heading, so this
+  is the second of the two things he named, and it points at the ANCHOR rather than the width: the
+  battle shot sits on a midpoint behind a leader who is pulling away.
+  **IS IT NEW? NO.** Master before the run-in work (`70607f7a`) reads **13.12%** against today's
+  **13.10%** — 53 frames in 335,596, every track within 0.1 pp, and the worst race on every track the
+  same seed at the same percentage. The run-in work neither caused it nor worsened it, which is what
+  its scoping was supposed to achieve. **It does not date the fault**: this compares two commits, not
+  a history. 4 proposals, 3 of them mine.
+
 - [SHIP-RUNIN-CALM-1.md](SHIP-RUNIN-CALM-1.md) — **the closing phase stops jumping, and the record is
   made true in the same commit** (2026-08-26, **THE SHIP** — `v-ship-runin-calm`, accepted by the
   owner on the production build `2285e8b5`; CAMERA and RENDER minted, WORLD and WORLD-OFF measured
