@@ -171,6 +171,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [ROADMAP-FOLD-2.md](ROADMAP-FOLD-2.md) — **the last 10% of a merge already filed as DONE, and the
+  last 10% was the whole problem** (2026-08-27, documents only; no gate can answer differently for a
+  `docs/` change). ROADMAP-FOLD-1 moved 35 sections on 2026-08-23 and left a **74-line phase-status
+  table** — and one document owning "the phase status" while another owns "the phases" is exactly the
+  half-ownership D24 existed to end. **A job 90% done and filed as finished is worse than one filed as
+  open**, because nothing looks at it again; second entry of that shape tonight. The table is folded
+  into BACKLOG PART TWO whole and unedited and `ROADMAP.md` is a **31-line redirect** — not a
+  deletion, because **11 documents and reports link to it and reports are append-only**. **The real
+  work was the DESCRIPTIONS**: `check-doc-links` passes on a link to a file that exists and cannot see
+  that the sentence around it has become false. Three live descriptions corrected (README, AUDIT,
+  PROJECT-PRINCIPLES) plus BACKLOG's three claims about itself; file-tree entries, see-alsos and
+  historical citations deliberately left, with the rule stated. 651 links, 0 dangling. 3 proposals, 2
+  the block's own.
+
 - [ALONG-RESIDUAL-1.md](ALONG-RESIDUAL-1.md) — **the residual is EPISODES, it is ONE TRACK, and the
   MARGIN makes three quarters of it** (2026-08-27, measure only — no mechanism, no key, no build; ten
   tracks x ten races). **THERE ARE TWO RESIDUALS.** The director declines a frame at the shipped 90 px

@@ -1,6 +1,6 @@
 # RaceArena — Backlog
 
-**Owns:** the living list of open work with the evidence behind each item, **AND — since 2026-08-23 (D24, ROADMAP-FOLD-1) — the phase history too.** [ROADMAP.md](ROADMAP.md) is now a phase-status table and owns nothing else.
+**Owns:** the living list of open work with the evidence behind each item, **AND — since 2026-08-23 (D24, ROADMAP-FOLD-1) — the phase history too, with the phase-status table folded in on 2026-08-27 by ROADMAP-FOLD-2.** [ROADMAP.md](ROADMAP.md) is now a REDIRECT and owns nothing at all.
 
 > **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. **So is every 16-hex FINGERPRINT below**: each one is the value at the moment that entry was written, not a claim about now. The current values live in [docs/fingerprints.json](fingerprints.json) and in no document. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world (COMBO15 + margin hysteresis + lateral acceleration cap).
 
@@ -111,7 +111,7 @@ word from him:**
 | the audit-gate policy for DEV dependencies | **answered — PART TWO D21.** Dev advisories report; the build is not ordered here |
 | the `body-parser` LOW advisory | **answered — PART TWO D22.** No action; revisit at the next `server/` bump |
 | the seed for the normal "Start Race" path, and seed persistence | **BUILT AND MERGED — PART TWO D23.** Landed on master by `7a3942fa` (`feat(SEED-REAL-RACE-1)`); `SetupScreen.jsx` passes a drawn `racePlanSeed` instead of the legacy `0`, and both values live in `localStorage`. The branch was swept; **nothing was lost — checked, not assumed.** Only the eye-test above remains |
-| merge ROADMAP into BACKLOG | **approved as work — PART TWO D24.** Its own piece |
+| merge ROADMAP into BACKLOG | **DONE — PART TWO D24.** ROADMAP-FOLD-1 (2026-08-23) moved 35 sections; ROADMAP-FOLD-2 (2026-08-27) folded the last table and left a redirect |
 | `D7d` — 100-racer performance | **downgraded to an observation — PART TWO D18.** Nothing is ordered |
 
 **Nothing else in PART ONE is blocked on any of these.**
@@ -554,7 +554,7 @@ nothing is designed here, no key is added, and no change is implied.
 
 ## Documentation (2026-08-07, from DOC-ORDER-1)
 
-**verify (section-wide):** `git grep -c "" docs/ROADMAP.md` — **the merge is DONE (2026-08-23, ROADMAP-FOLD-1): ROADMAP is now a 74-line phase-status table**, down from 627, and every section it held is accounted for in this file.
+**verify (section-wide):** `git grep -c "" docs/ROADMAP.md` — **the merge is FINISHED. ROADMAP-FOLD-1 (2026-08-23) took it from 627 lines to a 74-line phase-status table; ROADMAP-FOLD-2 (2026-08-27) folded that table in here and left a 31-line REDIRECT that owns nothing.** Every section it ever held is in this file.
 
 - [x] ~~**Merge ROADMAP into BACKLOG**~~ — ✅ **DONE 2026-08-23 by ROADMAP-FOLD-1**
       (NIGHT-2026-08-23 piece 3), under D24. **All 35 ROADMAP sections are accounted for:** 3 to PART
@@ -2862,6 +2862,54 @@ covers.
   fact for months.
 
 ## Phase history — moved whole from ROADMAP (2026-08-23)
+
+**AND THE TABLE ITSELF, folded in 2026-08-27 by ROADMAP-FOLD-2.** ROADMAP-FOLD-1 moved every section
+here and left the file as a 74-line phase-status table — 90% of the merge, and the last 10% is what
+kept two documents alive. `docs/ROADMAP.md` is now a redirect and owns nothing; the table below is the
+one it held, moved whole and unedited, same as everything else in this section.
+
+### The phase-status table — the last thing ROADMAP held
+
+| phase | status | where its detail lives now |
+| --- | --- | --- |
+| Phase 1 — Setup Screen  100% complete | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase 2 — Race Engine  Complete | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase 2.5 — Track Editor  Complete | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase L — Local Backend for Track Storage  Complete (PR #43, #44) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Issue D — Racer Redesign  Parts 1–3 merged, Parts 4–5 pending | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase B — Bug Fixes & Wiring  B-Wave done (PR #25) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D9 — Race Engine Speed Refactor  Done (PR #19, master `dad3300`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D3.5.5 — Per-Type-Tuning-UI  Done (PR #21, master `2d76bc3`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D10 — Track Size Variability + Auto-Sprite-Scaling  Done (PR #23, master `13a2dd2`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| fix/camera-polish + Q-14  Done (PR #28, master `750d826`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D11 — Racer Behavior: Soft Avoidance + Drafting  Done (PR #30, master `d46cab2`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D7a — Proportional Sprite Scaling + Zoom-Ratios + Label-Scaling  Done (PR #33, master `a49baa0`) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| W3 — Race-Type Override  Done (PR #17) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| PR-A1 — Open-Track Duration UX + Q-25 Fix  Done (2026-05-03) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| PR-A2-Diagnose — Speed-Pipeline Scope Analysis  Done (2026-05-03) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| PR-A2.6 — Race Dynamics  Done (2026-05-04) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| PR-A2.5 — Visual Race Naturalness  Done (2026-05-04) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| PR-A2 — Duration-Driven Speed Architecture  Done (2026-05-03) + fix (2026-05-04) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Racer Editor — Phase 1+2  Done (feature/racer-editor → master squash, 2026-05-28) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| QA Pipeline  Complete | **DONE** | BACKLOG PART TWO — *Phase history* |
+| D7c — Row Start with Speed Bonus + Track Capacity  Done (PR #39) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase D — Server-Side Storage Migration (groups / brands / racers)  Complete (2026-06-14/15) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase R — Lateral Physics Redesign & Race-Action Controller  Complete — shipped to master (July 2026) | **DONE** | BACKLOG PART TWO — *Phase history* |
+| Phase Q — Quality Hygiene | MIXED | BACKLOG PART TWO — *Phase history*; open `Q-` items are in PART ONE |
+| Phase V — Verification Sprint (planned) | PLANNED | BACKLOG PART ONE — `V-1`–`V-9` / `T-1`–`T-4` |
+| Phase T — Tooltip Retrofit (planned) | PLANNED | BACKLOG PART ONE — `V-1`–`V-9` / `T-1`–`T-4` |
+| Phase 5 — Race-Integrity Server & Leaderboard (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
+| Phase 6 — Public Deployment (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
+| Phase 7 — Multi-Tenant (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
+| Session Log | HISTORY | BACKLOG PART TWO — *Phase history* |
+| Planned Phase Order (as of 2026-05-06) | HISTORY | BACKLOG PART TWO — *Phase history* |
+| 2026-07-10 — status update (INFRA: sim-trust) | HISTORY | BACKLOG PART TWO — *Phase history* |
+| 2026-07-20 — status update (B2-Heroes shipped: OUTCOME front-action) | HISTORY | BACKLOG PART TWO — *Phase history* |
+| 2026-07-26 — status update (Evolution Act 1: assignment-follows-field CLOSED — reverted after negative SCREEN) | HISTORY | BACKLOG PART TWO — *Phase history* |
+| 2026-07-26 — status update (Evolution Act 2: finale front-compression CLOSED — all three builds reverted) | HISTORY | BACKLOG PART TWO — *Phase history* |
+
+---
+
 
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
 D24: BACKLOG owns both, ROADMAP is reduced to a phase-status table.**

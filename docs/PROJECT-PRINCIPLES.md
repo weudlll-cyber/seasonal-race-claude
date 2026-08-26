@@ -236,7 +236,8 @@ for internal function logic.
 ### Inline Doc-Maintenance Convention
 
 Documentation updates ship in the same PR as the code that changes them — not in
-separate doc-sprint PRs. Before creating a PR, Claude Code reviews BACKLOG, ROADMAP,
+separate doc-sprint PRs. Before creating a PR, Claude Code reviews BACKLOG (which owns the phase
+history ROADMAP used to hold),
 ARCHITECTURE, RACER_DATA_MODEL, TRACK_EDITOR, PROJECT-PRINCIPLES, and LESSONS for
 relevance and updates whatever applies. The PR body includes a "Doc-Updates" section
 listing touched files and one-line change summaries. Pure bugfixes without conceptual
