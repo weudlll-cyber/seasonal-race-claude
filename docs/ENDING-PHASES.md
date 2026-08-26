@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b480fc2e 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ bf7dfd7e 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
 **RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
 7/7) and the same settled-frame counts (94, 165, 0, 83).

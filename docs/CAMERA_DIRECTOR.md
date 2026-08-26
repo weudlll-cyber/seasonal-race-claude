@@ -948,7 +948,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b480fc2e 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ bf7dfd7e 2026-08-26 depends=client/src/modules/camera/ -->
 **RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EXACTLY ONE STATE MOVED: PHOTO_FINISH median
 2.89 -> 2.95 pp and p95 8.65 -> 8.64 (2026-08-26).** Every other state is identical to the digit,
 both percentiles and all six frame counts included — 8626, 159, 13282, 8473, 4130, 2089.

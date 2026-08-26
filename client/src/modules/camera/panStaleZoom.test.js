@@ -154,9 +154,11 @@ describe('RUNIN-PAN-STALE-ZOOM-1 — the aim is expressed at the zoom the frame 
   // The staleness is general; the repair is not. Called on every follow frame it also reaches the
   // ENTRY phase, whose convergence test is `|targetOffsetX - offsetX| < _entryConvergencePx`, so
   // moving the target moves when a state stops entering and starts tracking — measured on
-  // `scripts/tracking-lag.mjs` as LEADER_ZOOM's median lag 3.72 -> 5.08 pp and its tracking frames
-  // 17169 -> 13282, a state-machine timing change dressed as a pan fix. `_runInAfterDeadline` is
-  // false for the whole race before the endgame close, and this pins that.
+  // `scripts/tracking-lag.mjs` against the branch tip with this change REVERTED: LEADER_ZOOM's
+  // median lag 4.99 -> 5.08 pp and BATTLE_ZOOM's p95 10.16 -> 10.06, a state-machine timing change
+  // dressed as a pan fix. Scoped, the same harness moves exactly one state (PHOTO_FINISH
+  // 2.89 -> 2.95 pp) and leaves every frame count identical. `_runInAfterDeadline` is false for the
+  // whole race before the endgame close, and this pins that.
   //
   // IF THE GATE IS REMOVED: every state in the race moves, and the owner's eye-test of the crossing
   // is confounded by a camera that also behaves differently everywhere else.
