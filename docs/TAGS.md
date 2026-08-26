@@ -165,6 +165,34 @@ carried the SAME change and was deleted outright for the same reason.
   and its location is recorded in
   [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md).
 
+### CLEANUP-2026-08-26 — the two diagnostic branches whose instruments were nowhere else (2026-08-26)
+
+**Nine branches stood beside `master`; seven of them held nothing master did not.** Six `diag/*`
+branches were ancestors of `master` outright — every commit in its history, and every file on their
+tips also on master's tip, so deleting them cost nothing and they were deleted without a tag. The
+two below were NOT ancestors, and each carried a measurement harness that existed in **no other
+commit** — the `sweep.mjs` shape from [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md) one sweep earlier, caught this time
+before the deletion rather than after it.
+
+**WHY ARCHIVED RATHER THAN MERGED.** Both branch tips carry a merge of `feat/runin-level-set-1`,
+which is built, pushed and waiting on the owner's eye. Merging either to master would have dragged
+that unjudged build onto master with it. Their reports were landed on master separately when the
+blocks closed and are there now; only the instruments were stranded.
+
+- `archive/runin-chance-set-1` (`97c29d8b`, 2026-08-26) — **the four chance-set instruments**
+  (`chance-set.mjs`, `-run`, `-sum`, `-joins`). Keep them: RUNIN-CHANCE-SET-1's numbers are cited on
+  master and in the report INDEX — 1,140 races x 4 arms, the step moving 30 -> 18 races, the median
+  2.28 s of warning the width throws away — and nothing else in the tree can reproduce them. **The
+  line is also not closed**: the probe wraps the director's own `_updateContentionWatch` rate and
+  asks it about membership, which is exactly the EASED ADMIT the owner asked for on 2026-08-26, with
+  its price already measured.
+- `archive/runin-seed13-anatomy-1` (`c8bc1ad0`, 2026-08-26) — **`runin-anatomy.mjs`**, one race frame
+  by frame through the closing stretch, recording PLACEMENT and WIDTH separately. Keep it: it is the
+  instrument behind the finding that the pan is thrown out at the crossing in every traced race, and
+  no other instrument in the tree records the two apart. It is **still in use** — carried onto
+  `feat/runin-level-set-1` by CLEANUP-THEN-PAN-1 as the acceptance instrument for the pan repair, so
+  this tag is the before-picture the built numbers are checked against.
+
 ### RACE-ACTION — the host picks the race's action, and quiet is what shipped (2026-08-24)
 
 **A control named "Race Action" with three stages — `quiet`, `medium`, `wild` — chosen by the host
@@ -1589,7 +1617,16 @@ lines whose reports were copied to master in DOCS-1 STAGE 1:
 - `exp/free-band` → `archive/free-band-final` (`aa21576`).
 - `exp/choreo-release` → `archive/choreo-release-final` (`109abd6`).
 
-No non-master branches remain.
+No non-master branches remain. **(That sentence was true when written, 2026-07-29; the branch state
+since is recorded per sweep — the current one is the 2026-08-26 note directly below.)**
+
+**2026-08-26 — CLEANUP-2026-08-26 took the count from nine to one.** Six `diag/*` branches were
+ancestors of `master` and were deleted untagged; two carried instruments found in no other commit
+and were archived first (`archive/runin-chance-set-1`, `archive/runin-seed13-anatomy-1` — declared
+above with the reason each was kept). **One branch is deliberately still live:**
+`feat/runin-level-set-1`, built and pushed and waiting on the owner's eye, extended by
+CLEANUP-THEN-PAN-1 with the pan repair so he judges the level-set rule and the crossing on ONE build.
+It is not a leftover and must not be swept.
 
 ## Complete tag set (after the parity phase close, 2026-07-25)
 

@@ -193,6 +193,177 @@ previous subject into the run-in.
 
 ## THE REST — open, in the order they were already in
 
+## The night of 2026-08-25 — everything established, in one place (2026-08-26)
+
+**He asked for the day's findings collected so they can be taken one at a time.** Every item below is
+a FINDING. **No work is proposed here and no verdict is invented** — each says only what it is, what
+establishes it, and which of three things it needs next: **MEASURING**, **BUILDING**, or **ONLY HIS
+WORD**. Where a subject already has a home in this file it is LINKED, not restated.
+
+**verify (section-wide):** none — nothing in this section is a change.
+
+- [ ] **THE MERGE GATE STOPPED GATING ON 2026-08-18, and no test was edited to make it happen.**
+      `20868394` dropped `--no-file-parallelism` from the server test script — correctly, having made
+      test isolation real — and never measured wall clock. Sixteen bcrypt-heavy files went from
+      one-at-a-time to as-many-as-the-machine-has-cores. The worst test with no timeout of its own
+      runs **1,006 ms alone and up to 4,979 ms at fourteen workers, against a 5,000 ms limit**.
+      **CI is green because a 2-core runner cannot crowd the suite — that green is honest.**
+      Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md).
+      **NEEDS: ONLY HIS WORD** — restore the serialisation as a performance decision, or teach the
+      gate to report a timeout-only failure as INCONCLUSIVE rather than as pass or fail.
+
+- [ ] **TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**
+      `scripts/verify.mjs:246` and `.github/workflows/ci.yml:184` both assert
+      `--no-file-parallelism` is in the server package's `npm test`. It is not. `verify.mjs` then
+      runs the server suite **non-exclusively, beside the fingerprint jobs**, on the ground that the
+      suite is single-worker — which is why the GATE rather than the suite is where the red appears.
+      Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md), the second finding.
+      **NEEDS: BUILDING** (a comment fix and a scheduling flag), but it is entangled with the item
+      above and should be decided with it.
+
+- [ ] **A SWEEP CELL THAT ASKS FOR 60 RACES AND RETURNS 0 STILL PRINTS A NUMBER AND EXITS CLEAN.**
+      56 files import the measurement driver, **44 call `runRace`, and exactly ONE reads its return
+      value** — the driver's own test. `runRace` ends on three different conditions and returns one
+      indistinguishable value. **38 of the 44 harnesses have no failure path at all.**
+      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md).
+      **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
+      in the report.
+
+- [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
+      GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
+      **20/20**, because his beetle decision made the race short enough — **the harness hardcodes 2
+      laps and that never moved; the racer got faster.** The silence was never fixed.
+      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md), section 3.
+      **NEEDS: nothing on its own** — it is the argument for the item above.
+
+- [ ] **THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
+      on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
+      derived the camera seed from the race seed since his decision of 2026-08-23. **Re-deriving the
+      width-step hit list gave 30 races, not 26 minus 6 — a DIFFERENT POPULATION.** His twelve survive
+      re-measurement. **The fingerprints are NOT affected** — they carry a private copy of the same
+      number and never read the default.
+      Establishes it: [HARNESS-CAMERA-SEED-1](../reports/evolution/HARNESS-CAMERA-SEED-1.md).
+      **NEEDS: ONLY HIS WORD** — whether the default follows the browser, given that the obstacle is
+      an append-only journal whose tables would stop matching their tools.
+
+- [ ] **THE ARBITER THAT DECIDES WHETHER A CHANGE CAN REACH THE ENGINE CANNOT SEE ANYTHING THAT
+      SHIPS AS DATA.** `engine-reach --check` returns *"cannot reach the engine at all"* for
+      `server/seeds/tracks/*.json`, for `client/src/modules/racerNames.js` — whose names are hashed
+      into the physics — and for `client/src/modules/racer-types/*.js`, whose speed multipliers set
+      the race length. **Two of those three verdicts are wrong.** It is a wrong QUESTION asked of a
+      correct answer: the closure answers *"what does the engine import"* exactly.
+      Establishes it: [ENGINE-REACH-DATA-1](../reports/evolution/ENGINE-REACH-DATA-1.md).
+      **NEEDS: BUILDING** — the smallest change and its measured cost (3.4% of commits, 7 a month)
+      are in the report.
+
+- [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
+      FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
+      declared members, leaving `anchorRacerIndex` and `runInArrived` **undefined inside the
+      instrument**. **LABEL-FOCUS-1 has never been exercised by it, and RUNIN-NAMES-1 whole visible
+      change is a state it cannot enter** — its unmoved verdict for that feature was empty, not
+      reassuring.
+      Establishes it: [RENDER-FINGERPRINT-BLIND-1](../reports/evolution/RENDER-FINGERPRINT-BLIND-1.md).
+      **NEEDS: ONLY HIS WORD for the repair** — it moves the hash, so it is a mint. **The guard half —
+      checking that callers build the object through `frameCameraInputs` — needs only BUILDING.**
+
+- [ ] **THE MEASUREMENT HARNESS HAS A FIXED 200-SECOND CEILING AND A HARDCODED LAP COUNT, AND HE HAS
+      ALREADY JUDGED THIS NOT URGENT.** `raceDriver.mjs:303` stops every race at 200 s; `:185` gives
+      every closed track `laps: 2` and every open track `laps: 1`, ignoring the track own
+      `defaultLaps`. **His judgement, 2026-08-25: his own 120 s tests came out nearly the same, so
+      this is not pressing.** Recorded WITH that judgement so nobody re-opens it as an emergency.
+      Establishes it: [GARDEN-PATH-NO-FINISH-1](../reports/evolution/GARDEN-PATH-NO-FINISH-1.md) and
+      [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md), section 6.
+      **NEEDS: MEASURING, when he wants it** — a track whose `defaultLaps` is 4 is measured at 2 and
+      **no cell would be empty**, so the loud-zero rule above would not catch it.
+
+- [ ] **THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
+      VISIBLE STEP COMES FROM.** On river-run seed 13 a third racer crosses the one-length boundary
+      **by a tenth of a pixel** and the shot cuts **198 to 386 px in a single frame**, 0.15 s before
+      the line. His demand was fully formed **before** he joined. A chance-based membership removes 13
+      of the 30 worst steps and costs no width — **but it moves seed 13 cut earlier rather than
+      removing it**, because when the jump happens is a membership question and whether it happens is
+      not. **The membership buys a median 2.28 s of warning and the width spends none of it.**
+      Establishes it: [RUNIN-SEED13-ANATOMY-1](../reports/evolution/RUNIN-SEED13-ANATOMY-1.md) and
+      [RUNIN-CHANCE-SET-1](../reports/evolution/RUNIN-CHANCE-SET-1.md).
+      **NEEDS: ONLY HIS WORD** — may the width ease onto a new member over about 1.25 s, accepting he
+      is not fully guaranteed while it does?
+
+- [ ] **THE REQUIREMENT HE ASKED FOR IS ALREADY IMPLEMENTED IN HIS TREE AND POINTED BACKWARDS.**
+      `_updateContentionWatch` (`CameraDirector.js:2619`) computes *"can this racer still win"* every
+      250 ms and `contentionWatch` defaults to **true** — but `_contentionOut` only grows, so it can
+      only ever REMOVE a racer from the framing. **Nothing admits on it.** Two earlier reports had
+      already found it; this is the third.
+      Establishes it: [RUNIN-CHANCE-SET-1](../reports/evolution/RUNIN-CHANCE-SET-1.md), section 1.
+      **NEEDS: nothing on its own** — it is the context for the item above.
+
+- [ ] **AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
+      HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.** The pan target is resolved at the previous
+      frame zoom and drawn at this one; multiplied by the subject distance from the world origin the
+      aim is thrown **up to 2,427 px** and the leader leaves the canvas for 21 frames. **It is
+      general — the counter-case race swings 959 px too — and worse at lower frame rates.**
+      **The correction already exists in the file and is scoped to the frames where the schedule
+      composes, so it stops one frame before the largest zoom move of the race.**
+      Establishes it: [RUNIN-SEED13-ANATOMY-1](../reports/evolution/RUNIN-SEED13-ANATOMY-1.md), section 3.
+      **NEEDS: ONLY HIS WORD** — the repair moves the camera fingerprint on every race with a moving
+      zoom, so it is a ship-ceremony change and not a quiet fix.
+
+- [ ] **A SEED IS ONE OF NINE INPUTS, NOT SIX — and two of the nine are stored host preferences.**
+      This corrects the count in *"A seed alone does not reproduce a race"* below, which said six.
+      `raceActionStage` and the world config are read from host storage at press time, so **the same
+      seed on two machines is two races and neither operator changed anything.** His Quick Test
+      belief is right under two conditions that are invisible on screen: the roster *selector* picks
+      among three lists, and **any real player in the lobby re-indexes the whole field**.
+      Establishes it: [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md).
+      **NEEDS: ONLY HIS WORD** — a short typable identifier that refuses to exist when it would lie,
+      a long copyable one, or both.
+
+- [ ] **A SHIPPED TRACK CHANGE STILL REACHES NOBODY, CONFIRMED AGAIN TONIGHT.** garden-path icon and
+      description now match its beetle in the artefact the product ships, **and his own installation
+      will never see it** — `seedRuntime.js:36` copies a seed only where no file exists. **The live
+      record was deliberately NOT hand-edited this time**, so the evidence stays intact.
+      One home for this subject: **the section immediately below**, which owns it.
+      Also establishes it: [GARDEN-PATH-BEETLE-SKIN-1](../reports/evolution/GARDEN-PATH-BEETLE-SKIN-1.md).
+      **NEEDS: ONLY HIS WORD** — should a shipped-data change be deliverable to an existing
+      installation at all, or is "new installs only" the intended behaviour?
+
+---
+
+## A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
+
+**verify (section-wide):** none — nothing here is a change. **Both entries are FINDINGS, not
+proposals.** No work is proposed for either, no key is added, and nothing is designed.
+
+- [ ] **EDITING A SHIPPED TRACK SEED CHANGES NOTHING THAT ANY EXISTING INSTALLATION CAN SEE, and no
+      mechanism ever delivers it.** Three facts, each read at source: `seedRuntime.js` copies a seed
+      into the data directory **only when the destination does not exist** — *"Existing destination
+      files are never overwritten"*; `server/src/routes/tracks.js` builds its track map **once, at
+      process start** (`const tracksMap = loadAllTracks()` at module scope) and serves every read
+      from that map; and **there is no migration** — `.tlh1-defaults-migrated` is written and never
+      read, its own comment saying *"Legacy marker — no behavior gating; kept for operational
+      reference only."* **So a shipped default reaches fresh installs and nobody else.**
+      **THE EVIDENCE IS THIS BLOCK ITSELF.** garden-path's defaults moved on the owner's machine only
+      because the gitignored live record under `server/data/tracks` was **hand-edited** — a step no
+      user and no CI run performs — and even then only after the API process was restarted. **He
+      watched the old track for thirty hours**, and nothing in the repository could have told him:
+      the commit was correct, the seed was correct, and the picture was not.
+      **IT IS THE SAME ROOT CAUSE AS `verify`'s ROUTING NOT SEEING A TRACK CHANGE.** Routing and the
+      mint tripwire both compute their reach from the **transitive import closure** of the engine,
+      and a track record is never imported — it is read from disk at runtime. Measured here:
+      `verify` skipped all four fingerprint guards for a change that moved all four, and
+      `node scripts/engine-reach.mjs --check server/seeds/tracks/garden-path.json` exits **1**,
+      *"cannot reach the engine at all"*, for that same change. **A data file can move the world
+      without being reachable, and every instrument that decides by import closure is blind to it.**
+      **AND THE DRIFT WAS ALREADY REAL.** The owner's live record still carried the legacy
+      `defaultDuration` while the shipped seed had long since moved to `defaultLaps` — both resolving
+      to the same lap count, so nothing showed — **with nothing anywhere comparing the two.**
+
+- [ ] **garden-path still wears the snail.** Its icon is 🐌 and its description reads *"A leisurely
+      (yet surprisingly competitive) crawl through the roses"*, while the track's default racer is
+      now the **beetle**. The owner named two changes on 2026-08-25 and neither was the icon or the
+      description, so neither was touched; `scripts/track-defaults.test.mjs` pins both so that a
+      later block cannot quietly tidy them without saying so. **Small, visible, and recorded only so
+      that it reads as a decision rather than an oversight.**
+
 ## A seed alone does not reproduce a race (2026-08-23, from SEED-REAL-RACE-1)
 
 **verify (section-wide):** the item names its own command. **This is a FINDING, not a proposal** —
@@ -205,6 +376,11 @@ nothing is designed here, no key is added, and no change is implied.
       needs the track, the racer type, the field SIZE, the NAME LIST, the canonical duration input
       and the config that was in force. Established at source 2026-08-23; every address below was
       read, not recalled.
+      **COUNT CORRECTED 2026-08-26: it is NINE inputs, not six.**
+      [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md) re-established the set at source and
+      adds `raceActionStage`, `racePlanEnabled` and the world config — **two of which are stored HOST
+      preferences**, so the same seed on two machines is two races. Nothing else in this entry is
+      withdrawn.
 
   **THE NAME LIST IS THE ONE THAT SURPRISES PEOPLE, so it is first.** A racer's NAME is a PHYSICS
   INPUT: `stablePairBit` in `client/src/modules/raceBehavior.js` builds its key from

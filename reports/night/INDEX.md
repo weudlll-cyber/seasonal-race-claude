@@ -8,6 +8,12 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-25.md](NIGHT-2026-08-25.md) — **the morning sheet for the night of 2026-08-25**
+  (the gate that stopped gating, and seven pieces behind it). **Not a findings report: it is the
+  running state of that night's chain** — done, running, left, and the three forks that need his word
+  with the one question each. Updated after every piece, its own commit on master, so it always says
+  what master actually holds.
+
 - [NIGHT-2026-08-23.md](NIGHT-2026-08-23.md) — **the morning sheet for the night of 2026-08-23**
   (the ladder's validation, and everything that needed no word from him). **Not a findings report: it
   is the running state of that night's chain** — what is done, what is running, what is left, and the
