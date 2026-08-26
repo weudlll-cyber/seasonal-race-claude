@@ -1011,7 +1011,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 966ee56f 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4110bd26 2026-08-26 depends=client/src/modules/camera/ -->
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
 2089/2.81/8.59. Run rather than argued: the change moves the pan target in `LEADER_ZOOM`, which is
