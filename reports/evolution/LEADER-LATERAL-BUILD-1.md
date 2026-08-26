@@ -1,5 +1,12 @@
 # LEADER-LATERAL-BUILD-1 — the leader joins the subjects, and the camera steps aside
 
+> **ACCEPTED AND SHIPPED, 2026-08-26.** The owner judged the production build `3dc061f4` and accepted
+> it — space-sprint looks right to him. Camera minted `4aef03dc22ab08b3` → **`6dfded25dd656977`** and
+> render `ee4f4b016051a1e6` → **`4819e3b0f8e61c23`**, on his permission for these two values and no
+> others; world and world-off were measured in the same pass and are unmoved. Shipped under
+> `v-ship-leader-lateral`. **The gate correction is below** — the red gate this report handed off with
+> went GREEN on the same commit, which is a worse fact than a red one.
+
 **Built, measured, NOT merged.** Branch `feat/leader-lateral-minimal-1`, off master. Before and after
 are ten races on each of the ten tracks at shipped settings, browser Quick-Test path, camera seed
 derived from the race seed — **140,740 `LEADER_ZOOM` mid-race frames per arm**, one instrument, two
@@ -215,7 +222,31 @@ is in the hull and byte-identical against HEAD whatever the branch is doing. Bot
 for the reason they were written. **This would have gone red for the next block to ship a default
 too**, which is why it is repaired here rather than noted and left.
 
-## THE GATE, REPORTED AS IT ACTUALLY STANDS
+## CORRECTION, 2026-08-26 — THE GATE WENT GREEN ON THE SAME COMMIT, AND THAT IS THE FINDING
+
+The section below is what this report handed off with, and it is **superseded in its conclusion**
+though not in its facts. Re-run at merge time on the identical tree, commit `3dc061f4`, `verify`
+returned **PASS 20, FAIL 0, exit 0.**
+
+**Same tree, same commit, opposite result.** A deterministic code change cannot produce different
+outcomes on an identical tree, so this is the proof the earlier failures were not caused by this
+branch — stronger than any argument from which files it touches, which mattered because
+`raceActionStage.test.jsx` **does** import `storage/defaults.js`, the one product file this branch
+changes. That import closure ruled out the easy argument and forced the empirical one.
+
+What I could NOT reproduce, and say so plainly: the failure did not appear on master. `verify` on
+master refuses outright (VERIFY-BASE-1 — nothing changed, every guard skips); forced to run master's
+tree with `--base=b49bf4a5` it returned **PASS 22, FAIL 0**; and the two tests under a deliberate
+13-core load returned 24/24. **So there is no positive reproduction on master, only the
+same-tree-both-ways result on the branch.** That is enough to clear this branch and not enough to
+characterise the cliff, which is exactly why it is filed in `docs/BACKLOG.md` rather than closed.
+
+**A gate that returns PASS and FAIL for the same tree has stopped gating.** That is worse than a red
+gate: red stops you, non-deterministic teaches you to re-run until green. It is the same crowding
+class GATE-SERIAL-BCRYPT-1 fixed for the server suite by bounding its workers and running it alone —
+unfixed here, in a second place.
+
+## THE GATE AS IT STOOD WHEN THIS REPORT WAS WRITTEN (superseded above)
 
 **`npm run verify` is NOT green under its own parallelism, and the residue is not this change.** Final
 run: **PASS 19, FAIL 1** — `client-suite`. `script-suite` passes once the engine-reach fixture above is

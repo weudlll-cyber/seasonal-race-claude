@@ -154,7 +154,8 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
-- [LEADER-LATERAL-BUILD-1.md](LEADER-LATERAL-BUILD-1.md) — **BUILT, NOT MERGED: the clip rate falls
+- [LEADER-LATERAL-BUILD-1.md](LEADER-LATERAL-BUILD-1.md) — **SHIPPED as `v-ship-leader-lateral`
+  (accepted 2026-08-26): the clip rate falls
   4.18% -> 1.29% and the picture does not move** (2026-08-26, `feat/leader-lateral-minimal-1`; 10
   tracks x 10 races per arm, 140,740 `LEADER_ZOOM` mid-race frames each). space-sprint **15.4% ->
   3.3%**, seatrack 6.5% -> 2.2%, river-run 4.6% -> 0.3%, mountainstreet 4.4% -> 0.8%; the six calm
@@ -171,6 +172,10 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   unmoved**; NOT minted — no permission. Camera holds the centre 90.27%; along-track residual unchanged
   at 830. Five proposals, three of them this block's own; one live inconsistency found and left named:
   the corridor measures its room from a point the camera does not use (median 132 px out).
+  **CORRECTION at merge time: the red gate this report handed off with went GREEN on the IDENTICAL
+  commit `3dc061f4` (PASS 20 / FAIL 0), which clears the branch and indicts the gate** — a suite that
+  returns both answers for one tree has stopped gating. It did NOT reproduce on master. Filed in
+  `docs/BACKLOG.md` as GATE-SERIAL-BCRYPT-1's crowding class in a second place.
 
 - [LEADER-LATERAL-MINIMAL-1.md](LEADER-LATERAL-MINIMAL-1.md) — **BUILD IT: the rule sits 38x calmer
   than following him, but it JOLTS 130.6 world px and cannot reach 14% of what it engages on**

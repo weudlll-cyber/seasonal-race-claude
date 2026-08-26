@@ -145,6 +145,23 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
+- `v-ship-leader-lateral` (`PROVISIONAL`, 2026-08-26) — **the ship.** The owner judged the build on a
+  production build (`3dc061f4`) on 2026-08-26 and accepted it: space-sprint looks right to him. The
+  return point is `v-ship-leader-lateral^1`, and it restores a mid-race picture in which **nothing in
+  `LEADER_ZOOM` takes the leader's sideways position as an input to anything** — the state names him
+  its anchor, CAMERA-LATERAL-1 pins that anchor to the corridor centreline, and the CORRIDOR guarantee
+  fits the corridor rather than the man. It restores a pooled clip rate of **4.18%** against **1.29%**
+  after, and **15.4%** on space-sprint against **3.3%**; seatrack 6.5% against 2.2%, river-run 4.6%
+  against 0.3%, mountainstreet 4.4% against 0.8%. Measured on **ten tracks, ten races each**, 140,740
+  `LEADER_ZOOM` mid-race frames per arm. The six calm tracks are identical either side, because their
+  clipping was never sideways — that is the along-track residual, 830 frames, which this ship does not
+  touch and which belongs to the zoom guarantee. **The picture did not move to buy it**: 93 of 100
+  races carry a ≥120 px single-frame movement in BOTH arms and the largest median change anywhere is
+  10.07 → 10.15 px, so no easing was added — the pan smoother already turns the target step into a
+  travel. Camera and render fingerprints move; **world and world-off do not**, which is the check that
+  a camera repair touches no race. The SHA is provisional at the parent and is corrected to the merge
+  commit after CI goes green, per THE SHIP ORDER step 11.
+
 - `v-ship-runin-calm` (`341060f6`, 2026-08-26) — **the ship.** The return
   point is
   `v-ship-runin-calm^1`, and it restores a closing phase that still jumps: the picture's largest
