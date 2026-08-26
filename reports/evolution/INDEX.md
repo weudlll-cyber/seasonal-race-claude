@@ -154,6 +154,54 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BACKLOG-TRUTH-2.md](BACKLOG-TRUTH-2.md) — **six backlog entries checked AT SOURCE, and two were
+  not what they said** (2026-08-27, documents only; no gate can answer differently for a `docs/`
+  change). **CLOSED with evidence kept**: the merge gate (bcrypt group bounded to 3 in
+  `server/vitest.config.js`, margin 21 ms -> 1,894 ms — and the choice it asked him for was never
+  needed); the run-in's hard admit (answered YES BY ACCEPTANCE, `_levelEaseTo` eases both ways,
+  shipped in `v-ship-runin-calm`); the pan's stale zoom (`_resolvePanTarget()` after the zoom
+  settles). **STILL OPEN and re-verified rather than assumed**: the garden-path silent zero (the
+  symptom healed, the 200 s ceiling and the hardcoded 2 laps did not move) and the contention watch
+  (`_contentionOut` still only grows; the nearby `withinOneLength` membership is a DIFFERENT
+  mechanism and the two are now distinguished). **THE ONE THAT NEEDED SOURCE MOST**: the arbiter is
+  HALF closed — routing replayed on the real commit selects 12 guards where it selected 5, so a red
+  master can no longer report green, but `engine-reach --check` still answers "cannot reach the
+  engine at all" for a seed file whose two-line edit moved all four fingerprints, and cannot answer
+  otherwise because a JSON file is never an import edge. **THE RACE-SEED ROW ESTABLISHED**: merged
+  and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
+  would look at. Nothing deleted. 3 proposals, 2 the block's own.
+
+- [ANCHOR-ROOM-GAP-1.md](ANCHOR-ROOM-GAP-1.md) — **LATENT, never seen, NOT work — and the "median
+  132 px" was mine and does not survive re-measurement** (2026-08-27, measure only; 10 tracks x 5
+  races, 210,388 frames; replication against the director EXACT at 124,310/124,310). The gap changes
+  the guarantee's ANSWER on **2.99%** of frames; elsewhere it is arithmetic only (47.2% SILENT, 49.8%
+  same-direction SIZE). Where it changes the answer the picture would move a median 3-12 px and
+  **41.3 px at the very worst** — smaller than the noise the camera already carries (median per-frame
+  pan ~9 px, p99 ~190 px). **It is ONE STATE**: COMEBACK_ZOOM holds **79.06%** of the answer-changes
+  and is 1.9% of frames; LEADER_ZOOM is 0.96%, LEAD_CHANGE and PHOTO_FINISH exactly zero. **THE
+  CORRECTION**: 132 px measured a reconstruction against the director's `targetOffset`, not the two
+  room-measurement points; measured properly the pooled median gap is **0.0 px** and LEADER_ZOOM's is
+  **7.4**. Two exclusions made the probe trustworthy, both asked of the director rather than guessed:
+  the guarantee's five early returns, and capturing the ACTUAL arguments instead of rebuilding them.
+  3 proposals; **the recommendation is to leave it alone.**
+
+- [SHIP-ORDER-CLEANUP-1.md](SHIP-ORDER-CLEANUP-1.md) — **THE SHIP ORDER gets a twelfth step, and the
+  containment check that makes it safe** (2026-08-27, documents only — no gate can answer differently
+  for a `docs/` change, so none was run beyond `check-doc-links` and `check-index`). Cleanup lived
+  outside the repository and the record shows that does not hold: CLEANUP-2026-08-26 swept nine
+  branches and by the next ship there were three more. **The cost is not untidiness** — one of them
+  was the only home of a 195-line report for a day, and master's INDEX pointed a reader at it.
+  **Step 12**: after CI is green, check AT ORIGIN and delete every branch master already contains;
+  land anything missing FIRST; anything kept as evidence becomes an annotated tag with its register
+  entry, never a branch. **And the METHOD, because the rule without it already failed here**:
+  containment is a TREE question, `comm -23` of the branch's full `ls-tree` against master's. The
+  commit-level check reads like a complete audit and is not — a branch's tree carries what it
+  inherited, and `diag/runin-viable-1` passed that check while its tree still held
+  `panStaleZoom.test.js`, which master had replaced. **The conclusion was right by luck and the
+  method would not have caught a real loss.** `--is-ancestor` is not the check either and the file
+  says why. No step renumbered, so four documents and two minted records that cite "step 11" stay
+  accurate — checked, not assumed. 3 proposals, 2 the block's own.
+
 - [LEADER-LATERAL-BUILD-1.md](LEADER-LATERAL-BUILD-1.md) — **SHIPPED as `v-ship-leader-lateral`
   (accepted 2026-08-26): the clip rate falls
   4.18% -> 1.29% and the picture does not move** (2026-08-26, `feat/leader-lateral-minimal-1`; 10
