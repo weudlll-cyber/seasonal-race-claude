@@ -154,6 +154,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CLEANUP-2026-08-26.md](CLEANUP-2026-08-26.md) — **nine branches at origin, and two of them were
+  holding an instrument nobody else had** (2026-08-26, `chore/cleanup-2026-08-26`, refs and register
+  only, NO SOURCE CHANGE — so no fingerprint, no browser gate, no client suite, and the reason is
+  stated; merge permission granted for this piece and it is merged).
+  **SEVEN OF THE NINE HELD NOTHING MASTER DID NOT — and "ancestor of master" was not accepted as
+  proof of that.** Ancestry is decisive about history, not about the tree a reader checks out, so a
+  second test ran on all six contained branches: paths on the branch tip minus paths on master's tip.
+  **All six empty**, so they were deleted untagged.
+  **THE TWO THAT WERE NOT CONTAINED WERE EACH HOLDING A HARNESS THAT EXISTED IN NO OTHER COMMIT**, both
+  behind numbers already cited on master — the `sweep.mjs` shape of
+  [CLEANUP-2026-08-24](CLEANUP-2026-08-24.md), caught **before** the deletion this time rather than
+  after. `archive/runin-chance-set-1` (`97c29d8b`) holds the four chance-set instruments behind
+  RUNIN-CHANCE-SET-1's 1,140 races × 4 arms and its 2.28 s of discarded warning — **and the line is
+  open**, being exactly the eased-admit predicate the owner asked for on 2026-08-26.
+  `archive/runin-seed13-anatomy-1` (`c8bc1ad0`) holds `runin-anatomy.mjs`, **the only instrument in
+  the tree that records placement and width apart**, which is why every report reading `zoom` alone
+  had missed the pan swing.
+  **NEITHER COULD BE MERGED:** both tips carry a merge of `feat/runin-level-set-1`, so containing them
+  would have put an unjudged camera build on master. Tags and their register lines went up in ONE
+  atomic push, reachability re-verified at origin BEFORE any deletion.
+  **A WRONG ANSWER OF MINE IS REPORTED RATHER THAN DELETED:** the first containment sweep called
+  eighteen files different, including `.gitattributes`; all eighteen were false, because MSYS path
+  conversion mangled `rev:path` into `origin\master;.gitattributes` and `rev-parse` answered about a
+  nonexistent revision. Caught by disagreeing with a plain `git diff` already run.
+  **Also fixed:** `docs/TAGS.md` ended with the undated sentence *"No non-master branches remain"* —
+  true on 2026-07-29, read as current ever since, while nine branches stood at origin.
+  **State afterwards:** 2 branches at origin, 0 stashes, 1 worktree (`.git/worktrees/` inspected
+  directly), 118 tags with 0 unregistered in both directions, tree clean. 5 proposals, 3 of them
+  mine; none ordered.
+
 - [ENGINE-REACH-DATA-FIX-1.md](ENGINE-REACH-DATA-FIX-1.md) — **a guard now selects on what its code
   NAMES, not only on what it imports** (2026-08-26, `fix/engine-reach-data-1`, **BUILT AND MERGED**).
   **THE HISTORICAL FAILURE, REPLAYED AND EXIT-CODED.** `ba4a4442` (the garden-path icon) changed one
