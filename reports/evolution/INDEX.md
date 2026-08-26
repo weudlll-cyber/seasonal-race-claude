@@ -168,7 +168,8 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   offset from the leader unchanged. **0 of 5,886 clipped frames would clip with a perfect camera**, so
   the sprite never clips alone — but it sets the TOLERANCE, and space-sprint's is 3.1x tighter than
   river-run's, which is why near-identical gap distributions clip at 15.4% and 4.6%. Explains
-  [LEADER-WHOLE-SETBACK-BUILD-1](LEADER-WHOLE-SETBACK-BUILD-1.md) (it moved the anchor ALONG the track
+  LEADER-WHOLE-SETBACK-BUILD-1 (its report is NOT on master - it sits on `feat/leader-whole-setback-1`
+  @ `1e3a05ae`, unmerged; it moved the anchor ALONG the track
   when he is lost ACROSS it) and [LEADER-CORRIDORS-DEFAULT-1](LEADER-CORRIDORS-DEFAULT-1.md) (no
   corridor setting can close a promise his body was never in). **Removing 70% of the gap clears 95% of
   the frames; no camera speed is the lever.** Owner decision open: the repair hands back exactly what

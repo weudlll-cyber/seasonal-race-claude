@@ -267,7 +267,8 @@ framing rule. None of them is a camera-speed setting.**
 - **The working theory this block was given is refuted.** The mid-race clipping is not the tracking
   lag's tail in the sense the brief meant. It is the tail of a gap that is 84–90% framing-rule
   intent.
-- **LEADER-WHOLE-SETBACK-BUILD-1's failure is now explained.** The setback never engaged when solved
+- **LEADER-WHOLE-SETBACK-BUILD-1's failure is now explained.** (Its report is not on master — it sits
+  on `feat/leader-whole-setback-1` @ `1e3a05ae`, unmerged.) The setback never engaged when solved
   from the leader's intended placement, and was ineffective when solved from his delivered position,
   because it moved the anchor **along** the track — and on the tracks that clip, he is lost
   **across** it. The mechanism was aimed at the wrong axis.
