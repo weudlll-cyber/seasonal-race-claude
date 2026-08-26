@@ -238,8 +238,13 @@ export class CameraDirector {
     // RUNIN-LEVEL-SET-BUILD-1: the level guarantee's held ceiling and its eased release.
     // All three are null outside the run-in, which is what makes the rest of the race untouched.
     this._levelHeld = null;
-    this._levelRiseFrom = null;
-    this._levelRiseAt = 0;
+    // RUNIN-EASED-ADMIT-1: the level ceiling's ease, which now runs in BOTH directions and re-anchors
+    // whenever its target moves. `_levelEaseTarget` is what makes the re-anchor possible — without a
+    // record of what the ease was aimed at, a moved target cannot be noticed and its step is passed
+    // through scaled by however far the ease had travelled. See `_levelEaseTo`.
+    this._levelEaseFrom = null;
+    this._levelEaseAt = 0;
+    this._levelEaseTarget = null;
     this._levelSet = 0;
     // RUNIN-HOLD-1: the run-in HOLDS its opening shot and then closes in ONE sweep. Both fields are
     // one-way latches, for the same reason `_runInProgress` is clamped monotone — a close that could
@@ -2779,11 +2784,30 @@ export class CameraDirector {
    * @returns {number} the cam.zoom ceiling to compose with `Math.min`
    */
   _levelCeiling(racers, subjects, frameSize, preLevel, ts) {
-    if (!this._runInComposingNow || !subjects?.point || !(preLevel > 0)) {
+    if (!(preLevel > 0)) {
       this._levelHeld = null;
-      this._levelRiseFrom = null;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
       this._levelSet = 0;
       return Infinity;
+    }
+    // ── THE WINDOW CLOSING IS NOT A REASON TO DROP THE WIDTH (RUNIN-EASED-ADMIT-1) ─────────────
+    //
+    // This used to reset and return Infinity the moment the run-in stopped composing, which is the
+    // crossing. Measured on mountainstreet seed 32, that took `guaranteed` from 1.3139 to 4.0 in one
+    // frame — a factor of 3.05, and the largest single step this term ever produced. The rule's
+    // WINDOW ending is a fact about the rule; the PICTURE's width is not allowed to be discontinuous
+    // because of it. So the ceiling now leaves the only way it is allowed to: by easing to the shot
+    // that would have been and disengaging when it gets there.
+    //
+    // IT THEREFORE OUTLIVES `_runInComposingNow` BY AT MOST `runInOpenMs`, and that is a deliberate
+    // change to what "the run-in hands back at the line" means. It hands back over a window instead
+    // of on a frame. The shot it hands back TO is unchanged — `preLevel` is the state's own — so
+    // what moved is when the picture arrives there, not where.
+    if (!this._runInComposingNow || !subjects?.point) {
+      this._levelSet = 0;
+      if (this._levelHeld === null) return Infinity;
+      return this._levelEaseTo(preLevel, preLevel, ts);
     }
     const set = this._levelContenders(racers);
     this._levelSet = set.length;
@@ -2825,30 +2849,95 @@ export class CameraDirector {
     const target = Math.min(Number.isFinite(raw) ? raw : Infinity, preLevel);
     // Never fired, and nothing to fire for: the ordinary case, and it must cost exactly nothing.
     if (this._levelHeld === null && !(target < preLevel)) return Infinity;
-    if (this._levelHeld === null || target <= this._levelHeld) {
-      this._levelHeld = target;
-      this._levelRiseFrom = null;
-      return this._levelHeld;
-    }
-    if (this._levelRiseFrom === null) {
-      this._levelRiseFrom = this._levelHeld;
-      this._levelRiseAt = ts;
-    }
+    return this._levelEaseTo(target, preLevel, ts);
+  }
+
+  /**
+   * RUNIN-EASED-ADMIT-1 — THE LEVEL CEILING'S ONE CONTINUITY RULE.
+   *
+   * ── THE CAUSE THIS REPLACES, and it was NOT the one-sided admit alone ──────────────────────────
+   *
+   * What stood here eased in ONE direction and, where it did ease, did not smooth anything. Three
+   * boundaries, three ways the width could jump, all of them the same underlying fault: **the value
+   * was allowed to be discontinuous.**
+   *
+   *   1. THE ADMIT SNAPPED. `target <= _levelHeld` assigned `target` outright, so a new member moved
+   *      the width by his full demand in one frame. That is the asymmetry the owner named.
+   *
+   *   2. THE EASE RE-PROJECTED TARGET CHANGES INSTEAD OF ABSORBING THEM, and this was the bigger of
+   *      the two. It anchored `_levelRiseFrom` ONCE and then interpolated toward a LIVE target with
+   *      a RUNNING clock, so when the target moved mid-ease the already-elapsed fraction `e` was
+   *      applied immediately to the new, larger ratio. The output jumped by `(newTarget/oldTarget)^e`
+   *      in a single frame. Measured on river-run seed 18: the ceiling went 1.3703 -> 2.4251, a
+   *      factor of 1.77, on the frame the set dropped 2 -> 1 — **while the ease was already running**
+   *      — and `1.34 x (3.9868/1.34)^0.544` reproduces 2.4251 exactly. A smoother that passes a step
+   *      through, scaled by how far it happens to have travelled, is not a smoother.
+   *
+   *   3. THE EXIT DROPPED THE CEILING. Both exits — the set emptying and `_runInComposingNow` going
+   *      false at the crossing — returned `Infinity` and cleared the state, so the width returned to
+   *      the state's own shot in one frame. Measured on mountainstreet seed 32: `guaranteed`
+   *      1.3139 -> 4.0, a factor of 3.05, at the crossing.
+   *
+   * ── WHY THIS IS THE CAUSE AND NOT A BRIDGE OVER IT ────────────────────────────────────────────
+   *
+   * `preLevel` is smooth across every one of those frames — 3.945 -> 3.999 on seed 18 while the
+   * ceiling jumped 1.77x. So the picture's discontinuity was never the demand's own: it was this
+   * term failing to be a continuous function of it. **The repair is to give the quantity the
+   * contract it was missing**, not to hide the step behind a filter: the ceiling moves from WHERE IT
+   * IS to WHEREVER THE TARGET IS, always, in both directions, and it leaves by arriving rather than
+   * by vanishing. After it the value is continuous; there is nothing left to disguise.
+   *
+   * ── THE RULE, in one sentence ─────────────────────────────────────────────────────────────────
+   *
+   * Re-anchor whenever the target moves — start from the value currently held, restart the clock —
+   * and ease in log space on the same smoothstep over the same `runInOpenMs` the release already
+   * used. No new key, no new constant, no second smoother; the old release is this function's
+   * `target > held` case and behaves as it always meant to.
+   *
+   * @returns {number} the ceiling this frame, or Infinity once it has arrived and handed back.
+   */
+  _levelEaseTo(target, preLevel, ts) {
     const dur = this._runInOpenMs;
-    if (!(dur > 0)) {
-      this._levelHeld = target;
-      this._levelRiseFrom = null;
-      return this._levelHeld;
+    // Engage at the shot that would have been, so the width GROWS onto the new member from where
+    // the picture already is. Starting at `target` is what made the admit a step.
+    if (this._levelHeld === null) {
+      this._levelHeld = preLevel;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
     }
-    const k = Math.min(1, Math.max(0, (ts - this._levelRiseAt) / dur));
-    const e = k * k * (3 - 2 * k);
-    this._levelHeld = this._levelRiseFrom * Math.pow(target / this._levelRiseFrom, e);
-    if (k >= 1) this._levelRiseFrom = null;
+    if (!(dur > 0)) {
+      // No duration configured is the one case where a step is the honest answer: there is no
+      // window to move over, and pretending otherwise would invent one.
+      this._levelHeld = target;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
+    } else {
+      // THE RE-ANCHOR. A target that has moved starts a fresh ease from the value on screen right
+      // now, which is what makes the first frame after any change cost ZERO — `e` is 0 there by
+      // construction. Without this the elapsed fraction is applied to the new ratio, which is
+      // defect 2 above.
+      const moved =
+        this._levelEaseTarget === null || Math.abs(Math.log(target / this._levelEaseTarget)) > 1e-9;
+      if (moved) {
+        this._levelEaseFrom = this._levelHeld;
+        this._levelEaseAt = ts;
+        this._levelEaseTarget = target;
+      }
+      const k = Math.min(1, Math.max(0, (ts - this._levelEaseAt) / dur));
+      const e = k * k * (3 - 2 * k);
+      this._levelHeld = this._levelEaseFrom * Math.pow(target / this._levelEaseFrom, e);
+    }
     // Arrived: the term is exactly non-binding, so it hands back and stops existing rather than
-    // sitting at the delivered width pretending to hold it.
-    if (this._levelHeld >= preLevel - 1e-12) {
+    // sitting at the delivered width pretending to hold it. It now leaves by ARRIVING here, which
+    // is the only way out — the two exits that used to drop it are gone.
+    // BOTH CONDITIONS, and the second one is load-bearing. Arriving is not enough: on the frame the
+    // ease ENGAGES it starts at `preLevel` by construction (that is what makes the admit cost zero
+    // on its first frame), so a check on the value alone fires immediately and the term is inert
+    // forever. It leaves only when it has arrived AND nothing is still asking it to be wider.
+    if (this._levelHeld >= preLevel - 1e-12 && target >= preLevel - 1e-12) {
       this._levelHeld = null;
-      this._levelRiseFrom = null;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
       return Infinity;
     }
     return this._levelHeld;

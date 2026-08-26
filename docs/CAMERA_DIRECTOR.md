@@ -332,6 +332,31 @@ them individually.
 it costs 59 px → 360 px of sideways jump; widening it to the entry path costs the level-set
 guarantee 48 cut frames. The follow and glide branches are its scope.
 
+### 3.4a The level ceiling's continuity contract (RUNIN-EASED-ADMIT-1)
+
+**The level guarantee's width is a continuous function of its demand, in both directions, and it
+leaves by arriving rather than by vanishing.** One rule, `_levelEaseTo`, in log space on a smoothstep
+over `runInOpenMs` — the duration the release already used. No key was added.
+
+**Why it exists, and it is a cause rather than a smoother.** The term had three boundaries and
+stepped at all of them, while its own demand stayed smooth:
+
+| boundary | what it did | measured |
+| --- | --- | --- |
+| admit | assigned the new demand outright | the width moved by a member's full demand in one frame |
+| target moves mid-ease | anchored its start ONCE and interpolated toward a live target with a running clock, so an elapsed fraction `e` was applied to the new ratio | river-run seed 18: ceiling 1.3703 → 2.4251, **×1.77**, on the frame the set dropped 2→1 — *while the ease was already running* |
+| exit | returned `Infinity` and cleared its state when the set emptied or the run-in stopped composing | mountainstreet seed 32: `guaranteed` 1.3139 → 4.0, **×3.05**, at the crossing |
+
+`preLevel` — the shot that would have been — is smooth across all of those frames. **So the picture's
+discontinuity was never the demand's; it was this term failing to be a continuous function of it.**
+The repair gives the quantity the contract it lacked: re-anchor whenever the target moves, ease from
+where it is, and disengage only once it has both arrived AND nothing is still asking it to be wider.
+
+**Two consequences worth knowing.** The ceiling now outlives `_runInComposingNow` by at most
+`runInOpenMs`, so the run-in hands back over a window rather than on a frame — the shot it hands back
+TO is unchanged. And a newly admitted member is **not** fully guaranteed while the width grows onto
+him, which is the trade the owner accepted on 2026-08-26.
+
 ### 3.4 What is NOT here any more, and must not come back
 
 - **The containment clamp.** It claimed to be a no-op mid-glide and was measured ACTIVE on 23 of 23
@@ -986,7 +1011,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 139313a1 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ afe5cc9c 2026-08-26 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR RUNIN-EASED-ADMIT-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
+2089/2.81/8.59. Run rather than argued: the change is inside `client/src/modules/camera/` and moves
+the CAMERA fingerprint, so the usual byte-identical argument was unavailable. It did not move these
+because this harness's race (n=40, seed 5601) is measured on the tracking lag per state, and the
+repair changes only how the level ceiling's own value moves between frames.
+
 **RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND ALL SIX FRAME COUNTS ARE IDENTICAL (2026-08-26)**
 — 8626, 159, 13282, 8473, 4130, 2089. That is the load-bearing half of this entry: the repair moves
 where the aim is resolved, and a frame count would only move if it had also moved when a state stops

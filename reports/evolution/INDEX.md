@@ -154,6 +154,41 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-EASED-ADMIT-1.md](RUNIN-EASED-ADMIT-1.md) — **the width jumped because the ceiling had no
+  continuity contract, not because the admit was instant** (2026-08-26, `feat/runin-level-set-1`,
+  BUILT — one rule, no key, no constant, no second smoother, **nothing minted**; branch pushed
+  UNMERGED).
+  **FINDING THE CAUSE FIRST CHANGED WHAT GOT BUILT.** The obvious answer was the asymmetry — admit
+  snaps, release eases — and it is real but is only ONE of three ways the term stepped. **The single
+  largest step in the corpus, 580.58 px on river-run seed 18, is a RELEASE, and release was already
+  eased.** An eased admit would not have touched it.
+  **WHY AN ALREADY-EASED QUANTITY STEPPED BY x1.77:** the ease anchored its start ONCE and
+  interpolated toward a LIVE target with a RUNNING clock, so a target that moved mid-ease had the
+  elapsed fraction applied to the new ratio — `1.34 x (3.9868/1.34)^0.544 = 2.4251`, reproducing the
+  observation exactly. **A smoother that passes a step through, scaled by how far it has travelled,
+  is not a smoother** — and easing the admit on top of it would have been the bridge he refused.
+  **A THIRD BOUNDARY NOBODY HAD NAMED:** the exit dropped the ceiling outright when the run-in stopped
+  composing — mountainstreet seed 32, `guaranteed` 1.3139 -> 4.0, **x3.05**, at the crossing.
+  **THE VERDICT ON THE SHAPE:** the jump is neither the demand's own (`levelPre` is smooth across
+  every stepping frame) nor primarily the `Math.min` crossover (on the two biggest steps the binding
+  authority does not even change). **The term was a discontinuous function of a continuous demand at
+  all three of its boundaries**, so the repair is one continuity contract: re-anchor whenever the
+  target moves, ease both directions in log space over the same `runInOpenMs`, and leave by ARRIVING
+  rather than vanishing.
+  **RESULT, in his unit: the largest single-frame movement at the frame corner 580.58 -> 9.73 px on
+  seed 18, 368.65 -> 10.05 on seed 13, worst anywhere 14.41 px** — a 40x reduction, below the 1%-of-
+  frame floor, and **ZERO races still carry a movement a viewer would notice** (two did before).
+  Every remaining worst frame is charged to `OTHER` — ordinary pan and zoom, no admit, no release, no
+  crossover. **Nothing regressed:** across-track worst 1.33 px (from 1.22, reported not rounded away),
+  zero jumps, **zero level-set frames cut**, `check-runin-frame` PASS, camera suite 885/885.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED**; camera and render moved,
+  record untouched. Both stamps re-measured identical to the digit — straggler-truth **had** to be
+  run because the ceiling now outlives `_runInComposingNow` by up to `runInOpenMs`, so the run-in
+  hands back over a window and the two windows are no longer disjoint.
+  **A BUG OF MINE IS REPORTED RATHER THAN HIDDEN:** the first version disengaged on the engagement
+  frame and left the rule inert on every frame; four invariant tests caught it, including the one
+  whose final assertion exists to fail on a build that does nothing. 5 proposals, 3 of them mine.
+
 - [RUNIN-PIVOT-SCOPE-1.md](RUNIN-PIVOT-SCOPE-1.md) — **he is right that it is more than 59 px, and the
   experiment worked** (2026-08-26, `feat/runin-level-set-1`, BUILT — an ordering, no key, no default,
   **nothing minted**; branch pushed UNMERGED, his eye decides).

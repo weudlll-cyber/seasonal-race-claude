@@ -462,12 +462,40 @@ describe('a LIVE set does not pump the width', () => {
     expect(m1.variation).toBeLessThan(m0.variation / 3);
   });
 
-  it('admitting is instant even though releasing is eased — a racer is never cut while it thinks', () => {
-    // He appears at the boundary on one frame and must be held from that frame, not a beat later.
+  // ── RUNIN-EASED-ADMIT-1 REPLACED THIS TEST, AND THE OWNER REPLACED THE RULE IT PINNED ─────────
+  //
+  // It used to assert that the admit is INSTANT — "a racer is never cut while it thinks" — which was
+  // true and was the defect: admitting by the member's full demand in one frame is the width step he
+  // has been watching. His instruction of 2026-08-26 is that the picture may not change abruptly in
+  // the closing phase, and he accepts that a new member is not fully guaranteed while the width grows
+  // onto him. So the property to pin is inverted: the FIRST frame must cost almost nothing, and the
+  // guarantee must arrive shortly after rather than immediately.
+  it('a newly admitted member does not move the width by his full demand in one frame', () => {
     const field = (p, f) => (f < 150 ? mkField(p, []) : mkField(p, [{ back: 4, lateral: 145 }]));
     const { trace } = drive(0.9, 0.999, 300, field);
-    const after = trace.filter((x) => x.composing && x.f >= 150);
-    expect(after.length).toBeGreaterThan(20);
-    expect(after.every((row) => onScreen(row.racers[1], row))).toBe(true);
+    const composing = trace.filter((x) => x.composing);
+    expect(composing.length).toBeGreaterThan(40); // the phase ran, or nothing is proved
+
+    const i = trace.findIndex((x) => x.composing && x.f >= 150);
+    expect(i).toBeGreaterThan(0);
+    const before = trace[i - 1];
+    const admit = trace[i];
+
+    // THE STEP IS GONE ON THE ADMIT FRAME. In log space, because a width change is perceived
+    // logarithmically and that is the unit the ease itself works in.
+    const firstStep = Math.abs(Math.log(admit.zoom / before.zoom));
+    expect(firstStep).toBeLessThan(0.02); // ~2%, far below anything a viewer reads as a jump
+
+    // AND THE GUARANTEE STILL ARRIVES — the member is held once the width has grown onto him, or
+    // this would pass on a build that simply ignores him.
+    const late = trace.filter((x) => x.composing && x.f >= 150 + 40);
+    expect(late.length).toBeGreaterThan(10);
+    expect(late.every((row) => onScreen(row.racers[1], row))).toBe(true);
+
+    // ── SABOTAGE: the same race with the level guarantee removed never widens for him at all, so
+    // "the guarantee arrives" is a real assertion rather than a property of the fixture.
+    const without = withoutRule(() => drive(0.9, 0.999, 300, field));
+    const lateWithout = without.trace.filter((x) => x.composing && x.f >= 150 + 40);
+    expect(lateWithout.some((row) => !onScreen(row.racers[1], row))).toBe(true);
   });
 });

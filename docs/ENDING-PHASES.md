@@ -49,7 +49,15 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 139313a1 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ afe5cc9c 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR RUNIN-EASED-ADMIT-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot and the same
+settled-frame counts. **It had to be run this time**: the level ceiling now outlives
+`_runInComposingNow` by up to `runInOpenMs`, so the run-in's hand-back overlaps the start of the
+ending and the two windows are no longer disjoint. The durations are unmoved anyway, because they
+are answers about WHEN thresholds are crossed and the repair moves only the width's path between
+frames.
+
 **RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot and the same
 settled-frame counts. Run rather than argued: the repair re-orders where the aim is resolved on every

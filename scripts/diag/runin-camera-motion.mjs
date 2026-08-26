@@ -129,6 +129,44 @@ for (const { key, steps } of all) {
   );
 }
 
+// ── (c0) RANKED BY WHAT HE ACTUALLY SEES: THE CORNER ───────────────────────────────────────────
+//
+// RUNIN-EASED-ADMIT-1 asks the question in the owner's unit: the largest single-frame movement of
+// the picture AT THE FRAME CORNER, which is where the zoom term is largest. Each row is charged to
+// the level set's own direction — an ADMIT widens the demand, a RELEASE relaxes it — and separately
+// to whether the width changed hands between `state` and `level` on that frame, because a crossover
+// is a different fault with a different repair and an eased admit cannot remove it.
+console.log(`\n(c0) THE BIGGEST SINGLE-FRAME MOVEMENT AT THE CORNER, per race — and what caused it`);
+console.log(
+  "race                          s     corner px   pan px   zoom px   set     binding        kind"
+);
+const kinds = { ADMIT: 0, RELEASE: 0, CROSSOVER: 0, 'ADMIT+CROSSOVER': 0, 'RELEASE+CROSSOVER': 0, OTHER: 0 };
+for (const { key, R, steps } of all) {
+  const w = steps.reduce((m, s) => (s.totalPx > m.totalPx ? s : m), steps[0]);
+  const dSet = (w.b.levelSetSize ?? 0) - (w.a.levelSetSize ?? 0);
+  const cross = w.a.binding !== w.b.binding;
+  let kind = dSet > 0 ? 'ADMIT' : dSet < 0 ? 'RELEASE' : cross ? 'CROSSOVER' : 'OTHER';
+  if (dSet !== 0 && cross) kind += '+CROSSOVER';
+  kinds[kind] = (kinds[kind] ?? 0) + 1;
+  console.log(
+    key.padEnd(28),
+    f(R.crossTs == null ? null : (w.b.ts - R.crossTs) / 1000),
+    f(w.totalPx),
+    f(w.panPx),
+    f(w.zoomPx),
+    ` ${String(w.a.levelSetSize)}->${String(w.b.levelSetSize)}`.padEnd(8),
+    `${w.a.binding}->${w.b.binding}`.padEnd(14),
+    kind
+  );
+}
+console.log(
+  '   worst-frame causes: ' +
+    Object.entries(kinds)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('  ')
+);
+
 console.log(
   `\n(c) EVERY FAST CAMERA MOVEMENT, RANKED — perceptible = >${RATIO}x that race's median AND >${(FLOOR * 100).toFixed(0)}% of frame width`
 );
