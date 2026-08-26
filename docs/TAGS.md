@@ -145,9 +145,7 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
-- `v-ship-runin-calm` (`b75fcf1b`, 2026-08-26) — **the ship.** *The SHA is PROVISIONAL: it names the
-  parent commit and is corrected to the merge hash in the follow-up once CI is green, per THE SHIP
-  ORDER step 11. `check-tags` reads names, not shas, so the entry is valid meanwhile.* The return
+- `v-ship-runin-calm` (`341060f6`, 2026-08-26) — **the ship.** The return
   point is
   `v-ship-runin-calm^1`, and it restores a closing phase that still jumps: the picture's largest
   single-frame movement at the frame corner is **580.58 px on river-run seed 18** and 368.65 on
