@@ -154,6 +154,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEADER-WHOLE-SETBACK-1.md](LEADER-WHOLE-SETBACK-1.md) — **the setback is small, it BUYS forward
+  view rather than costing it, and applied raw it is a 617 px jolt** (2026-08-26,
+  `diag/leader-whole-setback-1`, MEASURE ONLY — nothing built, no default changed, no key, no
+  fingerprint; read-only, so no browser gate and no client suite, and the reason is stated; 100 races
+  at the SHIPPED settings, browser camera seeding, 14 cores; report merged, branch pushed unmerged).
+  **(a) THE SIZE.** On the typical engaged frame the leader moves back **50–210 screen px**, about
+  **0.07–0.16 of `leaderForwardFrac`** — from 0.66 to roughly 0.50–0.59. **space-sprint, his case, is
+  the cheapest at a median of 50.6 px.** The tail is another animal: p95 340–760 px and worst-case
+  frames needing 0.37–0.86 of the fraction, which would put him at or behind the frame's rear edge —
+  **a bounded setback will not fix those.**
+  **(c) AND THE BRIEF'S ASSUMPTION IS INVERTED — it costs no forward view, it ADDS it.** 0.66 places
+  him 16% AHEAD of centre, so the room ahead is the scarce half; pulling him back is both what makes
+  him fit and what opens the road. River-run goes **76.9 -> 280.8 px ahead**, searound from
+  **NEGATIVE** (his body already past the leading edge) to 96. **What it spends is the view BEHIND:
+  2.5% on city-circuit up to 25.3% on river-run**, which is the number for his eye.
+  **(d) IT CANNOT BE APPLIED RAW.** Median per-frame movement 0.0 px, p99 4.3 px — and **worst 616.7 px
+  in ONE frame** (seatrack), 603.9 (mountainstreet), 486.2 (space-sprint). **That is bigger than the
+  580 px width step this strand just removed**, so the piece is "a setback that EASES", and the
+  run-in's own `_levelEaseTo` is the precedent to reuse rather than a second smoother.
+  **(e) THE RESIDUAL IS 0.44% AND IT IS A THIRD MECHANISM.** 1,040 of 236,950 frames cannot be fixed by
+  a back-only setback — and not because he is short of room along the track (only 2% have less room
+  behind than half his body, none is longer than the frame). **The violation is ACROSS the track and a
+  setback moves him ALONG it.** That is the lateral clipping MIDRACE-LEADER-CLIP-1 found on river-run,
+  now quantified; river-run carries half of it.
+  **ENGAGEMENT 2.88% pooled, and it matches the known clip rates exactly** — space-sprint LEADER_ZOOM
+  15.4% against the measured 15.05%, seed 6 27.6% against 27.6% — so it fires on those frames and no
+  others. **OVERVIEW engages least (0.0–3.9%) and has NO focus racer**, so a setback built on
+  LEADER_ZOOM's anchor has nothing to attach to there and needs its own decision. 5 proposals, 3 of
+  them mine.
+
 - [LEADER-CORRIDORS-DEFAULT-1.md](LEADER-CORRIDORS-DEFAULT-1.md) — **no default closes this, and the
   shipped one is the worst value anyone is likely to run** (2026-08-26,
   `diag/leader-corridors-default-1`, MEASURE ONLY — no default changed, no key, no fingerprint;
