@@ -154,6 +154,37 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-RUNIN-CALM-1.md](SHIP-RUNIN-CALM-1.md) — **the closing phase stops jumping, and the record is
+  made true in the same commit** (2026-08-26, **THE SHIP** — `v-ship-runin-calm`, accepted by the
+  owner on the production build `2285e8b5`; CAMERA and RENDER minted, WORLD and WORLD-OFF measured
+  byte-identical; no key, no default, no new constant).
+  **TWO CAUSES, EACH ESTABLISHED BEFORE ANYTHING WAS BUILT.** The sideways jolt was the aim being
+  stated at the WRONG SCALE — `_setTrackTargets` answered how wide and where to aim in one pass while
+  the frame's zoom was settled afterwards — and the framing rule was never at fault, its across-track
+  component being identically 0.00 px, which is why the owner's own sentence was right and the strand
+  had been measuring the wrong quantity. The width step was a quantity with NO CONTINUITY CONTRACT:
+  the level ceiling stepped at all three of its boundaries while `preLevel` stayed smooth across every
+  one of those frames.
+  **WHAT THE TAG RESTORES:** corner movement **580.58 px** on river-run seed 18 and 368.65 on seed 13,
+  against **9.73** and **10.05**; sideways movement **59.07 px** against under 1.5; and two races
+  carrying a noticeable movement against **zero of 100**. Confirmed on ten tracks including
+  `garden-path`, now the calmest of the ten.
+  **THE COST OF THE WRONG TURN IS RECORDED BECAUSE IT IS THE USEFUL PART:** an earlier attempt deleted
+  all five compensating corrections at once and made the defect SEVEN TIMES WORSE (59 -> 360 px); its
+  own acceptance test caught it and the piece was STOPPED rather than shipped. The two pivots are now
+  bounded on both sides in `CAMERA_DIRECTOR.md` — deleting them costs 59 -> 360 px, widening them
+  costs the level set 48 cut frames.
+  **THE MINT NEARLY GOT SKIPPED, AND THE REASON IS WORTH THE ENTRY:** `npm run verify` is GREEN
+  WITHOUT IT, because the record-versus-engine comparison lives only in `check-fingerprints --mint`,
+  which verify does not run. An unminted merge would have passed the gate and put a knowingly false
+  record on master with nothing to catch it. **Minting was blocked twice by the permission gate and
+  was NOT routed around** — that gate guards the project's own rule that a fingerprint is never minted
+  on your own authority. Also corrects a stale note: `check-fingerprints` has **no `--fix` writer**;
+  it was deliberately removed, so the record is hand-edited.
+  **The merge also lands seven instruments that lived only on the branch**, every one cited by a
+  report already on master — the stranding pattern CLEANUP-2026-08-26 exists to prevent. 3 proposals,
+  2 of them mine.
+
 - [RUNIN-ALL-TRACKS-10-1.md](RUNIN-ALL-TRACKS-10-1.md) — **ten races on each of the ten tracks, and
   garden-path is the calmest of them** (2026-08-26, `feat/runin-level-set-1`, MEASURE ONLY — nothing
   built, no key, no fingerprint; read-only, so no browser gate and no client suite, and the reason is
