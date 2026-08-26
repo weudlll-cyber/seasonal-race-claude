@@ -61,10 +61,17 @@ function walk(dir, out = []) {
 /**
  * How the server suite runs, computed from the test files themselves.
  *
- * @returns {{all: string[], bounded: string[], parallel: string[], unbounded: boolean}}
+ * @returns {{all: string[], bounded: string[], parallel: string[], singleWorker: boolean}}
  *   `bounded` spends bcrypt time and runs under a worker cap (`server/vitest.config.js` sets the
- *   number); `parallel` keeps full parallelism. `unbounded` is true only if NOTHING is capped —
- *   which is what a scheduler needs to know, and is the exact fact that went stale for eight days.
+ *   number); `parallel` keeps full parallelism.
+ *
+ *   `singleWorker` IS THE FIELD A SCHEDULER NEEDS, and it is the corrected form of the sentence
+ *   that went stale for eight days. That sentence said the suite "already keeps it to a single
+ *   worker, so it is the cheapest thing in the run to overlap with a fingerprint". It is FALSE and
+ *   it stays false after this repair: bounding the bcrypt group to three workers is not one worker,
+ *   and the parallel group uses as many as the machine has. **So the suite must not share the
+ *   machine** — measured, overlapping it with the script suite put a test at 7,724 ms against the
+ *   5,000 ms limit, while the same suite alone peaks at 3,106 ms.
  */
 export function suiteShape() {
   const all = walk(SERVER_ROOT).sort();
@@ -82,10 +89,13 @@ export function suiteShape() {
         'on an unverified assumption.'
     );
   const boundedSet = new Set(bounded);
+  const parallel = all.filter((f) => !boundedSet.has(f));
   return {
     all,
     bounded,
-    parallel: all.filter((f) => !boundedSet.has(f)),
-    unbounded: false,
+    parallel,
+    // More than one file can be in flight whenever the parallel group is non-empty or the bcrypt
+    // cap is above one — both are true today, so this is false and a caller must not overlap it.
+    singleWorker: parallel.length === 0 && bounded.length <= 1,
   };
 }

@@ -265,15 +265,18 @@ export function commandFor(g) {
   // from the test files themselves, `server/vitest.config.js` builds its projects from the same
   // module, and this line reads it. **There is nothing left here that can disagree with the code.**
   //
-  // THE RULE: the suite may share the machine exactly when its bcrypt-heavy files are serialised
-  // among themselves. If anyone ever removes that serialisation, `fullyParallel` becomes true and
-  // this suite stops being overlapped — automatically, without anyone remembering to change it.
+  // THE RULE, and it is the OPPOSITE of what stood here: the suite may share the machine only if
+  // it is genuinely single-worker. It is not, and bounding the bcrypt group does not make it so —
+  // three workers is not one, and the parallel group uses as many as the machine has. MEASURED:
+  // overlapping this suite with the script suite put a test at 7,724 ms against the 5,000 ms limit,
+  // where the same suite alone peaks at 3,106 ms. So it runs alone, and `singleWorker` is derived
+  // rather than believed — if the suite ever does become single-worker, this reverts by itself.
   if (g.id === "server-suite") {
     const shape = suiteShape();
     return {
       cmd: ["npm", "test", "--silent"],
       cwd: join(ROOT, "server"),
-      exclusive: shape.unbounded,
+      exclusive: !shape.singleWorker,
     };
   }
   if (g.id === "script-suite")
