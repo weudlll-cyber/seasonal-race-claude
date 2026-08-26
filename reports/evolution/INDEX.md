@@ -154,6 +154,35 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-ORDER-FIX-1.md](RUNIN-ORDER-FIX-1.md) — **the acceptance test failed, and stopping was the
+  right answer** (2026-08-26, `feat/runin-level-set-1`, **NOTHING SHIPPED — the source is
+  byte-identical to the branch tip**; no fingerprint, no browser gate, no client suite, because no
+  product file changed; three measure-only instruments added; branch pushed, not merged).
+  **THE GATE CAUGHT A REPAIR THAT WOULD HAVE MADE THE DEFECT SEVEN TIMES WORSE.** The piece was
+  gated on RUNIN-VIABLE-1's test — the ordering must let FOUR OF THE FIVE patches be deleted. **Two
+  can. Two cannot.** P1 (VIEWER-INVARIANTS-2) and P4 (RUNIN-PAN-STALE-ZOOM-1) are compensations the
+  ordering subsumes and they go. **P5 (CAMERA-SIDEJUMP-1) and its glide twin P3 RESISTED**, and
+  deleting them took the worst sideways jump from 59 px to **360 px** — 30 jumps to **209**.
+  **WHAT THEY PRESERVE THAT THE ORDERING DOES NOT, in algebra:** the pivot is
+  `offset_new = offset_old − anchor.x·axisX·dz`, which given `offset_old = target_old + lag` comes
+  out as **`target_new + lag` exactly** — it carries the smoother's screen-space lag through a zoom
+  change. Restating the delivered offset the way the ordering restates the TARGET instead lands the
+  anchor at **`at.x·(e1/e0)`**, negligible while the zoom creeps and enormous at the width step,
+  where seed 13 moves ×1.95 in one frame. **So the target and the delivered offset are different
+  quantities needing different treatments, and only the target's was ever wrong.**
+  **RUNIN-VIABLE-1 MISCOUNTED and this corrects it:** of its five, two are ordering compensations,
+  P2 is a framing decision, and P3/P5 are the delivered quantity's own propagation — mechanisms, not
+  patches.
+  **THE JOLT IS REMOVABLE, AND THE NUMBER IS RECORDED EVEN THOUGH IT DID NOT SHIP.** Ordering plus
+  P3/P5 unified into ONE pivot takes the worst across-track jump over eight races from **59.07 px to
+  1.22 px** and the jump count from **30 to ZERO**. It was NOT shipped because the same build **cuts
+  the level set on 48 frames** — the owner's own rule — plus three tests that legitimately pin the
+  old ordering. **The coupling reaches further than RUNIN-VIABLE-1 found**, so that block's
+  REPAIRABLE verdict now rests on one fewer piece of evidence.
+  **NOT ESTABLISHED, and it is the next experiment:** whether the level-set regression comes from the
+  ordering itself or from the unified pivot firing on entry frames old-P5 never reached. One change,
+  one test run. 5 proposals, 3 of them mine; none ordered.
+
 - [RUNIN-PAN-STALE-ZOOM-1.md](RUNIN-PAN-STALE-ZOOM-1.md) — **the aim was resolved at one zoom and
   drawn at another, and that is the crossing's swing** (2026-08-26, `feat/runin-level-set-1` extended,
   BUILT — one method, one gated call site, no key, no default, **nothing minted**; branch pushed
