@@ -175,8 +175,16 @@ test("the negative message separates NOT-IN-THE-HULL from IN-THE-HULL-BUT-UNCHAN
   // These are different facts and used to print as one sentence: "none of N path(s) can reach the
   // race engine" was said about `defaults.js`, which can reach the engine from anywhere. That
   // sentence is what taught a reader the tool was doing something other than what it does.
+  // `--base=HEAD` IS LOAD-BEARING, and it is here because this test failed for a reason that had
+  // nothing to do with what it asserts. Without a base, `--check` reads the WORKING TREE against the
+  // branch point, so `defaults.js` counts as CHANGED on any branch that legitimately edits a default
+  // — the tool then answers 0 (a real positive) and the assertion below reads it as a regression.
+  // LEADER-LATERAL-BUILD-1 added two camera keys and turned this red without touching engine-reach at
+  // all. The scenario the test wants is IN-THE-HULL-BUT-UNCHANGED, so it has to PIN the comparison to
+  // a tree in which that path is unchanged; against HEAD it always is, whatever the branch is doing.
   const r = runCli(
     "--check",
+    "--base=HEAD",
     "docs/BACKLOG.md",
     "client/src/modules/storage/defaults.js",
   );

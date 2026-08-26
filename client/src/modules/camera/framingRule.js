@@ -715,6 +715,87 @@ export function pointGuarantee(
 }
 
 /**
+ * LEADER-LATERAL-BUILD-1: THE ADMISSIBLE LATERAL SHIFTS THAT KEEP ONE DRAWN BODY WHOLE.
+ *
+ * `lateralShiftToFit` below answers the same question for a POINT, and for the corridor edges — the
+ * subjects it was written for — a point is exact, because they sit at the anchor's own track
+ * parameter and their room is the anchor's room. For the LEADER it is not, for two reasons that both
+ * bite in the direction that matters:
+ *
+ *   1. He is displaced ALONG the track as well as across it, and the frame is a rectangle. The room
+ *      he has sideways depends on how far forward he is, which a single `roomPlus/roomMinus` pair
+ *      taken at the anchor cannot express.
+ *   2. He is not a point. He clips when his DRAWN BODY crosses an edge, and on the track where this
+ *      defect is worst his sprite is the largest in the game.
+ *
+ * So this works on the four corners of his oriented body box, in screen px, and returns the interval
+ * of shifts that keeps all four inside the frame. Shifting the pan target by `d` along the world
+ * perpendicular moves every other point on screen by `-v * d` — the same sign convention as
+ * `lateralShiftToFit` — so each corner contributes two inequalities and the answer is their
+ * intersection.
+ *
+ * AN EMPTY INTERVAL IS A REAL ANSWER, NOT A FAILURE: it means no sideways movement of any size fits
+ * him, because he is being lost ALONG the track. LEADER-LATERAL-MINIMAL-1 measured that at 14.1% of
+ * the frames the rule engages on. The caller must leave the shift alone there rather than invent one;
+ * that residual belongs to the zoom, not to the pan.
+ *
+ * ── AND WHY THE CALLER MUST BOUND WHAT IT DOES WITH THIS ──────────────────────────────────────
+ *
+ * The note on `lateralShiftToFit` below records that a screen-rectangle test was this mechanism's
+ * FIRST DEFECT: because a diagonal perpendicular has a component on both screen axes, a rectangle
+ * test will happily rescue a subject lost ALONG the track by sliding a very long way sideways, and it
+ * drove the camera 500 world px off the centreline doing exactly that. The empty interval above
+ * catches the case where he cannot be fitted at all, but NOT the case where he can be — at an absurd
+ * price. That is why the caller bounds the step, and the bound is load-bearing rather than tidy.
+ *
+ * @param {object} body  `{cx, cy, ux, uy, halfLen, halfWid}` — the body's centre and unit heading in
+ *   screen px, and its half extents along and across that heading, also in screen px.
+ * @param {number} vx  screen px moved per world px of shift, x component
+ * @param {number} vy  screen px moved per world px of shift, y component
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number} [marginPx=0]  keep the body this far inside every edge
+ * @returns {{lo: number, hi: number}} admissible shift interval in world px; `lo > hi` means none
+ */
+export function lateralAdmissibleForBody(body, vx, vy, frameW, frameH, marginPx = 0) {
+  const empty = { lo: 1, hi: -1 };
+  if (!body || !(frameW > 0) || !(frameH > 0)) return empty;
+  const { cx, cy, ux, uy, halfLen, halfWid } = body;
+  if (![cx, cy, ux, uy, halfLen, halfWid, vx, vy].every(Number.isFinite)) return empty;
+  // A margin wider than half the frame would INVERT the box it carves out, and an inverted box
+  // produces nonsense rather than an answer, so it is clamped. That is all the clamp promises: a
+  // margin large enough to leave a body no room still yields an EMPTY interval, which is the safe
+  // degradation — the caller reads that as "no sideways move fits him" and leaves the pan alone, so
+  // an absurd setting costs the leader's guarantee and never buys a wild shift.
+  const m = marginPx > 0 ? marginPx : 0;
+  const mx = Math.min(m, (frameW - 1) / 2);
+  const my = Math.min(m, (frameH - 1) / 2);
+  let lo = -Infinity;
+  let hi = Infinity;
+  // `p - v*d` must lie in [min, max]; solve for d and intersect. A zero component never reaches its
+  // pair of edges, so it constrains nothing unless the corner is already outside them.
+  const bound = (p, v, min, max) => {
+    if (Math.abs(v) < 1e-12) {
+      if (p < min - 1e-9 || p > max + 1e-9) hi = -Infinity;
+      return;
+    }
+    const e1 = (p - max) / v;
+    const e2 = (p - min) / v;
+    if (Math.min(e1, e2) > lo) lo = Math.min(e1, e2);
+    if (Math.max(e1, e2) < hi) hi = Math.max(e1, e2);
+  };
+  for (const a of [-1, 1])
+    for (const b of [-1, 1]) {
+      const px = cx + ux * halfLen * a - uy * halfWid * b;
+      const py = cy + uy * halfLen * a + ux * halfWid * b;
+      bound(px, vx, mx, frameW - mx);
+      bound(py, vy, my, frameH - my);
+    }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo > hi) return empty;
+  return { lo, hi };
+}
+
+/**
  * THE LATERAL GUARANTEE — CAMERA-LATERAL-1.
  *
  * The camera sits on the corridor centreline ACROSS the track. That is a default position, and like

@@ -122,6 +122,22 @@ export const DEFAULT_CAMERA_CONFIG = {
     },
     LEADER_ZOOM: {
       visibleCorridors: 0.75, // 225 world px — the reference shot, the owner's own eye
+      // LEADER-LATERAL-BUILD-1 — THE OWNER'S RULE: hold the centreline, step aside only when the
+      // leader would otherwise be clipped, and only as far as needed. Both numbers below are
+      // measured, not chosen; LEADER-LATERAL-BUILD-1 records the arm each came from.
+      //
+      // `leaderLateralMaxPx` BOUNDS the step. It is load-bearing, not tidy: a frame-rectangle test
+      // will rescue a subject lost ALONG the track by sliding a long way sideways (the defect
+      // recorded on `lateralShiftToFit`, which once drove the camera 500 world px off the
+      // centreline). Beyond this bound the leader stays PARTLY CLIPPED, deliberately — partial
+      // clipping is the lesser evil against a camera that swings.
+      leaderLateralMaxPx: 70,
+      // `leaderLateralMarginPx` keeps his body this far inside every edge. It is NOT taste: the
+      // guarantee is computed on the pan TARGET, and the delivered picture trails that target by the
+      // pan smoother's residual, so a promise made exactly at the edge arrives already broken. This
+      // is the same job `innerFramePct` does for every other subject, sized for this one from the
+      // measured trailing. LEADER-LATERAL-BUILD-1 records the sweep it was read off.
+      leaderLateralMarginPx: 90,
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,

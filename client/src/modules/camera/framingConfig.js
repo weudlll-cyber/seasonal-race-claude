@@ -85,6 +85,8 @@ const DEFAULT_GLIDE_DURATION_MS = DEFAULT_CAMERA_CONFIG.glideDurationMs;
  *   transitionGrammar: 'cut'|'glide'|'legacy',
  *   glideDurationMs: number,
  *   leaderForwardFrac: number|null,
+ *   leaderLateralMaxPx: number,
+ *   leaderLateralMarginPx: number,
  * }}
  */
 export function resolveFramingConfig(config) {
@@ -109,6 +111,16 @@ export function resolveFramingConfig(config) {
   // in (0.5, 0.8]: at or below 0.5 it is not forward, and above 0.8 the subject is at the frame
   // edge with nothing ahead of him. Out of band (including absent) means dead-centre.
   const lff = config?.leaderForwardFrac;
+  // LEADER-LATERAL-BUILD-1 — the two numbers the leader's own lateral guarantee needs. Read from the
+  // LEADER_ZOOM profile because that is the one state the rule runs in, and resolved HERE so a stored
+  // config written before they existed still reaches the director with the shipped values (the
+  // project has no schema and no migrations by standing rule — an absent key falls back, it does not
+  // fault). Negative is meaningless for both, so out-of-band degrades to the default rather than to 0,
+  // which would silently disable the bound that keeps the step from chasing an along-track loss.
+  const lzp = profiles?.LEADER_ZOOM;
+  const lmax = lzp?.leaderLateralMaxPx;
+  const lmar = lzp?.leaderLateralMarginPx;
+  const dflt = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM;
 
   return {
     referenceCorridorPx:
@@ -119,5 +131,7 @@ export function resolveFramingConfig(config) {
     transitionGrammar: g === 'cut' ? 'cut' : g === 'glide' ? 'glide' : 'legacy',
     glideDurationMs: Number.isFinite(gd) && gd >= 300 && gd <= 900 ? gd : DEFAULT_GLIDE_DURATION_MS,
     leaderForwardFrac: Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null,
+    leaderLateralMaxPx: Number.isFinite(lmax) && lmax >= 0 ? lmax : dflt.leaderLateralMaxPx,
+    leaderLateralMarginPx: Number.isFinite(lmar) && lmar >= 0 ? lmar : dflt.leaderLateralMarginPx,
   };
 }

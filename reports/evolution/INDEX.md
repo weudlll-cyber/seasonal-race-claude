@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEADER-LATERAL-BUILD-1.md](LEADER-LATERAL-BUILD-1.md) — **SHIPPED as `v-ship-leader-lateral`
+  (accepted 2026-08-26): the clip rate falls
+  4.18% -> 1.29% and the picture does not move** (2026-08-26, `feat/leader-lateral-minimal-1`; 10
+  tracks x 10 races per arm, 140,740 `LEADER_ZOOM` mid-race frames each). space-sprint **15.4% ->
+  3.3%**, seatrack 6.5% -> 2.2%, river-run 4.6% -> 0.3%, mountainstreet 4.4% -> 0.8%; the six calm
+  tracks are unchanged because their clipping was never sideways. **No clip was traded for a jolt**:
+  93 of 100 races carry a >=120 px single-frame movement in BOTH arms, and the largest median change
+  anywhere is 10.07 -> 10.15 px. **ADDING THE LEADER TO THE SUBJECT LIST WAS PROVED INERT FIRST** — 0
+  of 2,019 frames changed, because the corridor edges always dominate the interval AND the corridor
+  fails to fit the frame on 100% of frames, pinning `lateralShiftToFit` in its split-the-difference
+  branch. So he gets his own interval (`lateralAdmissibleForBody`, his four drawn body corners) and
+  the corridor's answer is clamped into it. **No easing was added and none is needed** — the rule moves
+  the pan TARGET and the existing smoother is the travel; the 130.6 px "jolt" was a target step, not a
+  picture step. The release margin was built, measured unnecessary and REMOVED. Camera fp
+  `4aef03dc22ab08b3` -> **`6dfded25dd656977`**, render -> **`4819e3b0f8e61c23`**, **world and world-off
+  unmoved**; NOT minted — no permission. Camera holds the centre 90.27%; along-track residual unchanged
+  at 830. Five proposals, three of them this block's own; one live inconsistency found and left named:
+  the corridor measures its room from a point the camera does not use (median 132 px out).
+  **CORRECTION at merge time: the red gate this report handed off with went GREEN on the IDENTICAL
+  commit `3dc061f4` (PASS 20 / FAIL 0), which clears the branch and indicts the gate** — a suite that
+  returns both answers for one tree has stopped gating. It did NOT reproduce on master. Filed in
+  `docs/BACKLOG.md` as GATE-SERIAL-BCRYPT-1's crowding class in a second place.
+
 - [LEADER-LATERAL-MINIMAL-1.md](LEADER-LATERAL-MINIMAL-1.md) — **BUILD IT: the rule sits 38x calmer
   than following him, but it JOLTS 130.6 world px and cannot reach 14% of what it engages on**
   (2026-08-26, `diag/leader-lateral-minimal-1`, MEASURE ONLY — nothing built, no default, key or
