@@ -154,6 +154,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GATE-SERIAL-BCRYPT-1.md](GATE-SERIAL-BCRYPT-1.md) — **the gate has teeth again, the suite is not
+  slower, and the disease was oversubscription** (2026-08-26, `fix/gate-serial-bcrypt-1`, **BUILT AND
+  MERGED**; no timeout raised, no test marked slow or skipped, `BCRYPT_COST` untouched).
+  **THE THREE WALL CLOCKS: today 39.1 s (RED on 2 of 3 runs, worst test 8,289 ms, margin −3,289 ms) ·
+  fully serial 93.4 s · SHIPPED 37.7 s, green 6 of 6, worst 3,768 ms, MARGIN +1,232 ms.** The suite is
+  fractionally FASTER than it is today; the repair costs zero seconds, not a few.
+  **MEMBERSHIP IS DERIVED, NOT LISTED, AND MEASURING OVERTURNED THE OBVIOUS RULE.** Every server test
+  file was run alone with bcrypt instrumented. `src/auth/**` is wrong in BOTH directions — five ROUTE
+  tests reach bcrypt through `test/authAgent.js`, and `csrf`/`guards` never touch it. The rule that is
+  exact on **24 of 24 files**: a file spends bcrypt time iff it imports `test/authAgent.js` or
+  `usersStore.js`. `suiteShape.mjs` evaluates it at config load, so a new test classifies itself.
+  **THE DISEASE IS OVERSUBSCRIPTION:** bcrypt runs on libuv's threadpool, 4 threads per worker, so 14
+  workers put ~56 bcrypt threads on 14 cores. So the group is **BOUNDED at 3, not serialised** — and
+  that is why the fix is free.
+  **VITEST CANNOT DO WHAT WAS ASKED:** it refuses two projects with different `maxWorkers` under one
+  `sequence.groupOrder`, and a unique groupOrder means SEQUENTIAL. "Serialise these while the rest stay
+  parallel" is not expressible; one-at-a-time cost 96.2 s, no cheaper than serialising everything.
+  **A MEASUREMENT REVERSED THE BLOCK'S OWN FIRST ANSWER.** It had derived that the suite could share
+  the machine; overlapped with the script suite a test hit **7,724 ms** (red 1 of 3) where alone it
+  peaks at 3,768 ms. **Four green verify runs with it overlapped were luck against a cliff, not
+  headroom.** The suite now runs **ALONE**; verify's own wall clock pays ~20 s for it.
+  **(c) THE SECOND OWNER WAS REMOVED RATHER THAN GUARDED.** `suiteShape.mjs` is the one home;
+  `vitest.config.js` builds its projects from it and `verify.mjs` reads the same module for
+  exclusivity — **there is no sentence left that can disagree with the code.** Self-correcting both
+  ways.
+  **THE GATE CAUGHT A REAL PRE-EXISTING RED:** `expected '🐌', actual '🪲'` — GARDEN-PATH-BEETLE-SKIN-1
+  broke a test and **master reported green**, because `script-suite` routes on `scripts/` and the change
+  lived in `server/seeds/`. **ENGINE-REACH-DATA-1's finding arriving for real one day later, and a
+  SECOND independent way the gate had stopped gating.** The assertion was updated, not removed.
+  **9 verify runs, the last 3 on the shipped arrangement, all exit 0.** 4 proposals, 3 of them the
+  block's own; two silent-zero shims of the block's own making are recorded in source hygiene.
+
 - [OWNER-FINDINGS-2026-08-25.md](OWNER-FINDINGS-2026-08-25.md) — **the day's findings, collected into
   one page he can work down** (2026-08-26, `docs/owner-findings-2026-08-25`, PIECE 8 of
   NIGHT-2026-08-25, COLLECTION ONLY — no work proposed, no verdict invented). The deliverable is the
