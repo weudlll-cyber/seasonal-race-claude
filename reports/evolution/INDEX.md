@@ -171,6 +171,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [ANCHOR-ROOM-GAP-1.md](ANCHOR-ROOM-GAP-1.md) — **LATENT, never seen, NOT work — and the "median
+  132 px" was mine and does not survive re-measurement** (2026-08-27, measure only; 10 tracks x 5
+  races, 210,388 frames; replication against the director EXACT at 124,310/124,310). The gap changes
+  the guarantee's ANSWER on **2.99%** of frames; elsewhere it is arithmetic only (47.2% SILENT, 49.8%
+  same-direction SIZE). Where it changes the answer the picture would move a median 3-12 px and
+  **41.3 px at the very worst** — smaller than the noise the camera already carries (median per-frame
+  pan ~9 px, p99 ~190 px). **It is ONE STATE**: COMEBACK_ZOOM holds **79.06%** of the answer-changes
+  and is 1.9% of frames; LEADER_ZOOM is 0.96%, LEAD_CHANGE and PHOTO_FINISH exactly zero. **THE
+  CORRECTION**: 132 px measured a reconstruction against the director's `targetOffset`, not the two
+  room-measurement points; measured properly the pooled median gap is **0.0 px** and LEADER_ZOOM's is
+  **7.4**. Two exclusions made the probe trustworthy, both asked of the director rather than guessed:
+  the guarantee's five early returns, and capturing the ACTUAL arguments instead of rebuilding them.
+  3 proposals; **the recommendation is to leave it alone.**
+
 - [SHIP-ORDER-CLEANUP-1.md](SHIP-ORDER-CLEANUP-1.md) — **THE SHIP ORDER gets a twelfth step, and the
   containment check that makes it safe** (2026-08-27, documents only — no gate can answer differently
   for a `docs/` change, so none was run beyond `check-doc-links` and `check-index`). Cleanup lived
