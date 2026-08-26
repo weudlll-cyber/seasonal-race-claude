@@ -34,14 +34,23 @@ import {
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
-const { DEFAULT_CAMERA_CONFIG } = await import(u("client/src/modules/storage/defaults.js"));
-const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/racerNames.js"));
-const { projectionForTrack } = await import(u("client/src/modules/camera/projection.js"));
-const { cameraSeedForRace } = await import(u("client/src/modules/camera/cameraSeed.js"));
-const { anchorScreenPoint, lateralShiftToFit, framingFor, GUARANTEE } = await import(
-  u("client/src/modules/camera/framingRule.js")
+const { DEFAULT_CAMERA_CONFIG } = await import(
+  u("client/src/modules/storage/defaults.js")
 );
-const { roomFromPointAlong } = await import(u("client/src/modules/camera/frameGeometry.js"));
+const { resolveNameSet, DEFAULT_NAME_SET } = await import(
+  u("client/src/modules/racerNames.js")
+);
+const { projectionForTrack } = await import(
+  u("client/src/modules/camera/projection.js")
+);
+const { cameraSeedForRace } = await import(
+  u("client/src/modules/camera/cameraSeed.js")
+);
+const { anchorScreenPoint, lateralShiftToFit, framingFor, GUARANTEE } =
+  await import(u("client/src/modules/camera/framingRule.js"));
+const { roomFromPointAlong } = await import(
+  u("client/src/modules/camera/frameGeometry.js")
+);
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 
 const arg = (k, d) => {
@@ -97,9 +106,23 @@ for (const c of CASES) {
   const origLateral = cd._applyLateralGuarantee.bind(cd);
   let ranThisFrame = false;
   let lastArgs = null;
-  cd._applyLateralGuarantee = function (panTarget, headingT, subjects, camZoom, frameSize, ...rest) {
+  cd._applyLateralGuarantee = function (
+    panTarget,
+    headingT,
+    subjects,
+    camZoom,
+    frameSize,
+    ...rest
+  ) {
     cd._lastLateralShift = NaN;
-    const r = origLateral(panTarget, headingT, subjects, camZoom, frameSize, ...rest);
+    const r = origLateral(
+      panTarget,
+      headingT,
+      subjects,
+      camZoom,
+      frameSize,
+      ...rest,
+    );
     ranThisFrame = Number.isFinite(cd._lastLateralShift);
     lastArgs = { panTarget, headingT, subjects, camZoom, frameSize };
     return r;
@@ -146,21 +169,43 @@ for (const c of CASES) {
       // is the pan target BEFORE the lateral shift, which is the input this guarantee is deciding
       // from — using the post-shift target would be circular.
       const tgt = lastArgs.panTarget;
-      const camXMax = Math.max(cd._worldBounds.minX, cd._worldBounds.maxX - FW / effX);
-      const camYMax = Math.max(cd._worldBounds.minY, cd._worldBounds.maxY - FH / effY);
-      const camX = Math.max(cd._worldBounds.minX, Math.min(camXMax, tgt.x - FW / (2 * effX)));
-      const camY = Math.max(cd._worldBounds.minY, Math.min(camYMax, tgt.y - FH / (2 * effY)));
+      const camXMax = Math.max(
+        cd._worldBounds.minX,
+        cd._worldBounds.maxX - FW / effX,
+      );
+      const camYMax = Math.max(
+        cd._worldBounds.minY,
+        cd._worldBounds.maxY - FH / effY,
+      );
+      const camX = Math.max(
+        cd._worldBounds.minX,
+        Math.min(camXMax, tgt.x - FW / (2 * effX)),
+      );
+      const camY = Math.max(
+        cd._worldBounds.minY,
+        Math.min(camYMax, tgt.y - FH / (2 * effY)),
+      );
       const atB = { x: (anchor.x - camX) * effX, y: (anchor.y - camY) * effY };
       const roomPlusB = roomFromPointAlong(atB.x, atB.y, vx, vy, FW, FH, pct);
-      const roomMinusB = roomFromPointAlong(atB.x, atB.y, -vx, -vy, FW, FH, pct);
+      const roomMinusB = roomFromPointAlong(
+        atB.x,
+        atB.y,
+        -vx,
+        -vy,
+        FW,
+        FH,
+        pct,
+      );
 
       // The subject list, exactly as the director builds it.
-      const lateralOf = (r) => (r.x - anchor.x) * perp.x + (r.y - anchor.y) * perp.y;
+      const lateralOf = (r) =>
+        (r.x - anchor.x) * perp.x + (r.y - anchor.y) * perp.y;
       const half = cd._trackWidthPx / 2;
       const offsets = [];
       if (half > 0) offsets.push(half, -half);
       if (framingFor(cd.state).guarantee === GUARANTEE.PAIR)
-        for (const r of lastArgs.subjects?.pair ?? []) if (r) offsets.push(lateralOf(r));
+        for (const r of lastArgs.subjects?.pair ?? [])
+          if (r) offsets.push(lateralOf(r));
       if (offsets.length === 0) return;
 
       const dA = lateralShiftToFit(offsets, roomPlusA, roomMinusA, scale);
@@ -179,7 +224,11 @@ for (const c of CASES) {
       const eA = Math.abs(dA) > 1e-9;
       const eB = Math.abs(dB) > 1e-9;
       const cls =
-        !eA && !eB ? "SILENT" : eA !== eB || Math.sign(dA) !== Math.sign(dB) ? "ANSWER" : "SIZE";
+        !eA && !eB
+          ? "SILENT"
+          : eA !== eB || Math.sign(dA) !== Math.sign(dB)
+            ? "ANSWER"
+            : "SIZE";
 
       rows.push({
         frame,
@@ -192,13 +241,15 @@ for (const c of CASES) {
         // How much the picture would move if the guarantee measured from B instead of A.
         movePx: +(Math.abs(dB - dA) * scale).toFixed(1),
         repl: repl === null ? null : +repl.toFixed(3),
-        shipped: Number.isFinite(cd._lastLateralShift) ? +cd._lastLateralShift.toFixed(3) : null,
+        shipped: Number.isFinite(cd._lastLateralShift)
+          ? +cd._lastLateralShift.toFixed(3)
+          : null,
         lerpPhase: cd._lerpPhase ?? null,
         roomA: [+roomPlusA.toFixed(1), +roomMinusA.toFixed(1)],
         roomB: [+roomPlusB.toFixed(1), +roomMinusB.toFixed(1)],
       });
     },
-    { slowmo: false }
+    { slowmo: false },
   );
 
   out.push({
@@ -209,7 +260,7 @@ for (const c of CASES) {
   });
   process.stdout.write(
     `${c.track}:${c.seed} rows=${rows.length} ANSWER=${rows.filter((r) => r.cls === "ANSWER").length} ` +
-      `SIZE=${rows.filter((r) => r.cls === "SIZE").length} repl=${matched}/${checked}\n`
+      `SIZE=${rows.filter((r) => r.cls === "SIZE").length} repl=${matched}/${checked}\n`,
   );
 }
 
