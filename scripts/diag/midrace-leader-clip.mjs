@@ -53,6 +53,23 @@ const TAG = arg("tag", "clip");
 // THE MID-RACE WINDOW. After the start ceremony has released and before the endgame opens. The
 // endgame threshold is a config value, so it is READ rather than restated here.
 const FROM_U = Number(arg("from", "0.10"));
+// §2026-08-26 — `--leader-corridors=` overrides ONE key: LEADER_ZOOM's `visibleCorridors`, the
+// "World in shot (corridors)" setting. It exists so the owner's hypothesis can be TESTED by sweeping
+// the setting rather than argued about. Nothing else is touched, and omitting the flag leaves the
+// shipped defaults exactly — which is what every earlier run in this report used.
+const LEADER_CORR = arg("leader-corridors", null);
+const CFG = LEADER_CORR
+  ? {
+      ...DEFAULT_CAMERA_CONFIG,
+      cameraStateProfiles: {
+        ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+        LEADER_ZOOM: {
+          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+          visibleCorridors: Number(LEADER_CORR),
+        },
+      },
+    }
+  : DEFAULT_CAMERA_CONFIG;
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const out = [];
@@ -71,7 +88,7 @@ for (const c of CASES) {
     cameraSeed: cameraSeedForRace(c.seed),
     note: "midrace-leader-clip (browser camera seed)",
   });
-  const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
+  const race = buildRace(geo, identity, CFG);
   const { cd } = race;
   const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, !geo.closed);
   const CW = identity.canvasW;
@@ -83,7 +100,7 @@ for (const c of CASES) {
   runRace(
     race,
     identity,
-    DEFAULT_CAMERA_CONFIG,
+    CFG,
     ({ cd, st, ts, frame }) => {
       const fp = cd._framingProbe;
       if (!fp) return;

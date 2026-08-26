@@ -202,6 +202,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   one that does cover him, via `pairGuarantee`, as a POINT and never whole; consistently it has the
   lowest rate of the three. The width came from `state` on 96–100% of clipped frames, so no guarantee
   was binding when he was cut. **No repair proposed** — only what a fix would have to promise.
+  **ADDENDUM 2026-08-26 (second) — HIS HYPOTHESIS TESTED: right that the setting drives it, wrong
+  about the mechanism, wrong about the direction.** He suspected the leader's PLACEMENT is computed
+  from the DEFAULT "World in shot" value rather than the one in force, as an ABSOLUTE forward offset
+  against a shrinking frame. **At source both halves are wrong:** placement comes from
+  `leaderForwardFrac` (0.66), a separate key that never reads `visibleCorridors`, and
+  `anchorScreenPoint` computes `(forwardFrac - 0.5) x frameExtentAlong(..., 1280, 720)` — **a fraction
+  of the SCREEN, invariant to the zoom.**
+  **BUT THE COUPLING IS REAL AND IT IS THE SPRITE.** The setting does not move where he is put, it
+  changes how big he is drawn there: a 36-world-px body spans **216 px at 0.40 and 43 px at 2.00**.
+  A five-times-larger body at a fixed screen offset is what crosses the edge — consistent with his
+  centre being off canvas on only 0.58% of LEADER_ZOOM frames while 4.18% clip.
+  **HIS PREDICTION IS DISPROVED.** LEADER_ZOOM clip rate swept on the two worst races: space-sprint s6
+  **83.6% / 70.0% / 33.9% / 14.7% / 2.3% / 2.2%** and river-run s9 **41.0% / 29.1% / 18.2% / 0.0% /
+  0.0% / 0.0%** at corridors 0.40 / 0.55 / **0.75 (shipped default)** / **0.85 (his)** / 1.20 / 2.00.
+  **The default does not show zero clipping — it is the worst setting he is likely to use**, and 0.85
+  is WIDER than the default, so moving to his setting REDUCES clipping (river-run to zero).
+  LEAD_CHANGE is flat across the sweep, which is the control; OVERVIEW never occurs in these two races
+  and is untested.
+  **AND THE WHOLE CORPUS RAN AT THE SHIPPED DEFAULTS** — the harness builds every race with
+  `DEFAULT_CAMERA_CONFIG` and overrides nothing. So every figure in this report describes the SHIPPED
+  configuration, not his; **if he is running 0.85 then the clipping he reports is not the clipping
+  this report measured**, and that gap is unexplained. Space-sprint is the candidate (14.7% at 0.85),
+  and it is worth asking which track he watched. No repair proposed, no key moved.
+
 
 
 - [SHIP-RUNIN-CALM-1.md](SHIP-RUNIN-CALM-1.md) — **the closing phase stops jumping, and the record is
