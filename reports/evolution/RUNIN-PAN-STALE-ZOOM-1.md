@@ -172,9 +172,22 @@ because a skip is a routing decision and not a measurement.
 | camera | `0434cd0385eacc7b` | `aad7a6e76816c2ba` | **MOVED — expected** |
 | render | `57b2eb101d806b22` | `928811f17436ddad` | **MOVED — follows the camera** |
 
-**NOTHING WAS RE-MINTED.** `docs/fingerprints.json` is untouched by this branch, and `git status`
-shows it clean. `--mint` verifies against the engine; it does not write. **A visible change needs the
-owner's eye first**, and this one has not had it.
+**THE "RECORDED" COLUMN IS THIS BRANCH'S RECORD, AND THAT IS THE RIGHT COMPARISON — but it is not
+what `master` says today, so it is stated rather than left to trip someone.** `master` records
+`world bc01b74fd4f3cfc8 · camera c6033c1f5c4d67f2 · render 1f55627fe213a31c · world-off
+daf78ff18eca83c6`. The branch predates that: `master` has since re-minted, and a track seed
+(`server/seeds/tracks/garden-path.json`) moved on it. **No commit on this branch has ever touched
+`docs/fingerprints.json`** — `git log master..HEAD -- docs/fingerprints.json` is empty — so the file
+here is simply master's older copy, carried along.
+
+The question this block has to answer is *"did MY change move anything relative to the tree I am
+changing"*, so the engine was minted on this branch and compared to this branch's record. **Anyone
+merging this will re-mint against master's** and should expect all four to differ for reasons that
+belong to master, not to this repair.
+
+**NOTHING WAS RE-MINTED.** `--mint` verifies against the engine; it does not write. `git status` is
+clean and `docs/fingerprints.json` is byte-identical to the branch's parent. **A visible change needs
+the owner's eye first**, and this one has not had it.
 
 **Tests:** 887 camera tests pass, including the shipped invariant 6 and the SIDEJUMP regression. Six
 new tests in `panStaleZoom.test.js`, **each carrying its own sabotage** — the property on a single
