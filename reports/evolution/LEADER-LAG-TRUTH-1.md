@@ -288,3 +288,15 @@ framing rule. None of them is a camera-speed setting.**
   as the single smallest clipping gap — an outlier, not a threshold. Both were rewritten (correlates
   over all frames, onset as a rate per bin) and the corpus re-run before anything here was written.
   The `_smoothFocal` hypothesis was likewise stated, tested and refuted rather than reasoned about.
+
+---
+
+## ADDENDUM 2026-08-27 — the branch this report points at no longer exists
+
+The line above says LEADER-WHOLE-SETBACK-BUILD-1's report "is not on master — it sits on
+`feat/leader-whole-setback-1` @ `1e3a05ae`, unmerged". **That was true when it was written and is not
+a correction to anything measured here**; the report is append-only and the sentence stays as it was.
+
+What changed is where to look: the report was landed on master on 2026-08-27 as
+[LEADER-WHOLE-SETBACK-BUILD-1.md](LEADER-WHOLE-SETBACK-BUILD-1.md), and the branch was deleted at
+origin in the same cleanup. Follow the link, not the branch name.
