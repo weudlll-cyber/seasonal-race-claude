@@ -171,6 +171,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [ALONG-RESIDUAL-1.md](ALONG-RESIDUAL-1.md) — **the residual is EPISODES, it is ONE TRACK, and the
+  MARGIN makes three quarters of it** (2026-08-27, measure only — no mechanism, no key, no build; ten
+  tracks x ten races). **THERE ARE TWO RESIDUALS.** The director declines a frame at the shipped 90 px
+  margin: **3,330** frames. The bare box with no margin: **830** — and it reproduces
+  LEADER-LATERAL-BUILD-1 track by track (115/136/44/63/22/56/0/78/109/207), which is the cross-check
+  that makes the rest trustworthy. **So 2,500 of the 3,330 are the MARGIN, not unreachable geometry**,
+  and 1,841 of those are space-sprint alone. The number that makes the lateral rule work also makes
+  most of the residual it leaves. **WHERE**: space-sprint is 61% of it, and it is NOT the endgame —
+  pooled `u` median **0.498**, the middle of a normal race. **HOW MUCH WIDTH**: median factor 1.21,
+  p95 2.46, worst 3.64 — the median frame goes 1.33 -> 1.61 corridors of road, the p95 frame to 3.27,
+  against a shot he has just accepted and a corridor setting he has already declined to widen.
+  **SHAPE**: 150 episodes, median 18 frames (0.30 s), longest 107 (1.78 s), and only **1 of 150** is a
+  single frame — visible, not noise. **The recommendation is not a zoom rule**: space-sprint's sprite
+  is 2.9x river-run's and carries 61% of the residual. 4 proposals, 2 the block's own.
+
 - [ANCHOR-ROOM-GAP-1.md](ANCHOR-ROOM-GAP-1.md) — **LATENT, never seen, NOT work — and the "median
   132 px" was mine and does not survive re-measurement** (2026-08-27, measure only; 10 tracks x 5
   races, 210,388 frames; replication against the director EXACT at 124,310/124,310). The gap changes
