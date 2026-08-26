@@ -154,6 +154,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-VIABLE-1.md](RUNIN-VIABLE-1.md) — **he is right that the camera aims at the middle, and the
+  sideways jolt is the SIZE** (2026-08-26, `diag/runin-viable-1` with `feat/runin-level-set-1` merged
+  in as the code under study, DIAGNOSE AND ASSESS ONLY — nothing built, no key, no default, no
+  fingerprint; read-only, so no browser gate and no client suite, and the reason is stated; report
+  merged, branch pushed unmerged; 8 races, 5 tracks, 1,235 frame-pairs, browser camera seeding,
+  14 cores).
+  **PART A — THE AIM NEVER MOVES ACROSS THE TRACK. Identically 0.00 world px on all eight races**, at
+  every stage the framing rule controls (`anchorPoint`, `afterBias`, `afterLateral`). His premise was
+  sound and this strand could have doubted it. **Yet the subject moves up to 59 px sideways in the
+  PICTURE**, and **221 of 221 across-track jumps are on a frame drawn at a different scale than its
+  aim was resolved at, 0 unexplained** — with a monotone dose–response across four orders of
+  magnitude: median across step **0.00 px** below 1e-4 of zoom mismatch, **9.64 px** above 1e-1.
+  **The framing rule chooses where the camera sits so the subject lands on its intended screen point
+  AT THE ZOOM IT WAS HANDED; the frame is drawn at another.** So it is not the aim along and not the
+  aim across — **it is the size.**
+  **PART B — 16 size mechanisms and 12 aim mechanisms**, but measured, only **2.25–2.69 are live per
+  frame** and **only two ever bind: `state` and `level`.** They meet in a `Math.min`, which is
+  continuous in value and not in derivative: **9 handovers in 1,243 frames and every one produces a
+  width step**, worst **0.853 ln — a factor of 2.35 in one frame**. The other 90% of steps are inside
+  one author and are the intended close.
+  **THE NON-CONVERGENCE HAS A NAME:** `CameraDirector.js` already carries **FIVE** separate pieces of
+  machinery compensating for the one ordering property, each scoped to a different frame-subset — and
+  **two of them preserve OPPOSITE invariants** (the re-statement holds the camera's world position,
+  the SIDEJUMP pivot holds the subject's screen position) with the pan lerp blending between them.
+  **VERDICT: REPAIRABLE**, committed to. Three causes behind the six symptoms — one ORDERING (aim
+  resolved at a zoom the frame is not drawn at, subsumes symptoms 5 and 6), one CROSSOVER
+  (`state`/`level`, symptom 4), one MISSING TERM (a span is not a presence, symptoms 1–3). The
+  redesign is rejected on evidence: **the framing rule is the one component with no defects in it**,
+  and a replacement would re-derive the five mechanisms the requirements produced. **The repair's own
+  acceptance test is what it DELETES** — four of the five patches — and if they cannot go, the verdict
+  re-opens. 5 proposals, 3 of them mine; none ordered.
+
 - [CLEANUP-2026-08-26.md](CLEANUP-2026-08-26.md) — **nine branches at origin, and two of them were
   holding an instrument nobody else had** (2026-08-26, `chore/cleanup-2026-08-26`, refs and register
   only, NO SOURCE CHANGE — so no fingerprint, no browser gate, no client suite, and the reason is
