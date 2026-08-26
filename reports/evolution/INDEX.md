@@ -210,12 +210,45 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   offset from the leader unchanged. **0 of 5,886 clipped frames would clip with a perfect camera**, so
   the sprite never clips alone — but it sets the TOLERANCE, and space-sprint's is 3.1x tighter than
   river-run's, which is why near-identical gap distributions clip at 15.4% and 4.6%. Explains
-  LEADER-WHOLE-SETBACK-BUILD-1 (its report is NOT on master - it sits on `feat/leader-whole-setback-1`
-  @ `1e3a05ae`, unmerged; it moved the anchor ALONG the track
-  when he is lost ACROSS it) and [LEADER-CORRIDORS-DEFAULT-1](LEADER-CORRIDORS-DEFAULT-1.md) (no
+  [LEADER-WHOLE-SETBACK-BUILD-1](LEADER-WHOLE-SETBACK-BUILD-1.md) (it moved the anchor ALONG the track
+  when he is lost ACROSS it; its report was NOT on master when this line was written and was landed
+  2026-08-27) and [LEADER-CORRIDORS-DEFAULT-1](LEADER-CORRIDORS-DEFAULT-1.md) (no
   corridor setting can close a promise his body was never in). **Removing 70% of the gap clears 95% of
   the frames; no camera speed is the lever.** Owner decision open: the repair hands back exactly what
   CAMERA-LATERAL-1 bought.
+
+- [LEADER-WHOLE-SETBACK-BUILD-1.md](LEADER-WHOLE-SETBACK-BUILD-1.md) — **built, measured, and NOT
+  shipped: the setback removes 7% of the clipping and a looser bound removes none** (2026-08-26,
+  written on `feat/leader-whole-setback-1`, **NOTHING SHIPPED — the source is reverted and
+  byte-identical to master**, so no fingerprint moved and none was minted. **The report was LANDED ON
+  MASTER 2026-08-27** and that branch deleted; it had been the report's only home for a day, which is
+  the branch-as-archive habit this project stopped.)
+  **THE BEFORE/AFTER, LEADER_ZOOM clip rate:** baseline **33.9%** on space-sprint seed 6 and 18.2% on
+  river-run seed 9; with the setback bounded at the frame centre **31.5% / 18.2%**; with the bound
+  relaxed to 0.30 and to 0.10, **33.9% / 18.2% — exactly baseline**. A mechanism whose benefit
+  vanishes when given more room is not bounded too tightly; it is aimed at the wrong quantity.
+  **THE FIRST BUILD NEVER ENGAGED ONCE, AND THAT IS THE REAL FINDING.** Solved from the leader's
+  INTENDED placement it fired on no frame of any track, because **at his intended placement he already
+  fits.** He is not clipped because his placement is too far forward — **he is clipped because the
+  DELIVERED picture runs ahead of it**, the pan trailing a leader who is pulling away, which is the
+  camera's own tracking lag arriving at the frame edge.
+  **THE SECOND BUILD ENGAGED AND STILL DID NOT DELIVER** — 614 of 2,019 LEADER_ZOOM frames asked for a
+  setback and 826 carried one, reaching the 0.500 bound — because solving from the delivered position
+  is a FEEDBACK LOOP: **the setback moves the camera, and moving the camera re-creates the overflow it
+  was measuring**, so the system settles at the margin instead of clearing it. That is also why a
+  looser bound buys nothing, which the 0.30 and 0.10 arms prove.
+  **WHAT WOULD HAVE TO CHANGE, named not built:** aim the setback at his CLOSING SPEED rather than at
+  the overflow, so it leads the lag instead of following it; or target LEADER_ZOOM's tracking lag
+  directly; or the guarantee, still the only complete answer. **The `_easeLogToward` extraction (the
+  run-in's ease made reusable, behaviour-identical, 885/885) was written and reverted with the rest,
+  and is the right shape if a second user appears.**
+  **Two departures stated plainly:** the build was reverted rather than shipped, and no sabotage tests
+  were written — tests for a reverted mechanism have no subject. The decision to revert is mine and is
+  one `git revert` from being overturned. 4 proposals, 3 mine.
+  **SUPERSEDED IN THE BEST WAY:** its own diagnosis — the setback moved the anchor ALONG the track
+  while the leader is lost ACROSS it — is what pointed at
+  [LEADER-LAG-TRUTH-1](LEADER-LAG-TRUTH-1.md) and then at the guarantee it named as the only complete
+  answer, which [LEADER-LATERAL-BUILD-1](LEADER-LATERAL-BUILD-1.md) shipped.
 
 - [LEADER-WHOLE-SETBACK-1.md](LEADER-WHOLE-SETBACK-1.md) — **the setback is small, it BUYS forward
   view rather than costing it, and applied raw it is a 617 px jolt** (2026-08-26,
