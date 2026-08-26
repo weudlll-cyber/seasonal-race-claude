@@ -181,6 +181,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   same seed at the same percentage. The run-in work neither caused it nor worsened it, which is what
   its scoping was supposed to achieve. **It does not date the fault**: this compares two commits, not
   a history. 4 proposals, 3 of them mine.
+  **ADDENDUM 2026-08-26 — RE-SLICED PER STATE AFTER THE REQUIREMENT NARROWED, and it changes the
+  answer.** He requires the leader in frame in LEADER_ZOOM, LEAD_CHANGE and OVERVIEW only; BATTLE_ZOOM
+  and COMEBACK_ZOOM are excused. No new races — the first pass had stored every mid-race frame with
+  its state. **His three states are 15.5% of all clipped frames** (BATTLE_ZOOM alone is 72.6%), at
+  **LEADER_ZOOM 4.18%, LEAD_CHANGE 1.00%, OVERVIEW 0.93%.**
+  **AND THE SHAPE THERE IS DIFFERENT, WHICH IS THE REAL FINDING:** in the excused states he is mostly
+  GONE (centre off canvas on 20% and 57% of frames, episodes of 85 and 295 frames); in HIS three he is
+  **clipped but PRESENT** — centre off canvas under 1%, episodes of **15–17 frames, a quarter of a
+  second, about 2.4 per race**. That is exactly what he described, and why his eye caught what the
+  pooled figure buried. Worst: **space-sprint s6 (33.9% of its LEADER_ZOOM frames)**, river-run s9
+  (18.2%) on his usual track, seatrack s1 (11.0%).
+  **A CORRECTION TO THIS REPORT'S OWN FIRST PASS:** its "leader was the ANCHOR on 0% of clipped
+  frames" was an ARTEFACT — it compared the framing POINT, which LEADER_ZOOM deliberately
+  forward-projects. Re-tested on the anchor RACER's index: **LEADER_ZOOM and LEAD_CHANGE 100%**,
+  OVERVIEW null. The claim holds only for the two excused states.
+  **THE GAP, IN THE WORDS THE REQUIREMENT ASKED FOR: LEADER_ZOOM and OVERVIEW each name the leader as
+  their subject while guaranteeing nothing about him.** Both use `corridorGuarantee`, which takes the
+  road's width and the heading and **no racer at all** — it guarantees the ROAD. LEAD_CHANGE is the
+  one that does cover him, via `pairGuarantee`, as a POINT and never whole; consistently it has the
+  lowest rate of the three. The width came from `state` on 96–100% of clipped frames, so no guarantee
+  was binding when he was cut. **No repair proposed** — only what a fix would have to promise.
+
 
 - [SHIP-RUNIN-CALM-1.md](SHIP-RUNIN-CALM-1.md) — **the closing phase stops jumping, and the record is
   made true in the same commit** (2026-08-26, **THE SHIP** — `v-ship-runin-calm`, accepted by the

@@ -183,3 +183,154 @@ A third guarantee found to promise less than everyone assumed — and this time 
 nothing was promised at all. A rate he can act on: 13% of mid-race frames, more than half of them with
 the leader gone entirely rather than merely cut. The direction that decides where to look: he goes off
 the front, not the side. And one question closed — it is not new, and the run-in work did not do it.
+
+---
+
+# ADDENDUM, 2026-08-26 — RE-SLICED PER CAMERA STATE, AFTER THE REQUIREMENT WAS NARROWED
+
+**The owner narrowed the requirement after the first pass, and it changes what the 13.10% means.** In
+**LEADER_ZOOM, LEAD_CHANGE and OVERVIEW** the leader must be in frame — those are the states whose
+subject he IS. In **BATTLE_ZOOM and COMEBACK_ZOOM** the camera is watching something else and his
+absence is not a defect. **No new races were run**: the first pass stored every mid-race frame with
+its state and a `clipped` flag, so the denominators for a per-state rate were already on disk.
+
+## THE ANSWER: HIS THREE STATES ARE 15.5% OF THE PROBLEM, AND THE SHAPE THERE IS DIFFERENT
+
+| state | frames | clipped | **rate** | centre off canvas | episodes | median len | longest |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **★ LEADER_ZOOM** | 140,740 | 5,886 | **4.18%** | 819 (0.58%) | 193 | **17** | 304 |
+| **★ LEAD_CHANGE** | 71,086 | 711 | **1.00%** | 188 (0.26%) | 31 | **15** | 167 |
+| **★ OVERVIEW** | 25,124 | 234 | **0.93%** | 116 (0.46%) | 16 | **17** | 21 |
+| BATTLE_ZOOM *(excused)* | 91,186 | 31,924 | 35.01% | 18,334 (20.11%) | 259 | 85 | 474 |
+| COMEBACK_ZOOM *(excused)* | 7,460 | 5,217 | 69.93% | 4,247 (56.93%) | 20 | 295 | 480 |
+
+**Where the pooled 13.10% actually came from:** BATTLE_ZOOM **72.6%**, LEADER_ZOOM 13.4%,
+COMEBACK_ZOOM 11.9%, LEAD_CHANGE 1.6%, OVERVIEW 0.5%. **His three together are 6,831 of 43,972
+clipped frames — 15.5%.** The first pass's headline was answering a question he had not asked.
+
+**AND IT IS THE "SMALL AND CONSTANT" CASE, WHICH IS THE REAL FINDING.** The two shapes are not the
+same fault seen twice:
+
+- In the **excused** states he is mostly **gone** — the centre is off canvas on 20% (BATTLE) and 57%
+  (COMEBACK) of their frames, in episodes lasting a median of **85 and 295 frames** (1.4 s and 5 s).
+- In **his three** he is **clipped but present** — the centre is off canvas on well under 1% of
+  frames, in episodes lasting a median of **15–17 frames, about a quarter of a second**, roughly
+  **2.4 per race**.
+
+**That is exactly what he described** — cut off, not absent — and it is why his eye catches something
+the pooled figure buried. A quarter-second nick at the edge of the frame, a couple of times a race,
+in the shot that is supposed to be of him.
+
+### Per track, his three states, worst race named
+
+| track | LEADER_ZOOM | worst race | LEAD_CHANGE | OVERVIEW |
+| --- | --- | --- | --- | --- |
+| **space-sprint** | **15.42%** | **s6 (33.9%)** | **11.68%** (s8 100%) | 1.61% |
+| seatrack | 6.47% | **s1 (11.0%)** | 3.59% (s8 21.3%) | 1.67% |
+| river-run | 4.56% | **s9 (18.2%)** | 0.00% | 1.69% |
+| mountainstreet | 4.42% | s6 (11.6%) | 2.26% | 0.00% |
+| city-circuit | 1.38% | s9 (3.0%) | 0.41% | 0.67% |
+| ice-track | 1.15% | s6 (3.3%) | 0.66% | 0.10% |
+| dirt-oval | 1.14% | s1 (2.5%) | 0.62% | 0.41% |
+| searound | 1.14% | s4 (2.6%) | 0.39% | 1.30% |
+| garden-path | 0.67% | s10 (1.7%) | 0.25% | 0.91% |
+| luger-hill | 0.57% | s7 (1.5%) | 0.17% | 0.05% |
+
+**Races to watch:** `space-sprint` seed 6 — a third of its LEADER_ZOOM frames clip the leader.
+`river-run` seed 9 (18.2%) is on his usual track. `space-sprint` seed 8 clips on **100%** of its
+LEAD_CHANGE frames, though that state is brief there.
+
+### What set the width and the anchor, on his three states only
+
+| | LEADER_ZOOM | LEAD_CHANGE | OVERVIEW |
+| --- | --- | --- | --- |
+| width set by | **`state` 96%** | **`state` 97%** | **`state` 100%** |
+| edges | bottom 2,986 · top 2,504 · right 248 · left 221 | top 379 · bottom 221 · left 94 · right 31 | top 151 · bottom 54 · left 50 |
+| overflow, mean | across 27.1 px · **along 48.6 px** | across 46.2 · **along 71.0** | across 50.3 · **along 98.3** |
+| leader is the anchor RACER | **100%** | **100%** | **0% — there is no focus racer** |
+
+**Top and bottom dominate the edges, and the overflow is larger ALONG the heading than across it** —
+so on these tracks the leader is being cut off *ahead of himself*, at whichever screen edge his
+direction of travel is pointing at. **The width is the state's own zoom on 96–100% of these frames: no
+guarantee is binding when he is cut.**
+
+## A CORRECTION TO THIS REPORT'S OWN FIRST PASS
+
+**The first pass said "the leader was the ANCHOR on 0% of clipped frames" on every track. That figure
+was an artefact of the test, not a fact about the camera.** It compared the framing *point* against
+the leader's position — and in LEADER_ZOOM the framing point is deliberately forward-projected ahead
+of him (`POSITION.FORWARD`), so the two never coincide even when he is the subject.
+
+Re-tested against the anchor *racer's index*, which the probe also recorded:
+
+| state | anchor POINT == leader | **anchor RACER == leader** | anchor racer is NULL |
+| --- | --- | --- | --- |
+| LEADER_ZOOM | 0% | **100%** | 0% |
+| LEAD_CHANGE | 0% | **100%** | 0% |
+| OVERVIEW | 0% | 0% | **100%** |
+
+**The claim in §"HOW OFTEN" that he is never the anchor holds for BATTLE_ZOOM and COMEBACK_ZOOM,
+which is where that section's evidence came from. It is wrong for LEADER_ZOOM and LEAD_CHANGE**, and
+the corrected reading makes the finding sharper rather than weaker.
+
+## WHAT THE THREE STATES ACTUALLY PROMISE ABOUT THE LEADER — ESTABLISHED AT SOURCE
+
+**WHOLE is never promised anywhere, and that stands unchanged.** No term in `framingRule.js` reads a
+racer's drawn size.
+
+**On PRESENT, the three differ, and two of them have the same gap:**
+
+**LEADER_ZOOM — `anchor: 'leader'`, `guarantee: GUARANTEE.CORRIDOR`, `position: FORWARD`.** He is the
+anchor racer (100%, measured). But `corridorGuarantee(headingWorld, trackWidthPx, axisX, axisY, …)`
+**takes no racer at all** — it takes the road's width and the heading. It guarantees the ROAD is in
+frame. **So this state names the leader as its subject while guaranteeing nothing about him.**
+
+**OVERVIEW — `anchor: 'leader'`, `guarantee: GUARANTEE.CORRIDOR`, `position: FORWARD`.** The framing
+table names the leader as the anchor, but at runtime `_focusAnchorRacer` returns **null on 100%** of
+its clipped frames, and its guarantee is the same road-only corridor. **So this state names the leader
+as its subject while guaranteeing nothing about him** — and its declared anchor and its runtime anchor
+do not agree, which is a second, smaller gap worth its own line.
+
+**LEAD_CHANGE — `anchor: 'new-leader'`, `guarantee: GUARANTEE.PAIR`.** This is the one that does cover
+him: `pairGuarantee` takes the two racers, and he is one of them. He is guaranteed **PRESENT as a
+POINT, not whole** — which is consistent with its being the lowest rate of the three at 1.00%, and
+with its clipping being a body-width nick rather than an absence.
+
+**So, in the words the requirement asked for: LEADER_ZOOM and OVERVIEW each name the leader as their
+subject while guaranteeing nothing about him.** LEAD_CHANGE guarantees his point and not his body.
+
+## WHAT A FIX WOULD HAVE TO PROMISE — named, not designed
+
+Not a proposal and not a design. Stating the gap precisely enough that someone can decide:
+
+1. **That the subject's BODY, not his point, is inside the frame** — no guarantee anywhere reads a
+   drawn size today, so this is a new kind of promise rather than a tightened number.
+2. **In LEADER_ZOOM and OVERVIEW, a term that takes the leader** — the corridor guarantee cannot be
+   tightened into this, because it has no racer argument to tighten.
+3. **That it binds** — the width came from `state` on 96–100% of the clipped frames, so a guarantee
+   that exists but never becomes the argmin would change nothing.
+
+**Whether any of it should be promised is a picture decision, not a repair**: widening LEADER_ZOOM to
+hold a whole body changes every leader shot in the game, and that is his call.
+
+## VERIFICATION FOR THIS ADDENDUM
+
+**None applies, and the reason is that nothing ran.** No product file was touched and no race was
+re-simulated — this section is a re-slice of JSON already on disk from the first pass, plus two source
+readings. No fingerprints, no browser gate, no client suite: all three would be measuring a tree
+identical to the one they already agree with. The only new artefact is one measure-only script.
+
+**Not established, and it matters for the reading:** ten races per track is a worst-of-ten and cannot
+speak about the tail; one roster and one field size; 60 Hz; the extent is a rectangle around each
+racer rather than his sprite, so every rate here is a floor. And the addendum inherits the first
+pass's finding that **none of this is new** — the before/after arms differed by 0.02 pp overall, and
+that comparison was made on the pooled figure, not per state.
+
+## SOURCE HYGIENE FOR THIS ADDENDUM
+
+No product file touched. Added `scripts/diag/midrace-clip-by-state.mjs`, measure-only, which counts
+episodes **within** a state rather than across it — a run of clipped frames that spans a state change
+is two episodes, because once the state changes the shot's subject has changed with it.
+
+**Noticed and left:** the stale conflict marker in `reports/evolution/INDEX.md`
+(`||||||| 5204b10b`) — seventh report to record it.
