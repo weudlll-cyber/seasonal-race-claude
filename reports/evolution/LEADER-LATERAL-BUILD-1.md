@@ -201,6 +201,20 @@ at the fixture's zoom no sideways move could fit it, so the rule correctly decli
 indistinguishable from the rule being inert. **The sabotage arm caught it.** The fixture now states its
 own scale and why it matters.
 
+## ONE TEST FIXED THAT IS NOT MINE, AND WHY IT HAD TO BE
+
+`scripts/engine-reach.test.mjs` — *"the negative message separates NOT-IN-THE-HULL from
+IN-THE-HULL-BUT-UNCHANGED"* — went red on this branch without engine-reach being touched. The cause is
+a fragile fixture, not this change: `--check` with no base reads the **working tree** against the
+branch point, so `client/src/modules/storage/defaults.js` counts as CHANGED on **any** branch that
+legitimately edits a default. The tool then correctly answers exit 0 (a real positive) and the test,
+which wants the IN-THE-HULL-BUT-**UNCHANGED** case, reads that as a regression.
+
+Pinning the comparison with `--base=HEAD` produces the intended scenario deterministically — the path
+is in the hull and byte-identical against HEAD whatever the branch is doing. Both assertions then hold
+for the reason they were written. **This would have gone red for the next block to ship a default
+too**, which is why it is repaired here rather than noted and left.
+
 ## SOURCE HYGIENE — including what I noticed and left
 
 - `lateralShiftToFit` is **unchanged**. The new helper sits beside it in `framingRule.js` so lateral
@@ -275,6 +289,14 @@ cause rather than the symptom — and it is a smaller change than anything in th
    in the same state; the corrected gate is the table above.
 3. **The first test fixture's sprite was too large for its own fixture**, so the rule declined and the
    test passed for the wrong reason. The sabotage arm caught it.
+
+**And two verify failures that were NOT findings, checked rather than assumed.** `client-suite` and
+`script-suite` both failed under verify's parallelism, and the harness labels that "a finding, not a
+flake". A *different* test failed on each of two runs — `raceActionStage`, then `raceSeed` timing out
+at 5,000 ms — and both pass alone, which is the contention signature. Run alone the client suite is
+**228 files / 4,314 tests green** (227/4,302 before, plus this block's one file and 12 tests). The
+script suite alone left exactly one real failure, which is the engine-reach fixture above — a genuine
+finding that the parallel run's noise would have hidden.
 
 One further correction to the brief's premise, made in the open: `_easeLogToward` does not exist on
 master — it was extracted during LEADER-WHOLE-SETBACK-BUILD-1, which was reverted and never merged.
