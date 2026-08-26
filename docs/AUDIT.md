@@ -108,7 +108,7 @@ No user-facing or server-side changes. Tinting operates entirely on offscreen ca
 
 ### Action Items
 
-- [ ] Verify Branding Profiles and System Backup claims in ROADMAP.md against running app (Phase V)
+- [ ] Verify Branding Profiles and System Backup claims against the running app (Phase V). *The claims moved to [BACKLOG.md](../docs/BACKLOG.md) PART TWO with the phase history; `ROADMAP.md` is a redirect.*
 - [ ] Winner-count wiring: SetupScreen → ResultScreen podium (Phase B / Phase 3)
 - [ ] Remove dead `_createTrail` system from Horse / Duck / Snail in D3.5.2
 

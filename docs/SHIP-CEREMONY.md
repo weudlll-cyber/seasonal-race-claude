@@ -241,7 +241,7 @@ tooling. Master had to be reset and force-pushed; that state is preserved as
 
 ## THE SHIP ORDER — and why the register line goes on the BRANCH
 
-**This section owns the ORDER of the merge, the mint and the tag.** Anything else that describes that
+**This section owns the ORDER of the merge, the mint, the tag and the cleanup that ends it.** Anything else that describes that
 order points here instead of restating it.
 
 **The contradiction it resolves (found 2026-08-18).** Two of this repository's rules were both right
@@ -284,6 +284,58 @@ used.
     it, see TRAP A for the dispatch route.
 11. **Only then, the follow-up commit on master correcting the two provisional SHAs** — the register
     line's and `mintedOn` — to the merge's actual hash, pushed on its own.
+12. **Clear the branches AT ORIGIN, and do it here rather than remembering to.** Every branch origin
+    still carries whose content master already holds is deleted; the ship is not finished while they
+    stand. **Anything a branch holds that master LACKS is landed on master first** — as a commit, not
+    by leaving the branch up — and anything that must survive as evidence becomes an **annotated tag
+    with its `TAGS.md` register entry**, never a branch. A branch is a moving pointer that anyone can
+    force-push or delete; a tag is the thing this repository already trusts to mean "this state, at
+    this moment". See THE CONTAINMENT CHECK immediately below for *how* to decide, because the
+    obvious way to decide is wrong.
+
+**WHY THIS IS A STEP AND NOT A HABIT.** It was a habit for months, and the habit produced ten
+archive-branches, then produced them again after they were cleared: CLEANUP-2026-08-26 swept nine,
+and by the next ship there were three more. A rule that lives outside the repository has to be
+remembered by whoever is at the keyboard, and the record shows it is not. **The failure is not
+untidiness.** `feat/leader-whole-setback-1` was the only home of a 195-line report for a day, so
+master's own index carried a line saying where to go and look — a repository that has to point
+outside itself for its own evidence. Deleting that branch on the wrong day would have destroyed it.
+
+### THE CONTAINMENT CHECK — a TREE question, not a COMMIT question
+
+**Get this wrong and the check reports "safe to delete" for a branch holding a file master lacks.**
+That is not hypothetical: it happened on `diag/runin-viable-1` on 2026-08-26, where the conclusion
+happened to be right and the method would not have caught a real loss.
+
+**THE CHECK:**
+
+```sh
+comm -23 <(git ls-tree -r --name-only origin/<branch> | sort)          <(git ls-tree -r --name-only origin/master   | sort)
+```
+
+Empty output means master's tree holds every path the branch's tree holds. That is the question worth
+asking, and this is the whole of it.
+
+**THE WEAKER CHECK THAT LOOKS CONVINCING**, and why it is not: comparing only the paths the branch's
+own commits *introduced* — `git show --name-only`, or a `master...branch` diff — against master. It
+reads like a complete audit, it names real files, and it will report a strict subset for a branch
+whose tree still contains something master has since deleted or renamed away. **A branch's tree is
+not the same thing as its commits' diffs**: it also carries everything it inherited from the commit
+it branched off, and master may have moved on from any of that. `diag/runin-viable-1`'s own commits
+introduced five paths, all of them accounted for; its TREE also held
+`client/src/modules/camera/panStaleZoom.test.js`, which master had replaced during
+RUNIN-PIVOT-SCOPE-1 and which the commit-level check never looked at.
+
+**AND `--is-ancestor` IS NOT THE CHECK EITHER**, though it is worth running first because it is
+cheap and it is sufficient when it passes cleanly: a branch whose tip is an ancestor of master had
+every commit merged, but a file it ADDED can still have been DELETED on master afterwards, leaving
+the branch's tree holding a path master's tip does not. Ancestry answers "were these commits
+merged"; the tree check answers "would deleting this lose anything". **Only the second one is the
+question step 12 asks.**
+
+**WHEN THE CHECK FINDS SOMETHING**, it does not mean keep the branch. It means land what is missing
+on master, confirm the check now comes back empty, and only then delete — the order matters, because
+a branch deleted first cannot be read back.
 
 ### TRAP A — CI DOES NOT RUN FOR A COMMIT THAT IS NOT THE TIP OF A PUSH
 
