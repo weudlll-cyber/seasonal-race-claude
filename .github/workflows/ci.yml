@@ -181,8 +181,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # `--no-file-parallelism` comes from the server package's own `npm test`, not from here: the
-      # suite writes a real sqlite session store, so files sharing it cannot run concurrently.
+      # HOW THIS SUITE RUNS IS NOT DESCRIBED HERE, and that is deliberate (GATE-SERIAL-BCRYPT-1).
+      # What stood here asserted that `--no-file-parallelism` came from the server package's own
+      # `npm test`. `20868394` removed that flag on 2026-08-18 and this comment went on asserting it
+      # for eight days, while `scripts/verify.mjs` SCHEDULED on the same dead sentence. A guarantee
+      # with three owners, and the two being read were the two that had gone stale.
+      #
+      # The one home is `server/vitest.config.js`, which derives its projects from
+      # `server/test/suiteShape.mjs`; verify reads that module rather than a sentence. CI does not
+      # schedule anything — it runs `npm test` and the config decides — so there is nothing for this
+      # comment to restate and it does not try.
       - name: Run server tests
         if: steps.scope.outputs.docs_only != 'true'
         run: npm test

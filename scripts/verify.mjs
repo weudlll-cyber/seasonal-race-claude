@@ -36,6 +36,10 @@ import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
 import { engineReach, splitInert } from "./engine-reach.mjs";
 import { collect, reasonFor } from "./lib/routing.mjs";
+// GATE-SERIAL-BCRYPT-1: how the server suite runs, derived from the test files, and the ONE
+// home both this scheduler and `server/vitest.config.js` read. Node builtins only, so it
+// resolves from the repository root where `vitest/config` does not.
+import { suiteShape } from "../server/test/suiteShape.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -243,18 +247,35 @@ export function commandFor(g) {
       cwd: join(ROOT, "client"),
       exclusive: true,
     };
-  // WIRE-SUITES-1. `--no-file-parallelism` is the server package's OWN `npm test`, not a flag added
-  // here: the suite writes a real sqlite session store, so files sharing it cannot run concurrently.
-  // Invoked through the package script rather than by spelling out vitest, so the suite keeps ONE
-  // definition of how it runs — the same reason client-suite calls `npm test`.
-  if (g.id === "server-suite")
+  // WIRE-SUITES-1 / GATE-SERIAL-BCRYPT-1. Invoked through the package script rather than by
+  // spelling out vitest, so the suite keeps ONE definition of how it runs — the same reason
+  // client-suite calls `npm test`.
+  //
+  // ── THE SCHEDULING IS DERIVED, NOT BELIEVED (2026-08-26) ──────────────────────────────────
+  //
+  // WHAT STOOD HERE WAS FALSE FOR EIGHT DAYS AND WAS BEING ACTED ON. It said
+  // `--no-file-parallelism` "is the server package's OWN `npm test`" and therefore that the suite
+  // "already keeps it to a single worker, so it is the cheapest thing in the run to overlap with a
+  // fingerprint". `20868394` removed that flag on 2026-08-18. So verify was overlapping a
+  // fourteen-worker suite with the fingerprint jobs on the strength of a sentence, and the extra
+  // contention is what spent the 21 ms this suite had left against its 5,000 ms timeout
+  // (GATE-RED-1).
+  //
+  // THE REPAIR IS NOT A BETTER SENTENCE. `server/test/suiteShape.mjs` derives how the suite runs
+  // from the test files themselves, `server/vitest.config.js` builds its projects from the same
+  // module, and this line reads it. **There is nothing left here that can disagree with the code.**
+  //
+  // THE RULE: the suite may share the machine exactly when its bcrypt-heavy files are serialised
+  // among themselves. If anyone ever removes that serialisation, `fullyParallel` becomes true and
+  // this suite stops being overlapped — automatically, without anyone remembering to change it.
+  if (g.id === "server-suite") {
+    const shape = suiteShape();
     return {
       cmd: ["npm", "test", "--silent"],
       cwd: join(ROOT, "server"),
-      // NOT exclusive, unlike client-suite. That flag exists because the client suite saturates the
-      // machine for ~200 s; this one is 42 s and its `--no-file-parallelism` already keeps it to a
-      // single worker, so it is the cheapest thing in the run to overlap with a fingerprint.
+      exclusive: shape.unbounded,
     };
+  }
   if (g.id === "script-suite")
     return { cmd: ["node", "--test", ...scriptTestFiles()] };
   // VERIFY-COST-3: `--cheap` is forwarded HERE, the only place the three are spawned. `cheapArgs()`
