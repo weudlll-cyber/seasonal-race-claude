@@ -154,6 +154,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BACKLOG-TRUTH-2.md](BACKLOG-TRUTH-2.md) — **six backlog entries checked AT SOURCE, and two were
+  not what they said** (2026-08-27, documents only; no gate can answer differently for a `docs/`
+  change). **CLOSED with evidence kept**: the merge gate (bcrypt group bounded to 3 in
+  `server/vitest.config.js`, margin 21 ms -> 1,894 ms — and the choice it asked him for was never
+  needed); the run-in's hard admit (answered YES BY ACCEPTANCE, `_levelEaseTo` eases both ways,
+  shipped in `v-ship-runin-calm`); the pan's stale zoom (`_resolvePanTarget()` after the zoom
+  settles). **STILL OPEN and re-verified rather than assumed**: the garden-path silent zero (the
+  symptom healed, the 200 s ceiling and the hardcoded 2 laps did not move) and the contention watch
+  (`_contentionOut` still only grows; the nearby `withinOneLength` membership is a DIFFERENT
+  mechanism and the two are now distinguished). **THE ONE THAT NEEDED SOURCE MOST**: the arbiter is
+  HALF closed — routing replayed on the real commit selects 12 guards where it selected 5, so a red
+  master can no longer report green, but `engine-reach --check` still answers "cannot reach the
+  engine at all" for a seed file whose two-line edit moved all four fingerprints, and cannot answer
+  otherwise because a JSON file is never an import edge. **THE RACE-SEED ROW ESTABLISHED**: merged
+  and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
+  would look at. Nothing deleted. 3 proposals, 2 the block's own.
+
 - [SHIP-ORDER-CLEANUP-1.md](SHIP-ORDER-CLEANUP-1.md) — **THE SHIP ORDER gets a twelfth step, and the
   containment check that makes it safe** (2026-08-27, documents only — no gate can answer differently
   for a `docs/` change, so none was run beyond `check-doc-links` and `check-index`). Cleanup lived
