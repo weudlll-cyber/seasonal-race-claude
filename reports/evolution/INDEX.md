@@ -154,6 +154,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEADER-LATERAL-MINIMAL-1.md](LEADER-LATERAL-MINIMAL-1.md) — **BUILD IT: the rule sits 38x calmer
+  than following him, but it JOLTS 130.6 world px and cannot reach 14% of what it engages on**
+  (2026-08-26, `diag/leader-lateral-minimal-1`, MEASURE ONLY — nothing built, no default, key or
+  fingerprint touched; read-only so no browser gate and no client suite; 10 tracks x 10 races,
+  140,740 `LEADER_ZOOM` mid-race frames). The owner's rule — hold the centreline, step aside only
+  when the leader would be cut, return as soon as he fits — engages on **4.18%** of frames, matching
+  the published clip rates **exactly on every track**, and leaves the camera at a mean lateral offset
+  of **0.76 world px against a following camera's 28.92**, travelling 28.8% of the distance. It
+  correctly does **nothing on 91.2% of lead changes**. Applied raw it is a **jump, not a travel** —
+  median and p95 frame-to-frame change are both 0.00 because the whole movement sits in the two
+  frames per episode, and the worst is **130.6 world px (~436 screen px)**; so the build is "step
+  aside, EASED". **830 frames (14.1% of engagements) no lateral shift can fix** — they are lost ALONG
+  the track; that does not contradict LEADER-LAG-TRUTH-1's "0 of 5,886 would clip with a perfect
+  camera", which allowed movement on both axes. **The rule is already in the tree**:
+  `lateralShiftToFit` holds the centre when it works and otherwise takes the smallest move that
+  works, and `_applyLateralGuarantee`'s docstring states his rule almost word for word — the leader is
+  simply missing from one subject list. One honest exception: on space-sprint the rule TRAVELS 118.2%
+  of a following camera, more not less. Five proposals, three of them this block's own.
+
 - [LEADER-LAG-TRUTH-1.md](LEADER-LAG-TRUTH-1.md) — **the clipped frames ARE the gap's tail, and the
   gap is NOT tracking lag** (2026-08-26, `diag/leader-lag-truth-1`, MEASURE ONLY — nothing built, no
   default, key or fingerprint touched; 10 tracks x 10 races, 140,740 `LEADER_ZOOM` mid-race frames).
