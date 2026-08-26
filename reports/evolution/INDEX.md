@@ -154,6 +154,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-PIVOT-SCOPE-1.md](RUNIN-PIVOT-SCOPE-1.md) — **he is right that it is more than 59 px, and the
+  experiment worked** (2026-08-26, `feat/runin-level-set-1`, BUILT — an ordering, no key, no default,
+  **nothing minted**; branch pushed UNMERGED, his eye decides).
+  **PART B — THE STRAND HAD BEEN MEASURING THE WRONG QUANTITY.** Every figure so far (59 px, 973 px,
+  2,427 px) measures how far a RACER moves inside the picture; he is watching how far the PICTURE
+  moves, and nothing had measured that. Split into its two parts, the screen motion is **PAN
+  22–70 px/frame** and **ZOOM 214–565 px/frame at the frame corner** — the zoom term is **five to ten
+  times** the pan. That is why his eye and the 59 px disagreed and both were honest: 59 px is the
+  subject near the middle where the zoom term vanishes; **565 px is the world at the corner**. The
+  camera's own centre barely moves (6–27 world px, 1.8–5.4% of frame).
+  **AND FRAME RATE DOES NOT RESCUE IT, which corrects an assumption:** the PAN term scales with rate
+  as RUNIN-SEED13-ANATOMY-1 found, but **the ZOOM term is rate-invariant** — 358.33 / 358.43 /
+  358.45 px at 50 / 60 / 90 Hz. A scheduled zoom step is a discontinuity, not a speed.
+  **PART A — THE NAMED EXPERIMENT SUCCEEDS.** Restricting the pivot to exactly old-P5's frames
+  (follow non-entry, and the glide) keeps arm B's benefit **to the digit** and removes the regression:
+  **level-set frames cut 48 → 0**, level-set and zoomPivot tests passing, camera suite **885/885**.
+  Worst across-track jump **59.07 → 0.04 px** on seed 18 and **30 jumps → ZERO** pooled. So the
+  regression was the pivot's SCOPE, never the ordering.
+  **`resolveCamera`'s adaptation loop is settled and is not a factor:** 96.8% of closing frames differ
+  from the resolver's scale, at a worst relative gap of **2.3e-7** — the float round-trip, four orders
+  of magnitude below where any across-track step appears.
+  **THE REFACTOR SHRANK THE FILE: 5,199 → 5,122 lines (−77)**, deleting `_restatePanTargetAtDrawnZoom`,
+  `_panTargetEff`, both re-statement call sites, three duplicated zoom writes and `panStaleZoom.test.js`
+  — each proven unreferenced tree-wide first — with `CAMERA_DIRECTOR.md` §2/§2a/§3.3 and
+  `ENDING-PHASES.md` corrected in the same commit. **The two pivots STAY and are now a documented
+  bound on both sides:** deleting them costs 59 → 360 px, widening them costs 48 cut frames.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED**; camera and render moved as
+  expected, record untouched. Stamps re-measured: tracking-lag all six frame counts identical, four
+  states improved; straggler-truth identical to the digit.
+  **WHAT STILL MOVES, said plainly: the width step, up to ~580 screen px at the frame corner in one
+  frame** — untouched here, and now the whole of what he sees. 5 proposals, 4 of them mine.
+
 - [RUNIN-ORDER-FIX-1.md](RUNIN-ORDER-FIX-1.md) — **the acceptance test failed, and stopping was the
   right answer** (2026-08-26, `feat/runin-level-set-1`, **NOTHING SHIPPED — the source is
   byte-identical to the branch tip**; no fingerprint, no browser gate, no client suite, because no

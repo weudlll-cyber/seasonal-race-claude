@@ -70,6 +70,9 @@ const CASES = (arg("cases", "river-run:20:13") || "")
 const OUT = arg("out", "c:/tmp/runin-aim-axes");
 const FROM_U = Number(arg("from", "0.90"));
 const TAG = arg("tag", "axes");
+// RUNIN-PIVOT-SCOPE-1 PART B: the frame clock. RUNIN-SEED13-ANATOMY-1 established that the swing
+// GROWS as the rate falls, so a figure taken only at 60 Hz understates what a slower browser shows.
+const FPS = Number(arg("fps", "60"));
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const out = [];
@@ -199,6 +202,26 @@ for (const c of CASES) {
           };
         })(),
         // ── WHAT COULD HAVE MOVED IT, recorded so a step can be charged rather than guessed ────
+        // ── RUNIN-PIVOT-SCOPE-1 PART B: WHERE THE CAMERA IS, NOT WHERE THE RACER IS ───────────
+        //
+        // Every figure this strand has taken measures how far a RACER moves within the picture.
+        // The owner is watching how far THE VIEW moves, and the two are different: the camera can
+        // travel a long way while the racer it follows barely shifts on screen, because the racer
+        // is travelling with it. These three fields are the camera's own state, per frame, and the
+        // summariser differences them.
+        //
+        // `visibleW` is the world width the frame spans, so a camera movement can be stated as a
+        // FRACTION OF THE PICTURE — which is the unit a viewer actually perceives, and the reason a
+        // world-pixel figure can look small while the shot is visibly tearing.
+        camCentre: {
+          x: +((CW / 2 - cd.offsetX) / effX).toFixed(2),
+          y: +((CH / 2 - cd.offsetY) / effY).toFixed(2),
+        },
+        visibleW: +(CW / effX).toFixed(2),
+        visibleH: +(CH / effY).toFixed(2),
+        effXNow: +effX.toFixed(6),
+        effYNow: +effY.toFixed(6),
+        binding: fp.binding ?? null,
         anchorT: fp.t === null || fp.t === undefined ? null : +fp.t.toFixed(6),
         lateralShift: fp.lateralShift ?? null,
         forwardFrac: cd._forwardFracNow?.() ?? null,
@@ -216,7 +239,11 @@ for (const c of CASES) {
         finishedCount: st.finishedCount,
       });
     },
-    { slowmo: true }
+    {
+      slowmo: true,
+      // A fixed clock, not a jittered one: two rates can only be compared under repeatable frames.
+      frameMs: FPS === 60 ? undefined : () => 1000 / FPS,
+    }
   );
 
   out.push({

@@ -31,8 +31,11 @@
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
-// is load-bearing in two places that look arbitrary (the zoom lerp before _setTargets, and
-// _setTargets owning targetOffsetX/Y alone), and both are explained there and at the call sites.
+// is load-bearing, and in one place above all: the frame's zoom is settled for EVERY path before
+// `_resolvePanTarget` states the aim, because an aim is `world x scale` and means nothing beside the
+// wrong scale. `_setTargets` answers how WIDE and stops; `_resolvePanTarget` answers where to AIM.
+// Reversing those two is the defect RUNIN-ORDER-FIX-1 removed, and it had cost four separate
+// corrections before anyone named it. See §2a there for the two pivots that are NOT part of it.
 // ============================================================
 
 import { getPanTarget } from './panTarget.js';
@@ -303,13 +306,6 @@ export class CameraDirector {
     this._transitionStartOffsetX = 0;
     this._transitionStartOffsetY = 0;
     this._lastResolvedPanTarget = null;
-    // RUNIN-PAN-STALE-ZOOM-1: the effective zoom `targetOffsetX/Y` are CURRENTLY stated at. It
-    // starts equal to the resolver's own `effectiveZoom` and moves whenever the aim is re-stated,
-    // which is what makes the re-statement idempotent and therefore safe to call from every path
-    // that finalises the frame's zoom. It is deliberately NOT `_lastResolvedPanTarget.effectiveZoom`:
-    // that field records what the RESOLVER decided and VIEWER-INVARIANTS-2's invariant 6 compares
-    // the drawn zoom against it, so overwriting it would make that test inert instead of passing.
-    this._panTargetEff = null;
     this._lerpPhase = 'entry';
     this._camT = null;
     this._observerPhase = 'idle';
@@ -1120,60 +1116,59 @@ export class CameraDirector {
     // the zoom is a second author, and two authors on one quantity is what hopping looks like.
     // ...AND the schedule is what actually set the delivered width, not a guarantee over it.
     const _schedZoom = this._scheduleComposing() && this._runInBinding;
+    // ── RUNIN-ORDER-FIX-1: THIS FRAME'S ZOOM IS SETTLED HERE, ONCE, FOR EVERY PATH ────────────
+    //
+    // WHAT USED TO BE HERE. Two corrections that re-stated the aim after the fact — one scoped to
+    // the composing schedule (VIEWER-INVARIANTS-2), one to the endgame close (RUNIN-PAN-STALE-ZOOM-1)
+    // — each right about its own subset of frames and neither removing the cause. They are gone.
+    // The order below is what replaces them: every path that can move this frame's zoom moves it
+    // HERE, and only then is the aim resolved, at a zoom that is now final.
+    //
+    // WHAT IS DELIBERATELY *NOT* GONE. The two zoom-about-the-anchor pivots stay exactly where they
+    // were, in the glide branch and the follow branch. RUNIN-ORDER-FIX-1 measured what removing them
+    // costs — the worst sideways jump went from 59 px to 360 px and the jump count from 30 to 209 —
+    // because they do a different job from this ordering: the ordering fixes where the aim is
+    // RESOLVED, the pivots carry the smoother's screen-space lag through a zoom change. Different
+    // quantities, different treatments, and only the aim's was ever wrong.
+    //
+    // ENDGAME-SCHEDULE-2's rule is unchanged and is the first branch: while the schedule composes it
+    // is the sole author of the width, so it writes the zoom outright and the glide's easing stands
+    // down. That was true before this repair; it is now said once instead of in two places.
+    const _glideDur = this._glideDurationActiveMs ?? this._glideDurationMs;
+    const _glideS =
+      this._lerpPhase === 'glide'
+        ? _glideDur > 0
+          ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / _glideDur))
+          : 1
+        : 0;
+    const _glideE = _glideS * _glideS * (3 - 2 * _glideS); // smoothstep ease
     if (_schedZoom) {
       this.zoom = this.targetZoom;
-      // ── THE PAN TARGET BELONGS TO THE ZOOM THE FRAME IS DRAWN WITH (VIEWER-INVARIANTS-2) ─────
+    } else if (this._lerpPhase === 'glide') {
+      this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * _glideE;
+    } else if (this._cutSnapPending) {
+      this.zoom = this.targetZoom;
+    } else if (!tSpaceLerpActive) {
+      // ── ENDGAME-SCHEDULE-1: A SCHEDULE IS A POSITION, NOT A TARGET TO CHASE ──────────────────
       //
-      // `_setTargets` ran a line ago and resolved the pan at `this.zoom` AS IT WAS THEN. The line
-      // above has just moved `this.zoom` to the schedule's value for this frame, so the offsets it
-      // computed belong to a zoom the renderer is not going to use.
+      // The reasoning that put this here is unchanged. The lerp exists to smooth a target that
+      // JUMPS; the endgame schedule is already C1 — it starts at `this.zoom` with zero rate by
+      // construction — so chasing it adds nothing but LAG, and the lag is not cosmetic: it is what
+      // made the shot miss requirement 1's deadline. Measured before that fix, mountainstreet
+      // reached the deadline about 10% narrower than the schedule placed it, which put the finish
+      // line just outside the frame at exactly the instant the specification says it must be
+      // inside. The schedule therefore takes the first branch and never reaches this line.
       //
-      // THAT MISMATCH IS NOT SMALL, AND THE REASON IS THE ARITHMETIC RATHER THAN THE SIZE OF THE
-      // ZOOM STEP. An offset is `-camX x effectiveZoom` — a product taken from the WORLD ORIGIN —
-      // so an error in the zoom is multiplied by the anchor's distance from that origin.
-      // update()'s own header records the same hazard for the entry path in the same words:
-      // "targetOffsetX uses the pre-lerp zoom while the renderer uses the post-lerp zoom, creating
-      // a per-frame mismatch (proportional to camX x d zoom)". The entry path was fixed by moving
-      // the lerp above `_setTargets`. The schedule cannot be moved there — `targetZoom` is computed
-      // INSIDE `_setTargets` — so it is corrected here instead.
-      //
-      // MEASURED IN THE BROWSER (`scripts/viewer-invariants.mjs`, space-sprint seed 9, shipped
-      // defaults, his roster), over the last 13 frames before the crossing: the framing error of the
-      // pan TARGET grew to 554 x 382 px while the pan's own residual against that target stayed
-      // under 119 px, and it collapsed to 39 x 27 the instant the zoom stopped moving. A 2.8%
-      // difference in zoom, times an anchor 3400 world px from the origin. The leader and the finish
-      // band went off the canvas with it.
-      //
-      // THE CORRECTION KEEPS `resolveCamera`'s ANSWER AND ONLY RE-EXPRESSES IT. The offset is
-      // `-camX x eff`, so scaling it by `effNow / effResolved` is the SAME camera world position
-      // stated at the drawn zoom. No framing rule is re-run and no placement is re-decided here —
-      // which matters, because re-deriving the placement would quietly replace `resolveCamera`'s
-      // judgement with a centring rule it does not use on every axis.
-      // ── AND NOT DURING A GLIDE, WHICH RESOLVES ITS ENDPOINT ON PURPOSE AT THE DESTINATION ────
-      //
-      // CAMERA-GLIDE-TARGET-1 makes the glide's pan endpoint the DESTINATION framing, resolved at
-      // the zoom the transition LANDS on rather than the live one, because the glide interpolates
-      // toward that endpoint across its whole span — and computing it at the live zoom "made the
-      // endpoint travel ~1150 px during the glide while the camera steered honestly toward a point
-      // that was wrong for the whole journey". Re-expressing it at the drawn zoom would undo exactly
-      // that, for exactly that reason. The mismatch this block repairs belongs to the paths that pin
-      // the pan to its target every frame, which is what the same note says they do.
-      // ── RUNIN-PAN-STALE-ZOOM-1: ONE MECHANISM, ONE HOME ──────────────────────────────────────
-      // The arithmetic that used to sit inline here now lives in `_restatePanTargetAtDrawnZoom`,
-      // because the SAME staleness was found on the follow path and two copies of a correction is
-      // how the two drift apart. The glide exclusion stays exactly where it was and is argued in
-      // the note above; the helper does not know about it, the call site does.
-      if (this._lerpPhase !== 'glide') this._restatePanTargetAtDrawnZoom();
+      // It also flattened the ends of the ramp — a first-order filter attenuates precisely where
+      // the smoothstep is slowest — which showed up as standstill the schedule never asked for.
+      this.zoom += (this.targetZoom - this.zoom) * lf;
     }
+
+    // The aim, resolved at the zoom settled above — the whole point of the split.
+    this._resolvePanTarget();
     this._detour?.beginFrame();
     if (this._lerpPhase === 'glide') {
-      const dur = this._glideDurationActiveMs ?? this._glideDurationMs;
-      const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
-      const e = s * s * (3 - 2 * s); // smoothstep ease
-      this._detour?.noteBranch('glide', s, e);
-      // ENDGAME-SCHEDULE-2: the schedule owns the zoom during the endgame; the glide keeps the PAN.
-      if (!_schedZoom)
-        this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
+      this._detour?.noteBranch('glide', _glideS, _glideE);
       // ── THE GLIDE MUST PIVOT TOO, ONCE IT NO LONGER OWNS THE ZOOM (VIEWER-INVARIANTS-1) ───────
       //
       // This branch interpolates the pan ABSOLUTELY, from a start captured when the glide began to
@@ -1224,8 +1219,8 @@ export class CameraDirector {
         _gAnchor && _gdz !== 0
           ? this._glideStartOffsetY - _gAnchor.y * this._proj.axisY * _gdz
           : this._glideStartOffsetY;
-      this.offsetX = _gsx + (this.targetOffsetX - _gsx) * e;
-      this.offsetY = _gsy + (this.targetOffsetY - _gsy) * e;
+      this.offsetX = _gsx + (this.targetOffsetX - _gsx) * _glideE;
+      this.offsetY = _gsy + (this.targetOffsetY - _gsy) * _glideE;
       this._leadChangeSnapPending = false;
       // CAMERA-FRAMING-1: the containment clamp used to run here, claiming to be a no-op mid-glide.
       // It was measured ACTIVE on 23 of 23 glide frames with corrections to −390 px — it had become
@@ -1234,12 +1229,12 @@ export class CameraDirector {
       // (CAMERA-HYGIENE-2: this note used to claim a `clampActiveCount` diagnostic still watched
       // the clamp. Nothing had incremented that counter since the clamp was deleted, so the test
       // that asserted it stayed 0 could not fail. Counter, getters and test are gone.)
-      if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
+      if (_glideS >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
     } else if (this._cutSnapPending) {
       this._detour?.noteBranch('cut');
       this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
-      this.zoom = this.targetZoom;
+      // The zoom snap has moved to the one place that settles this frame's zoom, above.
       this.offsetX = this.targetOffsetX;
       this.offsetY = this.targetOffsetY;
     } else {
@@ -1252,69 +1247,6 @@ export class CameraDirector {
         this.offsetY = this.targetOffsetY;
       }
 
-      if (!tSpaceLerpActive) {
-        // ── ENDGAME-SCHEDULE-1: A SCHEDULE IS A POSITION, NOT A TARGET TO CHASE ──────────────
-        //
-        // The lerp exists to smooth a target that JUMPS. The endgame schedule is already C1 — it
-        // starts at `this.zoom` with zero rate by construction — so chasing it adds nothing but
-        // LAG, and the lag is not cosmetic here: it is what made the shot miss requirement 1's
-        // deadline. Measured before this line, mountainstreet reached the deadline about 10%
-        // narrower than the schedule placed it, which put the finish line just outside the frame at
-        // exactly the instant the specification says it must be inside.
-        //
-        // It also flattened the ends of the ramp — a first-order filter attenuates precisely where
-        // the smoothstep is slowest — which showed up as standstill the schedule never asked for.
-        //
-        // ENDGAME-SCHEDULE-2: when the schedule authored the zoom above, `this.zoom` is already
-        // `targetZoom` and this lerp is a no-op by arithmetic — left in rather than branched around
-        // so the ordinary path reads exactly as it always did.
-        this.zoom += (this.targetZoom - this.zoom) * lf;
-        // ── RUNIN-PAN-STALE-ZOOM-1: THE AIM BELONGS TO THE ZOOM JUST SETTLED ABOVE ────────────
-        //
-        // THIS IS THE SAME DEFECT THE `_schedZoom` BLOCK ABOVE REPAIRS, ON THE PATH THAT CARRIES
-        // THE CROSSING. `_setTargets` resolved the pan a few lines up using `this.zoom` AS IT WAS
-        // — which on this path is the PREVIOUS frame's drawn zoom, because the pre-`_setTargets`
-        // zoom lerp is gated on `tSpaceLerpActive` and that is the ENTRY phase only. The line
-        // directly above has just moved the zoom to this frame's value. So the aim is resolved at
-        // one zoom and drawn at another, every frame the zoom moves on the follow path.
-        //
-        // WHY THE EXISTING CORRECTION DID NOT REACH IT. `_schedZoom` is
-        // `_scheduleComposing() && _runInBinding`. At the crossing the schedule HANDS BACK, and the
-        // largest zoom move of the race begins on the very next frame — outside that scope. The
-        // window ended one frame too early.
-        //
-        // WHY THE SIDEJUMP PIVOT BELOW IS NOT THIS. That pivot moves `offsetX` — where the camera
-        // IS — so the anchor keeps its screen position across the zoom change. This moves
-        // `targetOffsetX` — where the camera is AIMED. The pan then lerps the first toward the
-        // second, so correcting one has never corrected the other: the picture held still on the
-        // frame of the step and then slid, for as long as the lerp took to chase an aim that was
-        // wrong. That is the two-part signature the anatomy measured — a throw at the crossing, and
-        // a slide that outlives the width by 1.4 s.
-        //
-        // IT IS INERT WHENEVER THE ZOOM DID NOT MOVE, and idempotent when the schedule already
-        // re-stated the aim above: `_panTargetEff` carries the zoom the aim currently stands at, so
-        // the ratio is 1 and the call returns false rather than scaling a second time.
-        //
-        // ── WHY THE WINDOW IS `_runInAfterDeadline` AND NOT EVERY FOLLOW FRAME ─────────────────
-        //
-        // THE STALENESS IS GENERAL AND THE SCOPE IS NOT, AND THAT IS A MEASURED DECISION RATHER
-        // THAN TIMIDITY. Called on every follow frame the correction reaches the whole race, and
-        // `scripts/tracking-lag.mjs` says what that costs: LEADER_ZOOM's median lag 3.72 -> 5.08 pp
-        // and its tracking frames 17169 -> 13282, with BATTLE_ZOOM, LEAD_CHANGE and OVERVIEW all
-        // moving too. The reason is that this branch also carries the ENTRY phase, whose
-        // convergence test is `|targetOffsetX - offsetX| < _entryConvergencePx` — moving the target
-        // moves when a state stops entering and starts tracking, so a pan correction silently
-        // becomes a state-machine timing change across every state in the race.
-        //
-        // `_runInAfterDeadline` is the endgame close's own "the close is running". It is false for
-        // the whole race before the deadline and true from there to the end — measured on the
-        // anatomy trace, true on 105 of 105 frames from the crossing to the finish-overview
-        // handoff, while `runInActive`, `runInBinding` and `scheduled` are all false on every one
-        // of them. That is exactly the gap the defect lives in: the frames after the schedule hands
-        // back and before the ending takes over. Gating here leaves every frame before the endgame
-        // byte-identical, which is a property a test can hold this to.
-        if (this._runInAfterDeadline) this._restatePanTargetAtDrawnZoom();
-      }
       if (tSpaceLerpActive) {
         this.offsetX = this.targetOffsetX;
         this.offsetY = this.targetOffsetY;
@@ -4165,44 +4097,6 @@ export class CameraDirector {
   }
 
   /**
-   * RUNIN-PAN-STALE-ZOOM-1 — RE-STATE THE AIM AT THE ZOOM THE FRAME IS DRAWN WITH.
-   *
-   * `_setTargets` resolves the pan using `this.zoom` as it stands when it runs, and stores the
-   * answer as a SCREEN OFFSET: `targetOffsetX = -camX × effectiveZoom`. That is a product taken
-   * from the WORLD ORIGIN, so if the zoom then moves before the frame is drawn, the error in the
-   * aim is the zoom error MULTIPLIED BY THE SUBJECT'S DISTANCE FROM THAT ORIGIN. At a subject
-   * ~3,545 world px out, a 2.8% zoom difference is thousands of pixels of aim.
-   *
-   * THIS RE-EXPRESSES THE RESOLVER'S ANSWER; IT DOES NOT RE-DECIDE IT. Scaling the offset by
-   * `e1/e0` names the SAME camera world position at the new zoom — no framing rule is re-run and no
-   * placement is chosen here, which matters because re-deriving the placement would quietly replace
-   * `resolveCamera`'s judgement with a centring rule it does not use on every axis.
-   *
-   * IDEMPOTENT BY CONSTRUCTION, which is what lets one implementation serve every path that
-   * finalises the frame's zoom. `_panTargetEff` tracks the zoom the aim is CURRENTLY stated at, and
-   * moves with each re-statement, so a second call on the same frame finds a ratio of 1 and does
-   * nothing. Callers own their own exclusions — notably the glide, whose endpoint is resolved at
-   * the destination zoom ON PURPOSE (CAMERA-GLIDE-TARGET-1) and must not be re-expressed.
-   *
-   * @returns {boolean} true when the aim was actually re-stated — read by tests, not by the camera.
-   */
-  _restatePanTargetAtDrawnZoom() {
-    const e0 = this._panTargetEff;
-    const e1 = this._proj.effX(this.zoom);
-    if (!(e0 > 0) || !(e1 > 0) || Math.abs(e1 - e0) <= 1e-12) return false;
-    this.targetOffsetX *= e1 / e0;
-    // Y carries its own world→screen scale on a non-square closed world, so the ratio is taken on
-    // the Y axis rather than borrowed from X (the CAMERA-FOCUS-5 defect, in one line). On today's
-    // projection the two ratios are equal by arithmetic — `effY(camZoomForEffX(e))` cancels `axisY`
-    // — so this is written for the invariant rather than for a difference it currently makes.
-    const y0 = this._proj.effY(this._proj.camZoomForEffX(e0));
-    const y1 = this._proj.effY(this.zoom);
-    if (y0 > 0 && y1 > 0) this.targetOffsetY *= y1 / y0;
-    this._panTargetEff = e1;
-    return true;
-  }
-
-  /**
    * The Y pan offset for a resolved cam.zoom. Split out because the Y axis has its OWN world→screen
    * scale on every non-square closed world (bsY != bsX) — the projection supplies it, so this can
    * no longer be written with the X scale (the CAMERA-FOCUS-5 defect). On open tracks the mapping
@@ -4258,6 +4152,38 @@ export class CameraDirector {
       wasClamped: zoomResolved.wasClamped,
       targetInInnerFrame: zoomResolved.targetInInnerFrame,
     };
+    // ── RUNIN-ORDER-FIX-1: THE PAN IS *NOT* RESOLVED HERE, AND THAT IS THE WHOLE REPAIR ───────
+    //
+    // This method now answers ONE question — how wide — and stops. The aim is resolved by
+    // `_resolvePanTarget()`, which `update()` calls AFTER it has settled this frame's zoom.
+    //
+    // WHY THE SPLIT IS THE FIX RATHER THAN ANOTHER CORRECTION. An aim is stored as a screen offset,
+    // `world x scale`, so it is only meaningful beside the scale it was taken at. Resolving it here
+    // meant taking it at the PREVIOUS frame's zoom and drawing it at this one's, and the error is
+    // multiplied by the subject's distance from the world origin. RUNIN-VIABLE-1 measured the
+    // consequence: the aim's own across-track component is identically 0.00 px — the framing rule
+    // never aims sideways — yet the subject moved up to 59 px across the picture, and ALL 221
+    // across-track jumps landed on frames drawn at a different scale than their aim was resolved at.
+    //
+    // THE PROOF THAT THIS ORDER IS AVAILABLE WAS ALREADY IN THIS FILE. The ENTRY path hoists its
+    // zoom lerp above `_setTargets` for exactly this reason, and its own note says so in the same
+    // words — "so that targetOffsetX is computed with the post-lerp zoom". That path carried none of
+    // the corrections this repair deletes. It was right; it was simply never generalised.
+    this._panCtx = { target, proj, frameSize, minEffZoom, zoomResolved };
+  }
+
+  /**
+   * RUNIN-ORDER-FIX-1 — RESOLVE THE AIM AT THE SCALE THE FRAME IS ACTUALLY DRAWN AT.
+   *
+   * Called from `update()` once this frame's zoom is settled, whichever path settled it. Everything
+   * here was previously the second half of `_setTargets`; nothing about WHAT it computes changed,
+   * only WHEN. `this.zoom` is now the drawn zoom, so `proj.effX(this.zoom)` below is the scale the
+   * renderer will use rather than the one the previous frame used.
+   */
+  _resolvePanTarget() {
+    const ctx = this._panCtx;
+    if (!ctx) return;
+    const { target, proj, frameSize, minEffZoom, zoomResolved } = ctx;
 
     // CAMERA-GLIDE-TARGET-1 (fixes CAMERA-DETOUR cause D): the GRAMMAR-1 glide interpolates the offset from the
     // captured start to THIS endpoint across the whole glide, so the endpoint must be the DESTINATION framing —
@@ -4287,9 +4213,6 @@ export class CameraDirector {
       frameSize.height
     );
     this._lastResolvedPanTarget = panResolved;
-    // RUNIN-PAN-STALE-ZOOM-1: the aim has just been stated at THIS zoom. Every later re-statement
-    // this frame measures its ratio from here.
-    this._panTargetEff = panResolved.effectiveZoom;
     // Diagnostic only — the WORLD point the pan was aimed at this frame, before the smoother.
     // Read by nothing in the camera; VIEWER-INVARIANTS-2 needed it to settle which subject the pan
     // was actually tracking at the end of a race, which reading the framing rule could not.

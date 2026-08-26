@@ -148,17 +148,51 @@ The order matters and parts of it are load-bearing:
 5. The general hold gate → `_transition()`.
 6. **T-space entry lerp** — during entry, advance `_camT` along the TRACK toward the target, so the
    camera travels the curve instead of cutting across the infield.
-7. **Zoom lerp BEFORE `_setTargets`**, when the T-space lerp is active. Without this, `_setTargets`
-   computes the pan at the pre-lerp zoom while the renderer draws at the post-lerp zoom — a per-frame
-   mismatch proportional to `camX × Δzoom`, visible as camera jumps whenever `dt` varies.
-8. `_setTargets()` — the framing rule (§3).
-9. One of three branches writes `offsetX/offsetY`: **glide**, **cut**, or **follow**.
-10. Entry-convergence gate → promote `entry` to `tracking`, start the phased observer.
-11. `_computePhasedPanTarget()` — lead-in / follow / lead-out advance `_camT` for NEXT frame.
-12. Diagnostics, then return `{ zoom, offsetX, offsetY }`.
+7. **T-space zoom lerp**, when the T-space lerp is active — a special case of step 9, kept here
+   because the entry path advances `_camT` and its zoom together.
+8. `_setTargets()` — the framing rule (§3). **It answers HOW WIDE and stops.**
+9. **The frame's zoom is settled, once, for every path** — schedule, glide, cut or follow. This is
+   the ordering RUNIN-ORDER-FIX-1 introduced and it is the load-bearing step in this list.
+10. **`_resolvePanTarget()` — the aim, resolved at the zoom step 9 just settled.**
+11. One of three branches writes `offsetX/offsetY`: **glide**, **cut**, or **follow**. The glide and
+    follow branches each pivot the DELIVERED offset about the anchor when the zoom moved (§2a).
+12. Entry-convergence gate → promote `entry` to `tracking`, start the phased observer.
+13. `_computePhasedPanTarget()` — lead-in / follow / lead-out advance `_camT` for NEXT frame.
+14. Diagnostics, then return `{ zoom, offsetX, offsetY }`.
 
-**`targetOffsetX/Y` are owned exclusively by `_setTargets`.** `_computePhasedPanTarget` only moves
-`_camT`. Two writers to the pan target is how the camera acquires a fight with itself.
+**WHY 8, 9 AND 10 ARE IN THAT ORDER, and it is the whole of RUNIN-ORDER-FIX-1.** An aim is stored as
+a screen offset — `world × scale` — so it is only meaningful beside the scale it was taken at.
+Resolving it inside `_setTargets` meant taking it at the PREVIOUS frame's zoom and drawing it at this
+one's, multiplied by the subject's distance from the world origin. RUNIN-VIABLE-1 measured the
+consequence: the aim's own across-track component is identically **0.00 px** — the framing rule never
+aims sideways — yet the subject moved up to **59 px** across the picture, and **all 221** across-track
+jumps landed on frames drawn at a different scale than their aim was resolved at. Splitting the width
+question from the aim question, and settling the zoom between them, took that to **1.22 px worst over
+eight races and zero jumps**.
+
+**Four corrections were deleted by that ordering and are not coming back**: two re-statements that
+scaled the aim after the fact (VIEWER-INVARIANTS-2's, scoped to the composing schedule, and
+RUNIN-PAN-STALE-ZOOM-1's, scoped to the endgame close). **Two pivots STAY** and are not the same
+thing — see §2a below and §3.3.
+
+**`targetOffsetX/Y` are owned exclusively by `_resolvePanTarget`.** `_computePhasedPanTarget` only
+moves `_camT`. Two writers to the pan target is how the camera acquires a fight with itself.
+
+### 2a. The pivots, which the ordering did NOT replace
+
+The glide and follow branches each re-apply this frame's zoom change about the anchor before the pan
+smoother runs. **They are not compensations for the old ordering and deleting them is measured to be
+wrong**: RUNIN-ORDER-FIX-1 removed all four corrections at once and the worst sideways jump went from
+59 px to **360 px**, the jump count from 30 to **209**.
+
+The reason is that the ordering and the pivot act on different quantities. The ordering fixes where
+the aim is RESOLVED. The pivot carries the smoother's **screen-space lag** through a zoom change:
+with `offset_old = target_old + lag`, the pivot's `offset_old − anchor.x × axisX × dz` comes out as
+`target_new + lag` exactly. Only the aim's treatment was ever wrong.
+
+**Their scope is the follow and glide branches and must not be widened.** RUNIN-PIVOT-SCOPE-1
+measured that too: applied to entry frames as well, the level-set guarantee cut a member on **48
+frames**. Restricted to the branches above, the same build cuts none.
 
 ---
 
@@ -293,6 +327,10 @@ creeps toward its new target, the anchor SLIDES across the frame faster than the
 lurches to the edge and the pan slowly recovers. The follow branch re-applies each frame's zoom delta
 around the anchor's world position first, so every zoom source is lurch-free without touching any of
 them individually.
+
+**It survived RUNIN-ORDER-FIX-1 and its bounds are now measured on both sides — see §2a.** Deleting
+it costs 59 px → 360 px of sideways jump; widening it to the entry path costs the level-set
+guarantee 48 cut frames. The follow and glide branches are its scope.
 
 ### 3.4 What is NOT here any more, and must not come back
 
@@ -948,7 +986,28 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ bf7dfd7e 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ad0db84c 2026-08-26 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND ALL SIX FRAME COUNTS ARE IDENTICAL (2026-08-26)**
+— 8626, 159, 13282, 8473, 4130, 2089. That is the load-bearing half of this entry: the repair moves
+where the aim is resolved, and a frame count would only move if it had also moved when a state stops
+entering and starts tracking. It did not, which is what the pivot's restricted scope buys.
+
+Four states improved, one median moved the other way, and COMEBACK_ZOOM and OVERVIEW are identical to
+the digit on both percentiles:
+
+| state | median pp | p95 pp |
+| --- | --- | --- |
+| BATTLE_ZOOM | 5.82 -> 5.81 | 10.16 -> **10.05** |
+| COMEBACK_ZOOM | 4.84 -> 4.84 | 7.40 -> 7.40 |
+| LEADER_ZOOM | 4.99 -> **5.07** | 9.84 -> **9.71** |
+| LEAD_CHANGE | 4.66 -> **4.64** | 7.50 -> **7.45** |
+| OVERVIEW | 2.75 -> 2.75 | 16.00 -> 16.00 |
+| PHOTO_FINISH | 2.95 -> **2.81** | 8.64 -> **8.59** |
+
+**The baseline is this branch's own tip, measured, not the figures the entry below records** — for
+the reason the 2026-08-26 entry beneath already gives, and that discrepancy is still open and still
+not this block's.
+
 **RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EXACTLY ONE STATE MOVED: PHOTO_FINISH median
 2.89 -> 2.95 pp and p95 8.65 -> 8.64 (2026-08-26).** Every other state is identical to the digit,
 both percentiles and all six frame counts included — 8626, 159, 13282, 8473, 4130, 2089.
