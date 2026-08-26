@@ -58,15 +58,27 @@ const FROM_U = Number(arg("from", "0.10"));
 // the setting rather than argued about. Nothing else is touched, and omitting the flag leaves the
 // shipped defaults exactly — which is what every earlier run in this report used.
 const LEADER_CORR = arg("leader-corridors", null);
+// IT APPLIES TO BOTH STATES THAT SHIP AT 0.75, and that choice is deliberate. `visibleCorridors` is a
+// PER-STATE key: LEADER_ZOOM and LEAD_CHANGE both ship at 0.75, OVERVIEW at 1.5. Sweeping "the
+// setting" therefore has to say which states it means. These two are the ones the owner's number
+// names — 0.75 is their shipped value — so the sweep moves both together and leaves OVERVIEW at its
+// own 1.5 throughout. OVERVIEW's rate is consequently CONSTANT across the sweep and is reported as
+// the control it is, not as a result.
+const SWEPT_STATES = ["LEADER_ZOOM", "LEAD_CHANGE"];
 const CFG = LEADER_CORR
   ? {
       ...DEFAULT_CAMERA_CONFIG,
       cameraStateProfiles: {
         ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-        LEADER_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-          visibleCorridors: Number(LEADER_CORR),
-        },
+        ...Object.fromEntries(
+          SWEPT_STATES.map((s) => [
+            s,
+            {
+              ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s],
+              visibleCorridors: Number(LEADER_CORR),
+            },
+          ])
+        ),
       },
     }
   : DEFAULT_CAMERA_CONFIG;
@@ -172,6 +184,12 @@ for (const c of CASES) {
         leaderIdx: leader.index,
         zoom: +cd.zoom.toFixed(5),
         visibleW: +(CW / effX).toFixed(1),
+        // ── WHAT A WIDER SETTING COSTS, recorded so the trade can be shown and not just the benefit.
+        // `bodyPx` is the leader's drawn length ON SCREEN — the quantity the setting actually moves,
+        // and the reason he clips. `roadFrac` is how much of the frame's SHORT axis the road spans,
+        // so "more world in shot" can be read as "less of the picture is track".
+        bodyPx: +(((leader.drawnBodyLengthPx ?? 36)) * effX).toFixed(1),
+        roadFrac: +((race.trackWidthPx * effY) / CH).toFixed(4),
       });
     },
     { slowmo: false }

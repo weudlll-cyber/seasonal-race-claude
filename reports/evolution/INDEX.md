@@ -154,6 +154,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEADER-CORRIDORS-DEFAULT-1.md](LEADER-CORRIDORS-DEFAULT-1.md) — **no default closes this, and the
+  shipped one is the worst value anyone is likely to run** (2026-08-26,
+  `diag/leader-corridors-default-1`, MEASURE ONLY — no default changed, no key, no fingerprint;
+  read-only, so no browser gate and no client suite, and the reason is stated; **600 races** = 6
+  settings x 10 tracks x 10 races, browser camera seeding, 14 cores; report merged, branch pushed
+  unmerged).
+  **THE SWEEP.** `visibleCorridors` is PER STATE; LEADER_ZOOM and LEAD_CHANGE both ship at 0.75, so
+  both were moved together and OVERVIEW (1.5) was left as a control. Pooled clip rate in the swept
+  states: **11.02% / 5.83% / 3.11% (SHIPPED 0.75) / 1.41% / 0.93% / 0.91%** at
+  0.55 / 0.65 / 0.75 / 0.85 / 1.00 / 1.20. **space-sprint is the worst track at EVERY setting** —
+  **15.05% at the default, 27.6% on seed 6**, which is the cell the owner watched.
+  **THE COST, IN THE SAME TABLE AS THE BENEFIT.** Leader's drawn length 192.6 -> 97.8 px across the
+  sweep, and the road's share of the frame height **132% -> 67%**. **The shipped default is the
+  setting at which the road EXACTLY fills the frame (101.7%)** — which explains why it was chosen and
+  why it is also the worst value for this fault. From the default, 0.85 halves the clipping for 11% of
+  racer size; 1.00 removes four fifths of it for 22% and a fifth of the picture stops being road.
+  **(c) NO SETTING REACHES ZERO ON ANY TRACK, LET ALONE ALL TEN** — at 1.20 every track still clips
+  (0.16%–2.70%). **So no default can close this and the guarantee is the only complete answer.**
+  **(d) AND THE RIGHT VALUE IS NOT THE SAME PER TRACK.** Six tracks are already at a floor of 0.4–0.9%
+  at the default and widening buys them nothing (city-circuit 0.93 -> 0.84 across the WHOLE sweep);
+  four respond strongly (space-sprint 15.05 -> 2.70, seatrack 5.61 -> 1.40, mountainstreet 4.33 ->
+  0.66, river-run 3.95 -> 0.16). The key is global and the benefit is not.
+  **HAND-OFF: the setting is ALREADY reachable** — Dev Screen → Camera Advanced → Zoom Profiles, tier
+  `advanced`, slider 0.25–13 step 0.05 — so nothing was built. To reproduce this sweep he must move it
+  on BOTH `Leader Zoom` and `Lead Change`. **Compare 0.75 / 0.85 / 1.00 on space-sprint seed 6**
+  (27.6% / 12.5% / 2.8%); 1.20 is not worth looking at, measuring the same as 1.00 for another 16% of
+  racer size. **No default moved and no fix proposed** beyond four things the guarantee would have to
+  promise — including that it must hold at a TIGHT setting, since a host at 0.55 faces 46%.
+  5 proposals, 4 of them mine.
+
 - [MIDRACE-LEADER-CLIP-1.md](MIDRACE-LEADER-CLIP-1.md) — **nothing guarantees the leader mid-race, and
   he is clipped 13% of the time** (2026-08-26, `diag/midrace-leader-clip-1`, MEASURE ONLY — nothing
   built, no key, no fingerprint; read-only, so no browser gate and no client suite, and the reason is
