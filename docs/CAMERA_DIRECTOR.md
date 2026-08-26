@@ -986,7 +986,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ad0db84c 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 139313a1 2026-08-26 depends=client/src/modules/camera/ -->
 **RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND ALL SIX FRAME COUNTS ARE IDENTICAL (2026-08-26)**
 — 8626, 159, 13282, 8473, 4130, 2089. That is the load-bearing half of this entry: the repair moves
 where the aim is resolved, and a frame count would only move if it had also moved when a state stops
