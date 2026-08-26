@@ -52,9 +52,9 @@ export const SAMPLE_TRACKS = [
   {
     id: 'garden-path',
     name: 'Garden Path',
-    icon: '🐌',
-    description: 'A leisurely (yet surprisingly competitive) crawl through the roses.',
-    defaultRacerTypeId: 'snail',
+    icon: '🪲',
+    description: 'A leisurely (yet surprisingly competitive) scuttle through the roses.',
+    defaultRacerTypeId: 'beetle',
     geometryId: null,
     color: '#16a34a',
     defaultDuration: 120,
