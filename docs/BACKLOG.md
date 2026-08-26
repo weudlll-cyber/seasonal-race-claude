@@ -90,7 +90,7 @@ because a question that vanishes from an index looks like a question nobody aske
 | the question | where it lives |
 | --- | --- |
 | the authored BEATS never reach the camera — hand them through, or leave the detector inferring? | **PART TWO D14** — the open point it leaves. **His call, and it needs his eye afterwards.** |
-| a normal race now draws and shows a seed — does it read right on screen? | `feat/race-seed`, **unmerged**; see `reports/night/SEED-REAL-RACE-1.md` |
+| a normal race now draws and shows a seed — does it read right ON SCREEN? | **ON MASTER since `7a3942fa`** — `feat/race-seed` no longer exists and nothing was lost. **His eye is owed on the SCREEN, not on the code:** start a normal race (not Quick Test) with the seed field EMPTY, and check the drawn seed is shown where he expects it and reads as a number he could type back. Then close the tab, reopen, and check the same seed is still there — it is in `localStorage`, not `sessionStorage`, which is the half of D23 he asked for. See `reports/night/SEED-REAL-RACE-1.md` |
 
 **AND THESE ARE NO LONGER HIS — they are waiting on a MEASUREMENT or on a later block, not on a
 word from him:**
@@ -110,7 +110,7 @@ word from him:**
 | OUTCOME climb-capacity — drama-at-leader vs deep-band reach | **closed — PART TWO D17.** The lever it proposed is not ordered |
 | the audit-gate policy for DEV dependencies | **answered — PART TWO D21.** Dev advisories report; the build is not ordered here |
 | the `body-parser` LOW advisory | **answered — PART TWO D22.** No action; revisit at the next `server/` bump |
-| the seed for the normal "Start Race" path, and seed persistence | **build it — PART TWO D23.** Built on `feat/race-seed`, unmerged, his eye owed |
+| the seed for the normal "Start Race" path, and seed persistence | **BUILT AND MERGED — PART TWO D23.** Landed on master by `7a3942fa` (`feat(SEED-REAL-RACE-1)`); `SetupScreen.jsx` passes a drawn `racePlanSeed` instead of the legacy `0`, and both values live in `localStorage`. The branch was swept; **nothing was lost — checked, not assumed.** Only the eye-test above remains |
 | merge ROADMAP into BACKLOG | **approved as work — PART TWO D24.** Its own piece |
 | `D7d` — 100-racer performance | **downgraded to an observation — PART TWO D18.** Nothing is ordered |
 
@@ -245,7 +245,15 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
 
 **verify (section-wide):** none — nothing in this section is a change.
 
-- [ ] **THE MERGE GATE STOPPED GATING ON 2026-08-18, and no test was edited to make it happen.**
+- [x] ~~**THE MERGE GATE STOPPED GATING ON 2026-08-18, and no test was edited to make it happen.**~~
+      **✅ CLOSED 2026-08-26 by GATE-SERIAL-BCRYPT-1, and the close is verified at source rather than
+      from its report:** `server/vitest.config.js` bounds the bcrypt group to **3 workers** and
+      `server/test/suiteShape.mjs` owns the membership, which `scripts/verify.mjs` reads from the same
+      module. The margin against the unchanged 5,000 ms timeout went from **21 ms to 1,894 ms** with
+      no test over 4 s, and the suite is not slower (37.7 s against 39.1 s, inside variance). **The
+      question below asked him to choose between restoring serialisation and teaching the gate to
+      report INCONCLUSIVE; neither was needed — bounding the group made the gate honest at no cost.**
+      The original finding is kept in full because it is the evidence:
       `20868394` dropped `--no-file-parallelism` from the server test script — correctly, having made
       test isolation real — and never measured wall clock. Sixteen bcrypt-heavy files went from
       one-at-a-time to as-many-as-the-machine-has-cores. The worst test with no timeout of its own
@@ -296,8 +304,24 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       the race length. **Two of those three verdicts are wrong.** It is a wrong QUESTION asked of a
       correct answer: the closure answers *"what does the engine import"* exactly.
       Establishes it: [ENGINE-REACH-DATA-1](../reports/evolution/ENGINE-REACH-DATA-1.md).
-      **NEEDS: BUILDING** — the smallest change and its measured cost (3.4% of commits, 7 a month)
-      are in the report.
+      **HALF OF THIS IS NOW CLOSED, AND THE HALF THAT REMAINS IS THE SMALLER ONE. Established at
+      source 2026-08-27, not taken from a report.**
+      **✅ THE ROUTING HOLE IS CLOSED** by ENGINE-REACH-DATA-FIX-1: `scripts/lib/routing.mjs` now
+      decides which guards run through `scripts/lib/dataReach.mjs`, which follows NAMED paths and not
+      only import edges. Replayed on the real commit with `scripts/diag/routing-replay.mjs`: a change
+      to `server/seeds/tracks/garden-path.json` selected **5 guards before and 12 after** — all four
+      fingerprints, both suites, both frame checks. **That was the half that could let a red master
+      report green, and it cannot any more.**
+      **⏳ THE ADVISORY IS STILL WRONG, and it is the line a human reads at commit time.**
+      `engine-reach --check server/seeds/tracks/garden-path.json` still answers *"1 outside the hull
+      (cannot reach the engine at all)"* — for a file whose two-line edit moved **all four**
+      fingerprints in GARDEN-PATH-DEFAULTS-1. It cannot answer otherwise as written: `entryPoints()`
+      walks static `from '...'` specifiers, and **a JSON data file is never an import edge**, so no
+      data path can ever enter that hull.
+      **NEEDS: BUILDING, and it is now a smaller job than the report costed** — the mechanism that
+      answers it correctly already exists and is shipped; `engine-reach`'s hull is the last caller
+      that does not use `dataReach`. The measured cost in the report (3.4% of commits) was for the
+      whole thing and overstates what is left.
 
 - [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
       FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
@@ -319,7 +343,7 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: MEASURING, when he wants it** — a track whose `defaultLaps` is 4 is measured at 2 and
       **no cell would be empty**, so the loud-zero rule above would not catch it.
 
-- [ ] **THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
+- [x] ~~**THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
       VISIBLE STEP COMES FROM.** On river-run seed 13 a third racer crosses the one-length boundary
       **by a tenth of a pixel** and the shot cuts **198 to 386 px in a single frame**, 0.15 s before
       the line. His demand was fully formed **before** he joined. A chance-based membership removes 13
@@ -328,8 +352,14 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       not. **The membership buys a median 2.28 s of warning and the width spends none of it.**
       Establishes it: [RUNIN-SEED13-ANATOMY-1](../reports/evolution/RUNIN-SEED13-ANATOMY-1.md) and
       [RUNIN-CHANCE-SET-1](../reports/evolution/RUNIN-CHANCE-SET-1.md).
-      **NEEDS: ONLY HIS WORD** — may the width ease onto a new member over about 1.25 s, accepting he
-      is not fully guaranteed while it does?
+      **✅ CLOSED 2026-08-26 by RUNIN-EASED-ADMIT-1, and ANSWERED YES BY ACCEPTANCE rather than by a
+      separate word:** the width now eases onto a new member over `runInOpenMs`, he judged the result
+      on a production build and accepted it, and it shipped as `v-ship-runin-calm`. Verified at
+      source: `_levelEaseTo` (`CameraDirector.js`) re-anchors whenever the target moves and eases **in
+      both directions**, leaving by ARRIVING rather than by being dropped. **The question below is
+      what he answered** — it is kept because the answer is only legible beside it:
+      ~~may the width ease onto a new member over about 1.25 s, accepting he is not fully guaranteed
+      while it does?~~
 
 - [ ] **THE REQUIREMENT HE ASKED FOR IS ALREADY IMPLEMENTED IN HIS TREE AND POINTED BACKWARDS.**
       `_updateContentionWatch` (`CameraDirector.js:2619`) computes *"can this racer still win"* every
@@ -337,10 +367,22 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       only ever REMOVE a racer from the framing. **Nothing admits on it.** Two earlier reports had
       already found it; this is the third.
       Establishes it: [RUNIN-CHANCE-SET-1](../reports/evolution/RUNIN-CHANCE-SET-1.md), section 1.
-      **NEEDS: nothing on its own** — it is the context for the item above.
+      **STILL OPEN, and RE-VERIFIED AT SOURCE on 2026-08-27 rather than carried:** `_contentionOut`
+      is still only ever added to, and `_contentionPending` only gates entry to that removal — there is
+      no path that returns a racer to the framing. **Nothing admits on it.**
+      **AND ONE THING NEARBY DID CHANGE, so the two are not confused:** RUNIN-LEVEL-SET-BUILD-1 built
+      `withinOneLength` membership for the run-in's LEVEL SET, which is a different mechanism with a
+      different subject. The contention watch is untouched by it.
+      **NEEDS: nothing on its own** — it was the context for the admit item above, which is now
+      closed; it stands on its own as an unused mechanism nobody has decided to point forwards.
 
-- [ ] **AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
-      HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.** The pan target is resolved at the previous
+- [x] ~~**AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
+      HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.**~~
+      **✅ CLOSED 2026-08-26 by RUNIN-PIVOT-SCOPE-1, verified at source:** `update()` now calls
+      `_resolvePanTarget()` AFTER it has settled this frame's zoom, on every path — the aim is stated
+      at the scale the frame is drawn with. The split deleted two of the five compensating corrections
+      the file carried. Shipped in `v-ship-runin-calm`. The finding is kept because it is the
+      evidence: The pan target is resolved at the previous
       frame zoom and drawn at this one; multiplied by the subject distance from the world origin the
       aim is thrown **up to 2,427 px** and the leader leaves the canvas for 21 frames. **It is
       general — the counter-case race swings 959 px too — and worse at lower frame rates.**
