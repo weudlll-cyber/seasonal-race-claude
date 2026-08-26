@@ -6510,15 +6510,32 @@ describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination
     expect(cd.targetOffsetX).toBeCloseTo(early, 6);
   });
 
-  it('ENTRY/TRACKING endpoint still tracks the live zoom — the fix is glide-specific (entry path untouched)', () => {
+  // RUNIN-ORDER-FIX-1 rewrote this test's MECHANISM and kept its meaning. It used to assert that
+  // the non-glide endpoint tracks the LIVE zoom, which was true and was the defect's other face:
+  // "live" meant the zoom as it stood BEFORE the frame's transition ran. The endpoint now tracks the
+  // zoom the frame is DRAWN with, which `_resolvePanTarget` reads from `this.zoom` at the moment
+  // `update()` calls it. The property to pin is unchanged — a non-glide endpoint moves with the zoom
+  // — and it is now pinned against the right zoom.
+  it('ENTRY/TRACKING endpoint tracks the zoom it is resolved at — the glide is still the exception', () => {
     const cd = new CameraDirector(1280, 720, false);
     cd._lerpPhase = 'tracking';
     cd.zoom = 1.0;
     cd._setTrackTargets(target, cd._leaderZoom, FRAME);
+    cd._resolvePanTarget();
     const a = cd.targetOffsetX;
     cd.zoom = 6.0;
     cd._setTrackTargets(target, cd._leaderZoom, FRAME);
-    expect(cd.targetOffsetX).not.toBeCloseTo(a, 3); // non-glide still uses the live zoom (unchanged)
+    cd._resolvePanTarget();
+    expect(cd.targetOffsetX).not.toBeCloseTo(a, 3);
+
+    // ── SABOTAGE: resolving the pan BEFORE the zoom moves is the old order, and it produces the
+    // stale endpoint this repair removed — the same number at two different scales.
+    cd.zoom = 1.0;
+    cd._setTrackTargets(target, cd._leaderZoom, FRAME);
+    cd._resolvePanTarget();
+    const stale = cd.targetOffsetX;
+    cd.zoom = 6.0; // the frame is now drawn at 6x, but the aim was resolved at 1x and not re-resolved
+    expect(cd.targetOffsetX).toBeCloseTo(stale, 6);
   });
 });
 
@@ -8011,9 +8028,16 @@ describe('ENDGAME-REWRITE-1 — the empirical fixes, pinned before the rewrite',
     const eResolved = cd._lastResolvedPanTarget?.effectiveZoom;
     expect(eResolved).toBeGreaterThan(0);
     const eDrawn = cd._proj.effX(cd.zoom);
-    // The two DO differ — the schedule moved the zoom after the pan was resolved. If they ever stop
-    // differing this test is inert, so it says so rather than passing quietly.
-    expect(Math.abs(eDrawn - eResolved)).toBeGreaterThan(1e-12);
+    // ── RUNIN-ORDER-FIX-1 INVERTED THIS ASSERTION, WHICH IS THE POINT ────────────────────────────
+    //
+    // It used to read `expect(Math.abs(eDrawn - eResolved)).toBeGreaterThan(1e-12)` — "the two DO
+    // differ, because the schedule moved the zoom after the pan was resolved" — and it said that if
+    // they ever stopped differing the test would be inert. They have stopped differing, and it is
+    // not inertia: `update()` now settles the frame's zoom BEFORE resolving the aim, so the scale
+    // the aim is stated at IS the scale the frame is drawn with. The old form would now fail for the
+    // right reason, which is exactly what it was written to do. The residue is the float round-trip
+    // through `camZoomForEffX`/`effX`, measured across the closing phase at worst 2.3e-7 relative.
+    expect(Math.abs(eDrawn / eResolved - 1)).toBeLessThan(1e-6);
 
     // `targetOffsetX = -camX x effectiveZoom`, so dividing by the zoom the frame is DRAWN with
     // must give back the same `-camX` the resolver decided. Without the correction it gives back

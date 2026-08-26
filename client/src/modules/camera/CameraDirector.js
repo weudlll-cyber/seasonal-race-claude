@@ -31,8 +31,11 @@
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
-// is load-bearing in two places that look arbitrary (the zoom lerp before _setTargets, and
-// _setTargets owning targetOffsetX/Y alone), and both are explained there and at the call sites.
+// is load-bearing, and in one place above all: the frame's zoom is settled for EVERY path before
+// `_resolvePanTarget` states the aim, because an aim is `world x scale` and means nothing beside the
+// wrong scale. `_setTargets` answers how WIDE and stops; `_resolvePanTarget` answers where to AIM.
+// Reversing those two is the defect RUNIN-ORDER-FIX-1 removed, and it had cost four separate
+// corrections before anyone named it. See §2a there for the two pivots that are NOT part of it.
 // ============================================================
 
 import { getPanTarget } from './panTarget.js';
@@ -232,6 +235,17 @@ export class CameraDirector {
     this._runInEngaged = false;
     this._runInComposingNow = false;
     this._runInProgress = null;
+    // RUNIN-LEVEL-SET-BUILD-1: the level guarantee's held ceiling and its eased release.
+    // All three are null outside the run-in, which is what makes the rest of the race untouched.
+    this._levelHeld = null;
+    // RUNIN-EASED-ADMIT-1: the level ceiling's ease, which now runs in BOTH directions and re-anchors
+    // whenever its target moves. `_levelEaseTarget` is what makes the re-anchor possible — without a
+    // record of what the ease was aimed at, a moved target cannot be noticed and its step is passed
+    // through scaled by however far the ease had travelled. See `_levelEaseTo`.
+    this._levelEaseFrom = null;
+    this._levelEaseAt = 0;
+    this._levelEaseTarget = null;
+    this._levelSet = 0;
     // RUNIN-HOLD-1: the run-in HOLDS its opening shot and then closes in ONE sweep. Both fields are
     // one-way latches, for the same reason `_runInProgress` is clamped monotone — a close that could
     // restart is not a sweep.
@@ -1107,64 +1121,59 @@ export class CameraDirector {
     // the zoom is a second author, and two authors on one quantity is what hopping looks like.
     // ...AND the schedule is what actually set the delivered width, not a guarantee over it.
     const _schedZoom = this._scheduleComposing() && this._runInBinding;
+    // ── RUNIN-ORDER-FIX-1: THIS FRAME'S ZOOM IS SETTLED HERE, ONCE, FOR EVERY PATH ────────────
+    //
+    // WHAT USED TO BE HERE. Two corrections that re-stated the aim after the fact — one scoped to
+    // the composing schedule (VIEWER-INVARIANTS-2), one to the endgame close (RUNIN-PAN-STALE-ZOOM-1)
+    // — each right about its own subset of frames and neither removing the cause. They are gone.
+    // The order below is what replaces them: every path that can move this frame's zoom moves it
+    // HERE, and only then is the aim resolved, at a zoom that is now final.
+    //
+    // WHAT IS DELIBERATELY *NOT* GONE. The two zoom-about-the-anchor pivots stay exactly where they
+    // were, in the glide branch and the follow branch. RUNIN-ORDER-FIX-1 measured what removing them
+    // costs — the worst sideways jump went from 59 px to 360 px and the jump count from 30 to 209 —
+    // because they do a different job from this ordering: the ordering fixes where the aim is
+    // RESOLVED, the pivots carry the smoother's screen-space lag through a zoom change. Different
+    // quantities, different treatments, and only the aim's was ever wrong.
+    //
+    // ENDGAME-SCHEDULE-2's rule is unchanged and is the first branch: while the schedule composes it
+    // is the sole author of the width, so it writes the zoom outright and the glide's easing stands
+    // down. That was true before this repair; it is now said once instead of in two places.
+    const _glideDur = this._glideDurationActiveMs ?? this._glideDurationMs;
+    const _glideS =
+      this._lerpPhase === 'glide'
+        ? _glideDur > 0
+          ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / _glideDur))
+          : 1
+        : 0;
+    const _glideE = _glideS * _glideS * (3 - 2 * _glideS); // smoothstep ease
     if (_schedZoom) {
       this.zoom = this.targetZoom;
-      // ── THE PAN TARGET BELONGS TO THE ZOOM THE FRAME IS DRAWN WITH (VIEWER-INVARIANTS-2) ─────
+    } else if (this._lerpPhase === 'glide') {
+      this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * _glideE;
+    } else if (this._cutSnapPending) {
+      this.zoom = this.targetZoom;
+    } else if (!tSpaceLerpActive) {
+      // ── ENDGAME-SCHEDULE-1: A SCHEDULE IS A POSITION, NOT A TARGET TO CHASE ──────────────────
       //
-      // `_setTargets` ran a line ago and resolved the pan at `this.zoom` AS IT WAS THEN. The line
-      // above has just moved `this.zoom` to the schedule's value for this frame, so the offsets it
-      // computed belong to a zoom the renderer is not going to use.
+      // The reasoning that put this here is unchanged. The lerp exists to smooth a target that
+      // JUMPS; the endgame schedule is already C1 — it starts at `this.zoom` with zero rate by
+      // construction — so chasing it adds nothing but LAG, and the lag is not cosmetic: it is what
+      // made the shot miss requirement 1's deadline. Measured before that fix, mountainstreet
+      // reached the deadline about 10% narrower than the schedule placed it, which put the finish
+      // line just outside the frame at exactly the instant the specification says it must be
+      // inside. The schedule therefore takes the first branch and never reaches this line.
       //
-      // THAT MISMATCH IS NOT SMALL, AND THE REASON IS THE ARITHMETIC RATHER THAN THE SIZE OF THE
-      // ZOOM STEP. An offset is `-camX x effectiveZoom` — a product taken from the WORLD ORIGIN —
-      // so an error in the zoom is multiplied by the anchor's distance from that origin.
-      // update()'s own header records the same hazard for the entry path in the same words:
-      // "targetOffsetX uses the pre-lerp zoom while the renderer uses the post-lerp zoom, creating
-      // a per-frame mismatch (proportional to camX x d zoom)". The entry path was fixed by moving
-      // the lerp above `_setTargets`. The schedule cannot be moved there — `targetZoom` is computed
-      // INSIDE `_setTargets` — so it is corrected here instead.
-      //
-      // MEASURED IN THE BROWSER (`scripts/viewer-invariants.mjs`, space-sprint seed 9, shipped
-      // defaults, his roster), over the last 13 frames before the crossing: the framing error of the
-      // pan TARGET grew to 554 x 382 px while the pan's own residual against that target stayed
-      // under 119 px, and it collapsed to 39 x 27 the instant the zoom stopped moving. A 2.8%
-      // difference in zoom, times an anchor 3400 world px from the origin. The leader and the finish
-      // band went off the canvas with it.
-      //
-      // THE CORRECTION KEEPS `resolveCamera`'s ANSWER AND ONLY RE-EXPRESSES IT. The offset is
-      // `-camX x eff`, so scaling it by `effNow / effResolved` is the SAME camera world position
-      // stated at the drawn zoom. No framing rule is re-run and no placement is re-decided here —
-      // which matters, because re-deriving the placement would quietly replace `resolveCamera`'s
-      // judgement with a centring rule it does not use on every axis.
-      // ── AND NOT DURING A GLIDE, WHICH RESOLVES ITS ENDPOINT ON PURPOSE AT THE DESTINATION ────
-      //
-      // CAMERA-GLIDE-TARGET-1 makes the glide's pan endpoint the DESTINATION framing, resolved at
-      // the zoom the transition LANDS on rather than the live one, because the glide interpolates
-      // toward that endpoint across its whole span — and computing it at the live zoom "made the
-      // endpoint travel ~1150 px during the glide while the camera steered honestly toward a point
-      // that was wrong for the whole journey". Re-expressing it at the drawn zoom would undo exactly
-      // that, for exactly that reason. The mismatch this block repairs belongs to the paths that pin
-      // the pan to its target every frame, which is what the same note says they do.
-      const _e0 = this._lastResolvedPanTarget?.effectiveZoom;
-      const _e1 = this._proj.effX(this.zoom);
-      if (this._lerpPhase !== 'glide' && _e0 > 0 && _e1 > 0 && Math.abs(_e1 - _e0) > 1e-12) {
-        this.targetOffsetX *= _e1 / _e0;
-        // Y carries its own world->screen scale on a non-square closed world, so the ratio is taken
-        // on the Y axis rather than borrowed from X (the CAMERA-FOCUS-5 defect, in one line).
-        const _y0 = this._proj.effY(this._proj.camZoomForEffX(_e0));
-        const _y1 = this._proj.effY(this.zoom);
-        if (_y0 > 0 && _y1 > 0) this.targetOffsetY *= _y1 / _y0;
-      }
+      // It also flattened the ends of the ramp — a first-order filter attenuates precisely where
+      // the smoothstep is slowest — which showed up as standstill the schedule never asked for.
+      this.zoom += (this.targetZoom - this.zoom) * lf;
     }
+
+    // The aim, resolved at the zoom settled above — the whole point of the split.
+    this._resolvePanTarget();
     this._detour?.beginFrame();
     if (this._lerpPhase === 'glide') {
-      const dur = this._glideDurationActiveMs ?? this._glideDurationMs;
-      const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
-      const e = s * s * (3 - 2 * s); // smoothstep ease
-      this._detour?.noteBranch('glide', s, e);
-      // ENDGAME-SCHEDULE-2: the schedule owns the zoom during the endgame; the glide keeps the PAN.
-      if (!_schedZoom)
-        this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
+      this._detour?.noteBranch('glide', _glideS, _glideE);
       // ── THE GLIDE MUST PIVOT TOO, ONCE IT NO LONGER OWNS THE ZOOM (VIEWER-INVARIANTS-1) ───────
       //
       // This branch interpolates the pan ABSOLUTELY, from a start captured when the glide began to
@@ -1215,8 +1224,8 @@ export class CameraDirector {
         _gAnchor && _gdz !== 0
           ? this._glideStartOffsetY - _gAnchor.y * this._proj.axisY * _gdz
           : this._glideStartOffsetY;
-      this.offsetX = _gsx + (this.targetOffsetX - _gsx) * e;
-      this.offsetY = _gsy + (this.targetOffsetY - _gsy) * e;
+      this.offsetX = _gsx + (this.targetOffsetX - _gsx) * _glideE;
+      this.offsetY = _gsy + (this.targetOffsetY - _gsy) * _glideE;
       this._leadChangeSnapPending = false;
       // CAMERA-FRAMING-1: the containment clamp used to run here, claiming to be a no-op mid-glide.
       // It was measured ACTIVE on 23 of 23 glide frames with corrections to −390 px — it had become
@@ -1225,12 +1234,12 @@ export class CameraDirector {
       // (CAMERA-HYGIENE-2: this note used to claim a `clampActiveCount` diagnostic still watched
       // the clamp. Nothing had incremented that counter since the clamp was deleted, so the test
       // that asserted it stayed 0 could not fail. Counter, getters and test are gone.)
-      if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
+      if (_glideS >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
     } else if (this._cutSnapPending) {
       this._detour?.noteBranch('cut');
       this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
-      this.zoom = this.targetZoom;
+      // The zoom snap has moved to the one place that settles this frame's zoom, above.
       this.offsetX = this.targetOffsetX;
       this.offsetY = this.targetOffsetY;
     } else {
@@ -1243,24 +1252,6 @@ export class CameraDirector {
         this.offsetY = this.targetOffsetY;
       }
 
-      if (!tSpaceLerpActive) {
-        // ── ENDGAME-SCHEDULE-1: A SCHEDULE IS A POSITION, NOT A TARGET TO CHASE ──────────────
-        //
-        // The lerp exists to smooth a target that JUMPS. The endgame schedule is already C1 — it
-        // starts at `this.zoom` with zero rate by construction — so chasing it adds nothing but
-        // LAG, and the lag is not cosmetic here: it is what made the shot miss requirement 1's
-        // deadline. Measured before this line, mountainstreet reached the deadline about 10%
-        // narrower than the schedule placed it, which put the finish line just outside the frame at
-        // exactly the instant the specification says it must be inside.
-        //
-        // It also flattened the ends of the ramp — a first-order filter attenuates precisely where
-        // the smoothstep is slowest — which showed up as standstill the schedule never asked for.
-        //
-        // ENDGAME-SCHEDULE-2: when the schedule authored the zoom above, `this.zoom` is already
-        // `targetZoom` and this lerp is a no-op by arithmetic — left in rather than branched around
-        // so the ordinary path reads exactly as it always did.
-        this.zoom += (this.targetZoom - this.zoom) * lf;
-      }
       if (tSpaceLerpActive) {
         this.offsetX = this.targetOffsetX;
         this.offsetY = this.targetOffsetY;
@@ -2608,7 +2599,7 @@ export class CameraDirector {
       const vR = rateOf(r);
       if (vR === null) continue;
       const gapNow = shortestArcDeltaT(leader.t, r.t) * pathLen;
-      const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+      const contactLength = CameraDirector.contactLengthBetween(leader, r);
       if (!(contactLength > 0)) continue;
       const projected = gapNow + (vLeader - vR) * msToLine;
       if (projected > contactLength) {
@@ -2686,6 +2677,272 @@ export class CameraDirector {
     };
   }
 
+  /**
+   * ONE RACER LENGTH, between these two — the run-in's unit, defined ONCE (RUNIN-LEVEL-SET-BUILD-1).
+   *
+   * `pairContact`'s own along-track touch distance, `halfLengthA + halfLengthB`, i.e. exactly one
+   * body length between two equal racers. It was written out at two call sites before this block
+   * added a third that had to agree with both; a unit stated three times is a unit that can drift,
+   * and the owner's rule is expressed IN this unit, so it is now stated once and read.
+   */
+  static contactLengthBetween(a, b) {
+    return ((a?.drawnBodyLengthPx ?? 0) + (b?.drawnBodyLengthPx ?? 0)) / 2;
+  }
+
+  /**
+   * THE OWNER'S RULE OF 2026-08-24, as a predicate: is `r` at most ONE RACER LENGTH behind `leader`
+   * along the track? **Along-track only. His words: the across-track distance decides nothing about
+   * membership, because a racer's lane says nothing about his chance.**
+   */
+  static withinOneLength(leader, r, pathLenPx) {
+    const contact = CameraDirector.contactLengthBetween(leader, r);
+    if (!(contact > 0) || !(pathLenPx > 0)) return false;
+    return shortestArcDeltaT(leader.t, r.t) * pathLenPx <= contact;
+  }
+
+  /**
+   * THE LEVEL SET — the owner's rule of 2026-08-24, as a membership.
+   *
+   * *"Any racer at most ONE RACER LENGTH behind the leader ALONG THE TRACK must be in frame, however
+   * far to the side he is running."*
+   *
+   * IT IS `_abreastContenders` CONDITION 1 ALONE. That method carries a second condition — ON A FREE
+   * LANE — which is an ACROSS-TRACK test, and the owner has now excluded across-track distance from
+   * deciding membership: a racer's lane says nothing about his chance. Condition 2 stays where it is
+   * and keeps deciding the PHOTO_FINISH framing set; it simply has no part in this rule.
+   *
+   * **LIVE, NOT PINNED — decided deliberately; see the report's pin-or-live section.** The shipped
+   * contender set is captured once at the PHOTO_FINISH transition and never re-sorted, because
+   * re-sorting moves the ANCHOR (the pair midpoint) and that is steering. This set never touches the
+   * anchor — it returns a width ceiling and nothing else — so the pin's reason does not reach it.
+   * And a pinned set would fail the rule by construction: a racer who closes to within a length
+   * AFTER the pin could never be admitted, and arriving late alongside is precisely the case.
+   *
+   * @returns {Array<{x:number,y:number}>} the leader and everyone level with him; never null
+   */
+  _levelContenders(racers) {
+    if (!racers?.length) return [];
+    let leader = null;
+    let maxT = -Infinity;
+    for (const r of racers) {
+      if (r.t > maxT) {
+        maxT = r.t;
+        leader = r;
+      }
+    }
+    if (!leader) return [];
+    const pathLen = leader.pathLengthPx ?? 0;
+    // THE SAME GEOMETRY GUARD `_abreastContenders` CARRIES, for the same reason: without
+    // `pathLengthPx` and a drawn body the rule cannot be applied, and a caller supplying neither
+    // (a director test on bare shapes, `camera-replay`'s marker fields) would otherwise pass EVERY
+    // racer and frame the whole field. Five FINISH-PAIR-1 tests went red on exactly that.
+    if (!(pathLen > 0) || !((leader.drawnBodyLengthPx ?? 0) > 0)) return [];
+    const out = [leader];
+    for (const r of racers) {
+      if (r === leader || r.index === leader.index) continue;
+      if (CameraDirector.withinOneLength(leader, r, pathLen)) out.push(r);
+    }
+    return out;
+  }
+
+  /**
+   * THE LEVEL GUARANTEE — the width that keeps every member of that set IN FRAME.
+   *
+   * A PRESENCE GUARANTEE, NOT A SPAN ONE, and that distinction is the larger half of this build.
+   * `contenderGuarantee` is given the anchor, so each member is measured against the room the frame
+   * actually has from where the subject sits — `presenceCeilingFrom` in framingRule.js, which is
+   * `halfCorridorCeiling` with a different vector. Without the anchor it would fit the span BETWEEN
+   * members, which two racers running wide TOGETHER satisfy while both are off screen: measured over
+   * 1,260 races, span removes 11 of 126 winner-off races and presence removes 93.
+   *
+   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing, so **every frame before the
+   * closing stretch is what it was, to the pixel** — asserted by a test rather than asserted here.
+   *
+   * WIDEN-ONLY BY CONSTRUCTION: it returns a CEILING on cam.zoom, and the caller composes it with
+   * `Math.min`. It can make the shot wider and it has no way to make it tighter. That is what keeps
+   * the finish line — a version that could tighten would lose it, measured at 14.5-32.7% of frames
+   * against today's 85.7% (RUNIN-CONTENDER-GUARANTEE-1 §6).
+   *
+   * ── THE RELEASE IS EASED, WHICH IS WHAT MAKES A LIVE SET SAFE ─────────────────────────────────
+   *
+   * Membership is live, so a racer hovering at exactly one body length joins and leaves repeatedly.
+   * Admitting him is instant — he must not be cut while the camera thinks about it — but RELEASING
+   * him is eased, so the width cannot pump. The ceiling may FALL (widen) on any frame and may RISE
+   * (tighten) only along a smoothstep.
+   *
+   * **NO NEW CONSTANT.** The span is `runInOpenMs`, the owner's own 1-1.5 s, which already paces the
+   * opening glide and already times `_contentionWeight`'s release of a racer who has dropped out of
+   * contention. The ease is the same `3u^2 - 2u^3` the schedule uses, so nothing here can disagree
+   * with the rest of the endgame about the shape of a move. The interpolation is in LOG space,
+   * because a scale change is perceived logarithmically and this file says so in three other places.
+   *
+   * IT RELEASES TO THE SHOT THAT WOULD OTHERWISE BE, not to infinity: `preLevel` is the width every
+   * other authority has already agreed on, so at the end of the ease this term is exactly non-binding
+   * and hands back without a step.
+   *
+   * @param {number} preLevel  the cam.zoom every other authority has settled on this frame
+   * @returns {number} the cam.zoom ceiling to compose with `Math.min`
+   */
+  _levelCeiling(racers, subjects, frameSize, preLevel, ts) {
+    if (!(preLevel > 0)) {
+      this._levelHeld = null;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
+      this._levelSet = 0;
+      return Infinity;
+    }
+    // ── THE WINDOW CLOSING IS NOT A REASON TO DROP THE WIDTH (RUNIN-EASED-ADMIT-1) ─────────────
+    //
+    // This used to reset and return Infinity the moment the run-in stopped composing, which is the
+    // crossing. Measured on mountainstreet seed 32, that took `guaranteed` from 1.3139 to 4.0 in one
+    // frame — a factor of 3.05, and the largest single step this term ever produced. The rule's
+    // WINDOW ending is a fact about the rule; the PICTURE's width is not allowed to be discontinuous
+    // because of it. So the ceiling now leaves the only way it is allowed to: by easing to the shot
+    // that would have been and disengaging when it gets there.
+    //
+    // IT THEREFORE OUTLIVES `_runInComposingNow` BY AT MOST `runInOpenMs`, and that is a deliberate
+    // change to what "the run-in hands back at the line" means. It hands back over a window instead
+    // of on a frame. The shot it hands back TO is unchanged — `preLevel` is the state's own — so
+    // what moved is when the picture arrives there, not where.
+    if (!this._runInComposingNow || !subjects?.point) {
+      this._levelSet = 0;
+      if (this._levelHeld === null) return Infinity;
+      return this._levelEaseTo(preLevel, preLevel, ts);
+    }
+    const set = this._levelContenders(racers);
+    this._levelSet = set.length;
+    // ── NOBODY LEVEL MEANS NOTHING TO GUARANTEE, AND THAT IS THE RULE WORKING ─────────────────
+    //
+    // The set always holds the leader, so fewer than two members means nobody is within a racer
+    // length of him. His rule then says nothing about the width and today's shot stands — it is not
+    // a gap to be filled with a default. Without this the leader's own PADDING would still constrain
+    // (he sits on the anchor, so only his body's half-width is left to fit) and the term would
+    // quietly widen races with nobody in contention at all. Caught by a test that asserted exactly
+    // that and failed.
+    //
+    // IT DOES NOT SHORT-CIRCUIT, and that was a bug the churn test caught. Returning Infinity here
+    // THREW AWAY the release state, so a racer hovering at the boundary snapped the guarantee off and
+    // on and the ease never ran at all — the single worst frame-to-frame move was as large as with no
+    // ease whatsoever. An empty set is not "no guarantee", it is "release toward the shot that would
+    // otherwise be", and the code below already knows how to do that.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      this._forwardFracNow(),
+      this._headingScreen(subjects.t)
+    );
+    const raw =
+      set.length >= 2
+        ? contenderGuarantee(
+            set,
+            this._proj.axisX,
+            this._proj.axisY,
+            frameSize.width,
+            frameSize.height,
+            this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
+            this._drawnBodyWidthRefPx,
+            subjects.point,
+            at
+          )
+        : Infinity;
+    // Never more constraining than the rule asks, never tighter than the shot would have been.
+    const target = Math.min(Number.isFinite(raw) ? raw : Infinity, preLevel);
+    // Never fired, and nothing to fire for: the ordinary case, and it must cost exactly nothing.
+    if (this._levelHeld === null && !(target < preLevel)) return Infinity;
+    return this._levelEaseTo(target, preLevel, ts);
+  }
+
+  /**
+   * RUNIN-EASED-ADMIT-1 — THE LEVEL CEILING'S ONE CONTINUITY RULE.
+   *
+   * ── THE CAUSE THIS REPLACES, and it was NOT the one-sided admit alone ──────────────────────────
+   *
+   * What stood here eased in ONE direction and, where it did ease, did not smooth anything. Three
+   * boundaries, three ways the width could jump, all of them the same underlying fault: **the value
+   * was allowed to be discontinuous.**
+   *
+   *   1. THE ADMIT SNAPPED. `target <= _levelHeld` assigned `target` outright, so a new member moved
+   *      the width by his full demand in one frame. That is the asymmetry the owner named.
+   *
+   *   2. THE EASE RE-PROJECTED TARGET CHANGES INSTEAD OF ABSORBING THEM, and this was the bigger of
+   *      the two. It anchored `_levelRiseFrom` ONCE and then interpolated toward a LIVE target with
+   *      a RUNNING clock, so when the target moved mid-ease the already-elapsed fraction `e` was
+   *      applied immediately to the new, larger ratio. The output jumped by `(newTarget/oldTarget)^e`
+   *      in a single frame. Measured on river-run seed 18: the ceiling went 1.3703 -> 2.4251, a
+   *      factor of 1.77, on the frame the set dropped 2 -> 1 — **while the ease was already running**
+   *      — and `1.34 x (3.9868/1.34)^0.544` reproduces 2.4251 exactly. A smoother that passes a step
+   *      through, scaled by how far it happens to have travelled, is not a smoother.
+   *
+   *   3. THE EXIT DROPPED THE CEILING. Both exits — the set emptying and `_runInComposingNow` going
+   *      false at the crossing — returned `Infinity` and cleared the state, so the width returned to
+   *      the state's own shot in one frame. Measured on mountainstreet seed 32: `guaranteed`
+   *      1.3139 -> 4.0, a factor of 3.05, at the crossing.
+   *
+   * ── WHY THIS IS THE CAUSE AND NOT A BRIDGE OVER IT ────────────────────────────────────────────
+   *
+   * `preLevel` is smooth across every one of those frames — 3.945 -> 3.999 on seed 18 while the
+   * ceiling jumped 1.77x. So the picture's discontinuity was never the demand's own: it was this
+   * term failing to be a continuous function of it. **The repair is to give the quantity the
+   * contract it was missing**, not to hide the step behind a filter: the ceiling moves from WHERE IT
+   * IS to WHEREVER THE TARGET IS, always, in both directions, and it leaves by arriving rather than
+   * by vanishing. After it the value is continuous; there is nothing left to disguise.
+   *
+   * ── THE RULE, in one sentence ─────────────────────────────────────────────────────────────────
+   *
+   * Re-anchor whenever the target moves — start from the value currently held, restart the clock —
+   * and ease in log space on the same smoothstep over the same `runInOpenMs` the release already
+   * used. No new key, no new constant, no second smoother; the old release is this function's
+   * `target > held` case and behaves as it always meant to.
+   *
+   * @returns {number} the ceiling this frame, or Infinity once it has arrived and handed back.
+   */
+  _levelEaseTo(target, preLevel, ts) {
+    const dur = this._runInOpenMs;
+    // Engage at the shot that would have been, so the width GROWS onto the new member from where
+    // the picture already is. Starting at `target` is what made the admit a step.
+    if (this._levelHeld === null) {
+      this._levelHeld = preLevel;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
+    }
+    if (!(dur > 0)) {
+      // No duration configured is the one case where a step is the honest answer: there is no
+      // window to move over, and pretending otherwise would invent one.
+      this._levelHeld = target;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
+    } else {
+      // THE RE-ANCHOR. A target that has moved starts a fresh ease from the value on screen right
+      // now, which is what makes the first frame after any change cost ZERO — `e` is 0 there by
+      // construction. Without this the elapsed fraction is applied to the new ratio, which is
+      // defect 2 above.
+      const moved =
+        this._levelEaseTarget === null || Math.abs(Math.log(target / this._levelEaseTarget)) > 1e-9;
+      if (moved) {
+        this._levelEaseFrom = this._levelHeld;
+        this._levelEaseAt = ts;
+        this._levelEaseTarget = target;
+      }
+      const k = Math.min(1, Math.max(0, (ts - this._levelEaseAt) / dur));
+      const e = k * k * (3 - 2 * k);
+      this._levelHeld = this._levelEaseFrom * Math.pow(target / this._levelEaseFrom, e);
+    }
+    // Arrived: the term is exactly non-binding, so it hands back and stops existing rather than
+    // sitting at the delivered width pretending to hold it. It now leaves by ARRIVING here, which
+    // is the only way out — the two exits that used to drop it are gone.
+    // BOTH CONDITIONS, and the second one is load-bearing. Arriving is not enough: on the frame the
+    // ease ENGAGES it starts at `preLevel` by construction (that is what makes the admit cost zero
+    // on its first frame), so a check on the value alone fires immediately and the term is inert
+    // forever. It leaves only when it has arrived AND nothing is still asking it to be wider.
+    if (this._levelHeld >= preLevel - 1e-12 && target >= preLevel - 1e-12) {
+      this._levelHeld = null;
+      this._levelEaseFrom = null;
+      this._levelEaseTarget = null;
+      return Infinity;
+    }
+    return this._levelHeld;
+  }
+
   _abreastContenders(ordered) {
     const tw = this._trackWidthPx;
     const leader = ordered[0];
@@ -2716,7 +2973,7 @@ export class CameraDirector {
       // racers. Not a new number and not a lap fraction.
       if (r !== leader) {
         const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
-        const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+        const contactLength = CameraDirector.contactLengthBetween(leader, r);
         if (!(contactLength > 0) || gapPx > contactLength) continue;
       }
       // ── CONDITION 2: ON A FREE LANE ───────────────────────────────────────────────────────
@@ -3984,6 +4241,38 @@ export class CameraDirector {
       wasClamped: zoomResolved.wasClamped,
       targetInInnerFrame: zoomResolved.targetInInnerFrame,
     };
+    // ── RUNIN-ORDER-FIX-1: THE PAN IS *NOT* RESOLVED HERE, AND THAT IS THE WHOLE REPAIR ───────
+    //
+    // This method now answers ONE question — how wide — and stops. The aim is resolved by
+    // `_resolvePanTarget()`, which `update()` calls AFTER it has settled this frame's zoom.
+    //
+    // WHY THE SPLIT IS THE FIX RATHER THAN ANOTHER CORRECTION. An aim is stored as a screen offset,
+    // `world x scale`, so it is only meaningful beside the scale it was taken at. Resolving it here
+    // meant taking it at the PREVIOUS frame's zoom and drawing it at this one's, and the error is
+    // multiplied by the subject's distance from the world origin. RUNIN-VIABLE-1 measured the
+    // consequence: the aim's own across-track component is identically 0.00 px — the framing rule
+    // never aims sideways — yet the subject moved up to 59 px across the picture, and ALL 221
+    // across-track jumps landed on frames drawn at a different scale than their aim was resolved at.
+    //
+    // THE PROOF THAT THIS ORDER IS AVAILABLE WAS ALREADY IN THIS FILE. The ENTRY path hoists its
+    // zoom lerp above `_setTargets` for exactly this reason, and its own note says so in the same
+    // words — "so that targetOffsetX is computed with the post-lerp zoom". That path carried none of
+    // the corrections this repair deletes. It was right; it was simply never generalised.
+    this._panCtx = { target, proj, frameSize, minEffZoom, zoomResolved };
+  }
+
+  /**
+   * RUNIN-ORDER-FIX-1 — RESOLVE THE AIM AT THE SCALE THE FRAME IS ACTUALLY DRAWN AT.
+   *
+   * Called from `update()` once this frame's zoom is settled, whichever path settled it. Everything
+   * here was previously the second half of `_setTargets`; nothing about WHAT it computes changed,
+   * only WHEN. `this.zoom` is now the drawn zoom, so `proj.effX(this.zoom)` below is the scale the
+   * renderer will use rather than the one the previous frame used.
+   */
+  _resolvePanTarget() {
+    const ctx = this._panCtx;
+    if (!ctx) return;
+    const { target, proj, frameSize, minEffZoom, zoomResolved } = ctx;
 
     // CAMERA-GLIDE-TARGET-1 (fixes CAMERA-DETOUR cause D): the GRAMMAR-1 glide interpolates the offset from the
     // captured start to THIS endpoint across the whole glide, so the endpoint must be the DESTINATION framing —
@@ -4391,6 +4680,28 @@ export class CameraDirector {
     }
     this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
+    // BELOW `_runInBinding` ON PURPOSE. That flag means "the SCHEDULE is what the width
+    // authorities settled on", and `update()` reads it to choose an anchor. Composing above it
+    // would flip it to false on every frame this guarantee widens and quietly move the anchor —
+    // a side effect nobody asked for. The level term reports itself separately on the probe.
+    // ── THE OWNER'S RULE OF 2026-08-24, APPLIED LAST (RUNIN-LEVEL-SET-BUILD-1) ────────────────
+    //
+    // AFTER THE RATCHET, AND THAT IS THE DELIBERATE PART. The ratchet is requirement 3 — once the
+    // close begins the shot never re-opens — and it is computed from, and stored as, the SCHEDULE's
+    // own width. Composing here leaves that untouched: `_runInRatchet` still carries the schedule's
+    // monotone curve, so when this guarantee releases the shot returns to exactly that curve rather
+    // than to a value the guarantee moved. What it does mean is that a racer who would be CUT can
+    // re-open the delivered picture, and requirement 3 yields to him.
+    //
+    // THAT ORDER IS NOT NEW AND IT IS NOT MINE. `_corridorWidthCap` already states the same
+    // precedence in the same file: **THE CONTENDERS WIN IF THEY CONFLICT** — *"his first rule is
+    // that ALL participants must be visible, and the corridor is only his shortcut for 'certainly
+    // enough'."* This is that rule with the owner's own membership in place of the shortcut.
+    //
+    // THE COST IS REAL AND IT IS MEASURED, not waved past — see the report's re-open section.
+    const _levelCeil = this._levelCeiling(racers, subjects, frameSize, guaranteed, ts);
+    const _preLevel = guaranteed;
+    if (Number.isFinite(_levelCeil) && _levelCeil < guaranteed) guaranteed = _levelCeil;
     // ── WHAT ACTUALLY DECIDED THE DELIVERED ZOOM (ZOOM-PACE-5) ─────────────────────────────────
     //
     // THIS FIELD LIED, AND IT COST THREE REPORTS AND TWO NO-OP BUILDS. It was the argmin over
@@ -4416,7 +4727,16 @@ export class CameraDirector {
             ? 'line-after-cap'
             : 'guarantee-after-cap';
     }
+    // RUNIN-LEVEL-SET-BUILD-1, diagnostic only and read by nothing in the camera: what the level
+    // guarantee asked for, whether it decided the delivered width, and how many racers were level.
+    // Named rather than left to an argmin, because RUNIN-CONTENDER-GUARANTEE-1 recorded what an
+    // unnamed term costs a later diagnosis.
+    if (Number.isFinite(_levelCeil) && guaranteed < _preLevel - 1e-12) _binding = 'level';
     this._framingProbe = {
+      levelCeiling: _levelCeil,
+      levelBound: Number.isFinite(_levelCeil) && guaranteed < _preLevel - 1e-12,
+      levelSetSize: this._levelSet,
+      levelPreWidth: _preLevel,
       ceilings: _ceilings,
       wouldHave: _wouldHave,
       scheduled: _scheduled,

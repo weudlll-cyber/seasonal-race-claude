@@ -148,17 +148,51 @@ The order matters and parts of it are load-bearing:
 5. The general hold gate → `_transition()`.
 6. **T-space entry lerp** — during entry, advance `_camT` along the TRACK toward the target, so the
    camera travels the curve instead of cutting across the infield.
-7. **Zoom lerp BEFORE `_setTargets`**, when the T-space lerp is active. Without this, `_setTargets`
-   computes the pan at the pre-lerp zoom while the renderer draws at the post-lerp zoom — a per-frame
-   mismatch proportional to `camX × Δzoom`, visible as camera jumps whenever `dt` varies.
-8. `_setTargets()` — the framing rule (§3).
-9. One of three branches writes `offsetX/offsetY`: **glide**, **cut**, or **follow**.
-10. Entry-convergence gate → promote `entry` to `tracking`, start the phased observer.
-11. `_computePhasedPanTarget()` — lead-in / follow / lead-out advance `_camT` for NEXT frame.
-12. Diagnostics, then return `{ zoom, offsetX, offsetY }`.
+7. **T-space zoom lerp**, when the T-space lerp is active — a special case of step 9, kept here
+   because the entry path advances `_camT` and its zoom together.
+8. `_setTargets()` — the framing rule (§3). **It answers HOW WIDE and stops.**
+9. **The frame's zoom is settled, once, for every path** — schedule, glide, cut or follow. This is
+   the ordering RUNIN-ORDER-FIX-1 introduced and it is the load-bearing step in this list.
+10. **`_resolvePanTarget()` — the aim, resolved at the zoom step 9 just settled.**
+11. One of three branches writes `offsetX/offsetY`: **glide**, **cut**, or **follow**. The glide and
+    follow branches each pivot the DELIVERED offset about the anchor when the zoom moved (§2a).
+12. Entry-convergence gate → promote `entry` to `tracking`, start the phased observer.
+13. `_computePhasedPanTarget()` — lead-in / follow / lead-out advance `_camT` for NEXT frame.
+14. Diagnostics, then return `{ zoom, offsetX, offsetY }`.
 
-**`targetOffsetX/Y` are owned exclusively by `_setTargets`.** `_computePhasedPanTarget` only moves
-`_camT`. Two writers to the pan target is how the camera acquires a fight with itself.
+**WHY 8, 9 AND 10 ARE IN THAT ORDER, and it is the whole of RUNIN-ORDER-FIX-1.** An aim is stored as
+a screen offset — `world × scale` — so it is only meaningful beside the scale it was taken at.
+Resolving it inside `_setTargets` meant taking it at the PREVIOUS frame's zoom and drawing it at this
+one's, multiplied by the subject's distance from the world origin. RUNIN-VIABLE-1 measured the
+consequence: the aim's own across-track component is identically **0.00 px** — the framing rule never
+aims sideways — yet the subject moved up to **59 px** across the picture, and **all 221** across-track
+jumps landed on frames drawn at a different scale than their aim was resolved at. Splitting the width
+question from the aim question, and settling the zoom between them, took that to **1.22 px worst over
+eight races and zero jumps**.
+
+**Four corrections were deleted by that ordering and are not coming back**: two re-statements that
+scaled the aim after the fact (VIEWER-INVARIANTS-2's, scoped to the composing schedule, and
+RUNIN-PAN-STALE-ZOOM-1's, scoped to the endgame close). **Two pivots STAY** and are not the same
+thing — see §2a below and §3.3.
+
+**`targetOffsetX/Y` are owned exclusively by `_resolvePanTarget`.** `_computePhasedPanTarget` only
+moves `_camT`. Two writers to the pan target is how the camera acquires a fight with itself.
+
+### 2a. The pivots, which the ordering did NOT replace
+
+The glide and follow branches each re-apply this frame's zoom change about the anchor before the pan
+smoother runs. **They are not compensations for the old ordering and deleting them is measured to be
+wrong**: RUNIN-ORDER-FIX-1 removed all four corrections at once and the worst sideways jump went from
+59 px to **360 px**, the jump count from 30 to **209**.
+
+The reason is that the ordering and the pivot act on different quantities. The ordering fixes where
+the aim is RESOLVED. The pivot carries the smoother's **screen-space lag** through a zoom change:
+with `offset_old = target_old + lag`, the pivot's `offset_old − anchor.x × axisX × dz` comes out as
+`target_new + lag` exactly. Only the aim's treatment was ever wrong.
+
+**Their scope is the follow and glide branches and must not be widened.** RUNIN-PIVOT-SCOPE-1
+measured that too: applied to entry frames as well, the level-set guarantee cut a member on **48
+frames**. Restricted to the branches above, the same build cuts none.
 
 ---
 
@@ -293,6 +327,35 @@ creeps toward its new target, the anchor SLIDES across the frame faster than the
 lurches to the edge and the pan slowly recovers. The follow branch re-applies each frame's zoom delta
 around the anchor's world position first, so every zoom source is lurch-free without touching any of
 them individually.
+
+**It survived RUNIN-ORDER-FIX-1 and its bounds are now measured on both sides — see §2a.** Deleting
+it costs 59 px → 360 px of sideways jump; widening it to the entry path costs the level-set
+guarantee 48 cut frames. The follow and glide branches are its scope.
+
+### 3.4a The level ceiling's continuity contract (RUNIN-EASED-ADMIT-1)
+
+**The level guarantee's width is a continuous function of its demand, in both directions, and it
+leaves by arriving rather than by vanishing.** One rule, `_levelEaseTo`, in log space on a smoothstep
+over `runInOpenMs` — the duration the release already used. No key was added.
+
+**Why it exists, and it is a cause rather than a smoother.** The term had three boundaries and
+stepped at all of them, while its own demand stayed smooth:
+
+| boundary | what it did | measured |
+| --- | --- | --- |
+| admit | assigned the new demand outright | the width moved by a member's full demand in one frame |
+| target moves mid-ease | anchored its start ONCE and interpolated toward a live target with a running clock, so an elapsed fraction `e` was applied to the new ratio | river-run seed 18: ceiling 1.3703 → 2.4251, **×1.77**, on the frame the set dropped 2→1 — *while the ease was already running* |
+| exit | returned `Infinity` and cleared its state when the set emptied or the run-in stopped composing | mountainstreet seed 32: `guaranteed` 1.3139 → 4.0, **×3.05**, at the crossing |
+
+`preLevel` — the shot that would have been — is smooth across all of those frames. **So the picture's
+discontinuity was never the demand's; it was this term failing to be a continuous function of it.**
+The repair gives the quantity the contract it lacked: re-anchor whenever the target moves, ease from
+where it is, and disengage only once it has both arrived AND nothing is still asking it to be wider.
+
+**Two consequences worth knowing.** The ceiling now outlives `_runInComposingNow` by at most
+`runInOpenMs`, so the run-in hands back over a window rather than on a frame — the shot it hands back
+TO is unchanged. And a newly admitted member is **not** fully guaranteed while the width grows onto
+him, which is the trade the owner accepted on 2026-08-26.
 
 ### 3.4 What is NOT here any more, and must not come back
 
@@ -948,7 +1011,77 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ db59a328 2026-08-26 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR RUNIN-EASED-ADMIT-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
+2089/2.81/8.59. Run rather than argued: the change is inside `client/src/modules/camera/` and moves
+the CAMERA fingerprint, so the usual byte-identical argument was unavailable. It did not move these
+because this harness's race (n=40, seed 5601) is measured on the tracking lag per state, and the
+repair changes only how the level ceiling's own value moves between frames.
+
+**RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND ALL SIX FRAME COUNTS ARE IDENTICAL (2026-08-26)**
+— 8626, 159, 13282, 8473, 4130, 2089. That is the load-bearing half of this entry: the repair moves
+where the aim is resolved, and a frame count would only move if it had also moved when a state stops
+entering and starts tracking. It did not, which is what the pivot's restricted scope buys.
+
+Four states improved, one median moved the other way, and COMEBACK_ZOOM and OVERVIEW are identical to
+the digit on both percentiles:
+
+| state | median pp | p95 pp |
+| --- | --- | --- |
+| BATTLE_ZOOM | 5.82 -> 5.81 | 10.16 -> **10.05** |
+| COMEBACK_ZOOM | 4.84 -> 4.84 | 7.40 -> 7.40 |
+| LEADER_ZOOM | 4.99 -> **5.07** | 9.84 -> **9.71** |
+| LEAD_CHANGE | 4.66 -> **4.64** | 7.50 -> **7.45** |
+| OVERVIEW | 2.75 -> 2.75 | 16.00 -> 16.00 |
+| PHOTO_FINISH | 2.95 -> **2.81** | 8.64 -> **8.59** |
+
+**The baseline is this branch's own tip, measured, not the figures the entry below records** — for
+the reason the 2026-08-26 entry beneath already gives, and that discrepancy is still open and still
+not this block's.
+
+**RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EXACTLY ONE STATE MOVED: PHOTO_FINISH median
+2.89 -> 2.95 pp and p95 8.65 -> 8.64 (2026-08-26).** Every other state is identical to the digit,
+both percentiles and all six frame counts included — 8626, 159, 13282, 8473, 4130, 2089.
+
+**THE BASELINE IS THE BRANCH TIP, MEASURED, NOT THE FIGURES THE ENTRY BELOW RECORDS.** That is a
+deliberate choice and it exposes something. This block ran the harness twice on the same commit —
+once with its change and once with the change reverted — because the only honest baseline for "what
+did I move" is the tree I am moving it from. **The reverted run reads 8626 / 159 / 13282 / 8473 /
+4130 / 2089, which is not the 10923 / 159 / 17169 / 9373 / 4323 / 1865 the entry below records for
+this same branch.** Five of the six frame counts differ, and they differ WITHOUT this block's change
+applied, so **the discrepancy is not this block's and is not repaired here.** It is reported in
+[RUNIN-PAN-STALE-ZOOM-1](../reports/evolution/RUNIN-PAN-STALE-ZOOM-1.md) as an open question about
+the record rather than silently overwritten: either that re-measurement did not run and the older
+table was carried forward, or something outside `depends=` — the harness roster, which the identity
+line reports as `roster=none (index strings)`, is the obvious suspect given that a racer's NAME is
+physics — moved the race itself since.
+
+**WHY IT MOVED AT ALL, AND WHY ONLY THERE.** The repair re-expresses the pan target at the zoom the
+frame is drawn with, scoped to `_runInAfterDeadline` — the endgame close. PHOTO_FINISH is the state
+that runs inside that window, so it is the only one that can move, and the gate is what makes that a
+structural statement rather than a lucky one. **An earlier revision of this block did NOT scope it**,
+calling the correction on every follow frame, and the harness caught what that costs: LEADER_ZOOM
+median 4.99 -> 5.08 pp, BATTLE_ZOOM p95 10.16 -> 10.06, LEAD_CHANGE 4.66 -> 4.64. The follow branch
+also carries the ENTRY phase, whose convergence test reads `|targetOffsetX - offsetX|`, so moving the
+aim moves when a state stops entering — a pan correction becoming a state-machine timing change
+across the whole race. The scope exists because that was measured, not feared.
+
+**RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EXACTLY ONE FIGURE MOVED: PHOTO_FINISH median
+3.08 -> 3.00 pp (2026-08-25).** Every other state is identical to the digit, both percentiles and all
+six frame counts included — 10923, 159, 17169, 9373, 4323, 1865 — and PHOTO_FINISH's own frame count
+is unchanged, so the state ran exactly as long and followed a little closer while it did.
+
+**IT WAS RUN, AND THIS TIME IT HAD TO BE.** Every earlier entry here could rest on the CAMERA
+fingerprint coming back byte-identical. That sentence is unavailable to this block: **the camera
+fingerprint MOVED** (see [fingerprints.json](fingerprints.json) for where the values live), because
+the block adds a width authority that composes during the run-in. So the only honest answer was the
+measurement.
+
+**AND THE SIGNATURE IS THE DESIGN'S, which is the reason to believe it.** The new term is scoped to
+the run-in, whose window opens at the endgame threshold — by which point every state except
+PHOTO_FINISH and LEADER_ZOOM has left. A figure moving in BATTLE_ZOOM or OVERVIEW would have been
+evidence of a leak rather than of a better shot. The table below carries the new figure.
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the
@@ -1117,7 +1250,7 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 3.08      | 8.79   |
+| PHOTO_FINISH  | 1865   | 3.00      | 8.79   |
 
 (ENDGAME-LAND-CLEAN-1's run, which differs from ENDGAME-SCHEDULE-1's only in PHOTO_FINISH's two
 percentiles — that run read 3.54 / 8.91. The PHOTO-FINISH-STATE-1 run the paragraph below describes read

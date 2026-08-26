@@ -49,7 +49,49 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b3e3cd49 2026-08-24 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ db59a328 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR RUNIN-EASED-ADMIT-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot and the same
+settled-frame counts. **It had to be run this time**: the level ceiling now outlives
+`_runInComposingNow` by up to `runInOpenMs`, so the run-in's hand-back overlaps the start of the
+ending and the two windows are no longer disjoint. The durations are unmoved anyway, because they
+are answers about WHEN thresholds are crossed and the repair moves only the width's path between
+frames.
+
+**RE-MEASURED IN FULL FOR RUNIN-PIVOT-SCOPE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot and the same
+settled-frame counts. Run rather than argued: the repair re-orders where the aim is resolved on every
+path including this one, so the usual "the windows do not overlap" argument does not cover it. Phase
+6's lengths are answers about WHEN thresholds are crossed and the repair moves only WHERE the camera
+aims, which is why the CAMERA fingerprint moved and these four durations did not.
+
+**RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
+7/7) and the same settled-frame counts (94, 165, 0, 83).
+
+**IT WAS RUN RATHER THAN ARGUED, AND THIS TIME THE USUAL ARGUMENT WAS NOT EVEN AVAILABLE.** Earlier
+entries could rest on the run-in releasing before phase 6 begins, so the two windows never overlap.
+That sentence does not cover this block: its repair is scoped to `_runInAfterDeadline`, which is
+TRUE for the whole of phase 6 — the close is still "running" long after the run-in has handed the
+width back. So the endgame is inside the changed window by construction, and the only honest answer
+was the measurement.
+
+**Why it did not move anyway:** phase-6 durations and zoom-out leads are answers about WHEN
+thresholds are crossed, and the repair moves only WHERE the camera aims — it re-expresses the pan
+target at the drawn zoom and changes no schedule, no threshold and no width. The CAMERA fingerprint
+moved and these four durations did not, which is the distinction stated as a measurement.
+
+**RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-25)** — all four phase-6 durations and all four zoom-out leads.
+
+**IT WAS RUN RATHER THAN ARGUED.** Every earlier entry here could rest on the CAMERA fingerprint
+coming back byte-identical; that sentence is unavailable to this block, because **the camera
+fingerprint MOVED**. The measurement is the answer instead of the inference.
+
+**And the reason it did not move is structural rather than lucky.** The new width authority is scoped
+to the run-in, and `_updateRunIn` releases at the FIRST crossing — phase 6 begins after the winner is
+home, so the two windows do not overlap by a single frame, which is what this section says a few
+paragraphs down for a different reason.
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the

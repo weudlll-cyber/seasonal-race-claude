@@ -114,6 +114,54 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RUNIN-CALM — the closing phase stops jumping, in both quantities (2026-08-26)
+
+**THE OWNER JUDGED IT ON THE PRODUCTION BUILD `2285e8b5` ON 2026-08-26 AND ACCEPTED IT: the run-in is
+calm.** He had been in this strand since 2026-08-23 watching six symptoms get measured, explained and
+repaired without convergence, and had said that if a solution for the finish sequence as a whole did
+not arrive soon the whole thing might have to be rethought. Two causes were found — each established
+before anything was built — and both are gone.
+
+**THE SIDEWAYS JOLT WAS THE AIM BEING STATED AT THE WRONG SCALE.** `_setTrackTargets` answered how
+WIDE and where to AIM in one pass, while the frame's zoom was settled afterwards, so every frame's aim
+was resolved at the previous frame's zoom and drawn at this one's — multiplied by the subject's
+distance from the world origin. The framing rule itself was never at fault: its across-track component
+is identically 0.00 px, which is why the owner's own sentence ("the camera always aims at the middle,
+so a sideways jump cannot come from the aim") was right and the strand had been measuring the wrong
+quantity. Splitting the two questions — `_resolvePanTarget()` now runs after `update()` has settled
+the zoom on every path — deleted two of the five compensating corrections the file was carrying.
+
+**THE WIDTH STEP WAS A QUANTITY WITH NO CONTINUITY CONTRACT.** The level ceiling stepped at all three
+of its boundaries: it admitted by a member's full demand in one frame; its ease anchored ONCE and
+re-projected any target change by the elapsed fraction; and it was dropped outright when the run-in
+stopped composing. `preLevel` is smooth across every one of those frames, so the discontinuity was
+never the demand's own. One rule replaced all three.
+
+**WHAT IT COST TO GET THERE, RECORDED BECAUSE IT IS THE USEFUL PART.** An earlier attempt deleted all
+five corrections at once and made the defect SEVEN TIMES WORSE (59 px → 360 px); its own acceptance
+test caught that and the piece was stopped rather than shipped. The two zoom-about-the-anchor pivots
+are therefore bounded on both sides and must stay as they are: deleting them costs 59 → 360 px,
+widening them to the entry path costs the level-set guarantee 48 cut frames.
+
+**NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
+
+- `v-ship-runin-calm` (`b75fcf1b`, 2026-08-26) — **the ship.** *The SHA is PROVISIONAL: it names the
+  parent commit and is corrected to the merge hash in the follow-up once CI is green, per THE SHIP
+  ORDER step 11. `check-tags` reads names, not shas, so the entry is valid meanwhile.* The return
+  point is
+  `v-ship-runin-calm^1`, and it restores a closing phase that still jumps: the picture's largest
+  single-frame movement at the frame corner is **580.58 px on river-run seed 18** and 368.65 on
+  seed 13, against **9.73** and **10.05** after; the subject's largest sideways movement is
+  **59.07 px** against **under 1.5**; and two races in the corpus carry a movement the strand's own
+  rule calls noticeable, against **zero of 100**. Confirmed on **ten tracks, ten races each**,
+  including `garden-path` — excluded from every previous corpus because the harness could not finish
+  it, and now the calmest of the ten at 13.05 px. Three fast tracks (space-sprint 66.69 px seed 2,
+  city-circuit 35.34, ice-track 35.21) are recorded as an OPEN QUESTION rather than averaged in: they
+  are the endgame schedule's own closing rate, not the level ceiling. CAMERA and RENDER move; WORLD
+  and WORLD-OFF were measured and are byte-identical. Values in
+  [fingerprints.json](fingerprints.json). See
+  [SHIP-RUNIN-CALM-1](../reports/evolution/SHIP-RUNIN-CALM-1.md).
+
 ### RUNIN-NAMES — names instead of numbers once the closing zoom has arrived (2026-08-24)
 
 **THE OWNER JUDGED IT ON THE PRODUCTION BUILD ON 2026-08-24 AND ACCEPTED IT — names included, and

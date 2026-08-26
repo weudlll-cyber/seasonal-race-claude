@@ -154,6 +154,37 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-RUNIN-CALM-1.md](SHIP-RUNIN-CALM-1.md) — **the closing phase stops jumping, and the record is
+  made true in the same commit** (2026-08-26, **THE SHIP** — `v-ship-runin-calm`, accepted by the
+  owner on the production build `2285e8b5`; CAMERA and RENDER minted, WORLD and WORLD-OFF measured
+  byte-identical; no key, no default, no new constant).
+  **TWO CAUSES, EACH ESTABLISHED BEFORE ANYTHING WAS BUILT.** The sideways jolt was the aim being
+  stated at the WRONG SCALE — `_setTrackTargets` answered how wide and where to aim in one pass while
+  the frame's zoom was settled afterwards — and the framing rule was never at fault, its across-track
+  component being identically 0.00 px, which is why the owner's own sentence was right and the strand
+  had been measuring the wrong quantity. The width step was a quantity with NO CONTINUITY CONTRACT:
+  the level ceiling stepped at all three of its boundaries while `preLevel` stayed smooth across every
+  one of those frames.
+  **WHAT THE TAG RESTORES:** corner movement **580.58 px** on river-run seed 18 and 368.65 on seed 13,
+  against **9.73** and **10.05**; sideways movement **59.07 px** against under 1.5; and two races
+  carrying a noticeable movement against **zero of 100**. Confirmed on ten tracks including
+  `garden-path`, now the calmest of the ten.
+  **THE COST OF THE WRONG TURN IS RECORDED BECAUSE IT IS THE USEFUL PART:** an earlier attempt deleted
+  all five compensating corrections at once and made the defect SEVEN TIMES WORSE (59 -> 360 px); its
+  own acceptance test caught it and the piece was STOPPED rather than shipped. The two pivots are now
+  bounded on both sides in `CAMERA_DIRECTOR.md` — deleting them costs 59 -> 360 px, widening them
+  costs the level set 48 cut frames.
+  **THE MINT NEARLY GOT SKIPPED, AND THE REASON IS WORTH THE ENTRY:** `npm run verify` is GREEN
+  WITHOUT IT, because the record-versus-engine comparison lives only in `check-fingerprints --mint`,
+  which verify does not run. An unminted merge would have passed the gate and put a knowingly false
+  record on master with nothing to catch it. **Minting was blocked twice by the permission gate and
+  was NOT routed around** — that gate guards the project's own rule that a fingerprint is never minted
+  on your own authority. Also corrects a stale note: `check-fingerprints` has **no `--fix` writer**;
+  it was deliberately removed, so the record is hand-edited.
+  **The merge also lands seven instruments that lived only on the branch**, every one cited by a
+  report already on master — the stranding pattern CLEANUP-2026-08-26 exists to prevent. 3 proposals,
+  2 of them mine.
+
 - [RUNIN-ALL-TRACKS-10-1.md](RUNIN-ALL-TRACKS-10-1.md) — **ten races on each of the ten tracks, and
   garden-path is the calmest of them** (2026-08-26, `feat/runin-level-set-1`, MEASURE ONLY — nothing
   built, no key, no fingerprint; read-only, so no browser gate and no client suite, and the reason is
@@ -181,6 +212,138 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **WHAT TEN RACES CANNOT SUPPORT is stated rather than glossed:** no distributional claim, one roster
   and one field size, seeds 1–10 as a fixed set rather than a sample, and 60 Hz only. 4 proposals,
   3 of them mine.
+
+- [RUNIN-EASED-ADMIT-1.md](RUNIN-EASED-ADMIT-1.md) — **the width jumped because the ceiling had no
+  continuity contract, not because the admit was instant** (2026-08-26, `feat/runin-level-set-1`,
+  BUILT — one rule, no key, no constant, no second smoother, **nothing minted**; branch pushed
+  UNMERGED).
+  **FINDING THE CAUSE FIRST CHANGED WHAT GOT BUILT.** The obvious answer was the asymmetry — admit
+  snaps, release eases — and it is real but is only ONE of three ways the term stepped. **The single
+  largest step in the corpus, 580.58 px on river-run seed 18, is a RELEASE, and release was already
+  eased.** An eased admit would not have touched it.
+  **WHY AN ALREADY-EASED QUANTITY STEPPED BY x1.77:** the ease anchored its start ONCE and
+  interpolated toward a LIVE target with a RUNNING clock, so a target that moved mid-ease had the
+  elapsed fraction applied to the new ratio — `1.34 x (3.9868/1.34)^0.544 = 2.4251`, reproducing the
+  observation exactly. **A smoother that passes a step through, scaled by how far it has travelled,
+  is not a smoother** — and easing the admit on top of it would have been the bridge he refused.
+  **A THIRD BOUNDARY NOBODY HAD NAMED:** the exit dropped the ceiling outright when the run-in stopped
+  composing — mountainstreet seed 32, `guaranteed` 1.3139 -> 4.0, **x3.05**, at the crossing.
+  **THE VERDICT ON THE SHAPE:** the jump is neither the demand's own (`levelPre` is smooth across
+  every stepping frame) nor primarily the `Math.min` crossover (on the two biggest steps the binding
+  authority does not even change). **The term was a discontinuous function of a continuous demand at
+  all three of its boundaries**, so the repair is one continuity contract: re-anchor whenever the
+  target moves, ease both directions in log space over the same `runInOpenMs`, and leave by ARRIVING
+  rather than vanishing.
+  **RESULT, in his unit: the largest single-frame movement at the frame corner 580.58 -> 9.73 px on
+  seed 18, 368.65 -> 10.05 on seed 13, worst anywhere 14.41 px** — a 40x reduction, below the 1%-of-
+  frame floor, and **ZERO races still carry a movement a viewer would notice** (two did before).
+  Every remaining worst frame is charged to `OTHER` — ordinary pan and zoom, no admit, no release, no
+  crossover. **Nothing regressed:** across-track worst 1.33 px (from 1.22, reported not rounded away),
+  zero jumps, **zero level-set frames cut**, `check-runin-frame` PASS, camera suite 885/885.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED**; camera and render moved,
+  record untouched. Both stamps re-measured identical to the digit — straggler-truth **had** to be
+  run because the ceiling now outlives `_runInComposingNow` by up to `runInOpenMs`, so the run-in
+  hands back over a window and the two windows are no longer disjoint.
+  **A BUG OF MINE IS REPORTED RATHER THAN HIDDEN:** the first version disengaged on the engagement
+  frame and left the rule inert on every frame; four invariant tests caught it, including the one
+  whose final assertion exists to fail on a build that does nothing. 5 proposals, 3 of them mine.
+
+- [RUNIN-PIVOT-SCOPE-1.md](RUNIN-PIVOT-SCOPE-1.md) — **he is right that it is more than 59 px, and the
+  experiment worked** (2026-08-26, `feat/runin-level-set-1`, BUILT — an ordering, no key, no default,
+  **nothing minted**; branch pushed UNMERGED, his eye decides).
+  **PART B — THE STRAND HAD BEEN MEASURING THE WRONG QUANTITY.** Every figure so far (59 px, 973 px,
+  2,427 px) measures how far a RACER moves inside the picture; he is watching how far the PICTURE
+  moves, and nothing had measured that. Split into its two parts, the screen motion is **PAN
+  22–70 px/frame** and **ZOOM 214–565 px/frame at the frame corner** — the zoom term is **five to ten
+  times** the pan. That is why his eye and the 59 px disagreed and both were honest: 59 px is the
+  subject near the middle where the zoom term vanishes; **565 px is the world at the corner**. The
+  camera's own centre barely moves (6–27 world px, 1.8–5.4% of frame).
+  **AND FRAME RATE DOES NOT RESCUE IT, which corrects an assumption:** the PAN term scales with rate
+  as RUNIN-SEED13-ANATOMY-1 found, but **the ZOOM term is rate-invariant** — 358.33 / 358.43 /
+  358.45 px at 50 / 60 / 90 Hz. A scheduled zoom step is a discontinuity, not a speed.
+  **PART A — THE NAMED EXPERIMENT SUCCEEDS.** Restricting the pivot to exactly old-P5's frames
+  (follow non-entry, and the glide) keeps arm B's benefit **to the digit** and removes the regression:
+  **level-set frames cut 48 → 0**, level-set and zoomPivot tests passing, camera suite **885/885**.
+  Worst across-track jump **59.07 → 0.04 px** on seed 18 and **30 jumps → ZERO** pooled. So the
+  regression was the pivot's SCOPE, never the ordering.
+  **`resolveCamera`'s adaptation loop is settled and is not a factor:** 96.8% of closing frames differ
+  from the resolver's scale, at a worst relative gap of **2.3e-7** — the float round-trip, four orders
+  of magnitude below where any across-track step appears.
+  **THE REFACTOR SHRANK THE FILE: 5,199 → 5,122 lines (−77)**, deleting `_restatePanTargetAtDrawnZoom`,
+  `_panTargetEff`, both re-statement call sites, three duplicated zoom writes and `panStaleZoom.test.js`
+  — each proven unreferenced tree-wide first — with `CAMERA_DIRECTOR.md` §2/§2a/§3.3 and
+  `ENDING-PHASES.md` corrected in the same commit. **The two pivots STAY and are now a documented
+  bound on both sides:** deleting them costs 59 → 360 px, widening them costs 48 cut frames.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED**; camera and render moved as
+  expected, record untouched. Stamps re-measured: tracking-lag all six frame counts identical, four
+  states improved; straggler-truth identical to the digit.
+  **WHAT STILL MOVES, said plainly: the width step, up to ~580 screen px at the frame corner in one
+  frame** — untouched here, and now the whole of what he sees. 5 proposals, 4 of them mine.
+
+- [RUNIN-ORDER-FIX-1.md](RUNIN-ORDER-FIX-1.md) — **the acceptance test failed, and stopping was the
+  right answer** (2026-08-26, `feat/runin-level-set-1`, **NOTHING SHIPPED — the source is
+  byte-identical to the branch tip**; no fingerprint, no browser gate, no client suite, because no
+  product file changed; three measure-only instruments added; branch pushed, not merged).
+  **THE GATE CAUGHT A REPAIR THAT WOULD HAVE MADE THE DEFECT SEVEN TIMES WORSE.** The piece was
+  gated on RUNIN-VIABLE-1's test — the ordering must let FOUR OF THE FIVE patches be deleted. **Two
+  can. Two cannot.** P1 (VIEWER-INVARIANTS-2) and P4 (RUNIN-PAN-STALE-ZOOM-1) are compensations the
+  ordering subsumes and they go. **P5 (CAMERA-SIDEJUMP-1) and its glide twin P3 RESISTED**, and
+  deleting them took the worst sideways jump from 59 px to **360 px** — 30 jumps to **209**.
+  **WHAT THEY PRESERVE THAT THE ORDERING DOES NOT, in algebra:** the pivot is
+  `offset_new = offset_old − anchor.x·axisX·dz`, which given `offset_old = target_old + lag` comes
+  out as **`target_new + lag` exactly** — it carries the smoother's screen-space lag through a zoom
+  change. Restating the delivered offset the way the ordering restates the TARGET instead lands the
+  anchor at **`at.x·(e1/e0)`**, negligible while the zoom creeps and enormous at the width step,
+  where seed 13 moves ×1.95 in one frame. **So the target and the delivered offset are different
+  quantities needing different treatments, and only the target's was ever wrong.**
+  **RUNIN-VIABLE-1 MISCOUNTED and this corrects it:** of its five, two are ordering compensations,
+  P2 is a framing decision, and P3/P5 are the delivered quantity's own propagation — mechanisms, not
+  patches.
+  **THE JOLT IS REMOVABLE, AND THE NUMBER IS RECORDED EVEN THOUGH IT DID NOT SHIP.** Ordering plus
+  P3/P5 unified into ONE pivot takes the worst across-track jump over eight races from **59.07 px to
+  1.22 px** and the jump count from **30 to ZERO**. It was NOT shipped because the same build **cuts
+  the level set on 48 frames** — the owner's own rule — plus three tests that legitimately pin the
+  old ordering. **The coupling reaches further than RUNIN-VIABLE-1 found**, so that block's
+  REPAIRABLE verdict now rests on one fewer piece of evidence.
+  **NOT ESTABLISHED, and it is the next experiment:** whether the level-set regression comes from the
+  ordering itself or from the unified pivot firing on entry frames old-P5 never reached. One change,
+  one test run. 5 proposals, 3 of them mine; none ordered.
+
+- [RUNIN-PAN-STALE-ZOOM-1.md](RUNIN-PAN-STALE-ZOOM-1.md) — **the aim was resolved at one zoom and
+  drawn at another, and that is the crossing's swing** (2026-08-26, `feat/runin-level-set-1` extended,
+  BUILT — one method, one gated call site, no key, no default, **nothing minted**; branch pushed
+  UNMERGED, the owner's eye decides).
+  **THE MECHANISM, ESTABLISHED AT SOURCE AND SHARPER THAN THE DIAGNOSIS HANDED OVER.** `_setTargets`
+  stores the aim as `targetOffsetX = -camX x effectiveZoom` — a product from the WORLD ORIGIN — and the
+  pre-`_setTargets` zoom lerp that would keep the two in step **is gated on `tSpaceLerpActive`, which is
+  the ENTRY phase alone**. On the follow path the zoom moves afterwards, so the aim always belongs to
+  the previous frame's zoom, multiplied by ~3,545 world px of distance.
+  **THE SIDEJUMP PIVOT IS NOT THIS, WHICH IS WHY NOTHING CAUGHT IT**: that moves `offsetX` (where the
+  camera IS), the staleness is in `targetOffsetX` (where it is AIMED) — hence the two-part signature,
+  a throw at the crossing and a slide that outlives the width.
+  **THE SCOPE IS THE FINDING.** Called on every follow frame the repair reaches the whole race, because
+  that branch also carries ENTRY, whose convergence test reads `|targetOffsetX - offsetX|` — a pan fix
+  becoming a state-machine timing change (LEADER_ZOOM median 4.99 -> 5.08 pp). Gated on
+  `_runInAfterDeadline` — true on 105 of 105 frames of the defect window, false for the whole race
+  before it — **exactly ONE state moves: PHOTO_FINISH 2.89 -> 2.95 pp**, every other state identical to
+  the digit, **and the crossing figures are unchanged between the two builds**.
+  **THE HARNESS CONFIRMS ITS OWN FIGURES**: the before-arm reproduces RUNIN-SEED13-ANATOMY-1 §4 to the
+  digit (1010.5 / 972.9 / 959.1 / 892.2 / 868.5 / 447.1 / 413.6 / 202.4 against its recorded 1,011 /
+  973 / 959 / 892 / 869 / 447 / 414 / 202) and EVENT ONE's 197.7 -> 386.3 px step.
+  **RESULT: the aim's framing error 12,400 -> 881 px pooled, 92.9% removed** — inside the 90–97% the
+  report predicted. **Seed 13: leader off canvas 21 frames -> 0**, max overshoot 302 -> 0 px, and the
+  slide after the width settles 191.4 -> 59.5 px.
+  **TWO RACES DO NOT CLEAR AND ONE IS WORSE, said plainly:** seed 18 unchanged at 37 frames, **seed 49
+  89 -> 101** — because the aim is now CORRECT and what it correctly aims at is the pair MIDPOINT, not
+  the leader. That is "a SPAN is not a PRESENCE" again, and repairing it needs the guarantee, which this
+  block was told not to touch.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED** (routing skipped world as
+  "nothing changed"; minted anyway); camera and render moved as expected and the record is untouched.
+  887 camera tests pass; 6 new tests, each with its sabotage arm run.
+  **An open question is handed on rather than papered over:** `CAMERA_DIRECTOR.md` records six
+  tracking-lag frame counts for this branch and five no longer reproduce **with this block's change
+  reverted**, so the discrepancy predates it — `roster=none (index strings)` is the suspect, since a
+  racer's NAME is physics. 5 proposals, 3 of them mine; none ordered.
 
 - [RUNIN-VIABLE-1.md](RUNIN-VIABLE-1.md) — **he is right that the camera aims at the middle, and the
   sideways jolt is the SIZE** (2026-08-26, `diag/runin-viable-1` with `feat/runin-level-set-1` merged
