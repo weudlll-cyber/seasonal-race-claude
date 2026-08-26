@@ -49,7 +49,23 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 6078cd6a 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b480fc2e 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
+(2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
+7/7) and the same settled-frame counts (94, 165, 0, 83).
+
+**IT WAS RUN RATHER THAN ARGUED, AND THIS TIME THE USUAL ARGUMENT WAS NOT EVEN AVAILABLE.** Earlier
+entries could rest on the run-in releasing before phase 6 begins, so the two windows never overlap.
+That sentence does not cover this block: its repair is scoped to `_runInAfterDeadline`, which is
+TRUE for the whole of phase 6 — the close is still "running" long after the run-in has handed the
+width back. So the endgame is inside the changed window by construction, and the only honest answer
+was the measurement.
+
+**Why it did not move anyway:** phase-6 durations and zoom-out leads are answers about WHEN
+thresholds are crossed, and the repair moves only WHERE the camera aims — it re-expresses the pan
+target at the drawn zoom and changes no schedule, no threshold and no width. The CAMERA fingerprint
+moved and these four durations did not, which is the distinction stated as a measurement.
+
 **RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-25)** — all four phase-6 durations and all four zoom-out leads.
 

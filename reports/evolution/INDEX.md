@@ -154,6 +154,42 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-PAN-STALE-ZOOM-1.md](RUNIN-PAN-STALE-ZOOM-1.md) — **the aim was resolved at one zoom and
+  drawn at another, and that is the crossing's swing** (2026-08-26, `feat/runin-level-set-1` extended,
+  BUILT — one method, one gated call site, no key, no default, **nothing minted**; branch pushed
+  UNMERGED, the owner's eye decides).
+  **THE MECHANISM, ESTABLISHED AT SOURCE AND SHARPER THAN THE DIAGNOSIS HANDED OVER.** `_setTargets`
+  stores the aim as `targetOffsetX = -camX x effectiveZoom` — a product from the WORLD ORIGIN — and the
+  pre-`_setTargets` zoom lerp that would keep the two in step **is gated on `tSpaceLerpActive`, which is
+  the ENTRY phase alone**. On the follow path the zoom moves afterwards, so the aim always belongs to
+  the previous frame's zoom, multiplied by ~3,545 world px of distance.
+  **THE SIDEJUMP PIVOT IS NOT THIS, WHICH IS WHY NOTHING CAUGHT IT**: that moves `offsetX` (where the
+  camera IS), the staleness is in `targetOffsetX` (where it is AIMED) — hence the two-part signature,
+  a throw at the crossing and a slide that outlives the width.
+  **THE SCOPE IS THE FINDING.** Called on every follow frame the repair reaches the whole race, because
+  that branch also carries ENTRY, whose convergence test reads `|targetOffsetX - offsetX|` — a pan fix
+  becoming a state-machine timing change (LEADER_ZOOM median 4.99 -> 5.08 pp). Gated on
+  `_runInAfterDeadline` — true on 105 of 105 frames of the defect window, false for the whole race
+  before it — **exactly ONE state moves: PHOTO_FINISH 2.89 -> 2.95 pp**, every other state identical to
+  the digit, **and the crossing figures are unchanged between the two builds**.
+  **THE HARNESS CONFIRMS ITS OWN FIGURES**: the before-arm reproduces RUNIN-SEED13-ANATOMY-1 §4 to the
+  digit (1010.5 / 972.9 / 959.1 / 892.2 / 868.5 / 447.1 / 413.6 / 202.4 against its recorded 1,011 /
+  973 / 959 / 892 / 869 / 447 / 414 / 202) and EVENT ONE's 197.7 -> 386.3 px step.
+  **RESULT: the aim's framing error 12,400 -> 881 px pooled, 92.9% removed** — inside the 90–97% the
+  report predicted. **Seed 13: leader off canvas 21 frames -> 0**, max overshoot 302 -> 0 px, and the
+  slide after the width settles 191.4 -> 59.5 px.
+  **TWO RACES DO NOT CLEAR AND ONE IS WORSE, said plainly:** seed 18 unchanged at 37 frames, **seed 49
+  89 -> 101** — because the aim is now CORRECT and what it correctly aims at is the pair MIDPOINT, not
+  the leader. That is "a SPAN is not a PRESENCE" again, and repairing it needs the guarantee, which this
+  block was told not to touch.
+  **World `dc4647be0f55ebdb` and world-off `854018ee5d3d83e1` UNMOVED** (routing skipped world as
+  "nothing changed"; minted anyway); camera and render moved as expected and the record is untouched.
+  887 camera tests pass; 6 new tests, each with its sabotage arm run.
+  **An open question is handed on rather than papered over:** `CAMERA_DIRECTOR.md` records six
+  tracking-lag frame counts for this branch and five no longer reproduce **with this block's change
+  reverted**, so the discrepancy predates it — `roster=none (index strings)` is the suspect, since a
+  racer's NAME is physics. 5 proposals, 3 of them mine; none ordered.
+
 - [RUNIN-LEVEL-SET-BUILD-1.md](RUNIN-LEVEL-SET-BUILD-1.md) — **the owner's rule BUILT, with the
   repair that makes it work** (2026-08-25, `feat/runin-level-set-1`, **BUILT AND PUSHED, NOT MERGED —
   his eye decides**; 1,260 races on the built code + 180 on an archived master tree, pool 12 from 14

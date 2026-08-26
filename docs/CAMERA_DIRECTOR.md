@@ -948,7 +948,34 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6078cd6a 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b480fc2e 2026-08-26 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR RUNIN-PAN-STALE-ZOOM-1, AND EXACTLY ONE STATE MOVED: PHOTO_FINISH median
+2.89 -> 2.95 pp and p95 8.65 -> 8.64 (2026-08-26).** Every other state is identical to the digit,
+both percentiles and all six frame counts included — 8626, 159, 13282, 8473, 4130, 2089.
+
+**THE BASELINE IS THE BRANCH TIP, MEASURED, NOT THE FIGURES THE ENTRY BELOW RECORDS.** That is a
+deliberate choice and it exposes something. This block ran the harness twice on the same commit —
+once with its change and once with the change reverted — because the only honest baseline for "what
+did I move" is the tree I am moving it from. **The reverted run reads 8626 / 159 / 13282 / 8473 /
+4130 / 2089, which is not the 10923 / 159 / 17169 / 9373 / 4323 / 1865 the entry below records for
+this same branch.** Five of the six frame counts differ, and they differ WITHOUT this block's change
+applied, so **the discrepancy is not this block's and is not repaired here.** It is reported in
+[RUNIN-PAN-STALE-ZOOM-1](../reports/evolution/RUNIN-PAN-STALE-ZOOM-1.md) as an open question about
+the record rather than silently overwritten: either that re-measurement did not run and the older
+table was carried forward, or something outside `depends=` — the harness roster, which the identity
+line reports as `roster=none (index strings)`, is the obvious suspect given that a racer's NAME is
+physics — moved the race itself since.
+
+**WHY IT MOVED AT ALL, AND WHY ONLY THERE.** The repair re-expresses the pan target at the zoom the
+frame is drawn with, scoped to `_runInAfterDeadline` — the endgame close. PHOTO_FINISH is the state
+that runs inside that window, so it is the only one that can move, and the gate is what makes that a
+structural statement rather than a lucky one. **An earlier revision of this block did NOT scope it**,
+calling the correction on every follow frame, and the harness caught what that costs: LEADER_ZOOM
+median 4.99 -> 5.08 pp, BATTLE_ZOOM p95 10.16 -> 10.06, LEAD_CHANGE 4.66 -> 4.64. The follow branch
+also carries the ENTRY phase, whose convergence test reads `|targetOffsetX - offsetX|`, so moving the
+aim moves when a state stops entering — a pan correction becoming a state-machine timing change
+across the whole race. The scope exists because that was measured, not feared.
+
 **RE-MEASURED IN FULL FOR RUNIN-LEVEL-SET-BUILD-1, AND EXACTLY ONE FIGURE MOVED: PHOTO_FINISH median
 3.08 -> 3.00 pp (2026-08-25).** Every other state is identical to the digit, both percentiles and all
 six frame counts included — 10923, 159, 17169, 9373, 4323, 1865 — and PHOTO_FINISH's own frame count
