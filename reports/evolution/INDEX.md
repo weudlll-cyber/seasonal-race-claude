@@ -1199,7 +1199,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **THE TEN-SECOND CHECK, and its answer is the reverse of the intuition:** clearing both sliders with
   the stage still WILD leaves the badge at `2 race`; setting the stage to QUIET returns it to
   `defaults` with the sliders still moved. 5 proposals, none built.
-||||||| 5204b10b
 - [RUNIN-NAMES-1.md](RUNIN-NAMES-1.md) — **names instead of numbers once the closing zoom has
   arrived** (2026-08-24, BUILT, **NOT MERGED — it waits for his eye**; branch pushed).
   **TWO OF THE BRIEF'S PREMISES DID NOT HOLD.** The photo-finish names mechanism it says to reuse

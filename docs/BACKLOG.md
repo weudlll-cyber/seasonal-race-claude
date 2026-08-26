@@ -23,6 +23,49 @@ stated reason why no command can. Where a whole section shares one reason, it is
 the section head rather than copied onto every item — copying it would suggest each was
 considered separately, and that would not be true.
 
+## THE CLIENT SUITE HAS THE CROWDING CLIFF TOO — a gate that has stopped gating, in a second place
+
+**Found 2026-08-26 by LEADER-LATERAL-BUILD-1, which merged past it.** `verify` returns **both answers
+for one tree**. On the identical commit `3dc061f4` it returned FAIL twice and then **PASS 20 / FAIL 0**;
+on `c50e5a28` — a commit that changed `docs/TAGS.md`, `docs/fingerprints.json` and two report files,
+**zero lines of client or server source** — the same two tests went red again.
+
+**The two tests are always the same:** `client/src/screens/SetupScreen/raceActionStage.test.jsx` and
+`raceSeed.test.jsx`, both failing with `Test timed out in 5000ms`. They are React render tests; the
+failure is a timeout, never an assertion.
+
+**This is GATE-SERIAL-BCRYPT-1's shape in a second suite.** That block fixed it for the server suite
+by bounding the bcrypt group to three workers and running the suite alone under `verify` — margin
+21 ms → 1,232 ms, and the suite got FASTER. Nothing equivalent has been done for the client suite,
+and the cliff is now visible there.
+
+**IT IS NOT ONLY VERIFY'S PARALLELISM, which is what makes it worth a proper look.** The suite failed
+on a run where `verify` gave it exclusivity (`client-suite (ran alone)`, 330 s), and a full
+`npx vitest run` **alone** also failed 2 of 4,314 — while an earlier full alone run passed 228/4,314,
+and the two files run as a two-file selection pass 24/24 every time. The suite carries single tests of
+56–75 s (the golden real-arm arm); the plausible mechanism is those starving a 5 s React render test
+of a worker, but **that is a hypothesis, not a measurement.**
+
+**WHAT COULD NOT BE REPRODUCED, so nobody repeats the attempt:** it does not appear on master.
+`verify` on master refuses outright (VERIFY-BASE-1 — nothing changed, every guard skips); forced onto
+master's tree with `--base=b49bf4a5` it returned PASS 22 / FAIL 0; and the two tests under a
+deliberate 13-core load returned 24/24.
+
+**WHY THIS MATTERS MORE THAN A RED GATE.** Red stops you. Non-deterministic teaches you to re-run
+until green, and a gate you re-run until it agrees with you is not a gate. It is also how a real
+regression gets waved through as "that flaky client thing" — the exact failure mode
+GATE-SERIAL-BCRYPT-1 was written to end.
+
+**THE FIX IS NOT A TIMEOUT.** Raising the 5 s bound, marking a test slow or skipping one would hide
+the cliff rather than remove it, and the standing rule from the server-suite repair is that the 5 s
+timeout stays. The server-suite answer — bound the heavy group's workers, give the suite exclusivity,
+measure the margin before and after — is the shape to copy.
+
+**verify:** run `npm run verify` three times on an unchanged tree; any run that disagrees with another
+is this item. The margin measurement GATE-SERIAL-BCRYPT-1 used is the instrument to reuse.
+
+---
+
 ## NEEDS HIS WORD — decide these first
 
 **ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,
