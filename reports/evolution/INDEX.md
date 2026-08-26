@@ -154,6 +154,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNIN-ALL-TRACKS-10-1.md](RUNIN-ALL-TRACKS-10-1.md) — **ten races on each of the ten tracks, and
+  garden-path is the calmest of them** (2026-08-26, `feat/runin-level-set-1`, MEASURE ONLY — nothing
+  built, no key, no fingerprint; read-only, so no browser gate and no client suite, and the reason is
+  stated; 100 races, browser camera seeding, 14 cores; report merged, branch pushed unmerged).
+  **THE LAST GAP IN THIS STRAND'S EVIDENCE IS CLOSED.** Every figure before this was measured on a
+  corpus that EXCLUDED garden-path, because the harness could not finish it. **All ten of its races
+  now yield a closing window** (233–476 frames each), the run-in engages there, and its worst corner
+  movement — **13.05 px on seed 4 — is the LOWEST of the ten tracks.**
+  **100 of 100 races produced data; zero empty rows, zero silent zeros.** Across-track worst
+  **1.48 px** (mountainstreet s6) against RUNIN-PIVOT-SCOPE-1's 1.33; **0 of 100 races carry a
+  movement a viewer would notice**, by the same rule that read 2 before the repair.
+  **THREE TRACKS MEET THE BRIEF'S FAILURE CRITERION AND ARE NAMED RATHER THAN AVERAGED IN:**
+  space-sprint **66.69 px** (seed 2), city-circuit 35.34 (s1), ice-track 35.21 (s10) — up to 4.6x the
+  nine-track reference. **They are not the level ceiling:** every one of space-sprint's largest frames
+  is `state->state` with the level set UNCHANGED, 54.32 px of the 66.69 being the zoom term, so it is
+  the endgame SCHEDULE's own closing rate — a quantity this strand has not touched. They also fail the
+  >5x-median half of the perceptibility rule, which is why the noticeable count is 0. **Reported as an
+  open question, not a dismissal**, because the last time an instrument disagreed with his eye about a
+  pixel figure, his eye was right.
+  **A UNIT CORRECTION, since the brief stated it the other way:** the corner figure is **screen px on
+  the fixed 1280x720 store, NOT world px** — it is `|d camCentre| x effZoom` plus `halfFrame x d
+  effZoom`, both already in screen units. As a fraction of the frame the worst is **5.21%**
+  (space-sprint s2) and garden-path is 1.02%. His calibration is recorded beside it: 580 px a real
+  jolt, 14 px unnoticeable.
+  **WHAT TEN RACES CANNOT SUPPORT is stated rather than glossed:** no distributional claim, one roster
+  and one field size, seeds 1–10 as a fixed set rather than a sample, and 60 Hz only. 4 proposals,
+  3 of them mine.
+
 - [RUNIN-VIABLE-1.md](RUNIN-VIABLE-1.md) — **he is right that the camera aims at the middle, and the
   sideways jolt is the SIZE** (2026-08-26, `diag/runin-viable-1` with `feat/runin-level-set-1` merged
   in as the code under study, DIAGNOSE AND ASSESS ONLY — nothing built, no key, no default, no
