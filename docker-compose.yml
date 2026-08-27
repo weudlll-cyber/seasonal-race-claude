@@ -18,6 +18,14 @@ services:
       - ./server/src:/app/src         # live code — src changes visible without rebuild
       - ./server/utils:/app/utils     # utils helpers (atomicWriteJson etc.) — not in original Dockerfile COPY
       - ./server/data:/app/data       # surface-class JSON files persist across rebuilds
+      # `shared/` LIVES ABOVE THE BUILD CONTEXT, so the Dockerfile cannot COPY it and only a mount
+      # can supply it. `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`,
+      # which from `/app/src/routes/` resolves to `/shared/` — outside WORKDIR. On the host the same
+      # relative path lands on the repo root and works, which is why this was invisible until the
+      # image was next built. Added when NAME-LIMIT-1 introduced the import on 2026-08-07; the
+      # container has been unable to start since, and nobody saw it because the server was being run
+      # outside Docker.
+      - ./shared:/shared              # repo-root shared module, imported from above /app
       - /app/node_modules             # keep container's npm install isolated from host
     # node --watch (Node 20 built-in) auto-restarts on src file changes.
     # Note: on Windows Docker Desktop, file-change events across the WSL2 boundary
