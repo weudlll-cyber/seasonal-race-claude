@@ -171,6 +171,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [HARNESS-CAMERA-SEED-2.md](HARNESS-CAMERA-SEED-2.md) — **the harness camera follows the browser,
+  and 44 instruments now measure something different** (2026-08-27, BUILT; his decision of
+  2026-08-23, recorded and never built). `resolveIdentity`'s default derives the camera seed from the
+  race seed through the browser's own `cameraSeedForRace`, **imported rather than re-implemented** —
+  a harness carrying its own copy of the product's rule is the defect, not the shape. **An explicit
+  `cameraSeed` is untouched; only what an OMISSION means changed.** **THE CONSTANT WAS NOT
+  LOAD-BEARING, checked twice**: at source, `camera-fingerprint.mjs` and `render-fingerprint.mjs`
+  declare their own private `CAM_SEED` and never reach the default; then by running
+  `check-fingerprints --mint`, which came back **0 failures on all four roles** — nothing minted,
+  nothing needed to be. ⚠ **WHAT IS NO LONGER COMPARABLE**: picture figures from the 44 callers that
+  omitted the seed, taken before 2026-08-27. Race and physics figures are unaffected — the unmoved
+  world fingerprint is the proof. **Nothing re-baselined, no corpus re-run, no stored fingerprint
+  touched.** 3 proposals, 2 the block's own.
+
 - [GARDEN-PATH-ICON-1.md](GARDEN-PATH-ICON-1.md) — **the icon was already fixed in the repo, and that
   is WHY he still sees a snail** (2026-08-27; `engine-reach --check` selected NOTHING, so no
   fingerprint was in reach and none was minted). The seed has read `🪲` and "scuttle" since

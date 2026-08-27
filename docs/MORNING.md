@@ -3,63 +3,69 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-08-27, after piece 6.
-**Master:** `9e6dfc97` at the start of the chain. Origin carried master alone.
+**Last rewritten:** 2026-08-27, after piece 8 — **the chain is complete. All eight pieces are done.**
+**Master started at `9e6dfc97` with origin carrying master alone, and ends the same way.**
 
 ---
 
-## NEEDS YOUR WORD
+## NEEDS YOUR WORD — three things, none of them urgent
 
-**An eye-test, on master, two minutes.** *(piece 5 established it)*
-Start a NORMAL race — not Quick Test — with the seed field empty. Does the drawn seed appear where
-you expect, and read as a number you could type back? Then close the tab, reopen, and check it is
-still there. **What it blocks:** the last open half of D23. The build itself landed on master
-(`7a3942fa`) and nothing was lost; only your eye is owed.
+**1 · An eye-test, two minutes, on master.** *(piece 5 established it; piece 7 fixed what you would
+see)* Start a NORMAL race — not Quick Test — with the seed field empty. Does the drawn seed appear
+where you expect, and read as a number you could type back? Then close the tab, reopen, and check it
+survived. **Blocks:** the last open half of D23. The build landed on master (`7a3942fa`); only your
+eye is owed. **And garden-path now shows a beetle** — the icon you reported was the runtime copy, not
+the repository.
 
----
+**2 · The client suite costs about 29% more wall clock to make the gate honest.** *(piece 1)*
+Bounding its workers to 4 gives **0 failures in 3 runs** against **20 in 6 unbounded**, and takes the
+margin from **−5,457 ms to +598 ms**. It costs **313 s → 403 s** per run. The server-suite fix was
+free; this one is not, so it is your trade to make. **Blocks:** nothing today — the gate stays as it
+is until you say. **Not a timeout**: every failure measured was starvation, not a defect in a test.
 
-## DONE — merged to master
-
-- **6 — ROADMAP is folded and gone** (at its gate). It was 90% done since 2026-08-23 and filed as
-  DONE; the 74 lines left were a phase-status table, which is the half-ownership D24 existed to end.
-  Now a 31-line redirect — not deleted, because 11 documents and reports link to it.
-- **3 — the anchor-versus-centre gap: LATENT, not work** (`587d43d7`). It changes the guarantee's
-  answer on 2.99% of frames, worth 41 px at the very worst, almost all of it in COMEBACK_ZOOM.
-  **And the "median 132 px" was mine and is wrong** — the real gap is 0.0 px pooled, 7.4 in
-  LEADER_ZOOM.
-- **2 — the along-track residual: episodes, one track, and mostly the MARGIN** (`58a88c0f`). 830 is
-  the bare-box count and reproduces exactly; at the shipped margin it is 3,330, so **2,500 frames are
-  the margin's doing** and 1,841 of those are space-sprint. Middle of the race, not the endgame.
-  150 episodes, median 0.30 s. The recommendation is the sprite, not a zoom rule.
-- **5 — the backlog now says true things** (`b421c67a`). Three entries closed with evidence, two
-  re-verified as correctly open, one found half-and-half.
-- **4 — the ship order's twelfth step** (`a741a19f`). THE SHIP ORDER now ends by clearing branches at
-  origin, and carries THE CONTAINMENT CHECK beside it: containment is a TREE question, because the
-  commit-level check passed a branch whose tree held a file master lacked.
+**3 · Nine other track records may be stale the way garden-path's was.** *(piece 7)*
+Seeding copies a track record only if the file does not already exist, so **no seed edit ever reaches
+an existing install.** Garden-path's icon sat stale for a day; the other nine were not audited.
+**Blocks:** nothing yet. It is minutes of work and either confirms them clean or finds more.
 
 ---
 
-## RUNNING
+## DONE — all eight merged to master
 
-| piece | what it is measuring | where |
-| --- | --- | --- |
-| **1 — client-suite crowding** | all three arms are run and the answer is clear; the report is being written | worktree `c:/tmp/ra-p1`, branch `night/p1-crowding` |
+| # | what it was | outcome |
+|---|---|---|
+| **1** | client-suite crowding cliff | **MEASURED** — the suite starves *itself*; CPU, not memory. The two failing tests were starved to **10,457 ms** against a 5,000 ms limit. Bounding workers fixes it. |
+| **2** | the along-track residual | **MEASURED** — episodes, not noise; **one track** (space-sprint, 61%); **three quarters of it is the margin**, not geometry. The recommendation is the sprite, not a zoom rule. |
+| **3** | the anchor-versus-centre gap | **MEASURED — latent, and NOT work.** Worth 41 px at the very worst, almost all in one rare state. **And the "132 px" figure was mine and is wrong** — the real gap is 0.0 px pooled. |
+| **4** | the ship order's missing step | **BUILT** — step 12 clears branches at origin, with the tree-level containment check beside it. |
+| **5** | the backlog's stale entries | **BUILT** — three closed, two re-verified as correctly open, **one found half-and-half** that a report-level reading would have closed wrongly. |
+| **6** | ROADMAP folded | **BUILT** — the last table moved; `ROADMAP.md` is now a redirect that owns nothing. |
+| **7** | garden-path's snail | **BUILT** — the repository was already right; the *delivery mechanism* silently drops seed updates. |
+| **8** | harness camera seed | **BUILT** — it follows the browser now. **All four fingerprints run and unmoved.** |
 
-**Early answer, so you have it before the report:** bounding the suite's own workers to 4 gives
-**3 runs, 0 failures**, against **20 failures across 6 unbounded runs**. The heaviest test also runs
-**2.3x faster** bounded. It costs about **29% wall clock**. The server-suite remedy is the right
-shape.
+---
+
+## ⚠ ONE STANDING WARNING, FROM PIECE 8
+
+**Picture figures taken before 2026-08-27 by an instrument that omitted `cameraSeed` are not
+comparable with figures taken after.** They are different cameras on the same races. 19 of 63 callers
+already passed the seed explicitly and are unaffected — including every instrument from the recent
+camera work. **Race and physics figures are unaffected**, and the unmoved world fingerprint is the
+proof. Nothing was re-baselined and no historical corpus was re-run.
+
+---
+
+## ONE THING I BROKE AND FIXED — you should know
+
+To run three measurements at once I made directory junctions from temporary worktrees into the real
+`node_modules`. **Removing those worktrees deleted through the junctions**, gutting
+`client/node_modules/.bin` and hollowing out `prettier`. Restored with `npm ci`; **the tracked tree
+was never touched** and every gate has run green since. The lesson, for the next time three things
+need to run at once: **never junction into a real `node_modules` from a directory you intend to
+delete.**
 
 ---
 
 ## NOT STARTED
 
-- **7** — garden-path icon and description still say snail; the default racer is the beetle.
-- **8** — the harness camera seed follows the browser. Last, because it changes what every
-  measurement measures.
-
----
-
-## AT THE GATE
-
-- **6 — ROADMAP folded, redirect left, descriptions corrected.**
+*(nothing — the chain is complete)*
