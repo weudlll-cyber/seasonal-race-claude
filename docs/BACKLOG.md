@@ -292,15 +292,26 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md), section 3.
       **NEEDS: nothing on its own** — it is the argument for the item above.
 
-- [ ] **THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
+- [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
       derived the camera seed from the race seed since his decision of 2026-08-23. **Re-deriving the
       width-step hit list gave 30 races, not 26 minus 6 — a DIFFERENT POPULATION.** His twelve survive
       re-measurement. **The fingerprints are NOT affected** — they carry a private copy of the same
       number and never read the default.
       Establishes it: [HARNESS-CAMERA-SEED-1](../reports/evolution/HARNESS-CAMERA-SEED-1.md).
-      **NEEDS: ONLY HIS WORD** — whether the default follows the browser, given that the obstacle is
-      an append-only journal whose tables would stop matching their tools.
+      **✅ CLOSED 2026-08-27 by [HARNESS-CAMERA-SEED-2](../reports/evolution/HARNESS-CAMERA-SEED-2.md).
+      His word was given on 2026-08-23; this built it.** `resolveIdentity`'s default now derives the
+      camera seed from the race seed through the BROWSER's own `cameraSeedForRace`, imported rather
+      than re-implemented. A caller passing `cameraSeed` explicitly is untouched — only what an
+      OMISSION means changed. **All four fingerprints were run on the changed tree and are
+      byte-identical**, which the entry predicted and which was checked rather than trusted: the two
+      camera-facing fingerprints declare their own private `CAM_SEED` and never reach the default.
+      **The obstacle it named is handled the only way an append-only journal allows** — the tables
+      stay and the report is the note saying from which date they stop matching their tools. 19 of 63
+      callers already passed the seed explicitly and are unaffected; **the other 44 now measure a
+      camera a viewer could actually get.**
+      ~~NEEDS: ONLY HIS WORD — whether the default follows the browser, given that the obstacle is
+      an append-only journal whose tables would stop matching their tools.~~
 
 - [ ] **THE ARBITER THAT DECIDES WHETHER A CHANGE CAN REACH THE ENGINE CANNOT SEE ANYTHING THAT
       SHIPS AS DATA.** `engine-reach --check` returns *"cannot reach the engine at all"* for

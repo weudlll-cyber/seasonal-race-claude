@@ -55,6 +55,9 @@ const { normalSpeedFrom } = await import(
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u("client/src/modules/rowLayout.js")
 );
+// HARNESS-CAMERA-SEED-2: the BROWSER's own derivation, imported rather than re-implemented, so the
+// harness cannot drift from the product it is supposed to be reproducing.
+const { cameraSeedForRace } = await import(u("client/src/modules/camera/cameraSeed.js"));
 const RT = await (async () => {
   // The racer-type registry logs to stderr on load; silenced here so a harness's output is its own.
   const re = console.error;
@@ -81,7 +84,20 @@ export function resolveIdentity(partial = {}) {
   return {
     racers: partial.racers ?? 40,
     raceSeed: partial.raceSeed ?? 5601,
-    cameraSeed: partial.cameraSeed ?? 1439767152,
+    // HARNESS-CAMERA-SEED-2 (2026-08-27): THE DEFAULT FOLLOWS THE BROWSER, which is the owner's
+    // decision of 2026-08-23. The browser derives the camera's seed from the race seed
+    // (`cameraSeedForRace`), so a harness that pinned a constant was running a camera the product
+    // cannot produce — 43 of 53 callers took that constant by omission, and 19 instruments made
+    // picture claims on it.
+    //
+    // THE CONSTANT IS NOT DELETED, because a caller may still want it: pass `cameraSeed` explicitly
+    // and nothing here touches it. What changes is only what an OMISSION means.
+    //
+    // THE FINGERPRINTS ARE UNAFFECTED, checked at source rather than assumed: `camera-fingerprint.mjs`
+    // and `render-fingerprint.mjs` each define their own `const CAM_SEED = 1439767152` and call
+    // `cd.setRandomSeed(CAM_SEED)` directly, never reaching this default. They were run either side of
+    // this change and did not move.
+    cameraSeed: partial.cameraSeed ?? cameraSeedForRace(partial.raceSeed ?? 5601),
     // A racer-type id, or TRACK_DEFAULT_RACER to take each track's own `defaultRacerTypeId`.
     racerType: partial.racerType ?? TRACK_DEFAULT_RACER,
     seconds: partial.seconds ?? 60,
