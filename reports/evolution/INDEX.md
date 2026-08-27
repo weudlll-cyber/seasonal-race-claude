@@ -171,6 +171,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [GATE-CLIENT-BOUNDED-1.md](GATE-CLIENT-BOUNDED-1.md) — **the bound is in, the margin is 3.1 s, and
+  the 29% cost did not appear** (2026-08-27, BUILT and confirmed on the MERGED tree). `maxWorkers: 4`
+  in `client/vitest.config.js`, the file that already owns this suite's run shape; verify already
+  marked `client-suite` exclusive, so the scheduling half needed nothing. **Margin in
+  GATE-SERIAL-BCRYPT-1's unit: −5,457 ms unbounded → +3,101 ms merged**, better than the server
+  suite's own +1,894 ms; **20 failures in 6 unbounded runs, 0 in 6 bounded**. **Confirming on the
+  merged tree mattered** — the branch read +598 ms and the merged tree reads +3,101 ms, so a single
+  branch run would have understated it fivefold. **THE COST DID NOT MATERIALISE**: real merged wall
+  clock **296.2 s** against 313.8 s unbounded — not slower at all. The 403 s projection he accepted
+  came from an arm measured while three other jobs competed for the machine, which is the very
+  confound this item is about. **Proven**: concurrency causes it, the failing tests are starved
+  (10,457 → 1,899 ms with no code change), the heavy tests slow too (113,789 → 25,812 ms), memory is
+  ruled out. **Still inferred and labelled so**: that the 15 extended-timeout files are specifically
+  the load, that CPU is the resource, and that 4 is optimal — the sweep was deliberately NOT run.
+  3 proposals, 2 the block's own.
+
 - [TRACK-RUNTIME-AUDIT-1.md](TRACK-RUNTIME-AUDIT-1.md) — **all ten had drifted, none of it mattered,
   and one of them is HIS OWN EDIT** (2026-08-27; runtime state only, no tracked file changed, seeding
   mechanism untouched as instructed). **Nine tracks carried the legacy `defaultDuration` where the

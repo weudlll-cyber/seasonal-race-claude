@@ -23,51 +23,59 @@ stated reason why no command can. Where a whole section shares one reason, it is
 the section head rather than copied onto every item — copying it would suggest each was
 considered separately, and that would not be true.
 
-## THE CLIENT SUITE STARVES ITSELF — measured 2026-08-27, and the remedy is known
+## ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
 
-**MEASURED by [GATE-CLIENT-CROWDING-2](../reports/evolution/GATE-CLIENT-CROWDING-2.md)** — nine full
-suite runs in three arms, using GATE-SERIAL-BCRYPT-1's own instrument. **The hypothesis the first
-entry wrote down is confirmed, and the entry below is rewritten to separate what is now measured from
-what is still guessed.**
+**BUILT.** `client/vitest.config.js` carries `maxWorkers: 4`, in the file that already owns how this
+suite runs. `scripts/verify.mjs` already marked `client-suite` exclusive, which is the other half of
+the server-suite remedy and needed no change. **The owner accepted the trade on 2026-08-27.**
 
-**WHAT IS MEASURED.**
+**CONFIRMED ON THE MERGED TREE, not only on the branch** — the failure was intermittent, so one green
+run proves less than the margin does. Margin against the unchanged 5,000 ms default, on the worst
+test with no timeout of its own (GATE-SERIAL-BCRYPT-1's unit; the 15 tests that pass beyond 5 s carry
+their own timeouts and are excluded by that property, not by a list of names):
 
-- **The resource is CPU, and the suite is competing with itself.** Not memory — free RAM held at
-  7.4–7.9 GB of 33.8 throughout and no processes accumulated. The machine has 14 cores, vitest takes
-  roughly one worker per core, and the suite holds **15 tests that pass beyond 5,000 ms** and so carry
-  their own extended timeouts. The heaviest runs **113,789 ms unbounded and 49,482 ms bounded** —
-  2.3× faster with fewer things beside it, which is what tells oversubscription from a slow test.
-- **The two tests that kept failing are STARVED, not hung.** `raceSeed.test.jsx` reached **10,457 ms**
-  and `raceActionStage.test.jsx` **8,511 ms** against a 5,000 ms limit.
-- **Bounding the suite's own workers fixes it.** `--maxWorkers=4`: **0 failures in 3 runs**, against
-  **20 failures in 6 unbounded runs**. Margin against the unchanged 5,000 ms default, measured the way
-  the server repair measured it: **−5,457 ms → +598 ms**.
-- **It costs about 29% wall clock** (mean 313 s → 403 s). The server case cost nothing; this one does.
-- **Why external load never reproduced it:** outside load makes the scheduler share, the suite's own
-  thirteen workers make it oversubscribe. Every earlier attempt loaded the machine from outside and
-  came back green, which is why this looked incoherent.
+| arm | runs | failures | p99 | worst | **margin** |
+| --- | --- | --- | --- | --- | --- |
+| unbounded | 3 | **14** | 1,918 ms | 10,457 ms | **−5,457 ms** |
+| unbounded | 3 | **6** | 1,733 ms | 8,511 ms | **−3,511 ms** |
+| bounded, branch | 3 | 0 | 744 ms | 4,402 ms | +598 ms |
+| **bounded, MERGED TREE** | 3 | **0** | **524 ms** | **1,899 ms** | **+3,101 ms** |
 
-**WHAT IS STILL GUESSED.**
+**The margin is now better than the server suite's** (+1,894 ms after its own repair).
 
-- **That 4 is the right bound.** It was the first value probed, not a tuned one, and +598 ms is a
-  third of the margin the server suite considers safe. **The sweep has not been run.**
-- **That bounding is the best remedy rather than the first one that works.** Three files carry all the
-  load; splitting them into a serial project — the shape `server/test/suiteShape.mjs` already
-  implements — might cost far less than 29%. Uncosted.
-- **That three green runs mean the suite is trustworthy.** Three runs is three runs. The server repair
-  used four per arm.
+**AND THE COST DID NOT MATERIALISE.** The projection was 313 s → 403 s, about 29%. **The real merged
+wall clock is 296.2 s mean** (299.2 / 273.1 / 316.2) against 313.8 s and 312.2 s unbounded — **not
+slower at all**. The 403 s figure came from an arm measured while three other measurements were
+competing for the machine, which is exactly the confound this item is about. On a quiet machine
+bounding costs nothing here, the same as it cost nothing on the server.
 
-**NEEDS: HIS WORD ON THE TRADE, and it is a real trade this time** — about 29% wall clock on every
-client-suite run, against a gate that currently returns both answers for one tree. The server repair
-did not need this question because bounding there was free.
+**WHAT IS NOW MEASURED, not guessed:**
 
-**THE FIX IS STILL NOT A TIMEOUT.** Nothing here was a defect in the code under test; everything was a
-timeout caused by starvation. Raising the 5 s bound, marking a test slow or skipping one would hide
-the cliff rather than remove it, and the standing rule from the server repair is that the 5 s timeout
-stays.
+- **Concurrency causes it.** The only thing changed between the arms is worker count, and the failure
+  count goes 20-in-6-runs to 0-in-6-runs.
+- **The affected tests are STARVED, not slow.** The worst default-timeout test falls **10,457 ms →
+  1,899 ms**, a factor of 5.5, without a line of test code changing.
+- **The heavy tests are slowed too**, which is what distinguishes oversubscription from a slow test:
+  the golden real-arm comparison runs 113,789 ms unbounded and **25,812 ms** on the merged bounded
+  tree.
 
-**verify:** `node scripts/diag/suite-timing.mjs --suite=client --runs=3 --label=x` — and the same with
-`--extra=--maxWorkers=4`. Any run whose failure count differs from another arm's is this item.
+**WHAT REMAINS A HYPOTHESIS, and stays labelled as one:**
+
+- **That the 15 extended-timeout tests are specifically the load.** It is consistent with everything
+  above and nothing contradicts it, but the suite was never run WITHOUT those files, so their role is
+  inferred from correlation rather than isolated.
+- **That CPU is the exhausted resource.** Memory was ruled out by measurement (free RAM held
+  7.4–7.9 GB of 33.8, nothing accumulated). CPU is what is left and it fits, but no counter was read.
+- **That 4 is the right number.** It is what was measured and what he agreed to, not a tuned optimum.
+  The sweep the server repair ran — 1 / 3 / 6 / unbounded — has not been run here. **Deliberately
+  not tuned**: a bound found by search rather than by measurement is the same class of thing as
+  raising a timeout.
+
+**NEEDS: nothing.** It is built and confirmed. The open question is only whether the bound should
+later be tuned, and there is no reason to touch it while the margin is 3.1 s.
+
+**verify:** `node scripts/diag/suite-timing.mjs --suite=client --runs=3 --label=x` — margin and
+failures in one table. Any run whose failure count is non-zero reopens this.
 
 ---
 

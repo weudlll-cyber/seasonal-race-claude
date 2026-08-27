@@ -3,23 +3,18 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-08-27, after the day's piece 2 (D23 closed).
+**Last rewritten:** 2026-08-27, end of the day's four pieces. **Three of the three open rows closed.**
 **Master started at `9e6dfc97` with origin carrying master alone, and ends the same way.**
 
 ---
 
-## NEEDS YOUR WORD — three things, none of them urgent
+## NEEDS YOUR WORD — one thing, and it is not urgent
 
-*(The seed eye-test that stood here is **done** — see DONE below.)*
+*Two of the three rows that stood here closed today: the seed eye-test is done, and the client-suite
+trade is built. Both are under CLOSED TODAY.*
 
-**2 · The client suite costs about 29% more wall clock to make the gate honest.** *(piece 1)*
-Bounding its workers to 4 gives **0 failures in 3 runs** against **20 in 6 unbounded**, and takes the
-margin from **−5,457 ms to +598 ms**. It costs **313 s → 403 s** per run. The server-suite fix was
-free; this one is not, so it is your trade to make. **Blocks:** nothing today — the gate stays as it
-is until you say. **Not a timeout**: every failure measured was starvation, not a defect in a test.
-
-**2 · Which fields of a shipped track are the project's, and which are yours?** *(the audit answered
-the smaller question and sharpened this one)* All ten runtime records were audited. Nine had drifted
+**Which fields of a shipped track are the project's, and which are yours?** *(the audit answered the
+smaller question and sharpened this one)* All ten runtime records were audited. Nine had drifted
 onto a legacy duration field — **behaviourally identical, proven, and now repaired.** Garden-path was
 left alone deliberately: its live record carries two surface classes you added in the app on
 2026-07-04 that **exist nowhere else — not in the seed, not in git.** A seeding rule that overwrote
@@ -30,6 +25,15 @@ is correct either way. It only decides how the seeding mechanism should behave i
 
 ## CLOSED TODAY
 
+- **The client suite is BOUNDED and the gate is honest again.** `maxWorkers: 4`, confirmed on the
+  merged tree: **0 failures in 6 bounded runs against 20 in 6 unbounded**, margin **−5,457 ms →
+  +3,101 ms** — better than the server suite's. **And the cost you accepted did not appear:** real
+  wall clock **296.2 s** against 313.8 s unbounded, so it is not slower. The 403 s figure you were
+  offered came from an arm measured while three other jobs were competing for the machine — the exact
+  confound this item was about. You agreed to a 29% cost and are paying none.
+- **The nine other track records are audited and repaired.** All had drifted onto a legacy duration
+  field; proven behaviourally identical, then aligned. **Garden-path was left alone deliberately** —
+  see the one open row below.
 - **D23 — the seed for a normal race — is DISCHARGED.** Judged on the production build on
   **2026-08-27** and accepted: the drawn seed reads correctly on the setup panel and survives a
   browser restart. Both halves confirmed on screen, not merely in the source. Nothing outstanding.
