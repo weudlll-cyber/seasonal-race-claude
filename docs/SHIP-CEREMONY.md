@@ -307,10 +307,24 @@ outside itself for its own evidence. Deleting that branch on the wrong day would
 That is not hypothetical: it happened on `diag/runin-viable-1` on 2026-08-26, where the conclusion
 happened to be right and the method would not have caught a real loss.
 
-**THE CHECK:**
+**FIRST, LIST THE BRANCHES — and ask ORIGIN, not your own cache.** Step 12 is about every branch
+origin still carries, so the list has to come from origin:
 
 ```sh
-comm -23 <(git ls-tree -r --name-only origin/<branch> | sort)          <(git ls-tree -r --name-only origin/master   | sort)
+git ls-remote --heads origin | sed 's|.*refs/heads/||'
+```
+
+**`git branch -r` IS NOT THIS LIST**, and the difference is not pedantry. It shows what your last
+fetch saw, so a branch somebody pushed since is simply absent and will never be checked; and it emits
+`origin/HEAD` as an entry, which strips to a branch named `origin` that does not exist. **A step that
+says "check every branch" while leaving the reader to invent the enumeration is how the rule gets
+applied to a list of remembered names instead of to what is actually there** — which is exactly what
+happened on 2026-08-26, when a ship named three branches and left two standing.
+
+**THEN, FOR EACH ONE, THE CHECK:**
+
+```sh
+comm -23 <(git ls-tree -r --name-only origin/<branch> | sort) <(git ls-tree -r --name-only origin/master | sort)
 ```
 
 Empty output means master's tree holds every path the branch's tree holds. That is the question worth
