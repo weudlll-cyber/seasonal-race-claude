@@ -71,6 +71,36 @@ stays.
 
 ---
 
+## WHICH FIELDS OF A SHIPPED TRACK BELONG TO THE PROJECT, AND WHICH TO WHOEVER RUNS IT
+
+**Sharpened 2026-08-27 by [TRACK-RUNTIME-AUDIT-1](../reports/evolution/TRACK-RUNTIME-AUDIT-1.md),
+which audited all ten runtime track records against their seeds.** The open question is NOT the one
+the garden-path icon suggested.
+
+**The icon case made the seeding rule look purely harmful:** `seedRuntime.js` copies a record only
+`if (!existsSync(dest))`, so a shipped correction can never reach an existing install, and his
+garden-path showed a snail for three weeks after the repo said beetle.
+
+**The audit found the other half.** `server/data/tracks/garden-path.json` carries
+`surfaceClasses: ["grass","earth","mud","sand"]`; the seed carries two, and **has carried exactly two
+in every commit of its history back to 2026-06-17**. The live record's `updatedAt` is six days newer.
+Those two classes were added in the app by him on 2026-07-04 and **exist nowhere else — not in the
+seed, not in git.** A mechanism that overwrote existing records to deliver the icon would have
+deleted them without a word.
+
+**So the decision is narrower and harder than "should seed edits reach existing installs":**
+**which fields may a shipped record correct, and which belong to the person running it?** The icon and
+description are plainly the project's. The surface classes are plainly his. **Nothing in the record
+distinguishes them**, and no rule based on comparing values or timestamps gets it right — his edit is
+newer, larger, and exactly as plausible as a shipped change would be.
+
+**NEEDS: HIS WORD**, and it is not urgent: the audit repaired the nine records whose drift was
+behaviourally null, and left his edit intact, so the install is correct today either way.
+
+**verify:** the audit in the report is thirty lines and re-runnable; drift shows up as a field list.
+
+---
+
 ## NEEDS HIS WORD — decide these first
 
 **ONE section is entirely his and leads PART ONE** — HOW MUCH ACTION, immediately below,

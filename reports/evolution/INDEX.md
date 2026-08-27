@@ -171,6 +171,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [TRACK-RUNTIME-AUDIT-1.md](TRACK-RUNTIME-AUDIT-1.md) — **all ten had drifted, none of it mattered,
+  and one of them is HIS OWN EDIT** (2026-08-27; runtime state only, no tracked file changed, seeding
+  mechanism untouched as instructed). **Nine tracks carried the legacy `defaultDuration` where the
+  seeds carry `defaultLaps`/`defaultDurationSec`** — a field RENAME, not a difference of intent.
+  Proven behaviourally null by running the shipped `trackDefaultLaps` against both shapes: **ten of
+  ten identical**, because `legacyLapsFromDefaultDuration(60)` returns exactly the 2 the seeds bake.
+  Repaired anyway, so his install is on the same shape a fresh one gets; re-audited, nine identical.
+  **garden-path was LEFT ALONE and that is the finding**: its live record has four surface classes
+  where the seed has two, and an `updatedAt` six days newer — and **the seed has carried
+  `["grass","earth"]` in every commit of its history back to 2026-06-17.** Those classes were added in
+  the app by the owner on 2026-07-04 and exist nowhere else — not in the seed, not in git. **A
+  seeding mechanism that overwrote existing records to deliver yesterday's icon would have silently
+  deleted them.** So his open decision is not "should seed edits reach existing installs" but "which
+  fields belong to the project and which to whoever runs it" — left open, as instructed. 3 proposals,
+  2 the block's own.
+
 - [SHIP-DOCKER-REPAIR-1.md](SHIP-DOCKER-REPAIR-1.md) — **the docker repair lands, and step 12 gets
   the half it was missing** (2026-08-27; `engine-reach --check` selects nothing, no fingerprint in
   reach). Two independent August breakages merged at `688c8840`: the image could not be BUILT
