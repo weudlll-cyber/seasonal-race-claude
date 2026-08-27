@@ -95,7 +95,7 @@ because a question that vanishes from an index looks like a question nobody aske
 | the question | where it lives |
 | --- | --- |
 | the authored BEATS never reach the camera — hand them through, or leave the detector inferring? | **PART TWO D14** — the open point it leaves. **His call, and it needs his eye afterwards.** |
-| a normal race now draws and shows a seed — does it read right ON SCREEN? | **ON MASTER since `7a3942fa`** — `feat/race-seed` no longer exists and nothing was lost. **His eye is owed on the SCREEN, not on the code:** start a normal race (not Quick Test) with the seed field EMPTY, and check the drawn seed is shown where he expects it and reads as a number he could type back. Then close the tab, reopen, and check the same seed is still there — it is in `localStorage`, not `sessionStorage`, which is the half of D23 he asked for. See `reports/night/SEED-REAL-RACE-1.md` |
+| ~~a normal race now draws and shows a seed — does it read right ON SCREEN?~~ | **✅ ANSWERED 2026-08-27. He judged it on the production build and accepted it: the drawn seed reads correctly on the setup panel, and it survives a browser restart.** Both halves of D23 are now confirmed on screen, not merely in the source. The build landed on master by `7a3942fa`; nothing was lost when `feat/race-seed` was swept. See `reports/night/SEED-REAL-RACE-1.md` |
 
 **AND THESE ARE NO LONGER HIS — they are waiting on a MEASUREMENT or on a later block, not on a
 word from him:**
@@ -115,7 +115,7 @@ word from him:**
 | OUTCOME climb-capacity — drama-at-leader vs deep-band reach | **closed — PART TWO D17.** The lever it proposed is not ordered |
 | the audit-gate policy for DEV dependencies | **answered — PART TWO D21.** Dev advisories report; the build is not ordered here |
 | the `body-parser` LOW advisory | **answered — PART TWO D22.** No action; revisit at the next `server/` bump |
-| the seed for the normal "Start Race" path, and seed persistence | **BUILT AND MERGED — PART TWO D23.** Landed on master by `7a3942fa` (`feat(SEED-REAL-RACE-1)`); `SetupScreen.jsx` passes a drawn `racePlanSeed` instead of the legacy `0`, and both values live in `localStorage`. The branch was swept; **nothing was lost — checked, not assumed.** Only the eye-test above remains |
+| ~~the seed for the normal "Start Race" path, and seed persistence~~ | **✅ CLOSED 2026-08-27 — PART TWO D23, both halves.** Built and merged by `7a3942fa` (`feat(SEED-REAL-RACE-1)`): `SetupScreen.jsx` passes a drawn `racePlanSeed` instead of the legacy `0`, and both values live in `localStorage`. **Accepted on the production build on 2026-08-27** — the seed reads correctly on the setup panel and survives a browser restart. Nothing is outstanding |
 | merge ROADMAP into BACKLOG | **DONE — PART TWO D24.** ROADMAP-FOLD-1 (2026-08-23) moved 35 sections; ROADMAP-FOLD-2 (2026-08-27) folded the last table and left a redirect |
 | `D7d` — 100-racer performance | **downgraded to an observation — PART TWO D18.** Nothing is ordered |
 
@@ -2210,6 +2210,12 @@ into a lockfile chore commit — and it stays that way. **It is revisited when `
 for another reason**, not on its own schedule.
 
 ### D23 · The seed for a normal race — BUILD IT, and make it OUTLIVE THE SESSION · 2026-08-23
+### ✅ DISCHARGED 2026-08-27 — built, merged, and accepted on screen
+
+**Both halves are done and confirmed.** Built and merged by `7a3942fa` (`feat(SEED-REAL-RACE-1)`),
+and judged on the production build on **2026-08-27**: the drawn seed reads correctly on the setup
+panel and survives a browser restart. **The decision below stands as taken; this line records that it
+is discharged**, so the rows above can close without the decision itself looking unanswered.
 
 **His decision on both halves of the browser-seed follow-up, taken together because they are one
 thing.** The normal "Start Race" path hardcodes `racePlanSeed: 0`, so **no race he watches is
