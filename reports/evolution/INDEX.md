@@ -171,6 +171,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [SHIP-DOCKER-REPAIR-1.md](SHIP-DOCKER-REPAIR-1.md) — **the docker repair lands, and step 12 gets
+  the half it was missing** (2026-08-27; `engine-reach --check` selects nothing, no fingerprint in
+  reach). Two independent August breakages merged at `688c8840`: the image could not be BUILT
+  (`better-sqlite3`/`bcrypt` have no musl prebuilts, `node-gyp` dies on "find Python") and the
+  container could not START (`playerGroups.js` imports `../../../shared/nameLimits.mjs`, which
+  resolves outside `WORKDIR`; the build context is `./server` so only a mount can supply it).
+  **THE FIRST REAL USE OF STEP 12, and it half held.** The containment check runs exactly as printed
+  — verified by `grep`-ing the line out of the document and `eval`-ing it. **But the step said "check
+  every branch" and never said how to LIST them**, and the obvious local command is wrong twice:
+  `git branch -r` is a cache, so a branch pushed since the last fetch is never checked, and it emits
+  `origin/HEAD` as a branch called `origin` that does not exist. **That is the exact hole that let a
+  ship on 2026-08-26 name three branches and leave two standing** — the failure step 12 was written to
+  prevent. Step 12 now opens with `git ls-remote --heads origin` and says why the cache is not it.
+  3 proposals, 2 the block's own.
+
 - [HARNESS-CAMERA-SEED-2.md](HARNESS-CAMERA-SEED-2.md) — **the harness camera follows the browser,
   and 44 instruments now measure something different** (2026-08-27, BUILT; his decision of
   2026-08-23, recorded and never built). `resolveIdentity`'s default derives the camera seed from the
