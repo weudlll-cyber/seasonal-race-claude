@@ -3,19 +3,14 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-08-27, after piece 8 — **the chain is complete. All eight pieces are done.**
+**Last rewritten:** 2026-08-27, after the day's piece 2 (D23 closed).
 **Master started at `9e6dfc97` with origin carrying master alone, and ends the same way.**
 
 ---
 
 ## NEEDS YOUR WORD — three things, none of them urgent
 
-**1 · An eye-test, two minutes, on master.** *(piece 5 established it; piece 7 fixed what you would
-see)* Start a NORMAL race — not Quick Test — with the seed field empty. Does the drawn seed appear
-where you expect, and read as a number you could type back? Then close the tab, reopen, and check it
-survived. **Blocks:** the last open half of D23. The build landed on master (`7a3942fa`); only your
-eye is owed. **And garden-path now shows a beetle** — the icon you reported was the runtime copy, not
-the repository.
+*(The seed eye-test that stood here is **done** — see DONE below.)*
 
 **2 · The client suite costs about 29% more wall clock to make the gate honest.** *(piece 1)*
 Bounding its workers to 4 gives **0 failures in 3 runs** against **20 in 6 unbounded**, and takes the
@@ -23,14 +18,24 @@ margin from **−5,457 ms to +598 ms**. It costs **313 s → 403 s** per run. Th
 free; this one is not, so it is your trade to make. **Blocks:** nothing today — the gate stays as it
 is until you say. **Not a timeout**: every failure measured was starvation, not a defect in a test.
 
-**3 · Nine other track records may be stale the way garden-path's was.** *(piece 7)*
-Seeding copies a track record only if the file does not already exist, so **no seed edit ever reaches
-an existing install.** Garden-path's icon sat stale for a day; the other nine were not audited.
-**Blocks:** nothing yet. It is minutes of work and either confirms them clean or finds more.
+**2 · Which fields of a shipped track are the project's, and which are yours?** *(the audit answered
+the smaller question and sharpened this one)* All ten runtime records were audited. Nine had drifted
+onto a legacy duration field — **behaviourally identical, proven, and now repaired.** Garden-path was
+left alone deliberately: its live record carries two surface classes you added in the app on
+2026-07-04 that **exist nowhere else — not in the seed, not in git.** A seeding rule that overwrote
+records to deliver yesterday's icon would have deleted them. **Blocks:** nothing today; your install
+is correct either way. It only decides how the seeding mechanism should behave if it is ever changed.
 
 ---
 
-## DONE — all eight merged to master
+## CLOSED TODAY
+
+- **D23 — the seed for a normal race — is DISCHARGED.** Judged on the production build on
+  **2026-08-27** and accepted: the drawn seed reads correctly on the setup panel and survives a
+  browser restart. Both halves confirmed on screen, not merely in the source. Nothing outstanding.
+- **The docker repair is on master** (`688c8840`), and the backend answers on 4000 again.
+
+## DONE — the night chain, all eight merged to master
 
 | # | what it was | outcome |
 |---|---|---|
