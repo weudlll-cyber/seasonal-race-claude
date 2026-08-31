@@ -171,6 +171,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [SEED-SNAPSHOT-INVENTORY-1.md](SEED-SNAPSHOT-INVENTORY-1.md) — **one intended edit, five items of
+  residue, three records that are his to rule on — and NO fingerprint moves** (2026-08-31; inventory
+  only, no snapshot taken, seeding mechanism untouched, no tracked file changed but this report).
+  Every runtime record under `DATA_ROOT` compared leaf-by-leaf to the seed of the same name, binaries
+  by SHA-256. **Nine of ten tracks are byte-identical and the nine legacy `defaultDuration` fields are
+  confirmed GONE** — that class remains nowhere in the five types. **garden-path differs in exactly
+  two fields**: his 2026-07-04 surface-class edit (INTENT — and safe to ship, both ids are built-in
+  classes and `surface-classes/` is empty, so no dangling reference) and `updatedAt` (RESIDUE by
+  class, the field TRACK-RUNTIME-AUDIT-1's P1 already showed cannot say which side is newer).
+  **RESIDUE elsewhere**: three unreferenced hash-named backgrounds, each a byte-identical duplicate of
+  a named one (9.3 MB for nothing), an `updatedAt`-only drift on the example group, and a
+  German-named test group the permanent language rule forbids in a seed file. **CANNOT CLASSIFY, left
+  to him**: his "Fantasa" brand and its 2.8 MB logo, and a 40-name test group. **THE FINGERPRINT
+  ANSWER IS NO, settled by reading rather than a run**: camera and render already read
+  `server/data/tracks`, which the swap does not touch, and read no field that differs even on a fresh
+  clone; the world pair reads `server/seeds/tracks` only, but `updatedAt` is consumed by no
+  instrument and `surfaceClasses` feeds one racer-admission filter whose answer is unchanged for all
+  twenty racer types — and the world instrument passes an explicit `--racer` anyway. **One overturning
+  condition named**: a snapshot that also writes `server/data`. **Blind spot found**:
+  `fingerprint-default.mjs` hardcodes garden-path to `snail` instead of reading `defaultRacerTypeId`,
+  so the world hash cannot see that field at all. 2 proposals, 1 the block's own.
+
 - [GATE-CLIENT-BOUNDED-1.md](GATE-CLIENT-BOUNDED-1.md) — **the bound is in, the margin is 3.1 s, and
   the 29% cost did not appear** (2026-08-27, BUILT and confirmed on the MERGED tree). `maxWorkers: 4`
   in `client/vitest.config.js`, the file that already owns this suite's run shape; verify already
