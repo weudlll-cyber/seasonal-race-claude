@@ -191,6 +191,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [ENVIRONMENT-DOC-1.md](ENVIRONMENT-DOC-1.md) — **every variable, what breaks without it, and where
+  it belongs** (2026-09-01; documents plus one metadata field, no code). **The failure it closes**:
+  `docker-compose.yml` names an override file that is GITIGNORED and absent from a fresh clone, so
+  `docker compose up` SUCCEEDS and then CORS refuses the browser and setup returns 403 — two symptoms
+  that name no variable, on a path where nothing a newcomer reads named one either. New
+  `docs/ENVIRONMENT.md` documents 21 variables with **missing-behaviour and wrong-behaviour kept
+  separate**, names the two that stop the server booting (`RA_SESSION_SECRET` in production,
+  `RA_COOKIE_NAME_MODE=host` without `RA_COOKIE_SECURE=true`), and calls out that **`VITE_API_URL` is
+  read at BUILD time** so an app served anywhere else calls the visitor's own machine. Reachable from
+  the README twice. **The mechanical scan missed five of the 21**: `RA_DATA_DIR`, `RA_CLIENT_DIST` and
+  the three `RA_BUILD_*` are read through an injected `env` parameter, invisible to a `process.env`
+  grep. No secret value printed; the override still uncommitted and ignored, confirmed with
+  `git check-ignore`. `engines: node >=20` added to all three `package.json`. **CARRIES A CORRECTION
+  TO MY OWN PRACTICE**: the scan surfaced `scripts/serve-production.mjs` and VERIFY-RULES **R10** —
+  a production build is served by that script on 4173, and `vite preview` is DELIBERATELY not it
+  (the synced tree cost 1016 ms on one frame, and preview holds a watcher over it). Earlier pieces
+  tonight used `vite preview`; the rest use the script. No fingerprints run and none could move.
+  2 proposals, 1 the block's own.
+
 - [FIRST-RUN-TRUTH-1.md](FIRST-RUN-TRUTH-1.md) — **the documented first step led to a login screen
   with no way past it** (2026-09-01, documents only; no code, no behaviour). README and SETUP.md both
   opened with `cd client && npm run dev` and called the backend **optional** — every sentence of that
