@@ -2,6 +2,7 @@
   "name": "racearena",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "Monorepo root — owns the tracked git hooks (.githooks/, see docs/VERIFY-RULES.md R12), the guard scripts and npm run verify",
   "scripts": {
     "prepare": "node scripts/setup-hooks.mjs",

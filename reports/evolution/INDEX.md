@@ -191,6 +191,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [LICENCE-AGPL-1.md](LICENCE-AGPL-1.md) — **AGPL-3.0, and the README had been claiming MIT**
+  (2026-09-01, SHIPPED — his decision of the same day). **The find**: `README.md` ended with `##
+  License / MIT` while there was no `LICENSE` file, no `license` field anywhere and no copyright
+  notice in the tracked tree — one word was the repository's entire licensing statement, and it named
+  the wrong licence. Replaced, not softened. **The text was fetched, never typed**: `www.gnu.org` is
+  unreachable from this machine (403, then transport failures), so two published mirrors were fetched
+  and cross-checked line by line; GitHub's copy shipped because it alone is both FSF hard-wrapping AND
+  an unmodified appendix (the license-templates copy has Jinja markers where `<year>  <name of
+  author>` belongs; SPDX's is reflowed). 34,523 bytes, sha256 `8486a10c…`, verified identical after
+  writing. `AGPL-3.0-only` in all three `package.json` — **`-only` not `-or-later`, deliberately**,
+  since `-or-later` grants terms the FSF has not written yet; plain `AGPL-3.0` is SPDX-deprecated.
+  `private: true` untouched. No per-file headers, no notice file. **Dependency licences looked at and
+  nothing touched: no incompatibility** — `better-sqlite3-session-store` is `GPL-3.0-only` and a
+  server runtime dependency, which AGPLv3 §13 explicitly permits. **NEEDS HIS WORD: the copyright
+  holder line is a placeholder** (`weudlll-cyber`, the GitHub org) because the repository establishes
+  no author at all. No fingerprints run and none could move. 2 proposals, 1 the block's own.
+
 - [PUBLISH-READINESS-1.md](PUBLISH-READINESS-1.md) — **what stands between this repository and a
   stranger running it: seven findings, five of them small, and the application itself is not one of
   them** (2026-08-31, READ-ONLY — nothing built, no deployment branch opened; every finding
