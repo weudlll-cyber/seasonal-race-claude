@@ -1,1 +1,21 @@
 node_modules
+
+# IMAGE-NO-CREDENTIALS-1 — THE RUNTIME STORE NEVER ENTERS THE BUILD.
+#
+# `data/` holds this install's ACCOUNTS: users.json, users.json.bak-*, sessions.sqlite,
+# setup-complete.json and recover-admin-audit.log, beside the seeded records. Until now the only
+# line in this file was `node_modules`, so every one of those was sent to the Docker daemon as build
+# context AND copied into the image by `COPY data/ ./data/`. Building on a used machine produced an
+# image carrying the builder's password hashes — and, because `setup-complete.json` came with them,
+# an image on which `POST /api/auth/setup` answers 409 forever, so a recipient could never create an
+# admin and nothing would tell them why.
+#
+# NOTHING LEAKED: no image has ever been published. This closes it before the first one is.
+#
+# IGNORING IT HERE ALSO REMOVES THE COPY. A directory excluded from the context cannot be COPYed —
+# the build would fail on a missing source — so the Dockerfile's `COPY data/ ./data/` had to go with
+# it. That line was serving nothing: on a clean clone the whole tracked content of `server/data` is
+# one README, and every directory the server needs under the data root is created at runtime with
+# `mkdirSync(..., { recursive: true })`. Established by reading the tracked set and by booting an
+# image built without it, not assumed.
+data/

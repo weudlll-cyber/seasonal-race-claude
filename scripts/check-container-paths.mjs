@@ -101,6 +101,12 @@ export const DECLARED_DIVERGENCES = [
       "IT CANNOT BE COPIED. `shared/` sits at the repository root, ABOVE the build context (`./server`), and a Dockerfile cannot COPY from outside its context. `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`, which from `/app/src/routes/` resolves to `/shared/`. Only a mount can supply it, so this divergence is structural rather than historical — closing it would mean moving the build context, not editing a list.",
   },
   {
+    name: "data",
+    kind: "mounted-not-copied",
+    reason:
+      "IT MUST NEVER BE IN THE IMAGE. `server/data/` is the RUNTIME STORE — this install's accounts (users.json, sessions.sqlite, setup-complete.json) sit there beside the seeded records. It used to be COPYed, which meant an image built on a used machine carried the builder's password hashes and a setup marker that made `POST /api/auth/setup` answer 409 forever on the recipient's fresh install. IMAGE-NO-CREDENTIALS-1 removed the COPY and excluded the directory from the build context in server/.dockerignore. This divergence is CORRECT and permanent: an operator's data belongs in a volume, never baked into a layer. Every directory the server needs under it is created at runtime with mkdirSync recursive, so nothing is lost by its absence.",
+  },
+  {
     name: "utils",
     kind: "mounted-not-copied",
     reason:

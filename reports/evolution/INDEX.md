@@ -191,6 +191,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [IMAGE-NO-CREDENTIALS-1.md](IMAGE-NO-CREDENTIALS-1.md) — **the runtime store never enters the
+  build, and the COPY it came through was serving nothing** (2026-09-01, SHIPPED; nothing leaked —
+  no image has ever been published). **What `COPY data/` was for, established first**: on a clean
+  clone the entire tracked content of `server/data` is one README, and every directory under the data
+  root is created at runtime with `mkdirSync` recursive — so the line served nothing. On HIS machine
+  it shipped `users.json`, `sessions.sqlite`, `setup-complete.json`, the users backup and the
+  recover-admin log. **The worse half of the cost was the marker, not the hashes**: with
+  `setup-complete.json` baked in, a recipient's fresh install answers `409 setup already complete`
+  forever, so they can never create an admin and nothing tells them why. **One decision, two edits,
+  because they are not separable**: a directory excluded from the context cannot be COPYed, so
+  `data/` in `server/.dockerignore` forced the COPY out with it. An exclusion list naming the
+  credential files individually was rejected — the next one added would not be on it. **PROVEN FROM
+  INSIDE A BUILT IMAGE**: `/app/data` does not exist and a `find` over the whole filesystem returns
+  nothing for all four names. **His install unaffected**, and a FRESH install still seeds (10 tracks,
+  10 backgrounds) **with no setup marker**, which is the regression that mattered. The guard caught
+  the new divergence and demanded a reason; `data` is now the third declared entry and the only one
+  that is correct-and-permanent rather than structural or historical. Its fixture went red first and
+  was corrected to the real shape. `engine-reach --check` selected nothing (seventh time); all four
+  fingerprints run by hand and UNMOVED; nothing minted. 2 proposals, 1 the block's own.
+
 - [SERVE-SPA-1.md](SERVE-SPA-1.md) — **the server serves the client, and the API cannot be answered
   with a page** (2026-09-01, SHIPPED — his decision of the same day; the piece that unblocks
   publishing). `GET /` was a 404 while `DEPLOYMENT.md` described a same-origin deployment that had

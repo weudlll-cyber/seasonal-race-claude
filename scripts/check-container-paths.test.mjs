@@ -51,9 +51,12 @@ function run() {
   return { code: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
-// The real tree's shape: src/data/seeds COPYed and mounted, utils and shared mounted only — the two
-// entries the guard ships declaring.
-const REAL_COPIES = ["src", "data", "seeds"];
+// The real tree's shape, and it must STAY the real tree's shape or these tests stop meaning
+// anything: `src` and `seeds` are COPYed and mounted; `utils`, `shared` and — since
+// IMAGE-NO-CREDENTIALS-1 — `data` are mounted only, which are the three entries the guard ships
+// declaring. `data` is deliberately absent from the COPY list: the runtime store holds this
+// install's accounts and must never enter an image layer.
+const REAL_COPIES = ["src", "seeds"];
 const REAL_MOUNTS = [
   "./server/src:/app/src",
   "./server/utils:/app/utils",
