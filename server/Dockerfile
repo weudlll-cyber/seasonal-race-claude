@@ -17,7 +17,8 @@ COPY package.json ./
 RUN npm install --omit=dev  && apk del .build-deps
 
 COPY src/ ./src/
-COPY data/ ./data/
+# `data/` is NOT copied, deliberately — see server/.dockerignore. The runtime store holds this
+# install's accounts, and the directories the server needs there are created at runtime anyway.
 COPY seeds/ ./seeds/
 
 # SERVE-SPA-1 — THE BUILT CLIENT, FROM A NAMED BUILD CONTEXT.
