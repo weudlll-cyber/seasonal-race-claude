@@ -2,6 +2,7 @@
   "name": "racearena-server",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "RaceArena local backend — Phase L. `test` dropped --no-file-parallelism at TEST-ACCOUNTS-1: that flag was serialisation standing in for isolation, and the isolation is now real (a users store per test file, and no shared account). See server/test/env-setup.js.",
   "type": "module",
   "main": "src/index.js",

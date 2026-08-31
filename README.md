@@ -107,6 +107,17 @@ it is and why it may have rotted. `docs/archive/` is history and says so.
 
 The core simulation, editors, camera director, and local backend (Phase L) are in place. A race-integrity / leaderboard / multiplayer server is planned for Phase 5 — see [BACKLOG.md](docs/BACKLOG.md), PART ONE, *Phases 5–7*.
 
-## License
+## Licence
 
-MIT
+**RaceArena is licensed under the GNU Affero General Public License v3.0.** The full, unmodified
+licence text is in [LICENSE](LICENSE) at the repository root.
+
+Copyright (C) 2026 weudlll-cyber
+
+The AGPL is a copyleft licence with one addition that matters for a project like this one: **if you
+run a modified version of RaceArena as a network service, you must offer its users the source of
+your version** (section 13). Running it unmodified, or modifying it privately without serving it to
+anyone, carries no such obligation.
+
+The `"private": true` flag in each `package.json` is unrelated to this — it only stops an accidental
+`npm publish`.
