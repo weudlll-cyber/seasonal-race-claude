@@ -23,6 +23,7 @@ import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isValidId } from '../../utils/isValidId.js';
 import {
   PLAYER_NAME_MAX_LENGTH,
@@ -57,6 +58,8 @@ export function loadAll(dir = DATA_DIR) {
   return map;
 }
 
+// SEED-REDELIVERY-1: versioned delivery first, then the missing-file copy. See tracks.js.
+deliverSeedsOnce();
 // Copy missing default snapshots before loading the map.
 seedTypeFromSnapshot('player-groups');
 const groupsMap = loadAll();

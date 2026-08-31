@@ -1,0 +1,124 @@
+{
+  "_": [
+    "THE ONE HOME for shipped-record versions. A version here is raised BY HAND, and raising it is",
+    "what redelivers a record to every install. Nothing raises it automatically and nothing derives",
+    "it from content — see the argument below.",
+    "",
+    "WHY A VERSION AND NOT A CONTENT COMPARISON. The moment an operator edits a record their copy",
+    "differs from the seed. A content comparison would therefore overwrite and warn on every boot,",
+    "forever, on every install that has ever been used. The version is the only thing that can say",
+    "WE MEANT THIS, and it has to be said deliberately.",
+    "",
+    "WHY A SIDECAR AND NOT A FIELD INSIDE THE RECORD. Four reasons, in order of weight:",
+    "  1. A record field is WRITABLE BY AN OPERATOR EDIT. PUT /api/tracks/:id builds the stored",
+    "     record as { ...existing, ...req.body }, so any field the body carries lands unvalidated;",
+    "     the handler re-pins id, isDefault, backgroundImageFile and createdAt by name precisely",
+    "     because that spread does not protect anything it is not told to protect. An export/import",
+    "     round-trip or an editor replaying a record from another install would move the version by",
+    "     accident. Out here, nothing an operator can reach through the app writes it.",
+    "  2. BINARIES HAVE NO INSIDE. A background jpg and a logo cannot carry a field, so they need a",
+    "     sidecar whatever tracks do. One form everywhere beats two forms and a rule about which.",
+    "  3. THE UNIT IS THE THING VERSIONED, not the file. A track ships WITH its background and a",
+    "     brand WITH its logo, as the owner set the scope. A field inside the track JSON has nowhere",
+    "     to say that and nowhere to put the background half.",
+    "  4. ONE PLACE TO RAISE AND ONE PLACE TO CHECK. A human raising a version edits this file; the",
+    "     guard reads this file. Twelve versions in twelve records is twelve places to forget.",
+    "",
+    "HOW DELIVERY READS IT (server/src/seedDelivery.js owns the behaviour, not this comment):",
+    "  shipped version HIGHER than what the install recorded -> the whole unit is overwritten and",
+    "  the operator is warned. EQUAL, LOWER, ABSENT or not an integer -> nothing happens. Silence is",
+    "  the safe default; delivery is the exception that has to be asked for.",
+    "",
+    "A RECORD WITH NO UNIT HERE IS NEVER A TARGET. Delivery walks this manifest, so an operator own",
+    "creation cannot be reached by it — not by a filter that could be got wrong, but because the",
+    "loop never visits it.",
+    "",
+    "TO REDELIVER A RECORD: change its files, raise its version by one here, commit both together.",
+    "scripts/check-seed-versions.mjs FAILS the commit if you change the files and forget the version."
+  ],
+  "units": {
+    "tracks/city-circuit": {
+      "version": 1,
+      "files": [
+        "tracks/city-circuit.json",
+        "backgrounds/city-circuit.jpg"
+      ]
+    },
+    "tracks/dirt-oval": {
+      "version": 1,
+      "files": [
+        "tracks/dirt-oval.json",
+        "backgrounds/dirt-oval.jpg"
+      ]
+    },
+    "tracks/garden-path": {
+      "version": 1,
+      "files": [
+        "tracks/garden-path.json",
+        "backgrounds/garden-path.jpg"
+      ]
+    },
+    "tracks/ice-track": {
+      "version": 1,
+      "files": [
+        "tracks/ice-track.json",
+        "backgrounds/ice-track.jpg"
+      ]
+    },
+    "tracks/luger-hill": {
+      "version": 1,
+      "files": [
+        "tracks/luger-hill.json",
+        "backgrounds/luger-hill.jpg"
+      ]
+    },
+    "tracks/mountainstreet": {
+      "version": 1,
+      "files": [
+        "tracks/mountainstreet.json",
+        "backgrounds/mountainstreet.jpg"
+      ]
+    },
+    "tracks/river-run": {
+      "version": 1,
+      "files": [
+        "tracks/river-run.json",
+        "backgrounds/river-run.jpg"
+      ]
+    },
+    "tracks/searound": {
+      "version": 1,
+      "files": [
+        "tracks/searound.json",
+        "backgrounds/searound.jpg"
+      ]
+    },
+    "tracks/seatrack": {
+      "version": 1,
+      "files": [
+        "tracks/seatrack.json",
+        "backgrounds/seatrack.jpg"
+      ]
+    },
+    "tracks/space-sprint": {
+      "version": 1,
+      "files": [
+        "tracks/space-sprint.json",
+        "backgrounds/space-sprint.jpg"
+      ]
+    },
+    "brands/seasonal-entertainment": {
+      "version": 1,
+      "files": [
+        "brands/seasonal-entertainment.json",
+        "brand-logos/seasonal-entertainment.jpg"
+      ]
+    },
+    "player-groups/default-example-group": {
+      "version": 1,
+      "files": [
+        "player-groups/default-example-group.json"
+      ]
+    }
+  }
+}

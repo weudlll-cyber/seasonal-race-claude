@@ -39,6 +39,7 @@ import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../.
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 import { isValidId } from '../../utils/isValidId.js';
 
@@ -76,6 +77,8 @@ export function loadAll(dir = DATA_DIR) {
   return map;
 }
 
+// SEED-REDELIVERY-1: versioned delivery first, then the missing-file copy. See tracks.js.
+deliverSeedsOnce();
 // Copy missing default snapshots before loading the map.
 seedTypeFromSnapshot('brands');
 seedTypeFromSnapshot('brand-logos');

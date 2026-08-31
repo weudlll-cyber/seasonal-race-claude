@@ -14,6 +14,7 @@ import surfaceClassesRouter from './routes/surfaceClasses.js';
 import playerGroupsRouter from './routes/playerGroups.js';
 import brandsRouter from './routes/brands.js';
 import racersRouter from './routes/racers.js';
+import seedNoticesRouter from './routes/seedNotices.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
@@ -56,6 +57,7 @@ export function createApp() {
   app.use('/api/player-groups', playerGroupsRouter);
   app.use('/api/brands', brandsRouter);
   app.use('/api/racers', racersRouter);
+  app.use('/api/seed-notices', seedNoticesRouter);
 
   return app;
 }

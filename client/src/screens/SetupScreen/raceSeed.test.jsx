@@ -37,6 +37,15 @@ vi.mock('../../modules/storage/useServerTracks.js', async () => {
   const { serverTracksMock } = await import('../../test/mockServerTracks.js');
   return serverTracksMock();
 });
+// TEARDOWN-INFLIGHT-1: SetupScreen also mounts SeedRedeliveryNotice (SEED-REDELIVERY-1), which asks
+// the server whether this install is owed a redelivery warning. The SERVICE is replaced rather than
+// `fetch`, for the same reason the hook above is: replacing the module removes the effect's request
+// entirely, so nothing is ever in flight to outlive the test.
+vi.mock('../../services/seedNoticeApi.js', () => ({
+  fetchSeedNotices: () => Promise.resolve([]),
+  dismissSeedNotices: () => Promise.resolve(0),
+}));
+
 forbidNetwork();
 
 function seedGeometry(id, { closed = true } = {}) {
