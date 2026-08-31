@@ -191,6 +191,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [FIRST-RUN-TRUTH-1.md](FIRST-RUN-TRUTH-1.md) — **the documented first step led to a login screen
+  with no way past it** (2026-09-01, documents only; no code, no behaviour). README and SETUP.md both
+  opened with `cd client && npm run dev` and called the backend **optional** — every sentence of that
+  was true before auth arrived and none of it is now. **The mechanism, from the source**: with no
+  backend the `/me` probe fails without an HTTP status, and the offline fallback needs
+  `KEYS.LAST_USER`, which is written in exactly one place — inside the SUCCESSFUL `/me` path. A
+  first-time browser has no hint, so `authState` is `anonymous` and `ProtectedRoute` navigates to
+  `/login`: **a sign-in screen for an account that cannot exist yet.** The offline mode is real but is
+  a RECONNECTION affordance, useless to the fresh install the page is written for. Both pages
+  rewritten in running order around piece 2's one-port path, including the step neither ever
+  mentioned: **create the first admin**. The README's "everything else lives in localStorage"
+  paragraph also corrected — racers, brands and groups have been server-side for months. **A
+  correction found by testing the docs**: a wrong bootstrap token on an install that already has an
+  admin returns **409, not 403**, because the marker check runs first. No token value is printed —
+  the value has one home. No fingerprints run and none could move. 2 proposals, 1 the block's own.
+
 - [IMAGE-NO-CREDENTIALS-1.md](IMAGE-NO-CREDENTIALS-1.md) — **the runtime store never enters the
   build, and the COPY it came through was serving nothing** (2026-09-01, SHIPPED; nothing leaked —
   no image has ever been published). **What `COPY data/` was for, established first**: on a clean

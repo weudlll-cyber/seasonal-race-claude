@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, after piece 3 of 9. **Master `bcbf27b8` → and moving.** Origin
+**Last rewritten:** 2026-09-01, after piece 4 of 9. **Master `b5413025` → and moving.** Origin
 carries master alone.
 
 ---
@@ -38,14 +38,14 @@ Short, and nothing here blocks anything running.
 
 ---
 
-## TONIGHT'S CHAIN — 3 of 9 done
+## TONIGHT'S CHAIN — 4 of 9 done
 
 | # | piece | state |
 |---|---|---|
 | **1** | **The licence: AGPL-3.0** | **DONE, merged.** Full unmodified text at `LICENSE`; `AGPL-3.0-only` in all three `package.json`; README corrected. **It had been claiming MIT** with no licence file at all. No dependency licence is incompatible. |
 | **2** | **The server serves the client** | **DONE, merged.** One thing to start, one port. Proven by HTTP against the real container. |
 | **3** | **The image must not carry your credentials** | **DONE, merged.** The COPY was serving nothing; the runtime store is now out of the build context entirely. Proven from inside a built image: no credential file anywhere. **Nothing had leaked** — no image was ever published. |
-| 4 | The documented first step dead-ends | not started |
+| **4** | **The documented first step dead-ends** | **DONE, merged.** README and SETUP.md said the backend was optional; it has not been since auth arrived. Both rewritten around the one-port path, with the first-admin step they never mentioned. |
 | 5 | The required environment, where a newcomer looks | not started |
 | 6 | Close one of the two declared divergences | not started |
 | 7 | What the engine-reach advisory says about data files | not started |
