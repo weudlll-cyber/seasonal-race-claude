@@ -191,6 +191,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [CONTAINER-PATHS-1.md](CONTAINER-PATHS-1.md) — **the COPY set and the mount set now have to agree,
+  or say why not** (2026-08-31, BUILT and green on the tree as it stands). `check-container-paths.mjs`
+  reads `server/Dockerfile`'s COPY set and `docker-compose.yml`'s mount set and fails on any
+  divergence that is not DECLARED. **The rule is declared, not identical, and that choice is the
+  whole design**: a guard demanding equality would have failed on `shared/` and `utils/` from its
+  first run, and a guard wrong on day one gets silenced in a week. `DECLARED_DIVERGENCES` carries one
+  entry per accepted difference WITH ITS REASON, keyed by direction, and a STALE entry fails too.
+  Seeded with `shared/` (**structural** — above the build context, no COPY can ever reach it) and
+  `utils/` (**history, not necessity** — inside the context, one COPY line from not diverging;
+  declared rather than fixed because this piece ships no behaviour). **Built from three failures**:
+  `seeds/` (COPYed not mounted — the container ran the last image's seeds and redelivery was
+  SILENTLY INERT) and `shared/` would both have been caught; **`utils/` would NOT**, and that is the
+  stated blind spot — **it compares two DECLARATIONS, so a directory missing from BOTH lists is
+  invisible to it**, which is the exact shape of the failure that has already happened once. **Both
+  named sabotages run against the REAL files and both went red**, tree restored byte-exact; 10 fixture
+  tests green. Hooked into the pre-commit fast list and auto-registered with verify. `engine-reach
+  --check` selected nothing (sixth time); all four fingerprints run by hand and UNMOVED; nothing
+  minted. 2 proposals, 1 the block's own.
+
 - [COMPOSE-SEEDS-MOUNT-1.md](COMPOSE-SEEDS-MOUNT-1.md) — **the delivery mechanism was INERT in the
   container, and a baked-in seeds directory is the same failure one level down** (2026-08-31, FIXED —
   one mount line, eight lines of comment). `server/Dockerfile` COPYs `seeds/` at build time and
