@@ -1,6 +1,6 @@
 # RaceArena — Setup Guide
 
-**Owns:** getting RaceArena running locally — client, backend, ports, first sign-in, and the rules for restarting them. Deploying it to a public host, and the environment variables that requires, is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
+**Owns:** getting RaceArena running locally — client, backend, ports, first sign-in, and the rules for restarting them. Deploying it to a public host is [DEPLOYMENT.md](DEPLOYMENT.md)'s. What every environment variable does, and what happens without it, is [ENVIRONMENT.md](ENVIRONMENT.md)'s.
 
 ## The one thing to know first
 
@@ -78,7 +78,7 @@ cd client && npm run dev          # app on 5173, pinned in client/vite.config.js
 it there.
 
 Running the backend without Docker works too, and needs the variables named in
-[DEPLOYMENT.md](DEPLOYMENT.md):
+[ENVIRONMENT.md](ENVIRONMENT.md):
 
 ```bash
 RA_SESSION_SECRET=... RA_BOOTSTRAP_TOKEN=... node server/src/index.js

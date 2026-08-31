@@ -43,7 +43,9 @@ Setup runs **once** — a second attempt answers `409 setup already complete`.
 `cd client && npm run dev` for the app on `http://localhost:5173`, which gives you hot reload. You
 still need the account above; the sign-in is the same one.
 
-Full details, including every environment variable, are in the [Setup Guide](docs/SETUP.md).
+Full details are in the [Setup Guide](docs/SETUP.md), and every environment variable — what it
+does, and what happens when it is missing or wrong — is in
+[Environment Variables](docs/ENVIRONMENT.md).
 
 ## What you can do
 
@@ -110,7 +112,7 @@ The reading order it recommends, so you can start without a second click:
    "fair" here means something specific and unobvious, and the race design will not make sense
    without it.
 
-Also useful: [API Reference](docs/API.md) · [Backlog](docs/BACKLOG.md) — **the open work and the
+Also useful: [Environment Variables](docs/ENVIRONMENT.md) — **every variable, and what breaks without it** · [API Reference](docs/API.md) · [Backlog](docs/BACKLOG.md) — **the open work and the
 phase history, one home since 2026-08-23** · [Phase status](docs/ROADMAP.md) (a table; the detail is
 in the backlog) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
 race-mechanism change).

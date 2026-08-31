@@ -4,6 +4,8 @@
 
 **How authentication BEHAVES — the first-admin channel, sessions, what is protected, and what the auth code does when a variable is absent — is [AUTH.md](AUTH.md)'s.**
 
+**The complete variable list, including the ones this page does not need, is [ENVIRONMENT.md](ENVIRONMENT.md)'s.** What follows is the subset a public deployment requires.
+
 ## Public same-origin hosting
 
 The Node.js server serves **both** the built SPA and the `/api/*` endpoints on a single address
