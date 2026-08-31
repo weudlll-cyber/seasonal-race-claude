@@ -97,7 +97,7 @@ cd ..
 # the reason these are here at all is that a summary line was once read instead of a count.
 fast_fail=0
 fast_pass=0
-guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs scripts/check-fallback-agreement.mjs scripts/check-seed-versions.mjs"
+guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs scripts/check-fallback-agreement.mjs scripts/check-seed-versions.mjs scripts/check-container-paths.mjs"
 
 # STAMP-TRAP-1: the stamp guard runs against the STAGED tree HERE, and only here.
 #
