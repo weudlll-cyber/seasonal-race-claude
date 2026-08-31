@@ -6,6 +6,15 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-31 — [SEED-REDELIVERY-1](SEED-REDELIVERY-1.md)'s boot proof says "all 31 records". The
+  number is 30.** Counted directly: tracks 10, backgrounds 13, brands 2, brand-logos 2, player-groups
+  3. The 31 came from miscounting the snapshot's own keys, which carry the two state-file entries
+  (`.seed-versions.json`, `.seed-notices.json`) beside the records. **Nothing else in that report
+  changes** — the before/after diff it printed was empty, and "not one record was overwritten" is
+  true of thirty exactly as claimed of thirty-one. Established by
+  [COMPOSE-SEEDS-MOUNT-1](COMPOSE-SEEDS-MOUNT-1.md), which re-ran the same proof against a container
+  that could finally read the manifest. The report is not edited; the journal is append-only.
+
 - **2026-08-31 — [SEED-SNAPSHOT-INVENTORY-1](SEED-SNAPSHOT-INVENTORY-1.md)'s "garden-path differs in
   exactly two fields" is right about CONTENT and wrong about the DIFF.** Taking the snapshot produced
   a **third hunk**: `defaultLaps` moved from the end of the object to just after `defaultRacerTypeId`,
@@ -181,6 +190,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   otherwise because a JSON file is never an import edge. **THE RACE-SEED ROW ESTABLISHED**: merged
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
+
+- [COMPOSE-SEEDS-MOUNT-1.md](COMPOSE-SEEDS-MOUNT-1.md) — **the delivery mechanism was INERT in the
+  container, and a baked-in seeds directory is the same failure one level down** (2026-08-31, FIXED —
+  one mount line, eight lines of comment). `server/Dockerfile` COPYs `seeds/` at build time and
+  nothing mounted over it, so the container ran the last image's seeds: `ls /app/seeds/versions.json`
+  → **No such file**. `readManifest()` therefore returned `{}` and `deliverSeeds` iterated an empty
+  object — **no unit visited, no version compared, no redelivery possible at any version, ever**.
+  **And it would have looked like it worked**: `server/src` IS mounted, so the container had every
+  line of the delivery code and only the thing it reads was stale. A version raised on master would
+  have been committed, guarded and shipped, and simply never arrived — the exact failure this strand
+  exists to end, reproduced where none of the strand's machinery can see it. Fixed by mounting
+  `./server/seeds:/app/seeds` beside `src`/`utils`/`data`, with the reason written in the file
+  because it reads like a convenience and is not. A new mount needs `up -d`, not `restart`; verified
+  from inside afterwards (12 units, all version 1). **THE BOOT WAS STILL INERT**: 30 records
+  byte-identical, mtimes unchanged, `.seed-notices.json` still absent — every unit takes the
+  equal-version branch. `engine-reach --check` selected nothing (fifth time); all four fingerprints
+  run by hand and UNMOVED; nothing minted. **Carries a correction to SEED-REDELIVERY-1's record
+  count** (31 → 30). 2 proposals, 1 the block's own.
 
 - [SEED-REDELIVERY-1.md](SEED-REDELIVERY-1.md) — **the overwrite rule, the version that decides it,
   and the guard that stops us forgetting to raise it** (2026-08-31, BUILT — third and last of three;
