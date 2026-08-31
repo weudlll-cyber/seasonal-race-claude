@@ -5,11 +5,14 @@
   "description": "A leisurely (yet surprisingly competitive) scuttle through the roses.",
   "color": "#16a34a",
   "defaultRacerTypeId": "beetle",
+  "defaultLaps": 2,
   "defaultWinners": 3,
   "difficulty": "easy",
   "surfaceClasses": [
     "grass",
-    "earth"
+    "earth",
+    "mud",
+    "sand"
   ],
   "trackLights": {
     "color": "#ffdd66",
@@ -1690,10 +1693,9 @@
   ],
   "effects": [],
   "createdAt": "2026-05-01T21:15:30.352Z",
-  "updatedAt": "2026-06-28T00:00:00.000Z",
+  "updatedAt": "2026-07-04T13:06:57.165Z",
   "sourceMode": "center",
   "width": 198,
   "pathLengthPx": 4772.736772587987,
-  "maxRacers": null,
-  "defaultLaps": 2
+  "maxRacers": null
 }

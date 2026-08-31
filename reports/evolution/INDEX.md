@@ -6,6 +6,17 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-31 — [SEED-SNAPSHOT-INVENTORY-1](SEED-SNAPSHOT-INVENTORY-1.md)'s "garden-path differs in
+  exactly two fields" is right about CONTENT and wrong about the DIFF.** Taking the snapshot produced
+  a **third hunk**: `defaultLaps` moved from the end of the object to just after `defaultRacerTypeId`,
+  **value unchanged**. The inventory compared the two records leaf path by leaf path, which is
+  deliberately order-independent, so key order was outside what it could see. Established by
+  [SEED-SNAPSHOT-1](SEED-SNAPSHOT-1.md), which carries the cause (TRACK-RUNTIME-AUDIT-1 and
+  GARDEN-PATH-DEFAULTS-1 wrote the same field to two different positions). **Nothing else in that
+  report is withdrawn** — in particular its fingerprint answer was afterwards CONFIRMED BY RUNNING all
+  four, and all four are unmoved. The general rule worth keeping: **an order-independent comparison
+  cannot predict a diff**, and the two questions are not the same question.
+
 - **2026-08-23 — the sprite-route reading in
   [OPEN-ITEMS-2026-08-22](OPEN-ITEMS-2026-08-22.md) is CORRECT, and it is recorded here because the
   block that was asked to correct it could not.** BACKLOG-TRUTH-1 was forbidden by its own spec from
@@ -170,6 +181,50 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   otherwise because a JSON file is never an import edge. **THE RACE-SEED ROW ESTABLISHED**: merged
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
+
+- [SEED-SNAPSHOT-1.md](SEED-SNAPSHOT-1.md) — **his install IS the shipped default now; seven lines of
+  diff, four fingerprints unmoved, and the three deletions REFUSED** (2026-08-31, SHIPPED — second of
+  three pieces, the overwrite mechanism not built here). Runtime → seeds, one way; **nothing written
+  into `server/data`**, shown by every runtime mtime still predating the day. **The whole diff is 2
+  files, 7 insertions / 5 deletions**: garden-path's two extra surface classes and both `updatedAt`
+  drifts. 21 of 23 seed files were already byte-identical; all 23 are now. **A third hunk nobody
+  predicted**: `defaultLaps` MOVED POSITION, value unchanged — the inventory's leaf-by-leaf
+  comparison is order-independent and could not see it, and the cause is TRACK-RUNTIME-AUDIT-1 and
+  GARDEN-PATH-DEFAULTS-1 writing the same field to two different places. **Exclusion was structural,
+  not filtered**: the copy loop walks the SEEDS, so the four runtime-only items (the Fantasa brand and
+  logo, the 40-name group, the German-named group) were never visited — and they are not at risk from
+  the mechanism to come, because seeding is keyed by filename and a record with no seed of that name
+  is not a target. **THE THREE ORPHAN BACKGROUNDS WERE NOT DELETED.** Checks 1 and 2 pass — full
+  SHA-256 identity to a named background that remains, and zero references in all 20 track records —
+  but **check 3 FAILS for all three**: nine records in `server/data/tracks-backups/` reference them,
+  six as a `backgroundImageFile` value, so a restore would point at a deleted image. Found only
+  because the search covered the whole tree, which is the failure mode the condition was written for.
+  **`engine-reach --check` selected NOTHING** (a JSON is never an import edge — the same gap that let
+  routing skip all four fingerprints for a seed edit that moved every one of them), so **all four were
+  run by hand and all four are UNMOVED**; nothing minted, none needed. Language guard green over
+  `server/seeds/**`. 2 proposals, 1 the block's own.
+
+- [SEED-SNAPSHOT-INVENTORY-1.md](SEED-SNAPSHOT-INVENTORY-1.md) — **one intended edit, five items of
+  residue, three records that are his to rule on — and NO fingerprint moves** (2026-08-31; inventory
+  only, no snapshot taken, seeding mechanism untouched, no tracked file changed but this report).
+  Every runtime record under `DATA_ROOT` compared leaf-by-leaf to the seed of the same name, binaries
+  by SHA-256. **Nine of ten tracks are byte-identical and the nine legacy `defaultDuration` fields are
+  confirmed GONE** — that class remains nowhere in the five types. **garden-path differs in exactly
+  two fields**: his 2026-07-04 surface-class edit (INTENT — and safe to ship, both ids are built-in
+  classes and `surface-classes/` is empty, so no dangling reference) and `updatedAt` (RESIDUE by
+  class, the field TRACK-RUNTIME-AUDIT-1's P1 already showed cannot say which side is newer).
+  **RESIDUE elsewhere**: three unreferenced hash-named backgrounds, each a byte-identical duplicate of
+  a named one (9.3 MB for nothing), an `updatedAt`-only drift on the example group, and a
+  German-named test group the permanent language rule forbids in a seed file. **CANNOT CLASSIFY, left
+  to him**: his "Fantasa" brand and its 2.8 MB logo, and a 40-name test group. **THE FINGERPRINT
+  ANSWER IS NO, settled by reading rather than a run**: camera and render already read
+  `server/data/tracks`, which the swap does not touch, and read no field that differs even on a fresh
+  clone; the world pair reads `server/seeds/tracks` only, but `updatedAt` is consumed by no
+  instrument and `surfaceClasses` feeds one racer-admission filter whose answer is unchanged for all
+  twenty racer types — and the world instrument passes an explicit `--racer` anyway. **One overturning
+  condition named**: a snapshot that also writes `server/data`. **Blind spot found**:
+  `fingerprint-default.mjs` hardcodes garden-path to `snail` instead of reading `defaultRacerTypeId`,
+  so the world hash cannot see that field at all. 2 proposals, 1 the block's own.
 
 - [GATE-CLIENT-BOUNDED-1.md](GATE-CLIENT-BOUNDED-1.md) — **the bound is in, the margin is 3.1 s, and
   the 29% cost did not appear** (2026-08-27, BUILT and confirmed on the MERGED tree). `maxWorkers: 4`
