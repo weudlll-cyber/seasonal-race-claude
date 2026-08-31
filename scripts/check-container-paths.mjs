@@ -70,6 +70,7 @@ export const GUARD = {
     "a directory missing from BOTH lists — it compares two declarations, so the one failure shape it cannot catch is the one nobody wrote down anywhere (utils/ was exactly this)",
     "whether a mount actually works: it reads text and never starts a container",
     "files rather than directories, docker-compose.override.yml, and any service but the first",
+    "what a NAMED build context brings in: `COPY --from=` is skipped because it does not read the build context, so nothing checks that `additional_contexts` and those copies agree",
   ],
   dirs: [],
   files: [DOCKERFILE, COMPOSE],
@@ -134,6 +135,13 @@ const copiedDirs = new Set();
 for (const line of dockerfile.split("\n")) {
   const m = /^\s*COPY\s+(.+)$/i.exec(line);
   if (!m) continue;
+  // `COPY --from=<stage|context>` DOES NOT READ THE BUILD CONTEXT. It reads an earlier stage or a
+  // NAMED build context, so its source is not a host directory this comparison is about and there is
+  // nothing to mount. SERVE-SPA-1 found this by adding one: the guard read `dist/` as a directory of
+  // `server/` and demanded a mount for `server/dist`, which does not exist. Skipping the line is
+  // right — what a named context brings in is declared by the compose file's `additional_contexts`,
+  // not by the volume list.
+  if (/(^|\s)--from=/.test(m[1])) continue;
   const tokens = m[1]
     .trim()
     .split(/\s+/)
@@ -147,10 +155,15 @@ for (const line of dockerfile.split("\n")) {
 // ── The compose file's mount set, and the build context they are measured against ────────────────
 
 const compose = read(COMPOSE);
-const contextMatch = /^\s*build:\s*(\S+)\s*$/m.exec(compose);
+// BOTH COMPOSE FORMS. `build: ./server` is the short one; the long one puts the path on its own
+// `context:` line, which is what a service needs the moment it declares anything else about the
+// build. SERVE-SPA-1 added `additional_contexts` and this guard failed on the very tree it shipped
+// with — the short form was the only one it knew.
+const contextMatch =
+  /^\s*build:\s*(\S+)\s*$/m.exec(compose) ?? /^\s*context:\s*(\S+)\s*$/m.exec(compose);
 if (!contextMatch) {
   fail([
-    `FAIL: ${COMPOSE} declares no \`build:\` context.`,
+    `FAIL: ${COMPOSE} declares no build context (neither \`build: <path>\` nor a \`context:\` line).`,
     "      Without it there is no way to say which host directories the Dockerfile could even",
     "      reach, and the comparison would be meaningless.",
   ]);

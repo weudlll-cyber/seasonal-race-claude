@@ -1,11 +1,20 @@
 services:
   server:
-    build: ./server
+    build:
+      context: ./server
+      # SERVE-SPA-1: the built client, which lives OUTSIDE this context. A named build context
+      # brings it in without moving the context to the repository root — see server/Dockerfile.
+      # Requires `npm run build` in client/ to have been run first.
+      additional_contexts:
+        client: ./client
     ports:
       - "4000:4000"
     environment:
       - PORT=4000
       - RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production
+      # SERVE-SPA-1: where the Dockerfile put the client build. Without this the server looks
+      # for ../../client/dist relative to its own module, which does not exist in the image.
+      - RA_CLIENT_DIST=/app/client-dist
       # RA_SESSION_SECRET and RA_CLIENT_ORIGIN come from docker-compose.override.yml
       # (gitignored). Copy docker-compose.override.yml.example to get started.
     # Volume mounts so code changes never require a full `docker compose build`.

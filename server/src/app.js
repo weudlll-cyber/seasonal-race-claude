@@ -22,6 +22,11 @@ import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
 import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
+import {
+  mountClientAssets,
+  mountSpaFallback,
+  mountApiNotFound,
+} from './staticClient.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -34,6 +39,16 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(sessionMiddleware);
   app.use(csrfOriginGuard);
+
+  // SERVE-SPA-1 — THE BUILT CLIENT, AND IT IS MOUNTED ABOVE THE GUARDS ON PURPOSE.
+  // A visitor who is not signed in must still be able to load the app that draws the sign-in form,
+  // and a deep link must still return the shell so the client's router can redirect. Both mounts
+  // refuse anything under /api/, so no API path can ever be answered with the app's HTML. The whole
+  // argument, including why serving the shell publicly grants nothing, is in staticClient.js.
+  // With no build present these mount nothing and say so; the API is unaffected either way.
+  mountClientAssets(app);
+  mountSpaFallback(app);
+
   app.use(requireAuth);
   app.use(requireAdmin);
 
@@ -58,6 +73,10 @@ export function createApp() {
   app.use('/api/brands', brandsRouter);
   app.use('/api/racers', racersRouter);
   app.use('/api/seed-notices', seedNoticesRouter);
+
+  // SERVE-SPA-1: LAST, so every real route above wins. An unknown path under /api/ now answers as
+  // the API rather than as Express's default HTML error page.
+  mountApiNotFound(app);
 
   return app;
 }
