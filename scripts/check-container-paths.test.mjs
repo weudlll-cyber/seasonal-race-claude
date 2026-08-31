@@ -133,7 +133,44 @@ describe("check-container-paths", () => {
     );
     const r = run();
     expect(r.code).toBe(1);
-    expect(r.out).toMatch(/declares no `build:` context/);
+    expect(r.out).toMatch(/declares no build context/);
+  });
+
+  // ── SERVE-SPA-1 added both of these to the tree, and the guard failed on both ────────────────
+  it("understands the LONG build form (context: on its own line)", () => {
+    writeFileSync(join(repo, "server", "Dockerfile"), DOCKERFILE(REAL_COPIES));
+    writeFileSync(
+      join(repo, "docker-compose.yml"),
+      [
+        "services:",
+        "  server:",
+        "    build:",
+        "      context: ./server",
+        "      additional_contexts:",
+        "        client: ./client",
+        "    volumes:",
+        ...REAL_MOUNTS.map((m) => `      - ${m}`),
+        "      - /app/node_modules",
+      ].join("\n"),
+    );
+    const r = run();
+    expect(r.out).toMatch(/0 undeclared/);
+    expect(r.code).toBe(0);
+  });
+
+  it("does NOT read `COPY --from=` as a build-context copy", () => {
+    // Its source is a named context or an earlier stage, so there is no host directory to mount.
+    // Before this was handled the guard demanded a mount for `server/dist`, which does not exist.
+    writeFileSync(
+      join(repo, "server", "Dockerfile"),
+      DOCKERFILE(REAL_COPIES) + "\nCOPY --from=client dist/ ./client-dist/",
+    );
+    writeFileSync(join(repo, "docker-compose.yml"), COMPOSE(REAL_MOUNTS));
+    const r = run();
+    expect(r.out).toMatch(/0 undeclared/);
+    expect(r.out).not.toMatch(/server\/dist/);
+    expect(r.code).toBe(0);
+    write(REAL_COPIES, REAL_MOUNTS);
   });
 
   it("FAILS on an unreadable Dockerfile", () => {

@@ -20,6 +20,23 @@ COPY src/ ./src/
 COPY data/ ./data/
 COPY seeds/ ./seeds/
 
+# SERVE-SPA-1 — THE BUILT CLIENT, FROM A NAMED BUILD CONTEXT.
+#
+# The build context of this image is `./server`, and the client build lives at `./client/dist`,
+# OUTSIDE it — so an ordinary COPY cannot reach it. The alternative that suggests itself is moving
+# the context up to the repository root, which is a structural decision this image should not make
+# as a side effect; a NAMED BUILD CONTEXT gets the directory in while leaving the context where it
+# is. `docker compose build` supplies it (see `additional_contexts` in docker-compose.yml), and a
+# manual build needs `--build-context client=./client`.
+#
+# IT COPIES A BUILD, IT DOES NOT MAKE ONE: `client/dist` must exist first (`npm run build` in
+# client/). Building the client inside this image would make it self-contained at the cost of an
+# npm install of the whole front end on every image build; that trade is written up as a proposal
+# rather than taken here.
+#
+# The server finds it through RA_CLIENT_DIST, which docker-compose.yml sets to this path.
+COPY --from=client dist/ ./client-dist/
+
 EXPOSE 4000
 
 CMD ["node", "src/index.js"]

@@ -191,6 +191,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [SERVE-SPA-1.md](SERVE-SPA-1.md) — **the server serves the client, and the API cannot be answered
+  with a page** (2026-09-01, SHIPPED — his decision of the same day; the piece that unblocks
+  publishing). `GET /` was a 404 while `DEPLOYMENT.md` described a same-origin deployment that had
+  never been built. **Proven by HTTP against the real container**, ten probes signed out and five
+  signed in: `/` and deep links return the app, `/api/health` unchanged, and **no `/api/` path is
+  answered with the app's HTML in any state** — 401 signed out, `404 {"error":"no such API route"}`
+  signed in. **Both mounts sit ABOVE the auth guards on purpose**: below them the browser could never
+  load the page that draws the sign-in form. **A defect found by probing, not by reading**: the first
+  version answered a missing `/assets/*.js` with 200 and the shell, which the browser reports as a
+  MIME error rather than a 404 — `req.accepts('html')` cannot catch it because a script request sends
+  `Accept: */*`. **THE STOP CONDITION WAS NOT TRIGGERED**: a NAMED BUILD CONTEXT
+  (`additional_contexts: {client: ./client}` + `COPY --from=client`) gets the build into the image
+  with the context left at `./server`, so the structural move to the repository root remains open and
+  untaken. The image copies a build rather than making one, and a bare `docker build ./server` now
+  needs the context — nothing in the repository runs that. **The container-paths guard was wrong
+  twice** on the tree this piece produces and both blind spots are fixed with tests: `COPY --from=`
+  is not a build-context copy, and the long `build:`/`context:` form is now understood. 707 server
+  tests; `engine-reach --check` selected nothing (sixth time); all four fingerprints run by hand and
+  UNMOVED; nothing minted. 2 proposals, 1 the block's own.
+
 - [LICENCE-AGPL-1.md](LICENCE-AGPL-1.md) — **AGPL-3.0, and the README had been claiming MIT**
   (2026-09-01, SHIPPED — his decision of the same day). **The find**: `README.md` ended with `##
   License / MIT` while there was no `LICENSE` file, no `license` field anywhere and no copyright
