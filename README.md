@@ -13,22 +13,37 @@ It began as a simple horse-race visualizer and grew into a full multi-racer, mul
 
 ## See it running
 
+**RaceArena needs its backend.** Every screen is behind a sign-in, and the account you sign in with
+is created through the backend — so the client on its own gets you a login screen and no way past it.
+One command starts everything:
+
 ```bash
 git clone https://github.com/weudlll-cyber/seasonal-race-claude.git
-cd seasonal-race-claude/client
-npm install
-npm run dev
+cd seasonal-race-claude
+
+cd client && npm install && npm run build && cd ..   # build the app
+docker compose up -d                                 # serves the app AND the API on one port
 ```
 
-Open `http://localhost:5173` and you're in — that's enough to explore every built-in track and racer.
-
-To save your own hand-drawn tracks and their background images, also start the local backend (optional):
+Open `http://localhost:4000`. **The first time, you have to create your admin account** — there is no
+default login, and the backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set. For local
+use `docker-compose.yml` already sets it; copy the value from there into the command below:
 
 ```bash
-docker compose up        # backend on http://localhost:4000
+curl -X POST http://localhost:4000/api/auth/setup \
+  -H 'Content-Type: application/json' \
+  -H 'x-bootstrap-token: <the RA_BOOTSTRAP_TOKEN from docker-compose.yml>' \
+  -d '{"username":"me","password":"choose-a-real-password"}'
 ```
 
-Without the backend you still get all 10 built-in tracks; you just can't persist custom tracks or their images. Full details are in the [Setup Guide](docs/SETUP.md).
+Then sign in at `http://localhost:4000` and you are in, with all 10 built-in tracks and 20 racers.
+Setup runs **once** — a second attempt answers `409 setup already complete`.
+
+**For development** run the two halves separately instead — `docker compose up -d` for the API and
+`cd client && npm run dev` for the app on `http://localhost:5173`, which gives you hot reload. You
+still need the account above; the sign-in is the same one.
+
+Full details, including every environment variable, are in the [Setup Guide](docs/SETUP.md).
 
 ## What you can do
 
@@ -53,7 +68,7 @@ Without the backend you still get all 10 built-in tracks; you just can't persist
 
 ## How it works
 
-The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-timestep physics loop. A small local Express backend ("Phase L") stores hand-drawn tracks and their background images; everything else (racers, branding, settings, history) lives in the browser's `localStorage`. See [Architecture](docs/ARCHITECTURE.md) for the full picture.
+The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-timestep physics loop. A local Express backend ("Phase L") holds everything that has to outlive a browser profile — accounts and sessions, tracks and their background images, racer types and sprites, branding profiles and player groups — and, since 2026-09-01, serves the built app itself so there is one thing to start and one port. Tuning you do in the Dev Panel (physics, camera, race defaults) lives in the browser's `localStorage`. See [Architecture](docs/ARCHITECTURE.md) for the full picture.
 
 ## Tech stack
 
