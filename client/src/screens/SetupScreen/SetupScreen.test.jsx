@@ -27,6 +27,15 @@ vi.mock('../../modules/storage/useServerTracks.js', async () => {
 
 // TEARDOWN-INFLIGHT-1 — the proof: any network call from this file throws by name, so a file that
 // finishes has proved no request was ever started, and nothing can arrive after a test ends.
+// TEARDOWN-INFLIGHT-1: SetupScreen also mounts SeedRedeliveryNotice (SEED-REDELIVERY-1), which asks
+// the server whether this install is owed a redelivery warning. The SERVICE is replaced rather than
+// `fetch`, for the same reason the hook above is: replacing the module removes the effect's request
+// entirely, so nothing is ever in flight to outlive the test.
+vi.mock('../../services/seedNoticeApi.js', () => ({
+  fetchSeedNotices: () => Promise.resolve([]),
+  dismissSeedNotices: () => Promise.resolve(0),
+}));
+
 forbidNetwork();
 
 // Wrap in MemoryRouter because SetupScreen uses <Link> from react-router-dom

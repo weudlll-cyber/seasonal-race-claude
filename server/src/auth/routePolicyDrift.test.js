@@ -33,6 +33,7 @@ import surfaceClassesRouter from '../routes/surfaceClasses.js';
 import playerGroupsRouter  from '../routes/playerGroups.js';
 import brandsRouter        from '../routes/brands.js';
 import racersRouter        from '../routes/racers.js';
+import seedNoticesRouter   from '../routes/seedNotices.js';
 
 const MOUNT_MAP = [
   { prefix: '/api/auth',            router: authRouter },
@@ -42,6 +43,7 @@ const MOUNT_MAP = [
   { prefix: '/api/player-groups',   router: playerGroupsRouter },
   { prefix: '/api/brands',          router: brandsRouter },
   { prefix: '/api/racers',          router: racersRouter },
+  { prefix: '/api/seed-notices',    router: seedNoticesRouter },
 ];
 
 // ── Operator-plus allowlist (these do NOT require admin) ──────────────────────
@@ -77,6 +79,11 @@ const OPERATOR_PLUS_ALLOWLIST = [
   { method: 'POST',   pathPattern: '/api/racers' },
   { method: 'PUT',    pathPattern: '/api/racers' },
   { method: 'DELETE', pathPattern: '/api/racers' },
+  // /api/seed-notices/dismiss — SEED-REDELIVERY-1. Operator+ on purpose: EVERY operator is owed
+  // the redelivery warning, so an operator-only install must be able to clear its own banner.
+  // It writes nothing but the dismissal and reads nothing but record names already visible to
+  // any signed-in user through /api/tracks.
+  { method: 'POST',   pathPattern: '/api/seed-notices/dismiss' },
 ];
 
 // ── Route extraction ──────────────────────────────────────────────────────────

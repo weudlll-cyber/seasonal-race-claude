@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
@@ -568,6 +569,8 @@ function SetupScreen() {
 
   return (
     <div className={styles.screen}>
+      {/* SEED-REDELIVERY-1: renders nothing unless this install is owed a warning. */}
+      <SeedRedeliveryNotice />
       <header className={styles.header}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
           <div className={styles.logo}>

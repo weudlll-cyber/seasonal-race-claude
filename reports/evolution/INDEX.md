@@ -182,6 +182,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [SEED-REDELIVERY-1.md](SEED-REDELIVERY-1.md) — **the overwrite rule, the version that decides it,
+  and the guard that stops us forgetting to raise it** (2026-08-31, BUILT — third and last of three;
+  **nothing is redelivered by it landing**). **THE VERSION IS A SIDECAR** (`server/seeds/versions.json`
+  + `DATA_ROOT/.seed-versions.json`), not a field: `PUT /api/tracks/:id` stores `{ ...existing,
+  ...req.body }` and re-pins four fields BY NAME because that spread protects nothing it is not told
+  to — so a record field is writable by an operator edit and travels through every export. Binaries
+  have no inside anyway, the UNIT (track+background, brand+logo) is what is versioned, and one
+  manifest is one place to raise and one to check. **THE WARNING LIVES ON THE FIRST SCREEN BEHIND
+  SIGN-IN, not the sign-in screen** — dismissal must be an act by a known person, or anyone reaching
+  the port could clear a warning the operator never saw; `/` redirects to `/setup` behind
+  `ProtectedRoute`, so every operator still passes it. **THE RULE**: shipped version higher →
+  overwrite the whole unit and warn by name; equal, lower, absent or non-integer → nothing. A unit
+  with no recorded version ADOPTS (copies only what is missing, warns about nothing), which is what
+  makes an upgrade safe. A record with no unit is never visited. **A BOOT ON HIS INSTALL CHANGED NOT
+  ONE BYTE** — all 31 records byte-identical by SHA-256 with unchanged mtimes; the only difference is
+  one new state file adopting 12 units at version 1, and `.seed-notices.json` was never created.
+  **BOTH SABOTAGE DIRECTIONS WENT RED** (4 tests on removing the version comparison, 2 on removing
+  the guard's check). **THE CLIENT SUITE CAUGHT A DEFECT I INTRODUCED**: the banner gave three screen
+  test files a live fetch, TEARDOWN-INFLIGHT-1 named it, and it was fixed the way that mechanism
+  prescribes — replace the module, not `fetch`. `engine-reach --check` selected nothing for the
+  FOURTH time; all four fingerprints run by hand and UNMOVED; nothing minted. **The guard's honest
+  limit**: it is a content check and cannot see a redelivery needed for a reason outside the seed's
+  own bytes. 2 proposals, 1 the block's own.
+
 - [SEED-SNAPSHOT-1.md](SEED-SNAPSHOT-1.md) — **his install IS the shipped default now; seven lines of
   diff, four fingerprints unmoved, and the three deletions REFUSED** (2026-08-31, SHIPPED — second of
   three pieces, the overwrite mechanism not built here). Runtime → seeds, one way; **nothing written

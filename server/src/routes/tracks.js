@@ -23,6 +23,7 @@ import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../.
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
@@ -390,6 +391,10 @@ function writeTrackBackup(trackId, trackData) {
 // Copy committed snapshot files (server/seeds/) into DATA_ROOT on first boot.
 // Runs before loadAllTracks() so the map sees the rich seed files immediately.
 function migrateDefaultTracks() {
+  // SEED-REDELIVERY-1: versioned delivery runs FIRST, so a redelivered record is on disk before
+  // loadAllTracks() builds the map. seedTypeFromSnapshot below still covers any seed file the
+  // manifest does not name — check-seed-versions.mjs makes sure there is none.
+  deliverSeedsOnce();
   seedTypeFromSnapshot('tracks');
   seedTypeFromSnapshot('backgrounds');
   // Legacy marker — no behavior gating; kept for operational reference only.
