@@ -191,6 +191,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [PUBLISH-READINESS-1.md](PUBLISH-READINESS-1.md) — **what stands between this repository and a
+  stranger running it: seven findings, five of them small, and the application itself is not one of
+  them** (2026-08-31, READ-ONLY — nothing built, no deployment branch opened; every finding
+  established by running it, all probes removed afterwards). **THE APP'S OWN FIRST-RUN PATH WORKS END
+  TO END**, proven through the HTTP surface a browser uses from a genuinely empty volume:
+  setup-needed → 403 on no token → 403 on wrong token → 201 → 10 tracks visible → 409 on a second
+  setup → login. Seeding from empty produced 10 tracks, 10 backgrounds and a `.seed-versions.json` at
+  version 1 with no notice. **WHAT IS MISSING IS THE LAYER AROUND IT.** (1) The documented first step
+  dead-ends: a first-time visitor with no backend has no stored `LAST_USER`, so `offline-hint` is
+  unreachable and `ProtectedRoute` sends them to a login screen for an account they cannot create —
+  the README's "backend is optional" is no longer true. (2) **There is no way to serve the client**,
+  and `DEPLOYMENT.md` documents same-origin static serving that **does not exist**: no
+  `express.static` anywhere, and `GET /` on a live container returns 404 while `/api/health` returns
+  200. (3) The image does not run standalone — dies on `/app/utils/atomicWriteJson.js`, then
+  `/shared/nameLimits.mjs`; `utils/` is one COPY line, `shared/` needs the build context moved to the
+  repo root. (4) `RA_SESSION_SECRET`/`RA_BOOTSTRAP_TOKEN`/`RA_CLIENT_ORIGIN` are documented only in
+  `DEPLOYMENT.md` while compose expects two of them from a **gitignored** override file. (5) `COPY
+  data/ ./data/` with a one-line `.dockerignore` **bakes the builder's `users.json`, `sessions.sqlite`
+  and `setup-complete.json` into the image** — a recipient can never run setup and gets his password
+  hashes; a clean clone is safe. (6) **No licence, and origin is already PUBLIC** — facts only, his
+  decision. (7) Persistence works (proven across a container recreate); latent hazard that credentials
+  share a directory with seeded records, so any "wipe for clean defaults" destroys every account.
+  **Honest verdict: closer than the list looks — finding 2 is the one real decision.** 2 proposals, 1
+  the block's own.
+
 - [CONTAINER-PATHS-1.md](CONTAINER-PATHS-1.md) — **the COPY set and the mount set now have to agree,
   or say why not** (2026-08-31, BUILT and green on the tree as it stands). `check-container-paths.mjs`
   reads `server/Dockerfile`'s COPY set and `docker-compose.yml`'s mount set and fails on any
