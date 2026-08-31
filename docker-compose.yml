@@ -18,6 +18,14 @@ services:
       - ./server/src:/app/src         # live code — src changes visible without rebuild
       - ./server/utils:/app/utils     # utils helpers (atomicWriteJson etc.) — not in original Dockerfile COPY
       - ./server/data:/app/data       # surface-class JSON files persist across rebuilds
+      # SEED-REDELIVERY-1: the SHIPPED records, and this mount is load-bearing rather than a
+      # convenience. The Dockerfile COPYs `seeds/` at build time, so without it the container
+      # carries whatever was baked into the last image — which had no `versions.json` at all,
+      # making `readManifest()` return `{}` and delivery a permanent no-op. A baked-in seeds
+      # directory means A DELIVERY SILENTLY NEVER ARRIVES, which is the exact failure this
+      # whole strand was built to end, one level down in the deployment. Mounted like `src`
+      # and `data` so a raised version reaches the running container on a restart.
+      - ./server/seeds:/app/seeds     # shipped seed records + versions.json — see above
       # `shared/` LIVES ABOVE THE BUILD CONTEXT, so the Dockerfile cannot COPY it and only a mount
       # can supply it. `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`,
       # which from `/app/src/routes/` resolves to `/shared/` — outside WORKDIR. On the host the same
