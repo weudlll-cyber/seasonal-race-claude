@@ -69,6 +69,7 @@ const ROOT = join(__dir, "..");
 // Imported above the CLI-arg block so the arg defaults below can read from the
 // shared DevScreen config objects directly (no hand-mirrored literals).
 import { EditorShape } from "../client/src/modules/track-editor/EditorShape.js";
+import { racerFacts } from "./lib/racerFacts.mjs";
 import {
   applyRacerBehavior,
   initRacerBehavior,
@@ -952,152 +953,42 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// ── Racer type configs ────────────────────────────────────────────────────────
-// speedMultiplier, displaySize, bodyFillX, bodyFillY sourced from *RacerType.js files.
+// ── Racer type configs ───────────────────────────────────────────────────
+// speedMultiplier, displaySize, bodyFillX and bodyFillY are READ FROM THE RACER-TYPE REGISTRY, not
+// copied (REGISTRY-LITERALS-1, 2026-09-02). There is nothing here to edit and nothing here to drift:
+// change the racer type and this follows. `scripts/lib/racerFacts.mjs` carries the rule, including
+// why it reads the frozen pre-override snapshot rather than `.config` — two of the four fields are
+// Dev-Screen tunable and are mutated in place at module load.
+//
 // displaySize affects racersPerRow (track capacity) and avoidance pixel distances.
-// bodyFillX/Y: fraction of frame occupied by body pixels (measured from spritesheet).
-// surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
+// bodyFillX/Y: fraction of frame occupied by body pixels (measured from the spritesheet).
+//
+// surfaceClasses is still a literal here. It is used to filter racers by track surface, and unlike
+// the four physical fields it is NOT the registry's field of the same name in every consumer's
+// sense — it is left alone deliberately rather than swept along with the removal. CENSUS-DUPES-1
+// (group A3) records it as a duplicated fact with a source of truth and no guard: all 20 arrays
+// agree with the registry today, and nothing would notice if one stopped.
 export const RACER_CONFIGS = {
-  horse: {
-    speedMultiplier: 1.0,
-    displaySize: 47,
-    bodyFillX: 0.353,
-    bodyFillY: 0.8,
-    surfaceClasses: ["sand", "earth", "grass", "asphalt", "snow", "mud"],
-  },
-  duck: {
-    speedMultiplier: 0.85,
-    displaySize: 36,
-    bodyFillX: 0.875,
-    bodyFillY: 0.875,
-    surfaceClasses: ["water", "grass"],
-  },
-  snail: {
-    speedMultiplier: 0.3,
-    displaySize: 35,
-    bodyFillX: 0.727,
-    bodyFillY: 0.938,
-    surfaceClasses: ["grass"],
-  },
-  elephant: {
-    speedMultiplier: 0.6,
-    displaySize: 44,
-    bodyFillX: 0.539,
-    bodyFillY: 0.938,
-    surfaceClasses: ["sand", "earth", "grass"],
-  },
-  giraffe: {
-    speedMultiplier: 0.9,
-    displaySize: 48,
-    bodyFillX: 0.271,
-    bodyFillY: 0.767,
-    surfaceClasses: ["sand", "earth", "grass"],
-  },
-  snake: {
-    speedMultiplier: 0.75,
-    displaySize: 44,
-    bodyFillX: 0.374,
-    bodyFillY: 0.806,
-    surfaceClasses: ["sand", "earth", "grass"],
-  },
-  dragon: {
-    speedMultiplier: 1.1,
-    displaySize: 50,
-    bodyFillX: 0.836,
-    bodyFillY: 0.898,
-    surfaceClasses: ["air", "asphalt", "earth", "water"],
-  },
-  f1: {
-    speedMultiplier: 1.2,
-    displaySize: 38,
-    bodyFillX: 0.555,
-    bodyFillY: 0.953,
-    surfaceClasses: ["asphalt"],
-  },
-  rocket: {
-    speedMultiplier: 1.25,
-    displaySize: 47,
-    bodyFillX: 0.278,
-    bodyFillY: 0.801,
-    surfaceClasses: ["air", "water"],
-  },
-  buggy: {
-    speedMultiplier: 0.95,
-    displaySize: 38,
-    bodyFillX: 0.844,
-    bodyFillY: 0.875,
-    surfaceClasses: ["sand", "earth", "mud"],
-  },
-  motorbike: {
-    speedMultiplier: 1.05,
-    displaySize: 42,
-    bodyFillX: 0.4,
-    bodyFillY: 0.8,
-    surfaceClasses: ["asphalt", "earth"],
-  },
-  plane: {
-    speedMultiplier: 1.15,
-    displaySize: 42,
-    bodyFillX: 0.836,
-    bodyFillY: 0.93,
-    surfaceClasses: ["air"],
-  },
-  luge: {
-    speedMultiplier: 1.1,
-    displaySize: 80,
-    bodyFillX: 0.313,
-    bodyFillY: 0.641,
-    surfaceClasses: ["ice", "snow"],
-  },
-  beetle: {
-    speedMultiplier: 0.9,
-    displaySize: 38,
-    bodyFillX: 0.398,
-    bodyFillY: 0.672,
-    surfaceClasses: ["asphalt", "cobble", "earth"],
-  },
-  boarder: {
-    speedMultiplier: 1.0,
-    displaySize: 40,
-    bodyFillX: 0.398,
-    bodyFillY: 0.719,
-    surfaceClasses: ["asphalt", "cobble", "earth"],
-  },
-  koi: {
-    speedMultiplier: 0.95,
-    displaySize: 52,
-    bodyFillX: 0.578,
-    bodyFillY: 0.914,
-    surfaceClasses: ["water"],
-  },
-  turtle: {
-    speedMultiplier: 0.85,
-    displaySize: 48,
-    bodyFillX: 0.578,
-    bodyFillY: 0.734,
-    surfaceClasses: ["water"],
-  },
-  manta: {
-    speedMultiplier: 1.1,
-    displaySize: 56,
-    bodyFillX: 0.633,
-    bodyFillY: 0.805,
-    surfaceClasses: ["water"],
-  },
-  dolphin: {
-    speedMultiplier: 1.15,
-    displaySize: 52,
-    bodyFillX: 0.402,
-    bodyFillY: 0.887,
-    surfaceClasses: ["water"],
-  },
-  snowmobile: {
-    speedMultiplier: 1.1,
-    displaySize: 52,
-    bodyFillX: 0.459,
-    bodyFillY: 0.797,
-    surfaceClasses: ["snow", "ice", "earth"],
-  },
+  horse: { ...racerFacts("horse"), surfaceClasses: ["sand", "earth", "grass", "asphalt", "snow", "mud"] },
+  duck: { ...racerFacts("duck"), surfaceClasses: ["water", "grass"] },
+  snail: { ...racerFacts("snail"), surfaceClasses: ["grass"] },
+  elephant: { ...racerFacts("elephant"), surfaceClasses: ["sand", "earth", "grass"] },
+  giraffe: { ...racerFacts("giraffe"), surfaceClasses: ["sand", "earth", "grass"] },
+  snake: { ...racerFacts("snake"), surfaceClasses: ["sand", "earth", "grass"] },
+  dragon: { ...racerFacts("dragon"), surfaceClasses: ["air", "asphalt", "earth", "water"] },
+  f1: { ...racerFacts("f1"), surfaceClasses: ["asphalt"] },
+  rocket: { ...racerFacts("rocket"), surfaceClasses: ["air", "water"] },
+  buggy: { ...racerFacts("buggy"), surfaceClasses: ["sand", "earth", "mud"] },
+  motorbike: { ...racerFacts("motorbike"), surfaceClasses: ["asphalt", "earth"] },
+  plane: { ...racerFacts("plane"), surfaceClasses: ["air"] },
+  luge: { ...racerFacts("luge"), surfaceClasses: ["ice", "snow"] },
+  beetle: { ...racerFacts("beetle"), surfaceClasses: ["asphalt", "cobble", "earth"] },
+  boarder: { ...racerFacts("boarder"), surfaceClasses: ["asphalt", "cobble", "earth"] },
+  koi: { ...racerFacts("koi"), surfaceClasses: ["water"] },
+  turtle: { ...racerFacts("turtle"), surfaceClasses: ["water"] },
+  manta: { ...racerFacts("manta"), surfaceClasses: ["water"] },
+  dolphin: { ...racerFacts("dolphin"), surfaceClasses: ["water"] },
+  snowmobile: { ...racerFacts("snowmobile"), surfaceClasses: ["snow", "ice", "earth"] },
 };
 
 // ── Race-length variants ──────────────────────────────────────────────────────

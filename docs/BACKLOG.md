@@ -832,30 +832,19 @@ rather than a threshold nobody has found yet.**
       above; the guard below therefore needs **no allowlist**. **verify:** `node -e` comparing
       `RACER_CONFIGS` against `getRacerTypeById(id).config` — see the report.
 
-- [ ] **~~BUILD A DRIFT GUARD~~ — HELD 2026-09-01, and the answer is to DELETE THE COPIES instead.
-      [REGISTRY-IMPORT-FEASIBILITY-1](../reports/evolution/REGISTRY-IMPORT-FEASIBILITY-1.md)
-      establishes that ALL FOUR files can import the racer-type registry directly**, so a guard would
-      be policing a duplication that need not exist. Proven by running, not reading: the registry
-      imports in **plain Node (23–35 ms)** and in **vitest's jsdom (394 ms)**, and **thirteen
-      instruments already import it**. None of the four is new coupling — each already imports 6–13
-      modules from `client/src`. **NEEDS HIS WORD: order the removal?** **If it is ordered, the
-      removal MUST read `CONFIG_SNAPSHOT` for `displaySize` and `speedMultiplier`** — `index.js:539`
-      applies stored tunable overrides at load and mutates `type.config` in place, and both fields are
-      tunable — **while `bodyFillX`/`bodyFillY` are safe on `.config`** (not tunable, never mutated).
-      Verify it the way GOLDEN-TABLE-REGISTRY-1 was: parity suite either side, plus a `simArm` hash
-      per affected type shown UNCHANGED, since a removal must not move a race. The guard becomes
-      unnecessary if the removal lands; the original case for it is below.
-
-      **THE CASE FOR A GUARD, if the copies stay:** A racer's physical fields are copied into four files under
-      `scripts/` — `sim-fairness.mjs` (20 types, all agree today), `goldenRunner.mjs` (10 types, 5
-      differ), and manta constants in `diag/acceptance-orders.mjs` and `diag/micro-divergence.mjs`
-      (both agree). Nothing makes an edit to a `*RacerType.js` reach or even notice them. **A guard
-      would compare three fields — `displaySize`, `bodyFillX`, `bodyFillY` — for every hardcoded entry
-      against `getRacerTypeById(id).config`**, as ONE rule in the existing `check-*` family (R13),
-      running in CI's *Living-doc guards* job for milliseconds and no race. **It needs a
-      pinned-with-reason allowlist** in the shape `scripts/audit-gate.mjs` already uses, because it
-      would fail on day one against the five above and fixing those is not the correct response.
-      **Proposed, not decided** — write it after the freeze question above is answered.
+- [x] **~~BUILD A DRIFT GUARD~~ — NOT NEEDED, and the proposal is deleted rather than parked.
+      DONE 2026-09-02 by REGISTRY-LITERALS-1: THE COPIES IT WOULD HAVE WATCHED ARE GONE.** All four
+      files now import the racer-type registry through `scripts/lib/racerFacts.mjs` instead of
+      carrying `speedMultiplier` / `displaySize` / `bodyFillX` / `bodyFillY` literals, so there is no
+      second copy left for a guard to compare against — a guard here would now police nothing. The
+      owner ordered the removal on the reasoning that **a golden going red when a racer changes is
+      the correct loud signal, where a literal drifting silently is not**; that cost is accepted and
+      named in the report. Proven no-op: all four fingerprints UNMOVED and all 50 parity tests green,
+      because the tables had already been corrected to match the registry earlier the same day.
+      **Two duplications survive this removal and are deliberately NOT covered** — `surfaceClasses`
+      (20 arrays in `sim-fairness.mjs`, agreeing, unguarded) and the fifth table nobody had counted,
+      `scripts/audit-sprite-crops.mjs`, which has NEVER agreed. Both are recorded in
+      [CENSUS-DUPES-1](../reports/evolution/CENSUS-DUPES-1.md) groups A1/A2/A3.
 
 - [ ] **BEFORE SIZING ANY SPRITE CHANGE: `displaySize × bodyFill` is NOT a racer's world box at race
       time.** `computeBodyNarrowRef` (the auto-scale) equalises the NARROW axis across racer types —

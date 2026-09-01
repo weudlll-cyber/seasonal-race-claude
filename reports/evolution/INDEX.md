@@ -230,6 +230,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REGISTRY-LITERALS-1.md](REGISTRY-LITERALS-1.md) — **the copied racer literals are gone, the races
+  did not move, and the engine-reach closure DOUBLED** (2026-09-02, the one ordered repair of the
+  NIGHT-CENSUS-1 chain; **no minting permission given, none taken**). 124 literal values removed from
+  four files; all four now read the registry through the new `scripts/lib/racerFacts.mjs`. **Proven
+  no-op**: all four fingerprints measured BEFORE and AFTER on the branch (not merely compared to the
+  record, so a stale record could not manufacture a pass) — byte-identical and equal to the record —
+  and **50 of 50 goldens green**, nothing re-pinned. **One rule, not two**: the instruction said to
+  read all four fields from `CONFIG_SNAPSHOT`, but `bodyFillX`/`bodyFillY` are **not in it** (they are
+  not tunable), so reading them there would have returned `undefined` and moved every hash; the module
+  prefers the frozen snapshot and falls back to `.config`, which is override-immune for both halves.
+  **THE REAL COST, larger than the brief expected**: `engine-reach --check` selects 2 of 6 paths, not
+  nothing — the registry pulls in 40 modules, so the closure went **36 → 76 files** and both generated
+  blocks (`SIM.md`, `SHIP-CEREMONY.md`) had to follow. Racer-type work now pays the world
+  fingerprint. **And a routing gap found by doing the work and deliberately left**: `client-suite`
+  routes on `dirs=client/`, so a rewrite of `scripts/parity/goldenRunner.mjs` selects it **not at
+  all** — verify would have reported green without running one golden; the 50/50 exists only because
+  they were run by hand.
+
 - [CENSUS-REMOVABLE-1.md](CENSUS-REMOVABLE-1.md) — **exactly ONE item is provably dead (9 files,
   1,444 lines, 0 s of suite time); four of the six candidate classes came back EMPTY** (2026-09-02,
   propose only, **nothing removed**). Piece 4 of the NIGHT-CENSUS-1 chain, and the empty classes are

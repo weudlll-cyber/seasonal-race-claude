@@ -28,6 +28,7 @@ import {
   DEFAULT_BASE_SPEED_CONFIG,
 } from "../../client/src/modules/storage/defaults.js";
 import { DEFAULT_AUTO_SCALE_CONFIG } from "../../client/src/modules/autoSpriteScale.js";
+import { racerFacts } from "../lib/racerFacts.mjs";
 
 const NAMES = [
   "Turbo",
@@ -78,11 +79,15 @@ const shape = new EditorShape(track);
 const pathLengthPx = track.pathLengthPx ?? shape.getTotalLength();
 const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
 const isOpen = !!shape.isOpen;
-const N = 40,
-  spd = 1.1,
-  displaySize = 56,
-  bodyFillX = 0.633,
-  bodyFillY = 0.805;
+const N = 40;
+// The manta's physical facts come from the racer-type registry, not from literals here
+// (REGISTRY-LITERALS-1, 2026-09-02). scripts/lib/racerFacts.mjs carries the rule.
+const {
+  speedMultiplier: spd,
+  displaySize,
+  bodyFillX,
+  bodyFillY,
+} = racerFacts("manta");
 const V = normalSpeedFrom(DEFAULT_BASE_SPEED_CONFIG);
 const LAPS = trackDefaultLaps(track);
 const model = deriveRaceDuration({
