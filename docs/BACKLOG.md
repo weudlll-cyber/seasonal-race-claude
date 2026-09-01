@@ -787,10 +787,31 @@ rather than a threshold nobody has found yet.**
 
 - [ ] **What IS still open is the SPRITE, and it is scored on the bare-box residual.** That column is
       the only one a change has been shown to be able to move, and it is 591 on space-sprint against
-      **0** on river-run at the same N — a gap that is sprite size and aim room, not camera policy
-      (LEADER-LAG-TRUTH-1: space-sprint's sprite is 2.9× river-run's with 41% less room). This is
-      ALONG-RESIDUAL-1's P1 and it is unstarted. **verify:** `node scripts/diag/margin-both-axes.mjs
-      --track=space-sprint --seeds=30` — the `residual0` figure it prints is the gate.
+      **0** on river-run at the same N. This is ALONG-RESIDUAL-1's P1 and it is unstarted.
+      **verify:** `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` — the
+      `residual0` figure it prints is the gate.
+
+      **WHAT THAT GAP IS, restated precisely 2026-09-01 by
+      [SPRITE-PREMISE-1](../reports/evolution/SPRITE-PREMISE-1.md) after the premise was challenged
+      and held.** LEADER-LAG-TRUTH-1's "space-sprint's sprite is 2.9× river-run's" is **confirmed as
+      arithmetic and narrower as a claim**: the rocket is **2.881× LONGER and exactly 1.000× as
+      WIDE** (diagonal ratio 2.157×). **It is not a big sprite; it is a long thin one** — and the one
+      axis in which it is exceptional is the along-track axis the residual is measured in, so P1 is
+      better targeted than its original wording, not weaker. **NONE of the ratio is camera:** the
+      decomposition closes to 0.0000% residue as world 2.8813 × zoom **1.0000**, with `cd.zoom`
+      2.13333 and every zoom input identical on the two tracks, both corpora at 20 racers and both
+      `LEADER_ZOOM`-dominant at mid-race. The companion "41% less room" is **track ORIENTATION** —
+      the heading runs |ux| 0.354 on space-sprint against 0.951 on river-run, so a diagonal road is
+      bounded by the frame's 720 px height instead of its 1280 px width.
+
+- [ ] **BEFORE SIZING ANY SPRITE CHANGE: `displaySize × bodyFill` is NOT a racer's world box at race
+      time.** `computeBodyNarrowRef` (the auto-scale) equalises the NARROW axis across racer types —
+      **28.5 world px for both rocket and duck at n=20** — so a type's nominal `displaySize` divides
+      out and only its ASPECT RATIO reaches the screen. Reasoning from the racer-type constants gave
+      a wrong answer in both directions when it was tried on 2026-09-01. Go through
+      `computeBodyNarrowRef`, or measure `drawnBodyLengthPx` off a running race
+      (`scripts/diag/sprite-premise.mjs`). **There is no separate harness racer table to drift** —
+      every instrument reads the registry directly; that was checked rather than assumed.
 
 - [x] **The instrument trap that produced the wrong first reading, fixed 2026-09-01.**
       `along-residual.mjs`'s old `--margin=` changed only what the MEASUREMENT tested with while the

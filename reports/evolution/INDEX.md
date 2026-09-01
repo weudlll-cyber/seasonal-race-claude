@@ -6,6 +6,26 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-01 — [LEADER-LAG-TRUTH-1](LEADER-LAG-TRUTH-1.md)'s "space-sprint's sprite is 2.9×
+  river-run's" is CONFIRMED as arithmetic and NARROWED as a claim: it is 2.881× the drawn LENGTH and
+  exactly 1.000× the WIDTH.** Established by [SPRITE-PREMISE-1](SPRITE-PREMISE-1.md), which
+  reproduced the report's 131.4 / 45.6 and its 261.8 / 446.6 room figures exactly before touching
+  anything. **Nothing in that report is withdrawn.** What is corrected is what the sentence invites a
+  reader to believe. The column it comes from is `halfLen = (drawnBodyLengthPx / 2) × effX`
+  (`leader-lag-truth.mjs:137`) — **drawn SCREEN px at the delivered zoom** — and it decomposes with
+  **0.0000% residue** into world 2.8813 × zoom **1.0000**. **THE ZOOM IS BIT-IDENTICAL ON THE TWO
+  TRACKS** (`cd.zoom` 2.13333, `effX` 3.20000, and every input to them — `leaderZoom`,
+  `referenceCorridorPx`, `referenceWidthPx`, `trackWidthPx`, `axisX` — equal), the corpora are both
+  **20 racers**, and both are `LEADER_ZOOM`-dominant at mid-race (80.6% / 83.1%): **the ratio is
+  entirely world extent along the heading, and none of it is camera.** The cause is that the
+  auto-scale (`computeBodyNarrowRef`) equalises the NARROW axis to 28.5 world px for both, so a racer
+  type's nominal `displaySize` DIVIDES OUT and only its aspect ratio survives — rocket 2.8813 : 1,
+  duck 1.0000 : 1. **The practical consequence, which is why this is a correction and not a footnote:
+  `displaySize × bodyFill` is NOT a racer's world box at race time**, and reasoning about sprite size
+  from those two numbers gives a wrong answer in both directions. **ALONG-RESIDUAL-1's P1 does NOT
+  fall** — the one axis in which this sprite is exceptional is the along-track axis the residual is
+  measured in.
+
 - **2026-09-01 — [ALONG-RESIDUAL-1](ALONG-RESIDUAL-1.md)'s arithmetic is right and its FRAMING
   oversells the fault. The along-track residual is restated here at its measured size.** Nothing in
   that report is withdrawn — every figure in it reproduces exactly, and
@@ -193,6 +213,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [SPRITE-PREMISE-1.md](SPRITE-PREMISE-1.md) — **the 2.9× is CONFIRMED, the zoom is BIT-IDENTICAL,
+  and the number means something narrower than it reads** (2026-09-01, measure only — nothing built,
+  no default moved). Sent to refute LEADER-LAG-TRUTH-1's sprite premise; it **stands**. **(1) The
+  quantity**, read out of `leader-lag-truth.mjs:137` rather than re-derived: drawn SCREEN px at the
+  delivered zoom, median over mid-race `LEADER_ZOOM` frames at n=20, seeds 1–10. **(2) The world
+  arithmetic that challenged it is wrong twice** — duck is **36 / 0.875 / 0.875**, not 44 / 0.500 /
+  0.750 (there is no harness racer table to have drifted; every instrument reads the registry), and
+  `displaySize × bodyFill` is not the runtime's world box: `computeBodyNarrowRef` equalises the
+  NARROW axis to **28.5 world px for both types**, so `displaySize` divides out and only the ASPECT
+  RATIO survives — rocket **2.8813 : 1**, duck **1.0000 : 1**. **(3) The decomposition CLOSES to
+  0.0000% residue:** world 2.8813 × effX **1.0000** = 2.8813 against a measured 2.8813. Racer count
+  **20 on both** (the cheapest hypothesis, checked first, refuted); shot `LEADER_ZOOM`-dominant on
+  both (80.6% / 83.1%); `cd.zoom` **2.13333 on both** with every zoom input equal. **So the rocket is
+  2.881× LONGER and 1.000× as WIDE — a long thin sprite, not a big one — and the diagonal ratio is
+  2.157×.** What differs between two tracks with identical camera-facing geometry is **the racer type
+  the track declares** and **which way the road points** (|ux| 0.354 vs 0.951, which is the whole of
+  the 41% aim-room gap). **ALONG-RESIDUAL-1's P1 SURVIVES and is better targeted than its wording**:
+  the one exceptional axis is the along-track axis the residual is measured in. 3 proposals.
 
 - [MARGIN-PER-TRACK-1.md](MARGIN-PER-TRACK-1.md) — **the margin cannot reach the fault, and every
   value that shrinks the residual cuts the leader MORE** (2026-09-01, measured; **nothing built** —
