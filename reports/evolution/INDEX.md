@@ -230,6 +230,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GOLDEN-TABLE-REGISTRY-1.md](GOLDEN-TABLE-REGISTRY-1.md) — **the five drifted rows are corrected,
+  three golden cases now run the real body, and nothing went red** (2026-09-01, the owner's decision
+  built; **no golden re-pinned, no fingerprint minted**). **THE COST WAS RE-ESTABLISHED AT SOURCE
+  FIRST**, not taken from SPRITE-TABLE-DRIFT-1 — every assertion in all seven parity files
+  enumerated; **four pinned expectations exist** (`REAL_ARM_WINNERS`, replay's `Breeze`/`Surge`, the
+  replay drift check, `slowdownActive`) and **every one depends on manta, horse or dolphin, which
+  already agreed**, so the repair touches no recorded expectation. Five rows moved to the registry:
+  snail 35/0.727/0.938, motorbike 42/0.4/0.8, **duck 36/0.875/0.875**, luge 80/0.313/0.641, boarder
+  40/0.398/0.719 — all ten now agree. **THREE CASES NOW RUN A DIFFERENT RACE** (river-run/duck seeds
+  3 and 7, city-circuit/motorbike seed 1 — hashes moved; the searound/manta control is identical to
+  the digit), and river-run's duck went from **aspect 1.500 to its true 1.000** (`drawnLength`
+  42.750 → 28.500; the auto-scale had equalised the narrow axis either way, which is why the drift
+  was invisible in width). **THE SUITE STAYED 50/50 GREEN EITHER SIDE** — so no aspect-dependent
+  divergence was being hidden, which is the quiet result the coverage argument allowed for.
+  `engine-reach --check` **selected nothing**: the file is outside the engine hull. snail, luge and
+  boarder run in no golden case (hygiene, not coverage bought). 3 proposals.
+
 - [SPRITE-TABLE-DRIFT-1.md](SPRITE-TABLE-DRIFT-1.md) — **the absence claim was false, the parity
   result survives, and the cost is COVERAGE** (2026-09-01, measure + one comment; **no number
   changed, no golden re-pinned, nothing re-baselined**). **THE TABLES:** four files under `scripts/`
