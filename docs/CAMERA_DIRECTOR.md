@@ -1011,7 +1011,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ed627ae7 2026-09-01 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 38b19379 2026-09-01 depends=client/src/modules/camera/ -->
 **RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01), and the reason is a fingerprint
 rather than a judgement.** That block adds two camera keys whose defaults are OFF
 (`leaderAimRoomFloorPx` 0, `leaderBodyAspectMax` null). With both at their defaults the CAMERA

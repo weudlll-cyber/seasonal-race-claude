@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ ed627ae7 2026-09-01 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 38b19379 2026-09-01 depends=client/src/modules/camera/CameraDirector.js -->
 **RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01).** The only change to
 `CameraDirector.js` in that block is the forward-bias reading a new key whose default is 0 (OFF). The
 camera fingerprint is byte-identical at the defaults — re-run and equal to the value recorded in

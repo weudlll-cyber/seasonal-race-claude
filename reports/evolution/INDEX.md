@@ -230,6 +230,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-LEVERS-1.md](AIM-LEVERS-1.md) — **two candidates for his eye, and the fault is smaller than
+  the brief's numbers say** (2026-09-01, built + measured; **NOT merged, NOT minted**, branch
+  `feat/aim-levers-1` @ `38b19379` served on 4173, **all four fingerprints byte-identical at the
+  OFF defaults**). **THE PREMISE MOVED FIRST:** LEADER-LAG-TRUTH-1 predates the lateral guarantee, so
+  its median gap **142.9 → 112.7** and clip rate **15.4% → 3.26%** today while its two GEOMETRY
+  numbers (half-length 131.4, room 261.8) are unchanged. **The median case is not short by twelve
+  pixels — it clears by eighteen**, and `tolerance > gap` reads YES on the shipped baseline. The
+  fault is the TAIL: 3.46% of frames, **1,065 episodes** over 300 races, headroom +48 at p50 and
+  **−134 at p10**. **LEVER A'S GATE PASSED but the trap was live**: the aspect ratio drives the drawn
+  sprite AND a separately-derived `drawnBodyLengthPx`, so a cap on the second alone would have
+  removed the counting and not the clipping — one function now drives both. It wakes the existing
+  sleeping guard, which scales UNIFORMLY, so **the rocket is drawn SMALLER, not stubbier** — close to
+  the sprite floor he rejected. **LEVER B'S ARITHMETIC IS EXACTLY RIGHT**: room = chord × (1 − frac)
+  reproduces to the digit on all four tracks, chord 770 on space-sprint against 1,313 on river-run;
+  but his ~1.6 pp was sized against the superseded gap — half the tail costs ~13 pp. **AT N=300 ON
+  space-sprint: B beats A on the fault AND costs less steadiness** (−283 vs −207 clip episodes;
+  `step p99` flat 187.2→187.3 vs +2.6; centreline 69.5%→**88.9%** vs 79.2%), **and B changes only the
+  PICTURE while A changes the RACE** (frame counts 470,658 vs 470,323). Both together −340. Lever A is
+  **bit-identical on river-run, seatrack and dirt-oval**. **No recommendation between them,
+  deliberately** — both costs are unmeasurable and his. 3 proposals; P2 is a blocker for A only
+  (`cameraConfig` is classified COSMETIC and A changes physics).
+
 - [REGISTRY-IMPORT-FEASIBILITY-1.md](REGISTRY-IMPORT-FEASIBILITY-1.md) — **all four can import the
   real source, so the literals are removable and the guard is not needed** (2026-09-01, measure only
   — no literal removed, no guard built, nothing changed but the report). The owner held the drift
