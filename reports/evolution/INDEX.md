@@ -230,6 +230,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CENSUS-TESTS-1.md](CENSUS-TESTS-1.md) — **310 test files, 5,583 tests, 300 of 310 run
+  automatically — and "4,327" is the CLIENT suite alone, not the repository** (2026-09-02, count
+  only, nothing repaired). Piece 3 of the NIGHT-CENSUS-1 chain. **Two standing beliefs are corrected
+  by measurement.** First, `goldenRealArm.test.js` is **29.1%** of client wall clock, not 99% — the
+  four-worker bound made the four heavy `parity/` files run concurrently, and they are all done by
+  t+63 s of a 170 s run. Second, **the biggest cost is not a test at all**: the suite reports
+  `environment 376 s` against `tests 144 s`, i.e. ~55% of worker time spent building a jsdom 230
+  times, corroborated by 127 s of measured gaps with no file in flight on any worker. **Cutting tests
+  will not make this cheaper; cutting file count or sharing environments would.** The never-runs
+  figure is **zero** — the wrong-runner pattern is fully cleared and could not be found in history —
+  but **ten files run under no automatic invoker at all** (the whole Playwright suite, six of them
+  from April), and both files added to it in August are already defective: one **FAILS** because
+  GARDEN-PATH-DEFAULTS-1 deleted its premise the same day it was written, and one **asserts nothing**.
+  On redundancy the report refuses to guess: mutation testing was not run, so the honest answer is a
+  **45–85% range, labelled an estimate**, with the measured shape evidence given separately. **61 test
+  assertions restate a `defaults.js` value** — `check-config-claims` fails a *document* for that and
+  never looks at a test.
+
 - [CENSUS-CHECKS-1.md](CENSUS-CHECKS-1.md) — **40 checks: 27 demonstrably fire, 12 have never been
   exercised, exactly 1 is inert — so the four known failures are 4 of 40, not 4 of 10** (2026-09-02,
   count only, nothing repaired). Piece 2 of the NIGHT-CENSUS-1 chain, and it deliberately does not
