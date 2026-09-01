@@ -804,6 +804,35 @@ rather than a threshold nobody has found yet.**
       the heading runs |ux| 0.354 on space-sprint against 0.951 on river-run, so a diagonal road is
       bounded by the frame's 720 px height instead of its 1280 px width.
 
+- [ ] **THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW — a coverage gap, recorded
+      rather than closed (2026-09-01,
+      [SPRITE-TABLE-DRIFT-1](../reports/evolution/SPRITE-TABLE-DRIFT-1.md)).**
+      `scripts/parity/goldenRunner.mjs`'s `RACER_CONFIGS` disagrees with the racer-type registry on
+      **snail, motorbike, duck, luge and boarder** (its duck is 44 / 0.5 / 0.75 against the
+      registry's **36 / 0.875 / 0.875**). **The parity RESULT is sound** — all six consumers read
+      that one table, so both arms get the identical body and no divergence can be manufactured or
+      cancelled; the only pinned outcomes (`REAL_ARM_WINNERS`) are searound/manta, which agrees. **What
+      is lost is coverage:** the `river-run`/duck and `city-circuit`/motorbike cases prove parity for
+      a shape that is never drawn, so an aspect-ratio-dependent divergence would never be reached.
+      **The numbers were deliberately LEFT** — correcting them changes which races the goldens run
+      (different `drawnBodyLengthPx` → brake-T, avoidance, overlap → different hashes on both arms),
+      which is a re-baseline of a recorded instrument and the owner's call. **NEEDS HIS WORD: freeze
+      the five, or re-baseline onto the real bodies?** That answer also decides whether the guard
+      below needs a permanent allowlist. **verify:** `node -e` comparing `RACER_CONFIGS` against
+      `getRacerTypeById(id).config` — see the report.
+
+- [ ] **NO GUARD COMPARES A HARDCODED RACER TABLE TO THE REGISTRY, and the duplication has now caused
+      two errors in two blocks.** A racer's physical fields are copied into four files under
+      `scripts/` — `sim-fairness.mjs` (20 types, all agree today), `goldenRunner.mjs` (10 types, 5
+      differ), and manta constants in `diag/acceptance-orders.mjs` and `diag/micro-divergence.mjs`
+      (both agree). Nothing makes an edit to a `*RacerType.js` reach or even notice them. **A guard
+      would compare three fields — `displaySize`, `bodyFillX`, `bodyFillY` — for every hardcoded entry
+      against `getRacerTypeById(id).config`**, as ONE rule in the existing `check-*` family (R13),
+      running in CI's *Living-doc guards* job for milliseconds and no race. **It needs a
+      pinned-with-reason allowlist** in the shape `scripts/audit-gate.mjs` already uses, because it
+      would fail on day one against the five above and fixing those is not the correct response.
+      **Proposed, not decided** — write it after the freeze question above is answered.
+
 - [ ] **BEFORE SIZING ANY SPRITE CHANGE: `displaySize × bodyFill` is NOT a racer's world box at race
       time.** `computeBodyNarrowRef` (the auto-scale) equalises the NARROW axis across racer types —
       **28.5 world px for both rocket and duck at n=20** — so a type's nominal `displaySize` divides

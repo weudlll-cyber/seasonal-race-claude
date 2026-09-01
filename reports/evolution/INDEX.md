@@ -6,6 +6,22 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-01 — [SPRITE-PREMISE-1](SPRITE-PREMISE-1.md)'s claim that NO harness racer table exists
+  is FALSE. Two exist, and one has drifted on five of ten entries.** Established by
+  [SPRITE-TABLE-DRIFT-1](SPRITE-TABLE-DRIFT-1.md). The sentence withdrawn is *"there is no drift
+  between a harness table and the runtime to report: no harness table exists; every instrument reads
+  the registry directly"* — it was produced by a `bodyFillX` grep **capped at ten results**, of which
+  three were read and the conclusion generalised to seventeen; two hardcoded literals sat in that same
+  output unfollowed. **A capped search cannot support an absence claim.** The truth:
+  `scripts/sim-fairness.mjs` carries a complete 20-type table that **agrees with the registry on all
+  twenty**, and `scripts/parity/goldenRunner.mjs` carries a 10-type table that **differs on snail,
+  motorbike, duck, luge and boarder** — its duck is 44 / 0.5 / 0.75 against the registry's
+  **36 / 0.875 / 0.875** — while its own comment claimed it mirrored the file it disagrees with.
+  **EVERYTHING SPRITE-PREMISE-1 MEASURED STANDS**: it read the registry directly, its duck values were
+  right, and the 2.881× decomposition is untouched. **What that report got wrong was an absence claim
+  about the tooling, not a measurement.** The parity consequence is bounded and is coverage, not
+  correctness — see the report and `docs/BACKLOG.md`.
+
 - **2026-09-01 — [LEADER-LAG-TRUTH-1](LEADER-LAG-TRUTH-1.md)'s "space-sprint's sprite is 2.9×
   river-run's" is CONFIRMED as arithmetic and NARROWED as a claim: it is 2.881× the drawn LENGTH and
   exactly 1.000× the WIDTH.** Established by [SPRITE-PREMISE-1](SPRITE-PREMISE-1.md), which
@@ -213,6 +229,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [SPRITE-TABLE-DRIFT-1.md](SPRITE-TABLE-DRIFT-1.md) — **the absence claim was false, the parity
+  result survives, and the cost is COVERAGE** (2026-09-01, measure + one comment; **no number
+  changed, no golden re-pinned, nothing re-baselined**). **THE TABLES:** four files under `scripts/`
+  carry hardcoded bodyFill numbers, not ten — `sim-fairness.mjs` (20 types, **all agree**),
+  `goldenRunner.mjs` (10 types, **5 differ**: snail, motorbike, duck, luge, boarder), and two
+  manta constants in `diag/` that agree. **Which is stale was settled AT THE REGISTRY**, not by
+  assuming the odd one out: duck is **36 / 0.875 / 0.875**, so goldenRunner's 44 / 0.5 / 0.75 is the
+  drifted copy — and its comment claimed it mirrored the file it disagrees with. **WHAT IT COST THE
+  PARITY INSTRUMENT: nothing in correctness, a real hole in coverage.** All six consumers
+  (`buildIdentity`, `browserModel`, `simModel`, `browserArm`, `realArm`, `simArm`) read the SAME
+  table and goldenRunner never imports the registry, so both arms get the identical body — a wrong
+  value can neither manufacture a divergence nor cancel one, and the assertions are live
+  `a.hash === b.hash`, not recorded hashes. **The only pinned outcomes (`REAL_ARM_WINNERS`) are
+  searound/manta, and manta AGREES** — no golden was recorded through a wrong shape. But the
+  river-run/duck and city-circuit/motorbike cases **prove parity for a body the product never
+  draws**, so an aspect-dependent divergence would never be reached. **The numbers are LEFT**:
+  correcting them changes which races the goldens run, which is an owner's re-baseline. **THE CLASS:**
+  a physical fact copied into four files with no guard; what one would compare, and why it needs a
+  pinned-with-reason allowlist, is proposed not decided. 3 proposals.
 
 - [SPRITE-PREMISE-1.md](SPRITE-PREMISE-1.md) — **the 2.9× is CONFIRMED, the zoom is BIT-IDENTICAL,
   and the number means something narrower than it reads** (2026-09-01, measure only — nothing built,
