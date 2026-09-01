@@ -3,92 +3,139 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, 2026-09-01, after DELETE-TRACK-SAFETY-1 — the pair is complete. **Origin carries master alone.**
+**Last rewritten:** 2026-09-02, after the NIGHT-CENSUS-1 chain — four counts and the one repair you
+ordered. **Origin carries master.**
+
+---
+
+## THE CENSUS VERDICT — before coffee
+
+| what was counted | how many | how many are sound |
+|---|---|---|
+| **Duplicated facts** | 16 groups, **483** comparable values | **456 agree, 27 do not** — but **4 groups have no source of truth at all**, which is the worse half |
+| **Checks** | **40** | **27 demonstrably fire**, 12 have never been exercised, **exactly 1 is inert** |
+| **Tests** | **310 files, 5,583 tests** | **300 of 310 run** automatically; 10 run only by hand |
+| **Removable** | — | **1 item provably dead** (9 files, 1,444 lines, **0 s** of suite time); 6 more suspected, not proven |
+
+**Your four broken checks are 4 of 40 — 10%, not four out of ten.** And "4,327" is the **client
+suite alone**; the repository has 5,583 tests across four runners.
+
+### Are these findings recent or old? — OLD. Here is the number.
+
+**22 of the 27 disagreements are more than eight weeks old; 21 of them have been wrong since the day
+they were written, 91 days ago.** Only 5 are from the last fortnight. The one provably dead thing is
+**117 days** untouched — the oldest thing examined. Everything the census *could not* prove dead is
+days old and is live work.
+
+**So this is not a fortnight of rot. It is a spring's worth of small drift that nothing was looking
+for, surfacing now because something finally looked.**
+
+### Is the sound side growing? — IT GREW ONCE, AND IT HAS STOPPED.
+
+Checks over time: **5 (April) → 11 (July) → 40 (August) → 40 (September).** August alone built
+**72.5%** of the entire checking surface. Since then: **zero new checks**, and in the last fortnight
+**2 were added while 4 were found broken.**
+
+**The number that should bother you: none of those four was found by any check in the table.** They
+were found by people doing unrelated work. That is the honest reading — the machinery you built in
+August is real and mostly works, but it stopped growing, and it is not yet the thing that finds your
+faults for you.
+
+### The one limit, stated plainly
+
+**A census counts what can be found by looking. It cannot prove there is nothing else.** Every
+number above is a floor, not a total — the duplicate count is grep-based and cannot see a fact
+spelled differently in two places; "has this guard ever gone red" cannot see a failure fixed before
+it was committed; and the redundancy question needs mutation testing that was not run. **Do not read
+this as an all-clear.** Read it as: here is what one night of deliberate looking found.
+
+---
+
+## ⚠ ONE DANGEROUS FINDING — reported, and deliberately NOT fixed
+
+**The world fingerprint is not racing the track you think it is.**
+`scripts/fingerprint-default.mjs:153` hardcodes `["garden-path", "snail"]`, under a comment that says
+"10 standard tracks × default racer". The shipped seed has said **beetle** since 2026-08-25. So the
+project's primary change-detector for the race has, for eight days, been measuring a snail on a track
+the product runs with a beetle — one of its ten tracks does not cover the shipped race at all.
+
+It also means the reasoning recorded at the last re-mint is partly wrong: that mint argued all four
+values had to move because *"every instrument runs all TEN tracks AT TRACK DEFAULTS"*. The racer half
+of that change could not reach this instrument; only the lap-count half could.
+
+**Left alone, per the rule for this chain.** The same stale pairing sits in three other live places —
+`goldenRunner.mjs:93`, `sweep-bufferPct-driver.mjs:30`, `docs/ARCHITECTURE.md:438`.
 
 ---
 
 ## NEEDS YOUR WORD
 
-**Nothing.** Both rows that stood here were answered by you mid-chain and are now work, not
-questions — see the chain table.
-
-*The track-field-ownership row that stood here is CLOSED — see below. It was answered on 2026-08-31.*
-
----
-
-## CLOSED SINCE THIS SHEET WAS LAST RIGHT
-
-- **"Which fields of a shipped track are the project's, and which are yours?" — ANSWERED AND BUILT.**
-  You decided the rule: a shipped record is delivered **whole**, the operator is **warned by name**,
-  and a record with no seed of that name is **never touched**. The whole seed strand is merged: your
-  install became the shipped seeds, the redelivery mechanism exists, a hand-raised version decides
-  when it fires, and a guard refuses a seed change whose version was not raised. **A boot on your
-  install changes nothing** — 30 records byte-identical, no warning raised.
-- **Four decisions came in on 2026-09-01 and are no longer questions:** the licence is **AGPL-3.0**
-  (**`-or-later`**, and the holder line **`weudlll-cyber`** stands), and **the server serves the
-  client** rather than a second web server beside it. All built.
+1. **Candidate B — you are judging it this morning.** See the top of the next section.
+2. **The engine-reach closure doubled, 36 → 76 files, as a consequence of the removal you ordered.**
+   Importing the racer registry pulls in 40 modules, so editing *any* racer type now selects the
+   world fingerprint and asks for a mint. **That is the loud signal you asked for**, made explicit
+   rather than left to a golden going red later — but racer-type work now pays a duration it did not
+   pay before. Nobody has judged whether that trade is worth it at 40 modules rather than at one. It
+   is done and green; say if you want it narrowed.
+3. **`scripts/audit-sprite-crops.mjs` is the only tool that can measure `bodyFillX`/`bodyFillY`, and
+   it would give wrong answers today** — 8 of 20 frame geometries and 5 of 20 display sizes are
+   pre-crop values, wrong since 2026-06-03. Which means those two fields, which every racer's shape
+   depends on, are **numbers with a home but no derivation**: nothing in the repository can reproduce
+   them. Not touched. Say whether that is worth a block.
 
 ---
 
-## THE NIGHT CHAIN — all 10 done. THEN A FURTHER PAIR:
+## CANDIDATE B — WHAT YOU ARE JUDGING
+
+**4173 is up and serving `feat/aim-levers-1`, exactly as you left it.** Confirmed by reading the
+build pill out of the served bundle, not assumed: **`2c2f5ba9 · feat/aim-levers-1`, not dirty.** The
+backend on 4000 is up and answers `access-control-allow-origin: http://localhost:4173`.
+
+**One thing you should know: 4173 was DOWN when the night began** — only the backend was running. It
+was restarted from the existing `client/dist`, which was already that branch's build (built 23:46,
+the same minute as the branch's last commit). **Nothing was rebuilt, nothing was merged, and the
+branch was not touched.** It was served with `scripts/serve-production.mjs` per R10, not `vite
+preview`.
+
+The branch is unmerged and unminted, as required. Every piece of the night's work happened on
+`master` and on its own branches; the tree has been put back on `feat/aim-levers-1`.
+
+---
+
+## THE CHAIN — all five pieces done, merged, pushed
 
 | # | piece | state |
 |---|---|---|
-| **A** | **The image runs on its own** | **DONE, merged.** Build context moved to the repository root; `shared/nameLimits.mjs` copied. **Proven with NO source mounts**: boots, serves the app, gates the API. The root `.dockerignore` came first — without it the context would have been **1.3 GB** and would have carried `users.json` back in. Found and fixed a defect of mine: two `scripts/*.test.mjs` used vitest where `script-suite` runs `node --test`, so **22 tests had never run**. |
-| **B** | **Deleting a track must not damage another one** | **DONE, merged.** **The cross-damage cannot happen**: the upload route derives the filename from the track id, so two tracks can never share one — established from every writer, pinned by four tests, no runtime check built. **The real defect was next to it**: both delete paths unlinked a filename the read path refuses. Fixed, sabotage red. **No backup write added to `DELETE /:id`** — `tracks-backups/` is read by nothing; what a real recovery path would need is written up for you. |
+| **1** | **Duplicated facts** | **DONE, merged.** 16 groups, 483 comparable values, 456 agree / 27 not, 12 groups with a source of truth and **4 with none**. **The brief said four files copy the racer registry; it is five** — `audit-sprite-crops.mjs` carries a sixth table that has *never* agreed, found only by searching uncapped and in **both** spellings (`field:` and `field =`). Ten broken things named and left. → [CENSUS-DUPES-1](../reports/evolution/CENSUS-DUPES-1.md) |
+| **2** | **Checks** | **DONE, merged.** 40 checks: **27 fire, 12 never exercised, 1 inert.** The three states are deliberately not collapsed — a guard holding a line nobody has crossed is not waste. The inert one is `render-fingerprint.mjs` as a verify guard: no `--check`, never opens the record, no `throw`/`assert` anywhere, ~54 s to print a hash and PASS unconditionally. `camera-fingerprint.mjs` has the same headline defect. **FP-COMPARE-1 fixed this for one of three instruments and was never applied to the other two.** → [CENSUS-CHECKS-1](../reports/evolution/CENSUS-CHECKS-1.md) |
+| **3** | **The tests** | **DONE, merged.** 310 files / 5,583 tests / ~10,137 assertions; 300 run automatically. **Two beliefs corrected**: `goldenRealArm` is **29.1%** of client wall clock, not 99%; and **the biggest cost is not a test** — the suite spends more worker-time building a jsdom 230 times than running test bodies. On redundancy it refuses to guess: mutation testing was not run, so the answer is an honest **45–85% range, labelled an estimate**. → [CENSUS-TESTS-1](../reports/evolution/CENSUS-TESTS-1.md) |
+| **4** | **What is removable** | **DONE, merged. NOTHING REMOVED.** Exactly **one** item provably dead, and **four of six candidate classes came back empty** — no retired-mechanism tests survive, every guard's declared paths still resolve. **The `reports/perf` assumption is corrected: something DOES read it** (`phys-bench-fit.mjs:34` takes a file in there as its default input), it is 317 files not 326, and **deleting it would shrink a clone by 0.4%** — the weight is committed imagery, not reports. → [CENSUS-REMOVABLE-1](../reports/evolution/CENSUS-REMOVABLE-1.md) |
+| **5** | **The one repair you ordered** | **DONE, merged. NO MINTING PERMISSION TAKEN.** 124 literals removed from four files; all now read the registry via the new `scripts/lib/racerFacts.mjs`. **Proven no-op**: all four fingerprints measured **before and after on the branch** — not merely compared to the record, so a stale record could not fake a pass — byte-identical and equal to the record, and **50 of 50 goldens green**. The drift-guard proposal is closed with the reason. → [REGISTRY-LITERALS-1](../reports/evolution/REGISTRY-LITERALS-1.md) |
 
-### The original ten
+### Two things piece 5 turned up that were not in the brief
 
-| # | piece | state |
-|---|---|---|
-| **1** | **The licence: AGPL-3.0** | **DONE, merged.** Full unmodified text at `LICENSE`; `AGPL-3.0-only` in all three `package.json`; README corrected. **It had been claiming MIT** with no licence file at all. No dependency licence is incompatible. |
-| **2** | **The server serves the client** | **DONE, merged.** One thing to start, one port. Proven by HTTP against the real container. |
-| **3** | **The image must not carry your credentials** | **DONE, merged.** The COPY was serving nothing; the runtime store is now out of the build context entirely. Proven from inside a built image: no credential file anywhere. **Nothing had leaked** — no image was ever published. |
-| **4** | **The documented first step dead-ends** | **DONE, merged.** README and SETUP.md said the backend was optional; it has not been since auth arrived. Both rewritten around the one-port path, with the first-admin step they never mentioned. |
-| **5** | **The required environment, where a newcomer looks** | **DONE, merged.** New `docs/ENVIRONMENT.md`: 21 variables, missing vs wrong kept separate, reachable from the README. `engines: node >=20` added. **Found on the way: I had been using `vite preview` for the nightly production build, which VERIFY-RULES R10 specifically rejects** — `scripts/serve-production.mjs` is the right one and the rest of the night uses it. |
-| **6** | **Close one of the two declared divergences** | **DONE, merged.** `utils/` is copied now; the guard is green with two entries. **The image is still NOT standalone** — with no mounts it now fails on `/shared/` instead of `/app/utils/`, which is how the half-closure was measured. |
-| **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | **DONE, merged.** Identifier changed in all three `package.json`; README notice updated to the FSF's own or-later wording. `LICENSE` untouched — 'or later' belongs in the notice, not the licence text. |
-| **7** | **What the engine-reach advisory says about data files** | **DONE, merged.** The advisory now consults `dataReach` — the two rested on one question, so no design decision was needed and the STOP condition was not reached. It had called a seed record 'cannot reach the engine at all' **twice**, once for an edit that moved all four hashes. A second defect (an UNCHANGED record reported as reaching) was found by running the matrix and fixed. Routing untouched. |
-| **8** | **The two things the crowding entry still infers** | **DONE, merged.** **CPU confirmed as the resource** (85–87% at 13 workers vs 47% at 4; memory and disk ruled out on numbers). **The heavy-files claim is REFUTED as stated** — the bound buys 4× what removing them does. **And the cliff did not reproduce: 0 failures in 9 runs.** The crowding is real as DURATION (2.1×) but nothing crossed the 5 s line. **The bound is NOT retuned.** |
-| **9** | **What the track backup directory actually is** | **DONE, merged.** Read-only. **It is not a backup system**: written by four routes, read by nothing, no restore anywhere — and `DELETE /:id` writes no backup while deleting the image too. The record is stored AFTER the change, so it cannot undo one. 160 of 167 backed-up track ids no longer exist. **The three orphan backgrounds stay spared.** |
-
-### What piece 2 actually changed, in one paragraph
-
-`GET /` used to be a 404 while `docs/DEPLOYMENT.md` described a same-origin deployment that had never
-been built. Now the server serves `client/dist` with a deep-link fallback, mounted **above** the auth
-guards so a signed-out visitor can load the page that draws the sign-in form. **No path under `/api/`
-can be answered with the app's HTML** — that is the classic failure of this arrangement and it is
-proven by HTTP, signed in and signed out. A missing asset 404s instead of coming back as the shell
-(found by probing, not by reading). With no client build the server starts anyway and says so. **The
-dev loop is untouched** — the preview on 4173 still works exactly as it did. The client build reaches
-the Docker image through a **named build context**, so the build context did not have to move to the
-repository root; that structural decision is still yours to make and is what piece 6's other half
-would need.
+- **The instruction could not be followed as written.** It said to read all four fields from
+  `CONFIG_SNAPSHOT`. `bodyFillX`/`bodyFillY` are **not in it** — it is built from `TUNABLE_FIELDS`
+  and they are not tunable — so reading them there returns `undefined` and moves every hash. The
+  intent was honoured as one rule instead: prefer the frozen snapshot, fall back to `.config`, which
+  is override-immune for both halves. Your local Dev-Screen tuning still cannot reach the harness.
+- **A routing gap, counted and not repaired.** `npm run verify` would have reported **green** on this
+  change without running a single golden: `client-suite` routes on `dirs=client/`, and this change
+  was entirely under `scripts/` — yet four client test files import the very file it rewrote. The
+  50/50 exists **only because the goldens were run by hand.**
 
 ---
 
-## HANDED BACK
+## NOT STARTED / NOT DONE
 
-- **Production build on 4173**, served by `scripts/serve-production.mjs` (rule R10 — copied out of
-  the OneDrive tree, no file watcher). The build pill is master's tip; it is read from the served
-  bundle each time rather than assumed.
-- **Backend up on 4000**, rebuilt on the same client build and now running a **self-contained
-  image**: `/` 200, `/setup` 200, `/api/health` 200, `/api/tracks` 401.
-- **Origin carries master alone.**
-
-## ONE THING THAT IS NOT MINE AND IS WORTH KNOWING
-
-`git` prints `failed to delete '.git/worktrees/ra-p2': Permission denied` on some operations. Two
-stale worktree registrations (`ra-p2`, `ra-p3`) cannot be pruned — the known EPERM condition under
-OneDrive. It is **pre-existing, harmless to commits, merges and pushes** (all of tonight's went
-through), and `git worktree list` does not show them. Left alone deliberately.
-
-## RUNNING / NOT RUN
-
-- **Fingerprints:** all four run by hand for every piece that touched code, and **all four unmoved**
-  every time. Nothing minted; there is no minting permission in this chain.
-- **`engine-reach --check`'s advisory is repaired** (piece 7). Its eight "selected nothing" answers
-  this chain were mostly CORRECT — compose files and Dockerfiles genuinely cannot move a hash. The
-  one it was wrong about was the seed record, and that is the case now fixed.
-- Document-only pieces run **no** fingerprint, browser gate or client suite — they cannot move a hash,
-  and that is stated rather than checked.
+- **Nothing from the brief is outstanding.** All five pieces are done, each on its own branch, each
+  with its own check, each merged to master and pushed, master finished after every one.
+- **Everything the census found is unrepaired, by design** — that was the instruction. The lists live
+  in the four reports under "Broken things deliberately NOT fixed": ten in piece 1, eight in piece 2,
+  ten in piece 3, and the removable set in piece 4 with **nothing removed**.
+- **One deviation from the brief's method, and why.** The brief asked for a branch, check, report and
+  merge per piece, *and* for pieces 1–4 to run in parallel. Those two cannot both hold in one working
+  tree — a branch switch under a running analysis would have corrupted it. So the **analysis** ran in
+  parallel and the **writing and merging were serialised**, one piece at a time, never two writers or
+  two merges at once. Nothing was lost; the pieces are still four separate branches and five separate
+  merges.
