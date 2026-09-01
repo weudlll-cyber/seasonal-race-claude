@@ -73,7 +73,32 @@ const FROM_U = Number(arg("from", "0.10"));
 // director declines a frame when the interval is empty AT THE SHIPPED MARGIN; LEADER-LATERAL-BUILD-1
 // reported 830 using the bare box with no margin at all. Both are real and neither is "the" number,
 // so this probe can produce either and the report states which is which.
-const MARGIN_OVERRIDE = arg("margin", null);
+//
+// ── IT IS NAMED `--probe-margin` BECAUSE THAT IS THE ONLY THING IT CHANGES (MARGIN-PER-TRACK-1) ──
+//
+// This flag moves the number the MEASUREMENT tests with. **The director still flies at the shipped
+// value**, so the camera takes exactly the same path in every arm and the only thing that varies is
+// which of those identical frames get counted. That answers ONE question — "how much of today's
+// residual is the margin's doing" — and it is the question ALONG-RESIDUAL-1's margin's-share table
+// was built on, which is why the behaviour is kept rather than converted.
+//
+// It CANNOT answer "what would a different margin ship like", and under its old name (`--margin`) it
+// read as though it could. A caller asking that gets a camera that never moved differently, no
+// change in clipping, and a residual column that looks like a free win — the exact reading
+// MARGIN-PER-TRACK-1 had to run a second instrument to refute. So the old spelling is REFUSED below
+// rather than quietly aliased: a wrong answer that looks right is worse than an error.
+const MARGIN_OVERRIDE = arg("probe-margin", null);
+if (process.argv.some((a) => a.startsWith("--margin="))) {
+  process.stderr.write(
+    "along-residual: --margin is REFUSED. It only changed what this PROBE tested with while the\n" +
+      "director kept flying at the shipped value, so it cannot answer a question about the margin.\n" +
+      "  · to re-score today's camera at another margin (ALONG-RESIDUAL-1's margin's-share table):\n" +
+      "      --probe-margin=<px>\n" +
+      "  · to actually FLY a different margin and see what it costs:\n" +
+      "      scripts/diag/margin-both-axes.mjs --margin=<px>   (puts it in the camera config)\n",
+  );
+  process.exit(2);
+}
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const out = [];

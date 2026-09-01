@@ -6,6 +6,26 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-01 — [ALONG-RESIDUAL-1](ALONG-RESIDUAL-1.md)'s arithmetic is right and its FRAMING
+  oversells the fault. The along-track residual is restated here at its measured size.** Nothing in
+  that report is withdrawn — every figure in it reproduces exactly, and
+  [MARGIN-PER-TRACK-1](MARGIN-PER-TRACK-1.md) re-derived 2,048 / 207 / 17,503 frames / 3.26% clip on
+  space-sprint before touching anything. **What is corrected is what the headline number MEANS.** The
+  report leads with 3,330 declined frames and reads as 3,330 frames of a broken picture. **It is
+  not.** A residual frame is one the director declined to GUARANTEE — one whose body cannot be seated
+  with the margin to spare — **not one the viewer can see is wrong**, and the two counts are nothing
+  like the same size: at N=300 on space-sprint, **42,975 of 54,616 residual frames (78.7%) show a
+  leader entirely inside the picture** (seatrack 45.5%, river-run 27.7%). **So the visible fault is
+  the remainder — the frames where he is actually cut — together with the bare-box frames no sideways
+  move reaches at all (591 on space-sprint at N=30, and ZERO on river-run), and it is concentrated on
+  ONE TRACK.** The report's own P2 followed from the oversized reading and is now closed on its own
+  evidence: the bare-box count is **bit-identical at every margin**, so no margin can reach it
+  (mechanism and sweep in MARGIN-PER-TRACK-1; the standing warning is in
+  [BACKLOG.md](../../docs/BACKLOG.md), _THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER_). **The
+  general rule, which is why this is a correction and not a footnote: a metric that counts what a
+  mechanism DECLINED is not a count of what the viewer sees, and this strand has now twice sized work
+  from one without checking the difference.**
+
 - **2026-08-31 — [SEED-REDELIVERY-1](SEED-REDELIVERY-1.md)'s boot proof says "all 31 records". The
   number is 30.** Counted directly: tracks 10, backgrounds 13, brands 2, brand-logos 2, player-groups
   3. The 31 came from miscounting the snapshot's own keys, which carry the two state-file entries

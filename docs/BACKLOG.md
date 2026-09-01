@@ -756,6 +756,50 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
       happens, and this one was never measured that way — only its effect on zoom was.
 
+## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
+
+**Read this before proposing anything that moves `leaderLateralMarginPx` — per-track, adaptive, or a
+single new number. The lever cannot do the job it looks like it can do, and the reason is mechanical
+rather than a threshold nobody has found yet.**
+
+- [x] **RETIRED — no margin can reach the unreachable set, by construction.** Lateral admissibility
+      is **invariant under lateral translation of the camera**: shifting the pan target by `d` moves
+      every screen point by `−v·d`, so the admissible interval merely re-centres. The set of frames
+      where NO sideways move fits the leader's body is therefore a function of the along-track
+      geometry and the zoom **alone**. Measured confirmation rather than argument: the bare-box
+      residual is **bit-identical across eight margins on four tracks** (90/70/60/50/40/30/20/0 —
+      space-sprint 591, river-run 0, seatrack 256, dirt-oval 409 at N=30). The margin moves only the
+      line between *declined* and *admitted*; it never moves the line between *reachable* and *not*.
+      **A per-track margin was ALONG-RESIDUAL-1's own P2 and it is closed.** Evidence:
+      [MARGIN-PER-TRACK-1](../reports/evolution/MARGIN-PER-TRACK-1.md).
+
+- [x] **AND THE COST OF LOWERING IT IS CLIPPING ALONE — the two steadiness measures move the OTHER
+      way.** This is the half that gets assumed wrong. Lowering the margin does **not** make the
+      camera swing: the centreline share **improves** (space-sprint 70.0% → 96.7% across the sweep,
+      because a smaller margin more often reports "he already fits" and the rule contributes
+      nothing), and the picture's largest single-frame movement does not move at all (`step p99`
+      175.7 → 175.2, `loud` races 30/30 in every arm on every track). What it buys is **corner
+      overflow — the leader visibly cut**, which is the exact fault the margin was introduced to
+      remove. In episodes at N=300, space-sprint 90 → 70 removes 124 residual episodes and buys
+      **+239 cut episodes**; not one arm on any track beats the shipped 90. **dirt-oval's clip count
+      is identical at all eight margins** — the rule never fires there, so a per-track key would have
+      had nothing to set on it.
+
+- [ ] **What IS still open is the SPRITE, and it is scored on the bare-box residual.** That column is
+      the only one a change has been shown to be able to move, and it is 591 on space-sprint against
+      **0** on river-run at the same N — a gap that is sprite size and aim room, not camera policy
+      (LEADER-LAG-TRUTH-1: space-sprint's sprite is 2.9× river-run's with 41% less room). This is
+      ALONG-RESIDUAL-1's P1 and it is unstarted. **verify:** `node scripts/diag/margin-both-axes.mjs
+      --track=space-sprint --seeds=30` — the `residual0` figure it prints is the gate.
+
+- [x] **The instrument trap that produced the wrong first reading, fixed 2026-09-01.**
+      `along-residual.mjs`'s old `--margin=` changed only what the MEASUREMENT tested with while the
+      director kept flying at the shipped value — so it showed a residual falling with no clipping
+      cost, because the camera never moved differently. It is now `--probe-margin=` (same behaviour,
+      honest name, and it still reproduces ALONG-RESIDUAL-1's 2,048 and 207 exactly) and the old
+      spelling **exits 2** naming both replacements. To actually fly a different margin, use
+      `scripts/diag/margin-both-axes.mjs --margin=`, which puts the value in the camera config.
+
 ## Phases 5–7 — the planned server, deployment and multi-tenant arc (moved from ROADMAP 2026-08-23)
 
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
