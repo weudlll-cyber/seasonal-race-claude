@@ -230,6 +230,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REGISTRY-IMPORT-FEASIBILITY-1.md](REGISTRY-IMPORT-FEASIBILITY-1.md) — **all four can import the
+  real source, so the literals are removable and the guard is not needed** (2026-09-01, measure only
+  — no literal removed, no guard built, nothing changed but the report). The owner held the drift
+  guard to ask whether the copies need to exist at all. **They do not.** The registry imports cleanly
+  in **plain Node (23–35 ms)** and in **vitest's jsdom (394 ms)**, serving the code-default duck
+  36 / 0.875 / 0.875 in both — proven by running, including a throwaway jsdom probe test deleted
+  before commit. It reaches **40 modules** (four outside `racer-types/`: `storage/storage.js` and
+  three `services/`), five of which touch browser globals — but `storage.js:64` guards `typeof
+  localStorage === 'undefined'` under a comment naming Node explicitly, and **thirteen instruments
+  already import it**. Per file: `sim-fairness.mjs` **yes**, `goldenRunner.mjs` **yes in both
+  environments** (~1.6 s worst case on a 46–53 s suite, ~3%), `diag/acceptance-orders.mjs` **yes**,
+  `diag/micro-divergence.mjs` **yes** — and none is new coupling, all four already import 6–13
+  modules from `client/src`. **THE SUBTLETY WORTH HAVING FOUND FIRST:** `index.js:539` applies stored
+  tunable overrides at load and MUTATES `type.config` in place, and `TUNABLE_FIELDS` includes
+  **`displaySize`** and `speedMultiplier` — so a removal must read those from **`CONFIG_SNAPSHOT`**
+  (frozen, pre-override) while `bodyFillX`/`bodyFillY` are safe on `.config` (not tunable). 3
+  proposals; the recommendation is to order the removal.
+
 - [GOLDEN-TABLE-REGISTRY-1.md](GOLDEN-TABLE-REGISTRY-1.md) — **the five drifted rows are corrected,
   three golden cases now run the real body, and nothing went red** (2026-09-01, the owner's decision
   built; **no golden re-pinned, no fingerprint minted**). **THE COST WAS RE-ESTABLISHED AT SOURCE
