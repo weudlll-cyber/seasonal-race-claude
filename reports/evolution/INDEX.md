@@ -174,6 +174,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MARGIN-PER-TRACK-1.md](MARGIN-PER-TRACK-1.md) — **the margin cannot reach the fault, and every
+  value that shrinks the residual cuts the leader MORE** (2026-09-01, measured; **nothing built** —
+  no key, no default moved, ALONG-RESIDUAL-1's P2 CLOSED). Sweep of `leaderLateralMarginPx` at
+  90/70/60/50/40/30/20/0, four tracks x 30 races, then the one arm with a case (70) at **300**.
+  Baseline reproduces **four** published numbers on space-sprint (residual 2,048, bare box 207,
+  17,503 frames, clip 3.26% vs 3.3%). **A RESIDUAL FRAME IS NOT A FAULT:** at N=300, 42,975 of
+  space-sprint's 54,616 residual frames (**78.7%**) show a leader entirely in the picture — the
+  director declined to GUARANTEE him, nothing was wrong on screen. **AND THE MARGIN CANNOT TOUCH THE
+  REAL SET:** the bare-box residual `r0` is bit-identical across all eight arms on all four tracks
+  (591 / 0 / 256 / 409), because lateral admissibility is INVARIANT under lateral translation — the
+  frames no shift reaches are a function of along-track geometry and zoom alone. **THE TRADE, in
+  EPISODES at N=300:** space-sprint 90 -> 70 removes 124 residual episodes and buys **+239 cut
+  episodes** — 1.93 new visible faults per bookkeeping fault removed; seatrack +33, river-run +1;
+  **not one arm on any track beats 90 on corner overflow.** **THE COST IS NOT WHERE ANYONE EXPECTED:**
+  centreline share IMPROVES as the margin falls (70.0% -> 96.7%) and single-frame picture movement
+  does not move at all (`step p99` 175.7 -> 175.2, `loud` 30/30 every arm) — **the cost is clipping
+  and ONLY clipping**, which is the fault the margin was introduced to remove. dirt-oval's clip count
+  is identical at every margin (the rule never fires there). **Next piece is the SPRITE
+  (ALONG-RESIDUAL-1's P1), scored on `r0`**, the only column a change can move. 4 proposals.
+
 - [BACKLOG-TRUTH-2.md](BACKLOG-TRUTH-2.md) — **six backlog entries checked AT SOURCE, and two were
   not what they said** (2026-08-27, documents only; no gate can answer differently for a `docs/`
   change). **CLOSED with evidence kept**: the merge gate (bcrypt group bounded to 3 in
