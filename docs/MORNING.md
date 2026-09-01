@@ -3,23 +3,15 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, after piece 5 of 9. **Master `8c03c164` → and moving.** Origin
+**Last rewritten:** 2026-09-01, after piece 6 of 9. **Master `c90ce31f` → and moving.** Origin
 carries master alone.
 
 ---
 
 ## NEEDS YOUR WORD
 
-Short, and nothing here blocks anything running.
-
-1. **The copyright holder line is a placeholder.** The licence is in and says
-   `Copyright (C) 2026 weudlll-cyber` — your GitHub organisation, used because the repository
-   establishes no author anywhere: no `author` field in any `package.json`, no copyright notice in
-   any tracked file. A GitHub account name is a stand-in for a person or a company, not the thing
-   itself. **One line in the README to change** if it should read something else.
-2. **`AGPL-3.0-only` or `AGPL-3.0-or-later`?** You said AGPL-3.0, so `-only` shipped — the
-   conservative reading. `-or-later` would let recipients use the terms of a future AGPLv4 without
-   asking. **One word in three `package.json` files.** Most projects choose `-or-later`.
+**Nothing.** Both rows that stood here were answered by you mid-chain and are now work, not
+questions — see the chain table.
 
 *The track-field-ownership row that stood here is CLOSED — see below. It was answered on 2026-08-31.*
 
@@ -38,7 +30,7 @@ Short, and nothing here blocks anything running.
 
 ---
 
-## TONIGHT'S CHAIN — 5 of 9 done
+## TONIGHT'S CHAIN — 6 of 9 done, plus one added by you
 
 | # | piece | state |
 |---|---|---|
@@ -47,7 +39,8 @@ Short, and nothing here blocks anything running.
 | **3** | **The image must not carry your credentials** | **DONE, merged.** The COPY was serving nothing; the runtime store is now out of the build context entirely. Proven from inside a built image: no credential file anywhere. **Nothing had leaked** — no image was ever published. |
 | **4** | **The documented first step dead-ends** | **DONE, merged.** README and SETUP.md said the backend was optional; it has not been since auth arrived. Both rewritten around the one-port path, with the first-admin step they never mentioned. |
 | **5** | **The required environment, where a newcomer looks** | **DONE, merged.** New `docs/ENVIRONMENT.md`: 21 variables, missing vs wrong kept separate, reachable from the README. `engines: node >=20` added. **Found on the way: I had been using `vite preview` for the nightly production build, which VERIFY-RULES R10 specifically rejects** — `scripts/serve-production.mjs` is the right one and the rest of the night uses it. |
-| 6 | Close one of the two declared divergences | not started |
+| **6** | **Close one of the two declared divergences** | **DONE, merged.** `utils/` is copied now; the guard is green with two entries. **The image is still NOT standalone** — with no mounts it now fails on `/shared/` instead of `/app/utils/`, which is how the half-closure was measured. |
+| **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | not started — its own piece, its own report |
 | 7 | What the engine-reach advisory says about data files | not started |
 | 8 | The two things the crowding entry still infers | not started |
 | 9 | What the track backup directory actually is | not started |

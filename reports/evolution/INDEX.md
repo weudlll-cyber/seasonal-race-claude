@@ -191,6 +191,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [COPY-UTILS-1.md](COPY-UTILS-1.md) — **one of the two declared divergences is closed, and the image
+  is still not standalone** (2026-09-01, SHIPPED). One `COPY utils/ ./utils/` line; the declaration is
+  gone and the guard is green with **two** entries where it had three. **The stale-entry check earned
+  itself**: the moment the COPY landed the guard failed with *"DECLARED_DIVERGENCES names 'utils',
+  which is no longer a divergence"* — written on a hunch that an allow-list rots when nothing notices
+  its entries becoming false, and it caught its first real case inside a week, in the right direction.
+  **THE REPORT DOES NOT CLAIM SELF-CONTAINMENT AND PROVES IT DOES NOT HOLD**: run with no mounts the
+  image used to die on `/app/utils/atomicWriteJson.js` and now dies on `/shared/nameLimits.mjs` —
+  one of two closed, measured by where the failure moved to. `shared/` is the other kind: above the
+  build context, unreachable by any COPY, and its P1 notes SERVE-SPA-1's named-context trick would
+  close it without moving anything. Two inert test files now ship inside `utils/`; left deliberately
+  rather than adding a second exclusion list. `engine-reach --check` selected nothing (eighth time);
+  all four fingerprints run by hand and UNMOVED; nothing minted. 2 proposals, 1 the block's own.
+
 - [ENVIRONMENT-DOC-1.md](ENVIRONMENT-DOC-1.md) — **every variable, what breaks without it, and where
   it belongs** (2026-09-01; documents plus one metadata field, no code). **The failure it closes**:
   `docker-compose.yml` names an override file that is GITIGNORED and absent from a fresh clone, so
