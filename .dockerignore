@@ -1,0 +1,73 @@
+# ============================================================
+# File:        .dockerignore  (REPOSITORY ROOT)
+# Project:     RaceArena — IMAGE-STANDALONE-1
+#
+# THE BUILD CONTEXT IS THE REPOSITORY ROOT, so this file — and only this file — decides what is sent
+# to the Docker daemon. `.dockerignore` is honoured at the CONTEXT ROOT and nowhere else.
+#
+# ── WHY THIS FILE HAD TO EXIST BEFORE THE CONTEXT MOVED ──────────────────────────────────────────
+#
+# It is written first, deliberately, because moving the context is the kind of change that silently
+# undoes a protection that has nothing to do with it.
+#
+# The credential exclusion used to live in `server/.dockerignore`. That worked because `./server` WAS
+# the context root. The moment the context becomes the repository root, that file stops being
+# honoured at all — and the build context becomes the entire tree. Measured, not feared:
+#
+#     context = ./server, its own ignore honoured        94 files      55.1 MB
+#     context = repository root, NO ignore file       30,502 files   ~1,306 MB
+#     context = repository root, THIS file            (see below)
+#
+# That 1.3 GB includes `client/node_modules`, `reports/` and — the part that matters —
+# `server/data/`, which holds `users.json`, `users.json.bak-*`, `sessions.sqlite` and
+# `setup-complete.json`. IMAGE-NO-CREDENTIALS-1 removed those from the image on 2026-09-01; without
+# this file they would have walked straight back in, through a change about `shared/`.
+#
+# `server/.dockerignore` is DELETED rather than left in place. An ignore file that is honoured or not
+# depending on which context someone builds from is two sources of truth for one fact, and this
+# repository has paid for that shape repeatedly. Its reasoning lives here now.
+#
+# ── WHY DENY-BY-DEFAULT ──────────────────────────────────────────────────────────────────────────
+#
+# This is an ALLOW-LIST: everything is excluded, then exactly what the image needs is re-included.
+# A deny-list would need a new line every time a file worth protecting is added, and the failure
+# mode of forgetting one is that a secret ships. Deny-by-default is the same principle the auth layer
+# uses, for the same reason: the cost of an omission should be a broken build, not a leak.
+#
+# TO ADD SOMETHING TO THE IMAGE: add a `!` line below AND a COPY in server/Dockerfile. If you add
+# only the COPY, the build fails loudly on a missing path — which is the direction you want.
+# ============================================================
+
+# Everything, by default.
+**
+
+# ── What the server image actually needs, and nothing else ───────────────────────────────────────
+
+# Its dependency manifest. `npm install --omit=dev` runs against this.
+!server/package.json
+
+# The server itself.
+!server/src/**
+!server/utils/**
+
+# The shipped seed records. These are how a fresh install gets its ten tracks and their backgrounds
+# (proven by booting an image against an empty volume), so they are load-bearing and must be here.
+!server/seeds/**
+
+# THE ONLY THING THE SERVER IMPORTS FROM OUTSIDE `server/`, and the reason the context moved at all.
+# Established by resolving every relative specifier in `server/src` and `server/utils` against its
+# importing file — 65 of them — rather than by copying the directory because it looked relevant:
+# `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`, which from
+# `/app/src/routes/` resolves to `/shared/`. That is the whole list; `shared/` contains this one file.
+!shared/nameLimits.mjs
+
+# ── Deliberately NOT re-included, named so the absences are decisions rather than oversights ─────
+#
+#   server/data/**    THE RUNTIME STORE. Accounts, sessions and the setup marker live there beside
+#                     the seeded records. An operator's data belongs in a volume, never in a layer.
+#                     This is the exclusion IMAGE-NO-CREDENTIALS-1 built, carried across intact.
+#   server/test/**    Test harness. Not run in the image.
+#   client/**         The built client arrives through a NAMED BUILD CONTEXT
+#                     (`additional_contexts: { client: ./client }`), which is a separate context and
+#                     is not filtered by this file. The client SOURCE has no business in the image.
+#   scripts/, docs/, reports/, .git/, node_modules/   None of it runs in the container.

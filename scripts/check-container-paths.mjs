@@ -94,17 +94,16 @@ process.on("exit", () => {
 //   mounted-not-copied — on the host, absent from the image
 //   copied-not-mounted — in the image, not overlaid from the host
 export const DECLARED_DIVERGENCES = [
+  // `shared` STOOD HERE and is gone, closed by IMAGE-STANDALONE-1 on 2026-09-01. Its reason was
+  // "it cannot be copied — it sits above the build context", and it named the only way out: move
+  // the context. The context moved, the Dockerfile copies `shared/nameLimits.mjs`, and the mount
+  // was removed. **That entry was the last thing standing between this image and running on its
+  // own**, which is worth recording where the entry used to be.
   {
-    name: "shared",
+    name: "server/data",
     kind: "mounted-not-copied",
     reason:
-      "IT CANNOT BE COPIED. `shared/` sits at the repository root, ABOVE the build context (`./server`), and a Dockerfile cannot COPY from outside its context. `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`, which from `/app/src/routes/` resolves to `/shared/`. Only a mount can supply it, so this divergence is structural rather than historical — closing it would mean moving the build context, not editing a list.",
-  },
-  {
-    name: "data",
-    kind: "mounted-not-copied",
-    reason:
-      "IT MUST NEVER BE IN THE IMAGE. `server/data/` is the RUNTIME STORE — this install's accounts (users.json, sessions.sqlite, setup-complete.json) sit there beside the seeded records. It used to be COPYed, which meant an image built on a used machine carried the builder's password hashes and a setup marker that made `POST /api/auth/setup` answer 409 forever on the recipient's fresh install. IMAGE-NO-CREDENTIALS-1 removed the COPY and excluded the directory from the build context in server/.dockerignore. This divergence is CORRECT and permanent: an operator's data belongs in a volume, never baked into a layer. Every directory the server needs under it is created at runtime with mkdirSync recursive, so nothing is lost by its absence.",
+      "IT MUST NEVER BE IN THE IMAGE. `server/data/` is the RUNTIME STORE — this install's accounts (users.json, sessions.sqlite, setup-complete.json) sit there beside the seeded records. It used to be COPYed, which meant an image built on a used machine carried the builder's password hashes and a setup marker that made `POST /api/auth/setup` answer 409 forever on the recipient's fresh install. IMAGE-NO-CREDENTIALS-1 removed the COPY and excluded the directory from the build context; since IMAGE-STANDALONE-1 that exclusion lives in the ROOT .dockerignore, which is an allow-list, so this directory is excluded by not being named rather than by a rule that could be forgotten. This divergence is CORRECT and permanent: an operator's data belongs in a volume, never baked into a layer. Every directory the server needs under it is created at runtime with mkdirSync recursive, so nothing is lost by its absence.",
   },
   // `utils` STOOD HERE and is gone, closed by COPY-UTILS-1 on 2026-09-01. It was labelled "history,
   // not necessity" — inside the build context, one COPY line from not diverging, declared only
@@ -174,7 +173,15 @@ if (!contextMatch) {
     "      reach, and the comparison would be meaningless.",
   ]);
 }
-const context = contextMatch[1].replace(/^\.\//, "").replace(/\/$/, ""); // e.g. "server"
+// A ROOT CONTEXT IS A CONTEXT, and this guard did not know it. `context: .` (IMAGE-STANDALONE-1)
+// left `context` as the literal ".", so `"server/src".startsWith("./")` was false and EVERY mount
+// was reported as lying outside the build context — a guard failing on the tree it shipped with, for
+// the third time. The empty string means "the repository root", under which nothing is outside.
+const ctxRaw = contextMatch[1].trim();
+const context =
+  ctxRaw === "." || ctxRaw === "./" || ctxRaw === ""
+    ? ""
+    : ctxRaw.replace(/^\.\//, "").replace(/\/$/, ""); // e.g. "server"
 
 /** @type {{host: string, container: string, inContext: boolean, name: string}[]} */
 const mounts = [];
@@ -184,12 +191,14 @@ for (const line of compose.split("\n")) {
   const m = /^\s*-\s+(\.\/[^:\s]+):([^:\s]+)/.exec(line);
   if (!m) continue;
   const host = m[1].replace(/^\.\//, "");
-  const inContext = host.startsWith(`${context}/`);
+  const inContext = context === "" ? true : host.startsWith(`${context}/`);
   mounts.push({
     host,
     container: m[2],
     inContext,
-    name: inContext ? host.slice(context.length + 1) : host,
+    // With a root context the name IS the host path, because that is how the Dockerfile names it
+    // too (`COPY server/src/ ./src/`). With a sub-context it is the path relative to it.
+    name: context === "" ? host : inContext ? host.slice(context.length + 1) : host,
   });
 }
 
