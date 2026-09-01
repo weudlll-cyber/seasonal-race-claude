@@ -804,9 +804,19 @@ rather than a threshold nobody has found yet.**
       the heading runs |ux| 0.354 on space-sprint against 0.951 on river-run, so a diagonal road is
       bounded by the frame's 720 px height instead of its 1280 px width.
 
-- [ ] **THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW — a coverage gap, recorded
-      rather than closed (2026-09-01,
-      [SPRITE-TABLE-DRIFT-1](../reports/evolution/SPRITE-TABLE-DRIFT-1.md)).**
+- [x] **~~THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW~~ — ✅ CLOSED 2026-09-01
+      by [GOLDEN-TABLE-REGISTRY-1](../reports/evolution/GOLDEN-TABLE-REGISTRY-1.md), the owner's
+      decision.** All ten entries now agree with the registry. **Three cases now run a different
+      body** — river-run/duck seeds 3 and 7, city-circuit/motorbike seed 1 (hashes moved; the
+      searound/manta control did not) — and river-run's duck went from aspect **1.500 to its true
+      1.000**. **The suite stayed 50/50 green either side**, so no aspect-dependent divergence was
+      being hidden; the equality assertions held because both arms read the one table and move
+      together. No golden re-pinned: all four pinned expectations were re-enumerated at source and
+      every one depends on manta, horse or dolphin, which already agreed. `engine-reach --check`
+      selected nothing — the file is outside the engine hull. The original diagnosis is below.
+
+      **THE DIAGNOSIS THAT LED TO IT (2026-09-01,
+      [SPRITE-TABLE-DRIFT-1](../reports/evolution/SPRITE-TABLE-DRIFT-1.md)):**
       `scripts/parity/goldenRunner.mjs`'s `RACER_CONFIGS` disagrees with the racer-type registry on
       **snail, motorbike, duck, luge and boarder** (its duck is 44 / 0.5 / 0.75 against the
       registry's **36 / 0.875 / 0.875**). **The parity RESULT is sound** — all six consumers read
@@ -816,10 +826,11 @@ rather than a threshold nobody has found yet.**
       a shape that is never drawn, so an aspect-ratio-dependent divergence would never be reached.
       **The numbers were deliberately LEFT** — correcting them changes which races the goldens run
       (different `drawnBodyLengthPx` → brake-T, avoidance, overlap → different hashes on both arms),
-      which is a re-baseline of a recorded instrument and the owner's call. **NEEDS HIS WORD: freeze
-      the five, or re-baseline onto the real bodies?** That answer also decides whether the guard
-      below needs a permanent allowlist. **verify:** `node -e` comparing `RACER_CONFIGS` against
-      `getRacerTypeById(id).config` — see the report.
+      which is a re-baseline of a recorded instrument and the owner's call. ~~**NEEDS HIS WORD: freeze
+      the five, or re-baseline onto the real bodies?**~~ **ANSWERED 2026-09-01 — RE-BASELINE**, on his
+      reasoning that five of ten cases were proving parity for bodies the product never draws. Done
+      above; the guard below therefore needs **no allowlist**. **verify:** `node -e` comparing
+      `RACER_CONFIGS` against `getRacerTypeById(id).config` — see the report.
 
 - [ ] **NO GUARD COMPARES A HARDCODED RACER TABLE TO THE REGISTRY, and the duplication has now caused
       two errors in two blocks.** A racer's physical fields are copied into four files under

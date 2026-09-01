@@ -103,38 +103,29 @@ export const TRACKS = [
 /**
  * Racer-type physical config for the types the soak uses.
  *
- * ── THIS TABLE DOES NOT MIRROR ANYTHING. IT IS FROZEN, AND FIVE OF ITS TEN ENTRIES DISAGREE WITH
- *    THE PRODUCT (SPRITE-TABLE-DRIFT-1, 2026-09-01) ────────────────────────────────────────────
+ * ── EVERY ENTRY MATCHES THE RACER-TYPE REGISTRY ────────────────────────────────────────────────
  *
- * The line that stood here claimed this "mirrors sim-fairness's RACER_CONFIGS". **It does not, and
- * that sentence cost a reader a wrong conclusion**: it invites you to take these numbers as the
- * product's, and five of them are not. Measured against the racer-type registry
- * (`client/src/modules/racer-types/`, the one authority) on 2026-09-01:
+ * `client/src/modules/racer-types/` is the one authority for a racer's physical facts, and as of
+ * 2026-09-01 all ten entries here agree with it on `displaySize`, `bodyFillX` and `bodyFillY`.
+ * **Do not edit a value here to change a racer** — change the racer type and let this follow.
  *
- *     agrees   horse · rocket · manta · dolphin · snowmobile
- *     DIFFERS  snail 44/0.75/0.5      -> registry 35/0.727/0.938
- *              motorbike 44/0.35/0.8  -> registry 42/0.4/0.8
- *              duck 44/0.5/0.75       -> registry 36/0.875/0.875
- *              luge 50/0.3/0.85       -> registry 80/0.313/0.641
- *              boarder 48/0.4/0.8     -> registry 40/0.398/0.719
+ * WHY THE GUARD EXISTS. Until 2026-09-01 this comment claimed the table "mirrors sim-fairness's
+ * RACER_CONFIGS". It did not: five of ten entries (snail, motorbike, duck, luge, boarder) were round
+ * hand-written approximations left behind by a partial refresh, and the false claim of a mirror is
+ * what made them look authoritative. That cost two blocks — a reader took the stale duck as the
+ * product's, and the report correcting them then made a false absence claim about these tables.
+ * SPRITE-TABLE-DRIFT-1 diagnosed it; GOLDEN-TABLE-REGISTRY-1 corrected the five and built the guard.
  *
- * `scripts/sim-fairness.mjs`'s table agrees with the registry on all twenty types; this one is the
- * drifted copy. **The five that agree carry precise values and the five that differ carry round
- * hand-written ones** — this table was refreshed in part and never finished.
+ * WHAT THE CORRECTION BOUGHT — coverage, not a bug fix. All six consumers below (`buildIdentity`,
+ * `browserModel`, `simModel`, `browserArm`, `realArm`, `simArm`) read THIS table, so both arms of
+ * every golden comparison always got the identical body: the stale values could never manufacture a
+ * divergence or cancel one, and the suite was green throughout. What they did do is prove parity for
+ * bodies the product never draws — river-run's duck ran at aspect 1.500 where the product's is
+ * 1.000 — so an aspect-dependent divergence had no case that could reach it. Now it does.
  *
- * ── WHY THE NUMBERS ARE LEFT ALONE ANYWAY ──────────────────────────────────────────────────────
- *
- * **The parity result is not corrupted by them.** All six consumers below — `buildIdentity`,
- * `browserModel`, `simModel`, `browserArm`, `realArm`, `simArm` — read THIS table, so both sides of
- * every golden comparison are handed the identical body. A wrong value moves the two arms together
- * and can neither manufacture a divergence nor cancel one. What it costs is COVERAGE: the duck,
- * motorbike, snail, luge and boarder cases exercise a shape the product never draws, so a divergence
- * that only appears at the real aspect ratio would never be reached. The pinned outcomes
- * (`REAL_ARM_WINNERS`) are searound/manta, and manta is one of the five that agree.
- *
- * **Correcting them would change which races the goldens run** — different body, different brake-T
- * and avoidance, different hashes — which is exactly what a golden exists not to do silently. That
- * is an owner's re-baseline, not a tidy-up. Do not "fix" this table as a drive-by.
+ * `surfaceClasses` below is NOT the registry's surface list and is deliberately not compared: it is
+ * never read from this table (checked), and the registry's field means "which surfaces this type may
+ * race on", which is a different question from the soak's one-tag-per-track pairing.
  */
 export const RACER_CONFIGS = {
   horse: {
@@ -153,37 +144,37 @@ export const RACER_CONFIGS = {
   },
   snail: {
     speedMultiplier: 0.3,
-    displaySize: 44,
-    bodyFillX: 0.75,
-    bodyFillY: 0.5,
+    displaySize: 35,
+    bodyFillX: 0.727,
+    bodyFillY: 0.938,
     surfaceClasses: ["garden"],
   },
   motorbike: {
     speedMultiplier: 1.05,
-    displaySize: 44,
-    bodyFillX: 0.35,
+    displaySize: 42,
+    bodyFillX: 0.4,
     bodyFillY: 0.8,
     surfaceClasses: ["asphalt"],
   },
   duck: {
     speedMultiplier: 0.85,
-    displaySize: 44,
-    bodyFillX: 0.5,
-    bodyFillY: 0.75,
+    displaySize: 36,
+    bodyFillX: 0.875,
+    bodyFillY: 0.875,
     surfaceClasses: ["water"],
   },
   luge: {
     speedMultiplier: 1.1,
-    displaySize: 50,
-    bodyFillX: 0.3,
-    bodyFillY: 0.85,
+    displaySize: 80,
+    bodyFillX: 0.313,
+    bodyFillY: 0.641,
     surfaceClasses: ["ice", "snow"],
   },
   boarder: {
     speedMultiplier: 1.0,
-    displaySize: 48,
-    bodyFillX: 0.4,
-    bodyFillY: 0.8,
+    displaySize: 40,
+    bodyFillX: 0.398,
+    bodyFillY: 0.719,
     surfaceClasses: ["snow"],
   },
   manta: {
