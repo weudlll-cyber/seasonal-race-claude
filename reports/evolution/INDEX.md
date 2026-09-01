@@ -230,6 +230,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CENSUS-CHECKS-1.md](CENSUS-CHECKS-1.md) — **40 checks: 27 demonstrably fire, 12 have never been
+  exercised, exactly 1 is inert — so the four known failures are 4 of 40, not 4 of 10** (2026-09-02,
+  count only, nothing repaired). Piece 2 of the NIGHT-CENSUS-1 chain, and it deliberately does not
+  collapse "never red" into "useless": a guard holding a line nobody has crossed is not waste. The
+  one **DEMONSTRABLY INERT** member is `render-fingerprint.mjs` as a `verify` guard — it has no
+  `--check`, never opens the record, contains no `throw`/`assert`/`FAIL`, and its only `exit(1)` is
+  behind argv `verify` never passes; it spends **~54 s** to print a hash and PASS unconditionally.
+  `camera-fingerprint.mjs` is the same headline defect but is classed NEVER EXERCISED, because it
+  does carry one reachable throw. **FP-COMPARE-1 fixed this for one of three instruments in
+  2026-08 and was never applied to the other two.** The growth table is the uncomfortable half:
+  **August contributed 72.5% of the entire checking surface**, and the last fortnight added 2 checks
+  while 4 were found broken — **none of the four was found by any check in the table.** The known-bad
+  runner pattern is fully cleared: 40 of 40 `scripts/**/*.test.mjs` import `node:test`, zero import
+  vitest, and the two that did are exactly the 22 tests that had never run.
+
 - [CENSUS-DUPES-1.md](CENSUS-DUPES-1.md) — **16 groups of duplicated fact, 483 comparable values,
   456 agree and 27 do not — and four groups have no source of truth at all** (2026-09-02, count
   only, nothing repaired). Piece 1 of the NIGHT-CENSUS-1 chain. **The brief said four files copy the
