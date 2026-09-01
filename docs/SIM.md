@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the
-**36 files that can change the race**: touch one and the world fingerprint is owed, which
+**76 files that can change the race**: touch one and the world fingerprint is owed, which
 is exactly what the pre-commit tripwire and `npm run verify` route on.
 
 A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
@@ -143,6 +143,42 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
 | `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
+| `modules/racer-types/BeetleRacerType.js` | VW Beetle racer — SpriteRacerType configuration. |
+| `modules/racer-types/BoarderRacerType.js` | Skateboarder racer — SpriteRacerType configuration. |
+| `modules/racer-types/BuggyRacerType.js` | Buggy racer — SpriteRacerType configuration with mask-tinting. |
+| `modules/racer-types/DolphinRacerType.js` | Dolphin racer — SpriteRacerType with body+mask rendering. |
+| `modules/racer-types/DragonRacerType.js` | Dragon racer — SpriteRacerType configuration. |
+| `modules/racer-types/DuckRacerType.js` | Duck racer — SpriteRacerType configuration. |
+| `modules/racer-types/ElephantRacerType.js` | Elephant racer — SpriteRacerType configuration. |
+| `modules/racer-types/F1RacerType.js` | F1 racer — SpriteRacerType configuration. |
+| `modules/racer-types/GiraffeRacerType.js` | Giraffe racer — SpriteRacerType configuration. |
+| `modules/racer-types/HorseRacerType.js` | Horse racer — SpriteRacerType configuration. |
+| `modules/racer-types/KoiRacerType.js` | Koi fish racer — SpriteRacerType with per-coat pattern masks. |
+| `modules/racer-types/LugeRacerType.js` | Luge racer — SpriteRacerType configuration. |
+| `modules/racer-types/MantaRacerType.js` | Manta ray racer — SpriteRacerType with body+mask rendering. |
+| `modules/racer-types/MotorbikeRacerType.js` | Motorbike racer — SpriteRacerType configuration with mask-tinting. |
+| `modules/racer-types/PlaneRacerType.js` | Plane racer — SpriteRacerType configuration with mask-tinting. |
+| `modules/racer-types/RocketRacerType.js` | Rocket racer — SpriteRacerType configuration. |
+| `modules/racer-types/SnailRacerType.js` | Snail racer — SpriteRacerType configuration. |
+| `modules/racer-types/SnakeRacerType.js` | Snake racer — SpriteRacerType configuration. |
+| `modules/racer-types/SnowmobileRacerType.js` | Snowmobile racer — SpriteRacerType with multiply tinting. |
+| `modules/racer-types/SpriteRacerType.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/racer-types/TurtleRacerType.js` | Turtle racer — SpriteRacerType with dual-mask shell rendering. |
+| `modules/racer-types/beetleCoats.js` | 1970s-era VW Beetle color palette. |
+| `modules/racer-types/boarderCoats.js` | Street/skate culture color palette for the boarder racer. |
+| `modules/racer-types/dolphinCoats.js` | 18 dolphin coats using the body+mask system. |
+| `modules/racer-types/genericDustTrail.js` | Generic dust-particle trail factory for new racer types. |
+| `modules/racer-types/index.js` | Factory + registry for all racer-type modules. |
+| `modules/racer-types/koiCoats.js` | 16 koi color coats, grouped by pattern style. |
+| `modules/racer-types/lugeCoats.js` | Winter coat palette for the luge racer type. |
+| `modules/racer-types/mantaCoats.js` | 9 manta ray coats using the body+mask system. |
+| `modules/racer-types/racerWarmup.js` | Shared sprite warm-up for racer type configs. |
+| `modules/racer-types/snowmobileCoats.js` | 16 snowmobile coats for multiply tinting. |
+| `modules/racer-types/spriteLoader.js` | Module-level sprite image cache, keyed by URL. |
+| `modules/racer-types/spriteTinter.js` | Offscreen canvas tinting for sprite coat variants. |
+| `modules/racer-types/standardCoats.js` | Standard 20-coat palette for vehicle racer types. |
+| `modules/racer-types/trailStyles.js` | Named trail style registry for user-created racer types. |
+| `modules/racer-types/turtleCoats.js` | 18 turtle shell coats using the dual-mask system. |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
 | `modules/storage/configDiff.js` | CONFIG-DIFF-2 |
 | `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
@@ -150,7 +186,11 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/track-editor/EditorShape.js` | Race-engine shape adapter for track-editor geometry; wraps inner/outer Catmull-Rom splines. |
 | `modules/track-editor/catmullRom.js` | Pure Catmull-Rom spline math — no DOM, no React. |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
+| `services/api.js` | Single-export config — exposes API_BASE_URL read from VITE_API_URL env var (set in .env to override; fallback localhost:4000). |
+| `services/apiClient.js` | Shared fetch boilerplate for API service modules. |
+| `services/racerApi.js` | Frontend API client for racer CRUD + sprite operations (D5/D6a). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
+| `scripts/lib/racerFacts.mjs` | REGISTRY-LITERALS-1 |
 | `scripts/sim-fairness.mjs` | Headless fairness simulation — tests whether start-row position affects win probability across all tracks and racer types, with speedBonusMult (catch-up) fully active. |
 | `scripts/sim/observers/comeback-reality.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `scripts/sim/observers/escape-episodes.mjs` | **UNKNOWN** — the file's header states no purpose |
@@ -165,7 +205,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/report.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 
-36 files, 13 of them UNKNOWN.
+76 files, 14 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

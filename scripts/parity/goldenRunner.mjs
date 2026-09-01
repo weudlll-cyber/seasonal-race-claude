@@ -83,6 +83,7 @@ import {
   hashOutcome,
 } from "../../client/src/modules/parity/raceIdentity.js";
 import { QUICK_TEST_NAMES } from "../../client/src/modules/racerNames.js";
+import { racerFacts } from "../lib/racerFacts.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -103,101 +104,45 @@ export const TRACKS = [
 /**
  * Racer-type physical config for the types the soak uses.
  *
- * ── EVERY ENTRY MATCHES THE RACER-TYPE REGISTRY ────────────────────────────────────────────────
+ * ── THE PHYSICAL FIELDS ARE READ FROM THE REGISTRY, NOT COPIED ─────────────────────────────────
  *
  * `client/src/modules/racer-types/` is the one authority for a racer's physical facts, and as of
- * 2026-09-01 all ten entries here agree with it on `displaySize`, `bodyFillX` and `bodyFillY`.
- * **Do not edit a value here to change a racer** — change the racer type and let this follow.
+ * 2026-09-02 (REGISTRY-LITERALS-1) `speedMultiplier`, `displaySize`, `bodyFillX` and `bodyFillY`
+ * are IMPORTED rather than restated. There is nothing here to edit and nothing here to drift.
  *
- * WHY THE GUARD EXISTS. Until 2026-09-01 this comment claimed the table "mirrors sim-fairness's
+ * WHY THE COPIES WENT. Until 2026-09-01 this comment claimed the table "mirrors sim-fairness's
  * RACER_CONFIGS". It did not: five of ten entries (snail, motorbike, duck, luge, boarder) were round
  * hand-written approximations left behind by a partial refresh, and the false claim of a mirror is
  * what made them look authoritative. That cost two blocks — a reader took the stale duck as the
  * product's, and the report correcting them then made a false absence claim about these tables.
- * SPRITE-TABLE-DRIFT-1 diagnosed it; GOLDEN-TABLE-REGISTRY-1 corrected the five and built the guard.
+ * SPRITE-TABLE-DRIFT-1 diagnosed it; GOLDEN-TABLE-REGISTRY-1 corrected the five; a drift guard was
+ * proposed and HELD, and REGISTRY-IMPORT-FEASIBILITY-1 then showed the copies need not exist at all.
  *
- * WHAT THE CORRECTION BOUGHT — coverage, not a bug fix. All six consumers below (`buildIdentity`,
- * `browserModel`, `simModel`, `browserArm`, `realArm`, `simArm`) read THIS table, so both arms of
- * every golden comparison always got the identical body: the stale values could never manufacture a
- * divergence or cancel one, and the suite was green throughout. What they did do is prove parity for
- * bodies the product never draws — river-run's duck ran at aspect 1.500 where the product's is
- * 1.000 — so an aspect-dependent divergence had no case that could reach it. Now it does.
+ * THE OWNER'S REASONING FOR IMPORTING RATHER THAN GUARDING: a golden going red when a racer changes
+ * is the correct loud signal, where a literal drifting silently is not. The cost is accepted and
+ * named — a racer-type edit now MOVES these races instead of being ignored by them.
  *
- * `surfaceClasses` below is NOT the registry's surface list and is deliberately not compared: it is
+ * WHY NOT `.config` DIRECTLY: `index.js` applies stored Dev-Screen tunable overrides at module load
+ * and mutates `type.config` in place, and two of the four fields are tunable. `scripts/lib/racerFacts.mjs`
+ * reads the frozen pre-override snapshot instead, so a developer's local tuning cannot change what
+ * this soak measures. That module carries the full rule.
+ *
+ * `surfaceClasses` below is NOT the registry's surface list and is deliberately NOT imported: it is
  * never read from this table (checked), and the registry's field means "which surfaces this type may
- * race on", which is a different question from the soak's one-tag-per-track pairing.
+ * race on", which is a different question from the soak's one-tag-per-track pairing. It has no other
+ * home in the tree, which is why it stays a literal here.
  */
 export const RACER_CONFIGS = {
-  horse: {
-    speedMultiplier: 1.0,
-    displaySize: 47,
-    bodyFillX: 0.353,
-    bodyFillY: 0.8,
-    surfaceClasses: ["earth"],
-  },
-  rocket: {
-    speedMultiplier: 1.25,
-    displaySize: 47,
-    bodyFillX: 0.278,
-    bodyFillY: 0.801,
-    surfaceClasses: ["space"],
-  },
-  snail: {
-    speedMultiplier: 0.3,
-    displaySize: 35,
-    bodyFillX: 0.727,
-    bodyFillY: 0.938,
-    surfaceClasses: ["garden"],
-  },
-  motorbike: {
-    speedMultiplier: 1.05,
-    displaySize: 42,
-    bodyFillX: 0.4,
-    bodyFillY: 0.8,
-    surfaceClasses: ["asphalt"],
-  },
-  duck: {
-    speedMultiplier: 0.85,
-    displaySize: 36,
-    bodyFillX: 0.875,
-    bodyFillY: 0.875,
-    surfaceClasses: ["water"],
-  },
-  luge: {
-    speedMultiplier: 1.1,
-    displaySize: 80,
-    bodyFillX: 0.313,
-    bodyFillY: 0.641,
-    surfaceClasses: ["ice", "snow"],
-  },
-  boarder: {
-    speedMultiplier: 1.0,
-    displaySize: 40,
-    bodyFillX: 0.398,
-    bodyFillY: 0.719,
-    surfaceClasses: ["snow"],
-  },
-  manta: {
-    speedMultiplier: 1.1,
-    displaySize: 56,
-    bodyFillX: 0.633,
-    bodyFillY: 0.805,
-    surfaceClasses: ["water"],
-  },
-  dolphin: {
-    speedMultiplier: 1.15,
-    displaySize: 52,
-    bodyFillX: 0.402,
-    bodyFillY: 0.887,
-    surfaceClasses: ["water"],
-  },
-  snowmobile: {
-    speedMultiplier: 1.1,
-    displaySize: 52,
-    bodyFillX: 0.459,
-    bodyFillY: 0.797,
-    surfaceClasses: ["snow", "ice", "earth"],
-  },
+  horse: { ...racerFacts("horse"), surfaceClasses: ["earth"] },
+  rocket: { ...racerFacts("rocket"), surfaceClasses: ["space"] },
+  snail: { ...racerFacts("snail"), surfaceClasses: ["garden"] },
+  motorbike: { ...racerFacts("motorbike"), surfaceClasses: ["asphalt"] },
+  duck: { ...racerFacts("duck"), surfaceClasses: ["water"] },
+  luge: { ...racerFacts("luge"), surfaceClasses: ["ice", "snow"] },
+  boarder: { ...racerFacts("boarder"), surfaceClasses: ["snow"] },
+  manta: { ...racerFacts("manta"), surfaceClasses: ["water"] },
+  dolphin: { ...racerFacts("dolphin"), surfaceClasses: ["water"] },
+  snowmobile: { ...racerFacts("snowmobile"), surfaceClasses: ["snow", "ice", "earth"] },
 };
 
 const trackCache = new Map();
