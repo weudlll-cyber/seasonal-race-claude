@@ -191,6 +191,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [REACH-ADVISORY-1.md](REACH-ADVISORY-1.md) — **the line a human reads now agrees with the routing
+  that was already right** (2026-09-01, SHIPPED; the STOP condition was NOT reached — the two rest on
+  one question). `engine-reach --check` walks IMPORT edges, a JSON has none, so it said **"cannot
+  reach the engine at all"** about every seed record — **twice on the record for the same file**:
+  2026-08-25, where a two-line edit to `server/seeds/tracks/garden-path.json` moved ALL FOUR
+  fingerprints, and 2026-08-31 in the seed snapshot. That matters because every spec written here
+  names that line as the decider. **The routing side was never wrong**: `dataReach` walks the same
+  closure and reports the paths its files NAME — over these entry points, exactly
+  `server/seeds/tracks <- scripts/sim-fairness.mjs`. The advisory now asks it, with routing's own
+  matching rule; nothing was designed. **A SECOND DEFECT FOUND BY RUNNING THE MATRIX**: the first
+  version called an UNCHANGED seed record reaching, the mirror of the original fault. Data paths are
+  now held to the same changed-ness standard as hull files (token-inertness deliberately still not
+  applied), producing a **third distinct fact** — *"DATA read by the engine but unchanged against
+  base"*. Proven both ways on one file against two bases. **It does not over-select**: compose,
+  Dockerfile, player-groups and a non-hull client file all still outside — so the chain's eight
+  "selected nothing" answers were mostly CORRECT and only the seed case was ever wrong. **Both
+  sabotage directions red, and the first attempt at one of them was INEFFECTIVE and is recorded
+  rather than hidden** (an empty prefix matches nothing, so it merely repeated the other). Routing
+  untouched: 44/44 verify tests, same guards selected. All four fingerprints run by hand and UNMOVED.
+  2 proposals, 1 the block's own.
+
 - [LICENCE-OR-LATER-1.md](LICENCE-OR-LATER-1.md) — **`AGPL-3.0-or-later`, by the owner's answer**
   (2026-09-01, SHIPPED). **SUPERSEDES the `AGPL-3.0-only` identifier that
   [LICENCE-AGPL-1](LICENCE-AGPL-1.md) shipped** — that report is not corrected and is not wrong: it

@@ -196,3 +196,47 @@ test("the negative message separates NOT-IN-THE-HULL from IN-THE-HULL-BUT-UNCHAN
     "the old conflated sentence is back",
   );
 });
+
+// ── REACH-ADVISORY-1: the advisory must agree with the routing about DATA paths ────────────────
+//
+// The line a human reads at commit time called every seed record "cannot reach the engine at all",
+// because a JSON file has no imports and so can never be in an import closure. It said exactly that
+// for a two-line edit to `server/seeds/tracks/garden-path.json` that MOVED ALL FOUR FINGERPRINTS.
+// The routing side has been right since ENGINE-REACH-DATA-FIX-1; these assert that the advisory now
+// asks it. Both directions can go red — see the report for the sabotage runs.
+
+test("a CHANGED seed track record is reported as reaching, and named as DATA", () => {
+  // Pinned to the commit before SEED-SNAPSHOT-1, in which this record demonstrably changed. Pinning
+  // matters for the same reason the test above pins: against HEAD it is unchanged on a clean tree.
+  const r = runCli(
+    "--check",
+    "--base=37a67b9c~1",
+    "server/seeds/tracks/garden-path.json",
+  );
+  assert.equal(r.code, 0, "a changed seed record must be a positive answer");
+  assert.match(r.out, /can change the race/);
+  assert.match(r.out, /DATA — read by/, "it must say HOW it reaches, not merely that it does");
+  assert.doesNotMatch(
+    r.out,
+    /cannot reach the engine at all/,
+    "the sentence this repair exists to remove is back",
+  );
+});
+
+test("an UNCHANGED seed record is neither a hit nor 'cannot reach at all'", () => {
+  // The third fact: the engine reads it, and this diff does not touch it. Reporting it as a hit
+  // would over-select; reporting it as unreachable is the original defect.
+  const r = runCli("--check", "--base=HEAD", "server/seeds/tracks/garden-path.json");
+  assert.equal(r.code, 1);
+  assert.match(r.out, /DATA read by the engine but unchanged/);
+  assert.doesNotMatch(r.out, /cannot reach the engine at all/);
+});
+
+test("data reach does NOT over-select: compose and Dockerfile stay outside", () => {
+  // The other direction. `dataReach` returns only paths the engine's own closure NAMES, so a file
+  // the engine never reads must still be reported as outside the hull however this is wired.
+  const r = runCli("--check", "--base=HEAD", "docker-compose.yml", "server/Dockerfile");
+  assert.equal(r.code, 1);
+  assert.match(r.out, /cannot reach the engine at all/);
+  assert.doesNotMatch(r.out, /DATA/, "neither file is data the engine reads");
+});

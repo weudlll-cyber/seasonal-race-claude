@@ -35,6 +35,10 @@ import { execFileSync } from "node:child_process";
 import { join, dirname, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isInertChange } from "./lib/inertChange.mjs";
+// REACH-ADVISORY-1: the routing side already answers reachability for DATA paths. This import is
+// circular (dataReach imports importSpecifiers from here) and safe: both bindings are hoisted
+// function declarations, used only at call time, never during module evaluation.
+import { dataReach } from "./lib/dataReach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const MODULES_DIR = join(ROOT, "client", "src", "modules");
@@ -223,18 +227,85 @@ if (
       process.exit(2);
     }
 
+    // ── THE ADVISORY MUST AGREE WITH THE ROUTING (REACH-ADVISORY-1) ─────────────────────────────
+    //
+    // A JSON file has no imports, so nothing that ships as DATA can ever be in an import closure —
+    // and this line therefore called every seed record "cannot reach the engine at all". It said
+    // exactly that on 2026-08-25 for a two-line edit to `server/seeds/tracks/garden-path.json`
+    // THAT MOVED ALL FOUR FINGERPRINTS, and again on 2026-08-31 for the seed snapshot.
+    //
+    // The routing side has been right about this since ENGINE-REACH-DATA-FIX-1: `dataReach` walks
+    // the same closure and reports every tracked repository path the files in it NAME. Over this
+    // script's own entry points it returns `server/seeds/tracks`, named by `sim-fairness.mjs` —
+    // which is a declared reach entry of the world fingerprint precisely because it drives the
+    // engine and emits the rows that get hashed.
+    //
+    // SO THIS CONSULTS THAT, rather than inventing a second notion of reach. There is one rule and
+    // one home for it; what was missing was this line asking. The matching is the same rule routing
+    // uses (`f === p || f.startsWith(p + "/")`), for the same reason: a directory the code named
+    // matches its contents, a file matches itself.
+    //
+    // NO TOKEN-INERTNESS ANALYSIS IS APPLIED TO A DATA HIT, deliberately. `isInertChange` compares
+    // JS tokens to decide a diff is comments and whitespace; a data file has no such notion, and
+    // inventing one would be the second notion this repair exists to avoid.
+    //
+    // BUT "DID IT CHANGE AT ALL" STILL APPLIES, and leaving it out was a real over-report caught by
+    // running the matrix rather than by reading: an UNCHANGED seed record was being announced as
+    // "can change the race". A hull file in that state is correctly reported as carrying no change,
+    // and a data file must be held to the same standard — the question this command answers is
+    // whether the PATHS IT WAS GIVEN carry a reaching change, not whether they could in principle.
+    const dataPrefixes = dataReach(entryPoints()).paths;
+    const reachesAsData = (w) =>
+      !files.includes(w) &&
+      dataPrefixes.some((p) => w === p || w.startsWith(`${p}/`));
+
+    /** A data path counts only if its bytes differ from `base` — or if base has no version of it. */
+    const changedAgainstBase = (p) => {
+      let before;
+      try {
+        before = execFileSync("git", ["show", `${base}:${p}`], {
+          cwd: ROOT,
+          encoding: "utf8",
+          maxBuffer: 1 << 26,
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch {
+        return true; // new, or unreadable at base — it counts, which is the safe direction
+      }
+      try {
+        return readFileSync(join(ROOT, p), "utf8") !== before;
+      } catch {
+        return true;
+      }
+    };
+
     const inHull = wanted.filter((w) => files.includes(w));
-    const outOfHull = wanted.filter((w) => !files.includes(w));
+    const dataNamed = wanted.filter(reachesAsData);
+    const dataHits = dataNamed.filter(changedAgainstBase);
+    const dataUnchanged = dataNamed.filter((p) => !dataHits.includes(p));
+    const outOfHull = wanted.filter((w) => !files.includes(w) && !reachesAsData(w));
     const { hit, inert } = splitInert(inHull, base);
     for (const i of inert)
       console.log(
         `ENGINE REACH: ${i.path} is in the hull but INERT — ${i.reason}`,
       );
-    if (hit.length) {
+    if (hit.length || dataHits.length) {
+      const total = hit.length + dataHits.length;
       console.log(
-        `ENGINE REACH: ${hit.length} of ${wanted.length} path(s) can change the race:`,
+        `ENGINE REACH: ${total} of ${wanted.length} path(s) can change the race:`,
       );
       for (const h of hit) console.log("  " + h);
+      // Named separately: a reader who sees a JSON file listed as reaching deserves to know it got
+      // there by being NAMED by engine code rather than imported by it, because that is the fact
+      // this line was wrong about for months.
+      for (const d of dataHits) {
+        const via = dataReach(entryPoints()).from[
+          dataPrefixes.find((p) => d === p || d.startsWith(`${p}/`))
+        ];
+        console.log(
+          `  ${d}   (DATA — read by ${via ? via.join(", ") : "the engine closure"})`,
+        );
+      }
       process.exit(0);
     }
     // NOT IN THE HULL and IN THE HULL BUT UNCHANGED are different facts, and they used to print as
@@ -250,6 +321,12 @@ if (
     if (inert.length)
       console.log(
         `  ${inert.length} IN the hull but inert against ${base} — reachable code, unchanged content.`,
+      );
+    // The data equivalent of the line above, and it is a THIRD distinct fact: not "cannot reach the
+    // engine" but "the engine reads this, and this diff does not touch it".
+    if (dataUnchanged.length)
+      console.log(
+        `  ${dataUnchanged.length} DATA read by the engine but unchanged against ${base}: ${dataUnchanged.join(", ")}`,
       );
     process.exit(1);
   }
