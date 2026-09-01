@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, after piece 6b of 9+1. **Master `bbbaad53` → and moving.** Origin
+**Last rewritten:** 2026-09-01, after piece 7 of 9+1. **Master `bce4ed49` → and moving.** Origin
 carries master alone.
 
 ---
@@ -31,7 +31,7 @@ questions — see the chain table.
 
 ---
 
-## TONIGHT'S CHAIN — 7 done (6 of 9, plus the one you added)
+## TONIGHT'S CHAIN — 8 done (7 of 9, plus the one you added)
 
 | # | piece | state |
 |---|---|---|
@@ -42,7 +42,7 @@ questions — see the chain table.
 | **5** | **The required environment, where a newcomer looks** | **DONE, merged.** New `docs/ENVIRONMENT.md`: 21 variables, missing vs wrong kept separate, reachable from the README. `engines: node >=20` added. **Found on the way: I had been using `vite preview` for the nightly production build, which VERIFY-RULES R10 specifically rejects** — `scripts/serve-production.mjs` is the right one and the rest of the night uses it. |
 | **6** | **Close one of the two declared divergences** | **DONE, merged.** `utils/` is copied now; the guard is green with two entries. **The image is still NOT standalone** — with no mounts it now fails on `/shared/` instead of `/app/utils/`, which is how the half-closure was measured. |
 | **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | **DONE, merged.** Identifier changed in all three `package.json`; README notice updated to the FSF's own or-later wording. `LICENSE` untouched — 'or later' belongs in the notice, not the licence text. |
-| 7 | What the engine-reach advisory says about data files | not started |
+| **7** | **What the engine-reach advisory says about data files** | **DONE, merged.** The advisory now consults `dataReach` — the two rested on one question, so no design decision was needed and the STOP condition was not reached. It had called a seed record 'cannot reach the engine at all' **twice**, once for an edit that moved all four hashes. A second defect (an UNCHANGED record reported as reaching) was found by running the matrix and fixed. Routing untouched. |
 | 8 | The two things the crowding entry still infers | not started |
 | 9 | What the track backup directory actually is | not started |
 
@@ -65,7 +65,8 @@ would need.
 
 - **Fingerprints:** all four run by hand for every piece that touched code, and **all four unmoved**
   every time. Nothing minted; there is no minting permission in this chain.
-- **`engine-reach --check` has now selected nothing six times running** for these path shapes. That
-  is piece 7's subject.
+- **`engine-reach --check`'s advisory is repaired** (piece 7). Its eight "selected nothing" answers
+  this chain were mostly CORRECT — compose files and Dockerfiles genuinely cannot move a hash. The
+  one it was wrong about was the seed record, and that is the case now fixed.
 - Document-only pieces run **no** fingerprint, browser gate or client suite — they cannot move a hash,
   and that is stated rather than checked.
