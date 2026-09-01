@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, after piece 6 of 9. **Master `c90ce31f` → and moving.** Origin
+**Last rewritten:** 2026-09-01, after piece 6b of 9+1. **Master `bbbaad53` → and moving.** Origin
 carries master alone.
 
 ---
@@ -25,12 +25,13 @@ questions — see the chain table.
   install became the shipped seeds, the redelivery mechanism exists, a hand-raised version decides
   when it fires, and a guard refuses a seed change whose version was not raised. **A boot on your
   install changes nothing** — 30 records byte-identical, no warning raised.
-- **Two decisions came in on 2026-09-01 and are no longer questions:** the licence is **AGPL-3.0**,
-  and **the server serves the client** rather than a second web server beside it. Both are built.
+- **Four decisions came in on 2026-09-01 and are no longer questions:** the licence is **AGPL-3.0**
+  (**`-or-later`**, and the holder line **`weudlll-cyber`** stands), and **the server serves the
+  client** rather than a second web server beside it. All built.
 
 ---
 
-## TONIGHT'S CHAIN — 6 of 9 done, plus one added by you
+## TONIGHT'S CHAIN — 7 done (6 of 9, plus the one you added)
 
 | # | piece | state |
 |---|---|---|
@@ -40,7 +41,7 @@ questions — see the chain table.
 | **4** | **The documented first step dead-ends** | **DONE, merged.** README and SETUP.md said the backend was optional; it has not been since auth arrived. Both rewritten around the one-port path, with the first-admin step they never mentioned. |
 | **5** | **The required environment, where a newcomer looks** | **DONE, merged.** New `docs/ENVIRONMENT.md`: 21 variables, missing vs wrong kept separate, reachable from the README. `engines: node >=20` added. **Found on the way: I had been using `vite preview` for the nightly production build, which VERIFY-RULES R10 specifically rejects** — `scripts/serve-production.mjs` is the right one and the rest of the night uses it. |
 | **6** | **Close one of the two declared divergences** | **DONE, merged.** `utils/` is copied now; the guard is green with two entries. **The image is still NOT standalone** — with no mounts it now fails on `/shared/` instead of `/app/utils/`, which is how the half-closure was measured. |
-| **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | not started — its own piece, its own report |
+| **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | **DONE, merged.** Identifier changed in all three `package.json`; README notice updated to the FSF's own or-later wording. `LICENSE` untouched — 'or later' belongs in the notice, not the licence text. |
 | 7 | What the engine-reach advisory says about data files | not started |
 | 8 | The two things the crowding entry still infers | not started |
 | 9 | What the track backup directory actually is | not started |
