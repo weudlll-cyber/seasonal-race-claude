@@ -388,6 +388,39 @@ function writeTrackBackup(trackId, trackData) {
   }
 }
 
+/**
+ * Remove a track's background image — and ONLY if the stored filename is one this server could
+ * have written.
+ *
+ * DELETE-TRACK-SAFETY-1. The READ path has always refused an unsafe stored value
+ * (`GET /:id/background` calls `isSafeAssetFilename` before serving), while BOTH delete paths
+ * unlinked it unchecked. That asymmetry runs the wrong way: a corrupt or crafted value was refused
+ * where it would merely be SERVED and acted on where it would be DESTROYED.
+ *
+ * NOT REACHABLE THROUGH THE API, which is why this is a guard rather than a live bug: every writer
+ * of `backgroundImageFile` is constrained — POST hardcodes `null`, PUT re-pins the existing value,
+ * and the upload route derives `<track.id>.<ext>` from an id `isValidId` restricts to
+ * `^[a-z0-9_-]+$`. It IS reachable through an operation this project documents: editing a record
+ * under `server/data/tracks/` by hand, or restoring one of the `tracks-backups/` files — which
+ * TRACK-BACKUPS-TRUTH-1 established is a manual copy with no schema check anywhere in it.
+ *
+ * On an unsafe value the file is LEFT ALONE and the operator is told. A stray image is the lesser
+ * harm by a wide margin, and doing it silently would be the same defect one level down.
+ */
+export function removeBackgroundFile(track) {
+  const name = track.backgroundImageFile;
+  if (!name) return;
+  if (!isSafeAssetFilename(name)) {
+    console.warn(
+      `[tracks] refusing to delete background for "${track.id}": stored filename ${JSON.stringify(name)} ` +
+        'is not a plain filename this server could have written. The file was left in place.',
+    );
+    return;
+  }
+  const bgPath = join(BG_DIR, name);
+  if (existsSync(bgPath)) unlinkSync(bgPath);
+}
+
 // Copy committed snapshot files (server/seeds/) into DATA_ROOT on first boot.
 // Runs before loadAllTracks() so the map sees the rich seed files immediately.
 function migrateDefaultTracks() {
@@ -658,10 +691,7 @@ router.delete('/:id', (req, res) => {
   const jsonPath = join(DATA_DIR, `${track.id}.json`);
   if (existsSync(jsonPath)) unlinkSync(jsonPath);
 
-  if (track.backgroundImageFile) {
-    const bgPath = join(BG_DIR, track.backgroundImageFile);
-    if (existsSync(bgPath)) unlinkSync(bgPath);
-  }
+  removeBackgroundFile(track);
 
   tracksMap.delete(track.id);
   res.status(204).send();
@@ -672,10 +702,7 @@ router.delete('/:id/background', (req, res) => {
   const track = tracksMap.get(req.params.id);
   if (!track) return res.status(404).json({ error: 'Track not found' });
 
-  if (track.backgroundImageFile) {
-    const bgPath = join(BG_DIR, track.backgroundImageFile);
-    if (existsSync(bgPath)) unlinkSync(bgPath);
-  }
+  removeBackgroundFile(track);
 
   const updatedTrack = { ...track, backgroundImageFile: null, updatedAt: new Date().toISOString() };
   atomicWriteJson(join(DATA_DIR, `${track.id}.json`), updatedTrack);

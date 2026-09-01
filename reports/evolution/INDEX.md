@@ -191,6 +191,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [DELETE-TRACK-SAFETY-1.md](DELETE-TRACK-SAFETY-1.md) — **the cross-damage cannot happen, and the
+  real defect was next to it** (2026-09-01, SHIPPED). **ESTABLISHED FIRST, and the main half
+  evaporated**: `backgroundImageFile` has four writers — CREATE hardcodes `null`, UPDATE re-pins the
+  existing value, and **the upload route is the only one that ever assigns a non-null value, deriving
+  `<track.id>.<ext>` from an id `isValidId` restricts to `^[a-z0-9_-]+$`**. Ids are unique and
+  lowercase, so **two tracks cannot share a background file** and no runtime cross-reference check was
+  built — a check that can never fire is indistinguishable from a broken one. Four tests pin the
+  construction instead. **THE DEFECT THAT WAS ACTUALLY THERE**: the read path refuses an unsafe stored
+  filename (`isSafeAssetFilename`) while **both delete paths unlinked it unchecked** — refused where
+  it would be SERVED, acted on where it would be DESTROYED. Not reachable through the API; reachable
+  through two operations this project documents (hand-editing a record, restoring a `tracks-backups/`
+  file). Both routes now go through one validating helper that leaves the file and warns. **Sabotage
+  red — and the FIRST version of that test could not have failed** (the boot-time map made the route
+  404 before reaching the helper) and is recorded rather than quietly replaced; the helper is now
+  exported and driven directly, with the opposite direction covered too. **No backup write was added
+  to `DELETE /:id`** on the brief's rule and the evidence: `tracks-backups/` is read by nothing, so
+  one more unread file is the appearance of safety. What a real recovery path would need is stated in
+  four points and stopped there. Deletion's meaning, confirmation dialogs and default-track protection
+  untouched. `verify` green (PASS 5), all four fingerprints skipped as unreachable, nothing minted.
+  2 proposals, 1 the block's own.
+
 - [IMAGE-STANDALONE-1.md](IMAGE-STANDALONE-1.md) — **the image runs on its own, and the trap was
   real** (2026-09-01, SHIPPED). **Proven by running it: NO source mounts at all** — no src, utils,
   shared or seeds — and the container boots, `/api/health` 200, serves the app at `/` 200, `/setup`
