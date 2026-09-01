@@ -191,6 +191,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [IMAGE-STANDALONE-1.md](IMAGE-STANDALONE-1.md) — **the image runs on its own, and the trap was
+  real** (2026-09-01, SHIPPED). **Proven by running it: NO source mounts at all** — no src, utils,
+  shared or seeds — and the container boots, `/api/health` 200, serves the app at `/` 200, `/setup`
+  200, `/api/tracks` 401, and seeds itself from an empty volume with no accounts baked in. **THE
+  ROOT `.dockerignore` CAME FIRST AND THE TRAP WAS MEASURED**: a `.dockerignore` is honoured at the
+  CONTEXT ROOT only, so moving the context would have silently stopped `server/.dockerignore`
+  applying and taken the context from **94 files / 55.1 MB to 30,502 files / ~1.3 GB**, carrying
+  `users.json` and `sessions.sqlite` back into the image. It is an ALLOW-LIST — deny-by-default, so a
+  forgotten line breaks the build instead of leaking. `server/.dockerignore` deleted rather than left
+  inert. Real build after: `transferring context: 55.02MB`. **What the server needs from outside
+  `server/` was established by resolving all 65 relative specifiers: exactly one file**,
+  `shared/nameLimits.mjs`, and that is what is copied. **The image now declares
+  `ENV RA_CLIENT_DIST`** — the first standalone run exposed that it needed our compose file to know
+  its own layout, which is not standalone. **Every remaining mount is a development convenience**,
+  each named with its reason; `./shared:/shared` is gone. **The guard is green with ONE entry, not
+  zero**: `shared`'s declaration expired as intended, but `server/data` remains and must — a runtime
+  store belongs in a volume. **The guard failed on the tree it shipped with for the THIRD time**
+  (`context: .` made every mount look outside the context); fixed, fixture rewritten, sub-context
+  form still covered, 13/13. **AND IT FOUND A DEFECT IN MY OWN EARLIER WORK**: `script-suite` runs
+  `node --test`, and two `scripts/*.test.mjs` were written against VITEST — they failed to IMPORT and
+  had **never run in the suite that runs guard tests**, since `899691dc` and `b9dc8102`. Converted;
+  **22 tests that had never run now run**. `verify` green (PASS 7, FAIL 0) and it **skipped all four
+  fingerprints as unreachable**, so none was run by hand and nothing was minted. 2 proposals, 1 the
+  block's own.
+
 - [TRACK-BACKUPS-TRUTH-1.md](TRACK-BACKUPS-TRUTH-1.md) — **what `tracks-backups/` actually is, and
   what it is not** (2026-09-01, READ-ONLY — nothing built, nothing deleted, nothing proposed as work).
   **It is not a backup system.** Written by four routes (create, edit, upload background, remove

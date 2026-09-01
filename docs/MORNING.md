@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, at the end of the chain — ALL TEN PIECES MERGED. **Master `cd1e1fb4` → and moving.** Origin
+**Last rewritten:** 2026-09-01, 2026-09-01, after IMAGE-STANDALONE-1. **Master `813d5343` → and moving.** Origin
 carries master alone.
 
 ---
@@ -31,7 +31,14 @@ questions — see the chain table.
 
 ---
 
-## TONIGHT'S CHAIN — ALL 10 DONE (9 of 9, plus the one you added)
+## THE NIGHT CHAIN — all 10 done. THEN A FURTHER PAIR:
+
+| # | piece | state |
+|---|---|---|
+| **A** | **The image runs on its own** | **DONE, merged.** Build context moved to the repository root; `shared/nameLimits.mjs` copied. **Proven with NO source mounts**: boots, serves the app, gates the API. The root `.dockerignore` came first — without it the context would have been **1.3 GB** and would have carried `users.json` back in. Found and fixed a defect of mine: two `scripts/*.test.mjs` used vitest where `script-suite` runs `node --test`, so **22 tests had never run**. |
+| B | Deleting a track must not damage another one | not started |
+
+### The original ten
 
 | # | piece | state |
 |---|---|---|

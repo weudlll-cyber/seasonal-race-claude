@@ -1,9 +1,16 @@
 services:
   server:
     build:
-      context: ./server
-      # SERVE-SPA-1: the built client, which lives OUTSIDE this context. A named build context
-      # brings it in without moving the context to the repository root — see server/Dockerfile.
+      # IMAGE-STANDALONE-1: the context is the REPOSITORY ROOT, so the Dockerfile can reach
+      # `shared/nameLimits.mjs` — the one file the server imports from outside `server/`. What is
+      # actually sent is decided by the root `.dockerignore`, which is an allow-list; without it this
+      # context would be ~1.3 GB and would carry `server/data/`'s credential files into the image.
+      context: .
+      dockerfile: server/Dockerfile
+      # SERVE-SPA-1: the built client. It arrives through a NAMED build context and still should,
+      # even now that the primary context is the repository root: `client/dist` is a BUILD ARTEFACT,
+      # not source, and the root `.dockerignore` is an allow-list of source. Naming it separately
+      # keeps it an explicit input rather than something that must happen to be lying in the tree.
       # Requires `npm run build` in client/ to have been run first.
       additional_contexts:
         client: ./client
@@ -12,9 +19,8 @@ services:
     environment:
       - PORT=4000
       - RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production
-      # SERVE-SPA-1: where the Dockerfile put the client build. Without this the server looks
-      # for ../../client/dist relative to its own module, which does not exist in the image.
-      - RA_CLIENT_DIST=/app/client-dist
+      # RA_CLIENT_DIST is NOT set here any more: IMAGE-STANDALONE-1 made the image declare its own
+      # layout with an ENV, so a plain `docker run` serves the app too. One home for the fact.
       # RA_SESSION_SECRET and RA_CLIENT_ORIGIN come from docker-compose.override.yml
       # (gitignored). Copy docker-compose.override.yml.example to get started.
     # Volume mounts so code changes never require a full `docker compose build`.
@@ -35,14 +41,16 @@ services:
       # whole strand was built to end, one level down in the deployment. Mounted like `src`
       # and `data` so a raised version reaches the running container on a restart.
       - ./server/seeds:/app/seeds     # shipped seed records + versions.json — see above
-      # `shared/` LIVES ABOVE THE BUILD CONTEXT, so the Dockerfile cannot COPY it and only a mount
-      # can supply it. `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`,
-      # which from `/app/src/routes/` resolves to `/shared/` — outside WORKDIR. On the host the same
-      # relative path lands on the repo root and works, which is why this was invisible until the
-      # image was next built. Added when NAME-LIMIT-1 introduced the import on 2026-08-07; the
-      # container has been unable to start since, and nobody saw it because the server was being run
-      # outside Docker.
-      - ./shared:/shared              # repo-root shared module, imported from above /app
+      # `shared/` IS NO LONGER MOUNTED, and that is the point of IMAGE-STANDALONE-1. It used to be
+      # the one thing the container could not run without, because the build context was `./server`
+      # and no COPY could reach a directory above it. The context is the repository root now and the
+      # image COPIES `shared/nameLimits.mjs`, so the mount would supply something the image already
+      # has — and keeping it would hide the very property this piece exists to establish: run the
+      # image with no mounts at all and it works.
+      #
+      # The cost, stated: editing `shared/nameLimits.mjs` now needs `docker compose build` rather
+      # than a restart. It is one 4.5 KB constants file, and clarity about what the image contains is
+      # worth more than live-editing it.
       - /app/node_modules             # keep container's npm install isolated from host
     # node --watch (Node 20 built-in) auto-restarts on src file changes.
     # Note: on Windows Docker Desktop, file-change events across the WSL2 boundary
