@@ -3,8 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, 2026-09-01, after DELETE-TRACK-SAFETY-1 — the pair is complete. **Master `ac372195` → and moving.** Origin
-carries master alone.
+**Last rewritten:** 2026-09-01, 2026-09-01, after DELETE-TRACK-SAFETY-1 — the pair is complete. **Origin carries master alone.**
 
 ---
 
@@ -70,11 +69,19 @@ would need.
 
 ## HANDED BACK
 
-- **Production build on 4173**, served by `scripts/serve-production.mjs` (rule R10 — out of the
-  OneDrive tree, no watcher). **Build pill `build cd1e1fb4 · master`**, read from the served bundle.
-- **Backend up on 4000**, rebuilt on the same client build: `/` 200, `/api/health` 200,
-  `/api/tracks` 401.
+- **Production build on 4173**, served by `scripts/serve-production.mjs` (rule R10 — copied out of
+  the OneDrive tree, no file watcher). The build pill is master's tip; it is read from the served
+  bundle each time rather than assumed.
+- **Backend up on 4000**, rebuilt on the same client build and now running a **self-contained
+  image**: `/` 200, `/setup` 200, `/api/health` 200, `/api/tracks` 401.
 - **Origin carries master alone.**
+
+## ONE THING THAT IS NOT MINE AND IS WORTH KNOWING
+
+`git` prints `failed to delete '.git/worktrees/ra-p2': Permission denied` on some operations. Two
+stale worktree registrations (`ra-p2`, `ra-p3`) cannot be pruned — the known EPERM condition under
+OneDrive. It is **pre-existing, harmless to commits, merges and pushes** (all of tonight's went
+through), and `git worktree list` does not show them. Left alone deliberately.
 
 ## RUNNING / NOT RUN
 
