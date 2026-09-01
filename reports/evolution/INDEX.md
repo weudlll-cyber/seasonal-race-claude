@@ -191,6 +191,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [CROWDING-INFERENCES-1.md](CROWDING-INFERENCES-1.md) — **one inference confirmed, one refuted as
+  stated, and the cliff did not reproduce** (2026-09-01; measurement only. **THE BOUND IS NOT
+  RETUNED** — `maxWorkers: 4` untouched). Three arms, three runs each, GATE-SERIAL-BCRYPT-1's own
+  instrument reused, compared **only within one session and only on the 12,753 ordinary tests all
+  three arms share** — comparing "worst test" across an arm with the heavy files removed is circular.
+  **CPU IS THE RESOURCE — CONFIRMED AND NOW MEASURED**: 13 workers pin CPU at 85–87%, 4 workers sit at
+  47%, and the ordinary tests track it (p99 675 ms → 237 ms). **Memory is ruled out on a number for
+  the first time** — free memory never below 9.3 GB of 33.8 — and **disk was never even considered**:
+  queue 0 for almost every sample. **"THE 15 EXTENDED-TIMEOUT TESTS ARE THE LOAD" IS REFUTED AS
+  STATED**: removing all seven heavy files buys p99 −9% and worst −17%, while bounding workers buys
+  −65% and −77% — **the bound does 4× more than deleting them**. The count is also wrong (12, not 15,
+  per run) and so is the file list: the timeout is `RACE_TIMEOUT_MS = 180_000` in `goldenCases.js`, and
+  the three files a grep DOES find are none of the slow ones (`sim-fairness.test.js` is named in the
+  config comment and is not slow). **UNASKED AND LARGER: zero failures in nine runs**, where the
+  original unbounded arms failed 14 and 6. **The crowding reproduces as DURATION** (heaviest test
+  32.4 s unbounded vs 15.1 s bounded, 2.1×, matching the original 2.3×) **but not as failure** — the
+  worst ordinary test is 3,490 ms, still 1,510 ms inside the limit. Why is not established and is
+  flagged as a hypothesis. Also recorded: within this session the bound costs **13.5% wall clock**,
+  where GATE-CLIENT-BOUNDED-1 found no cost — different invocations, neither number transfers. The
+  first sampler returned ERR on every line (localized counter names — the netstat trap again); it uses
+  language-neutral CIM classes. 2 proposals, 1 the block's own.
+
 - [REACH-ADVISORY-1.md](REACH-ADVISORY-1.md) — **the line a human reads now agrees with the routing
   that was already right** (2026-09-01, SHIPPED; the STOP condition was NOT reached — the two rest on
   one question). `engine-reach --check` walks IMPORT edges, a JSON has none, so it said **"cannot
