@@ -230,6 +230,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CENSUS-DUPES-1.md](CENSUS-DUPES-1.md) — **16 groups of duplicated fact, 483 comparable values,
+  456 agree and 27 do not — and four groups have no source of truth at all** (2026-09-02, count
+  only, nothing repaired). Piece 1 of the NIGHT-CENSUS-1 chain. **The brief said four files copy the
+  racer registry; it is five** — `scripts/audit-sprite-crops.mjs` carries a sixth 20-type table that
+  has **never** agreed, wrong on 5 display sizes and 16 frame geometries since the day it was born
+  (`11093fff`, 2026-06-03), which matters because it is the only tool that can measure `bodyFillX/Y`
+  and it would today slice a 150-px sheet into 128-px frames. Found by searching **uncapped** and in
+  **both spellings** (`field:` and `field =`) — the two spellings and the ten-result cap are exactly
+  what hid it before. The 27 disagreements sit in five files; the garden-path/snail pairing is stale
+  in **four** live sites from one event (`d73ec6a9`, 2026-08-25), and `sweep-bufferPct-driver.mjs`
+  has paired city-circuit with the wrong racer since the week it was written, 64 days, unnoticed.
+  **The worse half is the four groups with NO home**: `bodyFillX/Y` are described everywhere as
+  "measured from the spritesheet" and **nothing in the repository can produce them**. Ten broken
+  things named and deliberately left, including a **tautological test** that has been green and
+  meaningless for 90 days and a comment claiming a guard that was proposed, held, and never built.
+
 - [REGISTRY-IMPORT-FEASIBILITY-1.md](REGISTRY-IMPORT-FEASIBILITY-1.md) — **all four can import the
   real source, so the literals are removable and the guard is not needed** (2026-09-01, measure only
   — no literal removed, no guard built, nothing changed but the report). The owner held the drift
