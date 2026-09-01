@@ -100,7 +100,42 @@ export const TRACKS = [
   ["space-sprint", "rocket"],
 ];
 
-/** Racer-type physical config — mirrors sim-fairness's RACER_CONFIGS for the types the soak uses. */
+/**
+ * Racer-type physical config for the types the soak uses.
+ *
+ * ── THIS TABLE DOES NOT MIRROR ANYTHING. IT IS FROZEN, AND FIVE OF ITS TEN ENTRIES DISAGREE WITH
+ *    THE PRODUCT (SPRITE-TABLE-DRIFT-1, 2026-09-01) ────────────────────────────────────────────
+ *
+ * The line that stood here claimed this "mirrors sim-fairness's RACER_CONFIGS". **It does not, and
+ * that sentence cost a reader a wrong conclusion**: it invites you to take these numbers as the
+ * product's, and five of them are not. Measured against the racer-type registry
+ * (`client/src/modules/racer-types/`, the one authority) on 2026-09-01:
+ *
+ *     agrees   horse · rocket · manta · dolphin · snowmobile
+ *     DIFFERS  snail 44/0.75/0.5      -> registry 35/0.727/0.938
+ *              motorbike 44/0.35/0.8  -> registry 42/0.4/0.8
+ *              duck 44/0.5/0.75       -> registry 36/0.875/0.875
+ *              luge 50/0.3/0.85       -> registry 80/0.313/0.641
+ *              boarder 48/0.4/0.8     -> registry 40/0.398/0.719
+ *
+ * `scripts/sim-fairness.mjs`'s table agrees with the registry on all twenty types; this one is the
+ * drifted copy. **The five that agree carry precise values and the five that differ carry round
+ * hand-written ones** — this table was refreshed in part and never finished.
+ *
+ * ── WHY THE NUMBERS ARE LEFT ALONE ANYWAY ──────────────────────────────────────────────────────
+ *
+ * **The parity result is not corrupted by them.** All six consumers below — `buildIdentity`,
+ * `browserModel`, `simModel`, `browserArm`, `realArm`, `simArm` — read THIS table, so both sides of
+ * every golden comparison are handed the identical body. A wrong value moves the two arms together
+ * and can neither manufacture a divergence nor cancel one. What it costs is COVERAGE: the duck,
+ * motorbike, snail, luge and boarder cases exercise a shape the product never draws, so a divergence
+ * that only appears at the real aspect ratio would never be reached. The pinned outcomes
+ * (`REAL_ARM_WINNERS`) are searound/manta, and manta is one of the five that agree.
+ *
+ * **Correcting them would change which races the goldens run** — different body, different brake-T
+ * and avoidance, different hashes — which is exactly what a golden exists not to do silently. That
+ * is an owner's re-baseline, not a tidy-up. Do not "fix" this table as a drive-by.
+ */
 export const RACER_CONFIGS = {
   horse: {
     speedMultiplier: 1.0,
