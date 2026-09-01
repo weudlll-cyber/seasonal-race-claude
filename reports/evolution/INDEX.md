@@ -230,6 +230,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CENSUS-REMOVABLE-1.md](CENSUS-REMOVABLE-1.md) — **exactly ONE item is provably dead (9 files,
+  1,444 lines, 0 s of suite time); four of the six candidate classes came back EMPTY** (2026-09-02,
+  propose only, **nothing removed**). Piece 4 of the NIGHT-CENSUS-1 chain, and the empty classes are
+  the more useful result: **zero** skipped or retired-mechanism tests survive anywhere, and **every**
+  guard's declared paths still resolve. The one proven item is
+  `client/e2e/camera-pan-diagnostic-output/` — its branch does not resolve, the `CameraDirector`
+  constructor it argues about no longer takes a bbox, all four diagnostic hooks that produced it
+  return zero files, and it is the **last place `postStartHoldMs` survives in the tree**. **The
+  `reports/perf` assumption is CORRECTED: something does read it** — `phys-bench-fit.mjs:34` takes a
+  file in there as its DEFAULT input — and it is 317 files / 785,622 lines, not the 326 / 787,000 the
+  brief cited (PERF-CLEAR-1 already pruned ten). **Deleting it would shrink a clone by 0.4%**: it is
+  2.49 MB of a 600 MB pack, where seventeen track backgrounds are 72.57 MB. The age distribution is
+  the reassuring half — **the one dead thing is the oldest thing examined, and everything unprovable
+  is days old**; `scripts/diag/` is not rot but a live investigation, 81% of it younger than nine
+  days, and one file on the "zero-reference" list belongs to the branch now under his eye.
+
 - [CENSUS-TESTS-1.md](CENSUS-TESTS-1.md) — **310 test files, 5,583 tests, 300 of 310 run
   automatically — and "4,327" is the CLIENT suite alone, not the repository** (2026-09-02, count
   only, nothing repaired). Piece 3 of the NIGHT-CENSUS-1 chain. **Two standing beliefs are corrected
