@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, 2026-09-01, after IMAGE-STANDALONE-1. **Master `813d5343` → and moving.** Origin
+**Last rewritten:** 2026-09-01, 2026-09-01, after DELETE-TRACK-SAFETY-1 — the pair is complete. **Master `ac372195` → and moving.** Origin
 carries master alone.
 
 ---
@@ -36,7 +36,7 @@ questions — see the chain table.
 | # | piece | state |
 |---|---|---|
 | **A** | **The image runs on its own** | **DONE, merged.** Build context moved to the repository root; `shared/nameLimits.mjs` copied. **Proven with NO source mounts**: boots, serves the app, gates the API. The root `.dockerignore` came first — without it the context would have been **1.3 GB** and would have carried `users.json` back in. Found and fixed a defect of mine: two `scripts/*.test.mjs` used vitest where `script-suite` runs `node --test`, so **22 tests had never run**. |
-| B | Deleting a track must not damage another one | not started |
+| **B** | **Deleting a track must not damage another one** | **DONE, merged.** **The cross-damage cannot happen**: the upload route derives the filename from the track id, so two tracks can never share one — established from every writer, pinned by four tests, no runtime check built. **The real defect was next to it**: both delete paths unlinked a filename the read path refuses. Fixed, sabotage red. **No backup write added to `DELETE /:id`** — `tracks-backups/` is read by nothing; what a real recovery path would need is written up for you. |
 
 ### The original ten
 
