@@ -191,6 +191,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [TRACK-BACKUPS-TRUTH-1.md](TRACK-BACKUPS-TRUTH-1.md) — **what `tracks-backups/` actually is, and
+  what it is not** (2026-09-01, READ-ONLY — nothing built, nothing deleted, nothing proposed as work).
+  **It is not a backup system.** Written by four routes (create, edit, upload background, remove
+  background) and **read by NOTHING** — `BACKUP_DIR` occurs twice in the whole repository, both inside
+  the writer. No restore endpoint, no script, no UI. **`DELETE /api/tracks/:id` is not on that list**:
+  the one operation that destroys a track writes no backup and deletes the background file too. **And
+  the backup is written AFTER the save, storing the NEW record** — a post-image, not a pre-image, so
+  restoring a track's most recent backup is a no-op and its state before the first recorded edit was
+  never captured. The Dev Panel's advertised "system backup/restore" is a DIFFERENT mechanism
+  (`exportAllStorage` over `localStorage`) that never touches these files. **All 223 records parsed**:
+  24 days, 2026-05-01 → 2026-08-22; **160 of 167 backed-up track ids no longer exist**, so a restore
+  would resurrect a deleted track; of the 56 naming a background **only 14 still have one**, and a
+  missing one is a silent 404 the browser draws as nothing — **the track would come back looking blank
+  rather than broken**. Restoring at all means copying a file by hand and restarting the API, since
+  the track list is an in-memory Map built at boot. **The three orphan backgrounds stay spared** —
+  that refusal was correct and stands; this only makes the thing protecting them smaller than it
+  looked. No fingerprints run and none could move.
+
 - [CROWDING-INFERENCES-1.md](CROWDING-INFERENCES-1.md) — **one inference confirmed, one refuted as
   stated, and the cliff did not reproduce** (2026-09-01; measurement only. **THE BOUND IS NOT
   RETUNED** — `maxWorkers: 4` untouched). Three arms, three runs each, GATE-SERIAL-BCRYPT-1's own

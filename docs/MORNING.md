@@ -3,7 +3,7 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-01, after piece 8 of 9+1. **Master `c28298d3` → and moving.** Origin
+**Last rewritten:** 2026-09-01, after piece 9 of 9+1 — THE CHAIN IS COMPLETE. **Master `50da38c7` → and moving.** Origin
 carries master alone.
 
 ---
@@ -31,7 +31,7 @@ questions — see the chain table.
 
 ---
 
-## TONIGHT'S CHAIN — 9 done (8 of 9, plus the one you added)
+## TONIGHT'S CHAIN — ALL 10 DONE (9 of 9, plus the one you added)
 
 | # | piece | state |
 |---|---|---|
@@ -44,7 +44,7 @@ questions — see the chain table.
 | **6b** | **AGPL-3.0-or-later** (added by you mid-chain) | **DONE, merged.** Identifier changed in all three `package.json`; README notice updated to the FSF's own or-later wording. `LICENSE` untouched — 'or later' belongs in the notice, not the licence text. |
 | **7** | **What the engine-reach advisory says about data files** | **DONE, merged.** The advisory now consults `dataReach` — the two rested on one question, so no design decision was needed and the STOP condition was not reached. It had called a seed record 'cannot reach the engine at all' **twice**, once for an edit that moved all four hashes. A second defect (an UNCHANGED record reported as reaching) was found by running the matrix and fixed. Routing untouched. |
 | **8** | **The two things the crowding entry still infers** | **DONE, merged.** **CPU confirmed as the resource** (85–87% at 13 workers vs 47% at 4; memory and disk ruled out on numbers). **The heavy-files claim is REFUTED as stated** — the bound buys 4× what removing them does. **And the cliff did not reproduce: 0 failures in 9 runs.** The crowding is real as DURATION (2.1×) but nothing crossed the 5 s line. **The bound is NOT retuned.** |
-| 9 | What the track backup directory actually is | not started |
+| **9** | **What the track backup directory actually is** | **DONE, merged.** Read-only. **It is not a backup system**: written by four routes, read by nothing, no restore anywhere — and `DELETE /:id` writes no backup while deleting the image too. The record is stored AFTER the change, so it cannot undo one. 160 of 167 backed-up track ids no longer exist. **The three orphan backgrounds stay spared.** |
 
 ### What piece 2 actually changed, in one paragraph
 
