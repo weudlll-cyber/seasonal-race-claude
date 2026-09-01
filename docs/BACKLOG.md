@@ -832,8 +832,21 @@ rather than a threshold nobody has found yet.**
       above; the guard below therefore needs **no allowlist**. **verify:** `node -e` comparing
       `RACER_CONFIGS` against `getRacerTypeById(id).config` — see the report.
 
-- [ ] **NO GUARD COMPARES A HARDCODED RACER TABLE TO THE REGISTRY, and the duplication has now caused
-      two errors in two blocks.** A racer's physical fields are copied into four files under
+- [ ] **~~BUILD A DRIFT GUARD~~ — HELD 2026-09-01, and the answer is to DELETE THE COPIES instead.
+      [REGISTRY-IMPORT-FEASIBILITY-1](../reports/evolution/REGISTRY-IMPORT-FEASIBILITY-1.md)
+      establishes that ALL FOUR files can import the racer-type registry directly**, so a guard would
+      be policing a duplication that need not exist. Proven by running, not reading: the registry
+      imports in **plain Node (23–35 ms)** and in **vitest's jsdom (394 ms)**, and **thirteen
+      instruments already import it**. None of the four is new coupling — each already imports 6–13
+      modules from `client/src`. **NEEDS HIS WORD: order the removal?** **If it is ordered, the
+      removal MUST read `CONFIG_SNAPSHOT` for `displaySize` and `speedMultiplier`** — `index.js:539`
+      applies stored tunable overrides at load and mutates `type.config` in place, and both fields are
+      tunable — **while `bodyFillX`/`bodyFillY` are safe on `.config`** (not tunable, never mutated).
+      Verify it the way GOLDEN-TABLE-REGISTRY-1 was: parity suite either side, plus a `simArm` hash
+      per affected type shown UNCHANGED, since a removal must not move a race. The guard becomes
+      unnecessary if the removal lands; the original case for it is below.
+
+      **THE CASE FOR A GUARD, if the copies stay:** A racer's physical fields are copied into four files under
       `scripts/` — `sim-fairness.mjs` (20 types, all agree today), `goldenRunner.mjs` (10 types, 5
       differ), and manta constants in `diag/acceptance-orders.mjs` and `diag/micro-divergence.mjs`
       (both agree). Nothing makes an edit to a `*RacerType.js` reach or even notice them. **A guard
