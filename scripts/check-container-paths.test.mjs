@@ -52,11 +52,11 @@ function run() {
 }
 
 // The real tree's shape, and it must STAY the real tree's shape or these tests stop meaning
-// anything: `src` and `seeds` are COPYed and mounted; `utils`, `shared` and — since
-// IMAGE-NO-CREDENTIALS-1 — `data` are mounted only, which are the three entries the guard ships
-// declaring. `data` is deliberately absent from the COPY list: the runtime store holds this
-// install's accounts and must never enter an image layer.
-const REAL_COPIES = ["src", "seeds"];
+// anything: `src`, `utils` and `seeds` are COPYed and mounted; `shared` and `data` are mounted only,
+// which are the TWO entries the guard now ships declaring. `data` is deliberately absent from the
+// COPY list — the runtime store holds this install's accounts and must never enter an image layer —
+// and `utils` joined the COPY list at COPY-UTILS-1, which is why its declaration is gone.
+const REAL_COPIES = ["src", "utils", "seeds"];
 const REAL_MOUNTS = [
   "./server/src:/app/src",
   "./server/utils:/app/utils",
@@ -105,10 +105,11 @@ describe("check-container-paths", () => {
     expect(r.out).toMatch(/OUTSIDE the build context/);
   });
 
-  it("PASSES once a divergence is closed by adding the COPY", () => {
-    // utils COPYed as well as mounted: no longer a divergence, so its declared entry goes stale —
-    // which the guard reports, because a stale allow-list entry is how an allow-list rots.
-    write([...REAL_COPIES, "utils"], REAL_MOUNTS);
+  it("FAILS when a declared divergence stops being one (the STALE-entry check)", () => {
+    // `data` COPYed as well as mounted: no longer a divergence, so its declared entry goes stale —
+    // which the guard reports, because a stale allow-list entry is how an allow-list rots. This is
+    // the check that caught `utils` the moment COPY-UTILS-1 added its COPY line.
+    write([...REAL_COPIES, "data"], REAL_MOUNTS);
     const r = run();
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/no longer a divergence/);

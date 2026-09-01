@@ -17,6 +17,11 @@ COPY package.json ./
 RUN npm install --omit=dev  && apk del .build-deps
 
 COPY src/ ./src/
+# COPY-UTILS-1: `utils/` is inside this build context and was only ever supplied by a bind
+# mount, which meant the image could not run without the repository beside it. It is copied now.
+# This does NOT make the image standalone — `shared/` lives above the build context and still
+# needs its mount.
+COPY utils/ ./utils/
 # `data/` is NOT copied, deliberately — see server/.dockerignore. The runtime store holds this
 # install's accounts, and the directories the server needs there are created at runtime anyway.
 COPY seeds/ ./seeds/

@@ -106,12 +106,12 @@ export const DECLARED_DIVERGENCES = [
     reason:
       "IT MUST NEVER BE IN THE IMAGE. `server/data/` is the RUNTIME STORE — this install's accounts (users.json, sessions.sqlite, setup-complete.json) sit there beside the seeded records. It used to be COPYed, which meant an image built on a used machine carried the builder's password hashes and a setup marker that made `POST /api/auth/setup` answer 409 forever on the recipient's fresh install. IMAGE-NO-CREDENTIALS-1 removed the COPY and excluded the directory from the build context in server/.dockerignore. This divergence is CORRECT and permanent: an operator's data belongs in a volume, never baked into a layer. Every directory the server needs under it is created at runtime with mkdirSync recursive, so nothing is lost by its absence.",
   },
-  {
-    name: "utils",
-    kind: "mounted-not-copied",
-    reason:
-      "HISTORY, NOT NECESSITY, and it is the honest label. `server/utils/` IS inside the build context and COULD be COPYed; it is not, because the original Dockerfile predates it and the mount was added when the missing helpers stopped the container starting. It works today because the mount supplies it. It is declared rather than fixed here because this piece builds a guard and does not change what ships — closing it is a one-line Dockerfile change and a rebuild, which is a separate decision.",
-  },
+  // `utils` STOOD HERE and is gone, closed by COPY-UTILS-1 on 2026-09-01. It was labelled "history,
+  // not necessity" — inside the build context, one COPY line from not diverging, declared only
+  // because the piece that built this guard shipped no behaviour. The Dockerfile now copies it.
+  // The stale-entry check above is what surfaced this the moment the COPY landed, which is the
+  // entry's last useful act: an allow-list that does not notice its own entries becoming false is
+  // how an allow-list rots.
 ];
 
 const fail = (lines) => {
