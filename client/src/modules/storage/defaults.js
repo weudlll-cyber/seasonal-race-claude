@@ -874,6 +874,46 @@ export const DEFAULT_CAMERA_CONFIG = {
   // edge. The pan target is shifted backward along the track tangent to achieve it; the containment clamp
   // (inner-70) stays the hard rail. Absent/invalid → dead-centre (legacy). Range 0.5–0.8.
   leaderForwardFrac: 0.66,
+  // ── AIM-ROOM-1, LEVER B. OFF BY DEFAULT (0). A FLOOR ON THE ROOM LEFT AHEAD OF THE LEADER. ─────
+  //
+  // `leaderForwardFrac` is a FRACTION, so the room it leaves ahead is `chord × (1 − frac)` — and the
+  // chord is the frame's reach along the heading, which is not a constant. Measured (ROOM-FLOOR-1):
+  // 770 px on space-sprint's steep heading against 1,313 on river-run's shallow one. One constant
+  // fraction therefore leaves proportionally LESS room exactly where there is least: 261.8 px ahead
+  // on space-sprint, 446.6 on river-run. 83.7% of space-sprint's clipped frames are the leader's
+  // NOSE past the forward edge, which is the fault this addresses.
+  //
+  // Set > 0 and the forward fraction is reduced — only where it must be — so at least this many
+  // screen px are left ahead of the aim point. **It is a floor, not a per-track number**: it binds
+  // where the chord is short and is inert where the chord is long, so it needs no table and no
+  // per-track key. The reduction is clamped at 0.5 (never behind centre), and a run-in placement
+  // already below 0.5 is left alone — that shot is deliberately composed the other way.
+  //
+  // WHAT IT COSTS, and it is the owner's to judge: LESS ROAD AHEAD OF THE LEADER. He has said
+  // repeatedly that seeing ahead matters. On space-sprint a floor of 320 moves the fraction 0.66 →
+  // 0.584 and covers 31% of the forward clips; 360 moves it to 0.533 and covers 54%. The cost is not
+  // measurable and the coverage is, which is exactly the wrong way round for a number to be picked
+  // by measurement alone.
+  leaderAimRoomFloorPx: 0,
+  // ── ASPECT-CAP-1, LEVER A. OFF BY DEFAULT (null). CAP THE DRAWN BODY'S ASPECT RATIO. ───────────
+  //
+  // Only two of the twenty racer types exceed 2.5: rocket at 2.881 and giraffe at 2.830. Set this
+  // and their LONG axis is capped at `ratio × narrow`; every other type is untouched, which
+  // `aspectCap.test.js` asserts rather than assumes.
+  //
+  // IT REACHES THE DRAWN SPRITE, NOT ONLY THE CAMERA'S ARITHMETIC — that distinction is the whole
+  // reason this lever is buildable. `bodyFillLong/bodyFillNarrow` governs two independent paths:
+  // `SpriteRacerType._drawBody` (what is drawn) and `raceCore`'s `drawnBodyLengthPx` (what the
+  // physics and the framing rule reason with). A cap applied only to the second would shrink the
+  // measured clipping without shrinking the clipping — the counting would stop counting. This key
+  // drives BOTH, from one value, so they cannot disagree.
+  //
+  // WHAT IT COSTS, and it is the owner's to judge: THE ROCKET IS DRAWN SMALLER. The mechanism is the
+  // sleeping long-axis guard already in `SpriteRacerType`, which caps the long axis by scaling the
+  // whole sprite down — it preserves the artwork's proportions rather than squashing it, so at 2.5
+  // the rocket's narrow axis goes 28.5 → 24.7 world px along with its length. **That is close to the
+  // sprite-floor change he has already rejected once**, and he should judge it knowing so.
+  leaderBodyAspectMax: null,
   // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only; correctness is universal). 'glide' (shipped,
   // owner's verdict) = on state entry pan AND zoom travel TOGETHER on one bounded ease to the subject's
   // correct framing — smooth, no hard cut. 'cut' = snap pan+zoom on frame 1 (crisp). 'legacy' = bare-caller

@@ -1011,7 +1011,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4110bd26 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ed627ae7 2026-09-01 depends=client/src/modules/camera/ -->
+**RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01), and the reason is a fingerprint
+rather than a judgement.** That block adds two camera keys whose defaults are OFF
+(`leaderAimRoomFloorPx` 0, `leaderBodyAspectMax` null). With both at their defaults the CAMERA
+fingerprint is byte-identical — re-run on the settled tree and equal to the value recorded in
+[docs/fingerprints.json](fingerprints.json) — so the delivered picture is the same to the byte and no
+number below can have moved. Re-running the lag measurement
+would have confirmed what the fingerprint already proves (R15a). **If either key is ever turned ON by
+default, every figure here must be re-measured for real.**
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
 2089/2.81/8.59. Run rather than argued: the change moves the pan target in `LEADER_ZOOM`, which is
