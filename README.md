@@ -126,10 +126,19 @@ The core simulation, editors, camera director, and local backend (Phase L) are i
 
 ## Licence
 
-**RaceArena is licensed under the GNU Affero General Public License v3.0.** The full, unmodified
-licence text is in [LICENSE](LICENSE) at the repository root.
+**RaceArena is licensed under the GNU Affero General Public License, version 3 or (at your option)
+any later version.** The full, unmodified licence text is in [LICENSE](LICENSE) at the repository
+root; the SPDX identifier is `AGPL-3.0-or-later`.
 
 Copyright (C) 2026 weudlll-cyber
+
+    This program is free software: you can redistribute it and/or modify it under the terms of the
+    GNU Affero General Public License as published by the Free Software Foundation, either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+    even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    Affero General Public License for more details.
 
 The AGPL is a copyleft licence with one addition that matters for a project like this one: **if you
 run a modified version of RaceArena as a network service, you must offer its users the source of

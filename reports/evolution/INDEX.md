@@ -191,6 +191,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and swept by `7a3942fa`, nothing lost, and the rows now name an eye-test owed ON MASTER and what he
   would look at. Nothing deleted. 3 proposals, 2 the block's own.
 
+- [LICENCE-OR-LATER-1.md](LICENCE-OR-LATER-1.md) — **`AGPL-3.0-or-later`, by the owner's answer**
+  (2026-09-01, SHIPPED). **SUPERSEDES the `AGPL-3.0-only` identifier that
+  [LICENCE-AGPL-1](LICENCE-AGPL-1.md) shipped** — that report is not corrected and is not wrong: it
+  chose the conservative reading of "AGPL-3.0" and flagged the alternative as his, which is the
+  question he has now answered. One word in three `package.json`, plus the README notice, which had
+  to follow because a bare identifier swap would leave the prose narrower than the metadata; the
+  wording is the FSF's own from the appendix already in `LICENSE`. **`LICENSE` itself untouched, and
+  that is correct** — "or later" is a statement about which versions the holder permits and belongs in
+  the notice, never in the licence document. Every statement of the licence in the tracked tree was
+  enumerated before editing so none could be missed; `package-lock.json` entries are dependency
+  licences and were left alone. Its own branch and report on his instruction rather than folded into
+  the piece in flight. **The copyright holder question is also closed** — `weudlll-cyber` stands. No
+  fingerprints run and none could move. 2 proposals, 1 the block's own.
+
 - [COPY-UTILS-1.md](COPY-UTILS-1.md) — **one of the two declared divergences is closed, and the image
   is still not standalone** (2026-09-01, SHIPPED). One `COPY utils/ ./utils/` line; the declaration is
   gone and the guard is green with **two** entries where it had three. **The stale-entry check earned
