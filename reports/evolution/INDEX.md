@@ -394,6 +394,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [MOTION-CONTINUITY-1.md](MOTION-CONTINUITY-1.md) — **BUILDABLE, but only after ONE field is
+  published — and the thing that decides it was MEASURED, not reasoned** (2026-09-02, read-only,
+  PROPOSE ONLY; a new instrument is the owner's to order and nothing was built). **The quantity is
+  NOT pan displacement**: `Δ(offsetX, offsetY)` is zoom bookkeeping, a reading this project has
+  already withdrawn twice. Two channels instead — camera centre in world px over visible world width
+  (frame widths), derivable from the record with no new field, and `|Δ ln camZoom|` kept separate.
+  Both are already implemented in the tree as REPORTS and never as checks. **The threshold shape
+  differs per channel and that is a finding**: a median multiple works for pan (±30-frame window,
+  ≥15×, AND >0.005 frame widths) and is **undefined for zoom**, because the zoom median is exactly
+  0.00000 on 11 of the 12 races measured — so zoom needs an absolute bound, about 0.25 ln. ★ **On the
+  deliberate cuts: the cut grammar is not even shipped** (`cameraTransitionGrammar: 'glide'`, zero
+  frames over ten races), and `LEAD_CHANGE`'s snap and OVERVIEW's are fully marked by state and
+  lerpPhase, both already hashed — **but the field guarantee's retirement is NOT distinguishable from
+  a fault today.** Recorded at the latch in a real browser race (city-circuit seed 9, `--arm=his`,
+  frame 1513) it is **the largest picture pan of the whole race at 14.8× the local median AND the
+  largest zoom step at 0.1276 ln**, with no state, lerp or HUD change to mark it; the only field that
+  moves is `binding`, which `company-ceiling-who.mjs:22` already declares untrusted. **The verdict is
+  therefore build AFTER publishing `fieldRetired`/`ceilings.field` — three lines** — and then put the
+  rule inside `viewer-invariants` per R13, which already declares this ground and whose `4-widthstep`
+  bound sits 0.005 ln above every real event this week found. It would have caught FINISH-MOTION-1's
+  2,708 px step by **32×**. **It misses six of this week's nine camera findings** and RACE-JUDDER-1's
+  sequence defect by construction, so the report insists it be named a **STEP check, not a
+  motion-continuity check**. ★ **A correction to the brief that commissioned it: there is no
+  `PAN-SPIKE-TRUTH-1`.** That finding lives in AIM-ROOM-PAN-ANATOMY-1 and SEED-117-SETTLE-1, and it
+  belongs to `_fieldCeiling`, not to the "once home" company retirement the brief named.
+
 - [TESTS-WIRED-1.md](TESTS-WIRED-1.md) — **none of the ten is out by ACCIDENT, so nothing was wired
   — and running them anyway found one assertion that has ROTTED and two that only flaked**
   (2026-09-02; nothing wired, nothing fixed, nothing silenced). The ten are the Playwright suite, out
