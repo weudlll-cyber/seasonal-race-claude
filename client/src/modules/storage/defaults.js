@@ -874,6 +874,30 @@ export const DEFAULT_CAMERA_CONFIG = {
   // edge. The pan target is shifted backward along the track tangent to achieve it; the containment clamp
   // (inner-70) stays the hard rail. Absent/invalid → dead-centre (legacy). Range 0.5–0.8.
   leaderForwardFrac: 0.66,
+  // ── AIM-ROOM-1. SHIPPED 2026-09-02. A FLOOR ON THE ROOM LEFT AHEAD OF THE LEADER. ─────────────
+  //
+  // WHY IT EXISTS. `leaderForwardFrac` is a FRACTION, so the room it leaves ahead is
+  // `chord × (1 − frac)` — and the chord is the frame's reach along the heading, which is not a
+  // constant. Measured (ROOM-FLOOR-1): 770 px on space-sprint's steep heading against 1,313 on
+  // river-run's shallow one. One constant fraction therefore leaves proportionally LESS room exactly
+  // where there is least. 83.7% of space-sprint's clipped frames are the leader's NOSE past the
+  // forward edge, which is the fault this addresses.
+  //
+  // WHAT IT DOES. The forward fraction is reduced — only where it must be — so at least this many
+  // screen px are left ahead of the aim point. **It is a floor, not a per-track number**: it binds
+  // where the chord is short and is inert where the chord is long, so it needs no table and no
+  // per-track key. The reduction is clamped at 0.5 (never behind centre), and a run-in placement
+  // already below 0.5 is left alone — that shot is deliberately composed the other way.
+  //
+  // WHAT IT COSTS: LESS ROAD AHEAD OF THE LEADER on the headings where it binds. That cost is not
+  // measurable and was never claimed to be; it was accepted BY EYE on dated production builds of
+  // `feat/aim-levers-1` (2026-09-01 and 2026-09-02) after both candidates were built OFF by default
+  // and judged side by side. The competing candidate — a cap on the drawn body's aspect ratio — was
+  // rejected and removed in the same ship (AIM-ROOM-SHIP-1).
+  //
+  // THE KEY STAYS, as every camera value in this project does, so the behaviour is the DEFAULT
+  // rather than an option and remains revertible: set 0 for the pre-2026-09-02 picture.
+  leaderAimRoomFloorPx: 360,
   // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only; correctness is universal). 'glide' (shipped,
   // owner's verdict) = on state entry pan AND zoom travel TOGETHER on one bounded ease to the subject's
   // correct framing — smooth, no hard cut. 'cut' = snap pan+zoom on frame 1 (crisp). 'legacy' = bare-caller

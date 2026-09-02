@@ -49,7 +49,31 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 4110bd26 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 6c049d86 2026-09-02 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-COMBINED-1, ON THE TREE CARRYING BOTH THE AIM ROOM FLOOR AND THE
+REPAIRED COMPANY GUARANTEE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT (2026-09-02)** — 6.18/4.57,
+7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-, 7/7) and the same
+settled-frame counts (94, 165, 0, 83). That is the THIRD tree in a row on which this window has not
+moved, and the strongest of the three: the camera fingerprint moved on all of them, so no
+byte-identical argument was available on any, and this one changes both the aim and the guarantee
+that widens around it. Phase 6 is the settled shot AFTER the pull-back's own duration is up, and
+these four numbers are answers about WHEN thresholds are crossed — neither change moves a threshold
+or the schedule.
+
+**RE-MEASURED IN FULL, TWICE, FOR AIM-ROOM-SHIP-1 AND AGAIN FOR AIM-ROOM-REPAIR-1 ON THE REPAIRED
+TREE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT BOTH TIMES (2026-09-02)**
+— 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-, 7/7) and the
+same settled-frame counts (94, 165, 0, 83). **The condition the previous entry set was met and
+honoured**: `leaderAimRoomFloorPx` is now defaulted **ON** at 360, so it was re-measured rather than
+re-stamped, exactly as that entry required. The camera fingerprint DID move for this ship, so no
+byte-identical argument was available and none was used.
+
+**Why it did not move, as a mechanism rather than a hope:** the floor reduces the leader's forward
+placement during `LEADER_ZOOM`, and phase 6 is the settled shot AFTER the pull-back's own duration is
+up — the zoom-out has already taken the frame off the leader's forward bias by then. The four numbers
+here are answers about WHEN thresholds are crossed, and the floor moves neither the thresholds nor the
+schedule. Note this is a genuinely stronger result than the identical-figures entries above it,
+because here the picture demonstrably changed elsewhere and this window still did not.
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
 7/7) and the same settled-frame counts (94, 165, 0, 83). Run rather than argued: the change adds a

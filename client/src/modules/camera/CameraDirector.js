@@ -89,10 +89,14 @@ import {
   companyGuarantee,
   fieldGuarantee,
   COMPANY_FRAME_PCT,
-  anchorScreenPoint,
+  // AIM-ROOM-REPAIR-1: imported UNDER AN ALIAS and used by exactly one method,
+  // `_anchorScreen`. The bare name `anchorScreenPoint` does not exist in this file, so a
+  // four-argument call that silently drops the room floor cannot be written by accident.
+  anchorScreenPoint as anchorScreenPointRaw,
   pointGuarantee,
   lateralShiftToFit,
   lateralAdmissibleForBody,
+  forwardFracForRoomFloor,
 } from './framingRule.js';
 import {
   ceremonySchedule,
@@ -566,6 +570,7 @@ export class CameraDirector {
     this._leaderForwardFrac = f.leaderForwardFrac;
     this._leaderLateralMaxPx = f.leaderLateralMaxPx;
     this._leaderLateralMarginPx = f.leaderLateralMarginPx;
+    this._leaderAimRoomFloorPx = f.leaderAimRoomFloorPx;
   }
 
   /**
@@ -2235,12 +2240,7 @@ export class CameraDirector {
     const anchor = subjects.point ?? panTarget;
     const effX = this._proj.effX(camZoom);
     const effY = this._proj.effY(camZoom);
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(headingT)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, headingT);
     // The perpendicular in SCREEN space, and how many screen px one world px along it is worth.
     const vx = perp.x * effX;
     const vy = perp.y * effY;
@@ -2578,12 +2578,7 @@ export class CameraDirector {
     // side of the anchor, so the room that matters is the room from THERE, not the chord through
     // the frame's centre. Reusing `anchorScreenPoint` keeps the two guarantees from disagreeing
     // about where the subject is about to be.
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(subjects.t)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     return corridorGuarantee(
       this._headingAt(subjects.t),
       this._trackWidthPx,
@@ -2920,12 +2915,7 @@ export class CameraDirector {
     // on and the ease never ran at all — the single worst frame-to-frame move was as large as with no
     // ease whatsoever. An empty set is not "no guarantee", it is "release toward the shot that would
     // otherwise be", and the code below already knows how to do that.
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(subjects.t)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     const raw =
       set.length >= 2
         ? contenderGuarantee(
@@ -3151,12 +3141,7 @@ export class CameraDirector {
     // is 0, so this value is computed and then applied not at all.
     if (this._corridorCapWeight() <= 0) return null;
     if (!subjects?.point || !(this._trackWidthPx > 0)) return null;
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(subjects.t)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     const cap = corridorGuarantee(
       this._headingAt(subjects.t),
       this._trackWidthPx + this._drawnBodyWidthRefPx,
@@ -3214,6 +3199,52 @@ export class CameraDirector {
    *
    * @returns {number|null} the fraction along the heading, or null for dead centre
    */
+  /**
+   * AIM-ROOM-REPAIR-1 — **THE ONE PLACE THIS DIRECTOR OBTAINS AN AIM POINT.**
+   *
+   * ── WHY THIS EXISTS, AND WHY IT IS AN ACCESSOR RATHER THAN SEVEN CAREFUL CALL SITES ───────────
+   *
+   * `anchorScreenPoint` takes the room floor as a FIFTH parameter with a default of 0. Seven call
+   * sites in this file passed four, so every framing guarantee — company, corridor, point, pair —
+   * planned its shot around an aim that `_applyLeaderForwardBias` then moved. The guarantees and
+   * the aim disagreed, which is the one thing `framingRule.js`'s contract forbids, and it is the
+   * same class of failure recorded at `_companyCeiling` below: *"0.66 assumed against a true 0.399
+   * dead ahead, which is why it delivered one companion fewer than it promised."*
+   *
+   * **The defaulted parameter is what produced the defect.** Seven places each remembering to pass
+   * it is seven chances to forget, and the eighth call site written next month forgets BY DEFAULT
+   * and degrades silently. So the fix is not "pass it everywhere"; it is to make an aim
+   * uncomputable without the floor.
+   *
+   * **HOW THAT IS ENFORCED, and it is the whole point:** `anchorScreenPoint` is **no longer
+   * imported into this file**. There is no raw function here to call with four arguments. A future
+   * call site must either use this method — which cannot omit the floor, because it does not take
+   * it — or re-add the import, which is a visible, reviewable act rather than a silent omission.
+   *
+   * **WHAT IT COSTS.** The parameter was not made *required* in `framingRule.js`, which would have
+   * been the loudest shape: `anchorScreenPoint` has around twenty callers outside this file — six
+   * assertions in `framingRule.test.js`, two in `levelSet.test.js`, and a dozen harnesses that
+   * reconstruct the aim for measurement — and a required parameter would break all of them at once
+   * to fix a defect that lives entirely in this class. Those callers reconstruct rather than
+   * decide, so an un-floored anchor there is a measurement question, not a picture. The cost of the
+   * shape chosen is therefore that `anchorScreenPoint`'s default still exists for them; the benefit
+   * is that the director, which is the only thing that can ship a wrong picture, cannot reach it.
+   *
+   * @param {number} frameW
+   * @param {number} frameH
+   * @param {number} t  the track position whose heading the aim is taken along
+   * @returns {{x:number,y:number}} the aim point in screen coordinates
+   */
+  _anchorScreen(frameW, frameH, t) {
+    return anchorScreenPointRaw(
+      frameW,
+      frameH,
+      this._forwardFracNow(),
+      this._headingScreen(t),
+      this._leaderAimRoomFloorPx
+    );
+  }
+
   _forwardFracNow() {
     const tableFrac =
       framingFor(this.state).position === POSITION.FORWARD ? (this._leaderForwardFrac ?? 0.5) : 0.5;
@@ -3300,14 +3331,7 @@ export class CameraDirector {
       framePct === null || (this._bandFloor && framePct === COMPANY_FRAME_PCT)
         ? subjectRegion
         : framePct;
-    const at =
-      atOverride ??
-      anchorScreenPoint(
-        frameSize.width,
-        frameSize.height,
-        this._forwardFracNow(),
-        this._headingScreen(subjects.t)
-      );
+    const at = atOverride ?? this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     return pointGuarantee(
       subjects.point,
       line,
@@ -4046,12 +4070,7 @@ export class CameraDirector {
     // of frames against 97.1%), because during a widening the live zoom is tighter than the target,
     // so the read-back over-states the room the finished shot will actually have and the guarantee
     // talks itself into staying tight. See the report.
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(subjects.t)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     // COMPANY_FRAME_PCT, not `_innerFramePct`: a guaranteed companion needs to be visible with a
     // margin, not inside the subject's safe region. See the constant for the owner's reasoning.
     return companyGuarantee(
@@ -4093,12 +4112,7 @@ export class CameraDirector {
   _fieldCeiling(subjects, racers, frameSize) {
     if (!this._fieldGuaranteeActive) return Infinity;
     if (!subjects?.point || !Array.isArray(racers) || racers.length === 0) return Infinity;
-    const at = anchorScreenPoint(
-      frameSize.width,
-      frameSize.height,
-      this._forwardFracNow(),
-      this._headingScreen(subjects.t)
-    );
+    const at = this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     // `racers.length + 1` asks for more company than exists, and `companyGuarantee` answers that by
     // taking what exists — the tightest ceiling in the list, which is every racer in frame.
     const ceiling = companyGuarantee(
@@ -4179,7 +4193,11 @@ export class CameraDirector {
     const sLen = Math.hypot(sxDir, syDir);
     if (!(sLen > 0)) return pos;
     const span = frameExtentAlong(sxDir, syDir, frameW, frameH);
-    const worldBias = ((frac - 0.5) * span) / sLen;
+    // AIM-ROOM-1 (LEVER B): the SAME reduction `anchorScreenPoint` applies, from the one helper, so
+    // the aim and the pan cannot disagree about where the leader will sit. Inert at the shipped
+    // default (`leaderAimRoomFloorPx` 0).
+    const effFrac = forwardFracForRoomFloor(frac, span, this._leaderAimRoomFloorPx);
+    const worldBias = ((effFrac - 0.5) * span) / sLen;
     // A NEGATIVE bias is legal now and is the whole of the run-in's opening placement. The old guard
     // here was `worldBias > 0`, which silently discarded exactly that case; it read as a degenerate
     // check and was in fact a one-way valve.

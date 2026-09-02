@@ -230,6 +230,64 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-COMBINED-1.md](AIM-ROOM-COMBINED-1.md) — **the floor and the repaired guarantee measured
+  TOGETHER before merging, against repaired master — and they do not fight** (2026-09-02, the gate for
+  shipping candidate B on top of COMPANY-HEADCOUNT-1). Both act on the same guarantee and every
+  published figure for either came from a tree where it was alone. **The promise does not fall back**:
+  at N=300 it holds or improves on three of four tracks (space-sprint 99.44% -> 99.46%, seatrack
+  98.84% -> 98.90%, river-run 99.88% -> 99.89%) and **mountainstreet slips 0.01 pp — 33 frames of
+  477,638** — reported, not treated as a stop. **B's gain survives**: clip episodes on space-sprint
+  1052 -> **771 (-281)** and centreline **71.20% -> 88.90%**. **Frame counts identical on all ten at
+  both N.** **THE RESTLESSNESS IS ATTRIBUTED, NOT GUESSED**: the combined tree adds whole-screen pans
+  (seatrack 115 -> 161), so a THIRD arm was measured — B alone on the unrepaired tree — and it gives
+  **161 and the identical maximum**, so the extra pans are entirely the floor's own cost and the repair
+  neither adds to nor removes them; the same arm shows B alone costs the promise (98.84% -> 97.06%)
+  and the repair recovers it and more. **The carried-forward river-run fault is smaller, 9 -> 7, and
+  still not fixed.** Priced against a correct baseline for the first time: the widening is bounded at
+  **~1.355x** everywhere, touching 1.5-26% of frames by track.
+
+- [AIM-ROOM-REPAIR-1.md](AIM-ROOM-REPAIR-1.md) — **the guarantees are told about the floor, the
+  promise is kept again, and B's real price is visible for the first time** (2026-09-02, branch
+  `ship/aim-room-floor-1`, **not merged, not minted**, handed back for his eye). Fixed **at the
+  source**: one `_anchorScreen` accessor, and `anchorScreenPoint` is no longer importable under its
+  own name in `CameraDirector.js`, so an eighth call site cannot silently drop the floor — the raw
+  function has ~20 outside callers (tests and harnesses that only *reconstruct* the aim), so making
+  the parameter required would have broken all of them to fix a defect living in one class; that
+  trade is stated. **THE ZERO CASE IS TESTED, NOT ARGUED**: at floor 0 all four fingerprints equal
+  master byte for byte. **SABOTAGE-PROVEN**: reverting the wiring turns 6 tests red and puts the
+  shortfall back to exactly 12.38% / 5.73%. **The two red tests went green untouched** — `git diff`
+  on `framingRule.test.js` is empty. **THE PRICE, three columns, ten tracks**: the company shortfall
+  recovers most of the loss everywhere and all of it on three tracks (space-sprint 4.40% → 12.38% →
+  **6.06%**; at N=300, 3.49% → 8.72% → **4.90%**), and the **worst-case count returns to today's
+  value on 8 of 10**. The gain survives — space-sprint −270 clip episodes at N=300, centreline
+  69.5% → 88.5% — at a cost of 1–2 episodes on four tracks, because guarantees that know the leader
+  sits further back permit a slightly tighter shot. Frame counts identical on all ten: still picture,
+  not race. **ONE NEW FAULT, reported not fixed**: river-run gains **9 whole-screen single-frame pans
+  in 479,587** (max 5320 px) where today has **0**, when the lateral guarantee engages without an
+  ease; seatrack improves 4 → 2 and every other track has none.
+
+- [AIM-ROOM-SHIP-1.md](AIM-ROOM-SHIP-1.md) — **A is out and returns master EXACTLY; B is built,
+  measured on ten tracks, and NOT MERGED** (2026-09-02, branch `ship/aim-room-floor-1`, pushed,
+  **unmerged and unminted**). **STOPPED BEFORE THE MERGE on a defect that can be proven.**
+  `anchorScreenPoint` takes the floor as its fifth parameter and **all seven call sites in
+  `CameraDirector.js` omit it**, so every framing guarantee plans the shot around a leader position
+  the pan will not deliver — the exact failure `CameraDirector.js:4045` records having already paid
+  for once. Measured on the real path: the company guarantee's shortfall rises on **all ten tracks**
+  (space-sprint 4.40% → **12.38%**, seatrack 2.46% → 5.73%) with the worst count reaching **2 racers
+  in shot** on five of them. **The diagnosis is proven, not argued**: feeding the floor to one call
+  site recovers about half (space-sprint → 6.81%, seatrack → 3.29% with worst back to 4), and the
+  experiment was fully reverted. Two `framingRule` tests are **left red on purpose**. **Needs his
+  word**: ship the picture he accepted with the weakened guarantee, or repair the wiring — which
+  changes the picture and voids the eye test. Everything else is done: **A's removal proven by all
+  four fingerprints equalling master byte for byte at floor 0**; the floor engages on all ten tracks
+  (13.4–71.8% of frames), lifts the p10 room to exactly 360 everywhere while leaving the **median
+  untouched on 9 of 10** — the "self-limiting by construction" claim demonstrated — and **costs
+  steadiness on none**; ice-track's +1 episode at N=30 resolves to **−8 at N=300**; both promised
+  measured stamps re-measured for real (`straggler-truth` identical to the digit; `tracking-lag`
+  moved in 3 of 6 states, `LEADER_ZOOM` better on both percentiles, `OVERVIEW`/`LEAD_CHANGE` p95
+  worse). **World and world-off UNMOVED.** An instrument trap was caught on the way: the sweep's
+  `off` arm silently became a second copy of the shipped arm the moment the default moved.
+||||||| e7e56372
 - [COMPANY-HEADCOUNT-1.md](COMPANY-HEADCOUNT-1.md) — **the guarantee asks whether its anchor is a
   racer instead of assuming it, and a promise of five delivers five** (2026-09-02, branch
   `fix/company-headcount-1` off master, **not merged, not minted**, handed back for his eye; ship
@@ -370,6 +428,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   "measured from the spritesheet" and **nothing in the repository can produce them**. Ten broken
   things named and deliberately left, including a **tautological test** that has been green and
   meaningless for 90 days and a comment claiming a guard that was proposed, held, and never built.
+||||||| ed627ae7
+- [AIM-LEVERS-1.md](AIM-LEVERS-1.md) — **two candidates for his eye, and the fault is smaller than
+  the brief's numbers say** (2026-09-01, built + measured; **NOT merged, NOT minted**, branch
+  `feat/aim-levers-1` @ `38b19379` served on 4173, **all four fingerprints byte-identical at the
+  OFF defaults**). **THE PREMISE MOVED FIRST:** LEADER-LAG-TRUTH-1 predates the lateral guarantee, so
+  its median gap **142.9 → 112.7** and clip rate **15.4% → 3.26%** today while its two GEOMETRY
+  numbers (half-length 131.4, room 261.8) are unchanged. **The median case is not short by twelve
+  pixels — it clears by eighteen**, and `tolerance > gap` reads YES on the shipped baseline. The
+  fault is the TAIL: 3.46% of frames, **1,065 episodes** over 300 races, headroom +48 at p50 and
+  **−134 at p10**. **LEVER A'S GATE PASSED but the trap was live**: the aspect ratio drives the drawn
+  sprite AND a separately-derived `drawnBodyLengthPx`, so a cap on the second alone would have
+  removed the counting and not the clipping — one function now drives both. It wakes the existing
+  sleeping guard, which scales UNIFORMLY, so **the rocket is drawn SMALLER, not stubbier** — close to
+  the sprite floor he rejected. **LEVER B'S ARITHMETIC IS EXACTLY RIGHT**: room = chord × (1 − frac)
+  reproduces to the digit on all four tracks, chord 770 on space-sprint against 1,313 on river-run;
+  but his ~1.6 pp was sized against the superseded gap — half the tail costs ~13 pp. **AT N=300 ON
+  space-sprint: B beats A on the fault AND costs less steadiness** (−283 vs −207 clip episodes;
+  `step p99` flat 187.2→187.3 vs +2.6; centreline 69.5%→**88.9%** vs 79.2%), **and B changes only the
+  PICTURE while A changes the RACE** (frame counts 470,658 vs 470,323). Both together −340. Lever A is
+  **bit-identical on river-run, seatrack and dirt-oval**. **No recommendation between them,
+  deliberately** — both costs are unmeasurable and his. 3 proposals; P2 is a blocker for A only
+  (`cameraConfig` is classified COSMETIC and A changes physics).
 
 - [REGISTRY-IMPORT-FEASIBILITY-1.md](REGISTRY-IMPORT-FEASIBILITY-1.md) — **all four can import the
   real source, so the literals are removable and the guard is not needed** (2026-09-01, measure only

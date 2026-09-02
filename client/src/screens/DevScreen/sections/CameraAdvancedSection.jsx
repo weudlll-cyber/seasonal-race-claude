@@ -1048,6 +1048,22 @@ function CameraAdvancedSection() {
             }
             tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
           />
+          {/* ── AIM-ROOM-1: SHIPPED at 360 px since 2026-09-02. The key stays so it is revertible. ── */}
+          <SliderRow
+            label="Aim room floor (px)"
+            testId="regie-leader-aim-room-floor"
+            min={0}
+            max={480}
+            step={20}
+            value={config.leaderAimRoomFloorPx ?? DEFAULT_CAMERA_CONFIG.leaderAimRoomFloorPx}
+            onChange={(e) => set('leaderAimRoomFloorPx', parseInt(e.target.value, 10))}
+            display={
+              (config.leaderAimRoomFloorPx ?? DEFAULT_CAMERA_CONFIG.leaderAimRoomFloorPx) > 0
+                ? `${config.leaderAimRoomFloorPx ?? DEFAULT_CAMERA_CONFIG.leaderAimRoomFloorPx} px`
+                : 'Off (pre-2026-09-02 behaviour)'
+            }
+            tip="SHIPPED. Guarantees at least this many screen px of road AHEAD of the leader by easing him back toward centre — but only where the frame is short in his direction. Inert on shallow headings (river-run already leaves plenty); binds on steep ones like space-sprint. The cost is seeing less of the road ahead. Takes effect on the NEXT race. 0 restores the older behaviour."
+          />
         </div>
       </div>
 

@@ -1011,7 +1011,27 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4c090b3e 2026-09-02 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6c049d86 2026-09-02 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-COMBINED-1, ON THE TREE THAT CARRIES BOTH THE AIM ROOM FLOOR AND
+THE REPAIRED COMPANY GUARANTEE (2026-09-02).** All six frame counts identical (8626, 159, 13282,
+8473, 4130, 2089). No byte-identical argument was available: both changes touch this directory and
+the CAMERA fingerprint moved.
+
+| state | repaired master | **combined** |
+| --- | --- | --- |
+| **LEADER_ZOOM** | 5.01 / 9.71 | **4.63 / 9.67** |
+| **LEAD_CHANGE** | 4.64 / 7.45 | 4.52 / **8.78** |
+| **OVERVIEW** | 2.75 / 16.00 | **2.87 / 18.54** |
+| BATTLE_ZOOM | 5.81 / 10.05 | 5.85 / 10.05 |
+| COMEBACK_ZOOM | 4.84 / 7.40 | 4.84 / 7.40 |
+| PHOTO_FINISH | 2.81 / 8.59 | 2.81 / 8.59 |
+
+`LEADER_ZOOM` improves on both percentiles, which is the state the floor aims at. **`LEAD_CHANGE`
+p95 and `OVERVIEW` p95 are worse, and they are the SAME two regressions the floor recorded on its
+own** — an ENTRY cost rather than a tracking one: a race enters those states from wherever
+`LEADER_ZOOM` left the camera, and the floor leaves it somewhere different. The combination carries
+them forward unchanged; it does not add to them.
+
 **RE-MEASURED IN FULL FOR COMPANY-HEADCOUNT-1, AND EXACTLY ONE NUMBER MOVED: `LEADER_ZOOM` median
 5.07 -> 5.01 pp (2026-09-02).** Every other figure is identical to the digit — both percentiles of the
 other five states, and all six frame counts (8626, 159, 13282, 8473, 4130, 2089). Run rather than
@@ -1022,6 +1042,41 @@ It moved only that one number because the corrected guarantee changes the shot o
 frames — 1.3% to 17.5% depending on the track — and widening the frame slightly reduces how far the
 camera has to travel to hold its subject. A median over 13,282 frames barely notices it, which is the
 honest reading of a 0.06 pp improvement rather than a claim that the repair improved the tracking.
+
+**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1 AND AGAIN FOR AIM-ROOM-REPAIR-1 ON THE REPAIRED TREE
+(2026-09-02), AND THREE OF THE SIX STATES MOVED.** The figures below are the REPAIRED tree's. The
+condition the previous entry set has been met: `leaderAimRoomFloorPx` is now defaulted **ON** at 360,
+so the byte-identical argument is gone and these figures were re-run for real rather than re-stamped.
+The other candidate that entry named, `leaderBodyAspectMax`, was rejected and **removed from the
+tree** in the same ship. **All six frame counts are identical** — 8626, 159, 13282, 8473, 4130, 2089 —
+which is the load-bearing half: this change moves the PICTURE and not the race, so a moved frame count
+would have meant something had gone wrong.
+
+Measured on the REPAIRED tree (AIM-ROOM-REPAIR-1), which is the one that would ship. The middle
+column is the same measurement on the arm the owner judged, before the guarantee wiring was fixed —
+kept because the two differ and a reader comparing against his eye test needs the arm he saw.
+
+| state | median pp: before -> as judged -> repaired | p95 pp: before -> as judged -> repaired |
+| --- | --- | --- |
+| BATTLE_ZOOM | 5.81 -> 5.81 -> 5.85 | 10.05 -> 10.05 -> 10.05 |
+| COMEBACK_ZOOM | 4.84 -> 4.84 -> 4.84 | 7.40 -> 7.40 -> 7.40 |
+| **LEADER_ZOOM** | 5.07 -> 4.73 -> **4.75** | 9.71 -> 8.95 -> **9.48** |
+| **LEAD_CHANGE** | 4.64 -> 4.49 -> **4.52** | 7.45 -> 8.77 -> **8.78** |
+| **OVERVIEW** | 2.75 -> 2.87 -> **2.87** | 16.00 -> 18.54 -> **18.54** |
+| PHOTO_FINISH | 2.81 -> 2.81 -> 2.81 | 8.59 -> 8.59 -> 8.59 |
+
+**LEADER_ZOOM improves on both percentiles, and that is the state the ship aims at** — the leader is
+held nearer the centre of the frame on the headings where the floor binds, so the camera has less
+distance to make up and sits closer to its subject. Median 5.07 -> 4.75 pp, p95 9.71 -> 9.48 pp.
+
+**TWO NUMBERS MOVE THE WRONG WAY AND ARE REPORTED RATHER THAN BURIED: `LEAD_CHANGE` p95
+7.45 -> 8.77 pp, and `OVERVIEW` p95 16.00 -> 18.54 pp** (its median 2.75 -> 2.87). Neither state
+reads `leaderAimRoomFloorPx`. The mechanism is entry, not tracking: a race enters `OVERVIEW` and
+`LEAD_CHANGE` from wherever `LEADER_ZOOM` left the camera, and the floor leaves it somewhere
+different, so the first frames of the next state start further from their target. It is a
+**transition** cost, at the p95 of two states whose medians are the lowest in the table. It was
+judged worth paying for the `LEADER_ZOOM` improvement and the clipping it removes, but it is a real
+cost and the next block to touch entry timing should know these two numbers moved here.
 
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,

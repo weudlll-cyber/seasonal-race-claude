@@ -87,6 +87,7 @@ const DEFAULT_GLIDE_DURATION_MS = DEFAULT_CAMERA_CONFIG.glideDurationMs;
  *   leaderForwardFrac: number|null,
  *   leaderLateralMaxPx: number,
  *   leaderLateralMarginPx: number,
+ *   leaderAimRoomFloorPx: number,
  * }}
  */
 export function resolveFramingConfig(config) {
@@ -133,5 +134,11 @@ export function resolveFramingConfig(config) {
     leaderForwardFrac: Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null,
     leaderLateralMaxPx: Number.isFinite(lmax) && lmax >= 0 ? lmax : dflt.leaderLateralMaxPx,
     leaderLateralMarginPx: Number.isFinite(lmar) && lmar >= 0 ? lmar : dflt.leaderLateralMarginPx,
+    // AIM-ROOM-1 (LEVER B). Absent/invalid/negative degrades to 0, which is OFF — the shipped
+    // behaviour — rather than to some other number, so a malformed config cannot quietly enable it.
+    leaderAimRoomFloorPx:
+      Number.isFinite(config?.leaderAimRoomFloorPx) && config.leaderAimRoomFloorPx > 0
+        ? config.leaderAimRoomFloorPx
+        : 0,
   };
 }

@@ -576,15 +576,53 @@ export const COMPANY_FRAME_PCT = 0.9;
  * @param {{x:number,y:number}|null} headingScreen  the subject's heading in SCREEN space
  * @returns {{x:number,y:number}} the anchor's screen position
  */
-export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen) {
+export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen, roomFloorPx = 0) {
   const centre = { x: frameW / 2, y: frameH / 2 };
   if (forwardFrac == null || !headingScreen) return centre;
   const len = Math.hypot(headingScreen.x, headingScreen.y);
   if (!(len > 0)) return centre;
   const ux = headingScreen.x / len;
   const uy = headingScreen.y / len;
-  const shift = (forwardFrac - 0.5) * frameExtentAlong(ux, uy, frameW, frameH);
+  const span = frameExtentAlong(ux, uy, frameW, frameH);
+  const shift = (forwardFracForRoomFloor(forwardFrac, span, roomFloorPx) - 0.5) * span;
   return { x: centre.x + ux * shift, y: centre.y + uy * shift };
+}
+
+/**
+ * AIM-ROOM-1 (LEVER B) — the forward fraction, reduced only as far as a ROOM FLOOR requires.
+ *
+ * THE PROBLEM IT ANSWERS. `forwardFrac` is a fraction of the frame's chord along the heading, so the
+ * room it leaves ahead of the subject is `span × (1 − frac)`. The chord is not a constant: measured
+ * at 770 px on space-sprint's steep heading against 1,313 on river-run's shallow one. **One constant
+ * fraction therefore leaves the least room exactly where the frame is shortest**, which is where the
+ * leader's nose runs out of picture.
+ *
+ * A floor on the ROOM, rather than a per-track fraction, is the shape that needs no table: it binds
+ * where the chord is short and is inert where the chord is long, and it is expressed in the quantity
+ * that actually matters — how much space is in front of the nose.
+ *
+ * TWO GUARDS, both deliberate:
+ *   · **never behind centre.** The result is clamped at 0.5, so the floor can centre the subject but
+ *     can never push him backwards into a shot nobody asked for.
+ *   · **a run-in placement is left alone.** `_forwardFracNow` legitimately returns values BELOW 0.5
+ *     during the run-in, where the frame carries the finish ahead of the leader on purpose. This
+ *     only ever reduces a fraction, and it declines to touch one already under 0.5.
+ *
+ * SHARED BY THE AIM AND THE PAN, which is why it lives here beside `anchorScreenPoint` rather than in
+ * the director: `_applyLeaderForwardBias` performs the same arithmetic on the pan target, and this
+ * file's contract is that the guarantee and the pan cannot disagree about where the subject will sit.
+ *
+ * @param {number|null} forwardFrac  the configured fraction
+ * @param {number} span              the frame's chord along the heading, in screen px
+ * @param {number} roomFloorPx       0/absent = OFF, the shipped default
+ * @returns {number|null} the fraction to use
+ */
+export function forwardFracForRoomFloor(forwardFrac, span, roomFloorPx = 0) {
+  if (forwardFrac == null) return forwardFrac;
+  if (!(roomFloorPx > 0) || !(span > 0)) return forwardFrac;
+  if (!(forwardFrac > 0.5)) return forwardFrac; // a run-in placement is not this rule's business
+  const capped = 1 - roomFloorPx / span;
+  return Math.max(0.5, Math.min(forwardFrac, capped));
 }
 
 /**
