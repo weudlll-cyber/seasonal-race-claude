@@ -198,8 +198,25 @@ describe('Racer-Types Registry — D3.5.3 Integration', () => {
     }
   });
 
-  test('renderedBodyH = displaySize × bodyFillY matches sprite crop audit within ±5%', () => {
-    // Audit values (px) from scripts/audit-sprite-crops.mjs — measured post-crop.
+  test('renderedBodyH = displaySize × bodyFillY matches its frozen witness to within 0.05 px', () => {
+    // ── WHAT THESE NUMBERS ARE, corrected 2026-09-03 (B2-HOME-1) ────────────────────────────────
+    //
+    // This comment read "Audit values (px) from scripts/audit-sprite-crops.mjs — measured post-crop",
+    // and that tool has never emitted this number: it prints frame geometry and fill ratios. The
+    // pinned values are `displaySize × bodyFillY`, a PRODUCT of two registry fields that each have
+    // one home already — so this table is not a second source of truth, it is a FROZEN WITNESS to
+    // what that product was when it was taken. The audit tool now PRINTS the same product in a
+    // `RendBodyH` column, so the credit above is true for the first time and the derivation can be
+    // re-run rather than trusted.
+    //
+    // ★ THE TOLERANCE IS 0.05 px ABSOLUTE, NOT ±5%, AND THAT IS A LIVE TRIPWIRE.
+    // The title said "within ±5%" for as long as this test existed while `toBeCloseTo(x, 1)` asserts
+    // |a-b| < 0.05 — for the buggy row, ±5% would allow 1.665 px and the real bound is 33× tighter.
+    // **buggy currently passes by 5.00e-2 against a 0.05 bound**, i.e. by floating-point dust: any
+    // change that moves `displaySize × bodyFillY` by a rounding step turns this red. The TITLE is
+    // corrected here because it was the false statement; **the tolerance is deliberately NOT
+    // loosened**, because choosing one is a judgement about how much drift is acceptable in a race
+    // input and that is the owner's. It is on the morning sheet.
     const AUDIT_RENDERED_BODY_H = {
       horse: 37.6,
       duck: 31.5,

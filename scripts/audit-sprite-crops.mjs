@@ -208,7 +208,7 @@ async function measureSpritesheet(filePath, frameCount) {
 async function main() {
   console.log("\n=== Racer Spritesheet Audit ===\n");
   console.log(
-    `${"ID".padEnd(12)} ${"Frame".padEnd(10)} ${"Body".padEnd(10)} ${"BBoxFill%".padEnd(11)} ${"PxFill%".padEnd(9)} ${"DispSz".padEnd(8)} ${"plain X/Y".padEnd(14)} ${"vs REGISTRY"}`,
+    `${"ID".padEnd(12)} ${"Frame".padEnd(10)} ${"Body".padEnd(10)} ${"BBoxFill%".padEnd(11)} ${"PxFill%".padEnd(9)} ${"DispSz".padEnd(8)} ${"RendBodyH".padEnd(10)} ${"plain X/Y".padEnd(14)} ${"vs REGISTRY"}`,
   );
   console.log("-".repeat(120));
 
@@ -238,6 +238,15 @@ async function main() {
         prodY = r3(m.productFillY);
       const plainAgrees = plainX === type.recordedFillX && plainY === type.recordedFillY;
       const prodAgrees = prodX === type.recordedFillX && prodY === type.recordedFillY;
+      // ── B2-HOME-1: THE DERIVATION, PRINTED WHERE ITS SOURCE WAS ALREADY CREDITED ──────────────
+      //
+      // `racer-types.integration.test.js` pins twenty `renderedBodyH` values and credited THIS FILE
+      // with them. It never emitted them: it prints frame geometry and fill ratios, and the pinned
+      // numbers are `displaySize × bodyFillY` — a PRODUCT of two values that each already have one
+      // home in the registry. Under R14 a derived value is owed a DERIVATION, not a home of its own,
+      // so nothing new is stored: the two factors were already in scope on this row and the product
+      // is now shown, which is all the credit ever meant.
+      const renderedBodyH = (type.displaySize * type.recordedFillY).toFixed(2);
       const geomDrift =
         m.frameWidth !== type.recordedFrameWidth || m.frameHeight !== type.recordedFrameHeight
           ? ` [registry geom ${type.recordedFrameWidth}x${type.recordedFrameHeight}]`
@@ -252,7 +261,7 @@ async function main() {
           : `shedding would differ -> ${prodX.toFixed(3)}/${prodY.toFixed(3)}`
         : `OWNING RULE DIFFERS  recorded ${type.recordedFillX}/${type.recordedFillY}`;
       console.log(
-        `${type.id.padEnd(12)} ${frameStr.padEnd(10)} ${bodyStr.padEnd(10)} ${(bboxFillPct + "%").padEnd(11)} ${(pxFillPct + "%").padEnd(9)} ${String(type.displaySize).padEnd(8)} ${(plainX.toFixed(3) + "/" + plainY.toFixed(3)).padEnd(14)} ${verdict}${geomDrift} ${flag}`,
+        `${type.id.padEnd(12)} ${frameStr.padEnd(10)} ${bodyStr.padEnd(10)} ${(bboxFillPct + "%").padEnd(11)} ${(pxFillPct + "%").padEnd(9)} ${String(type.displaySize).padEnd(8)} ${renderedBodyH.padEnd(10)} ${(plainX.toFixed(3) + "/" + plainY.toFixed(3)).padEnd(14)} ${verdict}${geomDrift} ${flag}`,
       );
       results.push({
         ...type,
