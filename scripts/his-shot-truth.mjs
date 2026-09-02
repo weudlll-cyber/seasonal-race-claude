@@ -238,7 +238,10 @@ console.log(
       ? "  ·  ARM B: HIS UNIT (1.0 = this track own width)"
       : "  ·  ARM A: shipped unit (fixed 300 reference)"),
 );
-console.log(formatIdentity(IDENTITY));
+// The config is passed EXPLICITLY because this line is printed BEFORE any race is built, so the
+// stamp buildRace leaves has not happened yet. Without it the four arms this script offers
+// (--owner-unit, --company-only, --min-racers=, --defaults) all print one identical line.
+console.log(formatIdentity(IDENTITY, cfg));
 console.log(
   "track            TW   state             frames    min      median      max     breath   guarantee binds",
 );
