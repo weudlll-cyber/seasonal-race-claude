@@ -16,11 +16,14 @@
  * For each sheet it takes the union of the opaque bounding box across that type's frames (laid out
  * horizontally; the frame count comes from the registry, the frame size from the PNG).
  *
- * ★ TWO RULES, AND THEY DO NOT ALWAYS AGREE. The bare opaque bbox ("plain") is what produced the
- * registry's pinned values. `computeSpriteBoundingBox` ("product") additionally sheds sparse edge
- * strips, and is what the Racer Editor's `measureBodyFill` would return if a sheet were re-measured
- * today. Both are computed and both are reported, because reporting only one would make a real
- * disagreement look like agreement — or the reverse.
+ * ★ TWO RULES, AND THEY DO NOT ALWAYS AGREE — BUT ONLY ONE OF THEM OWNS A BODY. The plain opaque
+ * bbox (`computeOpaqueBoundingBox`) is the OWNING RULE: a racer's body is what is visible, tails and
+ * fins included (the owner, 2026-09-02; docs/RACER_DATA_MODEL.md). It is what produced the
+ * registry's forty pinned values and what the Racer Editor's `measureBodyFill` returns.
+ * `computeSpriteBoundingBox` ("shed") additionally sheds sparse edge strips; it is for background
+ * removal and centring, and until 2026-09-02 the editor returned it. Both are still computed and
+ * both are still reported, because reporting only one would make a real disagreement look like
+ * agreement — or the reverse, and because the gap between them is the argument for the decision.
  *
  * THIS TOOL MEASURES AND CORRECTS NOTHING. bodyFillX/bodyFillY reach the race
  * (`headlessRaceSimulator.js`, `RaceScreen/index.jsx` and row layout), so changing one changes both
@@ -28,7 +31,10 @@
  */
 
 import sharp from "sharp";
-import { computeSpriteBoundingBox } from "../client/src/modules/racer-types/backgroundRemoval.js";
+import {
+  computeOpaqueBoundingBox,
+  computeSpriteBoundingBox,
+} from "../client/src/modules/racer-types/backgroundRemoval.js";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -95,14 +101,16 @@ async function measureSpritesheet(filePath, frameCount) {
 
   // Per-frame bounding boxes, then union them — the same shape as `measureBodyFill`
   // (client/src/screens/RacerEditor/canvasUtils.js), which is what actually authored the registry's
-  // bodyFillX/bodyFillY. The bbox itself comes from the PRODUCT function rather than a copy of it,
-  // for the same reason the frame geometry now comes from the sheet.
+  // bodyFillX/bodyFillY. BOTH bboxes come from the product module rather than a copy of either, for
+  // the same reason the frame geometry now comes from the sheet: a copy is what drifted last time.
   let unionMinX = Infinity,
     unionMinY = Infinity;
   let unionMaxX = -Infinity,
     unionMaxY = -Infinity;
-  // The plain opaque bbox, WITHOUT the product rule's sparse-edge shedding. Carried alongside so a
-  // reader can see whether the shedding is doing anything on these sheets or merely could.
+  // The plain opaque bbox — the OWNING rule — WITHOUT the shedding variant's sparse-edge trimming.
+  // Carried alongside so a reader can see what the shedding is doing on these sheets. It comes from
+  // `computeOpaqueBoundingBox` rather than from the pixel loop below; the loop still counts opaque
+  // pixels, which is a different question (how much ink is on the sheet) and not a bounding box.
   let rawMinX = Infinity,
     rawMinY = Infinity;
   let rawMaxX = -Infinity,
@@ -123,20 +131,18 @@ async function measureSpritesheet(filePath, frameCount) {
         frame[dst + 2] = channels >= 3 ? data[src + 2] : data[src];
         const alpha = data[src + channels - 1];
         frame[dst + 3] = alpha;
-        if (alpha >= ALPHA_THRESHOLD) {
-          if (lx < rawMinX) rawMinX = lx;
-          if (lx > rawMaxX) rawMaxX = lx;
-          if (y < rawMinY) rawMinY = y;
-          if (y > rawMaxY) rawMaxY = y;
-          totalOpaquePixels++;
-        }
+        if (alpha >= ALPHA_THRESHOLD) totalOpaquePixels++;
       }
     }
-    const bbox = computeSpriteBoundingBox({
-      width: frameWidth,
-      height: frameHeight,
-      data: frame,
-    });
+    const frameData = { width: frameWidth, height: frameHeight, data: frame };
+    const plain = computeOpaqueBoundingBox(frameData);
+    if (plain) {
+      if (plain.minX < rawMinX) rawMinX = plain.minX;
+      if (plain.minY < rawMinY) rawMinY = plain.minY;
+      if (plain.maxX > rawMaxX) rawMaxX = plain.maxX;
+      if (plain.maxY > rawMaxY) rawMaxY = plain.maxY;
+    }
+    const bbox = computeSpriteBoundingBox(frameData);
     if (bbox) {
       if (bbox.minX < unionMinX) unionMinX = bbox.minX;
       if (bbox.minY < unionMinY) unionMinY = bbox.minY;
@@ -184,10 +190,10 @@ async function measureSpritesheet(filePath, frameCount) {
     pixelFillRatio,
     // THE DERIVATION THE REGISTRY'S VALUES ARE CREDITED TO, now actually produced rather than left
     // as an intermediate for someone to divide by hand.
-    // TWO RULES, REPORTED SEPARATELY, because they do not always agree and only one of them
-    // authored the registry. `product*` is what the Racer Editor would measure TODAY
-    // (computeSpriteBoundingBox, which sheds sparse edge strips); `plain*` is the bare opaque
-    // bounding box, which is what the registry's pinned values were actually produced by.
+    // TWO RULES, REPORTED SEPARATELY, because they do not always agree and only one of them owns a
+    // body. `plain*` is the OWNING rule — the bare opaque bounding box, what the registry's pinned
+    // values were produced by and what the Racer Editor returns since 2026-09-02. `product*` is the
+    // shedding variant (computeSpriteBoundingBox), kept in the report so the gap stays visible.
     productFillX: productWidth / frameWidth,
     productFillY: productHeight / frameHeight,
     plainFillX: bodyWidth / frameWidth,
@@ -236,11 +242,15 @@ async function main() {
         m.frameWidth !== type.recordedFrameWidth || m.frameHeight !== type.recordedFrameHeight
           ? ` [registry geom ${type.recordedFrameWidth}x${type.recordedFrameHeight}]`
           : "";
+      // `plainAgrees` is the one that matters: the plain box is the owning rule, so a row that fails
+      // it is a real disagreement between the artwork and a value the race reads. A row where only
+      // the shedding variant differs is not a defect — it is the size of the tail the owner decided
+      // to keep, and it is reported so that gap stays visible rather than being tidied away.
       const verdict = plainAgrees
         ? prodAgrees
           ? "both agree"
-          : `EDITOR WOULD DIFFER -> ${prodX.toFixed(3)}/${prodY.toFixed(3)}`
-        : `PLAIN DIFFERS  recorded ${type.recordedFillX}/${type.recordedFillY}`;
+          : `shedding would differ -> ${prodX.toFixed(3)}/${prodY.toFixed(3)}`
+        : `OWNING RULE DIFFERS  recorded ${type.recordedFillX}/${type.recordedFillY}`;
       console.log(
         `${type.id.padEnd(12)} ${frameStr.padEnd(10)} ${bodyStr.padEnd(10)} ${(bboxFillPct + "%").padEnd(11)} ${(pxFillPct + "%").padEnd(9)} ${String(type.displaySize).padEnd(8)} ${(plainX.toFixed(3) + "/" + plainY.toFixed(3)).padEnd(14)} ${verdict}${geomDrift} ${flag}`,
       );

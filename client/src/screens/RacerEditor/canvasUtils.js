@@ -6,7 +6,7 @@
 // Description: Shared canvas drawing utilities for the Racer Editor.
 // ============================================================
 
-import { computeSpriteBoundingBox } from '../../modules/racer-types/backgroundRemoval.js';
+import { computeOpaqueBoundingBox } from '../../modules/racer-types/backgroundRemoval.js';
 
 export function drawCheckerboard(ctx, width, height, tileSize = 8) {
   for (let y = 0; y < height; y += tileSize) {
@@ -21,9 +21,19 @@ export function drawCheckerboard(ctx, width, height, tileSize = 8) {
 /**
  * Measure bodyFillX / bodyFillY from a generated spritesheet data URL.
  *
- * For each frame the opaque bounding box is computed in frame-local coordinates
- * via computeSpriteBoundingBox. The union over all frames gives the tightest
- * rectangle that encloses the visible body across the full animation cycle.
+ * ★ THE OWNING RULE IS THE PLAIN OPAQUE BOX — `computeOpaqueBoundingBox`, nothing shed. A racer's
+ * body is what is visible, tails and fins included; the edge-shedding variant is not the measure of
+ * a body. The rule and the decision behind it live in docs/RACER_DATA_MODEL.md § "What a racer's
+ * BODY is"; this function must not be the place anyone learns it from, but it must not disagree
+ * with it either. Until 2026-09-02 it called `computeSpriteBoundingBox`, which sheds sparse edge
+ * strips, so re-measuring any of five sheets here would have written a different number into a value
+ * the race reads (SPRITE-AUDIT-DERIVATION-1).
+ *
+ * For each frame the opaque bounding box is computed in frame-local coordinates.
+ * The UNION over all frames gives the tightest rectangle that encloses the visible body across the
+ * full animation cycle — the union, not the largest single frame: on 8 of the 20 built-in types the
+ * union is strictly wider than any one frame, and it is the union that the registry's forty pinned
+ * values record.
  * bodyFillX = unionWidth / frameWidth, bodyFillY = unionHeight / frameHeight.
  *
  * @param {string} spritesheetDataUrl  data: URL of the spritesheet strip.
@@ -64,7 +74,7 @@ export function measureBodyFill(spritesheetDataUrl, frameCount) {
           frameHeight
         );
         const imageData = ctx.getImageData(0, 0, frameWidth, frameHeight);
-        const bbox = computeSpriteBoundingBox(imageData);
+        const bbox = computeOpaqueBoundingBox(imageData);
         if (bbox) {
           if (bbox.minX < unionMinX) unionMinX = bbox.minX;
           if (bbox.maxX > unionMaxX) unionMaxX = bbox.maxX;

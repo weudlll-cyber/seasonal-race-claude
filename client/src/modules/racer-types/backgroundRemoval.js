@@ -45,6 +45,65 @@ export function sampleColor(imageData, x, y) {
   return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
 }
 
+// ── TWO BOXES, TWO QUESTIONS, AND THEY DIFFER IN TWO WAYS ──────────────────────────────
+//
+// This file exports two bounding boxes. They answer different questions and neither is a special
+// case of the other. One function serving both questions is how a measuring rule came to change
+// under values that a different rule had already pinned (SPRITE-AUDIT-DERIVATION-1), so they are
+// separate now, and each says which question it is for.
+//
+//   computeOpaqueBoundingBox   WHERE IS THE BODY?  Every opaque pixel is inside it; nothing is shed.
+//                              THE OWNING RULE for a racer's body — see docs/RACER_DATA_MODEL.md
+//                              § "What a racer's BODY is". Threshold: alpha >= 10.
+//
+//   computeSpriteBoundingBox   WHERE IS THE ARTWORK, ignoring leaked background?  A scan, then
+//                              sparse edge strips shed. For background removal and CENTRING, where
+//                              a few surviving background pixels at a border would drag the centre
+//                              off and shedding them is exactly right. Threshold: alpha > 10.
+//
+// ★ THE THRESHOLDS DIFFER BY ONE, AND THAT IS NOT AN OVERSIGHT. Measured against the twenty
+// shipped sheets on 2026-09-02: `alpha >= 10` reproduces all forty pinned `bodyFillX`/`bodyFillY`
+// values; `alpha > 10` reproduces thirty-eight, missing beetle (0.398 -> 0.383) and koi
+// (0.578 -> 0.574). So `>= 10` is the rule that authored the registry, and the body box uses it.
+// The shedding box stays at `> 10` because its answer feeds sprite CENTRING, which is pinned by its
+// own tests and by every sprite anyone has already centred; moving it would change pictures in order
+// to tidy a comparison. Deriving either function from the other would therefore be wrong in
+// whichever direction it was done.
+//
+// The shedding difference is the larger one: on manta the two disagree by 0.125 of frame height,
+// because the shedding rule declines to count her trailing tail as body. The owner decided on
+// 2026-09-02 that it is body.
+
+/**
+ * Scans all pixels with alpha >= 10 and returns the PLAIN bounding box of opaque content —
+ * every opaque pixel is inside it, and nothing is shed.
+ *
+ * ★ This is the rule that owns a racer's BODY. A tail, a fin or a trailing wingtip is body, however
+ * sparse it is, so nothing may be trimmed for being thin. See docs/RACER_DATA_MODEL.md.
+ *
+ * Returns { minX, maxX, minY, maxY, centerX, centerY } or null for a fully transparent image.
+ */
+export function computeOpaqueBoundingBox(imageData) {
+  const { width, height, data } = imageData;
+
+  let minX = width,
+    maxX = -1,
+    minY = height,
+    maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] >= 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0) return null;
+  return { minX, maxX, minY, maxY, centerX: (minX + maxX) / 2, centerY: (minY + maxY) / 2 };
+}
+
 /**
  * Scans all pixels with alpha > 10 and returns the bounding box of opaque content,
  * with iterative edge-strip filtering to ignore thin leaked background pixels at image borders.
@@ -52,6 +111,9 @@ export function sampleColor(imageData, x, y) {
  * After the raw scan, each edge is checked in a loop: if the outermost N columns/rows
  * contain fewer than 5% opaque pixels, that strip is discarded and the bbox shrinks inward.
  * N = clamp(round(imageDimension × 0.03), 2, 8).  Repeats until all four edges pass.
+ *
+ * ★ NOT the measure of a racer's BODY — use `computeOpaqueBoundingBox` for that. The shedding
+ * cannot tell a leaked background strip from a real sparse body part, so it removes both.
  *
  * Returns { minX, maxX, minY, maxY, centerX, centerY } or null for a fully transparent image.
  */
