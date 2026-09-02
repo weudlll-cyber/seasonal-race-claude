@@ -19,10 +19,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { join, dirname, relative } from "node:path";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { findPairs, EXCEPTIONS } from "./check-fallback-agreement.mjs";
+import {
+  findPairs,
+  findRegistryCopies,
+  loadRacerRegistry,
+  EXCEPTIONS,
+} from "./check-fallback-agreement.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const defaults = new Map([
@@ -240,4 +245,101 @@ test("END TO END: an UNLISTED disagreement makes the guard exit non-zero", () =>
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ══ RULE A ══════════════════════════════════════════════════════════════════════════════════════
+//
+// The property that matters is that the PAIRS ARE DISCOVERED. A test that hard-codes "frameWidth"
+// and "horse" would pass while the discovery it is meant to protect was replaced by a typed list —
+// so these build their registry from a FIXTURE and assert the rule follows it wherever it points.
+
+const REG = (racers) => {
+  const byRacer = new Map();
+  const fields = new Set();
+  for (const [id, f] of Object.entries(racers)) {
+    byRacer.set(id, new Map(Object.entries(f)));
+    for (const k of Object.keys(f)) fields.add(k);
+  }
+  return { byRacer, fields };
+};
+
+test("RULE A: a literal disagreeing with the home is found, named by an `id:` value", () => {
+  const reg = REG({ horse: { frameWidth: 150, displaySize: 47 } });
+  const out = findRegistryCopies(
+    `const T = [{ id: 'horse', frameWidth: 128, displaySize: 47 }];`,
+    "t.mjs",
+    reg,
+  );
+  const bad = out.filter((c) => !c.ok);
+  assert.equal(bad.length, 1);
+  assert.equal(bad[0].key, "frameWidth");
+  assert.equal(bad[0].value, 128);
+  assert.equal(bad[0].expected, 150);
+});
+
+test("RULE A: a copy named by the KEY it hangs from is found too", () => {
+  const reg = REG({ duck: { displaySize: 36 } });
+  const out = findRegistryCopies(`const M = { duck: { displaySize: 44 } };`, "t.mjs", reg);
+  assert.equal(out.filter((c) => !c.ok).length, 1);
+});
+
+test("RULE A: an AGREEING literal is not a finding", () => {
+  const reg = REG({ horse: { frameWidth: 150 } });
+  const out = findRegistryCopies(`x = { id: 'horse', frameWidth: 150 };`, "t.mjs", reg);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].ok, true);
+});
+
+test("RULE A: THE FIELD NAMES ARE DISCOVERED — a field the registry does not carry is ignored", () => {
+  const reg = REG({ horse: { frameWidth: 150 } });
+  const out = findRegistryCopies(
+    `x = { id: 'horse', frameWidth: 150, notARegistryField: 999 };`,
+    "t.mjs",
+    reg,
+  );
+  assert.equal(out.length, 1, "only the registry's own field is compared");
+  assert.equal(out[0].key, "frameWidth");
+});
+
+test("RULE A: THE RACERS ARE DISCOVERED — an id the registry does not carry is ignored", () => {
+  const reg = REG({ horse: { frameWidth: 150 } });
+  const out = findRegistryCopies(`x = { id: 'pegasus', frameWidth: 1 };`, "t.mjs", reg);
+  assert.equal(out.length, 0);
+});
+
+test("RULE A: naming the racer is not a copy of a fact ABOUT it", () => {
+  const reg = REG({ horse: { id: "horse", frameWidth: 150 } });
+  const out = findRegistryCopies(`x = { id: 'horse' };`, "t.mjs", reg);
+  assert.equal(out.length, 0, "`id` itself is never compared");
+});
+
+test("RULE A: a different TYPE is a different job, not a disagreement", () => {
+  const reg = REG({ horse: { frameWidth: 150 } });
+  const out = findRegistryCopies(`x = { id: 'horse', frameWidth: 'auto' };`, "t.mjs", reg);
+  assert.equal(out.length, 0);
+});
+
+test("RULE A: arrays are out of reach, and the guard says so rather than implying coverage", () => {
+  const reg = REG({ horse: { frameWidth: 150 } }); // surfaceClasses is not scalar, so never in `fields`
+  const out = findRegistryCopies(
+    `x = { id: 'horse', surfaceClasses: ['sand'], frameWidth: 150 };`,
+    "t.mjs",
+    reg,
+  );
+  assert.equal(out.length, 1);
+  assert.equal(out[0].key, "frameWidth");
+});
+
+test("RULE A: the real registry yields racers and fields without any list in this guard", async () => {
+  const reg = await loadRacerRegistry();
+  assert.ok(reg.byRacer.size >= 20, "every racer type is discovered");
+  assert.ok(reg.fields.has("frameWidth") && reg.fields.has("displaySize"));
+  assert.equal(reg.fields.has("surfaceClasses"), false, "arrays are excluded at discovery");
+  // The guard must contain no hand-written pair list: the racer ids come from the registry only.
+  const self = readFileSync(join(REPO, "scripts/check-fallback-agreement.mjs"), "utf8");
+  assert.equal(
+    /RACER_FIELDS\s*=|PAIR_LIST\s*=|const\s+FIELDS\s*=\s*\[/.test(self),
+    false,
+    "a typed list of pairs would be the same defect one level up",
+  );
 });

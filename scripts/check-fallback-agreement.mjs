@@ -50,14 +50,22 @@
 export const GUARD = {
   id: "check-fallback-agreement",
   covers:
-    "a fallback that disagrees with the default it mirrors — `config.k ?? 3` while the default says 5",
+    "a fallback that disagrees with the default it mirrors — `config.k ?? 3` while the default says 5; " +
+    "AND (RULE A) a literal mirroring a machine-readable home that disagrees with it — a racer-type " +
+    "field copied into a table while the registry says something else",
   blind: [
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
     "test files, which legitimately pass odd values to prove a band rejects them",
+    "RULE A: NON-SCALARS. Only scalars can disagree textually, so `surfaceClasses`, `coats` and `rteDefinitions` are out of reach — and `goldenRunner.mjs` carries a `surfaceClasses` table that is a DIFFERENT FACT under the same name, which this rule has NOT cleared",
+    "RULE A: a copy that does not NAME its racer. The object must carry the racer id as a value (`id: 'horse'`) or hang from it as a key (`horse: { … }`); a table keyed by array position is invisible",
+    "RULE A: literals in COMMENTS are matched like any other — a documented example must avoid stating real values, which is why this file's own example uses placeholders",
+    "RULE A DOES NOT GATE YET. It reports and does not fail the build, because its only objection on today's tree is legitimate (see the note above `copiesBad`). A rule that cannot yet fail is not protecting anything — that is the point of saying so here rather than letting a green run imply otherwise",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
-  dirs: ["client/src/"],
+  // RULE A widened this from `client/src/` alone. Its founding defect lived in `scripts/`, which is
+  // the hole CENSUS-DUPES-1 declared as its own largest, so a change there must now select this guard.
+  dirs: ["client/src/", "scripts/", "client/scripts/"],
   files: [],
 };
 if (process.argv.includes("--declare")) {
@@ -66,7 +74,7 @@ if (process.argv.includes("--declare")) {
 }
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, relative } from "node:path";
+import { join, dirname, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __t0 = Date.now();
@@ -254,6 +262,18 @@ async function loadDefaults() {
   return { byKey, ambiguous };
 }
 
+/** `walk`, widened to the script extensions — the founding instance is an `.mjs`. */
+function walkAny(dir, out = []) {
+  for (const e of readdirSync(dir)) {
+    if (e === "node_modules") continue;
+    const p = join(dir, e);
+    if (statSync(p).isDirectory()) walkAny(p, out);
+    else if (/\.(js|jsx|mjs|cjs)$/.test(e) && !/\.test\.|__tests__/.test(p))
+      out.push(p);
+  }
+  return out;
+}
+
 function walk(dir, out = []) {
   for (const e of readdirSync(dir)) {
     const p = join(dir, e);
@@ -310,6 +330,128 @@ const NULLISH =
 const BAND_DECL =
   /const\s+([a-zA-Z_$][\w$]*)\s*=\s*[^;\n]*?\.([a-zA-Z_][a-zA-Z0-9_]*)\s*;/g;
 const BAND_USE = /\?\s*([a-zA-Z_$][\w$]*)\s*:\s*([A-Z][A-Z0-9_]{2,})/g;
+
+// ══ RULE A — A LITERAL MIRRORING A MACHINE-READABLE HOME MUST AGREE WITH IT ══════════════════════
+//
+// THE DEFECT IT EXISTS FOR. `scripts/audit-sprite-crops.mjs` carried a twenty-row table of
+// `frameWidth`/`frameHeight`/`frameCount`/`displaySize`, written in `11093fff` (2026-06-03) — the
+// same commit that introduced the cropped sheets. It disagreed with the racer-type registry on eight
+// frame geometries and five display sizes FROM THE DAY IT WAS WRITTEN, and nothing noticed for 91
+// days. Run with those numbers the tool sliced a 150-px sheet into 128-px windows and reported
+// `bodyFillX = 1.000` for seven racers that fill nothing of the sort.
+//
+// ★ THE PAIRS ARE DISCOVERED, NEVER LISTED, and that is the design rather than a nicety. Both halves
+// come from the registry at run time: the RACER IDS from `RACER_TYPE_IDS`, the FIELD NAMES from the
+// union of the registry's own scalar config keys. A field added to a racer type is covered without
+// anyone editing this guard, and a field removed stops being scanned. A TYPED LIST OF PAIRS WOULD BE
+// THE SAME DEFECT ONE LEVEL UP — a hand-kept copy of what the registry holds, going stale exactly as
+// the table it is meant to catch did.
+//
+// WHAT COUNTS AS A COPY. An object literal that both names a racer and states one of the registry's
+// own scalar fields:
+//     { id: 'horse', frameWidth: <registry>, displaySize: <registry> }   ← named by an `id:` value
+//     horse: { displaySize: <registry> }                                ← named by the key it hangs from
+//
+// ONLY SCALARS ARE COMPARED, because only a scalar can disagree textually. `surfaceClasses`, `coats`
+// and `rteDefinitions` are arrays and are out of reach here — stated because `goldenRunner.mjs`
+// carries a `surfaceClasses` table that is a DIFFERENT FACT under the same name, and this guard must
+// not be read as having cleared it.
+
+/** The registry as a home: racerId → (field → scalar), plus the discovered field-name set. */
+export async function loadRacerRegistry(root = ROOT) {
+  const ns = await import(
+    pathToFileURL(join(root, "client/src/modules/racer-types/index.js")).href,
+  );
+  const byRacer = new Map();
+  const fields = new Set();
+  for (const id of ns.RACER_TYPE_IDS) {
+    // The FROZEN pre-override snapshot where one exists: some config fields are Dev-Screen tunable
+    // and are mutated in place at module load, so `.config` alone would compare a copy against a
+    // developer's local tuning rather than against what the repository ships.
+    const snap = ns.CONFIG_SNAPSHOT && ns.CONFIG_SNAPSHOT[id];
+    const m = new Map();
+    for (const [k, v] of Object.entries(ns.RACER_TYPES[id].config)) {
+      const val = snap && k in snap ? snap[k] : v;
+      if (val === null || typeof val === "object" || typeof val === "function")
+        continue;
+      m.set(k, val);
+      fields.add(k);
+    }
+    byRacer.set(id, m);
+  }
+  return { byRacer, fields };
+}
+
+/** The `{ … }` literal enclosing index `at`, or null past the size cap. */
+function enclosingObject(src, at, cap = 4000) {
+  let depth = 0;
+  let start = -1;
+  for (let i = at; i >= 0 && at - i < cap; i--) {
+    const c = src[i];
+    if (c === "}") depth++;
+    else if (c === "{") {
+      if (depth === 0) {
+        start = i;
+        break;
+      }
+      depth--;
+    }
+  }
+  if (start < 0) return null;
+  depth = 0;
+  for (let i = start; i < src.length && i - start < cap; i++) {
+    const c = src[i];
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return { start, text: src.slice(start, i + 1) };
+    }
+  }
+  return null;
+}
+
+const FIELD_LIT =
+  /(?:^|[{,\s])([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(-?\d+(?:\.\d+)?|true|false|'[^'\n]*'|"[^"\n]*")/g;
+
+/** Every registry field copied as a literal in `src`, with the racer it claims to describe. */
+export function findRegistryCopies(src, file, registry) {
+  const { byRacer, fields } = registry;
+  const out = [];
+  const seen = new Set();
+  for (const id of byRacer.keys()) {
+    // The racer named as a STRING VALUE (`id: 'horse'`) or as an OBJECT KEY (`horse: { … }`).
+    // NOT a template literal: `\s` inside one collapses to a bare `s`, which silently turned
+    // this pattern into `(?:^|[{,s])ducks*:s*{` and made the key-form invisible. Caught by the
+    // test for that form, which is why the test asserts the FORM rather than the code's output.
+    // `String.raw` because a normal template literal eats the backslashes: `\s` inside one
+    // collapses to a bare `s`, which silently turned this into `(?:^|[{,s])ducks*:s*{` and made
+    // the key-form invisible. Caught by the test for that form, which asserts the FORM rather
+    // than whatever the code happened to produce.
+    const pat = new RegExp(
+      String.raw`'${id}'|"${id}"|(?:^|[{,\s])${id}\s*:\s*\{`,
+      "g",
+    );
+    for (const m of src.matchAll(pat)) {
+      const obj = enclosingObject(src, m.index + m[0].length - 1);
+      if (!obj) continue;
+      const dedupe = `${obj.start}:${id}`;
+      if (seen.has(dedupe)) continue;
+      seen.add(dedupe);
+      for (const f of obj.text.matchAll(FIELD_LIT)) {
+        const key = f[1];
+        // Naming the racer is not a copy of a fact ABOUT it.
+        if (key === "id" || !fields.has(key)) continue;
+        const expected = byRacer.get(id).get(key);
+        if (expected === undefined) continue;
+        const value = literal(f[2]);
+        // A different type is a different job, not a disagreement — the same rule the `??` half uses.
+        if (typeof value !== typeof expected) continue;
+        out.push({ file, id, key, value, expected, ok: Object.is(value, expected) });
+      }
+    }
+  }
+  return out;
+}
 
 export function findPairs(src, file, defaults) {
   const consts = localConstants(src);
@@ -409,6 +551,18 @@ export function findPairs(src, file, defaults) {
   return found;
 }
 
+// ── THE MODULE ONLY RUNS WHEN IT IS THE ENTRY POINT ─────────────────────────────────────────────
+//
+// Its own test imports `findPairs` from it, and every other consumer — the pre-commit hook, the CI
+// job, `verify` — SPAWNS it as a process. Until Rule A landed the difference did not show: the guard
+// was green, so a self-run on import exited 0 and looked like nothing. The moment Rule A found a real
+// disagreement, importing the module called `process.exit(1)` and took the test file down with it.
+// Found by running that test rather than by reasoning, and fixed here rather than by making Rule A
+// quieter. Checked before changing it: NOTHING else imports this module.
+const IS_ENTRY =
+  process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (IS_ENTRY) {
 const { byKey, ambiguous } = await loadDefaults();
 const files = walk(SRC);
 const pairs = [];
@@ -416,6 +570,33 @@ for (const abs of files) {
   const rel = relative(ROOT, abs).replace(/\\/g, "/");
   pairs.push(...findPairs(readFileSync(abs, "utf8"), rel, byKey));
 }
+
+
+// ── RULE A's SCAN. It reaches FURTHER than the `??` half above, and it has to: the founding defect
+// lived in `scripts/`, which `dirs` did not cover, and CENSUS-DUPES-1 named that as its own largest
+// declared hole. The HOME ITSELF is excluded — the racer-type modules are the definitions, not
+// copies of them — as are test files, on the same reasoning the `??` half uses.
+const REGISTRY_HOME = "client/src/modules/racer-types/";
+const registry = await loadRacerRegistry();
+const regRoots = process.argv.some((x) => x.startsWith("--src="))
+  ? [SRC]
+  : ["client/src", "scripts", "client/scripts"].map((d) => join(ROOT, d));
+const regFiles = regRoots
+  .filter((d) => {
+    try {
+      return statSync(d).isDirectory();
+    } catch {
+      return false;
+    }
+  })
+  .flatMap((d) => walkAny(d));
+const copies = [];
+for (const abs of regFiles) {
+  const rel = relative(ROOT, abs).split(sep).join("/");
+  if (rel.startsWith(REGISTRY_HOME)) continue;
+  copies.push(...findRegistryCopies(readFileSync(abs, "utf8"), rel, registry));
+}
+const copiesBad = copies.filter((c) => !c.ok);
 
 const isExcepted = (p) =>
   EXCEPTIONS.some(
@@ -458,6 +639,12 @@ console.log(
     `${typeSkipped.length} skipped (fallback type differs — a display fallback, not a mirror); ` +
     `${unresolved.length} unresolved; ${ambiguous.size} key(s) unscannable (same key, two defaults).`,
 );
+console.log(
+  `check-fallback-agreement RULE A: ${copies.length} registry literal(s) in ${regFiles.length} file(s), ` +
+    `over ${registry.byRacer.size} racer type(s) and ${registry.fields.size} DISCOVERED field name(s); ` +
+    `${copiesBad.length} disagree. (SCALARS ONLY — arrays such as surfaceClasses are out of reach.)`,
+);
+
 
 // EVERY EXEMPTION IS PRINTED WHEN IT IS GRANTED (R11). A decision to yield must be visible, not
 // buried in a list nobody opens.
@@ -492,6 +679,34 @@ const stale = EXCEPTIONS.filter(
     ),
 );
 
+// ── RULE A REPORTS; IT DOES NOT YET GATE, AND THE REASON IS A FINDING RATHER THAN A CAVEAT ──────
+//
+// On its first run against today's tree it went red on `scripts/crop-sprite-sheets.mjs`, and that
+// objection is LEGITIMATE: `FLAGGED_TYPES` there records the PRE-CROP source geometry a one-shot
+// cropping run took as INPUT, not the registry's current post-crop values. Same field names, a
+// different fact — the `surfaceClasses` shape one level along.
+//
+// ★ NO EXCEPTION WAS ADDED, DELIBERATELY. An exception here would be the guard learning to ignore
+// the only thing it has ever objected to, on the authority of whoever wrote the exception. And no
+// mechanical discriminator exists: "a table that copies the registry" and "a table that records
+// what the registry used to hold" are the same shape, and telling them apart is a judgement about
+// intent. THAT IS THE FINDING. Until the owner has ruled on `crop-sprite-sheets.mjs` — except it,
+// delete the table, or rename its fields — the rule prints and does not fail.
+//
+// It is deliberately LOUD rather than quiet, so it cannot be read as a check that passed.
+if (copiesBad.length) {
+  console.log("");
+  console.log(
+    `  RULE A — NOT YET A GATE. ${copiesBad.length} disagreement(s) in ` +
+      `${new Set(copiesBad.map((c) => c.file)).size} file(s). It does not fail the build until the ` +
+      `owner has ruled on them; see BUILD-RULE-A-1.`,
+  );
+  for (const c of copiesBad)
+    console.log(
+      `    ${c.file}: ${c.key} = ${JSON.stringify(c.value)} for '${c.id}', registry says ${JSON.stringify(c.expected)}`,
+    );
+}
+
 if (newOnes.length || stale.length) {
   console.error("");
   for (const p of newOnes)
@@ -506,4 +721,5 @@ if (newOnes.length || stale.length) {
         `remove it if the pair was fixed.`,
     );
   process.exit(1);
+}
 }

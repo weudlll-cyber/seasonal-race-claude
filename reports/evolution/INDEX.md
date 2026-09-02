@@ -423,6 +423,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [BUILD-RULE-A-1.md](BUILD-RULE-A-1.md) — **Rule A is built, it is RED at its founding instance, and
+  it does NOT gate: its one objection today is legitimate** (2026-09-02; `verify` PASS 6 FAIL 0,
+  script suite 452/452, the guard's own tests 21/21). ★ **The founding-instance proof was RUN, not
+  argued**: the tree at `11093fff` (2026-06-03) was extracted with `git archive` — no worktree, since
+  junctions are forbidden here — and today's engine, imported unmodified, scanned that tree's audit
+  table against that tree's registry: **21 disagreements, 8 frameWidth + 8 frameHeight + 5
+  displaySize.** That is the same count SPRITE-AUDIT-DERIVATION-1 reached independently by hand, from
+  two methods arrived at separately. It would have gone red the DAY the table was written rather than
+  91 days later. ★ **THE PAIRS ARE DISCOVERED AND A TEST ASSERTS THAT RATHER THAN THE OUTPUT** — racer
+  ids from `RACER_TYPE_IDS`, field names from the union of the registry's own scalar keys (22 today),
+  with one test grepping the guard for a pair list and failing if one appears, because a typed list
+  would be the same defect one level up. ★ **IT IS RED ON SOMETHING LEGITIMATE AND NO EXCEPTION WAS
+  ADDED**: all 16 disagreements are `crop-sprite-sheets.mjs`, whose `FLAGGED_TYPES` records the
+  PRE-CROP source geometry a one-shot run took as INPUT — same field names, a different fact, the
+  `surfaceClasses` shape one file along. **No mechanical discriminator exists** between "a table that
+  copies the registry" and "a table that records what the registry used to hold", so **the rule
+  reports and does not fail**, and says so in its own output. False-positive rate stated both ways
+  because one flatters: 16 of 36 literals, or **1 of 1 objecting SITES**. **TWO DEFECTS THE WORK FOUND
+  IN ITSELF.** Adding Rule A BROKE the guard's own test — the module self-runs at import, which was
+  invisible while it was green and called `process.exit(1)` the moment it found something; found by
+  RUNNING the test, fixed with an entry-point guard after checking that hook, CI and verify all SPAWN
+  it and only the test imports it. And a **template literal silently ate the pattern**: `\s` inside
+  one collapses to a bare `s`, so the key-form matcher compiled as `(?:^|[{,s])ducks*:s*{` and the
+  `horse: { … }` form was **invisible while the rule claimed to cover it** — caught by the test for
+  that form, now `String.raw`, and re-scanning with it fixed revealed no hidden sites. Sabotaged both
+  directions, both files restored byte-identical.
+
 - [BACKLOG-DEDUPE-1.md](BACKLOG-DEDUPE-1.md) — **thirteen of the fourteen are NOT duplicates — they
   are the file's OPEN/CLOSED structure — and the one that is real was made last night** (2026-09-02;
   content untouched: 3,063 non-blank lines before and after, and the **280 lines the verdict count
