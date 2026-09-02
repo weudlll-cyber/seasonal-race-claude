@@ -9,6 +9,22 @@ chain touches `docs/fingerprints.json`. **Nothing about any race changed.**
 
 ---
 
+## THE STATE YOU ARE PICKING UP
+
+| | |
+| --- | --- |
+| branches, local and at origin | **`master`, and nothing else** |
+| `.git/worktrees` stubs | **0** — first time since 2026-08-05 |
+| working tree | clean |
+| fingerprints | **untouched**; no mint in any of this chain's commits |
+| CI / guards | `npm run verify` green after every merge |
+
+**Step 12 was paid on every one of the fourteen merges**, per today's scope correction. Eight
+**local-only** branches predating this chain were also cleared — each proven contained first by the
+TREE method the ceremony prescribes (master holds every path they hold), not by a commit diff.
+
+---
+
 ## ★ THE TWO NUMBERS YOU ASKED FOR
 
 ### 1. Can a machine catch the pattern? **PARTLY — four of the six, on two rules, inside guards you already have.**
