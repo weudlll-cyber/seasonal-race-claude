@@ -333,6 +333,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
   the soak was started, not run.
 
+- [PATTERN-CATCHABILITY-1.md](PATTERN-CATCHABILITY-1.md) — **CAN A MACHINE CATCH THE PATTERN? The
+  pattern is not one fault, it is FIVE, and only two of the five have two machine-readable sides**
+  (2026-09-02, read-only; nothing built, no check run — the design is a proposal and stays one).
+  The shape — a statement true when written, left standing while the thing it described moved — is a
+  SYMPTOM, not a fault class, and it does not decompose into one check. **Four of the six instances
+  would have gone red**, on two rules living inside guards that already exist (R13): **Rule A** in
+  `check-fallback-agreement.mjs`, widened so a literal mirroring a declared home must agree with it,
+  with the pairs DISCOVERED from the registry's own 24 field names rather than listed — so there is
+  no correspondence table to rot, which is the same defect one level up. It catches the fingerprint's
+  track table (red 2026-08-25, the day the seed moved) and the sprite audit's geometry table (red at
+  `11093fff`, **2026-06-03, the commit that introduced it**, because that table NEVER agreed).
+  **Rule B** in `check-tags.mjs`, which already asks origin for refs and already runs unconditionally
+  in hook and CI: no branch stands at origin whose TREE master already holds — the tree, not the
+  commit diff, for the reason SHIP-CEREMONY:346 owns. It catches step 12's scope at the FIRST of the
+  six merges rather than at the end of the batch. **SHIP-CEREMONY's stale row needs nothing built**:
+  `check-measured-stamps.mjs` already owns it and already fires; the sentence merely carries no
+  stamp, and the general problem — which of **6,548** multi-digit numbers across 36 documents deserve
+  one of the **11** stamps — is a judgement nobody found a way to mechanise. **The company headcount
+  is NOT catchable, and the report declines to manufacture a subtype that says otherwise**: neither
+  side is a literal, and the repair's own reasoning shows every machine-readable form of the premise
+  recreates the defect at the caller. **Correction to the brief: THREE of the six were created by
+  repairing another, not two** — half of them are a correct repair moving one side of a pair, which
+  is why "review harder at write time" cannot work: nobody was wrong at write time. False-positive
+  estimate for Rule A rests on the census's 1-in-483 collision rate over ~226 values in 7 files, with
+  **one** known site to except on day one; Rule B ships green because origin carries one head.
+
 - [BODY-IS-THE-BOX-1.md](BODY-IS-THE-BOX-1.md) — **the manta's tail is hers; the rule is written
   down; and the two measuring rules turn out to differ in TWO ways, not one** (2026-09-02, the
   owner's decision written down and wired in; **nothing about any race changes** — four files, all
