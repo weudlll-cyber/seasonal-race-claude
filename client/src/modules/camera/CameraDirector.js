@@ -4854,6 +4854,23 @@ export class CameraDirector {
       wouldHave: _wouldHave,
       scheduled: _scheduled,
       binding: _binding,
+      // ── FIELD-RETIRED-1: THE RETIREMENT IS AN EVENT, AND UNTIL NOW ONLY ITS AFTERMATH WAS VISIBLE.
+      //
+      // `ceilings.field` already appears above, but it is `Infinity` both BEFORE the guarantee is
+      // armed and AFTER it retires, so nothing outside this class could tell "retired on this frame"
+      // from "was never active". That matters because the retirement is the single largest one-frame
+      // picture move of a real race — measured at 14.8x the local median pan AND the largest zoom
+      // step of the race, on city-circuit seed 9 — and it is DELIBERATE. An instrument watching for
+      // a motion fault sees it and cannot tell it from one; two days went into a single-frame camera
+      // step this week before it was identified by hand.
+      //
+      // PUBLISHED, NOT DETECTED. These are the two values this class already keeps; nothing is
+      // computed here and no threshold is chosen. Whether to BUILD a motion-continuity check on them
+      // is the owner's to order, and MOTION-CONTINUITY-1 sets out what it would cost.
+      //
+      // Read by nothing in the camera. Like `corridorCap` above, it is diagnostic only.
+      fieldActive: this._fieldGuaranteeActive,
+      fieldRetiredAt: this._fieldGuaranteeRetiredAt,
       t: subjects.t,
       runInActive: this._runInActive,
       runInBinding: this._runInBinding,

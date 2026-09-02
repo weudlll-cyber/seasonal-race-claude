@@ -49,7 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 6c049d86 2026-09-02 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 6c049d86 2026-09-03 depends=client/src/modules/camera/CameraDirector.js -->
+
+**RE-STAMPED 2026-09-03 (FIELD-RETIRED-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change cannot have moved these numbers**: it adds two fields to `_framingProbe`, which `git grep` shows is read by tests and by nothing in the camera, and **all four fingerprints were run against the record and all four match** — camera and render included, the two that would move if the shot or the draw sequence had. Nothing was re-run; the stamp records that the dependency moved inertly.
 **RE-MEASURED IN FULL FOR AIM-ROOM-COMBINED-1, ON THE TREE CARRYING BOTH THE AIM ROOM FLOOR AND THE
 REPAIRED COMPANY GUARANTEE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT (2026-09-02)** — 6.18/4.57,
 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-, 7/7) and the same

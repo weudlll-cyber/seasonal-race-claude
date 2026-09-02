@@ -434,6 +434,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [FIELD-RETIRED-1.md](FIELD-RETIRED-1.md) — **the retirement is visible from outside now, and all
+  four fingerprints are byte-identical** (2026-09-03; two lines of published state, **no check
+  built**; `verify` PASS 14 FAIL 0, camera director 388/388). ★ **What was missing was NOT
+  `ceilings.field`, which was already on the probe.** `_fieldCeiling` returns `Infinity` **both before
+  the guarantee is armed and after it retires**, so from outside the class "retired on this frame" and
+  "was never armed" are the same value — and the retirement is the largest single-frame picture move
+  of a real race (14.8× the local median pan, and the largest zoom step of that race). An instrument
+  watching for a motion fault sees it and cannot tell it from one; two days went into a single-frame
+  camera step this week before it was identified by hand. Published: `fieldActive` and
+  `fieldRetiredAt`, **both values the class already kept** — nothing computed, no threshold chosen.
+  **Building the check on them is deliberately NOT done**; that is the owner's to order.
+  **The proof that it changes nothing is mechanical rather than argued:** the probe is read by tests
+  and nothing else (`git grep`), `CameraDirector.js` is outside the engine hull, and
+  **`camera-fingerprint` hashes TEN NAMED FIELDS so a new probe field cannot be among them BY
+  CONSTRUCTION, not by luck**. All four fingerprints were run against the record and all four match —
+  **render as well as camera, deliberately**, because SHIP-CEREMONY records that a camera-only diff
+  has moved the render hash before. ★ **Those checks could not have said this yesterday**: camera and
+  render only gained `--check` hours earlier in FP-COMPARE-2, and before that "the fingerprint did not
+  move" would have rested on someone reading two numbers. Three tests pin the PUBLICATION rather than
+  a threshold, including that a director which never armed the guarantee does not look like one that
+  retired. **Nothing consumes the fields yet, and the report says so** — an unread field is how a
+  stale one survives, and this one is deliberate.
+
 - [PRUNE-STEP-1.md](PRUNE-STEP-1.md) — **the condition that blocked it is gone, reproduced on a fresh
   stub, so it is a step now** (2026-09-03; one file changed, `verify` PASS 10 FAIL 0). The owner's
   refusal was explicitly CONDITIONAL — not that prune is wrong, but that it FAILS here, and a ritual
