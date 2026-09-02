@@ -3677,7 +3677,7 @@ search returned nothing, a control that returns something was run first.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** both branches are in master as he asked — `f01ff8ea` merge(AIM-LEVERS-1) and `73053d25` merge(AIM-ROOM-SHIP-1), both 2026-09-02 — and the floor shipped (`leaderAimRoomFloorPx` in `defaults.js`, tag `v-ship-aim-room`) with candidate A removed. **The carried-forward river-run item was re-measured on a tree that ships the floor:** AIM-ROOM-COMBINED-1 measured the combined arm before the merge (9 → 7 events) and AIM-ROOM-PAN-ANATOMY-1 (`d4b09759`, 2026-09-02) established they are **not pans but a zoom of up to ×1.94 in one frame**, that the shot STAYS, and that neither candidate is the author. The superseded-figure warnings are kept verbatim because they state a general rule.
 
-## ⚠ TWO UNMERGED BRANCHES CARRY FIGURES MEASURED AGAINST A DEFECTIVE BASELINE (2026-09-02)
+### ~~⚠ TWO UNMERGED BRANCHES CARRY FIGURES MEASURED AGAINST A DEFECTIVE BASELINE~~ — ✅ BOTH SHIPPED 2026-09-02 (heading marked 2026-09-02 by BACKLOG-DEDUPE-1; the verdict above already established it, but the heading still read as live)
 
 **`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured before COMPANY-HEADCOUNT-1, so
 every cost they publish was measured against a camera whose company guarantee was under-asking by one
@@ -3722,7 +3722,7 @@ on; no command re-derives them, which is why they are listed rather than recompu
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** built and merged `77be7904` (2026-08-27), confirmed on the merged tree by GATE-CLIENT-BOUNDED-1 (`d7a860f5`, 2026-08-27), and the three bullets it labelled as hypotheses were settled on 2026-09-01 by CROWDING-INFERENCES-1 (`1c5763ab`): **CPU confirmed and measured** (13 workers pin CPU at 85–87%, 4 workers sit at 47%), **"the 15 extended-timeout tests are the load" REFUTED as stated** (removing the seven heavy files buys −9% / −17% where the bound buys −65% / −77%, and the count is 12 not 15), and **the bound deliberately NOT retuned**. Its own NEEDS line already read *nothing*.
 
-## ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
+### ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
 
 **BUILT.** `client/vitest.config.js` carries `maxWorkers: 4`, in the file that already owns how this
 suite runs. `scripts/verify.mjs` already marked `client-suite` exclusive, which is the other half of
@@ -3782,7 +3782,7 @@ failures in one table. Any run whose failure count is non-zero reopens this.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — MOOT:** dissolved by the seed arc of 2026-08-31. SEED-SNAPSHOT-1 (`d93fcfdf`) made his runtime records the shipped seeds — `server/seeds/tracks/garden-path.json` now carries all four of his `surfaceClasses`, read at source today — and SEED-REDELIVERY-1 (`b9dc8102`, merge `22e6eadf`) answered the delivery question without needing a per-field rule at all: the **whole unit** is redelivered when a version in `server/seeds/versions.json` is raised BY HAND, and the operator is warned by a banner he must dismiss. There is no field-by-field line left to draw.
 
-## WHICH FIELDS OF A SHIPPED TRACK BELONG TO THE PROJECT, AND WHICH TO WHOEVER RUNS IT
+### WHICH FIELDS OF A SHIPPED TRACK BELONG TO THE PROJECT, AND WHICH TO WHOEVER RUNS IT
 
 **Sharpened 2026-08-27 by [TRACK-RUNTIME-AUDIT-1](../reports/evolution/TRACK-RUNTIME-AUDIT-1.md),
 which audited all ten runtime track records against their seeds.** The open question is NOT the one
@@ -3872,7 +3872,7 @@ behaviourally null, and left his edit intact, so the install is correct today ei
 
 ---
 
-## A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
+### A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
 
 **verify (section-wide):** none — nothing here is a change. **Both entries are FINDINGS, not
 proposals.** No work is proposed for either, no key is added, and nothing is designed.
@@ -3914,7 +3914,7 @@ proposals.** No work is proposed for either, no key is added, and nothing is des
 
 ---
 
-## Documentation (2026-08-07, from DOC-ORDER-1)
+### Documentation (2026-08-07, from DOC-ORDER-1)
 
 **verify (section-wide):** `git grep -c "" docs/ROADMAP.md` — **the merge is FINISHED. ROADMAP-FOLD-1 (2026-08-23) took it from 627 lines to a 74-line phase-status table; ROADMAP-FOLD-2 (2026-08-27) folded that table in here and left a 31-line REDIRECT that owns nothing.** Every section it ever held is in this file.
 

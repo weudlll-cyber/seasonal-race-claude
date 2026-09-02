@@ -423,6 +423,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [BACKLOG-DEDUPE-1.md](BACKLOG-DEDUPE-1.md) — **thirteen of the fourteen are NOT duplicates — they
+  are the file's OPEN/CLOSED structure — and the one that is real was made last night** (2026-09-02;
+  content untouched: 3,063 non-blank lines before and after, and the **280 lines the verdict count
+  reads are byte-identical**). ★ **The piece's premise is refuted and almost nothing was merged.**
+  The cause is not the ROADMAP fold of 2026-08-27, established by counting duplicates at each
+  candidate: they were already present at `b22ff2b8~1`. Walking all 188 commits, the first with any
+  duplicate is **`fa14ca0c` BACKLOG-SORTED-1 (2026-08-23)**, which introduced `# PART ONE — OPEN` and
+  `# PART TWO — CLOSED`. **Thirteen pairs straddle that boundary because a subject's OPEN items live
+  under its heading in PART ONE and its CLOSED items under the same heading in PART TWO** — measured
+  and unambiguous: PART ONE's copies hold only unticked items, PART TWO's only ticked.
+  **Merging them would have collapsed the open/closed sort**, which is the file's central structural
+  fact, so they were left alone under constraint 1. **No entry appears in both copies of any pair —
+  zero, checked mechanically over all fourteen** — so the anticipated "closed in one copy, open in the
+  other" finding does not exist: the copies are disjoint by construction. **The one real duplicate is
+  one night old**: `## Documentation (2026-08-07)` twice inside PART TWO, because BACKLOG-VERDICTS-1
+  moved entries into its new CLOSED block **keeping their `##` headings**, leaving five sections at the
+  same level as PART TWO's own. **The week's pattern again — a repair creating the defect the next
+  piece finds, the fourth instance in eight days.** Reconciled by demoting those five headings to
+  `###`; nothing merged, moved, reordered or reworded. **The re-count needed no correction:** last
+  night's 128 / 16 / 105 / 7 stand, *proven* rather than re-adjudicated, because the count's inputs are
+  byte-identical and the file was never doubled. Two stale items handled: the TWO UNMERGED BRANCHES
+  heading still read present-tense and is now struck (both shipped 2026-09-02); and the closed-inside-
+  open placement is **measured and reported rather than moved**, since moving is the reorder the brief
+  forbids — **13 ticked items sit in PART ONE**, and two whole sections there are titled CLOSED but
+  carry no checkbox at all, so they are misfiled rather than misleading.
+
 - [DOC-TRUTH-2.md](DOC-TRUTH-2.md) — **the breadth pass, returning after DOC-TRUTH-1 was merged:
   ~4,300 claims checked, 97 false at ~124 sites in 24 of 34 documents, median age 43 days** (range
   0–132; **14 false on the day they were written**). It does not overlap DOC-TRUTH-1's eight, and a
