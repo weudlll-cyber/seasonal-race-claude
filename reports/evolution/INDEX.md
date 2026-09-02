@@ -394,6 +394,36 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [GARDEN-PATH-FINISH-1.md](GARDEN-PATH-FINISH-1.md) — **the cause was the RACER-TYPE input, it was
+  removed on 2026-08-25, and the brief's symptom NO LONGER EXISTS: ten of ten tracks finish 40/40**
+  (2026-09-02, diagnose only — nothing built, nothing repaired, the ceiling NOT raised). Driven
+  through `raceDriver.mjs` `runRace` at the brief's own identity (n=40, 60 s, each track's own
+  `defaultRacerTypeId`, seeds 1/2/3, with and without slowmo) **every track completes**; the worst
+  cell is dirt-oval under slowmo at 6,785 of 12,000 frames — **56.5% of the ceiling** — and
+  garden-path at 44.7%. ★ **"NINE OF TEN TRACKS" WAS NEVER NINE.** The 2026-08-25 report found ONE,
+  and its phrase "every sweep reported nine tracks honestly" meant nine SUCCEEDED — the count was
+  read inverted and carried that way for eight days. **The named cause, with the number:** `d73ec6a9`
+  changed garden-path's `defaultRacerTypeId` snail→beetle AND `defaultLaps` 4→2, taking the race from
+  **424.2 s to 70.7 s, a factor of 6.0**. The mechanism is intact and was confirmed by re-arming it:
+  garden-path forced back to `snail` at n=40 seed 1 gives **12001/12000 frames, 0 of 40 finishers,
+  NULL — DISCARDED**. **The control agrees**: `goldenRunner.realArm`, the browser-pinned arm, returns
+  0 DNF on all ten with the last finisher at 31–47% of the bound, so the brief's decisive test never
+  fires — it finishes in BOTH arms. The four browser lap estimates measured the same night
+  (35/71/106/141 s) reconcile against `deriveRaceDuration` exactly, to the rounding. **TWO
+  CORRECTIONS TO THE STANDING ACCOUNT.** `raceDriver.mjs:259` calls its ceiling "wall-clock" and
+  **there is no real-time source in the file**: 93.32 s of loop clock cost 5.26 s of real time, and
+  without slowmo the loop clock equals race time exactly (93.32 vs 93.33 physicsTs), so **the
+  driver's dt IS the browser's**. But **with slowmo 12,000 frames buy only 165–178 s of race**, so the
+  effective ceiling for 24 harnesses is about **165 s — 17% below what every document states**.
+  **FOUR LIVE DIVERGENCES SURVIVE, none of which causes a non-finish**: `identity.seconds` is
+  silently discarded on all five closed tracks while `formatIdentity` prints it (an R16 violation);
+  space-sprint runs **−33%** of the product's race (60 s against 90 s) and luger-hill enters a
+  slowdown the browser never enters; laps are hardcoded and agree only because the DATA moved to meet
+  them; and **the roster is STILL null** — on the river-run seed-13 diff every field matches, with
+  `realizedDurationSec` bit-identical at 59.99999999999999, **except the NAMES**, and `stablePairBit`
+  hashes `r.name`. The driver also has no `raceActionStage` axis at all, so `medium` and `wild` are
+  inexpressible in every instrument built on it.
+
 - [MOTION-CONTINUITY-1.md](MOTION-CONTINUITY-1.md) — **BUILDABLE, but only after ONE field is
   published — and the thing that decides it was MEASURED, not reasoned** (2026-09-02, read-only,
   PROPOSE ONLY; a new instrument is the owner's to order and nothing was built). **The quantity is
