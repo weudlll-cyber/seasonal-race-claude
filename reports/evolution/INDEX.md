@@ -394,6 +394,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [TESTS-WIRED-1.md](TESTS-WIRED-1.md) — **none of the ten is out by ACCIDENT, so nothing was wired
+  — and running them anyway found one assertion that has ROTTED and two that only flaked**
+  (2026-09-02; nothing wired, nothing fixed, nothing silenced). The ten are the Playwright suite, out
+  for two reasons at once: wrong runner (`vitest.config.js:26` excludes `e2e/**` by name) and
+  deliberately expensive — **the owner's decision, 2026-08-16, whose one home is `docs/NIGHT-RUN.md`**,
+  pointed at rather than restated by `playwright.config.js`'s header and VERIFY-RULES R12a. A properly
+  housed exclusion, so the brief's "if nowhere, that is the finding" branch does not fire.
+  ★ **That nothing else is out by accident is PROVEN, not assumed**: 311 tracked test-shaped files
+  diffed against the union of what each runner ITSELF reports (`vitest list --filesOnly` × 2,
+  `git ls-files scripts` filtered, `playwright test --list`) — **discovered by no runner: ZERO**, the
+  union exceeding the file count by exactly `auth.setup.js`, which is a fixture and not a spec.
+  The suite was run anyway because this is the night: **103 passed, 3 failed of 106, in 4.6 minutes.**
+  **Two of the three are flakes and that was established** — both passed on an immediate re-run,
+  27/27, sitting exactly on NIGHT-RUN's recorded two-per-five rate. **The third is deterministic and
+  is the night's own pattern for the seventh time in four days:** `garden-path-finishes.spec.js:31`
+  asserts the product's estimate for that track EXCEEDS the 200 s harness ceiling, and the product
+  now says **71 s** at the harness's own 2 laps (35 / 71 / 106 / 141 s at 1-4 laps, all under the
+  ceiling). `GARDEN-PATH-DEFAULTS-1` swapped that track's default racer from snail to beetle on
+  2026-08-25 and the estimate fell under the ceiling; **the spec's premise died and the spec did not
+  notice.** In its own words, "if the product estimated UNDER the ceiling, the ceiling could not be
+  the cause". **Its SECOND test passed** — garden-path crosses the line in the browser, field 20,
+  11 finish times on the board — so the file now holds one false premise beside one confirmation of
+  the behaviour it was written to defend. Left exactly as it is per the decision rule, and handed to
+  piece 11 as evidence. **One document claim found false and flagged rather than fixed twice:**
+  `docs/NIGHT-RUN.md` says the suite is "103/103 green"; it is now 106 tests of which 103 pass — the
+  numerator stopped moving while the denominator did, so the figure reads as a pass while meaning
+  the opposite. Correcting it belongs to piece 10.
+
 - [CHECKS-FIRE-1.md](CHECKS-FIRE-1.md) — **eleven of the twelve never-exercised checks fire; the
   twelfth's outward half cannot be fired without notifying the owner; and one guard's headline half
   is confirmed inert** (2026-09-02, twelve sabotages, **every one reverted — the branch's WHOLE TREE
