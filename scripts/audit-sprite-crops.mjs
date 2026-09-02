@@ -4,191 +4,75 @@
 // Project:     RaceArena
 // Created:     2026-06-03
 // Description: Measures body bounding box and fill ratio for each racer
-//              spritesheet across all animation frames; requires sharp.
+//              spritesheet across all animation frames, and compares against
+//              the registry's recorded bodyFillX/bodyFillY; requires sharp.
 // ============================================================
 
 /**
  * audit-sprite-crops.mjs
- * Measures the body bounding box and fill ratio for each racer spritesheet.
- * For each spritesheet, computes the union of non-transparent pixels across
- * all 16 frames (laid out horizontally), then reports fill ratio.
+ * Measures the body bounding box and fill ratio for each racer spritesheet, and compares the result
+ * against the bodyFillX/bodyFillY the registry records.
+ *
+ * For each sheet it takes the union of the opaque bounding box across that type's frames (laid out
+ * horizontally; the frame count comes from the registry, the frame size from the PNG).
+ *
+ * ★ TWO RULES, AND THEY DO NOT ALWAYS AGREE. The bare opaque bbox ("plain") is what produced the
+ * registry's pinned values. `computeSpriteBoundingBox` ("product") additionally sheds sparse edge
+ * strips, and is what the Racer Editor's `measureBodyFill` would return if a sheet were re-measured
+ * today. Both are computed and both are reported, because reporting only one would make a real
+ * disagreement look like agreement — or the reverse.
+ *
+ * THIS TOOL MEASURES AND CORRECTS NOTHING. bodyFillX/bodyFillY reach the race
+ * (`headlessRaceSimulator.js`, `RaceScreen/index.jsx` and row layout), so changing one changes both
+ * the picture and the result. A disagreement here is a finding, not a fix.
  */
 
 import sharp from "sharp";
+import { computeSpriteBoundingBox } from "../client/src/modules/racer-types/backgroundRemoval.js";
 import { existsSync } from "fs";
 import { join } from "path";
 
 const ASSETS_DIR = join(process.cwd(), "client/public/assets/racers");
 
-const RACER_TYPES = [
-  {
-    id: "horse",
-    file: "horse-trot.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 40,
-  },
-  {
-    id: "duck",
-    file: "duck-walk.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 36,
-  },
-  {
-    id: "snail",
-    file: "snail-crawl.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 4,
-    displaySize: 35,
-  },
-  {
-    id: "elephant",
-    file: "elephant-walk.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 44,
-  },
-  {
-    id: "giraffe",
-    file: "giraffe-walk.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 48,
-  },
-  {
-    id: "snake",
-    file: "snake-crawl.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 36,
-  },
-  {
-    id: "dragon",
-    file: "dragon-fly.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 16,
-    displaySize: 50,
-  },
-  {
-    id: "f1",
-    file: "f1-race.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 38,
-  },
-  {
-    id: "rocket",
-    file: "rocket-fly.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 40,
-  },
-  {
-    id: "buggy",
-    file: "buggy-bounce.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 38,
-  },
-  {
-    id: "motorbike",
-    file: "motorbike-walk.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 36,
-  },
-  {
-    id: "plane",
-    file: "plane-fly.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 42,
-  },
-  {
-    id: "luge",
-    file: "luge-slide.png",
-    frameWidth: 64,
-    frameHeight: 64,
-    frameCount: 16,
-    displaySize: 40,
-  },
-  {
-    id: "beetle",
-    file: "beetle.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 8,
-    displaySize: 38,
-  },
-  {
-    id: "boarder",
-    file: "boarder-sprite.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 12,
-    displaySize: 40,
-  },
-  {
-    id: "koi",
-    file: "koi-swim.png",
-    frameWidth: 565,
-    frameHeight: 565,
-    frameCount: 16,
-    displaySize: 52,
-  },
-  {
-    id: "turtle",
-    file: "turtle-swim.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 16,
-    displaySize: 48,
-  },
-  {
-    id: "manta",
-    file: "manta-swim.png",
-    frameWidth: 128,
-    frameHeight: 128,
-    frameCount: 16,
-    displaySize: 56,
-  },
-  {
-    id: "dolphin",
-    file: "dolphin-swim.png",
-    frameWidth: 256,
-    frameHeight: 256,
-    frameCount: 16,
-    displaySize: 52,
-  },
-  {
-    id: "snowmobile",
-    file: "snowmobile.png",
-    frameWidth: 192,
-    frameHeight: 192,
-    frameCount: 16,
-    displaySize: 52,
-  },
-];
+// ── THE RACER SET AND ITS GEOMETRY, READ RATHER THAN RESTATED (SPRITE-AUDIT-DERIVATION-1) ─────────────
+//
+// THIS TABLE WAS THE DEFECT. It hardcoded frameWidth/frameHeight/frameCount/displaySize for twenty
+// types, and its frame geometry disagreed with the registry on EIGHT of them and its displaySize on
+// FIVE, since `11093fff` (2026-06-03) — the commit that introduced the table and the cropped sheets
+// in one go, so it was never right. Run with those numbers the tool slices a 150-px-tall sheet into
+// 128-px windows and reports a fill ratio for a window that is not a frame: it returns
+// `bodyFillX = 1.000` for horse, snake, rocket, motorbike, luge, koi and snowmobile.
+//
+// That is why `bodyFillX`/`bodyFillY` were said to have a home and no derivation. They HAVE one — it
+// is this file — and it was reading its inputs from a copy.
+//
+// TWO SOURCES, EACH ASKED FOR WHAT IT OWNS:
+//   the PNG        frameWidth and frameHeight. A decoded sheet knows its own dimensions, and this
+//                  file already had them in `info` and threw them away.
+//   the REGISTRY   frameCount, displaySize, spriteUrl and the RECORDED bodyFill values to compare
+//                  against. frameCount is the one input a PNG cannot yield — a strip of N frames
+//                  looks exactly like a strip of 2N — so it must come from the one home for it.
+const RT = await import("../client/src/modules/racer-types/index.js");
+const RACER_TYPES = RT.RACER_TYPE_IDS.map((id) => {
+  const c = RT.RACER_TYPES[id].config;
+  const snap = RT.CONFIG_SNAPSHOT[id];
+  return {
+    id,
+    // `spriteUrl` is a browser path; the audit wants the file's basename under ASSETS_DIR.
+    file: String(c.spriteUrl).split("/").pop(),
+    frameCount: c.frameCount,
+    // displaySize is Dev-Screen tunable, so take the frozen pre-override snapshot — a developer's
+    // local tuning must not change what this audit reports about the shipped artwork.
+    displaySize: snap && "displaySize" in snap ? snap.displaySize : c.displaySize,
+    recordedFillX: c.bodyFillX,
+    recordedFillY: c.bodyFillY,
+    // Recorded geometry, kept ONLY to report disagreement with the sheet. It is never measured with.
+    recordedFrameWidth: c.frameWidth,
+    recordedFrameHeight: c.frameHeight,
+  };
+});
 
-async function measureSpritesheet(
-  filePath,
-  frameWidth,
-  frameHeight,
-  frameCount,
-) {
+async function measureSpritesheet(filePath, frameCount) {
   const { data, info } = await sharp(filePath)
     .ensureAlpha()
     .raw()
@@ -196,40 +80,68 @@ async function measureSpritesheet(
 
   const { width, height, channels } = info;
 
+  // THE FRAME GEOMETRY COMES FROM THE SHEET, not from a table. This is the whole repair: `info`
+  // was already here and was being ignored in favour of a copy that had drifted.
+  const frameWidth = width / frameCount;
+  const frameHeight = height;
+  if (!Number.isInteger(frameWidth)) {
+    throw new Error(
+      `${filePath}: width ${width} is not divisible by frameCount ${frameCount} — the sheet and the ` +
+        `registry disagree about how many frames it holds, and that cannot be guessed.`,
+    );
+  }
+
   const ALPHA_THRESHOLD = 10;
 
-  // Per-frame bounding boxes, then union them
+  // Per-frame bounding boxes, then union them — the same shape as `measureBodyFill`
+  // (client/src/screens/RacerEditor/canvasUtils.js), which is what actually authored the registry's
+  // bodyFillX/bodyFillY. The bbox itself comes from the PRODUCT function rather than a copy of it,
+  // for the same reason the frame geometry now comes from the sheet.
   let unionMinX = Infinity,
     unionMinY = Infinity;
   let unionMaxX = -Infinity,
     unionMaxY = -Infinity;
+  // The plain opaque bbox, WITHOUT the product rule's sparse-edge shedding. Carried alongside so a
+  // reader can see whether the shedding is doing anything on these sheets or merely could.
+  let rawMinX = Infinity,
+    rawMinY = Infinity;
+  let rawMaxX = -Infinity,
+    rawMaxY = -Infinity;
   let totalOpaquePixels = 0;
 
   for (let f = 0; f < frameCount; f++) {
     const frameOffX = f * frameWidth;
-    let fMinX = Infinity,
-      fMinY = Infinity,
-      fMaxX = -Infinity,
-      fMaxY = -Infinity;
+    // Repack the frame as RGBA in frame-local coordinates, which is what computeSpriteBoundingBox
+    // expects (it indexes (y * width + x) * 4 + 3).
+    const frame = new Uint8ClampedArray(frameWidth * frameHeight * 4);
     for (let y = 0; y < frameHeight; y++) {
       for (let lx = 0; lx < frameWidth; lx++) {
-        const gx = frameOffX + lx;
-        const idx = (y * width + gx) * channels;
-        const alpha = data[idx + channels - 1];
+        const src = (y * width + frameOffX + lx) * channels;
+        const dst = (y * frameWidth + lx) * 4;
+        frame[dst] = data[src];
+        frame[dst + 1] = channels >= 3 ? data[src + 1] : data[src];
+        frame[dst + 2] = channels >= 3 ? data[src + 2] : data[src];
+        const alpha = data[src + channels - 1];
+        frame[dst + 3] = alpha;
         if (alpha >= ALPHA_THRESHOLD) {
-          if (lx < fMinX) fMinX = lx;
-          if (lx > fMaxX) fMaxX = lx;
-          if (y < fMinY) fMinY = y;
-          if (y > fMaxY) fMaxY = y;
+          if (lx < rawMinX) rawMinX = lx;
+          if (lx > rawMaxX) rawMaxX = lx;
+          if (y < rawMinY) rawMinY = y;
+          if (y > rawMaxY) rawMaxY = y;
           totalOpaquePixels++;
         }
       }
     }
-    if (fMinX !== Infinity) {
-      if (fMinX < unionMinX) unionMinX = fMinX;
-      if (fMinY < unionMinY) unionMinY = fMinY;
-      if (fMaxX > unionMaxX) unionMaxX = fMaxX;
-      if (fMaxY > unionMaxY) unionMaxY = fMaxY;
+    const bbox = computeSpriteBoundingBox({
+      width: frameWidth,
+      height: frameHeight,
+      data: frame,
+    });
+    if (bbox) {
+      if (bbox.minX < unionMinX) unionMinX = bbox.minX;
+      if (bbox.minY < unionMinY) unionMinY = bbox.minY;
+      if (bbox.maxX > unionMaxX) unionMaxX = bbox.maxX;
+      if (bbox.maxY > unionMaxY) unionMaxY = bbox.maxY;
     }
   }
 
@@ -244,8 +156,13 @@ async function measureSpritesheet(
     };
   }
 
-  const bodyWidth = unionMaxX - unionMinX + 1;
-  const bodyHeight = unionMaxY - unionMinY + 1;
+  // THE SHEET-TIGHTNESS HALF OF THIS TOOL USES THE PLAIN BBOX, and says so, because "how much
+  // transparent margin is on this sheet" is a question about the artwork, not about the product's
+  // shedding rule. Mixing the two silently is how the two halves came to disagree by 9px on koi.
+  const bodyWidth = rawMaxX - rawMinX + 1;
+  const bodyHeight = rawMaxY - rawMinY + 1;
+  const productWidth = unionMaxX - unionMinX + 1;
+  const productHeight = unionMaxY - unionMinY + 1;
   const framePx = frameWidth * frameHeight;
   // Bounding-box fill ratio: what fraction of the frame does the union bbox occupy?
   const bboxFillRatio = (bodyWidth * bodyHeight) / framePx;
@@ -254,10 +171,10 @@ async function measureSpritesheet(
   const pixelFillRatio = avgOpaquePxPerFrame / framePx;
 
   return {
-    unionMinX,
-    unionMinY,
-    unionMaxX,
-    unionMaxY,
+    unionMinX: rawMinX,
+    unionMinY: rawMinY,
+    unionMaxX: rawMaxX,
+    unionMaxY: rawMaxY,
     bodyWidth,
     bodyHeight,
     totalOpaquePixels,
@@ -265,6 +182,18 @@ async function measureSpritesheet(
     framePx,
     bboxFillRatio,
     pixelFillRatio,
+    // THE DERIVATION THE REGISTRY'S VALUES ARE CREDITED TO, now actually produced rather than left
+    // as an intermediate for someone to divide by hand.
+    // TWO RULES, REPORTED SEPARATELY, because they do not always agree and only one of them
+    // authored the registry. `product*` is what the Racer Editor would measure TODAY
+    // (computeSpriteBoundingBox, which sheds sparse edge strips); `plain*` is the bare opaque
+    // bounding box, which is what the registry's pinned values were actually produced by.
+    productFillX: productWidth / frameWidth,
+    productFillY: productHeight / frameHeight,
+    plainFillX: bodyWidth / frameWidth,
+    plainFillY: bodyHeight / frameHeight,
+    frameWidth,
+    frameHeight,
     sheetWidth: width,
     sheetHeight: height,
   };
@@ -273,9 +202,9 @@ async function measureSpritesheet(
 async function main() {
   console.log("\n=== Racer Spritesheet Audit ===\n");
   console.log(
-    `${"ID".padEnd(12)} ${"Frame".padEnd(10)} ${"Body".padEnd(10)} ${"BBoxFill%".padEnd(11)} ${"PxFill%".padEnd(9)} ${"DispSz".padEnd(8)} ${"Flag"}`,
+    `${"ID".padEnd(12)} ${"Frame".padEnd(10)} ${"Body".padEnd(10)} ${"BBoxFill%".padEnd(11)} ${"PxFill%".padEnd(9)} ${"DispSz".padEnd(8)} ${"plain X/Y".padEnd(14)} ${"vs REGISTRY"}`,
   );
-  console.log("-".repeat(75));
+  console.log("-".repeat(120));
 
   const results = [];
 
@@ -287,21 +216,33 @@ async function main() {
     }
 
     try {
-      const m = await measureSpritesheet(
-        filePath,
-        type.frameWidth,
-        type.frameHeight,
-        type.frameCount,
-      );
+      const m = await measureSpritesheet(filePath, type.frameCount);
       const bboxFillPct = (m.bboxFillRatio * 100).toFixed(1);
       const pxFillPct = (m.pixelFillRatio * 100).toFixed(1);
       // Flag if bbox fill < 50% — body doesn't use half the frame area
       const flagged = m.bboxFillRatio < 0.5;
       const flag = flagged ? "*** CROP" : "";
-      const frameStr = `${type.frameWidth}x${type.frameHeight}`;
+      const frameStr = `${m.frameWidth}x${m.frameHeight}`;
       const bodyStr = `${m.bodyWidth}x${m.bodyHeight}`;
+      // The registry stores these rounded to three decimals, so compare at three.
+      const r3 = (v) => Math.round(v * 1000) / 1000;
+      const plainX = r3(m.plainFillX),
+        plainY = r3(m.plainFillY);
+      const prodX = r3(m.productFillX),
+        prodY = r3(m.productFillY);
+      const plainAgrees = plainX === type.recordedFillX && plainY === type.recordedFillY;
+      const prodAgrees = prodX === type.recordedFillX && prodY === type.recordedFillY;
+      const geomDrift =
+        m.frameWidth !== type.recordedFrameWidth || m.frameHeight !== type.recordedFrameHeight
+          ? ` [registry geom ${type.recordedFrameWidth}x${type.recordedFrameHeight}]`
+          : "";
+      const verdict = plainAgrees
+        ? prodAgrees
+          ? "both agree"
+          : `EDITOR WOULD DIFFER -> ${prodX.toFixed(3)}/${prodY.toFixed(3)}`
+        : `PLAIN DIFFERS  recorded ${type.recordedFillX}/${type.recordedFillY}`;
       console.log(
-        `${type.id.padEnd(12)} ${frameStr.padEnd(10)} ${bodyStr.padEnd(10)} ${(bboxFillPct + "%").padEnd(11)} ${(pxFillPct + "%").padEnd(9)} ${String(type.displaySize).padEnd(8)} ${flag}`,
+        `${type.id.padEnd(12)} ${frameStr.padEnd(10)} ${bodyStr.padEnd(10)} ${(bboxFillPct + "%").padEnd(11)} ${(pxFillPct + "%").padEnd(9)} ${String(type.displaySize).padEnd(8)} ${(plainX.toFixed(3) + "/" + plainY.toFixed(3)).padEnd(14)} ${verdict}${geomDrift} ${flag}`,
       );
       results.push({
         ...type,

@@ -243,6 +243,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SPRITE-AUDIT-DERIVATION-1.md](SPRITE-AUDIT-DERIVATION-1.md) — **the sprite audit now reads its
+  inputs, and the artwork agrees with the registry on all twenty — against the rule that WROTE those
+  values. A second rule is wired into the editor and it disagrees on five** (2026-09-02, a TOOL
+  repair that ships nothing: one file, outside the engine hull, all four fingerprint guards reported
+  `nothing changed`). `audit-sprite-crops.mjs` carried a 20-row geometry table that **had never
+  agreed** with the registry (`11093fff`, 2026-06-03), so it sliced 150-px sheets into 128-px windows
+  and reported `bodyFillX = 1.000` for seven types that fill nothing of the sort. It now takes frame
+  SIZE from the decoded PNG, frame COUNT from the registry — the one input a PNG cannot yield — and
+  throws when the two disagree. **The finding that was not in the brief: there are TWO measuring
+  rules.** The bare opaque bbox produced the registry's forty pinned values; the product's
+  `computeSpriteBoundingBox` additionally sheds sparse edge strips and is what the Racer Editor's
+  `measureBodyFill` would return today. **Dates settle which authored the pins**: shedding landed
+  `d2c2ee6e` (2026-05-28), the values `7ea80484` (2026-06-04) — a week later and without it. Against
+  the plain rule **20/20 agree** and frame geometry agrees on all twenty; against the product rule
+  **five differ, always in ONE axis and always DOWNWARD** — dragon −0.031 and plane −0.032 on
+  `bodyFillY`, beetle −0.015 and koi −0.035 on `bodyFillX`, and **manta −0.125 on `bodyFillY`, four
+  times the next largest**. **NOTHING WAS CORRECTED, and that is not caution**: `bodyFillX/Y` reach
+  `headlessRaceSimulator.js`, `RaceScreen/index.jsx` and start-row layout, so moving manta would move
+  the world fingerprint and change who wins. **What is NOT established**: which rule is right — that
+  is a judgement about the picture and nobody has made it — and no sprite was eye-checked.
+
 - [FINGERPRINT-TRACK-DEFAULTS-1.md](FINGERPRINT-TRACK-DEFAULTS-1.md) — **the world fingerprint was
   racing a SNAIL on garden-path for eight days; the premise is repaired, not the pair** (2026-09-02,
   an INSTRUMENT correction and NOT a world change — the simulation is untouched and the diff shows
