@@ -1,170 +1,163 @@
 # Morning sheet
 
-**Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
+**Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-02, after COMPANY-HEADCOUNT-1 shipped.
+**Last rewritten:** 2026-09-02, after piece 4 of THE OPEN POINTS merged.
 
 ---
 
-## SHIPPED TODAY — the guarantee keeps its promise
+## ★ THE ONE DECISION THAT WAS TAKEN IN YOUR ABSENCE: PIECE 1'S MINT
 
-**COMPANY-HEADCOUNT-1 is merged and minted** (`v-ship-company-headcount`, merge `9328886b`). You
-judged it on the production build `59c6bb98` and accepted it. The company guarantee had been
-deducting one racer unconditionally since CAMERA-LATERAL-1 moved its anchor to the track centreline —
-a true comment left standing while its premise moved underneath it — so a promise of five asked for
-four and got four. It now asks whether a racer stands on its anchor instead of assuming one does.
+**The world fingerprint was re-minted. The race did not change.**
 
-Promise kept: space-sprint **96.32% → 99.23%**, searound **97.39% → 99.92%**, seatrack
-**97.55% → 99.63%**, garden-path → **100%**. Frame counts identical between arms on all ten tracks —
-the picture moved, the race did not. Camera and render re-minted; world and world-off unmoved.
+You granted permission for this mint and no other, on the condition that the movement be **fully
+explained by the instrument**. It was, and the conditions you set were met before anything was
+written:
 
-## ⚠ THE TWO UNMERGED BRANCHES: THEIR PUBLISHED COSTS ARE NO LONGER THE COSTS
+| your condition | result |
+|---|---|
+| the OLD instrument on the NEW tree must equal today's record **exactly** | it does — `bc01b74fd4f3cfc8`, the value being replaced |
+| the NEW instrument on the OLD tree must equal the value being minted | it does |
+| both controls reported in the mint text | they are, in `docs/fingerprints.json` |
 
-**`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured against the defective baseline.**
-Nothing was wrong with those measurements on the trees they were taken on — but they are not the cost
-of those changes against master any more.
+**And a third control you did not ask for, which is the conclusive one: of the ten per-track hashes,
+exactly ONE moved** — garden-path. The other nine are byte-identical. Camera and render did not move
+at all, because they already read each track's own default racer and never had the defect.
 
-**The one that matters: candidate B was charged with showing "about one racer fewer in shot". That
-was mostly this defect, not the lever.** The shortfall those pieces attributed to the aim room floor
-came largely from a guarantee asking for four where five was promised — on the floor arm and the
-baseline arm alike. **B has never been priced against a correct baseline.**
+**What this mint is NOT.** A moving world hash normally means the simulation changed, and
+SHIP-CEREMONY's world-changing half — REBASELINE, the SIM lineage entry, the golden re-pin — exists
+for that case. **It does not apply here.** The diff contains no engine file, no default, no config
+and no seed. What moved is *which race the instrument runs*. That is written into the mint entry and
+into [TAGS.md](TAGS.md) in plain words so a reader in six months does not conclude the race changed
+on 2026-09-02.
 
-**You have decided against re-measuring it and want both in master** (2026-09-02). Neither branch is
-rebased, merged or deleted by this piece. Full list of what is superseded and what still stands is in
-[BACKLOG.md](BACKLOG.md), including the one fault carried forward and unfixed: the floor gives
-river-run **nine whole-screen single-frame pans in 479,587** where master has none.
+**No ship tag was cut**, decided by SHIP-CEREMONY and not by convenience: a `v-ship-*` tag records a
+picture you judged, and its value is the return point. There is nothing here for your eye — the
+picture is byte-identical — and the return point would restore an instrument that races a snail.
+
+→ [FINGERPRINT-TRACK-DEFAULTS-1](../reports/evolution/FINGERPRINT-TRACK-DEFAULTS-1.md)
 
 ---
 
-## THE CENSUS VERDICT — before coffee
+## THE CHAIN — THE OPEN POINTS
 
-| what was counted | how many | how many are sound |
+| # | piece | state |
 |---|---|---|
-| **Duplicated facts** | 16 groups, **483** comparable values | **456 agree, 27 do not** — but **4 groups have no source of truth at all**, which is the worse half |
-| **Checks** | **40** | **27 demonstrably fire**, 12 have never been exercised, **exactly 1 is inert** |
-| **Tests** | **310 files, 5,583 tests** | **300 of 310 run** automatically; 10 run only by hand |
-| **Removable** | — | **1 item provably dead** (9 files, 1,444 lines, **0 s** of suite time); 6 more suspected, not proven |
+| **1** | **The fingerprint racing a snail** | **DONE — merged `fa553f50`, minted, pushed.** |
+| **2** | **The 74px anchor miss** | **RUNNING.** Read-only analysis in flight; nothing written yet. |
+| **3** | **The four groups with no source of truth** | **RUNNING.** Read-only analysis in flight; nothing written yet. |
+| **4** | **Repair the sprite audit, then run it** | **DONE — merged `ac1d7acc`, pushed. NO RACER'S VALUES CORRECTED.** |
+| **5** | **Price the engine-reach closure** | **RUNNING.** Read-only analysis in flight; nothing written yet. |
 
-**Your four broken checks are 4 of 40 — 10%, not four out of ten.** And "4,327" is the **client
-suite alone**; the repository has 5,583 tests across four runners.
-
-### Are these findings recent or old? — OLD. Here is the number.
-
-**22 of the 27 disagreements are more than eight weeks old; 21 of them have been wrong since the day
-they were written, 91 days ago.** Only 5 are from the last fortnight. The one provably dead thing is
-**117 days** untouched — the oldest thing examined. Everything the census *could not* prove dead is
-days old and is live work.
-
-**So this is not a fortnight of rot. It is a spring's worth of small drift that nothing was looking
-for, surfacing now because something finally looked.**
-
-### Is the sound side growing? — IT GREW ONCE, AND IT HAS STOPPED.
-
-Checks over time: **5 (April) → 11 (July) → 40 (August) → 40 (September).** August alone built
-**72.5%** of the entire checking surface. Since then: **zero new checks**, and in the last fortnight
-**2 were added while 4 were found broken.**
-
-**The number that should bother you: none of those four was found by any check in the table.** They
-were found by people doing unrelated work. That is the honest reading — the machinery you built in
-August is real and mostly works, but it stopped growing, and it is not yet the thing that finds your
-faults for you.
-
-### The one limit, stated plainly
-
-**A census counts what can be found by looking. It cannot prove there is nothing else.** Every
-number above is a floor, not a total — the duplicate count is grep-based and cannot see a fact
-spelled differently in two places; "has this guard ever gone red" cannot see a failure fixed before
-it was committed; and the redundancy question needs mutation testing that was not run. **Do not read
-this as an all-clear.** Read it as: here is what one night of deliberate looking found.
+Pieces 2, 3 and 5 are read-only and overlap freely, so they run together. Pieces 1 and 4 involved
+runs and went one at a time in the main tree — never two writers, two merges or two checks at once,
+and no worktrees with junctions.
 
 ---
 
-## ⚠ ONE DANGEROUS FINDING — reported, and deliberately NOT fixed
+## PIECE 1 — what was actually wrong, in two sentences
 
-**The world fingerprint is not racing the track you think it is.**
-`scripts/fingerprint-default.mjs:153` hardcodes `["garden-path", "snail"]`, under a comment that says
-"10 standard tracks × default racer". The shipped seed has said **beetle** since 2026-08-25. So the
-project's primary change-detector for the race has, for eight days, been measuring a snail on a track
-the product runs with a beetle — one of its ten tracks does not cover the shipped race at all.
+`scripts/fingerprint-default.mjs` carried a **literal** table of ten track/racer pairs under a
+comment claiming it ran each track's default. The seed has said `beetle` for garden-path since
+2026-08-25 and nothing followed, so for **eight days** the project's primary change-detector for the
+race ran a snail on a track the product runs with a beetle.
 
-It also means the reasoning recorded at the last re-mint is partly wrong: that mint argued all four
-values had to move because *"every instrument runs all TEN tracks AT TRACK DEFAULTS"*. The racer half
-of that change could not reach this instrument; only the lap-count half could.
+**The premise was repaired, not the pair.** Swapping one word would have reproduced the defect at the
+next default change; the instrument now READS `defaultRacerTypeId` from the shipped seed and
+**throws** rather than substituting one. The track ORDER stays fixed and listed, because it feeds the
+combined hash and a track added to the seeds must not silently join the instrument.
 
-**Left alone, per the rule for this chain.** The same stale pairing sits in three other live places —
-`goldenRunner.mjs:93`, `sweep-bufferPct-driver.mjs:30`, `docs/ARCHITECTURE.md:438`.
+**Three other sites were triaged rather than assumed.** `goldenRunner`'s table was established as
+drift and not a pinned fixture — its only consumer is `soak.mjs`, and no golden case is garden-path.
+`sweep-bufferPct-driver` was wrong on **two** axes, and one of its entries had **never** been right.
+`docs/ARCHITECTURE.md` cannot read a seed, so it is corrected and now labelled a snapshot.
+
+**The record is corrected too.** The 2026-08-25 re-mint argued all four values had to move because
+every instrument runs all ten tracks at track defaults. The racer half of that reasoning could not
+reach this instrument — which is exactly why the stale pairing survived unnoticed.
+
+---
+
+## PIECE 4 — the sprite audit, and the finding that was not in the brief
+
+**Repaired, run, and nothing corrected.** The tool carried a 20-row table of frame geometry and
+display sizes that had **never** agreed with the registry — it entered in `11093fff` (2026-06-03)
+disagreeing on eight frame geometries and five display sizes. Run that way it slices a 150-px sheet
+into 128-px windows and reports a fill ratio for a window that is not a frame. Frame **size** now
+comes from the decoded PNG; frame **count** comes from the registry, because it is the one input a
+PNG cannot yield.
+
+### ★ There are TWO measuring rules, and they disagree on five types
+
+This was not in the brief and is the more interesting half.
+
+- The **plain** opaque bounding box wrote the registry's forty pinned values.
+- The product's `computeSpriteBoundingBox` additionally **sheds sparse edge strips**, and is what the
+  Racer Editor's `measureBodyFill` returns today.
+
+**Dates settle which authored the pins, so this is not inference:** the shedding landed `d2c2ee6e`
+(2026-05-28); the values landed `7ea80484` (2026-06-04), a week later and without it.
+
+| against | result |
+|---|---|
+| the **plain** rule — the one that wrote them | **20 of 20 agree**, and frame geometry agrees on all twenty |
+| the **product** rule — what the editor would measure today | **5 differ**: dragon, plane, beetle, koi, **manta** |
+
+Every difference is in **one axis only** and **always downward**, which is what shedding must do
+since it can only trim. **manta is the outlier by a factor of four.**
+
+**Nothing was corrected, and that is not caution.** `bodyFillX`/`bodyFillY` reach
+`headlessRaceSimulator.js`, `RaceScreen/index.jsx` and start-row layout. Moving manta would move the
+world fingerprint and change who wins races. You have judged neither the number nor the picture.
+
+**It ships nothing, and that was proven rather than asserted:** one file, outside the engine hull,
+and **all four fingerprint guards reported `nothing changed`** because the file is in no
+fingerprint's import closure.
+
+→ [SPRITE-AUDIT-DERIVATION-1](../reports/evolution/SPRITE-AUDIT-DERIVATION-1.md)
 
 ---
 
 ## NEEDS YOUR WORD
 
-1. **Candidate B — you are judging it this morning.** See the top of the next section.
-2. **The engine-reach closure doubled, 36 → 76 files, as a consequence of the removal you ordered.**
-   Importing the racer registry pulls in 40 modules, so editing *any* racer type now selects the
-   world fingerprint and asks for a mint. **That is the loud signal you asked for**, made explicit
-   rather than left to a golden going red later — but racer-type work now pays a duration it did not
-   pay before. Nobody has judged whether that trade is worth it at 40 modules rather than at one. It
-   is done and green; say if you want it narrowed.
-3. **`scripts/audit-sprite-crops.mjs` is the only tool that can measure `bodyFillX`/`bodyFillY`, and
-   it would give wrong answers today** — 8 of 20 frame geometries and 5 of 20 display sizes are
-   pre-crop values, wrong since 2026-06-03. Which means those two fields, which every racer's shape
-   depends on, are **numbers with a home but no derivation**: nothing in the repository can reproduce
-   them. Not touched. Say whether that is worth a block.
+1. **The five sprite disagreements.** Which rule should own `bodyFillX`/`bodyFillY`? If the editor's
+   rule is right, five racers' recorded values are stale and correcting them changes races. If the
+   plain rule is right, the editor will quietly write a different number the next time anyone
+   regenerates one of those five sheets. **Today both are true at once and neither is written down.**
+   Nothing was changed either way.
+2. **The engine-reach closure, 36 → 76 files.** Still open from the census. Importing the racer
+   registry pulls in 40 modules, so editing *any* racer type now selects the world fingerprint and
+   asks for a mint. **Piece 5 is pricing this right now** and will land a number here; the decision
+   is still yours.
+3. **A racer's NAME is physics.** `stablePairBit` hashes `r.name`, so renaming a racer changed the
+   winner in 14 of 24 races. Long-standing, unfixed, and not touched by this chain.
 
 ---
 
-## CANDIDATE B — WHAT YOU ARE JUDGING
+## WHAT SHIPPED BEFORE THIS CHAIN — corrected, because the last sheet had it wrong
 
-**4173 is up and serving `feat/aim-levers-1`, exactly as you left it.** Confirmed by reading the
-build pill out of the served bundle, not assumed: **`2c2f5ba9 · feat/aim-levers-1`, not dirty.** The
-backend on 4000 is up and answers `access-control-allow-origin: http://localhost:4173`.
+The previous morning sheet showed the two aim-lever branches as unmerged and candidate B as pending
+your eye. **Both shipped.** The record now:
 
-**One thing you should know: 4173 was DOWN when the night began** — only the backend was running. It
-was restarted from the existing `client/dist`, which was already that branch's build (built 23:46,
-the same minute as the branch's last commit). **Nothing was rebuilt, nothing was merged, and the
-branch was not touched.** It was served with `scripts/serve-production.mjs` per R10, not `vite
-preview`.
+- **The aim room floor SHIPPED** — candidate B merged, candidate A removed entirely, tag
+  `v-ship-aim-room`, merge `73053d25`. Candidate A is kept on `archive/aim-levers-candidates` rather
+  than deleted. Neither branch exists any more.
+- **COMPANY-HEADCOUNT-1 SHIPPED** — tag `v-ship-company-headcount`. The company guarantee had been
+  deducting one racer unconditionally since CAMERA-LATERAL-1 moved its anchor to the track
+  centreline: a true comment left standing while its premise moved underneath it. A promise of five
+  asked for four and got four. It now derives whether a racer stands on its anchor instead of
+  assuming one does.
+- **The two changes were measured TOGETHER first**, and the restlessness on seatrack was attributed
+  to candidate B alone by a third measured arm rather than by argument.
 
-The branch is unmerged and unminted, as required. Every piece of the night's work happened on
-`master` and on its own branches; the tree has been put back on `feat/aim-levers-1`.
-
----
-
-## THE CHAIN — all five pieces done, merged, pushed
-
-| # | piece | state |
-|---|---|---|
-| **1** | **Duplicated facts** | **DONE, merged.** 16 groups, 483 comparable values, 456 agree / 27 not, 12 groups with a source of truth and **4 with none**. **The brief said four files copy the racer registry; it is five** — `audit-sprite-crops.mjs` carries a sixth table that has *never* agreed, found only by searching uncapped and in **both** spellings (`field:` and `field =`). Ten broken things named and left. → [CENSUS-DUPES-1](../reports/evolution/CENSUS-DUPES-1.md) |
-| **2** | **Checks** | **DONE, merged.** 40 checks: **27 fire, 12 never exercised, 1 inert.** The three states are deliberately not collapsed — a guard holding a line nobody has crossed is not waste. The inert one is `render-fingerprint.mjs` as a verify guard: no `--check`, never opens the record, no `throw`/`assert` anywhere, ~54 s to print a hash and PASS unconditionally. `camera-fingerprint.mjs` has the same headline defect. **FP-COMPARE-1 fixed this for one of three instruments and was never applied to the other two.** → [CENSUS-CHECKS-1](../reports/evolution/CENSUS-CHECKS-1.md) |
-| **3** | **The tests** | **DONE, merged.** 310 files / 5,583 tests / ~10,137 assertions; 300 run automatically. **Two beliefs corrected**: `goldenRealArm` is **29.1%** of client wall clock, not 99%; and **the biggest cost is not a test** — the suite spends more worker-time building a jsdom 230 times than running test bodies. On redundancy it refuses to guess: mutation testing was not run, so the answer is an honest **45–85% range, labelled an estimate**. → [CENSUS-TESTS-1](../reports/evolution/CENSUS-TESTS-1.md) |
-| **4** | **What is removable** | **DONE, merged. NOTHING REMOVED.** Exactly **one** item provably dead, and **four of six candidate classes came back empty** — no retired-mechanism tests survive, every guard's declared paths still resolve. **The `reports/perf` assumption is corrected: something DOES read it** (`phys-bench-fit.mjs:34` takes a file in there as its default input), it is 317 files not 326, and **deleting it would shrink a clone by 0.4%** — the weight is committed imagery, not reports. → [CENSUS-REMOVABLE-1](../reports/evolution/CENSUS-REMOVABLE-1.md) |
-| **5** | **The one repair you ordered** | **DONE, merged. NO MINTING PERMISSION TAKEN.** 124 literals removed from four files; all now read the registry via the new `scripts/lib/racerFacts.mjs`. **Proven no-op**: all four fingerprints measured **before and after on the branch** — not merely compared to the record, so a stale record could not fake a pass — byte-identical and equal to the record, and **50 of 50 goldens green**. The drift-guard proposal is closed with the reason. → [REGISTRY-LITERALS-1](../reports/evolution/REGISTRY-LITERALS-1.md) |
-
-### Two things piece 5 turned up that were not in the brief
-
-- **The instruction could not be followed as written.** It said to read all four fields from
-  `CONFIG_SNAPSHOT`. `bodyFillX`/`bodyFillY` are **not in it** — it is built from `TUNABLE_FIELDS`
-  and they are not tunable — so reading them there returns `undefined` and moves every hash. The
-  intent was honoured as one rule instead: prefer the frozen snapshot, fall back to `.config`, which
-  is override-immune for both halves. Your local Dev-Screen tuning still cannot reach the harness.
-- **A routing gap, counted and not repaired.** `npm run verify` would have reported **green** on this
-  change without running a single golden: `client-suite` routes on `dirs=client/`, and this change
-  was entirely under `scripts/` — yet four client test files import the very file it rewrote. The
-  50/50 exists **only because the goldens were run by hand.**
+**One thing worth carrying forward: the same defect shape has now appeared three times in four
+days** — the company headcount, the fingerprint's track table, and the sprite audit's geometry table.
+In each case a statement that was true when written stayed put while its premise moved. None was
+found by a check.
 
 ---
 
-## NOT STARTED / NOT DONE
+## NOT STARTED
 
-- **Nothing from the brief is outstanding.** All five pieces are done, each on its own branch, each
-  with its own check, each merged to master and pushed, master finished after every one.
-- **Everything the census found is unrepaired, by design** — that was the instruction. The lists live
-  in the four reports under "Broken things deliberately NOT fixed": ten in piece 1, eight in piece 2,
-  ten in piece 3, and the removable set in piece 4 with **nothing removed**.
-- **One deviation from the brief's method, and why.** The brief asked for a branch, check, report and
-  merge per piece, *and* for pieces 1–4 to run in parallel. Those two cannot both hold in one working
-  tree — a branch switch under a running analysis would have corrupted it. So the **analysis** ran in
-  parallel and the **writing and merging were serialised**, one piece at a time, never two writers or
-  two merges at once. Nothing was lost; the pieces are still four separate branches and five separate
-  merges.
+Nothing. All five pieces of THE OPEN POINTS are either merged or in flight.
