@@ -394,6 +394,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [PUBLISH-STEPS-1.md](PUBLISH-STEPS-1.md) — **one of the three closes mechanically; the other two
+  cannot be closed without changing HIS OWN setup, so they are proposed** (2026-09-02; his startup
+  output is **byte-identical** with his environment — not one new line — and his 4000 API and 4173
+  preview answered 200 before and after, every probe on a spare port). **Step 2 — the missing
+  `docker-compose.override.yml` — is CLOSED** by a pure, tested startup readiness report that reads no
+  files, starts nothing and changes no behaviour. ★ **The brief suggested FAILING loudly, and that
+  would have been wrong:** SERVE-SPA-1 made the server serve the client itself, so a same-origin
+  install is the normal one now and needs no CORS at all — refusing to start without
+  `RA_CLIENT_ORIGIN` would break the deployment this project is moving TOWARDS in order to fix the one
+  it is moving away from. So the CORS line is printed only when there is no client build to serve, and
+  in the live run it correctly **did not appear**. The standalone container, with **no mounts and no
+  environment**, serves the app (200) and reports `setupNeeded: true` with no bootstrap token — which
+  is exactly the dead end, now announced at startup instead of at a 403 twenty minutes later.
+  **Step 1 (build the client inside the image) is NOT closed on two independent grounds:** the
+  Dockerfile itself already records the trade as deliberately deferred, and closing it would add a
+  full front-end npm install to every one of his image builds, which the brief's own decision rule
+  forbids. **Step 3 (`VITE_API_URL`) is NOT closed because closing it is arithmetically certain to
+  break both his flows** — his dev client on 5173 and his preview on 4173 both talk to an API on
+  4000, so a same-origin default would send their API calls to themselves, and gating on
+  `import.meta.env.PROD` does not save it because **his 4173 preview IS a production build**. Both are
+  proposed with their shapes and costs and left to him. Ten tests; `verify` PASS 5 FAIL 0 with
+  `server-suite` included; `docker compose up` deliberately not run because it binds 4000 and his API
+  is live there.
+
 - [BACKLOG-VERDICTS-1.md](BACKLOG-VERDICTS-1.md) — **128 open entries, 16 closed against the tree,
   7 that are only his** (2026-09-02; verdicts and moves ONLY — no entry retitled, restructured or
   reworded). **16 + 105 + 7 = 128.** Every verdict was checked at source in the working tree, or by
