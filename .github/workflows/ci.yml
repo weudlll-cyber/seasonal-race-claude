@@ -51,7 +51,9 @@ on:
 #
 # READ OFF THE JOBS, NOT COPIED FROM A TEMPLATE. What the three jobs do with the token:
 #   actions/checkout@v4      — clones, and persists the token as a git credential   → contents: read
-#   scripts/check-tags.mjs   — `git ls-remote --tags origin` through that credential → contents: read
+#   scripts/check-tags.mjs   — `git ls-remote --tags origin` AND `--heads origin` through that
+#                              credential → contents: read (RULE B added the heads call 2026-09-02;
+#                              same credential, same scope, no new permission)
 #   everything else          — setup-node, npm ci, npm audit, vitest, node --test: network and
 #                              filesystem only, no GitHub API call at all
 #
