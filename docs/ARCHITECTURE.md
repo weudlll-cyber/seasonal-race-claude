@@ -306,15 +306,15 @@ Conversion helpers (raceBehavior.js, top of file):
 
 1. **Do NOT use `getActualTrackWidth()` for physics / overlap / clearance.** It is the spline estimate (overestimates on open tracks like Space Sprint: 449 vs 300 px). It stays only as a fallback in the `??` expression for tracks without a stored `width` field.
 
-2. **Do NOT reintroduce raw `physicalY × trackWidth` conversions.** Use `physicalYToPx` / `pxToPhysicalY`. The factor-of-2 lives only in those helpers.
+2. **Do NOT reintroduce raw `physicalY × trackWidth` conversions.** Use `pxToPhysicalY` (`raceBehavior.js:249`). The factor-of-2 lives only in that helper. *(Corrected 2026-09-02, DOC-TRUTH-2: this also named `physicalYToPx`, which was removed on 2026-06-28 by `f3116226` — 67 days of an invariant instructing the reader to use a helper that is not there. `pxToPhysicalY` survives and the RULE is unchanged.)*
 
-3. **Do NOT change `REFERENCE_TRACK_WIDTH = 98` to compensate for anything.** It is the Dirt Oval calibration anchor for `lateralScale`. Changing it would break all closed-track tuning.
+3. **~~Do NOT change `REFERENCE_TRACK_WIDTH = 98` to compensate for anything.~~ MOOT — both names are gone.** *(Corrected 2026-09-02, DOC-TRUTH-2.)* `REFERENCE_TRACK_WIDTH` and `lateralScale` were removed on 2026-06-27 by `bc68c378` (Commit A, with the legacy lateral forces); `FORCE-MAP.md` L10 already records `lateralScale` as REMOVED. **The invariant is kept struck rather than deleted** so a reader meeting the names in an old report can see they were retired and when.
 
 4. **Do NOT use `frameSizePx` (the sprite frame) for body overlap.** Use `drawnBodyWidthPx` / `drawnBodyLengthPx` (the visible body). The frame is larger than the body.
 
 5. **Do NOT derive `drawnBodyLengthPx` from `drawnBodyWidthPx` as a variable.** Both must reference `drawnBodyWidthRefPx` independently so length is not chained through width.
 
-6. **There are NO raw physicalY↔px conversions anywhere.** The previous "L515 exemption" (`frameSizePx / trackWidth` in the free-lane sensor) was fixed in the step after the scale cleanup: `/ trackWidth` gave HALF a frame in physicalY (off by 2×), creating a blind zone where bodies overlapped visually but the sensor missed them (report 35). All lateral thresholds now go through `pxToPhysicalY` / `physicalYToPx`. If you see `/ trackWidth` or `* trackWidth` next to a physicalY quantity, it is a bug.
+6. **There are NO raw physicalY↔px conversions anywhere.** The previous "L515 exemption" (`frameSizePx / trackWidth` in the free-lane sensor) was fixed in the step after the scale cleanup: `/ trackWidth` gave HALF a frame in physicalY (off by 2×), creating a blind zone where bodies overlapped visually but the sensor missed them (report 35). All lateral thresholds now go through `pxToPhysicalY` (`physicalYToPx` was removed 2026-06-28 — see invariant 2). If you see `/ trackWidth` or `* trackWidth` next to a physicalY quantity, it is a bug.
 
 7. **Camera anisotropy on closed tracks (`bsX ≠ bsY`) is screen-only.** Never pull it into world-space body/clearance math.
 

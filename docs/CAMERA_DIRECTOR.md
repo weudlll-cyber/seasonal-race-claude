@@ -977,11 +977,19 @@ more dangerous than one they do not:
 - **The rasteriser and the artwork.** Sprites are hashed by IDENTITY, not by pixels. Replace the
   artwork inside `duck.png` and this hash does not move.
 - **The racer types' DRAWING CODE, not just their pixels** — and this is wider than the line above.
-  `client/src/modules/racer-types/` is inside **no instrument's closure at all**: render 55 files,
-  camera 36, and `engine-reach` reports it cannot reach the engine. So a diff confined to a racer
-  type selects no fingerprint and none of the three would run even if it did. **A change to how a
-  racer is drawn is covered by the owner's eye and by nothing else.** The measurement and the
-  reasoning live once, in
+  **CORRECTED 2026-09-02 (DOC-TRUTH-2).** This entry said `racer-types/` is inside *"no instrument's
+  closure at all: render 55 files, camera 36, and `engine-reach` reports it cannot reach the engine"*.
+  **Every one of those four facts is now false.** `REGISTRY-LITERALS-1` (`56b99a9d`, 2026-09-02) put
+  the racer types into the WORLD instrument's closure; walking each guard's declared reach today
+  gives **world 78 (of which 36 are `racer-types/`), camera 38, render 58**, and
+  `engine-reach --check` on `SpriteRacerType.js` answers **"is in the hull"**. **The identical claim
+  was corrected in SHIP-CEREMONY the same day and this copy — one file over, pointing AT that
+  section — was not**, which is exactly the failure this entry's own list is about.
+  **What survives the correction, and is why the entry stays:** a racer's PHYSICS now selects the
+  world fingerprint, but **a racer's DRAWING still selects nothing** — render and camera do not
+  contain `racer-types/`, and the render fingerprint is blind to the sprite anyway (node has no
+  `Image`). **A change to how a racer is drawn is still covered by the owner's eye and by nothing
+  else.** The measurement and the reasoning live once, in
   [SHIP-CEREMONY.md § THE THREE FINGERPRINTS](SHIP-CEREMONY.md); this entry points at it because
   this is the list a camera reader checks.
 - **Particles and surface trails.** Their draw calls run, but the harness never fills their buffers,

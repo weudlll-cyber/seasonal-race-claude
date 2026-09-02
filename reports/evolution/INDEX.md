@@ -6,6 +6,22 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-02 — [DOC-TRUTH-1](DOC-TRUTH-1.md)'s headline of "8 false" UNDERSTATES THE DOCUMENT SET BY
+  ROUGHLY TWELVE TIMES.** The breadth pass it commissioned returned after it was merged and is
+  [DOC-TRUTH-2](DOC-TRUTH-2.md): **~4,300 claims checked, 97 false at ~124 sites in 24 of 34
+  documents, median age 43 days, range 0–132**, of which **14 were false on the day they were
+  written**. **Nothing in DOC-TRUTH-1 is withdrawn** — its eight are all real, all still corrected,
+  and the two sets **do not overlap**; what is wrong is only the impression its headline leaves that
+  the documents were in good order. They were not. **Its stated Limits already said the breadth pass
+  had not returned**, so the number was honest about its own scope; this entry exists because a
+  reader meeting "8 false" without reading the Limits would take away the opposite of the truth.
+  **The most significant thing DOC-TRUTH-1 missed:** `docs/CAMERA_DIRECTOR.md:980` carried the exact
+  claim the night's brief named — *"`racer-types/` is inside no instrument's closure at all: render
+  55, camera 36, and `engine-reach` reports it cannot reach the engine"* — **all four facts false
+  since `56b99a9d`.** The identical claim was corrected in SHIP-CEREMONY the same day; this copy, one
+  file over and pointing AT that section, was not. Verified at the tree before landing, not taken on
+  the report's word.
+
 - **2026-09-02 — THIS INDEX'S OWN HEADER carried a world fingerprint that had been superseded TWICE,
   and no guard could have caught it.** The line read *"Shipped world: `dc4647be0f55ebdb`"*. That value
   stopped being the shipped world on **2026-08-25**, when GARDEN-PATH-DEFAULTS-1 (`d73ec6a9`) minted
@@ -406,6 +422,35 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **losing `matrix.json` throws, but losing the profiles is SILENT** — try/catch plus continue drops
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
+
+- [DOC-TRUTH-2.md](DOC-TRUTH-2.md) — **the breadth pass, returning after DOC-TRUTH-1 was merged:
+  ~4,300 claims checked, 97 false at ~124 sites in 24 of 34 documents, median age 43 days** (range
+  0–132; **14 false on the day they were written**). It does not overlap DOC-TRUTH-1's eight, and a
+  correction to that report's headline is in the CORRECTIONS block above. **★ The find that matters
+  most is the night's own brief, at a second site:** `CAMERA_DIRECTOR.md:980` still said
+  `racer-types/` is inside *"no instrument's closure at all — render 55, camera 36, and engine-reach
+  reports it cannot reach the engine"*. **All four facts false since `56b99a9d`** — world is 78 (36 of
+  them `racer-types/`), camera 38, render 58, and `engine-reach` answers "is in the hull". The same
+  claim was corrected in SHIP-CEREMONY that day and **this copy, one file over and POINTING AT that
+  section, was not.** Corrected — and what survives it is kept: a racer's PHYSICS now selects the
+  world fingerprint, a racer's DRAWING still selects nothing. **`docs/FORCE-MAP.md` attributes the
+  whole browser physics loop to `RaceScreen/index.jsx` in 27 places**; it moved to `raceCore.js` on
+  2026-07-24 and `advanceRacerT`, the equation the document is built on, **occurs in `index.jsx` zero
+  times**. Corrected ONCE at the head rather than in 27 citations, deliberately: bulk-rewriting
+  addresses nobody re-verified would break that file's promise that a source line can be checked,
+  while looking like a repair. **`PROJECT-PRINCIPLES.md:86` carried the dead world fingerprint** —
+  the second site of DOC-TRUTH-1's own find, now a pointer rather than a copy. **Two of
+  ARCHITECTURE's seven "Do NOT touch" invariants instructed the reader to use symbols removed 67 days
+  earlier** (`physicalYToPx`, `REFERENCE_TRACK_WIDTH`/`lateralScale`); `pxToPhysicalY` survives and
+  the rules are unchanged. **`API.md` claimed to own "every endpoint" and documents 13 of 49** across
+  8 routers — the ownership claim is corrected, the gap deliberately NOT filled, because that is
+  completeness work. **`TRACK_EDITOR.md:310`'s `getCenterFrac` has never existed in any commit** but
+  the one that wrote the line, 132 days ago. **`README.md`** still called the race-action director
+  "default OFF" when it is a stage shipping as `quiet`. **`SHIP-CEREMONY.md` 150-170 was verified
+  CORRECT, not assumed** — its 78/38/58 reproduce exactly. **Seven corrections applied, verified at
+  the tree first; the remaining ~90 stand in the report** and are on the morning sheet as a sized
+  follow-up, because a correction applied in haste across 24 documents is worse than a stale
+  sentence — which is this report's own lesson.
 
 - [DOC-TRUTH-1.md](DOC-TRUTH-1.md) — **791 claims checked, 8 false, median age 9 days — and the worst
   one was hiding in a guard's DECLARED blind spot** (2026-09-02; corrections only, nothing rewritten

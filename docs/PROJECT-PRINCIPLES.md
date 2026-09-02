@@ -83,7 +83,7 @@ both layers, the ABSOLUTE band-arrival headline number, the permanent v2 duratio
 the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md); its
 [N=300 start-row-gradient residual](FAIRNESS.md) records the one named, dated exception to the zero-Holm line
 (pre-existing, shelved by owner decision 2026-07-31 — the criterion itself is unchanged). The shipped world is
-`dc4647be` = COMBO15 + margin hysteresis + lateral acceleration cap (fingerprint lineage in [SIM.md](SIM.md)).
+the `world` role in [fingerprints.json](fingerprints.json), which is its ONE home — COMBO15 + margin hysteresis + lateral acceleration cap and everything minted since (lineage in [SIM.md](SIM.md)). *(Corrected 2026-09-02, DOC-TRUTH-2: this read `dc4647be`, superseded on 2026-08-25 and again on 2026-09-02. It is not replaced with a newer hash — restating a fingerprint outside its one home is what this document's own rule forbids, and a copy would rot at the next mint. Same defect as the INDEX header, second site.)*
 
 ## 9. The camera is not a solution for missing action
 

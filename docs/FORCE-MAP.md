@@ -2,6 +2,20 @@
 
 **Owns:** every force that acts on a racer — which exist, when each fires, what it acts on, and a source line for each. It states STRUCTURE, never values.
 
+> **★ THE FILE ATTRIBUTIONS BELOW ARE STALE, IN 27 PLACES — corrected here once rather than 27 times
+> (2026-09-02, DOC-TRUTH-2).** This document cites `RaceScreen/index.jsx` as the home of the browser
+> physics loop throughout. **The loop moved to `client/src/modules/raceCore.js` on 2026-07-24
+> (`0bd146f3`)**, when the browser and the sim were put on one shared step. `advanceRacerT` — the
+> equation this whole document is built around — **does not occur in `index.jsx` at all**; it is in
+> `raceCore.js`. **Read every `index.jsx` citation below as `raceCore.js`**, and expect the line
+> numbers not to resolve.
+>
+> **The FORCES, their order, their triggers and their structure are NOT affected** — that is what this
+> document owns and it was not what moved. Only the addresses are wrong. They are corrected in one
+> place because 27 individually rewritten citations, none of them re-verified line by line, would be a
+> worse document than one honest paragraph: this file's own promise is that a source line can be
+> checked, and a bulk edit would quietly break that promise while looking like a repair.
+
 > Analysis only. Every force is backed by a source line so it can be verified against the source.
 >
 > **Renamed 2026-08-07** (DOC-ORDER-1). This file was `KRAEFTE-LANDKARTE.md` at the repo root, and

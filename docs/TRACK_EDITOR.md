@@ -307,7 +307,7 @@ The Track Manager preset editor gains a **Surface Classes** multi-select field l
 - `getPosition(t, offset)` — returns `{x, y, angle}` at parameter `t ∈ [0, 1]` along the lane; `offset ∈ [-0.5, +0.5]` = inner to outer boundary
 - `getActualTrackWidth(samples?)` — returns median inner-to-outer distance in world pixels (cached); used instead of metadata for all width-dependent calculations
 - `isOpen` — boolean, matches the track's `closed` field inverted
-- `getCenterFrac` — computed from track extents
+- ~~`getCenterFrac` — computed from track extents~~ **— THIS HAS NEVER EXISTED.** *(Corrected 2026-09-02, DOC-TRUTH-2: searched all of `client/`, `server/` and `scripts/` and the whole history — the only commit that ever contained the name is the one that wrote this line. It was false the day it was written, 132 days ago, which is why no later change could have caught it.)*
 
 Internally, `EditorShape` caches the sampled center line and perpendicular-offset calculation so per-frame calls remain cheap.
 
