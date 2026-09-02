@@ -256,6 +256,7 @@ test("a declaration without a backticked SHA is not a declaration — the sha is
 // here — no network — while still exercising the real `git ls-tree` comparison.
 
 const sh = (cmd) => execSync(cmd, { cwd: REPO, encoding: "utf8" }).trim();
+const TAGS_OK = ["# Tags", "- `pre/alpha`", "- `pre/beta`", ""].join(String.fromCharCode(10));
 const headsFixture = (entries) =>
   entries.map(([sha, name]) => `${sha}\trefs/heads/${name}`).join("\n") + "\n";
 
@@ -274,6 +275,39 @@ test("RULE B: a branch whose TREE master already holds FAILS the guard", () => {
   assert.notEqual(r.status, 0, "a contained branch must fail the build");
   assert.match(r.stderr, /leftover\/merged-and-not-deleted/);
   assert.match(r.stderr, /TREE master already holds/);
+});
+
+test("RULE B: a branch that only MODIFIES a file is NOT reported — the false positive that shipped", () => {
+  // It shipped comparing PATHS alone and reported every modify-only work-in-progress branch as
+  // deletable, failing on the very next branch pushed after it landed. This is that case.
+  const master = sh("git rev-parse master");
+  const blob = sh('echo modified | git hash-object -w --stdin');
+  const anyPath = sh(`git ls-tree -r --name-only ${master}`).split(String.fromCharCode(10))[0];
+  const idx = join(tmpdir(), `rb-mod-${process.pid}`);
+  execSync(`git read-tree ${master}`, { cwd: REPO, env: { ...process.env, GIT_INDEX_FILE: idx } });
+  execSync(`git update-index --add --cacheinfo 100644,${blob},${anyPath}`, {
+    cwd: REPO,
+    env: { ...process.env, GIT_INDEX_FILE: idx },
+  });
+  const tree = execSync("git write-tree", {
+    cwd: REPO,
+    encoding: "utf8",
+    env: { ...process.env, GIT_INDEX_FILE: idx },
+  }).trim();
+  const commit = sh(`git commit-tree ${tree} -p ${master} -m modify-only`);
+  rmSync(idx, { force: true });
+
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": TAGS_OK,
+    "heads.txt": headsFixture([
+      [master, "master"],
+      [commit, "wip/modify-only"],
+    ]),
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  assert.equal(r.status, 0, "a branch with modified content must not be called deletable");
+  assert.doesNotMatch(r.stderr, /wip\/modify-only/);
 });
 
 test("RULE B: a branch whose tree holds a path master lacks is NOT reported", () => {
