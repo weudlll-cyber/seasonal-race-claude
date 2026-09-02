@@ -394,6 +394,35 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [CHECKS-FIRE-1.md](CHECKS-FIRE-1.md) — **eleven of the twelve never-exercised checks fire; the
+  twelfth's outward half cannot be fired without notifying the owner; and one guard's headline half
+  is confirmed inert** (2026-09-02, twelve sabotages, **every one reverted — the branch's WHOLE TREE
+  HASH equals master's**, `5551ed9c`). CENSUS-CHECKS-1's "12 never exercised" bucket was mostly just
+  RECENT, as that report itself suspected: **ten fire outright**, `camera-fingerprint` fires on the
+  half that carries a reachable assertion, and only `audit-schedule` could not be put under load.
+  **Two sabotages were made real rather than synthetic on purpose.** `check-ending-frame` ships a
+  `--sabotage` flag that injects into the recording context — proving the detector, not the guard —
+  so a full-canvas `fillRect` was also injected into `renderRaceFrame` itself, the entry point of
+  every frame the game draws; same failure, 17 fillRects → 18. `check-standings-invariant`'s two
+  halves were each sabotaged with the thing the OTHER cannot see — a `rank` prop for the source half,
+  and an attribute write in `scoreboardPositions.js` for the measured half, which arrives BELOW React
+  where no prop exists and leaves the source half perfectly green. **Its header's claim that the two
+  halves are not redundant is now demonstrated rather than asserted.** ★ **`camera-fingerprint`'s
+  headline half is inert, confirmed by count not by reading**: `--check` appears **4** times in
+  `fingerprint-default.mjs` and **0** times in both `camera-fingerprint.mjs` and
+  `render-fingerprint.mjs` — two of the three fingerprints measure a hash and compare it to nothing.
+  NOT FIXED, per the brief. **`audit-schedule` was not fired because firing it creates a real GitHub
+  issue and notifies the owner** — `gh` is installed and authenticated, so this was a decision and
+  not an obstacle; its decision logic was instead lifted out and exercised offline against a stubbed
+  `gh` in all five branches, CRLF dedup included, every one correct. What that establishes is the
+  shell; what it cannot establish is delivery. **A measurement note worth carrying: the first reading
+  of #40's exit code was 0 because the command was piped into `head`** — the real code is 2 against a
+  control of 0, and in a regime where exit 2 means REFUSED a pipeline will quietly report the wrong
+  one. **A cross-reference found in passing:** the gate at `camera-fingerprint.mjs:333` is written as
+  "at least one track" precisely BECAUSE garden-path does not finish in the harness — the fact piece
+  11 is diagnosing — so repairing that would let this gate be tightened, and nothing records the
+  dependency in either direction.
+
 - [PATTERN-CATCHABILITY-1.md](PATTERN-CATCHABILITY-1.md) — **CAN A MACHINE CATCH THE PATTERN? The
   pattern is not one fault, it is FIVE, and only two of the five have two machine-readable sides**
   (2026-09-02, read-only; nothing built, no check run — the design is a proposal and stays one).
