@@ -7499,6 +7499,35 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
     expect(off._framingProbe.capBound).toBe(false);
   });
 
+  // ── FIELD-RETIRED-1 ───────────────────────────────────────────────────────────────────────────
+  //
+  // The retirement is the largest single-frame picture move of a real race and it is DELIBERATE.
+  // Until these two fields existed, nothing outside this class could tell "retired on this frame"
+  // from "was never armed" — `ceilings.field` is `Infinity` in both cases. These assert the
+  // PUBLICATION, not a threshold: no check is built on them here, and building one is the owner's
+  // to order (MOTION-CONTINUITY-1).
+  it('the probe publishes whether the field guarantee is still armed, and when it retired', () => {
+    const cd = drive({ contenderZoom: false }, spreadPair());
+    expect(cd._framingProbe).toHaveProperty('fieldActive');
+    expect(cd._framingProbe).toHaveProperty('fieldRetiredAt');
+    expect(typeof cd._framingProbe.fieldActive).toBe('boolean');
+  });
+
+  it('fieldRetiredAt stays null while the guarantee has never been armed — absence is not a retirement', () => {
+    const cd = drive({ contenderZoom: false }, spreadPair());
+    // `_fieldGuaranteeActive` starts false and is armed elsewhere; a director that never armed it
+    // must not look like one that retired, which is the whole distinction these fields add.
+    if (cd._framingProbe.fieldActive === false && cd._fieldGuaranteeRetiredAt === null) {
+      expect(cd._framingProbe.fieldRetiredAt).toBeNull();
+    }
+  });
+
+  it('the published values ARE the class state, not a recomputation', () => {
+    const cd = drive({ contenderZoom: false }, spreadPair());
+    expect(cd._framingProbe.fieldActive).toBe(cd._fieldGuaranteeActive);
+    expect(cd._framingProbe.fieldRetiredAt).toBe(cd._fieldGuaranteeRetiredAt);
+  });
+
   // The half that protects the contenders: the cap may never cut one.
   it('the contenders still win — the cap never tightens past their own guarantee', () => {
     const on = drive({ contenderZoom: true }, spreadPair());

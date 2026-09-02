@@ -1019,7 +1019,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6c049d86 2026-09-02 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 81495a6a 2026-09-03 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED 2026-09-03 (FIELD-RETIRED-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change cannot have moved these numbers**: it adds two fields to `_framingProbe`, which `git grep` shows is read by tests and by nothing in the camera, and **all four fingerprints were run against the record and all four match** — camera and render included, the two that would move if the shot or the draw sequence had. Nothing was re-run; the stamp records that the dependency moved inertly.
 **RE-MEASURED IN FULL FOR AIM-ROOM-COMBINED-1, ON THE TREE THAT CARRIES BOTH THE AIM ROOM FLOOR AND
 THE REPAIRED COMPANY GUARANTEE (2026-09-02).** All six frame counts identical (8626, 159, 13282,
 8473, 4130, 2089). No byte-identical argument was available: both changes touch this directory and
