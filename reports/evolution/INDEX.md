@@ -423,6 +423,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [SECOND-SITES-1.md](SECOND-SITES-1.md) — **11 of 21 corrections left an identical false statement
+  standing elsewhere, at 16 live sites — about one in two** (2026-09-02, read-only; nothing edited,
+  nothing proposed, the deliverable is the number). Of the 15 corrections DOC-TRUTH-1 and DOC-TRUTH-2
+  actually applied, **11 had at least one live second site (73%)**; of the 6 earlier corrections in
+  the INDEX CORRECTIONS block — a complete sweep of the block, not a sample — **0** did. Combined:
+  **11 of 21, 52%.** ★ **The `CAMERA_DIRECTOR.md:980` case that prompted the question is not an
+  outlier; it is the MEDIAN.** ★ **The sharpest site is a CODE COMMENT written 28 minutes before the
+  correction that fixed the documents, by the very commit that discovered the claim was false.**
+  `scripts/lib/raceDriver.mjs:122-125` still says *"`corridor-truth` and `corridor-truth
+  --company-only` print the SAME identity line … VERIFY-RULES R16 names that pair"* — written by
+  `6444a8b6` at **20:05:11**, whose own subject is *"R16's own worked example names the wrong tool"*.
+  Twenty-eight minutes later `49fd9386` corrected the two document sites and left the comment that
+  discovery had just written; it is false twice over, since R16 no longer names that pair. **Verified
+  at the tree before landing, not taken from the report.** Runner-up: `docs/ARCHITECTURE.md:285`
+  still lists `physicalYToPx` as a live helper (**0 occurrences in source**, control `pxToPhysicalY`
+  = 2) **24 lines above** the invariant corrected for exactly that — DOC-TRUTH-2 filed `:285` and
+  `:309` as one finding and only `:309` was repaired. **Twelve of the sixteen sites are named in no
+  report**, and four are in CODE, outside both censuses' declared 34-document scope.
+
 - [BUILD-RULE-B-1.md](BUILD-RULE-B-1.md) — **it ships GREEN with an empty keep list, and it was
   sabotage-proved against origin itself** (2026-09-02; `verify` PASS 7 FAIL 0, script suite 457/457,
   `check-tags`'s own tests 14/14). No branch may stand at origin whose TREE master already holds —
