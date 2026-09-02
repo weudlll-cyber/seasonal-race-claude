@@ -394,6 +394,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [BACKLOG-VERDICTS-1.md](BACKLOG-VERDICTS-1.md) — **128 open entries, 16 closed against the tree,
+  7 that are only his** (2026-09-02; verdicts and moves ONLY — no entry retitled, restructured or
+  reworded). **16 + 105 + 7 = 128.** Every verdict was checked at source in the working tree, or by
+  running the entry's own `verify:` command, or by `git log -S` on the symbol the entry names — never
+  from recollection, and where a search returned nothing a control that returns something was run
+  first. **The preservation is mechanically verified**: every non-blank line of the original appears
+  character-for-character in the new file, **0 missing**, with 136 non-blank lines added — 99 verdict
+  lines (six of them covering a list apiece, which is how 99 lines carry 128 entries) plus two section
+  headers. **The closed entries are MOVED, not deleted**, into a dated section that states its own
+  checkbox convention out loud: an unticked box there is the entry as it stood, not a claim that it is
+  open, and the verdict line above it is the closure mark. That is this backlog's own rule — a
+  question that vanishes looks like a question nobody asked. **The seven decisions are gathered into
+  one section** so they can be answered in a sitting. **The most significant closes:** the two
+  "unmerged" branches are IN master (`f01ff8ea`, `73053d25`, both 2026-09-02) and the floor shipped;
+  the shipped-track-delivery question — three entries and a whole section — is answered by
+  SEED-REDELIVERY-1 `b9dc8102` and SEED-SNAPSHOT-1 `d93fcfdf`, and garden-path stopped wearing the
+  snail on 2026-08-26 (`ba4a4442`, the seed's icon is now the beetle); `engine-reach`'s advisory half
+  closed 2026-09-01 by `585899be`. **Every count the closed entries carried was stale**, three of them
+  badly — re-run tonight, `check-tags` reports 123 origin tags with 0 unregistered and 0 missing, and
+  `git ls-remote --heads origin` returns 1. **Two things it could NOT settle mechanically, said
+  plainly rather than guessed:** the file contradicts itself on whether garden-path finishes, left
+  STILL TRUE for piece 11 rather than closed on a hunch (piece 11 has since settled it); and Phase 5's
+  "basic admin auth" is a judgement — auth shipped with bcrypt, guards and CSRF, but as a SESSION
+  COOKIE and not a JWT.
+
 - [RACE-IDENTITY-HASH-1.md](RACE-IDENTITY-HASH-1.md) — **the hash is in, it is STAMPED AT THE ONE
   FUNNEL rather than wired into a list, and R16's own worked example names the wrong tool**
   (2026-09-02; three files, all outside the engine hull, every fingerprint guard routed
