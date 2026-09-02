@@ -230,6 +230,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SEED-PARITY-1.md](SEED-PARITY-1.md) — **the Quick-Test seed field means exactly what the harness
+  seed means; the RACE does not, and five of the seven river-run races do not exist in the browser**
+  (2026-09-02, measure only — no sweep, no fix, no behaviour change). The number is sound: a typed
+  seed becomes `racePlanSeed` unchanged in both paths, reaches the same `createRaceFromIdentity`
+  field, and both derive the camera seed by the same `cameraSeedForRace`. **The divergence is the
+  ROSTER.** `resolveIdentity` defaults `roster: null`, every probe in this arc took that default, and
+  `raceDriver.mjs`'s own comment says a nameless field runs a DIFFERENT race at the same seed because
+  `stablePairBit` hashes `r.name`. **Measured on the same seven seeds, whole race scanned: nameless
+  gives one big step on all seven; with the Quick-Test roster FIVE VANISH**, and the two that survive
+  (117, 154) do so at different frames and magnitudes — different races, not the same race described
+  twice. **So he is given no seed that will not work**: 34, 38, 87, 210 and 247 are not reproducible
+  at all, and 117/154 are offered as different races that still show the phenomenon, with the full
+  setup beside them and a note of which inputs he cannot set (laps, duration, plan gate — matches on
+  river-run by luck, not construction). **The arc's A/B conclusions stand** (both arms were nameless);
+  what does not transfer is the absolute figures and the seven-pans count as statements about the
+  product.
+
 - [AIM-ROOM-PAN-ANATOMY-1.md](AIM-ROOM-PAN-ANATOMY-1.md) — **they are not pans, they are a ZOOM; the
   shot STAYS; and neither offered candidate is the author** (2026-09-02, measure only — nothing
   changed, fixed or proposed). **CORRECTS THIS ARC'S OWN REPORTING.** river-run's seven whole-screen
