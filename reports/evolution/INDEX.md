@@ -243,6 +243,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REACH-CLOSURE-COST-1.md](REACH-CLOSURE-COST-1.md) — **the 36 to 76 engine-reach closure costs 9
+  to 86 seconds a week of one developer's wait and ZERO in CI; it is worth it and should not be
+  narrowed** (2026-09-02, read-only pricing; the one exception is a false sentence in a living doc,
+  corrected and marked). **The CI zero is not a rounding**: grepping `.github/` for
+  `fingerprint-default`, `verify.mjs` and `engine-reach` returns exactly one hit and it is a comment.
+  **The fact that decides the whole question is an exclusivity flag**: `client-suite` is
+  `exclusive: true`, so verify drains it BEFORE the parallel queue — the 41 s fingerprint does NOT
+  hide inside the 170 s suite, and the marginal wall clock is **+39 s per verify run**, the opposite
+  of the intuition. **The delta is exactly 40 files and only ONE guard grew** (world declares 78,
+  camera 38 and render 58 do not name `sim-fairness.mjs` as a reach entry). Change frequency from
+  history, not intuition: **27 genuinely new selections in 90 days, 1.7% of non-merge commits, 24 of
+  them in TWO WEEKS of June and only 2 since 2026-07-01** — which is why the price is a range and not
+  an average. **The folder is not the closure**: the directory returns 37 commits, the 40 hull paths
+  return 32. **The honest waste is named**: 17 of the 40 files name none of the four physical fields
+  and 37% of new selections touched only those, so a third of the cost asks an instrument a question
+  its own `blind` list says it cannot hear — **and the narrowing that would fix it is still refused**,
+  because it saves 3 s/week at the current rate and costs a code change to the file every harness
+  reads. **Two narrowings refused by name**: `index.js`, which looks like a barrel but freezes
+  `CONFIG_SNAPSHOT` before `_applyStoredTunableOverrides()` and is the reason the harnesses are
+  override-immune; and `SnailRacerType.js`, because keying on "types a track default actually races"
+  re-creates FINGERPRINT-TRACK-DEFAULTS-1's exact defect one level up. **NOT established**: verify was
+  never run end to end on a racer-type diff, the machine was never quiet, and that the 17 appearance
+  files cannot move the world hash is **estimated, not proven by mutating a coat**.
+
 - [ANCHOR-MISS-1.md](ANCHOR-MISS-1.md) — **the aim is RIGHT, the smoothing is HONEST, and the answer
   is a SPLIT rather than one verdict: the 74px miss is FOUR terms, and only one of them is a defect**
   (2026-09-02, READ-ONLY and PROPOSE ONLY, nothing built). The brief asked whether the guarantees
