@@ -93,6 +93,7 @@ import {
   pointGuarantee,
   lateralShiftToFit,
   lateralAdmissibleForBody,
+  forwardFracForRoomFloor,
 } from './framingRule.js';
 import {
   ceremonySchedule,
@@ -566,6 +567,7 @@ export class CameraDirector {
     this._leaderForwardFrac = f.leaderForwardFrac;
     this._leaderLateralMaxPx = f.leaderLateralMaxPx;
     this._leaderLateralMarginPx = f.leaderLateralMarginPx;
+    this._leaderAimRoomFloorPx = f.leaderAimRoomFloorPx;
   }
 
   /**
@@ -4179,7 +4181,11 @@ export class CameraDirector {
     const sLen = Math.hypot(sxDir, syDir);
     if (!(sLen > 0)) return pos;
     const span = frameExtentAlong(sxDir, syDir, frameW, frameH);
-    const worldBias = ((frac - 0.5) * span) / sLen;
+    // AIM-ROOM-1 (LEVER B): the SAME reduction `anchorScreenPoint` applies, from the one helper, so
+    // the aim and the pan cannot disagree about where the leader will sit. Inert at the shipped
+    // default (`leaderAimRoomFloorPx` 0).
+    const effFrac = forwardFracForRoomFloor(frac, span, this._leaderAimRoomFloorPx);
+    const worldBias = ((effFrac - 0.5) * span) / sLen;
     // A NEGATIVE bias is legal now and is the whole of the run-in's opening placement. The old guard
     // here was `worldBias > 0`, which silently discarded exactly that case; it read as a degenerate
     // check and was in fact a one-way valve.

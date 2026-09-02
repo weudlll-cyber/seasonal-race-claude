@@ -49,7 +49,13 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 4110bd26 2026-08-26 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 38b19379 2026-09-01 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01).** The only change to
+`CameraDirector.js` in that block is the forward-bias reading a new key whose default is 0 (OFF). The
+camera fingerprint is byte-identical at the defaults — re-run and equal to the value recorded in
+[docs/fingerprints.json](fingerprints.json) — so the ending it produces is the same to the byte and
+none of these figures can have moved. **If the key is ever defaulted ON,
+re-measure rather than re-stamp.**
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
 7/7) and the same settled-frame counts (94, 165, 0, 83). Run rather than argued: the change adds a
