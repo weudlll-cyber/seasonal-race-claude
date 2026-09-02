@@ -34,10 +34,6 @@ import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
-import {
-  setBodyLongAxisMaxRatio,
-  guardedBodyFillNarrow,
-} from '../../modules/racer-types/SpriteRacerType.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { computeRacerLayout, computeBodyNarrowRef } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
@@ -541,12 +537,6 @@ export default function RaceScreen() {
     // is the camera's body-size reference for OVERVIEW-FRAMING-1's sprite floor.
     const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
-    // ASPECT-CAP-1 (LEVER A): put the cap in force BEFORE the race is built, because
-    // `createRaceFromIdentity` derives `drawnBodyLengthPx` through it and `_drawBody` reads it every
-    // frame. `null` (the shipped default) restores the sleeping threshold, so OFF means OFF and this
-    // call changes nothing until the key is set.
-    setBodyLongAxisMaxRatio(cameraConfig?.leaderBodyAspectMax ?? null);
-
     // ── The REAL race init, extracted to modules/raceCore.js (createRaceFromIdentity) ───────────
     // The canonical duration model, the seeded physics stream (raceRng), the row layout, the re-roll
     // schedule, every racer's physics fields, the Race Plan controller and the phase-split / director
@@ -576,12 +566,7 @@ export default function RaceScreen() {
       racePlanEnabledFlag: !!raceData.racePlanEnabled,
       physicalSpriteSize,
       drawnBodyWidthRefPx,
-      // ASPECT-CAP-1 (LEVER A): the GUARDED narrow, which is the same value `_drawBody` divides by.
-      // Passed in rather than imported inside `raceCore`, deliberately: `engineInputs.test.js` pins
-      // raceCore's import list, and pulling the racer-type registry (40 modules, reaching services/
-      // and storage/) into the engine hull would be a far larger change than this lever is worth.
-      // raceCore keeps taking a number and stays untouched; the caller decides what that number is.
-      bodyFillNarrow: guardedBodyFillNarrow(bodyFillNarrow, bodyFillLong),
+      bodyFillNarrow,
       bodyFillLong,
       constSpeedActive,
     });

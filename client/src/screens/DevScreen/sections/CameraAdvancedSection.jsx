@@ -1048,9 +1048,9 @@ function CameraAdvancedSection() {
             }
             tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
           />
-          {/* ── AIM-ROOM-1 / ASPECT-CAP-1: the two candidates, OFF by default, live-switchable ── */}
+          {/* ── AIM-ROOM-1: SHIPPED at 360 px since 2026-09-02. The key stays so it is revertible. ── */}
           <SliderRow
-            label="Aim room floor (px)  [candidate B]"
+            label="Aim room floor (px)"
             testId="regie-leader-aim-room-floor"
             min={0}
             max={480}
@@ -1059,28 +1059,10 @@ function CameraAdvancedSection() {
             onChange={(e) => set('leaderAimRoomFloorPx', parseInt(e.target.value, 10))}
             display={
               (config.leaderAimRoomFloorPx ?? DEFAULT_CAMERA_CONFIG.leaderAimRoomFloorPx) > 0
-                ? `${config.leaderAimRoomFloorPx} px`
-                : 'Off (shipped)'
+                ? `${config.leaderAimRoomFloorPx ?? DEFAULT_CAMERA_CONFIG.leaderAimRoomFloorPx} px`
+                : 'Off (pre-2026-09-02 behaviour)'
             }
-            tip="CANDIDATE B, off by default. Guarantees at least this many screen px of road AHEAD of the leader by easing him back toward centre — but only where the frame is short in his direction. Inert on shallow headings (river-run leaves 447 px already); binds on steep ones (space-sprint leaves 262). The cost is seeing less of the road ahead. Takes effect on the NEXT race. 0 = shipped behaviour."
-          />
-          <SliderRow
-            label="Body aspect cap  [candidate A]"
-            testId="regie-leader-body-aspect-max"
-            min={0}
-            max={4}
-            step={0.1}
-            value={config.leaderBodyAspectMax ?? 0}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              set('leaderBodyAspectMax', v > 0 ? v : null);
-            }}
-            display={
-              config.leaderBodyAspectMax > 0
-                ? `${config.leaderBodyAspectMax.toFixed(1)} : 1`
-                : 'Off (shipped)'
-            }
-            tip="CANDIDATE A, off by default. Caps how many times longer than wide a racer may be drawn. Only rocket (2.88) and giraffe (2.83) exceed 2.5 — every other racer is untouched. The rocket is drawn SMALLER in both axes, not squashed. Takes effect on the NEXT race. 0 = shipped behaviour."
+            tip="SHIPPED. Guarantees at least this many screen px of road AHEAD of the leader by easing him back toward centre — but only where the frame is short in his direction. Inert on shallow headings (river-run already leaves plenty); binds on steep ones like space-sprint. The cost is seeing less of the road ahead. Takes effect on the NEXT race. 0 restores the older behaviour."
           />
         </div>
       </div>

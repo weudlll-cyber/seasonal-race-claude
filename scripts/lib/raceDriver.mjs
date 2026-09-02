@@ -57,12 +57,7 @@ const { computeRacerLayout, computeBodyNarrowRef } = await import(
 );
 // HARNESS-CAMERA-SEED-2: the BROWSER's own derivation, imported rather than re-implemented, so the
 // harness cannot drift from the product it is supposed to be reproducing.
-const { cameraSeedForRace } = await import(
-  u("client/src/modules/camera/cameraSeed.js")
-);
-const { guardedBodyFillNarrow } = await import(
-  u("client/src/modules/racer-types/SpriteRacerType.js")
-);
+const { cameraSeedForRace } = await import(u("client/src/modules/camera/cameraSeed.js"));
 const RT = await (async () => {
   // The racer-type registry logs to stderr on load; silenced here so a harness's output is its own.
   const re = console.error;
@@ -102,8 +97,7 @@ export function resolveIdentity(partial = {}) {
     // and `render-fingerprint.mjs` each define their own `const CAM_SEED = 1439767152` and call
     // `cd.setRandomSeed(CAM_SEED)` directly, never reaching this default. They were run either side of
     // this change and did not move.
-    cameraSeed:
-      partial.cameraSeed ?? cameraSeedForRace(partial.raceSeed ?? 5601),
+    cameraSeed: partial.cameraSeed ?? cameraSeedForRace(partial.raceSeed ?? 5601),
     // A racer-type id, or TRACK_DEFAULT_RACER to take each track's own `defaultRacerTypeId`.
     racerType: partial.racerType ?? TRACK_DEFAULT_RACER,
     seconds: partial.seconds ?? 60,
@@ -211,9 +205,7 @@ export function buildRace(geo, identity, cameraConfig) {
     racePlanEnabledFlag: true,
     physicalSpriteSize: pss,
     drawnBodyWidthRefPx: bodyRef,
-    // ASPECT-CAP-1 (LEVER A): the GUARDED narrow, exactly as RaceScreen passes it. Without this the
-    // harness would run the cap's arm with an uncapped body and report that the lever does nothing.
-    bodyFillNarrow: guardedBodyFillNarrow(bfN, bfL),
+    bodyFillNarrow: bfN,
     bodyFillLong: bfL,
     constSpeedActive: false,
   });
@@ -344,9 +336,7 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
         slowIsPF = false;
       }
       const step = smFadeMs > 0 ? RAW / smFadeMs : Infinity;
-      fadeProg = slowActive
-        ? Math.min(1, fadeProg + step)
-        : Math.max(0, fadeProg - step);
+      fadeProg = slowActive ? Math.min(1, fadeProg + step) : Math.max(0, fadeProg - step);
       dilation = 1 - (1 - factor) * fadeProg;
     }
     accum += RAW * dilation;
@@ -373,15 +363,7 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
     );
     // `physicsSteps` is the RACE's own clock. Two runs at different frame rates are comparable at
     // matched step counts and at nothing else — the frame index means different things in each.
-    const verdict = onFrame({
-      cd,
-      st,
-      ts,
-      raceStart,
-      frame,
-      physicsSteps,
-      dtMs: RAW,
-    });
+    const verdict = onFrame({ cd, st, ts, raceStart, frame, physicsSteps, dtMs: RAW });
     frame++;
     ts += RAW;
     if (verdict === false) break;

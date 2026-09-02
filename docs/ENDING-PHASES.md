@@ -49,13 +49,20 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 38b19379 2026-09-01 depends=client/src/modules/camera/CameraDirector.js -->
-**RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01).** The only change to
-`CameraDirector.js` in that block is the forward-bias reading a new key whose default is 0 (OFF). The
-camera fingerprint is byte-identical at the defaults — re-run and equal to the value recorded in
-[docs/fingerprints.json](fingerprints.json) — so the ending it produces is the same to the byte and
-none of these figures can have moved. **If the key is ever defaulted ON,
-re-measure rather than re-stamp.**
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ AIM-ROOM-SHIP-1 2026-09-02 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT (2026-09-02)**
+— 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-, 7/7) and the
+same settled-frame counts (94, 165, 0, 83). **The condition the previous entry set was met and
+honoured**: `leaderAimRoomFloorPx` is now defaulted **ON** at 360, so it was re-measured rather than
+re-stamped, exactly as that entry required. The camera fingerprint DID move for this ship, so no
+byte-identical argument was available and none was used.
+
+**Why it did not move, as a mechanism rather than a hope:** the floor reduces the leader's forward
+placement during `LEADER_ZOOM`, and phase 6 is the settled shot AFTER the pull-back's own duration is
+up — the zoom-out has already taken the frame off the leader's forward bias by then. The four numbers
+here are answers about WHEN thresholds are crossed, and the floor moves neither the thresholds nor the
+schedule. Note this is a genuinely stronger result than the identical-figures entries above it,
+because here the picture demonstrably changed elsewhere and this window still did not.
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-,
 7/7) and the same settled-frame counts (94, 165, 0, 83). Run rather than argued: the change adds a

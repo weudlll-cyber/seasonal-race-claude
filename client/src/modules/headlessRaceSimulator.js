@@ -33,7 +33,6 @@ import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
-import { guardedBodyFillNarrow } from './racer-types/SpriteRacerType.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -196,10 +195,7 @@ export function simulateRace({
       : racerTypeConfig.displaySize;
     if (effectiveBodyNarrow > 0) {
       drawnBodyWidthPx = effectiveBodyNarrow;
-      // ASPECT-CAP-1 (LEVER A): the same guarded narrow the sprite is drawn with, so the sim and
-      // the browser agree about the body under the cap exactly as they do without it.
-      drawnBodyLengthPx =
-        effectiveBodyNarrow * (bodyFillLong / guardedBodyFillNarrow(bodyFillNarrow, bodyFillLong));
+      drawnBodyLengthPx = effectiveBodyNarrow * (bodyFillLong / bodyFillNarrow);
     }
   }
 

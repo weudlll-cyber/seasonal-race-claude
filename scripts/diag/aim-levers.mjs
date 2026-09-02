@@ -1,10 +1,14 @@
-// AIM-LEVERS-1 — the two levers, measured side by side on the same frames. MEASURE ONLY.
+// AIM-ROOM — the room floor, measured against the picture without it. MEASURE ONLY.
 //
-// ARMS. `off` is the shipped picture and every other arm is read against it AT THE SAME N.
-//   off        both keys at their defaults
-//   a          leaderBodyAspectMax = 2.5            (rocket 2.881 and giraffe 2.830 only)
+// AIM-ROOM-SHIP-1 (2026-09-02) REMOVED LEVER A, the body aspect cap, so this instrument now has one
+// lever rather than two. The `--aspect=` flag and the `a`/`ab` arms are GONE, not defaulted off:
+// the exports they drove (`setBodyLongAxisMaxRatio`) no longer exist, and a flag that silently does
+// nothing is how a harness comes to report that a lever has no effect. AIM-LEVERS-1 holds the
+// side-by-side numbers as they were measured, on the tree that still had both.
+//
+// ARMS. `off` is the pre-ship picture and every other arm is read against it AT THE SAME N.
+//   off        leaderAimRoomFloorPx = 0             (the picture before 2026-09-02)
 //   b<px>      leaderAimRoomFloorPx = <px>          (binds only where the chord is short)
-//   ab<px>     both
 //
 // BOTH SIDES OF EVERY ARM, because a lever that removes clipping and costs steadiness is a finding
 // and not a success:
@@ -15,9 +19,9 @@
 //   STEADINESS     the share of frames the camera holds the centreline, the picture's largest
 //                  single-frame movement, and corner overflow.
 //
-// LEVER A IS SET THROUGH THE SAME FUNCTION THE SPRITE IS DRAWN WITH (`setBodyLongAxisMaxRatio`),
-// which is the point of the lever: capping only the number the director reasons with would shrink
-// the measured clipping without shrinking the clipping.
+// THE ARM IS SET BY CAMERA CONFIG ONLY. This lever moves the PICTURE and not the race: the frame
+// count is identical between arms, which is the property that makes an off-vs-on comparison here a
+// comparison of two framings of the SAME races.
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -47,9 +51,6 @@ const { cameraSeedForRace } = await import(
 const { anchorScreenPoint } = await import(
   u("client/src/modules/camera/framingRule.js")
 );
-const { setBodyLongAxisMaxRatio, resetBodyLongAxisMaxRatio } = await import(
-  u("client/src/modules/racer-types/SpriteRacerType.js")
-);
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 
 const arg = (k, d) => {
@@ -62,14 +63,17 @@ const SEEDS = Number(arg("seeds", "30"));
 const OUT = arg("out", "c:/tmp/lev");
 const FROM_U = Number(arg("from", "0.10"));
 // Arm spec: aspect cap (null = off) and room floor (0 = off).
-const ASPECT = arg("aspect", null);
 const FLOOR = Number(arg("floor", "0"));
 const TAG = arg("tag", "off");
 
-const CFG =
-  FLOOR > 0
-    ? { ...DEFAULT_CAMERA_CONFIG, leaderAimRoomFloorPx: FLOOR }
-    : DEFAULT_CAMERA_CONFIG;
+// THE KEY IS ALWAYS SET EXPLICITLY, and that is a correction rather than a style choice.
+// This read `FLOOR > 0 ? {...override} : DEFAULT_CAMERA_CONFIG` while the shipped default was 0, so
+// "off" and "the default" were the same object and the shortcut was invisible. AIM-ROOM-SHIP-1 moved
+// the default to 360 — and the `off` arm silently became a SECOND copy of the shipped arm. The first
+// ten-track sweep run that way returned bit-identical clip counts on all ten tracks, which reads
+// exactly like "the lever does nothing" and is in fact "the instrument measured one arm twice".
+// An arm must state its own value; it must never inherit one from a default that can move.
+const CFG = { ...DEFAULT_CAMERA_CONFIG, leaderAimRoomFloorPx: FLOOR };
 
 const geo = new Map(loadTracks().map((g) => [g.id, g])).get(TRACK);
 if (!geo) {
@@ -79,8 +83,6 @@ if (!geo) {
 
 // THE CAP GOES IN BEFORE THE RACE IS BUILT, because `createRaceFromIdentity` derives
 // `drawnBodyLengthPx` through it — exactly as RaceScreen does it.
-if (ASPECT === null) resetBodyLongAxisMaxRatio();
-else setBodyLongAxisMaxRatio(Number(ASPECT));
 
 const races = [];
 let identityLine = "";
@@ -181,7 +183,6 @@ for (let s = 1; s <= SEEDS; s++) {
   );
   races.push({ seed: s, rows });
 }
-resetBodyLongAxisMaxRatio();
 
 mkdirSync(OUT, { recursive: true });
 writeFileSync(
@@ -189,7 +190,6 @@ writeFileSync(
   JSON.stringify({
     track: TRACK,
     tag: TAG,
-    aspect: ASPECT,
     floor: FLOOR,
     racers: N,
     seeds: SEEDS,

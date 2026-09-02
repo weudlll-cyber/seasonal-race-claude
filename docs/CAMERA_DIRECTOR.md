@@ -1011,15 +1011,36 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 38b19379 2026-09-01 depends=client/src/modules/camera/ -->
-**RE-STAMPED, NOT RE-MEASURED, FOR AIM-LEVERS-1 (2026-09-01), and the reason is a fingerprint
-rather than a judgement.** That block adds two camera keys whose defaults are OFF
-(`leaderAimRoomFloorPx` 0, `leaderBodyAspectMax` null). With both at their defaults the CAMERA
-fingerprint is byte-identical — re-run on the settled tree and equal to the value recorded in
-[docs/fingerprints.json](fingerprints.json) — so the delivered picture is the same to the byte and no
-number below can have moved. Re-running the lag measurement
-would have confirmed what the fingerprint already proves (R15a). **If either key is ever turned ON by
-default, every figure here must be re-measured for real.**
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ AIM-ROOM-SHIP-1 2026-09-02 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1 (2026-09-02), AND THREE OF THE SIX STATES MOVED.** The
+condition the previous entry set has been met: `leaderAimRoomFloorPx` is now defaulted **ON** at 360,
+so the byte-identical argument is gone and these figures were re-run for real rather than re-stamped.
+The other candidate that entry named, `leaderBodyAspectMax`, was rejected and **removed from the
+tree** in the same ship. **All six frame counts are identical** — 8626, 159, 13282, 8473, 4130, 2089 —
+which is the load-bearing half: this change moves the PICTURE and not the race, so a moved frame count
+would have meant something had gone wrong.
+
+| state | median pp | p95 pp |
+| --- | --- | --- |
+| BATTLE_ZOOM | 5.81 -> 5.81 | 10.05 -> 10.05 |
+| COMEBACK_ZOOM | 4.84 -> 4.84 | 7.40 -> 7.40 |
+| **LEADER_ZOOM** | 5.07 -> **4.73** | 9.71 -> **8.95** |
+| **LEAD_CHANGE** | 4.64 -> **4.49** | 7.45 -> **8.77** |
+| **OVERVIEW** | 2.75 -> **2.87** | 16.00 -> **18.54** |
+| PHOTO_FINISH | 2.81 -> 2.81 | 8.59 -> 8.59 |
+
+**LEADER_ZOOM improves on both percentiles, and that is the state the ship aims at** — the leader is
+held nearer the centre of the frame on the headings where the floor binds, so the camera has less
+distance to make up and sits closer to its subject. Median 5.07 -> 4.73 pp, p95 9.71 -> 8.95 pp.
+
+**TWO NUMBERS MOVE THE WRONG WAY AND ARE REPORTED RATHER THAN BURIED: `LEAD_CHANGE` p95
+7.45 -> 8.77 pp, and `OVERVIEW` p95 16.00 -> 18.54 pp** (its median 2.75 -> 2.87). Neither state
+reads `leaderAimRoomFloorPx`. The mechanism is entry, not tracking: a race enters `OVERVIEW` and
+`LEAD_CHANGE` from wherever `LEADER_ZOOM` left the camera, and the floor leaves it somewhere
+different, so the first frames of the next state start further from their target. It is a
+**transition** cost, at the p95 of two states whose medians are the lowest in the table. It was
+judged worth paying for the `LEADER_ZOOM` improvement and the clipping it removes, but it is a real
+cost and the next block to touch entry timing should know these two numbers moved here.
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
 2089/2.81/8.59. Run rather than argued: the change moves the pan target in `LEADER_ZOOM`, which is

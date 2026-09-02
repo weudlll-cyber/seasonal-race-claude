@@ -146,7 +146,14 @@ describe('the fix reaches the director — same setting, every heading, one disp
       6144,
       4096,
       true,
-      { ...DEFAULT_CAMERA_CONFIG, leaderForwardFrac: FRAC },
+      // THE ARM STATES ITS OWN VALUE, and that is the point of this line rather than a detail.
+      // What this case asserts is the CHORD property: one setting gives one displacement on every
+      // heading. `leaderAimRoomFloorPx` deliberately BREAKS that property — it reduces the fraction
+      // where the chord is short, which is the whole of AIM-ROOM-1 — so this case must pin it OFF or
+      // it is no longer testing the chord. It read `...DEFAULT_CAMERA_CONFIG` alone while that
+      // default was 0, and inherited a value that moved underneath it when the floor shipped at 360.
+      // The floor's own behaviour is asserted separately, below.
+      { ...DEFAULT_CAMERA_CONFIG, leaderForwardFrac: FRAC, leaderAimRoomFloorPx: 0 },
       28.5,
       straightShape(dirX, dirY),
       200
@@ -162,6 +169,41 @@ describe('the fix reaches the director — same setting, every heading, one disp
     const shift = Math.hypot(shiftScreenX, shiftScreenY);
     const extent = frameExtentAlong(dirX * effX, dirY * effY, W, H);
     expect((100 * shift) / extent).toBeCloseTo(16.0, 6);
+  });
+
+  // AIM-ROOM-SHIP-1: the shipped floor is the thing that breaks the property above, on purpose.
+  // Asserted here so the case above pinning it OFF cannot be mistaken for the floor being untested.
+  it.each([
+    ['horizontal — long chord, floor inert', 1, 0, true],
+    ['vertical — short chord, floor binds', 0, 1, false],
+  ])('%s', (_l, dirX, dirY, expectInert) => {
+    const mk = (floor) =>
+      new CameraDirector(
+        6144,
+        4096,
+        true,
+        { ...DEFAULT_CAMERA_CONFIG, leaderForwardFrac: FRAC, leaderAimRoomFloorPx: floor },
+        28.5,
+        straightShape(dirX, dirY),
+        200
+      );
+    const displacement = (cd) => {
+      const pos = { x: 3000 + dirX * 2000, y: 2000 + dirY * 2000 };
+      const b = cd._applyLeaderForwardBias(
+        pos,
+        0.5,
+        cd._proj.effX(cd._leaderZoom),
+        cd._proj.effY(cd._leaderZoom),
+        W,
+        H
+      );
+      return Math.hypot(pos.x - b.x, pos.y - b.y);
+    };
+    const off = displacement(mk(0));
+    const on = displacement(mk(360));
+    if (expectInert) expect(on).toBeCloseTo(off, 9);
+    // Binding means the leader is moved LESS far forward, so the displacement shrinks.
+    else expect(on).toBeLessThan(off);
   });
 
   it('a null leaderForwardFrac leaves the target untouched, on every heading', () => {

@@ -230,6 +230,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-SHIP-1.md](AIM-ROOM-SHIP-1.md) — **A is out and returns master EXACTLY; B is built,
+  measured on ten tracks, and NOT MERGED** (2026-09-02, branch `ship/aim-room-floor-1`, pushed,
+  **unmerged and unminted**). **STOPPED BEFORE THE MERGE on a defect that can be proven.**
+  `anchorScreenPoint` takes the floor as its fifth parameter and **all seven call sites in
+  `CameraDirector.js` omit it**, so every framing guarantee plans the shot around a leader position
+  the pan will not deliver — the exact failure `CameraDirector.js:4045` records having already paid
+  for once. Measured on the real path: the company guarantee's shortfall rises on **all ten tracks**
+  (space-sprint 4.40% → **12.38%**, seatrack 2.46% → 5.73%) with the worst count reaching **2 racers
+  in shot** on five of them. **The diagnosis is proven, not argued**: feeding the floor to one call
+  site recovers about half (space-sprint → 6.81%, seatrack → 3.29% with worst back to 4), and the
+  experiment was fully reverted. Two `framingRule` tests are **left red on purpose**. **Needs his
+  word**: ship the picture he accepted with the weakened guarantee, or repair the wiring — which
+  changes the picture and voids the eye test. Everything else is done: **A's removal proven by all
+  four fingerprints equalling master byte for byte at floor 0**; the floor engages on all ten tracks
+  (13.4–71.8% of frames), lifts the p10 room to exactly 360 everywhere while leaving the **median
+  untouched on 9 of 10** — the "self-limiting by construction" claim demonstrated — and **costs
+  steadiness on none**; ice-track's +1 episode at N=30 resolves to **−8 at N=300**; both promised
+  measured stamps re-measured for real (`straggler-truth` identical to the digit; `tracking-lag`
+  moved in 3 of 6 states, `LEADER_ZOOM` better on both percentiles, `OVERVIEW`/`LEAD_CHANGE` p95
+  worse). **World and world-off UNMOVED.** An instrument trap was caught on the way: the sweep's
+  `off` arm silently became a second copy of the shipped arm the moment the default moved.
+
 - [REGISTRY-LITERALS-1.md](REGISTRY-LITERALS-1.md) — **the copied racer literals are gone, the races
   did not move, and the engine-reach closure DOUBLED** (2026-09-02, the one ordered repair of the
   NIGHT-CENSUS-1 chain; **no minting permission given, none taken**). 124 literal values removed from

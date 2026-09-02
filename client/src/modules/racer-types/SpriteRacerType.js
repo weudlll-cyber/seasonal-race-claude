@@ -43,54 +43,6 @@ import { ensureRacerTypeWarm } from './racerWarmup.js';
 // (max ratio 2.88:1). Exported so tests can verify it never fires for current racers.
 export const BODY_LONG_AXIS_MAX_RATIO = 5.0;
 
-// ── ASPECT-CAP-1 (LEVER A): the same guard, woken deliberately. OFF unless something sets it. ────
-//
-// The threshold above is a CONSTANT and was written to sleep. `leaderBodyAspectMax` lets a race set
-// it lower so the guard actually fires — at 2.5 that is rocket (2.881) and giraffe (2.830) and
-// nothing else. It is module state rather than a parameter because `_drawBody` is called from the
-// render loop with no config in hand, and threading one through every call site would be a much
-// larger change than the lever is worth.
-//
-// `null` restores the sleeping constant exactly, which is what `resetBodyLongAxisMaxRatio` is for —
-// a test or a race that does not set it must see the shipped behaviour, and OFF must mean OFF.
-let _bodyLongAxisMaxRatio = BODY_LONG_AXIS_MAX_RATIO;
-
-/** ASPECT-CAP-1: set the live cap. `null`/invalid restores the shipped sleeping threshold. */
-export function setBodyLongAxisMaxRatio(ratio) {
-  _bodyLongAxisMaxRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : BODY_LONG_AXIS_MAX_RATIO;
-}
-
-/** ASPECT-CAP-1: the cap in force. Read by the sim and the race core so all three agree. */
-export function getBodyLongAxisMaxRatio() {
-  return _bodyLongAxisMaxRatio;
-}
-
-/** ASPECT-CAP-1: back to the shipped sleeping threshold. */
-export function resetBodyLongAxisMaxRatio() {
-  _bodyLongAxisMaxRatio = BODY_LONG_AXIS_MAX_RATIO;
-}
-
-/**
- * ASPECT-CAP-1: the drawn body's long axis, capped. ONE definition, used by `_drawBody` here and by
- * `raceCore`/`headlessRaceSimulator` for `drawnBodyLengthPx`.
- *
- * **This is the line that makes the lever honest.** The two paths are independent: the sprite is
- * drawn from `bodyFill*` and `displaySize`, while the physics and the framing rule reason about a
- * separately derived `drawnBodyLengthPx`. Capping only the second would shrink the MEASURED clipping
- * without shrinking the clipping — the check would stop checking. Both call this.
- *
- * @param {number} bodyFillNarrow  min(bodyFillX, bodyFillY)
- * @param {number} bodyFillLong    max(bodyFillX, bodyFillY)
- * @returns {number} the effective narrow fill; the long axis is then narrow x cap
- */
-export function guardedBodyFillNarrow(bodyFillNarrow, bodyFillLong) {
-  if (!(bodyFillNarrow > 0) || !(bodyFillLong > 0)) return bodyFillNarrow;
-  const aspect = bodyFillLong / bodyFillNarrow;
-  return aspect > _bodyLongAxisMaxRatio
-    ? bodyFillNarrow * (aspect / _bodyLongAxisMaxRatio)
-    : bodyFillNarrow;
-}
-
 const REQUIRED_FIELDS = [
   'id',
   'spriteUrl',
@@ -288,7 +240,11 @@ export class SpriteRacerType {
     // denominator so the long axis is capped at RATIO × narrow. INERT for all 20 current
     // racer types — max ratio is 2.88:1 (rocket, bodyFillLong/bodyFillNarrow=0.801/0.278).
     // Threshold: 5.0. Activate by adding a racer where max(bFX,bFY)/min(bFX,bFY) > 5.0.
-    const guardedFillNarrow = guardedBodyFillNarrow(bodyFillNarrow, bodyFillLong);
+    const aspectRatio = bodyFillLong / bodyFillNarrow;
+    const guardedFillNarrow =
+      aspectRatio > BODY_LONG_AXIS_MAX_RATIO
+        ? bodyFillNarrow * (aspectRatio / BODY_LONG_AXIS_MAX_RATIO)
+        : bodyFillNarrow;
     const scale =
       ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / guardedFillNarrow) *
       cfg.silhouetteScale;
