@@ -615,9 +615,18 @@ export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen) {
  * than the room allows, so it promised five racers and delivered four. `anchorAt` replaces the
  * scalar: give it where the anchor actually sits and the room is measured, not assumed.
  *
+ * THE HEADCOUNT'S PREMISE IS ASKED, NOT ASSUMED (COMPANY-HEADCOUNT-1). `minVisible` counts RACERS.
+ * Whether the anchor is one of them is a question about the anchor, and it is answered per call from
+ * the anchor itself rather than stated anywhere: the anchor is one of them exactly when some live
+ * racer stands on it. It did until CAMERA-LATERAL-1 moved the anchor to the track centreline, and a
+ * comment asserting the old premise is what let a promise of five deliver four for as long as it
+ * did. Nothing here asserts the premise now, so nothing here can go stale when the anchor moves
+ * again — see the body.
+ *
  * @param {{x:number,y:number}} anchor   the world point the shot is built around
  * @param {Array<{x:number,y:number,finished?:boolean}>} racers  the live field (the anchor may be in it)
- * @param {number} minVisible  how many racers must be in frame INCLUDING the anchor; <= 1 disables
+ * @param {number} minVisible  how many RACERS must be in frame — counting the anchor only when a
+ *   racer actually stands on it, which this decides for itself; <= 1 disables
  * @param {number} [framePct=COMPANY_FRAME_PCT]  the region a companion must be inside
  * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; frame centre when null
  * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
@@ -634,15 +643,51 @@ export function companyGuarantee(
   anchorAt = null
 ) {
   if (!anchor || !Array.isArray(racers)) return Infinity;
-  const need = Math.floor(minVisible) - 1; // the anchor itself is one of them
-  if (!(need > 0)) return Infinity;
+  // `<= 1 disables`, exactly as the contract above says and independently of everything below.
+  if (!(Math.floor(minVisible) > 1)) return Infinity;
   const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
+  // ── IS THE ANCHOR ONE OF THE RACERS IT IS COUNTING? ASKED, NEVER ASSUMED (COMPANY-HEADCOUNT-1) ──
+  //
+  // This used to read `const need = Math.floor(minVisible) - 1; // the anchor itself is one of them`.
+  // That sentence was TRUE when it was written: the anchor was the subject racer's own position.
+  // CAMERA-LATERAL-1 then replaced it with the racing-line CENTRELINE point — correctly, so every
+  // guarantee measures from the anchor the camera will actually use — and the leader stands in his
+  // lane, not on the centreline. Measured afterwards: the anchor equals `_centrelineAt(t)` on 100%
+  // of frames and coincides with NO racer on 100% of frames. So a promise of five asked for four
+  // companions and delivered four racers, and the widening that would have shown the fifth was never
+  // requested. See AIM-ROOM-LOST-1.
+  //
+  // WHY THIS SHAPE. The premise is now DERIVED, in the same pass and from the same inputs the
+  // function already walks — the `dx === 0 && dy === 0` test that skips the anchor was always doing
+  // the detection, its answer was simply thrown away. There is no second place that states the
+  // premise: no parameter, no flag, and no comment asserting it. So there is nothing left that can
+  // go stale. A future change that moves the anchor onto or off a racer is picked up on the very
+  // next call, because the answer is recomputed from the anchor itself every time.
+  //
+  // A BOOLEAN PARAMETER WOULD HAVE REPRODUCED THE DEFECT ONE LEVEL UP: the caller would assert the
+  // premise, an anchor change would move it, and the caller's assertion would still read true. That
+  // is exactly what happened here — a true statement left standing while its premise moved beneath
+  // it — so the fix must not create another statement to leave standing.
+  //
+  // THE DETECTION IS OVER THE SET THAT CAN SATISFY THE PROMISE. A finished racer is skipped before
+  // the test, so an anchor sitting on one does not count as "the anchor is among them" — which is
+  // right, because a finished racer cannot be one of the live racers the promise is about.
+  //
+  // EXACT EQUALITY IS THE RIGHT TEST and its failure mode is the safe one. Where the anchor is a
+  // racer it is a COPY of that racer's coordinates, so equality holds exactly. An anchor that merely
+  // converges near a racer reads as "not one of them", and the guarantee then asks for one MORE
+  // racer than strictly needed — it over-delivers rather than under-delivers, which is the direction
+  // a guarantee should fail in.
+  let anchorIsRacer = false;
   const ceilings = [];
   for (const r of racers) {
     if (!r || r.finished) continue;
     const dx = r.x - anchor.x;
     const dy = r.y - anchor.y;
-    if (dx === 0 && dy === 0) continue; // the anchor itself
+    if (dx === 0 && dy === 0) {
+      anchorIsRacer = true; // and it is therefore one of the `minVisible`
+      continue;
+    }
     const sx = dx * axisX;
     const sy = dy * axisY;
     const needed = Math.hypot(sx, sy);
@@ -654,6 +699,10 @@ export function companyGuarantee(
     ceilings.push(room / needed);
   }
   if (ceilings.length === 0) return Infinity;
+  // How many COMPANIONS the promise needs, now that whether the anchor is one of them is known
+  // rather than assumed. Anchor among them → it supplies one of the `minVisible` and the rest are
+  // companions. Anchor not among them (the centreline case) → all `minVisible` must be companions.
+  const need = Math.floor(minVisible) - (anchorIsRacer ? 1 : 0);
   // Most permissive first: ceilings[0] is the nearest company, in the frame's own terms.
   ceilings.sort((a, b) => b - a);
   // Asking for more company than the field can supply must not zoom to a point: take what exists.

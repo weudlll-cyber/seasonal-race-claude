@@ -230,6 +230,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMPANY-HEADCOUNT-1.md](COMPANY-HEADCOUNT-1.md) — **the guarantee asks whether its anchor is a
+  racer instead of assuming it, and a promise of five delivers five** (2026-09-02, branch
+  `fix/company-headcount-1` off master, **not merged, not minted**, handed back for his eye; ship
+  branch and `feat/aim-levers-1` untouched). **The premise is fixed, not the arithmetic**: the loop's
+  existing `dx === 0 && dy === 0` test already knew the answer and was throwing it away, so
+  `need = floor(minVisible) − (anchorIsRacer ? 1 : 0)`. **The shape cannot silently regress** because
+  the premise is DERIVED per call from the same inputs — no parameter, no flag, and now no comment
+  asserting it, so nothing is left to go stale; a boolean parameter would have relocated the defect
+  to the caller. **The second call site is correct and was established by RUNNING both trees**:
+  `_fieldCeiling`'s `racers.length + 1` is a sentinel and the `Math.min(need, ceilings.length)` clamp
+  absorbed the deduction — field site 0.9600 before and after in both anchor cases, while
+  `minVisible=5` with a non-racer anchor moves 1.4400 → 1.1520. **SABOTAGE turns 6 red.** **The price,
+  ten tracks, frame counts IDENTICAL on all ten**: promise kept space-sprint 96.32% → **99.23%**,
+  searound 97.39% → **99.92%**, seatrack 97.55% → **99.63%**, garden-path → **100%**; in-shot p50
+  unchanged everywhere and **p10 up one on the three worst tracks** — it bites only where the promise
+  was broken. **Steadiness is not costed**: largest single-frame pan identical on 9 of 10 (and at
+  N=300 on all four), corner overflow unchanged or better. **WITHDRAWS the 1.33×/2.26× price
+  AIM-ROOM-LOST-1 quoted** — that was a frame-subset figure; across all frames the shot is untouched
+  on 82.5–98.7% and widens by a median 1.02–1.07×. **The residual is reported, not clamped**: where it
+  remains short the company ceiling is itself binding on 77–100%, deficit exactly one — the guarantee
+  asking and not getting, which is the recorded 74 px anchor miss, its own piece.
+
 - [AIM-ROOM-LOST-1.md](AIM-ROOM-LOST-1.md) — **nothing stops the widening: the company guarantee asks
   for one racer too few, because its anchor stopped being a racer** (2026-09-02, measure only;
   nothing built or changed, ship branch untouched). Answers "what stops the widening before the

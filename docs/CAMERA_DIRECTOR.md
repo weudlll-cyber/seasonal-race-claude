@@ -1011,7 +1011,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4110bd26 2026-08-26 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4c090b3e 2026-09-02 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR COMPANY-HEADCOUNT-1, AND EXACTLY ONE NUMBER MOVED: `LEADER_ZOOM` median
+5.07 -> 5.01 pp (2026-09-02).** Every other figure is identical to the digit — both percentiles of the
+other five states, and all six frame counts (8626, 159, 13282, 8473, 4130, 2089). Run rather than
+argued, and the usual byte-identical argument was NOT available: that repair moves the company
+guarantee, which is one of the width authorities in `LEADER_ZOOM`, and the CAMERA fingerprint moved.
+
+It moved only that one number because the corrected guarantee changes the shot on a MINORITY of
+frames — 1.3% to 17.5% depending on the track — and widening the frame slightly reduces how far the
+camera has to travel to hold its subject. A median over 13,282 frames barely notices it, which is the
+honest reading of a 0.06 pp improvement rather than a claim that the repair improved the tracking.
+
 **RE-MEASURED IN FULL FOR LEADER-LATERAL-BUILD-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT
 (2026-08-26)** — 8626/5.81/10.05, 159/4.84/7.40, 13282/5.07/9.71, 8473/4.64/7.45, 4130/2.75/16.00,
 2089/2.81/8.59. Run rather than argued: the change moves the pan target in `LEADER_ZOOM`, which is
