@@ -53,7 +53,12 @@ const arg = (k, d) => {
 const BEFORE = Number(arg("before", "10"));
 const AFTER = Number(arg("after", "20"));
 const TRACK = "river-run";
-const N = 20;
+const N = Number(arg("racers", "20"));
+// THE ROSTER IS A PHYSICS INPUT, not a label: `stablePairBit` in raceBehavior.js hashes r.name and
+// falls back to r.index when there is none, so a NAMELESS harness field runs a DIFFERENT race from
+// the browser at the same seed. `--roster=quick` gives the field the names the Quick-Test path
+// actually fills, so the two can be compared instead of assumed equal.
+const ROSTER = arg("roster", "none");
 
 // From AIM-ROOM-SHIP-1's N=300 combined rows: every adjacent-frame camStep above 1000 px.
 const HITS = [
@@ -66,6 +71,10 @@ const HITS = [
   { seed: 247, frame: 1469, step: 2333.5 },
 ];
 
+const { resolveNameSet, DEFAULT_NAME_SET } = await import(
+  u("client/src/modules/racerNames.js")
+);
+const NAMES = resolveNameSet(DEFAULT_NAME_SET);
 const CFG = { ...DEFAULT_CAMERA_CONFIG };
 const geo = new Map(loadTracks().map((g) => [g.id, g])).get(TRACK);
 const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, !geo.closed);
@@ -81,6 +90,7 @@ for (const hit of HITS) {
     raceSeed: hit.seed,
     racers: N,
     racerType: TRACK_DEFAULT_RACER,
+    roster: ROSTER === "quick" ? NAMES.slice(0, N) : null,
   });
   const race = buildRace(geo, identity, CFG);
   const CW = identity.canvasW;
