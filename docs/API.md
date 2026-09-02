@@ -1,6 +1,15 @@
 # RaceArena — API Reference
 
-**Owns:** the backend's HTTP surface — every endpoint, its shape, and what it persists. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
+**Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
+
+> **⚠ THIS FILE IS NOT COMPLETE, AND UNTIL 2026-09-02 IT SAID IT WAS.** The line above read *"every
+> endpoint"*. Measured against the tree: the server mounts **eight** API routers registering **49**
+> routes, and this document describes **13**. Missing entirely: `/api/auth`, `/api/users`,
+> `/api/surface-classes`, `/api/player-groups`, `/api/brands`, `/api/racers` and `/api/seed-notices`.
+> **`/api/auth` is documented in [AUTH.md](AUTH.md)**, which covers its seven endpoints correctly;
+> the others are documented nowhere. **The ownership claim is corrected rather than the gap filled**
+> — writing 36 endpoint descriptions would be completeness work, and a document that admits its
+> boundary is more useful than one that overstates it (DOC-TRUTH-2, 2026-09-02).
 
 The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/`.
 

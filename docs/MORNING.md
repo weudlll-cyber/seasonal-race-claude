@@ -82,7 +82,7 @@ missing**.
 | 7 | RaceScreen | the seam is **one line**, and the file does not need it |
 | 8 | A stranger and a running install | one of three closes; two would break **your** setup |
 | 9 | The backlog | **16 closed, 7 are yours** |
-| 10 | The documents | **791 claims, 8 false**, median age 9 days |
+| 10 | The documents | **8 false** in my own pass — then the breadth pass returned with **97 more** |
 | 11 | The 200-second race | **the symptom no longer exists** — ten of ten tracks finish |
 | 12 | Nothing measures motion | buildable, **after one field is published** |
 | 13 | The race-identity hash | in, and stamped at the funnel rather than a list |
@@ -114,6 +114,35 @@ HIS**. Beyond those, tonight produced six:
    save it.
 6. **`garden-path-finishes.spec.js:31` is left red on purpose.** Its premise died when that track's
    racer changed. I did not fix it and did not silence it, per your rule.
+
+---
+
+## ★ THE ONE THING THAT CHANGED AFTER I FIRST WROTE THIS SHEET
+
+**The document breadth pass returned late — after piece 10 was merged — and it found 97 false claims,
+not 8.** ~4,300 claims across 24 of 34 documents, median age 43 days, **14 of them false on the day
+they were written**. DOC-TRUTH-1's eight are all real and do not overlap these; what its headline left
+was the wrong impression, and a correction is recorded in the INDEX CORRECTIONS block.
+
+**The find that matters most is your own brief, at a second site.** `CAMERA_DIRECTOR.md:980` still
+said `racer-types/` is inside *"no instrument's closure at all"*. **All four of its facts were false**
+— and the identical claim was corrected in SHIP-CEREMONY the same day, while **this copy, one file
+over and pointing AT that section, was missed.** That is the night's pattern one more time, in the
+place the night was looking.
+
+**Seven corrections are applied and were each verified at the tree first**, not taken on the report's
+word: the closure claim above; `PROJECT-PRINCIPLES.md`'s dead fingerprint (second site of the INDEX
+one); FORCE-MAP attributing the whole physics loop to a file where `advanceRacerT` occurs **zero**
+times; two of ARCHITECTURE's seven "Do NOT touch" invariants naming symbols removed 67 days earlier;
+`API.md` claiming "every endpoint" while documenting **13 of 49**; `TRACK_EDITOR`'s `getCenterFrac`,
+which has **never existed**; and README's "default OFF" race-action director, which is a stage
+shipping as `quiet`.
+
+**≈ 90 corrections are NOT applied.** They stand in DOC-TRUTH-2 with proposed text. **This is a
+deliberate stop, not an omission:** applying ninety edits across twenty-four documents at the end of a
+long night, none re-verified individually, is how a repair becomes the next defect — which is the
+report's own lesson. **It is the largest single item waiting for you**, and it is bounded and written
+down.
 
 ---
 
