@@ -30,6 +30,7 @@
 // than from constants, so it has no drift to fix and it is his live repro tool.
 // ============================================================
 
+import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -112,8 +113,95 @@ export function resolveIdentity(partial = {}) {
   };
 }
 
+// ── THE RACE HASH — "did these two numbers come from the same race?" ─────────────────────
+//
+// That question is checked by a human today, and this project has been bitten three times by a human
+// check everyone believed was happening — most recently on 2026-09-02, when the parity soak ran a
+// different race from the product for weeks because a roster defaulted to null.
+//
+// ★ THE CONFIG IS IN THE HASH, AND THAT IS THE WHOLE POINT. `corridor-truth` and
+// `corridor-truth --company-only` print the SAME identity line and produce DIFFERENT numbers, so
+// identity alone cannot answer the question. VERIFY-RULES R16 names that pair as the case where even
+// a stated identity is insufficient.
+//
+// WHAT IT COVERS: every field of the identity — including the ROSTER'S ACTUAL NAMES, not its length,
+// because `stablePairBit` hashes `r.name` and two fields of forty different names are two different
+// races — and the camera config, canonicalised so key order cannot change the answer.
+//
+// WHAT IT DOES NOT COVER, stated so nobody over-trusts it:
+//   - THE TRACK. Instruments loop tracks under one identity and name the track in every row. A hash
+//     that changed per track could not be printed on the identity line at all.
+//   - THE TREE. Two runs of the same identity and config on different code hash the SAME. This
+//     answers "same race?", never "same build?" — the build pill and the fingerprints answer that.
+//   - WHETHER THE CONFIG WAS ACTUALLY APPLIED. It hashes what it was handed.
+
+/** Canonical JSON: keys sorted at every depth, so key order cannot change the hash. */
+function canonical(v) {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+  return `{${Object.keys(v)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`)
+    .join(",")}}`;
+}
+
+/**
+ * sha256(identity + canonical(cameraConfig)), first 12 hex.
+ *
+ * THE CONFIG IS REQUIRED. A hash over the identity alone would be exactly the thing that already
+ * fails — two arms printing one identity — so there is no one-argument form, and passing nothing
+ * throws rather than quietly hashing less.
+ */
+export function raceHash(identity, cameraConfig) {
+  if (cameraConfig === undefined || cameraConfig === null) {
+    throw new Error(
+      "raceHash: cameraConfig is required. A hash over the identity alone cannot tell two arms " +
+        "apart, which is the case this exists for (VERIFY-RULES R16).",
+    );
+  }
+  return createHash("sha256")
+    .update(canonical({ identity, cameraConfig }))
+    .digest("hex")
+    .slice(0, 12);
+}
+
+/** Records `raceHash(identity, cameraConfig)` on the identity, non-enumerably, accumulating. */
+export function stampRaceHash(identity, cameraConfig) {
+  if (!identity || cameraConfig === undefined || cameraConfig === null) return;
+  const h = raceHash(identity, cameraConfig);
+  if (!Object.prototype.hasOwnProperty.call(identity, "__raceHashes")) {
+    Object.defineProperty(identity, "__raceHashes", {
+      value: new Set(),
+      enumerable: false,
+      writable: false,
+      configurable: true,
+    });
+  }
+  identity.__raceHashes.add(h);
+  return h;
+}
+
+/**
+ * The `race=` field of the identity line.
+ *
+ * An explicit config wins; otherwise the stamp `buildRace` left. MIXED names every config this
+ * identity was built with, because a harness running two arms under one identity is precisely the
+ * case a single hash would misreport.
+ */
+function raceLabel(id, cameraConfig) {
+  if (cameraConfig !== undefined && cameraConfig !== null) {
+    return `race=${raceHash(id, cameraConfig)}`;
+  }
+  const seen = id && id.__raceHashes ? [...id.__raceHashes] : [];
+  if (seen.length === 1) return `race=${seen[0]}`;
+  if (seen.length > 1) {
+    return `race=MIXED(${seen.join(",")}) — ${seen.length} configs under ONE identity`;
+  }
+  return "race=NO-CONFIG-GIVEN (this line cannot tell two arms apart)";
+}
+
 /** The one line every harness prints. It carries exactly the values that make two runs incomparable. */
-export function formatIdentity(id) {
+export function formatIdentity(id, cameraConfig) {
   const parts = [
     `n=${id.racers}`,
     `raceSeed=${id.raceSeed}`,
@@ -122,6 +210,9 @@ export function formatIdentity(id) {
     `${id.seconds}s`,
     `${id.canvasW}x${id.canvasH}`,
     `roster=${id.roster ? `${id.roster.length} names` : "none (index strings)"}`,
+    // THE HASH, or a LOUD absence. A blank would read as "nothing to say"; this reads as
+    // "this line cannot answer whether two runs match", which is the truth when no config is given.
+    raceLabel(id, cameraConfig),
   ];
   return `RACE IDENTITY: ${parts.join(" · ")}${id.note ? `  (${id.note})` : ""}`;
 }
@@ -159,6 +250,19 @@ export function loadTracks({ only = null } = {}) {
  *   the resolved racer type, and the drawn-body reference the camera was constructed with.
  */
 export function buildRace(geo, identity, cameraConfig) {
+  // ★ STAMP THE RACE HASH AS THE CONFIG PASSES THROUGH. This is the ONE funnel every harness's
+  // camera config goes through, so stamping here gives every instrument the hash with no edit at its
+  // own call site — and, more importantly, no hand-maintained list of "instruments that print it"
+  // to fall out of date. A list is the defect class this repository spent tonight auditing.
+  //
+  // NON-ENUMERABLE ON PURPOSE: several instruments `JSON.stringify` the identity into `--json`
+  // output, and a new visible key would change what their consumers parse. `formatIdentity` reads it
+  // explicitly; nothing else sees it.
+  //
+  // IT ACCUMULATES RATHER THAN OVERWRITES. A harness that builds two arms under ONE identity is
+  // exactly the case this exists for, so the second config does not silently replace the first — the
+  // identity line then reads MIXED and names both. Overwriting would have reproduced the defect.
+  stampRaceHash(identity, cameraConfig);
   const shape = new EditorShape(geo);
   const trackWidthPx = geo.width ?? shape.getActualTrackWidth();
   const W = DEFAULT_CONFIG_WORLD;

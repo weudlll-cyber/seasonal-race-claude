@@ -394,6 +394,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [RACE-IDENTITY-HASH-1.md](RACE-IDENTITY-HASH-1.md) — **the hash is in, it is STAMPED AT THE ONE
+  FUNNEL rather than wired into a list, and R16's own worked example names the wrong tool**
+  (2026-09-02; three files, all outside the engine hull, every fingerprint guard routed
+  `nothing changed`, `verify` PASS 6 FAIL 0 — what instruments PRINT gained a field, what they
+  MEASURE did not move). `raceHash(identity, cameraConfig)` is sha256 over canonical JSON, 12 hex,
+  and **the config is REQUIRED — there is no one-argument form and passing nothing throws**, because
+  a hash that silently covered less than it claimed would be worse than none. **The wiring decision is
+  the interesting part:** thirty instruments print an identity line, and editing thirty call sites
+  would have produced a hand-maintained list of "instruments that print the hash" — the exact defect
+  class this chain spent the night auditing. So `buildRace` stamps it as the config passes through:
+  every instrument printing AFTER its build gets the hash with **no edit at all, and no list to go
+  stale**. The stamp is **non-enumerable** (so `--json` consumers see no new key, asserted) and it
+  **accumulates rather than overwrites** — two configs under one identity read
+  `race=MIXED(h1,h2)`, because overwriting would have reproduced the defect inside the fix.
+  ★ **THE FINDING THAT WAS NOT IN THE BRIEF: R16's worked example names the wrong tool.** Both
+  VERIFY-RULES R16 and `BACKLOG.md:739` cite "`corridor-truth` and `corridor-truth --company-only`";
+  **`corridor-truth.mjs` has exactly one flag, `--json`**, and grepping it for `company` returns
+  nothing. The flag lives in `his-shot-truth.mjs:47` — which carries **four** arms under one identity
+  line, not two. The rule is right about the shape and wrong about the tool, sitting inside the rule
+  written to catch exactly that. Correction left to piece 10 so it happens once.
+  **It separates, proven on the real pair rather than a fixture:** shipped `race=4106f313b9d9` against
+  `--company-only` `race=015bb56cc425`, with everything left of `race=` **byte-identical**. And on the
+  input that was actually missing — two rosters of the SAME LENGTH differing in one name hash
+  differently, where the line's existing `roster=40 names` count never could, and a racer's name is
+  physics (`stablePairBit` hashes `r.name`). ★ **A LIMIT FOUND BY RUNNING IT:** `--owner-unit` does
+  NOT separate — it hashes identically to the shipped arm, correctly, because it mutates the config
+  **per track inside the loop**, after the line is printed. **A per-run hash cannot cover a per-track
+  config by construction**; `MIXED` would report it, but only for an instrument printing below its
+  table, and R16 itself asks for the line above. Not resolved — on the morning sheet. Eight new tests,
+  18/18 green in that file, asserting both directions plus the refusal, the stamp and the
+  non-enumerability.
+
 - [WORKTREE-STUBS-1.md](WORKTREE-STUBS-1.md) — **the attribute question is settled YES, the count is
   now ZERO, and the trap was the RECURSION FLAG rather than the attribute** (2026-09-02; every
   deletion performed by `git worktree prune` itself, no tracked file touched by it, tree clean

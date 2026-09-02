@@ -19,6 +19,8 @@ import {
   trackWidthOf,
   buildRace,
   runRace,
+  raceHash,
+  stampRaceHash,
   TRACK_DEFAULT_RACER,
 } from "./lib/raceDriver.mjs";
 
@@ -204,4 +206,82 @@ test("THE COUNTDOWN COMES FROM THE CONFIG BEING RUN, not the shipped default", (
     long > short + 7000,
     `a venue beat 8 s longer must start the race ~8 s later (got ${short} vs ${long})`,
   );
+});
+
+// ── THE RACE HASH (RACE-IDENTITY-HASH-1) ─────────────────────────────────────────
+//
+// "Did these two numbers come from the same race?" A hash is only worth having if it SEPARATES what
+// must be separated and JOINS what must be joined. Both directions are asserted, and the roster case
+// is asserted with two rosters OF THE SAME LENGTH, because the length is what the identity line
+// already printed and it is exactly what failed to catch the soak's null roster.
+
+test("the hash JOINS: same identity, same config, key order irrelevant", () => {
+  const a = resolveIdentity({ racers: 12, raceSeed: 3 });
+  const b = resolveIdentity({ racers: 12, raceSeed: 3 });
+  assert.equal(raceHash(a, { x: 1, y: 2 }), raceHash(b, { x: 1, y: 2 }));
+  // Canonicalisation: a config written in a different key order is the SAME config.
+  assert.equal(raceHash(a, { x: 1, y: 2 }), raceHash(a, { y: 2, x: 1 }));
+});
+
+test("the hash SEPARATES on the CONFIG alone — the case identity cannot answer", () => {
+  const id = resolveIdentity({ racers: 12, raceSeed: 3 });
+  const armA = raceHash(id, { companyOnlyFraming: false });
+  const armB = raceHash(id, { companyOnlyFraming: true });
+  assert.notEqual(armA, armB);
+  // And the identity LINE is identical between them without the hash — which is the whole problem.
+  const bare = (line) => line.split(" · race=")[0];
+  assert.equal(
+    bare(formatIdentity(id, { companyOnlyFraming: false })),
+    bare(formatIdentity(id, { companyOnlyFraming: true })),
+  );
+  assert.notEqual(formatIdentity(id, { companyOnlyFraming: false }), formatIdentity(id, { companyOnlyFraming: true }));
+});
+
+test("the hash covers the ROSTER'S NAMES, not its length — the input that was missing", () => {
+  const cfg = { x: 1 };
+  const abc = resolveIdentity({ racers: 3, roster: ["Turbo", "Blaze", "Rocket"] });
+  const abx = resolveIdentity({ racers: 3, roster: ["Turbo", "Blaze", "Nitro"] });
+  const none = resolveIdentity({ racers: 3, roster: null });
+  assert.equal(abc.roster.length, abx.roster.length, "the fixture must have equal-length rosters");
+  assert.notEqual(raceHash(abc, cfg), raceHash(abx, cfg));
+  assert.notEqual(raceHash(abc, cfg), raceHash(none, cfg));
+  // A racer's NAME is physics here (stablePairBit hashes r.name), so this is not cosmetic.
+});
+
+test("the hash REFUSES a missing config rather than hashing less", () => {
+  const id = resolveIdentity({});
+  assert.throws(() => raceHash(id, undefined), /cameraConfig is required/);
+  assert.throws(() => raceHash(id, null), /cameraConfig is required/);
+});
+
+test("an unstamped identity says so LOUDLY rather than printing a blank", () => {
+  const id = resolveIdentity({});
+  assert.match(formatIdentity(id), /race=NO-CONFIG-GIVEN/);
+});
+
+test("buildRace STAMPS the hash, so an instrument printing after the build needs no edit", () => {
+  const geo = loadTracks({ only: "city-circuit" })[0];
+  const id = resolveIdentity({ racers: 6, raceSeed: 4 });
+  assert.match(formatIdentity(id), /race=NO-CONFIG-GIVEN/);
+  buildRace(geo, id, DEFAULT_CAMERA_CONFIG);
+  assert.match(formatIdentity(id), /race=[0-9a-f]{12}/);
+  assert.equal(formatIdentity(id).includes("NO-CONFIG-GIVEN"), false);
+});
+
+test("TWO CONFIGS UNDER ONE IDENTITY read MIXED — it accumulates rather than overwriting", () => {
+  const id = resolveIdentity({ racers: 6, raceSeed: 4 });
+  stampRaceHash(id, { arm: "A" });
+  const one = formatIdentity(id);
+  assert.match(one, /race=[0-9a-f]{12}/);
+  stampRaceHash(id, { arm: "A" });
+  assert.equal(formatIdentity(id), one, "the same config twice is still one race");
+  stampRaceHash(id, { arm: "B" });
+  assert.match(formatIdentity(id), /race=MIXED\(.+,.+\) — 2 configs under ONE identity/);
+});
+
+test("the stamp is NON-ENUMERABLE — --json consumers see no new key", () => {
+  const id = resolveIdentity({ racers: 6 });
+  stampRaceHash(id, { x: 1 });
+  assert.equal(JSON.stringify(id).includes("__raceHashes"), false);
+  assert.deepEqual(Object.keys(id), Object.keys(resolveIdentity({ racers: 6 })));
 });
