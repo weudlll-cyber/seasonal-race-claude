@@ -423,6 +423,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [SPEC-AND-INERT-1.md](SPEC-AND-INERT-1.md) — **the dead spec's question is still live but belongs
+  on ten tracks in the script suite, not on one track in a browser; and both inert fingerprint halves
+  would compare against roles that MATCH the tree tonight, so the repair lands green** (2026-09-02,
+  read-only, PROPOSE ONLY — nothing edited, nothing applied). **A. The rotten spec should be DELETED,
+  not rewritten.** Its real question was *"does the harness silently discard a race the product
+  considers ordinary?"* — a PROPERTY, asked about one track, in the one runner that gates nothing.
+  It proposes two assertions in `scripts/raceDriver.test.mjs` instead (script suite → verify + CI):
+  every track's `realizedDurationSec` under **160 s** — 200 / 1.25, carrying the measured 1.21×
+  slowmo dilation, since the driver's 200 s is a synthetic FRAME clock and under slowmo 12,000 frames
+  buy only 165–178 s — at zero race cost because `buildRace` is arithmetic; and
+  `trackDefaultLaps(geo) === 2` on every closed track, because the driver **hardcodes 2**
+  (`raceDriver.mjs:305`) where the product reads the track, and they agree today only because
+  `d73ec6a9` moved the DATA to meet the hardcode. The loss on deletion is named: the only automated
+  check that SetupScreen renders the model's number. Its second test should **not** stay as-is — the
+  assertions are right but its header is false in three places and its 25/30-minute budgets were
+  sized for a 424 s snail race that now measures 121.3 s. **B. `--check` is still 0 in both**
+  (verified: camera 0, render 0, `fingerprint-default` 4). A working version compares `COMBINED`
+  against `roles.camera.value` / `roles.render.value` — the record already declares the comparison
+  in its `reproduce` commands and **nothing performs it**. Marginal cost **zero**: both already run
+  and already compute the hash. **Both were measured tonight and both MATCH the record**, so the
+  repair lands green with no re-mint. The split is precise: camera's LIVE half is its proof-of-live
+  on the ending window (`:330-341`, proven to fire); everything from `:344` is inert. **Render has no
+  live half at all** — zero `FAIL`, `throw` or `assert`, its only `exit(1)` behind `--ops=`.
+  ★ **A new finding inside the guard**: the camera gate's own rationale still says garden-path has no
+  ending to sample, while its run tonight printed **10 of 10 tracks contributing FINISHED frames** —
+  the same rot, inside the instrument, and the gate is now tightenable from "at least one track" to
+  "every track" at zero cost.
+
 - [SECOND-SITES-1.md](SECOND-SITES-1.md) — **11 of 21 corrections left an identical false statement
   standing elsewhere, at 16 live sites — about one in two** (2026-09-02, read-only; nothing edited,
   nothing proposed, the deliverable is the number). Of the 15 corrections DOC-TRUTH-1 and DOC-TRUTH-2
