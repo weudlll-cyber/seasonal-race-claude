@@ -88,6 +88,7 @@ process.on("exit", () => {
 `);
 });
 import { execFile } from "child_process";
+import { checkAgainstRecord } from "./lib/fingerprintCheck.mjs";
 import {
   isCheap,
   cheapTracks,
@@ -319,56 +320,18 @@ for (const t of perTrack)
 // until the value is minted — that is the ceremony working, and the message says so rather than
 // implying something is broken.
 if (process.argv.includes("--check")) {
-  if (CHEAP) {
-    console.log(
-      "check: SKIPPED under --cheap — a one-track hash is prefixed and cannot be compared " +
-        "against a ten-track record.",
-    );
-  } else {
-    const RECORD = join(ROOT, "docs", "fingerprints.json");
-    const role = LABEL === "off" ? "world-off" : "world";
-    let expected = null;
-    try {
-      expected =
-        JSON.parse(readFileSync(RECORD, "utf8"))?.roles?.[role]?.value ?? null;
-    } catch (e) {
-      console.error(
-        `FAIL: cannot read the fingerprint record at ${RECORD}: ${e.message}`,
-      );
-      process.exit(1);
-    }
-    if (!expected) {
-      // LOUD FAILURE (Lesson 187): a check with nothing to check against is a no-op wearing a
-      // guard's name, and that is the shape this whole block exists to end.
-      console.error(
-        `FAIL: the record declares no value for role "${role}". Nothing to check.`,
-      );
-      process.exit(1);
-    }
-    if (combinedHash !== expected) {
-      console.error(
-        `FAIL: WORLD fingerprint does not match the record.
-` +
-          `      role     : ${role}
-` +
-          `      recorded : ${expected}
-` +
-          `      measured : ${combinedHash}
-` +
-          `      If this change was NOT meant to move the world, something reached the engine that
-` +
-          `      you did not intend — start from the per-track hashes above, which localise it.
-` +
-          `      If it WAS meant to, this is the ship ceremony asking for a deliberate mint; see
-` +
-          `      docs/SHIP-CEREMONY.md. Do not edit the record to make this pass.`,
-      );
-      process.exit(1);
-    }
-    console.log(
-      `check: WORLD matches the record for role "${role}" (${expected}).`,
-    );
-  }
+  // FP-COMPARE-2: the comparison moved to scripts/lib/fingerprintCheck.mjs so all three instruments
+  // share ONE implementation. This block used to hold it inline; camera and render had none at all,
+  // and pasting this one into them would have made three copies of a single comparison.
+  checkAgainstRecord({
+    role: LABEL === "off" ? "world-off" : "world",
+    label: "WORLD",
+    measured: combinedHash,
+    cheap: CHEAP,
+    root: ROOT,
+    localise:
+      "start from the per-track hashes above, which localise which track moved.",
+  });
 }
 if (CHEAP)
   console.log(

@@ -132,6 +132,15 @@ homework), and the state immediately before an unattended night block.
 They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
 is move one without noticing.
 
+**ALL THREE NOW COMPARE, and until 2026-09-03 only one did.** `--check` reads the role's value from
+[fingerprints.json](fingerprints.json) and exits non-zero on a mismatch. FP-COMPARE-1 gave the world
+that in 2026-08-14; camera and render never got it, so for eighty days two of the three computed a
+hash, printed it, and reported PASS whatever it was — CENSUS-CHECKS-1 classified render
+DEMONSTRABLY INERT for exactly that. **`npm run verify` now passes `--check` to all three**, which is
+also the only place a new failure surfaces: the pre-commit hook deliberately does not run the
+fingerprints and CI does not run `verify`. A failure here is not always a bug — a block that moves a
+hash deliberately SHOULD fail it until the value is minted, which is this ceremony working.
+
 **The VALUES below are copies. Their one home is [docs/fingerprints.json](fingerprints.json)** — the
 value, the commit it was minted on, the date, and the script that reproduces it. Do not type a
 fingerprint into this table or anywhere else: put it in the record and run
