@@ -243,6 +243,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SOAK-ROSTER-1.md](SOAK-ROSTER-1.md) — **FINGERPRINT-TRACK-DEFAULTS-1's own repair broke the parity
+  soak, the same way it fixed the fingerprint; found, measured at three points, and fixed**
+  (2026-09-02). Making the soak's track axis read the shipped seeds (`fa553f50`) left its racer
+  ROSTER hand-listed as ten types in `goldenRunner.mjs`'s `RACER_CONFIGS`; garden-path then returned
+  `beetle`, which was not among the ten, and `soak.mjs:68` threw `unknown racer type beetle` on
+  **every** run. **Nothing went red, which is the second finding**: the soak is in no CI path and no
+  verify guard, so a tool that could not start looked exactly like a tool nobody ran. **Measured, not
+  reasoned** — `buildMatrix()` returns **600 rows at `bcd94805`, THROWS at `ac1d7acc`, and returns
+  600 rows now**; the "before" run required both old files extracted side by side with the import
+  between them repointed. **It is the same defect one layer down**: the roster is the same kind of
+  fact as the pairing, and repairing only the layer above MOVED it rather than removing it. Fixed by
+  deriving `RACER_CONFIGS` over `RACER_TYPE_IDS`. **`surfaceClasses` deliberately untouched** — still
+  unread, deletion now proposed three times and still not this piece's call, so no tag was invented
+  for the ten new entries. **`racerFacts.mjs` was deliberately NOT touched**: a re-export through it
+  was reverted after `engine-reach --check` showed that file is INSIDE the hull, and this chain
+  carries no minting permission. Proof: the ten pre-existing entries **JSON-compared byte-identical
+  to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
+  the soak was started, not run.
+
 - [SPRITE-AUDIT-DERIVATION-1.md](SPRITE-AUDIT-DERIVATION-1.md) — **the sprite audit now reads its
   inputs, and the artwork agrees with the registry on all twenty — against the rule that WROTE those
   values. A second rule is wired into the editor and it disagrees on five** (2026-09-02, a TOOL

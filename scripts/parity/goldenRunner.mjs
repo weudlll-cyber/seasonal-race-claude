@@ -84,6 +84,12 @@ import {
 } from "../../client/src/modules/parity/raceIdentity.js";
 import { QUICK_TEST_NAMES } from "../../client/src/modules/racerNames.js";
 import { racerFacts } from "../lib/racerFacts.mjs";
+// The ROSTER comes from the registry, which owns it, and is imported HERE rather than re-exported
+// through `racerFacts.mjs` on purpose: that module is INSIDE the engine hull
+// (`node scripts/engine-reach.mjs --check scripts/lib/racerFacts.mjs` says so), and this file is
+// outside it. Adding a re-export there would have put a fingerprint question on a change that
+// cannot move a race.
+import { RACER_TYPE_IDS } from "../../client/src/modules/racer-types/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -157,20 +163,45 @@ export function trackDefaultPairs() {
  * `surfaceClasses` below is NOT the registry's surface list and is deliberately NOT imported: it is
  * never read from this table (checked), and the registry's field means "which surfaces this type may
  * race on", which is a different question from the soak's one-tag-per-track pairing. It has no other
- * home in the tree, which is why it stays a literal here.
+ * home in the tree, which is why it stays a literal here. NO-SOURCE-OF-TRUTH-1 re-checked this on
+ * 2026-09-02: still unread, and two of its tags (`space`, `garden`) are not surface classes anywhere
+ * in the repository. Deleting it is proposed and NOT done here; only the ten types that already
+ * carried a tag keep one, which is why the derived entries below have none.
+ *
+ * ── THE ROSTER IS DERIVED TOO (SOAK-ROSTER-1) ──────────────────────────────────────────────────
+ *
+ * THIS TABLE USED TO LIST TEN TYPES BY HAND, AND THAT BROKE THE SOAK. When the soak's track axis
+ * started reading `defaultRacerTypeId` from the shipped seeds (FINGERPRINT-TRACK-DEFAULTS-1,
+ * 2026-09-02), garden-path began returning `beetle` — which was not among the ten — and
+ * `buildMatrix()` threw `unknown racer type beetle` on every run. Nothing went red, because the soak
+ * is in no CI path.
+ *
+ * That was the SAME defect the seed-reading repair had just removed one layer up: a hand-maintained
+ * list standing in for a fact that has an owner. Repairing the axis and leaving the roster listed
+ * only moved it. The roster is now every type the registry knows, so a racer added to the registry
+ * cannot fall out of this table and a track re-pointed at a different default cannot break it.
  */
-export const RACER_CONFIGS = {
-  horse: { ...racerFacts("horse"), surfaceClasses: ["earth"] },
-  rocket: { ...racerFacts("rocket"), surfaceClasses: ["space"] },
-  snail: { ...racerFacts("snail"), surfaceClasses: ["garden"] },
-  motorbike: { ...racerFacts("motorbike"), surfaceClasses: ["asphalt"] },
-  duck: { ...racerFacts("duck"), surfaceClasses: ["water"] },
-  luge: { ...racerFacts("luge"), surfaceClasses: ["ice", "snow"] },
-  boarder: { ...racerFacts("boarder"), surfaceClasses: ["snow"] },
-  manta: { ...racerFacts("manta"), surfaceClasses: ["water"] },
-  dolphin: { ...racerFacts("dolphin"), surfaceClasses: ["water"] },
-  snowmobile: { ...racerFacts("snowmobile"), surfaceClasses: ["snow", "ice", "earth"] },
+const SURFACE_TAGS = {
+  horse: ["earth"],
+  rocket: ["space"],
+  snail: ["garden"],
+  motorbike: ["asphalt"],
+  duck: ["water"],
+  luge: ["ice", "snow"],
+  boarder: ["snow"],
+  manta: ["water"],
+  dolphin: ["water"],
+  snowmobile: ["snow", "ice", "earth"],
 };
+
+export const RACER_CONFIGS = Object.fromEntries(
+  RACER_TYPE_IDS.map((id) => [
+    id,
+    SURFACE_TAGS[id]
+      ? { ...racerFacts(id), surfaceClasses: SURFACE_TAGS[id] }
+      : racerFacts(id),
+  ]),
+);
 
 const trackCache = new Map();
 
