@@ -293,6 +293,25 @@ which is built, pushed and waiting on the owner's eye. Merging either to master 
 that unjudged build onto master with it. Their reports were landed on master separately when the
 blocks closed and are there now; only the instruments were stranded.
 
+- `archive/aim-levers-candidates` (`2c2f5ba9`, 2026-09-02) — **the two aim-room candidates, both
+  live, both behind keys whose default is OFF.** The tip of the retired `feat/aim-levers-1`. Keep it
+  because it is the only state in which **candidate A can be run at all**: the owner rejected the
+  body aspect cap and AIM-ROOM-SHIP-1 removed it entirely — the key, the mechanism, the Dev-Screen
+  control, the harness wiring and the test — so nothing on master can reproduce the side-by-side
+  comparison that decided between them. The measured verdict it carries: at N=300 on space-sprint, B
+  beat A on the fault **and** cost less steadiness (−283 against −207 clip episodes; `step p99` flat
+  at 187.2→187.3 against A's +2.6; centreline 69.5%→**88.9%** against A's 79.2%), and **A changes the
+  RACE while B changes only the PICTURE** — A's frame count is 470,323 against the baseline's 470,658,
+  because the capped bodies feed brake-T and avoidance. A was **bit-identical** on river-run, seatrack
+  and dirt-oval.
+
+  **A correction to why this tag exists.** It was cut on the reasoning that the branch was not
+  contained in master and would be lost. **That is not true**: `ship/aim-room-floor-1` merged
+  `feat/aim-levers-1` at `f01ff8ea` before removing A, and that ship is now in master, so `2c2f5ba9`
+  is an ancestor of master and permanently reachable. What deleting the branch would actually have
+  cost is the **name and the reason** — which is what this entry is, and it is worth having on its own
+  account rather than on a containment claim that does not hold.
+
 - `archive/runin-chance-set-1` (`97c29d8b`, 2026-08-26) — **the four chance-set instruments**
   (`chance-set.mjs`, `-run`, `-sum`, `-joins`). Keep them: RUNIN-CHANCE-SET-1's numbers are cited on
   master and in the report INDEX — 1,140 races x 4 arms, the step moving 30 -> 18 races, the median
