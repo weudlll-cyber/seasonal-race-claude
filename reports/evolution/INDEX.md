@@ -243,6 +243,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ANCHOR-MISS-1.md](ANCHOR-MISS-1.md) — **the aim is RIGHT, the smoothing is HONEST, and the answer
+  is a SPLIT rather than one verdict: the 74px miss is FOUR terms, and only one of them is a defect**
+  (2026-09-02, READ-ONLY and PROPOSE ONLY, nothing built). The brief asked whether the guarantees
+  reason from a position they SHOULD have or one that is simply wrong. **The aim is proven exact —
+  0.0000 px at MAX on 39,712 frames** — so the target is not the fault. **Why 45 + 59 does not make
+  74: the two vectors are near-perpendicular.** The lerp is almost purely ALONG the heading, the
+  composition almost purely ACROSS it, and quadrature gives **74.11 against the recorded 74.22**, a
+  0.15% agreement; the residual is a median-of-medians artefact. **The miss decomposes into four
+  terms, not two, and the identity closes to 0.00 px at MAX on every frame**: the aim (right), the
+  pan lerp (the honest cost), a previously unnamed **scale lag** (sub-pixel while tracking, tens of
+  px through a glide), and the **lateral guarantee's own shift** — which `_applyLateralGuarantee`
+  applies THIRTY LINES AFTER the ceilings were sized around the un-shifted anchor. **That last one is
+  the whole remaining company shortfall**, and the counterfactual has INVERTED since AIM-ROOM-LOST-1:
+  placing the anchor where the guarantees assumed keeps the promise on **100%** of frames, removing
+  the composition alone does the same — and **removing the LERP alone makes it WORSE** (1.945% vs
+  1.796% on mountainstreet), so the smoothing is currently paying for part of the promise. A fifth
+  finding nobody had written down: **`subjects.point` is the RAW centreline while `panTarget` is
+  smoothed ten lines later**, so the guarantees measure from a point the frame is not built on, worth
+  5.5-8.5 px on essentially every frame and **with no circularity at all**. The lateral repair DOES
+  have one — the shift needs the composed zoom which needs the ceiling which needs the anchor — **so
+  it is "wrong" rather than "careless"** and cannot be fixed by reordering two lines. Three proposals,
+  including **do neither and record the account**, which is defensible. **NOT established**: no
+  browser, no eye test, no fixed harness seed, LEADER_ZOOM only with glide excluded, and the original
+  1,480-frame population no longer exists (89 frames of 37,188 today).
+
 - [NO-SOURCE-OF-TRUTH-1.md](NO-SOURCE-OF-TRUTH-1.md) — **the four homeless facts re-counted against
   the tree: one CLOSED, one HALF-REPAIRED, one still open, one that was never a group** (2026-09-02,
   READ-ONLY and PROPOSE ONLY — nothing edited, staged or committed by this piece). CENSUS-DUPES-1's
