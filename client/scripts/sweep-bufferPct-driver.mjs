@@ -22,20 +22,33 @@ const RACES = DRY ? 2 : 50;
 const SEED = 1;
 const DUR = 60;
 
-// Per-track default racer (from server/seeds/tracks/*.json defaultRacerTypeId) + topology.
-const ALL_TRACKS = [
-  { id: 'dirt-oval', racer: 'horse', open: false },
-  { id: 'river-run', racer: 'duck', open: false },
-  { id: 'space-sprint', racer: 'rocket', open: false },
-  { id: 'garden-path', racer: 'snail', open: false },
-  { id: 'city-circuit', racer: 'buggy', open: false },
-  { id: 'ice-track', racer: 'snowmobile', open: false },
-  { id: 'searound', racer: 'manta', open: false },
-  { id: 'luger-hill', racer: 'luge', open: true },
-  { id: 'mountainstreet', racer: 'boarder', open: true },
-  { id: 'seatrack', racer: 'dolphin', open: true },
+// Per-track default racer AND topology, READ FROM server/seeds/tracks/*.json rather than restated.
+//
+// THIS TABLE WAS DRIFT, AND ON TWO AXES. Its comment named the seed files as its source, which is what
+// made it look checked; it was not. The racer half was wrong on garden-path (`snail`; the seed said
+// `beetle` from 2026-08-25) and on city-circuit (`buggy`; the seed said `motorbike` from 2026-06-30 —
+// a week BEFORE this file was written, so that entry was never right). The topology half was wrong
+// too: river-run and space-sprint were marked closed and are open in the seeds. Reading the seed
+// removes all three at once and cannot go stale again.
+const TRACK_IDS = [
+  'dirt-oval',
+  'river-run',
+  'space-sprint',
+  'garden-path',
+  'city-circuit',
+  'ice-track',
+  'searound',
+  'luger-hill',
+  'mountainstreet',
+  'seatrack',
 ];
-const TRACKS = DRY ? ALL_TRACKS.filter((t) => ['garden-path', 'luger-hill'].includes(t.id)) : ALL_TRACKS;
+const ALL_TRACKS = TRACK_IDS.map((id) => {
+  const seed = JSON.parse(readFileSync(join(ROOT, `server/seeds/tracks/${id}.json`), 'utf8'));
+  if (!seed?.defaultRacerTypeId) {
+    throw new Error(`sweep-bufferPct-driver: ${id}.json has no defaultRacerTypeId`);
+  }
+  return { id, racer: seed.defaultRacerTypeId, open: seed.closed === false };
+});const TRACKS = DRY ? ALL_TRACKS.filter((t) => ['garden-path', 'luger-hill'].includes(t.id)) : ALL_TRACKS;
 
 function log(s) {
   process.stdout.write(s + '\n');

@@ -146,19 +146,58 @@ if (ARGV[2]?.startsWith("--")) {
 const EXTRA = ARGV.slice(3).filter((a) => a.startsWith("--"));
 const SEED = 1,
   RACES = 3;
-// 10 standard tracks × default racer (fixed order — never reorder; it feeds the combined hash).
-const TRACKS = [
-  ["city-circuit", "motorbike"],
-  ["dirt-oval", "horse"],
-  ["garden-path", "snail"],
-  ["ice-track", "snowmobile"],
-  ["luger-hill", "luge"],
-  ["mountainstreet", "boarder"],
-  ["river-run", "duck"],
-  ["searound", "manta"],
-  ["seatrack", "dolphin"],
-  ["space-sprint", "rocket"],
+// ── 10 standard tracks × THEIR OWN DEFAULT RACER, READ FROM THE SHIPPED SEED ────────────────────
+//
+// THE PAIRING IS NO LONGER WRITTEN DOWN HERE, and that is the repair rather than a tidy-up.
+//
+// This was a literal table under a comment saying "10 standard tracks × default racer". The comment
+// was TRUE when it was written and false from 2026-08-25, when GARDEN-PATH-DEFAULTS-1 changed that
+// track's `defaultRacerTypeId` from `snail` to `beetle` in `server/seeds/tracks/garden-path.json`
+// and nothing here followed. For eight days the project's primary change-detector for the RACE ran a
+// snail on a track the product runs with a beetle — so one of its ten tracks did not cover the
+// shipped race at all, while the combined hash carried on looking authoritative.
+//
+// SWAPPING snail FOR beetle WOULD HAVE REPRODUCED THE DEFECT the next time a default moves. The
+// premise — "these are the track defaults" — is what has to stop being a claim and start being a
+// read. The seed file is the one home for a track's default racer (`server/data/**` is a gitignored
+// runtime dir and is not a source), so the instrument asks it, every run.
+//
+// THE ORDER IS STILL FIXED and still matters: it feeds the combined hash, so the track ids are
+// listed here and sorted, and only the RACER half is resolved. A track added to the seeds does not
+// silently join this instrument — that would move the hash without anyone deciding to.
+const TRACK_IDS = [
+  "city-circuit",
+  "dirt-oval",
+  "garden-path",
+  "ice-track",
+  "luger-hill",
+  "mountainstreet",
+  "river-run",
+  "searound",
+  "seatrack",
+  "space-sprint",
 ];
+const TRACKS = TRACK_IDS.map((id) => {
+  const seedPath = join(ROOT, "server", "seeds", "tracks", `${id}.json`);
+  let racer;
+  try {
+    racer = JSON.parse(readFileSync(seedPath, "utf8"))?.defaultRacerTypeId;
+  } catch (e) {
+    throw new Error(
+      `fingerprint-default: cannot read ${seedPath} — the track defaults are read from the shipped ` +
+        `seeds and a missing one cannot be guessed. ${e.message}`,
+    );
+  }
+  if (typeof racer !== "string" || !racer) {
+    // LOUD, never a fallback. A silent default here would put this instrument back to racing a racer
+    // nobody chose, which is the exact defect being repaired.
+    throw new Error(
+      `fingerprint-default: ${id}.json has no defaultRacerTypeId. This instrument runs each track's ` +
+        `OWN default and will not substitute one.`,
+    );
+  }
+  return [id, racer];
+});
 
 // Stable stringify: sort object keys recursively so key order never affects the hash.
 function canon(v) {

@@ -145,6 +145,20 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
+> **2026-09-02 — THE WORLD FINGERPRINT CHANGED THAT DAY AND THE RACE DID NOT. NO TAG WAS CUT, AND
+> THAT IS DELIBERATE.** `FINGERPRINT-TRACK-DEFAULTS-1` re-minted the **world** and **world-off**
+> values because `scripts/fingerprint-default.mjs` had been racing a **snail** on garden-path since
+> 2026-08-25, eight days after the shipped seed changed that track's default to the **beetle**. **The
+> simulation was untouched** — no engine file, no default, no config, no seed is in that diff — and
+> the picture was untouched too: **camera and render are byte-identical across it**, which is the
+> check that proves it. Exactly one of the ten per-track hashes moved.
+>
+> **So SHIP-CEREMONY's world-changing half does not apply**: no REBASELINE, no SIM lineage entry for a
+> moved world, no golden re-pin. And no ship tag: a `v-ship-*` tag records a picture the owner judged,
+> and its worth is the return point — here there was nothing for his eye, and `^1` would restore an
+> instrument that races a snail. **A reader finding a moved world hash dated 2026-09-02 should not
+> conclude the race changed.** It did not.
+
 - `v-ship-aim-room` (`73053d25`, 2026-09-02) — **the ship.** The owner judged candidate B on
   production builds of `feat/aim-levers-1` on 2026-09-01 and 2026-09-02 and accepted the picture. The
   return point is `v-ship-aim-room^1`, and it restores a camera that places the leader at a constant
