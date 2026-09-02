@@ -230,6 +230,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SEED-117-SETTLE-1.md](SEED-117-SETTLE-1.md) — **the race IS the same; the step IS there; and
+  "not noticeable" is not what the data says** (2026-09-02, measure only). **(b) is ruled out**: at
+  seed 117 with the default roster the harness and `goldenRunner.realArm` — the browser-faithful arm
+  pinned byte-identical by `goldenRealArm.test.js` — give the **identical finishing order and finish
+  times to four decimals, largest difference 0.0000 s**. The roster was the last divergent input;
+  there is no second one to name. **But (a) as posed fails too.** At frame 1482 the zoom goes
+  **1.073 -> 2.133 (x1.99) in one frame**, the **visible world halves** (795x447 -> 400x225 world px)
+  and **five of twenty racers leave the picture**, at 42.7 s of a 60 s race. **The 5,311 px offset
+  reconciles with 15.5 px of leader movement** because the camera zooms about the WORLD ORIGIN — at
+  ~4,900 scaled px from it, a x2 zoom demands ~4,900 px of offset just to hold the subject still, so
+  `camStep` measures bookkeeping and not the picture whenever the zoom changes. **The honest reading
+  is a third one**: not invisible but UNREMARKABLE — no jump, no swing, no overshoot, no correction,
+  so it reads as the camera deciding to close in, which it does deliberately many times a race.
+  **One difference named and deliberately not swept**: the harness runs a fixed 60 Hz and the browser
+  runs on wall clock, and the same event took FOUR frames to arrive in another run — how abrupt it
+  looks depends on the frame durations the browser serves.
+
 - [SEED-PARITY-1.md](SEED-PARITY-1.md) — **the Quick-Test seed field means exactly what the harness
   seed means; the RACE does not, and five of the seven river-run races do not exist in the browser**
   (2026-09-02, measure only — no sweep, no fix, no behaviour change). The number is sound: a typed
