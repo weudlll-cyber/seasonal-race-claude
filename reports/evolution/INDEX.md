@@ -230,6 +230,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-LOST-1.md](AIM-ROOM-LOST-1.md) — **nothing stops the widening: the company guarantee asks
+  for one racer too few, because its anchor stopped being a racer** (2026-09-02, measure only;
+  nothing built or changed, ship branch untouched). Answers "what stops the widening before the
+  wanted number is visible" by following the number from the guarantee to the picture on the frames
+  where the promise breaks. **`companyGuarantee` computes `need = minVisible − 1` "because the anchor
+  itself is one of them" — and CAMERA-LATERAL-1 replaced the anchor with the track CENTRELINE point,
+  measured identical to `_centrelineAt(t)` (p50 0.00, max 0.00) and NOT any racer's position on
+  100% of frames.** So it is satisfied by one racer fewer than promised, and `state` wins the `min`
+  only because the state setting is already wider than company's understated request. **Candidates
+  eliminated by measurement**: the shot is not still travelling (delivered/target p50 **1.0000**, and
+  wider not tighter when it differs); the `room<=0` skip and the short-list fallback fire on
+  **0.00%**; and the anchor DOES miss its intended screen point on 100% of frames (p50 74 px, split
+  45 px composition / 59 px lerp) but **placing it correctly recovers only 11.55%**, leaving in-shot
+  at p50 **4.00** — exactly `need`. **The count IS reachable**: reading one index further down the
+  same sorted list keeps the promise on **100%** of frames on both tracks, at a cost of widening past
+  his LEADER_ZOOM setting by a median **1.33×** (p90 2.26×). **Revises AIM-ROOM-CEILING-1's reading
+  without contradicting its numbers** — `state` restrains nothing; the fetter is the `− 1`.
+
 - [AIM-ROOM-CEILING-1.md](AIM-ROOM-CEILING-1.md) — **on the broken-promise frames the fetter is the
   STATE's own zoom, and OVERVIEW does not set it — raising it would recover essentially nothing**
   (2026-09-02, measure only; nothing built, no setting changed, no value swept, ship branch
