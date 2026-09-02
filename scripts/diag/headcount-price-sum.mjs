@@ -18,6 +18,17 @@ const q = (a, p) => {
 };
 const f = (n, d = 2) => (Number.isFinite(n) ? n.toFixed(d) : "—");
 const pct = (n, tot) => (tot ? (100 * n) / tot : NaN);
+/** Runs of ADJACENT clipped frames. The residual is runs, so a per-frame reading overstates it. */
+const episodes = (rows) => {
+  let n = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (!rows[i].clipped) continue;
+    const cont = i > 0 && rows[i - 1].clipped && rows[i].frame === rows[i - 1].frame + 1;
+    if (!cont) n++;
+  }
+  return n;
+};
+
 /** A camStep is a PAN only between ADJACENT frames; a cut is not a pan. */
 const adj = (rows) => {
   const o = [];
@@ -36,6 +47,8 @@ const stat = (j) => {
     short: eligible.filter((r) => r.inShot < j.promise).length,
     eligible: eligible.length,
     clip: rows.filter((r) => r.clipped).length,
+    clipEps: j.races.reduce((n, r) => n + episodes(r.rows), 0),
+    bigStep: j.races.reduce((n, r) => n + adj(r.rows).filter((v) => v > 1000).length, 0),
     centre: rows.filter((r) => !(Math.abs(r.leaderExtra ?? 0) > 1e-9)).length,
     stepP99: q(steps, 0.99),
     stepMax: steps.at(-1) ?? 0,
@@ -45,9 +58,9 @@ const stat = (j) => {
 };
 
 console.log(
-  `| track | N | frames | in-shot p50 / p10 | promise kept | clip% | CLIP | centre% | step p99 | step max |`
+  `| track | N | frames | in-shot p50 / p10 | promise kept | clip% | CLIP EPS | centre% | step p99 | step max | pans>1000px |`
 );
-console.log(`|---|---|---|---|---|---|---|---|---|---|`);
+console.log(`|---|---|---|---|---|---|---|---|---|---|---|`);
 const widenAll = [];
 for (const t of TRACKS) {
   const pa = `${DIR}/hc-${t}-${A}.json`;
@@ -63,7 +76,7 @@ for (const t of TRACKS) {
   const row = (label, j, s) =>
     `| ${label} | ${j.seeds} | ${s.frames} | ${f(q(s.inShot, 0.5), 0)} / ${f(q(s.inShot, 0.1), 0)} | ` +
     `${s.eligible - s.short}/${s.eligible} (${f(pct(s.eligible - s.short, s.eligible))}%) | ` +
-    `${f(pct(s.clip, s.frames))} | ${s.clip} | ${f(pct(s.centre, s.frames))} | ${f(s.stepP99, 1)} | ${f(s.stepMax, 1)} |`;
+    `${f(pct(s.clip, s.frames))} | **${s.clipEps}** | ${f(pct(s.centre, s.frames))} | ${f(s.stepP99, 1)} | ${f(s.stepMax, 1)} | ${s.bigStep} |`;
   console.log(row(`**${t}** before`, ja, a));
   console.log(row(`${t} **after**`, jb, b));
   // PER-FRAME widening, on the frames both arms have.

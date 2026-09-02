@@ -145,6 +145,28 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
+- `v-ship-aim-room` (`PROVISIONAL`, 2026-09-02) — **the ship.** The owner judged candidate B on
+  production builds of `feat/aim-levers-1` on 2026-09-01 and 2026-09-02 and accepted the picture. The
+  return point is `v-ship-aim-room^1`, and it restores a camera that places the leader at a constant
+  **fraction** of the frame — which leaves the least road ahead of his nose exactly on the headings
+  where the frame is shortest, 261.8 px on space-sprint against 446.6 on river-run. It ships
+  `leaderAimRoomFloorPx` **0 → 360**, a FLOOR on that room which binds only where the chord is short;
+  the source-level wiring repair that makes `CameraDirector._anchorScreen` the one way the director
+  obtains an aim; and the **removal of candidate A**, the body aspect cap, which he rejected.
+  **Measured as a combination before merging**, because nobody had seen the floor and the repaired
+  company guarantee together: ten tracks at N=30 and four at N=300 against repaired master, with
+  **frame counts identical between arms on all ten at both N**. It restores clipped episodes of
+  **1052** on space-sprint against 771 after, and a centreline share of **71.20%** against **88.90%**.
+  **The restlessness it introduces is the floor's own and was attributed by a third arm**: seatrack's
+  whole-screen pans go 115 → 161 with the floor, and the floor-alone arm gives the identical 161, so
+  the repair neither adds to it nor removes it. **Carried forward and NOT fixed:** river-run gains
+  seven whole-screen single-frame pans where master has none (nine before the repair), and
+  `LEAD_CHANGE`/`OVERVIEW` p95 tracking lag are worse — an entry cost the floor recorded on its own.
+  Camera and render fingerprints move; **world and world-off do not**.
+
+  **The SHA is provisional here and is corrected to the merge commit after CI goes green**, per THE
+  SHIP ORDER step 11 — the same way `v-ship-leader-lateral`'s was.
+
 - `v-ship-company-headcount` (`9328886b`, 2026-09-02) — **the ship.** The owner judged the build on a
   production build (`59c6bb98`) on 2026-09-02 and accepted it, on the ground that he counts the racers
   he configured. The return point is `v-ship-company-headcount^1`, and it restores a picture in which

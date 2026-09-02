@@ -1011,7 +1011,27 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4c090b3e 2026-09-02 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6c049d86 2026-09-02 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-COMBINED-1, ON THE TREE THAT CARRIES BOTH THE AIM ROOM FLOOR AND
+THE REPAIRED COMPANY GUARANTEE (2026-09-02).** All six frame counts identical (8626, 159, 13282,
+8473, 4130, 2089). No byte-identical argument was available: both changes touch this directory and
+the CAMERA fingerprint moved.
+
+| state | repaired master | **combined** |
+| --- | --- | --- |
+| **LEADER_ZOOM** | 5.01 / 9.71 | **4.63 / 9.67** |
+| **LEAD_CHANGE** | 4.64 / 7.45 | 4.52 / **8.78** |
+| **OVERVIEW** | 2.75 / 16.00 | **2.87 / 18.54** |
+| BATTLE_ZOOM | 5.81 / 10.05 | 5.85 / 10.05 |
+| COMEBACK_ZOOM | 4.84 / 7.40 | 4.84 / 7.40 |
+| PHOTO_FINISH | 2.81 / 8.59 | 2.81 / 8.59 |
+
+`LEADER_ZOOM` improves on both percentiles, which is the state the floor aims at. **`LEAD_CHANGE`
+p95 and `OVERVIEW` p95 are worse, and they are the SAME two regressions the floor recorded on its
+own** — an ENTRY cost rather than a tracking one: a race enters those states from wherever
+`LEADER_ZOOM` left the camera, and the floor leaves it somewhere different. The combination carries
+them forward unchanged; it does not add to them.
+
 **RE-MEASURED IN FULL FOR COMPANY-HEADCOUNT-1, AND EXACTLY ONE NUMBER MOVED: `LEADER_ZOOM` median
 5.07 -> 5.01 pp (2026-09-02).** Every other figure is identical to the digit — both percentiles of the
 other five states, and all six frame counts (8626, 159, 13282, 8473, 4130, 2089). Run rather than

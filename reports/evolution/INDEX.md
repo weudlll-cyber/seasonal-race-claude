@@ -230,6 +230,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-COMBINED-1.md](AIM-ROOM-COMBINED-1.md) — **the floor and the repaired guarantee measured
+  TOGETHER before merging, against repaired master — and they do not fight** (2026-09-02, the gate for
+  shipping candidate B on top of COMPANY-HEADCOUNT-1). Both act on the same guarantee and every
+  published figure for either came from a tree where it was alone. **The promise does not fall back**:
+  at N=300 it holds or improves on three of four tracks (space-sprint 99.44% -> 99.46%, seatrack
+  98.84% -> 98.90%, river-run 99.88% -> 99.89%) and **mountainstreet slips 0.01 pp — 33 frames of
+  477,638** — reported, not treated as a stop. **B's gain survives**: clip episodes on space-sprint
+  1052 -> **771 (-281)** and centreline **71.20% -> 88.90%**. **Frame counts identical on all ten at
+  both N.** **THE RESTLESSNESS IS ATTRIBUTED, NOT GUESSED**: the combined tree adds whole-screen pans
+  (seatrack 115 -> 161), so a THIRD arm was measured — B alone on the unrepaired tree — and it gives
+  **161 and the identical maximum**, so the extra pans are entirely the floor's own cost and the repair
+  neither adds to nor removes them; the same arm shows B alone costs the promise (98.84% -> 97.06%)
+  and the repair recovers it and more. **The carried-forward river-run fault is smaller, 9 -> 7, and
+  still not fixed.** Priced against a correct baseline for the first time: the widening is bounded at
+  **~1.355x** everywhere, touching 1.5-26% of frames by track.
+
 - [AIM-ROOM-REPAIR-1.md](AIM-ROOM-REPAIR-1.md) — **the guarantees are told about the floor, the
   promise is kept again, and B's real price is visible for the first time** (2026-09-02, branch
   `ship/aim-room-floor-1`, **not merged, not minted**, handed back for his eye). Fixed **at the
