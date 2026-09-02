@@ -243,6 +243,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NO-SOURCE-OF-TRUTH-1.md](NO-SOURCE-OF-TRUTH-1.md) — **the four homeless facts re-counted against
+  the tree: one CLOSED, one HALF-REPAIRED, one still open, one that was never a group** (2026-09-02,
+  READ-ONLY and PROPOSE ONLY — nothing edited, staged or committed by this piece). CENSUS-DUPES-1's
+  headline **"Groups WITH NONE: 4"** does not hold at `ac1d7acc`. **B1** (`bodyFillX`/`bodyFillY` had
+  a home but no derivation) **closed the same day**, and it was established by RUNNING the repaired
+  audit tool, not by reading it — 20/20 agreement under the rule that authored the pins. **B2**
+  (`AUDIT_RENDERED_BODY_H`) is still open and only half-repaired: all 20 pins agree, but the credited
+  script still **never prints `displaySize x bodyFillY`**, so its stated provenance remains false and
+  a reader told to re-derive them has nowhere correct to look. **B3** (`surfaceClasses`) is unchanged
+  and still unread, with **6 of 10 differing** from the registry's field of the same name and two
+  tags (`space`, `garden`) that are **not surface classes anywhere in the repository**. **B4** (the
+  old `defaultDuration` column) **was mis-classified**: the census called it unverifiable, but the
+  key lived in the seeds between `83937c3e` and `9e41c2bd` and never changed value, so **10 of 10
+  reproduce exactly** — and the same table's speed-multiplier column checks 10 of 10 too. **The
+  pattern across all four is one thing: a comment asserting a provenance that nothing enforces.**
+  Verdicts: B2 and B4 CHEAP, B3 CHEAP, and B1's residual a **DESIGN DECISION** — which bounding-box
+  rule canonically defines a racer's body, given the editor would now measure five of them
+  differently. **Found while verifying, outside all four groups**: the parity soak threw on every
+  run; confirmed independently and fixed by [SOAK-ROSTER-1](SOAK-ROSTER-1.md). **NOT established**:
+  no suite was run for this piece, no sprite was eye-checked, and the other twelve census groups were
+  not re-audited.
+
 - [SOAK-ROSTER-1.md](SOAK-ROSTER-1.md) — **FINGERPRINT-TRACK-DEFAULTS-1's own repair broke the parity
   soak, the same way it fixed the fingerprint; found, measured at three points, and fixed**
   (2026-09-02). Making the soak's track axis read the shipped seeds (`fa553f50`) left its racer
