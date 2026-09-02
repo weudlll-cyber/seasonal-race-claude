@@ -230,6 +230,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-CEILING-1.md](AIM-ROOM-CEILING-1.md) — **on the broken-promise frames the fetter is the
+  STATE's own zoom, and OVERVIEW does not set it — raising it would recover essentially nothing**
+  (2026-09-02, measure only; nothing built, no setting changed, no value swept, ship branch
+  untouched). On the shortfall frames specifically — ten tracks, N=30 — **only two of the five terms
+  ever win the `min`: `state` 61.0% and `company` 39.0%**, pooled over 4,562 frames. `guarantee`,
+  `field` and `line` never won once, and `company` was never `Infinity`. **Where `company` itself
+  wins (39%) the geometry is short and no setting recovers it**; where `state` wins it sits up to
+  **0.31 ln tighter at p90** than company asked for, and that gap is the fetter. `state` on these
+  frames is `_leaderZoom`, built from the **LEADER_ZOOM** profile — `_overviewStateZoom` is a
+  separate field, and checked function by function it appears in **exactly one ceiling**,
+  `_fieldCeiling`'s retirement, which never won a frame. **Measured rather than read**: scaling
+  OVERVIEW's corridors by 1.5 recovers **2 shortfall frames of 2,345** on space-sprint and 11 of
+  1,148 on seatrack, with a control proving the setting applied (`_overviewStateZoom` changed,
+  `_leaderZoom` bit-identical). **Corrects an earlier answer given to the owner without checking** —
+  it read `_fieldCeiling`'s retirement and carried it across to the company guarantee, which has no
+  such clause. Raising OVERVIEW would widen the picture **everywhere that state is used** and not the
+  shots that break the promise: the expensive price for no gain.
+
 - [REGISTRY-LITERALS-1.md](REGISTRY-LITERALS-1.md) — **the copied racer literals are gone, the races
   did not move, and the engine-reach closure DOUBLED** (2026-09-02, the one ordered repair of the
   NIGHT-CENSUS-1 chain; **no minting permission given, none taken**). 124 literal values removed from
