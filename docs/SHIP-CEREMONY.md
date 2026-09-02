@@ -152,11 +152,16 @@ the racer types' `drawRacer`" until 2026-08-18, which told a reader that changin
 drawn is covered by an instrument. **It is not, in two independent ways, and both were measured
 rather than argued** (NIGHT-2026-08-18 finding 7):
 
-- **`racer-types/` is inside NO instrument's closure.** Walking each guard's declared `reach`
-  through `closureOf`: render 55 files, camera 36, world 36 — `racer-types/` appears in none, and
-  `engine-reach --check` on `SpriteRacerType.js` reports it cannot reach the engine. So a diff
-  confined to a racer type selects no fingerprint, and following this row by hand was the only way
-  it could ever have run.
+- **`racer-types/` is inside the WORLD instrument's closure, and NO other's — corrected 2026-09-02
+  (REACH-CLOSURE-COST-1); it was outside all three until then.** Walking each guard's declared
+  `reach` through `closureOf` today: **world 78 files, of which 36 are `racer-types/`**; camera 38
+  and render 58, neither containing one. `engine-reach --check` on `SpriteRacerType.js` now answers
+  **"is in the hull"**. **What this row said when it was written was true and is kept, because the
+  gap it describes is why the closure was closed**: until REGISTRY-LITERALS-1 (2026-09-02) the four
+  physical fields every racer carries were engine inputs that selected no instrument, and a diff
+  confined to a racer type could only be caught by following this row by hand. It no longer can be
+  missed — a racer's PHYSICS now selects the world fingerprint. **A racer's DRAWING still does not**,
+  which is the next row and is unaffected.
 - **Even when it runs, the instrument is blind to the sprite.** `RENDER-FINGERPRINT-1` §"blind to"
   says so: node has no `Image`, so the racer body falls back to its procedural branch and the blit
   is never recorded.
