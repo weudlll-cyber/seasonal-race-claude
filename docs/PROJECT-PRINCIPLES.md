@@ -30,7 +30,7 @@ Each domain concept has exactly one field name, one storage key, and one code pa
 Examples:
 
 - `racerTypeId` — not `racerId`, `racerType`, or `type`.
-- `racearena:racerTypes` — one key for racer-type cosmetics.
+- ~~`racearena:racerTypes` — one key for racer-type cosmetics.~~ **This key does not exist.** *(Corrected 2026-09-03: zero occurrences anywhere in `client/src` — control: the same query on `racearena:` in `storage.js` finds 27 real keys. It went with `racerTypeStorage.js` in `aa83fad4`, 2026-06-18, and the line stood for 76 days. Struck rather than deleted so a reader meeting the name in an older report can see it was retired and when.)*
 - `defaultRacerTypeId` on Track — one field for the default, not two dropdowns.
 
 Duplication of intent (parallel fields, parallel trail systems, parallel cache maps for the

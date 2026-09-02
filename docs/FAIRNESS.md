@@ -57,7 +57,7 @@ absolute share. A world is fairer than another if it lands more racers in their 
   director is also possible — to make the drawn ranks actually reachable AND to keep the race exciting.
 
   **THE SPLIT IS NOT ESTABLISHED.** No measurement anywhere attributes the 85–90% between the draw bias and the
-  controller: 47 reports mention `trajectoryMult` and none of them mentions it beside `bandBias`. Deciding
+  controller: many reports mention `trajectoryMult` and a few mention it beside `bandBias`. *(Corrected 2026-09-03. This read "47 reports … and NONE of them mentions it beside `bandBias`"; measured on that day it was 51 reports, of which 6 do mention both — both halves wrong. **No number replaces it**: `reports/` is append-only, so any count here rots on the next report, which is why the original was wrong rather than merely stale.)* Deciding
   whether to spend a sweep on it is the owner's call and has not been taken. **Do not quote either mechanism as
   the reason for the headline** — the honest statement is that both are present and the shares are unknown
   (FAIRNESS-PROMISE-1).
