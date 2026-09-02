@@ -43,7 +43,8 @@ export const GUARD = {
     "A TAG PUSHED WITHOUT TOUCHING TAGS.md IS INVISIBLE TO ROUTING — no file changed, so verify does not select this guard. The pre-commit hook and CI run it unconditionally, which is where that case is caught.",
     "RULE B: A BRANCH PUSHED OR DELETED TOUCHES NO FILE either, so routing cannot select this guard for it. Same answer as the tag half: the hook and CI run it unconditionally, and that is where Rule B actually fires.",
     "RULE B: a branch whose TREE is not available locally is reported UNJUDGED and does not fail. The post-merge case this rule exists for is always judgeable — you have just merged the objects — so the unjudgeable case is a branch pushed from another machine, where failing would cry wolf at a run that simply has not fetched.",
-    "RULE B compares PATHS, not contents. A branch that changes a file master also has, without adding or removing any path, is reported as contained. That is deliberate: step 12 asks whether deleting the branch loses WORK, and the ceremony's own shell asks the same question the same way.",
+    "RULE B compares (path, blob), not history. A branch whose every file matches master's byte for byte is reported as contained even if its COMMITS are not in master — which is the intended reading of step 12, since nothing is lost by deleting it. CORRECTED 2026-09-03: it shipped comparing paths ALONE, which reported every modify-only work-in-progress branch as deletable and failed on the next branch pushed after it shipped.",
+    "RULE B under-reports once master MOVES ON past a merge: the merged branch's blobs stop matching and it goes unreported. Step 12 is owed AT the merge, when they still agree, so the window this misses is one where the branch has already outlived the step meant to delete it.",
   ],
   dirs: [],
   files: ["docs/TAGS.md"],
@@ -112,16 +113,40 @@ function parseHeads(raw) {
   return heads;
 }
 
-/** Every path in a tree, or null when the object is not available locally to judge. */
-function treePaths(sha) {
+/**
+ * Every (path, blob) pair in a tree, or null when the object is not available locally to judge.
+ *
+ * ── PATH+BLOB, AND THIS IS A CORRECTION TO RULE B'S FIRST SHIPPED FORM (2026-09-03) ─────────────
+ *
+ * It shipped comparing PATHS ONLY, matching the shell SHIP-CEREMONY:346 writes out, and
+ * BUILD-RULE-B-1 recorded a deliberate decision to reject path+blob because it can under-report once
+ * master moves on past a merge. THAT REASONING WEIGHED THE WRONG RISK. A path-only comparison reports
+ * any branch that merely MODIFIES existing files as contained — which is what an ordinary
+ * work-in-progress branch looks like — so the guard failed on the very next branch pushed after it
+ * shipped, which happened to be this chain's own. A guard that fails on normal work gets disabled,
+ * and R11 already says a guard that cries wolf is worse than the gap it closes.
+ *
+ * THE CEREMONY'S SHELL IS NOT WRONG; IT IS USED DIFFERENTLY. A person runs it on ONE branch at merge
+ * time, having already decided that branch is finished. This guard runs on EVERY branch at origin,
+ * continuously, including ones nobody has finished. The stronger comparison is what that difference
+ * requires.
+ *
+ * THE COST IS STATED RATHER THAN HIDDEN: if master moves on after a merge, the merged branch's blobs
+ * stop matching master's and a genuinely deletable branch goes unreported. Step 12 is owed AT the
+ * merge, which is exactly when the blobs still agree — so the window this misses is the one where the
+ * branch has already outlived the step that should have deleted it.
+ */
+function treeEntries(sha) {
   try {
     return new Set(
-      execSync(`git ls-tree -r --name-only ${sha}`, {
+      execSync(`git ls-tree -r ${sha}`, {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       })
         .split("\n")
-        .filter(Boolean),
+        .filter(Boolean)
+        // "<mode> <type> <sha>\t<path>" → "<sha>\t<path>": content AND location, ignoring mode.
+        .map((l) => l.replace(/^\S+\s+\S+\s+/, "")),
     );
   } catch {
     return null;
@@ -310,19 +335,19 @@ if (headsError || heads.length === 0) {
 }
 
 const masterHead = heads.find((h) => h.name === "master");
-const masterPaths = masterHead ? treePaths(masterHead.sha) : null;
+const masterPaths = masterHead ? treeEntries(masterHead.sha) : null;
 const contained = [];
 const unjudged = [];
 if (masterPaths) {
   for (const h of heads) {
     if (h.name === "master" || h.name === "HEAD") continue;
-    const paths = treePaths(h.sha);
+    const paths = treeEntries(h.sha);
     if (!paths) {
       unjudged.push(h);
       continue;
     }
-    // CONTAINED = master's tree holds every path this branch's tree holds. Deliberately a question
-    // about CONTENT: a branch whose work is all in master has nothing left to lose by deleting.
+    // CONTAINED = master's tree holds every (path, blob) this branch's tree holds — the same CONTENT
+    // at the same place. A branch whose work is all in master has nothing left to lose by deleting.
     let extra = 0;
     for (const p of paths) if (!masterPaths.has(p)) extra++;
     if (extra === 0) contained.push(h);
