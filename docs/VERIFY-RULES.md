@@ -689,9 +689,19 @@ isolation.** A number alone can be wrong; it cannot mislead by comparison. A num
 number is an implicit claim that the two are comparable, and that claim is the thing nothing checks.
 
 **The instance it comes from.** NIGHT-1 needed the identity column and did not have it. The project
-has also been bitten by the same shape at the tool level: `corridor-truth` and
-`corridor-truth --company-only` print the SAME identity line and produce different numbers, so even
+has also been bitten by the same shape at the tool level: **`his-shot-truth` and
+`his-shot-truth --company-only`** print the SAME identity line and produce different numbers, so even
 a stated identity can be insufficient when the config is the thing that differs.
+
+**★ THE TOOL NAMED HERE IS CORRECTED, 2026-09-02 (RACE-IDENTITY-HASH-1).** This paragraph named
+`corridor-truth` from the day it was written. **`corridor-truth.mjs` has exactly one flag, `--json`**,
+and grepping it for `company` returns nothing at all; `--company-only` belongs to
+`his-shot-truth.mjs:47` and `camera-fingerprint.mjs:120`. The rule was right about the SHAPE and
+wrong about the tool — which is the very fault this rule exists to catch, sitting inside the rule.
+The real instance is also worse than the one described: `his-shot-truth` carries **four** arms under
+one identity line (`--company-only`, `--owner-unit`, `--min-racers=`, `--defaults`), not two.
+**The identity line now carries a `race=` hash** over the identity and the canonicalised camera
+config, so the two arms are distinguishable without anyone remembering this paragraph.
 
 **Adopted by the owner, 2026-08-23** (BACKLOG.md PART TWO D19). **There is no guard for it**, and
 that is not an oversight — "are these two numbers from the same run" is a question about meaning,

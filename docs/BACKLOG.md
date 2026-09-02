@@ -226,6 +226,25 @@ line numbers are the address; read the value there.
   `BehaviorTuningSection.jsx`. Every candidate above is reachable here today, and reaching them
   requires the Dev Screen — which is exactly what the order says is not enough.
 
+  **★ THAT LAST CLAUSE IS NO LONGER TRUE, AND THE REQUIREMENT IS MET — corrected 2026-09-02
+  (DOC-TRUTH-1).** The Dev Screen stopped being one undifferentiated developer surface: it has an
+  **operator tier**, and `client/src/screens/DevScreen/DevScreen.jsx:44-47` declares **Race Defaults**
+  with `tier: 'operator'`. Read at source today it is the FIRST operator-tier section and therefore
+  the landing section, and it is what writes `raceActionStage` into the stored race defaults
+  (`DevScreen.raceAction.test.jsx:68,123`). **So an ordinary operator reaches the dial without
+  developer access**, which is what the order asked for. **The owner confirmed on 2026-09-02 that
+  this satisfies his requirement.**
+
+  **What made it false, dated, because the sequence is the interesting part.** The sentence was
+  written on **2026-08-22** (`e826f23c`) and was TRUE that day. The operator tier already existed —
+  it landed 2026-08-17 — but there was no action control in it. **`RACE-ACTION-CONTROL-1`
+  (`b49bf4a5`, 2026-08-24) put `raceActionStage` into the operator-tier Race Defaults two days
+  later**, and this sentence was not revisited. **False for nine days.** It is kept rather than
+  deleted because the two surfaces it names are still the two surfaces, and because the ORDER it
+  records is what that commit was answering.
+  **Nothing else in this section changes** — open question 1, the mapping, is untouched: having a
+  home is not having a decision about what the dial does.
+
 ### The open questions — THREE OF FOUR ARE NOW ANSWERED (2026-08-23)
 
 **Struck rather than deleted, per D4.** Each answer names the decision that took it; the reasoning
@@ -601,8 +620,10 @@ nothing is designed here, no key is added, and no change is implied.
       made "did these two numbers come from the same race?" readable; a hash would make it
       mechanical, which matters because this project has been bitten three times by a human check
       everyone believed was happening. **The config must be in the hash, not just the identity** —
-      `corridor-truth` and `corridor-truth --company-only` print the SAME identity line and produce
-      different numbers, so identity alone is insufficient. Caveat: a hash nobody quotes is a dead
+      **`his-shot-truth`** and **`his-shot-truth --company-only`** print the SAME identity line and
+      produce different numbers, so identity alone is insufficient. *(This line named `corridor-truth`
+      until 2026-09-02; that script has one flag, `--json`, and never had this arm — corrected by
+      RACE-IDENTITY-HASH-1, which found it while building the hash.)* Caveat: a hash nobody quotes is a dead
       instrument (Lesson 196), so it is only worth adding alongside a convention that makes somebody
       quote it. **That convention now EXISTS** — the juxtaposition rule, adopted 2026-08-23 as
       [VERIFY-RULES.md R16](VERIFY-RULES.md). *(This line used to say "the convention below"; the
@@ -610,6 +631,16 @@ nothing is designed here, no key is added, and no change is implied.
       this file keeps paying for.)*
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE at `e4b2b075`:** no race-identity hash exists in any committed tree. **It is being built as this verdict is written** — tonight's **piece 13** has an uncommitted `raceHash` in the working copy of `scripts/lib/raceDriver.mjs`, which hashes the identity including the roster's NAMES plus the canonicalised camera config. This entry closes when that lands, not before.
+
+      **SUPERSEDED THE SAME NIGHT — ALREADY DONE (DOC-TRUTH-1, 2026-09-02):** it landed.
+      `raceHash(identity, cameraConfig)` is in `scripts/lib/raceDriver.mjs`, the config is REQUIRED
+      (there is no one-argument form and passing nothing throws), and `buildRace` stamps it so an
+      instrument printing after its build carries it with no edit — deliberately not a
+      hand-maintained list of instruments, which would have been the same defect one level up. Proven
+      to separate on the real pair: `his-shot-truth` shipped `race=4106f313b9d9` against
+      `--company-only` `race=015bb56cc425`, everything left of `race=` byte-identical. **One limit
+      found by running it and not resolved:** `--owner-unit` mutates the config PER TRACK, after the
+      line is printed, so a per-run hash cannot cover it. See RACE-IDENTITY-HASH-1.
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 

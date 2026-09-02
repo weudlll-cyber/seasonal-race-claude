@@ -463,9 +463,15 @@ pace: a faster default type lowers the ceiling (seatrack 60 → 44 s at dolphin'
 the normal speed — or choosing a slower type — relaxes it again. A shipped default never opens into
 a slowdown warning.
 
-garden-path is the visible consequence of restoring the type factor: at the snail's 0.3 it is a
+garden-path WAS the visible consequence of restoring the type factor: at the snail's 0.3 it was a
 deliberately leisurely **282.8 s**, close to its pre-ship 280.9 s. (Under the M⁰ model it had
-collapsed to 84.8 s.)
+collapsed to 84.8 s.) **CORRECTED 2026-09-02 (DOC-TRUTH-1): this sentence stated a CURRENT property
+and stopped being one on 2026-08-25**, when GARDEN-PATH-DEFAULTS-1 (`d73ec6a9`) moved that track to
+the **beetle** and **2 laps** — the same movement the table above already records, which this
+paragraph was not corrected with. Measured at the seed's present defaults: **70.7 s** through the
+driver, and the product's own estimate read in a browser is 71 s at 2 laps and 141 s at 4
+(GARDEN-PATH-FINISH-1, TESTS-WIRED-1). The ARITHMETIC above is unaffected — it is what the type
+factor does — but garden-path is no longer the track it happens to.
 
 **Stored settings do not break.** `loadBaseSpeedConfig()` merges the new `normalSpeedPxPerSec` over
 any pre-ship `{min, max}` entry and repairs an absent/non-positive value, so a legacy localStorage

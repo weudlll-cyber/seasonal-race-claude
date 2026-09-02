@@ -2,9 +2,22 @@
 
 One line per report: what it tried → verdict → the lesson/outcome. This is the lab journal's map. The reports
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
-and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`** = COMBO15 + margin hysteresis + lateral acceleration cap (lineage in [SIM.md](../../docs/SIM.md)).
+and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in [docs/fingerprints.json](../../docs/fingerprints.json)**, which is its one home — COMBO15 + margin hysteresis + lateral acceleration cap and everything minted since (lineage in [SIM.md](../../docs/SIM.md)).
 
 ## CORRECTIONS — findings that invalidate a number in a report below
+
+- **2026-09-02 — THIS INDEX'S OWN HEADER carried a world fingerprint that had been superseded TWICE,
+  and no guard could have caught it.** The line read *"Shipped world: `dc4647be0f55ebdb`"*. That value
+  stopped being the shipped world on **2026-08-25**, when GARDEN-PATH-DEFAULTS-1 (`d73ec6a9`) minted
+  `bc01b74fd4f3cfc8`, and again on **2026-09-02**, when FINGERPRINT-TRACK-DEFAULTS-1 (`a6030929`)
+  minted the value the record carries now. **False for eight days, across two mints.**
+  **`check-fingerprints` did not miss it — it is blind to it by declaration:** its own `blind` list
+  says *"superseded values, which living docs legitimately quote as history"*, and this sentence was
+  shaped exactly like history while reading as the present tense. **The repair is not a newer number.**
+  Restating a fingerprint anywhere but `docs/fingerprints.json` is what the one-canonical-home rule
+  forbids, and a corrected copy would simply rot again at the next mint — so the header now POINTS at
+  the record instead of quoting it. Established by DOC-TRUTH-1; **no report below is affected**, and
+  no fingerprint moved tonight.
 
 - **2026-09-02 — GARDEN-PATH-DEFAULTS-1's re-mint reasoning is CORRECTED: the racer half of that
   change could not reach the world fingerprint.** That mint argued all four values had to move because
@@ -393,6 +406,37 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **losing `matrix.json` throws, but losing the profiles is SILENT** — try/catch plus continue drops
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
+
+- [DOC-TRUTH-1.md](DOC-TRUTH-1.md) — **791 claims checked, 8 false, median age 9 days — and the worst
+  one was hiding in a guard's DECLARED blind spot** (2026-09-02; corrections only, nothing rewritten
+  for style or completeness, no fingerprint moved). **★ THIS INDEX'S OWN HEADER was one of the eight**:
+  it opened with `Shipped world: dc4647be0f55ebdb`, a value superseded on 2026-08-25 and again on
+  2026-09-02 — **false for eight days across TWO mints**. `check-fingerprints` did not miss it, it
+  **cannot see it and says so**: its `blind` list exempts *"superseded values, which living docs
+  legitimately quote as history"*, and this sentence was shaped exactly like history while reading as
+  the present tense. **The repair is not a newer number** — that would rot at the next mint, and
+  restating a fingerprint outside `docs/fingerprints.json` is what the one-canonical-home rule forbids
+  — so the header now POINTS at the record, and a correction sits in the CORRECTIONS block above.
+  **★ TWO OF THE EIGHT WERE NEVER TRUE**, false on the day they were written: `corridor-truth
+  --company-only` **has never existed on any branch at any point in history** — that script has one
+  flag, `--json` — yet it illustrated R16 and a BACKLOG entry for 28 days. The rule written to catch
+  two numbers that do not share an identity was illustrated with a tool that cannot produce them.
+  The other six: NIGHT-RUN's "103/103 green" (now 106 tests); ARCHITECTURE's garden-path *"is"* 282.8 s
+  at the snail (it runs the beetle at 70.7 s); the action dial *"requires the Dev Screen"* (Race
+  Defaults is `tier: 'operator'` since `b49bf4a5`); TRACK_LIFECYCLE asserting `defaultTracks.js` exists
+  while **ARCHITECTURE had said "NOT BUILT" for 23 days** — two living documents in flat
+  contradiction, which no tool compares; and R10's prune claim, corrected earlier tonight.
+  **What was checked and found TRUE is reported too**, because a census that lists only its hits
+  cannot be audited: SHIP-CEREMONY's racer-types claim is already correct (and its 76-vs-78 pair is
+  two different closures, both right); **FORCE-MAP's 48 symbols absent from source are every one of
+  them under a heading marked REMOVED** — accusing it would have been the easiest wrong answer of the
+  night; ENVIRONMENT, AUTH, DEPLOYMENT, SETUP, README, CLAUDE.md's quotation inventory,
+  DEVSCREEN-INVENTORY's five SubCards and DEAD-ENDS' tags all stand. **The method is the finding as
+  much as the count:** an earlier sweep of all 483 path-shaped strings returned 111 "missing" files,
+  nearly all relative references, and **was discarded rather than reported**; and every null result
+  rests on a control, after one grep found zero tags in DEAD-ENDS and nearly reported a clean sweep of
+  an empty set. **1 in 99 is a LOWER bound** — a described mechanism that quietly stopped matching its
+  code is invisible to every method used here.
 
 - [PUBLISH-STEPS-1.md](PUBLISH-STEPS-1.md) — **one of the three closes mechanically; the other two
   cannot be closed without changing HIS OWN setup, so they are proposed** (2026-09-02; his startup
