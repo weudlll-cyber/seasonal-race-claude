@@ -347,8 +347,28 @@ server with no warning, and the picture still looks plausible.
 **The practical consequence for the agent:** if a block needs the tree on a different branch while a
 judgement is pending, use a `git worktree` at a SHORT path outside the OneDrive tree
 (`git worktree add C:/ra-wt <branch>`), not a checkout in the main tree. Long paths under the
-scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
-are the reparse-point condition recorded in the backlog.
+scratchpad still fail on this machine.
+
+**`git worktree prune` DOES work here, and the recipe is three lines (corrected 2026-09-02,
+WORKTREE-STUBS-1).** This paragraph said for four months that prune "cannot delete the stale stubs
+here". That was true of every attempt anyone had made and false as a statement about the machine.
+The blocker is the ReadOnly attribute on the stub's DIRECTORIES — and **`attrib -R /s /d` does not
+clear it on nested subdirectories**, which is the whole trap: the recursion flag looks like it
+recurses and does not. Name each level:
+
+```
+attrib -R /d .git\worktrees\<name>
+attrib -R /d .git\worktrees\<name>\logs
+attrib -R /d .git\worktrees\<name>\refs
+git worktree prune
+```
+
+**★ AND THE REAL HAZARD IS NOT THE STUB, IT IS A JUNCTION.** A stub is inert metadata. What actually
+cost this project something was `git worktree remove --force` run while a worktree had the main
+tree's `client/node_modules` junctioned into it: it walked through the link and deleted into the real
+tree, emptying `node_modules/.bin` (81 shims → 0) before Windows stopped it (SIDE-FREE-CULL-1,
+2026-08-27). **Do not junction `node_modules` into a worktree.** If you already have, remove the
+junction BEFORE removing the worktree — never the other way round.
 
 **Why it is safe — and why it is not optional.** This has now cost him two test runs in one evening.
 The failure mode is silent by construction: the dev server serves the WORKING TREE, so a branch
@@ -360,8 +380,9 @@ times, and it was not read.
 **The practical consequence for the agent:** if a block needs the tree on a different branch while an
 eye test is pending, use a `git worktree` at a SHORT path outside the OneDrive tree
 (`git worktree add C:/ra-wt <branch>`), not a checkout in the main tree. Long paths under the
-scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
-are the reparse-point condition recorded in the backlog.
+scratchpad still fail on this machine. **`git worktree prune` DOES work here** — the recipe, and the
+junction hazard that matters far more than the stub, are stated once above under R10's first
+worktree paragraph and are not repeated.
 
 ## R11 — If a guard disagrees with a sentence, the GUARD is the first suspect
 

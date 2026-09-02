@@ -394,6 +394,37 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [WORKTREE-STUBS-1.md](WORKTREE-STUBS-1.md) — **the attribute question is settled YES, the count is
+  now ZERO, and the trap was the RECURSION FLAG rather than the attribute** (2026-09-02; every
+  deletion performed by `git worktree prune` itself, no tracked file touched by it, tree clean
+  throughout, `fsck` shows only ordinary dangling objects). ★ **`attrib -R /s /d` does NOT clear
+  ReadOnly on nested subdirectories, and exits 0 either way** — `/s` recurses for FILES, `/d` applies
+  to folders at the level given, and together they leave `logs/` and `refs/` still ReadOnly. That is
+  the whole four-month mystery: the flag looks like it recurses, does not, and reports success. Name
+  each level (`attrib -R /d` on the stub, on `logs`, on `refs`, then `prune`) and it works. Proven on
+  ONE stub first, as the brief asked, in the cleanest possible form: `prune` deleted `ra-p3` with **no
+  error line** while still failing on the two that were untouched. **3 → 0**, which is the backlog
+  entry's own verify condition. **On "without touching anything OneDrive syncs": strictly no** —
+  `.git/` is inside the OneDrive folder — and the real question, whether it can reach anything else,
+  was answered before acting: `dir /s /al` found **no reparse point, junction or symlink** anywhere
+  under `.git/worktrees`. **The upstream fix needed no code:** searching every executable file finds
+  **exactly one** creator of a worktree, `buildIdentityWorktree.test.js:132`, and it is already safe —
+  its cleanup path is pushed to `temps` BEFORE the operation that creates it, and its main tree is a
+  `mkdtempSync` under `tmpdir()`, so its stub lands in `%TEMP%` and can never reach this repository.
+  Proven: **0 stubs before, 0 after**, 7 tests green, no `%TEMP%` leftovers. The actual creators are
+  people following VERIFY-RULES R10's own instruction, and **a practice cannot be given a `finally`**,
+  so the guarantee was written where the practice is written. ★ **THE HARDER LESSON: the stub is not
+  the hazard, the junction is.** A stub costs one inert directory; `git worktree remove --force` over
+  a junctioned `client/node_modules` walked through the link and emptied the real tree's
+  `node_modules/.bin`, **81 shims to 0**, announcing itself only when the next commit could not find
+  `lint-staged`. **So the honest conclusion is NOT "stop using worktrees here"** — the checkout was
+  never the problem and the stub is now three lines — **it is "never junction `node_modules`, and if
+  one exists remove it before the worktree."** `prune` was NOT added to the ship ceremony as
+  instructed, but **the brief's reason for that instruction ("it already fails here") is now false**
+  and that is the owner's call, not one to take unasked. `docs/BACKLOG.md` was deliberately not
+  edited — piece 9 was rewriting it concurrently and two writers on one file is the one thing the
+  chain forbids outright.
+
 - [GARDEN-PATH-FINISH-1.md](GARDEN-PATH-FINISH-1.md) — **the cause was the RACER-TYPE input, it was
   removed on 2026-08-25, and the brief's symptom NO LONGER EXISTS: ten of ten tracks finish 40/40**
   (2026-09-02, diagnose only — nothing built, nothing repaired, the ceiling NOT raised). Driven
