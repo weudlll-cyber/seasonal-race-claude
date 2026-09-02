@@ -333,6 +333,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
   the soak was started, not run.
 
+- [HOMELESS-HOMES-1.md](HOMELESS-HOMES-1.md) — **do B2, drop B3 — and the reason to do B2 is not
+  the defect that was filed** (2026-09-02, read-only, PROPOSE ONLY; nothing built). Following
+  NO-SOURCE-OF-TRUTH-1's half-repaired and open groups to a proposal. **B2 `AUDIT_RENDERED_BODY_H`
+  needs NO new home, and that is the answer**: `renderedBodyH` is the PRODUCT of `displaySize` ×
+  `bodyFillY`, each of which already has one home, and under R14 a derived value gets a derivation,
+  not a home — two edits, one column in the existing audit print row and one false provenance
+  comment. The 20 pins stay as a frozen witness. **B3 `surfaceClasses` in `goldenRunner.mjs`: the
+  honest home is NONE** — the registry disagrees on 6 of 10, the seeds match neither, and two of its
+  values are surface classes nowhere in the tree, so the field should be deleted rather than housed.
+  **The recommendation is B2, for a THIRD defect found while costing it**: the test is titled ±5%
+  while asserting `toBeCloseTo(x, 1)`, which is ±0.05 ABSOLUTE — **33× tighter than its own title** —
+  and buggy currently passes it by 2.8e-15. That is a live tripwire on a race input which the next
+  rounding change will fire, and when it does the reader is misdirected twice. Cost: 2 files, no
+  hull, no fingerprint, no new guard. **B3 is dropped**: `goldenRunner.mjs:163-169` already annotates
+  the field as unread and invented, so nobody can be misled, and it has been declined three times on
+  purpose. Two caveats the report raises against its own sources: `engine-reach --check` exit 1
+  conflates "outside the hull" with "in the hull but inert", and NO-SOURCE-OF-TRUTH-1's "18 tag
+  values" is actually 13.
+
 - [DEAD-OR-ALIVE-1.md](DEAD-OR-ALIVE-1.md) — **five of the six suspected-dead items are ALIVE, one
   is two-thirds dead, and NOTHING was removed** (2026-09-02, read-only; the six rows taken verbatim
   from CENSUS-REMOVABLE-1's "LOOKS DEAD, NOT PROVEN" table, none invented). The **11 zero-reference
