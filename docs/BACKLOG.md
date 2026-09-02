@@ -810,7 +810,7 @@ rather than a threshold nobody has found yet.**
 
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
-here because BACKLOG now owns the open work and ROADMAP is a phase-status table.
+here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns nothing — it was a phase-status table when this block was moved, and ROADMAP-FOLD-2 (`c49d5af5`, 2026-08-27) folded that table in here too. *(Corrected 2026-09-03: this sentence contradicted line 3 of this same file, which has said REDIRECT since that fold. Found as a SECOND SITE of the same claim in README.md, not on its own.)*
 
 **verify (section-wide):** none can exist — **nothing here is built, and no command can check the
 absence of a server that was never started.** Each item leaves by being built, not by being checked.

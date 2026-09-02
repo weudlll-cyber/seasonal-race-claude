@@ -51,8 +51,11 @@ export function computeAutoScaleFactor(trackWidth, racerCount, config) {
  *
  *   1. This file is inside the ENGINE REACH — the transitive closure of `raceCore.js`'s imports,
  *      the set the mint tripwire and `npm run verify` both route on. Importing from `camera/` would
- *      pull the projection module INTO that closure, growing it from 19 files and changing what
- *      every future block is asked to mint for.
+ *      pull the projection module INTO that closure, growing it and changing what every future
+ *      block is asked to mint for. (The closure's SIZE is generated in SHIP-CEREMONY.md and is
+ *      deliberately not stated here. This comment read "from 19 files" until 2026-09-03 — a
+ *      figure last true before 2026-08-15, found as a SECOND SITE of the same stale count in
+ *      VERIFY-RULES R1, not on its own.)
  *   2. It would breach the one-way rule (CAMERA_DIRECTOR.md §1): the camera imports from the
  *      modules, never the reverse.
  *

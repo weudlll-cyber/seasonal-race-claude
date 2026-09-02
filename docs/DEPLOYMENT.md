@@ -90,18 +90,30 @@ curl -X POST https://racearena.example.com/api/auth/setup \
 ## Docker
 
 `docker compose build` supplies the client build to the image through a **named build context**. The
-image's build context is `./server`, and `client/dist` lives outside it, so an ordinary `COPY` cannot
-reach it; `additional_contexts: { client: ./client }` in `docker-compose.yml` brings it in without
-moving the build context to the repository root.
+image's build context is **the repository root** (`context: .` in `docker-compose.yml`), and
+`client/dist` is a BUILD ARTEFACT rather than source — the root `.dockerignore` is an allow-list of
+source — so `additional_contexts: { client: ./client }` keeps it an explicit input rather than
+something that must happen to be lying in the tree.
+
+*(Corrected 2026-09-03. This said the context is `./server` and that the named context avoids "moving
+the build context to the repository root". IMAGE-STANDALONE-1 moved it to the root on 2026-09-01, so
+the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own header states it.)*
 
 **Consequences worth knowing before you build:**
 
 - **Run `npm run build` in `client/` first.** The image copies a build, it does not make one. Without
   it the build fails on the missing `dist/`.
-- A manual build outside compose needs the context by hand:
-  `docker build --build-context client=./client ./server`.
-- The image is **not standalone**: `server/utils` and the repository-root `shared/` are supplied by
-  bind mounts, so the container still needs the repository beside it. Closing that is separate work.
+- A manual build outside compose needs the context by hand, **from the repository root**:
+  `docker build --build-context client=./client -f server/Dockerfile .`
+  *(Corrected 2026-09-03: the old command ended `./server`, which builds the wrong context since
+  IMAGE-STANDALONE-1 moved it to the root.)*
+- The image **IS standalone**: `server/utils/` and `shared/nameLimits.mjs` are COPYed in
+  (`server/Dockerfile:32` and `:42`), so it runs with no mounts and no repository beside it.
+  *(Corrected 2026-09-03. This said the opposite — that both came from bind mounts and that closing
+  it was "separate work" — and IMAGE-STANDALONE-1 and COPY-UTILS-1 closed it on 2026-09-01.
+  `docker-compose.yml` already stated the property this denied: "run the image with no mounts at all
+  and it works." Verified by running it: `docker run` with no mounts and no environment serves the app
+  and answers the API — PUBLISH-STEPS-1.)*
 
 ## Notes
 
