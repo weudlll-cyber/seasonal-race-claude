@@ -24,7 +24,7 @@ seasonal-race-claude/
 │       │   │       ├── overlayRendering.js     # Title, lap info, countdown, finish overlays
 │       │   │       ├── particleRendering.js    # Dust/burst particles, surface trails
 │       │   │       ├── racerRendering.js       # Racer sprites, name tags
-│       │   │       ├── priorityModeOverlay.js  # Priority mode debug rings + info box
+│       │   │       ├── startBoardRendering.js  # start board (priorityModeOverlay.js was DELETED with the 4-mode priority system, f3116226 2026-06-28; startBoardRendering.js was present and unlisted — corrected 2026-09-03)
 │       │   │       ├── battleDiagRendering.js  # Battle diagnostics world-space markers
 │       │   │       └── trackRendering.js       # Track surface (pre-existing)
 │       │   ├── ResultScreen/       # Post-race podium and history
@@ -66,7 +66,7 @@ seasonal-race-claude/
 │       │   │   ├── spriteLoader.js         # Async image loader with module cache
 │       │   │   ├── spriteTinter.js         # Offscreen-canvas tinting; detectTintMode (luminance-based auto); tintSpriteWithMask for mask-restricted mode; pattern overlay infrastructure (stripes/dots disabled — solid only active)
 │       │   │   ├── coatAssignment.js       # Hash-based coat + pattern selection (assignCoat, assignPattern — pattern always returns 'solid')
-│       │   │   ├── racerTypeStorage.js     # localStorage CRUD for user-created racer types (key: racearena:racerTypes)
+│       │   │   │   (racerTypeStorage.js was REMOVED, aa83fad4 2026-06-18 — neither the file nor its key racearena:racerTypes exists; listed here until 2026-09-03)
 │       │   │   ├── trailStyles.js          # Named trail-factory presets (dust, spark, bubble, leaf, snow, fire)
 │       │   │   ├── standardCoats.js        # STANDARD_COAT_PALETTE — 20-color coat array for vehicle racer types (animal types use own 11-color palettes)
 │       │   │   ├── spriteAnimations.js     # Pure animation math: computeFrameTransforms(frameIndex, N, config) → {rotate, scaleX, scaleY, translateX, translateY, shearX, shadowScale}
@@ -79,8 +79,8 @@ seasonal-race-claude/
 
 │       │   ├── surface-effects/    # Visual Racer Effects system (shipped — VRE-1..4, surface classes live)
 │       │   │   ├── index.js              # listSurfaceClasses / getSurfaceClass / getSurfaceClassApi
-│       │   │   ├── defaultClasses.js     # 9 default Surface Class definitions (code constants)
-│       │   │   ├── surfaceClassApi.js    # GET/POST/PUT/DELETE /api/surface-classes
+│       │   │   ├── defaults.js           # 9 default Surface Class definitions (DEFAULT_SURFACE_CLASSES) — named defaultClasses.js here until 2026-09-03, a file that has NEVER existed on any branch; docs/API.md already named it correctly
+│       │   │   │   (surfaceClassApi.js is at client/src/services/, never here — corrected 2026-09-03)
 │       │   │   └── generators/           # Generator modules
 │       │   │       ├── particle.js       # Individual point/circle particles
 │       │   │       ├── cloud.js          # Soft, growing, fading blobs
@@ -170,7 +170,7 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **EditorShape center-path geometry (fix/centerline-perpendicular, 2026-05-29)** — For tracks with `centerPoints`, `getPosition(t, offset)` uses a dedicated center-curve path: `centerPoints` are Catmull-Rom arc-length resampled with the same `opts` as `_inner`/`_outer`. At `offset = 0`, the center curve position is returned directly. At `offset ≠ 0`, the perpendicular displacement uses `angle − π/2` (CW in canvas y-down = toward outer side, matching the fallback convention) scaled by `track.width` from the JSON (not `getActualTrackWidth()`, which measures inner-to-outer distance and is correct for row layout but not for center-perpendicular displacement). `_precomputeAngles` uses `_center[i]` central differences when `_center` is available, eliminating up to 25.6° tangent error at tight U-turns caused by inner/outer arc-length phase misalignment (inner arc ≈ 600 px vs outer ≈ 1400 px through Luger Hill's tightest bend — at the same arc-length fraction, inner is past the apex and outer has not yet reached it). Fallback (no `centerPoints`): inner/outer interpolation unchanged — zero regression. See Lessons 97–100.
 - **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdPx` of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
-- **RaceScreen draw-function extraction (hygiene sprint, 2026-05-25)** — All non-trivial canvas draw functions have been extracted from `RaceScreen/index.jsx` into `RaceScreen/drawing/` modules: `overlayRendering.js` (title/lap/countdown/finish overlays), `particleRendering.js` (dust, bursts, surface trails), `racerRendering.js` (sprites, name tags), `priorityModeOverlay.js` (priority debug), `battleDiagRendering.js` (battle diagnostics). `index.jsx` dropped from 1853 → 1460 lines. `drawEditorTrackSurface` remains in the pre-existing `drawing/trackRendering.js` (finish-line only since the Race Track Lights PR).
+- **RaceScreen draw-function extraction (hygiene sprint, 2026-05-25)** — All non-trivial canvas draw functions have been extracted from `RaceScreen/index.jsx` into `RaceScreen/drawing/` modules: `overlayRendering.js` (title/lap/countdown/finish overlays), `particleRendering.js` (dust, bursts, surface trails), `racerRendering.js` (sprites, name tags), `battleDiagRendering.js` (battle diagnostics). *(This list named `priorityModeOverlay.js` until 2026-09-03; it was deleted with the 4-mode priority system, `f3116226` 2026-06-28.)* `index.jsx` dropped from 1853 → 1460 lines. `drawEditorTrackSurface` remains in the pre-existing `drawing/trackRendering.js` (finish-line only since the Race Track Lights PR).
 - **Track Lights** — Small glowing dots along both boundaries replace the solid cyan boundary lines. Light positions are cached once at race init via `sampleBoundaryAtInterval` (30 px spacing, ~400 points total for typical tracks). Per-frame, only brightness is recomputed per style (`steady`, `sequence`, `sync_pulse`, `random_flash`). Implementation: `client/src/modules/trackLights.js`. Configuration stored as `trackLights` on track geometry; editable in Track Editor; server-migration sets themed defaults on first startup.
 - **Racer Editor — user-created racer types via PNG upload (Racer Editor Phase 1+2, 2026-05-28)** — Users can create custom racer types at `/racer-editor` without code changes. Workflow: upload a PNG sprite sheet → background removal (flood-fill, tolerance) → animation preview (7 primary types × configurable amplitude + 2 add-ons) → metadata → save. Saved types are stored in localStorage under `racearena:racerTypes` as JSON with a `spriteDataUrl` (data URL). On load, user types are merged into the registry alongside built-in types. `SpriteRacerType` accepts user configs identically to built-in configs. `spriteTinter.detectTintMode` auto-selects multiply vs screen compositing based on average luminance of the base sprite.
 
@@ -282,7 +282,9 @@ So:  1 physicalY unit = trackWidth / 2  world pixels
 
 Conversion helpers (raceBehavior.js, top of file):
   pxToPhysicalY(px, trackWidth)  = px  / (trackWidth / 2)
-  physicalYToPx(phy, trackWidth) = phy * (trackWidth / 2)
+  pxToPhysicalY(px, trackWidth)  = px / (trackWidth / 2)   — physicalYToPx was REMOVED (f3116226,
+  2026-06-28) and stood here until 2026-09-03. SECOND SITE of invariant #2 below, which DOC-TRUTH-2
+  filed together with this line and which was repaired alone.
 ```
 
 **ALL lateral physicalY ↔ pixel conversions must go through these helpers.** Using raw `× trackWidth` or `/ trackWidth` misses the factor of 2 and is a real production bug (the BLOCKED-mode off-by-2 caused the blocked state to fire at half the intended pixel distance).
@@ -642,7 +644,7 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 
 **Key files:**
 
-- `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
+- `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController` *(a third name, `computeBereichsBonusMap`, stood here until 2026-09-03: it occurs nowhere in the tree — control, `createTrajectoryController` finds 2 — and it was also German, which the language rule forbids)*
 - `screens/RaceScreen/index.jsx` — Race Plan activation, `areaBonusMult` in physics loop, fade logic
 - `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
 - `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
@@ -818,7 +820,7 @@ createGenerator(config) → (x, y, speed, angle, surfaceClass) → Particle[]
 
 A Surface Class references one generator and configures its parameters (color, size, lifetime, spawn rate, etc.). New classes can be added in the UI without code changes, as long as a matching generator exists.
 
-**9 Default Surface Classes (code constants in `defaultClasses.js`):**
+**9 Default Surface Classes (code constants in `surface-effects/defaults.js`):** *(named `defaultClasses.js` here until 2026-09-03 — a SECOND SITE of the same never-true filename, corrected with it)*
 
 | id        | Display Label | Generator  |
 | --------- | ------------- | ---------- |

@@ -434,6 +434,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [CORRECTIONS-1.md](CORRECTIONS-1.md) — **34 of the ninety applied, 0 refuted, and the second-site
+  sweep found 5 more plus a product defect** (2026-09-03; each verified at the tree first, `verify`
+  PASS 15 FAIL 0, nothing minted). ★ **The dangerous class is VALUES, and the guard is not looking at
+  it**: `check-config-claims` exists to stop a document copying a config value and its own declared
+  blind spot is "config objects other than the CAMERA one" — **every wrong value found is in another
+  object**, which is how `reRollVariationPercent`/`TransitionDuration`/`IntervalDivisor`/
+  `LastPositionPercent` sat in FORCE-MAP as **58 / 5.0 / 15 / 80** against a shipped **75 / 3.0 / 10 /
+  95** for 63 days, under a header promising that file states structure and never values. Where the
+  value WAS the claim the number is not replaced — the line now points at `defaults.js`, the only form
+  that cannot rot again. **Nine things that do not exist** were named as if they did, four of them
+  **never** on any branch (`defaultClasses.js` twice, `surface-effects/index.js`, that folder's
+  `surfaceClassApi.js`, `racer-types/canvasUtils.js`), each absence proved against a control that
+  returns something. **Four documents contradicting themselves or each other**, including
+  `ENDING-PHASES` saying a figure is "UNVERIFIED — see the note under the phase table" while that note,
+  **at `:198` of the same document**, says it "was wrong" and gives the measurement — written by the
+  same commit, 15 days apart in the same file. ★ **FIVE SECOND SITES, none previously filed**,
+  including a **code comment** outside both censuses' 34-document scope, and `ARCHITECTURE:285` — which
+  DOC-TRUTH-2 filed together with `:309` and where **only `:309` was repaired last night**, the exact
+  defect SECOND-SITES-1 had just measured at 52%. ★ **A PRODUCT DEFECT, FOUND AND NOT TOUCHED**:
+  `DynamicsTuningSection.jsx:1233-1237` labels the `choreoOutcomeStart` control "(0.25–0.55)" with
+  `max: 0.55` and a tip saying "0.5 = shipped" — **the shipped value is 0.6, outside the slider's own
+  range**, so the control cannot reach where the game runs. Changing a range is a product judgement;
+  correcting only the label would be worse than the inconsistency. **Zero of the 34 were refuted**, but
+  one line number had drifted and was relocated rather than trusted, and one proposal was superseded by
+  a better repair already applied. **56 remain**, ~54 of them line-number drift — named as the
+  lowest-value class and deliberately not done as a batch of hand edits, since each correction needs a
+  new line number that will drift again and the real repair is structural.
+
 - [FIELD-RETIRED-1.md](FIELD-RETIRED-1.md) — **the retirement is visible from outside now, and all
   four fingerprints are byte-identical** (2026-09-03; two lines of published state, **no check
   built**; `verify` PASS 14 FAIL 0, camera director 388/388). ★ **What was missing was NOT

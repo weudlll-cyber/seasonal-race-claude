@@ -253,8 +253,12 @@ reason is in the source beside it.
 
 - **#1 the photo-finish check** — a predicate on the race, not a duration.
 - **#6 the wait for the stragglers** — it ends when the last racer arrives. Its length is a property
-  of the RACE, and the fair-arrival world makes it short on purpose (the ~2.9 s figure is
-  UNVERIFIED — see the note under the phase table).
+  of the RACE (the note under the phase table has the MEASURED figures; it is not ~2.9 s).
+  *(Corrected 2026-09-03: this said "the ~2.9 s figure is UNVERIFIED", while the note it points at —
+  at `:198` of this same document — says that figure "was wrong" and gives the measurement that
+  replaced it. `de524663` (STRAGGLER-TRUTH-1, 2026-08-19) wrote the correcting note higher up and did
+  not update this back-reference, so the document contradicted itself for 15 days. The numbers are
+  deliberately not restated here — the note is their one home in this file.)*
   A "wait longer" control here would either do nothing (everyone is already home) or hold a still
   picture while pretending to wait for arrivals that have happened. `finishHoldAfterLastMs` (#7) is
   the honest version of that wish and is named for what it actually does.
