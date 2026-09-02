@@ -434,6 +434,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [B2-HOME-1.md](B2-HOME-1.md) — **it needed no home; it needed a DERIVATION, and the credit is true
+  for the first time** (2026-09-03; both changed files outside the engine hull, `verify` PASS 9 FAIL 0,
+  racer-types integration 21/21). **The precondition was met, so it was built rather than proposed:**
+  `AUDIT_RENDERED_BODY_H` is read by **one test file and nothing else**, so nothing the product reads
+  at race time changed. ★ **B2's single home is that it does not get one.** `renderedBodyH` is
+  `displaySize × bodyFillY` — the PRODUCT of two registry fields that each already have one home — and
+  under R14 a derived value is owed a derivation, not a home; giving it one would create the second
+  definition that rule forbids. The test's comment credited `audit-sprite-crops.mjs`, **which has never
+  emitted this number**; the repair is ONE COLUMN, since both factors were already in scope on that
+  tool's print row. It now prints horse 37.60, duck 31.50, snail 32.83 against pins of 37.6 / 31.5 /
+  32.8 — **the credited tool produces the numbers it was credited with**, so the derivation can be
+  re-run rather than trusted. ★ **The defect that made it worth doing was not the one filed.** The
+  filed defect — a false script credit — is inert. The test is TITLED "within ±5%" while asserting
+  `toBeCloseTo(x, 1)`, i.e. **0.05 px ABSOLUTE, 33× tighter**, and **buggy passes by 5.00e-2 against a
+  0.05 bound** — floating-point dust. A live tripwire on a race input, which when it fires misdirects
+  the reader twice. **The two false statements are corrected and the TOLERANCE IS DELIBERATELY NOT
+  LOOSENED**: choosing how much drift is acceptable in a race input is the owner's judgement, so the
+  hazard is written where the next reader meets it, with its measured margin. One stale sentence found
+  and left: `BACKLOG.md:787`'s "has NEVER agreed" was repaired on 2026-09-02 and sits in a closed
+  entry. B3 is left as a proposal, as the brief instructed.
+
 - [CORRECTIONS-1.md](CORRECTIONS-1.md) — **34 of the ninety applied, 0 refuted, and the second-site
   sweep found 5 more plus a product defect** (2026-09-03; each verified at the tree first, `verify`
   PASS 15 FAIL 0, nothing minted). ★ **The dangerous class is VALUES, and the guard is not looking at
