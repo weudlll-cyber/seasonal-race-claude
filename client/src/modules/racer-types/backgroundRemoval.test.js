@@ -11,6 +11,7 @@ import {
   hasTransparentBackground,
   sampleColor,
   removeBackground,
+  computeOpaqueBoundingBox,
   computeSpriteBoundingBox,
   computeSpriteOffset,
 } from './backgroundRemoval.js';
@@ -50,6 +51,50 @@ describe('computeSpriteBoundingBox', () => {
   it('returns null for a fully transparent ImageData', () => {
     const img = makeImageData(8, 8, () => [0, 0, 0, 0]);
     expect(computeSpriteBoundingBox(img)).toBeNull();
+  });
+});
+
+describe('computeOpaqueBoundingBox — the OWNING rule for a racer body', () => {
+  // The owner, 2026-09-02: a racer's body is the opaque bounding box of the artwork, tails and
+  // fins included. docs/RACER_DATA_MODEL.md is the rule's home. These tests pin the two ways
+  // this function deliberately differs from computeSpriteBoundingBox, so that neither can be
+  // "tidied" into the other without going red.
+
+  it('keeps a sparse edge strip that the shedding rule would trim — the tail is body', () => {
+    // 200×200 so the shedding rule's strip is nX = nY = 6 and its threshold is 5%.
+    // Solid block rows 20–139; then a single opaque column at x=100 down to row 179.
+    const img = makeImageData(200, 200, (x, y) => {
+      if (y >= 20 && y <= 139 && x >= 40 && x <= 159) return [255, 0, 0, 255];
+      if (y >= 140 && y <= 179 && x === 100) return [255, 0, 0, 255];
+      return [0, 0, 0, 0];
+    });
+    expect(computeOpaqueBoundingBox(img).maxY).toBe(179);
+    // The same artwork under the shedding rule loses the tail.
+    expect(computeSpriteBoundingBox(img).maxY).toBeLessThan(179);
+  });
+
+  it('alpha exactly 10 is INSIDE the body box, and outside the shedding box', () => {
+    // This one alpha level decides beetle and koi against the registry's pinned values
+    // (measured 2026-09-02: >= 10 reproduces 20 of 20, > 10 reproduces 18 of 20).
+    const img = makeImageData(8, 8, (x, y) => {
+      if (x === 4 && y === 4) return [255, 0, 0, 255];
+      if (x === 1 && y === 1) return [255, 0, 0, 10];
+      return [0, 0, 0, 0];
+    });
+    expect(computeOpaqueBoundingBox(img).minX).toBe(1);
+    expect(computeSpriteBoundingBox(img).minX).toBe(4);
+  });
+
+  it('returns null for a fully transparent ImageData', () => {
+    expect(computeOpaqueBoundingBox(makeImageData(8, 8, () => [0, 0, 0, 0]))).toBeNull();
+  });
+
+  it('reports the same centre as the shedding box when nothing is shed', () => {
+    const img = makeImageData(8, 8, (x, y) => {
+      if ((x === 2 && y === 1) || (x === 4 && y === 3)) return [255, 0, 0, 255];
+      return [0, 0, 0, 0];
+    });
+    expect(computeOpaqueBoundingBox(img)).toEqual(computeSpriteBoundingBox(img));
   });
 });
 

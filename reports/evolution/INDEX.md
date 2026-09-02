@@ -333,6 +333,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
   the soak was started, not run.
 
+- [BODY-IS-THE-BOX-1.md](BODY-IS-THE-BOX-1.md) — **the manta's tail is hers; the rule is written
+  down; and the two measuring rules turn out to differ in TWO ways, not one** (2026-09-02, the
+  owner's decision written down and wired in; **nothing about any race changes** — four files, all
+  outside the engine hull, all four fingerprint guards routed `nothing changed`, `verify` PASS 13
+  FAIL 0). The Racer Editor's `measureBodyFill` measured with the SHEDDING box while all forty pinned
+  values had been produced by the PLAIN one, so re-measuring any of five sheets would silently have
+  written a smaller number into a race input; it now calls the new `computeOpaqueBoundingBox`.
+  **The finding that was not in the brief: the second difference is the ALPHA THRESHOLD.** `>= 10`
+  reproduces the registry on **20 of 20**; `> 10` on **18 of 20**, missing beetle (0.398 → 0.383) and
+  koi (0.578 → 0.574). It was found by sabotage — the obvious clean repair, deriving the plain box by
+  extracting the shedding box's own scan, MOVED those two rows — so the two functions are separate,
+  each with its own scan, and `computeSpriteBoundingBox` is behaviourally untouched (the diff removes
+  no line of code) because it still owns sprite CENTRING, where shedding is right.
+  **Of the two findings put up for verification, one is refuted and one confirmed exactly.** The pins
+  were taken as the **UNION** over frames, not the max: the two coincide on 12 of 20 — manta among
+  them, which is why the max reading looked right — and on the other 8 the union matches the
+  registry. That part of the rule was never unwritten either; `measureBodyFill`'s comment has always
+  said union. **Confirmed:** manta's shedding `bodyFillY` swings **0.578–0.680** across her sixteen
+  frames where the plain box holds 0.766–0.805 — it sheds the tail when the tail sweeps thin, so it
+  measures the pose. **My own generalisation of that is REFUTED and is stated because it is
+  tempting**: withholding one frame at a time, the shedding rule is more fragile on **1 of 20** types
+  (manta), equal on 17, and less fragile on 2, mean ratio 1.04×. The argument is a manta argument.
+  The rule's home is now `docs/RACER_DATA_MODEL.md` § "What a racer's BODY is"; the sabotage proof is
+  `canvasUtils.bodyRule.test.js`, which goes red reporting 0.62 where the body rule says 0.80.
+
 - [SPRITE-AUDIT-DERIVATION-1.md](SPRITE-AUDIT-DERIVATION-1.md) — **the sprite audit now reads its
   inputs, and the artwork agrees with the registry on all twenty — against the rule that WROTE those
   values. A second rule is wired into the editor and it disagrees on five** (2026-09-02, a TOOL

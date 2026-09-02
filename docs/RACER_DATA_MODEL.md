@@ -229,6 +229,54 @@ Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier
 `baseRotationOffset`, `tintMode` (`'multiply'` or `'mask'`), `maskUrl` (required when
 `tintMode='mask'`), `fallbackColor`.
 
+### What a racer's BODY is — the measuring rule for `bodyFillX` / `bodyFillY`
+
+**THE OWNER, 2026-09-02.** A racer's body is what is visible. The manta's trailing tail is part of
+her, so it is part of her body. **The body is the opaque bounding box of the artwork, tails and fins
+included — the edge-shedding variant is not the measure of a body.**
+
+**This is the rule anyone regenerating a sheet is measuring under**, so it is written here rather
+than left in the code that implements it.
+
+**In full, as it must be applied:**
+
+1. **The plain opaque bounding box**, per frame, in frame-local coordinates. Every opaque pixel is
+   inside it. Nothing is trimmed for being thin, sparse, or near an edge.
+2. **Alpha >= 10** counts as opaque. Not `> 10` — the difference is one alpha level and it decides
+   two of the twenty shipped types.
+3. **The UNION over every frame of the animation**, not the largest single frame. On 8 of the 20
+   built-in types the union is strictly wider than any one frame, so the two are not interchangeable.
+4. `bodyFillX = unionWidth / frameWidth`, `bodyFillY = unionHeight / frameHeight`, **stored to three
+   decimals**, which is the precision the registry compares at.
+
+**Where it lives in code.** `computeOpaqueBoundingBox`
+(`client/src/modules/racer-types/backgroundRemoval.js`) is step 1–2; `measureBodyFill`
+(`client/src/screens/RacerEditor/canvasUtils.js`) is steps 3–4 and is what the Racer Editor calls.
+`node scripts/audit-sprite-crops.mjs` checks the twenty shipped sheets against what the registry
+records; all twenty agree.
+
+**The other box is not a lesser version of this one.** `computeSpriteBoundingBox` in the same file
+additionally sheds sparse edge strips, and it is right for what it is for — background removal and
+sprite CENTRING, where a few surviving background pixels at a border would drag the centre off.
+It is not a body measure and must not be used as one. **The two differ in two ways**, the shedding
+and the alpha threshold; the file says so at the point of definition.
+
+**Why this needed a decision at all.** Until 2026-09-02 the Racer Editor measured with the shedding
+box, while all forty pinned values had been produced by the plain one. Re-measuring any of five
+sheets — dragon, plane, beetle, koi, manta — would silently have written a different number into a
+value the race reads. `bodyFillX`/`bodyFillY` set the body's extents in
+`headlessRaceSimulator.js` and `RaceScreen/index.jsx`, and start rows are laid out in visible body
+narrow units in `rowLayout.js`: a changed fill moves how much room a racer occupies on the grid and
+how it brakes on contact. **It would change who wins races.**
+
+**The strongest argument for the decision, measured at the artwork.** Over manta's sixteen frames the
+plain box's `bodyFillY` sits between 0.766 and 0.805 — it barely moves, because her body does not
+change size. The shedding box's answer swings between **0.578 and 0.680** across the same sixteen
+frames: it sheds the tail when the tail is swept thin and keeps it when the tail is broad, so it
+gives a different answer depending on which frame you happen to measure. A measure that tracks the
+wingbeat is measuring the pose, not the body.
+
+
 ### Mask-Tinting (Buggy, Motorbike, Plane)
 
 Mask types have two sprite files:
