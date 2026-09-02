@@ -86,24 +86,24 @@ describe('AIM-ROOM-REPAIR-1 — THE CONTRACT: the guarantees and the pan agree',
   // the leader through the biased camera and the two must land on the same screen point.
   // The case list is built as [label, dx, dy, floor]; the title is a function rather than a printf
   // template because `%s`/`%d` fill positionally and were labelling the floor with `dx`.
-  it.each([
-    ...HEADINGS.map((h) => [...h, 0]),
-    ...HEADINGS.map((h) => [...h, 360]),
-  ])('$0 at floor $3: the leader lands exactly where the guarantees were told', (_l, dx, dy, floor) => {
-    const cd = mk(dx, dy, floor);
-    const t = 0.5;
-    const pos = { x: 3000 + dx * 2000, y: 2000 + dy * 2000 };
-    const effX = cd._proj.effX(cd._leaderZoom);
-    const effY = cd._proj.effY(cd._leaderZoom);
+  it.each([...HEADINGS.map((h) => [...h, 0]), ...HEADINGS.map((h) => [...h, 360])])(
+    '$0 at floor $3: the leader lands exactly where the guarantees were told',
+    (_l, dx, dy, floor) => {
+      const cd = mk(dx, dy, floor);
+      const t = 0.5;
+      const pos = { x: 3000 + dx * 2000, y: 2000 + dy * 2000 };
+      const effX = cd._proj.effX(cd._leaderZoom);
+      const effY = cd._proj.effY(cd._leaderZoom);
 
-    const aim = cd._anchorScreen(W, H, t);
-    const panned = cd._applyLeaderForwardBias(pos, t, effX, effY, W, H);
+      const aim = cd._anchorScreen(W, H, t);
+      const panned = cd._applyLeaderForwardBias(pos, t, effX, effY, W, H);
 
-    // The camera centres on `panned`, so the leader appears at centre + (pos - panned) * eff.
-    const landedX = W / 2 + (pos.x - panned.x) * effX;
-    const landedY = H / 2 + (pos.y - panned.y) * effY;
+      // The camera centres on `panned`, so the leader appears at centre + (pos - panned) * eff.
+      const landedX = W / 2 + (pos.x - panned.x) * effX;
+      const landedY = H / 2 + (pos.y - panned.y) * effY;
 
-    expect(landedX).toBeCloseTo(aim.x, 6);
-    expect(landedY).toBeCloseTo(aim.y, 6);
-  });
+      expect(landedX).toBeCloseTo(aim.x, 6);
+      expect(landedY).toBeCloseTo(aim.y, 6);
+    }
+  );
 });

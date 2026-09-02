@@ -49,8 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ AIM-ROOM-SHIP-1 2026-09-02 depends=client/src/modules/camera/CameraDirector.js -->
-**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT (2026-09-02)**
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ d6bd2f6c 2026-09-02 depends=client/src/modules/camera/CameraDirector.js -->
+**RE-MEASURED IN FULL, TWICE, FOR AIM-ROOM-SHIP-1 AND AGAIN FOR AIM-ROOM-REPAIR-1 ON THE REPAIRED
+TREE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT BOTH TIMES (2026-09-02)**
 — 6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot (5/5, 6/6, -/-, 7/7) and the
 same settled-frame counts (94, 165, 0, 83). **The condition the previous entry set was met and
 honoured**: `leaderAimRoomFloorPx` is now defaulted **ON** at 360, so it was re-measured rather than

@@ -1011,8 +1011,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ AIM-ROOM-SHIP-1 2026-09-02 depends=client/src/modules/camera/ -->
-**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1 (2026-09-02), AND THREE OF THE SIX STATES MOVED.** The
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d6bd2f6c 2026-09-02 depends=client/src/modules/camera/ -->
+**RE-MEASURED IN FULL FOR AIM-ROOM-SHIP-1 AND AGAIN FOR AIM-ROOM-REPAIR-1 ON THE REPAIRED TREE
+(2026-09-02), AND THREE OF THE SIX STATES MOVED.** The figures below are the REPAIRED tree's. The
 condition the previous entry set has been met: `leaderAimRoomFloorPx` is now defaulted **ON** at 360,
 so the byte-identical argument is gone and these figures were re-run for real rather than re-stamped.
 The other candidate that entry named, `leaderBodyAspectMax`, was rejected and **removed from the

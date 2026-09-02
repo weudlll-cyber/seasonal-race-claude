@@ -3331,9 +3331,7 @@ export class CameraDirector {
       framePct === null || (this._bandFloor && framePct === COMPANY_FRAME_PCT)
         ? subjectRegion
         : framePct;
-    const at =
-      atOverride ??
-      this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
+    const at = atOverride ?? this._anchorScreen(frameSize.width, frameSize.height, subjects.t);
     return pointGuarantee(
       subjects.point,
       line,
