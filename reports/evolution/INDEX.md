@@ -333,6 +333,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
   the soak was started, not run.
 
+- [DEAD-OR-ALIVE-1.md](DEAD-OR-ALIVE-1.md) — **five of the six suspected-dead items are ALIVE, one
+  is two-thirds dead, and NOTHING was removed** (2026-09-02, read-only; the six rows taken verbatim
+  from CENSUS-REMOVABLE-1's "LOOKS DEAD, NOT PROVEN" table, none invented). The **11 zero-reference
+  `scripts/diag/` runners are ALIVE**: every default scratch path still exists on disk with data, and
+  re-running two summarisers today reproduces `AIM-LEVERS-1.md` and `RUNIN-LEVEL-SET-1.md` **digit
+  for digit** — they authored the published claims. The **19 instruments HARNESS-CAMERA-SEED-1
+  declared VOID are ALIVE** on the census's own discriminator, which had ALREADY been satisfied
+  before the census ran: the per-race derived camera seed merged `63ab59d8` on 2026-08-27, an
+  ancestor of the census commit. **`sweep-bufferPct-driver.mjs` is ALIVE** — "never touched" was
+  stale by a day. Of the **8 sprite generators, 6 are DEAD and 2 ALIVE**: four sources were deleted
+  by `456a0f65` one day after the generators were written, and two more would overwrite tracked
+  artwork in place. **`reports/perf` has MORE readers than the census found, and the census named the
+  wrong one**: `scripts/phys-bench-fit.mjs` reads **five** files, not one — `phys-bench-1/matrix.json`
+  plus four `profiles/prof-*.selftime.json` — and it is **manual-only**, absent from verify, every
+  npm script, the workflows, the pre-commit hook and the script suite. It reads NUMBERS FROM NAMED
+  FILES, never prose, filenames or directory existence, so summarising the prose costs nothing;
+  **losing `matrix.json` throws, but losing the profiles is SILENT** — try/catch plus continue drops
+  the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
+  automated check at all.
+
 - [PATTERN-CATCHABILITY-1.md](PATTERN-CATCHABILITY-1.md) — **CAN A MACHINE CATCH THE PATTERN? The
   pattern is not one fault, it is FIVE, and only two of the five have two machine-readable sides**
   (2026-09-02, read-only; nothing built, no check run — the design is a proposal and stays one).
