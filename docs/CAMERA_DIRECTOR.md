@@ -1020,18 +1020,22 @@ tree** in the same ship. **All six frame counts are identical** — 8626, 159, 1
 which is the load-bearing half: this change moves the PICTURE and not the race, so a moved frame count
 would have meant something had gone wrong.
 
-| state | median pp | p95 pp |
+Measured on the REPAIRED tree (AIM-ROOM-REPAIR-1), which is the one that would ship. The middle
+column is the same measurement on the arm the owner judged, before the guarantee wiring was fixed —
+kept because the two differ and a reader comparing against his eye test needs the arm he saw.
+
+| state | median pp: before -> as judged -> repaired | p95 pp: before -> as judged -> repaired |
 | --- | --- | --- |
-| BATTLE_ZOOM | 5.81 -> 5.81 | 10.05 -> 10.05 |
-| COMEBACK_ZOOM | 4.84 -> 4.84 | 7.40 -> 7.40 |
-| **LEADER_ZOOM** | 5.07 -> **4.73** | 9.71 -> **8.95** |
-| **LEAD_CHANGE** | 4.64 -> **4.49** | 7.45 -> **8.77** |
-| **OVERVIEW** | 2.75 -> **2.87** | 16.00 -> **18.54** |
-| PHOTO_FINISH | 2.81 -> 2.81 | 8.59 -> 8.59 |
+| BATTLE_ZOOM | 5.81 -> 5.81 -> 5.85 | 10.05 -> 10.05 -> 10.05 |
+| COMEBACK_ZOOM | 4.84 -> 4.84 -> 4.84 | 7.40 -> 7.40 -> 7.40 |
+| **LEADER_ZOOM** | 5.07 -> 4.73 -> **4.75** | 9.71 -> 8.95 -> **9.48** |
+| **LEAD_CHANGE** | 4.64 -> 4.49 -> **4.52** | 7.45 -> 8.77 -> **8.78** |
+| **OVERVIEW** | 2.75 -> 2.87 -> **2.87** | 16.00 -> 18.54 -> **18.54** |
+| PHOTO_FINISH | 2.81 -> 2.81 -> 2.81 | 8.59 -> 8.59 -> 8.59 |
 
 **LEADER_ZOOM improves on both percentiles, and that is the state the ship aims at** — the leader is
 held nearer the centre of the frame on the headings where the floor binds, so the camera has less
-distance to make up and sits closer to its subject. Median 5.07 -> 4.73 pp, p95 9.71 -> 8.95 pp.
+distance to make up and sits closer to its subject. Median 5.07 -> 4.75 pp, p95 9.71 -> 9.48 pp.
 
 **TWO NUMBERS MOVE THE WRONG WAY AND ARE REPORTED RATHER THAN BURIED: `LEAD_CHANGE` p95
 7.45 -> 8.77 pp, and `OVERVIEW` p95 16.00 -> 18.54 pp** (its median 2.75 -> 2.87). Neither state

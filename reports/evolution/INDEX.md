@@ -230,6 +230,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-REPAIR-1.md](AIM-ROOM-REPAIR-1.md) — **the guarantees are told about the floor, the
+  promise is kept again, and B's real price is visible for the first time** (2026-09-02, branch
+  `ship/aim-room-floor-1`, **not merged, not minted**, handed back for his eye). Fixed **at the
+  source**: one `_anchorScreen` accessor, and `anchorScreenPoint` is no longer importable under its
+  own name in `CameraDirector.js`, so an eighth call site cannot silently drop the floor — the raw
+  function has ~20 outside callers (tests and harnesses that only *reconstruct* the aim), so making
+  the parameter required would have broken all of them to fix a defect living in one class; that
+  trade is stated. **THE ZERO CASE IS TESTED, NOT ARGUED**: at floor 0 all four fingerprints equal
+  master byte for byte. **SABOTAGE-PROVEN**: reverting the wiring turns 6 tests red and puts the
+  shortfall back to exactly 12.38% / 5.73%. **The two red tests went green untouched** — `git diff`
+  on `framingRule.test.js` is empty. **THE PRICE, three columns, ten tracks**: the company shortfall
+  recovers most of the loss everywhere and all of it on three tracks (space-sprint 4.40% → 12.38% →
+  **6.06%**; at N=300, 3.49% → 8.72% → **4.90%**), and the **worst-case count returns to today's
+  value on 8 of 10**. The gain survives — space-sprint −270 clip episodes at N=300, centreline
+  69.5% → 88.5% — at a cost of 1–2 episodes on four tracks, because guarantees that know the leader
+  sits further back permit a slightly tighter shot. Frame counts identical on all ten: still picture,
+  not race. **ONE NEW FAULT, reported not fixed**: river-run gains **9 whole-screen single-frame pans
+  in 479,587** (max 5320 px) where today has **0**, when the lateral guarantee engages without an
+  ease; seatrack improves 4 → 2 and every other track has none.
+
 - [AIM-ROOM-SHIP-1.md](AIM-ROOM-SHIP-1.md) — **A is out and returns master EXACTLY; B is built,
   measured on ten tracks, and NOT MERGED** (2026-09-02, branch `ship/aim-room-floor-1`, pushed,
   **unmerged and unminted**). **STOPPED BEFORE THE MERGE on a defect that can be proven.**
