@@ -23,131 +23,6 @@ stated reason why no command can. Where a whole section shares one reason, it is
 the section head rather than copied onto every item — copying it would suggest each was
 considered separately, and that would not be true.
 
-## ⚠ TWO UNMERGED BRANCHES CARRY FIGURES MEASURED AGAINST A DEFECTIVE BASELINE (2026-09-02)
-
-**`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured before COMPANY-HEADCOUNT-1, so
-every cost they publish was measured against a camera whose company guarantee was under-asking by one
-racer on every frame.** Their numbers are not wrong about the trees they were taken on; they are no
-longer the costs of those changes against master.
-
-**The clearest case is the one that mattered most to the decision.** Candidate B (the aim room floor)
-was charged with showing *about one racer fewer in shot on average* — that figure is in
-`reports/evolution/AIM-ROOM-REPAIR-1.md`, which lives on `ship/aim-room-floor-1` and is deliberately
-not linked here because it is not on master. **That charge was mostly this defect, not the lever.** The company shortfall those pieces attributed
-to the floor was dominated by a guarantee that asked for four where five was promised, on the floor
-arm and the baseline arm alike — and the repair alone lifts promise-kept on the affected tracks by
-1.6 to 2.9 points without any lever at all. **The lever has never been priced against a correct
-baseline.**
-
-Superseded specifically, and these should not be quoted as current:
-
-- **AIM-ROOM-REPAIR-1's three-column company-shortfall tables** (today / as judged / repaired), on the
-  unmerged branch — all three columns come from trees with the under-asking guarantee.
-- **AIM-ROOM-LOST-1's price for the corrected headcount, a median 1.33× and p90 2.26× widening.**
-  Already withdrawn in [COMPANY-HEADCOUNT-1](../reports/evolution/COMPANY-HEADCOUNT-1.md): it was a
-  frame-subset figure, and measured across all frames the shot is untouched on 82.5–98.7% and widens
-  by a median 1.02–1.07×.
-- **AIM-ROOM-CEILING-1's 61/39 `state`/`company` split** on broken-promise frames. The measurement
-  stands for the tree it was taken on; the population it describes is much smaller now.
-
-**What is NOT superseded:** everything about lever A's removal (proven by four byte-identical
-fingerprints at floor 0), the wiring repair's own sabotage proof, the ten-track engagement table for
-the floor, and the river-run finding below.
-
-**STILL OPEN AND CARRIED FORWARD:** `ship/aim-room-floor-1` introduced **nine whole-screen
-single-frame pans on river-run in 479,587 adjacent steps** where master has none, when the lateral
-guarantee engages without an ease. That was recorded and deliberately not fixed. It must be
-re-measured on any tree that ships the floor.
-
-**THE OWNER'S DECISION, 2026-09-02:** he has decided **against** re-measuring candidate B on the
-corrected baseline, and wants both in master. Neither branch is to be rebased or deleted on anyone
-else's initiative. **verify:** the superseded figures are identified by which tree they were taken
-on; no command re-derives them, which is why they are listed rather than recomputed.
-
-## ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
-
-**BUILT.** `client/vitest.config.js` carries `maxWorkers: 4`, in the file that already owns how this
-suite runs. `scripts/verify.mjs` already marked `client-suite` exclusive, which is the other half of
-the server-suite remedy and needed no change. **The owner accepted the trade on 2026-08-27.**
-
-**CONFIRMED ON THE MERGED TREE, not only on the branch** — the failure was intermittent, so one green
-run proves less than the margin does. Margin against the unchanged 5,000 ms default, on the worst
-test with no timeout of its own (GATE-SERIAL-BCRYPT-1's unit; the 15 tests that pass beyond 5 s carry
-their own timeouts and are excluded by that property, not by a list of names):
-
-| arm | runs | failures | p99 | worst | **margin** |
-| --- | --- | --- | --- | --- | --- |
-| unbounded | 3 | **14** | 1,918 ms | 10,457 ms | **−5,457 ms** |
-| unbounded | 3 | **6** | 1,733 ms | 8,511 ms | **−3,511 ms** |
-| bounded, branch | 3 | 0 | 744 ms | 4,402 ms | +598 ms |
-| **bounded, MERGED TREE** | 3 | **0** | **524 ms** | **1,899 ms** | **+3,101 ms** |
-
-**The margin is now better than the server suite's** (+1,894 ms after its own repair).
-
-**AND THE COST DID NOT MATERIALISE.** The projection was 313 s → 403 s, about 29%. **The real merged
-wall clock is 296.2 s mean** (299.2 / 273.1 / 316.2) against 313.8 s and 312.2 s unbounded — **not
-slower at all**. The 403 s figure came from an arm measured while three other measurements were
-competing for the machine, which is exactly the confound this item is about. On a quiet machine
-bounding costs nothing here, the same as it cost nothing on the server.
-
-**WHAT IS NOW MEASURED, not guessed:**
-
-- **Concurrency causes it.** The only thing changed between the arms is worker count, and the failure
-  count goes 20-in-6-runs to 0-in-6-runs.
-- **The affected tests are STARVED, not slow.** The worst default-timeout test falls **10,457 ms →
-  1,899 ms**, a factor of 5.5, without a line of test code changing.
-- **The heavy tests are slowed too**, which is what distinguishes oversubscription from a slow test:
-  the golden real-arm comparison runs 113,789 ms unbounded and **25,812 ms** on the merged bounded
-  tree.
-
-**WHAT REMAINS A HYPOTHESIS, and stays labelled as one:**
-
-- **That the 15 extended-timeout tests are specifically the load.** It is consistent with everything
-  above and nothing contradicts it, but the suite was never run WITHOUT those files, so their role is
-  inferred from correlation rather than isolated.
-- **That CPU is the exhausted resource.** Memory was ruled out by measurement (free RAM held
-  7.4–7.9 GB of 33.8, nothing accumulated). CPU is what is left and it fits, but no counter was read.
-- **That 4 is the right number.** It is what was measured and what he agreed to, not a tuned optimum.
-  The sweep the server repair ran — 1 / 3 / 6 / unbounded — has not been run here. **Deliberately
-  not tuned**: a bound found by search rather than by measurement is the same class of thing as
-  raising a timeout.
-
-**NEEDS: nothing.** It is built and confirmed. The open question is only whether the bound should
-later be tuned, and there is no reason to touch it while the margin is 3.1 s.
-
-**verify:** `node scripts/diag/suite-timing.mjs --suite=client --runs=3 --label=x` — margin and
-failures in one table. Any run whose failure count is non-zero reopens this.
-
----
-
-## WHICH FIELDS OF A SHIPPED TRACK BELONG TO THE PROJECT, AND WHICH TO WHOEVER RUNS IT
-
-**Sharpened 2026-08-27 by [TRACK-RUNTIME-AUDIT-1](../reports/evolution/TRACK-RUNTIME-AUDIT-1.md),
-which audited all ten runtime track records against their seeds.** The open question is NOT the one
-the garden-path icon suggested.
-
-**The icon case made the seeding rule look purely harmful:** `seedRuntime.js` copies a record only
-`if (!existsSync(dest))`, so a shipped correction can never reach an existing install, and his
-garden-path showed a snail for three weeks after the repo said beetle.
-
-**The audit found the other half.** `server/data/tracks/garden-path.json` carries
-`surfaceClasses: ["grass","earth","mud","sand"]`; the seed carries two, and **has carried exactly two
-in every commit of its history back to 2026-06-17**. The live record's `updatedAt` is six days newer.
-Those two classes were added in the app by him on 2026-07-04 and **exist nowhere else — not in the
-seed, not in git.** A mechanism that overwrote existing records to deliver the icon would have
-deleted them without a word.
-
-**So the decision is narrower and harder than "should seed edits reach existing installs":**
-**which fields may a shipped record correct, and which belong to the person running it?** The icon and
-description are plainly the project's. The surface classes are plainly his. **Nothing in the record
-distinguishes them**, and no rule based on comparing values or timestamps gets it right — his edit is
-newer, larger, and exactly as plausible as a shipped change would be.
-
-**NEEDS: HIS WORD**, and it is not urgent: the audit repaired the nine records whose drift was
-behaviourally null, and left his edit intact, so the install is correct today either way.
-
-**verify:** the audit in the report is thirty lines and re-runnable; drift shows up as a field list.
-
 ---
 
 ## NEEDS HIS WORD — decide these first
@@ -199,6 +74,108 @@ word from him:**
 | `D7d` — 100-racer performance | **downgraded to an observation — PART TWO D18.** Nothing is ordered |
 
 **Nothing else in PART ONE is blocked on any of these.**
+
+### THE SEVEN THAT ARE HIS — moved here whole on 2026-09-02 by BACKLOG-VERDICTS-1
+
+**Moved, not rewritten.** Each entry below is verbatim from where it stood in PART ONE, with a verdict
+line added above it. They were gathered into one place so they can be answered in a sitting, which is
+the instruction this pass was given; the reasoning above for keeping such items in place is left
+standing so a later reader can see the trade that was made. **Nothing else in PART ONE waits on him.**
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the repair moves the hash, so it is a mint and only he can order it. Re-verified at source today: `scripts/render-fingerprint.mjs` still builds the frame camera as a hand-written literal with three members (`hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`); `frameCameraInputs` is imported by five client files and by that instrument not at all. The guard half still needs only BUILDING.
+
+- [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
+      FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
+      declared members, leaving `anchorRacerIndex` and `runInArrived` **undefined inside the
+      instrument**. **LABEL-FOCUS-1 has never been exercised by it, and RUNIN-NAMES-1 whole visible
+      change is a state it cannot enter** — its unmoved verdict for that feature was empty, not
+      reassuring.
+      Establishes it: [RENDER-FINGERPRINT-BLIND-1](../reports/evolution/RENDER-FINGERPRINT-BLIND-1.md).
+      **NEEDS: ONLY HIS WORD for the repair** — it moves the hash, so it is a mint. **The guard half —
+      checking that callers build the object through `frameCameraInputs` — needs only BUILDING.**
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the choice he is asked for is unchanged — a short typable identifier that refuses to exist when it would lie, a long copyable one, or both. **Sharpened since it was written:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) showed the seed field itself agrees across paths and the ROSTER is what diverges, so five of seven river-run seeds name races the browser cannot produce.
+
+- [ ] **A SEED IS ONE OF NINE INPUTS, NOT SIX — and two of the nine are stored host preferences.**
+      This corrects the count in *"A seed alone does not reproduce a race"* below, which said six.
+      `raceActionStage` and the world config are read from host storage at press time, so **the same
+      seed on two machines is two races and neither operator changed anything.** His Quick Test
+      belief is right under two conditions that are invisible on screen: the roster *selector* picks
+      among three lists, and **any real player in the lobby re-indexes the whole field**.
+      Establishes it: [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md).
+      **NEEDS: ONLY HIS WORD** — a short typable identifier that refuses to exist when it would lie,
+      a long copyable one, or both.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the open point is D14's and it is his call, with his eye owed afterwards. Re-verified today: `git grep -n "beats" -- client/src/modules/camera` returns the JSDoc `@param` line at `CameraDirector.js:785` and the CEREMONY's own unrelated beats, and no code that reads a hero's beats. **B4c below still points at this item as "above"; it is here now.**
+
+- **~~Camera timing levers — comeback shot appears late (tune by eye, no code)~~ REPLACED 2026-08-23 by the owner's DEFINITION of a comeback — PART TWO D14.** 🔜 _(added 2026-07-15, from B4; replaced 2026-08-23)_
+
+  **THE REQUIREMENT, in his terms: a comeback is a racer STORMING FROM FAR BACK TO THE FRONT.** A
+  racer climbing slowly from progress ~0.28 is **not** a comeback. That is the bar the shot has to
+  clear, and it is what the old item was missing.
+
+  **Why the old proposal is retired rather than scheduled.** It was: lower `outcomePhaseThreshold`
+  (which gates reactive comeback detection, and whose slider floor sits above the start of the
+  authored climb) and re-weight `comebackWeight` against `battleWeight` (which it loses to during
+  PULK, so even a fired candidate does not win the lens). **Both changes make the SLOW CLIMB visible
+  EARLIER — and against the definition above that is the wrong thing, sooner.** It would cost the
+  front battle the weight contest was protecting and buy an event that is not the event.
+  *(Values deliberately not restated: they live in `client/src/modules/storage/defaults.js`, which
+  is their one home.)*
+
+  **The beat timing is still true and is kept, because it is what the OPEN POINT below is about:**
+  a comebacker HOLDS its deep rank from its `anchor` beat until its `peak` beat (usually in PULK),
+  then climbs to its `resolve` beat (in OUTCOME). **The `resolve` beat is the storm he is
+  describing.**
+
+  **THE OPEN POINT — the authored BEATS never reach the camera.** Full evidence, established at
+  source and re-verified on 2026-08-23, is in **PART TWO D14**: the generator emits role AND beats,
+  the FULL `cameraPlan` IS delivered to the director, and `comebackDetector.setPlan` keeps only
+  `role === 'comebacker'` and **discards the beats** — so the camera re-infers from rank history
+  what the plan already stated, and the `resolve` beat never arrives at all.
+  **NOTHING IS PROPOSED AND NOTHING IS BUILT.** Whether the beats get handed through is his call,
+  and it needs his eye afterwards.
+  **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns
+  only the two JSDoc `@param` lines and no code that reads them.**
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the entry says so itself — the band count is his to fix before any work starts, and moving it re-baselines every fairness number in the project.
+
+- ⏳ **Coarser fairness bands.** A product-level simplification the owner has raised: reduce the number of
+  finishing-place bands so "reached your band" is a coarser, more forgiving promise. Would touch the band
+  definition used by `computeZoneSuccessRate` / the draw and would re-baseline every fairness number — a
+  deliberate product decision, not a tuning tweak. Owner to decide the band count before any work starts.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** design-first by his own instruction; no mechanism until he fixes the definitions.
+
+- ⏳ **The story layer (owner-cast narrative toolkit).** The banked owner-cast toolkit for authored race
+  stories: the **multi-role rule** (a racer may hold several narrative roles across the race provided their
+  windows are DISJOINT, smoothly welded, and resolve to ONE endpoint — no contradictory simultaneous roles);
+  **comebacker** and **fallbacker** definitions (a racer authored to climb, or to slide, over a bounded window);
+  and the **drawn-not-patterned** counts (how many of each role per race are DRAWN from a distribution, never a
+  fixed recurring pattern the eye learns). Design-first; no mechanism until the owner fixes the definitions.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** it cannot be actioned until he restates the symptom, which is what the entry records.
+
+- ⏳ **Camera block reset.** Parked camera item (block reset) from the camera saga handoff — needs the owner to
+  restate the exact symptom before it is actionable; recorded here so it is not lost.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** a design question he deferred; relative or absolute is not derivable from the tree.
+
+- ⏳ **Camera-weights design question — relative vs absolute weighting (deferred).** Whether the camera's
+  subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
+  A design question the owner deferred; no implementation until it is answered.
 
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
 
@@ -282,6 +259,8 @@ lives there and is not restated here.
 **NOTHING ABOVE IS A PROPOSAL.** It is the record of an order, the facts a later block starts from,
 and the four decisions of 2026-08-23 that narrowed it.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the section):** question 1 waits on a MEASUREMENT, not on him — the table is `reports/night/ACTION-KEYS-1.md` and the design block starts from it; question 4's fingerprint half waits on question 1. Nothing here is blocked on a word from him.
+
 ---
 
 ## THE CLOSING PHASE ENDS WHATEVER WAS RUNNING (2026-08-24, the owner's instruction)
@@ -316,6 +295,8 @@ previous subject into the run-in.
       cutting a phase removes one of the two. **Per the project's rule the visible consequence gets
       measured before that is built.** Nothing here proposes how.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the section):** waiting on somebody seeing what the shot looks like when the previous phase is CUT rather than allowed to finish. No such measurement exists in the tree; nothing in `CameraDirector.js` ends a running phase at the closing boundary today.
+
 ---
 
 ## THE REST — open, in the order they were already in
@@ -347,15 +328,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: ONLY HIS WORD** — restore the serialisation as a performance decision, or teach the
       gate to report a timeout-only failure as INCONCLUSIVE rather than as pass or fail.
 
-- [ ] **TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**
-      `scripts/verify.mjs:246` and `.github/workflows/ci.yml:184` both assert
-      `--no-file-parallelism` is in the server package's `npm test`. It is not. `verify.mjs` then
-      runs the server suite **non-exclusively, beside the fingerprint jobs**, on the ground that the
-      suite is single-worker — which is why the GATE rather than the suite is where the red appears.
-      Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md), the second finding.
-      **NEEDS: BUILDING** (a comment fix and a scheduling flag), but it is entangled with the item
-      above and should be decided with it.
-
 - [ ] **A SWEEP CELL THAT ASKS FOR 60 RACES AND RETURNS 0 STILL PRINTS A NUMBER AND EXITS CLEAN.**
       56 files import the measurement driver, **44 call `runRace`, and exactly ONE reads its return
       value** — the driver's own test. `runRace` ends on three different conditions and returns one
@@ -364,12 +336,16 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
       in the report.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:273` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:155`, the driver's own test. Waiting on BUILDING.
+
 - [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
       GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
       **20/20**, because his beetle decision made the race short enough — **the harness hardcodes 2
       laps and that never moved; the racer got faster.** The silence was never fixed.
       Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md), section 3.
       **NEEDS: nothing on its own** — it is the argument for the item above.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is still the argument for the item above, and the mechanism is unchanged — `raceDriver.mjs:201` still gives every closed track `laps: 2` and `:319` still stops at 200,000 ms (line numbers at `e4b2b075`). Waiting on nothing of its own.
 
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
@@ -392,42 +368,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       ~~NEEDS: ONLY HIS WORD — whether the default follows the browser, given that the obstacle is
       an append-only journal whose tables would stop matching their tools.~~
 
-- [ ] **THE ARBITER THAT DECIDES WHETHER A CHANGE CAN REACH THE ENGINE CANNOT SEE ANYTHING THAT
-      SHIPS AS DATA.** `engine-reach --check` returns *"cannot reach the engine at all"* for
-      `server/seeds/tracks/*.json`, for `client/src/modules/racerNames.js` — whose names are hashed
-      into the physics — and for `client/src/modules/racer-types/*.js`, whose speed multipliers set
-      the race length. **Two of those three verdicts are wrong.** It is a wrong QUESTION asked of a
-      correct answer: the closure answers *"what does the engine import"* exactly.
-      Establishes it: [ENGINE-REACH-DATA-1](../reports/evolution/ENGINE-REACH-DATA-1.md).
-      **HALF OF THIS IS NOW CLOSED, AND THE HALF THAT REMAINS IS THE SMALLER ONE. Established at
-      source 2026-08-27, not taken from a report.**
-      **✅ THE ROUTING HOLE IS CLOSED** by ENGINE-REACH-DATA-FIX-1: `scripts/lib/routing.mjs` now
-      decides which guards run through `scripts/lib/dataReach.mjs`, which follows NAMED paths and not
-      only import edges. Replayed on the real commit with `scripts/diag/routing-replay.mjs`: a change
-      to `server/seeds/tracks/garden-path.json` selected **5 guards before and 12 after** — all four
-      fingerprints, both suites, both frame checks. **That was the half that could let a red master
-      report green, and it cannot any more.**
-      **⏳ THE ADVISORY IS STILL WRONG, and it is the line a human reads at commit time.**
-      `engine-reach --check server/seeds/tracks/garden-path.json` still answers *"1 outside the hull
-      (cannot reach the engine at all)"* — for a file whose two-line edit moved **all four**
-      fingerprints in GARDEN-PATH-DEFAULTS-1. It cannot answer otherwise as written: `entryPoints()`
-      walks static `from '...'` specifiers, and **a JSON data file is never an import edge**, so no
-      data path can ever enter that hull.
-      **NEEDS: BUILDING, and it is now a smaller job than the report costed** — the mechanism that
-      answers it correctly already exists and is shipped; `engine-reach`'s hull is the last caller
-      that does not use `dataReach`. The measured cost in the report (3.4% of commits) was for the
-      whole thing and overstates what is left.
-
-- [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
-      FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
-      declared members, leaving `anchorRacerIndex` and `runInArrived` **undefined inside the
-      instrument**. **LABEL-FOCUS-1 has never been exercised by it, and RUNIN-NAMES-1 whole visible
-      change is a state it cannot enter** — its unmoved verdict for that feature was empty, not
-      reassuring.
-      Establishes it: [RENDER-FINGERPRINT-BLIND-1](../reports/evolution/RENDER-FINGERPRINT-BLIND-1.md).
-      **NEEDS: ONLY HIS WORD for the repair** — it moves the hash, so it is a mint. **The guard half —
-      checking that callers build the object through `frameCameraInputs` — needs only BUILDING.**
-
 - [ ] **THE MEASUREMENT HARNESS HAS A FIXED 200-SECOND CEILING AND A HARDCODED LAP COUNT, AND HE HAS
       ALREADY JUDGED THIS NOT URGENT.** `raceDriver.mjs:303` stops every race at 200 s; `:185` gives
       every closed track `laps: 2` and every open track `laps: 1`, ignoring the track own
@@ -437,6 +377,8 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md), section 6.
       **NEEDS: MEASURING, when he wants it** — a track whose `defaultLaps` is 4 is measured at 2 and
       **no cell would be empty**, so the loud-zero rule above would not catch it.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source (`raceDriver.mjs:201` and `:319`; the line numbers in the entry have moved, the mechanism has not). It is tonight's **piece 11** — *why a 60-second race exceeds 200 seconds of simulation* — which had not started when this verdict was written.
 
 - [x] ~~**THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
       VISIBLE STEP COMES FROM.** On river-run seed 13 a third racer crosses the one-length boundary
@@ -471,6 +413,8 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: nothing on its own** — it was the context for the admit item above, which is now
       closed; it stands on its own as an unused mechanism nobody has decided to point forwards.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source. `CameraDirector.js:2628` states the verdict is one-way and `_contentionOut` is added to at `:2697` and never removed from; nothing admits on it. Waiting on nobody — an unused mechanism nobody has decided to point forwards.
+
 - [x] ~~**AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
       HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.**~~
       **✅ CLOSED 2026-08-26 by RUNIN-PIVOT-SCOPE-1, verified at source:** `update()` now calls
@@ -486,63 +430,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       Establishes it: [RUNIN-SEED13-ANATOMY-1](../reports/evolution/RUNIN-SEED13-ANATOMY-1.md), section 3.
       **NEEDS: ONLY HIS WORD** — the repair moves the camera fingerprint on every race with a moving
       zoom, so it is a ship-ceremony change and not a quiet fix.
-
-- [ ] **A SEED IS ONE OF NINE INPUTS, NOT SIX — and two of the nine are stored host preferences.**
-      This corrects the count in *"A seed alone does not reproduce a race"* below, which said six.
-      `raceActionStage` and the world config are read from host storage at press time, so **the same
-      seed on two machines is two races and neither operator changed anything.** His Quick Test
-      belief is right under two conditions that are invisible on screen: the roster *selector* picks
-      among three lists, and **any real player in the lobby re-indexes the whole field**.
-      Establishes it: [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md).
-      **NEEDS: ONLY HIS WORD** — a short typable identifier that refuses to exist when it would lie,
-      a long copyable one, or both.
-
-- [ ] **A SHIPPED TRACK CHANGE STILL REACHES NOBODY, CONFIRMED AGAIN TONIGHT.** garden-path icon and
-      description now match its beetle in the artefact the product ships, **and his own installation
-      will never see it** — `seedRuntime.js:36` copies a seed only where no file exists. **The live
-      record was deliberately NOT hand-edited this time**, so the evidence stays intact.
-      One home for this subject: **the section immediately below**, which owns it.
-      Also establishes it: [GARDEN-PATH-BEETLE-SKIN-1](../reports/evolution/GARDEN-PATH-BEETLE-SKIN-1.md).
-      **NEEDS: ONLY HIS WORD** — should a shipped-data change be deliverable to an existing
-      installation at all, or is "new installs only" the intended behaviour?
-
----
-
-## A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
-
-**verify (section-wide):** none — nothing here is a change. **Both entries are FINDINGS, not
-proposals.** No work is proposed for either, no key is added, and nothing is designed.
-
-- [ ] **EDITING A SHIPPED TRACK SEED CHANGES NOTHING THAT ANY EXISTING INSTALLATION CAN SEE, and no
-      mechanism ever delivers it.** Three facts, each read at source: `seedRuntime.js` copies a seed
-      into the data directory **only when the destination does not exist** — *"Existing destination
-      files are never overwritten"*; `server/src/routes/tracks.js` builds its track map **once, at
-      process start** (`const tracksMap = loadAllTracks()` at module scope) and serves every read
-      from that map; and **there is no migration** — `.tlh1-defaults-migrated` is written and never
-      read, its own comment saying *"Legacy marker — no behavior gating; kept for operational
-      reference only."* **So a shipped default reaches fresh installs and nobody else.**
-      **THE EVIDENCE IS THIS BLOCK ITSELF.** garden-path's defaults moved on the owner's machine only
-      because the gitignored live record under `server/data/tracks` was **hand-edited** — a step no
-      user and no CI run performs — and even then only after the API process was restarted. **He
-      watched the old track for thirty hours**, and nothing in the repository could have told him:
-      the commit was correct, the seed was correct, and the picture was not.
-      **IT IS THE SAME ROOT CAUSE AS `verify`'s ROUTING NOT SEEING A TRACK CHANGE.** Routing and the
-      mint tripwire both compute their reach from the **transitive import closure** of the engine,
-      and a track record is never imported — it is read from disk at runtime. Measured here:
-      `verify` skipped all four fingerprint guards for a change that moved all four, and
-      `node scripts/engine-reach.mjs --check server/seeds/tracks/garden-path.json` exits **1**,
-      *"cannot reach the engine at all"*, for that same change. **A data file can move the world
-      without being reachable, and every instrument that decides by import closure is blind to it.**
-      **AND THE DRIFT WAS ALREADY REAL.** The owner's live record still carried the legacy
-      `defaultDuration` while the shipped seed had long since moved to `defaultLaps` — both resolving
-      to the same lap count, so nothing showed — **with nothing anywhere comparing the two.**
-
-- [ ] **garden-path still wears the snail.** Its icon is 🐌 and its description reads *"A leisurely
-      (yet surprisingly competitive) crawl through the roses"*, while the track's default racer is
-      now the **beetle**. The owner named two changes on 2026-08-25 and neither was the icon or the
-      description, so neither was touched; `scripts/track-defaults.test.mjs` pins both so that a
-      later block cannot quietly tidy them without saying so. **Small, visible, and recorded only so
-      that it reads as a decision rather than an oversight.**
 
 ## A seed alone does not reproduce a race (2026-08-23, from SEED-REAL-RACE-1)
 
@@ -597,6 +484,8 @@ nothing is designed here, no key is added, and no change is implied.
   the same grep over `client/src/screens/SetupScreen/SetupScreen.jsx` returns the lines that build
   the payload.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it and still returns nothing — `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx` exits 1, where the same pattern over `SetupScreen.jsx` returns 6 lines, so the pattern can match. Waiting on the durable record carrying the race's inputs and on the config-storage design question the entry names.
+
 ---
 
 ## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
@@ -645,31 +534,7 @@ nothing is designed here, no key is added, and no change is implied.
   `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
   Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
 
----
-
-## Documentation (2026-08-07, from DOC-ORDER-1)
-
-**verify (section-wide):** `git grep -c "" docs/ROADMAP.md` — **the merge is FINISHED. ROADMAP-FOLD-1 (2026-08-23) took it from 627 lines to a 74-line phase-status table; ROADMAP-FOLD-2 (2026-08-27) folded that table in here and left a 31-line REDIRECT that owns nothing.** Every section it ever held is in this file.
-
-- [x] ~~**Merge ROADMAP into BACKLOG**~~ — ✅ **DONE 2026-08-23 by ROADMAP-FOLD-1**
-      (NIGHT-2026-08-23 piece 3), under D24. **All 35 ROADMAP sections are accounted for:** 3 to PART
-      ONE (*Phases 5–7*), 30 to PART TWO (*Phase history*), 2 subsumed because they were only
-      pointers back into this file (Phase V, Phase T). **A move, not an audit — no verdict was
-      re-checked and no completion claim confirmed or withdrawn.** ROADMAP survives as a phase-status
-      table so every existing link to it stays valid. *(The reasoning that follows is kept because it
-      states the general rule, and because it is the record of why the merge was a separate order.)*
-      **The original entry read:** *(The approval changes nothing about the reasoning below; what it
-      settles is that the merge WILL happen and gets its own piece. It was deliberately not done
-      inside the 2026-08-23 documents piece, which was already rewriting a dozen entries in this
-      file — a dropped item and an edited item would have been indistinguishable in that diff.)* The two documents
-      half-own "what is done and what is next": this file owns the open work with its evidence,
-      [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
-      that boundary in both files' `**Owns:**` lines rather than merging them, **on the owner's
-      instruction that the merge is a separate order.** The reason it is separate: ROADMAP is 618
-      lines and this file is over 1300, a real merge is a careful pass with a high chance of silently
-      dropping an item, and a half-finished merge leaves two documents half-owning a subject — which
-      is worse than the boundary that exists today. When it happens, the intended landing is that
-      **BACKLOG owns both**, with ROADMAP reduced to a phase-status table.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the finding holds — `git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing where `render(<` matches in 34 test files. Waiting on nobody: D2 (2026-08-23) declined to act on it and RACESCREEN-SEAM-1 (`81904563`, 2026-09-02) priced the seam at **one line** — a default parameter for `canvas.getContext` — and concluded the file does not need it, because everything a mount would exercise already has a better driver.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
@@ -681,6 +546,8 @@ nothing is designed here, no key is added, and no change is implied.
       median outside the enumerable deliberate cuts (the `cut` grammar, LEAD_CHANGE's snap). The same
       pinned-offset-plus-moving-target pattern exists at every entry into a T-space-lerped state.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no motion-continuity instrument exists — `scripts/check-*.mjs` has no such guard. It is tonight's **piece 12**, which had not started when this verdict was written.
+
 - [ ] **Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
       finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
       garden-path with the finish accounting instrumented — a measurement, not a grep, so no
@@ -689,15 +556,9 @@ nothing is designed here, no key is added, and no change is implied.
       harness — 9 of 10 tracks. Not a camera fault; worth asking why a 60-second race exceeds 200
       seconds of simulation.
 
-## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it needs a driven race with the finish accounting instrumented. The premise is confirmed as recently as today — `scripts/camera-fingerprint.mjs:327` documents its "at least one track" gate as existing **because** garden-path does not finish inside the harness's 200 s ceiling. Waiting on tonight's **piece 11**. *(Note for a later reader: the 2026-08-25 section above records garden-path completing 20/20 under the beetle; that is the sweep driver, and this is the fingerprint harness. Which of the two changed was not settled by this pass and no race was run for it.)*
 
-- [ ] **THE BADGE STILL HAS NO WATCHER — both of its failures were found by the owner's eye.**
-      It lied confidently (BUILD-TRUTH-1), then failed silently (BUILD-UNKNOWN-1), and in both cases
-      the alarm was a human noticing something on screen. The start-up line helps only if somebody
-      reads the terminal. **Owner decision:** should `npm run dev` REFUSE to start when the identity
-      is unreadable? Cheap to build, and it converts "a colour fifteen hours later" into "it did not
-      start". The argument against is that it blocks work on a machine with a transient git fault —
-      which is exactly the fault we just had. See BUILD-UNKNOWN-1 §P1.
+## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
 - [ ] **`0xC0000142` on this machine — watch for a second occurrence before treating it as a
       pattern.** A 15-hour dev server became permanently unable to spawn ANY child process
@@ -719,6 +580,8 @@ nothing is designed here, no key is added, and no change is implied.
       machine is retired, neither of which a command can tell you. Said explicitly rather than
       carrying a check that cannot fail.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is a WATCH by construction and closes on a second occurrence or on the machine being retired. One occurrence still.
+
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -732,6 +595,8 @@ nothing is designed here, no key is added, and no change is implied.
       it is his live repro tool; the cost of touching it exceeds one fewer copy. **Neither is an
       oversight. Anyone closing this must answer both arguments, not just count the copies.**
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** all three copies are still there and the argument is unmet, which is the point of the entry. Waiting on anyone who proposes to consolidate answering both arguments first.
+
 - [ ] **The race-identity HASH: `sha(identity + canonical(cameraConfig))`.** Printing the identity
       made "did these two numbers come from the same race?" readable; a hash would make it
       mechanical, which matters because this project has been bitten three times by a human check
@@ -743,6 +608,8 @@ nothing is designed here, no key is added, and no change is implied.
       [VERIFY-RULES.md R16](VERIFY-RULES.md). *(This line used to say "the convention below"; the
       convention moved to PART TWO when it was adopted, and a dangling "below" is exactly the drift
       this file keeps paying for.)*
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE at `e4b2b075`:** no race-identity hash exists in any committed tree. **It is being built as this verdict is written** — tonight's **piece 13** has an uncommitted `raceHash` in the working copy of `scripts/lib/raceDriver.mjs`, which hashes the identity including the roster's NAMES plus the canonicalised camera config. This entry closes when that lands, not before.
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
@@ -758,6 +625,8 @@ nothing is designed here, no key is added, and no change is implied.
       whatever creates a throwaway worktree should remove it in a `finally`, so the stub is never
       created. Even that leaves the ReadOnly directory, so the OneDrive attribute question has to be
       settled before any of this is worth doing.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .git/worktrees | wc -l` returns **3** today, against the 51 the entry last recorded, so the stubs shrank but did not go. It is tonight's **piece 14** (*the worktree stubs, at the cause*), which had not started when this verdict was written.
 
 ---
 
@@ -778,24 +647,22 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       longer waiting on his word — it is waiting on the measurement**, and it stays open until that
       measurement exists and he has seen it.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the spread-field measurement across field sizes, which does not exist. COMPANY-HEADCOUNT-1 (2026-09-02) measured the guarantee's promise on ten tracks and repaired its headcount, but it did not sweep FIELD SIZE on a spread field, which is what this asks for.
+
 - [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
       the build and the camera path, never which guarantee ran. That gap is what made
       CAMERA-COMPANY-ONLY-2 halt a shippable block. The HUD `cfg` fingerprint may already separate
       behaviours — if it does, putting it in the line is the cheap honest fix. **An owner's PASS is
       the most expensive input this project consumes and it is currently recorded nowhere.**
 
-- [ ] **A Dev Screen change does not reach a running race.** *(**verify:**
-      `git grep -n "loadCameraConfig()" -- client/src/screens/RaceScreen/index.jsx` — **still open
-      while the line is a `useState` with no setter**; re-confirmed at `:220` on 2026-08-23.)* `RaceScreen` reads the camera config
-      once at mount (`useState(() => loadCameraConfig())`, no setter), although the director fully
-      supports live-apply via `updateConfig`. **Every A/B the owner has ever run has been two races
-      when it could have been one race and a toggle.** One line, and it is the highest-leverage
-      change on this list.
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
 
 - [ ] **"Road edge out of frame" should be a standing measurement.** The control number is the
       argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
       Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
       happens, and this one was never measured that way — only its effect on zoom was.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no standing instrument exists — none of the eighteen `scripts/check-*.mjs` guards measures the road edge, and the only thing that ever has is the ad-hoc `scripts/his-shot-truth.mjs`. Waiting on somebody making it standing.
 
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
@@ -844,6 +711,8 @@ rather than a threshold nobody has found yet.**
       `LEADER_ZOOM`-dominant at mid-race. The companion "41% less room" is **track ORIENTATION** —
       the heading runs |ux| 0.354 on space-sprint against 0.951 on river-run, so a diagonal road is
       bounded by the frame's 720 px height instead of its 1280 px width.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** ALONG-RESIDUAL-1's P1 is unstarted; the entry's own gate (`node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30`, the `residual0` figure) still decides it. Waiting on a sprite change being sized and measured.
 
 - [x] **~~THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW~~ — ✅ CLOSED 2026-09-01
       by [GOLDEN-TABLE-REGISTRY-1](../reports/evolution/GOLDEN-TABLE-REGISTRY-1.md), the owner's
@@ -896,6 +765,8 @@ rather than a threshold nobody has found yet.**
       (`scripts/diag/sprite-premise.mjs`). **There is no separate harness racer table to drift** —
       every instrument reads the registry directly; that was checked rather than assumed.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE as a warning, with its LAST SENTENCE withdrawn:** *"There is no separate harness racer table to drift"* was refuted on 2026-09-01 by SPRITE-TABLE-DRIFT-1 — two tables existed and one disagreed with the registry on five of ten rows. Both have since been repaired (GOLDEN-TABLE-REGISTRY-1 `de99f690`; REGISTRY-LITERALS-1 `56b99a9d`, which deleted 124 literals and doubled the engine-reach closure), and the body rule now has a written home in `docs/RACER_DATA_MODEL.md` (BODY-IS-THE-BOX-1, `54e32cd3`, 2026-09-02) — **which also found a second measuring rule that differs on five types**. The warning itself is unaffected and still binds.
+
 - [x] **The instrument trap that produced the wrong first reading, fixed 2026-09-01.**
       `along-residual.mjs`'s old `--margin=` changed only what the MEASUREMENT tested with while the
       director kept flying at the shipped value — so it showed a residual falling with no clipping
@@ -917,6 +788,8 @@ absence of a server that was never started.** Each item leaves by being built, n
 what must be true before anything goes online; this one is the FEATURE WORK those phases contain.
 Neither subsumes the other and both were already open.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the thirteen boxes that remain):** none of Phase 5's five remaining items, Phase 6's four or Phase 7's four exists in the tree; each leaves by being built, as the section says. **Two boxes were closed by this pass and moved to PART TWO** — Phase 5's *Basic admin auth* and Phase 6's *Environment config* — so the ⚠️ auth prerequisite above is discharged. Two more are further along than they read but are not closed: the client can now be SERVED by the server (SERVE-SPA-1, `719fd7fc`, 2026-09-01) and the image runs standalone (IMAGE-STANDALONE-1, `af0bb3b5`), neither of which is the VPS deployment Phase 6 names.
+
 ### Phase 5 — Race-Integrity Server & Leaderboard (planned)
 
 
@@ -929,13 +802,11 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 - [ ] Race outcomes persisted to DB; season standings computed server-side
 - [ ] Leaderboard screen (client) reading from server API
 - [ ] Season archive + reset
-- [ ] Basic admin auth (JWT, server-side password hashing with bcrypt)
 
 ### Phase 6 — Public Deployment (planned)
 
 
 - [ ] VPS deployment (nginx reverse proxy, HTTPS via Let's Encrypt)
-- [ ] Environment config (CLIENT_ORIGIN, JWT_SECRET, DB_PATH)
 - [ ] Admin auth hardened for public-facing use
 - [ ] Stats pages (top racers, busiest tracks, season history)
 - [ ] Mobile / tablet responsive tuning
@@ -958,6 +829,8 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       backups 2.4 MB, 10 schema-differing tracks, and ~15 KB of accounts, brand and player groups);
       **12 files / 51.7 MB are byte-identical to the seeds and do not need to travel at all.**
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `npm run data:export` exists (`package.json:11` → `scripts/data-export.mjs`) and the entry is a MEASUREMENT of what must travel, not a task. It closes when the migration happens.
+
 **This is a LIST, not a work item.** Nothing here is urgent and nothing here should be "fixed" now.
 The server currently runs only on the owner's machine — **nothing is online**, and a VPS migration
 happens only after development is finished. Every entry below is harmless while that is true and
@@ -977,9 +850,13 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
       `.disabled` suffix now says it to GitHub as well. Reviving it needs the rename back AND all
       four cleared — the rename alone would register a workflow that still cannot work.
 
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .github/workflows/deploy.yml.disabled` succeeds and `ls scripts/deploy.sh` fails, exactly as the entry predicts. All four blockers stand.
+
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `racearena.example.com` is still the only value anywhere — it appears in `deploy.yml.disabled:39` and three times in `docs/DEPLOYMENT.md`, and nowhere as a real origin. Waiting on a real public address.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
@@ -1016,6 +893,8 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 - 🔜 **Successor candidate (future act, not scheduled):** finale-window / front-band contest that ADDS a
   bounded chase term while KEEPING the static endpoint pin — see AFF-NEXT-CC.md.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** a direction, not scheduled, from a closed arc. Waiting on somebody ordering a future act.
+
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
 **verify (section-wide):** the feature shipped; the open items are follow-up MEASUREMENTS, and a measurement is its own check — each names the harness that would run it.
@@ -1039,23 +918,11 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   are untested post-fix. A full 10-track re-measurement is **not** required before shipping, but the
   headline is a pre-fix number and should never be quoted bare.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all three bullets):** the feature is shipped; what stands here are the OFF invariant, the sim-follows-default note and the measurement caveat, which is a standing qualifier on how the 23.0% → 8.3% headline may be quoted. Waiting on nothing; do not quote the headline bare.
+
 ## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
 
 **verify (section-wide):** each item IS a proposed instrument, so the check is "does the script exist": `ls scripts/` against the name in the item.
-
-- ⛔️ _(superseded by the line above)_ **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
-  tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
-  `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
-  lock-step" rule, the MODULES whose values reach `createRaceFromIdentity` / `stepRacePhysics` — plus a
-  test that FAILS when `raceCore.js` imports something not on the list. Then adding an engine input
-  forces the list to change, and the list drives the mint rule instead of a person's memory.
-  **Why both:** the mint rule catches what someone remembers; the list catches what nobody does, and in
-  this project the second kind is what has held. **The case that motivated it:** `drawnBodyWidthRefPx`
-  is computed in a screen file and consumed by `raceBehavior.js` as the avoidance body size, so a
-  race-moving value can sit in a "presentation-only" diff and pass every check —
-  `autoSpriteScale.js` did exactly that in CAMERA-PICTURE-FIXES-1 (fingerprint did NOT move, but
-  nothing established it; see [CAMERA-MINT-TRIPWIRE-1](../reports/evolution/CAMERA-MINT-TRIPWIRE-1.md)).
-  Owner asked for this to be done properly in the hygiene phase rather than tacked onto a camera block.
 
 - 🔜 **Paired per-seed delta evaluation in the gate driver.** `exp-gate-retune.mjs` already runs
   **truly paired** arms — identical seed sequence per track, per-race seeds recorded — but then
@@ -1065,9 +932,13 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   through, and would surface the flip-level detail the branch-priority A0 check had to be run by hand
   to get. Identified in `reports/proposals/review-pre-greenfield-proto-gate-driver-bf4ff90-copilot.md`.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `scripts/exp-gate-retune.mjs` still compares AGGREGATES (`deadDelta`/`frontDelta` at `:316-317` are arm-level), and its `gate-per-seed.csv` records per-seed rows without computing the paired distribution the entry asks for.
+
 - Reporting discipline for both: see the **Reporting rule** in SWEEP-HARNESS.md — episode- and
   tilt-derived metrics are mechanically G-coupled and comparable only at fixed G; gate primaries must
   be G-independent; "Holm" in these drivers is a flagged-track count, not a family-wise procedure.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** a standing reporting rule pointing at SWEEP-HARNESS.md, not a task. Waiting on nothing.
 
 ---
 
@@ -1118,37 +989,11 @@ verified against `git log` / `git tag`.
 
 - **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
-- **~~Camera timing levers — comeback shot appears late (tune by eye, no code)~~ REPLACED 2026-08-23 by the owner's DEFINITION of a comeback — PART TWO D14.** 🔜 _(added 2026-07-15, from B4; replaced 2026-08-23)_
-
-  **THE REQUIREMENT, in his terms: a comeback is a racer STORMING FROM FAR BACK TO THE FRONT.** A
-  racer climbing slowly from progress ~0.28 is **not** a comeback. That is the bar the shot has to
-  clear, and it is what the old item was missing.
-
-  **Why the old proposal is retired rather than scheduled.** It was: lower `outcomePhaseThreshold`
-  (which gates reactive comeback detection, and whose slider floor sits above the start of the
-  authored climb) and re-weight `comebackWeight` against `battleWeight` (which it loses to during
-  PULK, so even a fired candidate does not win the lens). **Both changes make the SLOW CLIMB visible
-  EARLIER — and against the definition above that is the wrong thing, sooner.** It would cost the
-  front battle the weight contest was protecting and buy an event that is not the event.
-  *(Values deliberately not restated: they live in `client/src/modules/storage/defaults.js`, which
-  is their one home.)*
-
-  **The beat timing is still true and is kept, because it is what the OPEN POINT below is about:**
-  a comebacker HOLDS its deep rank from its `anchor` beat until its `peak` beat (usually in PULK),
-  then climbs to its `resolve` beat (in OUTCOME). **The `resolve` beat is the storm he is
-  describing.**
-
-  **THE OPEN POINT — the authored BEATS never reach the camera.** Full evidence, established at
-  source and re-verified on 2026-08-23, is in **PART TWO D14**: the generator emits role AND beats,
-  the FULL `cameraPlan` IS delivered to the director, and `comebackDetector.setPlan` keeps only
-  `role === 'comebacker'` and **discards the beats** — so the camera re-infers from rank history
-  what the plan already stated, and the `resolve` beat never arrives at all.
-  **NOTHING IS PROPOSED AND NOTHING IS BUILT.** Whether the beats get handed through is his call,
-  and it needs his eye afterwards.
-  **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns
-  only the two JSDoc `@param` lines and no code that reads them.**
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:166`) still produces one `realizedIntensity` for the whole cast at `:541`. Waiting on the eye-test the entry itself asks for before building.
 
 - **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest. **AND SO DOES THE OPEN POINT IT NOW CARRIES (PART TWO D14):** the beats a faller shot would need are delivered to the director and discarded by `comebackDetector.setPlan` along with everybody else's.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** blocked on the same decision as the camera-timing-levers entry, which this pass moved into the NEEDS HIS WORD section — the beats a faller shot needs are still discarded by `comebackDetector.setPlan`. Waiting on that word.
 
 - **E3 — PULK→OUTCOME speed differential** ✅ **CLOSED 2026-08-23 — ACCEPTED AS DESIGN (PART TWO D16).** The remaining open half was the `trajectoryMult` differential: the pack is pinned to 1.0 in PULK and the P-controller returns at the boundary, so racers are genuinely faster in OUTCOME than in PULK — a real speed step, not an onset artefact. **The owner's verdict is that the step is INTENDED DRAMATURGY**, and it is documented as design in the living document that owns the mechanism, [RACE-ACTION.md](RACE-ACTION.md) § *Phase discipline — how forces fade*. **DO NOT RE-OPEN EITHER HALF.** The other half — the `rowBonus`/`rowEnvMult` sub-step — was smoothed by a 1 s `easeInOutCubic` in the shared `raceStep.js` (`computeRowEnvSmoothed`, config `enableRowEnvSmooth` + DevScreen toggle), shipped dormant at `v-rowenv-easing-complete` and flipped to default ON on 2026-07-19 at `v-rowenv-default-on-complete` after an owner eye-test; a 4-track × 100-race sim sweep (SLEW 1%/frame vs EASING 1 s) confirmed both arms fairness-neutral. Design verified at source: `racePlanner.js`, the PULK branch that pins the pack and zeroes rowBonus.
 
@@ -1202,6 +1047,8 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1717-1719`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
+
 ### 2 — Player Group Selection 🔜 PRIORITY 1 after Camera Phase
 
 The game master selects in setup which player group enters the race (e.g. "Group A", "All", "Selection").
@@ -1227,6 +1074,8 @@ Currently all configured players are always shown — there is no mechanism for 
 
 **Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `SetupScreen.jsx` consumes an ACTIVE_GROUP handed to it by the Dev Panel (`:139-146`) and has no "which group races?" filter. Waiting on the spec the entry says is still pending.
+
 ---
 
 ### Race Duration Recalibration for Race End ⏳ Low Priority
@@ -1245,6 +1094,8 @@ If user complaints about race duration deviations ever arise:
 
 **Effort:** 1–2 days. Including re-verification of all race tests.
 **Priority:** Low. Currently accepted with explicit doc clarification in ARCHITECTURE.md.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** accepted with a doc clarification and gated on a trigger that has not occurred — waiting on a user complaint about race duration.
 
 ---
 
@@ -1269,11 +1120,15 @@ Three conceptual problems were uncovered while attempting to draw default track 
 
 > **Order matters:** TLH-1 makes the system safe (backup + no data loss bugs), TLH-2 makes it usable (correct UI flow), TLH-3 makes it resilient (offline fallback). TLH-3 was deferred until after the Camera Phase. See `docs/TRACK_LIFECYCLE.md` for the full spec.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (TLH-3 only):** TLH-1, TLH-2 and the delete safeguards are shipped; the code-bundle fallback and status banner are not in the client. Waiting on the Camera Phase, by its own deferral.
+
 ### 1a — Draw Default Tracks ✅ Completed 2026-05-02
 
 All 5 geometries drawn and saved in the track editor:
 
 - **D7d** — 100-racer performance (spatial grid, smarter camera, LOD) — deferred until after Camera Phase
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE as an echo only:** this is the *Draw Default Tracks* completion plus the D7d status line, and D7d is an OBSERVATION since 2026-08-23 (PART TWO D18), not a work item. Waiting on nothing.
 
 ---
 
@@ -1357,6 +1212,8 @@ having no seed at all.
   browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
   timestep). Making one seed mean one race in both engines is a separate, larger piece of work.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it is now better understood:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) established that the seed FIELD means the same thing in both paths and the divergence is the ROSTER — a nameless field runs a different race at the same seed, because `stablePairBit` hashes the name. Waiting on the larger piece of work the entry names.
+
 - **Visual Racer Effects** — Surface-class-driven trail system. Four sub-PRs:
   - ✅ **VRE-1** — Foundation: 4 generator modules (`particle`, `cloud`, `splash`, `line`), 9 default surface classes, registry with override resolution, `/api/surface-classes` backend API (CRUD, atomic writes), `surfaceClassLoader.js` cache, `surfaceClassApi.js` service layer. 64 frontend + 24 backend tests. No UI, no race integration.
   - ✅ **VRE-2** — Surface class editor in dev screen. Master-detail layout: class list with Default/Modified/Custom badges on the left, animated live preview canvas + generator config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. 36 new unit tests + 31 new e2e tests (smoke + UX verification). 1084 unit + 183 e2e tests total.
@@ -1430,6 +1287,8 @@ already-settled questions.
   **verify:** `git grep -l "racer-configs" -- client/src` returns nothing and
   `client/src/modules/racer-types/` still exists (checked 2026-08-23), so **still open**.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/modules/racer-types/` still exists. **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
+
 - **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
   zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
@@ -1438,6 +1297,8 @@ already-settled questions.
   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
   **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
   exists only in prose (checked 2026-08-23), so **still open**.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "getZonesAtPosition" -- client/src` still returns nothing, and the TrackEditor has no zone tool. Waiting on Visual Racer Effects being complete, by its own sequencing.
 
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
@@ -1466,6 +1327,8 @@ already-settled questions.
   **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
   returns nothing (checked 2026-08-23), so the coats half is **still open**.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -ni "coat" -- .../RacerEditModal.jsx` still returns nothing, so the coats-edit and sprite-swap halves are unbuilt. Waiting on the B-UX phase, by the order below.
+
 ### Phase B (Wiring Gaps + UX Improvements)
 
 - **B-UX-Pause** — Pause + resume race
@@ -1473,11 +1336,15 @@ already-settled questions.
   - Explicitly NOT part of the camera phase (PR-G only implements Cancel Race with confirm dialog)
   - Priority: after camera phase
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
+
 - **B-UX-ManualFocus** — MANUAL_FOCUS: game master click on racer locks camera
   - Canvas click handler + hit test racer + new MANUAL_FOCUS state in CameraDirector
   - Lock UI indicator, unlock mechanism (click empty / button)
   - Effort: ~150–200 LOC, new camera state
   - Priority: after camera phase (too complex for this phase)
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — `MANUAL_FOCUS` appears nowhere in `client/src`. Waiting on the camera phase.
 
 - **B-UX2** — Dev screen cleanup + help screen
   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
@@ -1489,6 +1356,8 @@ already-settled questions.
     - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
   - Priority: medium-high. Should be tackled before D8 (full racer config editor),
     so D8 is not built into a disorganized dev screen environment.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
 
 - **B-UX3** — Detailed variable documentation
   - User finding: "I need an explanation that says more than the tooltip — what do all
@@ -1502,12 +1371,16 @@ already-settled questions.
   - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
   already renders *"Invalid: min must be > 0 and < max."* inline. **Neither section this item names
   has one** — so the work is to apply an existing pattern in two places, not to invent one.
   **verify:** `git grep -ni "must be" -- client/src/screens/DevScreen/sections/RaceTuningSection.jsx client/src/screens/DevScreen/sections/CameraZoomTuningSection.jsx` — returns nothing, so **still open**
   _(Arose during Phase 4 slider implementation 2026-05-06, Severity: LOW — currently consistent with existing speed range convention)_
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -ni "must be"` over `RaceTuningSection.jsx` and `CameraZoomTuningSection.jsx` returns nothing, while the precedent it names still exists. Waiting on somebody applying it in two places.
 
 - **B-UX4** — Sprite size system overhaul
   - Current behavior: per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
@@ -1520,6 +1393,8 @@ already-settled questions.
     - **(c) Complete redesign of the tunable concept** — auto and absolute value as selectable modes
   - Arose during D7c diagnosis (2026-04-29). Needs vision discussion before spec is written.
   - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the vision discussion the entry says must come before a spec.
 
 - ~~**B-2** — TrackSelector: custom track behavior when geometry is missing~~ — ✅ **CLOSED
   2026-08-23 (BACKLOG-SORT-42). Closed by `5bde5a94` (QUIET-FAILURES-1, 2026-08-17)**, confirmed at
@@ -1537,17 +1412,23 @@ already-settled questions.
   *Order of Next Steps* item 18. What is open is an end-to-end pass over export → import → reset.
   **verify:** `git grep -n "importAllStorage\|exportAllStorage" -- client/src/screens/DevScreen/sections/SystemSettings.jsx`
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `exportAllStorage` and `importAllStorage` are imported and called in `SystemSettings.jsx:12-27`, so the wiring is there and what is open is the end-to-end pass. Waiting on somebody performing export → import → reset.
+
 ### Phase Q (Quality Hygiene)
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
 
 - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
+
 - **Q-19 — TrackEditor.effects.test.jsx flaky** — **CANNOT ESTABLISH, 2026-08-23, and that is
   about the evidence and not about effort.** The file passes **11/11 in isolation** and the full
   client suite ran green **three times** on 2026-08-22/23. **Three green runs cannot settle an
   intermittent failure.** *What would decide it:* repeated full-suite runs under the parallel
   configuration, counting failures — a MEASUREMENT, so it is not a verdict item. — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** the file still exists and an intermittent failure is not decidable by a grep. Waiting on repeated full-suite runs under the parallel configuration, counting failures. *(The suite is now bounded at 4 workers, 2026-08-27, so any future count is against a different configuration than the one that produced the flake.)*
 
 - **Q-8** — Watch list: TrackManager.jsx and BrandingProfiles.jsx. **THE LOC FIGURES ARE REMOVED
   RATHER THAN UPDATED.** Recorded as 535 and 330; measured 2026-08-23 as **654** and **559** — both
@@ -1556,10 +1437,14 @@ already-settled questions.
   **verify:** `git grep -c "" -- <file>` — **still open while either exceeds 400.**
   Consider refactor at next extension.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `TrackManager.jsx` **654** lines and `BrandingProfiles.jsx` **566**, both still past the 400-line threshold the watch exists to enforce.
+
 - **Q-9** — Watch: `racer-types/index.js` — candidate for splitting. Recorded at 286 LOC;
   **540 on 2026-08-23**, nearly doubled.
   **verify:** `git grep -c "" -- client/src/modules/racer-types/index.js` — **still open above 400.**
   (override API vs. registry vs. boot logic). Not a problem today, monitor.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `client/src/modules/racer-types/index.js` is **540** lines, still above 400.
 
 - **Q-10** — Watch: `RacerEditModal.jsx`. Recorded at 302 LOC and described as *already 75% of
   the 400-LOC threshold*; measured 2026-08-23 at **670 — 68% PAST it**, and the file has moved to
@@ -1568,27 +1453,7 @@ already-settled questions.
   **still open above 400.**
   Keep an eye on it at D8 (full config editor).
 
-- **Background cache for offline play** _(Low priority)_
-
-  Currently all tracks (default + custom) require the running backend server for background images.
-  When server is offline → console warning (since PR-A2.8) and black/gradient background in race.
-
-  **User vision:** Tracks that were loaded once with a running server should remain playable with
-  background while offline.
-
-  **Resolution (2026-06-18, L.4-BgCacheRemoved):** Background-image caching removed entirely.
-  localStorage approach is structurally impossible — default backgrounds are 4–10 MB; even JPEG
-  downscale at q0.6 exceeds the 5–10 MB total quota once geometry + other data are included.
-  `trackCache.js` deleted. `_cacheBackgroundAsync`, `getTrackBackgroundUrl`, `resolveBackgroundSrc`,
-  `purgeStaleServerGeometries` all removed from `trackLoader.js`. Geometry cache kept intact.
-  Offline races run without background image. One-time localStorage cleanup in `main.jsx` removes
-  legacy `racearena:cache:backgrounds` key on first load.
-
-  **If background offline play is required in future:** Use IndexedDB (no Base64 overhead, no
-  5 MB quota). Consumption side in RaceScreen/PresetThumbnail would need async `getBackground(id)`.
-  Effort ~4–5h. Not planned.
-
-  **Priority:** Not planned (structural impossibility resolved by removal).
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `RacerEditModal.jsx` is **670** lines, still above 400.
 
 - **Q-27** — Background image weight. **THE ITEM'S PREMISE IS STALE AND THE NUMBER IS UNDERSTATED —
   re-measured 2026-08-23 (BACKLOG-SORT-42).** It was written as *"~11.7 MB uncompressed PNGs"* and
@@ -1601,7 +1466,11 @@ already-settled questions.
   directory weight is unaddressed and no re-spec exists.**
   _(Priority: low. Audit 2026-05-04, deferred in PR-A2.9.)_
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — there are still **zero** `.png` backgrounds in either `server/data/backgrounds/` or `server/seeds/backgrounds/`, so the fix as written still cannot be executed. Waiting on a re-spec, which is the work.
+
 - **Q-20a** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no hint text exists; waiting on somebody adding it.
 
 - ~~**Q-12** — localStorage quota with large data-URL images~~ — ✅ **SUPERSEDED 2026-08-23
   (BACKLOG-SORT-42) by the background-cache removal of 2026-06-18 (L.4-BgCacheRemoved)**, which is
@@ -1634,6 +1503,8 @@ already-settled questions.
   guard, or switch tests to a temporary directory (DATA_DIR override via env var).
   _(Discovered TLH-1 2026-05-01, Severity: LOW)_
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -n "process.on" -- server/src/routes/tracks.test.js` returns nothing, so there is still no crash-path cleanup.
+
 - **Q-21** — `.json.tmp` orphans on OneDrive EPERM fallback (TLH-1)
   `atomicWriteJson` writes `.tmp` first, then `renameSync`. If `renameSync` fails (OneDrive
   EPERM), fallback `writeFileSync` writes to the target file — after which `unlinkSync(tmp)` should delete the
@@ -1646,6 +1517,8 @@ already-settled questions.
   server's own `.json` filter (`tracks.js`), so still open** (checked 2026-08-23).
   _(Discovered TLH-1 2026-05-01, Severity: LOW)_
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — the only `json.tmp` hits in `server/src` are the two test assertions that a `.tmp` does NOT remain after a normal write; there is still no boot sweep and no `.json.tmp` branch in the server's own filter.
+
 - **Q-22** — TrackEditor frontend draft snapshot
   localStorage snapshot of the drawn geometry (key: `racearena:trackEditor:draft:<serverId>` for
   load mode, `racearena:trackEditor:draft:new` for new mode). Written on every point action or every
@@ -1656,12 +1529,16 @@ already-settled questions.
   so **still open**.
   _(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)_
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "trackEditor:draft" -- client/src` still returns nothing.
+
 - **Q-24** — isDefault immutability via PUT explicitly tested
   Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
   **verify:** `git grep -n "isDefault" -- server/src/routes/tracks.test.js` — the hits cover DELETE
   refusal and seed defaults; **no test PUTs `isDefault: false` at a default track**, so **still
   open** (checked 2026-08-23).
   _(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)_
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — `git grep -n "isDefault: false" -- server/src/routes/tracks.test.js` returns nothing, so no test PUTs `isDefault: false` at a default track.
 
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
@@ -1670,6 +1547,8 @@ already-settled questions.
   without upload in this case. Possible solutions: (a) separate error message per step with "Retry Background"
   option, (b) atomic save (rollback geometry if background fails). Effort: small–medium.
   _(Arose 2026-05-02 after background diagnosis dirt-oval, Severity: MEDIUM)_
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the two-step save is unchanged and no differentiated error message exists. Waiting on a choice between the two solutions the entry names.
 
 - **Q-13** — Sprite frame animation stutters with large sprites
   On 6000-tracks sprites become very large — frame changes appear jerky.
@@ -1683,6 +1562,8 @@ already-settled questions.
   Fallback solutions (basePeriodMs scaling, frame interpolation) only if
   maxTargetScreenPx calibration is insufficient.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and only the eye-test half:** `maxTargetScreenPx` is present in `client/src/modules/autoSpriteScale.js`, so the code half is done; nothing in the tree evidences the browser check. Waiting on somebody watching a 6000-track race and saying so.
+
 - **Q-29** — Shared RangeSliderSection component _(Post-Phase-4 audit 2026-05-06, Severity: LOW)_
   Three Phase-4 Dev-Screen sections share a 36-line slider pattern:
   `NameTagVisibilitySection.jsx`, `SpriteSizeRangeSection.jsx`, `CameraZoomTuningSection.jsx`.
@@ -1691,11 +1572,15 @@ already-settled questions.
   **verify:** `git grep -l "RangeSliderSection" -- client/src` returns nothing (checked 2026-08-23),
   so **still open**.
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "RangeSliderSection" -- client/src` still returns nothing.
+
 - **V-1** — PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
   B-Wave (PR #25, master `697e081`), recorded in *Completed Items* above. **So this is no longer
   "cannot start"; it is an unperformed verification of shipped work**, which is a different and much
   cheaper thing. Re-sorted 2026-08-23 (BACKLOG-SORT-42).
   **verify:** none can exist — it is a manual UI check of loading a saved player list.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it is a manual UI check of shipped work. Waiting on somebody performing it.
 
 - **V-2** — TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
   (`5bde5a94`, QUIET-FAILURES-1); see the struck entry above. **This is now an unperformed
@@ -1703,6 +1588,8 @@ already-settled questions.
   refused with a reason rather than starting the wrong race mode. Re-sorted 2026-08-23
   (BACKLOG-SORT-42). *(The same downstream shape holds for V-1↔B-1 and V-5↔B-5.)*
   **verify:** none can exist — it is a manual UI check.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** a manual UI check of shipped work — `selectedGeometryReady` is confirmed present at `SetupScreen.jsx:190` and gates `canStart` at `:192`, so what remains is the eye on it.
 
 - ~~**V-3** — Result screen winner count B-3 (configurable?)~~ — ✅ **ALREADY ANSWERED 2026-08-23
   (BACKLOG-SORT-42): YES, it is configurable.** `winners` is a key in `defaults.js` with a DevScreen
@@ -1714,6 +1601,8 @@ already-settled questions.
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
   doing, which is why this line is kept rather than struck.)*
 
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** not independently open — it lives or dies with B-5 above.
+
 - **V-6** — Multiple dev panel sections — visual verification
 
 - **V-7** — Physics + collision behavior — smoke test
@@ -1721,6 +1610,8 @@ already-settled questions.
 - **V-8** — localStorage persistence edge cases — stress test
 
 - **V-9** — Fullscreen toggle — functionally unverified
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired at `RaceScreen/index.jsx:1717-1719`, so what is unverified is the behaviour, not the existence.)*
 
 ### Phase T (Tooltip Retrofit)
 
@@ -1745,6 +1636,8 @@ rather than struck, with the evidence attached.
 - **T-4** — SystemSettings fields. **ZERO `InfoTooltip` uses — genuinely untouched**, and the only
   one of the four that is.
   **verify:** `git grep -c "InfoTooltip" -- client/src/screens/DevScreen/sections/SystemSettings.jsx`
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (T-1 through T-4, all four):** re-counted today — RaceDefaults **9**, TrackManager **10**, BrandingProfiles **8**, SystemSettings **0**. Three are retrofitted in substance and T-4 is untouched, but the phase's closing condition is *which fields are still unclear*, which is his judgment and not a count. Waiting on his read.
 
 ---
 
@@ -1810,6 +1703,8 @@ rather than struck, with the evidence attached.
 22. **Phase T** (tooltip retrofit — uses InfoTooltip from D3.5.5)
 23. **Phase 5** VPS deployment — ⚠️ auth (JWT) first
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the section):** a sequencing note, and its open tail (16–23) is echoes of live entries that live elsewhere in this file. Waiting on the order stopping being useful. *(Item 18's correction and item 9's duplicate warning both still hold; item 23 says "auth (JWT) first" and the auth that shipped is session-based — see the Phase 5 verdict now in PART TWO.)*
+
 ---
 
 ## Physics — Open Issues
@@ -1838,6 +1733,8 @@ rather than struck, with the evidence attached.
 
 **Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the audit note's premise is confirmed — `raceRubberBand.js` is deleted and no `flatBoost` survives in `client/src` — and the coupling it names is unchanged: `defaults.js` still carries `avoidanceDistance` and `speedBrakeYThreshold` at the same value. Waiting on the fresh top-down measurement the note asks for.
+
 ### P-3 — Speed-brake lateral: body-based same-lane filter on narrow tracks _(backlogged 2026-06-08)_
 
 **Resolved in report 45:** Speed-brake lateral now uses `contactWidth × 1.0` (body-based same-lane filter). The ×1.5 attempt (report 43 revert) failed because the multiplier expanded the zone into adjacent rows for wide-body racers on narrow tracks (luge/250px: 22.5px→37.5px, caught all adjacent pairs).
@@ -1848,6 +1745,8 @@ rather than struck, with the evidence attached.
 
 **Priority:** Low. Current ×1.0 solution is safe across all 10 tracks + 20 racer types.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** an edge case recorded with a fix direction and a stated low priority. Waiting on a narrow track or wide body making it bite.
+
 ---
 
 ### P-4 — getWidthAtT: non-uniform track width _(backlogged 2026-06-07)_
@@ -1855,6 +1754,8 @@ rather than struck, with the evidence attached.
 `getTrackWidthAtTpx` returns a single track-width value per racer (the stored `track.width` constant). For tracks with variable lane width (e.g. banked curves, chicanes), avoidance thresholds should scale with the local width at `racer.t`. Extension hook is documented in `raceBehavior.js`. Implement by querying `EditorShape._centerWidth(t)` or equivalent per frame.
 
 **Priority:** Low. No existing track has variable width. Build only when the Track Editor gains variable-width curves.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `getTrackWidthAtTpx` (`client/src/modules/raceBehavior.js:258`) still returns the constant, with the extension hook documented in the line below it. Waiting on the Track Editor gaining variable-width curves, by its own condition.
 
 ---
 
@@ -1871,6 +1772,8 @@ Current avoidance loop is O(N²) over all active pairs. At N=100 this is 4950 pa
 **Already planned as D7d** in the roadmap. Prerequisite for 100-racer races.
 
 **Priority:** Medium. Required for D7d; no urgency at current N=40–60.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE as a physics note, but nothing is ordered:** it is the mechanism behind D7d, which was downgraded to an OBSERVATION on 2026-08-23 (PART TWO D18) and is explicitly not ordered. Waiting on a measured stutter, if one ever appears.
 
 ---
 
@@ -1891,6 +1794,8 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 - **(b) Longitudinal rendered-body overlap during open-track overtaking** (P-1 bug): rubber-band overcomes speed brake, dT → 0 at crossing, ~31.7 px body overlap per pair on screen. Pre-existing physics issue, still open.
 
 **Reference:** `reports/closed-track-overview/14-full-diagnosis.md` §Q8, `reports/closed-track-overview/15-topdown-overlap.md`, `reports/phase1-metrics/03-n50-lapping-confirmation.md`
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (item 3 only):** items 1 and 2 are done and marked so; the dead-zone guard metric is still absent — `git grep -n "physSlot" -- scripts/sim-fairness.mjs` returns nothing. Waiting on that metric being added.
 
 ---
 
@@ -1932,6 +1837,8 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
   Mitigation: replace `focusRacers` with standings-sorted list; calculate centroid only within
   the top-N of the actual race order. Standalone PR after the camera phase.
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all six, as accepted limitations):** none is a defect waiting on a check and each closes only when somebody decides it is no longer acceptable, which is the section's own rule. **One is arguably work rather than a limitation** — *Pan target identification* carries priority medium and a named mitigation — and it is left here rather than promoted, because promoting it would be a decision this pass has no authority to take.
+
 ---
 
 ## Parking Lot — Future / Unclear Scope
@@ -1948,6 +1855,8 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 - Strecken-Wähler (track-picker diagnose tool) Phase 2 — optional extension of the completed Phase 1 (closed-track selection with per-track caps from finish math); scope undefined, non-mandatory
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (all five):** the scope of each is undecided, which is the section's own name. Waiting on somebody deciding the scope. *(Phase 5, i18n, multi-tenant and mobile tuning are duplicated as planned work in Phases 5–7 above; that overlap is recorded, not resolved here.)*
+
 ---
 
 ## 2026-07-10 — added (INFRA: sim-trust)
@@ -1960,11 +1869,7 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
   sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),
   O5 (auxiliary sweep scripts omit the phase-split), O6 (shared-module parity conditional on geometry).
 
-- **Repository hygiene** — needs a curation pass: **170 tags on origin, 180 local** (10 unpushed local
-  tags; `git tag | wc -l` = 180, `git ls-remote --tags` = 170) and **6 remote branches**. Which tags are
-  meaningful, and which branches are dead, is **UNVERIFIED** — keep it that way until whoever prunes
-  proves each one; produce a KEEP-LIST of the live rollback anchors first. (Do not prune on any inherited
-  count — they have not matched twice now.)
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE for O2–O6, and its HEADLINE is already closed:** **O1 is RESOLVED** — `computeFinishT` no longer exists in the sim and `scripts/sim-fairness.mjs:1101` passes `runoutZone: behaviorConfig.runoutZone`, closed by the speed/duration ship (`9e41c2bd`, 2026-07-24) and recorded as closed in `docs/archive/FORCE-PARITY.md`'s own row 7. The entry calls O1 the sharpest and it is the one that is gone; O2–O6 are unchanged latent seams.
 
 - ~~**Pre-existing start-row WIN bias on luger-hill and dirt-oval**~~ — ✅ **CLOSED 2026-08-24 by his
   decision D25** (PART TWO). It was recorded from `startRowUnfair = true` under v4-OFF. **Two things
@@ -1973,10 +1878,6 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
   any arm; and the effect it was reaching for **has since been measured as a magnitude** rather than a
   detection — see D25 and the two reports it points at. **The general rule it leaves behind: a
   detection test that trips on the baseline has stopped being evidence about anything else.**
-
-- **PHOTO_FINISH DevScreen accordion** — to be added.
-
-- **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
 
 ### Re-apply --jobs parallelism cleanly (perf)
 
@@ -1995,6 +1896,8 @@ branch.
 (default config) now yields `72c3360fb75225ef`. The pre-feature `4ec8e64dd2641ad3` now requires
 `b2AttackHeroes` at zero. Pin the parity gate to the current default hash (or run with count=0 for `4ec8e64`).
 
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** deferred, and the return point it depends on exists — the tag `archive/diag-look-before-brake` is present. Waiting on somebody choosing to pay the 1–2 h core-loop refactor.
+
 ## 2026-07-31 — added (DOC-SYNC-2: long-term items, owner's hand)
 
 **verify (section-wide):** **his own list, in his words.** No command decides any of them; they close when he says so.
@@ -2008,17 +1911,7 @@ owner's hand**: parked here with enough context to be actionable months from now
   gzip). Split via dynamic `import()` / route-level code-splitting (or `build.rolldownOptions.output.codeSplitting`)
   so the first paint doesn't pull the whole app. Pure build/perf work, no behaviour change.
 
-- ⏳ **Coarser fairness bands.** A product-level simplification the owner has raised: reduce the number of
-  finishing-place bands so "reached your band" is a coarser, more forgiving promise. Would touch the band
-  definition used by `computeZoneSuccessRate` / the draw and would re-baseline every fairness number — a
-  deliberate product decision, not a tuning tweak. Owner to decide the band count before any work starts.
-
-- ⏳ **The story layer (owner-cast narrative toolkit).** The banked owner-cast toolkit for authored race
-  stories: the **multi-role rule** (a racer may hold several narrative roles across the race provided their
-  windows are DISJOINT, smoothly welded, and resolve to ONE endpoint — no contradictory simultaneous roles);
-  **comebacker** and **fallbacker** definitions (a racer authored to climb, or to slide, over a bounded window);
-  and the **drawn-not-patterned** counts (how many of each role per race are DRAWN from a distribution, never a
-  fixed recurring pattern the eye learns). Design-first; no mechanism until the owner fixes the definitions.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and the number has grown:** the built bundle is **874 KB** today (`client/dist/assets/index-*.js`), against the ≈763 KB the entry records and the 500 kB warning threshold. Waiting on the code-split.
 
 - ⏳ **CAMERA-GLIDE-PATH-1 — view-change detour.** A camera view change travels fast but takes a visible
   DETOUR rather than the direct line. Standing hypothesis: the pan is interpolated in **track space (T-lerp)**
@@ -2026,12 +1919,7 @@ owner's hand**: parked here with enough context to be actionable months from now
   view positions. Investigate by tracing the pan interpolation space; candidate fix is to lerp the screen-space
   target, not the track parameter. Owner-visible feel item.
 
-- ⏳ **Camera block reset.** Parked camera item (block reset) from the camera saga handoff — needs the owner to
-  restate the exact symptom before it is actionable; recorded here so it is not lost.
-
-- ⏳ **Camera-weights design question — relative vs absolute weighting (deferred).** Whether the camera's
-  subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
-  A design question the owner deferred; no implementation until it is answered.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** an investigation nobody has run; the hypothesis is untested. Waiting on somebody tracing the pan interpolation space. *(Adjacent but not the same subject: ANCHOR-MISS-1 (`b8147c7f`, 2026-09-02) decomposed the 74 px anchor miss into four terms and found the pan lerp to be the honest cost — it does not answer this item's T-lerp question.)*
 
 - ~~⏳ **Start-row gradient project — SHELVED WITH DOCUMENTATION, opens only on the owner's explicit
   word.**~~ — ✅ **CLOSED 2026-08-24 by his decision D25** (PART TWO): the start-row advantage is
@@ -3740,3 +3628,379 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
 ## Parking Lot — Future / Unclear Scope
 
 - Phase 7: custom sprite upload ✅ delivered as standalone Racer Editor Phase 1+2 (2026-05-28)
+
+---
+
+## CLOSED 2026-09-02 BY BACKLOG-VERDICTS-1 — eighteen entries, each checked against the tree
+
+**Moved, not rewritten.** Every entry below is verbatim from where it stood in PART ONE. Each carries
+ONE verdict line above it — **ALREADY DONE** with the commit and the date it actually landed, or
+**MOOT** with what dissolved it. Nothing was deleted, per D4: an entry that vanishes looks like a
+question nobody asked. **The checkboxes below are left exactly as they stood** — an unticked
+`- [ ]` here is the entry as it was, not a claim that it is open; the verdict line above it is the
+closure mark.
+
+**How they were checked:** at source in the working tree at `e4b2b075`, or by running the entry's own
+`verify:` command, or by `git log -S` on the symbol the entry names — never from recollection. Where a
+search returned nothing, a control that returns something was run first.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** both branches are in master as he asked — `f01ff8ea` merge(AIM-LEVERS-1) and `73053d25` merge(AIM-ROOM-SHIP-1), both 2026-09-02 — and the floor shipped (`leaderAimRoomFloorPx` in `defaults.js`, tag `v-ship-aim-room`) with candidate A removed. **The carried-forward river-run item was re-measured on a tree that ships the floor:** AIM-ROOM-COMBINED-1 measured the combined arm before the merge (9 → 7 events) and AIM-ROOM-PAN-ANATOMY-1 (`d4b09759`, 2026-09-02) established they are **not pans but a zoom of up to ×1.94 in one frame**, that the shot STAYS, and that neither candidate is the author. The superseded-figure warnings are kept verbatim because they state a general rule.
+
+## ⚠ TWO UNMERGED BRANCHES CARRY FIGURES MEASURED AGAINST A DEFECTIVE BASELINE (2026-09-02)
+
+**`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured before COMPANY-HEADCOUNT-1, so
+every cost they publish was measured against a camera whose company guarantee was under-asking by one
+racer on every frame.** Their numbers are not wrong about the trees they were taken on; they are no
+longer the costs of those changes against master.
+
+**The clearest case is the one that mattered most to the decision.** Candidate B (the aim room floor)
+was charged with showing *about one racer fewer in shot on average* — that figure is in
+`reports/evolution/AIM-ROOM-REPAIR-1.md`, which lives on `ship/aim-room-floor-1` and is deliberately
+not linked here because it is not on master. **That charge was mostly this defect, not the lever.** The company shortfall those pieces attributed
+to the floor was dominated by a guarantee that asked for four where five was promised, on the floor
+arm and the baseline arm alike — and the repair alone lifts promise-kept on the affected tracks by
+1.6 to 2.9 points without any lever at all. **The lever has never been priced against a correct
+baseline.**
+
+Superseded specifically, and these should not be quoted as current:
+
+- **AIM-ROOM-REPAIR-1's three-column company-shortfall tables** (today / as judged / repaired), on the
+  unmerged branch — all three columns come from trees with the under-asking guarantee.
+- **AIM-ROOM-LOST-1's price for the corrected headcount, a median 1.33× and p90 2.26× widening.**
+  Already withdrawn in [COMPANY-HEADCOUNT-1](../reports/evolution/COMPANY-HEADCOUNT-1.md): it was a
+  frame-subset figure, and measured across all frames the shot is untouched on 82.5–98.7% and widens
+  by a median 1.02–1.07×.
+- **AIM-ROOM-CEILING-1's 61/39 `state`/`company` split** on broken-promise frames. The measurement
+  stands for the tree it was taken on; the population it describes is much smaller now.
+
+**What is NOT superseded:** everything about lever A's removal (proven by four byte-identical
+fingerprints at floor 0), the wiring repair's own sabotage proof, the ten-track engagement table for
+the floor, and the river-run finding below.
+
+**STILL OPEN AND CARRIED FORWARD:** `ship/aim-room-floor-1` introduced **nine whole-screen
+single-frame pans on river-run in 479,587 adjacent steps** where master has none, when the lateral
+guarantee engages without an ease. That was recorded and deliberately not fixed. It must be
+re-measured on any tree that ships the floor.
+
+**THE OWNER'S DECISION, 2026-09-02:** he has decided **against** re-measuring candidate B on the
+corrected baseline, and wants both in master. Neither branch is to be rebased or deleted on anyone
+else's initiative. **verify:** the superseded figures are identified by which tree they were taken
+on; no command re-derives them, which is why they are listed rather than recomputed.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** built and merged `77be7904` (2026-08-27), confirmed on the merged tree by GATE-CLIENT-BOUNDED-1 (`d7a860f5`, 2026-08-27), and the three bullets it labelled as hypotheses were settled on 2026-09-01 by CROWDING-INFERENCES-1 (`1c5763ab`): **CPU confirmed and measured** (13 workers pin CPU at 85–87%, 4 workers sit at 47%), **"the 15 extended-timeout tests are the load" REFUTED as stated** (removing the seven heavy files buys −9% / −17% where the bound buys −65% / −77%, and the count is 12 not 15), and **the bound deliberately NOT retuned**. Its own NEEDS line already read *nothing*.
+
+## ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
+
+**BUILT.** `client/vitest.config.js` carries `maxWorkers: 4`, in the file that already owns how this
+suite runs. `scripts/verify.mjs` already marked `client-suite` exclusive, which is the other half of
+the server-suite remedy and needed no change. **The owner accepted the trade on 2026-08-27.**
+
+**CONFIRMED ON THE MERGED TREE, not only on the branch** — the failure was intermittent, so one green
+run proves less than the margin does. Margin against the unchanged 5,000 ms default, on the worst
+test with no timeout of its own (GATE-SERIAL-BCRYPT-1's unit; the 15 tests that pass beyond 5 s carry
+their own timeouts and are excluded by that property, not by a list of names):
+
+| arm | runs | failures | p99 | worst | **margin** |
+| --- | --- | --- | --- | --- | --- |
+| unbounded | 3 | **14** | 1,918 ms | 10,457 ms | **−5,457 ms** |
+| unbounded | 3 | **6** | 1,733 ms | 8,511 ms | **−3,511 ms** |
+| bounded, branch | 3 | 0 | 744 ms | 4,402 ms | +598 ms |
+| **bounded, MERGED TREE** | 3 | **0** | **524 ms** | **1,899 ms** | **+3,101 ms** |
+
+**The margin is now better than the server suite's** (+1,894 ms after its own repair).
+
+**AND THE COST DID NOT MATERIALISE.** The projection was 313 s → 403 s, about 29%. **The real merged
+wall clock is 296.2 s mean** (299.2 / 273.1 / 316.2) against 313.8 s and 312.2 s unbounded — **not
+slower at all**. The 403 s figure came from an arm measured while three other measurements were
+competing for the machine, which is exactly the confound this item is about. On a quiet machine
+bounding costs nothing here, the same as it cost nothing on the server.
+
+**WHAT IS NOW MEASURED, not guessed:**
+
+- **Concurrency causes it.** The only thing changed between the arms is worker count, and the failure
+  count goes 20-in-6-runs to 0-in-6-runs.
+- **The affected tests are STARVED, not slow.** The worst default-timeout test falls **10,457 ms →
+  1,899 ms**, a factor of 5.5, without a line of test code changing.
+- **The heavy tests are slowed too**, which is what distinguishes oversubscription from a slow test:
+  the golden real-arm comparison runs 113,789 ms unbounded and **25,812 ms** on the merged bounded
+  tree.
+
+**WHAT REMAINS A HYPOTHESIS, and stays labelled as one:**
+
+- **That the 15 extended-timeout tests are specifically the load.** It is consistent with everything
+  above and nothing contradicts it, but the suite was never run WITHOUT those files, so their role is
+  inferred from correlation rather than isolated.
+- **That CPU is the exhausted resource.** Memory was ruled out by measurement (free RAM held
+  7.4–7.9 GB of 33.8, nothing accumulated). CPU is what is left and it fits, but no counter was read.
+- **That 4 is the right number.** It is what was measured and what he agreed to, not a tuned optimum.
+  The sweep the server repair ran — 1 / 3 / 6 / unbounded — has not been run here. **Deliberately
+  not tuned**: a bound found by search rather than by measurement is the same class of thing as
+  raising a timeout.
+
+**NEEDS: nothing.** It is built and confirmed. The open question is only whether the bound should
+later be tuned, and there is no reason to touch it while the margin is 3.1 s.
+
+**verify:** `node scripts/diag/suite-timing.mjs --suite=client --runs=3 --label=x` — margin and
+failures in one table. Any run whose failure count is non-zero reopens this.
+
+---
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — MOOT:** dissolved by the seed arc of 2026-08-31. SEED-SNAPSHOT-1 (`d93fcfdf`) made his runtime records the shipped seeds — `server/seeds/tracks/garden-path.json` now carries all four of his `surfaceClasses`, read at source today — and SEED-REDELIVERY-1 (`b9dc8102`, merge `22e6eadf`) answered the delivery question without needing a per-field rule at all: the **whole unit** is redelivered when a version in `server/seeds/versions.json` is raised BY HAND, and the operator is warned by a banner he must dismiss. There is no field-by-field line left to draw.
+
+## WHICH FIELDS OF A SHIPPED TRACK BELONG TO THE PROJECT, AND WHICH TO WHOEVER RUNS IT
+
+**Sharpened 2026-08-27 by [TRACK-RUNTIME-AUDIT-1](../reports/evolution/TRACK-RUNTIME-AUDIT-1.md),
+which audited all ten runtime track records against their seeds.** The open question is NOT the one
+the garden-path icon suggested.
+
+**The icon case made the seeding rule look purely harmful:** `seedRuntime.js` copies a record only
+`if (!existsSync(dest))`, so a shipped correction can never reach an existing install, and his
+garden-path showed a snail for three weeks after the repo said beetle.
+
+**The audit found the other half.** `server/data/tracks/garden-path.json` carries
+`surfaceClasses: ["grass","earth","mud","sand"]`; the seed carries two, and **has carried exactly two
+in every commit of its history back to 2026-06-17**. The live record's `updatedAt` is six days newer.
+Those two classes were added in the app by him on 2026-07-04 and **exist nowhere else — not in the
+seed, not in git.** A mechanism that overwrote existing records to deliver the icon would have
+deleted them without a word.
+
+**So the decision is narrower and harder than "should seed edits reach existing installs":**
+**which fields may a shipped record correct, and which belong to the person running it?** The icon and
+description are plainly the project's. The surface classes are plainly his. **Nothing in the record
+distinguishes them**, and no rule based on comparing values or timestamps gets it right — his edit is
+newer, larger, and exactly as plausible as a shipped change would be.
+
+**NEEDS: HIS WORD**, and it is not urgent: the audit repaired the nine records whose drift was
+behaviourally null, and left his edit intact, so the install is correct today either way.
+
+**verify:** the audit in the report is thirty lines and re-runnable; drift shows up as a field list.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`), the same commit that closed the item above it — the backlog simply never heard. Verified at source: `scripts/verify.mjs:250-272` carries the corrected comment and schedules on `exclusive: !shape.singleWorker` derived from `server/test/suiteShape.mjs`, and `.github/workflows/ci.yml:184-193` says the flag was removed and that CI schedules nothing. Neither file asserts `--no-file-parallelism` any more.
+
+- [ ] **TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**
+      `scripts/verify.mjs:246` and `.github/workflows/ci.yml:184` both assert
+      `--no-file-parallelism` is in the server package's `npm test`. It is not. `verify.mjs` then
+      runs the server suite **non-exclusively, beside the fingerprint jobs**, on the ground that the
+      suite is single-worker — which is why the GATE rather than the suite is where the red appears.
+      Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md), the second finding.
+      **NEEDS: BUILDING** (a comment fix and a scheduling flag), but it is entangled with the item
+      above and should be decided with it.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** the remaining ⏳ half closed 2026-09-01 by REACH-ADVISORY-1 (`585899be`). Verified at source: `scripts/engine-reach.mjs:41` imports `dataReach` and `:257` computes `dataPrefixes` from it, so the advisory a human reads now agrees with the routing. The report also found and fixed a second defect on the way — an UNCHANGED seed record was being called reaching — and adds a third verdict, *"DATA read by the engine but unchanged against base"*.
+
+- [ ] **THE ARBITER THAT DECIDES WHETHER A CHANGE CAN REACH THE ENGINE CANNOT SEE ANYTHING THAT
+      SHIPS AS DATA.** `engine-reach --check` returns *"cannot reach the engine at all"* for
+      `server/seeds/tracks/*.json`, for `client/src/modules/racerNames.js` — whose names are hashed
+      into the physics — and for `client/src/modules/racer-types/*.js`, whose speed multipliers set
+      the race length. **Two of those three verdicts are wrong.** It is a wrong QUESTION asked of a
+      correct answer: the closure answers *"what does the engine import"* exactly.
+      Establishes it: [ENGINE-REACH-DATA-1](../reports/evolution/ENGINE-REACH-DATA-1.md).
+      **HALF OF THIS IS NOW CLOSED, AND THE HALF THAT REMAINS IS THE SMALLER ONE. Established at
+      source 2026-08-27, not taken from a report.**
+      **✅ THE ROUTING HOLE IS CLOSED** by ENGINE-REACH-DATA-FIX-1: `scripts/lib/routing.mjs` now
+      decides which guards run through `scripts/lib/dataReach.mjs`, which follows NAMED paths and not
+      only import edges. Replayed on the real commit with `scripts/diag/routing-replay.mjs`: a change
+      to `server/seeds/tracks/garden-path.json` selected **5 guards before and 12 after** — all four
+      fingerprints, both suites, both frame checks. **That was the half that could let a red master
+      report green, and it cannot any more.**
+      **⏳ THE ADVISORY IS STILL WRONG, and it is the line a human reads at commit time.**
+      `engine-reach --check server/seeds/tracks/garden-path.json` still answers *"1 outside the hull
+      (cannot reach the engine at all)"* — for a file whose two-line edit moved **all four**
+      fingerprints in GARDEN-PATH-DEFAULTS-1. It cannot answer otherwise as written: `entryPoints()`
+      walks static `from '...'` specifiers, and **a JSON data file is never an import edge**, so no
+      data path can ever enter that hull.
+      **NEEDS: BUILDING, and it is now a smaller job than the report costed** — the mechanism that
+      answers it correctly already exists and is shipped; `engine-reach`'s hull is the last caller
+      that does not use `dataReach`. The measured cost in the report (3.4% of commits) was for the
+      whole thing and overstates what is left.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-31 by SEED-REDELIVERY-1 (`b9dc8102`, merge `22e6eadf`). A shipped record now redelivers to an existing installation when its version in `server/seeds/versions.json` is raised by hand — whole unit, `server/src/seedDelivery.js` — and the operator is warned by server-side state (`GET /api/seed-notices`, a SetupScreen banner, dismissed by an authenticated POST). `seedRuntime.js:36` still never overwrites, deliberately: delivery moved rather than being bolted onto the first-boot copy.
+
+- [ ] **A SHIPPED TRACK CHANGE STILL REACHES NOBODY, CONFIRMED AGAIN TONIGHT.** garden-path icon and
+      description now match its beetle in the artefact the product ships, **and his own installation
+      will never see it** — `seedRuntime.js:36` copies a seed only where no file exists. **The live
+      record was deliberately NOT hand-edited this time**, so the evidence stays intact.
+      One home for this subject: **the section immediately below**, which owns it.
+      Also establishes it: [GARDEN-PATH-BEETLE-SKIN-1](../reports/evolution/GARDEN-PATH-BEETLE-SKIN-1.md).
+      **NEEDS: ONLY HIS WORD** — should a shipped-data change be deliverable to an existing
+      installation at all, or is "new installs only" the intended behaviour?
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE (both entries in this section):** the first closes with SEED-REDELIVERY-1 above — a shipped change now reaches an existing installation on a hand-raised version. The second, **garden-path still wears the snail**, closed 2026-08-26 by GARDEN-PATH-BEETLE-SKIN-1 (`ba4a4442`): read at source today, the seed's icon is 🪲 and its description reads *"A leisurely (yet surprisingly competitive) scuttle through the roses."*
+
+---
+
+## A shipped track change never reaches an existing installation (2026-08-25, from GARDEN-PATH-DEFAULTS-1 and TRACK-DEFAULTS-REACH-1)
+
+**verify (section-wide):** none — nothing here is a change. **Both entries are FINDINGS, not
+proposals.** No work is proposed for either, no key is added, and nothing is designed.
+
+- [ ] **EDITING A SHIPPED TRACK SEED CHANGES NOTHING THAT ANY EXISTING INSTALLATION CAN SEE, and no
+      mechanism ever delivers it.** Three facts, each read at source: `seedRuntime.js` copies a seed
+      into the data directory **only when the destination does not exist** — *"Existing destination
+      files are never overwritten"*; `server/src/routes/tracks.js` builds its track map **once, at
+      process start** (`const tracksMap = loadAllTracks()` at module scope) and serves every read
+      from that map; and **there is no migration** — `.tlh1-defaults-migrated` is written and never
+      read, its own comment saying *"Legacy marker — no behavior gating; kept for operational
+      reference only."* **So a shipped default reaches fresh installs and nobody else.**
+      **THE EVIDENCE IS THIS BLOCK ITSELF.** garden-path's defaults moved on the owner's machine only
+      because the gitignored live record under `server/data/tracks` was **hand-edited** — a step no
+      user and no CI run performs — and even then only after the API process was restarted. **He
+      watched the old track for thirty hours**, and nothing in the repository could have told him:
+      the commit was correct, the seed was correct, and the picture was not.
+      **IT IS THE SAME ROOT CAUSE AS `verify`'s ROUTING NOT SEEING A TRACK CHANGE.** Routing and the
+      mint tripwire both compute their reach from the **transitive import closure** of the engine,
+      and a track record is never imported — it is read from disk at runtime. Measured here:
+      `verify` skipped all four fingerprint guards for a change that moved all four, and
+      `node scripts/engine-reach.mjs --check server/seeds/tracks/garden-path.json` exits **1**,
+      *"cannot reach the engine at all"*, for that same change. **A data file can move the world
+      without being reachable, and every instrument that decides by import closure is blind to it.**
+      **AND THE DRIFT WAS ALREADY REAL.** The owner's live record still carried the legacy
+      `defaultDuration` while the shipped seed had long since moved to `defaultLaps` — both resolving
+      to the same lap count, so nothing showed — **with nothing anywhere comparing the two.**
+
+- [ ] **garden-path still wears the snail.** Its icon is 🐌 and its description reads *"A leisurely
+      (yet surprisingly competitive) crawl through the roses"*, while the track's default racer is
+      now the **beetle**. The owner named two changes on 2026-08-25 and neither was the icon or the
+      description, so neither was touched; `scripts/track-defaults.test.mjs` pins both so that a
+      later block cannot quietly tidy them without saying so. **Small, visible, and recorded only so
+      that it reads as a decision rather than an oversight.**
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** the section's only item is the ROADMAP merge and it is finished. `git grep -c "" docs/ROADMAP.md` returns **31** today — the redirect ROADMAP-FOLD-2 left on 2026-08-27. Nothing in this section is open.
+
+---
+
+## Documentation (2026-08-07, from DOC-ORDER-1)
+
+**verify (section-wide):** `git grep -c "" docs/ROADMAP.md` — **the merge is FINISHED. ROADMAP-FOLD-1 (2026-08-23) took it from 627 lines to a 74-line phase-status table; ROADMAP-FOLD-2 (2026-08-27) folded that table in here and left a 31-line REDIRECT that owns nothing.** Every section it ever held is in this file.
+
+- [x] ~~**Merge ROADMAP into BACKLOG**~~ — ✅ **DONE 2026-08-23 by ROADMAP-FOLD-1**
+      (NIGHT-2026-08-23 piece 3), under D24. **All 35 ROADMAP sections are accounted for:** 3 to PART
+      ONE (*Phases 5–7*), 30 to PART TWO (*Phase history*), 2 subsumed because they were only
+      pointers back into this file (Phase V, Phase T). **A move, not an audit — no verdict was
+      re-checked and no completion claim confirmed or withdrawn.** ROADMAP survives as a phase-status
+      table so every existing link to it stays valid. *(The reasoning that follows is kept because it
+      states the general rule, and because it is the record of why the merge was a separate order.)*
+      **The original entry read:** *(The approval changes nothing about the reasoning below; what it
+      settles is that the merge WILL happen and gets its own piece. It was deliberately not done
+      inside the 2026-08-23 documents piece, which was already rewriting a dozen entries in this
+      file — a dropped item and an edited item would have been indistinguishable in that diff.)* The two documents
+      half-own "what is done and what is next": this file owns the open work with its evidence,
+      [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
+      that boundary in both files' `**Owns:**` lines rather than merging them, **on the owner's
+      instruction that the merge is a separate order.** The reason it is separate: ROADMAP is 618
+      lines and this file is over 1300, a real merge is a careful pass with a high chance of silently
+      dropping an item, and a half-finished merge leaves two documents half-owning a subject — which
+      is worse than the boundary that exists today. When it happens, the intended landing is that
+      **BACKLOG owns both**, with ROADMAP reduced to a phase-status table.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — MOOT:** the owner decision this item exists to ask was answered **NO** on 2026-08-23 (PART TWO D5, which records both halves), and the silent failure it guarded against was removed by BUILD-FROM-OUTSIDE-1 (`a24f47e2`, merge `c10c6b12`): verified at source, `server/src/app.js:59` answers `/api/health` with `build: buildIdentity()`, which reports `unknown` **and the reason** rather than failing quietly. There is nothing left for a watcher to watch that a URL cannot answer.
+
+- [ ] **THE BADGE STILL HAS NO WATCHER — both of its failures were found by the owner's eye.**
+      It lied confidently (BUILD-TRUTH-1), then failed silently (BUILD-UNKNOWN-1), and in both cases
+      the alarm was a human noticing something on screen. The start-up line helps only if somebody
+      reads the terminal. **Owner decision:** should `npm run dev` REFUSE to start when the identity
+      is unreadable? Cheap to build, and it converts "a colour fifteen hours later" into "it did not
+      start". The argument against is that it blocks work on a machine with a transient git fault —
+      which is exactly the fault we just had. See BUILD-UNKNOWN-1 §P1.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — MOOT:** declined by the owner on 2026-08-22 and again on 2026-08-23 — PART TWO **D5**, *A Dev Screen change reaching a RUNNING race is NOT wanted*, closed as a decision precisely so it stops being re-proposed as "one line, the highest-leverage line in the file". The source is unchanged on purpose (`client/src/screens/RaceScreen/index.jsx:221`, `useState(() => loadCameraConfig())`, no setter).
+
+- [ ] **A Dev Screen change does not reach a running race.** *(**verify:**
+      `git grep -n "loadCameraConfig()" -- client/src/screens/RaceScreen/index.jsx` — **still open
+      while the line is a `useState` with no setter**; re-confirmed at `:220` on 2026-08-23.)* `RaceScreen` reads the camera config
+      once at mount (`useState(() => loadCameraConfig())`, no setter), although the director fully
+      supports live-apply via `updateConfig`. **Every A/B the owner has ever run has been two races
+      when it could have been one race and a toggle.** One line, and it is the highest-leverage
+      change on this list.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE (Phase 5, *Basic admin auth*):** shipped, and it discharges the ⚠️ auth prerequisite that heads Phase 5. `server/src/auth/` carries `authRouter.js`, `guards.js`, `csrf.js`, an admin role and a bootstrap path; `server/package.json` depends on `bcrypt ^6.0.0` at cost 12. **Named differently than it landed:** the session is a signed cookie with a SQLite session store, not a JWT, so no `JWT_SECRET` exists — the mechanism differs from the phase text, the requirement does not.
+
+- [ ] Basic admin auth (JWT, server-side password hashing with bcrypt)
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE (Phase 6, *Environment config*):** landed as `RA_CLIENT_ORIGIN`, `RA_SESSION_SECRET` and `RA_DATA_DIR` (no `JWT_SECRET` — see the Phase 5 line above), and documented variable by variable on 2026-09-01 by ENVIRONMENT-DOC-1 (`09aeb7f6`): `docs/ENVIRONMENT.md`, **21 variables**, missing-behaviour and wrong-behaviour kept separate, naming the two that stop the server booting.
+
+- [ ] Environment config (CLIENT_ORIGIN, JWT_SECRET, DB_PATH)
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** built 2026-08-03 by CAMERA-HYGIENE-1 2/n (`aff558a3`). Verified at source: `ENGINE_INPUT_MODULES` is exported from `client/src/modules/raceConfigWorld.js` beside `WORLD_CONFIG_KEYS`, and `client/src/modules/engineInputs.test.js` fails when `raceCore.js` imports a module the list does not name — which is exactly the test this item asked for.
+
+- ⛔️ _(superseded by the line above)_ **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
+  tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
+  `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
+  lock-step" rule, the MODULES whose values reach `createRaceFromIdentity` / `stepRacePhysics` — plus a
+  test that FAILS when `raceCore.js` imports something not on the list. Then adding an engine input
+  forces the list to change, and the list drives the mint rule instead of a person's memory.
+  **Why both:** the mint rule catches what someone remembers; the list catches what nobody does, and in
+  this project the second kind is what has held. **The case that motivated it:** `drawnBodyWidthRefPx`
+  is computed in a screen file and consumed by `raceBehavior.js` as the avoidance body size, so a
+  race-moving value can sit in a "presentation-only" diff and pass every check —
+  `autoSpriteScale.js` did exactly that in CAMERA-PICTURE-FIXES-1 (fingerprint did NOT move, but
+  nothing established it; see [CAMERA-MINT-TRIPWIRE-1](../reports/evolution/CAMERA-MINT-TRIPWIRE-1.md)).
+  Owner asked for this to be done properly in the hygiene phase rather than tacked onto a camera block.
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — MOOT:** resolved by removal on 2026-06-18 (L.4-BgCacheRemoved), which the entry itself records: `trackCache.js` is deleted and the four consumption helpers are gone. The want is not scheduled and the structural reason is kept — localStorage is not an image store. Closed here only because a resolved entry sitting in PART ONE reads as open work.
+
+- **Background cache for offline play** _(Low priority)_
+
+  Currently all tracks (default + custom) require the running backend server for background images.
+  When server is offline → console warning (since PR-A2.8) and black/gradient background in race.
+
+  **User vision:** Tracks that were loaded once with a running server should remain playable with
+  background while offline.
+
+  **Resolution (2026-06-18, L.4-BgCacheRemoved):** Background-image caching removed entirely.
+  localStorage approach is structurally impossible — default backgrounds are 4–10 MB; even JPEG
+  downscale at q0.6 exceeds the 5–10 MB total quota once geometry + other data are included.
+  `trackCache.js` deleted. `_cacheBackgroundAsync`, `getTrackBackgroundUrl`, `resolveBackgroundSrc`,
+  `purgeStaleServerGeometries` all removed from `trackLoader.js`. Geometry cache kept intact.
+  Offline races run without background image. One-time localStorage cleanup in `main.jsx` removes
+  legacy `racearena:cache:backgrounds` key on first load.
+
+  **If background offline play is required in future:** Use IndexedDB (no Base64 overhead, no
+  5 MB quota). Consumption side in RaceScreen/PresetThumbnail would need async `getBackground(id)`.
+  Effort ~4–5h. Not planned.
+
+  **Priority:** Not planned (structural impossibility resolved by removal).
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** the KEEP-LIST exists and is enforced in **both** directions. Run today: `node scripts/check-tags.mjs` → *"123 origin tags checked, 0 unregistered; 123 declared in the register, 0 missing at origin"* — the register is `docs/TAGS.md` and the guard is `scripts/check-tags.mjs` (`582438d4`, 2026-07-31). The branch half is finished too: `git ls-remote --heads origin` returns **1** (master), against the 6 this entry recorded, after BRANCH-INVENTORY-1 and BRANCH-CLEANUP-1; and SHIP-CEREMONY step 12 (`7bb7dfe5`, 2026-09-02) binds branch clearing to every merge. **Every count in the entry is stale** — 123 local tags today, not 180.
+
+- **Repository hygiene** — needs a curation pass: **170 tags on origin, 180 local** (10 unpushed local
+  tags; `git tag | wc -l` = 180, `git ls-remote --tags` = 170) and **6 remote branches**. Which tags are
+  meaningful, and which branches are dead, is **UNVERIFIED** — keep it that way until whoever prunes
+  proves each one; produce a KEEP-LIST of the live rollback anchors first. (Do not prune on any inherited
+  count — they have not matched twice now.)
+
+---
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE (both lines):** **PHOTO_FINISH DevScreen accordion** landed 2026-08-02 with CAMERA-FRAMING-1 (`e4a7fd14`) — `client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx:34-45` gives PHOTO_FINISH its own row and label. **Hero-count as a DevScreen range** landed 2026-07-20 with the B2-attacker ship (`8bf54cad`) — `DynamicsTuningSection.jsx:1381` renders `b2AttackHeroes` as *"B2-attacker count (0–5)"* with min 0 / max 5 / step 1.
+
+- **PHOTO_FINISH DevScreen accordion** — to be added.
+
+- **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
