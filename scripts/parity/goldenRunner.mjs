@@ -87,19 +87,46 @@ import { racerFacts } from "../lib/racerFacts.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-/** The 10 shipped tracks with their default racer type — the soak's track axis. */
-export const TRACKS = [
-  ["city-circuit", "motorbike"],
-  ["dirt-oval", "horse"],
-  ["garden-path", "snail"],
-  ["ice-track", "snowmobile"],
-  ["luger-hill", "luge"],
-  ["mountainstreet", "boarder"],
-  ["river-run", "duck"],
-  ["searound", "manta"],
-  ["seatrack", "dolphin"],
-  ["space-sprint", "rocket"],
-];
+/**
+ * The 10 shipped tracks with their default racer type — the soak's track axis, READ FROM THE SEEDS.
+ *
+ * IT IS DRIFT, NOT A PINNED FIXTURE, and that was established rather than assumed. This table is
+ * imported by exactly one consumer, `scripts/parity/soak.mjs`; the GOLDEN CASES name their own
+ * track/racer pairs in `client/src/modules/parity/goldenCases.js` and none of them is garden-path, so
+ * no recorded expectation depends on this pairing. Its comment claimed the track defaults while
+ * carrying `garden-path → snail`, which the seed stopped saying on 2026-08-25. Nothing pinned it; it
+ * was simply stale.
+ *
+ * A FUNCTION AND NOT A CONST, deliberately: four vitest files import this module, and reading ten
+ * seed files at import time would put that cost on every golden test for a value only the soak uses.
+ * `soak.mjs` calls it once.
+ */
+export function trackDefaultPairs() {
+  const ids = [
+    "city-circuit",
+    "dirt-oval",
+    "garden-path",
+    "ice-track",
+    "luger-hill",
+    "mountainstreet",
+    "river-run",
+    "searound",
+    "seatrack",
+    "space-sprint",
+  ];
+  return ids.map((id) => {
+    const seed = JSON.parse(
+      readFileSync(join(ROOT, `server/seeds/tracks/${id}.json`), "utf8"),
+    );
+    if (!seed?.defaultRacerTypeId) {
+      throw new Error(
+        `goldenRunner.trackDefaultPairs: ${id}.json has no defaultRacerTypeId — the soak runs each ` +
+          `track's OWN default and will not substitute one.`,
+      );
+    }
+    return [id, seed.defaultRacerTypeId];
+  });
+}
 
 /**
  * Racer-type physical config for the types the soak uses.

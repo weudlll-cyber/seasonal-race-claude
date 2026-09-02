@@ -17,7 +17,7 @@
 
 import { writeFileSync } from "fs";
 import {
-  TRACKS,
+  trackDefaultPairs,
   RACER_CONFIGS,
   loadTrack,
   buildIdentity,
@@ -58,7 +58,9 @@ const COUNTS = [20, 40, 60];
 /** Every identity the soak will check. */
 export function buildMatrix() {
   const out = [];
-  for (const [trackId, defaultType] of TRACKS) {
+  // Read from the shipped seeds every run, so the soak's axis cannot go stale the way the old
+  // literal table did (garden-path carried `snail` for eight days after the seed said `beetle`).
+  for (const [trackId, defaultType] of trackDefaultPairs()) {
     const ctx = loadTrack(trackId);
     const shapes = ctx.isOpen ? ["open-in-range", "open-slowdown"] : ["closed"];
     const types = [defaultType, ALT_TYPE[trackId]];
@@ -92,7 +94,7 @@ function main() {
     `identities: ${cases.length}${LIMIT ? ` (limited from ${matrix.length})` : ""}`,
   );
   console.log(
-    `tracks: ${TRACKS.length}   seeds: ${SEEDS.join(",")}   counts: ${COUNTS.join(",")}`,
+    `tracks: ${trackDefaultPairs().length}   seeds: ${SEEDS.join(",")}   counts: ${COUNTS.join(",")}`,
   );
   console.log("");
 

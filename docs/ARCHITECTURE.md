@@ -428,14 +428,14 @@ Tracks carry `defaultLaps` (closed) or `defaultDurationSec` (open) instead of th
 The migrated defaults (laps for closed, stored seconds for open) are **speed-independent** — they do not
 change with the normal-speed pick. The realized durations they produce at the shipped **150 px/s** are in
 [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) §0 (e.g. dirt-oval 87.2 s, searound 62.4 s,
-luger-hill 59.0 s, mountainstreet 60.0 s; garden-path far longer at the snail's 0.30×). The multiplier `M`
+luger-hill 59.0 s, mountainstreet 60.0 s; garden-path formerly far longer at the snail's 0.30x; it defaults to the beetle since 2026-08-25). The multiplier `M`
 is the type-intrinsic speed multiplier (part of the pace), not a speed.
 
 | track          | topology | default type (M)  | old `defaultDuration` | new default |
 | -------------- | -------- | ----------------- | --------------------- | ----------- |
 | city-circuit   | closed   | motorbike (1.05)  | 60 s                  | 2 laps      |
 | dirt-oval      | closed   | horse (1.00)      | 60 s                  | 2 laps      |
-| garden-path    | closed   | snail (0.30)      | 120 s                 | 4 laps      |
+| garden-path    | closed   | **beetle (0.90)** | 120 s                 | **2 laps**  |
 | ice-track      | closed   | snowmobile (1.10) | 60 s                  | 2 laps      |
 | searound       | closed   | manta (1.10)      | 60 s                  | 2 laps      |
 | luger-hill     | open     | luge (1.10)       | 90 s                  | 90 s stored |
@@ -443,6 +443,16 @@ is the type-intrinsic speed multiplier (part of the pace), not a speed.
 | river-run      | open     | duck (0.85)       | 60 s                  | 60 s stored |
 | seatrack       | open     | dolphin (1.15)    | 60 s                  | 60 s stored |
 | space-sprint   | open     | rocket (1.25)     | 90 s                  | 90 s stored |
+
+**THE `default type` AND `new default` COLUMNS ARE A SNAPSHOT, NOT A SOURCE.** `server/seeds/tracks/*.json`
+is the one home for a track's `defaultRacerTypeId` and lap count; this table restates them for a reader
+and **can go stale, because a document cannot read a seed**. It did: garden-path stood at `snail (0.30)`
+and `4 laps` from 2026-08-25, when GARDEN-PATH-DEFAULTS-1 made that track default to the **beetle** and
+**2 laps**, until 2026-09-02. The row is corrected above. **The three CODE sites that carried the same
+stale pairing now read the seed instead and cannot drift again** — `scripts/fingerprint-default.mjs`,
+`scripts/parity/goldenRunner.mjs` and `client/scripts/sweep-bufferPct-driver.mjs`. This one is left as
+prose deliberately: the alternative is a generated block, and this table's other four columns are
+history that nothing can regenerate.
 
 Closed defaults use the old staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4), preserved as
 `legacyLapsFromDefaultDuration()` — a migration helper only; nothing in a running race calls it.

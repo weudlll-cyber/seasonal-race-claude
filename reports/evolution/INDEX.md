@@ -6,6 +6,19 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-02 — GARDEN-PATH-DEFAULTS-1's re-mint reasoning is CORRECTED: the racer half of that
+  change could not reach the world fingerprint.** That mint argued all four values had to move because
+  *every instrument runs all TEN tracks AT TRACK DEFAULTS*. `scripts/fingerprint-default.mjs` was not
+  reading track defaults — it carried a LITERAL table pairing garden-path with `snail` — so the racer
+  half of GARDEN-PATH-DEFAULTS-1 moved nothing there, and **only the lap-count half could move the
+  world hash on 2026-08-25**. That is exactly why the stale pairing survived unnoticed for eight days:
+  the value moved for a reason that looked sufficient. Established and repaired by
+  [FINGERPRINT-TRACK-DEFAULTS-1](FINGERPRINT-TRACK-DEFAULTS-1.md), which also proves the point in the
+  other direction — camera and render, which DO resolve each track's racer from the track record, are
+  byte-identical across the repair while world and world-off move. **Nothing else in that report is
+  withdrawn**: the lap change, the four values it recorded and the eye-test reasoning all stand. The
+  report itself is append-only and is not edited.
+
 - **2026-09-01 — [SPRITE-PREMISE-1](SPRITE-PREMISE-1.md)'s claim that NO harness racer table exists
   is FALSE. Two exist, and one has drifted on five of ten entries.** Established by
   [SPRITE-TABLE-DRIFT-1](SPRITE-TABLE-DRIFT-1.md). The sentence withdrawn is *"there is no drift
@@ -229,6 +242,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [FINGERPRINT-TRACK-DEFAULTS-1.md](FINGERPRINT-TRACK-DEFAULTS-1.md) — **the world fingerprint was
+  racing a SNAIL on garden-path for eight days; the premise is repaired, not the pair** (2026-09-02,
+  an INSTRUMENT correction and NOT a world change — the simulation is untouched and the diff shows
+  it). `fingerprint-default.mjs` carried a literal table under a comment claiming it ran each track's
+  default; the seed said `beetle` from 2026-08-25 and nothing followed. It now READS
+  `defaultRacerTypeId` from the shipped seed and throws rather than substituting one, so the pairing
+  cannot go stale again; the track ORDER stays fixed because it feeds the combined hash. **Three other
+  sites triaged rather than assumed**: `goldenRunner`'s table is DRIFT not a pinned fixture (its only
+  consumer is `soak.mjs`; no golden case is garden-path) and now reads the seeds as a FUNCTION so four
+  vitest files do not pay import-time fs; `sweep-bufferPct-driver` was wrong on TWO axes with
+  city-circuit never right since the week it was written, and now reads the seeds; `ARCHITECTURE.md`
+  cannot read a seed and is corrected and LABELLED a snapshot. **THE MOVEMENT IS DEMONSTRATED**: the
+  old instrument on the new tree returns the value being replaced, the new instrument on the old tree
+  returns the value being written, and **exactly one of ten per-track hashes moved** — garden-path.
+  **World and world-off re-minted; camera and render UNMOVED because they never had the defect.**
+  **No ship tag**, decided by SHIP-CEREMONY: nothing for his eye, and the return point would restore
+  an instrument that races a snail.
 
 - [SEED-117-SETTLE-1.md](SEED-117-SETTLE-1.md) — **the race IS the same; the step IS there; and
   "not noticeable" is not what the data says** (2026-09-02, measure only). **(b) is ruled out**: at
