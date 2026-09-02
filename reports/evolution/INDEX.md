@@ -230,6 +230,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-ROOM-PAN-ANATOMY-1.md](AIM-ROOM-PAN-ANATOMY-1.md) — **they are not pans, they are a ZOOM; the
+  shot STAYS; and neither offered candidate is the author** (2026-09-02, measure only — nothing
+  changed, fixed or proposed). **CORRECTS THIS ARC'S OWN REPORTING.** river-run's seven whole-screen
+  events were called *pans* in AIM-ROOM-REPAIR-1, AIM-ROOM-COMBINED-1, the `v-ship-aim-room` register
+  entry and the mint text. `camStep` measures the OFFSET, and the camera zooms about the world origin
+  — so when the zoom changes the offset must move. **The leader moves 12-149 screen px, 1-12% of the
+  frame, not the 1,594-5,137 px the metric reports.** The real event is a zoom of up to **x1.94 in one
+  frame**. **UNIT settled**: `camStep` is SCREEN px, so the arithmetic was valid and the
+  interpretation was not. **SHAPE: STAY** — the camera never returns, but "recovery" is the wrong
+  frame: the zoom ARRIVES at `LEADER_ZOOM`'s own 2.133 and stays, in **3-6 frames (0.05-0.10 s) on
+  five of seven** and **16-19 frames (0.27-0.32 s) on the other two**, which are the ones a viewer
+  would read as a move. **BOTH CANDIDATES RULED OUT**: the screen heading turns 0.27-1.02 deg/frame at
+  the step, ordinary and often identical to its neighbours, so no bend; and the anchor miss is
+  12-106 px with no spike, often FALLING through the window. **What IS coincident on all seven:
+  `binding` flips `field` -> `state`** — the field guarantee's latched, un-eased retirement — recorded
+  as an association and explicitly not as a proof, since the retirement itself was not instrumented.
+
 - [AIM-ROOM-COMBINED-1.md](AIM-ROOM-COMBINED-1.md) — **the floor and the repaired guarantee measured
   TOGETHER before merging, against repaired master — and they do not fight** (2026-09-02, the gate for
   shipping candidate B on top of COMPANY-HEADCOUNT-1). Both act on the same guarantee and every
