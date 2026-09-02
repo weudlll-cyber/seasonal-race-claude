@@ -249,6 +249,15 @@ tooling. Master had to be reset and force-pushed; that state is preserved as
 **This section owns the ORDER of the merge, the mint, the tag and the cleanup that ends it.** Anything else that describes that
 order points here instead of restating it.
 
+**★ SCOPE, corrected 2026-09-02: step 12 binds to EVERY MERGE TO MASTER, not only to a ship.** Steps
+1-11 are a ship's sequence and need a mint or a tag to mean anything; **step 12 needs neither.** The
+rest of this section was read as scoping it — the list is called THE SHIP ORDER, its neighbours talk
+about provisional SHAs and CI for a tag, and step 12 itself used to end "the ship is not finished
+while they stand" — so a chain of ordinary merges that minted nothing and tagged nothing left six
+branches standing at origin, and the step never fired. **The wording was the defect, not the
+practice.** A branch is cleared because master holds its content, and that is true of a diagnostic
+merge exactly as it is of a ship.
+
 **The contradiction it resolves (found 2026-08-18).** Two of this repository's rules were both right
 and could not both hold: *CI must be green for exactly the merge SHA*, and *a ship tag's `TAGS.md`
 register line goes in the commit after the merge*. Checked out at the tag, `check-tags` saw a tag at
@@ -290,8 +299,11 @@ used.
 11. **Only then, the follow-up commit on master correcting the two provisional SHAs** — the register
     line's and `mintedOn` — to the merge's actual hash, pushed on its own.
 12. **Clear the branches AT ORIGIN, and do it here rather than remembering to.** Every branch origin
-    still carries whose content master already holds is deleted; the ship is not finished while they
-    stand. **Anything a branch holds that master LACKS is landed on master first** — as a commit, not
+    still carries whose content master already holds is deleted. **This step is owed by ANY merge to
+    master — a diagnostic, a docs commit, a repair, a piece of a chain — not only by a ship**, and it
+    is owed at the merge, not at the end of a batch of them: no merge is finished while a branch it
+    made redundant stands at origin. **A merge that mints nothing and tags nothing still owes this
+    step**, which is precisely the case that was missed (see SCOPE above). **Anything a branch holds that master LACKS is landed on master first** — as a commit, not
     by leaving the branch up — and anything that must survive as evidence becomes an **annotated tag
     with its `TAGS.md` register entry**, never a branch. A branch is a moving pointer that anyone can
     force-push or delete; a tag is the thing this repository already trusts to mean "this state, at
@@ -300,7 +312,10 @@ used.
 
 **WHY THIS IS A STEP AND NOT A HABIT.** It was a habit for months, and the habit produced ten
 archive-branches, then produced them again after they were cleared: CLEANUP-2026-08-26 swept nine,
-and by the next ship there were three more. A rule that lives outside the repository has to be
+and by the next ship there were three more. **Making it a step was not enough on its own**: on
+2026-09-02 a five-piece chain merged six branches to master, ran this document's own containment
+check on none of them, and left all six at origin — because every one of those merges was an ordinary
+merge and this step read as a ship's. **A step in the wrong section is still a step nobody runs.** A rule that lives outside the repository has to be
 remembered by whoever is at the keyboard, and the record shows it is not. **The failure is not
 untidiness.** `feat/leader-whole-setback-1` was the only home of a 195-line report for a day, so
 master's own index carried a line saying where to go and look — a repository that has to point
