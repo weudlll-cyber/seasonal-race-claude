@@ -58,6 +58,7 @@ process.on("exit", () => {
 });
 
 import { createHash } from "node:crypto";
+import { checkAgainstRecord } from "./lib/fingerprintCheck.mjs";
 import {
   isCheap,
   cheapTracks,
@@ -344,6 +345,27 @@ if (!CHEAP && !ENDING_OFF && withEnding.length === 0) {
 const COMBINED = CHEAP
   ? cheapHash(combined.digest("hex"))
   : combined.digest("hex").slice(0, 16);
+
+// ── --check: COMPARE AGAINST THE RECORD (FP-COMPARE-2) ──────────────────────────────────────────
+//
+// THIS INSTRUMENT MEASURED AND DID NOT CHECK. `--check` appeared FOUR times in
+// `fingerprint-default.mjs` and ZERO times here: it computed a hash, printed it, and exited 0
+// whatever the hash was. FP-COMPARE-1 fixed exactly this for the world in 2026-08-14 and the other
+// two were never done, so two of the three instruments guarding the picture were log lines.
+//
+// The comparison itself lives in `scripts/lib/fingerprintCheck.mjs` — one implementation for all
+// three, rather than a third copy of it here.
+if (process.argv.includes("--check")) {
+  checkAgainstRecord({
+    role: "camera",
+    label: "CAMERA",
+    measured: COMBINED,
+    cheap: CHEAP,
+    root: ROOT,
+    localise: "the per-track lines above localise which track moved.",
+  });
+}
+
 
 if (QUIET) {
   console.log(COMBINED);

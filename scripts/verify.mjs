@@ -304,7 +304,20 @@ export function commandFor(g) {
   // printed the new value and reported PASS, and the defect reached master green. `--check` is
   // inert under --cheap (a one-track hash cannot be compared to a ten-track record) and the script
   // says so rather than passing silently.
-  if (g.id === "world-fingerprint")
+  // FP-COMPARE-2 (2026-09-03): camera and render join the world here. `--check` appeared FOUR times
+  // in `fingerprint-default.mjs` and ZERO times in the other two, so two of the three instruments
+  // guarding the picture computed a hash, printed it, and reported PASS whatever it was. They now
+  // compare against `docs/fingerprints.json` through ONE shared implementation.
+  //
+  // WHERE A NEW FAILURE SURFACES, established before the change: `npm run verify` and nothing else.
+  // The pre-commit hook deliberately does not run the fingerprints, and CI does not run `verify`.
+  // So a moved camera or render hash now fails the command the ship ceremony already tells a person
+  // to run, and it fails nowhere they are not looking.
+  if (
+    g.id === "world-fingerprint" ||
+    g.id === "camera-fingerprint" ||
+    g.id === "render-fingerprint"
+  )
     return {
       cmd: ["node", g.source, ...(cheap ? cheapArgs() : []), "--check"],
     };

@@ -6,6 +6,17 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-03 — [CENSUS-CHECKS-1](CENSUS-CHECKS-1.md)'s "DEMONSTRABLY INERT — 1" is REPAIRED, and
+  the count it belongs to moves with it.** That census found `render-fingerprint.mjs` could not go red
+  under the argv `verify` gives it, and named `camera-fingerprint.mjs`'s headline half as inert for the
+  same reason — `--check` appeared four times in `fingerprint-default.mjs` and **zero** times in both
+  others. FP-COMPARE-2 gave all three the comparison, through **one shared implementation** rather than
+  a third copy of it. **The census's finding was right and is not withdrawn**; what has changed is the
+  tree it described. Its "40 checks: 27 fire, 12 never exercised, 1 inert" should now be read as
+  **1 inert → 0**, with the two former non-gating halves proven to go red by
+  `scripts/lib/fingerprintCheck.test.mjs` and by a wired sabotage on the camera instrument. **No
+  fingerprint moved**: all four were run against the record and all four match.
+
 - **2026-09-02 — [DOC-TRUTH-1](DOC-TRUTH-1.md)'s headline of "8 false" UNDERSTATES THE DOCUMENT SET BY
   ROUGHLY TWELVE TIMES.** The breadth pass it commissioned returned after it was merged and is
   [DOC-TRUTH-2](DOC-TRUTH-2.md): **~4,300 claims checked, 97 false at ~124 sites in 24 of 34
@@ -422,6 +433,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **losing `matrix.json` throws, but losing the profiles is SILENT** — try/catch plus continue drops
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
+
+- [FP-COMPARE-2.md](FP-COMPARE-2.md) — **two of the three instruments guarding the picture were log
+  lines; all three now compare, through ONE implementation** (2026-09-03; **no fingerprint moved** —
+  all four run against the record and all four match; `verify` PASS 15 FAIL 0 with world, camera and
+  render all running `--check` and all green). `--check` appeared **4** times in
+  `fingerprint-default.mjs` and **0** times in the other two: FP-COMPARE-1 fixed the world on
+  2026-08-14 and the others were never done, so for **eighty days** two instruments computed a hash,
+  printed it, and reported PASS whatever it was. ★ **ONE IMPLEMENTATION, NOT A THIRD COPY.** The
+  obvious repair — pasting the world's block into both — would have put three copies of one
+  comparison in the tree, the exact shape Rule A was built the same night to catch. The block MOVED to
+  `scripts/lib/fingerprintCheck.mjs`; `fingerprint-default` lost its inline copy and the other two
+  gained a call. **The repair removes a copy while adding a capability**, and a test asserts all three
+  call it so it cannot go half-applied later. ★ **PROVEN RED TWICE, because once was not enough**:
+  six tests on the comparison itself (mismatch exits 1, an undeclared role fails rather than passing
+  on nothing, an unreadable record fails, `--cheap` SAYS it skipped), and then a **wired sabotage** on
+  the camera instrument — its digest sliced one character over, perturbing the hash and not the
+  measurement — which failed with recorded `152cf295c4c9ff54` against measured `52cf295c4c9ff549`,
+  then reverted byte-identical. **A FIRST SABOTAGE ATTEMPT FAILED TO SABOTAGE ANYTHING and is
+  recorded**: the camera's `--company-only` probe arm still matched, so that flag does not move what
+  is hashed — stopping there would have reported a green run as evidence of a working check.
+  **Where a new failure surfaces was established BEFORE the change: `npm run verify` and nowhere
+  else** — the hook deliberately does not run the fingerprints and CI does not run verify.
+  **The new check caught my own error first**: running the off arm as `off --check` (which names the
+  run but does not turn the world off) correctly reported a mismatch, where a printing instrument
+  would have let a moved world-off hash be recorded as a finding.
 
 - [SPEC-AND-INERT-1.md](SPEC-AND-INERT-1.md) — **the dead spec's question is still live but belongs
   on ten tracks in the script suite, not on one track in a browser; and both inert fingerprint halves

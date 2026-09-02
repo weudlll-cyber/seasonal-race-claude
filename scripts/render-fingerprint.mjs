@@ -112,6 +112,7 @@ import {
   refuseCheapQuiet,
 } from "./lib/cheapMode.mjs";
 import { ceremonySamplePoints } from "./lib/ceremonySamples.mjs";
+import { checkAgainstRecord } from "./lib/fingerprintCheck.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -719,6 +720,25 @@ for (const geo of RUN_GEOS) {
 const COMBINED = CHEAP
   ? cheapHash(combined.digest("hex"))
   : combined.digest("hex").slice(0, 16);
+
+// ── --check: COMPARE AGAINST THE RECORD (FP-COMPARE-2) ──────────────────────────────────────────
+//
+// THIS INSTRUMENT MEASURED AND DID NOT CHECK, and it was the more complete case of the two: it
+// carried no `FAIL`, no `throw` and no `assert` anywhere, and its only `process.exit(1)` sits behind
+// `--ops=`. Under the argv `verify` gives it, it could not go red at all. CENSUS-CHECKS-1 classified
+// it DEMONSTRABLY INERT for exactly that, and the repair was named there and not applied.
+//
+// The comparison lives in `scripts/lib/fingerprintCheck.mjs` — one implementation for all three.
+if (process.argv.includes("--check")) {
+  checkAgainstRecord({
+    role: "render",
+    label: "RENDER",
+    measured: COMBINED,
+    cheap: CHEAP,
+    root: ROOT,
+    localise: "the per-track lines above localise which track moved.",
+  });
+}
 
 if (QUIET) {
   console.log(COMBINED);
