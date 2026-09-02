@@ -434,6 +434,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [PRUNE-STEP-1.md](PRUNE-STEP-1.md) — **the condition that blocked it is gone, reproduced on a fresh
+  stub, so it is a step now** (2026-09-03; one file changed, `verify` PASS 10 FAIL 0). The owner's
+  refusal was explicitly CONDITIONAL — not that prune is wrong, but that it FAILS here, and a ritual
+  that cannot succeed teaches that rituals are optional. ★ **The decision rule was TESTED, not
+  assumed.** There were zero stubs left to test on, so one was made: a real `git worktree` at a short
+  path outside OneDrive with **no junction** (checked — `dir /s /al` found no reparse point inside
+  it), whose directory was then removed to leave exactly the stale stub the ceremony must deal with.
+  **Prune alone: `Permission denied`, 1 stub left. With `-R` cleared at all three levels: removed, 0
+  left.** It fails for ReadOnly and succeeds once ReadOnly is gone; no other cause appeared, so the
+  rule permitted the step. ★ **A detail only a FRESH stub could show: the attribute arrives late.**
+  At creation the stub carried `P` only — **no `R` at all** — and by the time prune ran it carried
+  `A R P`, as did `logs/` and `refs/`. **OneDrive applies ReadOnly after the fact, when it syncs**,
+  which is why the clearing belongs at REMOVAL time rather than creation time; last night's evidence,
+  taken on days-old stubs, could not have shown it. The step spells all three `attrib` lines out
+  because `attrib -R /s /d` **looks like it recurses and does not** — `/s` recurses for files, `/d`
+  applies at the level given, and together they leave `logs/` and `refs/` ReadOnly **while exiting
+  0**, which is why the one-liner everybody tried failed for four months. **The step carries the
+  junction warning beside the recipe**, because the stub is not the hazard: `git worktree remove
+  --force` over a junctioned `client/node_modules` walked through the link and emptied the real
+  tree's `node_modules/.bin`, 81 shims to 0. **Constraint 2:** the SCOPE paragraph said "steps 1-11
+  are a ship's sequence … step 12 needs neither" and now reads 12 AND 13; `check-tags.mjs`'s two
+  citations of "step 12" remain accurate. **The step cannot be enforced and says so** — `.git/` is not
+  tracked, so no guard can see a stub, and unlike Rule B's branches there is nothing to ask origin.
+
 - [FP-COMPARE-2.md](FP-COMPARE-2.md) — **two of the three instruments guarding the picture were log
   lines; all three now compare, through ONE implementation** (2026-09-03; **no fingerprint moved** —
   all four run against the record and all four match; `verify` PASS 15 FAIL 0 with world, camera and

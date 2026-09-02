@@ -258,8 +258,10 @@ tooling. Master had to be reset and force-pushed; that state is preserved as
 **This section owns the ORDER of the merge, the mint, the tag and the cleanup that ends it.** Anything else that describes that
 order points here instead of restating it.
 
-**★ SCOPE, corrected 2026-09-02: step 12 binds to EVERY MERGE TO MASTER, not only to a ship.** Steps
-1-11 are a ship's sequence and need a mint or a tag to mean anything; **step 12 needs neither.** The
+**★ SCOPE, corrected 2026-09-02: steps 12 AND 13 bind to EVERY MERGE TO MASTER, not only to a
+ship.** Steps 1-11 are a ship's sequence and need a mint or a tag to mean anything; **steps 12 and 13
+need neither** — 13 was added 2026-09-03 and inherits 12's scope for the same reason, since a
+worktree stub is left by any block that used one, ship or not. The
 rest of this section was read as scoping it — the list is called THE SHIP ORDER, its neighbours talk
 about provisional SHAs and CI for a tag, and step 12 itself used to end "the ship is not finished
 while they stand" — so a chain of ordinary merges that minted nothing and tagged nothing left six
@@ -318,6 +320,39 @@ used.
     force-push or delete; a tag is the thing this repository already trusts to mean "this state, at
     this moment". See THE CONTAINMENT CHECK immediately below for *how* to decide, because the
     obvious way to decide is wrong.
+
+13. **Clear the WORKTREE STUBS, and clear the ReadOnly attribute FIRST.** If the block used a
+    `git worktree`, `.git/worktrees/` is left holding inert metadata that `git worktree prune` alone
+    cannot delete on this machine:
+
+    ```
+    attrib -R /d .git\worktrees\<name>
+    attrib -R /d .git\worktrees\<name>\logs
+    attrib -R /d .git\worktrees\<name>\refs
+    git worktree prune
+    ```
+
+    **WHY THIS IS A STEP NOW, WHEN THE OWNER PREVIOUSLY REFUSED IT.** His instruction was explicitly
+    conditional — not that prune is wrong, but that *it fails here*, and a ritual that cannot succeed
+    teaches that rituals are optional. **That condition is gone.** WORKTREE-STUBS-1 (2026-09-02)
+    cleared all three stubs then standing, and the recipe was reproduced independently on 2026-09-03
+    against a freshly created stub: **prune alone fails with `Permission denied`; with `-R` cleared at
+    all three levels it succeeds and the count goes to zero.**
+
+    **WHY THE ORDERING MATTERS, and it is not obvious.** `attrib -R /s /d` looks like it recurses and
+    does not — `/s` recurses for FILES, `/d` applies to folders at the level given, and together they
+    leave `logs/` and `refs/` still ReadOnly while exiting 0. **Naming each level is the whole
+    trick**, and it is why this failed for four months. The clearing must also come at REMOVAL time
+    rather than creation time: a stub is created without ReadOnly and acquires it later, when OneDrive
+    syncs the directory — measured on 2026-09-03, where a fresh stub carried only `P` and had gained
+    `R` by the time prune ran.
+
+    ★ **AND THE STUB IS NOT THE HAZARD — A JUNCTION IS.** A stale stub costs one inert directory.
+    `git worktree remove --force` run while a worktree had the main tree's `client/node_modules`
+    junctioned into it walked *through* the link and deleted into the real tree, emptying
+    `node_modules/.bin` from 81 shims to 0 (SIDE-FREE-CULL-1, 2026-08-27). **Do not junction
+    `node_modules` into a worktree**; if one exists, remove the junction BEFORE removing the worktree,
+    never the other way round.
 
 **WHY THIS IS A STEP AND NOT A HABIT.** It was a habit for months, and the habit produced ten
 archive-branches, then produced them again after they were cleared: CLEANUP-2026-08-26 swept nine,
