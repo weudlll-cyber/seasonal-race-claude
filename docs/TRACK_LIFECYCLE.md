@@ -29,7 +29,7 @@ This document captures the agreed solution before implementation begins.
 | **Track-Geometry**    | Spatial path data: background image, inner/outer/center boundary points, closed flag, effects, surface classes, track lights config.                                                                           |
 | **Server-Track**      | A Track-Preset with a backing `server/data/tracks/<id>.json` file. Authoritative source of truth.                                                                                                              |
 | **Default-Track**     | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1, these are Server-Tracks seeded at boot. |
-| **Code-Bundle**       | `client/src/modules/storage/defaultTracks.js` — in-code fallback snapshot, used when server is unreachable and cache is empty.                                                                                 |
+| **Code-Bundle**       | `client/src/modules/storage/defaultTracks.js` — **NOT BUILT; the file does not exist.** The PLANNED in-code fallback snapshot, for when the server is unreachable and the cache is empty. Deferred as TLH-3 below. *(Corrected 2026-09-02, DOC-TRUTH-1: this row read as present tense and was the only place in either document that asserted the file exists — `docs/ARCHITECTURE.md` already said "NOT BUILT" and named THIS file as the owner that marks it deferred, so the two disagreed.)* |
 | **Orphaned Geometry** | A geometry cache entry whose linked Track-Preset no longer exists. Harmless — preserved indefinitely.                                                                                                          |
 
 ---
@@ -267,6 +267,12 @@ After Track-Delete, the geometry cache entry (`racearena:trackGeometries:<geomet
 ---
 
 ## Code-Bundle Update Workflow
+
+**⚠ THIS DESCRIBES TLH-3, WHICH IS DEFERRED AND NOT BUILT** (see the status at the top of this file
+and TLH-3 below). Neither `defaultTracks.js` nor the Export button exists today; the steps below are
+the planned workflow, kept because TLH-3 is deferred rather than abandoned. Marked 2026-09-02
+(DOC-TRUTH-1) because the section was written in the present tense and read as a procedure someone
+could follow.
 
 The Code-Bundle (`defaultTracks.js`) is updated manually, not automatically. The workflow:
 

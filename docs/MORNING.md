@@ -3,8 +3,9 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-02 night, after piece 7. **HYGIENE AND TRUTH is running.**
-Pieces 1, 4, 5, 6 and 7 are merged and pushed. Master is green after each.
+**Last rewritten:** after piece 10. **HYGIENE AND TRUTH IS FINISHED — all fourteen pieces merged and
+pushed.** Master is green after each. **Nothing was minted**, proven mechanically: no commit in this
+chain touches `docs/fingerprints.json`. **Nothing about any race changed.**
 
 ---
 
@@ -12,160 +13,131 @@ Pieces 1, 4, 5, 6 and 7 are merged and pushed. Master is green after each.
 
 ### 1. Can a machine catch the pattern? **PARTLY — four of the six, on two rules, inside guards you already have.**
 
-The shape — a statement true when written, left standing while the thing it described moved
-underneath it — **is not one fault. It is five.** Split by what the two sides actually ARE:
+The shape — a statement true when written, left standing while the thing it described moved — **is not
+one fault. It is five.**
 
-| | the subtype | catchable? |
-| --- | --- | --- |
-| a hand-copied SET whose home is machine-readable | the fingerprint's track table, the sprite audit's geometry | **YES** |
-| a hand-maintained SUBSET that must COVER a computed set | the parity soak's roster | **YES**, with one relation typed once |
-| a document sentence stating what a command computes | SHIP-CEREMONY's closure row | **YES — the guard already exists and already fires** |
-| a SCOPE word in a procedure | step 12 | **NO as a statement; YES by its whole consequence** |
-| a premise in code about what a value IS at runtime | the company headcount | **NO** |
+| the subtype | catchable? |
+| --- | --- |
+| a hand-copied SET whose home is machine-readable | **YES** |
+| a hand-maintained SUBSET that must COVER a computed set | **YES**, with one relation typed once |
+| a document sentence stating what a command computes | **YES — the guard exists and already fires** |
+| a SCOPE word in a procedure | **NO as a statement; YES by its whole consequence** |
+| a premise in code about what a value IS at runtime | **NO** |
 
 **No new check script.** Two rules inside existing guards. **Rule A** widens
-`check-fallback-agreement` so a literal mirroring a declared home must agree with it — with the pairs
-**discovered from the registry's own field names**, never listed, because a typed correspondence table
-is the same defect one level up. It would have gone red on the sprite audit's table at
-**2026-06-03, the commit that introduced it** — that table never agreed with the registry for one day
-of its 91. **Rule B** widens `check-tags` to refuse a branch standing at origin whose TREE master
-already holds; it would have caught step 12 at the FIRST of the six merges rather than at the end.
+`check-fallback-agreement`, with the pairs **discovered from the registry's own field names, never
+listed** — because a typed list is the same defect one level up. It would have gone red on the sprite
+audit's table at **2026-06-03, the commit that introduced it**. **Rule B** widens `check-tags`: no
+branch stands at origin whose tree master already holds.
 
-**The company headcount is not catchable and the report refuses to pretend otherwise.** Neither side
-is a literal, and the repair's own reasoning shows every machine-readable form of that premise
-recreates the defect at the caller.
+**The company headcount is not catchable and the report refuses to pretend otherwise.**
 
 **A correction that strengthens the case: THREE of the six were created by repairing another, not
-two.** Half of them are a *correct* repair moving one side of a pair. That is why "review harder at
-write time" cannot work — nobody was wrong at write time.
+two.** Half are a *correct* repair moving one side of a pair — which is why "review harder at write
+time" cannot work.
 
-### 2. How much of the backlog closed tonight? **NOT YET — piece 9 has not run.**
+### 2. How much of the backlog closed tonight? **16 of 128 open entries.**
 
-It is next after the two write-pieces ahead of it and it is never dropped. This line gets the count.
-
----
-
-## WHERE EVERY PIECE STANDS
-
-| # | piece | state |
-| --- | --- | --- |
-| 1 | The manta's tail belongs to her | **DONE — merged** |
-| 2 | The twelve checks never exercised | not started |
-| 3 | The ten test files that run only by hand | not started |
-| 4 | Can the pattern be caught by a check? | **DONE — merged** |
-| 5 | Prove or clear the six suspected-dead items | **DONE — merged** |
-| 6 | The homeless facts, followed through | **DONE — merged** |
-| 7 | Why RaceScreen cannot be tested | **DONE — merged** |
-| 8 | Three steps between a stranger and a running install | not started |
-| 9 | Give every open backlog entry a verdict | not started — **never dropped** |
-| 10 | The documents must describe the tree that exists | not started — **never dropped** |
-| 11 | Why a 60-second race exceeds 200 seconds of simulation | not started |
-| 12 | Nothing measures motion, only per-frame values | not started |
-| 13 | The race-identity hash | not started |
-| 14 | The worktree stubs, at the cause | not started |
-
----
-
-## PIECE 1 — THE MANTA'S TAIL. Your decision is written down, and it turned up a second difference.
-
-**Nothing about any race changed.** No `bodyFill` corrected, no default moved, all four fingerprint
-guards routed **`nothing changed`**, `verify` PASS 13 FAIL 0.
-
-Your rule now lives in `docs/RACER_DATA_MODEL.md` § "What a racer's BODY is", where someone
-regenerating a sheet will meet it. The Racer Editor now returns it: until today `measureBodyFill`
-measured with the shedding box while all forty pinned values had been produced by the plain one, so
-re-measuring any of five sheets would silently have written a smaller number into a value that sets
-body extents and start-row spacing. **It would have changed who wins races.**
-
-**★ THE FINDING THAT WAS NOT IN THE BRIEF: the two rules differ in TWO ways, not one.** Besides the
-shedding, the **alpha threshold** differs by one level — and it decides two of the twenty types.
-
-| threshold | reproduces the registry |
+| | count |
 | --- | --- |
-| `alpha >= 10` | **20 of 20** |
-| `alpha > 10` | 18 of 20 — beetle `0.398 → 0.383`, koi `0.578 → 0.574` |
+| open before | **128** |
+| **closed tonight** | **16** (12 already done, 4 moot) |
+| still true | **105** |
+| **need your word** | **7** |
 
-**It was found by sabotage, not by reading.** The obvious clean repair — deriving the plain box by
-extracting the shedding box's own scan — moved those two rows the moment it was wired in. A repair
-that changes two numbers is not a repair. The two functions are therefore separate;
-`computeSpriteBoundingBox` is **behaviourally untouched** (the diff removes no line of code) and
-keeps sprite CENTRING, where shedding is right.
-
-**Of the two findings put to me for checking, one is refuted and one confirmed exactly.**
-
-- **"The pins were taken as a MAX across frames" — REFUTED, twice.** They are the **UNION**. The two
-  coincide on 12 of 20 — manta among them, which is why the max reading looked right there — and on
-  the other 8 the union is strictly wider and is what matches. Nor was it unwritten:
-  `measureBodyFill`'s comment has always said union. What was unwritten was *which box rule*.
-- **"The shedding rule varies 0.578–0.680 over manta's sixteen frames" — CONFIRMED, exactly.** The
-  plain box holds 0.766–0.805 over the same frames, and `bodyFillX` is 0.633 on every frame under
-  both rules — so the disagreement sits precisely on the axis the tail occupies. It sheds the tail
-  when the tail sweeps thin. **A measure that tracks the wingbeat is measuring the pose, not the
-  body.** That is now written where the rule is written, as the argument for your decision.
-- **My own generalisation of that is REFUTED, and is recorded because it is tempting.** Withholding
-  one frame at a time, the shedding rule is more fragile on **1 of 20** types (manta), equal on 17,
-  *less* fragile on 2; mean ratio 1.04×. It is a manta argument, not a general one.
-
-**All twenty agree with the owning rule** — the repaired audit reports zero rows as `OWNING RULE
-DIFFERS`. **Sabotage-proven:** pointing the editor back at the shedding rule fails
-`canvasUtils.bodyRule.test.js` with `expected 0.62 to be close to 0.8`.
+16 + 105 + 7 = 128. Every verdict checked against the tree, never recalled. **Closed entries were
+moved, not deleted**, into a dated section that states its own checkbox convention out loud. **The
+seven decisions are gathered into one section so you can answer them in a sitting.** Preservation is
+mechanically verified: every non-blank line of the original survives character-for-character, **0
+missing**.
 
 ---
 
-## PIECE 5 — WHAT IS ACTUALLY DEAD: almost nothing, and the census named the wrong reader.
+## ALL FOURTEEN — DONE
 
-**5 ALIVE, 1 split (6 of its 8 dead), 0 still unproven. Nothing was removed.**
-
-- The **11 zero-reference `scripts/diag/` runners** are **ALIVE** — re-running two summarisers
-  reproduces `AIM-LEVERS-1` and `RUNIN-LEVEL-SET-1` **digit for digit**. They authored claims already
-  acted on. A zero-reference grep says only that nothing *imports* them.
-- The **19 "VOID" instruments** are **ALIVE** on the census's own discriminator, which had already
-  been satisfied six days *before* the census ran.
-- **6 of the 8 sprite generators are DEAD** — four of their sources were deleted one day after the
-  generators were written, and two more would overwrite tracked artwork in place.
-- **`reports/perf`: the reader is `phys-bench-fit.mjs`, it reads FIVE files, not one, and it is
-  MANUAL-ONLY** — in no suite, no workflow, no hook. It reads **numbers from named files**, never
-  prose. So summarising the prose costs nothing. **Keeping those five files and deleting the other
-  310 breaks no automated check at all.** One hazard: losing `matrix.json` throws, but losing the
-  profiles is **silent** — it drops the whole Q4 table at exit 0.
-
----
-
-## PIECE 6 — THE HOMELESS FACTS: do one, drop the other, and the reason is not the filed defect.
-
-- **B2 `AUDIT_RENDERED_BODY_H` needs NO new home, and that is the answer.** It is the *product* of two
-  values that each already have one home; under R14 a derived value is owed a derivation, not a home.
-  Two edits close it.
-- **B3 `surfaceClasses` in `goldenRunner.mjs`: the honest home is NONE.** It agrees with no source and
-  two of its values name surface classes that exist nowhere. **A fact that agrees with no source is
-  not homeless, it is invented** — the proposal is deletion, and it is dropped as not worth doing
-  because the field is already annotated as unread.
-- **The recommendation is B2, for a defect found while costing it, not the one filed.** That test is
-  **titled ±5% while asserting ±0.05 absolute — 33× tighter than its own title** — and buggy passes
-  it by 2.8e-15. A live tripwire on a race input that the next rounding change will fire.
+| # | piece | the headline |
+| --- | --- | --- |
+| 1 | The manta's tail | your rule is written down; **the two box rules differ in TWO ways, not one** |
+| 2 | The twelve unexercised checks | **eleven of twelve fire**; one guard's headline half is confirmed inert |
+| 3 | The ten hand-run test files | **none is out by accident**; one spec's premise has rotted |
+| 4 | Can a check catch the pattern? | five subtypes, two catchable, four of six would have gone red |
+| 5 | The six suspected-dead items | **five are ALIVE**; `reports/perf`'s reader was misidentified |
+| 6 | The homeless facts | do B2, drop B3 — and the reason is not the defect that was filed |
+| 7 | RaceScreen | the seam is **one line**, and the file does not need it |
+| 8 | A stranger and a running install | one of three closes; two would break **your** setup |
+| 9 | The backlog | **16 closed, 7 are yours** |
+| 10 | The documents | **791 claims, 8 false**, median age 9 days |
+| 11 | The 200-second race | **the symptom no longer exists** — ten of ten tracks finish |
+| 12 | Nothing measures motion | buildable, **after one field is published** |
+| 13 | The race-identity hash | in, and stamped at the funnel rather than a list |
+| 14 | The worktree stubs | **count is now ZERO**; the trap was the recursion flag |
 
 ---
 
-## PIECE 7 — RaceScreen: the seam is ONE LINE, and the file does not need it.
+## ★ NEEDS YOUR WORD — the forks I stopped at
 
-**Both "known blockers" are refuted at the code.** `sessionStorage` is not one (jsdom implements it).
-The geometry is not a fetch (it is a synchronous `localStorage` read; the network is on SetupScreen).
-**The one real blocker is that jsdom returns `null` for the 2D context** and the next line
-dereferences it.
+**Seven backlog decisions** are now in one section of `docs/BACKLOG.md` under **THE SEVEN THAT ARE
+HIS**. Beyond those, tonight produced six:
 
-**The minimum seam is one default parameter and one call site**, and the stand-in already exists.
-**And it should not be added.** Four tests point at the file and none executes it — two mock it away,
-two grep its source *as text*. Everything a mount would exercise already has a better driver, and
-the browser suite already drives `/race` **with a real rasteriser**. Only two things would be new,
-and both belong somewhere else. **That everything worth asserting was already moved out is the
-finding, not the absence of one.**
+1. **`prune` and the ship ceremony.** You told me not to add it *because it fails here*. **It no
+   longer fails** — three lines clear the ReadOnly and git's own prune does the rest. Whether a ritual
+   that can now succeed belongs in the ceremony is yours. **Nothing was added.**
+2. **Two of the three fingerprints cannot gate.** `--check` appears 4 times in
+   `fingerprint-default.mjs` and **0 times** in `camera-fingerprint.mjs` and `render-fingerprint.mjs`.
+   They measure a hash and compare it to nothing. The one-line repair is known. **Not applied.**
+3. **The motion-continuity check needs one field first.** The field guarantee's retirement is the
+   largest single-frame pan AND zoom of a real race and is **indistinguishable from a fault** in
+   today's record. Publish `fieldRetired` (3 lines) and it becomes buildable. **Your instrument to
+   order.**
+4. **`audit-schedule` could not be exercised.** Firing its drill creates a real GitHub issue and
+   notifies you. Its decision logic was proven offline in all five branches; **delivery is unproven**
+   and is one click from you.
+5. **The two publish steps I did not close.** Building the client inside the image would add a full
+   front-end install to every one of your builds; a same-origin `VITE_API_URL` default would break
+   your 5173 **and** your 4173 flows — your preview *is* a production build, so `PROD`-gating does not
+   save it.
+6. **`garden-path-finishes.spec.js:31` is left red on purpose.** Its premise died when that track's
+   racer changed. I did not fix it and did not silence it, per your rule.
 
 ---
 
-## NEEDS YOUR WORD
+## THE THINGS I WOULD WANT TO KNOW FIRST
 
-Nothing from tonight yet — no fork so far has needed a judgement that a decision rule could not
-settle. This section fills as the chain runs.
+**Piece 11 killed a fifteen-day-old belief.** garden-path finishes. **Ten of ten tracks finish 40/40**
+under the driver; the worst cell uses 56.5% of the ceiling. **"Nine of ten tracks" was never nine** —
+the original report found ONE, and its sentence *"every sweep reported nine tracks honestly"* meant
+nine **succeeded**. The count was read inverted and carried that way for eight days. The cause was the
+racer-type input and **it was removed on 2026-08-25**; re-arming it reproduces the failure exactly.
+**Four real divergences survive and none causes a non-finish** — including that **the roster is still
+null**, so the harness's field is nameless where the browser's is `Turbo, Blaze, Rocket`, and a
+racer's name is physics.
 
-**Standing, from before tonight:** everything in `docs/BACKLOG.md`'s open decisions. Piece 9 is about
-to sort exactly those into one section you can answer in a sitting.
+**Piece 1 found a second difference nobody had named.** Besides the shedding, the two bounding-box
+rules differ by **one alpha level** — and it decides two of twenty types. `>= 10` reproduces the
+registry on 20 of 20; `> 10` on 18. **Found by sabotage, not by reading**: the obvious clean repair
+moved beetle and koi the moment it was wired in. Your decision is now written where someone
+regenerating a sheet will meet it, and the editor returns it.
+
+**Piece 10 found this in the file that carries everyone else's corrections.** The evolution INDEX
+opened with a shipped-world fingerprint **superseded twice, false for eight days**. The guard did not
+miss it — **it is blind to superseded values by declaration**, and that sentence was shaped like
+history while reading as the present tense. The header now points at the record instead of quoting
+it, because a corrected copy would rot at the next mint.
+
+**And two documented claims were never true.** `corridor-truth --company-only` **has never existed on
+any branch** — yet it illustrated R16 and a backlog entry for 28 days. The rule written to catch two
+numbers that do not share an identity was illustrated with a tool that cannot produce them.
+
+---
+
+## ONE SMALL THING, RECORDED RATHER THAN HIDDEN
+
+A commit message in piece 12 lost the word `binding` to a shell backtick — the line reads *"The only
+field that moves is , which…"*. The fact survives correctly in the report and the INDEX, and rewriting
+pushed history to fix one word would cost more than it buys. **Not amended, and named here so it is
+not read as a mystery.**
+
+Also left alone, and it is a real falsehood: **`scripts/lib/raceDriver.mjs:259` calls its ceiling
+"wall-clock" and there is no real-time source in that file.** Piece 11 measured it. Fixing a code
+comment sat outside both that piece's brief (diagnose only) and piece 10's (documents), so it stayed.
+It is a one-word correction whenever you want it.

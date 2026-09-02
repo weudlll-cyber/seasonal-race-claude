@@ -110,13 +110,22 @@ and production build are up.
 **ten minutes**, which is roughly five times the entire per-push CI run. A ten-minute browser suite
 gating every merge trains people to re-run red builds, and a check nobody believes protects nothing.
 
-**The flake budget is no longer unknown (2026-08-17).** The suite is **103/103 green**, and five full
-runs measured the residual at about **two tests per five runs** — with a single shared mechanism
+**The flake budget is no longer unknown (2026-08-17).** Five full runs measured the residual at about
+**two tests per five runs** — with a single shared mechanism
 rather than four unrelated ones: a loader that swallowed a failed fetch, so a MISSING track geometry
 read as a CLOSED track and an open track quick-tested as a laps race. `client/e2e/appReady.js` is the
 repair. **It took five runs to know that**, which is the point: one run cannot separate a broken
 assertion from an unlucky one (see [Lesson 211](LESSONS.md)). The measurement does not change the
 rule above — ten minutes is still ten minutes.
+
+**★ THE PASS COUNT IS CORRECTED, 2026-09-02 (DOC-TRUTH-1). This paragraph said the suite was
+"103/103 green" and it is now 106 tests.** The numerator stopped moving while the denominator did:
+two specs were added on 2026-08-25/26 and this sentence did not notice, so a figure that reads as a
+clean sweep came to mean **103 of 106**. Measured tonight over a full run plus a re-run of the
+failures: **105 of the 106 can pass, and one fails deterministically** —
+`garden-path-finishes.spec.js:31`, whose premise died when garden-path's default racer changed
+(TESTS-WIRED-1). **No count is written here as a target**: run it and read what it says. The two
+flaked tests passed on an immediate re-run, which is the residual above and not a new mechanism.
 
 **This is the one home for that command and that reason.** `docs/VERIFY-RULES.md` says why the suite
 is deliberately outside the ordinary path and points here rather than repeating it.
