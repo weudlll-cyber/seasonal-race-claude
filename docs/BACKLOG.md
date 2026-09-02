@@ -23,6 +23,47 @@ stated reason why no command can. Where a whole section shares one reason, it is
 the section head rather than copied onto every item — copying it would suggest each was
 considered separately, and that would not be true.
 
+## ⚠ TWO UNMERGED BRANCHES CARRY FIGURES MEASURED AGAINST A DEFECTIVE BASELINE (2026-09-02)
+
+**`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured before COMPANY-HEADCOUNT-1, so
+every cost they publish was measured against a camera whose company guarantee was under-asking by one
+racer on every frame.** Their numbers are not wrong about the trees they were taken on; they are no
+longer the costs of those changes against master.
+
+**The clearest case is the one that mattered most to the decision.** Candidate B (the aim room floor)
+was charged with showing *about one racer fewer in shot on average* — that figure is in
+`reports/evolution/AIM-ROOM-REPAIR-1.md`, which lives on `ship/aim-room-floor-1` and is deliberately
+not linked here because it is not on master. **That charge was mostly this defect, not the lever.** The company shortfall those pieces attributed
+to the floor was dominated by a guarantee that asked for four where five was promised, on the floor
+arm and the baseline arm alike — and the repair alone lifts promise-kept on the affected tracks by
+1.6 to 2.9 points without any lever at all. **The lever has never been priced against a correct
+baseline.**
+
+Superseded specifically, and these should not be quoted as current:
+
+- **AIM-ROOM-REPAIR-1's three-column company-shortfall tables** (today / as judged / repaired), on the
+  unmerged branch — all three columns come from trees with the under-asking guarantee.
+- **AIM-ROOM-LOST-1's price for the corrected headcount, a median 1.33× and p90 2.26× widening.**
+  Already withdrawn in [COMPANY-HEADCOUNT-1](../reports/evolution/COMPANY-HEADCOUNT-1.md): it was a
+  frame-subset figure, and measured across all frames the shot is untouched on 82.5–98.7% and widens
+  by a median 1.02–1.07×.
+- **AIM-ROOM-CEILING-1's 61/39 `state`/`company` split** on broken-promise frames. The measurement
+  stands for the tree it was taken on; the population it describes is much smaller now.
+
+**What is NOT superseded:** everything about lever A's removal (proven by four byte-identical
+fingerprints at floor 0), the wiring repair's own sabotage proof, the ten-track engagement table for
+the floor, and the river-run finding below.
+
+**STILL OPEN AND CARRIED FORWARD:** `ship/aim-room-floor-1` introduced **nine whole-screen
+single-frame pans on river-run in 479,587 adjacent steps** where master has none, when the lateral
+guarantee engages without an ease. That was recorded and deliberately not fixed. It must be
+re-measured on any tree that ships the floor.
+
+**THE OWNER'S DECISION, 2026-09-02:** he has decided **against** re-measuring candidate B on the
+corrected baseline, and wants both in master. Neither branch is to be rebased or deleted on anyone
+else's initiative. **verify:** the superseded figures are identified by which tree they were taken
+on; no command re-derives them, which is why they are listed rather than recomputed.
+
 ## ~~THE CLIENT SUITE STARVES ITSELF~~ — ✅ BOUNDED 2026-08-27, and the gate is honest again
 
 **BUILT.** `client/vitest.config.js` carries `maxWorkers: 4`, in the file that already owns how this

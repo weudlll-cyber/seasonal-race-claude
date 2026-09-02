@@ -3,8 +3,37 @@
 **Owns:** where the night chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-02, after the NIGHT-CENSUS-1 chain — four counts and the one repair you
-ordered. **Origin carries master.**
+**Last rewritten:** 2026-09-02, after COMPANY-HEADCOUNT-1 shipped.
+
+---
+
+## SHIPPED TODAY — the guarantee keeps its promise
+
+**COMPANY-HEADCOUNT-1 is merged and minted** (`v-ship-company-headcount`, merge `9328886b`). You
+judged it on the production build `59c6bb98` and accepted it. The company guarantee had been
+deducting one racer unconditionally since CAMERA-LATERAL-1 moved its anchor to the track centreline —
+a true comment left standing while its premise moved underneath it — so a promise of five asked for
+four and got four. It now asks whether a racer stands on its anchor instead of assuming one does.
+
+Promise kept: space-sprint **96.32% → 99.23%**, searound **97.39% → 99.92%**, seatrack
+**97.55% → 99.63%**, garden-path → **100%**. Frame counts identical between arms on all ten tracks —
+the picture moved, the race did not. Camera and render re-minted; world and world-off unmoved.
+
+## ⚠ THE TWO UNMERGED BRANCHES: THEIR PUBLISHED COSTS ARE NO LONGER THE COSTS
+
+**`ship/aim-room-floor-1` and `feat/aim-levers-1` were both measured against the defective baseline.**
+Nothing was wrong with those measurements on the trees they were taken on — but they are not the cost
+of those changes against master any more.
+
+**The one that matters: candidate B was charged with showing "about one racer fewer in shot". That
+was mostly this defect, not the lever.** The shortfall those pieces attributed to the aim room floor
+came largely from a guarantee asking for four where five was promised — on the floor arm and the
+baseline arm alike. **B has never been priced against a correct baseline.**
+
+**You have decided against re-measuring it and want both in master** (2026-09-02). Neither branch is
+rebased, merged or deleted by this piece. Full list of what is superseded and what still stands is in
+[BACKLOG.md](BACKLOG.md), including the one fault carried forward and unfixed: the floor gives
+river-run **nine whole-screen single-frame pans in 479,587** where master has none.
 
 ---
 

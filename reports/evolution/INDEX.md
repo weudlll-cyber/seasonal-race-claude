@@ -271,6 +271,64 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   moved in 3 of 6 states, `LEADER_ZOOM` better on both percentiles, `OVERVIEW`/`LEAD_CHANGE` p95
   worse). **World and world-off UNMOVED.** An instrument trap was caught on the way: the sweep's
   `off` arm silently became a second copy of the shipped arm the moment the default moved.
+||||||| e7e56372
+- [COMPANY-HEADCOUNT-1.md](COMPANY-HEADCOUNT-1.md) — **the guarantee asks whether its anchor is a
+  racer instead of assuming it, and a promise of five delivers five** (2026-09-02, branch
+  `fix/company-headcount-1` off master, **not merged, not minted**, handed back for his eye; ship
+  branch and `feat/aim-levers-1` untouched). **The premise is fixed, not the arithmetic**: the loop's
+  existing `dx === 0 && dy === 0` test already knew the answer and was throwing it away, so
+  `need = floor(minVisible) − (anchorIsRacer ? 1 : 0)`. **The shape cannot silently regress** because
+  the premise is DERIVED per call from the same inputs — no parameter, no flag, and now no comment
+  asserting it, so nothing is left to go stale; a boolean parameter would have relocated the defect
+  to the caller. **The second call site is correct and was established by RUNNING both trees**:
+  `_fieldCeiling`'s `racers.length + 1` is a sentinel and the `Math.min(need, ceilings.length)` clamp
+  absorbed the deduction — field site 0.9600 before and after in both anchor cases, while
+  `minVisible=5` with a non-racer anchor moves 1.4400 → 1.1520. **SABOTAGE turns 6 red.** **The price,
+  ten tracks, frame counts IDENTICAL on all ten**: promise kept space-sprint 96.32% → **99.23%**,
+  searound 97.39% → **99.92%**, seatrack 97.55% → **99.63%**, garden-path → **100%**; in-shot p50
+  unchanged everywhere and **p10 up one on the three worst tracks** — it bites only where the promise
+  was broken. **Steadiness is not costed**: largest single-frame pan identical on 9 of 10 (and at
+  N=300 on all four), corner overflow unchanged or better. **WITHDRAWS the 1.33×/2.26× price
+  AIM-ROOM-LOST-1 quoted** — that was a frame-subset figure; across all frames the shot is untouched
+  on 82.5–98.7% and widens by a median 1.02–1.07×. **The residual is reported, not clamped**: where it
+  remains short the company ceiling is itself binding on 77–100%, deficit exactly one — the guarantee
+  asking and not getting, which is the recorded 74 px anchor miss, its own piece.
+
+- [AIM-ROOM-LOST-1.md](AIM-ROOM-LOST-1.md) — **nothing stops the widening: the company guarantee asks
+  for one racer too few, because its anchor stopped being a racer** (2026-09-02, measure only;
+  nothing built or changed, ship branch untouched). Answers "what stops the widening before the
+  wanted number is visible" by following the number from the guarantee to the picture on the frames
+  where the promise breaks. **`companyGuarantee` computes `need = minVisible − 1` "because the anchor
+  itself is one of them" — and CAMERA-LATERAL-1 replaced the anchor with the track CENTRELINE point,
+  measured identical to `_centrelineAt(t)` (p50 0.00, max 0.00) and NOT any racer's position on
+  100% of frames.** So it is satisfied by one racer fewer than promised, and `state` wins the `min`
+  only because the state setting is already wider than company's understated request. **Candidates
+  eliminated by measurement**: the shot is not still travelling (delivered/target p50 **1.0000**, and
+  wider not tighter when it differs); the `room<=0` skip and the short-list fallback fire on
+  **0.00%**; and the anchor DOES miss its intended screen point on 100% of frames (p50 74 px, split
+  45 px composition / 59 px lerp) but **placing it correctly recovers only 11.55%**, leaving in-shot
+  at p50 **4.00** — exactly `need`. **The count IS reachable**: reading one index further down the
+  same sorted list keeps the promise on **100%** of frames on both tracks, at a cost of widening past
+  his LEADER_ZOOM setting by a median **1.33×** (p90 2.26×). **Revises AIM-ROOM-CEILING-1's reading
+  without contradicting its numbers** — `state` restrains nothing; the fetter is the `− 1`.
+
+- [AIM-ROOM-CEILING-1.md](AIM-ROOM-CEILING-1.md) — **on the broken-promise frames the fetter is the
+  STATE's own zoom, and OVERVIEW does not set it — raising it would recover essentially nothing**
+  (2026-09-02, measure only; nothing built, no setting changed, no value swept, ship branch
+  untouched). On the shortfall frames specifically — ten tracks, N=30 — **only two of the five terms
+  ever win the `min`: `state` 61.0% and `company` 39.0%**, pooled over 4,562 frames. `guarantee`,
+  `field` and `line` never won once, and `company` was never `Infinity`. **Where `company` itself
+  wins (39%) the geometry is short and no setting recovers it**; where `state` wins it sits up to
+  **0.31 ln tighter at p90** than company asked for, and that gap is the fetter. `state` on these
+  frames is `_leaderZoom`, built from the **LEADER_ZOOM** profile — `_overviewStateZoom` is a
+  separate field, and checked function by function it appears in **exactly one ceiling**,
+  `_fieldCeiling`'s retirement, which never won a frame. **Measured rather than read**: scaling
+  OVERVIEW's corridors by 1.5 recovers **2 shortfall frames of 2,345** on space-sprint and 11 of
+  1,148 on seatrack, with a control proving the setting applied (`_overviewStateZoom` changed,
+  `_leaderZoom` bit-identical). **Corrects an earlier answer given to the owner without checking** —
+  it read `_fieldCeiling`'s retirement and carried it across to the company guarantee, which has no
+  such clause. Raising OVERVIEW would widen the picture **everywhere that state is used** and not the
+  shots that break the promise: the expensive price for no gain.
 
 - [REGISTRY-LITERALS-1.md](REGISTRY-LITERALS-1.md) — **the copied racer literals are gone, the races
   did not move, and the engine-reach closure DOUBLED** (2026-09-02, the one ordered repair of the

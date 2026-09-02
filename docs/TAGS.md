@@ -145,6 +145,32 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
+- `v-ship-company-headcount` (`9328886b`, 2026-09-02) — **the ship.** The owner judged the build on a
+  production build (`59c6bb98`) on 2026-09-02 and accepted it, on the ground that he counts the racers
+  he configured. The return point is `v-ship-company-headcount^1`, and it restores a picture in which
+  **the company guarantee delivers one racer fewer than it promises** — `companyGuarantee` deducted one
+  unconditionally because the anchor used to be the subject racer, and CAMERA-LATERAL-1 moved that
+  anchor to the track centreline without the headcount following. Measured: the anchor equals
+  `_centrelineAt(t)` on 100% of frames and stands on no racer on 100% of frames, so a promise of five
+  asked for four companions and got four racers. It restores promise-kept rates of **96.32%** on
+  space-sprint against 99.23% after, **97.39%** on searound against 99.92%, and **97.55%** on seatrack
+  against 99.63%; in-shot p10 is one lower on those three tracks. Measured on **ten tracks at N=30 and
+  four at N=300**, arms matched frame by frame, with **frame counts identical between arms on all
+  ten** — the picture moves and the race does not. The steadiness columns are not the price: largest
+  single-frame pan is identical on 9 of 10 at N=30 and on all four at N=300, corner overflow unchanged
+  or better, centreline share unchanged or better; the shot is untouched on **82.5–98.7%** of frames
+  and widens by a median 1.02–1.07× where it bites. Camera and render fingerprints move; **world and
+  world-off do not**, run on the merged tree rather than argued.
+
+  **THE REGISTER LINE LANDS AFTER THE MERGE HERE, and that is an artefact worth naming rather than
+  hiding.** THE SHIP ORDER puts it on the branch before the merge so the merge commit registers its
+  own tag; this ship was merged before the tag decision was taken, so the line lands in the commit
+  after. That reproduces the state the four tags named at the top of this file are in — the tag is
+  correctly registered on master and `check-tags` is green there, and history is not rewritten for it.
+  **The merge commit was tagged rather than the register commit deliberately**: `^1` on the merge is
+  the genuine pre-ship state, and tagging the later commit would have bought a self-registering tree
+  at the cost of the return point, which is the whole purpose of the tag.
+
 - `v-ship-leader-lateral` (`334525df`, 2026-08-26) — **the ship.** The owner judged the build on a
   production build (`3dc061f4`) on 2026-08-26 and accepted it: space-sprint looks right to him. The
   return point is `v-ship-leader-lateral^1`, and it restores a mid-race picture in which **nothing in
