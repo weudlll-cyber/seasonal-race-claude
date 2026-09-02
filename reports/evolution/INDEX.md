@@ -423,6 +423,35 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the whole Q4 table at exit 0. Keeping those five files and deleting the other 310 breaks no
   automated check at all.
 
+- [BUILD-RULE-B-1.md](BUILD-RULE-B-1.md) — **it ships GREEN with an empty keep list, and it was
+  sabotage-proved against origin itself** (2026-09-02; `verify` PASS 7 FAIL 0, script suite 457/457,
+  `check-tags`'s own tests 14/14). No branch may stand at origin whose TREE master already holds —
+  the mechanical half of the scope defect that left six branches standing, which `7bb7dfe5` fixed in
+  prose. **Unlike Rule A it found nothing to object to, so it ships as a real gate rather than a
+  report.** ★ **THE TREE, NOT THE COMMIT GRAPH**, because the ceremony already records why: on
+  2026-08-26 a commit-level check called `diag/runin-viable-1` safe to delete while its TREE held a
+  file master had replaced. And **origin is asked directly, not the cache** — `git branch -r` reads
+  whatever the last fetch left behind. ★ **SABOTAGED IN THREE DIRECTIONS AGAINST THE REAL ORIGIN**,
+  one more than asked: a branch pushed at master's own commit goes **RED**; deleting it goes
+  **GREEN**; and a branch whose tree holds a path master lacks is **NOT reported** — the
+  false-positive direction, which is what decides whether a guard is usable. Both throwaway branches
+  were deleted. Direction 3 was built with **plumbing** (`read-tree` into a temp index, `write-tree`,
+  `commit-tree`) after the first attempt used `git stash --include-untracked` and **hit OneDrive's
+  placeholder permissions mid-operation** — recovered by diffing the stash against the working tree
+  and dropping it, and recorded because the next person will reach for stash on this machine.
+  **The keep list ships EMPTY**: a list is unavoidable here and only here, because "kept on purpose"
+  is an INTENT no discovery can read off the repository — with a reason per entry, a STALE ENTRY
+  FAILING, and exemptions printed when granted. **Constraint 2 turned up three live pointers:**
+  `ci.yml:54` documents exactly which commands use the token and named only the tags call (corrected
+  — same credential, same scope); the guard's own test file did NOT previously import the module and
+  now does; and every existing test in it would have started reaching the network, so `runGuard` now
+  pins a `--heads-file`. **A correction to my own first account is recorded in the report**: I wrote
+  that `check-tags` had the same live self-run defect as `check-fallback-agreement`. It did not —
+  that test spawned the guard rather than importing it, so the entry-point guard here is a precaution
+  Rule B made necessary, not a bug it exposed. **Path-only comparison is deliberate** and a stricter
+  path+blob variant was REJECTED: it would introduce a false negative exactly where the rule matters,
+  after master moves on past a merge.
+
 - [BUILD-RULE-A-1.md](BUILD-RULE-A-1.md) — **Rule A is built, it is RED at its founding instance, and
   it does NOT gate: its one objection today is legitimate** (2026-09-02; `verify` PASS 6 FAIL 0,
   script suite 452/452, the guard's own tests 21/21). ★ **The founding-instance proof was RUN, not

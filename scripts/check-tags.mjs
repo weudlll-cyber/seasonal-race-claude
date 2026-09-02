@@ -34,11 +34,16 @@
 export const GUARD = {
   id: "check-tags",
   covers:
-    "a tag at origin that no register entry declares, and a register entry naming a tag that does not exist",
+    "a tag at origin that no register entry declares, and a register entry naming a tag that does not exist; " +
+    "AND (RULE B) a branch standing at origin whose TREE master already holds — the mechanical half of " +
+    "SHIP-CEREMONY step 12",
   blind: [
     "whether a tag points where the register SAYS it points — names are checked, not shas",
     "local tags that were never pushed",
     "A TAG PUSHED WITHOUT TOUCHING TAGS.md IS INVISIBLE TO ROUTING — no file changed, so verify does not select this guard. The pre-commit hook and CI run it unconditionally, which is where that case is caught.",
+    "RULE B: A BRANCH PUSHED OR DELETED TOUCHES NO FILE either, so routing cannot select this guard for it. Same answer as the tag half: the hook and CI run it unconditionally, and that is where Rule B actually fires.",
+    "RULE B: a branch whose TREE is not available locally is reported UNJUDGED and does not fail. The post-merge case this rule exists for is always judgeable — you have just merged the objects — so the unjudgeable case is a branch pushed from another machine, where failing would cry wolf at a run that simply has not fetched.",
+    "RULE B compares PATHS, not contents. A branch that changes a file master also has, without adding or removing any path, is reported as contained. That is deliberate: step 12 asks whether deleting the branch loses WORK, and the ceremony's own shell asks the same question the same way.",
   ],
   dirs: [],
   files: ["docs/TAGS.md"],
@@ -61,12 +66,87 @@ process.on("exit", () => {
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+
+// ══ RULE B — NO BRANCH MAY STAND AT ORIGIN WHOSE TREE MASTER ALREADY HOLDS ═══════════════════════
+//
+// THE DEFECT IT EXISTS FOR. SHIP-CEREMONY step 12 clears merged branches at origin, and its scope
+// read as a SHIP's step rather than every merge's. On 2026-09-02 a five-piece chain merged six
+// branches and left all six standing, because every scope cue said the step did not apply. The
+// wording was corrected by `7bb7dfe5`; this is the mechanical half, and it would have gone red at
+// the FIRST of the six merges rather than after the batch.
+//
+// ★ THE TREE, NOT THE COMMIT GRAPH. `git merge-base --is-ancestor` and a `master...branch` commit
+// diff both answer a question about HISTORY, and the ceremony records why that is the wrong one:
+// on 2026-08-26 the commit-level check reported `diag/runin-viable-1` as safe to delete while that
+// branch's TREE held `client/src/modules/camera/panStaleZoom.test.js`, a file master had REPLACED
+// during RUNIN-PIVOT-SCOPE-1. A branch is safe to delete when master's tree holds every path its
+// tree holds — that is a question about CONTENT, and it is the one asked here.
+//
+// ★ ORIGIN IS ASKED DIRECTLY, NOT THE CACHE. `git branch -r` reads remote-tracking refs, which are
+// whatever the last fetch left behind; step 12 already writes this distinction down and the guard
+// has to honour it or it would bless a branch that was deleted locally and still stands remotely.
+const KEEP = (name, reason) => ({ name, reason });
+
+// ── BRANCHES DELIBERATELY KEPT AT ORIGIN ────────────────────────────────────────────────────────
+//
+// EMPTY TODAY, AND THAT IS THE SHIPPED STATE. A list is unavoidable here and only here: "this branch
+// is kept on purpose" is an INTENT, and no discovery can read it off the repository — which is the
+// one condition under which this project accepts a list at all. It carries a reason per entry, and a
+// STALE ENTRY FAILS, the shape `audit-gate` already uses: an allowlist that outlives its subject is
+// a hole that looks like a decision.
+//
+// TAGS.md already states the rule this list must not be used to evade: anything that must survive as
+// evidence becomes an ANNOTATED TAG, never a branch. An entry here is therefore a temporary
+// exception to a settled policy, not a second way of keeping work.
+export const KEPT_BRANCHES = [];
+
+/** `git ls-remote --heads origin` → [{ sha, name }]. The authoritative list, not the cache. */
+function parseHeads(raw) {
+  const heads = [];
+  for (const line of raw.split("\n")) {
+    const m = line.match(/^(\S+)\s+refs\/heads\/(.+)$/);
+    if (m) heads.push({ sha: m[1], name: m[2] });
+  }
+  return heads;
+}
+
+/** Every path in a tree, or null when the object is not available locally to judge. */
+function treePaths(sha) {
+  try {
+    return new Set(
+      execSync(`git ls-tree -r --name-only ${sha}`, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .split("\n")
+        .filter(Boolean),
+    );
+  } catch {
+    return null;
+  }
+}
 
 const argVal = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
 };
 
+// ── THE MODULE ONLY RUNS WHEN IT IS THE ENTRY POINT ─────────────────────────────────────────────
+//
+// STATED PRECISELY, because the sibling case was NOT the same. `check-fallback-agreement.mjs` had a
+// LIVE defect — its test already imported it, and adding a rule that could fail took the test file
+// down. THIS file had no importer at all until now: its test built the guard's path as a string and
+// spawned it. So this is a precaution that Rule B MADE NECESSARY rather than a bug it exposed — the
+// test now imports `KEPT_BRANCHES` to assert the keep list ships empty, and without this guard that
+// import would run a NETWORK call (`git ls-remote --heads`) on every test in the file.
+// Checked before changing it: the hook, CI and `verify` all SPAWN this guard; nothing else imports.
+const IS_ENTRY =
+  process.argv[1] &&
+  pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (IS_ENTRY) {
 const TAGS_MD = resolve(argVal("tags-md", "docs/TAGS.md"));
 const TAGS_FILE = argVal("tags-file", null); // test override: a file in `git ls-remote --tags` format
 
@@ -206,4 +286,101 @@ if (declaredMissing.length > 0) {
   }
 }
 
-if (unregistered.length > 0 || declaredMissing.length > 0) process.exit(1);
+
+// ── RULE B'S RUN ────────────────────────────────────────────────────────────────────────────────
+const HEADS_FILE = argVal("heads-file", null); // test override, mirroring --tags-file
+let heads = [];
+let headsError = null;
+try {
+  heads = parseHeads(
+    HEADS_FILE
+      ? readFileSync(resolve(HEADS_FILE), "utf8")
+      : execSync("git ls-remote --heads origin", { encoding: "utf8" }),
+  );
+} catch (e) {
+  headsError = e.message;
+}
+// The same loud-failure rule the tag half uses: a run that cannot see origin must break the build.
+// An empty head list is not "no branches" — origin always has at least the default branch.
+if (headsError || heads.length === 0) {
+  fail(
+    `could not obtain the branch list at origin (${headsError ?? "empty result"}). ` +
+      `A run that cannot see the branches must break the build, not bless it (Lesson 187).`,
+  );
+}
+
+const masterHead = heads.find((h) => h.name === "master");
+const masterPaths = masterHead ? treePaths(masterHead.sha) : null;
+const contained = [];
+const unjudged = [];
+if (masterPaths) {
+  for (const h of heads) {
+    if (h.name === "master" || h.name === "HEAD") continue;
+    const paths = treePaths(h.sha);
+    if (!paths) {
+      unjudged.push(h);
+      continue;
+    }
+    // CONTAINED = master's tree holds every path this branch's tree holds. Deliberately a question
+    // about CONTENT: a branch whose work is all in master has nothing left to lose by deleting.
+    let extra = 0;
+    for (const p of paths) if (!masterPaths.has(p)) extra++;
+    if (extra === 0) contained.push(h);
+  }
+}
+const keptStale = KEPT_BRANCHES.filter(
+  (k) => !heads.some((h) => h.name === k.name),
+);
+const containedUnkept = contained.filter(
+  (c) => !KEPT_BRANCHES.some((k) => k.name === c.name),
+);
+
+console.log(
+  `check-tags RULE B: ${heads.length} head(s) at origin; ${contained.length} whose TREE master ` +
+    `already holds (${containedUnkept.length} not on the keep list); ${unjudged.length} unjudged; ` +
+    `${KEPT_BRANCHES.length} deliberately kept.`,
+);
+// EVERY EXEMPTION IS PRINTED WHEN IT IS GRANTED (R11), exactly as the tag half prints its own.
+for (const k of KEPT_BRANCHES)
+  console.log(
+    `  ${heads.some((h) => h.name === k.name) ? "KEPT  " : "STALE "} ${k.name} — ${k.reason}`,
+  );
+for (const u of unjudged)
+  console.log(
+    `  UNJUDGED ${u.name} — its tree is not available locally; fetch it to judge (${u.sha.slice(0, 7)})`,
+  );
+
+if (containedUnkept.length > 0) {
+  console.error(
+    `\nFAIL: ${containedUnkept.length} branch(es) stand at origin whose TREE master already holds:`,
+  );
+  for (const c of containedUnkept)
+    console.error(
+      `${c.name} -> ${c.sha.slice(0, 7)}  (master's tree holds every path this branch's tree holds)`,
+    );
+  console.error(
+    `\nSHIP-CEREMONY step 12 clears these, and it is owed by EVERY merge to master rather than only` +
+      `\nby a ship. Delete them: git push origin --delete <branch>. If one is kept on purpose, add it` +
+      `\nto KEPT_BRANCHES in this file WITH A REASON — but TAGS.md's rule is that evidence becomes an` +
+      `\nannotated tag, never a branch.`,
+  );
+}
+if (keptStale.length > 0) {
+  console.error(
+    `\nFAIL: ${keptStale.length} keep-list entr(ies) name a branch that is not at origin:`,
+  );
+  for (const k of keptStale)
+    console.error(`${k.name} — ${k.reason}`);
+  console.error(
+    `A keep-list entry that outlives its branch is a hole that looks like a decision. Remove it.`,
+  );
+}
+
+if (
+  unregistered.length > 0 ||
+  declaredMissing.length > 0 ||
+  containedUnkept.length > 0 ||
+  keptStale.length > 0
+)
+  process.exit(1);
+}

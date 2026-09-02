@@ -11,14 +11,16 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync, execSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GUARD = join(HERE, "check-tags.mjs");
+const REPO = join(HERE, "..");
+import { KEPT_BRANCHES } from "./check-tags.mjs";
 
 // Synthetic `git ls-remote --tags origin` output; the "^{}" line is a dereferenced annotated tag
 // the guard must skip (so this is TWO tags, not three).
@@ -28,6 +30,20 @@ const LS_REMOTE =
     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\trefs/tags/pre/beta",
     "cccccccccccccccccccccccccccccccccccccccc\trefs/tags/pre/beta^{}",
   ].join("\n") + "\n";
+
+// One head, master, resolved from this repository so its TREE is real. Used by every test that is
+// not about Rule B, so those tests keep asking exactly the question they were written to ask.
+const DEFAULT_HEADS = (() => {
+  const dir = mkdtempSync(join(tmpdir(), "check-tags-heads-"));
+  const sha = execSync("git rev-parse master", {
+    cwd: REPO,
+    encoding: "utf8",
+  }).trim();
+  const p = join(dir, "heads.txt");
+  writeFileSync(p, `${sha}	refs/heads/master
+`);
+  return p;
+})();
 
 function fixture(files) {
   const dir = mkdtempSync(join(tmpdir(), "check-tags-"));
@@ -40,10 +56,18 @@ function fixture(files) {
   return paths;
 }
 
-const runGuard = (tagsFile, tagsMd) =>
+// RULE B made this guard ask origin for BRANCHES as well as tags, so every test now pins the head
+// list too. Without it the tag tests would silently depend on whatever branches happen to stand at
+// origin while they run — green today by luck, and a network call inside a unit test either way.
+const runGuard = (tagsFile, tagsMd, headsFile = DEFAULT_HEADS) =>
   spawnSync(
     process.execPath,
-    [GUARD, `--tags-file=${tagsFile}`, `--tags-md=${tagsMd}`],
+    [
+      GUARD,
+      `--tags-file=${tagsFile}`,
+      `--tags-md=${tagsMd}`,
+      `--heads-file=${headsFile}`,
+    ],
     {
       encoding: "utf8",
     },
@@ -222,4 +246,108 @@ test("a declaration without a backticked SHA is not a declaration — the sha is
     0,
     `a bare list mention must not fail; stderr: ${r.stderr}`,
   );
+});
+
+// ══ RULE B ══════════════════════════════════════════════════════════════════════════════════════
+//
+// The heads fixture feeds real SHAs, because Rule B judges TREES and a fake sha has no tree. The
+// shas below are resolved from this repository at run time: `master` (whose tree is trivially its
+// own) and a commit built for the test. That keeps the test hermetic in the only sense that matters
+// here — no network — while still exercising the real `git ls-tree` comparison.
+
+const sh = (cmd) => execSync(cmd, { cwd: REPO, encoding: "utf8" }).trim();
+const headsFixture = (entries) =>
+  entries.map(([sha, name]) => `${sha}\trefs/heads/${name}`).join("\n") + "\n";
+
+test("RULE B: a branch whose TREE master already holds FAILS the guard", () => {
+  const master = sh("git rev-parse master");
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": "# Tags\n- `pre/alpha`\n- `pre/beta`\n",
+    // A branch pointing AT master has, by definition, a tree master holds.
+    "heads.txt": headsFixture([
+      [master, "master"],
+      [master, "leftover/merged-and-not-deleted"],
+    ]),
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  assert.notEqual(r.status, 0, "a contained branch must fail the build");
+  assert.match(r.stderr, /leftover\/merged-and-not-deleted/);
+  assert.match(r.stderr, /TREE master already holds/);
+});
+
+test("RULE B: a branch whose tree holds a path master lacks is NOT reported", () => {
+  const master = sh("git rev-parse master");
+  // Built with plumbing so no working tree or index is touched.
+  const blob = sh('echo probe | git hash-object -w --stdin');
+  const idx = join(tmpdir(), `rb-idx-${process.pid}`);
+  execSync(`git read-tree ${master}`, { cwd: REPO, env: { ...process.env, GIT_INDEX_FILE: idx } });
+  execSync(`git update-index --add --cacheinfo 100644,${blob},RULE-B-PROBE.md`, {
+    cwd: REPO,
+    env: { ...process.env, GIT_INDEX_FILE: idx },
+  });
+  const tree = execSync("git write-tree", {
+    cwd: REPO,
+    encoding: "utf8",
+    env: { ...process.env, GIT_INDEX_FILE: idx },
+  }).trim();
+  const commit = sh(`git commit-tree ${tree} -p ${master} -m probe`);
+  rmSync(idx, { force: true });
+
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": "# Tags\n- `pre/alpha`\n- `pre/beta`\n",
+    "heads.txt": headsFixture([
+      [master, "master"],
+      [commit, "feat/live-work"],
+    ]),
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  assert.equal(r.status, 0, "live work must not be reported as deletable");
+  assert.doesNotMatch(r.stderr, /feat\/live-work/);
+  assert.match(r.stdout, /RULE B: 2 head\(s\) at origin; 0 whose TREE/);
+});
+
+test("RULE B: a KEPT branch is exempt, and the exemption is PRINTED when granted", () => {
+  const master = sh("git rev-parse master");
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": "# Tags\n- `pre/alpha`\n- `pre/beta`\n",
+    "heads.txt": headsFixture([[master, "master"]]),
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  // The shipped list is EMPTY, which is the state this rule ships in. The assertion is that the
+  // mechanism prints rather than that any entry exists — an exemption nobody sees is the failure
+  // mode R11 names.
+  assert.equal(KEPT_BRANCHES.length, 0, "the keep list ships empty");
+  assert.match(r.stdout, /RULE B: 1 head\(s\) at origin/);
+  assert.equal(r.status, 0);
+});
+
+test("RULE B: an empty head list FAILS rather than blessing (Lesson 187)", () => {
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": "# Tags\n- `pre/alpha`\n- `pre/beta`\n",
+    "heads.txt": "\n",
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /cannot see the branches must break the build/);
+});
+
+test("RULE B: a branch whose tree is unavailable is UNJUDGED, not a failure", () => {
+  const master = sh("git rev-parse master");
+  const p = fixture({
+    "ls-remote.txt": LS_REMOTE,
+    "TAGS.md": "# Tags\n- `pre/alpha`\n- `pre/beta`\n",
+    // A sha this repository does not have: it cannot be judged, and crying wolf at a run that has
+    // simply not fetched is the failure mode this avoids.
+    "heads.txt": headsFixture([
+      [master, "master"],
+      ["0".repeat(40), "someone-elses/branch"],
+    ]),
+  });
+  const r = runGuard(p["ls-remote.txt"], p["TAGS.md"], p["heads.txt"]);
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /UNJUDGED someone-elses\/branch/);
 });
