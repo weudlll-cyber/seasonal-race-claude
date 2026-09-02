@@ -38,11 +38,11 @@ the place that got forgotten was always the table.
 
 **The SET of guards is discovered, not listed** — `guardScripts()` scans `scripts/` for
 `check-*.mjs`, `*-fingerprint.mjs` and `fingerprint-default.mjs`, plus `gen-engine-reach-doc.mjs`
-by name, plus the two suite guards declared in `routing.mjs`. So this document deliberately states
+by name, plus the suite guards declared in `routing.mjs`. So this document deliberately states
 **no count**: an earlier version said "seven", which was true when it was written and was fifteen by
 the time anyone read it again. `--dry` prints the current set.
 
-**Why one generator is named individually rather than a `gen-*` wildcard.** Discovery works by RUNNING
+**Why each generator is named individually rather than by a `gen-*` wildcard.** Discovery works by RUNNING
 each candidate with `--declare`, and most scripts here do their work at module load — asking a sweep
 what it covers would run the sweep, and a generator run with no argument REWRITES its document.
 `gen-engine-reach-doc.mjs` is safe to ask because it declares and exits first, and `verify.mjs` gives
@@ -108,7 +108,7 @@ readable as a run that found nothing. **The tool takes the paths you hand it and
 own**, so the usual cause is a command substitution that expanded empty.
 
 **Why it is safe.** The trigger is the transitive closure of `raceCore.js`'s imports, computed from
-source — 19 files against the 103 the old folder rule fired on. What the core cannot read cannot
+source — the counts are GENERATED in [SHIP-CEREMONY.md](SHIP-CEREMONY.md)'s engine-reach block and are deliberately not restated here. What the core cannot read cannot
 change the race. The closure is guarded by `scripts/engine-reach.test.mjs`, which fails if a new
 import stops appearing in it or if a dynamic `import()` (which a static walk cannot follow) ever
 enters the closure.

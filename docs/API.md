@@ -103,7 +103,9 @@ To override a built-in default class, POST with the same `id` as the default and
 
 | Method | Path          | Description                            |
 | ------ | ------------- | -------------------------------------- |
-| `GET`  | `/api/health` | `{ status: "ok", timestamp: "<ISO>" }` |
+| `GET`  | `/api/health` | `{ status: "ok", timestamp: "<ISO>", build: <build identity> }` |
+
+*(The `build` field was added by BUILD-FROM-OUTSIDE-1 (`a24f47e2`, 2026-08-23) and this row did not follow it; it reports `unknown` AND the reason rather than failing quietly. Corrected 2026-09-03.)*
 
 ---
 

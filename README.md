@@ -76,7 +76,7 @@ The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-t
 
 | Layer   | Technology                                                       |
 | ------- | ---------------------------------------------------------------- |
-| Client  | React 18, Vite, React Router v6, CSS Modules                     |
+| Client  | React 18, Vite, React Router v7, CSS Modules                     |
 | Engine  | Canvas 2D, requestAnimationFrame, fixed-timestep physics         |
 | Tests   | vitest (full unit suite), Playwright (e2e)                       |
 | Storage | Browser `localStorage` + local Express backend for tracks/images |
@@ -113,7 +113,7 @@ The reading order it recommends, so you can start without a second click:
    without it.
 
 Also useful: [Environment Variables](docs/ENVIRONMENT.md) — **every variable, and what breaks without it** · [API Reference](docs/API.md) · [Backlog](docs/BACKLOG.md) — **the open work and the
-phase history, one home since 2026-08-23** · [Phase status](docs/ROADMAP.md) (a table; the detail is
+phase history, one home since 2026-08-23** · [Phase status](docs/ROADMAP.md) (a REDIRECT that owns nothing since ROADMAP-FOLD-2, 2026-08-27; the detail is
 in the backlog) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
 race-mechanism change).
 

@@ -27,8 +27,8 @@ keeps `pulkStart <= pulkEnd <= corridorStart <= corridorEnd`.
 because `corridorStart == pulkEnd` always, the TRANSITION branch is zero-width and unreachable** — a racer
 goes straight from PULK to OUTCOME. TRANSITION is a dead branch, not a live phase.
 
-At the shipped defaults `racePlanPulkStart == 0.15` and `choreoOutcomeStart == 0.5` the three live phases are:
-**CHAOS/PRE_PULK [0, 0.15) · PULK [0.15, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart`
+At the shipped defaults `racePlanPulkStart == 0.15` and `choreoOutcomeStart == 0.6` the three live phases are:
+**CHAOS/PRE_PULK [0, 0.15) · PULK [0.15, 0.6) · OUTCOME [0.6, 1.0)**. *(Corrected 2026-09-03 from 0.5 at three sites in this document; the shipped value has been 0.6 since `5646d238`, 2026-07-17. `docs/DEVSCREEN-INVENTORY.md` had it right, so the two documents disagreed for 47 days. Found as SECOND SITES of the same claim in FORCE-MAP.)* The owner may set `choreoOutcomeStart`
 anywhere in 0.25–0.60; since `pulkStart` (0.15) now sits below that whole range, PULK is always at least 0.10
 wide under the shipped chaos window (it is no longer collapsible to zero-width from the DevScreen, unlike the
 pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum).
@@ -77,7 +77,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   width) and OUTCOME starts at the chaos boundary. Because PULK end == OUTCOME start, moving this ONE
   value moves both seams together.
 - **DevScreen.** "PULK end / OUTCOME begins (0.25–0.55)", config key `choreoOutcomeStart`, in the PULK
-  Phase card (DynamicsTuningSection.jsx:925-930). Default 0.5.
+  Phase card. Default **0.6**. *(Corrected 2026-09-03 from 0.5. ★ The DevScreen control itself is wrong in the same direction and is NOT corrected here: its label reads "(0.25–0.55)", its `max` is 0.55 and its tip says "0.5 = shipped" — so **the slider cannot reach the value the game actually runs**. Changing a control's range is a product judgement and is on the morning sheet, not taken here.)*
 - **Calibrated for it.** `pulkBiasGain`, `pulkLeaderBrake`, `pulkChallengerBoost` and the
   rest of the `pulk*` contest strengths are all calibrated for the PULK window this boundary defines.
   The PULK phase-split bonuses (`areaBonusPulk`, `rowBonusPulk`, gated by the Phase-Split master
@@ -155,7 +155,7 @@ on the actual field state, casting 2–4 heroes with anchored position-over-time
 (`choreoPackBandStrictness`, racePlanner.js:576-580). Config keys and shipped values (defaults.js):
 `choreoIntensity` 0.6, `choreoPackBandStrictness` 0.5, `choreoSuppressChaosBonusB1` false (spoiler
 switch), `choreoReleaseProgress` 0.97, `choreoResolveB2/B3/B4/B5` 0.8/0.7/0.65/0.6, `choreoOutcomeStart`
-0.5. The plan-internal mirrors are `_choreo*` (e.g. `_choreoEnabled` hardcoded true).
+**0.6** *(corrected 2026-09-03 from 0.5)*. The plan-internal mirrors are `_choreo*` (e.g. `_choreoEnabled` hardcoded true).
 
 ## PULK lead rotation — the unconditional PULK-phase contest (raceGovernor.js `applyPulkLeadRotation`)
 
@@ -164,7 +164,7 @@ exists (shipped on), inside the live PULK window `[pulkStart, pulkEnd)`, staging
 1–2 attacker slots boost the live P2/P3 until one takes the lead, a permanent outsider slot boosts the
 deepest still-reachable outsider, and a settle-brake set holds a dethroned leader back until it is
 `dropDepthLengths` behind (raceGovernor.js:170-380). Every force term is scaled by `governorPhaseWeight`,
-which fades to EXACTLY 1.0 (no effect) by OUTCOME (raceGovernor.js:92-97,195,375). Strengths live in the
+which fades to EXACTLY 0 by OUTCOME (raceGovernor.js:92-97,195,375). Strengths live in the
 `pulk*` namespace (defaults.js): `pulkLeaderBrake` 0.1, `pulkChallengerBoost` 0.06, `pulkFrontPool` 8,
 `pulkBoostHeadroom` 0.1, `pulkCeilingCap` true; realism envelope `pulkEnvelopeMaxEffect` 0.12 (±12% clamp)
 and `pulkEnvelopeMaxStepPerFrame` 0.01 (per-frame slew); rotation internals
