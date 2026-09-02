@@ -145,7 +145,7 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
 
 **NO KEY, NO DEFAULT, NO NEW CONSTANT** in any of it — the repairs are an ordering and a contract.
 
-- `v-ship-aim-room` (`PROVISIONAL`, 2026-09-02) — **the ship.** The owner judged candidate B on
+- `v-ship-aim-room` (`73053d25`, 2026-09-02) — **the ship.** The owner judged candidate B on
   production builds of `feat/aim-levers-1` on 2026-09-01 and 2026-09-02 and accepted the picture. The
   return point is `v-ship-aim-room^1`, and it restores a camera that places the leader at a constant
   **fraction** of the frame — which leaves the least road ahead of his nose exactly on the headings
@@ -164,8 +164,11 @@ widening them to the entry path costs the level-set guarantee 48 cut frames.
   `LEAD_CHANGE`/`OVERVIEW` p95 tracking lag are worse — an entry cost the floor recorded on its own.
   Camera and render fingerprints move; **world and world-off do not**.
 
-  **The SHA is provisional here and is corrected to the merge commit after CI goes green**, per THE
-  SHIP ORDER step 11 — the same way `v-ship-leader-lateral`'s was.
+  **The register line was written on the BRANCH with a provisional SHA and corrected to the merge
+  commit `73053d25` once it existed**, per THE SHIP ORDER step 11 and the same way
+  `v-ship-leader-lateral`'s was. That is the order the ceremony asks for — everything the merge must
+  contain, including the fingerprints, written before the merge — and it is the order the previous
+  ship (`v-ship-company-headcount`) could not follow because it was merged before its tag decision.
 
 - `v-ship-company-headcount` (`9328886b`, 2026-09-02) — **the ship.** The owner judged the build on a
   production build (`59c6bb98`) on 2026-09-02 and accepted it, on the ground that he counts the racers
