@@ -333,6 +333,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to master's**, 50/50 goldens green twice, one changed file outside the hull. **NOT established**:
   the soak was started, not run.
 
+- [RACESCREEN-SEAM-1.md](RACESCREEN-SEAM-1.md) — **the seam is ONE LINE, and the file does not need
+  it** (2026-09-02, read-only, PROPOSE ONLY — the owner has judged no change to this file and the
+  diff below is not applied). **Both of the brief's known blockers are refuted at the code.**
+  `sessionStorage` is not a blocker — jsdom implements it and `raceSession.js:20-31` wants only
+  `{racers, geometryId}`. The geometry is not a fetch — `trackStorage.js:138` is a SYNCHRONOUS
+  `localStorage` read; the network lives in `trackLoader.js:34`, which runs on SetupScreen, and
+  RaceScreen never fetches. Effect ordering is fine too: `setRaceData` re-renders before the
+  `[raceData]` effect runs, so the canvas ref is populated. **The one real blocker is that
+  `index.jsx:399` `canvas.getContext('2d', {alpha:true})` returns null under this repo's jsdom and
+  `:400` dereferences it** — no canvas mock exists anywhere in the client config. So the minimum
+  seam is one default parameter and one call site, and the stand-in already exists as
+  `modules/parity/recordingContext.js`. **The verdict is that it should not be added.** Four tests
+  point at the file and none executes it — two mock it away, two grep its SOURCE AS TEXT — and
+  everything a mount would exercise already has a better driver: `goldenRealArm.test.js:8` runs
+  RaceScreen's OWN init, `render-fingerprint.mjs` drives `renderRaceFrame` through the same recording
+  context on ten tracks, `standingsInvariant.test.jsx` mounts the real Scoreboard, and
+  `d9-smoke.spec.js:377-441` already seeds those exact two keys and drives `/race` **in a real
+  browser with a real rasteriser**. Only two things would be genuinely new: the effect's TEARDOWN,
+  which belongs as an assertion on the e2e back-button test that already exists, and the
+  payload-to-`createRaceFromIdentity` wiring, which is a four-copy drift problem the parity rule
+  already owns — pinning `index.jsx` against itself is the instance-assertion R7 warns against.
+
 - [HOMELESS-HOMES-1.md](HOMELESS-HOMES-1.md) — **do B2, drop B3 — and the reason to do B2 is not
   the defect that was filed** (2026-09-02, read-only, PROPOSE ONLY; nothing built). Following
   NO-SOURCE-OF-TRUTH-1's half-repaired and open groups to a proposal. **B2 `AUDIT_RENDERED_BODY_H`
