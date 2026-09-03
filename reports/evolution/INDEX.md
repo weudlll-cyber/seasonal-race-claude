@@ -542,6 +542,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   `raceActionStage` ships `quiet` at `defaults.js:40` — **a line citation still exactly true**, on the
   night 54 others were found stale.
 
+- [WHATS-LEFT-1.md](WHATS-LEFT-1.md) — **six items, of which TWO remove a fault class and four are
+  instances; the list is short and that is the answer** (2026-09-03, READ-ONLY; built from
+  `MORNING.md` and `BACKLOG.md` after the eight-piece chain, **every item re-verified at the tree**
+  rather than trusted from the report that filed it). ★ **First: a rule comparing the racer registry
+  to the PNG artwork**, inside `check-fallback-agreement` — the only item covering something covered
+  by NOTHING. A spritesheet is a race input with no machine-readable other side, the agreement has
+  been checked by hand twice and by a machine never, and the exposure was **demonstrated** when a
+  stray shell expansion overwrote nine tracked sheets and no guard noticed. **Precondition measured:
+  20 agree, 0 disagree, 0 unresolvable — it lands green with no exception list.** ★ **Second:
+  interpolate `DynamicsTuningSection`'s tooltip values** — it removes the PRODUCER, not the products:
+  that card interpolates in **0** tooltips and carries **all six** of tonight's false claims, while
+  `CameraAdvancedSection` interpolates in **24** and carries none. ★ **Third: the seven live second
+  sites this chain FILED and did not fix**, re-confirmed with line numbers — because SECOND-SITES-2's
+  finding is precisely that a filed second site stays standing. ★ Also: four withdrawn claims in this
+  INDEX's own report summaries, three open BACKLOG checkboxes whose own verdict says ALREADY DONE, and
+  one false sentence `camera-fingerprint` prints every run. ★ **Seven items are NOT on the list
+  because they need his word**, and they are named. **No third class-removing item was invented.**
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).

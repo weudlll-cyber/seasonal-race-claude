@@ -313,6 +313,29 @@ again.
 
 ---
 
+## ★ WHAT IS ACTUALLY LEFT — SIX ITEMS, TWO OF WHICH REMOVE A FAULT CLASS
+
+Built after the chain from this sheet and the backlog, **every item re-verified at the tree**. The
+list is short and that is the answer; **no third class-removing item was invented.** Full reasoning in
+[WHATS-LEFT-1](../reports/evolution/WHATS-LEFT-1.md).
+
+1. **A rule comparing the racer registry to the PNG artwork** — the only item covering something
+   covered by NOTHING, and the exposure was demonstrated tonight rather than argued. **Precondition
+   measured: 20 agree, 0 disagree, 0 unresolvable.** It lands green with no exception list, inside a
+   guard that already loads the registry.
+2. **Interpolate `DynamicsTuningSection`'s tooltip values** — removes the producer, not the products.
+   That card interpolates in **0** tooltips and carries **all six** of tonight's false claims; the
+   camera card interpolates in **24** and carries none.
+3. **The seven live second sites this chain filed and did not fix**, with line numbers — because the
+   measured failure is that a filed second site stays standing.
+4. Four withdrawn claims in `reports/evolution/INDEX.md`'s own report summaries.
+5. Three open BACKLOG checkboxes whose own verdict already says ALREADY DONE.
+6. One false sentence `camera-fingerprint.mjs` prints on every run.
+
+**Seven more are NOT on that list because they need your word** — they are the section below.
+
+---
+
 ## ★ WHAT NEEDS YOUR WORD
 
 1. **`crop-sprite-sheets.mjs` — what happens to the spent list.** Its twelve entries describe sheets
