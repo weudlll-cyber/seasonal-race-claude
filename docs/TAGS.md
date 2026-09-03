@@ -1233,8 +1233,11 @@ Values live in [fingerprints.json](fingerprints.json), not here.
 ### COMBO15 ship + the action/fair-arrival line (2026-07-29)
 
 COMBO15 (chaos steer + band-aware re-roll bias + 0.15 chaos window) was the shipped world **at this ship**; it
-has since advanced through two avoidance engine changes to the current world `dc4647be0f55ebdb` (see the
-_Engine changes since COMBO15_ subsection below). The ship
+has since advanced through two avoidance engine changes to `dc4647be0f55ebdb` (see the
+_Engine changes since COMBO15_ subsection below), and through further changes since. **The CURRENT
+world is not named here** — `docs/fingerprints.json` is its one home, and a register of past states
+is the last place that should carry it *(corrected 2026-09-03, SECOND-SITES-LIVE-1: this line called
+`dc4647be0f55ebdb` current)*. The ship
 anchors are permanent; the four experiment branches that fed the multi-week action/fair-arrival hunt were
 archived as permanent `archive/*` tags and their remote branches deleted (branch hygiene, owner-approved).
 
@@ -1306,7 +1309,8 @@ entry). Full fingerprint lineage: [SIM.md](SIM.md); reports:
   RACER-FLAPPING-2 shipped `62400c8e88cdbe59`.
 - `pre/motion` (`e99b034d`, 2026-07-31) — the pre-RACER-MOTION-2 state: restores **COMBO15 + margin hysteresis**
   (`62400c8e88cdbe59`), before the lateral acceleration cap (`maxLateralAccelPerStep` 0.0005). RACER-MOTION-2
-  shipped the current world `dc4647be0f55ebdb`.
+  shipped `dc4647be0f55ebdb`, the world current **at that ship** and not since
+  *(corrected 2026-09-03, SECOND-SITES-LIVE-1; `docs/fingerprints.json` holds the current one)*.
 
 ### Camera detour fix — CAMERA-GLIDE-TARGET-1 (2026-08-01)
 

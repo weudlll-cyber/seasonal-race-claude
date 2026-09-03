@@ -119,10 +119,15 @@ export function resolveIdentity(partial = {}) {
 // check everyone believed was happening — most recently on 2026-09-02, when the parity soak ran a
 // different race from the product for weeks because a roster defaulted to null.
 //
-// ★ THE CONFIG IS IN THE HASH, AND THAT IS THE WHOLE POINT. `corridor-truth` and
-// `corridor-truth --company-only` print the SAME identity line and produce DIFFERENT numbers, so
-// identity alone cannot answer the question. VERIFY-RULES R16 names that pair as the case where even
-// a stated identity is insufficient.
+// ★ THE CONFIG IS IN THE HASH, AND THAT IS THE WHOLE POINT. `his-shot-truth` prints ONE identity
+// line over FOUR arms — `--company-only`, `--owner-unit`, `--min-racers=`, `--defaults` — which
+// produce DIFFERENT numbers, so identity alone cannot answer the question. VERIFY-RULES R16 names
+// that case as the one where even a stated identity is insufficient.
+//
+// Corrected 2026-09-03 (SECOND-SITES-LIVE-1): this comment named `corridor-truth`, which has exactly
+// one flag, `--json`. R16 carried the same wrong tool and was corrected on 2026-09-02; the comment
+// that copied it was not. `--company-only` belongs to `his-shot-truth.mjs:47` and
+// `camera-fingerprint.mjs:121`.
 //
 // WHAT IT COVERS: every field of the identity — including the ROSTER'S ACTUAL NAMES, not its length,
 // because `stablePairBit` hashes `r.name` and two fields of forty different names are two different
