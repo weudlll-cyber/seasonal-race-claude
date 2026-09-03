@@ -557,6 +557,20 @@ nothing is designed here, no key is added, and no change is implied.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
+- [ ] **THE BROWSER SWEEP STILL EXCLUDES GARDEN-PATH ON A CLAIM TWO OTHER HARNESSES HAVE RETRACTED.**
+      `scripts/viewer-invariants.mjs` records garden-path as never finishing at seed 9 and drops it
+      from the twelve scorable items; `SHIP-CEREMONY.md` repeats it. **The same claim was true of the
+      camera fingerprint and of the render fingerprint and is false in both** since 2026-08-25, when
+      `d73ec6a9` gave the track the beetle and two laps — measured 2026-09-03: 4,916 of 12,000 frames
+      with 300 after the last crossing, and FINISH by frame 4300 with the coverage matrix reading
+      **10/10**. **It is NOT corrected here, deliberately**: that is a third harness at a specific
+      seed, and settling it from another instrument's result is precisely the mistake
+      BACKLOG-VERDICTS-1 made about this track. Both sites are flagged DOUBTFUL in place.
+      **verify:** run the sweep for garden-path at seed 9 and read whether it scores — a measurement,
+      not a grep. **Costs nothing while it stands**: the nightly sweep runs all ten tracks anyway, so
+      what is at stake is one track's pre-merge coverage, not its coverage. **Filed 2026-09-03
+      (GARDEN-PATH-CLOSE-1).**
+
 - [ ] **NOTHING MEASURES MOTION, only per-frame VALUES.** A 2708 px one-frame step was invisible to
       the camera fingerprint (which hashes state, and duly hashed it as just another frame) and
       survived repeated refactoring of `CameraDirector.js`. `scripts/finish-motion-truth.mjs` is now
@@ -567,18 +581,8 @@ nothing is designed here, no key is added, and no change is implied.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no motion-continuity instrument exists — `scripts/check-*.mjs` has no such guard. It is tonight's **piece 12**, which had not started when this verdict was written.
 
-- [ ] **Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
-      finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
-      garden-path with the finish accounting instrumented — a measurement, not a grep, so no
-      `verify:` command can stand in for it. Within the shared driver's 200 s ceiling at n=40 / 60 s
-      requested (`finishedCount` still 0 at frame 12000), so it is unmeasurable for any finish-phase
-      harness — 9 of 10 tracks. Not a camera fault; worth asking why a 60-second race exceeds 200
-      seconds of simulation.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it needs a driven race with the finish accounting instrumented. The premise is confirmed as recently as today — `scripts/camera-fingerprint.mjs:327` documents its "at least one track" gate as existing **because** garden-path does not finish inside the harness's 200 s ceiling. Waiting on tonight's **piece 11**. *(Note for a later reader: the 2026-08-25 section above records garden-path completing 20/20 under the beetle; that is the sweep driver, and this is the fingerprint harness. Which of the two changed was not settled by this pass and no race was run for it.)*
-
-      **★ RE-VERDICT 2026-09-03 (CAMERA-GATE-1) — FALSE. GARDEN-PATH FINISHES.** The race the verdict above asked for was run, on the very harness it cited: `node scripts/camera-fingerprint.mjs` reports **`garden-path … 4916 frames (300 after the last crossing)`** and **`10 of 10 tracks contributed FINISHED frames`**. It uses **4,916 of the 12,000 frames** the 200 s ceiling allows — **41%**, with 102 seconds of headroom. It became true on **2026-08-25**, when `d73ec6a9` gave the track the beetle and two laps.
-      **THE VERDICT ABOVE IS THE ONE CONTAMINATED ENTRY IN ITS OWN PASS**, and how it went wrong is worth more than the fact: it said the question "cannot be established mechanically", and then established it anyway — from a COMMENT in `camera-fingerprint.mjs` that had itself been false since 2026-08-25. **Its own closing note named exactly the missing step** — *"no race was run for it"* — and the race, when finally run, took 26 seconds. Audited across all **99** of that pass's verdicts, **this is the only one whose evidence was a claim rather than the tree.** The false comment, and a second copy of it the instrument PRINTED on every run, are removed by CAMERA-GATE-1.
+*(The other entry that stood in this section — **Garden Path does not finish** — moved to PART TWO on
+2026-09-03, closed. GARDEN-PATH-CLOSE-1.)*
 
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
@@ -2527,6 +2531,23 @@ key names already available to whoever picks it up.
       that explains the difference is not a substitute for a label that shows it.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
+
+- [x] ~~**Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
+      finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
+      garden-path with the finish accounting instrumented — a measurement, not a grep, so no
+      `verify:` command can stand in for it. Within the shared driver's 200 s ceiling at n=40 / 60 s
+      requested (`finishedCount` still 0 at frame 12000), so it is unmeasurable for any finish-phase
+      harness — 9 of 10 tracks. Not a camera fault; worth asking why a 60-second race exceeds 200
+      seconds of simulation.~~
+      **CLOSED 2026-09-03 (GARDEN-PATH-CLOSE-1) — IT FINISHES, and the RE-VERDICT below is what
+      closed it.** Moved here from PART ONE's *Instrument coverage residuals* **whole**: every verdict
+      it collected is kept, INCLUDING the one that was wrong, because **how that one went wrong is the
+      most useful thing on the entry** and deleting it would delete the lesson with it.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** it needs a driven race with the finish accounting instrumented. The premise is confirmed as recently as today — `scripts/camera-fingerprint.mjs:327` documents its "at least one track" gate as existing **because** garden-path does not finish inside the harness's 200 s ceiling. Waiting on tonight's **piece 11**. *(Note for a later reader: the 2026-08-25 section above records garden-path completing 20/20 under the beetle; that is the sweep driver, and this is the fingerprint harness. Which of the two changed was not settled by this pass and no race was run for it.)*
+
+      **★ RE-VERDICT 2026-09-03 (CAMERA-GATE-1) — FALSE. GARDEN-PATH FINISHES.** The race the verdict above asked for was run, on the very harness it cited: `node scripts/camera-fingerprint.mjs` reports **`garden-path … 4916 frames (300 after the last crossing)`** and **`10 of 10 tracks contributed FINISHED frames`**. It uses **4,916 of the 12,000 frames** the 200 s ceiling allows — **41%**, with 102 seconds of headroom. It became true on **2026-08-25**, when `d73ec6a9` gave the track the beetle and two laps.
+      **THE VERDICT ABOVE IS THE ONE CONTAMINATED ENTRY IN ITS OWN PASS**, and how it went wrong is worth more than the fact: it said the question "cannot be established mechanically", and then established it anyway — from a COMMENT in `camera-fingerprint.mjs` that had itself been false since 2026-08-25. **Its own closing note named exactly the missing step** — *"no race was run for it"* — and the race, when finally run, took 26 seconds. Audited across all **99** of that pass's verdicts, **this is the only one whose evidence was a claim rather than the tree.** The false comment, and a second copy of it the instrument PRINTED on every run, are removed by CAMERA-GATE-1.
 
 - [x] ~~**A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT** — proposed convention:
       any block that re-mints names one or two specific invariants that must NOT move, and measures

@@ -695,6 +695,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [GARDEN-PATH-CLOSE-1.md](GARDEN-PATH-CLOSE-1.md) — **the entry is closed, and the sweep found the
+  claim alive in TWO more instruments and DOUBTFUL in a third** (2026-09-03; documents and one code
+  comment, one 44 s measurement, nothing minted). The entry moved to PART TWO **whole** — all three
+  verdicts kept, **including the wrong one**, because it declared a question *“cannot be established
+  mechanically”* and then established it from a false COMMENT, and the race it said was needed took
+  26 seconds. ★ **THE SWEEP IS THE PIECE.** `CAMERA_DIRECTOR.md` carried the same premise twice about
+  the RENDER fingerprint — a different harness — and the document names the command that settles it:
+  `render-fingerprint.mjs --coverage` now reads **`tracks with the finish SHOT sampled: 10/10`**, with
+  garden-path at FINISH by frame 4300 and at rest from 4520. **Both corrected**, and the instrument’s
+  blind spot restated as what it actually is — a mid-zoom-out MOVE frame on garden-path and
+  city-circuit, and the resting frame on dirt-oval. ★ **A THIRD harness is FLAGGED, NOT CORRECTED**:
+  `viewer-invariants.mjs` and `SHIP-CEREMONY.md` exclude the track at **seed 9**, and correcting a
+  browser sweep on a headless fingerprint’s evidence is the exact mistake this entry is famous for.
+  Marked DOUBTFUL in place, filed open with a `verify:` that is a race rather than a grep. Open boxes
+  57 → 56 → 57, said plainly.
 - [CITATIONS-CONVENTION-1.md](CITATIONS-CONVENTION-1.md) — **the “113 mechanically-convertible” is
   TWELVE, because 107 of the citations are LINKS whose line number is the destination** (2026-09-03;
   documents, one guard rule, eight tests; nothing minted, no fingerprint touched). ★ **CITATIONS-1’s
