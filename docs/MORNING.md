@@ -3,14 +3,24 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 10 — **the chain is finished.** Pieces 1–9 are merged to master and
-pushed; **piece 10 is built, green and NOT merged**, waiting on your eye. Master green after every
-merge, step 12 done each time, clean tree.
+**Last rewritten:** 2026-09-04, after your eye test. The chain is finished and **TWO BRANCHES ARE
+WAITING ON YOU** — neither merges until you have judged them. Master green, clean tree.
 
-★ **THE ONE THING TO DO THIS MORNING: open <http://localhost:4173/> and go to the Players tab.**
-It is a production build of `feat/player-groups-1` with the API up. What to look at is at the bottom
-of `reports/evolution/PLAYER-GROUPS-1.md` §6 — which is ON THAT BRANCH, not on master — and takes
-about two minutes.
+★ **THE ONE THING TO DO: open <http://localhost:4173/> and start a race on DIRT-OVAL.**
+It is a production build of **`fix/board-portrait-fit-1`** — the STARTERS-board fix, which you have
+NOT seen: the build you judged was `feat/player-groups-1`, and it does not contain it. Watch the
+board during the countdown. **Dirt-oval, not garden-path**, because its default racer is the HORSE,
+which overflowed **45% further than the beetle** — the beetle is only seventh of twenty.
+
+**What you are judging is the COST, not the overlap.** The overlap is gone on all twenty types.
+Fitting the portrait to its column makes long racers SHORTER — the rocket is now **35% of its former
+height**, the horse 44%, the duck unchanged. The column's geometry is fixed (20 px of room left of
+centre, 14 px right), so if that is worse than the overlap, the column has to widen and **the name
+pays for it**. Details in `reports/evolution/BOARD-PORTRAIT-FIT-1.md` §4 and §6, on that branch.
+
+**The other branch, `feat/player-groups-1`, is unchanged since you saw it** except for the three
+things your eye test asked for: the chips are readable, the over-capacity notice is a warning, and
+**the `#3` badge and the 🔀 shuffle are gone** on your decision — the list is alphabetical now.
 
 ---
 
@@ -515,8 +525,36 @@ list is short and that is the answer; **no third class-removing item was invente
 
 ## ★ WHAT NEEDS YOUR WORD
 
-0. **★ PIECE 10, ON 4173.** Two minutes. Everything else on this list has been waiting longer and
-   can keep waiting; this one is the only thing in the chain that changes what you see.
+### The three from 2026-09-04, and none of them can be closed by anybody else
+
+**A. THE RENDER FINGERPRINT MOVED FOR THE BOARD FIX, AND IT IS UNMINTED.**
+It moved on all ten tracks, because the board is one of the beats that instrument samples. **The
+values are not written here** — `docs/fingerprints.json` is the record's one home, and the new one
+is not in it precisely because nothing has minted it. **A visible board change MUST move it**, so this is the ceremony asking for
+a deliberate mint rather than a fault — and **your word is the only thing that writes it.** World and
+camera were re-run and are unmoved, which is the pairing R17 asks for. Nothing was minted.
+*(`fix/board-portrait-fit-1`; `reports/evolution/BOARD-PORTRAIT-FIT-1.md`.)*
+
+**B. THE OVER-CAPACITY BEHAVIOUR — truncation drops names the host cannot discover.**
+When a group does not fit the field, the tail is silently cut. The names that go are **deterministic**
+— the end of the group's saved order, after removing duplicates — and **there is no way to find out
+who they were from anywhere on the screen**: the saved order is not on the Setup Screen, the roster
+shows only who arrived, and the field is renumbered afterwards. The message says how many, never
+which. **My own read, and it is a read rather than a recommendation you asked for:** refusing a
+47-name group for a 40-cap track — *“this group has 47; the track holds 40”* — is simpler to build and
+harder to get wrong than any list of the cut. **Nothing was built.**
+*(`reports/evolution/CHIP-CONTRAST-1.md` §4.)*
+
+**C. WHETHER `feat/player-groups-1` MERGES AS IT STANDS**, once you have judged the board. It is
+green, all four fingerprints unmoved, and carries player groups, the contrast fix, the warning
+treatment and the badge/shuffle removal. **It has not been merged and will not be without your word.**
+
+---
+
+0. ~~**★ PIECE 10, ON 4173.**~~ **DONE 2026-09-04 — you judged it, and four items came back.** Three
+   are fixed on the branch (contrast, the warning, the badge and shuffle) and one, the STARTERS
+   board, is on its own branch off master and is what 4173 now serves. Struck rather than deleted so
+   the ask still reads as one that was asked and answered.
 
 0b. **Whether piece 9 should finish the job** — delete `garden-path-finishes.spec.js` entirely, and
    with it the only browser evidence that the track finishes. I kept the crossing test; the argument
