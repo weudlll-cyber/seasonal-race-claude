@@ -124,7 +124,11 @@ two specs were added on 2026-08-25/26 and this sentence did not notice, so a fig
 clean sweep came to mean **103 of 106**. Measured tonight over a full run plus a re-run of the
 failures: **105 of the 106 can pass, and one fails deterministically** —
 `garden-path-finishes.spec.js:31`, whose premise died when garden-path's default racer changed
-(TESTS-WIRED-1). **No count is written here as a target**: run it and read what it says. The two
+(TESTS-WIRED-1). **★ THAT TEST WAS DELETED 2026-09-03 (DROP-GP-SPEC-1)** — it asserted the product’s
+estimate for the track EXCEEDS the 200 s harness ceiling, and the race now takes about **82 s** at
+those same two laps, so it was failing because it was right to fail. **The suite is 105 tests and no
+known deterministic failure**; run it and read what it says rather than taking that as a target. The
+file’s second test STAYS — it is the only browser-side assertion that garden-path finishes at all. **No count is written here as a target**: run it and read what it says. The two
 flaked tests passed on an immediate re-run, which is the residual above and not a new mechanism.
 
 **This is the one home for that command and that reason.** `docs/VERIFY-RULES.md` says why the suite
