@@ -156,9 +156,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // choreo TWO-PHASE MODEL (CHAOS → PULK → OUTCOME): under choreo there is no TRANSITION phase — OUTCOME
   // (the pack's band-steering) begins exactly where PULK ends, so `corridorStart := pulkEnd` (the live
   // value, DERIVED not copied). `choreoOutcomeStart` is the STORAGE KEY for the PULK-end fraction
-  // (the DevScreen "PULK end / OUTCOME begins here" slider writes it). At defaults it equals pulkStart
-  // (0.25) → PULK is zero-width and this degenerates to the former collapse, byte-identical to the
-  // reactive path's steer-from-0.25. Raising it reopens the PULK window [pulkStart, pulkEnd] and moves
+  // (the DevScreen "PULK end / OUTCOME begins here" slider writes it). When it is set EQUAL to pulkStart
+  // PULK is zero-width and this degenerates to the former collapse, byte-identical to the reactive
+  // path's steer-from-the-chaos-boundary. (That was the state at the pre-COMBO15 defaults, where both
+  // sides were 0.25; at today's shipped values PULK is a real window — the two numbers live in
+  // defaults.js and are deliberately not repeated here.) Raising it widens [pulkStart, pulkEnd] and moves
   // OUTCOME with it. The clamp chain below keeps pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
   // Single source: every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split
   // via getPhaseFractions) inherits these fractions — no duplicated phase math. Choreography is
@@ -175,12 +177,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // degenerates cleanly to a zero-duration phase (never NaN, never inverted). Monotonic clamp
   // chain anchored on corridorEnd as the ceiling; it SUPERSEDES the former corridorStart <=
   // corridorEnd clamp (min against corridorEnd is preserved as the upper bound). No-op for
-  // well-ordered configs — the defaults (0.25/0.5/0.55/1.0) are unchanged. Single source: the
+  // well-ordered configs — DEFAULT_PHASE_FRACTIONS above is already ordered, so the chain is a no-op
+  // on it whatever those values are (they are not restated here; they moved once already). Single source: the
   // sim imports createRacePlan (sim-fairness.mjs:59), so browser and sim inherit this identically.
   // No hardcoded fractions — every bound reads the live resolved phaseFractions.
   const resolvedCorridorStart = phaseFractions.corridorStart ?? phaseFractions.transitionEnd;
   // pulkStart is now ownable (DevScreen "PULK begins here"); anchor it to [0, corridorEnd] first so the
-  // monotonic chain below can never produce an inverted PULK. No-op for the defaults (0.25).
+  // monotonic chain below can never produce an inverted PULK. No-op at the shipped pulkStart.
   phaseFractions.pulkStart = clamp(phaseFractions.pulkStart, 0, phaseFractions.corridorEnd);
   phaseFractions.pulkEnd = clamp(
     phaseFractions.pulkEnd,

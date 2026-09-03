@@ -1230,11 +1230,20 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             },
             {
               key: 'choreoOutcomeStart',
-              label: 'PULK end / OUTCOME begins (0.25–0.55)',
+              label: 'PULK end / OUTCOME begins (0.25–0.60)',
+              // CONTROL-BOUNDS-1: max was 0.55 and the shipped value is 0.60, so the control CLAMPED
+              // TO 0.55 ON OPEN — touching it lost the shipped value with no way back, while the
+              // card's own Reset restored a value the slider could not then display. The bound is not
+              // a new judgement: the VALIDATED config range [0.25, 0.60] was already established
+              // (DEVSCREEN-INVENTORY.md, PHASE-CONTRACT.md §2) and the widget was 0.05 short of it at
+              // the top. The rule the sibling control above already follows — widget clamp == validated
+              // range, cf. `racePlanPulkStart` [0.10, 0.60] — now holds here too. 0.60 is the top of
+              // what has been measured (SWEEP 2, 2026-07-17); raising it further would be an
+              // unvalidated range, which is the owner's call, not a hygiene repair.
               min: 0.25,
-              max: 0.55,
+              max: 0.6,
               step: 0.05,
-              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [PULK begin, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
+              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [PULK begin, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.6 = shipped.",
             },
             {
               key: 'pulkLeaderBrake',

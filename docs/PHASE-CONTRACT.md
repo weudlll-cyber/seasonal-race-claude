@@ -8,16 +8,22 @@ enumerates those contracts so a boundary can never move and silently break them.
 
 ## The phase model (verified)
 
-`DEFAULT_PHASE_FRACTIONS` (racePlanner.js:62-69): `pulkStart 0.25, pulkEnd 0.5, transitionEnd 0.75,
-corridorStart 0.55, corridorEnd 1.0, midToLateSwitchFraction 0.85`. These are the raw fallback literals; the
-resolved plan overwrites three of them. **`pulkStart` is overwritten by config `racePlanPulkStart` — the
-shipped default is `0.15` since COMBO15 (2026-07-29), not the `0.25` fallback literal above** (the fallback
-only applies to a direct `createRacePlan` caller that passes no `pulkStart`, e.g. a unit test). `pulkEnd` and
-`corridorStart` are overwritten from `choreoOutcomeStart` (below).
+`DEFAULT_PHASE_FRACTIONS` (`racePlanner.js`, the `export const DEFAULT_PHASE_FRACTIONS` block) holds
+`pulkStart, pulkEnd, transitionEnd, corridorStart, corridorEnd, midToLateSwitchFraction`. All but the
+first are raw fallback literals; the resolved plan overwrites three of them. **`pulkStart` is NOT a
+literal at all — the block READS `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart`**, so a direct
+`createRacePlan` caller that passes no `pulkStart` (a unit test, say) gets the same shipped value a race
+does, and there is no second number to drift. *(CONTROL-BOUNDS-1, 2026-09-03: this paragraph said the
+fallback literal was `0.25` and warned that the shipped value differs from it. It described the
+pre-COMBO15 file; the literal was replaced by the config read when `racePlanPulkStart` became ownable,
+and the same fossil was standing at five more sites — three code comments in `racePlanner.js`, one in
+`defaults.js`, one in `sim-fairness.mjs` — all corrected together. The values themselves are not
+restated here; they live in `defaults.js`.)* `pulkEnd` and `corridorStart` are overwritten from
+`choreoOutcomeStart` (below).
 
 **The shipped two-phase model (racePlanner.js:147-149), UNCONDITIONAL.** Choreography is always on
 (`_choreoEnabled` is hardcoded `true`, racePlanner.js:274). At plan build time:
-`choreoPulkEnd = config.choreoOutcomeStart ?? 0.25`, then `pulkEnd := choreoPulkEnd` and
+`choreoPulkEnd = config.choreoOutcomeStart ?? phaseFractions.pulkStart`, then `pulkEnd := choreoPulkEnd` and
 `corridorStart := choreoPulkEnd` (DERIVED, not a second copy). So OUTCOME begins exactly where PULK ends:
 **CHAOS → PULK → OUTCOME, with no TRANSITION phase.** The monotonic clamp chain (racePlanner.js:163-173)
 keeps `pulkStart <= pulkEnd <= corridorStart <= corridorEnd`.
@@ -35,7 +41,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 
 ---
 
-## 1. `pulkStart` = 0.15 (shipped; fallback literal 0.25) — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
+## 1. `pulkStart` = 0.15 (shipped; no fallback literal — `DEFAULT_PHASE_FRACTIONS.pulkStart` READS the config key) — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
 
 - **Who reads it.** `getPhase` (racePlanner.js:359,365); the row-envelope chaos-end (raceStep.js via
   `computeRowEnvMult`; browser `PHASE_CHAOS_END` index.jsx; sim `pulkStartLive` sim-fairness.mjs); the
@@ -76,8 +82,12 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   mechanisms act over a longer span. Lowering it toward `pulkStart` (0.15, below its 0.25 minimum) narrows the PULK window (toward zero
   width) and OUTCOME starts at the chaos boundary. Because PULK end == OUTCOME start, moving this ONE
   value moves both seams together.
-- **DevScreen.** "PULK end / OUTCOME begins (0.25–0.55)", config key `choreoOutcomeStart`, in the PULK
-  Phase card. Default **0.6**. *(Corrected 2026-09-03 from 0.5. ★ The DevScreen control itself is wrong in the same direction and is NOT corrected here: its label reads "(0.25–0.55)", its `max` is 0.55 and its tip says "0.5 = shipped" — so **the slider cannot reach the value the game actually runs**. Changing a control's range is a product judgement and is on the morning sheet, not taken here.)*
+- **DevScreen.** "PULK end / OUTCOME begins (0.25–0.60)", config key `choreoOutcomeStart`, in the PULK
+  Phase card. Default **0.6**. *(Corrected 2026-09-03 from 0.5. The control itself was wrong in the same
+  direction — label "(0.25–0.55)", `max: 0.55`, tip "0.5 = shipped" — so the slider could not reach the
+  value the game runs; **repaired by CONTROL-BOUNDS-1 the same day**, by setting the widget clamp to the
+  VALIDATED range [0.25, 0.60] that this document and DEVSCREEN-INVENTORY.md had already recorded. The
+  shipped value did not move.)*
 - **Calibrated for it.** `pulkBiasGain`, `pulkLeaderBrake`, `pulkChallengerBoost` and the
   rest of the `pulk*` contest strengths are all calibrated for the PULK window this boundary defines.
   The PULK phase-split bonuses (`areaBonusPulk`, `rowBonusPulk`, gated by the Phase-Split master

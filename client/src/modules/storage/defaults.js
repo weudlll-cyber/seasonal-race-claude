@@ -1029,10 +1029,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   choreoResolveB5: 0.6,
   // Choreo PULK end / OUTCOME start (storage key): PULK ends here and OUTCOME (the pack's
   // band-steering) begins here — one boundary, no TRANSITION phase (corridorStart := this in
-  // racePlanner.js). At the default 0.25 (== racePlanPulkStart) PULK is zero-width and the field is
-  // steered from the chaos→choreo boundary, byte-identical to the shipped behaviour; raising it reopens
-  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.60.
-  // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
+  // racePlanner.js). Set EQUAL to racePlanPulkStart, PULK is zero-width and the field is steered from
+  // the chaos→choreo boundary; raising it widens the PULK window [racePlanPulkStart, this] and hands
+  // OUTCOME off later. (Written when both sides were 0.25 and PULK was collapsed; racePlanPulkStart has
+  // since moved and the value below with it, so the equality is a case, not the default.)
+  // VALIDATED RANGE 0.25–0.60 — and the DevScreen control's own clamp IS that range, not a second
+  // number beside it. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
   choreoOutcomeStart: 0.6,
   // ── FRONT ACT window start — the front battle's OWN key ───────────────────────────────────────

@@ -303,10 +303,13 @@ jobs:
       - name: Check no document restates the fairness threshold
         run: node scripts/check-doc-facts.mjs
 
-      # Fails if a key the renderer or the Dev Screen reads has NO default. loadCameraConfig()
-      # rebuilds the live config key-by-key from the defaults, so such a key is silently dropped —
-      # the control appears to work and the value never arrives. See DEV-MARKERS-1.
-      - name: Check every camera key read has a default
+      # TWO rules, one run. (1) Fails if a key the renderer or the Dev Screen reads has NO default:
+      # loadCameraConfig() rebuilds the live config key-by-key from the defaults, so such a key is
+      # silently dropped — the control appears to work and the value never arrives (DEV-MARKERS-1).
+      # (2) RULE C fails if a Dev Screen control's declared min/max cannot represent the value its
+      # key ships: the control clamps to an edge on open, touching it loses the shipped value, and
+      # Reset restores a number the control cannot display (CONTROL-BOUNDS-1).
+      - name: Check every camera key read has a default, and every control can reach its value
         run: node scripts/check-config-keys.mjs
 
       # Its sibling, and the gap it leaves: check-config-keys asks whether a key EXISTS in the

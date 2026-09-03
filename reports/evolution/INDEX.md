@@ -455,6 +455,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and left: `BACKLOG.md:787`'s "has NEVER agreed" was repaired on 2026-09-02 and sits in a closed
   entry. B3 is left as a proposal, as the brief instructed.
 
+- [CONTROL-BOUNDS-1.md](CONTROL-BOUNDS-1.md) — **the slider now reaches where the game runs, and a
+  RULE INSIDE AN EXISTING GUARD keeps it there** (2026-09-03; `verify` PASS, all four fingerprints
+  run against the record and all four match, nothing minted). **The shipped value did not move**:
+  `choreoOutcomeStart` is still 0.6; the widget's ceiling went 0.55 → 0.60. ★ **The bound was not
+  chosen — it was already recorded in three places** (`DEVSCREEN-INVENTORY.md`, `PHASE-CONTRACT.md`,
+  `defaults.js`) as the VALIDATED range [0.25, 0.60], and the widget was 0.05 short of it at the top,
+  which is exactly one step and exactly where the shipped value lives. The sibling control in the same
+  card (`racePlanPulkStart`) already keeps widget clamp == validated range. ★ **A mechanical sweep of
+  the whole Dev Screen: 96 controls resolved, and this is the ONLY one that could not represent its
+  shipped value** — 0 others, 0 needing a judgement, 18 unresolved and printed on every run so they
+  cannot read as coverage. ★ **THE TRAP THAT DECIDED THE DESIGN: the obvious sweep — stored value vs
+  bounds — reports SIX violations, and five are false.** A control's bounds are a claim about what it
+  DISPLAYS: `nameTagAllUntilMs` ships 8000 and its box reads 8 against max 30. Rule C evaluates the
+  value expression with the default substituted in, and a test pins that so nobody simplifies it back.
+  ★ **RULE C lives inside `check-config-keys`, not in a new script** — same two sides, same scan
+  region, and a second guard would be a second home for the same pairing. ★ **A SECOND, OLDER FOSSIL
+  found underneath: "`pulkStart` is 0.25" was standing at EIGHT live sites** — three comments in
+  `racePlanner.js`, one in `defaults.js`, one in `sim-fairness.mjs` and three in `PHASE-CONTRACT.md`,
+  one of which *warned the reader* that the shipped value differs from a fallback literal that no
+  longer exists. Every repair replaces the number with the name of its home. **`racePlanner.js` is
+  inside the engine hull, so the world fingerprint was run rather than argued about.**
+
 - [CORRECTIONS-1.md](CORRECTIONS-1.md) — **34 of the ninety applied, 0 refuted, and the second-site
   sweep found 5 more plus a product defect** (2026-09-03; each verified at the tree first, `verify`
   PASS 15 FAIL 0, nothing minted). ★ **The dangerous class is VALUES, and the guard is not looking at
