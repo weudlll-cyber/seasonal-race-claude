@@ -695,6 +695,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [LEFT-BEHIND-1.md](LEFT-BEHIND-1.md) — **ONE stale sentence, and that is the whole answer**
+  (2026-09-04). All six classes searched over `3fc4c6ed..HEAD`: **no** script nothing invokes, **no**
+  export nothing imports, **no** test asserting removed behaviour (the four that still name
+  `assignRacers`/`racerNumber`/`Reshuffle` are ABSENCE assertions or removal comments — the point of
+  the removal, not residue from it), **no** unlinked report (429/73/7, 0 unindexed, 0 dangling), and
+  **no** dead open backlog entry found. ★ **THE ONE**: `MORNING.md` said `crop-sprite-sheets.mjs`'s
+  fields *“are now”* renamed — present tense about a file deleted the following day. Corrected.
+  ★ **AND WHERE IT LANDED IS THE ONLY GENERALISABLE THING**: each of the three big removals swept its
+  own references and every one records the deletion; the single survivor is in **the one document
+  nothing guards**, rewritten by hand every night. **The residue landed exactly where nothing looks.**
+  Reported as the small finding it is, rather than written up as a haul.
+
 - [DOC-TRUTH-3DAY-1.md](DOC-TRUTH-3DAY-1.md) — **THREE false claims written in three days, all of
   them COUNTS, median age under a day — and all three were caught by C2, not by this** (2026-09-04).
   **25 mechanically checkable claims written in scope; 0 false against the tree as it stands** after
