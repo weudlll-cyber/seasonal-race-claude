@@ -95,3 +95,42 @@ describe('randomInt', () => {
     expect(randomInt(0, 0)).toBe(0);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// PLAYER-GROUPS-1 — object entries, and every field of them surviving.
+//
+// SABOTAGE — before this, `assignRacers` rebuilt each player from its NAME. That was harmless for
+//   as long as a player WAS a name; the moment one carries which group it came from, the rebuild
+//   erases it on every add, every remove and every reshuffle — silently, and in three callers.
+//   What breaks if I delete this: the helper could go back to `{ name, racerNumber }` and the
+//   grouped roster would empty itself one click at a time.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+describe('assignRacers with object entries', () => {
+  it('preserves every field of an object entry and overwrites only racerNumber', () => {
+    const out = assignRacers([{ name: 'Anna', group: 'Reds', racerNumber: 99 }]);
+    expect(out).toEqual([{ name: 'Anna', group: 'Reds', racerNumber: 1 }]);
+  });
+
+  it('still takes plain strings, so every existing caller is unchanged', () => {
+    expect(assignRacers(['Solo'])).toEqual([{ name: 'Solo', racerNumber: 1 }]);
+  });
+
+  it('takes a MIXED list — a group arriving beside a hand-typed name', () => {
+    const out = assignRacers([{ name: 'Anna', group: 'Reds' }, 'Zoe']);
+    expect(out.map((p) => p.name).sort()).toEqual(['Anna', 'Zoe']);
+    expect(out.find((p) => p.name === 'Anna').group).toBe('Reds');
+    expect(out.find((p) => p.name === 'Zoe').group).toBeUndefined();
+  });
+
+  it('numbers stay 1..N with no repeat, whatever the entry shape', () => {
+    const out = assignRacers([{ name: 'a', group: 'g' }, 'b', { name: 'c' }]);
+    expect([...out.map((p) => p.racerNumber)].sort((x, y) => x - y)).toEqual([1, 2, 3]);
+  });
+
+  it('does not mutate the entries it was given', () => {
+    const entry = { name: 'Anna', group: 'Reds' };
+    assignRacers([entry]);
+    expect(entry).toEqual({ name: 'Anna', group: 'Reds' });
+  });
+});

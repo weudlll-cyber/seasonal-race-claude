@@ -695,6 +695,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [PLAYER-GROUPS-1.md](PLAYER-GROUPS-1.md) — **several saved groups can race each other, and the
+  field’s real minimum is ONE** (2026-09-03, **NOT MERGED — on `feat/player-groups-1`, his eye
+  owed**, served on 4173). **All four fingerprints match the record** and no default moved; the
+  changed set is four Setup Screen files, one helper and tests. ★ **THE MINIMUM WAS ESTABLISHED
+  FIRST, as the brief required: it is 1**, stated three times — `canStart`’s `players.length > 0`,
+  `validateActiveRace`’s empty-roster throw, and the server’s non-empty rule — and a test pins it so
+  the feature cannot quietly raise it. *(The MAXIMA disagree across four files: 40/100, a dead 20, a
+  server 200, and the track’s own soft `maxRacers`. Named, not reconciled.)* ★ **Groups existed and
+  only ONE could reach a race**, through a Dev Screen hand-off key; running two meant retyping one.
+  Now any number are picked where the race is set up, hand-typed names run under **“All”**, and the
+  start bar says *(Reds 2 + Blues 2)*. ★ **THREE SILENT FAILURES PINNED**: a name in two groups (the
+  roster keys on the name, so a duplicate would have vanished one of them, not doubled it);
+  **`assignRacers` rebuilt every player from its NAME**, erasing the group on every add, remove and
+  reshuffle in three callers at once; and the `sessionStorage` seam, where a stripped field only
+  shows up once a race is running. ★ **The API can be down and a race still starts** — the failure
+  says WHY and is never rendered as an empty list.
 - [DROP-GP-SPEC-1.md](DROP-GP-SPEC-1.md) — **one of the two tests is deleted and the other is the
   ONLY browser evidence in the repository that garden-path finishes** (2026-09-03; one spec, two
   documents, nothing minted). **The file was NOT deleted, and the report is the argument for that.**

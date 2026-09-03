@@ -499,3 +499,101 @@
 .linkBtn:hover {
   filter: brightness(1.2);
 }
+
+/* ── PLAYER-GROUPS-1 — the group picker and the grouped roster ────────────────────────────── */
+
+.groupPicker {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border, #d8d8d8);
+  border-radius: 8px;
+  background: var(--panel-alt, rgba(0, 0, 0, 0.02));
+}
+
+.groupPickerHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.groupPickerTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.groupPickerHint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.groupChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.groupChip,
+.groupChipOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #d8d8d8);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.groupChip:hover,
+.groupChipOn:hover {
+  border-color: var(--brand-primary, #3b7ddd);
+}
+
+.groupChipOn {
+  border-color: var(--brand-primary, #3b7ddd);
+  background: color-mix(in srgb, var(--brand-primary, #3b7ddd) 12%, transparent);
+  font-weight: 600;
+}
+
+.groupChipCount {
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.playerGroupSection {
+  margin-bottom: 0.6rem;
+}
+
+.playerGroupHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.playerGroupCount {
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.startSummaryGroups {
+  opacity: 0.75;
+  font-size: 0.9em;
+}

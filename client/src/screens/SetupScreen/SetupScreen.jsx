@@ -12,6 +12,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
+import PlayerGroupPicker from './PlayerGroupPicker.jsx';
+import { sectionsOf } from './rosterGroups.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -249,6 +251,16 @@ function SetupScreen() {
     const geom = getTrack(selectedTrack.geometryId);
     return geom ? !geom.closed : false;
   }, [selectedTrack]);
+
+  // PLAYER-GROUPS-1: the field cap, resolved ONCE. It was computed inline at the one place that
+  // needed it; two components need it now, and two copies of a `??` chain is how they drift apart.
+  const effectiveMaxPlayers = trackIsOpen
+    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
+    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed);
+
+  // PLAYER-GROUPS-1: the roster split by group, for the start bar. One derivation, shared with the
+  // Players tab, so the two can never disagree about who is in which group.
+  const rosterSections = useMemo(() => sectionsOf(players), [players]);
 
   // ── Canonical model inputs for the selected track ─────────────────────────────────────────
   // One normal speed (px/s) for every track; the race's PACE is that speed times the selected
@@ -710,14 +722,19 @@ function SetupScreen() {
           {activeTab === 0 && (
             <>
               <h2 className={styles.panelTitle}>Players</h2>
+              {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the field
+                  from a saved group is the common case and typing thirty names is not. It writes
+                  into the SAME roster the input below writes into — there is one field, and both
+                  doors lead to it. */}
+              <PlayerGroupPicker
+                players={players}
+                onChange={setPlayers}
+                maxPlayers={effectiveMaxPlayers}
+              />
               <PlayerSetup
                 players={players}
                 onChange={setPlayers}
-                maxPlayers={
-                  trackIsOpen
-                    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
-                    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed)
-                }
+                maxPlayers={effectiveMaxPlayers}
               />
             </>
           )}
@@ -1020,7 +1037,17 @@ function SetupScreen() {
             </div>
           )}
           <div className={styles.startSummary}>
-            <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
+            <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''}
+            {/* PLAYER-GROUPS-1: WHO is racing, not just how many. The start bar is the last thing
+                read before the gun and it is where a wrong field is still cheap to fix. */}
+            {rosterSections.length > 1 && (
+              <span className={styles.startSummaryGroups} data-testid="start-summary-groups">
+                {' ('}
+                {rosterSections.map((s) => `${s.label} ${s.members.length}`).join(' + ')}
+                {')'}
+              </span>
+            )}{' '}
+            ·{' '}
             {selectedTrack ? (
               <strong>
                 {getRacerType(

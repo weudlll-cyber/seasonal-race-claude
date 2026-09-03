@@ -44,6 +44,15 @@ vi.mock('../../services/seedNoticeApi.js', () => ({
   dismissSeedNotices: () => Promise.resolve(0),
 }));
 
+// TEARDOWN-INFLIGHT-1 + PLAYER-GROUPS-1: the Setup Screen now asks the server for saved player
+// groups when the Players tab mounts. The SERVICE is replaced rather than the fetch, for the same
+// reason SeedRedeliveryNotice is: a mocked fetch still exercises the client's error path and leaves
+// a rejected promise in flight past the end of the test. An EMPTY list is the honest default here —
+// these tests are about the roster and the race payload, not about groups.
+vi.mock('../../services/playerGroupApi.js', () => ({
+  fetchPlayerGroups: vi.fn().mockResolvedValue([]),
+}));
+
 forbidNetwork();
 
 function seedGeometry(id, { closed = true } = {}) {

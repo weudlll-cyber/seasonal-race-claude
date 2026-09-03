@@ -15,6 +15,7 @@ import {
   isNameLengthValid,
   nameTooLongMessage,
 } from '../../../../shared/nameLimits.mjs';
+import { sectionsOf } from './rosterGroups.js';
 import styles from './SetupScreen.module.css';
 
 function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
@@ -34,9 +35,10 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
     }
     setNameError('');
 
-    // Re-shuffle racer assignments every time the roster changes
-    const newNames = [...players.map((p) => p.name), name];
-    onChange(assignRacers(newNames));
+    // Re-shuffle racer assignments every time the roster changes. PLAYER-GROUPS-1: the EXISTING
+    // players are passed through as objects, not rebuilt from their names — rebuilding erased the
+    // group each one arrived with, and did so on every single add.
+    onChange(assignRacers([...players, { name }]));
     setInputValue('');
   }
 
@@ -45,15 +47,16 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
   }
 
   function handleRemove(index) {
-    const newNames = players.filter((_, i) => i !== index).map((p) => p.name);
-    onChange(newNames.length > 0 ? assignRacers(newNames) : []);
+    const kept = players.filter((_, i) => i !== index);
+    onChange(kept.length > 0 ? assignRacers(kept) : []);
   }
 
   function handleReassign() {
-    onChange(assignRacers(players.map((p) => p.name)));
+    onChange(assignRacers(players));
   }
 
   const atMax = players.length >= maxPlayers;
+  const sections = sectionsOf(players);
 
   return (
     <div>
@@ -96,24 +99,35 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
         <p className={styles.emptyHint}>No players yet — add at least one to start.</p>
       ) : (
         <>
-          {/* Sort display by racer number so the list is easy to scan */}
-          <div className={styles.playerList}>
-            {[...players]
-              .sort((a, b) => a.racerNumber - b.racerNumber)
-              .map((player) => (
-                <div key={player.name} className={styles.playerRow}>
-                  <span className={styles.racerBadge}>#{player.racerNumber}</span>
-                  <span className={styles.playerName}>{player.name}</span>
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => handleRemove(players.findIndex((p) => p.name === player.name))}
-                    title="Remove player"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-          </div>
+          {/* PLAYER-GROUPS-1: the roster is shown UNDER ITS GROUPS, with hand-added players under
+              `UNGROUPED_LABEL`. The operator has to be able to see which group a name arrived with,
+              or removing one group's players becomes guesswork. Sorting inside each section is by
+              racer number, exactly as before — only the sectioning is new, and a field with no
+              groups renders as one section headed "All", which is the previous list with a title. */}
+          {sections.map(({ label, members }) => (
+            <div key={label} className={styles.playerGroupSection}>
+              {sections.length > 1 && (
+                <p className={styles.playerGroupHeading} data-testid={`roster-section-${label}`}>
+                  {label} <span className={styles.playerGroupCount}>{members.length}</span>
+                </p>
+              )}
+              <div className={styles.playerList}>
+                {members.map((player) => (
+                  <div key={player.name} className={styles.playerRow}>
+                    <span className={styles.racerBadge}>#{player.racerNumber}</span>
+                    <span className={styles.playerName}>{player.name}</span>
+                    <button
+                      className={styles.removeBtn}
+                      onClick={() => handleRemove(players.findIndex((p) => p.name === player.name))}
+                      title="Remove player"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
           <button className={styles.reassignBtn} onClick={handleReassign}>
             🔀 Reshuffle racer assignments
           </button>

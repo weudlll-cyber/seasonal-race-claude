@@ -24,16 +24,27 @@ export function shuffle(array, rng = Math.random) {
 }
 
 /**
- * Assigns racer numbers (1-based) to a list of player names.
- * Numbers are shuffled so assignment is unpredictable.
+ * Assigns racer numbers (1-based) to a roster. Numbers are shuffled so assignment is
+ * unpredictable.
  *
- * @param {string[]} playerNames
- * @returns {{ name: string, racerNumber: number }[]}
+ * ENTRIES MAY BE STRINGS OR OBJECTS, and every field of an object entry SURVIVES — only
+ * `racerNumber` is overwritten. That is what PLAYER-GROUPS-1 needed and it is why this takes both
+ * shapes rather than a second function: the setup flow re-shuffles on every add and remove, so a
+ * helper that rebuilt each player from its NAME ALONE silently erased anything else the roster
+ * carried. It did, for as long as a player was only a name; the moment one carries which group it
+ * came from, that erasure is a bug in every caller at once.
+ *
+ * @param {(string|{name: string})[]} entries  names, or player objects carrying at least `name`
+ * @returns {{ name: string, racerNumber: number }[]}  the same objects, renumbered
  */
-export function assignRacers(playerNames) {
-  const numbers = playerNames.map((_, i) => i + 1);
+export function assignRacers(entries) {
+  const numbers = entries.map((_, i) => i + 1);
   shuffle(numbers);
-  return playerNames.map((name, i) => ({ name, racerNumber: numbers[i] }));
+  return entries.map((entry, i) =>
+    typeof entry === 'string'
+      ? { name: entry, racerNumber: numbers[i] }
+      : { ...entry, racerNumber: numbers[i] }
+  );
 }
 
 /**
