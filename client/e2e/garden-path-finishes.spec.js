@@ -3,63 +3,40 @@
 //
 // THE OWNER'S OBSERVATION, CONFIRMED IN A REAL BROWSER: garden-path runs to the finish.
 //
-// WHY THIS EXISTS. Three headless sweeps recorded garden-path producing NO finishing order —
-// 16 of 16, then 0 of 120, then again — and every figure this project holds for that track rests on
-// races that never ended. The owner has watched it FINISH on screen. This spec is the browser half
-// of that comparison, so the gap is measured rather than argued.
+// ★ WHAT CHANGED, 2026-09-03 (DROP-GP-SPEC-1). This file carried TWO tests and the first is DELETED,
+// not repaired. It asserted that the product's own estimate for this track at the harness's two laps
+// EXCEEDS the harness's 200 s ceiling — the comparison that made "garden-path does not finish" a
+// measurement rather than an argument. **That premise died on 2026-08-25**, when `d73ec6a9` gave the
+// track the beetle and two laps: the race now takes about **82 s** at those two laps (4,916 frames at
+// 60 Hz, measured by `camera-fingerprint.mjs` on 2026-09-03), so an assertion that the estimate is
+// over 200 s is false by more than a factor of two. It is the one deterministic failure
+// `docs/NIGHT-RUN.md` records in the browser suite, and it was failing because it was RIGHT to fail.
+//
+// ★ WHY THE SECOND TEST STAYS, when the piece that removed the first was asked to remove the file.
+// It is the ONLY assertion anywhere that garden-path finishes IN A BROWSER. The e2e suite names the
+// track in no other file; `scripts/viewer-invariants.mjs` EXCLUDES it from the browser sweep on the
+// very claim this test refutes; and the camera and render fingerprints are headless drivers. On
+// 2026-09-03 GARDEN-PATH-CLOSE-1 flagged that exclusion DOUBTFUL and filed it open — deleting the
+// only browser evidence on the same night would have left the tree less true, which is the one thing
+// a hygiene pass may not do.
+//
+// WHAT THE DELETED TEST'S MECHANISM STILL HAS: `SetupScreen.test.jsx` covers the estimate itself in
+// three unit tests — that it renders, that there is no duration slider beside it, and that more laps
+// raise it proportionally. Only the garden-path-against-the-ceiling COMPARISON was unique here, and
+// that comparison is the part that died.
 //
 // IT RUNS ON THE E2E INSTANCE'S OWN PORTS AND DATA DIRECTORY (4399/5399, a temp dir), which is
 // exactly why it is safe to run while the owner's production build is up on 4173 for an eye-test —
 // `e2e-env.js` says those ports were chosen apart for this reason.
 //
-// TWO TESTS, AND THE FIRST IS THE ONE THAT SETTLES IT.
-//   1. WHAT THE PRODUCT ITSELF SAYS THE RACE IS. The setup screen prints its own estimate per lap
-//      choice. If the product's estimate exceeds the harness's 200 s ceiling, the harness is cutting
-//      a race the product considers ordinary — and that is a comparison of the two paths' own
-//      numbers, needing no four-minute race to make it.
-//   2. THAT IT ACTUALLY CROSSES. Slower, and budgeted generously: a headless browser on a loaded
-//      machine advances the race clock more slowly than wall clock, because the rAF accumulator caps
-//      catch-up at two physics steps per frame (RaceScreen index.jsx:988). So the wall-clock budget
-//      here is not the race's length and must not be read as one.
+// THE BUDGET IS NOT THE RACE'S LENGTH. A headless browser on a loaded machine advances the race clock
+// more slowly than wall clock, because the rAF accumulator caps catch-up at two physics steps per
+// frame (`RaceScreen/index.jsx` → `physicsAccum`). The wall-clock budget below must not be
+// read as a statement about how long the race is.
 import { test, expect } from '@playwright/test';
 import { ensureTrackGeometriesCached } from './appReady.js';
 
-/** scripts/lib/raceDriver.mjs runRace: `while (... && ts - raceStart < 200000)`. */
-const HARNESS_CEILING_S = 200;
-
-test.describe('garden-path against the harness ceiling', () => {
-  test("the product's own estimate for this track exceeds the harness ceiling", async ({ page }) => {
-    test.setTimeout(120_000);
-    await page.goto('/setup');
-    await ensureTrackGeometriesCached(page);
-    await page.getByRole('tab', { name: 'Track' }).click();
-    await page.getByRole('button', { name: /Garden Path/ }).first().click();
-
-    const readEstimate = async (laps) => {
-      await page.getByTestId(`lap-choice-${laps}`).click();
-      const txt = await page.getByTestId('closed-track-estimated-duration').innerText();
-      const m = txt.match(/(\d+(?:\.\d+)?)/);
-      return { txt: txt.trim(), seconds: m ? Number(m[1]) : null };
-    };
-
-    const rows = [];
-    for (const laps of [1, 2, 3, 4]) rows.push({ laps, ...(await readEstimate(laps)) });
-    for (const r of rows) console.log(`[garden-path] ${r.laps} lap(s): estimate "${r.txt}"`);
-
-    // THE TRACK'S OWN DEFAULT is what a Quick Test runs, and it is 4 laps here (defaultDuration 120
-    // -> legacyLapsFromDefaultDuration). The harness hardcodes 2 for EVERY closed track.
-    const atHarnessLaps = rows.find((r) => r.laps === 2);
-    expect(atHarnessLaps.seconds, 'the estimate must be readable').not.toBeNull();
-    console.log(
-      `[garden-path] at the harness's own 2 laps the product estimates ${atHarnessLaps.seconds} s, ` +
-        `against a ${HARNESS_CEILING_S} s ceiling`
-    );
-    expect(
-      atHarnessLaps.seconds,
-      'if the product estimated UNDER the ceiling, the ceiling could not be the cause'
-    ).toBeGreaterThan(HARNESS_CEILING_S);
-  });
-
+test.describe('garden-path finishes in a browser', () => {
   test('and it actually crosses the line', async ({ page }) => {
     test.slow();
     test.setTimeout(1_800_000);

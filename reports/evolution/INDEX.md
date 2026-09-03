@@ -695,6 +695,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [DROP-GP-SPEC-1.md](DROP-GP-SPEC-1.md) — **one of the two tests is deleted and the other is the
+  ONLY browser evidence in the repository that garden-path finishes** (2026-09-03; one spec, two
+  documents, nothing minted). **The file was NOT deleted, and the report is the argument for that.**
+  The piece was asked to remove it *after first establishing what it asserted* — and establishing it
+  changed the answer. ★ **Test 1 IS deleted**: it asserted the product’s estimate at the harness’s two
+  laps EXCEEDS the 200 s ceiling, and the race now runs **4,916 frames ≈ 82 s** at those same two
+  laps. It is the one deterministic failure `NIGHT-RUN.md` records, **and it was failing because it
+  was right to fail**. Its MECHANISM survives in three `SetupScreen.test.jsx` unit tests; only the
+  garden-path-against-the-ceiling COMPARISON was unique, and that is the part that died. ★ **Test 2
+  STAYS**: the other eight e2e specs never name the track, `viewer-invariants.mjs` **excludes** it on
+  the very claim this test refutes, and the two fingerprints are headless. **Deleting the only
+  browser evidence on the night GARDEN-PATH-CLOSE-1 called that exclusion doubtful would have left
+  the tree less true.** ★ **And Rule F’s declared blind spot arrived within the hour**: converting the
+  header’s stale `index.jsx:988` first named `renderInterpolation`, which IS in the file and is a
+  different feature — Rule F would have passed it, and **reading the line is what caught it.**
 - [GARDEN-PATH-CLOSE-1.md](GARDEN-PATH-CLOSE-1.md) — **the entry is closed, and the sweep found the
   claim alive in TWO more instruments and DOUBTFUL in a third** (2026-09-03; documents and one code
   comment, one 44 s measurement, nothing minted). The entry moved to PART TWO **whole** — all three
