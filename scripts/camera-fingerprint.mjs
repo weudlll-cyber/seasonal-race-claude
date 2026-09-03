@@ -325,18 +325,57 @@ for (const geo of RUN_GEOS) {
 // and the hash would still be a hash — which is exactly how the old blindness lasted as long as it
 // did. So the instrument REFUSES rather than noting it: zero ending frames anywhere is a failure.
 //
-// It is "at least one track", not "every track". garden-path does not finish inside the harness's
-// 200 s wall-clock ceiling, so it has no ending to sample and never did; demanding all ten would
-// fail on a race that is simply too long, which is a different problem and not this one.
+// ★ IT IS "EVERY TRACK" SINCE 2026-09-03 (CAMERA-GATE-1), AND IT WAS "AT LEAST ONE" FOR A REASON
+// THAT HAD STOPPED BEING TRUE. The paragraph here read: "garden-path does not finish inside the
+// harness's 200 s wall-clock ceiling, so it has no ending to sample and never did; demanding all ten
+// would fail on a race that is simply too long." It stopped being true on 2026-08-25, when
+// GARDEN-PATH-DEFAULTS-1 (`d73ec6a9`) gave that track the beetle and two laps. Today garden-path
+// finishes in 4,916 of the 12,000 frames the ceiling allows — 41%, with 102 seconds of headroom —
+// and contributes the full 300 ending frames like every other track.
+//
+// THE OWNER'S CONDITION FOR TIGHTENING, AND IT WAS MEASURED BEFORE THE CHANGE. He asked how often
+// the tighter gate would have gone red WITHOUT CAUSE over recent history, and said to leave the gate
+// alone if that number were high. Replayed over the daily tip of the last twelve days, in a shared
+// clone, running this instrument at each:
+//
+//     2026-09-03 … 2026-08-25   0 tracks with zero ending frames   (7 days, GREEN)
+//     2026-08-24 … 2026-08-18   1 track  — garden-path, every day  (5 days, RED)
+//
+// FIVE of twelve red — and ZERO of them WITHOUT CAUSE. Every red is a true statement: on those days
+// garden-path genuinely contributed nothing and the hash genuinely did not cover its ending. The
+// gate would not have cried wolf once; it would have reported a real gap that stood for months, and
+// the reason it could not be tightened then was the gap, not the gate.
+//
+// WHAT THE TIGHTER GATE COSTS, stated rather than discovered: a track whose race legitimately
+// cannot finish inside 200 s WILL block this instrument. That is the intended reading — the hash
+// would not cover that track's ending, and a fingerprint that silently omits a track is the
+// blindness CAMERA-ENDING-WINDOW-1 removed. The answer then is the track's defaults or the ceiling,
+// NOT this gate, and the failure message says so.
 const withEnding = rows.filter((r) => r.endingFrames > 0);
+const noEnding = rows.filter((r) => r.endingFrames === 0);
 // --ending-off is the one arm where zero is the EXPECTED answer rather than the failure: the key it
-// turns off is what puts the ending in the director's hands at all.
+// turns off is what puts the ending in the director's hands at all. --cheap runs ONE track, so
+// "every track" is not a question it can answer; the zero-anywhere failure below still binds there.
 if (!CHEAP && !ENDING_OFF && withEnding.length === 0) {
   console.error(
     "\nFAIL: NOT ONE TRACK produced a FINISHED frame, so this hash does not cover the ending at\n" +
       "      all — the exact blindness CAMERA-ENDING-WINDOW-1 removed. The window comes from\n" +
       "      endingOnRaceScreenMs(); either the ending has been shortened to nothing or this loop\n" +
       "      no longer reaches it. Refusing to print a value that would look like a baseline.",
+  );
+  process.exit(1);
+}
+if (!CHEAP && !ENDING_OFF && noEnding.length > 0) {
+  console.error(
+    `\nFAIL: ${noEnding.length} of ${rows.length} track(s) contributed NO FINISHED frames, so this hash\n` +
+      `      does not cover their ending: ${noEnding.map((r) => r.id).join(", ")}\n` +
+      "      A track contributes none only when its race does not get every racer home inside the\n" +
+      "      200 s ceiling in `trackHash`. The hash would then be a baseline for nine tracks'\n" +
+      "      endings and silence about the tenth, which is the shape CAMERA-ENDING-WINDOW-1 exists\n" +
+      "      to prevent.\n" +
+      "      FIX THE TRACK OR THE CEILING, NOT THIS GATE: check that track's defaultRacerTypeId and\n" +
+      "      defaultLaps, or raise the ceiling deliberately. Loosening this back to 'at least one'\n" +
+      "      is how it came to be justified by a claim that had been false for months.",
   );
   process.exit(1);
 }
@@ -379,11 +418,23 @@ if (QUIET) {
       `  ${r.id.padEnd(16)} ${r.hash}  ${String(r.frames).padStart(5)} frames` +
         `  (${r.endingFrames} after the last crossing)`,
     );
+  // THE THIRD LINE USED TO BE A HARDCODED SENTENCE, and it was false, and it was printed on every
+  // run two lines under the number that refutes it (CAMERA-GATE-1, 2026-09-03). It read:
+  //   "garden-path does not finish inside the 200 s ceiling, so it has no ending to sample."
+  // The rows above it showed garden-path contributing 300 frames after the last crossing, and the
+  // line above it said 10 of 10. It became false on 2026-08-25, when GARDEN-PATH-DEFAULTS-1 gave
+  // that track the beetle and two laps; nothing could go red over it, because nothing compares a
+  // console.log string to the row above it. What replaces it is DERIVED from the same rows.
+  const short = rows.filter((r) => r.endingFrames === 0).map((r) => r.id);
   console.log(
     `\n  THE ENDING IS IN THIS HASH — ${withEnding.length} of ${rows.length} tracks contributed ` +
       `FINISHED frames.\n  The window is endingOnRaceScreenMs(), the same arithmetic RaceScreen ` +
-      `navigates away on.\n  garden-path does not finish inside the 200 s ceiling, so it has no ` +
-      `ending to sample.`,
+      `navigates away on.\n  ` +
+      (short.length
+        ? `${short.length} track(s) contributed NONE and are not covered by this hash: ${short.join(", ")}. ` +
+          `A track\n  contributes nothing only when its race does not get every racer home inside the ` +
+          `200 s ceiling.`
+        : `Every track's race finished inside the 200 s ceiling, so every track's ending is covered.`),
   );
   console.log(
     "\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n" +
