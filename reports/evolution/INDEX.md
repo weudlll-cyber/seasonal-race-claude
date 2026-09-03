@@ -695,6 +695,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [MAX-FIELD-1.md](MAX-FIELD-1.md) — **it was never a disagreement: three different limits and one
+  dead key, wearing names close enough to look like four answers** (2026-09-04; no limit's VALUE
+  moved, all four fingerprints unmoved). `maxPlayersClosed`/`Open` 40/100 is **the only field cap**;
+  `SAVED_GROUP_MAX_NAMES` 200 is a **storage** limit on a saved group; `track.maxRacers` is a SOFT
+  recommendation that is **null on every shipped track and has never fired**; and **`maxPlayers: 20`
+  was read by NOTHING** — established by an uncapped search of four trees. It survived because it
+  looked like the field cap and sat between two keys that are. A fourth lookalike went with it:
+  `PlayerSetup`'s `maxPlayers = 20` default parameter, which no production caller ever reached.
+  ★ **THE RECONCILIATION WOULD HAVE BEEN WRONG.** Four numbers, pick one — and you cap saved groups
+  at 40 or fields at 200. **R20** says so: *a limit's name says what it limits*, and *do not
+  reconcile limits that are not the same fact*. No guard, and there could not easily be one.
+  ★ **RULE F CAUGHT MY OWN EDIT HOURS AFTER IT SHIPPED**: removing the key shifted the lines under
+  two paired citations in `FORCE-MAP.md`, and the failure named which half was wrong. **Under the
+  bare form neither would have been noticed** — both symbols are still in the file.
+  ★ **And a test requires its subject to be COMMITTED in a repo that verifies before committing**:
+  `engine-reach.test.mjs`'s `--base=HEAD` only helps once the edit is committed; red on the branch,
+  green on the same content committed, nothing else touched. Filed, not fixed.
+
 - [WATCH-BACKGROUNDS-1.md](WATCH-BACKGROUNDS-1.md) — **the 21.3 MB is watched now, and it is SIX not
   four: five are DIFFERENT PICTURES under one name, one is byte-identical twice** (2026-09-04). The
   digest covers them by EXTENSION, not a second mechanism — **37 assets, one rule**, each directory

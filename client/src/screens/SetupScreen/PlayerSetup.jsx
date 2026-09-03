@@ -16,7 +16,10 @@ import {
 import { sectionsOf } from './rosterGroups.js';
 import styles from './SetupScreen.module.css';
 
-function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
+// MAX-FIELD-1: `maxPlayers` is REQUIRED. It carried a `= 20` default that no caller ever reached —
+// SetupScreen passes the track's cap at both call sites — and a magic 20 in a signature is a fourth
+// number that looks like a field limit and is not one.
+function PlayerSetup({ players, onChange, maxPlayers }) {
   const [inputValue, setInputValue] = useState('');
   const [nameError, setNameError] = useState('');
 

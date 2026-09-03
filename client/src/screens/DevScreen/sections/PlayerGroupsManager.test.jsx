@@ -46,7 +46,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 }));
 
 vi.mock('../../../modules/storage/defaults.js', () => ({
-  DEFAULT_RACE_DEFAULTS: { maxPlayers: 20, maxPlayersClosed: 40, maxPlayersOpen: 100 },
+  DEFAULT_RACE_DEFAULTS: { maxPlayersClosed: 40, maxPlayersOpen: 100 },
 }));
 
 // DROP-RACER-NUMBER-1: the RandomHelper mock was removed with `assignRacers`. This component no

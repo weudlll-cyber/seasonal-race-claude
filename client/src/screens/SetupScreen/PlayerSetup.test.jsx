@@ -13,7 +13,9 @@ import { sectionsOf } from './rosterGroups.js';
 // Helper: render with controlled props; returns the onChange spy
 function setup(players = []) {
   const onChange = vi.fn();
-  render(<PlayerSetup players={players} onChange={onChange} />);
+  // MAX-FIELD-1: the cap is REQUIRED now, so this helper states one instead of leaning on a
+  // default that no production caller ever reached.
+  render(<PlayerSetup players={players} onChange={onChange} maxPlayers={20} />);
   return { onChange };
 }
 
