@@ -551,7 +551,10 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   ★ **All four are in the SAME FILE as the correction that withdraws them**: `INDEX.md`'s own
   report-summary entries state *"7 of 12 names collide"*, *"0 of 8 non-exempt names overlap"*,
   *"still yields zero names"* and *"the camera moves 0.1 world px at the gun"* as present-tense fact,
-  thousands of lines below the corrections block that withdraws each one. **SECOND-SITES-1 searched
+  thousands of lines below the corrections block that withdraws each one. **All four CLOSED
+  2026-09-03 (INDEX-SUMMARIES-1)** — each summary now carries the withdrawal beside the claim; a
+  fifth site of the same inflated pass, *"all seven intrusions"*, was found on the sweep and closed
+  with them. **The measurement above stands as made; only the four sites it named are gone.** **SECOND-SITES-1 searched
   living documents and code and never looked in the lab journal's own map**, which is the whole reason
   its earlier-sample rate was zero. ★ **One has teeth:** `BACKLOG.md`'s open *"Garden Path does not
   finish"* was re-verdicted STILL TRUE yesterday **on the evidence of a stale comment in
@@ -4122,8 +4125,9 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   track's centre — for the first **3000 ms** the anchor is **the field's CENTROID**, and at exactly
   `START_PHASE_DURATION` it switches to **the leader alone**. `worldW/2` was a coincidence of the
   oval's shape (the target's y is ~594 world px from the world's middle). **The step is at 3 s, not
-  at the gun** — the camera moves 0.1 world px at the gun, and `lag` spikes 5.4× (dirt-oval) and
-  3.5× (river-run) in the frame the subject changes, after which the field walks out of the middle
+  at the gun** — the camera moves 0.1 world px at the gun *(NARROWED — see the corrections block:
+  true of the FIRST FRAME only; the centre travels 187 world px within 400 ms)*, and `lag` spikes
+  5.4× (dirt-oval) and 3.5× (river-run) in the frame the subject changes, after which the field walks out of the middle
   of the picture. **The one mechanism built to smooth an anchor change is inert there** (`_camT` is
   null until the first committed transition at 4983 ms), and **`leaderForwardFrac` never fires in
   the window either** (`bias 0.0` on every frame). No proposals, by instruction.
@@ -5152,10 +5156,14 @@ finish shot leave ALONG it.
 
 - [LABEL-OVERLAP-3.md](LABEL-OVERLAP-3.md) — **the screen was right and the instrument was wrong
   three times over** (2026-08-22, INVESTIGATION ONLY, nothing changed, no fingerprint can move).
-  **THE ROOM TEST IS BROKEN**: 7 of 12 names collide in his frame, counted BY PIXELS with real fonts,
+  **THE ROOM TEST IS BROKEN**: names collide in his frame, counted BY PIXELS with real fonts
+  — **3 of 11**, CORRECTED in the corrections block at the top of this file from the **7 of 12** this
+  report gave (its browser pass used `BOX_PAD_X = 10` where the module's value is 8, so every box was
+  2 px too wide). **The finding stands, because 3 is not 0**;
   where the layout claimed 0 — and **every collision is name-vs-NUMBER**, which names the defect:
   `YIELD_OVERLAP_FRAC = 0.35` lets a tenured number intrude 35% of its area onto a name that was
-  admitted with zero tolerance; all seven intrusions (31-192 px2) sit inside that budget. The code's
+  admitted with zero tolerance; every intrusion measured (31-192 px2) sits inside that budget
+  *(their COUNT came from the same inflated pass and no report restates it)*. The code's
   own justification is inverted from the failure. **PHOTO_FINISH is a second, separate one**:
   `exemptAll` skips the test on the premise "at that zoom", and that shot is now **1951 world px —
   the widest of the race** — with 40/41 names overlapping and 9 clipped. Font metrics, coordinate
@@ -5170,7 +5178,8 @@ finish shot leave ALONG it.
   reverting `battleWeight` or `outcomePhaseThreshold` ADDS ~140 names, so his settings already
   suppress names relative to the shipped camera. **THE ROOM TEST IS CORRECT**: of 6 names in his
   crowded frame exactly 1 overlaps, and it is the LABEL-FOCUS-1 exempt racer drawn regardless by
-  design — **0 of 8 non-exempt names overlap**, and the layout measures the same font and box the
+  design — **0 of 8 non-exempt names overlap** *(WITHDRAWN — see the corrections block: measured by
+  pixels in his own frame it is not zero)*, and the layout measures the same font and box the
   renderer draws. **So it is his setting, not a defect** — which turns the wide shot's
   unreadability back onto the SPRITES (32.4 px drawn into 29.2 px of spacing). Carries a correction
   to two earlier reports.
@@ -5216,8 +5225,9 @@ finish shot leave ALONG it.
   26.9 px available, names 60.3 px do not** — the sprite contributes 5.5 px of overlap and a name
   would contribute 33.4 px, 6.1x more, so it is predominantly a LABELLING problem. **NOT
   ESTABLISHED: where his NAMES come from** — `labelNamesWhenRoom` ships false and turning it on
-  still yields zero names; a stored config is the remaining explanation. Found on the way: **the
-  start-formation roll call draws NUMBERS while its own comment says it draws names.**
+  still yields zero names *(WITHDRAWN — see the corrections block: it yields 670; the zero was a
+  harness defect in `raceDriver.mjs`)*; a stored config is the remaining explanation. Found on the
+  way: **the start-formation roll call draws NUMBERS while its own comment says it draws names.**
 
 - [FALLBACK-MIRRORS-1.md](FALLBACK-MIRRORS-1.md) — **the camera's last three copied defaults, and
   what "unreachable" meant this time** (2026-08-18, SHIPPED, **nothing minted**). Four copies
