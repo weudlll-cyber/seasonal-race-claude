@@ -91,6 +91,21 @@ writeFileSync(
   ) + "\n",
 );
 
+// WATCH-BACKGROUNDS-1 (2026-09-04): the rule now digests a SECOND directory, the track
+// backgrounds, and fails loudly when either is absent — so the fixture carries one asset and one
+// record for that directory too. Without it every test in this file fails on a missing directory,
+// which is the rule behaving correctly against a fixture that had not kept up.
+mkdirSync(join(repo, "client", "public", "assets", "tracks", "backgrounds"), { recursive: true });
+writeFileSync(join(repo, "client/public/assets/tracks/backgrounds/alpha.jpg"), "bg-bytes");
+writeFileSync(
+  join(repo, "client/public/assets/tracks/backgrounds/digests.json"),
+  JSON.stringify(
+    { files: { "alpha.jpg": createHash("sha256").update("bg-bytes").digest("hex") } },
+    null,
+    2,
+  ) + "\n",
+);
+
 git("init", "-q");
 git("config", "user.email", "t@example.com");
 git("config", "user.name", "T");
@@ -192,7 +207,8 @@ test("SABOTAGE: an artwork file whose BYTES changed fails, naming the file and b
   writeFileSync(join(repo, "client/public/assets/racers/alpha.png"), "overwritten-by-a-stray-script");
   const r = run();
   assert.equal(r.code, 1, "changed artwork must break the build");
-  assert.match(r.out, /the artwork does not match its record/);
+  // WATCH-BACKGROUNDS-1: the message now names WHICH directory disagreed, because there are two.
+  assert.match(r.out, /the artwork under .* does not match its record/);
   assert.match(r.out, /CHANGED  alpha\.png/);
   assert.match(r.out, /recorded [0-9a-f]{12}….*now [0-9a-f]{12}…/);
   assert.match(
@@ -207,7 +223,10 @@ test("SABOTAGE: an artwork file whose BYTES changed fails, naming the file and b
 test("CONSEQUENCE: restoring the bytes makes it green again", () => {
   const r = run();
   assert.equal(r.code, 0, r.out);
-  assert.match(r.out, /1 hand-made asset\(s\).*match their record/);
+  // WATCH-BACKGROUNDS-1: the fixture now carries TWO watched directories, one asset each.
+  assert.match(r.out, /2 hand-made asset\(s\) match their record/);
+  assert.match(r.out, /assets\/racers/);
+  assert.match(r.out, /tracks\/backgrounds/);
 });
 
 test("a NEW artwork file in no record fails — a record that lists nothing cannot object", () => {
