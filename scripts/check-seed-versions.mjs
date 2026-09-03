@@ -46,7 +46,14 @@
 // ============================================================
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import {
+  readFileSync,
+  readdirSync,
+  statSync,
+  existsSync,
+  writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,13 +65,16 @@ const MANIFEST = `${SEEDS}/versions.json`;
 export const GUARD = {
   id: "check-seed-versions",
   covers:
-    "a shipped seed record whose content changed without its version being raised, a seed file in no unit or in two, and a unit naming a file that does not exist",
+    "a tracked file whose CONTENT changed without its record changing with it — for a shipped seed, its version in server/seeds/versions.json; for a hand-made artwork asset, its digest in client/public/assets/racers/digests.json. Plus a seed file in no unit or in two, and a unit naming a file that does not exist",
   blind: [
     "a redelivery needed for a reason OUTSIDE the seed file's bytes — a client, engine or renderer change that makes an unchanged record wrong; it compares content and cannot see intent",
     "whether the version was raised by the right amount, and whether the change itself is any good",
     "the runtime side entirely — no install's recorded versions are read here",
+    "ARTWORK: whether a change was WANTED. A digest is a tripwire, not a reviewer — it refuses silence and nothing more",
+    "ARTWORK: everything outside `client/public/assets/racers/`. Track backgrounds under `server/seeds/backgrounds/` ARE covered, by the seed rule rather than the digest one; the favicons and every non-image asset are covered by neither, and the inventory with costs is in ARTWORK-DIGEST-1",
+    "ARTWORK: a change to a file's NAME. A renamed sheet reads as one MISSING and one NEW, which is correct but says nothing about whether the pixels moved with it",
   ],
-  dirs: [`${SEEDS}/`],
+  dirs: [`${SEEDS}/`, "client/public/assets/racers/"],
   files: [MANIFEST],
   reach: [],
 };
@@ -247,4 +257,144 @@ console.log(
     `${changed.filter((f) => f !== MANIFEST).length} changed against ${BASE}; ` +
     "0 unversioned change(s), 0 orphan(s), 0 duplicate(s), 0 missing file(s). " +
     "(Content only — it CANNOT see a redelivery that is needed for a reason outside the seed's own bytes.)",
+);
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE ARTWORK RULE — A HAND-MADE ASSET MAY NOT CHANGE WITHOUT ITS RECORD CHANGING WITH IT
+//
+// THE INCIDENT, 2026-09-03. A stray shell expansion ran `scripts/crop-sprite-sheets.mjs`. It
+// overwrote NINE tracked spritesheets — horse, giraffe, snake, rocket, motorbike and its mask,
+// luge, beetle, boarder — printing "Verification: OK — no border clipping" for each, and stopped
+// only because a later entry's arithmetic went out of bounds. **Nothing in this repository would
+// have gone red.** No guard declared `client/public/`, the five client tests that mention
+// `assets/racers` all assert a URL *string*, and `render-fingerprint` cannot blit a sprite in node.
+//
+// ★ AND A GEOMETRY CHECK WOULD NOT HAVE CAUGHT IT. The bad run re-cropped an already-cropped sheet
+// and produced the SAME frame size — horse went in 150x150 and came out 150x150. Only the PIXELS
+// changed. So the registry-vs-PNG geometry rule is a different question and does not cover this
+// one; the cheapest thing that catches it is a digest.
+//
+// WHY THIS RULE IS HERE AND NOT IN A GUARD OF ITS OWN. This guard's subject is already exactly it:
+// *a tracked file whose CONTENT CHANGED without its record being raised*. It is the only guard in
+// the repository with that subject, it runs everywhere (unlike `check-writable`, which is a no-op
+// off Windows), and it already reads a manifest and walks a tree. Its `covers` is widened to say so
+// rather than left describing only half of what it does.
+//
+// WHY A DIGEST HERE AND A VERSION FOR SEEDS — and the seed manifest's own argument is what settles
+// it. It says a content comparison is wrong for seeds because "the moment an operator edits a
+// record their copy differs from the seed", so a content check would warn forever on every used
+// install. **NOTHING OF THE SORT IS TRUE OF A SPRITESHEET.** It is bundled into the client build;
+// no operator has a divergent copy of it; there is nothing to redeliver. So the objection that
+// rules content out for seeds does not reach here, and the digest is the honest instrument.
+//
+// WHAT IT CATCHES: any change to the bytes of any image under the artwork directory — an accidental
+// overwrite, a truncated write, a half-finished export, a file replaced by a different one.
+// WHAT IT CANNOT DO: judge whether the change was WANTED. It cannot. A digest is a tripwire, not a
+// reviewer, and the only correct response to a legitimate artwork edit is to re-record — one
+// command, named in the failure message, so that re-recording is never the harder path than
+// deleting the rule.
+// WHAT IT DOES NOT COVER: everything outside the artwork directory. Track backgrounds under
+// `server/seeds/backgrounds/` are ALREADY covered by the seed rule above; the rest is inventoried
+// in ARTWORK-DIGEST-1 and deliberately not extended tonight.
+//
+// LOUD FAILURE (Lesson 187): zero image files walked, or an unreadable record, both FAIL.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+const ART_DIR =
+  process.argv.find((a) => a.startsWith("--artwork-root="))?.slice(15) ??
+  "client/public/assets/racers";
+const ART_RECORD = `${ART_DIR}/digests.json`;
+const RECORD_MODE = process.argv.includes("--record-artwork");
+const IS_IMAGE = /\.(png|jpe?g|webp|gif)$/i;
+
+const artAbs = join(ROOT, ART_DIR);
+if (!existsSync(artAbs))
+  fail([
+    `FAIL: the artwork directory ${ART_DIR} does not exist.`,
+    "      Nothing was digested, so this rule proved nothing. See Lesson 187.",
+  ]);
+
+const artFiles = readdirSync(artAbs)
+  .filter((n) => IS_IMAGE.test(n) && statSync(join(artAbs, n)).isFile())
+  .sort();
+
+if (artFiles.length === 0)
+  fail([
+    `FAIL: ZERO image files under ${ART_DIR}.`,
+    "      Either the artwork moved or the extension filter stopped matching; either way this",
+    "      rule cannot have compared anything. See Lesson 187.",
+  ]);
+
+const digestOf = (name) =>
+  createHash("sha256").update(readFileSync(join(artAbs, name))).digest("hex");
+const measured = Object.fromEntries(artFiles.map((n) => [n, digestOf(n)]));
+
+if (RECORD_MODE) {
+  writeFileSync(
+    join(ROOT, ART_RECORD),
+    JSON.stringify(
+      {
+        _: [
+          "THE RECORD OF WHAT THE ARTWORK IS. sha256 per file, one line each, regenerated by",
+          "  node scripts/check-seed-versions.mjs --record-artwork",
+          "",
+          "It exists because these files are HAND-MADE and cannot be re-derived from anything, and",
+          "because on 2026-09-03 nine of them were overwritten by an accidentally-run script while",
+          "every check in this repository stayed green. A digest cannot tell a wanted change from an",
+          "unwanted one — it only refuses silence. If you meant it, re-record and commit both.",
+        ],
+        files: measured,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(
+    `check-seed-versions --record-artwork: recorded ${artFiles.length} file(s) into ${ART_RECORD}.`,
+  );
+  process.exit(0);
+}
+
+let recorded;
+try {
+  recorded = JSON.parse(readFileSync(join(ROOT, ART_RECORD), "utf8"))?.files;
+} catch (e) {
+  fail([
+    `FAIL: cannot read the artwork record ${ART_RECORD} — ${e.message}`,
+    "      Create it with: node scripts/check-seed-versions.mjs --record-artwork",
+    "      Refusing to report the artwork unchanged against a record it could not read.",
+  ]);
+}
+if (!recorded || typeof recorded !== "object" || !Object.keys(recorded).length)
+  fail([
+    `FAIL: ${ART_RECORD} records no files.`,
+    "      A record that lists nothing cannot disagree with anything. See Lesson 187.",
+  ]);
+
+const artChanged = artFiles.filter((n) => recorded[n] && recorded[n] !== measured[n]);
+const artNew = artFiles.filter((n) => !recorded[n]);
+const artGone = Object.keys(recorded).filter((n) => !artFiles.includes(n));
+
+if (artChanged.length || artNew.length || artGone.length) {
+  const lines = ["FAIL: the artwork does not match its record."];
+  for (const n of artChanged)
+    lines.push(
+      `  CHANGED  ${n}  recorded ${recorded[n].slice(0, 12)}…  now ${measured[n].slice(0, 12)}…`,
+    );
+  for (const n of artNew) lines.push(`  NEW      ${n}  (in no record)`);
+  for (const n of artGone) lines.push(`  MISSING  ${n}  (recorded, not on disk)`);
+  lines.push(
+    "",
+    "  These files are HAND-MADE and cannot be re-derived. This rule cannot tell a wanted change",
+    "  from an unwanted one — it only refuses silence.",
+    "  IF YOU MEANT IT:  node scripts/check-seed-versions.mjs --record-artwork",
+    "  then commit the artwork and the record together.",
+    "  IF YOU DID NOT:   git checkout -- " + ART_DIR,
+  );
+  fail(lines);
+}
+
+console.log(
+  `check-seed-versions ARTWORK: ${artFiles.length} hand-made asset(s) under ${ART_DIR} match their ` +
+    `record; 0 changed, 0 new, 0 missing. (Content only — it cannot judge whether a change was wanted.)`,
 );

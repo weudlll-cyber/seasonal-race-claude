@@ -3,43 +3,66 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 8. **THE CHAIN IS FINISHED — all eight pieces merged and pushed.**
-Master is green after each. **Full-weight `verify --base=807b9171` on the finished master: PASS 21,
-FAIL 0, SKIP 5**, including both suites, all four fingerprints, `check-runin-frame`, `check-tags` and
-`check-ending-frame`. **17 commits, 8 merges, ZERO touching `docs/fingerprints.json`.** One branch
-locally and at origin, zero worktree stubs, clean tree. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
-pieces merged and pushed.** This chain is running; every piece is marked below.
+**Last rewritten:** after piece 2 of the new chain. **Pieces 1 and 2 — the two that are never
+dropped — are merged and pushed.** Master green after each; one branch locally and at origin, one new
+annotated tag, clean tree. **Pieces 3–10 have not started.**
 
 ---
 
-## ★★ READ THIS FIRST — I FIRED THE GUN I HAD JUST DOCUMENTED
+## ★★ DOES THE ARTWORK GUARD CATCH ITS FOUNDING INCIDENT? — YES, AND IT NAMED ALL NINE FILES
 
-**Nothing is broken. Every affected file is byte-identical to HEAD and it was proved, not assumed.**
+**Reproduced faithfully, on COPIES, with the repository's own artwork never touched.** The deleted
+crop tool was recovered from its archive tag, run over copies of all 31 sheets, and it behaved exactly
+as it did on 2026-09-03 — `Verification: OK` and all.
 
-While writing up piece 2's finding that `crop-sprite-sheets.mjs` would destroy artwork if re-run, I
-put backticks inside a double-quoted shell string. The shell treated them as a command and **ran
-`node scripts/crop-sprite-sheets.mjs`.** It overwrote **nine tracked artwork files** —
-`horse-trot`, `giraffe-walk`, `snake-crawl`, `rocket-fly`, `motorbike-walk`, `motorbike-walk-mask`,
-`luge-slide`, `beetle`, `boarder-sprite` — before throwing `extract_area: bad extract area` on a
-later entry.
+| step | result |
+| --- | --- |
+| the guard against the corrupted copies | **exit 1**, naming **all nine** files the accident hit, each with its recorded and its measured digest |
+| restore | **exit 0** |
+| the real tree, throughout | **exit 0** |
 
-**Restored with `git checkout --` and verified:** `git diff HEAD -- client/public/assets/` is empty,
-and the PNG headers read back at their correct sizes (horse 1200×150, luge 2048×128, and so on).
+**★ AND THE FINDING THAT DECIDED THE SHAPE.** The obvious cheap rule — registry frame size against
+the PNG header — **would NOT have caught it**:
 
-**Two things this changes.**
+    scratch horse BEFORE: 1200x150   sha 223ee39c748dba50…
+    scratch horse AFTER : 1200x150   sha 02be933d520abbe8…
 
-1. **The hazard is no longer an argument, it is an observation.** And it is worse than piece 2's
-   report described: for each sheet it corrupted it printed
-   **`Verification: OK — no border clipping`**. It reports success while doing the damage, and it
-   only stopped because a later entry's arithmetic went out of bounds.
-2. **The mitigation I chose — a warning comment at the head of the table — is not enough**, and I am
-   the proof. **This is the first item needing your word, below.** I did not change the script's
-   behaviour unattended: two of the options are deletions and the others are new mechanisms.
-3. **★ NOTHING WOULD HAVE GONE RED.** No guard declares `client/public/`; the five client tests that
-   mention `assets/racers` all assert a URL *string*; the render fingerprint's own blind list says
-   node has no `Image` so the sprite blit never happens. **A spritesheet is a race input with no
-   machine-readable other side in this tree** — checked by hand twice and by no guard ever. That is
-   the same shape as every defect this week has been about, one directory over.
+**Same dimensions. Different pixels.** The bad run re-cropped an already-cropped sheet to the same
+target size. Only a digest sees this, which is why the rule is a digest.
+
+**Re-recording a legitimate artwork change is one command** — `node scripts/check-seed-versions.mjs
+--record-artwork` — named in the failure message and asserted by a test, because a tripwire whose
+reset is harder than deleting the tripwire gets deleted within a month.
+
+**★ AND A CORRECTION I OWE YOU.** I told you *"nothing watches the artwork"*. **That is wrong about
+the larger half.** What I actually verified was that no guard DECLARES `client/public/`; I then
+generalised it. **`server/seeds/backgrounds/` — 10 files, 51.6 MB — has been covered all along** by
+the seed version rule. The `client/public/` hole was real and is what the accident hit; the word
+"nothing" was not.
+
+**Still unwatched, named and costed rather than extended:** 6 files / 21.3 MB of client-side track
+backgrounds (33 ms to digest — but four of the six share a name with a seed background in a different
+format, and **whether they are the same pictures is a question nobody has asked**), and the two
+favicons. **There are no fonts and no sounds** — measured, not assumed.
+
+---
+
+## ★ THE CROP SCRIPT IS GONE
+
+The owner's decision. **Both preconditions established first:** nothing invokes it (zero hits in every
+`package.json`, `.github/`, `.githooks/`, `verify.mjs`, `routing.mjs`, and no import anywhere), and
+**the sheets in the tree are provably its output — 12 of 12**, by running its own arithmetic over its
+own recorded pre-crop geometry against each PNG's header.
+
+**The knowledge is beside the artwork**, in `client/public/assets/racers/CREDITS.md` — where somebody
+wondering why a sheet is 129 px wide is standing. **That file was itself lying**: it said
+`horse-trot.png` is *"512×128 px, 4 × 128×128 frames"* against a real 1200×150 with **eight** 150×150
+frames. The code is at `archive/crop-sprite-sheets`.
+
+**And the deletion made a Lesson-187 hole visible.** Rule A's live population is now **ZERO**, so its
+green line is byte-identical to what a broken discovery would print. Closed with the right
+distinction: zero LITERALS is the goal; zero racer types, zero fields or zero files walked now FAIL —
+both proven to fire.
 
 ---
 
@@ -374,6 +397,18 @@ list is short and that is the answer; **no third class-removing item was invente
 
 | # | piece | state |
 | --- | --- | --- |
+| 1 | Delete the crop script | **DONE** — both preconditions proven; knowledge beside the artwork; `archive/crop-sprite-sheets` |
+| 2 | Nothing watches the artwork | **DONE** — catches its founding incident, all nine files named |
+| 3 | The instrument that refutes its own printed sentence | not started |
+| 4 | The two rules that remove a fault class | not started |
+| 5 | The slider needs headroom | not started |
+| 6 | The four remaining instances | not started |
+| 7 | The citation convention | not started |
+| 8 | Close the garden-path entry | not started |
+| 9 | Delete the rotten spec | not started |
+| 10 | Player group selection — **the one you will look at** | not started |
+
+--- | --- | --- |
 | 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
 | 2 | Rename the pre-crop fields | **DONE** — Rule A gates, empty exception list; R18 written |
 | 3 | The fifty-six remaining corrections | **DONE** — 15 non-drift applied, 1 line citation, 54 deliberately left |
