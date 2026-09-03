@@ -3,9 +3,9 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 3 of the new chain. **Pieces 1 and 2 — the two that are never
+**Last rewritten:** after piece 4 of the new chain. **Pieces 1 and 2 — the two that are never
 dropped — are merged and pushed.** Master green after each; one branch locally and at origin, one new
-annotated tag, clean tree. **Pieces 4–10 have not started.**
+annotated tag, clean tree. **Pieces 5–10 have not started.**
 
 ---
 
@@ -88,6 +88,33 @@ standing above the new one so the movement is visible.
 evidence IS. 64 name a file, a command or a count they ran; most of the remainder correctly say the
 question is not a tree question at all (NEEDS HIS WORD, *"waiting on a spec"*); **exactly one cites a
 document as evidence of a fact about the world.** The contamination was real and it was isolated.
+
+---
+
+## ★ PIECE 4 — BOTH RULES SHIPPED, AND THE COUNT OF CATCHABLE SUBTYPES DID NOT MOVE
+
+| rule | what it compares | today |
+| --- | --- | --- |
+| **D** | the registry's frame geometry against the PNG's own header | **20 of 20, 0 disagree** |
+| **E** | a control's STATED range against its actual bounds | **5 of 5, 0 disagree** |
+
+Both discovered rather than listed, both sabotage-proven in both directions, both with a loud failure
+that fires, **and neither needed an exception on day one** — so your condition for leaving one
+unshipped never came up.
+
+**Rule D closes the half nobody was holding.** CENSUS-DUPES-1 named the PNG as the source of truth
+for frame geometry, recorded **"Guard: NONE"**, and checked it by hand. **In 88 days that agreement
+had been checked by hand twice and by a machine never.**
+
+**Rule E's sabotage is the repair CORRECTIONS-1 refused to make** — moving the label alone. That
+report called it *"worse than the inconsistency"* and was right, and **nothing enforced it.**
+
+**★ THE ANSWER YOU ASKED FOR, AND IT IS NOT THE FLATTERING ONE: the count does NOT move from four.**
+Both rules close parts of subtype **S1**, which was already counted as catchable. S4 (a scope word in
+a procedure) and S5 (a premise about a value's runtime identity) are untouched and remain
+uncatchable. **Building two rules did not make more of the class catchable — it made more of the
+already-catchable part actually caught.** *(Also: "four of six" counts INSTANCES. There are five
+subtypes, not six.)*
 
 ---
 
@@ -444,7 +471,7 @@ list is short and that is the answer; **no third class-removing item was invente
 | 1 | Delete the crop script | **DONE** — both preconditions proven; knowledge beside the artwork; `archive/crop-sprite-sheets` |
 | 2 | Nothing watches the artwork | **DONE** — catches its founding incident, all nine files named |
 | 3 | The instrument that refutes its own printed sentence | **DONE** — sentence removed, gate **TIGHTENED** on a measurement, audit **1 of 99** |
-| 4 | The two rules that remove a fault class | not started |
+| 4 | The two rules that remove a fault class | **DONE** — both green, no exception list; **catchable count unchanged at four** |
 | 5 | The slider needs headroom | not started |
 | 6 | The four remaining instances | not started |
 | 7 | The citation convention | not started |

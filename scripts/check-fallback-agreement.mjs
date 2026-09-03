@@ -52,7 +52,8 @@ export const GUARD = {
   covers:
     "a fallback that disagrees with the default it mirrors — `config.k ?? 3` while the default says 5; " +
     "AND (RULE A) a literal mirroring a machine-readable home that disagrees with it — a racer-type " +
-    "field copied into a table while the registry says something else",
+    "field copied into a table while the registry says something else; " +
+    "AND (RULE D) a racer-type registry whose frame geometry disagrees with the PNG it names — frameWidth x frameCount against the sheet's own IHDR header",
   blind: [
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
@@ -61,12 +62,14 @@ export const GUARD = {
     "RULE A: a copy that does not NAME its racer. The object must carry the racer id as a value (`id: 'horse'`) or hang from it as a key (`horse: { … }`); a table keyed by array position is invisible",
     "RULE A: literals in COMMENTS are matched like any other — a documented example must avoid stating real values, which is why this file's own example uses placeholders",
     "RULE A: a copy that RENAMES its fields. It discovers pairs from the registry's own field names, so a table using different names is invisible to it. That is the price R18 asks for: renaming a historical record is what makes it readable as one, and it is also what puts it out of reach. (The example the tree carried — `crop-sprite-sheets.mjs`'s `preCropFrameWidth` — was DELETED on 2026-09-03 with the script; the blind spot is unchanged and is now unexercised.)",
+    "RULE D: GEOMETRY only. A change that leaves the frame size alone — a repaint, a re-crop to the same target, a truncated write — is invisible to it. That case is measured (ARTWORK-DIGEST-1: an overwrite produced 1200x150 before AND after) and is the artwork DIGEST's question, in check-seed-versions",
+    "RULE D: only the sheet named by `spriteUrl`. Mask files hang off nested coat objects, which the registry loader skips, so they are digested but not geometry-checked",
     "RULE A: it can find ZERO literals and that is the GOAL STATE, not a failure — REGISTRY-LITERALS-1 removed the copies before this rule existed and DROP-CROP-SCRIPT-1 removed the last twelve. What must never be zero is the DISCOVERY, and that is enforced below rather than left to the test suite.",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
   // RULE A widened this from `client/src/` alone. Its founding defect lived in `scripts/`, which is
   // the hole CENSUS-DUPES-1 declared as its own largest, so a change there must now select this guard.
-  dirs: ["client/src/", "scripts/", "client/scripts/"],
+  dirs: ["client/src/", "scripts/", "client/scripts/", "client/public/assets/racers/"],
   files: [],
 };
 if (process.argv.includes("--declare")) {
@@ -684,6 +687,96 @@ console.log(
     `over ${registry.byRacer.size} racer type(s) and ${registry.fields.size} DISCOVERED field name(s); ` +
     `${copiesBad.length} disagree. (SCALARS ONLY — arrays such as surfaceClasses are out of reach.)`,
 );
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE D — THE REGISTRY MUST AGREE WITH THE ARTWORK IT DESCRIBES
+//
+// Rule A asks whether a COPY of a registry field still agrees with the registry. This asks the
+// question one step further out, at the end nobody was holding: **does the registry agree with the
+// PNG?** For every racer type: `frameWidth × frameCount === pngWidth` and `frameHeight === pngHeight`,
+// read from the file's own IHDR header — 24 bytes, no decoder, no dependency.
+//
+// WHY IT IS THE HALF THAT WAS MISSING. CENSUS-DUPES-1 catalogued this as group A2 and named the PNG
+// as its SOURCE OF TRUTH — the only group in the census whose truth is a binary asset. It recorded
+// "Guard: NONE", and verified the agreement BY HAND. RULE-A-REACH-1 measured the consequence: of the
+// twelve duplicated-fact groups, Rule A covers one in full and **A2 only by half** — the copies, not
+// the fact. This is that half. **The agreement has been checked by hand twice and by a machine
+// never**, in eighty-eight days.
+//
+// WHAT IT DOES NOT COVER, and the distinction is load-bearing rather than pedantic: it compares
+// GEOMETRY, so it is blind to a change that leaves the frame size alone. ARTWORK-DIGEST-1 measured
+// exactly that case — the 2026-09-03 overwrite produced `1200x150` before AND after, same dimensions,
+// different pixels — which is why the digest in `check-seed-versions` exists beside this and neither
+// replaces the other. **This rule catches a registry that has drifted from its art; that one catches
+// art that has drifted from itself.**
+//
+// LOUD FAILURE (Lesson 187): zero types with a resolvable sheet FAILS. A rule that compared nothing
+// must not print "0 disagree".
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+const ART_DIR = "client/public/assets/racers";
+const artMismatch = [];
+let artChecked = 0;
+const artUnresolved = [];
+for (const [id, fields] of registry.byRacer) {
+  const url = fields.get("spriteUrl");
+  const fw = fields.get("frameWidth");
+  const fh = fields.get("frameHeight");
+  const fc = fields.get("frameCount");
+  if (typeof url !== "string" || !url) {
+    artUnresolved.push(`${id} — no spriteUrl in the registry`);
+    continue;
+  }
+  if (![fw, fh, fc].every((v) => typeof v === "number" && v > 0)) {
+    artUnresolved.push(`${id} — frameWidth/frameHeight/frameCount are not all positive numbers`);
+    continue;
+  }
+  const file = join(ROOT, ART_DIR, url.split("/").pop());
+  let buf;
+  try {
+    buf = readFileSync(file);
+  } catch {
+    artUnresolved.push(`${id} — ${url} is not on disk under ${ART_DIR}`);
+    continue;
+  }
+  // PNG IHDR: width at byte 16, height at byte 20, both big-endian.
+  const w = buf.readUInt32BE(16);
+  const h = buf.readUInt32BE(20);
+  artChecked++;
+  if (fw * fc !== w || fh !== h)
+    artMismatch.push(
+      `    ${id}: registry says ${fw}x${fh} x${fc} frames = a ${fw * fc}x${fh} sheet, ` +
+        `but ${url.split("/").pop()} is ${w}x${h}`,
+    );
+}
+
+if (artChecked === 0)
+  fail187(
+    `RULE D resolved ZERO racer sheets under ${ART_DIR}. Either the artwork moved or the registry\n` +
+      `      stopped naming it, and "0 disagree" would be a statement about an empty search.`,
+  );
+
+console.log(
+  `check-fallback-agreement RULE D: ${artChecked} racer sheet(s) checked against the registry's own ` +
+    `frame geometry; ${artMismatch.length} disagree${artUnresolved.length ? `, ${artUnresolved.length} unresolved` : ""}. ` +
+    `(GEOMETRY ONLY — a change that leaves the frame size alone is the artwork digest's question, not this one.)`,
+);
+for (const u of artUnresolved) console.log(`  unresolved: ${u}`);
+
+if (artMismatch.length) {
+  console.error("");
+  console.error(
+    `FAIL: RULE D — ${artMismatch.length} racer type(s) whose registry geometry does not match the ` +
+      `PNG it names.`,
+  );
+  for (const m of artMismatch) console.error(m);
+  console.error(
+    "      The PNG is the source of truth here — it is the artwork. Either the registry was edited\n" +
+      "      without the sheet, or the sheet was replaced without the registry. Read the file's own\n" +
+      "      header before deciding which: `frameWidth × frameCount` must equal the sheet's width.",
+  );
+  process.exitCode = 1;
+}
 
 
 // EVERY EXEMPTION IS PRINTED WHEN IT IS GRANTED (R11). A decision to yield must be visible, not

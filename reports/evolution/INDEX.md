@@ -643,6 +643,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and reached for a comment instead of stopping. Its own note had named the missing step: *"no race
   was run for it"*. **The race takes 26 seconds.**
 
+- [TWO-RULES-1.md](TWO-RULES-1.md) — **both rules are green with no exception list, and NEITHER
+  changes the count of catchable subtypes** (2026-09-03; `verify` green, 48 tests across the two
+  guard suites, nothing minted). ★ **RULE D — the registry must agree with the artwork it describes**:
+  `frameWidth × frameCount` against the sheet's own IHDR header, **20 of 20, 0 disagree**. It closes
+  the half of CENSUS-DUPES-1's group A2 that RULE-A-REACH-1 measured as uncovered — that census named
+  the PNG as the source of truth, recorded **"Guard: NONE"**, and checked it BY HAND. **In 88 days
+  that agreement had been checked by hand twice and by a machine never.** ★ **RULE E — a control may
+  not state a range it does not have**: **5 stated ranges, 0 disagree**, reading the same controls
+  Rule C already discovers. **Its sabotage is exactly the repair CORRECTIONS-1 refused to make** —
+  moving the label alone — which that report called *"worse than the inconsistency"* and which nothing
+  enforced. ★ **Why the range rule is buildable and the tooltip-VALUE rule is not**, restated from
+  CONTROL-CLAIMS-1: a value claim has four spellings and a MEASUREMENT is lexically indistinguishable
+  from a config claim; a range has one spelling and no ambiguity. ★ **THE HEADLINE THAT IS NOT THE
+  EXPECTED ONE: the count of catchable subtypes does NOT move from four.** Both rules close parts of
+  **S1**, already counted catchable; S4 (a scope word) and S5 (a runtime premise) are untouched.
+  **Building two rules did not make more of the class catchable — it made more of the
+  already-catchable part actually caught.** Also corrected: "four of six" counts INSTANCES, not
+  subtypes — PATTERN-CATCHABILITY-1 found six instances in five subtypes.
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).
