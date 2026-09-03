@@ -3,7 +3,11 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 8 — THE CHAIN IS FINISHED. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 8. **THE CHAIN IS FINISHED — all eight pieces merged and pushed.**
+Master is green after each. **Full-weight `verify --base=807b9171` on the finished master: PASS 21,
+FAIL 0, SKIP 5**, including both suites, all four fingerprints, `check-runin-frame`, `check-tags` and
+`check-ending-frame`. **17 commits, 8 merges, ZERO touching `docs/fingerprints.json`.** One branch
+locally and at origin, zero worktree stubs, clean tree. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
