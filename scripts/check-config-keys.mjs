@@ -59,14 +59,15 @@
 export const GUARD = {
   id: "check-config-keys",
   covers:
-    "a key the renderer or the Dev Screen READS that has no entry in the defaults — the loader rebuilds the live config key by key, so such a key is silently dropped; and (RULE C) a Dev Screen control whose declared min/max cannot represent the value its key ships",
+    "a key the renderer or the Dev Screen READS that has no entry in the defaults — the loader rebuilds the live config key by key, so such a key is silently dropped; and (RULE C) a Dev Screen control whose declared min/max cannot represent the value its key ships; and (RULE E) a control that STATES a range in its label or tip which is not the range its bounds allow",
   blind: [
     "whether the key's VALUE is right — see check-fallback-agreement, which is the sibling that asks that",
     "config objects other than the camera one: dynamics and behaviour are spread-merged and cannot fail this way (the EXISTENCE rule only; RULE C reads every defaults object the Dev Screen imports)",
     "a key read by a computed expression rather than by name",
     "RULE C: a control whose bounds are expressions rather than literals — the numbers live in the caller's descriptor and are checked there, but the helper's own row is not",
     "RULE C: a value expression that is not pure arithmetic over one substituted default — reported unresolved, never assumed to pass",
-    "RULE C: whether the LABEL's stated range matches min and max, and whether a tip names the shipped value — prose about a config value belongs to check-config-claims",
+    "RULE C: whether a tip NAMES THE SHIPPED VALUE. CONTROL-CLAIMS-1 established that is not buildable — a value claim has four spellings in this screen and a MEASUREMENT is lexically indistinguishable from a config claim. RULE E below closes the RANGE half, which has one spelling and no such ambiguity",
+    "RULE E: a range stated in WORDS rather than digits, and a range on a control whose bounds are EXPRESSIONS — the one such case in the tree today is `battleMaxGroupSize`'s '(3–6)', checked by hand and correct",
     "RULE C: `step` — whether the shipped value is REACHABLE by stepping from min, as opposed to merely inside the bounds",
   ],
   dirs: ["client/src/"],
@@ -372,6 +373,10 @@ const evalArith = (expr) => {
 const relOf = (p) =>
   p.replace(ROOT, "").replace(/\\/g, "/").replace(/^\//, "");
 
+// RULE E reads the SAME controls Rule C discovers — one scan, two questions. Accumulated here so
+// the rule below does not walk the screen a second time.
+const ruleCControls = [];
+
 for (const f of devFiles) {
   const src = readFileSync(f, "utf8");
   const rel = relOf(f);
@@ -384,11 +389,17 @@ for (const f of devFiles) {
     const block = src.slice(i, end < 0 ? i + 900 : end);
     const kind = (block.match(/type="(\w+)"/) ?? [])[1];
     if (kind !== "number" && kind !== "range") continue;
+    // RULE E needs the control's own PROSE — its label and its tip — and takes it from the
+    // enclosing `formGroup`, not from a fixed character window. A window spills into the PREVIOUS
+    // control and attributes its label to this one, which is how a first pass produced three false
+    // findings.
+    const opener = src.lastIndexOf('<div className={s.formGroup}', i);
     controls.push({
       line: lineAt(i),
       min: numeric(jsxAttr(block, "min")),
       max: numeric(jsxAttr(block, "max")),
       valueExpr: jsxAttr(block, "value"),
+      prose: opener >= 0 && i - opener < 4000 ? src.slice(opener, i) : "",
     });
   }
 
@@ -415,11 +426,12 @@ for (const f of devFiles) {
     const min = field("min");
     const max = field("max");
     if (min === null && max === null) continue;
-    controls.push({ line: lineAt(m.index), min, max, descriptorKey: m[1] });
+    controls.push({ line: lineAt(m.index), min, max, descriptorKey: m[1], prose: block });
   }
 
   for (const c of controls) {
     const where = `${rel}:${c.line}`;
+    ruleCControls.push({ ...c, where });
     if (c.min === null && c.max === null) {
       ruleCUnresolved.push(
         `${where} — bounds are expressions (a shared row helper; the caller's descriptor carries the numbers and IS checked)`,
@@ -507,6 +519,74 @@ console.log(
     `(listed below — they are NOT coverage).`,
 );
 for (const u of ruleCUnresolved) console.log(`  unresolved: ${u}`);
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE E — A CONTROL MAY NOT STATE A RANGE IT DOES NOT HAVE
+//
+// Rule C asks whether a control's bounds can REACH its shipped value. This asks the question one
+// layer over, in the control's own prose: when a label or a tip states a range — "(0.25–0.60)" —
+// that range must be the control's actual `min` and `max`.
+//
+// THE DEFECT IT EXISTS FOR is `choreoOutcomeStart`, and it is the same defect Rule C was built for
+// seen from the other side. Its label read "(0.25–0.55)" while its `max` was 0.55 and the shipped
+// value was 0.60. CONTROL-BOUNDS-1 widened the bound to the validated 0.60 and corrected the label
+// by hand — **and nothing would have noticed if only one of the two had moved.** A stated range and
+// a widget clamp are two numbers side by side (R16); this makes them one.
+//
+// WHY THIS ONE IS BUILDABLE AND THE TOOLTIP-VALUE RULE IS NOT. CONTROL-CLAIMS-1 established that a
+// claim about a VALUE has four spellings in this screen ("0.6 = shipped", "Default: 67%", "every
+// state ships 0.25s", "ships 0.6") and that a MEASUREMENT is lexically indistinguishable from a
+// config claim — "2000 was the calmest value on the measurement; 1200 is what your eye asked for"
+// contains both. **A RANGE has one spelling and no such ambiguity**: two numbers in brackets joined
+// by a dash, compared against two numbers in the same object. That is why this rule exists and the
+// other does not.
+//
+// WHAT IT CANNOT SEE, declared rather than discovered:
+//   - a range stated in WORDS ("between a quarter and six tenths") — it matches digits;
+//   - a range stated for something OTHER than this control's own bounds, e.g. a tip that quotes a
+//     neighbour's validated range. There is no such case in the tree today, and if one appears the
+//     honest repair is to stop stating it, not to except it;
+//   - a control whose bounds are expressions — the same blind spot Rule C declares, for the same
+//     reason: the numbers live in the caller's descriptor and are checked there.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+const RANGE_IN_PROSE =
+  /\(\s*(-?\d+(?:\.\d+)?)\s*(?:[–—-]|to)\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+let ruleEChecked = 0;
+const ruleERanges = [];
+
+for (const c of ruleCControls) {
+  if (!c.prose || c.min === null || c.max === null) continue;
+  for (const m of c.prose.matchAll(RANGE_IN_PROSE)) {
+    const lo = Number(m[1]);
+    const hi = Number(m[2]);
+    // A pair that is not ascending is not a range — it is a coordinate, a ratio, a date.
+    if (!(hi > lo)) continue;
+    ruleEChecked++;
+    if (Math.abs(lo - c.min) > 1e-9 || Math.abs(hi - c.max) > 1e-9)
+      ruleERanges.push(
+        `    ${c.where}: the control states "(${lo}–${hi})" and its bounds are ` +
+          `[${c.min}, ${c.max}]`,
+      );
+  }
+}
+
+console.log(
+  `check-config-keys RULE E: ${ruleEChecked} stated range(s) checked against the bounds of the ` +
+    `control that states them; ${ruleERanges.length} disagree. (A range in DIGITS and BRACKETS — a ` +
+    `range in words is out of reach, and a claim about a VALUE is a different rule that is not buildable.)`,
+);
+
+if (ruleERanges.length) {
+  fail(
+    `RULE E — ${ruleERanges.length} control(s) state a range they do not have.\n` +
+      ruleERanges.join("\n") +
+      `\n      A stated range and a widget clamp are two numbers side by side, so they share one\n` +
+      `      identity (R16). Move them together, or stop stating the range — do not correct only the\n` +
+      `      prose: a label saying the right thing over a control that cannot do it is worse than a\n` +
+      `      label saying the wrong thing, because it reads as verified.`,
+  );
+}
 
 console.log(`[ra-elapsed-ms ${Date.now() - started}]`);
 if (failures > 0) process.exit(1);

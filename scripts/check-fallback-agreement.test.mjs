@@ -532,3 +532,104 @@ test("…but finding ZERO LITERALS is the GOAL STATE and stays green", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE D — the registry must agree with the artwork it describes.
+//
+// SABOTAGE — the half of CENSUS-DUPES-1's group A2 that nothing has ever held. That census named
+//   the PNG as the source of truth for frame geometry, recorded "Guard: NONE", and checked the
+//   agreement BY HAND. RULE-A-REACH-1 measured the consequence: Rule A covers the COPIES of that
+//   fact and not the fact.
+//   What breaks if I delete this: Rule D could stop comparing and print "0 disagree" over 20 types.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+/** A fixture registry pointing at the REAL sheets, so only the numbers are synthetic. */
+const registryFixture = (entries) =>
+  "export const RACER_TYPE_IDS = " +
+  JSON.stringify(Object.keys(entries)) +
+  ";\nexport const CONFIG_SNAPSHOT = {};\nexport const RACER_TYPES = " +
+  JSON.stringify(
+    Object.fromEntries(Object.entries(entries).map(([k, v]) => [k, { config: v }])),
+  ) +
+  ";\n";
+
+const withRegistry = (entries, fn) => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-ruled-"));
+  try {
+    const home = join(dir, "client/src/modules/racer-types");
+    mkdirSync(home, { recursive: true });
+    writeFileSync(join(home, "index.js"), registryFixture(entries));
+    let code = 0;
+    let out = "";
+    try {
+      out = execFileSync(
+        process.execPath,
+        ["scripts/check-fallback-agreement.mjs", `--registry-root=${dir.split("\\").join("/")}`],
+        { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+    } catch (e) {
+      code = e.status;
+      out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+    return fn({ code, out });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+const HORSE_OK = {
+  id: "horse",
+  spriteUrl: "/assets/racers/horse-trot.png",
+  frameWidth: 150,
+  frameHeight: 150,
+  frameCount: 8,
+};
+
+test("RULE D SABOTAGE: a registry frame size that disagrees with its PNG fails, naming both sides", () => {
+  withRegistry({ horse: { ...HORSE_OK, frameWidth: 151 } }, ({ code, out }) => {
+    assert.equal(code, 1, "a registry that has drifted from its artwork must break the build");
+    assert.match(out, /RULE D/);
+    assert.match(out, /horse: registry says 151x150 x8 frames = a 1208x150 sheet/);
+    assert.match(out, /horse-trot\.png is 1200x150/, "must state what the file actually is");
+    assert.match(
+      out,
+      /The PNG is the source of truth here/,
+      "must say which side wins, or the reader edits the wrong one",
+    );
+  });
+});
+
+test("RULE D CONSEQUENCE: a registry that agrees with its PNG passes", () => {
+  withRegistry({ horse: HORSE_OK }, ({ code, out }) => {
+    assert.equal(code, 0, out);
+    assert.match(out, /RULE D: 1 racer sheet\(s\) checked/);
+    assert.match(out, /0 disagree/);
+  });
+});
+
+test("RULE D: frameCOUNT is part of the comparison, not just the frame size", () => {
+  // 150 x 8 = 1200 is the sheet. 150 x 7 is not, and a count that drifts is exactly as wrong as a
+  // width that does — it is the same product.
+  withRegistry({ horse: { ...HORSE_OK, frameCount: 7 } }, ({ code, out }) => {
+    assert.equal(code, 1);
+    assert.match(out, /a 1050x150 sheet, but horse-trot\.png is 1200x150/);
+  });
+});
+
+test("RULE D LOUD FAILURE: zero resolvable sheets FAILS rather than reporting 0 disagree", () => {
+  withRegistry({ horse: { ...HORSE_OK, spriteUrl: "/assets/racers/there-is-no-such-sheet.png" } }, ({ code, out }) => {
+    assert.equal(code, 1);
+    assert.match(out, /RULE D resolved ZERO racer sheets/);
+    assert.match(out, /Lesson 187/);
+    assert.doesNotMatch(out, /RULE D: \d+ racer sheet\(s\) checked/, "and prints no verdict on the way out");
+  });
+});
+
+test("RULE D is GEOMETRY only, and says so — the digest owns the other half", () => {
+  // Stated in the output rather than only in a comment, because the two rules are easy to confuse
+  // and ARTWORK-DIGEST-1 measured the case that separates them: an overwrite that produced the SAME
+  // frame size and different pixels.
+  withRegistry({ horse: HORSE_OK }, ({ out }) => {
+    assert.match(out, /GEOMETRY ONLY/);
+  });
+});

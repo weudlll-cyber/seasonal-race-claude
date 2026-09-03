@@ -398,3 +398,68 @@ test("RULE C: no Dev Screen, and a Dev Screen with no resolvable control, both F
     { bare: true },
   );
 });
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE E — a control may not state a range it does not have.
+//
+// SABOTAGE — the repair CORRECTIONS-1 explicitly refused to make. It found `choreoOutcomeStart`
+//   labelled "(0.25–0.55)" over a control that could not reach the shipped 0.6, and declined to fix
+//   the label alone because *"0.6 = shipped beside a slider that stops at 0.55 is worse than the
+//   inconsistency"*. That judgement was right and nothing enforced it: correcting one of the two
+//   numbers would have passed every check in the repository.
+//   What breaks if I delete this: a label and a bound can drift apart again, silently.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+const rangeControl = (label, min, max) => ({
+  ...OK_CONTROL,
+  "screens/DevScreen/sections/RangeSection.jsx":
+    "import { DEFAULT_FIXTURE_CONFIG } from '../../../modules/ruleCFixtureConfig.js';\n" +
+    "const FIELDS = [\n" +
+    `  { key: 'fixtureValue', label: '${label}', min: ${min}, max: ${max}, step: 1 },\n` +
+    "];\nexport default FIELDS;\n",
+});
+
+test("RULE E SABOTAGE: a control whose stated range is not its bounds FAILS, naming both", () => {
+  withTree(["minRacersVisible"], rangeControl("Fixture (0-9)", 0, 10), (root) => {
+    const { status, out } = run(root);
+    assert.equal(status, 1, "a label that lies about its own control must break the build");
+    assert.match(out, /RULE E/);
+    assert.match(out, /states "\(0–9\)" and its bounds are \[0, 10\]/);
+    assert.match(
+      out,
+      /do not correct only the\s+prose/,
+      "must say which repair is wrong, or the next reader makes it",
+    );
+    assert.match(out, /R16/, "and name the rule it is an instance of");
+  });
+});
+
+test("RULE E CONSEQUENCE: a stated range that IS the bounds passes", () => {
+  withTree(["minRacersVisible"], rangeControl("Fixture (0-10)", 0, 10), (root) => {
+    const { status, out } = run(root);
+    assert.equal(status, 0, out);
+    assert.match(out, /RULE E: \d+ stated range\(s\) checked/);
+    assert.match(out, /0 disagree/);
+  });
+});
+
+test("RULE E: a bracketed pair that is not ASCENDING is not a range", () => {
+  // "(3-1)" is a ratio, a coordinate, a score — not a claim about bounds. Treating every bracketed
+  // pair as a range is how a guard starts crying wolf on prose it was never meant to read.
+  withTree(["minRacersVisible"], rangeControl("Fixture (10-0)", 0, 10), (root) => {
+    const { status, out } = run(root);
+    assert.equal(status, 0, out);
+    assert.doesNotMatch(out, /RULE E — /);
+  });
+});
+
+test("RULE E declares that a VALUE claim is a different question it does not answer", () => {
+  withTree(["minRacersVisible"], OK_CONTROL, (root) => {
+    const { out } = run(root);
+    assert.match(
+      out,
+      /a claim about a VALUE is a different rule that is not buildable/,
+      "the boundary belongs in the output, not only in a comment — CONTROL-CLAIMS-1 measured why",
+    );
+  });
+});
