@@ -3,9 +3,9 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 4 of the new chain. **Pieces 1 and 2 — the two that are never
+**Last rewritten:** after piece 5 of the new chain. **Pieces 1 and 2 — the two that are never
 dropped — are merged and pushed.** Master green after each; one branch locally and at origin, one new
-annotated tag, clean tree. **Pieces 5–10 have not started.**
+annotated tag, clean tree. **Pieces 6–10 have not started.**
 
 ---
 
@@ -115,6 +115,42 @@ a procedure) and S5 (a premise about a value's runtime identity) are untouched a
 uncatchable. **Building two rules did not make more of the class catchable — it made more of the
 already-catchable part actually caught.** *(Also: "four of six" counts INSTANCES. There are five
 subtypes, not six.)*
+
+---
+
+## ★ PIECE 5 — THE CEILING IS 0.70, AND THE RECORDED RANGE WAS THE TOP OF WHAT WAS WRITTEN DOWN
+
+**Your expectation was right and my ceiling last night was wrong.** The bound is now **0.70**, taken
+from the neighbour rather than from feel. **The shipped value is untouched at 0.60.**
+
+**`choreoResolveB3` is a fixed 0.70**, so B3's OUTCOME settling window is `[this, 0.70]` — 0.10 wide
+at 0.60, 0.05 at 0.65, **zero at 0.70**. Past that a band is asked to be resolved before the phase
+that resolves it has begun. A second wall agrees: the loader rejects a seam at or above
+`contestWindowStart`, which ships 0.80.
+
+**And SWEEP 2 had already measured it.** It ran FOUR points, not two:
+
+| | 0.5 | 0.6 | **0.7** | 0.8 |
+| --- | --- | --- | --- | --- |
+| tracks passing the band-reach gate | 2 of 4 | **3 of 4** | **3 of 4** | **0 of 4** |
+| mean lead changes in the PULK window | 6.47 | 9.86 | **13.41** | 17.08 |
+
+**0.70 passes on exactly the same three tracks as the shipped 0.60, with 36% more lead changes.** So
+"validated range [0.25, 0.60]" — which I quoted last night as the authority — was the top of what had
+been **written down**, not measured. Corrected in all four places that carry it.
+
+**★ AND RAISING THE WIDGET ALONE WOULD HAVE BEEN WORSE THAN THE DEFECT.** `raceDynamicsConfig.js`
+rejected `choreoOutcomeStart > 0.6` and, on any rejection, **returns the whole default object.** A
+slider position you could reach would have silently discarded every other tuning in that config —
+your brake, your boost, your intensity, your attacker count — with no message. Validator and widget
+moved together, with tests pinning both walls.
+
+**★ A rule built two hours earlier caught a real fault I opened.** A blind `max: 0.6` replacement hit
+`racePlanPulkStart` instead, leaving it labelled "(0.10–0.60)" over a max of 0.70. **Rule E names it
+on the real tree.**
+
+**The headroom is not free**: B3 on city-circuit goes 68% at 0.60 to **59% at 0.70**. The gate verdict
+is unchanged; the margin is not.
 
 ---
 
@@ -472,7 +508,7 @@ list is short and that is the answer; **no third class-removing item was invente
 | 2 | Nothing watches the artwork | **DONE** — catches its founding incident, all nine files named |
 | 3 | The instrument that refutes its own printed sentence | **DONE** — sentence removed, gate **TIGHTENED** on a measurement, audit **1 of 99** |
 | 4 | The two rules that remove a fault class | **DONE** — both green, no exception list; **catchable count unchanged at four** |
-| 5 | The slider needs headroom | not started |
+| 5 | The slider needs headroom | **DONE** — bound 0.60 → **0.70**, taken from `choreoResolveB3`; shipped value unchanged |
 | 6 | The four remaining instances | not started |
 | 7 | The citation convention | not started |
 | 8 | Close the garden-path entry | not started |

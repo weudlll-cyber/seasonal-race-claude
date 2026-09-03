@@ -284,10 +284,25 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig().contestWindowStart).toBe(0.7);
   });
 
-  it('returns defaults when choreoOutcomeStart is out of [0.25, 0.60]', () => {
+  it('returns defaults when choreoOutcomeStart is out of [0.25, 0.70]', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.2 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.75 });
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  // SLIDER-HEADROOM-1: the top of the range the Dev Screen can now reach must SURVIVE the loader.
+  // Before this pass the widget was being raised to 0.70 while this validator still cut at 0.60 —
+  // which would have made a reachable slider position silently discard the ENTIRE stored config.
+  it('accepts the top of the range the Dev Screen can reach — 0.70', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.7 });
+    expect(loadRaceDynamicsConfig().choreoOutcomeStart).toBe(0.7);
+  });
+
+  it('still rejects a value that would swallow contestWindowStart', () => {
+    // The other wall, and it is why the range does not go higher: contestWindowStart ships 0.8 and
+    // must sit strictly ABOVE this seam, so 0.8 was never reachable whatever the widget said.
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.8 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 

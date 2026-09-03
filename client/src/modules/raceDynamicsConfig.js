@@ -71,9 +71,20 @@ export function loadRaceDynamicsConfig() {
     typeof merged.racePlanPulkStart !== 'number' ||
     merged.racePlanPulkStart < 0.1 ||
     merged.racePlanPulkStart > 0.6 ||
+    // choreoOutcomeStart — the PULK/OUTCOME seam. Validated range [0.25, 0.70]; shipped 0.60.
+    // THE TOP CAME FROM THE NEIGHBOUR, not from feel (SLIDER-HEADROOM-1, 2026-09-03):
+    // `choreoResolveB3` is a fixed 0.70, so B3's OUTCOME settling window is `[this, 0.70]` and is
+    // ZERO wide at 0.70. SWEEP 2 measured all four points — the band-reach gate holds on 3 of 4
+    // tracks at BOTH 0.60 and 0.70 and collapses to 0 of 4 at 0.80.
+    //
+    // ★ THIS BOUND AND THE DEV SCREEN'S MUST MOVE TOGETHER, and that is not a style note. It was
+    // 0.6 here while the widget was being raised to 0.70, which would have let an operator set 0.65
+    // or 0.70 and have this loader REJECT THE WHOLE OBJECT and silently return every default —
+    // losing every other tuning in the config with it. A widget that can write a value its loader
+    // throws away is worse than one that cannot reach the value at all.
     typeof merged.choreoOutcomeStart !== 'number' ||
     merged.choreoOutcomeStart < 0.25 ||
-    merged.choreoOutcomeStart > 0.6 ||
+    merged.choreoOutcomeStart > 0.7 ||
     // Front-act window. Same whole-object-reject pattern as everything above. contestWindowStart must
     // sit inside the OUTCOME act it measures: after OUTCOME begins and strictly before the release,
     // else the measurement window is empty or spans a phase it was never meant to cover.

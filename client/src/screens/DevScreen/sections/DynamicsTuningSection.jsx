@@ -1236,18 +1236,29 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             },
             {
               key: 'choreoOutcomeStart',
-              label: 'PULK end / OUTCOME begins (0.25–0.60)',
-              // CONTROL-BOUNDS-1: max was 0.55 and the shipped value is 0.60, so the control CLAMPED
-              // TO 0.55 ON OPEN — touching it lost the shipped value with no way back, while the
-              // card's own Reset restored a value the slider could not then display. The bound is not
-              // a new judgement: the VALIDATED config range [0.25, 0.60] was already established
-              // (DEVSCREEN-INVENTORY.md, PHASE-CONTRACT.md §2) and the widget was 0.05 short of it at
-              // the top. The rule the sibling control above already follows — widget clamp == validated
-              // range, cf. `racePlanPulkStart` [0.10, 0.60] — now holds here too. 0.60 is the top of
-              // what has been measured (SWEEP 2, 2026-07-17); raising it further would be an
-              // unvalidated range, which is the owner's call, not a hygiene repair.
+              label: 'PULK end / OUTCOME begins (0.25–0.70)',
+              // CONTROL-BOUNDS-1 (2026-09-03): max was 0.55 while the shipped value is 0.60, so the
+              // control CLAMPED TO 0.55 ON OPEN — touching it lost the shipped value with no way back,
+              // while the card's own Reset restored a value the slider could not display.
+              //
+              // SLIDER-HEADROOM-1 (2026-09-03) then raised the top to 0.70, and the bound comes from
+              // the NEIGHBOUR rather than from feel. `choreoResolveB3` is a fixed 0.70, so B3's
+              // OUTCOME settling window is exactly `[this, 0.70]` — 0.10 wide at the shipped 0.60,
+              // 0.05 at 0.65, and **ZERO at 0.70**. That is the wall: past it a band is asked to be
+              // resolved before OUTCOME has begun. SWEEP 2 (2026-07-17) measured all four points and
+              // agrees — the gate holds on 3 of 4 tracks at BOTH 0.60 and 0.70, and collapses to 0 of
+              // 4 at 0.80, with B3 the first casualty everywhere.
+              //
+              // SO THE PREVIOUS COMMENT HERE WAS WRONG, and this is the correction: it said 0.60 was
+              // "the top of what has been measured". SWEEP 2 measured 0.70 and 0.80 as well. 0.60 was
+              // the top of what was RECORDED as validated, which is a different claim — and the two
+              // documents that recorded it are corrected with this change.
+              //
+              // THE HEADROOM IS NOT FREE, and the operator should know: per-band reach degrades
+              // monotonically as this rises. On city-circuit, B3 goes 68% at 0.60 → 59% at 0.70. The
+              // gate verdict is unchanged; the margin is not.
               min: 0.25,
-              max: 0.6,
+              max: 0.7,
               step: 0.05,
               tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [PULK begin, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.6 = shipped.",
             },

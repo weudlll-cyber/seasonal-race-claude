@@ -165,7 +165,7 @@ its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last 
 | Control                               | Config key                         | Shipped default |
 | ------------------------------------- | ---------------------------------- | --------------- |
 | PULK begin / CHAOS ends (0.10–0.60)   | `racePlanPulkStart`                | 0.15            |
-| PULK end / OUTCOME begins (0.25–0.60) | `choreoOutcomeStart`               | 0.6             |
+| PULK end / OUTCOME begins (0.25–0.70) | `choreoOutcomeStart`               | 0.6             |
 | Leader brake                          | `pulkLeaderBrake`                  | 0.1             |
 | Challenger boost (cap)                | `pulkChallengerBoost`              | 0.06            |
 | Ex-leader drop depth (lengths)        | `pulkLeadRotationDropDepthLengths` | 8               |
@@ -175,7 +175,7 @@ its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last 
 widget clamp [0.10, 0.60], validated config range **[0.10, 0.60]** (per the measured chain-world plateau);
 shipped default **0.15** (COMBO15). It is part of the `raceDynamics` block, so the master **Reset All
 Defaults** restores it and the HUD config badge counts it as race-relevant. The PULK-end control's input
-widget clamp is **[0.25, 0.60]**, which is its validated config range. *(CONTROL-BOUNDS-1, 2026-09-03: the
+widget clamp is **[0.25, 0.70]**, which is its validated config range. *(CONTROL-BOUNDS-1, 2026-09-03: the
 widget clamped at 0.55 while the shipped value is 0.60, so the control could not display or restore what
 the game runs. The two numbers were recorded separately here — "the clamp" and "the validated range" — and
 that separation is what let them disagree for 47 days: a widget clamp that is not the validated range is a

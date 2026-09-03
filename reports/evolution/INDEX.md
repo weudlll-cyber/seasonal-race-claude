@@ -29,6 +29,19 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   asked for: of the 99 BACKLOG-VERDICTS-1 verdicts, exactly ONE rested on a claim rather than the
   tree** — the garden-path entry itself, which cited the false comment. It is re-verdicted in place.
 
+- **2026-09-03 — [CONTROL-BOUNDS-1](CONTROL-BOUNDS-1.md)'s ceiling of 0.60 was the top of what had
+  been WRITTEN DOWN, not of what had been measured.** That report set `choreoOutcomeStart`'s widget
+  clamp to the "VALIDATED config range [0.25, 0.60]" recorded in `DEVSCREEN-INVENTORY.md`,
+  `PHASE-CONTRACT.md` and `defaults.js`, and said 0.60 was "the top of what has been measured
+  (SWEEP 2)". **SWEEP 2 measured FOUR points — 0.5, 0.6, 0.7 and 0.8 — and 0.70 passes the band-reach
+  gate on exactly the same 3 of 4 tracks as the shipped 0.60**, with 36% more lead changes; 0.80
+  collapses to 0 of 4. **Nothing in CONTROL-BOUNDS-1's repair is withdrawn** — the widget genuinely
+  could not reach the shipped value and that was the defect it fixed. What is corrected is the
+  ceiling's authority: it came from a recorded range rather than from the measurement or from the
+  phase model. [SLIDER-HEADROOM-1](SLIDER-HEADROOM-1.md) sets it from the neighbour instead —
+  `choreoResolveB3` is a fixed 0.70, where B3's settling window closes to zero — and corrects all four
+  sites. **The shipped value did not move.**
+
 - **2026-09-03 — "NOTHING WATCHES THE ARTWORK" IS WRONG ABOUT THE LARGER HALF OF IT.**
   PRE-CROP-FIELDS-1, WHATS-LEFT-1 and the morning sheet all said no guard watched the repository's
   hand-made assets. **What I verified was narrower**: that no guard DECLARES `client/public/`. It was
@@ -661,6 +674,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **Building two rules did not make more of the class catchable — it made more of the
   already-catchable part actually caught.** Also corrected: "four of six" counts INSTANCES, not
   subtypes — PATTERN-CATCHABILITY-1 found six instances in five subtypes.
+
+- [SLIDER-HEADROOM-1.md](SLIDER-HEADROOM-1.md) — **the ceiling is 0.70 and it comes from the
+  neighbour; the recorded "validated range" was the top of what had been WRITTEN DOWN** (2026-09-03;
+  all four fingerprints match, the shipped value untouched at 0.60, nothing minted). ★ **The bound is
+  structural, not a feeling**: `choreoResolveB3` is a fixed **0.70**, so B3's OUTCOME settling window
+  is `[choreoOutcomeStart, 0.70]` — 0.10 wide at the shipped 0.60 and **ZERO at 0.70**. A second wall
+  agrees: the loader rejects `contestWindowStart <= choreoOutcomeStart` and that ships 0.80. ★ **SWEEP
+  2 had answered it all along**: 0.70 passes the gate on the same 3 of 4 tracks as 0.60 with **36%
+  more lead changes**; 0.80 fails 4 of 4. The failing track at 0.70 fails at 0.5 and 0.6 too. ★ **THE
+  SECOND SITE THAT MATTERED — raising the widget alone would have been WORSE than the defect.**
+  `raceDynamicsConfig.js` rejected `choreoOutcomeStart > 0.6` and returns the WHOLE default object on
+  failure, so a reachable slider position would have silently discarded every other tuning in the
+  config. Validator and widget moved together, with two tests pinning both walls. ★ **And a rule built
+  two hours earlier caught a real fault I opened**: a blind `max: 0.6` replacement hit
+  `racePlanPulkStart` instead, leaving it labelled "(0.10–0.60)" over a max of 0.70 — **Rule E names
+  it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
+  goes 68% at 0.60 to 59% at 0.70.
 
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
