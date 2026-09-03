@@ -695,6 +695,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [DOC-TRUTH-3DAY-1.md](DOC-TRUTH-3DAY-1.md) — **THREE false claims written in three days, all of
+  them COUNTS, median age under a day — and all three were caught by C2, not by this** (2026-09-04).
+  **25 mechanically checkable claims written in scope; 0 false against the tree as it stands** after
+  Parts A and B — including every one a later piece could have falsified (R20's *“`maxRacers` is null
+  on every shipped track”*, checked against all ten; the removal comments in `RandomHelper.js`, true
+  in BOTH directions). ★ **But three WERE false, for hours**: R19's *“8 of 69”*, the guard's own
+  `blind[]` saying the same, and *“61 converted and 51 not”*. **All counts the code computes and
+  prints on every run**, and the true figure had already moved because R19's own worked example added
+  a citation. ★ **Against the truth passes' 97 false / median 43 days / 14 false the day written**:
+  the SAME-DAY rate has not improved — what improved is **how long a false claim survives**, which is
+  a smaller property than it sounds. ★ **Every falsehood written under the constraints was a NUMBER**,
+  not a wrong path or a dead symbol — those classes are guarded now. **Counts are what is left, and
+  nothing checks a count in prose.** The cheap rule: *do not write a count you can print.*
+
 - [GUARDS-FIRE-1.md](GUARDS-FIRE-1.md) — **8 of 9 rules added since the census CAN FIRE, proven one
   at a time; the ninth could not be sabotaged safely and has field evidence instead** (2026-09-04,
   every sabotage reverted, `git status --porcelain` empty). The census found 12 of 40 OLDER guards
