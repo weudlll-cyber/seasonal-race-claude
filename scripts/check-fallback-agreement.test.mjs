@@ -633,3 +633,120 @@ test("RULE D is GEOMETRY only, and says so — the digest owns the other half", 
     assert.match(out, /GEOMETRY ONLY/);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE F — a citation may not name a symbol its file does not contain.
+//
+// SABOTAGE — the class this rule exists for is the largest recurring hygiene defect in this
+//   repository: CITATIONS-1 found fifty-four stale line citations and measured that NOTHING can
+//   tell a correct `file.js:357` from a stale one. The arrow form is the first citation shape that
+//   can be wrong out loud.
+//   What breaks if I delete this: Rule F could stop resolving files and print "0 disagree" over
+//   every citation in the documents.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+const withDocs = (files, fn) => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulef-"));
+  try {
+    for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body);
+    let code = 0;
+    let out = "";
+    try {
+      out = execFileSync(
+        process.execPath,
+        ["scripts/check-fallback-agreement.mjs", `--docs-root=${dir.split("\\").join("/")}`],
+        { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+    } catch (e) {
+      code = e.status;
+      out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+    return fn({ code, out });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+test("RULE F SABOTAGE: a citation naming a symbol the file does not contain fails, naming both ends", () => {
+  withDocs({ "a.md": "the fade lives in `raceGovernor.js` → `governorPhaseWeightXX`.\n" }, ({ code, out }) => {
+    assert.equal(code, 1, "a citation that has drifted from its code must break the build");
+    assert.match(out, /RULE F/);
+    assert.match(out, /governorPhaseWeightXX/);
+    assert.match(out, /raceGovernor\.js does not contain/, "must name the file that was searched");
+    assert.match(
+      out,
+      /a line number cannot be wrong out loud, and this can/,
+      "must say WHY the form is preferred, or the reader reverts to a line citation",
+    );
+  });
+});
+
+test("RULE F CONSEQUENCE: a citation whose symbol is really there passes", () => {
+  withDocs({ "a.md": "the fade lives in `raceGovernor.js` → `governorPhaseWeight`.\n" }, ({ code, out }) => {
+    assert.equal(code, 0);
+    assert.match(out, /RULE F: 1 symbol citation\(s\) in 1 document\(s\); 0 name a symbol/);
+  });
+});
+
+test("RULE F: the ASCII arrow is accepted too, because a document may be typed either way", () => {
+  withDocs({ "a.md": "see `raceGovernor.js` -> `governorPhaseWeight`.\n" }, ({ out }) => {
+    assert.match(out, /RULE F: 1 symbol citation/);
+  });
+});
+
+test("RULE F: an AMBIGUOUS file name is reported as unresolved, never silently passed", () => {
+  // `index.jsx` names at least four screens in this repository. CITATIONS-1 measured 31 citations
+  // that carry it bare, and a rule that picked one would be guessing.
+  withDocs({ "a.md": "see `index.jsx` → `useState`.\n" }, ({ code, out }) => {
+    assert.equal(code, 0, "an unresolved citation is not a failure — it is an unanswered question");
+    assert.match(out, /unresolved:/);
+    assert.match(out, /AMBIGUOUS/);
+    assert.match(out, /Spell the path/, "must say what the writer should do about it");
+  });
+});
+
+test("RULE F: a file that does not exist at all is unresolved, and says where it looked", () => {
+  withDocs({ "a.md": "see `thereIsNoSuchModule.js` → `whatever`.\n" }, ({ out }) => {
+    assert.match(out, /no such file under client\/src, scripts or server\/src/);
+  });
+});
+
+test("RULE F LOUD FAILURE: zero documents scanned FAILS rather than reporting 0 disagree", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulef-empty-"));
+  rmSync(dir, { recursive: true, force: true }); // a root that is not there at all
+  let code = 0;
+  let out = "";
+  try {
+    execFileSync(
+      process.execPath,
+      ["scripts/check-fallback-agreement.mjs", `--docs-root=${dir.split("\\").join("/")}`],
+      { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch (e) {
+    code = e.status;
+    out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+  }
+  assert.equal(code, 1);
+  assert.match(out, /RULE F scanned ZERO documents/);
+  assert.match(out, /Lesson 187/);
+  assert.doesNotMatch(out, /RULE F: \d+ symbol citation/, "and prints no verdict on the way out");
+});
+
+test("RULE F: ZERO citations is fine — it is the state on the day the convention starts", () => {
+  // The distinction Lesson 187 draws: "found nothing" is a legitimate answer; "could not look" is
+  // not. Rule F fails on the second and not on the first, and the two are one line apart.
+  withDocs({ "a.md": "a document with no citations at all.\n" }, ({ code, out }) => {
+    assert.equal(code, 0);
+    assert.match(out, /RULE F: 0 symbol citation\(s\) in 1 document\(s\)/);
+  });
+});
+
+test("RULE F says in its OUTPUT that line citations are invisible to it", () => {
+  // The count is a count of OPT-INS. A reader who takes "0 disagree" as a statement about every
+  // citation in the documents has read it as the opposite of what it is.
+  withDocs({ "a.md": "see `raceGovernor.js:92` for the fade.\n" }, ({ out }) => {
+    assert.match(out, /RULE F: 0 symbol citation/, "a line citation is not counted");
+    assert.match(out, /OPT-IN/);
+    assert.match(out, /always will be/);
+  });
+});

@@ -72,7 +72,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   row-envelope pulk-end (raceStep.js; browser `PHASE_PULK_END`; sim `pulkEndLive`); the phase-split
   `inPulk` branch (racePlanner.js:463); the PULK lead-rotation window end
   (`progress < pulkEndFrac`, raceGovernor.js:187); the phase-weight fade end (`governorPhaseWeight` →
-  EXACTLY 0 at `corrStartFrac == pulkEndFrac`, raceGovernor.js:92-97); the PULK re-roll bias
+  EXACTLY 0 at `corrStartFrac == pulkEndFrac`, `raceGovernor.js` → `governorPhaseWeight`); the PULK re-roll bias
   (`computePulkBiasedTarget` returns `rawSample` unless `getPhase()==='PULK'`, racePlanner.js:640); the
   phase context threaded to the governor (`getPhaseFractions`, racePlanner.js:699-701).
 - **What it gates.** PULK width; the window in which the PULK cohesion bias (`pulkBiasGain`) acts; the
@@ -110,7 +110,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **Who reads it.** `getPhase` `corrStartFrac` (racePlanner.js:361); the servo pre-OUTCOME gate
   (`_preOutcome && !isHero` pins the pack to 1.0 before OUTCOME, racePlanner.js:480,555); the
   phase-weight fade-to-zero end (`governorPhaseWeight` returns 0 at `progress >= corrStartFrac`,
-  raceGovernor.js:95); the governor phase context (`getPhaseFractions`, racePlanner.js:700).
+  `raceGovernor.js` → `governorPhaseWeight`); the governor phase context (`getPhaseFractions`, `racePlanner.js`).
 - **What it gates.** The moment the servo (`trajectoryMult`) STARTS steering the PACK toward target ranks
   (before it, the pack is pinned to 1.0; heroes steer along their curves from `pulkStart`). It is also
   where the PULK lead rotation's phase weight reaches exactly 0, so `governorMult` is faded to 1.0 by
@@ -121,7 +121,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   (DynamicsTuningSection.jsx:622-628, "P-Controller starts") but its value is overwritten by
   `choreoOutcomeStart` at plan build, so the owned seam is the "PULK end / OUTCOME begins" control.
 - **Calibrated for it.** The phase-weight fade window is anchored on it (spans
-  `max(corrStartFrac − pulkEndFrac, MIN_FADE_SPAN)` back from it, raceGovernor.js:88-90; since it equals
+  `max(corrStartFrac − pulkEndFrac, MIN_FADE_SPAN)` back from it, `raceGovernor.js` → `MIN_FADE_SPAN`; since it equals
   `pulkEnd`, the fade is the `MIN_FADE_SPAN`=0.05 tail ending at OUTCOME start).
 
 ## 4. `corridorEnd` = 1.0 — the OUTCOME→FINAL boundary (config key `racePlanCorridorEnd`)
@@ -138,7 +138,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **Why it's inert.** Under the unconditional choreo model the areaBonus is instant-zero from `pulkStart`
   (racePlanner.js:398-414) — there is no `easeInOutCubic` fade to trigger, so `bonusFadeDuration` is
   functionless and `transitionEnd` never gates a fade. Its only remaining structural role is a
-  `corridorStart` fallback (`resolvedCorridorStart = corridorStart ?? transitionEnd`, racePlanner.js:160),
+  `corridorStart` fallback (`resolvedCorridorStart = corridorStart ?? transitionEnd`, `racePlanner.js`),
   which never fires because `corridorStart` is always defined (it is derived from `choreoOutcomeStart`).
 - **Who reads it.** racePlanner.js:133 (setter from `config.bonusTransitionEnd`); :160 (the never-firing
   `corridorStart` fallback); :222 (`transEnd` ms); :329 (`transEndFrac`); :420 (the areaBonus fade
@@ -182,8 +182,8 @@ switch), `choreoReleaseProgress` 0.97, `choreoResolveB2/B3/B4/B5` 0.8/0.7/0.65/0
 exists (shipped on), inside the live PULK window `[pulkStart, pulkEnd)`, staging a real front contest:
 1–2 attacker slots boost the live P2/P3 until one takes the lead, a permanent outsider slot boosts the
 deepest still-reachable outsider, and a settle-brake set holds a dethroned leader back until it is
-`dropDepthLengths` behind (raceGovernor.js:170-380). Every force term is scaled by `governorPhaseWeight`,
-which fades to EXACTLY 0 by OUTCOME (raceGovernor.js:92-97,195,375). Strengths live in the
+`dropDepthLengths` behind (`raceGovernor.js` → `dropDepthLengths`). Every force term is scaled by `governorPhaseWeight`,
+which fades to EXACTLY 0 by OUTCOME (`raceGovernor.js` → `governorPhaseWeight`). Strengths live in the
 `pulk*` namespace (defaults.js): `pulkLeaderBrake` 0.1, `pulkChallengerBoost` 0.06, `pulkFrontPool` 8,
 `pulkBoostHeadroom` 0.1, `pulkCeilingCap` true; realism envelope `pulkEnvelopeMaxEffect` 0.12 (±12% clamp)
 and `pulkEnvelopeMaxStepPerFrame` 0.01 (per-frame slew); rotation internals
