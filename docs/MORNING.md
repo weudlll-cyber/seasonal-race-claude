@@ -249,9 +249,11 @@ keeps widget clamp == validated range [0.10, 0.60].
 **YES — and it GATES.** 12 registry literals over 20 racer types and 22 discovered fields,
 **0 disagree, no exception list, nothing told to look away.** It fails the build from today.
 
-`crop-sprite-sheets.mjs`'s `frameWidth`/`frameHeight` are now
-`preCropFrameWidth`/`preCropFrameHeight`. Rule A no longer DISCOVERS them — because the distinction
-now exists in the tree, not because it was excepted.
+`crop-sprite-sheets.mjs`'s `frameWidth`/`frameHeight` **were** renamed to
+`preCropFrameWidth`/`preCropFrameHeight`, and Rule A stopped DISCOVERING them — because the
+distinction existed in the tree, not because it was excepted. *(Past tense corrected 2026-09-04,
+LEFT-BEHIND-1: **the file was deleted the following day** and is at `archive/crop-sprite-sheets`.
+This paragraph described a live file, which is the only stale sentence the removals left behind.)*
 
 **`frameCount` deliberately kept its live name.** Cropping does not change how many frames a sheet
 has, so it is the SAME fact as the registry's and still agrees on all twelve entries. That is also
