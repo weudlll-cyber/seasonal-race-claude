@@ -23,7 +23,8 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, cpSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, cpSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -70,6 +71,25 @@ cpSync(GUARD, join(repo, "scripts", "check-seed-versions.mjs"));
 writeFileSync(join(repo, "server/seeds/versions.json"), manifest(1));
 writeFileSync(join(repo, "server/seeds/tracks/alpha.json"), '{"id":"alpha","name":"Alpha"}\n');
 writeFileSync(join(repo, "server/seeds/backgrounds/alpha.jpg"), "jpeg-bytes");
+
+// ── THE ARTWORK RULE's baseline (ARTWORK-DIGEST-1) ────────────────────────────────────────────
+// The guard now also digests `client/public/assets/racers/` and fails loudly if that directory is
+// absent or empty — a run that cannot see must break the build. So the fixture carries one asset
+// and its record, which also exercises the rule's happy path on every test in this file.
+mkdirSync(join(repo, "client", "public", "assets", "racers"), { recursive: true });
+writeFileSync(join(repo, "client/public/assets/racers/alpha.png"), "png-bytes");
+writeFileSync(
+  join(repo, "client/public/assets/racers/digests.json"),
+  JSON.stringify(
+    {
+      files: {
+        "alpha.png": createHash("sha256").update("png-bytes").digest("hex"),
+      },
+    },
+    null,
+    2,
+  ) + "\n",
+);
 
 git("init", "-q");
 git("config", "user.email", "t@example.com");
@@ -157,4 +177,90 @@ test("declares its routing", () => {
   assert.equal(d.id, "check-seed-versions");
   assert.ok(d.blind.length > 0);
   assert.ok(d.dirs.includes("server/seeds/"));
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE ARTWORK RULE (ARTWORK-DIGEST-1)
+//
+// SABOTAGE — the founding incident, reduced. On 2026-09-03 an accidentally-run script overwrote
+// NINE tracked spritesheets and every check in the repository stayed green. What makes this the
+// right sabotage rather than a geometry one: the bad run produced the SAME frame size and only the
+// PIXELS changed, so nothing about dimensions could have caught it.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+test("SABOTAGE: an artwork file whose BYTES changed fails, naming the file and both digests", () => {
+  writeFileSync(join(repo, "client/public/assets/racers/alpha.png"), "overwritten-by-a-stray-script");
+  const r = run();
+  assert.equal(r.code, 1, "changed artwork must break the build");
+  assert.match(r.out, /the artwork does not match its record/);
+  assert.match(r.out, /CHANGED  alpha\.png/);
+  assert.match(r.out, /recorded [0-9a-f]{12}….*now [0-9a-f]{12}…/);
+  assert.match(
+    r.out,
+    /--record-artwork/,
+    "and must name the one command that re-records, or re-recording becomes harder than deleting the rule",
+  );
+  assert.match(r.out, /git checkout --/, "and the way back");
+  git("checkout", "--", "client/public/assets/racers/alpha.png");
+});
+
+test("CONSEQUENCE: restoring the bytes makes it green again", () => {
+  const r = run();
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /1 hand-made asset\(s\).*match their record/);
+});
+
+test("a NEW artwork file in no record fails — a record that lists nothing cannot object", () => {
+  writeFileSync(join(repo, "client/public/assets/racers/beta.png"), "new-art");
+  const r = run();
+  assert.equal(r.code, 1);
+  assert.match(r.out, /NEW      beta\.png/);
+  rmSync(join(repo, "client/public/assets/racers/beta.png"));
+});
+
+test("a RECORDED file that vanished fails too", () => {
+  const png = join(repo, "client/public/assets/racers/alpha.png");
+  const keep = readFileSync(png);
+  rmSync(png);
+  const r = run();
+  assert.equal(r.code, 1);
+  assert.match(r.out, /ZERO image files|MISSING  alpha\.png/);
+  writeFileSync(png, keep);
+});
+
+test("--record-artwork re-records, and re-recording is the ONLY thing needed", () => {
+  writeFileSync(join(repo, "client/public/assets/racers/alpha.png"), "a-deliberate-new-drawing");
+  assert.equal(run().code, 1, "first it objects");
+  const rec = run("--record-artwork");
+  assert.equal(rec.code, 0, rec.out);
+  assert.match(rec.out, /recorded 1 file\(s\)/);
+  assert.equal(run().code, 0, "and then it is quiet — one command, no version, no second edit");
+  git("checkout", "--", "client/public/assets/racers");
+});
+
+test("LOUD FAILURE: a missing or empty artwork directory FAILS (Lesson 187)", () => {
+  const dir = join(repo, "client/public/assets/racers");
+  const png = join(dir, "alpha.png");
+  const keep = readFileSync(png);
+  rmSync(png);
+  const r = run();
+  assert.equal(r.code, 1);
+  assert.match(r.out, /ZERO image files/);
+  assert.match(r.out, /Lesson 187/);
+  writeFileSync(png, keep);
+
+  const r2 = run("--artwork-root=client/public/assets/nowhere");
+  assert.equal(r2.code, 1);
+  assert.match(r2.out, /does not exist/);
+});
+
+test("LOUD FAILURE: an unreadable record FAILS rather than reporting the artwork unchanged", () => {
+  const rec = join(repo, "client/public/assets/racers/digests.json");
+  const keep = readFileSync(rec);
+  writeFileSync(rec, "{ not json");
+  const r = run();
+  assert.equal(r.code, 1);
+  assert.match(r.out, /cannot read the artwork record/);
+  assert.doesNotMatch(r.out, /match their record/);
+  writeFileSync(rec, keep);
 });

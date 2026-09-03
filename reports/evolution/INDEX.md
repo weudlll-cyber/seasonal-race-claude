@@ -17,6 +17,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   `scripts/lib/fingerprintCheck.test.mjs` and by a wired sabotage on the camera instrument. **No
   fingerprint moved**: all four were run against the record and all four match.
 
+- **2026-09-03 — "NOTHING WATCHES THE ARTWORK" IS WRONG ABOUT THE LARGER HALF OF IT.**
+  PRE-CROP-FIELDS-1, WHATS-LEFT-1 and the morning sheet all said no guard watched the repository's
+  hand-made assets. **What I verified was narrower**: that no guard DECLARES `client/public/`. It was
+  then generalised to "the artwork", and the search never reached `server/seeds/`.
+  **`check-seed-versions` has covered `server/seeds/backgrounds/` (10 files, 51.6 MB) and
+  `server/seeds/brand-logos/` all along** — it fails when any tracked file under `server/seeds/`
+  changes without its unit's version being raised, and it reports **0 orphans**, which proves every
+  one of them is inside a versioned unit. **Nothing in those reports' measurements changes**: the
+  `client/public/` hole was real, it is what the incident hit, and ARTWORK-DIGEST-1 closes it. What
+  is withdrawn is the word "nothing". Established by [ARTWORK-DIGEST-1](ARTWORK-DIGEST-1.md), whose
+  own required second-site sweep is what found it.
+
 - **2026-09-03 — [BUILD-RULE-A-1](BUILD-RULE-A-1.md)'s "RULE A — NOT YET A GATE" is SUPERSEDED: it
   gates, with an EMPTY exception list.** That report was right that no mechanical discriminator
   exists between "a table that copies the registry" and "a table that records what the registry used
@@ -579,6 +591,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   as a live example. ★ **And a test that was too wide**: it sliced 400 lines and three functions and
   grepped them, so a note recording the deletion tripped it — narrowed to the array literal, because
   an assertion that fires on prose about a thing is not an assertion about the thing.
+
+- [ARTWORK-DIGEST-1.md](ARTWORK-DIGEST-1.md) — **the rule catches its founding incident, and a
+  geometry check would not have** (2026-09-03; guard suite 16/16, `verify` green, the repository's own
+  artwork never touched, nothing minted). ★ **The finding that decided the shape, measured on a
+  faithful reproduction:** the bad crop run produced `1200x150` before AND after — **same dimensions,
+  different pixels** — so the cheap registry-vs-PNG geometry check **would not have caught the
+  incident**, and only a digest does. ★ **The rule went inside `check-seed-versions`**, whose subject
+  already IS *"a tracked file whose content changed without its record changing with it"* and which,
+  unlike `check-writable`, runs in CI. **A digest here and a version for seeds, and the seed manifest's
+  own argument settles it**: a content check is wrong for seeds because operators hold divergent
+  copies — nothing of the sort is true of a bundled spritesheet. ★ **Re-recording is one command**
+  (`--record-artwork`), named in the failure message and asserted by a test, because a tripwire whose
+  reset is harder than deleting it gets deleted. ★ **PROVEN AGAINST THE FOUNDING INCIDENT**: the
+  deleted tool was recovered from its archive tag, run over COPIES, and the guard named **all nine**
+  files the accident hit, with both digests; restore → green; the real tree green throughout. ★ **AND
+  THE CORRECTION IT OWES**: *"nothing watches the artwork"* was wrong — `server/seeds/backgrounds/`
+  (51.6 MB) was covered all along. ★ **The full inventory with costs**: 6 files / 21.3 MB of
+  client-side track backgrounds and 2 favicons remain unwatched, **no fonts and no sounds exist**
+  (measured), and the backgrounds raise a duplication question nobody has asked. **Extended nothing.**
 
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
