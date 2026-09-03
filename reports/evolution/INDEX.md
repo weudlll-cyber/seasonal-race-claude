@@ -695,6 +695,38 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [CHIP-CONTRAST-1.md](CHIP-CONTRAST-1.md) — **the chips measured 1.20:1 because they declared a
+  background and no COLOUR, and their readability depended on the operator's logo** (2026-09-04, on
+  `feat/player-groups-1`, NOT merged; CSS, markup, one test file — nothing minted). From his eye
+  test. **Unselected 1.20:1 → 5.48:1, selected 1.37:1 → 15.47:1**, measured against the surface each
+  actually sits on. ★ **TWO MISTAKES AND THE SECOND IS WORSE.** A `<button>` with no `color` takes the
+  UA's `buttontext` — black — because nothing declares `color-scheme: dark`; and the chip named three
+  custom properties this project does not define, one of them **`--brand-primary` as the selected
+  fill**, so **the contrast was a property of the operator's own event colour** and could not have
+  been guaranteed at any value. ★ **The convention already existed two classes up**:
+  `.optionBtn`/`.optionBtnActive`, a BORDER-AND-TEXT pattern whose selected state keeps a dark field
+  — which is exactly what stops the problem arising. Now used character for character, and pinned.
+  ★ **The over-capacity message was 4.88:1 and LEGIBLE — the defect was salience**, since every
+  secondary line on that screen is the same grey. It gets the screen's own ⚠️ + `--color-accent`
+  warning treatment, **not the error red**, because a field at the cap starts and races.
+  ★★ **AND WHAT HE IS NOT TOLD: WHICH names were cut.** They are **deterministic** — the tail of the
+  group's saved order after de-duplication — and **undiscoverable**: the saved order is not on the
+  Setup Screen, the roster shows only who arrived, and the field is renumbered afterwards. Not built,
+  reported, as instructed. Seven tests, both sabotages red.
+
+- [SHUFFLE-REACH-1.md](SHUFFLE-REACH-1.md) — **NO. The shuffle does not decide the race numbers, and
+  it does not decide the start grid either — it reorders one list** (2026-09-04, READ-ONLY, his
+  question, nothing changed). **There are TWO numbers with almost the same name**: `racerNumber`, made
+  by `assignRacers` from `Math.random` and drawn as the `#3` badge in the Players tab, and
+  `raceNumber`, drawn by `assignRaceNumbers` **from the race seed on its own generator** and keyed by
+  racer index — which is what the sprite and the STARTERS board show. **`racerNumber` is read by
+  nobody outside the Setup Screen.** ★ **The answer I expected to be different**: it does not move the
+  START GRID either, because `assignRacers` shuffles the NUMBERS and never the ARRAY — proven by
+  running it three times — so a racer's index is its insertion order, and the grid keys off that plus
+  the seeded RNG. ★ **What the shuffle DOES**: `PlayerSetup` sorts the list by `racerNumber`, so the
+  button re-sorts a list and nothing downstream notices. Four options offered, none taken; **R16's
+  shape on a screen rather than in a report.**
+
 - [PLAYER-GROUPS-1.md](PLAYER-GROUPS-1.md) — **several saved groups can race each other, and the
   field’s real minimum is ONE** (2026-09-03, **NOT MERGED — on `feat/player-groups-1`, his eye
   owed**, served on 4173). **All four fingerprints match the record** and no default moved; the

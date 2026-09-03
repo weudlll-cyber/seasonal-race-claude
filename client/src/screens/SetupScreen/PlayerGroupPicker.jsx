@@ -90,7 +90,8 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
       );
     if (turnedAway > 0)
       notices.push(
-        `${turnedAway} did not fit — the field is capped at ${maxPlayers} for this track`
+        `${turnedAway} did not fit — the field is capped at ${maxPlayers} for this track. ` +
+          `The ${maxPlayers} in the field will race normally.`
       );
     setNotice(notices.join('; '));
 
@@ -159,9 +160,14 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
         </div>
       )}
 
+      {/* CHIP-CONTRAST-1 item 3: a WARNING, not an error. Nothing is broken — a field at the cap
+          starts and races normally — so it wears the ⚠️ and --color-accent this screen's start-bar
+          `capacity-warning` already uses, not the red of a refusal. Dressing a normal outcome as a
+          failure is how an operator learns to skip real ones. The words say so too. */}
       {notice && (
-        <p role="status" data-testid="group-notice" className={styles.emptyHint}>
-          {notice}
+        <p role="status" data-testid="group-notice" className={styles.groupNotice}>
+          <span aria-hidden="true">⚠️</span>
+          <span>{notice}</span>
         </p>
       )}
     </div>
