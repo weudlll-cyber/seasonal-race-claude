@@ -60,7 +60,8 @@ export const GUARD = {
     "RULE A: NON-SCALARS. Only scalars can disagree textually, so `surfaceClasses`, `coats` and `rteDefinitions` are out of reach — and `goldenRunner.mjs` carries a `surfaceClasses` table that is a DIFFERENT FACT under the same name, which this rule has NOT cleared",
     "RULE A: a copy that does not NAME its racer. The object must carry the racer id as a value (`id: 'horse'`) or hang from it as a key (`horse: { … }`); a table keyed by array position is invisible",
     "RULE A: literals in COMMENTS are matched like any other — a documented example must avoid stating real values, which is why this file's own example uses placeholders",
-    "RULE A: a copy that RENAMES its fields. It discovers pairs from the registry's own field names, so a table using different names is invisible to it — and since PRE-CROP-FIELDS-1 there is a DELIBERATE example in the tree (`crop-sprite-sheets.mjs`'s `preCropFrameWidth`). That is the price of the distinction: the rename is what makes a pre-crop record readable as one, and it is also what puts it out of reach",
+    "RULE A: a copy that RENAMES its fields. It discovers pairs from the registry's own field names, so a table using different names is invisible to it. That is the price R18 asks for: renaming a historical record is what makes it readable as one, and it is also what puts it out of reach. (The example the tree carried — `crop-sprite-sheets.mjs`'s `preCropFrameWidth` — was DELETED on 2026-09-03 with the script; the blind spot is unchanged and is now unexercised.)",
+    "RULE A: it can find ZERO literals and that is the GOAL STATE, not a failure — REGISTRY-LITERALS-1 removed the copies before this rule existed and DROP-CROP-SCRIPT-1 removed the last twelve. What must never be zero is the DISCOVERY, and that is enforced below rather than left to the test suite.",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
   // RULE A widened this from `client/src/` alone. Its founding defect lived in `scripts/`, which is
@@ -577,7 +578,16 @@ for (const abs of files) {
 // declared hole. The HOME ITSELF is excluded — the racer-type modules are the definitions, not
 // copies of them — as are test files, on the same reasoning the `??` half uses.
 const REGISTRY_HOME = "client/src/modules/racer-types/";
-const registry = await loadRacerRegistry();
+// `--registry-root=<dir>` points the REGISTRY load at a fixture. It exists for one reason and it is
+// the reason `--src=`, `--tags-file=` and `--doc=` exist: without it, the loud failure below cannot
+// be fired, and a check that cannot go red is the thing this guard is for. It is NOT `--src=`: that
+// one moves the SCAN, this one moves the HOME, and conflating them would make the rule compare a
+// fixture against itself.
+const REGISTRY_ROOT =
+  process.argv
+    .find((a) => a.startsWith("--registry-root="))
+    ?.slice("--registry-root=".length) ?? ROOT;
+const registry = await loadRacerRegistry(REGISTRY_ROOT);
 const regRoots = process.argv.some((x) => x.startsWith("--src="))
   ? [SRC]
   : ["client/src", "scripts", "client/scripts"].map((d) => join(ROOT, d));
@@ -590,6 +600,36 @@ const regFiles = regRoots
     }
   })
   .flatMap((d) => walkAny(d));
+/** A run that cannot see must break the build, never bless it (Lesson 187). */
+const fail187 = (msg) => {
+  console.error(`\nFAIL: ${msg}\n      See Lesson 187.`);
+  process.exit(1);
+};
+
+// ── LOUD FAILURE ON A BROKEN DISCOVERY (Lesson 187, DROP-CROP-SCRIPT-1) ─────────────────────────
+//
+// Rule A finding ZERO literals is the GOAL, not a fault: REGISTRY-LITERALS-1 removed the copies this
+// rule was built for before it existed, and deleting `crop-sprite-sheets.mjs` removed the last
+// twelve. From today its live population is zero and it prints "0 registry literal(s)" — which is
+// indistinguishable from a rule whose DISCOVERY has silently stopped working, and that is the exact
+// shape Lesson 187 is about.
+//
+// So the discovery itself is what must never be empty. A registry that yields no racers, no fields,
+// or a walk that reaches no files, means this rule proved nothing and must break the build. Its own
+// test already asserted these are non-empty; asserting it only in the test checks the fixture, not
+// the tree.
+if (registry.byRacer.size === 0 || registry.fields.size === 0)
+  fail187(
+    `RULE A discovered ${registry.byRacer.size} racer type(s) and ${registry.fields.size} field ` +
+      `name(s) in ${REGISTRY_HOME}. It cannot have compared anything.\n` +
+      `      Either the registry moved or its exports changed shape. Refusing to report "0 disagree".`,
+  );
+if (regFiles.length === 0)
+  fail187(
+    `RULE A walked ZERO files across ${regRoots.length} root(s). Nothing was scanned, so "0 disagree"\n` +
+      `      would be a statement about an empty search rather than about this repository.`,
+  );
+
 const copies = [];
 for (const abs of regFiles) {
   const rel = relative(ROOT, abs).split(sep).join("/");
@@ -692,11 +732,16 @@ const stale = EXCEPTIONS.filter(
 // records what the registry used to hold" are the same shape, and telling them apart is a judgement
 // about intent. That was the finding, and it was reported rather than worked around.
 //
-// ★ THE OWNER RULED: RENAME (PRE-CROP-FIELDS-1, 2026-09-03). Those fields are now
-// `preCropFrameWidth` / `preCropFrameHeight`, so they are no longer registry field names and this
-// rule does not discover them — not because it was told to ignore them, but because THE DISTINCTION
-// NOW EXISTS IN THE TREE. Rule A reports 0 disagreements over 20 racer types and 22 discovered
-// fields, with an EMPTY exception list, and therefore gates: it is a build failure from here.
+// ★ THE OWNER RULED TWICE. First RENAME (PRE-CROP-FIELDS-1, 2026-09-03): the fields became
+// `preCropFrameWidth` / `preCropFrameHeight`, so they stopped being registry field names and this
+// rule stopped discovering them — not because it was told to ignore them, but because THE
+// DISTINCTION EXISTED IN THE TREE. Then DELETE (DROP-CROP-SCRIPT-1, the same day): the script had
+// done its work in June and what it could still do was destructive only. **So the file this rule
+// objected to is gone, its pre-crop record is preserved beside the artwork in
+// `client/public/assets/racers/CREDITS.md`, and the code is at `archive/crop-sprite-sheets`.**
+// Rule A reports 0 disagreements over 20 racer types and 22 discovered fields, with an EMPTY
+// exception list, and gates: it is a build failure from here. Its live population is now ZERO,
+// which is why the discovery itself carries a loud failure above.
 // The general rule that prevents the next one is R18 in docs/VERIFY-RULES.md.
 //
 // It is deliberately LOUD, and it names both sides, because a rule that only says "no" gets an

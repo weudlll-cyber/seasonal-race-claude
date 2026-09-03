@@ -560,6 +560,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   one false sentence `camera-fingerprint` prints every run. ★ **Seven items are NOT on the list
   because they need his word**, and they are named. **No third class-removing item was invented.**
 
+- [DROP-CROP-SCRIPT-1.md](DROP-CROP-SCRIPT-1.md) — **the tool is gone, the knowledge is beside the
+  artwork, and Rule A's population is now zero on purpose** (2026-09-03, the owner's decision;
+  `verify` green, guard suite 27/27, nothing minted). ★ **Both preconditions established BEFORE the
+  deletion**: nothing invokes it (0 hits in every `package.json`, `.github/`, `.githooks/`,
+  `verify.mjs`, `routing.mjs`, and no import anywhere — it has no `export`), and **the sheets in the
+  tree are provably its output — 12 of 12**, by running its own arithmetic over the pre-crop geometry
+  it recorded and comparing with each PNG's IHDR header. ★ **The knowledge went to
+  `client/public/assets/racers/CREDITS.md`** — the file a person opening the sprite directory finds,
+  which is where somebody wondering why a sheet is 129 px wide is standing. **That file was itself
+  lying**: its one entry said `horse-trot.png` is *"512×128 px, 4 × 128×128 frames"* against a real
+  1200×150 with **eight** 150×150 frames, false since the June crop. ★ **THE DELETION MADE A LOUD-
+  FAILURE HOLE VISIBLE AND IT IS CLOSED**: Rule A's live population is now **ZERO**, so its green line
+  is byte-identical to what a broken discovery would print. Finding zero LITERALS is the goal; zero
+  racer types, zero fields or zero files walked now FAIL — **both proven to fire**, via a new
+  `--registry-root=` seam of the same family as `--src=` and `--tags-file=`. ★ **A second site one
+  night old, created by my own repair**, corrected: the guard's `blind` array named the deleted file
+  as a live example. ★ **And a test that was too wide**: it sliced 400 lines and three functions and
+  grepped them, so a note recording the deletion tripped it — narrowed to the array literal, because
+  an assertion that fires on prose about a thing is not an assertion about the thing.
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).

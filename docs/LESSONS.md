@@ -2256,7 +2256,7 @@ Open tracks already have an ssf correction (`ssf = pathLengthPx / REFERENCE_PATH
 
 **Consequence:** "Tight crop" only shrinks the frame when the body has padding in both dimensions. For sprites whose body already fills the frame in one axis, adding symmetric padding makes the frame larger in that axis. Check whether `cropSize > frameHeight_old` after computing the crop and compensate `displaySize` before committing the change.
 
-**Reference:** `HorseRacerType.js`, `SnakeRacerType.js`, `RocketRacerType.js`, `MotorbikeRacerType.js`, `LugeRacerType.js` (displaySize increases). `scripts/audit-sprite-crops.mjs`, `scripts/crop-sprite-sheets.mjs`. Session 2026-06-03.
+**Reference:** `HorseRacerType.js`, `SnakeRacerType.js`, `RocketRacerType.js`, `MotorbikeRacerType.js`, `LugeRacerType.js` (displaySize increases). `scripts/audit-sprite-crops.mjs`. Session 2026-06-03. *(`scripts/crop-sprite-sheets.mjs` was the tool that performed the crop; it was DELETED on 2026-09-03, DROP-CROP-SCRIPT-1, and is recoverable at the annotated tag `archive/crop-sprite-sheets`. The pre-crop geometry it recorded is preserved in `client/public/assets/racers/CREDITS.md`.)*
 
 ---
 
