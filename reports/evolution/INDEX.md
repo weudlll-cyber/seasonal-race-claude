@@ -17,6 +17,22 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   `scripts/lib/fingerprintCheck.test.mjs` and by a wired sabotage on the camera instrument. **No
   fingerprint moved**: all four were run against the record and all four match.
 
+- **2026-09-03 — [BUILD-RULE-A-1](BUILD-RULE-A-1.md)'s "RULE A — NOT YET A GATE" is SUPERSEDED: it
+  gates, with an EMPTY exception list.** That report was right that no mechanical discriminator
+  exists between "a table that copies the registry" and "a table that records what the registry used
+  to hold", and right to add no exception. **The owner ruled RENAME on 2026-09-03**, and
+  [PRE-CROP-FIELDS-1](PRE-CROP-FIELDS-1.md) made the distinction exist in the tree:
+  `crop-sprite-sheets.mjs`'s `frameWidth`/`frameHeight` are now `preCropFrameWidth`/
+  `preCropFrameHeight`, so Rule A no longer DISCOVERS them — **not because it was told to look away**.
+  The rule reports 0 disagreements over 20 racer types and 22 discovered fields and **fails the build
+  from that day**, proved by sabotage in both directions. `frameCount` deliberately kept its live
+  name: cropping does not change it, so it is the same fact as the registry's and still agrees on all
+  twelve entries — the rule went green, not quiet. **Nothing in BUILD-RULE-A-1 is withdrawn**; what
+  changed is the tree it described. Two live sentences describing the old state were corrected —
+  `ci.yml`'s step comment and a comment in the guard's own test — and BOTH also carried a second false
+  claim, that the guard "ships green over an explicit exception list of the 42 known disagreements".
+  **That list is empty**: every entry was worked rather than kept.
+
 - **2026-09-02 — [DOC-TRUTH-1](DOC-TRUTH-1.md)'s headline of "8 false" UNDERSTATES THE DOCUMENT SET BY
   ROUGHLY TWELVE TIMES.** The breadth pass it commissioned returned after it was merged and is
   [DOC-TRUTH-2](DOC-TRUTH-2.md): **~4,300 claims checked, 97 false at ~124 sites in 24 of 34
@@ -527,6 +543,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   a threshold, including that a director which never armed the guarantee does not look like one that
   retired. **Nothing consumes the fields yet, and the report says so** — an unread field is how a
   stale one survives, and this one is deliberate.
+
+- [PRE-CROP-FIELDS-1.md](PRE-CROP-FIELDS-1.md) — **the rename creates the distinction, so Rule A
+  gates with an EMPTY exception list — and the table it renames is a loaded gun** (2026-09-03;
+  `verify` green, 24/24 on the guard's own suite, nothing minted, no fingerprint in reach).
+  `frameWidth`/`frameHeight` in `crop-sprite-sheets.mjs`'s `FLAGGED_TYPES` became
+  `preCropFrameWidth`/`preCropFrameHeight`; **Rule A now FAILS THE BUILD** — 12 registry literals over
+  20 racer types, 0 disagreeing, nothing on an exception list, proved by sabotage in both directions.
+  ★ **`frameCount` deliberately KEPT its live name**: cropping does not change how many frames a sheet
+  has, so it is the same fact as the registry's and still agrees on all twelve entries — which is also
+  the proof the rule went GREEN rather than QUIET. ★ **The finding worth more than the rename:** the
+  script writes each sheet **back over itself** (`const mainOutput = mainInput`), it ran once on
+  2026-06-03, and the frames on disk are now its OUTPUT — horse is **150 px today against a table that
+  says 128**. Running it again would slice eight of twelve sheets at the wrong offsets and overwrite
+  shipped artwork; read from the PNG headers, and independently confirmed by `BACKLOG.md`'s own
+  2026-06-03 history row, which lists the identical eight transitions. **Deleting it is the owner's
+  call and was not taken.** ★ **R18** — *a record of a past value must not wear the live field's name*
+  — is written into `docs/VERIFY-RULES.md`, with the sentence that matters: **no amount of cleverness
+  in a checker recovers a distinction the source does not make**, and every attempt to write the
+  distinction down beside the value reproduces the defect one level up.
 
 - [PRUNE-STEP-1.md](PRUNE-STEP-1.md) — **the condition that blocked it is gone, reproduced on a fresh
   stub, so it is a step now** (2026-09-03; one file changed, `verify` PASS 10 FAIL 0). The owner's

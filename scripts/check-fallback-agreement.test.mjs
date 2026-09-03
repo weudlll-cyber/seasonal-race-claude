@@ -213,9 +213,11 @@ test("3b. changing either VALUE of a listed pair un-exempts it", () => {
 });
 
 test("END TO END: an UNLISTED disagreement makes the guard exit non-zero", () => {
-  // The property the unit tests above cannot reach, and the one that matters most: this guard ships
-  // GREEN over 42 exemptions, so "green" must still mean something. Gutting `isExcepted` to
-  // always-true passed every other test in this file — it is caught here and nowhere else.
+  // The property the unit tests above cannot reach, and the one that matters most: "green" must
+  // still mean something. Gutting `isExcepted` to always-true passed every other test in this file —
+  // it is caught here and nowhere else. (This comment said the guard "ships GREEN over 42
+  // exemptions". The list is EMPTY today: every entry was worked rather than kept. The test is
+  // unaffected — its point is that an UNLISTED disagreement fails, which is stronger with no list.)
   //
   // `--src=` points the scan at a fixture. The defaults it compares against are the REAL ones, so
   // the fixture only has to name a real key and get it wrong.
@@ -341,5 +343,98 @@ test("RULE A: the real registry yields racers and fields without any list in thi
     /RACER_FIELDS\s*=|PAIR_LIST\s*=|const\s+FIELDS\s*=\s*\[/.test(self),
     false,
     "a typed list of pairs would be the same defect one level up",
+  );
+});
+
+// ────────────────────────────────────────────────────────────
+// RULE A GATES (PRE-CROP-FIELDS-1, 2026-09-03).
+//   What breaks if I delete it: Rule A could go back to printing and exiting 0 — the state it was
+//     in for a day — and every unit test above would stay green, because they all call
+//     `findRegistryCopies` directly and never look at the process exit code.
+//   What goes unnoticed without it: a literal copy of a racer-type registry field drifting from the
+//     registry, silently, which is the entire defect this rule was built for. A rule that reports
+//     and cannot fail is a decoration.
+// ────────────────────────────────────────────────────────────
+test("RULE A GATES: a disagreeing registry literal makes the guard exit non-zero, naming both sides", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulea-gate-"));
+  try {
+    // A real racer id and a real registry field, with a wrong value. The registry it is compared
+    // against is the REAL one, so the fixture only has to be wrong.
+    writeFileSync(
+      join(dir, "fixture.js"),
+      "export const T = [{ id: 'horse', frameWidth: 1, frameHeight: 1 }];\n",
+    );
+    let code = 0;
+    let out = "";
+    try {
+      out = execFileSync(
+        process.execPath,
+        [
+          "scripts/check-fallback-agreement.mjs",
+          `--src=${relative(REPO, dir).split("\\").join("/")}`,
+        ],
+        { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+    } catch (e) {
+      code = e.status;
+      out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+    assert.equal(code, 1, "Rule A must FAIL the build, not merely report");
+    assert.match(out, /RULE A/);
+    assert.match(out, /frameWidth = 1 for 'horse'/, "must name the literal it found");
+    assert.match(out, /registry says/, "and the value it should have agreed with");
+    assert.match(
+      out,
+      /rename the\s+field so its meaning is in the name \(R18\)/,
+      "must offer the rename as the escape, since the alternative is an exception list",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("RULE A: a RENAMED field is out of reach — the distinction, and its price", () => {
+  // This is the shape `crop-sprite-sheets.mjs` now has, and it is deliberate: a record of what a
+  // value USED to be must not wear the live field's name (R18). The cost is stated rather than
+  // hidden — the rename is also what makes the table invisible to this rule.
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulea-renamed-"));
+  try {
+    writeFileSync(
+      join(dir, "fixture.js"),
+      "export const T = [{ id: 'horse', preCropFrameWidth: 1, preCropFrameHeight: 1 }];\n",
+    );
+    const out = execFileSync(
+      process.execPath,
+      [
+        "scripts/check-fallback-agreement.mjs",
+        `--src=${relative(REPO, dir).split("\\").join("/")}`,
+      ],
+      { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    assert.match(out, /0 disagree/);
+    assert.doesNotMatch(out, /RULE A —/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("RULE A carries NO exception for the one file it ever objected to", () => {
+  // The point of renaming rather than excepting: there is nothing here telling the rule to look
+  // away. If this assertion ever has to be deleted, the rule has stopped being a rule.
+  const self = readFileSync(join(REPO, "scripts/check-fallback-agreement.mjs"), "utf8");
+  const exceptionsBlock = self.slice(
+    self.indexOf("const EXCEPTIONS"),
+    self.indexOf("const isExcepted"),
+  );
+  assert.ok(exceptionsBlock.length > 0, "the exception list must still be findable");
+  assert.doesNotMatch(
+    exceptionsBlock,
+    /crop-sprite-sheets/,
+    "the pre-crop table was renamed, not excepted",
+  );
+  assert.doesNotMatch(
+    exceptionsBlock,
+    /preCropFrame/,
+    "and no exception was written for the renamed fields either",
   );
 });

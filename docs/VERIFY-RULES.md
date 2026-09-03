@@ -733,6 +733,45 @@ usually being taken anyway for a different reason. **Adopted by the owner, 2026-
 
 ---
 
+## R18 — A RECORD OF A PAST VALUE MUST NOT WEAR THE LIVE FIELD'S NAME
+
+**Rule.** When a table, a fixture or a comment records what a value **used to be** — the input a
+one-shot tool consumed, the baseline an arm was measured against, the shape a format had before a
+migration — **it must not use the field name the live value uses.** Name it for what it is:
+`preCropFrameWidth`, `baselineZoom`, `legacyLapCount`. One field name, one fact.
+
+**The failure it closes, and it is not "someone gets confused".** A guard that compares a literal
+against its one home cannot tell "a copy that has drifted" from "a record of what the home used to
+hold" — the two are the same shape, and telling them apart is a judgement about intent. So a
+historical record under a live field name puts every such guard in an impossible position: it must
+either go red on something correct, or be given an exception, and **an exception is the guard being
+told to look away from the only thing it can see.**
+
+**The instance it comes from.** `scripts/crop-sprite-sheets.mjs`'s `FLAGGED_TYPES` carried
+`frameWidth`/`frameHeight` recording the PRE-crop sheet geometry, while the racer-type registry
+carries the POST-crop values. They disagreed on 8 of 12 entries, **correctly**, and had done since
+the day both were written (`11093fff`, 2026-06-03). `check-fallback-agreement`'s Rule A found them on
+its first run and **could not be made to gate for as long as they stood** — the owner ruled RENAME
+over except-or-delete on 2026-09-03, and the rule gates from that day (PRE-CROP-FIELDS-1).
+
+**The discriminator has to exist in the tree, not in the guard.** That is the whole point of the
+rule: no amount of cleverness in a checker recovers a distinction the source does not make, and
+every attempt to write the distinction down *beside* the value reproduces the defect one level up —
+the same trap COMPANY-HEADCOUNT-1 hit and named.
+
+**Only the fields that actually MOVED are historical.** In the founding instance `frameCount` keeps
+its live name and keeps agreeing with the registry, because cropping does not change how many frames
+a sheet has. Renaming it too would have invented a distinction that is not there, which is this
+rule's own failure mode in the opposite direction.
+
+**Cost, stated because it is the objection:** a rename touches every reader of the field, and it puts
+the renamed table **out of the guard's reach** — that is the price of the distinction, and it is
+declared in `check-fallback-agreement`'s `blind` list rather than left to be discovered. **There is
+no guard for this rule**, and there cannot be: "is this field a record of the past" is the question
+the rule exists because nothing can answer.
+
+---
+
 ## The instruments, and what each costs
 
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,

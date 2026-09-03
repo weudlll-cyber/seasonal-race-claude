@@ -24,13 +24,31 @@ const ASSETS_DIR = join(process.cwd(), "client/public/assets/racers");
 
 // Types where bbox fill < 50%, measured by audit-sprite-crops.mjs.
 // unionMin/Max are per-frame-local coordinates of the non-transparent body union.
+//
+// ★ EVERY GEOMETRY FIELD BELOW IS A **PRE-CROP** RECORD — the size of the sheet this run took as
+// INPUT, not the size it produced, and not the size the registry carries today. The names say so
+// (PRE-CROP-FIELDS-1, 2026-09-03), because they used to say the opposite: `frameWidth`/`frameHeight`
+// are live registry field names, so this table read as a stale copy of the registry and was the only
+// thing check-fallback-agreement's Rule A has ever objected to. It is not a copy. It is a different
+// fact under the same name, which is exactly the shape R18 now forbids.
+//
+// `frameCount` KEEPS its live name deliberately: cropping does not change how many frames a sheet
+// has, so it is the SAME fact as the registry's and agrees with it on all twelve entries. Only the
+// fields the crop CHANGES are pre-crop facts.
+//
+// ★★ THE LIST BELOW IS SPENT, AND RE-RUNNING THIS TOOL AS IT STANDS WOULD DESTROY ARTWORK.
+// `main()` writes each output back over its input (`const mainOutput = mainInput`). It ran once, on
+// 2026-06-03; every sheet named here carries that date. The frames on disk are now the crop's
+// OUTPUT — horse is 150x150 today — so a second run would slice a 150-px frame at 128-px offsets
+// and overwrite the shipped sheet with the result. Before running this again on an entry, re-measure
+// its pre-crop geometry from the file that is actually there.
 const FLAGGED_TYPES = [
   {
     id: "horse",
     file: "horse-trot.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 37,
     unionMinY: 4,
@@ -41,8 +59,8 @@ const FLAGGED_TYPES = [
     id: "giraffe",
     file: "giraffe-walk.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 46,
     unionMinY: 7,
@@ -53,8 +71,8 @@ const FLAGGED_TYPES = [
     id: "snake",
     file: "snake-crawl.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 35,
     unionMinY: 1,
@@ -65,8 +83,8 @@ const FLAGGED_TYPES = [
     id: "rocket",
     file: "rocket-fly.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 43,
     unionMinY: 7,
@@ -77,8 +95,8 @@ const FLAGGED_TYPES = [
     id: "motorbike",
     file: "motorbike-walk.png",
     maskFiles: ["motorbike-walk-mask.png"],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 34,
     unionMinY: 2,
@@ -89,8 +107,8 @@ const FLAGGED_TYPES = [
     id: "luge",
     file: "luge-slide.png",
     maskFiles: [],
-    frameWidth: 64,
-    frameHeight: 64,
+    preCropFrameWidth: 64,
+    preCropFrameHeight: 64,
     frameCount: 16,
     unionMinX: 20,
     unionMinY: 8,
@@ -101,8 +119,8 @@ const FLAGGED_TYPES = [
     id: "beetle",
     file: "beetle.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 8,
     unionMinX: 46,
     unionMinY: 32,
@@ -113,8 +131,8 @@ const FLAGGED_TYPES = [
     id: "boarder",
     file: "boarder-sprite.png",
     maskFiles: [],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 12,
     unionMinX: 44,
     unionMinY: 32,
@@ -130,8 +148,8 @@ const FLAGGED_TYPES = [
       "koi-mask-sanke.png",
       "koi-mask-showa.png",
     ],
-    frameWidth: 565,
-    frameHeight: 565,
+    preCropFrameWidth: 565,
+    preCropFrameHeight: 565,
     frameCount: 16,
     unionMinX: 188,
     unionMinY: 145,
@@ -142,8 +160,8 @@ const FLAGGED_TYPES = [
     id: "turtle",
     file: "turtle-swim.png",
     maskFiles: ["turtle-mask-plates.png", "turtle-mask-borders.png"],
-    frameWidth: 128,
-    frameHeight: 128,
+    preCropFrameWidth: 128,
+    preCropFrameHeight: 128,
     frameCount: 16,
     unionMinX: 31,
     unionMinY: 19,
@@ -154,8 +172,8 @@ const FLAGGED_TYPES = [
     id: "dolphin",
     file: "dolphin-swim.png",
     maskFiles: ["dolphin-mask-belly.png"],
-    frameWidth: 256,
-    frameHeight: 256,
+    preCropFrameWidth: 256,
+    preCropFrameHeight: 256,
     frameCount: 16,
     unionMinX: 75,
     unionMinY: 12,
@@ -166,8 +184,8 @@ const FLAGGED_TYPES = [
     id: "snowmobile",
     file: "snowmobile.png",
     maskFiles: [],
-    frameWidth: 192,
-    frameHeight: 192,
+    preCropFrameWidth: 192,
+    preCropFrameHeight: 192,
     frameCount: 16,
     unionMinX: 62,
     unionMinY: 43,
@@ -220,8 +238,8 @@ function computeCropParams(type) {
  */
 async function cropSpritesheet(inputPath, outputPath, params) {
   const {
-    frameWidth,
-    frameHeight,
+    preCropFrameWidth,
+    preCropFrameHeight,
     frameCount,
     extractX,
     extractY,
@@ -241,8 +259,8 @@ async function cropSpritesheet(inputPath, outputPath, params) {
   // How much to pad the frame before extracting the crop window
   const padLeft = Math.max(0, -extractX);
   const padTop = Math.max(0, -extractY);
-  const padRight = Math.max(0, extractX + cropSize - frameWidth);
-  const padBottom = Math.max(0, extractY + cropSize - frameHeight);
+  const padRight = Math.max(0, extractX + cropSize - preCropFrameWidth);
+  const padBottom = Math.max(0, extractY + cropSize - preCropFrameHeight);
 
   // Offset into the padded frame where the extract starts
   const extractInPaddedX = padLeft + extractX;
@@ -251,7 +269,7 @@ async function cropSpritesheet(inputPath, outputPath, params) {
   const processedFrames = [];
 
   for (let f = 0; f < frameCount; f++) {
-    const frameOffX = f * frameWidth;
+    const frameOffX = f * preCropFrameWidth;
 
     // Step 1: Extract this frame from the sheet → intermediate PNG buffer
     // (Two extract() calls cannot be chained in one sharp pipeline.)
@@ -261,8 +279,8 @@ async function cropSpritesheet(inputPath, outputPath, params) {
       .extract({
         left: frameOffX,
         top: 0,
-        width: frameWidth,
-        height: frameHeight,
+        width: preCropFrameWidth,
+        height: preCropFrameHeight,
       })
       .png()
       .toBuffer();
@@ -404,7 +422,7 @@ async function main() {
     const p = computeCropParams(type);
     console.log(`\n── ${type.id} ──`);
     console.log(
-      `  Before: ${type.frameWidth}x${type.frameHeight} (${type.frameCount} frames)`,
+      `  Before: ${type.preCropFrameWidth}x${type.preCropFrameHeight} (${type.frameCount} frames)`,
     );
     console.log(
       `  Body bbox: [${type.unionMinX},${type.unionMaxX}] x [${type.unionMinY},${type.unionMaxY}]  (${p.bodyWidth}x${p.bodyHeight})`,
@@ -416,8 +434,8 @@ async function main() {
     const mainOutput = mainInput; // overwrite in-place
 
     const cropParams = {
-      frameWidth: type.frameWidth,
-      frameHeight: type.frameHeight,
+      preCropFrameWidth: type.preCropFrameWidth,
+      preCropFrameHeight: type.preCropFrameHeight,
       frameCount: type.frameCount,
       extractX: p.extractX,
       extractY: p.extractY,
@@ -459,9 +477,11 @@ async function main() {
   console.log("\n=== Summary: Config Updates Required ===\n");
   for (const type of FLAGGED_TYPES) {
     const p = computeCropParams(type);
-    if (p.targetSize !== type.frameWidth || p.targetSize !== type.frameHeight) {
+    if (p.targetSize !== type.preCropFrameWidth || p.targetSize !== type.preCropFrameHeight) {
+      // The registry's LIVE fields are what the operator has to update — the pre-crop record below
+      // stays as it is, because it describes the input this run consumed and not the output.
       console.log(
-        `  ${type.id}: frameWidth/frameHeight: ${type.frameWidth} → ${p.targetSize}`,
+        `  ${type.id}: set the registry's frame size to ${p.targetSize} (was ${type.preCropFrameWidth} before this crop)`,
       );
     }
   }
