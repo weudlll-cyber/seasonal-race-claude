@@ -3,24 +3,137 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-04, after your eye test. The chain is finished and **TWO BRANCHES ARE
-WAITING ON YOU** — neither merges until you have judged them. Master green, clean tree.
+**Last rewritten:** 2026-09-04, after the fifteenth and last piece. **Everything is merged.** Both
+branches you were judging are in master and cleared from origin; origin holds `master` and nothing
+else. Master green after every merge, step 12 done each time, clean tree.
 
-★ **THE ONE THING TO DO: open <http://localhost:4173/> and start a race on DIRT-OVAL.**
-It is a production build of **`fix/board-portrait-fit-1`** — the STARTERS-board fix, which you have
-NOT seen: the build you judged was `feat/player-groups-1`, and it does not contain it. Watch the
-board during the countdown. **Dirt-oval, not garden-path**, because its default racer is the HORSE,
-which overflowed **45% further than the beetle** — the beetle is only seventh of twenty.
+---
 
-**What you are judging is the COST, not the overlap.** The overlap is gone on all twenty types.
-Fitting the portrait to its column makes long racers SHORTER — the rocket is now **35% of its former
-height**, the horse 44%, the duck unchanged. The column's geometry is fixed (20 px of room left of
-centre, 14 px right), so if that is worse than the overlap, the column has to widen and **the name
-pays for it**. Details in `reports/evolution/BOARD-PORTRAIT-FIT-1.md` §4 and §6, on that branch.
+## ★★ THE FOUR NUMBERS, IN YOUR ORDER
 
-**The other branch, `feat/player-groups-1`, is unchanged since you saw it** except for the three
-things your eye test asked for: the chips are readable, the over-capacity notice is a warning, and
-**the `#3` badge and the 🔀 shuffle are gone** on your decision — the list is alphabetical now.
+| | |
+| --- | --- |
+| **the second-site rate over the new work** | **3 of 32 — 9.4%**, against 47% historically and a 0% that was measured over SIX |
+| **new copies three days of building created** | **2 harmful**, both mine from last night, plus 1 tolerated |
+| **new guards that can actually fire** | **8 of 9.** The ninth could not be sabotaged safely and has field evidence instead |
+| **claims written in the last three days already false** | **3.** All counts. Median age under a day. All corrected |
+
+**THIS AUDITS WHAT CAN BE FOUND BY LOOKING. It does not prove there is nothing else** — the same
+statement the census carried, and it is not modesty: every number above is what one method found in
+one night, and §"what the numbers do not cover" at the foot of each report says where its method
+stops.
+
+---
+
+## ★★ THE ONE THING THAT IS NOT ZERO, AND IT IS THE HEADLINE
+
+**The second-site rate is 9.4%, not 0%. The sweep is being PERFORMED and is still missing things** —
+which is a different problem from forgetting to sweep, and a harder one.
+
+Three corrections made under the constraints left a live second site. **None was forgotten. Each was
+missed for a reason about the SHAPE OF THE SEARCH:**
+
+| | why the sweep missed it |
+| --- | --- |
+| `AUDIT.md` stated a config key that **occurs nowhere in the tree** | **nobody thinks to open it.** It reads as history, not as a spec |
+| `ARCHITECTURE.md` said `smoothDt` feeds the **camera lerp** — the camera has been fed `rawDt` since June | **the token is legitimate 30+ times over.** A grep for the name drowns the one wrong use. It had ALREADY been contradicted in `CAMERA_DIRECTOR.md` and in a source comment, and stood anyway |
+| `TRACK_LIFECYCLE.md`'s own diagram showed a file that **does not exist** as a live fallback | **it is a PICTURE.** An ASCII diagram is prose to a human and noise to a search for a sentence |
+
+**All three corrected.** And **no rule at any earlier moment would have caught them** — a rule at the
+keystroke is the same grep run sooner. What would help is a better SEARCH, not an earlier one, and
+that is a habit with a checklist rather than a mechanism (`BUILD-TIME-RULES-1` §2).
+
+---
+
+## ★ THE TWO COPIES, AND WHY THEY ARE THE UNCOMFORTABLE FINDING
+
+Constraint 3 — *invent no redundancy* — has been in every brief since 2026-09-01. **It was broken
+twice, both times last night, both times inside the new work.**
+
+1. **A guard that hardcodes a count it computes.** Rule F prints its own split on every run; the same
+   numbers were hand-written into the guard's own `blind[]` **and** into VERIFY-RULES R19. **By the
+   time the audit ran the true figure had already moved — because R19's own worked example added a
+   citation.** The document that stated the count changed the count by being written.
+2. **A test that hardcodes what it tests.** The board-portrait test declared its own copies of the
+   column's four constants — so narrowing the column in the module would have left it **green while
+   asserting the portraits fit a column that no longer exists.** The exact defect the test was written
+   to prevent, reintroduced by the test.
+
+**Both were built by someone who had written constraint 3 into two reports the same night.** Knowing
+the rule is not the failure mode. **Applying it to the artefact you are currently building is** — and
+I have no proposal for that.
+
+---
+
+## WHAT YOU STILL OWE A DECISION ON
+
+**A. THE CLIENT SHIPS FIVE PICTURES THAT ARE NOT THE ONES ON SCREEN.**
+`client/public/assets/tracks/backgrounds/` holds six images, 21.3 MB, and **all six share a name with
+a seed background.** Measured at the pixels: **five are DIFFERENT PHOTOGRAPHS** (mean |diff| 30–63 of
+255 — no re-encode does that), and two of those share a name **and** a format. The sixth,
+`Mountainstreet.jpg`, is **byte-identical** to `mountainstreet.jpg` — 9.32 MB stored twice, differing
+only in a capital, which is the same name to the OS and a different name to git.
+**Nothing loads any of them**: the client fetches `/api/tracks/<id>/background` from the server, and
+the only reference to the public path is a doc-comment example. **So the divergence is not live and
+the 21.3 MB is dead weight in the bundle.** Which picture should appear where is a picture question
+and it is yours. Nothing was reconciled.
+
+**B. WHAT THE PRE-MERGE GATE RUNS.** `viewer-invariants` excludes garden-path from the gate's
+scorable items on the ground that its race never finishes at seed 9. **That is false, measured on
+that harness**: one race, 255 s, a full acceptance sheet — it reaches PHOTO_FINISH with the winner on
+canvas and **IS graded, passing ten of twelve and FAILING TWO** (winner cut; walk). **So excluding it
+does not cost nothing**, which is what the line claimed. **What the gate runs decides what reddens a
+build and it is yours.** The nightly sweep still runs all ten, so those two failures are visible a
+day later rather than never.
+
+**C. THE OVER-CAPACITY BEHAVIOUR IS DECIDED AND BUILT** — a group that does not fit is refused whole,
+with numbers and never names. Two things came out of building it and are yours:
+**Quick Test is not covered** (it builds its own roster capped at 100 regardless of the track, so a
+Quick Test at N=60 on a closed track still starts), and **the four maxima were three different limits
+and one dead key**, now named for what each governs.
+
+**D. A STORED 0.65 STILL LOADS.** The slider is back to 0.60 and the shipped value never moved, but
+the LOADER still tolerates up to 0.70 **deliberately** — the slider stood at 0.70 for a day, and that
+validator discards the WHOLE config on any rejection, so tightening it would cost an operator every
+other tuning to correct one key they can no longer set. A stored 0.65 clamps the first time the
+slider is touched. **No migration, by standing rule.**
+
+**E. AN INSTRUMENT THAT HANGS INSTEAD OF FAILING.** The browser sweep's first run hung fifteen minutes
+with no output: `client/dist-sweep` empty, nothing on its app port. The build it spawns is
+`stdio: "ignore"`, so a build that produces nothing leaves **no trace at all**. Run by hand the same
+build succeeds in 873 ms. **A hang looks like patience.** Filed, not fixed — it is a gating instrument.
+
+---
+
+## WHAT THE FIFTEEN PIECES DID
+
+**PART A — the open work, and the only mint.**
+
+| | | |
+| --- | --- | --- |
+| A1 | the board fix merged, **render MINTED** on your acceptance | world, world-off and camera re-measured on the MERGED tree and unmoved; `client/` proved byte-identical to the build you judged |
+| A2 | a group that does not fit is **refused whole** | and the picker could not guard the only door — **two routes reach an over-cap field** without misusing a control, so Start checks too |
+| A3 | player groups merged | A1 was brought INTO the branch first, so the combination was verified on the tree master would receive |
+| A4 | the garden-path spec trimmed to one claim | 77 → 60 lines, and **the sweep's exclusion was refuted by running the race** |
+| A5 | the slider bound back to **0.60** | with the missing line at the bound: *the top is the edge of what has been MEASURED, not a limit of the mechanism* |
+| A6 | **61 citations converted to the paired form** | and **Rule F now checks the PAIR** — the symbol must be at the line the link points to, which closes its own declared blind spot |
+
+**PART B — hygiene under correction authority.** B1 found its rule already existed (Rule D) and said
+so rather than building a second; B2 watched the backgrounds and found the collision above; B3
+established the four maxima and removed the dead key.
+
+**PART C — did the constraints hold?** The four numbers, and three reports that answer *no, partly*
+honestly: the rate is not zero, the copies were created under the rule, and the sabotages that test
+the guards had bugs of their own.
+
+---
+
+## ★ THE THING I GOT WRONG TWICE, WORTH ONE LINE
+
+**A check that verifies a check needs verifying too.** A6's first wiring test passed a sabotage that
+had reverted the whole feature; C3's first sabotage batch reported two WORKING rules as inert. Both
+were caught by reading what the guard PRINTED rather than its exit code. **Neither would have been
+caught by running it again.**
 
 ---
 
