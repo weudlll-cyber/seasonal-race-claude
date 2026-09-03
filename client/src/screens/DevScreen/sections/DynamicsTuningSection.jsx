@@ -686,7 +686,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 data-testid="gap-reroll-toggle"
               />
               Gap-Reroll enabled
-              <InfoTooltip text="Master switch for the gap-cap re-roll bias. ON = shipped (symmetric, G=0.75, strength=0.5): runaway winners 23% → 8.3% with band-reach and Holm unchanged. OFF restores the pre-feature game byte-identically — that is the world every committed baseline was measured in, so turn it off to compare against one." />
+              {/* CITATIONS-1, 2026-09-03: this tip read "ON = shipped (symmetric, G=0.75,
+                  strength=0.5): runaway winners 23% → 8.3%". Those are the values and the
+                  measurement of the 2026-07-23 RETUNE, which the owner FLIPPED on 2026-07-26 to the
+                  confirm-gate candidate. The two numbers are not restated here at all: G and
+                  strength have their own controls immediately below and their one home is
+                  defaults.js, which is how they came to be wrong here for 39 days. */}
+              <InfoTooltip text="Master switch for the gap-cap re-roll bias. ON = shipped, in symmetric mode, at the G and strength the two controls below show. The ten-track confirm gate that shipped it: dead finales 14.1% → 10.0%, runaway winners 10.1% → 6.8%, pooled band-reach 71.8% → 72.7%, Holm unchanged. OFF restores the pre-feature game byte-identically — that is the world every committed baseline was measured in, so turn it off to compare against one." />
             </label>
           </div>
           <div className={s.formGroup}>
@@ -695,7 +701,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Gap-Reroll G (lengths)
-              <InfoTooltip text="Gap cap G in racer-lengths: the bias engages only once a racer's arc gap to its neighbour exceeds G. Lower = engages sooner = tighter field. 0.75 = shipped." />
+              <InfoTooltip text="Gap cap G in racer-lengths: the bias engages only once a racer's arc gap to its neighbour exceeds G. Lower = engages sooner = tighter field. 0.5 = shipped (CITATIONS-1, 2026-09-03: this said 0.75, the value of the 2026-07-23 retune that the owner FLIPPED on 2026-07-26 — 39 days stale)." />
             </label>
             <input
               type="number"
@@ -721,7 +727,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Gap-Reroll strength
-              <InfoTooltip text="How hard a single correction pulls: fraction-to-band-edge = min(1, strength·(gap−G)) per excess length. Higher = individual corrections hit harder and saturate at the band edge sooner (visible braking); lower = many gentle nudges. 0.5 = shipped — it halved the share of saturated corrections without costing fairness." />
+              <InfoTooltip text="How hard a single correction pulls: fraction-to-band-edge = min(1, strength·(gap−G)) per excess length. Higher = individual corrections hit harder and saturate at the band edge sooner (visible braking); lower = many gentle nudges. 1.0 = shipped — the confirm gate found the correction firing EARLIER (smaller G) and at FULL strength makes the finale livelier, not deader (CITATIONS-1, 2026-09-03: this said 0.5 and described the opposite trade-off; both belonged to the 2026-07-23 retune the owner flipped away from on 2026-07-26)." />
             </label>
             <input
               type="number"

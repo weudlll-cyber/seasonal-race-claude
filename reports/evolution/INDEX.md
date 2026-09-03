@@ -471,6 +471,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and left: `BACKLOG.md:787`'s "has NEVER agreed" was repaired on 2026-09-02 and sits in a closed
   entry. B3 is left as a proposal, as the brief instructed.
 
+- [CITATIONS-1.md](CITATIONS-1.md) — **the non-drift remainder is FIFTEEN, not two; the drift cannot
+  be re-derived and was not touched; and one dead tag was standing in EIGHT living documents**
+  (2026-09-03; `verify` green, nothing minted). ★ **The brief's "~54 drift and 2 are not" understates
+  the non-drift half by seven times** — counted individually and each verified at the tree: `README`'s
+  completeness claim (six documents missing), `ROADMAP`'s "eleven documents link here" (**five files,
+  seven links, exactly ONE a report — and it is the report that filed the finding**), four
+  `ARCHITECTURE` claims including `stateRatio`, **a symbol that occurs nowhere**, five
+  `CAMERA_DIRECTOR` call-signature claims, and four `SIM.md`/`SWEEP-HARNESS` claims including one that
+  is **exactly inverted** and one that **contradicts itself in a single sentence**. ★ **A dead tag in
+  EIGHT living documents, found in THREE passes** — each repair pass revealed sites the previous grep
+  was not shaped to see — plus a ninth site of a different claim in `RaceScreen/index.jsx`'s own
+  comments. ★ **THE LINE NUMBERS CANNOT BE RE-DERIVED, and it is measured, not asserted:** of 250
+  citations in `docs/*.md`, **137 (55%) name no identifier at all**, 31 name a bare `index.jsx`, and
+  where a symbol IS named it occurs 2–12 times in the cited file — `getPhase`'s first hit is a
+  **comment** at :165 while its definition is at :524. **The 54 were left, deliberately, and exactly
+  ONE line citation was repaired**: `branding.md` cited `storage.js:158` in a 148-line file, which is
+  the only class a machine can call wrong today. ★ **The proposal, PROPOSE-ONLY:** a citation should
+  name a SYMBOL, because a line citation cannot be checked and a symbol citation can — 113 convertible
+  with review, **137 needing a human**, nothing mechanical broken, and the largest recurring hygiene
+  class in the repository becomes checkable for the first time.
+
 - [CONTROL-BOUNDS-1.md](CONTROL-BOUNDS-1.md) — **the slider now reaches where the game runs, and a
   RULE INSIDE AN EXISTING GUARD keeps it there** (2026-09-03; `verify` PASS, all four fingerprints
   run against the record and all four match, nothing minted). **The shipped value did not move**:

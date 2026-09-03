@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 2. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 3. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -85,8 +85,48 @@ the defect one level up.
 
 ### 3. Piece 7's second-site rate over the larger sample
 
-**NOT STARTED.** The population is the INDEX corrections block: **20 corrections**, 2026-08-12 to
-2026-09-03, splitting **10 before / 10 after 2026-08-26** — the cut the trend question turns on.
+**NOT STARTED — but piece 3 turned up the thing that decides it, and it is not good news for the
+existing number.** SECOND-SITES-1 says the INDEX corrections block "holds **9** entries" and that it
+took "all six remaining — **a complete sweep of the block, not a subsample**". Counted at the tree
+it stood at that commit: **19**. It examined six, and **all six are dated 2026-08-31 or later**.
+
+**So the 52% has no "before" in it at all.** Every correction it measured — the 15 applied plus the
+6 sampled — was made on or after 2026-08-31, which is *after* the 2026-08-26 change the trend
+question asks about. **Thirteen earlier corrections were never examined.** Piece 7's job is now
+exactly to supply them.
+
+---
+
+## ★ PIECE 3 — THE REMAINDER WAS SEVEN TIMES BIGGER THAN "TWO"
+
+**15 non-drift corrections applied**, each verified at the tree, in nine documents and one source
+file. The brief said "~54 are drift and 2 are not"; counted individually the non-drift half is
+**fifteen** — including `ROADMAP.md`'s reason for existing (it says **eleven** documents link to it;
+it is **five files, seven links, and exactly ONE is a report** — the report that filed the finding),
+`ARCHITECTURE`'s `stateRatio` (**a symbol that occurs nowhere**), five `CAMERA_DIRECTOR`
+call-signature claims, and a `SWEEP-HARNESS` paragraph that is **exactly inverted** — it warns that a
+fix is missing which landed five weeks ago.
+
+**★ ONE DEAD TAG WAS STANDING IN EIGHT LIVING DOCUMENTS**, and the sweep needed **three passes** to
+find them all: each repair revealed sites the previous grep was not shaped to see. Tag
+`pre/dead-mechanisms-cleanup` was named as the recovery route for deleted code in `SIM.md` (×2),
+`SWEEP-HARNESS`, `BACKLOG` (×2), `DEVSCREEN-INVENTORY`, `LESSONS` and `ARCHITECTURE`. **It does not
+exist** — 123 tags and none is that one. All eight now name commit `0555f9d`, which is reachable.
+
+**★ THE 54 LINE CITATIONS WERE LEFT, AND THE REASON IS MEASURED.** Of 250 citations in `docs/*.md`,
+**137 (55%) name no identifier at all**, so there is nothing to re-derive from; 31 name a bare
+`index.jsx`, which is four different files; and where a symbol IS named it occurs 2–12 times in the
+cited file. `getPhase`'s first hit in `racePlanner.js` is a **comment** at :165 while the definition
+is at :524 — a mechanical rewrite would move a citation from one wrong line to a different wrong one.
+**Exactly ONE was repaired**: `branding.md` cited `storage.js:158` in a 148-line file, which is the
+only class a machine can call wrong today.
+
+**★ AND FOUR FALSE NUMBERS ON THE OPERATOR'S SCREEN, from piece 5's census, fixed here.** The
+gap-reroll card's three tooltips carried **G=0.75 and strength=0.5** — the values of the 2026-07-23
+retune that you FLIPPED on 2026-07-26 to G=0.5 / strength=1.0. One of them also described the
+opposite trade-off from the one the confirm gate found. **39 days stale, on the card an operator
+reads while judging the mechanism.** Piece 5 is read-only and found them; piece 3 is the fix-piece
+and applied them.
 
 ---
 
@@ -156,7 +196,7 @@ again.
 | --- | --- | --- |
 | 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
 | 2 | Rename the pre-crop fields | **DONE** — Rule A gates, empty exception list; R18 written |
-| 3 | The fifty-six remaining corrections | not started |
+| 3 | The fifty-six remaining corrections | **DONE** — 15 non-drift applied, 1 line citation, 54 deliberately left |
 | 4 | The inert guard half and the rotten spec | not started |
 | 5 | Where else does a control disagree with what ships? | not started (read-only) |
 | 6 | What Rule A cannot see | not started (read-only) |
