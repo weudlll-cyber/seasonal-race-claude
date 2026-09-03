@@ -54,7 +54,7 @@ export const GUARD = {
     "AND (RULE A) a literal mirroring a machine-readable home that disagrees with it — a racer-type " +
     "field copied into a table while the registry says something else; " +
     "AND (RULE D) a racer-type registry whose frame geometry disagrees with the PNG it names — frameWidth x frameCount against the sheet's own IHDR header; " +
-    "AND (RULE F) a SYMBOL CITATION in a document that names a symbol its file does not contain — `raceGovernor.js` -> `governorPhaseWeight`",
+    "AND (RULE F) a SYMBOL CITATION in a document that names a symbol its file does not contain — `raceGovernor.js` -> `governorPhaseWeight` — and, in the PAIRED form, one whose symbol is not at the LINE its link points to",
   blind: [
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
@@ -66,7 +66,7 @@ export const GUARD = {
     "RULE D: GEOMETRY only. A change that leaves the frame size alone — a repaint, a re-crop to the same target, a truncated write — is invisible to it. That case is measured (ARTWORK-DIGEST-1: an overwrite produced 1200x150 before AND after) and is the artwork DIGEST's question, in check-seed-versions",
     "RULE D: only the sheet named by `spriteUrl`. Mask files hang off nested coat objects, which the registry loader skips, so they are digested but not geometry-checked",
     "RULE F: LINE citations, which are the overwhelming majority and are the reason this rule exists. CITATIONS-1 measured 250 of them and CITATIONS-CONVENTION-1 re-measured 246: NOTHING can tell a correct `file.js:357` from a stale one, because every in-range number is equally plausible. This rule can only see the ARROW form, so its count is a count of citations that OPTED IN.",
-    "RULE F: WHICH occurrence. It asks whether the symbol is in the file at all, not whether it is the one the sentence meant. That is deliberate — CITATIONS-1 measured `getPhase`'s first occurrence in `racePlanner.js` as a COMMENT at :165 with its definition at :524, so a rule that guessed an occurrence would manufacture confident wrong answers. A two-sided existence claim is what is checkable and it is all that is claimed.",
+    "RULE F: WHICH occurrence — FOR THE BARE FORM ONLY, and there are now 8 of those. A bare `file` -> `symbol` asks whether the symbol is in the file at all, so a symbol belonging to another feature passes. CITATION-PAIRS-1 (2026-09-04) CLOSED THIS for the 61 PAIRED citations: a paired citation carries the line in its href and the symbol must be AT those lines, which no other feature's symbol satisfies by accident. The blind spot is now 8 of 69 rather than all of them, and it shrinks as citations are converted.",
     "RULE F: reports/, which are append-only, and docs/archive/, which records the past on purpose. Neither is scanned.",
     "RULE A: it can find ZERO literals and that is the GOAL STATE, not a failure — REGISTRY-LITERALS-1 removed the copies before this rule existed and DROP-CROP-SCRIPT-1 removed the last twelve. What must never be zero is the DISCOVERY, and that is enforced below rather than left to the test suite.",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
@@ -821,8 +821,36 @@ const DOC_BASE = isAbsolute(DOC_DIR) ? DOC_DIR : join(ROOT, DOC_DIR);
 const SYMBOL_CITE =
   /`([A-Za-z0-9_.\-/]+\.(?:js|jsx|mjs|cjs|ts|tsx))`\s*(?:→|->)\s*`([A-Za-z_$][\w$]*)(?:\(\))?`/g;
 
+// ── THE PAIRED FORM (CITATION-PAIRS-1, 2026-09-04) ───────────────────────────────────────────
+//
+// `[\`file.js\` → \`symbol\`](../path/file.js#L46-L55)` — the symbol in the visible text, the line in
+// the href. Both halves are checked TOGETHER, and that pairing is the whole reason the form exists:
+//
+//   CONVERTING THE VISIBLE HALF ALONE WOULD HAVE BEEN WORSE THAN THE DRIFT IT REPLACES. The href's
+//   line number still moves silently when code above it moves, so the text would say the right name
+//   while the click landed somewhere else — and a reader trusts a link more than a number.
+//
+// ★ AND IT CLOSES RULE F'S DECLARED BLIND SPOT for every citation in this form. The bare arrow asks
+// only whether the symbol is in the file ANYWHERE, so a symbol belonging to another feature passes.
+// A paired citation must have the symbol AT THE LINES THE HREF NAMES, which no other feature's
+// symbol can satisfy by accident.
+/** Collapse `a/b/../c` to `a/c` — the paired citations' hrefs are doc-relative. */
+function normalisePath(p) {
+  const out = [];
+  for (const part of p.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") out.pop();
+    else out.push(part);
+  }
+  return out.join("/");
+}
+
+const PAIRED_CITE =
+  /\[`([A-Za-z0-9_.\-/]+\.(?:js|jsx|mjs|cjs|ts|tsx))`\s*(?:→|->)\s*`([A-Za-z_$][\w$]*)(?:\(\))?`\]\(([^)\s]*?)#L(\d+)(?:-L(\d+))?\)/g;
+
 const citeBad = [];
 const citeUnresolved = [];
+let citePaired = 0;
 let citeDocs = 0;
 let citeChecked = 0;
 const srcCache = new Map();
@@ -851,7 +879,56 @@ for (const name of docNames) {
   const text = readSrc(join(DOC_BASE, name));
   if (text === null) continue;
   citeDocs++;
+
+  // PAIRED first. Their spans are recorded so the bare scan below does not count them twice and
+  // then check them more weakly than they have already been checked.
+  const pairedSpans = [];
+  for (const m of text.matchAll(PAIRED_CITE)) {
+    pairedSpans.push([m.index, m.index + m[0].length]);
+    const cited = m[1];
+    const sym = m[2];
+    const href = m[3];
+    const from = Number(m[4]);
+    const to = m[5] ? Number(m[5]) : from;
+    // ★ A PAIRED CITATION RESOLVES BY ITS HREF, NOT BY THE BASENAME IN ITS TEXT. The href is a real
+    // path and is never ambiguous; the visible name often is — this repository has four `index.jsx`.
+    // Resolving by basename made 14 of 61 paired citations unresolvable on the first run, which is
+    // the rule declining to check the very citations the conversion was for.
+    const rel = normalisePath(`${DOC_DIR}/${name}/../${href}`);
+    const hits = allTracked.includes(rel)
+      ? [rel]
+      : allTracked.filter((t) => t === cited || t.endsWith("/" + cited));
+    if (hits.length !== 1) {
+      citeUnresolved.push(
+        `${DOC_DIR}/${name}: \`${cited}\` (paired) resolves to ${hits.length} file(s) via ${href}. Spell the path.`,
+      );
+      continue;
+    }
+    const src = readSrc(join(ROOT, hits[0]));
+    if (src === null) {
+      citeUnresolved.push(`${DOC_DIR}/${name}: \`${cited}\` (paired) could not be read`);
+      continue;
+    }
+    citeChecked++;
+    citePaired++;
+    const lines = src.split("\n");
+    if (from > lines.length) {
+      citeBad.push(
+        `    ${DOC_DIR}/${name}: cites \`${cited}\` → \`${sym}\` at L${from}, and ${hits[0]} has only ${lines.length} lines`,
+      );
+      continue;
+    }
+    const window = lines.slice(from - 1, Math.min(to, lines.length)).join("\n");
+    const reP = new RegExp("\\b" + sym.replace(/[$]/g, "\\$") + "\\b");
+    if (!reP.test(window))
+      citeBad.push(
+        `    ${DOC_DIR}/${name}: cites \`${cited}\` → \`${sym}\` at L${from}${to !== from ? `-L${to}` : ""}, and ${sym} is NOT in those lines` +
+          (reP.test(src) ? " (it IS elsewhere in the file — the LINK points somewhere else)" : ""),
+      );
+  }
+
   for (const m of text.matchAll(SYMBOL_CITE)) {
+    if (pairedSpans.some(([a, b]) => m.index >= a && m.index < b)) continue;
     const cited = m[1];
     const sym = m[2];
     const hits = allTracked.filter((t) => t === cited || t.endsWith("/" + cited));
@@ -880,10 +957,12 @@ if (citeDocs === 0)
   );
 
 console.log(
-  `check-fallback-agreement RULE F: ${citeChecked} symbol citation(s) in ${citeDocs} document(s); ` +
-    `${citeBad.length} name a symbol their file does not contain` +
+  `check-fallback-agreement RULE F: ${citeChecked} symbol citation(s) in ${citeDocs} document(s) — ` +
+    `${citePaired} PAIRED (symbol checked AT the line the link points to) and ` +
+    `${citeChecked - citePaired} bare (symbol checked anywhere in the file); ` +
+    `${citeBad.length} disagree` +
     `${citeUnresolved.length ? `, ${citeUnresolved.length} unresolved` : ""}. ` +
-    `(OPT-IN — a \`file.js:357\` line citation is invisible to this and always will be.)`,
+    `(OPT-IN — a \`file.js:357\` line citation with no symbol is invisible to this and always will be.)`,
 );
 for (const u of citeUnresolved) console.log(`  unresolved: ${u}`);
 

@@ -802,7 +802,7 @@ it asks Rule A's question with a document on one end.
 counted **246** code citations in `docs/*.md` and converted **12**. It did not convert the rest, and
 this is not deferred work:
 
-- **107 (43%) are markdown deep links** — `[`raceStep.js:46-55`](../client/src/modules/raceStep.js#L46-L55)`.
+- **107 (43%) are markdown deep links** — `[`raceStep.js` → `computeRowEnvMult`](../client/src/modules/raceStep.js#L46-L55)`.
   **The line number IS the link target.** Converting them breaks 107 working links; CITATIONS-1's
   proposal said "nothing mechanical breaks" and had not counted them.
 - **39 name a symbol that lives somewhere ELSE in the cited file.** Converting those moves the
@@ -816,6 +816,30 @@ this is not deferred work:
 **So the old citations stay, and nothing pretends they are checkable.** Rule F's count is a count of
 citations that OPTED IN, and its output says so, because "0 disagree" read as a statement about every
 citation in the documents would be the opposite of the truth.
+
+### ★ THE PAIRED FORM, and it is now the preferred one (CITATION-PAIRS-1, 2026-09-04)
+
+A citation that is already a DEEP LINK keeps its href and puts the symbol in its visible text:
+
+    [`raceStep.js` → `computeRowEnvMult`](../client/src/modules/raceStep.js#L46-L55)
+
+**The link still works and the visible half is now checkable. Rule F checks THE PAIR** — that the
+symbol named in the text is at the lines the href points to — and that is not a nicety:
+
+> **Converting the visible half alone would have been WORSE than the drift it replaces.** The href's
+> line number still moves silently when code above it moves, so the text would say the right name
+> while the click landed somewhere else — and a reader trusts a link more than a number.
+
+★ **IT ALSO CLOSES RULE F'S DECLARED BLIND SPOT for every citation in this form.** A bare
+`` `file` → `symbol` `` asks only whether the symbol is in the file ANYWHERE, so a symbol belonging
+to a different feature passes. A paired citation must have it AT THOSE LINES, which no other
+feature's symbol satisfies by accident. **The blind spot is 8 of 69 today rather than all of them**,
+and it shrinks as citations are converted.
+
+**A citation is converted only when a symbol is genuinely DECLARED at the cited lines.** Of 112 deep
+links, **61 were converted and 51 were not** — nothing in their range is a nameable symbol (a JSX
+fragment, a CSS rule, a bare expression). **Those are left as they are and reported**, because an
+unchecked pair is the failure mode this design exists to avoid.
 
 **Cost, stated because it is the objection:** a `file:line` is clickable in some editors and a symbol
 is not. That cost is real for a bare citation and **zero for the 107 links**, which keep their
