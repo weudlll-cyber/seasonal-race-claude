@@ -76,29 +76,54 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
     const incoming = group.players.filter((n) => !already.has(n));
     const duplicates = group.players.length - incoming.length;
 
-    const room = maxPlayers - players.length;
-    const admitted = room > 0 ? incoming.slice(0, room) : [];
-    const turnedAway = incoming.length - admitted.length;
-
-    const notices = [];
-    if (duplicates > 0)
-      notices.push(
-        `${duplicates} name${duplicates === 1 ? '' : 's'} in "${group.name}" ${
-          duplicates === 1 ? 'is' : 'are'
-        } already in the field and ${duplicates === 1 ? 'was' : 'were'} not added twice`
+    // ── REFUSE, DO NOT TRUNCATE (REFUSE-OVERSIZED-1, the owner's decision of 2026-09-04) ────────
+    //
+    // This used to admit `incoming.slice(0, room)` and report how many did not fit. The count was
+    // true and useless: the names it dropped were the TAIL of the group's saved order, that order
+    // is on no screen, and the field was renumbered afterwards — so the host was told seven were
+    // gone and had no way to find out WHICH. He would rather be told it does not fit and choose
+    // himself, and choosing is something only he can do.
+    //
+    // IT IS ALL OR NOTHING, AND IT SAYS SO AT THE MOMENT OF SELECTION rather than at launch. A
+    // refusal a host meets while picking is a fact they can act on; the same refusal met at the
+    // start line is a wall.
+    //
+    // THE MESSAGE NAMES NUMBERS, NEVER PEOPLE. How many the selection would hold, how many the
+    // track allows. Naming individuals would be the truncation defect wearing a better coat — it
+    // would still be the screen deciding who is out.
+    const wouldHold = players.length + incoming.length;
+    if (incoming.length > 0 && wouldHold > maxPlayers) {
+      setNotice(
+        `“${group.name}” does not fit. It would put ${wouldHold} racers in the field and this ` +
+          `track allows ${maxPlayers}. Nothing was added — remove ${wouldHold - maxPlayers} from ` +
+          `the field, or clear a group, and try again.`
       );
-    if (turnedAway > 0)
-      notices.push(
-        `${turnedAway} did not fit — the field is capped at ${maxPlayers} for this track. ` +
-          `The ${maxPlayers} in the field will race normally.`
-      );
-    setNotice(notices.join('; '));
+      return;
+    }
 
-    if (admitted.length === 0) return;
-    onChange([...players, ...admitted.map((name) => ({ name, group: group.name }))]);
+    if (incoming.length === 0) {
+      setNotice(
+        duplicates > 0
+          ? `Every name in “${group.name}” is already in the field. Nothing was added.`
+          : `“${group.name}” is empty.`
+      );
+      return;
+    }
+
+    setNotice(
+      duplicates > 0
+        ? `${duplicates} name${duplicates === 1 ? '' : 's'} in “${group.name}” ${
+            duplicates === 1 ? 'was' : 'were'
+          } already in the field and ${duplicates === 1 ? 'was' : 'were'} not added twice.`
+        : ''
+    );
+    onChange([...players, ...incoming.map((name) => ({ name, group: group.name }))]);
   }
 
   function removeGroup(group) {
+    // DESELECTING ALWAYS WORKS, and never refuses. It is the way out of every refusal above, so a
+    // guard on it — however reasonable-looking — would strand a host inside a field they cannot
+    // shrink. Clearing the notice is part of that: the reason it was shown has just been acted on.
     setNotice('');
     onChange(players.filter((p) => p.group !== group.name));
   }

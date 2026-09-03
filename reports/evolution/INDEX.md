@@ -695,6 +695,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [REFUSE-OVERSIZED-1.md](REFUSE-OVERSIZED-1.md) — **a group that does not fit is refused whole, and
+  the field can no longer reach the start line over the cap by ANY route** (2026-09-04, on
+  `feat/player-groups-1`; all four fingerprints unmoved). **His decision, option (b)**: truncation
+  told the host how many were cut and gave no way to learn WHICH — the names were the tail of a saved
+  order that is on no screen. ★ **THE PICKER CANNOT GUARD THE ONLY DOOR, and that is the finding.**
+  Two routes reach an over-cap field without misusing a control and neither goes through the picker:
+  **the TRACK changes under the roster** (open allows 100, closed 40, and switching does not touch
+  the players), and **the Dev Screen's “Load to Setup”**, which writes straight into state through
+  `ACTIVE_GROUP` with **no cap check anywhere on the path**. Without a Start-side check both would
+  have delivered their refusal at the start line — the thing the decision is against. ★ **The message
+  names NUMBERS, never individuals** — a test asserts no player name appears in it, because naming who
+  would be cut is the truncation defect in a better coat. ★ **Deselecting never refuses**: it is the
+  way out of every refusal, so a guard on it would strand a host in a field they cannot shrink.
+  ★ Reuses CHIP-CONTRAST-1's warning treatment rather than a third presentation, and sits above the
+  track's SOFT `maxRacers` warning, which says something different. **Both halves sabotage-proven**
+  (5 red, then 1 red); 134 tests green. **Quick Test is NOT covered and is reported, not built.**
+
 - [DROP-RACER-NUMBER-1.md](DROP-RACER-NUMBER-1.md) — **the badge and the shuffle are gone, and
   `assignRacers` went with them because it had nothing else to do** (2026-09-04, on
   `feat/player-groups-1`, NOT merged; **all four fingerprints unmoved**). **His decision on

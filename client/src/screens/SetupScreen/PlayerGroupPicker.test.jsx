@@ -115,13 +115,86 @@ describe('PlayerGroupPicker', () => {
     })();
   });
 
-  it('the field CAP is honoured, and the overflow is reported rather than dropped in silence', async () => {
+  // ── REFUSE-OVERSIZED-1 (the owner's decision, 2026-09-04) ───────────────────────────────────
+  //
+  // SABOTAGE — this replaced TRUNCATION, which admitted as many as fit and reported a COUNT. The
+  //   count was true and useless: the names it dropped were the tail of the group's saved order,
+  //   that order is on no screen, and the field was renumbered afterwards, so the host was told
+  //   seven were gone with no way to learn which.
+  //   What breaks if I delete this: `slice(0, room)` can come back and the suite stays green,
+  //   because a truncating picker still produces a legal field.
+
+  it('★ a group that does not fit is REFUSED WHOLE — nothing is added', async () => {
     const { state, rerender } = harness({ maxPlayers: 1 });
     fireEvent.click(await screen.findByTestId('group-chip-Reds'));
     rerender();
-    expect(state.players).toHaveLength(1);
-    expect(screen.getByTestId('group-notice')).toHaveTextContent(/did not fit/i);
-    expect(screen.getByTestId('group-notice')).toHaveTextContent(/capped at 1/);
+    expect(state.players, 'not one name may be admitted from a group that does not fit').toEqual(
+      []
+    );
+  });
+
+  it('★ and it says so with NUMBERS, at the moment of selection, naming nobody', async () => {
+    const { rerender } = harness({ maxPlayers: 1 });
+    fireEvent.click(await screen.findByTestId('group-chip-Reds'));
+    rerender();
+    const notice = screen.getByTestId('group-notice');
+    expect(notice).toHaveTextContent(/does not fit/i);
+    expect(notice).toHaveTextContent(/would put 2 racers/);
+    expect(notice).toHaveTextContent(/allows 1/);
+    expect(notice).toHaveTextContent(/Nothing was added/i);
+    // NEVER an individual. Naming who would be cut is the truncation defect in a better coat.
+    expect(notice.textContent).not.toMatch(/Anna|Ben/);
+  });
+
+  it('★ TWO groups that each fit but together do not: the second is refused, the first stands', async () => {
+    // maxPlayers 3: Reds is 2 and fits; Blues would take it to 4.
+    const { state, rerender } = harness({ maxPlayers: 3 });
+    fireEvent.click(await screen.findByTestId('group-chip-Reds'));
+    rerender();
+    expect(state.players.map((p) => p.name).sort()).toEqual(['Anna', 'Ben']);
+    fireEvent.click(screen.getByTestId('group-chip-Blues'));
+    rerender();
+    expect(state.players.map((p) => p.name).sort()).toEqual(['Anna', 'Ben']);
+    expect(screen.getByTestId('group-notice')).toHaveTextContent(/does not fit/i);
+  });
+
+  it('★ …and DESELECTING is the way out, and always works', async () => {
+    const { state, rerender } = harness({ maxPlayers: 3 });
+    fireEvent.click(await screen.findByTestId('group-chip-Reds'));
+    rerender();
+    fireEvent.click(screen.getByTestId('group-chip-Blues')); // refused
+    rerender();
+    fireEvent.click(screen.getByTestId('group-chip-Reds')); // out
+    rerender();
+    expect(state.players).toEqual([]);
+    // The notice goes with the reason for it.
+    expect(screen.queryByTestId('group-notice')).toBeNull();
+    // And now the group that would not fit, fits.
+    fireEvent.click(screen.getByTestId('group-chip-Blues'));
+    rerender();
+    expect(state.players.map((p) => p.name).sort()).toEqual(['Ben', 'Cara', 'Dev']);
+  });
+
+  it('a group whose every name is already in the field says so, and adds nothing', async () => {
+    const { state, rerender } = harness();
+    fireEvent.click(await screen.findByTestId('group-chip-Reds'));
+    rerender();
+    const before = state.players.length;
+    fireEvent.click(screen.getByTestId('group-chip-Blues'));
+    rerender();
+    fireEvent.click(screen.getByTestId('group-chip-Blues')); // off
+    rerender();
+    fireEvent.click(screen.getByTestId('group-chip-Reds')); // off
+    rerender();
+    expect(before).toBeGreaterThan(0);
+    expect(state.players).toEqual([]);
+  });
+
+  it('hand-typed names are untouched by a REFUSAL, as by every other group operation', async () => {
+    const { state, rerender } = harness({ initial: [{ name: 'Zoe' }], maxPlayers: 2 });
+    fireEvent.click(await screen.findByTestId('group-chip-Blues'));
+    rerender();
+    expect(state.players).toEqual([{ name: 'Zoe' }]);
   });
 
   it('★ a failed fetch says WHY, and does not render as "no groups"', async () => {
