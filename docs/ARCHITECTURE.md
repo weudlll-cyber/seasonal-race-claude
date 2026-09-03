@@ -767,7 +767,8 @@ Key properties:
 
 ### EMA dt-Smoothing (Variant C — PR #118)
 
-A separate smoothed delta-time (`smoothDt`) is used for cosmetic-only updates (camera lerp factor, track effects, minimap). The physics accumulator always uses raw `rawDt`.
+A separate smoothed delta-time (`smoothDt`) is used for cosmetic-only updates — **track effects and the minimap.** The physics accumulator always uses raw `rawDt`.
+*(Corrected 2026-09-04, SECOND-SITE-RATE-1: this listed **"camera lerp factor"** first. **The camera is fed `rawDt`, not `smoothDt`, and has been since `f16ab4de`, 2026-06-08.** `docs/CAMERA_DIRECTOR.md` was corrected on 2026-09-03 for exactly this claim and a source comment in `RaceScreen/index.jsx` says it in as many words; this was the third site, and the sweep that found the other two did not reach here.)*
 
 ```
 smoothDt = alpha × smoothDt + (1 - alpha) × rawDt   // alpha = 0.7 default

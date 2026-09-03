@@ -695,6 +695,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [SECOND-SITE-RATE-1.md](SECOND-SITE-RATE-1.md) — **3 of 32. It is NOT zero, and that is the
+  night's most important number** (2026-09-04; scope `3fc4c6ed..HEAD` — 105 non-merge commits, 184
+  with merges, 224 files). **32 corrections applied under the new constraints, 3 with a live second
+  site — 9.4%**, against 47% historically and against a 0% that was measured over SIX. **Zero over
+  five was not evidence and it did not survive a sample five times larger.** ★ **THE THREE**:
+  `AUDIT.md` states `battlePulkThresholdPx` — a key that occurs NOWHERE, the second site of an
+  ARCHITECTURE error corrected the day before; `ARCHITECTURE.md` says `smoothDt` feeds the **camera
+  lerp** when the camera has been fed `rawDt` since 2026-06-08 — **already contradicted in
+  CAMERA_DIRECTOR.md AND in a source comment**, and standing anyway; and `TRACK_LIFECYCLE.md`'s own
+  ASCII diagram shows `defaultTracks.js` as a live fallback while a row in the SAME FILE says it does
+  not exist. All three corrected. ★★ **AND IT IS THE PROBLEM THE BRIEF NAMED: the sweep IS being
+  performed and still missing things.** None of the three was forgotten; each was missed for a
+  **search-shape** reason — a document nobody thinks to open, a token that is legitimate 30 times
+  over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
+  a search. **Not a discipline failure, and not fixable by trying harder.**
+
 - [MAX-FIELD-1.md](MAX-FIELD-1.md) — **it was never a disagreement: three different limits and one
   dead key, wearing names close enough to look like four answers** (2026-09-04; no limit's VALUE
   moved, all four fingerprints unmoved). `maxPlayersClosed`/`Open` 40/100 is **the only field cap**;

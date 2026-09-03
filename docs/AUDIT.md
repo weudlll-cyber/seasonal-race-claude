@@ -539,7 +539,7 @@ Phase 4 implemented the first round of Camera-Director runtime tunables and fixe
 ### Scope of this branch
 
 - **EditorShape linear interpolation** — `Math.round()` → `Math.floor()` + fractional blend; eliminates ~20 px staircase jumps at zoom 4× (stage 26)
-- **Pack battle trigger** — `battlePulkThresholdPx` (200 px) + `battleMinDurationMs` (3000 ms) replace `battleGapThreshold`/hysteresis
+- **Pack battle trigger** — `battlePulkThresholdT` + `battleMinDurationMs` replace `battleGapThreshold`/hysteresis *(corrected 2026-09-04, SECOND-SITE-RATE-1: this said `battlePulkThresholdPx` (200 px). **That name occurs nowhere in the tree** — the key is `battlePulkThresholdT`, a LAP FRACTION, not a pixel distance. `docs/ARCHITECTURE.md` carried the same error and was corrected on 2026-09-03; this was its second site and the sweep that found the first did not find this one. Values are not restated here — `defaults.js` is their home.)*
 - **Schema v5** — `leadInDuration`/`leadOutDuration` (seconds) replace pixel-based `leadInDistance`/`followDuration`/`leadOutDistance`
 - **Observer phase** — lead-in → follow → lead-out per state entry
 - **Cleanup** — `_display*` and `_drawX/_drawY` workaround fields removed; stage-23 trace instrumentation removed; dead modules deleted
