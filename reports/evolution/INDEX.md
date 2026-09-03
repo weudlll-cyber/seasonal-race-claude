@@ -695,6 +695,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [BOARD-PORTRAIT-FIT-1.md](BOARD-PORTRAIT-FIT-1.md) — **the beetle is SEVENTH. The board sized one
+  axis of a two-axis picture, and 13 of 20 types spilled onto the number** (2026-09-04, **NOT MERGED
+  — `fix/board-portrait-fit-1` off master, his eye owed**). ★ **THE RENDER FINGERPRINT MOVED,
+  DELIBERATELY, AND NOTHING WAS MINTED**: it samples the STARTERS board, so a visible board change
+  must move it. **World and camera re-run and UNMOVED** — the R17 pairing. ★ **THE CAUSE.**
+  `displaySizeScale` sizes the body's NARROW axis only; the other follows the sprite's proportions,
+  and every shipped type's `baseRotationOffset` is 90°, which lays it ACROSS the screen at the number
+  chip. The board's own comment said the portrait "goes … to ~26.3 px" — **26.3 px was only ever its
+  height.** ★ **MEASURED**: 13 of 20 overflow by geometry, 14 by ink (read from the PNGs with
+  `sharp`), and **the beetle is 7th** — the HORSE, the default on most tracks, puts **45% more ink on
+  the number** and overflows 4.5× as far. The beetle's `displaySize` is 38, below the median:
+  **it is not a big sprite, it is a column that assumes a body is square.** ★ **It predates
+  2026-08-25** — that day only made a *beetle* board reachable on garden-path. ★ **THE FIX IS THE
+  ASSUMPTION**: no sprite and no config touched; `SpriteRacerType` gains `getBodyBox` and
+  `getPortraitFitScale`, and the fill/scale arithmetic `_drawBody` held inline becomes one home. The
+  race is untouched and a test holds it — the narrow-axis contract feeds row layout and braking.
+  ★★ **THE SABOTAGE THAT MATTERED WAS THE ONE THAT DID NOT FIRE**: reverting the board left all eight
+  tests green, because every one measured the HELPER and none asked what the BOARD passes. **A rule
+  the caller does not use is a rule that is not in force.** Two wiring tests added; the same sabotage
+  now goes red. ★ **The cost is named**: long racers get shorter portraits (rocket 35% of its former
+  height) — the column's geometry, not the fix's fault, and widening it costs the name.
+
 - [DROP-GP-SPEC-1.md](DROP-GP-SPEC-1.md) — **one of the two tests is deleted and the other is the
   ONLY browser evidence in the repository that garden-path finishes** (2026-09-03; one spec, two
   documents, nothing minted). **The file was NOT deleted, and the report is the argument for that.**
