@@ -99,9 +99,15 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 │       ↓ on success: update cache                            │
 │  2. Cache (localStorage geometries)   ← offline fallback    │
 │       ↓ if server unreachable AND cache empty               │
-│  3. Code-Bundle (defaultTracks.js)    ← last resort         │
+│  3. Code-Bundle (defaultTracks.js)    ← NOT BUILT (TLH-3)   │
 │       → Status-Banner shown in this mode                    │
 └─────────────────────────────────────────────────────────────┘
+
+*(Corrected 2026-09-04, SECOND-SITE-RATE-1: step 3 read “last resort” in the present tense, while
+the Code-Bundle row near the top of THIS SAME FILE says the file does not exist and is deferred as
+TLH-3. A document contradicting itself — and the 2026-09-02 sweep that corrected that row did not
+look at the diagram.)*
+
 
 ┌─────────────────────────────────────────────────────────────┐
 │  Server — data layout                                       │
