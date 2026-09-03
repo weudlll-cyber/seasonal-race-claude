@@ -3,9 +3,9 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 2 of the new chain. **Pieces 1 and 2 — the two that are never
+**Last rewritten:** after piece 3 of the new chain. **Pieces 1 and 2 — the two that are never
 dropped — are merged and pushed.** Master green after each; one branch locally and at origin, one new
-annotated tag, clean tree. **Pieces 3–10 have not started.**
+annotated tag, clean tree. **Pieces 4–10 have not started.**
 
 ---
 
@@ -44,6 +44,50 @@ the seed version rule. The `client/public/` hole was real and is what the accide
 backgrounds (33 ms to digest — but four of the six share a name with a seed background in a different
 format, and **whether they are the same pictures is a question nobody has asked**), and the two
 favicons. **There are no fonts and no sounds** — measured, not assumed.
+
+---
+
+## ★★ WAS THE CAMERA GATE TIGHTENED? — YES, AND HERE IS THE NUMBER YOU ASKED FOR FIRST
+
+**Your condition was binding and it was measured before the gate moved.** The instrument was run at
+the **daily tip of each of the last twelve days**, in a shared clone, counting tracks with zero
+ending frames:
+
+| daily tip | tracks contributing NO ending frames |
+| --- | --- |
+| 2026-09-03 … 2026-08-25 | **0** — seven days green |
+| 2026-08-24 … 2026-08-18 | **1 — garden-path**, every day |
+
+**Five of twelve red. ZERO of them WITHOUT CAUSE.** On each of those five days garden-path genuinely
+contributed nothing, so the gate would have been stating a true thing about a real gap — not crying
+wolf. It could not have been satisfied then; the reason was the gap, and the gap closed on
+2026-08-25.
+
+**The margin, so "green" is not read as "just barely":** the ceiling allows 12,000 frames. The slowest
+track uses 5,888 and garden-path 4,916 — **102 seconds of headroom**. A track would have to take
+**twice as long as the slowest one does now** to trip it.
+
+**So it was tightened, and what that costs is written into the guard**: a track that legitimately
+cannot finish in 200 s WILL block the instrument, and the failure message says *fix the track or the
+ceiling, not this gate*. Proven to fire by cutting one track's ceiling to 20 s.
+
+**The false sentence is gone.** What replaces it is derived from the same rows, so there is nothing
+left in it to go stale.
+
+## ★★ HOW MANY TRUTH-PASS VERDICTS RESTED ON A CLAIM? — ONE, OF NINETY-NINE
+
+And it is the one you already knew about. `BACKLOG.md`'s *"Garden Path does not finish"* was
+re-verdicted **STILL TRUE** on 2026-09-02 on the evidence of that very comment — which had been false
+for eight days. **The verdict said the question "cannot be established mechanically" and then
+established it anyway**, from the nearest thing to hand. Its own closing note named the missing step:
+*"no race was run for it"*. **The race takes 26 seconds**, and it was run: garden-path finishes,
+4,916 frames, 300 after the last crossing. **Re-verdicted in place**, with the old verdict left
+standing above the new one so the movement is visible.
+
+**The audit behind that number:** all 99 `BACKLOG-VERDICTS-1` verdicts classified by what their
+evidence IS. 64 name a file, a command or a count they ran; most of the remainder correctly say the
+question is not a tree question at all (NEEDS HIS WORD, *"waiting on a spec"*); **exactly one cites a
+document as evidence of a fact about the world.** The contamination was real and it was isolated.
 
 ---
 
@@ -399,7 +443,7 @@ list is short and that is the answer; **no third class-removing item was invente
 | --- | --- | --- |
 | 1 | Delete the crop script | **DONE** — both preconditions proven; knowledge beside the artwork; `archive/crop-sprite-sheets` |
 | 2 | Nothing watches the artwork | **DONE** — catches its founding incident, all nine files named |
-| 3 | The instrument that refutes its own printed sentence | not started |
+| 3 | The instrument that refutes its own printed sentence | **DONE** — sentence removed, gate **TIGHTENED** on a measurement, audit **1 of 99** |
 | 4 | The two rules that remove a fault class | not started |
 | 5 | The slider needs headroom | not started |
 | 6 | The four remaining instances | not started |

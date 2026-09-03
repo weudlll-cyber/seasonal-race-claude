@@ -17,6 +17,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   `scripts/lib/fingerprintCheck.test.mjs` and by a wired sabotage on the camera instrument. **No
   fingerprint moved**: all four were run against the record and all four match.
 
+- **2026-09-03 — [SPEC-AND-GATE-1](SPEC-AND-GATE-1.md)'s finding is ACTED ON, and the gate it named
+  is TIGHTENED on a measurement.** That report established that `camera-fingerprint` printed a
+  hardcoded sentence — *"garden-path does not finish inside the 200 s ceiling"* — two lines below its
+  own computed *"10 of 10 tracks contributed FINISHED frames"*. **Nothing in it is withdrawn.**
+  CAMERA-GATE-1 removed the sentence, replaced it with a line DERIVED from the same rows, and moved
+  the gate from "at least one track" to "every track" — **after** measuring the owner's condition:
+  replayed over the daily tip of the last twelve days, the tighter gate would have been red on **five
+  days and green on seven**, and **zero of the five without cause** (every red was garden-path
+  genuinely contributing nothing, all before `d73ec6a9` on 2026-08-25). **And the audit that report
+  asked for: of the 99 BACKLOG-VERDICTS-1 verdicts, exactly ONE rested on a claim rather than the
+  tree** — the garden-path entry itself, which cited the false comment. It is re-verdicted in place.
+
 - **2026-09-03 — "NOTHING WATCHES THE ARTWORK" IS WRONG ABOUT THE LARGER HALF OF IT.**
   PRE-CROP-FIELDS-1, WHATS-LEFT-1 and the morning sheet all said no guard watched the repository's
   hand-made assets. **What I verified was narrower**: that no guard DECLARES `client/public/`. It was
@@ -610,6 +622,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   (51.6 MB) was covered all along. ★ **The full inventory with costs**: 6 files / 21.3 MB of
   client-side track backgrounds and 2 favicons remain unwatched, **no fonts and no sounds exist**
   (measured), and the backgrounds raise a duplication question nobody has asked. **Extended nothing.**
+
+- [CAMERA-GATE-1.md](CAMERA-GATE-1.md) — **the sentence is gone, the gate is tightened on a
+  measurement, and exactly ONE of ninety-nine verdicts rested on a claim** (2026-09-03; all four
+  fingerprints run against the record and all four match, nothing minted). ★ **The owner's condition
+  was binding and was measured BEFORE the change**: twelve full runs of the instrument at the daily
+  tip of the last twelve days — **five days red, seven green, and ZERO of the five WITHOUT CAUSE**.
+  Every red was garden-path genuinely contributing nothing, every one before `d73ec6a9` (2026-08-25).
+  ★ **The margin, so "green" is not read as "just barely":** the ceiling allows 12,000 frames; the
+  slowest track uses 5,888 and garden-path 4,916 — **102 seconds of headroom**, so a track would have
+  to take twice as long as the slowest does now to trip it. ★ **What the tighter gate costs is written
+  into the guard**: a track that legitimately cannot finish in 200 s WILL block it, and the message
+  says *fix the track or the ceiling, not this gate*. **Proven to fire** by cutting one track's ceiling
+  to 20 s. ★ **THE AUDIT: 1 of 99.** Every `BACKLOG-VERDICTS-1` verdict was classified by what its
+  evidence IS — 64 name a file, a command or a count; most of the rest correctly say the question is
+  not a tree question (NEEDS HIS WORD, *"waiting on a spec"*); **exactly one cites a document as
+  evidence of a fact about the world**, and it is the garden-path entry that cited the false comment.
+  A second narrower pass returned four rows and three are clean. **The contamination was real and it
+  was isolated** — in the one place the pass had already admitted it could not answer mechanically
+  and reached for a comment instead of stopping. Its own note had named the missing step: *"no race
+  was run for it"*. **The race takes 26 seconds.**
 
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
