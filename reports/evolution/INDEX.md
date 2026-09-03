@@ -503,6 +503,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **and OPEN-ENDED outside it**, because nothing enumerates the homes: the twelve groups were found by
   hand. **The honest footnote to "four of six subtypes are catchable": one rule, one home.**
 
+- [SECOND-SITES-2.md](SECOND-SITES-2.md) — **the 52% has no "before" in it: every correction it
+  measured was made after 2026-08-31, and the block it called complete held nineteen entries, not
+  nine** (2026-09-03, READ-ONLY, nothing edited). ★ SECOND-SITES-1 says the INDEX corrections block
+  *"holds 9 entries"* and that its six-entry sweep was *"a complete sweep of the block, not a
+  subsample"*. **Counted at its own commit: 19.** The six it took are the six most recent — all dated
+  **2026-08-31 or later** — so its "earlier sample" was its LATER one and **the 52% contains no
+  correction from before the practice change it was meant to test.** ★ **The eleven never examined,
+  all dated 2026-08-12 to 08-23: 4 have a live second site — 36%**, against 0 of 6 on the later group.
+  ★ **All four are in the SAME FILE as the correction that withdraws them**: `INDEX.md`'s own
+  report-summary entries state *"7 of 12 names collide"*, *"0 of 8 non-exempt names overlap"*,
+  *"still yields zero names"* and *"the camera moves 0.1 world px at the gun"* as present-tense fact,
+  thousands of lines below the corrections block that withdraws each one. **SECOND-SITES-1 searched
+  living documents and code and never looked in the lab journal's own map**, which is the whole reason
+  its earlier-sample rate was zero. ★ **One has teeth:** `BACKLOG.md`'s open *"Garden Path does not
+  finish"* was re-verdicted STILL TRUE yesterday **on the evidence of a stale comment in
+  `camera-fingerprint.mjs`** — and tonight's run of that instrument gives garden-path **300 frames
+  after the last crossing**. ★ **The trend falls 36% → 0%, and three reasons not to bank it are
+  given**, including that the two groups are different KINDS of correction and the 52% averaged them.
+  **Honest combined figure: 15 of 32 = 47%.** ★ **Five of five of SECOND-SITES-1's own claim-groups
+  are still live a day later.**
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).

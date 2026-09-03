@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 6. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 7. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -85,15 +85,34 @@ the defect one level up.
 
 ### 3. Piece 7's second-site rate over the larger sample
 
-**NOT STARTED — but piece 3 turned up the thing that decides it, and it is not good news for the
-existing number.** SECOND-SITES-1 says the INDEX corrections block "holds **9** entries" and that it
-took "all six remaining — **a complete sweep of the block, not a subsample**". Counted at the tree
-it stood at that commit: **19**. It examined six, and **all six are dated 2026-08-31 or later**.
+**36% before 2026-08-26, 0% after — and the number you were given had no "before" in it.**
 
-**So the 52% has no "before" in it at all.** Every correction it measured — the 15 applied plus the
-6 sampled — was made on or after 2026-08-31, which is *after* the 2026-08-26 change the trend
-question asks about. **Thirteen earlier corrections were never examined.** Piece 7's job is now
-exactly to supply them.
+SECOND-SITES-1 says the INDEX corrections block *"holds 9 entries"* and that its six-entry sweep was
+*"a complete sweep of the block"*. **Counted at its own commit: 19.** The six it took are the six most
+recent, **all dated 2026-08-31 or later** — so its "earlier sample" was its later one, and **every
+correction inside the 52% was made after the practice change it was meant to test.**
+
+| population | n | with a live second site | rate |
+| --- | --- | --- | --- |
+| INDEX-block corrections **before 2026-08-26** | 11 | 4 | **36%** |
+| INDEX-block corrections **2026-08-31 and later** | 6 | 0 | **0%** |
+| the applied DOC-TRUTH set (all 2026-09-02) | 15 | 11 | 73% |
+| **honest combined** | **32** | **15** | **47%** |
+
+**The direction is what you hoped for and I would not bank it yet:** n is 6 and 11; age is confounded
+with practice (a two-day-old correction has had two days to acquire a second site); and the two groups
+are different KINDS — the 73% set are document corrections, the INDEX-block entries correct a number
+in an append-only report. **The 52% averaged them.**
+
+**★ And all four earlier hits are in the SAME FILE as the correction that withdraws them.**
+`reports/evolution/INDEX.md` states *"7 of 12 names collide"*, *"0 of 8 non-exempt names overlap"*,
+*"still yields zero names"* and *"the camera moves 0.1 world px at the gun"* as present-tense fact in
+its report summaries — thousands of lines below the corrections block that withdraws each one.
+**SECOND-SITES-1 searched living documents and code and never looked in the lab journal's own map.**
+
+**Five of five of its own filed second sites are still live a day later** — it was read-only, so that
+is a control, not a criticism. The clearest of them: `VERIFY-RULES.md` says the browser suite is
+"103/103 green" and `NIGHT-RUN.md` says it is 106, and neither knows about the other.
 
 ---
 
@@ -277,13 +296,19 @@ again.
 2. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
    validated range and stops there. Nothing above 0.60 has ever been measured.
 
-3. **The camera fingerprint's gate, and the sentence under it.** Its printed line
+3. **A backlog entry that should probably close, on evidence nobody had.**
+   `BACKLOG.md`'s open *"Garden Path does not finish"* was re-verdicted **STILL TRUE** yesterday, on
+   the evidence of the stale `camera-fingerprint.mjs` comment above. Its own closing note says
+   *"no race was run for it"*. **One was run tonight: 300 frames after the last crossing on
+   garden-path.** Closing a backlog entry is a verdict, so it was not taken.
+
+4. **The camera fingerprint's gate, and the sentence under it.** Its printed line
    *"garden-path does not finish inside the 200 s ceiling"* is false and unconditional, and it is
    the reason its gate is "at least ONE track" rather than "every track". Deleting the sentence is
    trivial; **tightening the gate changes when the build goes red**, and that is yours. The
    measurement is in the piece 4 report.
 
-4. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
+5. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
    0.05 px absolute (33× tighter), with `buggy` passing by floating-point dust. Both false statements
    are corrected; choosing the tolerance is yours.
 
@@ -299,7 +324,7 @@ again.
 | 4 | The inert guard half and the rotten spec | **DONE** — read-only; the inert half is repaired, the dead premise has THREE live sites |
 | 5 | Where else does a control disagree with what ships? | **DONE** — read-only; the class is **SIX**, not one |
 | 6 | What Rule A cannot see | **DONE** — read-only; it covers **1 of 12** groups, live population **12** |
-| 7 | The second-site rate, as a baseline | not started (read-only) |
+| 7 | The second-site rate, as a baseline | **DONE** — read-only; the baseline had no "before"; **36% → 0%**, combined **47%** |
 | 8 | The publish documentation | not started |
 
 ---
