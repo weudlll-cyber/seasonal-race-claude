@@ -228,26 +228,7 @@ export class SpriteRacerType {
 
     const idx = this._getFrameIndex(frame, racer.speed ?? 1);
     const sx = idx * cfg.frameWidth;
-    const _bfNarrowRaw = Math.min(cfg.bodyFillX, cfg.bodyFillY);
-    const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
-    const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
-    // displaySizeScale is now the body-narrow world-px reference divided by displaySize.
-    // Dividing by bodyFillNarrow converts from body-narrow units to frame units so the
-    // visible narrow body equals displaySize × displaySizeScale in world pixels.
-    //
-    // Sleeping long-axis guard (Stage 5): if a future racer has a visible-body aspect
-    // ratio exceeding BODY_LONG_AXIS_MAX_RATIO, scale up the effective bodyFillNarrow
-    // denominator so the long axis is capped at RATIO × narrow. INERT for all 20 current
-    // racer types — max ratio is 2.88:1 (rocket, bodyFillLong/bodyFillNarrow=0.801/0.278).
-    // Threshold: 5.0. Activate by adding a racer where max(bFX,bFY)/min(bFX,bFY) > 5.0.
-    const aspectRatio = bodyFillLong / bodyFillNarrow;
-    const guardedFillNarrow =
-      aspectRatio > BODY_LONG_AXIS_MAX_RATIO
-        ? bodyFillNarrow * (aspectRatio / BODY_LONG_AXIS_MAX_RATIO)
-        : bodyFillNarrow;
-    const scale =
-      ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / guardedFillNarrow) *
-      cfg.silhouetteScale;
+    const scale = this._frameScale(displaySizeScale);
     if (!Number.isFinite(scale) || scale <= 0) return;
     const dw = cfg.frameWidth * scale;
     const dh = cfg.frameHeight * scale;
@@ -256,6 +237,98 @@ export class SpriteRacerType {
     ctx.rotate(cfg.baseRotationOffset);
     ctx.drawImage(drawable, sx, 0, cfg.frameWidth, cfg.frameHeight, -dw / 2, -dh / 2, dw, dh);
     ctx.restore();
+  }
+
+  /**
+   * The effective body-narrow denominator, with the sleeping long-axis guard applied.
+   *
+   * ONE HOME (BOARD-PORTRAIT-FIT-1). `_drawBody` computed this inline and it was the only thing
+   * that knew it; `getBodyBox` below has to agree with it exactly, and two copies of a formula
+   * whose whole job is "how big is this drawn" is how a caller comes to believe a size it is not
+   * getting. That belief is the defect this method was extracted for — see `getPortraitFitScale`.
+   *
+   * Sleeping long-axis guard (Stage 5): a racer whose visible-body aspect exceeds
+   * BODY_LONG_AXIS_MAX_RATIO gets a larger denominator, capping its long axis at RATIO × narrow.
+   * INERT for all 20 current types — the maximum is 2.88:1 (rocket, 0.801/0.278).
+   */
+  _guardedFillNarrow() {
+    const cfg = this.config;
+    const raw = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+    const narrow = Number.isFinite(raw) && raw > 0 ? raw : 1.0;
+    const long = Math.max(cfg.bodyFillX, cfg.bodyFillY);
+    const aspect = long / narrow;
+    return aspect > BODY_LONG_AXIS_MAX_RATIO
+      ? narrow * (aspect / BODY_LONG_AXIS_MAX_RATIO)
+      : narrow;
+  }
+
+  /**
+   * The sheet-to-canvas scale for a given `displaySizeScale`.
+   *
+   * `displaySizeScale` is the body-narrow reference divided by displaySize. Dividing by the body
+   * fill converts from body-narrow units to FRAME units, so the visible NARROW body ends up
+   * `displaySize × displaySizeScale` px. **The other axis is not bounded by this** and follows the
+   * sprite's own proportions — which is correct on the track and is exactly what a caller drawing
+   * into a fixed box must not assume away.
+   */
+  _frameScale(displaySizeScale = 1) {
+    const cfg = this.config;
+    return (
+      ((cfg.displaySize * displaySizeScale) / cfg.frameHeight / this._guardedFillNarrow()) *
+      cfg.silhouetteScale
+    );
+  }
+
+  /**
+   * The VISIBLE BODY's on-screen bounding box at a given `displaySizeScale`, in canvas px.
+   *
+   * ★ WHY THIS EXISTS. `displaySizeScale` sizes ONE axis — the narrow one. Every caller that wanted
+   * a portrait in a fixed box has assumed it sized both, and the STARTERS board's own comment said
+   * so in as many words ("the drawn portrait is 94 % of it, so it goes … to ~26.3 px"). It is 26.3
+   * px on the narrow axis and up to **75.8 px** on the other, because `baseRotationOffset` is 90°
+   * for every shipped type and lays the long axis across the screen. Measured 2026-09-04: 14 of the
+   * 20 types put opaque pixels on the number chip beside them.
+   *
+   * The rotation is applied as an axis-aligned bounding box of the rotated body rectangle, so the
+   * answer is right for the 90° every type uses and honest for anything in between.
+   *
+   * @param {number} [displaySizeScale=1]
+   * @returns {{w: number, h: number}} the drawn body's width and height on screen
+   */
+  getBodyBox(displaySizeScale = 1) {
+    const cfg = this.config;
+    const scale = this._frameScale(displaySizeScale);
+    if (!Number.isFinite(scale) || scale <= 0) return { w: 0, h: 0 };
+    const bx = cfg.frameWidth * scale * cfg.bodyFillX;
+    const by = cfg.frameHeight * scale * cfg.bodyFillY;
+    const rot = cfg.baseRotationOffset ?? 0;
+    const c = Math.abs(Math.cos(rot));
+    const s = Math.abs(Math.sin(rot));
+    return { w: bx * c + by * s, h: bx * s + by * c };
+  }
+
+  /**
+   * The `displaySizeScale` that makes this type's VISIBLE BODY fit inside a `boxW × boxH` box.
+   *
+   * ★ THIS IS THE FIX FOR THE BOARD, AND IT IS NOT A FIX FOR ONE SPRITE. A caller drawing portraits
+   * into a column wants a box, not a narrow axis. Asking the TYPE for the scale keeps the geometry
+   * — body fill, rotation, silhouette scale — in the one place that owns it, so a caller cannot get
+   * it subtly wrong the way the board did, and any future portrait column gets the right answer
+   * without re-deriving anything.
+   *
+   * NOTHING ON THE TRACK USES THIS. The race sizes racers by the narrow axis deliberately: body
+   * fill feeds row layout and contact braking, and a racer that shrank to fit a box would change
+   * the race. This is for fixed-box UI only.
+   *
+   * @param {number} boxW  the box's width in canvas px
+   * @param {number} boxH  the box's height in canvas px
+   * @returns {number} the scale to pass to `drawRacer`; 0 if the type cannot be measured
+   */
+  getPortraitFitScale(boxW, boxH) {
+    const unit = this.getBodyBox(1);
+    if (!(unit.w > 0) || !(unit.h > 0)) return 0;
+    // The box grows linearly with the scale, so one measurement at 1 answers it.
+    return Math.min(boxW / unit.w, boxH / unit.h);
   }
 
   drawRacer(ctx, x, y, angle, racer, isLeader, frame, displaySizeScale = 1, isComeback = false) {
