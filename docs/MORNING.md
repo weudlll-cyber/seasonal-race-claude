@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 3. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 4. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -130,6 +130,41 @@ and applied them.
 
 ---
 
+## ★★ PIECE 4 — AN INSTRUMENT PRINTS A SENTENCE BESIDE THE NUMBER THAT REFUTES IT
+
+Run `node scripts/camera-fingerprint.mjs` and read the last four lines of its output together:
+
+    garden-path      a7d57478...   4916 frames  (300 after the last crossing)
+    ...
+    THE ENDING IS IN THIS HASH — 10 of 10 tracks contributed FINISHED frames.
+    garden-path does not finish inside the 200 s ceiling, so it has no ending to sample.
+
+**The first two are computed. The third is a hardcoded string, printed unconditionally.** It is
+false, it is printed on every non-quiet run, and it sits two lines under the number that refutes it.
+**This is the week's defect in its purest form and it is not in a document.**
+
+**It is also load-bearing.** That sentence is the stated REASON the instrument's gate is "at least
+ONE track produced a FINISHED frame" rather than "every track". With the premise dead, the tree
+supports the stronger gate — which is the difference between noticing that a track stopped reaching
+its ending and not noticing.
+
+**Where the premise came from:** `d73ec6a9` (2026-08-25) changed garden-path's default racer
+**snail → beetle** AND its default laps **4 → 2** in one commit. That single change killed BOTH
+premises of `client/e2e/garden-path-finishes.spec.js` — its assertion now runs backwards, and its
+own comment about "the track's own default is 4 laps" against a harness that hardcodes 2 describes a
+mismatch that no longer exists.
+
+**Three live sites of one dead premise. Nothing was applied** — the piece asked for the answer, not
+the edit. The spec should be **deleted, not rewritten**; the replacement assertion belongs over all
+ten tracks in `scripts/raceDriver.test.mjs`, which runs on every verify instead of when somebody
+remembers.
+
+**And the half that was INERT is not inert any more.** FP-COMPARE-2 gave all three fingerprint
+instruments `--check` through one shared implementation on 2026-09-02. Piece 4 re-establishes that
+rather than re-discovering it, and says so plainly.
+
+---
+
 ## ★ THE FINDING PIECE 1 DID NOT GO LOOKING FOR
 
 **The obvious version of that sweep — compare the STORED default against `min`/`max` — reports SIX
@@ -184,7 +219,13 @@ again.
 2. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
    validated range and stops there. Nothing above 0.60 has ever been measured.
 
-3. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
+3. **The camera fingerprint's gate, and the sentence under it.** Its printed line
+   *"garden-path does not finish inside the 200 s ceiling"* is false and unconditional, and it is
+   the reason its gate is "at least ONE track" rather than "every track". Deleting the sentence is
+   trivial; **tightening the gate changes when the build goes red**, and that is yours. The
+   measurement is in the piece 4 report.
+
+4. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
    0.05 px absolute (33× tighter), with `buggy` passing by floating-point dust. Both false statements
    are corrected; choosing the tolerance is yours.
 
@@ -197,7 +238,7 @@ again.
 | 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
 | 2 | Rename the pre-crop fields | **DONE** — Rule A gates, empty exception list; R18 written |
 | 3 | The fifty-six remaining corrections | **DONE** — 15 non-drift applied, 1 line citation, 54 deliberately left |
-| 4 | The inert guard half and the rotten spec | not started |
+| 4 | The inert guard half and the rotten spec | **DONE** — read-only; the inert half is repaired, the dead premise has THREE live sites |
 | 5 | Where else does a control disagree with what ships? | not started (read-only) |
 | 6 | What Rule A cannot see | not started (read-only) |
 | 7 | The second-site rate, as a baseline | not started (read-only) |
