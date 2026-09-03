@@ -695,6 +695,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [BUILD-TIME-RULES-1.md](BUILD-TIME-RULES-1.md) — **of the faults found since the census, TWO could
+  have been caught earlier by a machine; the rest became inevitable at the keystroke and are human
+  rules or nothing** (2026-09-04, READ-ONLY, PROPOSE ONLY). Twelve faults, each placed at the moment
+  it was DECIDED rather than noticed. **Four are mechanically catchable earlier and one of those
+  already is** — `no-control-regex` caught a heredoc-mangled regex at the commit. ★ **THE THREE
+  MISSED SECOND SITES ARE THE ONES THAT MATTER AND EARLINESS DOES NOT HELP THEM**: a document nobody
+  opens, a token legitimate 30 times over, and **a PICTURE**. A rule at the keystroke would have been
+  the same grep run sooner. **What would help is a better SEARCH, not an earlier one** — enumerate
+  documents, then read every hit in the files that mention the subject. ★ **WHY THIS PROJECT'S HUMAN
+  RULES ROT, read from its own history**: the rules that STUCK acquired a machine (R13, R17, R11);
+  the ones that ROTTED stayed prose (R16 named the wrong tool for weeks; the 0.60 bound moved because
+  its reason lived in a report's Limits section). **The pattern is PROXIMITY plus a FAILING ARTEFACT
+  plus a REFUSAL**, not discipline. ★ **And the thing no rule will fix**: both copies in C2 and both
+  bad sabotages in C3 were made by someone who had written the relevant constraint into a report the
+  same night. **Knowing the rule is not the failure mode; applying it to the artefact you are
+  currently building is.** ★ **The proposal is ONE small rule** — two CSS checks, one of which
+  `chipContrast.test.js` already contains — **and the honest statement that little else can move.**
+
 - [LEFT-BEHIND-1.md](LEFT-BEHIND-1.md) — **ONE stale sentence, and that is the whole answer**
   (2026-09-04). All six classes searched over `3fc4c6ed..HEAD`: **no** script nothing invokes, **no**
   export nothing imports, **no** test asserting removed behaviour (the four that still name
