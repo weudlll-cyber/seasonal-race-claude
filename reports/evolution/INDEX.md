@@ -471,6 +471,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and left: `BACKLOG.md:787`'s "has NEVER agreed" was repaired on 2026-09-02 and sits in a closed
   entry. B3 is left as a proposal, as the brief instructed.
 
+- [CONTROL-CLAIMS-1.md](CONTROL-CLAIMS-1.md) — **the class is SIX, not one, and every one is in
+  the card that TYPES its numbers instead of reading them** (2026-09-03, READ-ONLY, nothing edited).
+  Four kinds of claim a control makes about its value, measured over all 24 Dev Screen files:
+  **bounds 1 false** (fixed, piece 1), **step 3 false**, **label range 0 of only 6 that state one**,
+  **tooltip value 2 still false** (4 more fixed by piece 3). ★ **The structural finding:**
+  `CameraAdvancedSection` interpolates the live value in **24** tooltips and has **0** false claims;
+  `DynamicsTuningSection` interpolates in **0** and carries **all six**. A tooltip that reads the
+  value it describes cannot drift — **the fix for that kind is to interpolate, not to check.** ★ **Kind
+  B is piece 1's defect one level subtler and Rule C declares itself blind to it**: three controls
+  ship a value that is **off their own step grid** — `maxLateralSpeedPerStep` 0.028 on a 0.005 grid
+  from 0.005, and two more — so one arrow-click loses the shipped value with no way back by stepping.
+  ★ **Still false tonight:** two tooltips say **"Default: 67%"** where the keys ship **0.75** and
+  **0.55** — and the second names a key that `PHASE-CONTRACT` records as **overwritten at plan build
+  and never reaching a live race**, so it is wrong twice. ★ **Kind C's zero means less than it looks:**
+  6 stated ranges against 90 numeric inputs is a convention 7% of controls follow.
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).

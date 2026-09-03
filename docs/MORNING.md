@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 4. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 5. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -130,6 +130,35 @@ and applied them.
 
 ---
 
+## ★ PIECE 5 — THE CLASS IS SIX, AND ONE CARD CAUSES ALL OF IT
+
+Piece 1 asked how many controls could not REPRESENT their shipped value and the honest answer was
+one. **That was the smallest of the four kinds a control claims about its value.**
+
+| what the control claims | measured | false |
+| --- | --- | --- |
+| its BOUNDS contain the shipped value | 96 controls | **1** *(fixed, piece 1)* |
+| its STEP can REACH the shipped value | 96 controls | **3** |
+| its LABEL's stated range matches min/max | only 6 labels state one | **0** |
+| its TOOLTIP names the shipped value | 22 pairable claims | **2** *(4 more fixed, piece 3)* |
+
+**★ Every one of the six is in the same card.** `CameraAdvancedSection` interpolates the live value
+in **24** of its tooltips and carries **zero** false claims. `DynamicsTuningSection` interpolates in
+**zero** and carries **all six**. **A tooltip that reads the value it describes cannot drift** — one
+card already does it, so the fix for that kind is to interpolate, not to check.
+
+**Still false tonight, not fixed (this piece is read-only):** two tooltips say **"Default: 67%"**
+where the keys ship **0.75** and **0.55**. The second is wrong twice — `racePlanCorridorStart` is
+**overwritten at plan build** and never reaches a live race, so its tip names a wrong number for a
+key that does nothing.
+
+**And three controls ship a value that is off their own STEP GRID** — `maxLateralSpeedPerStep` ships
+0.028 on a 0.005 grid starting at 0.005. One arrow-click lands on 0.025 or 0.030 and **cannot get
+back to 0.028 by stepping.** That is piece 1's defect one level subtler, and Rule C declares itself
+blind to exactly it.
+
+---
+
 ## ★★ PIECE 4 — AN INSTRUMENT PRINTS A SENTENCE BESIDE THE NUMBER THAT REFUTES IT
 
 Run `node scripts/camera-fingerprint.mjs` and read the last four lines of its output together:
@@ -239,7 +268,7 @@ again.
 | 2 | Rename the pre-crop fields | **DONE** — Rule A gates, empty exception list; R18 written |
 | 3 | The fifty-six remaining corrections | **DONE** — 15 non-drift applied, 1 line citation, 54 deliberately left |
 | 4 | The inert guard half and the rotten spec | **DONE** — read-only; the inert half is repaired, the dead premise has THREE live sites |
-| 5 | Where else does a control disagree with what ships? | not started (read-only) |
+| 5 | Where else does a control disagree with what ships? | **DONE** — read-only; the class is **SIX**, not one |
 | 6 | What Rule A cannot see | not started (read-only) |
 | 7 | The second-site rate, as a baseline | not started (read-only) |
 | 8 | The publish documentation | not started |
