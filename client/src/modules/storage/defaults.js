@@ -25,9 +25,16 @@ import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';
 export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
   winners: 3,
-  maxPlayers: 20,
+  // ── THE FIELD CAP: how many racers one race may hold. TWO values, because a closed track's
+  //    lap geometry holds fewer than an open track's length. This is the ONLY limit on this screen
+  //    that governs a FIELD (MAX-FIELD-1, 2026-09-04).
   maxPlayersClosed: 40,
   maxPlayersOpen: 100,
+  // `maxPlayers: 20` stood here and was READ BY NOTHING — removed 2026-09-04 (MAX-FIELD-1),
+  // established by an uncapped search of client, server, scripts and shared. Every other
+  // `maxPlayers` in the tree is a local or a prop of that name, never this key. It survived because
+  // it LOOKED like the field cap and sat beside two keys that are, so a reader counting "the
+  // maximum field size" found three numbers where there are two.
   autoAdvance: false,
   autoAdvanceDelay: 5,
   soundEffects: true,

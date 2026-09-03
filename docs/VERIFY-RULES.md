@@ -848,6 +848,38 @@ the visible half is then the checkable one.
 
 ---
 
+## R20 — A LIMIT'S NAME SAYS WHAT IT LIMITS
+
+**Rule.** When two limits sit near each other, their names must distinguish **what each governs**, not
+only their values. `maxPlayersClosed` and `SAVED_GROUP_MAX_NAMES` are one limit on a FIELD and one on
+a SAVED LIST; `maxPlayers` and `PLAYER_MAX` beside them read as two more opinions about the same
+thing.
+
+**The failure it closes is a READER'S, and it is the expensive kind.** Four numbers — 20, 40/100,
+200, and a per-track `maxRacers` — looked like four answers to *“how big can a field be”*. Measured
+2026-09-04 (MAX-FIELD-1), they are **not the same question**:
+
+| | governs | kind |
+| --- | --- | --- |
+| `maxPlayersClosed` 40 / `maxPlayersOpen` 100 | how many racers ONE RACE may hold | **HARD, and the only field cap** |
+| `SAVED_GROUP_MAX_NAMES` 200 (server) | how many names a SAVED GROUP may hold | HARD, a storage limit |
+| `track.maxRacers` | a per-track RECOMMENDATION | **SOFT** — and `null` on every shipped track, so it never fires |
+| ~~`maxPlayers` 20~~ | **nothing. Read by no code at all** | removed |
+
+**So it was never a disagreement.** It was three different limits and one dead key, wearing names
+close enough that a reader had to open four files to learn they did not conflict. **A naming defect
+costs the same as a real one the first time somebody trusts the wrong number.**
+
+**Do not reconcile limits that are not the same fact.** The temptation on finding four numbers is to
+pick one; that would have capped saved groups at 40 or fields at 200. **The work is establishing what
+each governs, and then saying so in its name.**
+
+**There is no guard for this**, and there could not easily be one: *“do these two names describe the
+same thing”* is a question about meaning. It is enforced at review time, by whoever is adding the
+fifth number.
+
+---
+
 ## The instruments, and what each costs
 
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,

@@ -34,7 +34,11 @@ import {
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
 const NAME_MAX = 100;
-const PLAYER_MAX = 200;
+// ★ THIS IS A SAVED-GROUP SIZE, NOT A FIELD CAP (MAX-FIELD-1, 2026-09-04). A group of 200 names may
+// be SAVED; whether it fits a race is a different question with a different answer (40 on a closed
+// track, 100 on an open one, in client defaults.js). Named for what it limits, because `PLAYER_MAX`
+// beside `maxPlayersClosed` read as a third opinion about the same thing.
+const SAVED_GROUP_MAX_NAMES = 200;
 // NAME-LIMIT-1: the limit has ONE home, above both packages, because it must be identical on both
 // sides of this HTTP boundary. This route is the ONLY place a name can be enforced for real — a
 // client is untrusted and an input attribute is a hint to a browser.
@@ -86,8 +90,8 @@ export function validateBody(body) {
   if (!Array.isArray(body.players) || body.players.length === 0) {
     errors.push('players must be a non-empty array');
   } else {
-    if (body.players.length > PLAYER_MAX) {
-      errors.push(`players must contain at most ${PLAYER_MAX} entries`);
+    if (body.players.length > SAVED_GROUP_MAX_NAMES) {
+      errors.push(`players must contain at most ${SAVED_GROUP_MAX_NAMES} entries`);
     }
     if (body.players.some((p) => typeof p !== 'string' || !p.trim())) {
       errors.push('all player names must be non-empty strings');
