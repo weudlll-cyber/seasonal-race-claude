@@ -565,16 +565,17 @@ treatment and the badge/shuffle removal. **It has not been merged and will not b
    available to every one of them and was applied to none: it is a document-by-document edit with a
    judgement in each.
 
-1. **`crop-sprite-sheets.mjs` — what happens to the spent list.** Its twelve entries describe sheets
-   that no longer exist in that form; the tool overwrites in place; it prints "Verification: OK"
-   while corrupting; and it is one stray command away at all times, as tonight demonstrated.
-   Options: **delete the twelve entries** (git holds them, and `BACKLOG.md`'s 2026-06-03 row records
-   every transition), **delete the script**, **add a refusal** that compares the PNG's actual frame
-   width against `preCropFrameWidth` before touching anything, or — **the one I would pick** — a rule
-   inside `check-fallback-agreement` (which already loads the racer registry) comparing every racer
-   type's `frameWidth × frameCount` against its PNG's header. That one catches a corrupted sheet
-   *however* it got corrupted, not just this script's way, and it closes the hole in item 3 above.
-   It is a piece of its own and was not built tonight.
+1. ~~**`crop-sprite-sheets.mjs` — what happens to the spent list.**~~ **CLOSED — and the option I
+   recommended is the one that was built.** You chose DELETE THE SCRIPT on 2026-09-03; it is gone and
+   archived at the annotated tag `archive/crop-sprite-sheets`, and its twelve entries went with it.
+   The pre-crop geometry lives in `client/public/assets/racers/CREDITS.md`, which is now its only
+   home. **And the rule I would have picked exists**: `check-fallback-agreement`'s **Rule D** compares
+   every racer type's `frameWidth × frameCount` against the PNG's own IHDR header — 20 sheets, 0
+   disagree, re-sabotaged 2026-09-04 on the REGISTRY with the artwork untouched, and it names both
+   sides when it fires. Its blind half is covered too: **Rule D catches a registry that drifted from
+   its art; the artwork DIGEST catches art that drifted from itself** (31 assets, 0 changed), which is
+   the case a geometry check cannot see. *(Struck rather than deleted so the question still reads as
+   one that was asked and answered.)*
 
 2. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
    validated range and stops there. Nothing above 0.60 has ever been measured.
