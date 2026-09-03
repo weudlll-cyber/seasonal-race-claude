@@ -695,6 +695,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [CITATION-PAIRS-1.md](CITATION-PAIRS-1.md) — **61 converted, 51 refused, and Rule F now checks THE
+  PAIR, which closes its own declared blind spot** (2026-09-04). His decision, with the part that
+  makes it worth doing: **the href's line still drifts silently**, so converting the visible half
+  alone would leave the text saying the right name while the click landed elsewhere — **worse than
+  today, because a reader trusts a link.** ★ **Rule F checks that the symbol in the text is AT the
+  lines the href names.** 61 PAIRED, 8 bare, **0 disagree** — and the verification is not a separate
+  pass, it IS the rule. ★ **THE BLIND SPOT, RE-MEASURED: from 8 of 8 to 8 of 69.** Proven by
+  sabotage with `NATURALNESS_CEILING`, a symbol that really IS in `raceGovernor.js` — at `:30`, not at
+  the cited L92-L97 — which **the old rule would have passed**; the failure says WHICH half is wrong,
+  or a reader edits the symbol when the line drifted. ★ **THE PICKER HAD TO BE TIGHTENED THREE
+  TIMES**, and that is the useful part: a first pass produced `storageSet` (a call), `useEffect` (a
+  hook), `background` (a CSS property) and `for` (a keyword) — all genuinely at the line, all passing
+  a paired check, all useless. **A citation that is checkable and meaningless is not an improvement on
+  a line number.** Declarations only; 70 → 63 → 61. ★ **51 REFUSED, not deferred** — nothing in their
+  range is a nameable symbol, and an unchecked pair is the failure this design exists to avoid.
+  ★ Found on the way: the paired check first resolved by BASENAME and this repo has four `index.jsx`,
+  so **14 of 61 came back AMBIGUOUS** — the rule declining to check the very citations the conversion
+  was for. It resolves by href now. Five tests, 45 in the suite; R19 carries the form.
+
 - [SLIDER-BOUND-060-1.md](SLIDER-BOUND-060-1.md) — **the bound is 0.60 again, and this time the WHY
   is written where the bound is** (2026-09-04; the shipped value 0.6 never moved, all four
   fingerprints unmoved). His decision reversing SLIDER-HEADROOM-1 a day later. ★ **THE MISSING LINE
