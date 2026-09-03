@@ -15,7 +15,11 @@ It began as a simple horse-race visualizer and grew into a full multi-racer, mul
 
 **RaceArena needs its backend.** Every screen is behind a sign-in, and the account you sign in with
 is created through the backend — so the client on its own gets you a login screen and no way past it.
-One command starts everything:
+
+**You need Node.js 20 or newer and Docker.** *(Named 2026-09-03, PUBLISH-DOCS-1: this section handed
+a stranger `npm` and `docker compose` commands without saying what had to be installed first. The
+Node floor is declared in every `package.json`'s `engines`; running the backend without Docker is
+possible and is [SETUP.md](docs/SETUP.md) §5's.)*
 
 ```bash
 git clone https://github.com/weudlll-cyber/seasonal-race-claude.git
@@ -38,6 +42,12 @@ curl -X POST http://localhost:4000/api/auth/setup \
 
 Then sign in at `http://localhost:4000` and you are in, with all 10 built-in tracks and 20 racers.
 Setup runs **once** — a second attempt answers `409 setup already complete`.
+
+**One optional file, and the server tells you about it.** `docker-compose.override.yml` is gitignored,
+so a fresh clone has only the `.example`. Everything above works without it; the server just prints
+`[auth] Using ephemeral dev session secret — sessions will not survive restart`, and you sign in
+again after each restart. Copying the example and setting `RA_SESSION_SECRET` ends that.
+[ENVIRONMENT.md](docs/ENVIRONMENT.md) owns what every variable does.
 
 **For development** run the two halves separately instead — `docker compose up -d` for the API and
 `cd client && npm run dev` for the app on `http://localhost:5173`, which gives you hot reload. You
@@ -81,18 +91,25 @@ The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-t
 | Tests   | vitest (full unit suite), Playwright (e2e)                       |
 | Storage | Browser `localStorage` + local Express backend for tracks/images |
 | Backend | Node / Express (Phase L, port 4000)                              |
-| CI/CD   | GitHub Actions (lint → test → audit on every PR)                 |
+| CI/CD   | GitHub Actions — **three** jobs per PR: client (lint, format, tests + coverage, audit), server (tests, audit), living-doc guards + script tests |
 
 ## Project structure
 
 ```
 seasonal-race-claude/
 ├── client/   # React frontend (Vite, vitest, Playwright)
-├── server/   # Express backend — track + background storage (port 4000)
+├── server/   # Express backend — accounts, tracks, racers, branding (port 4000)
+├── shared/   # The one module both halves import (name-length limits)
 ├── scripts/  # Headless simulation + tuning-sweep tools (Node.js)
 ├── docs/     # Architecture, API, setup, specs, lessons — see docs/README.md
+├── reports/  # The lab journal — append-only, see reports/README.md
 └── .github/  # CI/CD workflows
 ```
+
+*(`shared/` added 2026-09-03, PUBLISH-DOCS-1: it was missing from this tree while being the reason
+the Docker build context is the repository root — `server/Dockerfile` copies `shared/nameLimits.mjs`
+in, and the image would not run without it. `reports/` added for the same reason: it is a top-level
+directory a stranger will meet.)*
 
 ## Documentation
 
