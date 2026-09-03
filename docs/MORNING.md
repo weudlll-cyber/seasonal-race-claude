@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 5. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 6. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -127,6 +127,35 @@ retune that you FLIPPED on 2026-07-26 to G=0.5 / strength=1.0. One of them also 
 opposite trade-off from the one the confirm gate found. **39 days stale, on the card an operator
 reads while judging the mechanism.** Piece 5 is read-only and found them; piece 3 is the fix-piece
 and applied them.
+
+---
+
+## ★ PIECE 6 — RULE A COVERS ONE GROUP OF TWELVE, AND ITS LIVE POPULATION IS TWELVE NUMBERS
+
+**You were told four of six subtypes are catchable. This is the footnote you should have before
+treating the class as closed.**
+
+| | |
+| --- | --- |
+| Rule A's DOMAIN | **423 facts** — 20 racer types × 22 discovered fields, all scalar |
+| its LIVE POPULATION today | **12** — twelve `frameCount` literals, one file, all agreeing |
+| duplicated-fact groups it covers | **1 of 12 in full, plus HALF of a second** |
+
+**Why the population is twelve: REGISTRY-LITERALS-1 removed the 214 copies before Rule A was built.**
+`sim-fairness.mjs` and `goldenRunner.mjs` now call `racerFacts(id)` — they READ the registry. So Rule
+A is a guard against RECURRENCE over an almost-empty population, and it has objected exactly twice in
+its life: to the pre-crop table, and to sabotage I wrote to test it.
+
+**★ The half it does not cover is the sharper half.** Group A2 is spritesheet frame geometry, and
+**its source of truth is the PNG file.** Rule A checks copies against the REGISTRY. Nothing checks the
+registry against the artwork — no guard declares `client/public/`, no test reads a spritesheet's
+bytes, and the render fingerprint cannot blit a sprite in node. **That agreement has been verified by
+hand twice and by a machine never**, which is also why tonight's accidental crop run would have
+passed every check.
+
+**Bounded inside the registry, open-ended outside it.** Inside: 423 facts and six enumerable blind
+SHAPES. Outside: the uncovered set is "every duplicated fact whose home is not the racer registry",
+and **nothing enumerates the homes** — the twelve groups were found by hand.
 
 ---
 
@@ -269,7 +298,7 @@ again.
 | 3 | The fifty-six remaining corrections | **DONE** — 15 non-drift applied, 1 line citation, 54 deliberately left |
 | 4 | The inert guard half and the rotten spec | **DONE** — read-only; the inert half is repaired, the dead premise has THREE live sites |
 | 5 | Where else does a control disagree with what ships? | **DONE** — read-only; the class is **SIX**, not one |
-| 6 | What Rule A cannot see | not started (read-only) |
+| 6 | What Rule A cannot see | **DONE** — read-only; it covers **1 of 12** groups, live population **12** |
 | 7 | The second-site rate, as a baseline | not started (read-only) |
 | 8 | The publish documentation | not started |
 
