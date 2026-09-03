@@ -471,6 +471,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and left: `BACKLOG.md:787`'s "has NEVER agreed" was repaired on 2026-09-02 and sits in a closed
   entry. B3 is left as a proposal, as the brief instructed.
 
+- [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
+  sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
+  edited or silenced; one 25.8 s measurement taken because the central claim needed a number).
+  ★ **The spec is red because ONE commit killed BOTH its premises**: `d73ec6a9` moved garden-path's
+  default racer **snail → beetle** *and* its default laps **4 → 2** together, so the "estimate exceeds
+  200 s" assertion now runs backwards AND the spec's own comment about the harness hardcoding a
+  different lap count is gone. **Delete the first test, replace the second** — its 1,500 s budget was
+  sized for a 424 s snail race that no longer exists. ★ **The inert half is NOT inert:** FP-COMPARE-2
+  gave all three instruments `--check` through one shared implementation the night before; §4
+  establishes what it was for and what catches it now, rather than re-discovering it. ★ **THE LIVE
+  FINDING: the same dead premise holds a DIFFERENT gate open, and the instrument prints it.**
+  `camera-fingerprint` gates on "at least one track produced a FINISHED frame", justified by
+  *"garden-path does not finish inside the 200 s ceiling"* — and it prints that sentence, hardcoded
+  and unconditional, **two lines below its own computed "10 of 10 tracks contributed FINISHED frames"
+  and three below `garden-path … (300 after the last crossing)`.** A sentence and its refutation, in
+  one block, from one program, on every run. **Nothing was applied.**
+
 - [CITATIONS-1.md](CITATIONS-1.md) — **the non-drift remainder is FIFTEEN, not two; the drift cannot
   be re-derived and was not touched; and one dead tag was standing in EIGHT living documents**
   (2026-09-03; `verify` green, nothing minted). ★ **The brief's "~54 drift and 2 are not" understates
