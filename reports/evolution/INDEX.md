@@ -695,6 +695,45 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [BACKLOG-CHECKBOXES-1.md](BACKLOG-CHECKBOXES-1.md) — **three boxes closed by their own verdict, and
+  a FOURTH that looked identical and is correctly open** (2026-09-03, documents only, nothing minted).
+  BACKLOG-VERDICTS-1 returned ALREADY DONE on three entries on 2026-09-02 and **the checkboxes never
+  moved** — a reader scanning for open work reads the box, not the paragraph under it. All three
+  **re-verified at the tree** rather than taken from the verdict: `server/package.json`'s `test` is
+  `vitest run`; the track change closed by SEED-REDELIVERY-1; garden-path's seed is the beetle.
+  ★ **The re-check paid for itself once**: `:3958` *"a Dev Screen change does not reach a running
+  race"* sat in the same block, read the same way, and a first pass attributed a neighbour's verdict
+  to it. Its own `verify:` command returns `const [cameraConfig] = useState(() => loadCameraConfig())`
+  — **no setter. Correctly open.** Boxes struck, not deleted, with the evidence on the line. 60 → 57.
+
+- [INDEX-SUMMARIES-1.md](INDEX-SUMMARIES-1.md) — **the four withdrawn claims were in the SAME FILE as
+  the correction that withdraws them, and a fifth was in the same paragraph as the first** (2026-09-03,
+  documents only, nothing minted). SECOND-SITES-2's sharpest finding was not that four old corrections
+  had live second sites but **where**: this INDEX's own report summaries, thousands of lines below its
+  own corrections block. Each now carries the withdrawal beside the claim — *"7 of 12"* → **3 of 11**,
+  *"0 of 8 non-exempt"* → withdrawn, *"still yields zero names"* → **it yields 670**, *"0.1 world px at
+  the gun"* → **narrowed to the first frame, 187 world px within 400 ms**. ★ **The sweep found a fifth
+  four lines below the first**: *"all seven intrusions"* is the same inflated pass. **No report
+  re-counts them, so no count is invented** — it is struck and the reader sent to the block; the px²
+  range stands because it does not depend on the count. ★ **Five reports and the block's dated entries
+  are deliberately untouched**: reports are append-only, and correcting a dated entry in place is how a
+  correction record stops being a record.
+
+- [SECOND-SITES-LIVE-1.md](SECOND-SITES-LIVE-1.md) — **the seven this chain filed and left standing,
+  and TWO of them were a correction that landed at the source while the copy kept speaking**
+  (2026-09-03, documents and one code comment, nothing minted). ★ **THE FINDING IS NOT THE LIST.**
+  `VERIFY-RULES.md` R10's prune paragraph and `BACKLOG.md:627`'s `corridor-truth` line were **both
+  corrected on 2026-09-02** — and the ceremony instruction and the code comment that copied them were
+  not. **A correction that fixes the source and not the copies has done half the work and looks like
+  all of it**, and one of the copies was load-bearing because it was phrased as an instruction.
+  ★ **The suite count was REMOVED, not updated**: writing 106 would have reset the clock on the exact
+  failure being fixed; `NIGHT-RUN.md` is its one home and already says to run it and read what it
+  says. The `TAGS.md` pair is the same move — **a register of PAST states is the last place that
+  should name the present one.** ★ **Closed on the way by its own verify command**: `.git/worktrees`
+  returns 0. Its live remainder — nothing removes a throwaway worktree in a `finally`, so step 13 is a
+  cure and not a prevention — is **re-filed as its own open line rather than buried in a struck one.
+  Open boxes 57 → 57**, said plainly rather than reported as a decrease.
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).
