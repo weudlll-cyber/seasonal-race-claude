@@ -695,6 +695,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [GP-SPEC-TRIM-1.md](GP-SPEC-TRIM-1.md) — **the spec is one claim now, and the contradiction around
+  it is settled: garden-path IS scorable, and the sweep is not scoring a track that fails two of its
+  twelve items** (2026-09-04). His decision revising *delete the file*: keep only what is needed.
+  **77 lines → 60**, and what survives is exactly *“this track finishes in the browser”*. Removed: two
+  paragraphs of removal history (DROP-GP-SPEC-1 is their home), the e2e ports paragraph (true of
+  every spec, `e2e-env.js` is its home), `test.slow()` beside an explicit timeout, a **25-minute
+  budget sized when the race was believed never to finish**, and a line citation converted under R19.
+  ★★ **THE CONTRADICTION IS NOT DOUBTFUL ANY MORE — IT IS FALSE, MEASURED ON THE HARNESS THE CLAIM IS
+  ABOUT.** The backlog entry's own `verify:` was a race, not a grep, and it was run: 255 s, one race,
+  a full acceptance sheet. **Garden-path reaches PHOTO_FINISH with the winner on canvas and IS
+  graded** — passing ten of twelve and **FAILING TWO** (item 9 winner-cut, 4 violations worst at frame
+  6241; item 10 walk 0.52). ★ **So the exclusion’s justification is gone and the cost is not zero**:
+  it stood on *“there is nothing to score”*, and my own 2026-09-03 line *“costs nothing while it
+  stands”* was wrong for the same reason. **What the gate RUNS is not changed — that reddens a build
+  and is his.** Both sites corrected, backlog entry closed by its own command, 57 → 56.
+  ★ **AND THE HARNESS HUNG SILENTLY ON ITS FIRST RUN**: `dist-sweep` empty, nothing on the app port,
+  fifteen minutes with no output — the spawned build is `stdio: "ignore"`, so a build that produces
+  nothing leaves no trace and the instrument hangs rather than fails. Run by hand it builds in 873 ms.
+  Filed, not fixed: **a hang looks like patience.**
+
 - [REFUSE-OVERSIZED-1.md](REFUSE-OVERSIZED-1.md) — **a group that does not fit is refused whole, and
   the field can no longer reach the start line over the cap by ANY route** (2026-09-04, on
   `feat/player-groups-1`; all four fingerprints unmoved). **His decision, option (b)**: truncation

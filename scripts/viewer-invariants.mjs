@@ -163,12 +163,20 @@ function geometries() {
 //   - the eight tracks' own geometry: searound's tight corners, luger-hill's gradient, dirt-oval's
 //     and river-run's shapes. A defect that needs one of THOSE curves to appear now reaches the
 //     nightly sweep instead of the gate, i.e. a day later rather than before the merge.
-//   - garden-path entirely — recorded as never finishing at seed 9, so never scorable anyway.
-//     ★ DOUBTFUL AND UN-RECHECKED, 2026-09-03 (GARDEN-PATH-CLOSE-1): the same claim in two OTHER
-//     harnesses has been measured false since 2026-08-25 (`d73ec6a9` gave the track the beetle and
-//     two laps). No race has been run at seed 9 to settle THIS one, and it is not corrected on
-//     another harness's evidence — that is the mistake this project has already made about this
-//     exact track. The exclusion costs nothing while it stands: the nightly sweep runs all ten.
+//   - garden-path entirely. The reason recorded here was that its race never finishes at seed 9,
+//     so it was never scorable anyway.
+//     ★★ THAT REASON IS FALSE, MEASURED ON THIS HARNESS, 2026-09-04 (GP-SPEC-TRIM-1). Flagged
+//     DOUBTFUL on 2026-09-03 because two OTHER harnesses had retracted the same claim and no race
+//     had been run HERE. One was:
+//         node scripts/viewer-invariants.mjs --tracks=garden-path --seeds=9 --arm=shipped
+//     255 s, one race, a full acceptance sheet. GARDEN-PATH FINISHES AND IS SCORABLE: it reaches
+//     PHOTO_FINISH with the winner on canvas at (0.465, 0.695), and it is GRADED on the twelve
+//     items — passing ten and FAILING two, item 9 (winner cut, 4 violations, worst at frame 6241)
+//     and item 10 (walk, 0.52).
+//     ★ SO THE EXCLUSION DOES NOT COST NOTHING. It was justified on the ground that there was
+//     nothing to score; there is, and two of the twelve fail. WHAT THE GATE RUNS IS NOT CHANGED
+//     HERE — that decides what reddens a build and is the owner's. The nightly sweep still runs
+//     all ten, so those two failures are visible a day later rather than never.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
