@@ -506,8 +506,12 @@ per-push CI run. A ten-minute browser suite gating every merge trains people to 
 **The history that made it urgent, and the state it is in now.** Until 2026-08-16 the suite had never
 run successfully at all: `ProtectedRoute` landed 2026-06-14, no spec authenticated, and 85 of 102
 died at the login gate — **about two months dead while looking exactly like a check** (see
-[Lesson 209](LESSONS.md)). It was repaired over 2026-08-16/17 and is **103/103 green**, with a
-measured flake rate of roughly **two tests per five runs** from one shared mechanism, now fixed. The
+[Lesson 209](LESSONS.md)). It was repaired over 2026-08-16/17 and went green, with a
+measured flake rate of roughly **two tests per five runs** from one shared mechanism, now fixed.
+**The suite's SIZE and its pass count are not restated here** — [NIGHT-RUN.md](NIGHT-RUN.md) holds
+them, and it records that the numerator stopped moving while the denominator did not. *(Corrected
+2026-09-03, SECOND-SITES-LIVE-1: this line said "103/103 green" while `NIGHT-RUN.md`, in another
+file, already said 106.)* The
 cost, not the state of repair, is why it stays outside the ordinary path.
 
 **The decision is asserted, not just written down.** `scripts/verify.test.mjs` requires that

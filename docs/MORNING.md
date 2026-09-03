@@ -249,9 +249,15 @@ its report summaries — thousands of lines below the corrections block that wit
 withdrawal beside the claim rather than only thousands of lines above it. The reports themselves are
 untouched: they are append-only, and the corrections block stays their home.
 
-**Five of five of its own filed second sites are still live a day later** — it was read-only, so that
-is a control, not a criticism. The clearest of them: `VERIFY-RULES.md` says the browser suite is
-"103/103 green" and `NIGHT-RUN.md` says it is 106, and neither knows about the other.
+**Five of five of its own filed second sites were still live a day later** — it was read-only, so that
+was a control, not a criticism. The clearest of them: `VERIFY-RULES.md` said the browser suite was
+"103/103 green" while `NIGHT-RUN.md` said 106, and neither knew about the other.
+
+**All seven are CLOSED as of 2026-09-03** (SECOND-SITES-LIVE-1). `VERIFY-RULES.md` no longer states
+the count at all — `NIGHT-RUN.md` is its one home. Two more of the seven had already been corrected
+at their own site and the copy left standing, which is the same shape one layer down: R10's prune
+paragraph and `BACKLOG.md`'s `corridor-truth` line were both fixed on 2026-09-02, and the code
+comment and the ceremony instruction that copied them were not.
 
 ---
 

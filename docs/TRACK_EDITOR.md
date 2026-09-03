@@ -126,13 +126,18 @@ The Track Editor behaves differently depending on whether a `?load=<serverId>` U
 
 ### Code-Bundle Fallback
 
-When the server is unreachable and the geometry cache is empty, the frontend falls back to the Code-Bundle (`defaultTracks.js`). In this mode:
+**NOT BUILT.** `client/src/modules/storage/defaultTracks.js` does not exist, and neither does this
+fallback; it is deferred as TLH-3 in [TRACK_LIFECYCLE.md](TRACK_LIFECYCLE.md), which owns it.
+*(Corrected 2026-09-03, SECOND-SITES-LIVE-1: the two blocks below were written in the present tense
+and were the last place in the documents asserting the file exists.)* **As PLANNED**, when the server
+is unreachable and the geometry cache is empty, the frontend would fall back to the Code-Bundle
+(`defaultTracks.js`), and in that mode:
 
 - A status banner is shown: "Server unavailable — showing default tracks (limited functionality)"
 - Default tracks appear with empty geometries (not selectable for races until drawn)
 - Write operations are disabled
 
-The Code-Bundle is updated manually: after the 5 default tracks have been drawn, the Dev-Screen "Export" button (TLH-3) writes a JSON snapshot which the user commits into `defaultTracks.js`.
+The Code-Bundle would be updated manually: after the 5 default tracks have been drawn, a Dev-Screen "Export" button (TLH-3) would write a JSON snapshot for the user to commit into `defaultTracks.js`. **Neither the button nor the file exists** — see `TRACK_LIFECYCLE.md`.
 
 ---
 

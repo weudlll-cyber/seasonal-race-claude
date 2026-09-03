@@ -647,18 +647,33 @@ nothing is designed here, no key is added, and no change is implied.
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
-- [ ] **The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
-      multiplying.** **THE COUNT IS DELIBERATELY NOT WRITTEN HERE ANY MORE** — it has been wrong
-      three times (ten on 2026-08-05, forty-seven on 2026-08-22, **fifty-one on 2026-08-23**), which
-      is what a number restated in prose does. Every one is STALE; none is live.
-      **verify:** `ls .git/worktrees | wc -l` — **still open while it returns more than 0.** — every one is a
-      OneDrive Files-On-Demand placeholder carrying `ReadOnly`, which blocks the delete. Not a lock, an
-      attribute. They are inert metadata pointing at directories that no longer exist.
-      **Do not add `prune` to the ship ceremony** — it already fails here, and a ritual that cannot
-      succeed teaches people rituals are optional (TAG-GUARD-2 §6.2). **The upstream fix instead:**
-      whatever creates a throwaway worktree should remove it in a `finally`, so the stub is never
-      created. Even that leaves the ReadOnly directory, so the OneDrive attribute question has to be
-      settled before any of this is worth doing.
+- [x] ~~**The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
+      multiplying.**~~ **CLOSED 2026-09-03 (SECOND-SITES-LIVE-1) BY ITS OWN VERIFY COMMAND:**
+      `ls .git/worktrees | wc -l` returns **0**, and the entry said *"still open while it returns more
+      than 0"*. Closing it is mechanical, not a new judgement. **THE COUNT IS DELIBERATELY NOT WRITTEN
+      HERE** — it was wrong three times (ten on 2026-08-05, forty-seven on 2026-08-22, **fifty-one on
+      2026-08-23**), which is what a number restated in prose does.
+      **WHAT CLOSED IT:** WORKTREE-STUBS-1 (2026-09-02) cleared the three stubs then standing. The
+      blocker was real and is named so a later reader does not think it was imagined — each stub was a
+      OneDrive Files-On-Demand placeholder carrying `ReadOnly`, which blocks the delete; not a lock,
+      an attribute. **The recipe is `attrib -R /d` at all three levels — the directory, `logs/` and
+      `refs/` — because `/s /d` looks like it recurses and does not.**
+      ★ **THE INSTRUCTION BELOW IS WITHDRAWN, and it was right when written.** This entry said
+      *"do not add `prune` to the ship ceremony — it already fails here, and a ritual that cannot
+      succeed teaches people rituals are optional (TAG-GUARD-2 §6.2)"*. **That was conditional on
+      prune failing, and the condition is gone**: PRUNE-STEP-1 added it as SHIP-CEREMONY step 13 on
+      2026-09-02 after reproducing the recipe against a freshly created stub. The reasoning stands
+      whole; only its premise moved.
+      **STILL TRUE and not done:** the upstream fix — whatever creates a throwaway worktree should
+      remove it in a `finally`, so the stub is never created — is unbuilt. It is not what this box
+      asked for, and it is filed as its own line below rather than kept open under a closed one.
+
+- [ ] **Nothing removes a throwaway worktree at CREATION's end, so the stub is created and then
+      cleaned up later.** SHIP-CEREMONY step 13 clears the stubs a block leaves behind, which is a
+      cure rather than a prevention. Whatever creates a throwaway worktree should remove it in a
+      `finally`. **Filed 2026-09-03 (SECOND-SITES-LIVE-1)** as the live remainder of the closed
+      `.git/worktrees` entry above; the closure was about prune working, not about stubs not being
+      made. **verify:** grep the tooling for `worktree add` and check each caller has a `finally`.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .git/worktrees | wc -l` returns **3** today, against the 51 the entry last recorded, so the stubs shrank but did not go. It is tonight's **piece 14** (*the worktree stubs, at the cause*), which had not started when this verdict was written.
 
