@@ -23,18 +23,19 @@ export function shuffle(array, rng = Math.random) {
   return array;
 }
 
-/**
- * Assigns racer numbers (1-based) to a list of player names.
- * Numbers are shuffled so assignment is unpredictable.
- *
- * @param {string[]} playerNames
- * @returns {{ name: string, racerNumber: number }[]}
- */
-export function assignRacers(playerNames) {
-  const numbers = playerNames.map((_, i) => i + 1);
-  shuffle(numbers);
-  return playerNames.map((name, i) => ({ name, racerNumber: numbers[i] }));
-}
+// ── `assignRacers` WAS HERE, and it is gone (DROP-RACER-NUMBER-1, 2026-09-04) ────────────────
+//
+// It existed to give every player a shuffled `racerNumber`, which the Players tab drew as a `#3`
+// badge beside the name. THE OWNER RETIRED BOTH on 2026-09-04, and his reasoning is the shape of
+// the removal rather than a note beside it: **the badge created an expectation it did not meet.**
+// He read it as deciding the numbers the racers carry in the race, and it decided nothing — those
+// come from `raceNumbers.js`, drawn from the race SEED on a generator of its own.
+//
+// ★ DO NOT RE-ADD IT THINKING IT IS `raceNumber`. Two fields, one letter apart, and only one of
+// them ever reaches a race. SHUFFLE-REACH-1 traced the pair; this comment is here because the
+// near-collision is exactly how a removed mechanism comes back.
+//
+// `shuffle` below STAYS and is unrelated: `rowLayout.js` uses it for the start grid, seeded.
 
 /**
  * Pick a random integer in [min, max] inclusive.

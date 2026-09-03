@@ -12,6 +12,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
+import PlayerGroupPicker from './PlayerGroupPicker.jsx';
+import { sectionsOf } from './rosterGroups.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -189,7 +191,7 @@ function SetupScreen() {
   // plus a `title` that says why. No new component, no new message style, no new state.
   const selectedGeometryReady = !!selectedTrack?.geometryId && !!getTrack(selectedTrack.geometryId);
 
-  const canStart = players.length > 0 && selectedTrackId !== null && selectedGeometryReady;
+  const canStartBase = players.length > 0 && selectedTrackId !== null && selectedGeometryReady;
 
   // Filter racer types to those compatible with the selected track's surface classes.
   // Types with empty surfaceClasses are always included (native trail fallback).
@@ -249,6 +251,30 @@ function SetupScreen() {
     const geom = getTrack(selectedTrack.geometryId);
     return geom ? !geom.closed : false;
   }, [selectedTrack]);
+
+  // PLAYER-GROUPS-1: the field cap, resolved ONCE. It was computed inline at the one place that
+  // needed it; two components need it now, and two copies of a `??` chain is how they drift apart.
+  const effectiveMaxPlayers = trackIsOpen
+    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
+    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed);
+
+  // PLAYER-GROUPS-1: the roster split by group, for the start bar. One derivation, shared with the
+  // Players tab, so the two can never disagree about who is in which group.
+  const rosterSections = useMemo(() => sectionsOf(players), [players]);
+
+  // ── A FIELD OVER THE CAP CANNOT BE STARTED (REFUSE-OVERSIZED-1, 2026-09-04) ──────────────────
+  //
+  // The group picker refuses a selection that would not fit, and the Add button has always stopped
+  // at the cap — so the obvious reading is that an over-cap field is unreachable and this check is
+  // dead. IT IS NOT, and the route is worth naming because nothing else on this screen watches it:
+  //
+  //   pick an OPEN track (cap 100) -> add 60 players -> pick a CLOSED track (cap 40).
+  //
+  // The roster does not change when the track does, so the field is now 60 against a cap of 40 and
+  // no control was misused to get there. Refusing at the group picker alone would have left that
+  // door open, and the failure would have arrived at the start line rather than while choosing.
+  const overCap = players.length > effectiveMaxPlayers;
+  const canStart = canStartBase && !overCap;
 
   // ── Canonical model inputs for the selected track ─────────────────────────────────────────
   // One normal speed (px/s) for every track; the race's PACE is that speed times the selected
@@ -710,14 +736,19 @@ function SetupScreen() {
           {activeTab === 0 && (
             <>
               <h2 className={styles.panelTitle}>Players</h2>
+              {/* PLAYER-GROUPS-1: the picker sits ABOVE the name input, because filling the field
+                  from a saved group is the common case and typing thirty names is not. It writes
+                  into the SAME roster the input below writes into — there is one field, and both
+                  doors lead to it. */}
+              <PlayerGroupPicker
+                players={players}
+                onChange={setPlayers}
+                maxPlayers={effectiveMaxPlayers}
+              />
               <PlayerSetup
                 players={players}
                 onChange={setPlayers}
-                maxPlayers={
-                  trackIsOpen
-                    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
-                    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed)
-                }
+                maxPlayers={effectiveMaxPlayers}
               />
             </>
           )}
@@ -1006,6 +1037,21 @@ function SetupScreen() {
               ℹ️ {players.length} players will start in {rowLayoutHints.totalRows} rows
             </div>
           )}
+          {/* REFUSE-OVERSIZED-1: the HARD cap, said where the Start button is, in the warning
+              treatment CHIP-CONTRAST-1 established rather than a third presentation of its own.
+              It sits ABOVE the track's soft `capacity-warning` below, which is a different claim —
+              that one says the race may feel cramped, this one says it cannot start. */}
+          {overCap && (
+            <p role="alert" data-testid="over-cap-refusal" className={styles.groupNotice}>
+              <span aria-hidden="true">⚠️</span>
+              <span>
+                <strong>{players.length}</strong> racers are in the field and this track allows{' '}
+                <strong>{effectiveMaxPlayers}</strong>. Remove{' '}
+                <strong>{players.length - effectiveMaxPlayers}</strong>, or pick a track that allows
+                more.
+              </span>
+            </p>
+          )}
           {rowLayoutHints.showCapacityWarn && (
             <div
               data-testid="capacity-warning"
@@ -1020,7 +1066,17 @@ function SetupScreen() {
             </div>
           )}
           <div className={styles.startSummary}>
-            <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''} ·{' '}
+            <strong>{players.length}</strong> player{players.length !== 1 ? 's' : ''}
+            {/* PLAYER-GROUPS-1: WHO is racing, not just how many. The start bar is the last thing
+                read before the gun and it is where a wrong field is still cheap to fix. */}
+            {rosterSections.length > 1 && (
+              <span className={styles.startSummaryGroups} data-testid="start-summary-groups">
+                {' ('}
+                {rosterSections.map((s) => `${s.label} ${s.members.length}`).join(' + ')}
+                {')'}
+              </span>
+            )}{' '}
+            ·{' '}
             {selectedTrack ? (
               <strong>
                 {getRacerType(
@@ -1251,7 +1307,10 @@ function SetupScreen() {
                     // failure. Separate the two so the cause is the one that is actually true.
                     selectedTrack?.geometryId && !selectedGeometryReady
                     ? 'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
-                    : 'Add at least one player and select a track to start'
+                    : overCap
+                      ? // REFUSE-OVERSIZED-1: numbers, and the way out. Never names.
+                        `${players.length} racers are in the field and this track allows ${effectiveMaxPlayers}. Remove ${players.length - effectiveMaxPlayers}, or pick a track that allows more.`
+                      : 'Add at least one player and select a track to start'
               }
             >
               Start Race →

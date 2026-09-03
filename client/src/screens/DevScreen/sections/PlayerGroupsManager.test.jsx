@@ -49,9 +49,8 @@ vi.mock('../../../modules/storage/defaults.js', () => ({
   DEFAULT_RACE_DEFAULTS: { maxPlayers: 20, maxPlayersClosed: 40, maxPlayersOpen: 100 },
 }));
 
-vi.mock('../../../modules/utils/RandomHelper.js', () => ({
-  assignRacers: vi.fn((players) => players.map((p) => ({ name: p }))),
-}));
+// DROP-RACER-NUMBER-1: the RandomHelper mock was removed with `assignRacers`. This component no
+// longer imports that module — Load-to-Setup writes plain `{ name }` objects.
 
 import PlayerGroupsManager from './PlayerGroupsManager.jsx';
 import {
@@ -311,7 +310,16 @@ describe('PlayerGroupsManager — ACTIVE_GROUP written locally on Load', () => {
 
     fireEvent.click(screen.getByTitle('Load this group into the Setup Screen'));
 
+    // DROP-RACER-NUMBER-1: the SHAPE is asserted, not just "an array". The hand-off used to run the
+    // names through `assignRacers` for a `racerNumber`; it now carries names only, and a saved group
+    // must still load. The server stores `players` as plain strings, so this is the whole contract.
     expect(storageSet).toHaveBeenCalledWith('racearena:activeGroup', expect.any(Array));
+    const [, handedOff] = storageSet.mock.calls.find((c) => c[0] === 'racearena:activeGroup');
+    expect(handedOff.length).toBeGreaterThan(0);
+    for (const p of handedOff) {
+      expect(Object.keys(p)).toEqual(['name']);
+      expect(typeof p.name).toBe('string');
+    }
   });
 });
 

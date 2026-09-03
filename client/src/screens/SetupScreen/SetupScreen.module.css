@@ -250,18 +250,8 @@
   border-radius: var(--radius);
 }
 
-.racerBadge {
-  min-width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 4px;
-}
+/* `.racerBadge` and `.reassignBtn` were removed here on 2026-09-04 (DROP-RACER-NUMBER-1) with the
+   `#3` badge and the 🔀 button they styled. Nothing else referenced either. */
 
 .playerName {
   flex: 1;
@@ -281,25 +271,6 @@
 
 .removeBtn:hover {
   color: var(--color-primary);
-}
-
-.reassignBtn {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid #2a2a35;
-  border-radius: var(--radius);
-  color: var(--color-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition:
-    border-color var(--transition),
-    color var(--transition);
-}
-
-.reassignBtn:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
 
 .emptyHint {
@@ -498,4 +469,150 @@
 
 .linkBtn:hover {
   filter: brightness(1.2);
+}
+
+/* ── PLAYER-GROUPS-1 — the group picker and the grouped roster ─────────────────────────────
+   CHIP-CONTRAST-1, 2026-09-04: these were rewritten to use THIS SCREEN'S OWN selected/unselected
+   convention, which `.optionBtn` / `.optionBtnActive` above already define and `.tab` / `.tabActive`
+   follow: muted text on a recessed near-black field when off, full text with a --color-primary
+   border and a dark red-tinted field when on. The first version invented its own — a brand-tinted
+   fill and no `color` at all, so the label fell back to the UA's default BLACK button text on a
+   near-black panel and measured 1.20:1. It also used three custom properties this project does not
+   define (--border, --panel-alt, --brand-primary as a chip fill), so its readability depended on a
+   colour the operator picks for event branding and could never be guaranteed. */
+
+.groupPicker {
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #2a2a35;
+}
+
+.groupPickerHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.groupPickerTitle {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.groupPickerHint {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.groupChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Unselected — `.optionBtn`'s treatment exactly. 5.48:1. */
+.groupChip,
+.groupChipOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #0d0d0f;
+  border: 1px solid #2a2a35;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background var(--transition);
+}
+
+.groupChip:hover {
+  border-color: #444;
+  color: var(--color-text);
+}
+
+/* Selected — `.optionBtnActive`'s treatment exactly. 15.47:1. */
+.groupChipOn {
+  border-color: var(--color-primary);
+  background: #1f0e10;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* The count rides ON the chip, so it takes the chip's own field as its background rather than a
+   translucent black that lands on whatever is behind. 11.79:1 off, 12.96:1 on. */
+.groupChipCount {
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: #2a2a35;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.groupChipOn .groupChipCount {
+  background: #3a1a1e;
+}
+
+/* ── The over-capacity notice — a WARNING, not an error (CHIP-CONTRAST-1 item 3) ───────────
+   The treatment is the one this screen already uses for `capacity-warning` in the start bar:
+   a ⚠️ and --color-accent, with wording that says the race still starts. Nothing is broken here
+   — a field of 40 runs — so it must not wear the error red the Start button's refusal uses.
+   The panel is new and is the only part that is: the same words in the same colour were already
+   passing 4.88:1 and were still missed, because every secondary line on this screen looks the
+   same. Salience, not legibility, was the defect. */
+.groupNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--color-accent);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: #2a1f14;
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.playerGroupSection {
+  margin-bottom: 0.6rem;
+}
+
+.playerGroupHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.3rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.playerGroupCount {
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: #2a2a35;
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.startSummaryGroups {
+  color: var(--color-muted);
+  font-size: 0.9em;
 }
