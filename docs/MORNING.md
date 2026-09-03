@@ -3,135 +3,133 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 8. **ENFORCE THE HYGIENE IS FINISHED — all ten pieces merged and
-pushed.** Master is green after each. One branch locally and at origin, zero worktree stubs, a clean
-tree, and **no commit in this chain touches `docs/fingerprints.json`.**
+**Last rewritten:** after piece 1 of the new chain. **The previous chain (ENFORCE THE HYGIENE) is
+finished — all ten pieces merged and pushed.** This chain is running now; pieces below are marked
+DONE, RUNNING or NOT STARTED.
 
 ---
 
-## ★ THE FOUR NUMBERS
+## ★ THE THREE NUMBERS
 
-### 1. Are Rule A and Rule B live and green?
+### 1. How many controls could not represent their shipped value?
 
-| | state |
+**ONE — the one you named, and no others.**
+
+| | |
 | --- | --- |
-| **Rule A** — a literal mirroring a machine-readable home must agree with it | **BUILT and RED at its founding instance — but NOT a gate** |
-| **Rule B** — no branch may stand at origin whose tree master already holds | **LIVE AND GREEN**, empty keep list |
+| Dev Screen controls resolved and checked | **96** |
+| **could not represent their shipped value** | **1** — `choreoOutcomeStart` |
+| needed a JUDGEMENT rather than a widening | **0** |
+| not resolvable (printed every run, never counted as coverage) | 18 |
 
-**Rule A does not gate, and that is the result rather than a shortfall.** Its only objection on
-today's tree is **legitimate**: `crop-sprite-sheets.mjs` records the *pre-crop source geometry* a
-one-shot run took as its input — same field names, a different fact. **No exception was added**, per
-your rule. It prints, loudly, and waits for you.
+**Fixed, and the shipped value did not move.** `choreoOutcomeStart` is still `0.6`. The widget's
+ceiling went 0.55 → **0.60**, its label to "(0.25–0.60)", its tip to "0.6 = shipped".
 
-**It is proven to catch what it was built for.** Run against the tree at `11093fff` (2026-06-03) it
-finds **21 disagreements — 8 frameWidth, 8 frameHeight, 5 displaySize** — the same count
-SPRITE-AUDIT-DERIVATION-1 reached independently and by hand. **It would have gone red the day that
-table was written**, not 91 days later.
+**The bound was not mine to choose — it was already written down three times.**
+`DEVSCREEN-INVENTORY.md`, `PHASE-CONTRACT.md` and `defaults.js` all record the VALIDATED range as
+**[0.25, 0.60]**. The widget stopped at 0.55, which is 0.05 short — **exactly one step, and exactly
+where the shipped value lives.** The sibling control in the same card, `racePlanPulkStart`, already
+keeps widget clamp == validated range [0.10, 0.60]. I applied the rule the neighbour follows.
 
-**Rule B gates — after I broke it and fixed it.** See below.
+**It sits at the top of its range with no headroom, and that is honest rather than comfortable.**
+0.60 is where the measurement stops (the 2026-07-17 sweep, band-reach still held on 3 of 4 tracks
+*at* 0.60). Putting an unmeasured span behind a slider is a fairness judgement — **that one is yours,
+below.**
 
-### 2. The corrected backlog count, beside last night's
+### 2. Is Rule A green without an exception list after the rename?
 
-| | last night | tonight |
+**NOT STARTED — piece 2 runs next.** Today Rule A objects to **16 disagreements in ONE file**
+(`crop-sprite-sheets.mjs`), all `frameWidth`/`frameHeight`, over 8 racer types. It is REPORT-ONLY
+and does not gate.
+
+### 3. Piece 7's second-site rate over the larger sample
+
+**NOT STARTED.** The population is the INDEX corrections block: **20 corrections**, dated 2026-08-12
+to 2026-09-03, and they split **10 before / 10 after 2026-08-26** — which is the cut the trend
+question turns on.
+
+---
+
+## ★ THE FINDING PIECE 1 DID NOT GO LOOKING FOR
+
+**The obvious version of this sweep — compare the STORED default against `min`/`max` — reports SIX
+violations, and FIVE of them are false.**
+
+| control | ships | its box shows | bounds |
+| --- | --- | --- | --- |
+| `racePlanBonusTransitionEnd` | 0.75 | **75** (× 100, "% race") | 30 – 95 |
+| `racePlanCorridorStart` | 0.55 | **55** | 50 – 100 |
+| `racePlanCorridorEnd` | 1.0 | **100** | 50 – 100 |
+| `nameTagFrameFrac` | 0.022 | **2.2** (× 1000 / 10, "% of frame") | 1 – 5 |
+| `nameTagAllUntilMs` | 8000 | **8** (/ 1000, seconds) | 0 – 30 |
+
+**A control's bounds are a claim about the number it DISPLAYS, not the one it stores.** A guard that
+cries wolf five times out of six gets turned off, and takes the one real finding with it. Rule C
+evaluates the value expression with the shipped default substituted in — and a test pins that,
+because "simplifying" it back looks like a clean-up.
+
+---
+
+## ★ AND A SECOND, OLDER FOSSIL UNDERNEATH — EIGHT LIVE SITES
+
+Establishing the bound meant reading the phase model, which still describes a world that ended on
+2026-07-29. **"`pulkStart` is 0.25" was standing at eight live sites:** three code comments in
+`racePlanner.js`, one in `defaults.js`, one in `sim-fairness.mjs`, three in `PHASE-CONTRACT.md`.
+
+**The root site is the worst kind.** `PHASE-CONTRACT.md` did not merely quote a stale number — it
+**warned the reader** that the shipped value differs from a "fallback literal 0.25". There is no
+literal: `DEFAULT_PHASE_FRACTIONS.pulkStart` READS `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart`.
+A correction written to protect against drift had itself drifted.
+
+**A ninth, of the same shape, one file over:** `camera/framingConfig.js` says its
+`DEFAULT_MIN_RACERS_VISIBLE` is *"deliberately a literal rather than an import"* — **two lines above
+the import** — and points at `raceBehavior.js` for "the same wording", which that file no longer
+carries. `719f6c51` converted 259 fallbacks to read the default and did not touch the paragraph
+explaining why they were copies. That comment instructs the next reader to maintain by hand a copy
+that is not there.
+
+**Every repair replaces the number with the name of its home**, so the same sentence cannot rot again.
+
+---
+
+## ★ WHAT NEEDS YOUR WORD
+
+1. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
+   validated range and stops there. Going higher needs a fairness measurement first — nothing above
+   0.60 has ever been run. **Not a hygiene question.**
+
+2. **`crop-sprite-sheets.mjs` — and piece 2 has already turned up more than the rename asked for.**
+   Establishing what reads those fields showed the script **overwrites the sprite sheets in place**
+   and its `frameWidth: 128` for horse describes a sheet whose frames are **150 px wide today**.
+   Running it now would slice every frame at the wrong offset and overwrite the shipped artwork.
+   **The rename is going ahead as you chose**; whether the spent list should be deleted outright is
+   in the piece 2 report.
+
+3. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
+   0.05 px absolute (33× tighter), with `buggy` passing by floating-point dust. Both false statements
+   are corrected; **choosing the tolerance is a product judgement and is yours.**
+
+---
+
+## WHERE EVERY PIECE STANDS
+
+| # | piece | state |
 | --- | --- | --- |
-| open before | 128 | **128** |
-| closed | 16 | **16** |
-| still true | 105 | **105** |
-| needs your word | 7 | **7** |
-
-**No correction was needed: the file was never doubled.** Thirteen of the fourteen "duplicate"
-sections are the file's own PART ONE (OPEN) / PART TWO (CLOSED) structure — a subject's open items
-under its heading in one part, its closed items under the same heading in the other. **Merging them
-would have destroyed the open/closed sort**, so they were left alone. This is *proven* rather than
-re-adjudicated: the 280 lines the count is computed from are **byte-identical** before and after.
-
-**One duplicate was real, and it was one night old** — my own BACKLOG-VERDICTS-1 moved entries into a
-new CLOSED block keeping their `##` headings. Fixed by demoting five headings; no content moved.
-
-### 3. Of the ninety document corrections: applied, and refuted
-
-**34 applied. 0 refuted on verification.** Every one re-checked against the code, the command, or the
-config module before being applied. **56 remain**, about 54 of them line-number drift — named as the
-lowest-value class and deliberately not done as a batch of hand edits, since each needs a new line
-number that will drift again and the real repair is structural.
-
-### 4. Piece 9's second-site count
-
-**11 of 21 corrections had left an identical false statement standing somewhere else — 16 live sites.
-About one in two.**
-
-And piece 3's own sweep found **5 more**, none previously filed — including a **code comment** outside
-both censuses' scope, and `ARCHITECTURE:285`, which DOC-TRUTH-2 filed together with `:309` and where
-**only `:309` was repaired last night**. I reproduced the very defect the same day I read its
-measurement.
-
----
-
-## ★ THE FAULT I OPENED, AND HOW IT WAS FOUND
-
-**Rule B shipped comparing PATHS, and failed on the very next branch pushed after it — this chain's
-own.** A branch that only MODIFIES files adds no path, so master's tree holds every path it holds:
-that is what an ordinary work-in-progress branch looks like, and the guard called it deletable and
-exited 1. The hook and CI would have gone red for anyone with work pushed.
-
-**BUILD-RULE-B-1 recorded rejecting the stronger comparison deliberately. That reasoning weighed the
-wrong risk.** The false negative it avoided is a branch that outlived the step meant to delete it; the
-false positive it accepted fires on normal work, every time.
-
-**The ceremony's shell is not wrong — it is used differently.** A person runs it on ONE branch at
-merge time, having already decided that branch is finished. The guard runs on EVERY branch,
-continuously, including ones nobody has finished. Matching the shell was the wrong thing to optimise
-for.
-
-Fixed to compare `(path, blob)`, re-proved in all three directions, with a regression test for the
-exact false positive. **Constraint 2 caught it because I pushed the branch and then looked.**
-
----
-
-## ★ TWO THINGS THAT NEED YOUR WORD
-
-1. **`crop-sprite-sheets.mjs` and Rule A.** Except that table with a reason, delete it (it was a
-   one-shot run and its inputs are in git), or rename its fields so they stop claiming to be registry
-   facts. **Until then Rule A reports and does not gate.** No mechanical discriminator exists between
-   "a table that copies the registry" and "a table that records what it used to hold" — that is the
-   finding, not a gap in the work.
-
-2. **A product defect the correction sweep turned up, which I did not touch.**
-   `DynamicsTuningSection.jsx:1233-1237` labels the `choreoOutcomeStart` control **"(0.25–0.55)"**,
-   sets `max: 0.55`, and its tip says **"0.5 = shipped"**. **The shipped value is 0.6 — outside the
-   slider's own range.** An operator opening that card sees a control that cannot reach where the game
-   actually runs. Changing a range is a product judgement; correcting only the label would put
-   "0.6 = shipped" beside a slider that stops at 0.55, which is worse than the inconsistency.
-
-**Also waiting, smaller:** the `renderedBodyH` test's tolerance. It is titled ±5% and asserts **0.05
-px absolute — 33× tighter** — and `buggy` passes by **5.00e-2 against a 0.05 bound**, i.e.
-floating-point dust. Both false statements are corrected; **the tolerance is deliberately not
-loosened**, because choosing how much drift is acceptable in a race input is yours.
-
----
-
-## WHERE EVERY PIECE STANDS — ALL TEN DONE
-
-| # | piece | the headline |
-| --- | --- | --- |
-| 0 | The backlog's fourteen duplicates | **premise refuted** — thirteen are the OPEN/CLOSED structure |
-| 1 | Build Rule A | red at its founding instance; **not gating**, and no exception added |
-| 2 | Build Rule B | live and green — **after I broke it and fixed it** |
-| 3 | The ninety corrections | **34 applied, 0 refuted, 5 second sites** |
-| 4 | The two fingerprints that cannot gate | all three compare now, through **one** implementation |
-| 5 | The prune step | added — the condition that blocked it is gone, reproduced on a fresh stub |
-| 6 | Publish `fieldRetired` | published; **all four fingerprints byte-identical** |
-| 7 | The rotten spec and the inert guard half | **delete the spec, do not rewrite it** |
-| 8 | The homeless fact | it needed a **derivation**, not a home |
-| 9 | One-site correcting | **52%** |
+| 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
+| 2 | Rename the pre-crop fields | RUNNING |
+| 3 | The fifty-six remaining corrections | not started |
+| 4 | The inert guard half and the rotten spec | not started |
+| 5 | Where else does a control disagree with what ships? | not started (read-only) |
+| 6 | What Rule A cannot see | not started (read-only) |
+| 7 | The second-site rate, as a baseline | not started (read-only) |
+| 8 | The publish documentation | not started |
 
 ---
 
 ## ONE LIMIT, STATED PLAINLY
 
-**This chain enforces what was already established. It does not prove there is nothing else.** Rule A
-has never objected to a real copy on a live tree — only to the 2026-06-03 one — because
-REGISTRY-LITERALS-1 had already removed them all. Rule B has never caught a real leftover branch, only
-ones I pushed to make it object. Piece 9's 52% rests on twenty-one corrections, a small population
-whose two halves behave very differently. And piece 3's second-site sweep searched by claim rather
-than by string: **5 is a floor, not a total.**
+**"96 controls checked" is not "96 controls correct".** Rule C asks one question — can the control
+represent its value. A control's label, its step and its tooltip are all claims about the same
+number, and **piece 5 measures that class**; its first pass already shows the bounds question is the
+cleanest of the four. The 18 controls Rule C cannot resolve are printed on every run with their
+reason, so nobody has to take my word for the coverage.

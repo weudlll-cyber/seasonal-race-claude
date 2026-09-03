@@ -715,7 +715,7 @@ const AREA_BONUS_EARLY = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly ?? 1.0;
 const AREA_BONUS_PULK = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk ?? 0;
 const AREA_BONUS_POST = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost ?? 1.0;
 // PRE-STAGE-1 Q2 (--heroChaosAreaBonus=on|off, default on = byte-neutral): suppress the HERO POOL's
-// areaBonus during CHAOS ONLY (raceProgress < pulkStartLive = choreo boundary 0.25). §4b: the CHAOS
+// areaBonus during CHAOS ONLY (raceProgress < pulkStartLive, the live choreo boundary). §4b: the CHAOS
 // areaBonus is band-graded (B1 = +6% at bonusMult 2.0), so it washes the future B1 heroes forward
 // BEFORE the race opens up — they never start deep. Setting this OFF zeros the B1-target racers' bonus
 // only in chaos (the rest of the field keeps its wash-forward → assigned-winner reachability intact),

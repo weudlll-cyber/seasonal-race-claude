@@ -56,16 +56,22 @@ export const DEFAULT_REFERENCE_CORRIDOR_PX = DEFAULT_CAMERA_CONFIG.referenceCorr
 /**
  * CAMERA-COMPANY-1: the anchor plus this many−1 others must stay in frame. <= 1 disables it.
  *
- * MIRRORS `DEFAULT_CAMERA_CONFIG.minRacersVisible`, which is the canonical home. This is the value a
+ * READS `DEFAULT_CAMERA_CONFIG.minRacersVisible`, which is the canonical home. This is the value a
  * PARTIAL-CONFIG caller gets — unit tests and any harness that builds a director without handing it
- * the shipped config — and it is deliberately a literal rather than an import, matching the
- * fallback convention used throughout this project (see the same wording in raceBehavior.js).
+ * the shipped config.
  *
- * MIN-RACERS-5: moved 3 → 5 IN STEP with the default. It was left at 3 when the default went to 5,
- * which is not a second opinion, it is the L199 trap: the shipped path and the fallback path would
- * have framed differently and only the fallback path is untested by the fingerprints. Nothing
- * guards this agreement — `check-config-keys` checks that a key EXISTS in the defaults, never that
- * a mirrored fallback still AGREES with it — so if you change one, change this one too.
+ * MIN-RACERS-5: it was once a LITERAL, was left at 3 when the default went to 5, and the shipped
+ * path and the fallback path framed differently — the L199 trap, with only the fallback path
+ * untested by the fingerprints. `719f6c51` (2026-08-10) converted this and 258 other fallbacks to
+ * READ the default instead of copying it, so there is no longer a second number here to drift and
+ * nothing to keep in step by hand. `check-fallback-agreement` counts this line among the fallbacks
+ * that "read the default BY REFERENCE and cannot disagree".
+ *
+ * *(CONTROL-BOUNDS-1, 2026-09-03: this block still said the value was "deliberately a literal
+ * rather than an import", two lines above the import, and pointed at raceBehavior.js for "the same
+ * wording", which that file no longer carries. The refactor changed the code and not the paragraph
+ * explaining it — the most expensive kind of stale comment, because it instructs the next reader to
+ * maintain by hand a copy that is not there.)*
  */
 export const DEFAULT_MIN_RACERS_VISIBLE = DEFAULT_CAMERA_CONFIG.minRacersVisible;
 /** The fraction of the frame a subject is kept inside — the safe region, not the whole canvas. */
