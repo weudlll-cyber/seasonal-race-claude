@@ -65,7 +65,7 @@ const MANIFEST = `${SEEDS}/versions.json`;
 export const GUARD = {
   id: "check-seed-versions",
   covers:
-    "a tracked file whose CONTENT changed without its record changing with it — for a shipped seed, its version in server/seeds/versions.json; for a hand-made artwork asset, its digest in client/public/assets/racers/digests.json. Plus a seed file in no unit or in two, and a unit naming a file that does not exist",
+    "a tracked file whose CONTENT changed without its record changing with it — for a shipped seed, its version in server/seeds/versions.json; for a hand-made artwork asset, its digest in the digests.json beside it (racer sheets AND track backgrounds). Plus a seed file in no unit or in two, and a unit naming a file that does not exist",
   blind: [
     "a redelivery needed for a reason OUTSIDE the seed file's bytes — a client, engine or renderer change that makes an unchanged record wrong; it compares content and cannot see intent",
     "whether the version was raised by the right amount, and whether the change itself is any good",
@@ -74,7 +74,13 @@ export const GUARD = {
     "ARTWORK: everything outside `client/public/assets/racers/`. Track backgrounds under `server/seeds/backgrounds/` ARE covered, by the seed rule rather than the digest one; the favicons and every non-image asset are covered by neither, and the inventory with costs is in ARTWORK-DIGEST-1",
     "ARTWORK: a change to a file's NAME. A renamed sheet reads as one MISSING and one NEW, which is correct but says nothing about whether the pixels moved with it",
   ],
-  dirs: [`${SEEDS}/`, "client/public/assets/racers/"],
+  dirs: [
+    `${SEEDS}/`,
+    "client/public/assets/racers/",
+    // WATCH-BACKGROUNDS-1: 21.3 MB of track backgrounds that were outside every guard's declared
+    // scope. A change there now selects this guard.
+    "client/public/assets/tracks/backgrounds/",
+  ],
   files: [MANIFEST],
   reach: [],
 };
@@ -300,101 +306,122 @@ console.log(
 // LOUD FAILURE (Lesson 187): zero image files walked, or an unreadable record, both FAIL.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
-const ART_DIR =
-  process.argv.find((a) => a.startsWith("--artwork-root="))?.slice(15) ??
-  "client/public/assets/racers";
-const ART_RECORD = `${ART_DIR}/digests.json`;
+// ★ TWO DIRECTORIES, ONE RULE (WATCH-BACKGROUNDS-1, 2026-09-04).
+//
+// The racer sheets were watched from the day this rule shipped. The six TRACK BACKGROUNDS under
+// client/public — 21.3 MB — sat outside every guard's declared scope. They are covered by
+// EXTENDING this rule rather than by a second one: “a tracked hand-made image changed without its
+// record changing with it” is ONE question and deserves one answer. Each directory keeps its own
+// digests.json beside the files it describes, so a record never travels away from what it records.
+const ART_DIRS = (() => {
+  const override = process.argv.find((a) => a.startsWith("--artwork-root="))?.slice(15);
+  return override
+    ? [override]
+    : ["client/public/assets/racers", "client/public/assets/tracks/backgrounds"];
+})();
 const RECORD_MODE = process.argv.includes("--record-artwork");
 const IS_IMAGE = /\.(png|jpe?g|webp|gif)$/i;
 
-const artAbs = join(ROOT, ART_DIR);
-if (!existsSync(artAbs))
-  fail([
-    `FAIL: the artwork directory ${ART_DIR} does not exist.`,
-    "      Nothing was digested, so this rule proved nothing. See Lesson 187.",
-  ]);
+let artTotal = 0;
+const artVerdicts = [];
+for (const ART_DIR of ART_DIRS) {
+  const ART_RECORD = `${ART_DIR}/digests.json`;
+  const artAbs = join(ROOT, ART_DIR);
+  if (!existsSync(artAbs))
+    fail([
+      `FAIL: the artwork directory ${ART_DIR} does not exist.`,
+      "      Nothing was digested, so this rule proved nothing. See Lesson 187.",
+    ]);
 
-const artFiles = readdirSync(artAbs)
-  .filter((n) => IS_IMAGE.test(n) && statSync(join(artAbs, n)).isFile())
-  .sort();
+  const artFiles = readdirSync(artAbs)
+    .filter((n) => IS_IMAGE.test(n) && statSync(join(artAbs, n)).isFile())
+    .sort();
 
-if (artFiles.length === 0)
-  fail([
-    `FAIL: ZERO image files under ${ART_DIR}.`,
-    "      Either the artwork moved or the extension filter stopped matching; either way this",
-    "      rule cannot have compared anything. See Lesson 187.",
-  ]);
+  if (artFiles.length === 0)
+    fail([
+      `FAIL: ZERO image files under ${ART_DIR}.`,
+      "      Either the artwork moved or the extension filter stopped matching; either way this",
+      "      rule cannot have compared anything. See Lesson 187.",
+    ]);
 
-const digestOf = (name) =>
-  createHash("sha256").update(readFileSync(join(artAbs, name))).digest("hex");
-const measured = Object.fromEntries(artFiles.map((n) => [n, digestOf(n)]));
+  const digestOf = (name) =>
+    createHash("sha256").update(readFileSync(join(artAbs, name))).digest("hex");
+  const measured = Object.fromEntries(artFiles.map((n) => [n, digestOf(n)]));
 
-if (RECORD_MODE) {
-  writeFileSync(
-    join(ROOT, ART_RECORD),
-    JSON.stringify(
-      {
-        _: [
-          "THE RECORD OF WHAT THE ARTWORK IS. sha256 per file, one line each, regenerated by",
-          "  node scripts/check-seed-versions.mjs --record-artwork",
-          "",
-          "It exists because these files are HAND-MADE and cannot be re-derived from anything, and",
-          "because on 2026-09-03 nine of them were overwritten by an accidentally-run script while",
-          "every check in this repository stayed green. A digest cannot tell a wanted change from an",
-          "unwanted one — it only refuses silence. If you meant it, re-record and commit both.",
-        ],
-        files: measured,
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  console.log(
-    `check-seed-versions --record-artwork: recorded ${artFiles.length} file(s) into ${ART_RECORD}.`,
-  );
-  process.exit(0);
-}
-
-let recorded;
-try {
-  recorded = JSON.parse(readFileSync(join(ROOT, ART_RECORD), "utf8"))?.files;
-} catch (e) {
-  fail([
-    `FAIL: cannot read the artwork record ${ART_RECORD} — ${e.message}`,
-    "      Create it with: node scripts/check-seed-versions.mjs --record-artwork",
-    "      Refusing to report the artwork unchanged against a record it could not read.",
-  ]);
-}
-if (!recorded || typeof recorded !== "object" || !Object.keys(recorded).length)
-  fail([
-    `FAIL: ${ART_RECORD} records no files.`,
-    "      A record that lists nothing cannot disagree with anything. See Lesson 187.",
-  ]);
-
-const artChanged = artFiles.filter((n) => recorded[n] && recorded[n] !== measured[n]);
-const artNew = artFiles.filter((n) => !recorded[n]);
-const artGone = Object.keys(recorded).filter((n) => !artFiles.includes(n));
-
-if (artChanged.length || artNew.length || artGone.length) {
-  const lines = ["FAIL: the artwork does not match its record."];
-  for (const n of artChanged)
-    lines.push(
-      `  CHANGED  ${n}  recorded ${recorded[n].slice(0, 12)}…  now ${measured[n].slice(0, 12)}…`,
+  if (RECORD_MODE) {
+    writeFileSync(
+      join(ROOT, ART_RECORD),
+      JSON.stringify(
+        {
+          _: [
+            "THE RECORD OF WHAT THE ARTWORK IS. sha256 per file, one line each, regenerated by",
+            "  node scripts/check-seed-versions.mjs --record-artwork",
+            "",
+            "It exists because these files are HAND-MADE and cannot be re-derived from anything,",
+            "and because on 2026-09-03 nine of them were overwritten by an accidentally-run script",
+            "while every check in this repository stayed green. A digest cannot tell a wanted change",
+            "from an unwanted one — it only refuses silence. If you meant it, re-record and commit",
+            "both.",
+          ],
+          files: measured,
+        },
+        null,
+        2,
+      ) + "\n",
     );
-  for (const n of artNew) lines.push(`  NEW      ${n}  (in no record)`);
-  for (const n of artGone) lines.push(`  MISSING  ${n}  (recorded, not on disk)`);
-  lines.push(
-    "",
-    "  These files are HAND-MADE and cannot be re-derived. This rule cannot tell a wanted change",
-    "  from an unwanted one — it only refuses silence.",
-    "  IF YOU MEANT IT:  node scripts/check-seed-versions.mjs --record-artwork",
-    "  then commit the artwork and the record together.",
-    "  IF YOU DID NOT:   git checkout -- " + ART_DIR,
-  );
-  fail(lines);
+    console.log(
+      `check-seed-versions --record-artwork: recorded ${artFiles.length} file(s) into ${ART_RECORD}.`,
+    );
+    artTotal += artFiles.length;
+    continue;
+  }
+
+  let recorded;
+  try {
+    recorded = JSON.parse(readFileSync(join(ROOT, ART_RECORD), "utf8"))?.files;
+  } catch (e) {
+    fail([
+      `FAIL: cannot read the artwork record ${ART_RECORD} — ${e.message}`,
+      "      Create it with: node scripts/check-seed-versions.mjs --record-artwork",
+      "      Refusing to report the artwork unchanged against a record it could not read.",
+    ]);
+  }
+  if (!recorded || typeof recorded !== "object" || !Object.keys(recorded).length)
+    fail([
+      `FAIL: ${ART_RECORD} records no files.`,
+      "      A record that lists nothing cannot disagree with anything. See Lesson 187.",
+    ]);
+
+  const artChanged = artFiles.filter((n) => recorded[n] && recorded[n] !== measured[n]);
+  const artNew = artFiles.filter((n) => !recorded[n]);
+  const artGone = Object.keys(recorded).filter((n) => !artFiles.includes(n));
+
+  if (artChanged.length || artNew.length || artGone.length) {
+    const lines = [`FAIL: the artwork under ${ART_DIR} does not match its record.`];
+    for (const n of artChanged)
+      lines.push(
+        `  CHANGED  ${n}  recorded ${recorded[n].slice(0, 12)}…  now ${measured[n].slice(0, 12)}…`,
+      );
+    for (const n of artNew) lines.push(`  NEW      ${n}  (in no record)`);
+    for (const n of artGone) lines.push(`  MISSING  ${n}  (recorded, not on disk)`);
+    lines.push(
+      "",
+      "  These files are HAND-MADE and cannot be re-derived. This rule cannot tell a wanted change",
+      "  from an unwanted one — it only refuses silence.",
+      "  IF YOU MEANT IT:  node scripts/check-seed-versions.mjs --record-artwork",
+      "  then commit the artwork and the record together.",
+      "  IF YOU DID NOT:   git checkout -- " + ART_DIR,
+    );
+    fail(lines);
+  }
+
+  artTotal += artFiles.length;
+  artVerdicts.push(`${artFiles.length} under ${ART_DIR}`);
 }
 
-console.log(
-  `check-seed-versions ARTWORK: ${artFiles.length} hand-made asset(s) under ${ART_DIR} match their ` +
-    `record; 0 changed, 0 new, 0 missing. (Content only — it cannot judge whether a change was wanted.)`,
-);
+if (!RECORD_MODE)
+  console.log(
+    `check-seed-versions ARTWORK: ${artTotal} hand-made asset(s) match their record ` +
+      `(${artVerdicts.join("; ")}); 0 changed, 0 new, 0 missing. ` +
+      `(Content only — it cannot judge whether a change was wanted.)`,
+  );

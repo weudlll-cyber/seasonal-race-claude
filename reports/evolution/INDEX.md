@@ -695,6 +695,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [WATCH-BACKGROUNDS-1.md](WATCH-BACKGROUNDS-1.md) — **the 21.3 MB is watched now, and it is SIX not
+  four: five are DIFFERENT PICTURES under one name, one is byte-identical twice** (2026-09-04). The
+  digest covers them by EXTENSION, not a second mechanism — **37 assets, one rule**, each directory
+  keeping its record beside the files it describes. Sabotage red, restored green, 16 tests.
+  ★★ **THE COLLISION, MEASURED AT THE PIXELS rather than inferred from names**: all six share a name
+  with a seed background, and **five are different photographs** — mean |diff| 30–63 of 255, which no
+  re-encode produces. **Two share a name AND a format** (`dirt-oval.jpg`, `space-sprint.jpg`), same
+  extension, different picture, 6× the size apart. **One is one fact with two homes**:
+  `Mountainstreet.jpg` and `mountainstreet.jpg`, byte-identical at 9.32 MB, differing only in a
+  capital — **the same name to the OS and different names to git**. ★ **AND NOTHING LOADS THEM**:
+  `trackLoader.js` builds `\`${API_BASE_URL}/api/tracks/${serverId}/background\``, so the client
+  fetches the SERVER's copy and the only reference to the public path is a doc-comment example. **The
+  divergence is not live and the 21.3 MB is dead weight in the bundle.** Reported, not reconciled —
+  which picture appears where is his.
+
 - [CITATION-PAIRS-1.md](CITATION-PAIRS-1.md) — **61 converted, 51 refused, and Rule F now checks THE
   PAIR, which closes its own declared blind spot** (2026-09-04). His decision, with the part that
   makes it worth doing: **the href's line still drifts silently**, so converting the visible half
