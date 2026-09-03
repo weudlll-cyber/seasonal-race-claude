@@ -105,6 +105,13 @@ three of the four fingerprints in its own routing and agreed.
 
 **Nothing was minted, and nothing needed to be.**
 
+★ **THE ENGINE-REACH ADVISORY FIRED, AND IT WAS RIGHT TO.** `client/src/modules/utils/RandomHelper.js`
+is inside the engine hull — the sim shuffles with it — so the commit hook flagged **1 of 15 changed
+paths can change the race** and named the command. It was run: `COMBINED 8a1977187e9c99b4`, the
+recorded value. **The advisory is not noise and the answer is not “I only touched the UI”** — the
+change makes `assignRacers` accept an object as well as a string, and a helper the race reads is
+exactly where an innocent-looking widening earns a measurement rather than an argument.
+
 ---
 
 ## 6. WHAT TO LOOK AT ON 4173
