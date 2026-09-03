@@ -11,10 +11,19 @@
 
 ## Why this file still exists
 
-**It is a redirect and not a deletion, deliberately.** Eleven documents and reports link to
-`docs/ROADMAP.md`, and several are reports — append-only by rule, so their links cannot be rewritten.
-Deleting the path would break every one of them and turn a finished merge into a trail of dead links.
-A stub costs nine lines and keeps them all landing somewhere true.
+**It is a redirect and not a deletion, deliberately.** **Five files carry seven links** to this
+path — `README.md`, `docs/README.md`, `docs/BACKLOG.md` (×2), `docs/SIM.md`, and
+`reports/evolution/DOC-TRUTH-2.md` (×2), which is the report that measured it. Reports are
+append-only by rule, so their links cannot be rewritten. Deleting the path would break every one of
+them and turn a finished merge into a trail of dead links. A stub costs nine lines and keeps them all
+landing somewhere true.
+
+*(Corrected 2026-09-03, CITATIONS-1. This paragraph said **eleven** documents and reports link here
+and that **several are reports**. Counted at the tree, it is five files and seven links, and exactly
+ONE is a report. Both halves were wrong, and the second was the load-bearing one: the stated REASON
+this file survives — that append-only reports point at it — rests on a single report, which is the
+one that filed this correction. The argument for keeping the stub still holds on the four living
+documents; it is just a smaller argument than the one written here.)*
 
 ## What happened, in two steps
 

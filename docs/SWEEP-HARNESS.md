@@ -125,9 +125,16 @@ as a tally, and never as "the family-wise error rate across tracks is controlled
 | `exp-<name>-results/` | The small final CSVs + `SUMMARY.md` / `REPORT.md` of a sweep                                                                                                    | **tracked**                                       |
 | `reports/`            | Archived investigation evidence — concept reviews, closed-experiment result tables (`reports/exp-archive/`), salvaged one-off docs (`reports/results-salvage/`) | **tracked** — never moved once cited by a doc     |
 
-The sim writes its run artifacts under repo ROOT (`--out` is resolved relative to ROOT), so scratch
-lands in `client/tmp/` rather than an external temp dir — a known hygiene limitation, not a per-sweep
-choice. Keep heavy raw output in `client/tmp/`; commit only the small distilled CSVs/summaries.
+The sim writes its run artifacts to an EXTERNAL scratch directory by default — `$RA_SCRATCH_DIR`, or
+`<os-tmp>/racearena-scratch` when that is unset. Only a RELATIVE `--out=` resolves under the repo
+root. Commit only the small distilled CSVs/summaries.
+
+*(Corrected 2026-09-03, CITATIONS-1: this paragraph said the opposite — that scratch lands under repo
+ROOT "rather than an external temp dir — a known hygiene limitation". It was written 2026-07-20 and
+HYGIENE-1 moved the default off the OneDrive tree on 2026-07-29, which is the fix this paragraph
+warns is missing. `docs/SIM.md` carried the same inversion and is corrected with it. The `client/tmp/`
+ROW in the table above is still accurate: that is where a relative `--out=` lands, and it is still
+gitignored.)*
 
 ## `exp-runaway-leader.mjs --p1-criteria` — which classifier condition blocks a race
 
@@ -162,7 +169,9 @@ comparable to a baseline measured at a different value — state the value in th
 
 > The front-rotation flags that used to sit beside this one were removed with the mechanism itself
 > (dead-mechanisms cleanup, 2026-07-23). An arm script that still passes them will simply have them
-> ignored by the sim. Recoverable at tag `pre/dead-mechanisms-cleanup`.
+> ignored by the sim. Recoverable at commit `0555f9d` — the tag this line used to name was deleted in
+> the 2026-07-23 tag collapse and `docs/TAGS.md` records it in the DELETED table (CITATIONS-1,
+> 2026-09-03). The commit is still reachable, so the recovery route is real; only its address was wrong.
 
 ### Footnote — schedule-math cut points are NOMINAL
 

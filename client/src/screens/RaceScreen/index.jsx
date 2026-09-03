@@ -930,7 +930,11 @@ export default function RaceScreen() {
         }
         // ── BATTLE slowmo ────────────────────────────────────────────────────
         // Slows down physics (and sprite animation) during BATTLE_ZOOM.
-        // Camera path (smoothDt) is intentionally unaffected.
+        // The camera path is intentionally unaffected. (CITATIONS-1, 2026-09-03: this line said
+        // "Camera path (smoothDt)". The camera is fed `rawDt` — see the `camDir.update(…, rawDt)`
+        // call below — and has been since `f16ab4de`, 2026-06-08. `smoothDt` feeds the EFFECTS loop.
+        // The claim about slow-motion is unchanged; only the parenthesis was wrong, and it was the
+        // second site of a sentence `docs/CAMERA_DIRECTOR.md` carried in the same wrong direction.)
         {
           const hud = camDirRef.current?.hudState;
           const isBattleZoom = hud === 'BATTLE_ZOOM';

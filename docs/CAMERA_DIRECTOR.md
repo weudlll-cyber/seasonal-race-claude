@@ -896,14 +896,27 @@ RaceScreen  (useEffect [raceData, fadeNavigate])
 │
 └── requestAnimationFrame loop  (one rAF per frame; `cancelled` guards React StrictMode's double-invoke)
     │
-    ├── [COUNTDOWN]  camDir.updateCountdown(racers, ts, elapsed, durationMs, cW, cH)
+    ├── [COUNTDOWN]  camDir.updateCountdown(racers, ts, countdownElapsed, cW, cH)
     │
     └── [RACING]     camDir.updateRacePlan(b1Indices)      ← race start; resets the comeback roster
                      camDir.setCameraPlan(plan)            ← once, mid-race, when the heroes are cast
-                     camDir.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
-                     camDir.detectBattleGroup(st.racers)   ← render only, for the battle-focus darkening
-                     ctx.setTransform(...)
+                     camDir.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, rawDt)
 ```
+
+*(Corrected 2026-09-03, CITATIONS-1 — four claims in this one diagram, checked at the tree.*
+*(1) `updateCountdown` takes **five** parameters (`CameraDirector.js`), and the call site passes five.*
+*There is no `durationMs`: START-BOARD-2 gave the board its own duration on 2026-08-08.*
+*(2) the camera lerp is fed **`rawDt`**, not `smoothDt` — since `f16ab4de`, 2026-06-08. `smoothDt`*
+*still exists and feeds the effects loop, and a source comment beside it says "Camera path (smoothDt)*
+*is intentionally unaffected", which is itself stale in the same direction.*
+*(3) `camDir.detectBattleGroup(st.racers)` was removed from this list: `index.jsx` never calls it.*
+*It is reached from `renderRaceFrame.js` through the facade in `frameCameraInputs.js` — RENDER-*
+*FINGERPRINT-1, 2026-08-04. The paragraph below about it being public on purpose is unaffected and*
+*is still true.*
+*(4) `ctx.setTransform(...)` was removed: **no `setTransform` call is left in the client.** The only*
+*two hits in `client/src` are entries in a method-name list in `parity/recordingContext.js`. The*
+*transform is applied in `renderRaceFrame.js` with `save` / `translate` / `scale` — CANVAS-SCALE-1,*
+*2026-08-10.)*
 
 `update()` is called exactly once per frame, from `RaceScreen/index.jsx`. `updateConfig(config)`
 live-applies a new config without reconstruction; it takes effect on the next `_transition()`.
@@ -1275,10 +1288,17 @@ period-2 strobe all displaced the subject on the frames they fired, and none of 
 
 **RE-STAMPED, NOT RE-MEASURED, FOR CAMERA-SEED-AND-LINE-1 — and the reason is a fact, not a
 judgement.** That block's only file under this stamp's `depends=` directory is the NEW
-`camera/cameraSeed.js`, which derives the camera's random seed from the race's. It is imported by
-`RaceScreen` alone and is **not in `tracking-lag.mjs`'s load closure** — the harness sets the
-camera seed itself, through `raceDriver`'s identity, and never reaches the browser screen. The
+`camera/cameraSeed.js`, which derives the camera's random seed from the race's. **The verdict stands
+and its stated reason did not**: the harness sets the camera seed itself — `tracking-lag.mjs` pins a
+constant — so the derivation is loaded but never used, and nothing this table measures can move. The
 director itself is untouched by that block: its diff is empty.
+
+*(Corrected 2026-09-03, CITATIONS-1. This paragraph said `cameraSeed.js` is "imported by `RaceScreen`
+alone" and is "**not in `tracking-lag.mjs`'s load closure**". Both are false: `scripts/lib/raceDriver.mjs`
+imports it top-level and unconditionally, `tracking-lag.mjs` imports `raceDriver`, and a dozen further
+files under `scripts/` import it too. **It is loaded on every run.** The re-stamp was still right,
+for the reason now written above — loaded is not used — which is a different argument from the one
+that was here.)*
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2. Only PHOTO_FINISH moved — median 5.59 -> 4.62,
 p95 16.61 -> 21.49** — and it is the only state the endgame's own width authority reaches with

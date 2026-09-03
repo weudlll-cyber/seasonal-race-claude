@@ -2,7 +2,11 @@
 
 **What this document owns:** the map. Every maintained document, what it owns, and the order to read
 them in. If a document is not listed here it is either in [archive/](archive/README.md) or it should
-not exist. **The rule is about DOCUMENTS, and the four empty directories a reader may find beside
+not exist. *(CITATIONS-1, 2026-09-03: that claim was false for six living documents — `AUTH.md`,
+`ENVIRONMENT.md`, `ENDING-PHASES.md`, `NIGHT-RUN.md`, `MORNING.md` and `OPEN.md` appeared nowhere
+here. They are listed now. **The completeness claim is checkable and was not being checked**:
+`for f in docs/*.md; do grep -q "$f" docs/README.md || echo missing; done` returns the answer in one
+line, and returned six.)* **The rule is about DOCUMENTS, and the four empty directories a reader may find beside
 them are not a counter-example: they are not in the repository at all** — git tracks files, so a
 directory holding none of them is local litter on one machine and nothing this map is missing.
 
@@ -61,6 +65,8 @@ What a stranger needs in order to understand and change RaceArena.
 | [SETUP.md](SETUP.md)               | Local setup: client, backend, ports, the single-server rule.       |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System shape: client, in-browser race logic, backend, persistence. |
 | [API.md](API.md)                   | The backend HTTP endpoints.                                        |
+| [AUTH.md](AUTH.md)                 | Authentication as it is BUILT: what an operator supplies, what is protected. |
+| [ENVIRONMENT.md](ENVIRONMENT.md)   | Every environment variable, and what happens when one is missing or wrong. |
 | [DEPLOYMENT.md](DEPLOYMENT.md)     | Public same-origin hosting and the environment it needs.           |
 
 ### The data model
@@ -87,6 +93,7 @@ What a stranger needs in order to understand and change RaceArena.
 | document                                 | what it owns                                                        |
 | ---------------------------------------- | --------------------------------------------------------------------- |
 | [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) | The camera's shape: which file owns what, and the one framing rule. |
+| [ENDING-PHASES.md](ENDING-PHASES.md)     | The ending, phase by phase: what happens, for how long, and where that length lives. |
 
 ### The race screen
 
@@ -120,6 +127,9 @@ needs none of it. A contributor about to change RaceArena needs most of it.
 | [LESSONS.md](LESSONS.md)                         | The numbered lessons. Append-only; cited by number across the codebase.            |
 | [AUDIT.md](AUDIT.md)                             | The dated security and quality audit log. Read rows as history.                    |
 | [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) | What the Dev Panel actually renders, verified at source.                           |
+| [NIGHT-RUN.md](NIGHT-RUN.md)                     | How an unattended night chain is run, and what it is allowed to do.                |
+| [MORNING.md](MORNING.md)                         | Where the current chain stands. Rewritten after every piece, never at the end.     |
+| [OPEN.md](OPEN.md)                               | The decisions waiting on the owner.                                                |
 | [internal/README.md](internal/README.md)         | The diagnostic-snapshot export procedure. The Dev Panel names this path on screen. |
 
 ---

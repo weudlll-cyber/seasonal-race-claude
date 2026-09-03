@@ -256,9 +256,11 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 - The **B1 lead rotation** config family and the **universal band-arrival** key — sim-only, never had a
   DevScreen control, removed entirely in the same cleanup.
 
-Deliberately not named here: the retired key names. Git history is the archive — `git show
-pre/dead-mechanisms-cleanup` has them, and repeating them in live docs is how a deleted mechanism gets
-half-resurrected.
+Deliberately not named here: the retired key names. Git history is the archive — `git show 0555f9d`
+has them, and repeating them in live docs is how a deleted mechanism gets half-resurrected.
+*(CITATIONS-1, 2026-09-03: this named the tag `pre/dead-mechanisms-cleanup`, which the 2026-07-23
+collapse deleted; `docs/TAGS.md` records it in the DELETED table. The commit is still reachable. The
+same dead tag was standing as a recovery route in FIVE living documents.)*
 
 The `RENAMED_KEY_MIGRATION` shim that once carried persisted values under the old keys forward
 (`directorV4*` → `choreo*`, `governorDirector*` / `governorMax*` → `pulk*`) was **removed** (commit

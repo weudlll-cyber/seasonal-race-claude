@@ -34,7 +34,7 @@ seasonal-race-claude/
 │       │   │   ├── RacerMetadataPanel.jsx  # Right column: name, emoji, speed, display size, trail style, surface classes, primary color
 │       │   │   ├── AnimationControls.jsx   # Primary animation type pills + per-type amplitude sliders + add-ons (tail wiggle, shadow pulse)
 │       │   │   └── RacerEditor.module.css
-│       │   ├── DevScreen/          # Developer / admin panel (10 sections, 2-tier Operator/Advanced)
+│       │   ├── DevScreen/          # Developer / admin panel (16 sections, 2-tier Operator/Advanced)
 │       │   │   └── sections/
 │       │   │       ├── RaceTuningSection.jsx       # Thin coordinator (44 lines) — renders below two
 │       │   │       ├── BehaviorTuningSection.jsx   # behaviorConfig: avoidance, drafting, soft steering, speed brake
@@ -168,7 +168,7 @@ Per-screen boundaries are not used — the top-level catch-all is sufficient for
 - **Spline Sampling — arc-length uniform (PR-A2.5)** — `catmullRomSpline` defaults to `parameterization: 'arclength'`. A dense T-table (5× requested samples, min 1000) is built per call; binary search maps target arc-lengths to T-values. Racers advance at constant pixel velocity regardless of editor-point distribution. Pass `parameterization: 'parameter'` for legacy T-uniform behaviour.
 - **EditorShape linear interpolation (Stage 26)** — `EditorShape.getPosition()` uses `Math.floor()` + fractional blend between adjacent precomputed samples instead of the former `Math.round()` nearest-neighbour lookup. At 500 samples on a ~2000 px oval at zoom 4×, `Math.round()` caused ~20 px visible racer jumps per frame; linear interpolation eliminates this. Angles are precomputed once in `_precomputeAngles()` and interpolated with shortest-path wrap.
 - **EditorShape center-path geometry (fix/centerline-perpendicular, 2026-05-29)** — For tracks with `centerPoints`, `getPosition(t, offset)` uses a dedicated center-curve path: `centerPoints` are Catmull-Rom arc-length resampled with the same `opts` as `_inner`/`_outer`. At `offset = 0`, the center curve position is returned directly. At `offset ≠ 0`, the perpendicular displacement uses `angle − π/2` (CW in canvas y-down = toward outer side, matching the fallback convention) scaled by `track.width` from the JSON (not `getActualTrackWidth()`, which measures inner-to-outer distance and is correct for row layout but not for center-perpendicular displacement). `_precomputeAngles` uses `_center[i]` central differences when `_center` is available, eliminating up to 25.6° tangent error at tight U-turns caused by inner/outer arc-length phase misalignment (inner arc ≈ 600 px vs outer ≈ 1400 px through Luger Hill's tightest bend — at the same arc-length fraction, inner is past the apex and outer has not yet reached it). Fallback (no `centerPoints`): inner/outer interpolation unchanged — zero regression. See Lessons 97–100.
-- **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdPx` of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
+- **CameraDirector — pulk battle trigger + time-based phases (feat/per-state-camera-phase-1)** — `BATTLE_ZOOM` fires when ≥3 of the top-10 racers are within `battlePulkThresholdT` of each other, replacing the former fraction-based `battleGapThreshold`. `battleMinDurationMs` prevents flickering when the cluster briefly dissolves. Per-state `leadInDuration` / `leadOutDuration` (seconds) replaced the old pixel-based `leadInDistance` / `followDuration` / `leadOutDistance` fields (schema v5 migration in `cameraConfig.js`).
 - **Track Effects replace Environments** — Animated overlays (rain, stars, bubbles, etc.) are opt-in per-track effect layers under `modules/track-effects/`. Up to 3 simultaneous effects per geometry. The old `environments/` module was deleted.
 - **RaceScreen draw-function extraction (hygiene sprint, 2026-05-25)** — All non-trivial canvas draw functions have been extracted from `RaceScreen/index.jsx` into `RaceScreen/drawing/` modules: `overlayRendering.js` (title/lap/countdown/finish overlays), `particleRendering.js` (dust, bursts, surface trails), `racerRendering.js` (sprites, name tags), `battleDiagRendering.js` (battle diagnostics). *(This list named `priorityModeOverlay.js` until 2026-09-03; it was deleted with the 4-mode priority system, `f3116226` 2026-06-28.)* `index.jsx` dropped from 1853 → 1460 lines. `drawEditorTrackSurface` remains in the pre-existing `drawing/trackRendering.js` (finish-line only since the Race Track Lights PR).
 - **Track Lights** — Small glowing dots along both boundaries replace the solid cyan boundary lines. Light positions are cached once at race init via `sampleBoundaryAtInterval` (30 px spacing, ~400 points total for typical tracks). Per-frame, only brightness is recomputed per style (`steady`, `sequence`, `sync_pulse`, `random_flash`). Implementation: `client/src/modules/trackLights.js`. Configuration stored as `trackLights` on track geometry; editable in Track Editor; server-migration sets themed defaults on first startup.
@@ -190,13 +190,20 @@ Where:
   effZoom (Closed) = cam.zoom × bsX       where bsX = CANVAS_W / worldW
   effZoom (Open)   = OPEN_TRACK_BASE_ZOOM × cam.zoom   (OPEN_TRACK_BASE_ZOOM = 1.5)
 
-  cam.zoom     = overviewZoom × stateRatio    (lerp-smoothed each frame)
+  cam.zoom     = the zoom that puts `visibleCorridors` standard corridors across the frame
+                 for the live camera state (lerp-smoothed each frame)
   overviewZoom = CANVAS_W / worldW            (adaptive: full world fits at zoom=1 on 1280px ref)
-  stateRatio   = LEADER:1.4, BATTLE:1.6, COMEBACK:1.3, OVERVIEW:1.0
 
   displaySizeScale = computeAutoScaleFactor(trackWidth, racerCount, config)
                    = clamp(trackWidth / racerCount / referenceValue, minScale, maxScale)
 ```
+
+*(Corrected 2026-09-03, CITATIONS-1: this block described `cam.zoom` as `overviewZoom × stateRatio`
+and gave four per-state ratios. **`stateRatio` occurs nowhere in `client/src` or `scripts`** — the
+per-state zoom has been `visibleCorridors` since `dcca55ba` (CAMERA-REFERENCE-WIDTH-1, 2026-08-03),
+which is measured in standard corridors of world across the frame rather than as a multiple of the
+overview. Its per-state values are NOT restated here; they live in `DEFAULT_CAMERA_CONFIG` and the
+Dev Screen renders them. `overviewZoom` and `OPEN_TRACK_BASE_ZOOM` above were and are correct.)*
 
 What was eliminated in D7a:
 
@@ -323,7 +330,15 @@ Conversion helpers (raceBehavior.js, top of file):
 ### Deferred follow-ups (not blocking)
 
 - **Non-uniform track width (`getWidthAtT(t)`):** The function `getTrackWidthAtTpx` has an extension comment for when tracks with variable width are added. Implement by querying `EditorShape._centerWidth` (or equivalent) at `racer.t` per frame. Do NOT build prematurely.
-- **Sim brake-match parity:** `sim-fairness.mjs:~1007` reads `trailer.frameSizePx` (was `visibleWidthPx`) for the dynamic brake-match threshold. Sim racer objects never set `frameSizePx`, so this always falls back to `0.014`. Fix: set `frameSizePx: effectiveDisplaySize` (already set; now correctly named) and verify the threshold matches the game's `dynamicBrakeMatchT`.
+- **Sim brake-match parity:** `sim-fairness.mjs` reads `trailer.frameSizePx` for the dynamic
+  brake-match threshold, and the sim DOES set it — the racer object carries
+  `frameSizePx: effectiveDisplaySize`. What remains open is only the last clause: whether the
+  resulting threshold matches the game's `dynamicBrakeMatchT`. *(Corrected 2026-09-03, CITATIONS-1:
+  this item said the sim "never sets `frameSizePx`, so this always falls back to `0.014`" and then,
+  in its own last clause, said the field was "already set". **It contradicted itself in one
+  sentence**, and the half that was doing the work — the fallback — is the false half. The line
+  number it cited was wrong as well; the citation is dropped rather than replaced, per the citation
+  convention question on the morning sheet.)*
 
 ## Speed Pipeline (speed/duration ship, 2026-07)
 
@@ -671,7 +686,7 @@ The front-action feature (`v-b2-heroes-complete`, master `8bf54ca`). Beyond the 
 
 **Validation:** sim-swept (3 phases) to the winner `count=3, peak=5, band-arrival` — **+21% top-5 OUTCOME action** vs the no-attacker floor, B1/B2 band-reach cleared the gate on all four tracks, Holm at the pre-existing 2/4 baseline. `count=0` restores the pre-feature game byte-identical (`4ec8e64…`; the count=3 default fingerprint is `72c3360fb75225ef`). Config keys (values live in `storage/defaults.js`): `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank`, `b2AttackProgress`, `b2AttackResolveProgress`, `b2AttackBandArrival`. DevScreen: B2-count slider (PULK card) + hero-highlight rings (Camera Advanced).
 
-**Two release mechanisms were built, measured, and REMOVED** (dead-mechanisms cleanup, 2026-07-23; recoverable from git history at tag `pre/dead-mechanisms-cleanup`): freeing the whole non-hero pack inside its band broke B2 band-reach via an **endgame edge-leak** (92% of leaks after progress 0.90); freeing B1-heroes + the normal pack held fairness but cost −6% action. Both confirm the shipping principle: **action comes from steering racers along authored curves, not from releasing the servo** — freeing settles the field. B2-attackers win because they are authored, not free.
+**Two release mechanisms were built, measured, and REMOVED** (dead-mechanisms cleanup, 2026-07-23; recoverable from git history at commit `0555f9d` — the tag this line named was deleted in the 2026-07-23 collapse, CITATIONS-1 2026-09-03): freeing the whole non-hero pack inside its band broke B2 band-reach via an **endgame edge-leak** (92% of leaks after progress 0.90); freeing B1-heroes + the normal pack held fairness but cost −6% action. Both confirm the shipping principle: **action comes from steering racers along authored curves, not from releasing the servo** — freeing settles the field. B2-attackers win because they are authored, not free.
 
 ### (a.2) COMBO15 — fair-arrival: chaos steer + band-aware re-roll draw bias (shipped 2026-07-29)
 

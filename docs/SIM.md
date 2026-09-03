@@ -45,7 +45,7 @@ Both sides import the identical physics modules:
 - `raceBehavior.js` — soft steering, hard separation, avoidance, speed braking
 - `rowLayout.js` — start position layout and speed bonus
 - `racePlanner.js` — Race Plan zone targeting
-- `lapUtils.js` — speed scale factor and reference FPS
+- `lapUtils.js` — lap progress and the reference FPS *(CITATIONS-1, 2026-09-03: this said "speed scale factor". The module exports `REFERENCE_FPS`, `lapProgress` and `currentLap` and nothing else; the speed helpers went with the 2026-07-24 speed/duration ship, and §8 of this same document already lists `computeSpeedScaleFactor` under what that ship deleted. The document contradicted itself.)*
 - `EditorShape.js` — track geometry
 
 **What the sim can predict:**
@@ -219,7 +219,7 @@ repository rather than a guess — give the FILE a header line and this table im
 node scripts/sim-fairness.mjs
 ```
 
-Runs 50 races on all track×racer×duration combos. Writes two files to `client/tmp/`:
+Runs 50 races on all track×racer×duration combos. Writes two files to the scratch directory — `$RA_SCRATCH_DIR`, or `<os-tmp>/racearena-scratch` when that is unset. It is OUTSIDE the repository on purpose (HYGIENE-1, 2026-07-29: sim output was thrashing the OneDrive sync client). Only a RELATIVE `--out=` resolves under the repo root:
 
 - `fairness-data.json` — machine-readable results
 - `fairness-report.md` — human-readable Markdown report
@@ -232,7 +232,7 @@ node scripts/sim-fairness.mjs \
   --racers=40          # racers per race (default: 40)
   --openRacers=60      # racers for open-track combos (overrides --racers for open tracks)
   --closedRacers=40    # racers for closed-track combos (overrides --racers for closed tracks)
-  --out=client/tmp     # output directory (default: client/tmp)
+  --out=client/tmp     # output directory (default: $RA_SCRATCH_DIR or <os-tmp>/racearena-scratch)
   --track=river-run    # run only this track (optional filter)
   --racer=horse        # run only this racer type (optional filter)
   --laps=2             # CLOSED tracks: lap count (the canonical closed-track input)
@@ -534,7 +534,7 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 **Formula:** Fraction of simulated races that completed before the sim timeout.
 
-**What it measures:** Basic sanity — do all racers finish?
+**What it measures:** Basic sanity — did **at least one** racer cross the line? `results.outcomeReached = finishedCount > 0`. *(CITATIONS-1, 2026-09-03: this said "do all racers finish?", which has never been what the code computes — that form has stood since this document was created on 2026-05-31. It matters because the two lines below use this metric as a hard cutoff, and a race in which 39 of 40 racers time out passes it.)*
 
 **Good:** 1.0 (Phase 1 hard cutoff). A value below 1.0 means some parameter combo caused an infinite loop or degenerate state.
 
@@ -795,7 +795,7 @@ The physics sliders (`lateralForce`, `lateralDamping`, `avoidanceDistance`, `spe
 
 ### Start-phase warmup exclusion (first 4 seconds)
 
-All naturalness metrics (`zigzagScore`, `lateralSpeedScore`, `brakeRate`, `stableOvertakes`) exclude the first 4 seconds of each race. This is because:
+The naturalness metrics `zigzagScore`, `lateralSpeedScore` and `brakeRate` exclude the first 4 seconds of each race (`raceTs > 4000`). **`stableOvertakes` does NOT** — it is windowed to 20–80% of the race and carries no warmup term at all, which this page already states correctly where the metric is defined. *(CITATIONS-1, 2026-09-03: the list named all four.)* The 4-second exclusion exists because:
 
 1. At race start, all 40–50 racers launch from a tight grid. Avoidance, braking, and lateral forces all fire simultaneously, producing metrics that are not representative of steady-state racing.
 2. The Race Plan controller ramps up its influence over the first few seconds. Including this ramp in the metrics would penalize combos that produce correct behavior after the ramp completes.
@@ -1107,8 +1107,13 @@ node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --rac
 
 This document was the most stale; the items below correct it against source.
 
-- **Size & structure:** `scripts/sim-fairness.mjs` is now **~3716 lines** (`wc -l`), not ~5000. Observers
-  are factored into `scripts/sim/observers/` (`fairness-stats.mjs`, `gap-metrics.mjs`, `report.mjs`).
+- **Size & structure:** `scripts/sim-fairness.mjs` is factored so that observers live in
+  `scripts/sim/observers/`. **The line count and the observer list this bullet used to carry are gone**
+  rather than refreshed *(CITATIONS-1, 2026-09-03)*: it said "**~3716 lines**" against **6,195** today,
+  and named **three** observer modules against **thirteen** on disk — and the GENERATED block earlier in
+  this document lists all twelve that are inside the engine-reach closure and is kept current by a
+  guard. A hand-typed count beside a generated one is the defect, not the staleness. Run `wc -l` and
+  read the generated block.
   `scripts/sim/experiments/` no longer exists (it went with the last experiment).
 - **Dormant experiments: ALL FOUR DELETED** — TEF (`tefMult`), ROW_SPLIT (`startRowBoostMult`), the V4
   start-row experiment, and **tier2** (`tier2Mult`). Non-comment `grep tier2` = 0. (2026-07-10 correction:
@@ -1175,7 +1180,10 @@ This is the single steering path — choreography + PulkLeadRotation; there is n
 Both LOST to the B2-attackers and are recorded here as the evidence for **why liberation loses** (see
 LESSONS.md — "action lives in orchestration, not liberation"). They were kept for a while as default-OFF
 flags and then deleted in the dead-mechanisms cleanup ship; the code is recoverable from git history at
-tag `pre/dead-mechanisms-cleanup`.
+commit `0555f9d` (2026-07-23). *(CITATIONS-1, 2026-09-03: this named tag `pre/dead-mechanisms-cleanup`,
+which does not exist — `git tag -l` returns 123 and none is that one. `docs/TAGS.md` records it in the
+DELETED table; it went in the 2026-07-23 tag collapse. The COMMIT is still reachable, so the recovery
+route is real — only its address was wrong.)*
 
 - **Pack strictness release** — non-hero pack runs strictness-0 inside its band.
   **Why it lost:** breaks B2 band-reach on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame
@@ -1241,7 +1249,8 @@ transform and saturation telemetry, the sim flags, the handover-telemetry observ
 file. Removing it left BOTH fingerprints byte-identical (ON `e93ffa70dad562a1`, OFF
 `72c3360fb75225ef`), which is the proof it had never been on any live path. The design write-up and
 both independent concept reviews remain under `reports/proposals/`; the code is recoverable from git
-history at tag `pre/dead-mechanisms-cleanup`.
+history at commit `0555f9d` (2026-07-23) — the tag this line used to name was deleted in the 2026-07-23
+collapse (CITATIONS-1, 2026-09-03).
 
 **Gap-reroll branch-priority fix (behaviour change, gated by `gapRerollEnabled` / the sim flag).**
 When BOTH `gapBehind > G` and `gapAhead > G`, the **larger imbalance** now decides the direction;
@@ -1295,8 +1304,10 @@ correction _softness_ and a shallower worst-case escape. Duration sanity (30/120
 candidate ≥ current on band-reach at every duration. At 30 s both arms sit at ~66% band-reach — a
 pre-existing short-race limitation, not introduced here.
 
-Evidence `reports/greenfield/gate-retune/`; driver `scripts/exp-gate-retune.mjs` (branch
-`pre/greenfield-proto`, commit `bf4ff90`). **Caveats:** arms are paired as experimental control, not
+Evidence `reports/greenfield/gate-retune/`; driver `scripts/exp-gate-retune.mjs` (on master;
+commit `bf4ff90`). *(CITATIONS-1, 2026-09-03: the branch `pre/greenfield-proto` no longer exists —
+`git branch -a` returns `master` and `origin/master` only, and `docs/TAGS.md` records it archived as
+`archive/greenfield-proto-final`. The script and the commit both survive.)* **Caveats:** arms are paired as experimental control, not
 as a paired estimator, so the deltas are differences of independent means; only pooled band-reach is
 racer-row weighted (context metrics are race-row means); episode-derived and `tiltFrac`-family metrics
 are mechanically G-coupled and comparable only at fixed G — the primary is G-independent.

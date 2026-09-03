@@ -3027,7 +3027,8 @@ SIM.md, where it cannot be switched on. Any control whose only purpose is "so we
 should be a paragraph instead.
 
 **What survives a deletion like this.** The MEASUREMENT (kept in SIM.md / LESSONS.md, with numbers), the
-git history (tag `pre/dead-mechanisms-cleanup`, a complete archive), and any sub-part with a live
+git history (commit `0555f9d`, a complete archive — the tag this lesson named was deleted in the
+2026-07-23 collapse, CITATIONS-1 2026-09-03), and any sub-part with a live
 consumer — here the spatial re-steer threshold, which the shipped B2-attacker release reads and which was
 therefore kept and re-documented rather than deleted with the rest. What does NOT survive is the config
 key, the UI control, and the code path. Both fingerprints stayed byte-identical through the removal,
