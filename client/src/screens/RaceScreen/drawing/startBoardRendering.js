@@ -522,8 +522,31 @@ export function drawStartBoard(
   // dimmer than both things it must not be confused with — and the portrait still stands between it
   // and the number chip.
   const rowFont = Math.round(12 * L.scale);
+  // ── THE PORTRAIT FITS ITS BOX (BOARD-PORTRAIT-FIT-1, 2026-09-04) ────────────────────────────
+  //
+  // THIS LINE USED TO BE `portraitPx / displaySize`, AND THAT SIZES ONE AXIS. `displaySizeScale`
+  // is the body's NARROW reference; the other axis follows the sprite's own proportions, and every
+  // shipped type has `baseRotationOffset` = 90°, which lays that axis ACROSS the screen — straight
+  // at the number chip on its left. The comment above this block said the drawn portrait "goes …
+  // to ~26.3 px", and 26.3 px is only ever its height.
+  //
+  // MEASURED at the artwork, alpha >= 10, frame 0, at scale 1: **14 of the 20 racer types put
+  // opaque pixels on the number chip**, from 0.4 px² (manta) to 161.5 px² (giraffe). The beetle,
+  // which is how this was found, is SEVENTH — the horse is worse, and the horse is the default on
+  // most tracks. It is not a sprite that is too big; it is a column that assumed a body is roughly
+  // square, and 14 bodies are not.
+  //
+  // THE TYPE ANSWERS IT, not the board. `getPortraitFitScale` lives on SpriteRacerType because the
+  // body fill, the rotation and the silhouette scale are its own, and a caller that re-derives them
+  // is one refactor away from believing a size it is not getting — which is what happened here.
+  // A type without the method keeps the old behaviour rather than vanishing.
   const portraitPx = spriteBox * PORTRAIT_FRAC;
-  const spriteScale = displaySize > 0 ? portraitPx / displaySize : 1;
+  const spriteScale =
+    typeof racerType?.getPortraitFitScale === 'function'
+      ? racerType.getPortraitFitScale(portraitPx, L.cellH * PORTRAIT_FRAC)
+      : displaySize > 0
+        ? portraitPx / displaySize
+        : 1;
 
   for (let i = 0; i < entries.length; i++) {
     const r = entries[i];

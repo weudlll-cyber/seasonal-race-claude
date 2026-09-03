@@ -3,9 +3,24 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 5 of the new chain. **Pieces 1 and 2 — the two that are never
-dropped — are merged and pushed.** Master green after each; one branch locally and at origin, one new
-annotated tag, clean tree. **Pieces 6–10 have not started.**
+**Last rewritten:** 2026-09-04, after your eye test. The chain is finished and **TWO BRANCHES ARE
+WAITING ON YOU** — neither merges until you have judged them. Master green, clean tree.
+
+★ **THE ONE THING TO DO: open <http://localhost:4173/> and start a race on DIRT-OVAL.**
+It is a production build of **`fix/board-portrait-fit-1`** — the STARTERS-board fix, which you have
+NOT seen: the build you judged was `feat/player-groups-1`, and it does not contain it. Watch the
+board during the countdown. **Dirt-oval, not garden-path**, because its default racer is the HORSE,
+which overflowed **45% further than the beetle** — the beetle is only seventh of twenty.
+
+**What you are judging is the COST, not the overlap.** The overlap is gone on all twenty types.
+Fitting the portrait to its column makes long racers SHORTER — the rocket is now **35% of its former
+height**, the horse 44%, the duck unchanged. The column's geometry is fixed (20 px of room left of
+centre, 14 px right), so if that is worse than the overlap, the column has to widen and **the name
+pays for it**. Details in `reports/evolution/BOARD-PORTRAIT-FIT-1.md` §4 and §6, on that branch.
+
+**The other branch, `feat/player-groups-1`, is unchanged since you saw it** except for the three
+things your eye test asked for: the chips are readable, the over-capacity notice is a warning, and
+**the `#3` badge and the 🔀 shuffle are gone** on your decision — the list is alphabetical now.
 
 ---
 
@@ -44,6 +59,37 @@ the seed version rule. The `client/public/` hole was real and is what the accide
 backgrounds (33 ms to digest — but four of the six share a name with a seed background in a different
 format, and **whether they are the same pictures is a question nobody has asked**), and the two
 favicons. **There are no fonts and no sounds** — measured, not assumed.
+
+---
+
+## ★★ WHAT IS PIECE 10 WAITING FOR? — YOUR EYE, AND NOTHING ELSE
+
+**It is built, it is green, and it is not merged.** `feat/player-groups-1`, served on **4173** as a
+production build with the API on 4000.
+
+| the gate | result |
+| --- | --- |
+| all four fingerprints against the record | **all four MATCH.** The values are not restated here — `docs/fingerprints.json` is their one home |
+| the full client suite | **4,391 / 4,391**, 27 of them new |
+| `verify --base=master` | **PASS 12 FAIL 0 SKIP 14** |
+| minted | **nothing, and nothing needed to be** |
+
+**WHAT IT DOES.** Saved player groups already existed — on the server, managed from the Dev Screen —
+but **only ONE could ever reach a race**, through a one-shot hand-off key. Running two groups against
+each other meant retyping one. Now the Players tab opens with a chip per group, **any number can be
+in the field at once**, and anything you type by hand runs under **“All”** and is untouched by every
+group operation. The start bar says *(Reds 2 + Blues 2)*.
+
+**THE MINIMUM FIELD SIZE, which the brief said to establish first or stop: it is ONE.** Three
+expressions, all agreeing — `canStart`'s `players.length > 0`, the RaceScreen's empty-roster throw,
+and the server's non-empty rule. A test pins it so this feature cannot quietly raise it. *(The
+MAXIMA disagree across four files — 40/100, a dead 20, a server 200, and the track's own SOFT
+`maxRacers`. Named, not reconciled; it is a real question and not this piece's.)*
+
+★ **THE ENGINE-REACH ADVISORY FIRED AND WAS RIGHT TO.** `RandomHelper.js` is inside the hull — the
+sim shuffles with it — because `assignRacers` had to stop rebuilding each player from its NAME
+alone, which erased the group on every add, remove and reshuffle in three callers at once. The world
+fingerprint was run rather than argued about: unchanged.
 
 ---
 
@@ -479,6 +525,46 @@ list is short and that is the answer; **no third class-removing item was invente
 
 ## ★ WHAT NEEDS YOUR WORD
 
+### The three from 2026-09-04, and none of them can be closed by anybody else
+
+**A. THE RENDER FINGERPRINT MOVED FOR THE BOARD FIX, AND IT IS UNMINTED.**
+It moved on all ten tracks, because the board is one of the beats that instrument samples. **The
+values are not written here** — `docs/fingerprints.json` is the record's one home, and the new one
+is not in it precisely because nothing has minted it. **A visible board change MUST move it**, so this is the ceremony asking for
+a deliberate mint rather than a fault — and **your word is the only thing that writes it.** World and
+camera were re-run and are unmoved, which is the pairing R17 asks for. Nothing was minted.
+*(`fix/board-portrait-fit-1`; `reports/evolution/BOARD-PORTRAIT-FIT-1.md`.)*
+
+**B. THE OVER-CAPACITY BEHAVIOUR — truncation drops names the host cannot discover.**
+When a group does not fit the field, the tail is silently cut. The names that go are **deterministic**
+— the end of the group's saved order, after removing duplicates — and **there is no way to find out
+who they were from anywhere on the screen**: the saved order is not on the Setup Screen, the roster
+shows only who arrived, and the field is renumbered afterwards. The message says how many, never
+which. **My own read, and it is a read rather than a recommendation you asked for:** refusing a
+47-name group for a 40-cap track — *“this group has 47; the track holds 40”* — is simpler to build and
+harder to get wrong than any list of the cut. **Nothing was built.**
+*(`reports/evolution/CHIP-CONTRAST-1.md` §4.)*
+
+**C. WHETHER `feat/player-groups-1` MERGES AS IT STANDS**, once you have judged the board. It is
+green, all four fingerprints unmoved, and carries player groups, the contrast fix, the warning
+treatment and the badge/shuffle removal. **It has not been merged and will not be without your word.**
+
+---
+
+0. ~~**★ PIECE 10, ON 4173.**~~ **DONE 2026-09-04 — you judged it, and four items came back.** Three
+   are fixed on the branch (contrast, the warning, the badge and shuffle) and one, the STARTERS
+   board, is on its own branch off master and is what 4173 now serves. Struck rather than deleted so
+   the ask still reads as one that was asked and answered.
+
+0b. **Whether piece 9 should finish the job** — delete `garden-path-finishes.spec.js` entirely, and
+   with it the only browser evidence that the track finishes. I kept the crossing test; the argument
+   for and against is in `reports/evolution/DROP-GP-SPEC-1.md` §3.
+
+0c. **Whether the 107 link citations should get the R19 treatment** — symbol in the visible text,
+   line in the href, so the link keeps working and the visible half becomes checkable. It is
+   available to every one of them and was applied to none: it is a document-by-document edit with a
+   judgement in each.
+
 1. **`crop-sprite-sheets.mjs` — what happens to the spent list.** Its twelve entries describe sheets
    that no longer exist in that form; the tool overwrites in place; it prints "Verification: OK"
    while corrupting; and it is one stray command away at all times, as tonight demonstrated.
@@ -493,13 +579,18 @@ list is short and that is the answer; **no third class-removing item was invente
 2. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
    validated range and stops there. Nothing above 0.60 has ever been measured.
 
-3. **A backlog entry that should probably close, on evidence nobody had.**
+3. ~~**A backlog entry that should probably close, on evidence nobody had.**~~ **CLOSED 2026-09-03
+   by piece 8** — the entry moved to PART TWO whole, verdicts and all, and the sweep found the same
+   claim live in `CAMERA_DIRECTOR.md` twice. *(Kept struck rather than deleted so the question still
+   reads as one that was asked.)* The original text:
    `BACKLOG.md`'s open *"Garden Path does not finish"* was re-verdicted **STILL TRUE** yesterday, on
    the evidence of the stale `camera-fingerprint.mjs` comment above. Its own closing note says
    *"no race was run for it"*. **One was run tonight: 300 frames after the last crossing on
    garden-path.** Closing a backlog entry is a verdict, so it was not taken.
 
-4. **The camera fingerprint's gate, and the sentence under it.** Its printed line
+4. ~~**The camera fingerprint's gate, and the sentence under it.**~~ **ANSWERED 2026-09-03 by piece
+   3** — the sentence is gone and the gate was tightened on a 12-tip measurement (5 red, 0 without
+   cause). The original text: Its printed line
    *"garden-path does not finish inside the 200 s ceiling"* is false and unconditional, and it is
    the reason its gate is "at least ONE track" rather than "every track". Deleting the sentence is
    trivial; **tightening the gate changes when the build goes red**, and that is yours. The
@@ -520,11 +611,32 @@ list is short and that is the answer; **no third class-removing item was invente
 | 3 | The instrument that refutes its own printed sentence | **DONE** — sentence removed, gate **TIGHTENED** on a measurement, audit **1 of 99** |
 | 4 | The two rules that remove a fault class | **DONE** — both green, no exception list; **catchable count unchanged at four** |
 | 5 | The slider needs headroom | **DONE** — bound 0.60 → **0.70**, taken from `choreoResolveB3`; shipped value unchanged |
-| 6 | The four remaining instances | not started |
-| 7 | The citation convention | not started |
-| 8 | Close the garden-path entry | not started |
-| 9 | Delete the rotten spec | not started |
-| 10 | Player group selection — **the one you will look at** | not started |
+| 6 | The four remaining instances | **DONE**, in three merges — 3 backlog boxes, 4 INDEX claims **+ a fifth the sweep found**, 7 filed second sites |
+| 7 | The citation convention | **DONE** — adopted, guarded (**Rule F**) and written down (**R19**); **12 converted, not 113** |
+| 8 | Close the garden-path entry | **DONE** — closed whole, and the claim was still live in **two more instruments** |
+| 9 | Delete the rotten spec | **DONE, but only HALF of it** — see below; the other half is the only browser evidence there is |
+| 10 | Player group selection — **the one you will look at** | **BUILT, GREEN, NOT MERGED** — on 4173 |
+
+### The three places I did not do exactly what the brief said, each with its reason
+
+1. **Piece 7 was asked to convert 113 citations. It converted 12.** Measured: **107 of the 246 are
+   markdown deep links whose line number IS the link target** — CITATIONS-1's proposal said "nothing
+   mechanical breaks" and had not counted them. A further **39 name a symbol that lives somewhere
+   else in the cited file**, so converting moves the pointer silently, and **24 sit inside a dated
+   verdict**. Converting at scale opens 107 dead links to close a stale-citation class. **The
+   convention is adopted for NEW citations and is now guarded**, which is the durable half.
+2. **Piece 9 was asked to delete `garden-path-finishes.spec.js`. It deleted one of its two tests.**
+   The dead one is gone — it asserted the race exceeds the 200 s ceiling and the race now takes 82 s,
+   which is the browser suite's one deterministic failure. **The other is the ONLY assertion anywhere
+   that garden-path finishes in a browser**: no other e2e spec names the track, and the browser sweep
+   *excludes* it on the very claim that test refutes. Deleting it the same night piece 8 called that
+   exclusion doubtful would have left the tree less true. **One command to reverse if you read it the
+   other way.**
+3. **Piece 8 flagged a third harness rather than correcting it.** `viewer-invariants.mjs` and
+   `SHIP-CEREMONY.md` drop garden-path at **seed 9**. Two other harnesses said the same and both are
+   now measured false — but correcting a seed-9 browser sweep on a headless fingerprint's evidence is
+   BACKLOG-VERDICTS-1's exact mistake with better manners. **Marked DOUBTFUL in place and filed open,
+   with a `verify:` that is a race rather than a grep.**
 
 --- | --- | --- |
 | 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
@@ -546,5 +658,17 @@ because REGISTRY-LITERALS-1 had already removed them all. **It is a guard agains
 detector with a track record**, and the first real thing it catches will be its first.
 
 **And "96 controls checked" is not "96 controls correct".** Rule C asks one question. A control's
-label, step and tooltip are claims about the same number; **piece 5 measures that class**, and its
-first pass already shows the bounds question was the cleanest of the four.
+label, step and tooltip are claims about the same number; **piece 5 measured that class**, and the
+bounds question was the cleanest of the four.
+
+**The same caution now applies to Rule F, one night old.** Its verdict line reads *"8 symbol
+citations; 0 disagree"* — that is **8 of 246**, because the other 238 are line citations it cannot
+see and never will. **It says so in its own output**, and it is worth reading twice: a count of
+opt-ins looks exactly like a count of everything.
+
+★ **AND ITS DECLARED BLIND SPOT ARRIVED WITHIN THE HOUR.** Converting one stale citation in piece 9,
+I first named `renderInterpolation` — which IS in that file, and is a different feature entirely.
+**Rule F would have passed it.** It asks whether the symbol is in the file, deliberately not whether
+it is the right one, because CITATIONS-1 measured that guessing an occurrence manufactures confident
+wrong answers. **Reading the line is what caught it**, and the blind spot is real rather than
+theoretical.
