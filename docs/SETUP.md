@@ -42,6 +42,17 @@ The app and the API are both at **`http://localhost:4000`**. One thing to start,
 If you skip step 2, the server still starts and serves the API; it logs one line saying it found no
 client build, and `http://localhost:4000/` is a 404 until you build.
 
+**Optional, and the server will tell you: `docker-compose.override.yml`.** It is gitignored, so a
+fresh clone has only `docker-compose.override.yml.example`. **Without it everything works** — the
+server starts, the app is served, and same-origin needs no CORS — but it prints
+`[auth] Using ephemeral dev session secret — sessions will not survive restart`, and they will not:
+you sign in again after every `docker compose restart`. Copy the example and set `RA_SESSION_SECRET`
+to stop that. **What each variable does, and what breaks without it, is
+[ENVIRONMENT.md](ENVIRONMENT.md)'s and is not restated here.** *(Named as a step 2026-09-03,
+PUBLISH-DOCS-1: this page walked a stranger through setup without mentioning the one file a fresh
+clone does not have, and the consequence of skipping it was discoverable only from a startup log
+line.)*
+
 ## 4. Create the first admin — once
 
 There is no default login. `POST /api/auth/setup` creates the first account and it requires
@@ -87,10 +98,19 @@ RA_SESSION_SECRET=... RA_BOOTSTRAP_TOKEN=... node server/src/index.js
 ## 6. Running the tests
 
 ```bash
+npm install                  # ONCE, at the repository root — see below
 cd client && npm test        # the client suite
 cd server && npm test        # the server suite
 npm run verify               # the guards, routed by what you changed
 ```
+
+**The root `npm install` is not optional and this page did not say so until 2026-09-03
+(PUBLISH-DOCS-1).** The repository root declares three dev dependencies — `acorn`, `pngjs` and
+`sharp` — and `npm run verify` needs the first of them: `check-fingerprint-payload.mjs` PARSES the
+hashed payload literal rather than matching text over it, and a guard that cannot parse says so and
+fails rather than skipping. CI installs them for exactly this reason
+(`.github/workflows/ci.yml`, *"Install the parser the payload guard needs"*). It also installs the
+git hooks through the root `prepare` script — see [VERIFY-RULES.md](VERIFY-RULES.md) R12.
 
 ## 7. Working with the server
 

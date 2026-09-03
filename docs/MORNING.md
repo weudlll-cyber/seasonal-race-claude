@@ -3,7 +3,7 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 7. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+**Last rewritten:** after piece 8 — THE CHAIN IS FINISHED. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
 pieces merged and pushed.** This chain is running; every piece is marked below.
 
 ---
@@ -146,6 +146,35 @@ retune that you FLIPPED on 2026-07-26 to G=0.5 / strength=1.0. One of them also 
 opposite trade-off from the one the confirm gate found. **39 days stale, on the card an operator
 reads while judging the mechanism.** Piece 5 is read-only and found them; piece 3 is the fix-piece
 and applied them.
+
+---
+
+## ★ PIECE 8 — THE PUBLISH PATH IS SOUND; WHAT IT OMITTED WAS THREE PREREQUISITES
+
+**21 claims checked at the tree — 17 true, 4 corrected. No document restructured, neither manual step
+closed.** A stranger following the README from a clean clone reaches a running install; what they
+were not told was what to install first.
+
+1. **`npm run verify` needs a ROOT `npm install`, and `SETUP.md` never said so.** The root declares
+   `acorn`, and `check-fingerprint-payload.mjs` PARSES the payload literal — without it that guard
+   **fails rather than skips**. **CI has carried a step called "Install the parser the payload guard
+   needs" all along**: the instruction existed in the workflow and not in the document a person reads.
+2. **The README's project tree omitted `shared/`** — the directory holding the one module both halves
+   import, and the reason the Docker build context is the repository root at all.
+3. **It called CI "lint → test → audit". It is three jobs**, and the unmentioned one runs every guard
+   this repository has.
+4. **Neither entry point named `docker-compose.override.yml`**, which a fresh clone does not have.
+   Everything works without it and the server says so — but *optional with a consequence* (you sign in
+   again after every restart) **is a step, not an omission**.
+
+**Also: the README handed a stranger `npm` and `docker compose` without naming Node 20+ and Docker.**
+
+**Both manual steps are stated and neither is closed** — build the client before building the image,
+and set `VITE_API_URL` for a real deployment. `VITE_API_URL` is deliberately absent from the two
+LOCAL-install documents, which is correct: their reader must not set it.
+
+**One confirmation worth the ink:** `raceActionStage` ships `quiet` at `defaults.js:40` — a line
+citation still exactly true, on the night 54 others were found stale.
 
 ---
 
@@ -325,7 +354,7 @@ again.
 | 5 | Where else does a control disagree with what ships? | **DONE** — read-only; the class is **SIX**, not one |
 | 6 | What Rule A cannot see | **DONE** — read-only; it covers **1 of 12** groups, live population **12** |
 | 7 | The second-site rate, as a baseline | **DONE** — read-only; the baseline had no "before"; **36% → 0%**, combined **47%** |
-| 8 | The publish documentation | not started |
+| 8 | The publish documentation | **DONE** — 21 claims checked, **17 true, 4 corrected**; neither manual step closed |
 
 ---
 

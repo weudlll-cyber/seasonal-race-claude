@@ -524,6 +524,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   **Honest combined figure: 15 of 32 = 47%.** ★ **Five of five of SECOND-SITES-1's own claim-groups
   are still live a day later.**
 
+- [PUBLISH-DOCS-1.md](PUBLISH-DOCS-1.md) — **the path from a clean clone is sound; what it omitted
+  was three prerequisites and one file a fresh clone does not have** (2026-09-03; a verification pass
+  with corrections, `verify` green, nothing minted, **no document restructured and neither manual step
+  closed**). **21 claims checked at the tree — 17 true, 4 corrected.** ★ `npm run verify` needs a ROOT
+  `npm install` and `SETUP.md` never said so: the root declares `acorn`, and
+  `check-fingerprint-payload.mjs` PARSES the payload literal, so without it that guard **fails rather
+  than skips**. **CI already carries a step named "Install the parser the payload guard needs"** — the
+  instruction existed in the workflow and not in the document a person reads. ★ The README's project
+  tree omitted **`shared/`** — the directory holding the one module both halves import, and **the
+  reason the Docker build context is the repository root at all**. ★ It called CI *"lint → test →
+  audit"*; it is **three jobs**, and the unmentioned one runs every guard this repository has.
+  ★ Neither entry point named `docker-compose.override.yml`, which a fresh clone does not have:
+  everything works without it, and the server prints *"sessions will not survive restart"* — **optional
+  with a consequence is a step, not an omission.** ★ **`VITE_API_URL` is deliberately absent from the
+  two local-install documents**, which is correct rather than missing. ★ Among the confirmations:
+  `raceActionStage` ships `quiet` at `defaults.js:40` — **a line citation still exactly true**, on the
+  night 54 others were found stale.
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).
