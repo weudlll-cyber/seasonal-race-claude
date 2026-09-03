@@ -557,19 +557,17 @@ nothing is designed here, no key is added, and no change is implied.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
-- [ ] **THE BROWSER SWEEP STILL EXCLUDES GARDEN-PATH ON A CLAIM TWO OTHER HARNESSES HAVE RETRACTED.**
-      `scripts/viewer-invariants.mjs` records garden-path as never finishing at seed 9 and drops it
-      from the twelve scorable items; `SHIP-CEREMONY.md` repeats it. **The same claim was true of the
-      camera fingerprint and of the render fingerprint and is false in both** since 2026-08-25, when
-      `d73ec6a9` gave the track the beetle and two laps — measured 2026-09-03: 4,916 of 12,000 frames
-      with 300 after the last crossing, and FINISH by frame 4300 with the coverage matrix reading
-      **10/10**. **It is NOT corrected here, deliberately**: that is a third harness at a specific
-      seed, and settling it from another instrument's result is precisely the mistake
-      BACKLOG-VERDICTS-1 made about this track. Both sites are flagged DOUBTFUL in place.
-      **verify:** run the sweep for garden-path at seed 9 and read whether it scores — a measurement,
-      not a grep. **Costs nothing while it stands**: the nightly sweep runs all ten tracks anyway, so
-      what is at stake is one track's pre-merge coverage, not its coverage. **Filed 2026-09-03
-      (GARDEN-PATH-CLOSE-1).**
+- [x] ~~**THE BROWSER SWEEP STILL EXCLUDES GARDEN-PATH ON A CLAIM TWO OTHER HARNESSES HAVE
+      RETRACTED.**~~ **ANSWERED 2026-09-04 (GP-SPEC-TRIM-1) BY ITS OWN VERIFY COMMAND, AND THE CLAIM
+      IS FALSE.** The entry asked for a measurement rather than a grep, and it got one:
+      `node scripts/viewer-invariants.mjs --tracks=garden-path --seeds=9 --arm=shipped` — 255 s, one
+      race, a full acceptance sheet. **Garden-path finishes at seed 9 and IS scorable**: PHOTO_FINISH
+      with the winner on canvas at (0.465, 0.695), graded on the twelve items, **passing ten and
+      failing two** — item 9 (winner cut, 4 violations, worst at frame 6241) and item 10 (walk, 0.52).
+      ★ **AND THE ENTRY'S OWN CLOSING LINE WAS WRONG TOO.** It said the exclusion *“costs nothing
+      while it stands”* on the ground that there was nothing to score. There is, and two of the twelve
+      fail. Both sites are corrected in place. **WHAT THE GATE RUNS IS NOT CHANGED** — that decides
+      what reddens a build and is the owner's; it is on the morning sheet as his.
 
 - [ ] **NOTHING MEASURES MOTION, only per-frame VALUES.** A 2708 px one-frame step was invisible to
       the camera fingerprint (which hashes state, and duly hashed it as just another frame) and
