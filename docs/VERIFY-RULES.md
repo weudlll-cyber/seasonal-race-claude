@@ -776,6 +776,54 @@ the rule exists because nothing can answer.
 
 ---
 
+## R19 — A CITATION NAMES A SYMBOL, NOT A LINE — FROM HERE ON
+
+**Rule.** A **NEW** citation from a document to code names a symbol:
+
+    `raceGovernor.js` → `governorPhaseWeight`
+
+not `raceGovernor.js:92`. Where the sentence already names the symbol beside the file, the line
+number is simply dropped — a bare filename makes no claim about a line and so cannot be wrong about
+one. **Spell the path when the basename is ambiguous**; `index.jsx` names at least four screens here.
+
+**The argument is not readability. It is that a line citation cannot be checked and a symbol
+citation can.** Nothing in this repository can tell a correct `file.js:357` from a stale one, because
+every in-range number is equally plausible — which is exactly how fifty-four of them rotted
+unnoticed (CITATIONS-1). *"`governorPhaseWeight` is in `raceGovernor.js`"* is a two-sided,
+machine-readable claim of the shape Rule A already enforces.
+
+**It IS guarded**, which is what separates this rule from R16 and R18. `check-fallback-agreement`'s
+**Rule F** resolves every arrow-form citation in `docs/*.md` and fails when the named file does not
+contain the named symbol — proven in both directions, and a document change now selects that guard.
+It is a **rule inside an existing guard, not a new script** (R13), and it lives beside Rule A because
+it asks Rule A's question with a document on one end.
+
+**"FROM HERE ON" is the whole of the rule, and the reason is measured.** CITATIONS-CONVENTION-1
+counted **246** code citations in `docs/*.md` and converted **12**. It did not convert the rest, and
+this is not deferred work:
+
+- **107 (43%) are markdown deep links** — `[`raceStep.js:46-55`](../client/src/modules/raceStep.js#L46-L55)`.
+  **The line number IS the link target.** Converting them breaks 107 working links; CITATIONS-1's
+  proposal said "nothing mechanical breaks" and had not counted them.
+- **39 name a symbol that lives somewhere ELSE in the cited file.** Converting those moves the
+  pointer silently, which is worse than leaving it stale.
+- **24 sit inside a dated verdict or correction** — a record of what was checked on a day. Rewriting
+  a record is the thing this project refuses everywhere else.
+- The remainder name no symbol at all, and deciding what each meant is the judgement CITATIONS-1
+  measured as un-automatable: `getPhase`'s first occurrence in `racePlanner.js` is a **comment** at
+  `:165` and its definition is at `:524`.
+
+**So the old citations stay, and nothing pretends they are checkable.** Rule F's count is a count of
+citations that OPTED IN, and its output says so, because "0 disagree" read as a statement about every
+citation in the documents would be the opposite of the truth.
+
+**Cost, stated because it is the objection:** a `file:line` is clickable in some editors and a symbol
+is not. That cost is real for a bare citation and **zero for the 107 links**, which keep their
+anchors under this rule — a link may carry a symbol in its visible text and a line in its href, and
+the visible half is then the checkable one.
+
+---
+
 ## The instruments, and what each costs
 
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,

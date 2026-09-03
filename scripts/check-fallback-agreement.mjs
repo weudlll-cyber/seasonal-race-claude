@@ -53,7 +53,8 @@ export const GUARD = {
     "a fallback that disagrees with the default it mirrors — `config.k ?? 3` while the default says 5; " +
     "AND (RULE A) a literal mirroring a machine-readable home that disagrees with it — a racer-type " +
     "field copied into a table while the registry says something else; " +
-    "AND (RULE D) a racer-type registry whose frame geometry disagrees with the PNG it names — frameWidth x frameCount against the sheet's own IHDR header",
+    "AND (RULE D) a racer-type registry whose frame geometry disagrees with the PNG it names — frameWidth x frameCount against the sheet's own IHDR header; " +
+    "AND (RULE F) a SYMBOL CITATION in a document that names a symbol its file does not contain — `raceGovernor.js` -> `governorPhaseWeight`",
   blind: [
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
@@ -64,12 +65,17 @@ export const GUARD = {
     "RULE A: a copy that RENAMES its fields. It discovers pairs from the registry's own field names, so a table using different names is invisible to it. That is the price R18 asks for: renaming a historical record is what makes it readable as one, and it is also what puts it out of reach. (The example the tree carried — `crop-sprite-sheets.mjs`'s `preCropFrameWidth` — was DELETED on 2026-09-03 with the script; the blind spot is unchanged and is now unexercised.)",
     "RULE D: GEOMETRY only. A change that leaves the frame size alone — a repaint, a re-crop to the same target, a truncated write — is invisible to it. That case is measured (ARTWORK-DIGEST-1: an overwrite produced 1200x150 before AND after) and is the artwork DIGEST's question, in check-seed-versions",
     "RULE D: only the sheet named by `spriteUrl`. Mask files hang off nested coat objects, which the registry loader skips, so they are digested but not geometry-checked",
+    "RULE F: LINE citations, which are the overwhelming majority and are the reason this rule exists. CITATIONS-1 measured 250 of them and CITATIONS-CONVENTION-1 re-measured 246: NOTHING can tell a correct `file.js:357` from a stale one, because every in-range number is equally plausible. This rule can only see the ARROW form, so its count is a count of citations that OPTED IN.",
+    "RULE F: WHICH occurrence. It asks whether the symbol is in the file at all, not whether it is the one the sentence meant. That is deliberate — CITATIONS-1 measured `getPhase`'s first occurrence in `racePlanner.js` as a COMMENT at :165 with its definition at :524, so a rule that guessed an occurrence would manufacture confident wrong answers. A two-sided existence claim is what is checkable and it is all that is claimed.",
+    "RULE F: reports/, which are append-only, and docs/archive/, which records the past on purpose. Neither is scanned.",
     "RULE A: it can find ZERO literals and that is the GOAL STATE, not a failure — REGISTRY-LITERALS-1 removed the copies before this rule existed and DROP-CROP-SCRIPT-1 removed the last twelve. What must never be zero is the DISCOVERY, and that is enforced below rather than left to the test suite.",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
   // RULE A widened this from `client/src/` alone. Its founding defect lived in `scripts/`, which is
   // the hole CENSUS-DUPES-1 declared as its own largest, so a change there must now select this guard.
-  dirs: ["client/src/", "scripts/", "client/scripts/", "client/public/assets/racers/"],
+  // RULE F reads `docs/`, so a document change selects this guard too — a citation rots when either
+  // end moves, and the document end is the one that moves by hand.
+  dirs: ["client/src/", "scripts/", "client/scripts/", "client/public/assets/racers/", "docs/", "server/src/"],
   files: [],
 };
 if (process.argv.includes("--declare")) {
@@ -78,7 +84,7 @@ if (process.argv.includes("--declare")) {
 }
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, relative, sep } from "node:path";
+import { join, dirname, relative, sep, isAbsolute } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __t0 = Date.now();
@@ -774,6 +780,121 @@ if (artMismatch.length) {
     "      The PNG is the source of truth here — it is the artwork. Either the registry was edited\n" +
       "      without the sheet, or the sheet was replaced without the registry. Read the file's own\n" +
       "      header before deciding which: `frameWidth × frameCount` must equal the sheet's width.",
+  );
+  process.exitCode = 1;
+}
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// RULE F — A CITATION MAY NOT NAME A SYMBOL ITS FILE DOES NOT CONTAIN
+//
+// The form: \`raceGovernor.js\` → \`governorPhaseWeight\` — a file and a symbol, joined by an arrow.
+//
+// WHY IT EXISTS, and it is not readability. A LINE citation cannot be checked: nothing in this
+// repository can tell a correct \`file.js:357\` from a stale one, because every in-range number is
+// equally plausible. That is exactly how fifty-four of them rotted unnoticed. **A symbol citation is
+// a two-sided, machine-readable claim** of precisely the shape Rule A already enforces — which is
+// why it lives here, beside Rule A, rather than in a new script (R13).
+//
+// WHAT IT DOES NOT ASK: which occurrence. CITATIONS-1 measured \`getPhase\`'s first hit in
+// \`racePlanner.js\` as a COMMENT at :165, with the definition at :524. A rule that picked an
+// occurrence would move a citation from one wrong place to a different wrong place. **Existence is
+// what is checkable, and existence is all that is claimed.**
+//
+// THE COUNT IS A COUNT OF OPT-INS. CITATIONS-CONVENTION-1 converted twelve citations and left 234,
+// because 107 of them are markdown deep links whose line number IS the link target and 39 name a
+// symbol that lives somewhere else in the file entirely. This rule grows as the convention is
+// adopted; it does not reach back.
+//
+// LOUD FAILURE (Lesson 187): zero documents scanned FAILS. Zero CITATIONS is fine and is the state
+// on the day the convention starts.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
+// `--docs-root=<dir>` moves the DOCUMENT end, the way `--registry-root=` moves the registry end. It
+// exists so Rule F can be sabotaged against a fixture rather than against the real documents, which
+// is how every other rule in this file is proven.
+const DOCS_ROOT_ARG = process.argv.find((x) => x.startsWith("--docs-root="));
+const DOC_DIR = DOCS_ROOT_ARG ? DOCS_ROOT_ARG.slice("--docs-root=".length) : "docs";
+const DOC_BASE = isAbsolute(DOC_DIR) ? DOC_DIR : join(ROOT, DOC_DIR);
+// \`file.ext\` → \`symbol\`  (an optional \`()\` on the symbol, an optional leading path)
+const SYMBOL_CITE =
+  /`([A-Za-z0-9_.\-/]+\.(?:js|jsx|mjs|cjs|ts|tsx))`\s*(?:→|->)\s*`([A-Za-z_$][\w$]*)(?:\(\))?`/g;
+
+const citeBad = [];
+const citeUnresolved = [];
+let citeDocs = 0;
+let citeChecked = 0;
+const srcCache = new Map();
+const readSrc = (p) => {
+  if (!srcCache.has(p)) {
+    try {
+      srcCache.set(p, readFileSync(p, "utf8"));
+    } catch {
+      srcCache.set(p, null);
+    }
+  }
+  return srcCache.get(p);
+};
+const allTracked = walk(join(ROOT, "client", "src"))
+  .concat(walk(join(ROOT, "scripts")))
+  .concat(walk(join(ROOT, "server", "src")))
+  .map((p) => relative(ROOT, p).split(sep).join("/"));
+
+let docNames = [];
+try {
+  docNames = readdirSync(DOC_BASE).filter((f) => f.endsWith(".md"));
+} catch {
+  docNames = [];
+}
+for (const name of docNames) {
+  const text = readSrc(join(DOC_BASE, name));
+  if (text === null) continue;
+  citeDocs++;
+  for (const m of text.matchAll(SYMBOL_CITE)) {
+    const cited = m[1];
+    const sym = m[2];
+    const hits = allTracked.filter((t) => t === cited || t.endsWith("/" + cited));
+    if (hits.length === 0) {
+      citeUnresolved.push(`${DOC_DIR}/${name}: \`${cited}\` — no such file under client/src, scripts or server/src`);
+      continue;
+    }
+    if (hits.length > 1) {
+      citeUnresolved.push(
+        `${DOC_DIR}/${name}: \`${cited}\` is AMBIGUOUS — ${hits.length} files share that name (${hits.slice(0, 3).join(", ")}…). Spell the path.`,
+      );
+      continue;
+    }
+    citeChecked++;
+    const src = readSrc(join(ROOT, hits[0]));
+    const re = new RegExp("\\b" + sym.replace(/[$]/g, "\\$") + "\\b");
+    if (src === null || !re.test(src))
+      citeBad.push(`    ${DOC_DIR}/${name}: cites \`${cited}\` → \`${sym}\`, and ${hits[0]} does not contain \`${sym}\``);
+  }
+}
+
+if (citeDocs === 0)
+  fail187(
+    `RULE F scanned ZERO documents under ${DOC_DIR}/. Either the documents moved or the read failed,\n` +
+      `      and "0 disagree" would be a statement about an empty search.`,
+  );
+
+console.log(
+  `check-fallback-agreement RULE F: ${citeChecked} symbol citation(s) in ${citeDocs} document(s); ` +
+    `${citeBad.length} name a symbol their file does not contain` +
+    `${citeUnresolved.length ? `, ${citeUnresolved.length} unresolved` : ""}. ` +
+    `(OPT-IN — a \`file.js:357\` line citation is invisible to this and always will be.)`,
+);
+for (const u of citeUnresolved) console.log(`  unresolved: ${u}`);
+
+if (citeBad.length) {
+  console.error("");
+  console.error(`FAIL: RULE F — ${citeBad.length} citation(s) name a symbol their file does not contain.`);
+  for (const b of citeBad) console.error(b);
+  console.error(
+    "      Either the symbol was renamed or removed and the document was not, or the citation names\n" +
+      "      the wrong file. This is the whole reason a symbol citation is preferred to a line one:\n" +
+      "      a line number cannot be wrong out loud, and this can.",
   );
   process.exitCode = 1;
 }

@@ -522,7 +522,7 @@ nothing is designed here, no key is added, and no change is implied.
     and they are the finding rather than a footnote to it:
     `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
     — the app's own test replaces the race screen with an empty component — and
-    `client/src/modules/buildIdentitySource.test.js:25` opens it with `readFileSync` and asserts
+    `client/src/modules/buildIdentitySource.test.js` opens it with `readFileSync` and asserts
     against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
     `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
     workaround: what needed testing was moved OUT, one file at a time.
@@ -2917,8 +2917,8 @@ Additionally: Space (Custom Track) already present.
   Defensive hygiene, low priority.
 
 - **Q-16** ✅ ~~CORS wildcard on all backend endpoints~~ — **NEVER TRUE as written today,
-  established at source 2026-08-23.** `server/src/auth/csrf.js:26` builds `corsOptions` from an
-  explicit allow-list and **denies** when the list is empty; `app.js:31-36` then stacks
+  established at source 2026-08-23.** `server/src/auth/csrf.js` builds `corsOptions` from an
+  explicit allow-list and **denies** when the list is empty; `server/src/app.js` then stacks
   `csrfOriginGuard`, `requireAuth` and `requireAdmin` above every route. No `origin: '*'` and no
   bare `cors()` exist in the tree.
   **verify:** `git grep -n "origin: '\*'\|cors()" -- 'server/src/**'` — **still closed while it

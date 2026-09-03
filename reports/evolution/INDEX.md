@@ -695,6 +695,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [CITATIONS-CONVENTION-1.md](CITATIONS-CONVENTION-1.md) — **the “113 mechanically-convertible” is
+  TWELVE, because 107 of the citations are LINKS whose line number is the destination** (2026-09-03;
+  documents, one guard rule, eight tests; nothing minted, no fingerprint touched). ★ **CITATIONS-1’s
+  proposal said “nothing mechanical breaks” and had not counted the links.** Of 246 code citations in
+  `docs/*.md`, **107 — 43% — are markdown deep links** of the form
+  `` [`raceStep.js:46-55`](…#L46-L55) ``: the line number IS the link target, and a conversion pass
+  would have destroyed all 107 with no guard saying a word. **A further 39 name a symbol that lives
+  somewhere ELSE in the cited file** — converting those moves the pointer silently, which is worse
+  than leaving it stale — and **24 sit inside a dated verdict**, where rewriting is what this project
+  refuses everywhere else. ★ **Twelve converted, 234 left, and the leaving is the finding.**
+  ★ **RULE F ships** in `check-fallback-agreement` beside Rules A and D (R13: a rule inside an
+  existing guard, not a new script): `` `file.js` → `symbol` `` must resolve. **Sabotage-proven at
+  BOTH ends** — rename it in the document, red; rename it in `raceGovernor.js` and leave the document
+  alone, red. **It deliberately does not ask WHICH occurrence**, because `getPhase`’s first hit in
+  `racePlanner.js` is a comment at `:165` with the definition at `:524`. **Its count is a count of
+  OPT-INS and its own output says so.** ★ **All twelve symbol-shaped near-misses were opened by hand
+  and all twelve are correct**, for four different reasons — including `FORCE-MAP.md`’s three
+  stuck-mode constants, which have **no code behind them under those names** and are a correct record
+  because the header two lines up says **REMOVED**. **A guard on that window would have cried wolf
+  twelve times on its first run.** R19 written; `docs/` now selects the guard.
 - [BACKLOG-CHECKBOXES-1.md](BACKLOG-CHECKBOXES-1.md) — **three boxes closed by their own verdict, and
   a FOURTH that looked identical and is correctly open** (2026-09-03, documents only, nothing minted).
   BACKLOG-VERDICTS-1 returned ALREADY DONE on three entries on 2026-09-02 and **the checkboxes never
