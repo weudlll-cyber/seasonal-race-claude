@@ -244,6 +244,11 @@ in an append-only report. **The 52% averaged them.**
 its report summaries — thousands of lines below the corrections block that withdraws each one.
 **SECOND-SITES-1 searched living documents and code and never looked in the lab journal's own map.**
 
+**All four are CLOSED as of 2026-09-03** (INDEX-SUMMARIES-1), along with a fifth the sweep turned up
+— *"all seven intrusions"*, the same inflated pass as the *"7 of 12"*. Each summary now carries the
+withdrawal beside the claim rather than only thousands of lines above it. The reports themselves are
+untouched: they are append-only, and the corrections block stays their home.
+
 **Five of five of its own filed second sites are still live a day later** — it was read-only, so that
 is a control, not a criticism. The clearest of them: `VERIFY-RULES.md` says the browser suite is
 "103/103 green" and `NIGHT-RUN.md` says it is 106, and neither knows about the other.
