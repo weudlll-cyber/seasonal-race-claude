@@ -71,11 +71,29 @@ export function loadRaceDynamicsConfig() {
     typeof merged.racePlanPulkStart !== 'number' ||
     merged.racePlanPulkStart < 0.1 ||
     merged.racePlanPulkStart > 0.6 ||
-    // choreoOutcomeStart — the PULK/OUTCOME seam. Validated range [0.25, 0.70]; shipped 0.60.
-    // THE TOP CAME FROM THE NEIGHBOUR, not from feel (SLIDER-HEADROOM-1, 2026-09-03):
-    // `choreoResolveB3` is a fixed 0.70, so B3's OUTCOME settling window is `[this, 0.70]` and is
-    // ZERO wide at 0.70. SWEEP 2 measured all four points — the band-reach gate holds on 3 of 4
-    // tracks at BOTH 0.60 and 0.70 and collapses to 0 of 4 at 0.80.
+    // choreoOutcomeStart — the PULK/OUTCOME seam. Shipped 0.60.
+    //
+    // ★★ TWO NUMBERS HERE, AND THEY ARE DELIBERATELY DIFFERENT.
+    //
+    //   THE ACCEPTED RANGE IS [0.25, 0.60], and the Dev Screen's slider enforces it. THE TOP IS
+    //   0.60 BECAUSE THAT IS THE EDGE OF WHAT HAS BEEN MEASURED, not because the mechanism stops
+    //   there. The mechanism's wall is 0.70 — `choreoResolveB3` is a fixed 0.70, so B3's settling
+    //   window `[this, 0.70]` is ZERO wide there — and SWEEP 2 measured 0.70 as holding the gate on
+    //   3 of 4 tracks. But SWEEP 2 is 2026-07-17, before the speed-150 re-baseline, COMBO15,
+    //   gap-reroll's flip and the B2 attackers at count 3. NOTHING ABOVE 0.60 HAS BEEN MEASURED ON
+    //   THE TREE THAT SHIPS. The owner raised the slider to 0.70 on 2026-09-03 and REVERSED IT ON
+    //   2026-09-04 for exactly that reason.
+    //
+    //   THIS LOADER STILL TOLERATES UP TO 0.70, and that is not an oversight. The slider stood at
+    //   0.70 for a day, so a stored 0.65 is reachable — and this validator REJECTS THE WHOLE OBJECT
+    //   on any failure, silently returning every default. Tightening it to 0.60 would throw away an
+    //   operator's brake, boost, intensity and attacker count to correct one key they can no longer
+    //   set anyway. A tolerated 0.65 costs one clamp on open; a tightened bound costs the config.
+    //   (This project takes no migrations, by standing rule, so there is no third option.)
+    //
+    //   THE RESIDUAL IS REPORTED, NOT HIDDEN: a stored 0.65 loads, and the slider clamps it to 0.60
+    //   the moment it is touched — CONTROL-BOUNDS-1's defect in miniature, on a value only reachable
+    //   during one day's window. It is on the morning sheet rather than silently repaired.
     //
     // ★ THIS BOUND AND THE DEV SCREEN'S MUST MOVE TOGETHER, and that is not a style note. It was
     // 0.6 here while the widget was being raised to 0.70, which would have let an operator set 0.65

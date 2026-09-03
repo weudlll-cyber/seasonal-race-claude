@@ -284,17 +284,26 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig().contestWindowStart).toBe(0.7);
   });
 
-  it('returns defaults when choreoOutcomeStart is out of [0.25, 0.70]', () => {
+  it('returns defaults when choreoOutcomeStart is outside the LOADER range [0.25, 0.70]', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.2 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.75 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
-  // SLIDER-HEADROOM-1: the top of the range the Dev Screen can now reach must SURVIVE the loader.
-  // Before this pass the widget was being raised to 0.70 while this validator still cut at 0.60 —
-  // which would have made a reachable slider position silently discard the ENTIRE stored config.
-  it('accepts the top of the range the Dev Screen can reach — 0.70', () => {
+  // ★ THE LOADER IS DELIBERATELY WIDER THAN THE SLIDER (SLIDER-BOUND-060-1, 2026-09-04).
+  //
+  // SLIDER-HEADROOM-1 raised the widget to 0.70 on 2026-09-03 and this test was written so a
+  // reachable slider position could not silently discard the ENTIRE stored config. The owner
+  // REVERSED the widening a day later — the slider stops at 0.60 again, because that is the edge of
+  // what has been measured on the tree that ships.
+  //
+  // THIS TEST STAYS, and the reason is the day in between: the slider stood at 0.70 for a day, so a
+  // stored 0.65 or 0.70 is reachable. This validator rejects the WHOLE OBJECT on any failure, so
+  // tightening it to 0.60 would throw away an operator's brake, boost, intensity and attacker count
+  // in order to correct one key they can no longer set. A tolerated 0.70 costs one clamp when the
+  // slider is next touched; a tightened bound costs the config. (No migrations, by standing rule.)
+  it('the LOADER still accepts 0.70, though the slider no longer reaches it', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.7 });
     expect(loadRaceDynamicsConfig().choreoOutcomeStart).toBe(0.7);
   });

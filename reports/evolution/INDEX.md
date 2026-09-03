@@ -695,6 +695,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [SLIDER-BOUND-060-1.md](SLIDER-BOUND-060-1.md) — **the bound is 0.60 again, and this time the WHY
+  is written where the bound is** (2026-09-04; the shipped value 0.6 never moved, all four
+  fingerprints unmoved). His decision reversing SLIDER-HEADROOM-1 a day later. ★ **THE MISSING LINE
+  IS THE WHOLE PIECE**: *0.60 is the edge of what has been MEASURED, not a limit of the mechanism.*
+  The mechanism's wall really is 0.70 and SWEEP 2 measured it holding — but SWEEP 2 is 2026-07-17,
+  before the speed-150 re-baseline, COMBO15, gap-reroll's flip and the B2 attackers, so **nothing
+  above 0.60 has been measured on the tree that ships**. The widening let an operator tune where no
+  evidence exists. ★ **SLIDER-HEADROOM-1 recorded that caveat IN ITS LIMITS SECTION** — a place
+  nobody editing a slider will read — which is why the bound moved. **A caveat that lives in a report
+  and not at the line has already failed.** ★ **THE LOADER WAS DELIBERATELY NOT TIGHTENED**: the
+  slider stood at 0.70 for a day, so a stored 0.65 is reachable, and that validator discards the
+  WHOLE object on any rejection — cutting it to 0.60 would throw away an operator's brake, boost,
+  intensity and attacker count to correct one key they can no longer set. Both numbers are stated in
+  one place with which is which; the residual clamp is reported, not hidden. **Six second sites
+  swept and corrected**, and PHASE-CONTRACT's widening argument is KEPT above the reversal so a
+  reader can tell the question was thought about.
+
 - [GP-SPEC-TRIM-1.md](GP-SPEC-TRIM-1.md) — **the spec is one claim now, and the contradiction around
   it is settled: garden-path IS scorable, and the sweep is not scoring a track that fails two of its
   twelve items** (2026-09-04). His decision revising *delete the file*: keep only what is needed.

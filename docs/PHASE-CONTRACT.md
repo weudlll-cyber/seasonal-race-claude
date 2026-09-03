@@ -88,7 +88,12 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   value the game runs; **repaired by CONTROL-BOUNDS-1 the same day**, by setting the widget clamp to the
   VALIDATED range [0.25, 0.60] that this document and DEVSCREEN-INVENTORY.md had already recorded. The
   shipped value did not move.)*
-  *(And the TOP moved again the same day, SLIDER-HEADROOM-1: to **0.70**, taken from the neighbour
+  *(★ AND IT MOVED BACK. The owner reversed the widening on **2026-09-04**: the slider's top is
+  **0.60** again, because the top is the edge of what has been MEASURED on the tree that ships and
+  SWEEP 2 is from 2026-07-17 — before the speed-150 re-baseline, COMBO15, gap-reroll's flip and the
+  B2 attackers. The mechanism's wall really is 0.70 and that is not the question. The paragraph below
+  records the widening as it was argued at the time.)*
+  *(The TOP moved again the same day, SLIDER-HEADROOM-1: to **0.70**, taken from the neighbour
   rather than from feel. `choreoResolveB3` is a fixed **0.70**, so B3's OUTCOME settling window is
   exactly `[choreoOutcomeStart, 0.70]` — 0.10 wide at the shipped 0.60, **zero at 0.70**. That is the
   wall: past it a band would be asked to be resolved before OUTCOME has begun. SWEEP 2 (2026-07-17)
