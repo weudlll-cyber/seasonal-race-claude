@@ -3,9 +3,39 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** after piece 1 of the new chain. **The previous chain (ENFORCE THE HYGIENE) is
-finished — all ten pieces merged and pushed.** This chain is running now; pieces below are marked
-DONE, RUNNING or NOT STARTED.
+**Last rewritten:** after piece 2. **The previous chain (ENFORCE THE HYGIENE) is finished — all ten
+pieces merged and pushed.** This chain is running; every piece is marked below.
+
+---
+
+## ★★ READ THIS FIRST — I FIRED THE GUN I HAD JUST DOCUMENTED
+
+**Nothing is broken. Every affected file is byte-identical to HEAD and it was proved, not assumed.**
+
+While writing up piece 2's finding that `crop-sprite-sheets.mjs` would destroy artwork if re-run, I
+put backticks inside a double-quoted shell string. The shell treated them as a command and **ran
+`node scripts/crop-sprite-sheets.mjs`.** It overwrote **nine tracked artwork files** —
+`horse-trot`, `giraffe-walk`, `snake-crawl`, `rocket-fly`, `motorbike-walk`, `motorbike-walk-mask`,
+`luge-slide`, `beetle`, `boarder-sprite` — before throwing `extract_area: bad extract area` on a
+later entry.
+
+**Restored with `git checkout --` and verified:** `git diff HEAD -- client/public/assets/` is empty,
+and the PNG headers read back at their correct sizes (horse 1200×150, luge 2048×128, and so on).
+
+**Two things this changes.**
+
+1. **The hazard is no longer an argument, it is an observation.** And it is worse than piece 2's
+   report described: for each sheet it corrupted it printed
+   **`Verification: OK — no border clipping`**. It reports success while doing the damage, and it
+   only stopped because a later entry's arithmetic went out of bounds.
+2. **The mitigation I chose — a warning comment at the head of the table — is not enough**, and I am
+   the proof. **This is the first item needing your word, below.** I did not change the script's
+   behaviour unattended: two of the options are deletions and the others are new mechanisms.
+3. **★ NOTHING WOULD HAVE GONE RED.** No guard declares `client/public/`; the five client tests that
+   mention `assets/racers` all assert a URL *string*; the render fingerprint's own blind list says
+   node has no `Image` so the sprite blit never happens. **A spritesheet is a race input with no
+   machine-readable other side in this tree** — checked by hand twice and by no guard ever. That is
+   the same shape as every defect this week has been about, one directory over.
 
 ---
 
@@ -29,30 +59,40 @@ ceiling went 0.55 → **0.60**, its label to "(0.25–0.60)", its tip to "0.6 = 
 `DEVSCREEN-INVENTORY.md`, `PHASE-CONTRACT.md` and `defaults.js` all record the VALIDATED range as
 **[0.25, 0.60]**. The widget stopped at 0.55, which is 0.05 short — **exactly one step, and exactly
 where the shipped value lives.** The sibling control in the same card, `racePlanPulkStart`, already
-keeps widget clamp == validated range [0.10, 0.60]. I applied the rule the neighbour follows.
+keeps widget clamp == validated range [0.10, 0.60].
 
-**It sits at the top of its range with no headroom, and that is honest rather than comfortable.**
-0.60 is where the measurement stops (the 2026-07-17 sweep, band-reach still held on 3 of 4 tracks
-*at* 0.60). Putting an unmeasured span behind a slider is a fairness judgement — **that one is yours,
-below.**
+**It now sits at the top of its range with no headroom, and that is honest rather than comfortable.**
+0.60 is where the measurement stops. Going higher needs a fairness run first — **your call, below.**
 
 ### 2. Is Rule A green without an exception list after the rename?
 
-**NOT STARTED — piece 2 runs next.** Today Rule A objects to **16 disagreements in ONE file**
-(`crop-sprite-sheets.mjs`), all `frameWidth`/`frameHeight`, over 8 racer types. It is REPORT-ONLY
-and does not gate.
+**YES — and it GATES.** 12 registry literals over 20 racer types and 22 discovered fields,
+**0 disagree, no exception list, nothing told to look away.** It fails the build from today.
+
+`crop-sprite-sheets.mjs`'s `frameWidth`/`frameHeight` are now
+`preCropFrameWidth`/`preCropFrameHeight`. Rule A no longer DISCOVERS them — because the distinction
+now exists in the tree, not because it was excepted.
+
+**`frameCount` deliberately kept its live name.** Cropping does not change how many frames a sheet
+has, so it is the SAME fact as the registry's and still agrees on all twelve entries. That is also
+how you can tell the rule went **green** rather than **quiet**: it still finds twelve literals in
+that file and still checks them.
+
+**R18 is written**, in `docs/VERIFY-RULES.md` where project rules live: *a record of a past value
+must not wear the live field's name.* The sentence that matters is why the discriminator has to live
+in the source and not in the checker — every attempt to write it down *beside* the value reproduces
+the defect one level up.
 
 ### 3. Piece 7's second-site rate over the larger sample
 
-**NOT STARTED.** The population is the INDEX corrections block: **20 corrections**, dated 2026-08-12
-to 2026-09-03, and they split **10 before / 10 after 2026-08-26** — which is the cut the trend
-question turns on.
+**NOT STARTED.** The population is the INDEX corrections block: **20 corrections**, 2026-08-12 to
+2026-09-03, splitting **10 before / 10 after 2026-08-26** — the cut the trend question turns on.
 
 ---
 
 ## ★ THE FINDING PIECE 1 DID NOT GO LOOKING FOR
 
-**The obvious version of this sweep — compare the STORED default against `min`/`max` — reports SIX
+**The obvious version of that sweep — compare the STORED default against `min`/`max` — reports SIX
 violations, and FIVE of them are false.**
 
 | control | ships | its box shows | bounds |
@@ -64,50 +104,49 @@ violations, and FIVE of them are false.**
 | `nameTagAllUntilMs` | 8000 | **8** (/ 1000, seconds) | 0 – 30 |
 
 **A control's bounds are a claim about the number it DISPLAYS, not the one it stores.** A guard that
-cries wolf five times out of six gets turned off, and takes the one real finding with it. Rule C
-evaluates the value expression with the shipped default substituted in — and a test pins that,
-because "simplifying" it back looks like a clean-up.
+cries wolf five times out of six gets turned off and takes the one real finding with it. Rule C
+evaluates the value expression with the shipped default substituted in, and a test pins that.
 
 ---
 
-## ★ AND A SECOND, OLDER FOSSIL UNDERNEATH — EIGHT LIVE SITES
+## ★ TWO OLDER FOSSILS, NINE LIVE SITES BETWEEN THEM
 
-Establishing the bound meant reading the phase model, which still describes a world that ended on
-2026-07-29. **"`pulkStart` is 0.25" was standing at eight live sites:** three code comments in
-`racePlanner.js`, one in `defaults.js`, one in `sim-fairness.mjs`, three in `PHASE-CONTRACT.md`.
+**"`pulkStart` is 0.25" was standing at eight sites:** three code comments in `racePlanner.js`, one in
+`defaults.js`, one in `sim-fairness.mjs`, three in `PHASE-CONTRACT.md`. **The root site is the worst
+kind** — `PHASE-CONTRACT.md` did not merely quote a stale number, it *warned the reader* that the
+shipped value differs from a "fallback literal 0.25". There is no literal:
+`DEFAULT_PHASE_FRACTIONS.pulkStart` READS the config key. A correction written to protect against
+drift had itself drifted.
 
-**The root site is the worst kind.** `PHASE-CONTRACT.md` did not merely quote a stale number — it
-**warned the reader** that the shipped value differs from a "fallback literal 0.25". There is no
-literal: `DEFAULT_PHASE_FRACTIONS.pulkStart` READS `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart`.
-A correction written to protect against drift had itself drifted.
+**A ninth, same shape, one file over:** `camera/framingConfig.js` calls its
+`DEFAULT_MIN_RACERS_VISIBLE` *"deliberately a literal rather than an import"* — **two lines above the
+import** — and points at a file that no longer carries that wording. `719f6c51` converted 259
+fallbacks to read the default and did not touch the paragraph explaining why they were copies.
 
-**A ninth, of the same shape, one file over:** `camera/framingConfig.js` says its
-`DEFAULT_MIN_RACERS_VISIBLE` is *"deliberately a literal rather than an import"* — **two lines above
-the import** — and points at `raceBehavior.js` for "the same wording", which that file no longer
-carries. `719f6c51` converted 259 fallbacks to read the default and did not touch the paragraph
-explaining why they were copies. That comment instructs the next reader to maintain by hand a copy
-that is not there.
-
-**Every repair replaces the number with the name of its home**, so the same sentence cannot rot again.
+**Every repair names the home instead of restating the number**, so the same sentence cannot rot
+again.
 
 ---
 
 ## ★ WHAT NEEDS YOUR WORD
 
-1. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
-   validated range and stops there. Going higher needs a fairness measurement first — nothing above
-   0.60 has ever been run. **Not a hygiene question.**
+1. **`crop-sprite-sheets.mjs` — what happens to the spent list.** Its twelve entries describe sheets
+   that no longer exist in that form; the tool overwrites in place; it prints "Verification: OK"
+   while corrupting; and it is one stray command away at all times, as tonight demonstrated.
+   Options: **delete the twelve entries** (git holds them, and `BACKLOG.md`'s 2026-06-03 row records
+   every transition), **delete the script**, **add a refusal** that compares the PNG's actual frame
+   width against `preCropFrameWidth` before touching anything, or — **the one I would pick** — a rule
+   inside `check-fallback-agreement` (which already loads the racer registry) comparing every racer
+   type's `frameWidth × frameCount` against its PNG's header. That one catches a corrupted sheet
+   *however* it got corrupted, not just this script's way, and it closes the hole in item 3 above.
+   It is a piece of its own and was not built tonight.
 
-2. **`crop-sprite-sheets.mjs` — and piece 2 has already turned up more than the rename asked for.**
-   Establishing what reads those fields showed the script **overwrites the sprite sheets in place**
-   and its `frameWidth: 128` for horse describes a sheet whose frames are **150 px wide today**.
-   Running it now would slice every frame at the wrong offset and overwrite the shipped artwork.
-   **The rename is going ahead as you chose**; whether the spent list should be deleted outright is
-   in the piece 2 report.
+2. **Whether `choreoOutcomeStart` should be tunable above 0.60.** It now reaches the top of its
+   validated range and stops there. Nothing above 0.60 has ever been measured.
 
 3. **Still waiting from last night:** the `renderedBodyH` test's tolerance — titled ±5%, asserting
    0.05 px absolute (33× tighter), with `buggy` passing by floating-point dust. Both false statements
-   are corrected; **choosing the tolerance is a product judgement and is yours.**
+   are corrected; choosing the tolerance is yours.
 
 ---
 
@@ -116,7 +155,7 @@ that is not there.
 | # | piece | state |
 | --- | --- | --- |
 | 1 | The slider that cannot show its own value | **DONE** — 1 of 96, fixed; Rule C built inside `check-config-keys` |
-| 2 | Rename the pre-crop fields | RUNNING |
+| 2 | Rename the pre-crop fields | **DONE** — Rule A gates, empty exception list; R18 written |
 | 3 | The fifty-six remaining corrections | not started |
 | 4 | The inert guard half and the rotten spec | not started |
 | 5 | Where else does a control disagree with what ships? | not started (read-only) |
@@ -128,8 +167,11 @@ that is not there.
 
 ## ONE LIMIT, STATED PLAINLY
 
-**"96 controls checked" is not "96 controls correct".** Rule C asks one question — can the control
-represent its value. A control's label, its step and its tooltip are all claims about the same
-number, and **piece 5 measures that class**; its first pass already shows the bounds question is the
-cleanest of the four. The 18 controls Rule C cannot resolve are printed on every run with their
-reason, so nobody has to take my word for the coverage.
+**Rule A gates on one file's worth of evidence.** It has objected exactly twice in its life: to the
+pre-crop table, and to sabotage I wrote. On the live tree it has never found a real drifted copy —
+because REGISTRY-LITERALS-1 had already removed them all. **It is a guard against recurrence, not a
+detector with a track record**, and the first real thing it catches will be its first.
+
+**And "96 controls checked" is not "96 controls correct".** Rule C asks one question. A control's
+label, step and tooltip are claims about the same number; **piece 5 measures that class**, and its
+first pass already shows the bounds question was the cleanest of the four.

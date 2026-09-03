@@ -315,7 +315,10 @@ jobs:
       # Its sibling, and the gap it leaves: check-config-keys asks whether a key EXISTS in the
       # defaults, never whether a MIRROR of it still agrees. minRacersVisible went 3 -> 5 and two
       # mirrors stayed at 3 — the partial-config fallback and the Dev Screen slider. See
-      # FALLBACK-GUARD-1. Ships green over an explicit exception list of the 42 known disagreements.
+      # FALLBACK-GUARD-1. The exception list it once shipped green over is now EMPTY: every entry was
+      # worked rather than kept, which is what a worklist is for. RULE A rides in the same run and
+      # gates since 2026-09-03 (PRE-CROP-FIELDS-1): a literal copy of a racer-type registry field
+      # that disagrees with the registry fails the build, with no exception list of its own.
       - name: Check every fallback agrees with the default it mirrors
         run: node scripts/check-fallback-agreement.mjs
 

@@ -60,7 +60,7 @@ export const GUARD = {
     "RULE A: NON-SCALARS. Only scalars can disagree textually, so `surfaceClasses`, `coats` and `rteDefinitions` are out of reach — and `goldenRunner.mjs` carries a `surfaceClasses` table that is a DIFFERENT FACT under the same name, which this rule has NOT cleared",
     "RULE A: a copy that does not NAME its racer. The object must carry the racer id as a value (`id: 'horse'`) or hang from it as a key (`horse: { … }`); a table keyed by array position is invisible",
     "RULE A: literals in COMMENTS are matched like any other — a documented example must avoid stating real values, which is why this file's own example uses placeholders",
-    "RULE A DOES NOT GATE YET. It reports and does not fail the build, because its only objection on today's tree is legitimate (see the note above `copiesBad`). A rule that cannot yet fail is not protecting anything — that is the point of saying so here rather than letting a green run imply otherwise",
+    "RULE A: a copy that RENAMES its fields. It discovers pairs from the registry's own field names, so a table using different names is invisible to it — and since PRE-CROP-FIELDS-1 there is a DELIBERATE example in the tree (`crop-sprite-sheets.mjs`'s `preCropFrameWidth`). That is the price of the distinction: the rename is what makes a pre-crop record readable as one, and it is also what puts it out of reach",
     "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
   // RULE A widened this from `client/src/` alone. Its founding defect lived in `scripts/`, which is
@@ -679,32 +679,46 @@ const stale = EXCEPTIONS.filter(
     ),
 );
 
-// ── RULE A REPORTS; IT DOES NOT YET GATE, AND THE REASON IS A FINDING RATHER THAN A CAVEAT ──────
+// ── RULE A GATES SINCE 2026-09-03, AND THE ROUTE THERE IS THE POINT ─────────────────────────────
 //
 // On its first run against today's tree it went red on `scripts/crop-sprite-sheets.mjs`, and that
-// objection is LEGITIMATE: `FLAGGED_TYPES` there records the PRE-CROP source geometry a one-shot
+// objection was LEGITIMATE: `FLAGGED_TYPES` there records the PRE-CROP source geometry a one-shot
 // cropping run took as INPUT, not the registry's current post-crop values. Same field names, a
 // different fact — the `surfaceClasses` shape one level along.
 //
-// ★ NO EXCEPTION WAS ADDED, DELIBERATELY. An exception here would be the guard learning to ignore
-// the only thing it has ever objected to, on the authority of whoever wrote the exception. And no
-// mechanical discriminator exists: "a table that copies the registry" and "a table that records
-// what the registry used to hold" are the same shape, and telling them apart is a judgement about
-// intent. THAT IS THE FINDING. Until the owner has ruled on `crop-sprite-sheets.mjs` — except it,
-// delete the table, or rename its fields — the rule prints and does not fail.
+// ★ NO EXCEPTION WAS EVER ADDED, DELIBERATELY. An exception would have been the guard learning to
+// ignore the only thing it had ever objected to, on the authority of whoever wrote the exception.
+// And no mechanical discriminator exists: "a table that copies the registry" and "a table that
+// records what the registry used to hold" are the same shape, and telling them apart is a judgement
+// about intent. That was the finding, and it was reported rather than worked around.
 //
-// It is deliberately LOUD rather than quiet, so it cannot be read as a check that passed.
+// ★ THE OWNER RULED: RENAME (PRE-CROP-FIELDS-1, 2026-09-03). Those fields are now
+// `preCropFrameWidth` / `preCropFrameHeight`, so they are no longer registry field names and this
+// rule does not discover them — not because it was told to ignore them, but because THE DISTINCTION
+// NOW EXISTS IN THE TREE. Rule A reports 0 disagreements over 20 racer types and 22 discovered
+// fields, with an EMPTY exception list, and therefore gates: it is a build failure from here.
+// The general rule that prevents the next one is R18 in docs/VERIFY-RULES.md.
+//
+// It is deliberately LOUD, and it names both sides, because a rule that only says "no" gets an
+// exception written for it.
 if (copiesBad.length) {
-  console.log("");
-  console.log(
-    `  RULE A — NOT YET A GATE. ${copiesBad.length} disagreement(s) in ` +
-      `${new Set(copiesBad.map((c) => c.file)).size} file(s). It does not fail the build until the ` +
-      `owner has ruled on them; see BUILD-RULE-A-1.`,
+  console.error("");
+  console.error(
+    `FAIL: RULE A — ${copiesBad.length} literal(s) in ` +
+      `${new Set(copiesBad.map((c) => c.file)).size} file(s) mirror a racer-type registry field and ` +
+      `DISAGREE with it.`,
   );
   for (const c of copiesBad)
-    console.log(
+    console.error(
       `    ${c.file}: ${c.key} = ${JSON.stringify(c.value)} for '${c.id}', registry says ${JSON.stringify(c.expected)}`,
     );
+  console.error(
+    `      Bring the literal in step with the registry, or — if it is a DIFFERENT FACT that merely\n` +
+      `      wears the live field's name, such as a record of what the value USED to be — rename the\n` +
+      `      field so its meaning is in the name (R18). Do not add an exception: an exception here is\n` +
+      `      the guard being told to ignore the only thing it can see.`,
+  );
+  process.exitCode = 1;
 }
 
 if (newOnes.length || stale.length) {
