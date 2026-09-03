@@ -695,6 +695,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [GUARDS-FIRE-1.md](GUARDS-FIRE-1.md) — **8 of 9 rules added since the census CAN FIRE, proven one
+  at a time; the ninth could not be sabotaged safely and has field evidence instead** (2026-09-04,
+  every sabotage reverted, `git status --porcelain` empty). The census found 12 of 40 OLDER guards
+  never exercised and 1 inert; this applies that test **before these become old ones**. Rules A, B,
+  C, D, E, F-bare, **F-paired** and the artwork digest all fire, each on a named fault — F-paired
+  proven by moving **only the href**, text untouched. The camera gate is **COULD NOT BE SABOTAGED
+  SAFELY**: inducing a track that never finishes means changing the engine, the ceiling or a lap
+  count, so the sabotage would prove something about a different tree — what stands instead is
+  CAMERA-GATE-1's measurement over twelve daily tips, **red on 5, none without cause**.
+  ★★ **TWO OF MY OWN SABOTAGES WERE WRONG, and both would have reported a WORKING rule as inert.**
+  Rule A's added a comment where the rule looks for a disagreeing COPY; Rule F-paired's edited the
+  wrong occurrence by string replacement. **A guard is only as good as the sabotage that tests it,
+  and a sabotage is code with its own bugs** — the same shape as A6's wiring test that passed a
+  sabotage which had reverted the feature. Both caught by reading what the guard PRINTED rather than
+  its exit code.
+
 - [NEW-COPIES-1.md](NEW-COPIES-1.md) — **three days of building created copies, and BOTH sharp ones
   are mine from last night** (2026-09-04, scope `3fc4c6ed..HEAD`). Constraint 3 has been in every
   brief since 2026-09-01 and **it was not obeyed**. ★ **A GUARD THAT HARDCODES WHAT IT COMPUTES**:
