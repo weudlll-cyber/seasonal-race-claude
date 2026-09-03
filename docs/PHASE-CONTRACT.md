@@ -35,7 +35,7 @@ goes straight from PULK to OUTCOME. TRANSITION is a dead branch, not a live phas
 
 At the shipped defaults `racePlanPulkStart == 0.15` and `choreoOutcomeStart == 0.6` the three live phases are:
 **CHAOS/PRE_PULK [0, 0.15) · PULK [0.15, 0.6) · OUTCOME [0.6, 1.0)**. *(Corrected 2026-09-03 from 0.5 at three sites in this document; the shipped value has been 0.6 since `5646d238`, 2026-07-17. `docs/DEVSCREEN-INVENTORY.md` had it right, so the two documents disagreed for 47 days. Found as SECOND SITES of the same claim in FORCE-MAP.)* The owner may set `choreoOutcomeStart`
-anywhere in 0.25–0.60; since `pulkStart` (0.15) now sits below that whole range, PULK is always at least 0.10
+anywhere in 0.25–0.70; since `pulkStart` (0.15) now sits below that whole range, PULK is always at least 0.10
 wide under the shipped chaos window (it is no longer collapsible to zero-width from the DevScreen, unlike the
 pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum).
 
@@ -82,12 +82,21 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   mechanisms act over a longer span. Lowering it toward `pulkStart` (0.15, below its 0.25 minimum) narrows the PULK window (toward zero
   width) and OUTCOME starts at the chaos boundary. Because PULK end == OUTCOME start, moving this ONE
   value moves both seams together.
-- **DevScreen.** "PULK end / OUTCOME begins (0.25–0.60)", config key `choreoOutcomeStart`, in the PULK
+- **DevScreen.** "PULK end / OUTCOME begins (0.25–0.70)", config key `choreoOutcomeStart`, in the PULK
   Phase card. Default **0.6**. *(Corrected 2026-09-03 from 0.5. The control itself was wrong in the same
   direction — label "(0.25–0.55)", `max: 0.55`, tip "0.5 = shipped" — so the slider could not reach the
   value the game runs; **repaired by CONTROL-BOUNDS-1 the same day**, by setting the widget clamp to the
   VALIDATED range [0.25, 0.60] that this document and DEVSCREEN-INVENTORY.md had already recorded. The
   shipped value did not move.)*
+  *(And the TOP moved again the same day, SLIDER-HEADROOM-1: to **0.70**, taken from the neighbour
+  rather than from feel. `choreoResolveB3` is a fixed **0.70**, so B3's OUTCOME settling window is
+  exactly `[choreoOutcomeStart, 0.70]` — 0.10 wide at the shipped 0.60, **zero at 0.70**. That is the
+  wall: past it a band would be asked to be resolved before OUTCOME has begun. SWEEP 2 (2026-07-17)
+  measured all four points and agrees — the band-reach gate holds on 3 of 4 tracks at BOTH 0.60 and
+  0.70 and collapses to **0 of 4 at 0.80**. The recorded "validated range [0.25, 0.60]" was the top of
+  what had been WRITTEN DOWN, not of what had been measured. **The shipped value is still 0.60**, and
+  the headroom is not free: per-band reach degrades monotonically, B3 on city-circuit going 68% at
+  0.60 to 59% at 0.70.)*
 - **Calibrated for it.** `pulkBiasGain`, `pulkLeaderBrake`, `pulkChallengerBoost` and the
   rest of the `pulk*` contest strengths are all calibrated for the PULK window this boundary defines.
   The PULK phase-split bonuses (`areaBonusPulk`, `rowBonusPulk`, gated by the Phase-Split master

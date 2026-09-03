@@ -1033,8 +1033,13 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // the chaos→choreo boundary; raising it widens the PULK window [racePlanPulkStart, this] and hands
   // OUTCOME off later. (Written when both sides were 0.25 and PULK was collapsed; racePlanPulkStart has
   // since moved and the value below with it, so the equality is a case, not the default.)
-  // VALIDATED RANGE 0.25–0.60 — and the DevScreen control's own clamp IS that range, not a second
+  // VALIDATED RANGE 0.25–0.70 — and the DevScreen control's own clamp IS that range, not a second
   // number beside it. Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
+  // The TOP comes from the neighbour, not from feel: `choreoResolveB3` is a fixed 0.70, so B3's
+  // OUTCOME settling window is `[this, 0.70]` — zero wide AT 0.70, which is the wall. SWEEP 2
+  // measured all four points and agrees: the band-reach gate holds on 3 of 4 tracks at BOTH 0.60 and
+  // 0.70 and collapses to 0 of 4 at 0.80. *(Corrected 2026-09-03, SLIDER-HEADROOM-1: this said 0.60,
+  // which was the top of what had been RECORDED, not of what had been measured.)*
   // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
   choreoOutcomeStart: 0.6,
   // ── FRONT ACT window start — the front battle's OWN key ───────────────────────────────────────
