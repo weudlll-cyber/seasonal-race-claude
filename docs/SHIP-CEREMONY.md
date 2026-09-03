@@ -641,8 +641,14 @@ went missing).
       per-track drift that stays WITHIN the envelope these two define. A defect needing one of those
       curves now reaches the NIGHTLY sweep rather than the pre-merge gate — a day later, not never.
 
-      **One of the ten is also NOT SCORABLE**: garden-path's race never finishes at seed 9, so it
-      contributes nothing to the twelve items, though it still runs the five window invariants.
+      **One of the ten is also recorded NOT SCORABLE**: garden-path's race never finishes at seed 9,
+      so it contributes nothing to the twelve items, though it still runs the five window invariants.
+      **★ DOUBTFUL AND UN-RECHECKED, 2026-09-03 (GARDEN-PATH-CLOSE-1).** Two other harnesses said the
+      same of garden-path and BOTH have now been corrected — it finishes in the camera fingerprint
+      (4,916 of 12,000 frames) and reaches FINISH by frame 4300 in the render fingerprint. **This is a
+      third harness at a specific seed and NO RACE HAS BEEN RUN FOR IT**, so the line is flagged
+      rather than corrected: settling it on another harness's result is the exact mistake
+      BACKLOG-VERDICTS-1 made on this same track. Open in `BACKLOG.md`.
 
       **What it costs a ship:** 200-340 s, plus the one-off `npx playwright install chromium`. It needs
       no network and touches nothing of the owner's — it builds to `client/dist-sweep`, runs its own

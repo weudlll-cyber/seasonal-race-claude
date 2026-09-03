@@ -163,7 +163,12 @@ function geometries() {
 //   - the eight tracks' own geometry: searound's tight corners, luger-hill's gradient, dirt-oval's
 //     and river-run's shapes. A defect that needs one of THOSE curves to appear now reaches the
 //     nightly sweep instead of the gate, i.e. a day later rather than before the merge.
-//   - garden-path entirely — whose race never finishes at seed 9, so it was never scorable anyway.
+//   - garden-path entirely — recorded as never finishing at seed 9, so never scorable anyway.
+//     ★ DOUBTFUL AND UN-RECHECKED, 2026-09-03 (GARDEN-PATH-CLOSE-1): the same claim in two OTHER
+//     harnesses has been measured false since 2026-08-25 (`d73ec6a9` gave the track the beetle and
+//     two laps). No race has been run at seed 9 to settle THIS one, and it is not corrected on
+//     another harness's evidence — that is the mistake this project has already made about this
+//     exact track. The exclusion costs nothing while it stands: the nightly sweep runs all ten.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific

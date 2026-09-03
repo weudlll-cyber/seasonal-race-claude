@@ -1009,8 +1009,13 @@ more dangerous than one they do not:
   so both layers are no-ops in it. Found by a sabotage that swapped them and did NOT move the hash.
 - **Anything between two sample frames.** Sixteen frames out of 5600. A flicker lasting less than a
   sample interval is invisible to it by construction.
-- **`garden-path`'s ending** — that track never finishes inside the window, so the late sample points
-  measure nothing there. `--coverage` prints the matrix.
+- **A mid-zoom-out MOVE frame on `garden-path` and `city-circuit`, and the RESTING frame on
+  `dirt-oval`.** `--coverage` prints the matrix: every one of the ten now has its finish SHOT
+  sampled, 8 of 10 catch the zoom-out mid-move, and 9 of 10 reach rest.
+  *(Corrected 2026-09-03, GARDEN-PATH-CLOSE-1. This read **"`garden-path`'s ending — that track never
+  finishes inside the window, so the late sample points measure nothing there"**, which stopped being
+  true on 2026-08-25 when `d73ec6a9` gave the track the beetle and two laps. Measured: garden-path is
+  at FINISH by frame 4300 and at rest from 4520, and the matrix reads 10/10.)*
 - **Slow motion**, and every diagnostic overlay: read-only by design, unasserted by consequence.
 
 **3. Do the camera's own units still hold?**
@@ -1783,8 +1788,10 @@ hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at **sixteen** fixed frames across all ten tracks, by driving the real
 `renderRaceFrame()` through a recording context. FINISH-WINDOW-1 extended the run from 3400 to 5600
 frames and added ten late sample points, because the ending sits at frames 3330–5587 and the
-instrument had never reached it — on 9 of 10 tracks it now samples the finish shot, a frame mid
-zoom-out and the resting frame (`--coverage` prints the matrix; garden-path never finishes). It covers what the camera fingerprint structurally
+instrument had never reached it — on **10 of 10** tracks it now samples the finish shot, on 8 a frame mid
+zoom-out and on 9 the resting frame (`--coverage` prints the matrix). *(Corrected 2026-09-03,
+GARDEN-PATH-CLOSE-1: this said 9 of 10 **"garden-path never finishes"**, false since 2026-08-25.)*
+It covers what the camera fingerprint structurally
 cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.
 
 **Protected — a change breaks a test:** the zoom unit's invariance; the six-state framing table;
