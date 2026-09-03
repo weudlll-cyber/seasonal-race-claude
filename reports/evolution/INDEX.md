@@ -487,6 +487,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   and never reaching a live race**, so it is wrong twice. ★ **Kind C's zero means less than it looks:**
   6 stated ranges against 90 numeric inputs is a convention 7% of controls follow.
 
+- [RULE-A-REACH-1.md](RULE-A-REACH-1.md) — **Rule A covers ONE of the twelve duplicated-fact
+  groups and half of a second, and its live population today is twelve numbers in one file**
+  (2026-09-03, READ-ONLY; every figure taken by calling the rule's own exported functions against the
+  real tree). ★ **Domain 423 facts** (20 racer types × 22 discovered fields, all scalar); **live
+  population 12** — twelve `frameCount` literals in `crop-sprite-sheets.mjs`, all agreeing.
+  **REGISTRY-LITERALS-1 removed the 214 copies CENSUS-DUPES-1 counted BEFORE Rule A was built**, so it
+  is a guard against recurrence over a population that is currently almost empty, and it has objected
+  exactly twice in its life — to the pre-crop table and to sabotage. ★ **Group by group:** A1 covered;
+  **A2 covered only by HALF — it checks copies against the registry, and A2's source of truth is the
+  PNG**, which no guard declares, no test reads and the render fingerprint cannot blit; A3 arrays,
+  A4/A5 keyed by track with a home under `server/seeds/`, A8–A10 owned by other guards, A12
+  unbuildable, B1–B4 have no home to compare against. ★ **Bounded INSIDE the registry** (423 facts,
+  six enumerable blind SHAPES, one of which — a renamed copy — the tree now contains deliberately)
+  **and OPEN-ENDED outside it**, because nothing enumerates the homes: the twelve groups were found by
+  hand. **The honest footnote to "four of six subtypes are catchable": one rule, one home.**
+
 - [SPEC-AND-GATE-1.md](SPEC-AND-GATE-1.md) — **the dead premise has THREE live sites, one of them a
   sentence an instrument prints beside the number that refutes it** (2026-09-03, READ-ONLY, nothing
   edited or silenced; one 25.8 s measurement taken because the central claim needed a number).
