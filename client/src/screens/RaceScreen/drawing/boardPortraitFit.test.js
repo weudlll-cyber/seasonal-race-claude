@@ -16,13 +16,18 @@
 
 import { describe, it, expect } from 'vitest';
 import { RACER_TYPES } from '../../../modules/racer-types/index.js';
-import { drawStartBoard } from './startBoardRendering.js';
+import { drawStartBoard, START_BOARD_GEOMETRY } from './startBoardRendering.js';
 
-// The board's own geometry, at scale 1 (startBoardRendering.js).
-const SPRITE_BOX = 28;
-const PORTRAIT_FRAC = 0.94;
-const CELL_H = 30;
-const NUMBER_BOX = 46;
+// NEW-COPIES-1 (2026-09-04): READ from the board, never re-declared here. This block held its own
+// copies of all four numbers — so narrowing the column in the module would have left these tests
+// asserting that the portraits fit a column that no longer exists, GREEN while the board overlapped
+// again. A test that hardcodes what it tests is the sharpest form of a duplicated fact.
+const {
+  spriteBox: SPRITE_BOX,
+  portraitFrac: PORTRAIT_FRAC,
+  cellH: CELL_H,
+  numberBox: NUMBER_BOX,
+} = START_BOARD_GEOMETRY;
 const BOX_W = SPRITE_BOX * PORTRAIT_FRAC;
 const BOX_H = CELL_H * PORTRAIT_FRAC;
 

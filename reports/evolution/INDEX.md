@@ -695,6 +695,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [NEW-COPIES-1.md](NEW-COPIES-1.md) — **three days of building created copies, and BOTH sharp ones
+  are mine from last night** (2026-09-04, scope `3fc4c6ed..HEAD`). Constraint 3 has been in every
+  brief since 2026-09-01 and **it was not obeyed**. ★ **A GUARD THAT HARDCODES WHAT IT COMPUTES**:
+  Rule F prints its own split on every run, and the same numbers were hand-written into the guard's
+  `blind[]` AND into R19. **By the time this audit ran the true figure had already moved** — because
+  R19's own worked example added a citation, so *the document that states the count changed the count
+  by being written*. R19 even said *“it shrinks as citations are converted”* while stating it. Both
+  removed; they point at the verdict line now. ★ **A TEST THAT HARDCODES WHAT IT TESTS**:
+  `boardPortraitFit.test.js` declared its own `SPRITE_BOX`/`PORTRAIT_FRAC`/`CELL_H`/`NUMBER_BOX` — so
+  narrowing the column in the module would have left it **green while asserting the portraits fit a
+  column that no longer exists**, which is the exact defect the test was written to prevent.
+  `START_BOARD_GEOMETRY` is exported now; 28 → 14 in the module turns the test RED, and did not
+  before. ★ **Both were built by someone who had written constraint 3 into two reports the same
+  night** — the rule was not applied to the artefact being built WHILE building it, which is C6's
+  problem and not a discipline one. Also named and tolerated: one directory path in two guards, each
+  failing loudly if it moves.
+
 - [SECOND-SITE-RATE-1.md](SECOND-SITE-RATE-1.md) — **3 of 32. It is NOT zero, and that is the
   night's most important number** (2026-09-04; scope `3fc4c6ed..HEAD` — 105 non-merge commits, 184
   with merges, 224 files). **32 corrections applied under the new constraints, 3 with a live second

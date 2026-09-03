@@ -116,6 +116,33 @@ const NUMBER_BOX = 46;
 // and left the freed pixels as padding; the name is what needs them.
 const SPRITE_BOX = 28;
 const PORTRAIT_FRAC = 0.94; // how much of its column the portrait actually fills
+
+/**
+ * The board's own column geometry, EXPORTED so a test does not have to re-declare it.
+ *
+ * NEW-COPIES-1 (2026-09-04): `boardPortraitFit.test.js` had its own `SPRITE_BOX = 28`,
+ * `PORTRAIT_FRAC = 0.94`, `CELL_H = 30` and `NUMBER_BOX = 46`. Four numbers, two homes, one day old
+ * — and the failure mode is the quiet one: narrow the column here and the test still asserts the
+ * portraits fit a column that no longer exists, and stays GREEN while the board overlaps again.
+ * That is the exact defect the test was written to prevent, reintroduced by the test.
+ */
+export const START_BOARD_GEOMETRY = Object.freeze({
+  get cellW() {
+    return CELL_W;
+  },
+  get cellH() {
+    return CELL_H;
+  },
+  get numberBox() {
+    return NUMBER_BOX;
+  },
+  get spriteBox() {
+    return SPRITE_BOX;
+  },
+  get portraitFrac() {
+    return PORTRAIT_FRAC;
+  },
+});
 const NAME_PAD = 5;
 // The row marker's column, between the portrait and the name. `R12` at 12 px is about 24 px, and the
 // marker is left-aligned in it so the NAME always starts at the same x.

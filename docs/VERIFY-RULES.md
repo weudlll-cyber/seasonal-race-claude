@@ -833,13 +833,17 @@ symbol named in the text is at the lines the href points to — and that is not 
 ★ **IT ALSO CLOSES RULE F'S DECLARED BLIND SPOT for every citation in this form.** A bare
 `` `file` → `symbol` `` asks only whether the symbol is in the file ANYWHERE, so a symbol belonging
 to a different feature passes. A paired citation must have it AT THOSE LINES, which no other
-feature's symbol satisfies by accident. **The blind spot is 8 of 69 today rather than all of them**,
-and it shrinks as citations are converted.
+feature's symbol satisfies by accident. **The blind spot is now the BARE citations only, rather than
+all of them.** *(No count is written here. `check-fallback-agreement`'s verdict line prints the split
+on every run and it changes with every conversion — NEW-COPIES-1, 2026-09-04: this sentence carried
+“8 of 69”, and the guard's own `blind[]` carried it too.)*
 
-**A citation is converted only when a symbol is genuinely DECLARED at the cited lines.** Of 112 deep
-links, **61 were converted and 51 were not** — nothing in their range is a nameable symbol (a JSX
-fragment, a CSS rule, a bare expression). **Those are left as they are and reported**, because an
-unchecked pair is the failure mode this design exists to avoid.
+**A citation is converted only when a symbol is genuinely DECLARED at the cited lines**, and a
+substantial share of deep links cannot meet that — nothing in their range is a nameable symbol (a
+JSX fragment, a CSS rule, a bare expression). **Those are left as they are and reported**, because an
+unchecked pair is the failure mode this design exists to avoid. *(The split as it stood on the day of
+the conversion is in `reports/evolution/CITATION-PAIRS-1.md`; it is not restated here, because it
+moves whenever a citation is converted and this document would not move with it.)*
 
 **Cost, stated because it is the objection:** a `file:line` is clickable in some editors and a symbol
 is not. That cost is real for a bare citation and **zero for the 107 links**, which keep their
