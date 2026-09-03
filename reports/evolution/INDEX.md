@@ -695,6 +695,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   it on the real tree.** ★ **The headroom is not free** and the operator is told: B3 on city-circuit
   goes 68% at 0.60 to 59% at 0.70.
 
+- [DROP-RACER-NUMBER-1.md](DROP-RACER-NUMBER-1.md) — **the badge and the shuffle are gone, and
+  `assignRacers` went with them because it had nothing else to do** (2026-09-04, on
+  `feat/player-groups-1`, NOT merged; **all four fingerprints unmoved**). **His decision on
+  SHUFFLE-REACH-1 option 2**, and his reasoning is the shape of the removal: *the badge created an
+  expectation it did not meet* — he read the `#3` as deciding the numbers the racers carry, and it
+  decided nothing. ★ **ESTABLISHED BEFORE REMOVING, uncapped, five spellings**: zero hits in
+  `server/`, `scripts/`, `shared/`, `client/e2e/`, `client/public/`, `docs/` — three source files in
+  `client/src`, all of them the Setup Screen. ★ **The stored roster shape was the check that could
+  have stopped it**: a saved group stores `players` as an array of **plain strings**, so removing the
+  field cannot break loading one. The transient `ACTIVE_GROUP` hand-off did carry it and now writes
+  `{ name }` — **pinned key by key**, where the old test asserted `expect.any(Array)` and would have
+  passed whatever the shape became. ★ **`assignRacers` went because its whole body assigned the
+  field**; keeping it would have left a mechanism running with nothing on the other end. **`shuffle`
+  STAYS** — `rowLayout.js` uses it for the seeded start grid — and a comment where the function stood
+  says so, because *“the shuffle was removed”* is the sentence that would delete it next.
+  ★ **The list is ALPHABETICAL now**: the badge was re-rolled on every add and remove and the list
+  sorted by it, so the roster moved under the operator's hands for no reason they could act on.
+  ★ **`raceNumber` is NOT touched** — one letter away, drawn from the race seed, read by 8 files; the
+  near-collision is recorded at the removal site because that is how a removed mechanism comes back.
+  **Four tests assert the ABSENCE; sixteen were deleted and a note stands in their place.**
+
 - [CHIP-CONTRAST-1.md](CHIP-CONTRAST-1.md) — **the chips measured 1.20:1 because they declared a
   background and no COLOUR, and their readability depended on the operator's logo** (2026-09-04, on
   `feat/player-groups-1`, NOT merged; CSS, markup, one test file — nothing minted). From his eye

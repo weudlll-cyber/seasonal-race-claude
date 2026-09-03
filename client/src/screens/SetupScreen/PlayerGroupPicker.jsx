@@ -29,7 +29,6 @@
 
 import { useEffect, useState } from 'react';
 import { fetchPlayerGroups } from '../../services/playerGroupApi.js';
-import { assignRacers } from '../../modules/utils/RandomHelper.js';
 import { UNGROUPED_LABEL } from './rosterGroups.js';
 import styles from './SetupScreen.module.css';
 
@@ -96,15 +95,12 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
     setNotice(notices.join('; '));
 
     if (admitted.length === 0) return;
-    // Renumber the WHOLE field, exactly as adding a name by hand does. A group arriving with no
-    // racer numbers, or with a second #1, is the same defect from a different door.
-    onChange(assignRacers([...players, ...admitted.map((name) => ({ name, group: group.name }))]));
+    onChange([...players, ...admitted.map((name) => ({ name, group: group.name }))]);
   }
 
   function removeGroup(group) {
     setNotice('');
-    const kept = players.filter((p) => p.group !== group.name);
-    onChange(kept.length > 0 ? assignRacers(kept) : []);
+    onChange(players.filter((p) => p.group !== group.name));
   }
 
   return (

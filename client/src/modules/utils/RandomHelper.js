@@ -23,29 +23,19 @@ export function shuffle(array, rng = Math.random) {
   return array;
 }
 
-/**
- * Assigns racer numbers (1-based) to a roster. Numbers are shuffled so assignment is
- * unpredictable.
- *
- * ENTRIES MAY BE STRINGS OR OBJECTS, and every field of an object entry SURVIVES — only
- * `racerNumber` is overwritten. That is what PLAYER-GROUPS-1 needed and it is why this takes both
- * shapes rather than a second function: the setup flow re-shuffles on every add and remove, so a
- * helper that rebuilt each player from its NAME ALONE silently erased anything else the roster
- * carried. It did, for as long as a player was only a name; the moment one carries which group it
- * came from, that erasure is a bug in every caller at once.
- *
- * @param {(string|{name: string})[]} entries  names, or player objects carrying at least `name`
- * @returns {{ name: string, racerNumber: number }[]}  the same objects, renumbered
- */
-export function assignRacers(entries) {
-  const numbers = entries.map((_, i) => i + 1);
-  shuffle(numbers);
-  return entries.map((entry, i) =>
-    typeof entry === 'string'
-      ? { name: entry, racerNumber: numbers[i] }
-      : { ...entry, racerNumber: numbers[i] }
-  );
-}
+// ── `assignRacers` WAS HERE, and it is gone (DROP-RACER-NUMBER-1, 2026-09-04) ────────────────
+//
+// It existed to give every player a shuffled `racerNumber`, which the Players tab drew as a `#3`
+// badge beside the name. THE OWNER RETIRED BOTH on 2026-09-04, and his reasoning is the shape of
+// the removal rather than a note beside it: **the badge created an expectation it did not meet.**
+// He read it as deciding the numbers the racers carry in the race, and it decided nothing — those
+// come from `raceNumbers.js`, drawn from the race SEED on a generator of its own.
+//
+// ★ DO NOT RE-ADD IT THINKING IT IS `raceNumber`. Two fields, one letter apart, and only one of
+// them ever reaches a race. SHUFFLE-REACH-1 traced the pair; this comment is here because the
+// near-collision is exactly how a removed mechanism comes back.
+//
+// `shuffle` below STAYS and is unrelated: `rowLayout.js` uses it for the start grid, seeded.
 
 /**
  * Pick a random integer in [min, max] inclusive.

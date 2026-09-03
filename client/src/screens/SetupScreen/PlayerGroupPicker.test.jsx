@@ -78,7 +78,7 @@ describe('PlayerGroupPicker', () => {
 
   it('clearing a group removes exactly its own players and leaves the rest', async () => {
     const { state, rerender } = harness({
-      initial: [{ name: 'Zoe', racerNumber: 1 }],
+      initial: [{ name: 'Zoe' }],
     });
     fireEvent.click(await screen.findByTestId('group-chip-Reds'));
     rerender();
@@ -90,7 +90,7 @@ describe('PlayerGroupPicker', () => {
   it('★ a hand-added player is untouched by every group operation', async () => {
     // The picker fills the field; it does not own it. A hand-typed name that a group click can
     // delete would make the two doors into the roster fight each other.
-    const { state, rerender } = harness({ initial: [{ name: 'Zoe', racerNumber: 1 }] });
+    const { state, rerender } = harness({ initial: [{ name: 'Zoe' }] });
     fireEvent.click(await screen.findByTestId('group-chip-Reds'));
     rerender();
     fireEvent.click(screen.getByTestId('group-chip-Blues'));
@@ -102,13 +102,17 @@ describe('PlayerGroupPicker', () => {
     expect(zoe.group).toBeUndefined();
   });
 
-  it('every player carries a racer number after a group arrives, and no number repeats', async () => {
-    const { state, rerender } = harness({ initial: [{ name: 'Zoe', racerNumber: 1 }] });
-    fireEvent.click(await screen.findByTestId('group-chip-Blues'));
-    rerender();
-    const numbers = state.players.map((p) => p.racerNumber);
-    expect(numbers.every((n) => Number.isInteger(n) && n > 0)).toBe(true);
-    expect(new Set(numbers).size).toBe(numbers.length);
+  it('★ a group arriving stamps NO racer number on anybody (DROP-RACER-NUMBER-1)', () => {
+    // The picker used to renumber the whole field on every add. The owner retired the badge and
+    // the shuffle on 2026-09-04; the roster is names and groups now, and nothing may quietly
+    // re-introduce a field the Setup Screen no longer draws and nothing outside it ever read.
+    return (async () => {
+      const { state, rerender } = harness({ initial: [{ name: 'Zoe' }] });
+      fireEvent.click(await screen.findByTestId('group-chip-Blues'));
+      rerender();
+      expect(state.players.length).toBeGreaterThan(1);
+      for (const p of state.players) expect(p).not.toHaveProperty('racerNumber');
+    })();
   });
 
   it('the field CAP is honoured, and the overflow is reported rather than dropped in silence', async () => {

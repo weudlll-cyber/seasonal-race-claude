@@ -3,12 +3,10 @@
 // Path:        client/src/screens/SetupScreen/PlayerSetup.jsx
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: Game Master enters player names; each player is shown their
-//              randomly assigned racer number
+// Description: Game Master enters the player names that will race.
 // ============================================================
 
 import { useState } from 'react';
-import { assignRacers } from '../../modules/utils/RandomHelper.js';
 // NAME-LIMIT-1: the limit's one home, shared with the server so both sides of the boundary agree.
 import {
   PLAYER_NAME_MAX_LENGTH,
@@ -35,10 +33,9 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
     }
     setNameError('');
 
-    // Re-shuffle racer assignments every time the roster changes. PLAYER-GROUPS-1: the EXISTING
-    // players are passed through as objects, not rebuilt from their names — rebuilding erased the
-    // group each one arrived with, and did so on every single add.
-    onChange(assignRacers([...players, { name }]));
+    // The existing players are passed through as OBJECTS, not rebuilt from their names —
+    // rebuilding erased the group each one arrived with, and did so on every single add.
+    onChange([...players, { name }]);
     setInputValue('');
   }
 
@@ -47,12 +44,7 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
   }
 
   function handleRemove(index) {
-    const kept = players.filter((_, i) => i !== index);
-    onChange(kept.length > 0 ? assignRacers(kept) : []);
-  }
-
-  function handleReassign() {
-    onChange(assignRacers(players));
+    onChange(players.filter((_, i) => i !== index));
   }
 
   const atMax = players.length >= maxPlayers;
@@ -103,7 +95,11 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
               `UNGROUPED_LABEL`. The operator has to be able to see which group a name arrived with,
               or removing one group's players becomes guesswork. Sorting inside each section is by
               racer number, exactly as before — only the sectioning is new, and a field with no
-              groups renders as one section headed "All", which is the previous list with a title. */}
+              groups renders as one section headed "All", which is the previous list with a title.
+
+              DROP-RACER-NUMBER-1: sorted ALPHABETICALLY, which is what a start list normally does.
+              It used to sort by a `#3` badge that was re-rolled on every keystroke, so the list
+              reordered itself under the operator's hands for no reason they could act on. */}
           {sections.map(({ label, members }) => (
             <div key={label} className={styles.playerGroupSection}>
               {sections.length > 1 && (
@@ -114,7 +110,6 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
               <div className={styles.playerList}>
                 {members.map((player) => (
                   <div key={player.name} className={styles.playerRow}>
-                    <span className={styles.racerBadge}>#{player.racerNumber}</span>
                     <span className={styles.playerName}>{player.name}</span>
                     <button
                       className={styles.removeBtn}
@@ -128,9 +123,6 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
               </div>
             </div>
           ))}
-          <button className={styles.reassignBtn} onClick={handleReassign}>
-            🔀 Reshuffle racer assignments
-          </button>
         </>
       )}
     </div>

@@ -67,35 +67,46 @@ describe('PlayerSetup', () => {
   });
 
   it('removes a player when the remove button is clicked', () => {
-    const players = [{ name: 'Alice', racerNumber: 1 }];
+    const players = [{ name: 'Alice' }];
     const { onChange } = setup(players);
     fireEvent.click(screen.getByTitle('Remove player'));
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
-  it('calls onChange when Reshuffle is clicked', () => {
-    const players = [
-      { name: 'Alice', racerNumber: 1 },
-      { name: 'Bob', racerNumber: 2 },
-    ];
-    const { onChange } = setup(players);
-    fireEvent.click(screen.getByText(/Reshuffle/i));
-    expect(onChange).toHaveBeenCalledOnce();
-    const [reshuffled] = onChange.mock.calls[0];
-    // All original names must still be present after reshuffle
-    expect(reshuffled.map((p) => p.name).sort()).toEqual(['Alice', 'Bob']);
-  });
+  // ── DROP-RACER-NUMBER-1, the owner's decision of 2026-09-04 ─────────────────────────────────
+  //
+  // SABOTAGE — the badge and the 🔀 button are GONE. They are asserted ABSENT rather than simply
+  //   deleted from the suite, because a removal nothing watches is a removal that comes back: the
+  //   `#3` was read as the number the racer carries into the race, and it decided nothing.
+  //   What breaks if I delete this: either control can be re-added and the suite stays green.
 
-  it('renders each player with a racer badge and name', () => {
-    const players = [
-      { name: 'Alice', racerNumber: 1 },
-      { name: 'Bob', racerNumber: 2 },
-    ];
-    setup(players);
+  it('★ renders each player as a NAME — the #3 badge is gone', () => {
+    setup([{ name: 'Alice' }, { name: 'Bob' }]);
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByText('#1')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.queryByText(/^#\d+$/)).toBeNull();
+  });
+
+  it('★ there is no reshuffle control at all', () => {
+    setup([{ name: 'Alice' }, { name: 'Bob' }]);
+    expect(screen.queryByText(/Reshuffle/i)).toBeNull();
+    expect(screen.queryByText(/🔀/)).toBeNull();
+  });
+
+  it('★ the list reads ALPHABETICALLY, whatever order the names arrived in', () => {
+    setup([{ name: 'Zoe' }, { name: 'Alice' }, { name: 'Mo' }]);
+    const shown = screen.getAllByText(/^(Zoe|Alice|Mo)$/).map((el) => el.textContent);
+    expect(shown).toEqual(['Alice', 'Mo', 'Zoe']);
+  });
+
+  it('adding a name does NOT stamp a number onto anybody', () => {
+    const { onChange } = setup([{ name: 'Alice' }]);
+    fireEvent.change(screen.getByPlaceholderText(/Enter player name/i), {
+      target: { value: 'Bob' },
+    });
+    fireEvent.click(screen.getByText('Add'));
+    const [next] = onChange.mock.calls[0];
+    for (const p of next) expect(p).not.toHaveProperty('racerNumber');
   });
 });
 
@@ -109,7 +120,7 @@ describe('PlayerSetup', () => {
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
 describe('sectionsOf', () => {
-  const P = (name, racerNumber, group) => ({ name, racerNumber, ...(group ? { group } : {}) });
+  const P = (name, _unused, group) => ({ name, ...(group ? { group } : {}) });
 
   it('puts each group in its own section and ungrouped players under All', () => {
     const out = sectionsOf([P('Anna', 2, 'Reds'), P('Zoe', 1), P('Cara', 3, 'Blues')]);
@@ -127,9 +138,11 @@ describe('sectionsOf', () => {
     expect(out.map((s) => s.label)).toEqual(['Zulu', 'Alpha']);
   });
 
-  it('sorts inside a section by racer number, exactly as the flat list did', () => {
+  it('★ sorts inside a section ALPHABETICALLY (DROP-RACER-NUMBER-1)', () => {
+    // It sorted by the `racerNumber` badge, which was re-rolled on every add and remove — so the
+    // list reordered itself under the operator's hands for no reason they could act on.
     const out = sectionsOf([P('B', 3, 'Reds'), P('A', 1, 'Reds'), P('C', 2, 'Reds')]);
-    expect(out[0].members.map((m) => m.name)).toEqual(['A', 'C', 'B']);
+    expect(out[0].members.map((m) => m.name)).toEqual(['A', 'B', 'C']);
   });
 
   it('a field with NO groups is one section called All — the previous list, with a title', () => {
@@ -147,7 +160,7 @@ describe('PlayerSetup with groups', () => {
   it('★ adding a name by hand does not erase the group of anyone already in the field', () => {
     // The defect this guards is invisible: `assignRacers` rebuilt from names, so every Add silently
     // stripped the group off every existing player.
-    let players = [{ name: 'Anna', racerNumber: 1, group: 'Reds' }];
+    let players = [{ name: 'Anna', group: 'Reds' }];
     const onChange = vi.fn((next) => {
       players = next;
     });
@@ -163,10 +176,7 @@ describe('PlayerSetup with groups', () => {
   it('the section headings appear once there is more than one section', () => {
     render(
       <PlayerSetup
-        players={[
-          { name: 'Anna', racerNumber: 1, group: 'Reds' },
-          { name: 'Zoe', racerNumber: 2 },
-        ]}
+        players={[{ name: 'Anna', group: 'Reds' }, { name: 'Zoe' }]}
         onChange={() => {}}
         maxPlayers={20}
       />
@@ -176,13 +186,7 @@ describe('PlayerSetup with groups', () => {
   });
 
   it('and a single-section field is NOT given a heading — the list is unchanged for that case', () => {
-    render(
-      <PlayerSetup
-        players={[{ name: 'Zoe', racerNumber: 1 }]}
-        onChange={() => {}}
-        maxPlayers={20}
-      />
-    );
+    render(<PlayerSetup players={[{ name: 'Zoe' }]} onChange={() => {}} maxPlayers={20} />);
     expect(screen.queryByTestId('roster-section-All')).toBeNull();
   });
 });

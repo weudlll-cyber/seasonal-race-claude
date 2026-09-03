@@ -14,7 +14,6 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
-import { assignRacers } from '../../../modules/utils/RandomHelper.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import {
   fetchPlayerGroups,
@@ -143,7 +142,12 @@ function PlayerGroupsManager() {
 
   function handleLoad(group) {
     // ACTIVE_GROUP stays local — unchanged from pre-D2 (transient hand-off channel)
-    storageSet(KEYS.ACTIVE_GROUP, assignRacers(group.players));
+    // DROP-RACER-NUMBER-1: the hand-off carries NAMES only. It used to run them through
+    // `assignRacers` for a `racerNumber` the Setup Screen drew and nothing else ever read.
+    storageSet(
+      KEYS.ACTIVE_GROUP,
+      group.players.map((name) => ({ name }))
+    );
     navigate('/setup');
   }
 

@@ -250,18 +250,8 @@
   border-radius: var(--radius);
 }
 
-.racerBadge {
-  min-width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 4px;
-}
+/* `.racerBadge` and `.reassignBtn` were removed here on 2026-09-04 (DROP-RACER-NUMBER-1) with the
+   `#3` badge and the 🔀 button they styled. Nothing else referenced either. */
 
 .playerName {
   flex: 1;
@@ -281,25 +271,6 @@
 
 .removeBtn:hover {
   color: var(--color-primary);
-}
-
-.reassignBtn {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid #2a2a35;
-  border-radius: var(--radius);
-  color: var(--color-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition:
-    border-color var(--transition),
-    color var(--transition);
-}
-
-.reassignBtn:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
 
 .emptyHint {
