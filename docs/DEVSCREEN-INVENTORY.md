@@ -165,7 +165,7 @@ its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last 
 | Control                               | Config key                         | Shipped default |
 | ------------------------------------- | ---------------------------------- | --------------- |
 | PULK begin / CHAOS ends (0.10–0.60)   | `racePlanPulkStart`                | 0.15            |
-| PULK end / OUTCOME begins (0.25–0.70) | `choreoOutcomeStart`               | 0.6             |
+| PULK end / OUTCOME begins (0.25–0.60) | `choreoOutcomeStart`               | 0.6             |
 | Leader brake                          | `pulkLeaderBrake`                  | 0.1             |
 | Challenger boost (cap)                | `pulkChallengerBoost`              | 0.06            |
 | Ex-leader drop depth (lengths)        | `pulkLeadRotationDropDepthLengths` | 8               |
@@ -175,7 +175,15 @@ its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last 
 widget clamp [0.10, 0.60], validated config range **[0.10, 0.60]** (per the measured chain-world plateau);
 shipped default **0.15** (COMBO15). It is part of the `raceDynamics` block, so the master **Reset All
 Defaults** restores it and the HUD config badge counts it as race-relevant. The PULK-end control's input
-widget clamp is **[0.25, 0.70]**, which is its validated config range. *(CONTROL-BOUNDS-1, 2026-09-03: the
+widget clamp is **[0.25, 0.60]**, and **the top is the edge of what has been MEASURED, not a limit of
+the mechanism** — the mechanism's wall is 0.70 (`choreoResolveB3`), and SWEEP 2 measured 0.70 as
+holding, but SWEEP 2 predates the speed-150 re-baseline, COMBO15, gap-reroll's flip and the B2
+attackers, so nothing above 0.60 has been measured on the tree that ships. *(Raised to 0.70 by
+SLIDER-HEADROOM-1 on 2026-09-03 and REVERSED by the owner on 2026-09-04 for that reason. The LOADER
+still tolerates up to 0.70 deliberately — the slider stood there for a day, and that validator
+discards the WHOLE config on any rejection, so tightening it would cost an operator every other
+tuning to correct one key they can no longer set. `raceDynamicsConfig.js` states both numbers and
+which is which.)* *(CONTROL-BOUNDS-1, 2026-09-03: the
 widget clamped at 0.55 while the shipped value is 0.60, so the control could not display or restore what
 the game runs. The two numbers were recorded separately here — "the clamp" and "the validated range" — and
 that separation is what let them disagree for 47 days: a widget clamp that is not the validated range is a

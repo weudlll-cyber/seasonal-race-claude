@@ -1236,29 +1236,33 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             },
             {
               key: 'choreoOutcomeStart',
-              label: 'PULK end / OUTCOME begins (0.25–0.70)',
+              label: 'PULK end / OUTCOME begins (0.25–0.60)',
               // CONTROL-BOUNDS-1 (2026-09-03): max was 0.55 while the shipped value is 0.60, so the
               // control CLAMPED TO 0.55 ON OPEN — touching it lost the shipped value with no way back,
               // while the card's own Reset restored a value the slider could not display.
               //
-              // SLIDER-HEADROOM-1 (2026-09-03) then raised the top to 0.70, and the bound comes from
-              // the NEIGHBOUR rather than from feel. `choreoResolveB3` is a fixed 0.70, so B3's
-              // OUTCOME settling window is exactly `[this, 0.70]` — 0.10 wide at the shipped 0.60,
-              // 0.05 at 0.65, and **ZERO at 0.70**. That is the wall: past it a band is asked to be
-              // resolved before OUTCOME has begun. SWEEP 2 (2026-07-17) measured all four points and
-              // agrees — the gate holds on 3 of 4 tracks at BOTH 0.60 and 0.70, and collapses to 0 of
-              // 4 at 0.80, with B3 the first casualty everywhere.
+              // ★★ THE TOP IS 0.60 BECAUSE THAT IS THE EDGE OF WHAT HAS BEEN MEASURED — NOT BECAUSE
+              // THE MECHANISM STOPS THERE. It is the one line that matters here, and its absence is
+              // why this bound has now moved twice.
               //
-              // SO THE PREVIOUS COMMENT HERE WAS WRONG, and this is the correction: it said 0.60 was
-              // "the top of what has been measured". SWEEP 2 measured 0.70 and 0.80 as well. 0.60 was
-              // the top of what was RECORDED as validated, which is a different claim — and the two
-              // documents that recorded it are corrected with this change.
+              // The MECHANISM's wall is 0.70: `choreoResolveB3` is a fixed 0.70, so B3's OUTCOME
+              // settling window is `[this, 0.70]` and is ZERO wide at 0.70, and SWEEP 2 (2026-07-17)
+              // measured 0.50/0.60/0.70/0.80 with the gate holding on 3 of 4 tracks at both 0.60 and
+              // 0.70. SLIDER-HEADROOM-1 (2026-09-03) took that as licence and raised the top to 0.70.
               //
-              // THE HEADROOM IS NOT FREE, and the operator should know: per-band reach degrades
-              // monotonically as this rises. On city-circuit, B3 goes 68% at 0.60 → 59% at 0.70. The
-              // gate verdict is unchanged; the margin is not.
+              // THE OWNER REVERSED IT ON 2026-09-04, and the reason is not the mechanism: SWEEP 2 is
+              // from a world that no longer exists — the speed-150 re-baseline, COMBO15, gap-reroll's
+              // flip and the B2 attackers at count 3 all landed after it. **Nothing above 0.60 has
+              // been measured on the tree that ships**, so the widening let an operator tune into a
+              // range where no evidence exists, and a slider that reaches further than the evidence
+              // is a slider that invites a value nobody can defend.
+              //
+              // ★ SO: DO NOT RAISE THIS WITHOUT A MEASUREMENT ON TODAY'S TREE. Re-running SWEEP 2 is
+              // 16 configs x 100 races. If it says 0.70 still holds, the bound may move and this
+              // comment moves with it. Reading `choreoResolveB3` and concluding 0.70 is exactly the
+              // step that was taken and reversed.
               min: 0.25,
-              max: 0.7,
+              max: 0.6,
               step: 0.05,
               tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [PULK begin, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.6 = shipped.",
             },
