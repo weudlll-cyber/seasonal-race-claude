@@ -3818,7 +3818,7 @@ behaviourally null, and left his edit intact, so the install is correct today ei
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`), the same commit that closed the item above it — the backlog simply never heard. Verified at source: `scripts/verify.mjs:250-272` carries the corrected comment and schedules on `exclusive: !shape.singleWorker` derived from `server/test/suiteShape.mjs`, and `.github/workflows/ci.yml:184-193` says the flag was removed and that CI schedules nothing. Neither file asserts `--no-file-parallelism` any more.
 
-- [ ] **TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**
+- [x] ~~**TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**~~ — **CLOSED 2026-09-03 (BACKLOG-CHECKBOXES-1): closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`). Re-checked at source 2026-09-03: `server/package.json`'s `test` is `vitest run` with no `--no-file-parallelism`, and both `scripts/verify.mjs` and `.github/workflows/ci.yml` carry corrected comments describing the removal.** *(The verdict below said ALREADY DONE on 2026-09-02 and the box never moved; closing it is mechanical, not a new judgement.)* 
       `scripts/verify.mjs:246` and `.github/workflows/ci.yml:184` both assert
       `--no-file-parallelism` is in the server package's `npm test`. It is not. `verify.mjs` then
       runs the server suite **non-exclusively, beside the fingerprint jobs**, on the ground that the
@@ -3861,7 +3861,7 @@ behaviourally null, and left his edit intact, so the install is correct today ei
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-31 by SEED-REDELIVERY-1 (`b9dc8102`, merge `22e6eadf`). A shipped record now redelivers to an existing installation when its version in `server/seeds/versions.json` is raised by hand — whole unit, `server/src/seedDelivery.js` — and the operator is warned by server-side state (`GET /api/seed-notices`, a SetupScreen banner, dismissed by an authenticated POST). `seedRuntime.js:36` still never overwrites, deliberately: delivery moved rather than being bolted onto the first-boot copy.
 
-- [ ] **A SHIPPED TRACK CHANGE STILL REACHES NOBODY, CONFIRMED AGAIN TONIGHT.** garden-path icon and
+- [x] ~~**A SHIPPED TRACK CHANGE STILL REACHES NOBODY, CONFIRMED AGAIN TONIGHT.**~~ — **CLOSED 2026-09-03 (BACKLOG-CHECKBOXES-1): closed by SEED-REDELIVERY-1 — a shipped change now reaches an existing installation on a hand-raised version.** *(The verdict below said ALREADY DONE on 2026-09-02 and the box never moved; closing it is mechanical, not a new judgement.)*  garden-path icon and
       description now match its beetle in the artefact the product ships, **and his own installation
       will never see it** — `seedRuntime.js:36` copies a seed only where no file exists. **The live
       record was deliberately NOT hand-edited this time**, so the evidence stays intact.
@@ -3905,7 +3905,7 @@ proposals.** No work is proposed for either, no key is added, and nothing is des
       `defaultDuration` while the shipped seed had long since moved to `defaultLaps` — both resolving
       to the same lap count, so nothing showed — **with nothing anywhere comparing the two.**
 
-- [ ] **garden-path still wears the snail.** Its icon is 🐌 and its description reads *"A leisurely
+- [x] ~~**garden-path still wears the snail.**~~ — **CLOSED 2026-09-03 (BACKLOG-CHECKBOXES-1): closed 2026-08-26 by GARDEN-PATH-BEETLE-SKIN-1 (`ba4a4442`). Re-checked at source 2026-09-03: the seed's icon is 🪲 and its description reads *"A leisurely (yet surprisingly competitive) scuttle through the roses."*** *(The verdict below said ALREADY DONE on 2026-09-02 and the box never moved; closing it is mechanical, not a new judgement.)*  Its icon is 🐌 and its description reads *"A leisurely
       (yet surprisingly competitive) crawl through the roses"*, while the track's default racer is
       now the **beetle**. The owner named two changes on 2026-08-25 and neither was the icon or the
       description, so neither was touched; `scripts/track-defaults.test.mjs` pins both so that a
