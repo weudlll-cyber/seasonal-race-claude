@@ -293,6 +293,21 @@ carried the SAME change and was deleted outright for the same reason.
   and its location is recorded in
   [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md).
 
+### DROP-CROP-SCRIPT — the one-shot crop tool, deleted once its work was proven done (2026-09-03)
+
+- `archive/crop-sprite-sheets` (`9c0c9956`, 2026-09-03) — **`scripts/crop-sprite-sheets.mjs`, the
+  one-shot tight-crop tool**, on the commit that deleted it. **Recover with
+  `git show archive/crop-sprite-sheets^:scripts/crop-sprite-sheets.mjs`** — the tag is ON the
+  deletion, so the file lives at its PARENT, hence the caret. Keep it because it is the only place
+  the tool's own arithmetic exists, and that arithmetic is what proves the twelve sheets in
+  `client/public/assets/racers/` are its output: run over the pre-crop geometry it recorded, it
+  predicts the frame size each PNG has today, **12 of 12**. **It was deleted rather than kept because
+  what it could still do was destructive only** — it overwrites its inputs, and its recorded geometry
+  stopped describing them the moment it finished. On 2026-09-03 a stray shell expansion ran it: nine
+  tracked artwork files overwritten, with `Verification: OK` printed for each. The pre-crop
+  dimensions it recorded — the only record of what those sheets held before — are preserved beside
+  the artwork in `client/public/assets/racers/CREDITS.md`.
+
 ### CLEANUP-2026-08-26 — the two diagnostic branches whose instruments were nowhere else (2026-08-26)
 
 **Nine branches stood beside `master`; seven of them held nothing master did not.** Six `diag/*`

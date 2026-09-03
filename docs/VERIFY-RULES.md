@@ -747,7 +747,7 @@ historical record under a live field name puts every such guard in an impossible
 either go red on something correct, or be given an exception, and **an exception is the guard being
 told to look away from the only thing it can see.**
 
-**The instance it comes from.** `scripts/crop-sprite-sheets.mjs`'s `FLAGGED_TYPES` carried
+**The instance it comes from**, and the file no longer exists — it was deleted on 2026-09-03 by the owner's decision (DROP-CROP-SCRIPT-1) and is at the annotated tag `archive/crop-sprite-sheets`; **the rule it produced is unaffected**. `scripts/crop-sprite-sheets.mjs`'s `FLAGGED_TYPES` carried
 `frameWidth`/`frameHeight` recording the PRE-crop sheet geometry, while the racer-type registry
 carries the POST-crop values. They disagreed on 8 of 12 entries, **correctly**, and had done since
 the day both were written (`11093fff`, 2026-06-03). `check-fallback-agreement`'s Rule A found them on

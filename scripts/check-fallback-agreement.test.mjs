@@ -19,7 +19,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { join, dirname, relative } from "node:path";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import {
@@ -394,7 +394,7 @@ test("RULE A GATES: a disagreeing registry literal makes the guard exit non-zero
 });
 
 test("RULE A: a RENAMED field is out of reach — the distinction, and its price", () => {
-  // This is the shape `crop-sprite-sheets.mjs` now has, and it is deliberate: a record of what a
+  // This is the shape `crop-sprite-sheets.mjs` HAD before it was deleted, and it is deliberate: a record of what a
   // value USED to be must not wear the live field's name (R18). The cost is stated rather than
   // hidden — the rename is also what makes the table invisible to this rule.
   const dir = mkdtempSync(join(tmpdir(), "ra-rulea-renamed-"));
@@ -421,12 +421,17 @@ test("RULE A: a RENAMED field is out of reach — the distinction, and its price
 test("RULE A carries NO exception for the one file it ever objected to", () => {
   // The point of renaming rather than excepting: there is nothing here telling the rule to look
   // away. If this assertion ever has to be deleted, the rule has stopped being a rule.
+  //
+  // THE SLICE IS THE ARRAY LITERAL AND NOTHING ELSE (narrowed 2026-09-03, DROP-CROP-SCRIPT-1). It
+  // used to run from `const EXCEPTIONS` to `const isExcepted`, four hundred lines and three
+  // unrelated functions later — so a COMMENT anywhere in that span could fail it, and one did: a
+  // note recording that the file had been deleted. An assertion that fires on prose about a thing
+  // is not an assertion about the thing.
   const self = readFileSync(join(REPO, "scripts/check-fallback-agreement.mjs"), "utf8");
-  const exceptionsBlock = self.slice(
-    self.indexOf("const EXCEPTIONS"),
-    self.indexOf("const isExcepted"),
-  );
-  assert.ok(exceptionsBlock.length > 0, "the exception list must still be findable");
+  const open = self.indexOf("export const EXCEPTIONS = [");
+  const exceptionsBlock = self.slice(open, self.indexOf("\n];", open) + 3);
+  assert.ok(open >= 0 && exceptionsBlock.length > 0, "the exception list must still be findable");
+  assert.match(exceptionsBlock, /\n\];$/, "the slice must end at the array's own closing bracket");
   assert.doesNotMatch(
     exceptionsBlock,
     /crop-sprite-sheets/,
@@ -437,4 +442,93 @@ test("RULE A carries NO exception for the one file it ever objected to", () => {
     /preCropFrame/,
     "and no exception was written for the renamed fields either",
   );
+});
+
+// ────────────────────────────────────────────────────────────
+// LOUD FAILURE ON A BROKEN DISCOVERY (Lesson 187, DROP-CROP-SCRIPT-1).
+//   What breaks if I delete these: Rule A's live population is now ZERO — the copies it was built
+//     for were removed before it existed, and deleting `crop-sprite-sheets.mjs` took the last
+//     twelve. So "0 registry literal(s) … 0 disagree" is the GOAL STATE and it is byte-identical to
+//     what a rule whose discovery has silently stopped working would print.
+//   What goes unnoticed without them: exactly that. A renamed registry export or a moved directory
+//     and the rule reports a clean bill of health over an empty search, forever.
+// ────────────────────────────────────────────────────────────
+test("LOUD FAILURE: an EMPTY REGISTRY fails rather than reporting '0 disagree'", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulea-emptyreg-"));
+  try {
+    const home = join(dir, "client/src/modules/racer-types");
+    mkdirSync(home, { recursive: true });
+    writeFileSync(
+      join(home, "index.js"),
+      "export const RACER_TYPE_IDS = [];\nexport const RACER_TYPES = {};\nexport const CONFIG_SNAPSHOT = {};\n",
+    );
+    let code = 0;
+    let out = "";
+    try {
+      out = execFileSync(
+        process.execPath,
+        ["scripts/check-fallback-agreement.mjs", `--registry-root=${dir.split("\\").join("/")}`],
+        { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+    } catch (e) {
+      code = e.status;
+      out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+    assert.equal(code, 1, "a registry that yields nothing must break the build");
+    assert.match(out, /discovered 0 racer type\(s\) and 0 field name\(s\)/);
+    assert.match(out, /Lesson 187/);
+    assert.doesNotMatch(
+      out,
+      /RULE A: d+ registry literal/,
+      "and must NOT print its summary line on the way out — the refusal message quotes the words it is refusing to print, so the assertion is on the SUMMARY, not on the phrase",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("LOUD FAILURE: a scan that walks ZERO files fails too", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulea-emptysrc-"));
+  try {
+    let code = 0;
+    let out = "";
+    try {
+      out = execFileSync(
+        process.execPath,
+        [
+          "scripts/check-fallback-agreement.mjs",
+          `--src=${relative(REPO, dir).split("\\").join("/")}`,
+        ],
+        { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+    } catch (e) {
+      code = e.status;
+      out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+    }
+    assert.equal(code, 1);
+    assert.match(out, /walked ZERO files/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("…but finding ZERO LITERALS is the GOAL STATE and stays green", () => {
+  // The distinction the two tests above exist for. After DROP-CROP-SCRIPT-1 the real tree has no
+  // registry literals at all, and that must read as success, not as a broken scan.
+  const dir = mkdtempSync(join(tmpdir(), "ra-rulea-noliterals-"));
+  try {
+    writeFileSync(join(dir, "fixture.js"), "export const T = { id: 'horse', unrelated: 1 };\n");
+    const out = execFileSync(
+      process.execPath,
+      [
+        "scripts/check-fallback-agreement.mjs",
+        `--src=${relative(REPO, dir).split("\\").join("/")}`,
+      ],
+      { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    assert.match(out, /RULE A: 0 registry literal\(s\)/);
+    assert.match(out, /0 disagree/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
