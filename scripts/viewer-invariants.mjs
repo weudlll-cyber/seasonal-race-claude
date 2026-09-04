@@ -166,18 +166,32 @@ function geometries() {
 //     nightly sweep instead of the gate, i.e. a day later rather than before the merge.
 //   - garden-path entirely. The reason recorded here was that its race never finishes at seed 9,
 //     so it was never scorable anyway.
-//     ★★ THAT REASON IS FALSE, MEASURED ON THIS HARNESS, 2026-09-04 (GP-SPEC-TRIM-1). Flagged
-//     DOUBTFUL on 2026-09-03 because two OTHER harnesses had retracted the same claim and no race
-//     had been run HERE. One was:
-//         node scripts/viewer-invariants.mjs --tracks=garden-path --seeds=9 --arm=shipped
-//     255 s, one race, a full acceptance sheet. GARDEN-PATH FINISHES AND IS SCORABLE: it reaches
-//     PHOTO_FINISH with the winner on canvas at (0.465, 0.695), and it is GRADED on the twelve
-//     items — passing ten and FAILING two, item 9 (winner cut, 4 violations, worst at frame 6241)
-//     and item 10 (walk, 0.52).
-//     ★ SO THE EXCLUSION DOES NOT COST NOTHING. It was justified on the ground that there was
-//     nothing to score; there is, and two of the twelve fail. WHAT THE GATE RUNS IS NOT CHANGED
-//     HERE — that decides what reddens a build and is the owner's. The nightly sweep still runs
-//     all ten, so those two failures are visible a day later rather than never.
+//     ★★ THAT REASON IS FALSE, MEASURED ON THIS HARNESS, 2026-09-04 (GP-SPEC-TRIM-1). Garden-path
+//     FINISHES AND IS SCORABLE: it reaches PHOTO_FINISH with the winner on canvas, and is graded on
+//     the twelve items — passing ten and FAILING two, item 9 (winner cut) and item 10 (walk).
+//
+//     ★★ AND THE WIDENING WAS THEN CONSIDERED IN FULL AND STOPPED — GATE-GARDEN-PATH-1, 2026-09-04,
+//     16 races. DO NOT REDO THIS WITHOUT READING THAT REPORT; the obvious move has been made and
+//     measured. In one paragraph:
+//
+//       BOTH FAILURES ARE REAL AND NEITHER BELONGS TO GARDEN-PATH. It PASSES item 9 at seeds 1, 2
+//       and 3 and item 10 at seeds 1 and 3. Item 9 fails when the PHOTO-FINISH ZOOM HAS NOT ARRIVED
+//       AT THE CROSSING — the camera is still on the `level` binding, tightening under the winner,
+//       who slides to 0.855 of the frame against a 0.85 bound. Item 10 fails when a BATTLE_ZOOM sits
+//       in the endgame window: a battle shot frames the battle, so the leader is held forward and
+//       never walks back behind centre. Both are per-RACE camera behaviours, on more than one track.
+//
+//       SO IT WAS NOT ADDED. The gate runs SEED 9 and nothing else, and seed 9 is exactly where
+//       garden-path fails both — a gate that is red the day it is widened is a gate that gets
+//       ignored within a week. The two behaviours are picture questions and went to the owner.
+//
+//     ★ WHAT THE EXCLUSION ACTUALLY COSTS IS NOT A TRACK, AND THIS IS THE PART WORTH KNOWING HERE.
+//     Both gate tracks cross with `binding: state` and the camera ALREADY at `photoFinishZoom`, so
+//     THIS GATE IS STRUCTURALLY BLIND TO BOTH BEHAVIOURS — not because garden-path is missing, but
+//     because neither of its own two races exhibits them. The lever is WHICH RACE the gate runs, not
+//     which track. Three excluded tracks fail something at seed 9: garden-path (items 9 and 10) and
+//     luger-hill and dirt-oval (item 2) — and item 2's failures are the SAME late-zoom mechanism.
+//     The nightly sweep still runs all ten, so all of it is visible a day later rather than never.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
