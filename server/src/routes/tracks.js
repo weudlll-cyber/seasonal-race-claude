@@ -22,7 +22,7 @@ import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
-import { seedTypeFromSnapshot } from '../seedRuntime.js';
+import { seedTypeFromSnapshot, readSeedType } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 
@@ -55,171 +55,30 @@ function loadAllTracks() {
 migrateDefaultTracks();
 const tracksMap = loadAllTracks();
 
-// Metadata for the 10 built-in default tracks — kept for SEED_SURFACE_CLASSES /
-// SEED_TRACK_LIGHTS lookup maps and external callers (tracks.test.js).
-// Geometry fields are intentionally empty: they are drawn by the user via the Track Editor.
-export const DEFAULT_TRACK_SEEDS = [
-  {
-    id: 'dirt-oval',
-    name: 'Dirt Oval',
-    icon: '🐴',
-    description: 'Classic oval on packed earth — tight turns, lots of dust.',
-    color: '#a0522d',
-    defaultRacerTypeId: 'horse',
-    defaultLaps: 2,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['earth'],
-    trackLights: { color: '#ff8844', style: 'sequence', speed: 1.0 },
-    worldWidth: 3072,
-    worldHeight: 2047,
-    isDefault: true,
-  },
-  {
-    id: 'river-run',
-    name: 'River Run',
-    icon: '🦆',
-    description: 'Downstream sprint through meandering rapids and lily pads.',
-    color: '#2196f3',
-    defaultRacerTypeId: 'duck',
-    defaultDurationSec: 60,
-    defaultWinners: 3,
-    difficulty: 'easy',
-    surfaceClasses: ['water'],
-    trackLights: { color: '#3aa0ff', style: 'sync_pulse', speed: 0.7 },
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'space-sprint',
-    name: 'Space Sprint',
-    icon: '🚀',
-    description: 'Zero-gravity dash past asteroids and nebula clouds.',
-    color: '#7c3aed',
-    defaultRacerTypeId: 'rocket',
-    defaultDurationSec: 90,
-    defaultWinners: 3,
-    difficulty: 'hard',
-    surfaceClasses: ['air'],
-    trackLights: { color: '#a8d4ff', style: 'sequence', speed: 1.5 },
-    worldWidth: 1280,
-    worldHeight: 720,
-    isDefault: true,
-  },
-  {
-    id: 'garden-path',
-    name: 'Garden Path',
-    icon: '🐌',
-    description: 'A leisurely (yet surprisingly competitive) crawl through the roses.',
-    color: '#16a34a',
-    defaultRacerTypeId: 'snail',
-    defaultLaps: 4,
-    defaultWinners: 3,
-    difficulty: 'easy',
-    surfaceClasses: ['grass', 'earth'],
-    trackLights: { color: '#ffdd66', style: 'steady', speed: 1.0 },
-    worldWidth: 3072,
-    worldHeight: 2047,
-    isDefault: true,
-  },
-  {
-    id: 'city-circuit',
-    name: 'City Circuit',
-    icon: '🚙',
-    description: 'High-speed urban track with hairpin corners and tunnel sections.',
-    color: '#64748b',
-    defaultRacerTypeId: 'buggy',
-    defaultLaps: 2,
-    defaultWinners: 3,
-    difficulty: 'hard',
-    surfaceClasses: ['asphalt'],
-    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
-    worldWidth: 3072,
-    worldHeight: 2047,
-    isDefault: true,
-  },
-  {
-    id: 'mountainstreet',
-    name: 'Mountainstreet',
-    icon: '🏞',
-    description: 'A winding mountain road with sweeping corners and elevation changes.',
-    color: '#e63946',
-    defaultRacerTypeId: 'boarder',
-    defaultDurationSec: 60,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['asphalt'],
-    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
-    worldWidth: 6144,
-    worldHeight: 4096,
-    isDefault: true,
-  },
-  {
-    id: 'ice-track',
-    name: 'Ice Track',
-    icon: '🎿',
-    description: 'A slippery closed circuit on packed ice and snow.',
-    color: '#e63946',
-    defaultRacerTypeId: 'horse',
-    defaultLaps: 2,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['ice', 'snow'],
-    trackLights: { color: '#ffffff', style: 'sequence', speed: 1.0 },
-    worldWidth: 3072,
-    worldHeight: 2047,
-    isDefault: true,
-  },
-  {
-    id: 'seatrack',
-    name: 'Seatrack',
-    icon: '🐬',
-    description: 'Open sea dash through waves and sunken ruins.',
-    color: '#0077b6',
-    defaultRacerTypeId: 'dolphin',
-    defaultDurationSec: 60,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['water'],
-    trackLights: { color: '#00b4d8', style: 'sync_pulse', speed: 0.7 },
-    worldWidth: 6144,
-    worldHeight: 4096,
-    isDefault: true,
-  },
-  {
-    id: 'searound',
-    name: 'Searound',
-    icon: '🌊',
-    description: 'Circular sea circuit — racers loop around a sunken atoll.',
-    color: '#023e8a',
-    defaultRacerTypeId: 'manta',
-    defaultLaps: 2,
-    defaultWinners: 3,
-    difficulty: 'medium',
-    surfaceClasses: ['water'],
-    trackLights: { color: '#0096c7', style: 'sync_pulse', speed: 0.9 },
-    worldWidth: 3072,
-    worldHeight: 2048,
-    isDefault: true,
-  },
-  {
-    id: 'luger-hill',
-    name: 'Luger Hill',
-    icon: '🛷',
-    description: 'Steep luge descent through frozen mountain banks and open ridgelines.',
-    color: '#e63946',
-    defaultRacerTypeId: 'luge',
-    defaultDurationSec: 90,
-    defaultWinners: 3,
-    difficulty: 'hard',
-    surfaceClasses: ['ice', 'air'],
-    trackLights: { color: '#0eaf2e', style: 'sequence', speed: 1.0 },
-    worldWidth: 4096,
-    worldHeight: 2728,
-    isDefault: true,
-  },
-];
+// The ten built-in default tracks — READ FROM THE SEEDS, never restated (TRACK-SEEDS-ONE-HOME-1).
+//
+// THIS WAS A LITERAL COPY OF ALL TEN, and it had drifted. Of 140 comparable values 32 disagreed
+// with `server/seeds/tracks/*.json`, which is the source of truth: `garden-path` still said
+// `snail` and `defaultLaps: 4` — the exact pairing FINGERPRINT-TRACK-DEFAULTS-1 repaired on
+// 2026-09-02 at a different home, which never reached this one — and `city-circuit` still said
+// `buggy`, stale since 2026-06-30.
+//
+// WHY THAT MATTERED, and it is not the `snail`. Nothing reads `defaultRacerTypeId` here. What IS
+// read is `surfaceClasses` and `trackLights`, by the two startup migrations below, and SEVEN of the
+// thirty-two disagreements were in those two fields — `dirt-oval` short three surface classes,
+// `ice-track` short `air`, `garden-path` short `mud` and `sand`, and four tracks' light styles.
+// Those migrations repair a stored record that LACKS the field, so a hand-edited record, a partial
+// restore or a future seed that omits one would have been patched with the stale value and written
+// to disk — and `surfaceClasses` decides which racer types may run a track. INERT TODAY (all ten
+// delivered seeds carry both fields, so both migrations `continue`) is not the same claim as
+// CANNOT MATTER, and only the first was ever true.
+//
+// GEOMETRY IS STRIPPED, keeping this export's meaning exactly what it was: metadata only. The
+// points are drawn by the user in the Track Editor, `tracksMap` already holds them, and a second
+// in-memory copy of 324 KB of geometry would buy nothing.
+export const DEFAULT_TRACK_SEEDS = readSeedType('tracks').map(
+  ({ innerPoints, outerPoints, centerPoints, ...rest }) => rest
+);
 
 // Lookup maps derived from seeds — used by startup migrations to patch tracks written
 // before these fields existed.
@@ -615,7 +474,6 @@ router.post('/', (req, res) => {
   const geometryId = req.body.geometryId || generateGeometryId();
   const now = new Date().toISOString();
 
-  // eslint-disable-next-line no-unused-vars
   const { backgroundImage, ...rest } = req.body;
   const track = {
     // Sensible defaults — overridden by anything in req.body
@@ -656,7 +514,6 @@ router.put('/:id', (req, res) => {
   const errors = validateTrackBodyForUpdate(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
-  // eslint-disable-next-line no-unused-vars
   const { backgroundImage, ...rest } = req.body;
   const track = {
     ...existing,
