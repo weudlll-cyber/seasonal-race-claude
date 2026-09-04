@@ -66,6 +66,35 @@ COPY --from=client dist/ ./client-dist/
 # gets a working app.
 ENV RA_CLIENT_DIST=/app/client-dist
 
+# ── CONTAINER-NONROOT-1: THE IMAGE DOES NOT RUN AS ROOT ─────────────────────────────────────────
+#
+# This repository is public and licensed, so `docker run` on it is something a stranger does. With
+# no USER directive that stranger gets a root process by default, and anything that can write or
+# escape from it starts at uid 0. Nothing here needs root after the build.
+#
+# `node` is the unprivileged user the official node images already ship (uid 1000). Using it rather
+# than creating one keeps this to two lines and avoids a second answer to a question the base image
+# has already answered.
+#
+# WHAT IT MUST OWN, established by resolving every write site rather than by guessing: writeFileSync,
+# mkdirSync, renameSync, copyFileSync, appendFileSync and unlinkSync appear in ten modules across
+# `server/src` and `server/utils`, and EVERY target resolves under DATA_ROOT — /app/data. Nothing
+# writes to /app itself, to /shared, to ./client-dist or to /tmp. Exactly one directory changes
+# hands. `node_modules` stays root-owned and world-readable, which is what a dependency tree should
+# be: the process can read it and cannot rewrite it.
+#
+# CREATING THE DIRECTORY HERE IS THE LOAD-BEARING HALF, and leaving it out breaks a fresh install.
+# `/app/data` is deliberately NOT copied — the root .dockerignore excludes `server/data/**` so an
+# operator's accounts never enter a layer — so on a fresh install the server MKDIRS it at boot, and
+# uid 1000 cannot mkdir inside a root-owned /app. MEASURED by removing exactly this line and running
+# the result on an empty named volume: the container EXITS 1 with
+# `EACCES: permission denied, mkdir '/app/data/tracks'`, on the seed delivery, which is the first
+# write a new install makes. So the failure is LOUD rather than a half-seeded install — but it is
+# total, and it is the whole install. A Docker named volume mounted here inherits this ownership; a
+# bind mount brings its own, which is why the compose path is proved separately.
+RUN mkdir -p /app/data && chown -R node:node /app/data
+USER node
+
 EXPOSE 4000
 
 CMD ["node", "src/index.js"]

@@ -3,8 +3,8 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-04, after CLOSE-WHAT-THE-AUDIT-FOUND pieces 1 and 2 — two branches, two
-merges, master green after each, step 12 done each time, origin holds `master` and nothing else.
+**Last rewritten:** 2026-09-04, after CLOSE-WHAT-THE-AUDIT-FOUND pieces 1, 2 and 3 — three branches,
+three merges, master green after each, step 12 done each time, origin holds `master` and nothing else.
 **Nothing was minted; no minting permission was given and none was needed.**
 
 ---
@@ -82,11 +82,40 @@ with `defaultRacerTypeId` and `surfaceClasses`; `city-circuit` says `buggy` wher
 test-only, it has one reader, and that reader destructures `{ id }` and nothing else. Every stale
 value in it is read by nothing — which makes it **dead weight, piece 4's class, not piece 2's.**
 
+**Piece 3 — the container no longer runs as root.** `harden(CONTAINER-NONROOT-1)`.
+
+`server/Dockerfile` had no `USER`, so a stranger cloning this public repository got a root process.
+It now runs as `node` (uid 1000), the unprivileged user the official image already ships.
+
+★ **The interesting half was not `USER node`, it was what that user must own.** Every write site in
+`server/src` and `server/utils` was resolved rather than guessed — ten modules, and **every target
+lands under `/app/data`**. Nothing writes to `/app`, `/shared`, `client-dist` or `/tmp`. So exactly
+one directory changes hands, and `node_modules` stays root-owned and world-readable: the process can
+read its dependencies and cannot rewrite them.
+
+**`/app/data` has to be created IN THE IMAGE**, because the root `.dockerignore` deliberately keeps
+`server/data/**` out of every layer, so a fresh install mkdirs it at boot — and uid 1000 cannot
+mkdir inside a root-owned `/app`. **That line was proved load-bearing by removing it:** the
+container then exits 1 with `EACCES … mkdir '/app/data/tracks'` on the seed delivery, the first
+write a new install makes. Loud rather than silent, but total.
+
+**Proved both ways it can be run:**
+
+| | standalone, empty named volume | your compose file |
+| --- | --- | --- |
+| runs as | `uid=1000(node)` | `uid=1000(node)` |
+| seeding from empty | **10 tracks, 10 backgrounds, `sessions.sqlite` written** | already seeded |
+| a real write | volume created by `node` | probe file written, read and removed **as `node`**, and `better-sqlite3` opened your live `sessions.sqlite` read-write |
+| `/api/health` · `/` · `/api/tracks` | **200 · 200 · 401** | **200 · 200 · 401** |
+
+**Your bind mount was never the obstacle** — Docker Desktop presents `./server/data` as `0777`, so
+uid 1000 writes it exactly as root did. **Nothing about your setup changed**; the container was
+rebuilt and restarted in place and its log is clean.
+
 ---
 
 ## WHAT IS STILL OPEN IN THIS CHAIN
 
-3. **The container runs as root** — `server/Dockerfile` has no `USER`. Not started.
 4. **The four mechanical items** — `npm audit fix` in `server/`, two dead lines in
    `CameraDirector.js`, 18 needless exports, five unused test locals, and wiring `knip`. Not started.
 5. **Why the client suite got slower** — read-only. Not started. This is open end 2 above.
@@ -116,7 +145,8 @@ shape tried**. A foreign-origin mutating request gets **403**. The login limiter
 attempt. The cookie is HttpOnly, SameSite=Lax, Secure-in-production, `__Host-` named when Secure is
 guaranteed. **No secret has ever been committed** — `users.json` never, no keys or tokens in the
 history, and the one `.env.example` held a placeholder and was deleted. Session invalidation was
-verified **by sabotage**, not by reading. **The root container is piece 3 and is still open.**
+verified **by sabotage**, not by reading. **The root container is closed** — piece 3 above; the image
+runs as `node`, proved standalone and on your compose file.
 
 ---
 
@@ -127,7 +157,8 @@ These rot silently because no machine watches them:
 1. **prose claims in documents** — the mechanical classes are guarded; a sentence is not
 2. **dead exports** — `knip` is configured and unwired
 3. **file and function size** — nothing notices growth
-4. **container hardening and dependency advisories** — the daily audit reports, nothing gates
+4. **dependency advisories** — the daily audit reports, nothing gates. (The container's `USER` is a
+   Dockerfile line now, so it cannot silently regress the way an unwritten habit could.)
 5. **`surfaceClasses` arrays** — Rule A is scalars-only by its own declaration
 
 **Two entries left this list today.** The routing machinery is held by three tests proved to fire in
