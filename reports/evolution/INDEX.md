@@ -336,6 +336,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CLOSE-AUDIT-CHAIN-1.md](CLOSE-AUDIT-CHAIN-1.md) — **the client-suite regression is NOT REAL, and
+  the tree the audit could not see holds 42 unconsumed exports** (2026-09-04, read-only; pieces 5 and
+  6 of the CLOSE-WHAT-THE-AUDIT-FOUND chain). Six A/B **interleaved** runs, because the machine could
+  not be made quiet: master 227.7/228.3/258.8 s against the census tree `ed627ae7` at
+  214.8/272.8/222.9 s. ★ **The census tree's slowest run is slower than every master run** — the arms
+  do not separate, noise within one arm reaches 58 s, and the gap between them is at most 12.9 s.
+  **Neither published figure reproduces**: the audit's 286 s is above every master run and the
+  census's 170 s is below every census-tree run, so the "+68%" was two noise samples, not two trees.
+  The two were also **two days apart, not three weeks**. What difference exists is the ten test files
+  added on 09-02/09-04, at an unchanged **1.96 s of jsdom per FILE** — which is the lever if the suite
+  ever must get faster; **`maxWorkers` was not touched**. Piece 6 closes the audit's third limit:
+  **`scripts/` 37, `server/` 5, `shared/` 0, `client/` non-JSX 1** unconsumed named exports, measured
+  by one method across every tree because knip cannot see outside a workspace. **Not acted on** —
+  `DEAD-LINES-1` had just shown two `client/` candidates are reached through a string a test
+  generates, so each of the 42 needs that check individually. For the other two limits it PROPOSES
+  only: prose cannot be given a denominator by counting, only by converting claims to a checkable
+  form so the denominator measures adoption; and a 1% mutation sample is ~3.6 h of machine time,
+  5% ~18 h, with the warning that the audit's own first five findings included three harness errors,
+  so **a 570-mutation run nobody audits is a worse number than 17 that were**.
+
 - [REACH-CLOSURE-COST-1.md](REACH-CLOSURE-COST-1.md) — **the 36 to 76 engine-reach closure costs 9
   to 86 seconds a week of one developer's wait and ZERO in CI; it is worth it and should not be
   narrowed** (2026-09-02, read-only pricing; the one exception is a false sentence in a living doc,
