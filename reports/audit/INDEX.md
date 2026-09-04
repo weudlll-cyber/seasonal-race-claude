@@ -67,3 +67,22 @@ this index treats the same way: their file, their edit, committed as it stands.
 **F2 is this project's own Lesson 209 in someone else's words** — a check that cannot fail is
 indistinguishable from one that passes. It is not fixed here: this block registers the directory and
 commits the audits unedited, and acting on a finding is separate work with its own verdict.
+
+---
+
+## THE FULL AUDIT — 2026-09-04
+
+A chain, not a block: each piece has its own branch, check, report and merge. The deliverable is a
+verdict with numbers on each axis, not a list of work.
+
+- [AUDIT-SCOPE-1.md](AUDIT-SCOPE-1.md) — **the denominators, and what three weeks did.** The
+  repository is **2,452 tracked files**, of which **1,345 are reports**; the part that can break is
+  **479 source files / 121,137 lines**, and **tests are 40% of the code by line**. 26 guards, a
+  78-file engine-reach closure, 851 reports, 36 living documents. **80% of the tracked bytes are seed
+  artwork and the lab journal** — neither can break the product. ★ **Against the census of three
+  weeks ago the one axis that moved most is the MIRRORS: 27 disagreements to ZERO**, now guarded over
+  406 mirrored facts. Tests grew 310 to 320 files and 5,583 to 5,697, with the automatic share held
+  at 97%. ★ **Two comparisons are deliberately NOT made** — "40 checks" and "26 guards" are different
+  grains, and the tree's size has no 09-01 counterpart — and **one figure that looks worse is flagged
+  with its confound rather than concluded**: the client suite reads 286 s against the census's 170 s
+  for 3% more tests, on a different day under different load.
