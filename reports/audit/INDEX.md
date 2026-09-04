@@ -190,3 +190,21 @@ verdict with numbers on each axis, not a list of work.
   right** — an en-dash for a hyphen, a pattern in the wrong section of `TAGS.md`, a mutation in a path
   node cannot reach, and a truncated read that nearly made me report an honest instrument as silent.
   All named.
+
+- [AUDIT-SECURITY-1.md](AUDIT-SECURITY-1.md) — **the surface is small and sound; NOTHING is
+  exploitable today, and two things are worth doing** (2026-09-04; measured against a LIVE isolated
+  server with its own data dir, secrets and port — nothing touched his install, nothing changed).
+  **Deny-by-default is real, not documented**: all seven non-public routers return 401 unauthenticated
+  — **including the four that did not exist when the auth work was done**, which inherit the global
+  guard rather than having to opt in. Path traversal **404s on every shape tried**, against both the
+  static mount and the filename routes (`:id` is a MAP LOOKUP, not a path join). A foreign-origin
+  mutating request gets **403**. The login limiter **fires at the tenth attempt**. The cookie is
+  HttpOnly, SameSite=Lax, `Secure` from `NODE_ENV=production`, `__Host-` named when Secure is
+  guaranteed. **No secret has ever been committed** — `users.json` never, no keys or tokens in
+  history, and the one `.env.example` held a placeholder and was deleted in 2026. **Session
+  invalidation is verified by SABOTAGE, not by reading.** ★ **TWO HARDENINGS, neither urgent: the
+  container has NO `USER` directive and runs as ROOT, and the server carries 3 moderate advisories
+  (`body-parser`, `qs`) that reach the RUNNING PRODUCT rather than the toolchain.** Both are behaviour
+  changes on the auth/deployment path, so **nothing was fixed** and both go to the morning sheet. The
+  report keeps **exploitable / hardening / theoretical** strictly apart, and the exploitable list is
+  empty.
