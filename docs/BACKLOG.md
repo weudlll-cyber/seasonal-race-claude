@@ -364,10 +364,19 @@ asserted, where two one-token sabotages used to pass all 44 tests.
 **Listed so nothing has to be remembered. Whether any of it is worth doing is his call, and none of
 these carries a recommendation.**
 
-1. **`RaceScreen` has no test that mounts it.** 1,917 lines. Forcing its background path to `null` —
-   which blanks every track background in the game — passes every test in its own directory and
-   `App.test.jsx`. See the existing section *`RaceScreen` is not testable* below, which is the
-   evidence for it.
+1. ~~**`RaceScreen` has no test that mounts it.**~~ **HALF ANSWERED 2026-09-04 (RACESCREEN-MOUNT-1),
+   and the half that is not is the half this item actually measured.** `mount.test.jsx` now renders
+   the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
+   red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
+   NAMED HERE IS STILL GREEN, re-measured on the night of 2026-09-04:** forcing `bgImagePath` to
+   `null` at `index.jsx:435` — which blanks every track background in the game — passes **31 files
+   and 405 tests** in that directory, the new mount test among them.
+   **★ AND IT CANNOT BE CAUGHT THERE.** The mount test stubs the 2D context, so nothing it does is
+   drawn; it proves the screen RENDERS, never WHAT it renders. A test that asserted draw calls would
+   be a worse copy of `render-fingerprint.mjs`, which draws the real bundle. So what remains open is
+   **not** "mount the screen" — it is whether the render fingerprint's coverage should reach the
+   background layer, which is a different question and belongs with the instrument. The file is
+   **1,959 lines** (was 1,917 when this was written) and no rewrite is implied, proposed or wanted.
 2. **`scripts/sim-fairness.mjs` is 6,195 lines with a 2,766-line function and no test.** **It is NOT
    product code and is on no product path** — nothing the game runs imports it. It is, however, **a
    declared `reach` entry of the world fingerprint**, so it is inside that instrument's dependency
@@ -604,54 +613,6 @@ nothing is designed here, no key is added, and no change is implied.
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it and still returns nothing — `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx` exits 1, where the same pattern over `SetupScreen.jsx` returns 6 lines, so the pattern can match. Waiting on the durable record carrying the race's inputs and on the config-storage design question the entry names.
 
 ---
-
-## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
-
-- [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
-      lives inside it can only be proven by READING ITS SOURCE.** This is a finding with evidence, not
-      a proposal — nothing is proposed here, and no rewrite is implied.
-
-  **The evidence, established at source on 2026-08-22:**
-
-  - **One component, 1907 lines.** `wc -l client/src/screens/RaceScreen/index.jsx`.
-  - **One file imports it to USE it, and no test in the tree renders it.**
-    `git grep -n "screens/RaceScreen/index.jsx"` over the whole tree returns exactly one real import
-    — `client/src/App.jsx:13`. **The two test files that name it both name it in order to AVOID it**,
-    and they are the finding rather than a footnote to it:
-    `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
-    — the app's own test replaces the race screen with an empty component — and
-    `client/src/modules/buildIdentitySource.test.js` opens it with `readFileSync` and asserts
-    against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
-    `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
-    workaround: what needed testing was moved OUT, one file at a time.
-  - **First paint returns a placeholder.** `index.jsx:1746` — `if (!raceData) return <Loading…>`.
-    `raceData` is null on mount (`:175`) and is filled by an effect that reads
-    `sessionStorage['activeRace']` and throws into an error state when the key is absent (`:381-389`).
-    So a bare mount renders the loading card and nothing under test is ever constructed.
-  - **The race is built inside a second effect that needs a canvas AND a geometry.**
-    `:393` — `if (!raceData || !canvasRef.current) return;` — then `:416` `getTrack(...)`, which reads
-    the geometry out of `localStorage` and returns null when it is not there, setting an error.
-  - **The draw loop is rAF-driven** (`:1684`, `:1687`) and wants a 2D context.
-  - **Six `useEffect`s**, of which the two above gate everything the screen does.
-
-  **What it has already cost, named because it is the reason this entry exists.** CEREMONY-SKIP-2
-  (`608ad5ba`) was ordered to prove three guards on the ceremony-skip handler by mounting the screen.
-  **All three had to be written against a FIXTURE that reproduces the screen's DOM shape plus a
-  TRANSCRIPTION of the handler**, because mounting the real component would have tested the
-  scaffolding and every one of its failure modes would have landed on that file as a flake. The
-  compromise was stated in the report rather than implied — and it forced two further source-reading
-  tests to hold the transcription and the attachment to the real file
-  (`ceremonySkip.test.jsx`, the two `readFileSync` tests). **A source-reading test is a lexical
-  approximation of behaviour**; it catches a rename and a move, and it cannot catch a wrong value at
-  runtime.
-
-  **verify:** `git grep -n "render(<RaceScreen" -- '*.jsx'`. **STILL OPEN while it returns nothing
-  and exits 1** — that is today's output. The day it returns a line, somebody has mounted the screen
-  and the finding is answered. **The empty result is evidence because the pattern can match:**
-  `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
-  Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the finding holds — `git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing where `render(<` matches in 34 test files. Waiting on nobody: D2 (2026-08-23) declined to act on it and RACESCREEN-SEAM-1 (`81904563`, 2026-09-02) priced the seam at **one line** — a default parameter for `canvas.getContext` — and concluded the file does not need it, because everything a mount would exercise already has a better driver.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
@@ -2598,6 +2559,112 @@ key names already available to whoever picks it up.
       nowhere in the tree. **The rule it stated stands and is why the line is kept:** two controls
       governing different moments must not be able to read as one control at a glance — a tooltip
       that explains the difference is not a substitute for a label that shows it.
+
+## `RaceScreen` is not testable — ✅ ANSWERED 2026-09-04 (RACESCREEN-MOUNT-1)
+
+**It mounts.** `client/src/screens/RaceScreen/mount.test.jsx` renders the real component, gets it
+past its own `Loading…` placeholder, and asserts the race chrome is on the page. Three tests, and
+the run log shows the real `CameraDirector` initialising (`[RA CAMERA LIVE TRUTH] … cameraSeed=…`),
+so the race is genuinely built rather than the chrome merely drawn.
+
+**★ THIS SUPERSEDES D2, WHICH IS NOT WITHDRAWN.** D2 (2026-08-23) decided to keep the finding and
+do no work — *"what is closed is the question of whether to act on it"*. The night chain of
+2026-09-04 re-opened exactly that question and ordered the test, with its own reason: **the action
+dial is about to be built on this screen.** D2 was not wrong; the trade changed when the next
+feature landed on this file.
+
+**NO PRODUCTION CODE WAS CHANGED.** RACESCREEN-SEAM-1 priced a seam at one line (a default
+parameter for `canvas.getContext`) and concluded the file did not need it. **It still does not** —
+`getContext` is stubbed in the test, which is where scaffolding belongs. Five things are supplied
+from outside the component: `sessionStorage['activeRace']`, the track geometry in `localStorage`
+(**the real shipped record** from `server/seeds/tracks/`, not a hand-made shape), a 2D context, a
+bounded `requestAnimationFrame`, and a Router.
+
+**★ AND THE FIFTH ONE IS THE FINDING WORTH KEEPING.** `index.jsx` imports no router package, so
+grepping the file for `react-router` says it needs none — **and that is wrong.** It calls
+`useFadeNavigate()` at `:121`, and that hook (`contexts/TransitionContext.jsx:47`) falls back to
+`useNavigate()`, which throws outside a Router. It was found by RUNNING the mount, not by reading
+for it. That is a small live example of this entry's own thesis: a source-reading test is a lexical
+approximation of behaviour.
+
+**SABOTAGE — 3 of 3 caught, with a green control, each mutation applied to the real `index.jsx` and
+the file restored byte-identical:**
+
+| the defect it stands for | result |
+| --- | --- |
+| a reference error in the animation effect — the screen never renders | **RED**, 3/3 tests |
+| the load effect never setting `raceData` — a permanent `Loading…` card, no error, no crash | **RED**, 3/3 tests |
+| the geometry lookup always failing — the error card instead of the race | **RED**, 3/3 tests |
+
+All three ship silently on master today, because not one existing test renders the component —
+`App.test.jsx:18` replaces it with `() => null`.
+
+**⚠ THIS ENTRY'S OWN `verify` COMMAND DOES NOT FIRE, AND IT IS NOT GOING TO.**
+`git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing and exits 1 — because the screen
+**cannot** be rendered in that shape. It needs a Router, so the mount reads
+`render(<MemoryRouter …><RaceScreen /></MemoryRouter>)`. The verify line was written against a form
+the component does not have. **The command to use instead is
+`git grep -ln "RaceScreen" -- 'client/src/screens/RaceScreen/mount.test.jsx'`, or simply run that
+file.** Recorded rather than quietly fixed, because a liveness check that was itself a lexical
+guess is the same lesson one level up.
+
+**WHAT THIS DOES NOT DO.** It is a smoke test: it proves the screen renders, not that it renders
+anything correctly. Nothing about the picture, the camera or the physics is asserted, and it must
+not grow into that — `render-fingerprint.mjs` and `viewer-invariants.mjs` drive the real bundle in
+a real browser and are strictly better instruments for every one of those questions. **What this
+catches is the class they cannot: the screen failing to render at all.** The file is still 1,959
+lines and no rewrite is implied, proposed or wanted.
+
+<details><summary>The original PART ONE entry, verbatim</summary>
+
+
+- [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
+      lives inside it can only be proven by READING ITS SOURCE.** This is a finding with evidence, not
+      a proposal — nothing is proposed here, and no rewrite is implied.
+
+  **The evidence, established at source on 2026-08-22:**
+
+  - **One component, 1907 lines.** `wc -l client/src/screens/RaceScreen/index.jsx`.
+  - **One file imports it to USE it, and no test in the tree renders it.**
+    `git grep -n "screens/RaceScreen/index.jsx"` over the whole tree returns exactly one real import
+    — `client/src/App.jsx:13`. **The two test files that name it both name it in order to AVOID it**,
+    and they are the finding rather than a footnote to it:
+    `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
+    — the app's own test replaces the race screen with an empty component — and
+    `client/src/modules/buildIdentitySource.test.js` opens it with `readFileSync` and asserts
+    against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
+    `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
+    workaround: what needed testing was moved OUT, one file at a time.
+  - **First paint returns a placeholder.** `index.jsx:1746` — `if (!raceData) return <Loading…>`.
+    `raceData` is null on mount (`:175`) and is filled by an effect that reads
+    `sessionStorage['activeRace']` and throws into an error state when the key is absent (`:381-389`).
+    So a bare mount renders the loading card and nothing under test is ever constructed.
+  - **The race is built inside a second effect that needs a canvas AND a geometry.**
+    `:393` — `if (!raceData || !canvasRef.current) return;` — then `:416` `getTrack(...)`, which reads
+    the geometry out of `localStorage` and returns null when it is not there, setting an error.
+  - **The draw loop is rAF-driven** (`:1684`, `:1687`) and wants a 2D context.
+  - **Six `useEffect`s**, of which the two above gate everything the screen does.
+
+  **What it has already cost, named because it is the reason this entry exists.** CEREMONY-SKIP-2
+  (`608ad5ba`) was ordered to prove three guards on the ceremony-skip handler by mounting the screen.
+  **All three had to be written against a FIXTURE that reproduces the screen's DOM shape plus a
+  TRANSCRIPTION of the handler**, because mounting the real component would have tested the
+  scaffolding and every one of its failure modes would have landed on that file as a flake. The
+  compromise was stated in the report rather than implied — and it forced two further source-reading
+  tests to hold the transcription and the attachment to the real file
+  (`ceremonySkip.test.jsx`, the two `readFileSync` tests). **A source-reading test is a lexical
+  approximation of behaviour**; it catches a rename and a move, and it cannot catch a wrong value at
+  runtime.
+
+  **verify:** `git grep -n "render(<RaceScreen" -- '*.jsx'`. **STILL OPEN while it returns nothing
+  and exits 1** — that is today's output. The day it returns a line, somebody has mounted the screen
+  and the finding is answered. **The empty result is evidence because the pattern can match:**
+  `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
+  Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the finding holds — `git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing where `render(<` matches in 34 test files. Waiting on nobody: D2 (2026-08-23) declined to act on it and RACESCREEN-SEAM-1 (`81904563`, 2026-09-02) priced the seam at **one line** — a default parameter for `canvas.getContext` — and concluded the file does not need it, because everything a mount would exercise already has a better driver.
+
+</details>
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
