@@ -788,6 +788,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
   a search. **Not a discipline failure, and not fixable by trying harder.**
 
+- [GATE-GARDEN-PATH-1.md](GATE-GARDEN-PATH-1.md) — **the two failures are neither the instrument's nor
+  the track's, and the gate stays as it is** (2026-09-04; 16 races, nothing changed). The widening was
+  authorised **conditional on the diagnosis**, and the diagnosis **stops it**: both failures are real
+  picture faults, and the gate runs SEED 9 — exactly where garden-path fails both — so adding it
+  would have reddened the gate on the day it was widened. ★ **BUT NEITHER FAILURE BELONGS TO
+  GARDEN-PATH**: it **passes item 9 at seeds 1, 2 and 3** and item 10 at seeds 1 and 3. **Item 9 fails
+  when the PHOTO-FINISH ZOOM HAS NOT ARRIVED AT THE CROSSING** — the camera is still on the `level`
+  binding at 9.22 of a 17.06 target, tightening *under* the winner, who slides 0.160 down the frame to
+  0.855 against a 0.85 bound; the eight tracks whose zoom has arrived move 0.000–0.032. **Item 10 fails
+  when a `BATTLE_ZOOM` sits in the endgame window** — with one {0.38, 0.45, 0.503, 0.52}, without one
+  {0.343–0.401}. ★ **SO WHAT THE EXCLUSION COSTS IS NOT A TRACK BUT TWO BEHAVIOURS, and the lever is
+  WHICH RACE the gate runs**: both gate tracks cross with the zoom already arrived, so the gate is
+  **structurally blind** to both. ★ **And garden-path is not the only excluded track that fails** —
+  luger-hill and dirt-oval fail **item 2** at seed 9, from the *same* late-zoom mechanism. ★ An
+  instrument hypothesis was **tested and disproved** (the graded window is 77 frames on all ten, no
+  state changes), and the harness **reproduces exactly** — two ten-track runs agree row for row.
+
 - [INSTRUMENT-FAILS-LOUD-1.md](INSTRUMENT-FAILS-LOUD-1.md) — **fifteen minutes of silence becomes 1.7
   seconds and a sentence, and the class turns out to be three** (2026-09-04). The browser sweep's
   build ran with `stdio: "ignore"` and was awaited on `exit` ALONE with no timeout and no check that
