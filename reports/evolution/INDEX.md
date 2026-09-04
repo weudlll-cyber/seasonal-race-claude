@@ -788,6 +788,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
   a search. **Not a discipline failure, and not fixable by trying harder.**
 
+- [ACCEPTED-FINISH-1.md](ACCEPTED-FINISH-1.md) — **items 9 and 10 encode an ideal he rejected, and the
+  three exclusions do not mean the same thing** (2026-09-04; nothing changed — no threshold moved, no
+  item removed). His decision: **the finish sequence stays exactly as it is** — the closing zoom need
+  not have arrived by the crossing, and a battle shot may take the frame near the finish. Recorded in
+  three places so it is met before the failure is interpreted: the head of `endgame-sheet.mjs`, beside
+  the items at their computations, and **in the sheet's printed legend**. ★ **THE NOTE NAMES A CAUSE,
+  NOT AN ITEM** — a blanket "9 and 10 may fail" would disarm them, which is a widened threshold by
+  another route; so item 9 with the shot **settled**, and item 10 with **no battle shot**, are still
+  findings. ★ **A THIRD ITEM MEASURES THE SAME ACCEPTED BEHAVIOUR**: item 2 asks directly whether the
+  shot is at one of the two named factors at the crossing — flagged, and left to him, because his
+  acceptance did not name it. ★ **THE THREE EXCLUDED TRACKS ARE IN THREE DIFFERENT CASES**:
+  garden-path fails **the two named items alone** at the gate's seed; luger-hill fails **item 2 only**
+  — same behaviour, different item; and **dirt-oval fails ITEM 7 at seed 3, a contender off canvas on
+  78 frames, which is NOT accepted behaviour** and is the one thing an exclusion is still hiding.
+
 - [DROP-DEAD-BACKGROUNDS-1.md](DROP-DEAD-BACKGROUNDS-1.md) — **12.6 MB deleted, re-established
   unreachable at the source first** (2026-09-04; **21.32 MB to 0** with the duplicate removed earlier
   that day). His decision after looking at all five pairs: **he wants the picture the game already

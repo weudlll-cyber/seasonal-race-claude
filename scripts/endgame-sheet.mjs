@@ -53,6 +53,58 @@ const { DEFAULT_INNER_FRAME_PCT } = await import(u("client/src/modules/camera/fr
 //           the SUBJECT's own inner region, `innerFramePct`, which framingRule.js says exists so
 //           the subject does not cling to the edge.
 // 10        the walk is present when the leader is ever BEHIND centre in the window (< 0.5).
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// ★★ THE OWNER'S ACCEPTANCE OF 2026-09-04 — READ THIS BEFORE TREATING A FAILURE ON 9 OR 10 AS A
+//    DEFECT (ACCEPTED-FINISH-1).
+//
+// TWO BEHAVIOURS OF THE FINISH SEQUENCE ARE ACCEPTED. He and the project went through the finish on
+// the picture over several days two weeks before this date, judged it, and decided it stays exactly
+// as it is. Neither behaviour is to change:
+//
+//   (i)  THE CLOSING ZOOM NEED NOT HAVE ARRIVED by the moment the leader crosses.
+//   (ii) A BATTLE SHOT MAY TAKE THE FRAME near the finish, so the leader's walk need not survive it.
+//
+// SO ITEMS 9 AND 10 DO NOT ENCODE A DEFECT. They encode an IDEAL THE OWNER HAS CONSIDERED AND
+// REJECTED, and a failure on either is therefore NOT, by itself, evidence of a regression.
+//
+// ── THE ITEMS ARE NOT REMOVED AND THEIR THRESHOLDS ARE NOT MOVED ────────────────────────────────
+// Deliberately, and this is the whole design of the note. Both items still measure something real
+// and still say how far the picture went; what changed is what a failure MEANS, not what is
+// measured. Moving a threshold until a known-accepted case passes is how a gate stops gating — and
+// it would also blind the item to the case nobody has accepted.
+//
+// ★★ AND THIS IS WHY THE NOTE NAMES A CAUSE AND NOT AN ITEM. A blanket "9 and 10 may fail" would
+// disarm them completely, which is the same defect wearing a different coat. What is accepted is a
+// failure WITH THE CAUSE NAMED BELOW. A failure of the same item from any OTHER cause is still a
+// finding and must be treated as one:
+//
+//   ITEM 9 measures where the WINNER sits in the frame — at the crossing and for 1250 ms after,
+//     against the subject's own inner region (`innerFramePct`).
+//     ACCEPTED CAUSE: the camera is still on the `level` binding with the photo-finish zoom in
+//     flight, so it tightens UNDER the winner and he drifts toward the frame edge. Read it off the
+//     crossing row: `binding: "level"` and `camZoom` short of `photoFinishZoom`.
+//     STILL A FINDING: the winner leaving the inner region while the shot is SETTLED — `binding:
+//     "state"` and the zoom already arrived. Nothing has been accepted about that.
+//
+//   ITEM 10 measures whether the leader is EVER behind frame centre during the endgame window. It
+//     is a PRESENCE test for the run-in's walk-back, not a quality one.
+//     ACCEPTED CAUSE: a `BATTLE_ZOOM` in the window. A battle shot frames the BATTLE, so the leader
+//     is held forward and the walk does not happen.
+//     STILL A FINDING: the walk absent with NO battle shot in the window. That would mean the
+//     run-in stopped walking the leader back for some other reason, which is what this item was
+//     written to catch.
+//
+// ── ★ AND ONE OBSERVATION, REPORTED RATHER THAN DECIDED ─────────────────────────────────────────
+// ITEM 2 MEASURES BEHAVIOUR (i) DIRECTLY — it asks whether the shot is at one of the director's two
+// named factors AT THE CROSSING, and "the closing zoom has not arrived yet" is precisely how that
+// question gets the answer no. His acceptance names two behaviours and two items; item 2 was not
+// among them. It is flagged at its own computation below so that a reader meeting a FAIL there has
+// the same context, and it is left to him whether the acceptance formally reaches it. Nothing about
+// item 2 was changed.
+//
+// Measured basis for all of the above: GATE-GARDEN-PATH-1 and ACCEPTED-FINISH-1, 16 races.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+
 const ENDGAME_FROM = DEFAULT_CAMERA_CONFIG.endgameThreshold;
 const FACTOR_TOL_LN = 0.02;
 const STEP_LN_MAX = Math.log(2);
@@ -97,6 +149,10 @@ export function gradeRace(p, run) {
   R.i1_band = d?.band ?? null;
 
   // 2 — at the crossing, one of the two named factors
+  // ★ ACCEPTED-FINISH-1: a FAIL here is usually the owner's accepted behaviour (i) — the
+  // closing zoom not yet arrived — stated directly rather than through its consequences. His
+  // 2026-09-04 acceptance names items 9 and 10; whether it reaches this one is his. See the
+  // acceptance block at the head of this file.
   if (c?.at?.camZoom > 0 && c.at.leaderZoom > 0 && c.at.photoFinishZoom > 0) {
     const dl = Math.abs(Math.log(c.at.camZoom / c.at.leaderZoom));
     const dp = Math.abs(Math.log(c.at.camZoom / c.at.photoFinishZoom));
@@ -146,6 +202,9 @@ export function gradeRace(p, run) {
   R.i8 = null; // a cost to minimise, not a pass/fail — his requirement 8 says so in as many words
 
   // 9 — the finish happens near the middle: the winner at ~0.60 through the crossing, never cut
+  // ★ ACCEPTED-FINISH-1: a FAIL here is NOT a defect when the crossing row shows `binding:
+  // "level"` with `camZoom` short of `photoFinishZoom` — that is the owner's accepted
+  // behaviour (i). A fail with the shot ALREADY SETTLED is still a finding. Head of file.
   if (c?.at) {
     const lo = (1 - INNER) / 2;
     const hi = 1 - lo;
@@ -158,6 +217,9 @@ export function gradeRace(p, run) {
   } else R.i9 = null;
 
   // 10 — the leader's walk back through the run-in stays
+  // ★ ACCEPTED-FINISH-1: a FAIL here is NOT a defect when the window contains a BATTLE_ZOOM —
+  // the owner's accepted behaviour (ii). A fail with NO battle shot in the window is still a
+  // finding, and is what this item was written to catch. Head of file.
   const fracs = w.map((x) => x.leadFrac).filter((x) => x !== null);
   R.i10_min = fracs.length ? +Math.min(...fracs).toFixed(3) : null;
   R.i10 = fracs.length ? R.i10_min < 0.5 : null;
@@ -219,7 +281,12 @@ export function printSheet(rows, label) {
   );
   console.log(
     `  3 and 8 are REPORTED not gated (his requirement 8 makes the pause a cost, not a fail); ` +
-      `12 is graded by comparing two runs.`
+      `12 is graded by comparing two runs.` +
+      `\n  ★ 9 and 10 encode an ideal the owner CONSIDERED AND REJECTED on 2026-09-04: the` +
+      ` closing zoom need not have arrived by the crossing (9), and a battle shot may take the` +
+      ` frame near the finish (10).` +
+      `\n    A fail on either FROM THOSE CAUSES is not a regression; from any other cause it still` +
+      ` is. The acceptance, and the causes it names, are at the head of this file.`
   );
   const worstStep = Math.max(...s.map((r) => r.i6_worst));
   const widest = Math.max(...s.map((r) => r.i4_widest));
