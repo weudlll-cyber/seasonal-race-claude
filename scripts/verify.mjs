@@ -567,17 +567,35 @@ if (IS_ENTRY) {
   } else {
     const t0 = Date.now();
     try {
+      // INSTRUMENT-FAILS-LOUD-1: `stdio: "ignore"` here threw away the ONE thing the operator needs
+      // when this step fails — which file prettier choked on. The run stopped correctly and said
+      // nothing useful, which is the same fault as the sweep's silent build, one severity down: it
+      // fails rather than hangs, but it fails anonymously. Captured now, and printed only on the
+      // failure path, so a passing run is exactly as quiet as it was.
       execFileSync("npm", ["run", "format", "--silent"], {
         cwd: join(ROOT, "client"),
-        stdio: "ignore",
+        stdio: ["ignore", "pipe", "pipe"],
         shell: process.platform === "win32",
       });
       console.log(
         `  format: done in ${secs(Date.now() - t0)} — measuring the tree that will be committed.\n`,
       );
-    } catch {
+    } catch (err) {
+      const said = [err?.stdout, err?.stderr]
+        .map((b) => (b ? String(b).trim() : ""))
+        .filter(Boolean)
+        .join("\n");
       console.log(
-        "  format: FAILED — refusing to measure a tree that will change under the hook.\n",
+        "  format: FAILED — refusing to measure a tree that will change under the hook.",
+      );
+      console.log(
+        said
+          ? said
+              .split("\n")
+              .slice(-15)
+              .map((l) => `    ${l}`)
+              .join("\n") + "\n"
+          : "    (it printed nothing, which is itself the finding)\n",
       );
       process.exit(1);
     }
