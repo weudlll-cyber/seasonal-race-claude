@@ -155,3 +155,21 @@ verdict with numbers on each axis, not a list of work.
   reasoning beside each value is the point, and **seven of the eight largest UI files are mounted by a
   test** — RaceScreen is the exception and the largest. Nothing split: both headline cases change
   behaviour a person would notice, and the second changes every fairness number this project has.
+
+- [AUDIT-TESTS-1.md](AUDIT-TESTS-1.md) — **17 sabotages, 2 got through, and three of my first five
+  "holes" were my own harness** (2026-09-04; every revert proved byte-identical, tree clean after each
+  batch). **320 test files, 311 wired, ZERO unwired** — the mechanical fix class this piece was
+  allowed to repair is empty. **15 of 17 mutations caught; escape rate 12%.** ★ **THE HOLE THAT
+  MATTERS: `routing.closureOf` — the function that decides which guards `verify` runs — can be made to
+  return nothing and NOTHING FAILS.** Measured in both directions: on a docs diff the plan harmlessly
+  *gains* three guards; **on a diff touching the engine hull it LOSES FIVE — all three fingerprints,
+  `check-seed-versions` and `check-tags`** — so on exactly the change that most needs them, they
+  silently stop being selected and `verify` prints PASS. `verify.test.mjs` tests the *inputs* to
+  `closureOf` and never its output. The second miss is **`RaceScreen`**: forcing its background path to
+  null blanks every track in the game and passes every test, the direct cost of nothing mounting it.
+  ★ **AND THE ERROR BAR IS REPORTED, NOT HIDDEN — three of my first five misses were mine**: one
+  mutation was a comment inside a parameter list (no semantic content), and two had scopes that
+  omitted the very test written for the behaviour, including `sessionInvalidation.test.js`. **A MISS
+  only counts once the mutation is shown to change behaviour AND the scope is shown to contain the
+  test that should care**; both surviving misses were put through that. Also verified in passing:
+  **disabling the session-epoch check IS caught**, which piece 8 inherits as fact rather than claim.
