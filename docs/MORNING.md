@@ -3,8 +3,8 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-04, after CLOSE-WHAT-THE-AUDIT-FOUND pieces 1, 2 and 3 — three branches,
-three merges, master green after each, step 12 done each time, origin holds `master` and nothing else.
+**Last rewritten:** 2026-09-04, after **all six** CLOSE-WHAT-THE-AUDIT-FOUND pieces — six branches,
+six merges, master green after each, step 12 done each time, origin holds `master` and nothing else.
 **Nothing was minted; no minting permission was given and none was needed.**
 
 ---
@@ -43,11 +43,30 @@ the second **0 → 1 red**, and the total break goes **12 → 14**. The seeds ar
 `git ls-files`, so an eleventh track cannot arrive silently unrouted. No new mechanism and no new
 guard script — the tests live in `scripts/verify.test.mjs` with the rest of the routing tests.
 
-### 2. Is the client-suite regression real? — **NOT YET MEASURED**
+### 2. Is the client-suite regression real? — **NO**
 
-Piece 5 has not run. It is the last open axis in the verdict and the honest answer is still
-"286 s against 170 s, on a different day under different load". **Do not read that as a regression
-until it has been measured the way the merge-gate margins were.**
+Six runs, **A/B interleaved** because the machine could not be made quiet with your browser open —
+interleaving is what handles that, and it is the shape the merge-gate margins were measured with.
+
+| | run 1 | run 2 | run 3 | min | spread |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **master** (239 files, 4,467 tests) | 228.3 s | 227.7 s | 258.8 s | **227.7 s** | 13.6% |
+| **the census tree `ed627ae7`** (229, 4,319) | 214.8 s | 272.8 s | 222.9 s | **214.8 s** | 27.0% |
+
+★ **The census tree's slowest run is slower than every master run.** The arms do not separate. Noise
+within one arm reaches **58 s**; the gap between them is at most **12.9 s**.
+
+★ **And neither published figure reproduces.** The audit's **286 s** is above every master run; the
+census's **170 s** is below every run of the census's *own* tree. **The +68% was the difference
+between two single runs under uncontrolled load, not between two trees.** They were also **two days
+apart, not three weeks** — that phrase had drifted here from the previous audit.
+
+What difference exists is the ten test files added on 09-02 to 09-04, at an **unchanged 1.96 s of
+jsdom per FILE**. That is the lever if the suite ever has to get faster: **files, not workers**.
+`maxWorkers` was not touched — that bound was measured and accepted, and this piece explains the
+number rather than changing it.
+
+**Both of the verdict's open ends are now closed.**
 
 ---
 
@@ -180,12 +199,59 @@ the containment guard caught the first draft of this paragraph for writing them 
 
 ---
 
-## WHAT IS STILL OPEN IN THIS CHAIN
+**Pieces 5 and 6 — read-only, and their record is one report.**
+[reports/evolution/CLOSE-AUDIT-CHAIN-1.md](../reports/evolution/CLOSE-AUDIT-CHAIN-1.md).
 
-**Pieces 1 to 4 are all merged.** Two remain, both read-only:
+Piece 5 is open end 2 above. Piece 6 **closes the audit's third limit**: dead exports across the
+trees it never measured, by one method applied to every tree, because knip cannot see outside a
+workspace.
 
-5. **Why the client suite got slower** — this is open end 2 at the top. Not started.
-6. **What the audit could not see** — propose-only. Not started.
+| tree | source files | named exports | **consumed nowhere in code** |
+| --- | ---: | ---: | ---: |
+| `scripts/` | 197 | 221 | **37** |
+| `server/` | 37 | 85 | **5** |
+| `shared/` | 1 | 4 | **0** |
+| `client/` non-JSX | 202 | 647 | **1** |
+
+**42 in the trees the audit could not see, against 1 left in `client/`** — and that 1 only because
+piece 4b narrowed 18 of them hours earlier. `scripts/`'s 37 are two families, not a scatter: 15 sim
+observers and 11 `scripts/lib` internals. **Nothing was acted on**, because piece 4b had just shown
+that two `client/` candidates are reached through a string a test generates at runtime; each of the
+42 needs that check on its own. `server/src/seedDelivery.js :: _resetDeliveryForTests` is the one
+worth a look — its name says something should call it, and the question is why nothing does.
+
+★ **My own control was wrong first, the same shape twice in one day.** The census counted a mention
+in any tracked file, and two of its three controls passed because the symbol appeared in `docs/`. **A
+doc mention is not a consumer.** Corrected to code-only, five controls, five found.
+
+---
+
+## WHAT THE OTHER TWO LIMITS WOULD COST — proposal only, your call
+
+**Prose claims cannot be given a denominator by counting**, and that is a property of prose. An LLM
+pass over the 61 living documents is cheap and produces a confident number with **no error bar and no
+reproducibility** — run it twice, the population changes. The honest route is the one this project
+already invented for citations: **convert claims into a checkable form and let the denominator
+measure ADOPTION**, the way RULE F counts only the arrow form and shrinks its blind spot as citations
+convert. Zero machine time; the cost is discipline, and it never reaches 100%.
+
+**A fuller mutation sample**, priced on today's measured suite times:
+
+| sample | mutations | machine time, serial, no new dependency |
+| --- | ---: | ---: |
+| 1% | 57 | **~3.6 h** — one overnight run |
+| 5% | 285 | ~18 h |
+| 10% | 570 | ~36 h |
+
+Stryker would cut that by one to two orders of magnitude, at the cost of a day of setup, a new
+dependency, and **another config file that must be kept honest** — which is what today was spent
+deleting.
+
+★ **The cost that is not machine time is the one that binds.** The audit's own record is that **three
+of its first five findings were harness errors**. A bigger sample multiplies that linearly unless
+every miss is put through the rule the audit itself derived. **A 570-mutation run nobody audits is a
+worse number than 17 that were.** My recommendation: 1%, once, overnight, only if you want a second
+reading of the 12% escape rate.
 
 ---
 
@@ -240,15 +306,16 @@ of the audit's findings had: *a term used correctly thirty times and wrongly onc
 
 ---
 
-## ★ WHAT THE AUDIT COULD NOT KNOW
+## ★ WHAT IS STILL NOT KNOWN
 
-- **Prose has no denominator.** The 0.07% covers paths, symbols, counts, commands and line citations.
-- **17 mutations is a 0.3% sample**, and the choice was biased toward load-bearing lines.
-- **Dead exports were measured in `client/` only** — ~240 of 479 source files unmeasured.
-- **"Does any test assert something no other test asserts?"** was not measured at all.
-
-The third of these is mechanical and is piece 6's job. The first two are piece 6's *proposal* — what
-it would cost to close them, so you can decide whether the remaining uncertainty is worth buying.
+- **Prose has no denominator**, and cannot be given one by counting — see the proposal above. The
+  0.07% covers paths, symbols, counts, commands and line citations, and nothing else.
+- **17 mutations is a 0.3% sample**, biased toward load-bearing lines. Priced above; not taken.
+- ~~Dead exports were measured in `client/` only~~ — **CLOSED by piece 6.** All four trees measured.
+- **"Does any test assert something no other test asserts?"** is still unmeasured, was not in this
+  chain's scope, and is now the largest remaining unknown about the estate.
+- **The suite timing is one machine, one day, six runs.** Enough to show the arms overlap; not a
+  performance baseline, and it could not resolve a 6% difference if one existed.
 
 ---
 
