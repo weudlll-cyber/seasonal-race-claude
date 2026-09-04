@@ -794,3 +794,98 @@ test("A GUARD THAT SCANS THE REPO ROOT MUST ROUTE ON IT (DECLARED-HOLES-1)", () 
     }
   }
 });
+
+// ── ROUTER-PLAN-1: THE OUTPUT NOBODY ASSERTED WAS THE DATA PATH, NOT THE CLOSURE ────────────────
+//
+// AUDIT-VERDICT-1 read `closureOf` as the one thing in the tree held by nothing, on the reading that
+// this file "tests its INPUTS and never its OUTPUT". THAT READING IS WRONG, and it was checked
+// rather than argued: `closureOf` returning `[]` turns TWELVE of the tests above red, and making it
+// non-transitive (`return [relPath]`) turns six red. The engine-hull case is already held, by
+// THE ENGINE GATE, MISS 6, ENGINE, CAMERA, SELF-COVERAGE and HULL -> SIM.md. Nothing is restated
+// here for it — a second assertion of a held property is the redundancy this project keeps deleting.
+//
+// WHAT IS GENUINELY UNHELD IS NARROWER AND SHARPER: the DATA path.
+//
+// `resolveGuard` feeds each guard's resolved closure to `dataReach`, so a guard also selects on any
+// tracked path its own code NAMES but cannot import. That mechanism IS ENGINE-REACH-DATA-FIX-1,
+// and the incident it was built for is on the record: the 2026-08-25 garden-path change broke
+// `scripts/track-defaults.test.mjs`, nothing routed on `server/seeds/`, and MASTER WAS RED FOR A DAY
+// WHILE THE MERGE REPORTED GREEN. The repair landed. Nothing then asserted the route it created.
+//
+// Two one-token sabotages of the router delete that route and pass all 44 tests above — `fail 0`,
+// both run against this tree:
+//
+//   · `reached` filtered to `client/` in `resolveGuard` — a track seed loses the world fingerprint,
+//     and so does an edit to `scripts/sim-fairness.mjs`, which that guard DECLARES as its reach
+//   · `dataReach([...self, ...suiteEntries])` — a track seed loses the world fingerprint
+//
+// The three tests below turn both red. They assert the PLAN, both directions, and they DISCOVER the
+// seeds from git rather than naming them, so an eleventh track cannot arrive silently unrouted.
+
+/**
+ * Every guard a path selects, always-on ones excluded, WITH THE INERT SPLITTER STUBBED — the same
+ * seam and the same reason as `runs` at the top of this file. These assert set MEMBERSHIP, and the
+ * paths they pass are unchanged on disk, which the real splitter correctly calls inert. Without the
+ * stub the reach test below silently becomes a test of the inert rule: `scripts/sim-fairness.mjs`
+ * is a hull file, so the real splitter drops it from the world fingerprint's hits for being
+ * byte-identical to the base, and the assertion fails for a reason that has nothing to do with
+ * routing. The inert rule has its own both-direction tests above.
+ */
+const selects = (f) =>
+  plan([f], "master", NOTHING_INERT)
+    .filter((t) => t.run && !t.everything)
+    .map((t) => t.id)
+    .sort();
+
+/** The track seeds as git knows them — never a list, so a new track is routed or this fails. */
+const trackSeeds = () =>
+  execFileSync("git", ["ls-files", "server/seeds/tracks/*.json"], {
+    cwd: REPO,
+    encoding: "utf8",
+  })
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+test("THE DATA PATH: a track seed selects all three fingerprints and the script suite", () => {
+  // WHAT BREAKS IF THIS IS DELETED: the exact incident above comes back. A seed is DATA — no import
+  // can reach it — so the only thing standing between a track edit and an unverified merge is that
+  // each fingerprint's own code names `server/seeds/tracks`. That is discovered, not declared, which
+  // makes it silent when it stops happening.
+  const seeds = trackSeeds();
+  assert.ok(seeds.length >= 10, `expected the ten track seeds, got ${seeds.length}`);
+  for (const seed of seeds) {
+    const ids = selects(seed);
+    for (const id of [
+      "world-fingerprint",
+      "camera-fingerprint",
+      "render-fingerprint",
+      // The suite that holds `scripts/track-defaults.test.mjs` — the test the incident broke.
+      "script-suite",
+    ])
+      assert.ok(ids.includes(id), `${seed} must select ${id}, got ${ids.join(",")}`);
+  }
+});
+
+test("…and the DATA path is not simply 'everything under server/seeds/'", () => {
+  // The other direction, without which the test above passes against a router that selects the
+  // fingerprints for every path in the tree. `versions.json` is the seed manifest: the seed guard
+  // and the server suite read it, no fingerprint harness names it, and none must select on it.
+  const ids = selects("server/seeds/versions.json");
+  for (const id of ["world-fingerprint", "camera-fingerprint", "render-fingerprint"])
+    assert.ok(!ids.includes(id), `server/seeds/versions.json must NOT select ${id}`);
+  assert.ok(ids.includes("check-seed-versions"), "the guard that DOES read it must still run");
+});
+
+test("A DECLARED REACH ENTRY OUTSIDE client/ still selects its guard", () => {
+  // `world-fingerprint` declares `reach: [raceCore.js, scripts/sim-fairness.mjs]`. Every reach test
+  // above names the client entry; nothing named the other one, so a router that quietly resolved
+  // reach inside `client/` only kept all of them green while the fingerprint stopped noticing edits
+  // to the simulator that PRODUCES it.
+  const ids = selects("scripts/sim-fairness.mjs");
+  assert.ok(ids.includes("world-fingerprint"), `sim-fairness must select the world fingerprint, got ${ids.join(",")}`);
+  // The pair: it is that guard's reach, not everyone's. The camera and render harnesses do not run
+  // the simulator, and a router that widened to select them here would be wrong in the other way.
+  for (const id of ["camera-fingerprint", "render-fingerprint"])
+    assert.ok(!ids.includes(id), `sim-fairness must NOT select ${id}`);
+});
