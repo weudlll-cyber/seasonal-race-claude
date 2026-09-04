@@ -284,28 +284,46 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig().contestWindowStart).toBe(0.7);
   });
 
-  it('returns defaults when choreoOutcomeStart is outside the LOADER range [0.25, 0.70]', () => {
+  it('rejects a choreoOutcomeStart outside the LOADER range [0.25, 0.60]', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.2 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.75 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
-  // ★ THE LOADER IS DELIBERATELY WIDER THAN THE SLIDER (SLIDER-BOUND-060-1, 2026-09-04).
+  // ★ THE LOADER AND THE SLIDER NOW AGREE AT 0.60 (LOADER-BOUND-060-1, the owner's decision of
+  // 2026-09-04). Until today this loader tolerated 0.70 deliberately: the slider stood at 0.70 for a
+  // day, so a stored 0.65 is reachable, and the validator discarded the WHOLE OBJECT on any failure
+  // — tightening it would have cost an operator every other tuning to correct one key. PER-KEY-
+  // REJECT-1 removed that cost, so the bound is now a plain question about the value.
   //
-  // SLIDER-HEADROOM-1 raised the widget to 0.70 on 2026-09-03 and this test was written so a
-  // reachable slider position could not silently discard the ENTIRE stored config. The owner
-  // REVERSED the widening a day later — the slider stops at 0.60 again, because that is the edge of
-  // what has been measured on the tree that ships.
-  //
-  // THIS TEST STAYS, and the reason is the day in between: the slider stood at 0.70 for a day, so a
-  // stored 0.65 or 0.70 is reachable. This validator rejects the WHOLE OBJECT on any failure, so
-  // tightening it to 0.60 would throw away an operator's brake, boost, intensity and attacker count
-  // in order to correct one key they can no longer set. A tolerated 0.70 costs one clamp when the
-  // slider is next touched; a tightened bound costs the config. (No migrations, by standing rule.)
-  it('the LOADER still accepts 0.70, though the slider no longer reaches it', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.7 });
-    expect(loadRaceDynamicsConfig().choreoOutcomeStart).toBe(0.7);
+  // These two specs are the reachable case, and they are the point of the piece: 0.65 was writable
+  // for one day, and what it costs now is 0.65 and nothing else.
+  it('rejects a stored 0.65 — the value the slider could write for one day', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.65 });
+    expect(loadRaceDynamicsConfig().choreoOutcomeStart).toBe(
+      DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart
+    );
+  });
+
+  it('★ and rejecting it costs NOTHING ELSE — the whole reason the bound could move', () => {
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      choreoOutcomeStart: 0.65,
+      pulkLeaderBrake: 0.15,
+      pulkChallengerBoost: 0.12,
+      choreoIntensity: 0.8,
+    });
+    const loaded = loadRaceDynamicsConfig();
+    expect(loaded.choreoOutcomeStart).toBe(0.6);
+    expect(loaded.pulkLeaderBrake).toBe(0.15);
+    expect(loaded.pulkChallengerBoost).toBe(0.12);
+    expect(loaded.choreoIntensity).toBe(0.8);
+  });
+
+  it('accepts 0.60 itself — the bound is inclusive and it is the shipped value', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.6 });
+    expect(loadRaceDynamicsConfig().choreoOutcomeStart).toBe(0.6);
   });
 
   it('still rejects a value that would swallow contestWindowStart', () => {

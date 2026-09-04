@@ -179,11 +179,13 @@ widget clamp is **[0.25, 0.60]**, and **the top is the edge of what has been MEA
 the mechanism** — the mechanism's wall is 0.70 (`choreoResolveB3`), and SWEEP 2 measured 0.70 as
 holding, but SWEEP 2 predates the speed-150 re-baseline, COMBO15, gap-reroll's flip and the B2
 attackers, so nothing above 0.60 has been measured on the tree that ships. *(Raised to 0.70 by
-SLIDER-HEADROOM-1 on 2026-09-03 and REVERSED by the owner on 2026-09-04 for that reason. The LOADER
-still tolerates up to 0.70 deliberately — the slider stood there for a day, and that validator
-discards the WHOLE config on any rejection, so tightening it would cost an operator every other
-tuning to correct one key they can no longer set. `raceDynamicsConfig.js` states both numbers and
-which is which.)* *(CONTROL-BOUNDS-1, 2026-09-03: the
+SLIDER-HEADROOM-1 on 2026-09-03 and REVERSED by the owner on 2026-09-04 for that reason.)*
+*(LOADER-BOUND-060-1, 2026-09-04: **the loader's bound is 0.60 too, so the widget and the validator
+now state one number rather than two.** It tolerated 0.70 deliberately until then — the slider stood
+there for a day, so a stored 0.65 is reachable, and the validator discarded the WHOLE config on any
+rejection, so tightening it would have cost an operator every other tuning to correct one key.
+**PER-KEY-REJECT-1 removed that cost the same day**: a rejected key falls back to its own default
+alone and the operator is told which one, so a stored 0.65 now costs the 0.65 and nothing else.)* *(CONTROL-BOUNDS-1, 2026-09-03: the
 widget clamped at 0.55 while the shipped value is 0.60, so the control could not display or restore what
 the game runs. The two numbers were recorded separately here — "the clamp" and "the validated range" — and
 that separation is what let them disagree for 47 days: a widget clamp that is not the validated range is a
