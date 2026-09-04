@@ -13,7 +13,8 @@ seasonal-race-claude/
 ├── client/
 │   ├── public/
 │   │   ├── index.html
-│   │   ├── assets/tracks/backgrounds/   # Track background images (1280×720)
+│   │   ├── assets/tracks/backgrounds/   # EMPTY since 2026-09-04 — see the README in it.
+│   │   │                                #   Backgrounds come from the API, not from here
 │   │   └── assets/racers/               # Racer sprite sheets + CREDITS.md
 │   └── src/
 │       ├── screens/                # Route-level full-page views

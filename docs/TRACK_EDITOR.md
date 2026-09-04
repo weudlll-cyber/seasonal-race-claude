@@ -159,11 +159,16 @@ The Code-Bundle would be updated manually: after the 5 default tracks have been 
 
 Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`.
 
+*(`backgroundImage` corrected 2026-09-04, DROP-DEAD-BACKGROUNDS-1: this example showed a
+`/assets/tracks/backgrounds/...` public path, which `trackLoader.js` has not produced for a long
+time — it builds the API URL below — and which now names a file that no longer exists. Second site of
+the same stale claim this document's §4 carried.)*
+
 ```json
 {
   "id": "custom-<uuid>",
   "name": "City Circuit Night",
-  "backgroundImage": "/assets/tracks/backgrounds/city-circuit.png",
+  "backgroundImage": "http://localhost:4000/api/tracks/city-circuit/background",
   "closed": true,
   "sourceMode": "center",
   "centerPoints": [{ "x": 640, "y": 360 }],

@@ -91,20 +91,11 @@ writeFileSync(
   ) + "\n",
 );
 
-// WATCH-BACKGROUNDS-1 (2026-09-04): the rule now digests a SECOND directory, the track
-// backgrounds, and fails loudly when either is absent — so the fixture carries one asset and one
-// record for that directory too. Without it every test in this file fails on a missing directory,
-// which is the rule behaving correctly against a fixture that had not kept up.
-mkdirSync(join(repo, "client", "public", "assets", "tracks", "backgrounds"), { recursive: true });
-writeFileSync(join(repo, "client/public/assets/tracks/backgrounds/alpha.jpg"), "bg-bytes");
-writeFileSync(
-  join(repo, "client/public/assets/tracks/backgrounds/digests.json"),
-  JSON.stringify(
-    { files: { "alpha.jpg": createHash("sha256").update("bg-bytes").digest("hex") } },
-    null,
-    2,
-  ) + "\n",
-);
+// WATCH-BACKGROUNDS-1 (2026-09-04) added a SECOND watched directory here, the track backgrounds, and
+// DROP-DEAD-BACKGROUNDS-1 removed it the same day — the owner wanted the picture the game already
+// uses in every case, so that directory holds no artwork and is no longer an artwork directory. The
+// fixture followed. The rule's zero-files and missing-directory refusals are UNCHANGED and are still
+// exercised below; only the list of directories shrank.
 
 git("init", "-q");
 git("config", "user.email", "t@example.com");
@@ -223,10 +214,9 @@ test("SABOTAGE: an artwork file whose BYTES changed fails, naming the file and b
 test("CONSEQUENCE: restoring the bytes makes it green again", () => {
   const r = run();
   assert.equal(r.code, 0, r.out);
-  // WATCH-BACKGROUNDS-1: the fixture now carries TWO watched directories, one asset each.
-  assert.match(r.out, /2 hand-made asset\(s\) match their record/);
+  // DROP-DEAD-BACKGROUNDS-1: ONE watched directory again, one asset in it.
+  assert.match(r.out, /1 hand-made asset\(s\) match their record/);
   assert.match(r.out, /assets\/racers/);
-  assert.match(r.out, /tracks\/backgrounds/);
 });
 
 test("a NEW artwork file in no record fails — a record that lists nothing cannot object", () => {

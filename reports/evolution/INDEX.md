@@ -788,6 +788,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
   a search. **Not a discipline failure, and not fixable by trying harder.**
 
+- [DROP-DEAD-BACKGROUNDS-1.md](DROP-DEAD-BACKGROUNDS-1.md) — **12.6 MB deleted, re-established
+  unreachable at the source first** (2026-09-04; **21.32 MB to 0** with the duplicate removed earlier
+  that day). His decision after looking at all five pairs: **he wants the picture the game already
+  uses, in every case.** ★ **THE DECISIVE FACT IS NOT A GREP.** Six uncapped searches — including the
+  path built in PIECES, every track record, and `url()`/`<img>`/`src=` across every css, html and svg
+  — found only fixtures, docs and the digest guard's own list; but what SETTLES it is where the path
+  comes from: **`trackLoader.js` builds every client-side background path as an API URL**, and the one
+  module that loads a background is fed from exactly two call sites that read it. ★ **THE DIGEST RULE
+  COULD NOT BE "GREEN WITH THE REDUCED SET"** — the reduced set is EMPTY and the rule refuses that,
+  correctly (Lesson 187: "zero images" and "the filter broke" are indistinguishable from inside).
+  **The refusal was not softened**; the directory stopped being an artwork directory, and
+  `digests.json` was **deleted rather than emptied**, because a manifest naming five absent files is
+  the stale-record defect the rule exists to refuse. ★ **THREE SECOND SITES, and the one that nearly
+  escaped is a PICTURE** — `ARCHITECTURE.md`'s ASCII tree described the folder as holding images; the
+  other two are `TRACK_EDITOR.md`'s JSON example (**a second site of a claim corrected in §4 of the
+  same file the day before**) and a `@param` example in production code. ★ Four sabotages: the rule
+  still catches a changed byte, a new file, a zero-file directory and a missing one — the **new-file**
+  arm found by accident, when a sabotage created a file instead of appending to one.
+
 - [GATE-GARDEN-PATH-1.md](GATE-GARDEN-PATH-1.md) — **the two failures are neither the instrument's nor
   the track's, and the gate stays as it is** (2026-09-04; 16 races, nothing changed). The widening was
   authorised **conditional on the diagnosis**, and the diagnosis **stops it**: both failures are real

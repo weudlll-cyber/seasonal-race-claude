@@ -65,7 +65,7 @@ const MANIFEST = `${SEEDS}/versions.json`;
 export const GUARD = {
   id: "check-seed-versions",
   covers:
-    "a tracked file whose CONTENT changed without its record changing with it — for a shipped seed, its version in server/seeds/versions.json; for a hand-made artwork asset, its digest in the digests.json beside it (racer sheets AND track backgrounds). Plus a seed file in no unit or in two, and a unit naming a file that does not exist",
+    "a tracked file whose CONTENT changed without its record changing with it — for a shipped seed, its version in server/seeds/versions.json; for a hand-made artwork asset, its digest in the digests.json beside it (racer sheets). Plus a seed file in no unit or in two, and a unit naming a file that does not exist",
   blind: [
     "a redelivery needed for a reason OUTSIDE the seed file's bytes — a client, engine or renderer change that makes an unchanged record wrong; it compares content and cannot see intent",
     "whether the version was raised by the right amount, and whether the change itself is any good",
@@ -77,9 +77,11 @@ export const GUARD = {
   dirs: [
     `${SEEDS}/`,
     "client/public/assets/racers/",
-    // WATCH-BACKGROUNDS-1: 21.3 MB of track backgrounds that were outside every guard's declared
-    // scope. A change there now selects this guard.
-    "client/public/assets/tracks/backgrounds/",
+    // WATCH-BACKGROUNDS-1 added `client/public/assets/tracks/backgrounds/` here on 2026-09-04, and
+    // DROP-DEAD-BACKGROUNDS-1 removed it the same day: the owner looked at all six and wanted the
+    // picture the game already uses in every case, so the directory now holds no artwork at all.
+    // See the ART_DIRS block below for why a watched directory with nothing in it is not a thing
+    // this rule can have.
   ],
   files: [MANIFEST],
   reach: [],
@@ -300,24 +302,33 @@ console.log(
 // command, named in the failure message, so that re-recording is never the harder path than
 // deleting the rule.
 // WHAT IT DOES NOT COVER: everything outside the artwork directory. Track backgrounds under
-// `server/seeds/backgrounds/` are ALREADY covered by the seed rule above; the rest is inventoried
-// in ARTWORK-DIGEST-1 and deliberately not extended tonight.
+// `server/seeds/backgrounds/` — the ones the game actually shows — are ALREADY covered by the seed
+// rule above; the rest is inventoried in ARTWORK-DIGEST-1.
 //
 // LOUD FAILURE (Lesson 187): zero image files walked, or an unreadable record, both FAIL.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
-// ★ TWO DIRECTORIES, ONE RULE (WATCH-BACKGROUNDS-1, 2026-09-04).
+// ★ ONE DIRECTORY AGAIN — AND THE REASON IS NOT THAT WATCHING WAS WRONG (DROP-DEAD-BACKGROUNDS-1,
+// 2026-09-04).
 //
-// The racer sheets were watched from the day this rule shipped. The six TRACK BACKGROUNDS under
-// client/public — 21.3 MB — sat outside every guard's declared scope. They are covered by
-// EXTENDING this rule rather than by a second one: “a tracked hand-made image changed without its
-// record changing with it” is ONE question and deserves one answer. Each directory keeps its own
-// digests.json beside the files it describes, so a record never travels away from what it records.
+// WATCH-BACKGROUNDS-1 added `client/public/assets/tracks/backgrounds` here that morning, because
+// 21.3 MB of track backgrounds sat outside every guard's declared scope. Watching them is what
+// FOUND what they were: five measurably different photographs from the ones the game shows, and one
+// byte-identical duplicate under a second spelling. The owner looked at all six and wanted the
+// picture the game already uses in every case, so all six are gone and the directory holds no
+// artwork.
+//
+// ★ IT IS REMOVED FROM THE LIST RATHER THAN LEFT WITH AN EMPTY RECORD, and that is the whole point:
+// the zero-files refusal below is CORRECT and must not be softened to accommodate this. "Zero images
+// here" and "the extension filter broke" are indistinguishable from inside the rule, which is
+// exactly what Lesson 187 is about. A directory that holds no artwork is not an artwork directory,
+// so it stops being one — and its `digests.json` was DELETED rather than emptied, because a manifest
+// naming five files that no longer exist is precisely the stale-record defect this rule exists to
+// refuse. What happened to the megabytes is recorded in the README that stayed behind, in
+// ARCHITECTURE.md's tree, and in reports/evolution/DROP-DEAD-BACKGROUNDS-1.md.
 const ART_DIRS = (() => {
   const override = process.argv.find((a) => a.startsWith("--artwork-root="))?.slice(15);
-  return override
-    ? [override]
-    : ["client/public/assets/racers", "client/public/assets/tracks/backgrounds"];
+  return override ? [override] : ["client/public/assets/racers"];
 })();
 const RECORD_MODE = process.argv.includes("--record-artwork");
 const IS_IMAGE = /\.(png|jpe?g|webp|gif)$/i;
