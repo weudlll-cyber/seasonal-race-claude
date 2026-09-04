@@ -438,6 +438,23 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:273` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:155`, the driver's own test. Waiting on BUILDING.
 
+      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
+      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
+      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
+      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
+      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
+      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
+      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
+      established at source:** `scripts/viewer-invariants.mjs` filters
+      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
+      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
+      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
+      race is driven, so `runRace`'s return value could not have caught it either.
+      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
+      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
+      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
+      `--tracks` entry point named in the piece-E report still has the defect.
+
 - [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
       GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
       **20/20**, because his beetle decision made the race short enough — **the harness hardcodes 2
@@ -1181,33 +1198,6 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1717-1719`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
-
-### 2 — Player Group Selection 🔜 PRIORITY 1 after Camera Phase
-
-The game master selects in setup which player group enters the race (e.g. "Group A", "All", "Selection").
-Currently all configured players are always shown — there is no mechanism for subgroups.
-
-**Use cases:**
-
-- Tournament with multiple groups: only Group A races in round 1, Group B in round 2
-
-- Ad-hoc race with participants from the full roster
-
-- Quick selection without manually deselecting all inactive players
-
-**Requirements (spec still pending):**
-
-- Player groups definable in `PlayerGroupsManager` (group name + player assignment)
-
-- Setup screen: selection filter "Which group races?" before race start
-
-- No change to the race engine — only which players end up in `sessionStorage.activeRace`
-
-- UI principle 1: everything configurable (group names, sizes, assignments) without code changes
-
-**Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `SetupScreen.jsx` consumes an ACTIVE_GROUP handed to it by the Dev Panel (`:139-146`) and has no "which group races?" filter. Waiting on the spec the entry says is still pending.
 
 ---
 
@@ -2930,6 +2920,62 @@ key names already available to whoever picks it up.
 - ✅ City Circuit
 
 Additionally: Space (Custom Track) already present.
+
+### 2 — Player Group Selection — ✅ SHIPPED 2026-09-03
+
+**Moved here from PART ONE on 2026-09-04, verified at source.** The 2026-09-02 verdict below said
+unbuilt and was true on the day it was written; the feature landed the next day and the verdict was
+never revisited. What the tree holds today:
+
+- **The picker exists and is mounted.** `client/src/screens/SetupScreen/PlayerGroupPicker.jsx`
+  (198 lines, header dated 2026-09-03), rendered at `client/src/screens/SetupScreen/SetupScreen.jsx:803`.
+- **Several groups, not one.** `addGroup` appends a group's players to the roster and `removeGroup`
+  takes back exactly the ones it put there; which groups are on is DERIVED from the roster
+  (`players.map(p => p.group)`), so any number can be in the field at once. The one-shot
+  `KEYS.ACTIVE_GROUP` hand-off the verdict described is gone from `SetupScreen.jsx` — the key
+  survives only on the Dev Screen's own Load-to-Setup path.
+- **An oversized field is REFUSED, not truncated.** `addGroup` returns without adding when
+  `players.length + incoming.length > maxPlayers`, and says how many over the cap it would be.
+  That is REFUSE-OVERSIZED-1, the owner's decision of 2026-09-04.
+
+Shipped by `aea89b22` *feat(PLAYER-GROUPS-1)* (2026-09-03), with `210697d1` (REFUSE-OVERSIZED-1),
+`648fd223` (DROP-RACER-NUMBER-1) and `a4e38b54` (CHIP-CONTRAST-1) on the same day. All on master.
+
+**One requirement of the original spec is NOT what shipped, and it is worth naming rather than
+letting the tick mark cover it:** the entry asked for a filter — "*which* group races?" — and what
+was built is ADDITIVE selection: picking a group fills the roster, it does not narrow a field. For
+the use cases the entry lists (one group per tournament round; an ad-hoc mixed field) additive
+selection does the same work and does more, which is presumably why it was built that way. If the
+filter reading was the one you wanted, that is a fresh entry, not this one.
+
+<details><summary>The original PART ONE entry, verbatim</summary>
+
+
+The game master selects in setup which player group enters the race (e.g. "Group A", "All", "Selection").
+Currently all configured players are always shown — there is no mechanism for subgroups.
+
+**Use cases:**
+
+- Tournament with multiple groups: only Group A races in round 1, Group B in round 2
+
+- Ad-hoc race with participants from the full roster
+
+- Quick selection without manually deselecting all inactive players
+
+**Requirements (spec still pending):**
+
+- Player groups definable in `PlayerGroupsManager` (group name + player assignment)
+
+- Setup screen: selection filter "Which group races?" before race start
+
+- No change to the race engine — only which players end up in `sessionStorage.activeRace`
+
+- UI principle 1: everything configurable (group names, sizes, assignments) without code changes
+
+**Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `SetupScreen.jsx` consumes an ACTIVE_GROUP handed to it by the Dev Panel (`:139-146`) and has no "which group races?" filter. Waiting on the spec the entry says is still pending.
+</details>
 
 ## Ready — spec exists, concept decided
 
