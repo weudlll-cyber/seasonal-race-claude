@@ -46,9 +46,23 @@ The admin selects "Closed Loop" or "Open Course" with an explicit toggle before 
 
 Tracks are stored in `localStorage` under the existing `racearena:*` key convention, consistent with how Dev Panel currently persists custom racers, branding profiles, etc.
 
-Background images are served from `client/public/assets/tracks/backgrounds/` and are selected in the editor via a dropdown of files in that folder. Images must be placed in the folder manually (commit + push) before they appear in the dropdown. No file upload in v1.
+~~Background images are served from `client/public/assets/tracks/backgrounds/` and are selected in the editor via a dropdown of files in that folder. Images must be placed in the folder manually (commit + push) before they appear in the dropdown. No file upload in v1.~~
 
-**Rationale:** Keeps v1 purely client-side, no server dependency, fastest path to a working feature. File upload is a known follow-up (see Future Extensions).
+**★ CORRECTED 2026-09-04 (BG-CAPITAL-DUPE-1). NEITHER HALF OF THAT SENTENCE IS TRUE ANY MORE, and
+this file calls itself the single source of truth for the feature, so it was a live false claim
+rather than history.** The follow-up the rationale below anticipated has SHIPPED: the editor takes a
+background by **file upload** (`TrackEditorSaveBar.jsx`'s hidden `<input type="file">`), and a saved
+track's background is served by the API from the runtime backgrounds directory —
+`GET /api/tracks/:id/background`, out of `<RA_DATA_DIR>/backgrounds`, which `server/seeds/backgrounds/`
+seeds. **There is no dropdown, and `client/public/assets/tracks/backgrounds/` is read by nothing** —
+the only references left in the tree are test fixtures and one doc-comment example.
+
+*(Found by sweeping for second sites while removing a duplicate file from that folder, not by reading
+this document. The neighbouring claim in this same section — that tracks are stored in
+`localStorage` — reads stale too after TLH-1 made them Server-Tracks; it is NAMED here rather than
+edited, because it is a different fact and checking it properly is its own piece of work.)*
+
+**Rationale (v1, superseded):** Keeps v1 purely client-side, no server dependency, fastest path to a working feature. File upload is a known follow-up (see Future Extensions).
 
 ### 5. Migration of Existing Tracks
 
