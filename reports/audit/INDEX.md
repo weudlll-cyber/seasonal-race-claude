@@ -104,3 +104,21 @@ verdict with numbers on each axis, not a list of work.
   static-file server, the data-path resolver and four route modules, which is exactly the surface
   piece 8 must audit. Also: `.github/copilot-instructions.md` carries working rules that appear in no
   repository document and that the reading order never reaches.
+
+- [AUDIT-REDUNDANCY-1.md](AUDIT-REDUNDANCY-1.md) — **the 27 disagreements are 0, duplicated logic is
+  0.37%, and one stale copy nobody had checked.** All 16 catalogued fact-groups re-verified: eight are
+  guarded and read zero, one is covered by a test, two of the four homeless groups have **left the
+  tree**, and the five files that held all 27 census disagreements still exist and **none disagrees**.
+  ★ **CODE-LEVEL DUPLICATION MEASURED FOR THE FIRST TIME** — 502 files, 74,569 normalised lines: 34
+  clone groups at ≥25 lines, but **96% of them are DATA TABLES** (canvas-API name arrays, coat
+  palettes), and quoting the 10.52% headline alone would be a lie. **Duplicated LOGIC is 279 lines,
+  0.37%, in 6 groups — every one in `scripts/`, none in `client/src` or `server/src`.** The largest is
+  four `diag/*-run.mjs` shard runners that are 105 lines each and **share 60% of themselves**.
+  ★ **THE FINDING: `server/src/routes/tracks.js` carries a literal copy of all ten tracks — 85 values,
+  24 stale (28%)** — including `garden-path → snail` where the seed says `beetle`, **the exact
+  staleness repaired in the fingerprint instrument two days earlier, which had a second home the
+  repair never reached**, and `city-circuit → buggy` where the seed has said `motorbike` since June.
+  **PROVED INERT** (all ten seeds carry the fields, and the seed files are delivered before the map is
+  built, so both startup migrations skip) — but it is a loaded gun on the race path, so it is
+  **reported and not touched**. Of the twelve groups, **A3 and A4 are the only two unguarded**; A3 has
+  never disagreed, A4 disagrees 24 times.
