@@ -8,6 +8,30 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RACESCREEN-MOUNT-1.md](RACESCREEN-MOUNT-1.md) — **a test that mounts `RaceScreen`** (2026-09-04,
+  PIECE C). It mounts: three tests render the real component past its `Loading…` placeholder, and the
+  run log shows the real `CameraDirector` initialising, so the race is built rather than the chrome
+  merely drawn. ★ **It supersedes owner decision D2, which is not withdrawn** — D2 closed the
+  question of whether to act; the chain re-opened it because the action dial is about to be built on
+  this screen. **No production code changed**; RACESCREEN-SEAM-1's one-line seam was not needed.
+  ★ **The Router is the finding:** grepping `index.jsx` for `react-router` says it needs none, and
+  that is wrong — `useFadeNavigate()` falls back to `useNavigate()`. Found by running, not reading.
+  Sabotage 3/3. ★ **AND THE SABOTAGE THE CHAIN NAMED IS STILL GREEN** — blanking every track
+  background still passes 31 files and 405 tests, and cannot be caught here; the backlog item is
+  corrected to say so rather than struck.
+
+- [SIM-FAIRNESS-PIN-1.md](SIM-FAIRNESS-PIN-1.md) — **characterisation tests for `sim-fairness.mjs`**
+  (2026-09-04, PIECE F). Shape re-established with acorn: 6,195 lines, 340 functions, the longest
+  `runSingleRace` at **2,766** — matching the backlog. ★ **Two facts it does not carry decide what is
+  testable:** `runSingleRace` is EXPORTED, and the whole sweep sits behind `if (isMain)`, so the file
+  can be driven without touching it. 12 tests pin the module's shape, the analysis helpers, and
+  `runSingleRace` end to end on real tracks in BOTH regimes, with one golden digest so a change that
+  moves only open tracks cannot pass by averaging. ★ **Both return shapes were established by RUNNING
+  the code and both first drafts were wrong.** Sabotage: a physics constant CAUGHT by the golden; a
+  tie-break NOT caught — and correctly so, because `finalRank` is a strict ordering and the branch is
+  unreachable, measured over 15 races. The `isMain` block stays unpinned and is named. World
+  fingerprint unmoved.
+
 - [SILENT-ZERO-TRACKS-1.md](SILENT-ZERO-TRACKS-1.md) — **a sweep that measures nothing must not exit
   clean** (2026-09-04, PIECE E of that night's chain). `--tracks=all` matched no geometry, and the
   harness did not merely report zero — **it printed `Every frame of every race swept satisfied all
