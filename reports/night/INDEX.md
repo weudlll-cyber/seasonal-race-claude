@@ -8,6 +8,52 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SILENT-ZERO-TRACKS-1.md](SILENT-ZERO-TRACKS-1.md) — **a sweep that measures nothing must not exit
+  clean** (2026-09-04, PIECE E of that night's chain). `--tracks=all` matched no geometry, and the
+  harness did not merely report zero — **it printed `Every frame of every race swept satisfied all
+  five invariants. PASS` and exited 0**, in 43 s, measured by removing the new guard and re-running
+  the incident. ★ **The fix already existed in this repository and never travelled:**
+  `company-spread-sweep.mjs:160` carries the same guard, written after its own silent zero. Two
+  checks added to `viewer-invariants.mjs`, both before the client build. One guard limb was found
+  UNREACHABLE by measurement and removed rather than left looking protective. 28 other `--tracks`
+  entry points are named and deliberately not guarded, and `sim-fairness.mjs` holds a third variant —
+  a silent DEFAULT, not a zero. **Not wired into CI, verify or a hook.**
+
+- [HARNESS-CEILING-LAPS-1.md](HARNESS-CEILING-LAPS-1.md) — **the fixed ceiling and the hardcoded lap
+  count** (2026-09-04, PIECE H). ★ **The track records already say how many laps they run** —
+  `defaultLaps`, 2 on all five closed tracks — so the driver was ignoring the data, not filling a gap
+  in it. Measured over ten tracks at their own defaults: **0 of 10 exceed the 200 s ceiling**, the
+  longest being dirt-oval at 93.1 s. The driver now reads the record and THROWS rather than
+  substituting, and a truncated race throws instead of being returned as though it were a race.
+  **The ceiling is NOT raised** — choosing a new limit is a decision; making the existing one audible
+  is not. Sabotage 4/4 with two controls. All four fingerprints unmoved.
+
+- [RENDER-CAMERA-GAP-1.md](RENDER-CAMERA-GAP-1.md) — **the render fingerprint's blind spot, the guard
+  half only** (2026-09-04, PIECE G). The instrument builds the frame camera as a three-member literal
+  against a six-member contract. ★ **The correction: it costs TWO fields, not three** —
+  `anchorRacerIndex` and `runInArrived`, both label behaviours; `camera.state` is no longer read by
+  live code and survives only inside the comment recording its removal. **The repair is NOT done — it
+  moves the render hash and is therefore a mint and the owner's to order.** A test pins exactly which
+  members are missing today, so the gap can no longer widen or change silently. Sabotage 3/3.
+
+- [IMAGE-DATE-FNS-1.md](IMAGE-DATE-FNS-1.md) — **why `date-fns` is in the image** (2026-09-04,
+  PIECE J). Pulled by `better-sqlite3-session-store`; it appears in no `package.json` in the tree.
+  **27.1 MB measured INSIDE the image — 42% of its dependency tree** — and ★ **the package that
+  declares it never imports it**: its only mentions there are its own `package.json` and its TEST
+  file, and nothing else in the image imports it either. **Not removed, and that is a judgement
+  rather than a rule:** the three clean routes are the ones the piece forbids, and an `rm -rf` would
+  leave the image disagreeing with its own manifest — the anonymous-volume defect one layer over.
+  NEEDS HIS WORD.
+
+- [BACKLOG-CORRECTIONS-2026-09-04.md](BACKLOG-CORRECTIONS-2026-09-04.md) — **three document
+  corrections, each established at source first** (2026-09-04, PIECE K). Player Group Selection was
+  unbuilt on 2026-09-02 and **shipped on 2026-09-03**; verified at source and moved to PART TWO, with
+  the one requirement that did NOT ship named rather than covered by the tick mark — it asked for a
+  FILTER, and what shipped is ADDITIVE selection. Gate item 2 still measures accepted behaviour under
+  a different name, now stated plainly in the `GATE_TRACKS` comment — **and it is now two of the three
+  excluded tracks, not one**; no exclusion was changed. The `--tracks=all` silent zero is recorded as
+  the class's next occurrence.
+
 - [NIGHT-2026-08-25.md](NIGHT-2026-08-25.md) — **the morning sheet for the night of 2026-08-25**
   (the gate that stopped gating, and seven pieces behind it). **Not a findings report: it is the
   running state of that night's chain** — done, running, left, and the three forks that need his word
