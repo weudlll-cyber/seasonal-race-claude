@@ -50,6 +50,29 @@
 !server/src/**
 !server/utils/**
 
+# ── …BUT NOT ITS TESTS (IMAGE-NO-TESTS-1) ────────────────────────────────────────────────────────
+#
+# The two lines above take the directories WHOLE, and this repository keeps a test beside the file it
+# tests — `racers.test.js` sits next to `racers.js`. So 31 test files rode into every image: MEASURED
+# in the running container as 62 files under /app/src + /app/utils, of which 31 were `*.test.js`,
+# 354,556 bytes. HALF the server source a recipient receives was tests that cannot run there and that
+# describe the system's internals to somebody who only wants to play the game.
+#
+# THE RULE LIVES HERE AND NOT IN THE DOCKERFILE, deliberately. This file is the one place that
+# decides what the image contains; a `RUN find … -delete` in the Dockerfile would be a second such
+# place, and the two would drift the way every second home in this repository has. It also keeps the
+# files out of the CONTEXT rather than deleting them from a layer they already entered.
+#
+# THE SET WAS ESTABLISHED BY SHAPE, NOT BY ONE SUFFIX, and the sweep found more than was reported:
+# 29 under `server/src/` and TWO MORE under `server/utils/` (`imageUpload.test.js`,
+# `isSafeAssetFilename.test.js`). There are no `.spec.` files and no `__tests__` directory anywhere
+# under `server/`, and no test-only fixture or helper hides among the source: all 31 NON-test files
+# in these two directories were resolved by import specifier and every one has a production consumer.
+# Nothing in the image imports a test file, so nothing here can break by their absence — which was
+# then proved by booting the image with no source mounts at all.
+server/src/**/*.test.js
+server/utils/**/*.test.js
+
 # The shipped seed records. These are how a fresh install gets its ten tracks and their backgrounds
 # (proven by booting an image against an empty volume), so they are load-bearing and must be here.
 !server/seeds/**
@@ -67,6 +90,15 @@
 #                     the seeded records. An operator's data belongs in a volume, never in a layer.
 #                     This is the exclusion IMAGE-NO-CREDENTIALS-1 built, carried across intact.
 #   server/test/**    Test harness. Not run in the image.
+#   *.test.js         THE TESTS THAT LIVE BESIDE THE SOURCE, re-excluded above after `server/src/**`
+#                     and `server/utils/**` admit their directories whole (IMAGE-NO-TESTS-1). 31
+#                     files, measured in the running container, and they cannot run in the image:
+#                     `vitest` is a devDependency and `npm install --omit=dev` never installs it.
+#                     What they cost is not bytes — 0.64% of the context — it is that they hand a
+#                     recipient a description of the internals with the game.
+#   server/scripts/** `dev-start.js` and `restart-dev.js`, the local dev-loop wrappers. Already
+#                     excluded because nothing re-includes them; named here so that is a decision
+#                     and not an accident. The image's CMD is `node src/index.js` directly.
 #   client/**         The built client arrives through a NAMED BUILD CONTEXT
 #                     (`additional_contexts: { client: ./client }`), which is a separate context and
 #                     is not filtered by this file. The client SOURCE has no business in the image.

@@ -336,6 +336,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [IMAGE-NO-TESTS-1.md](IMAGE-NO-TESTS-1.md) — **31 server test files left the image, and it is 31 and
+  not 29** (2026-09-04; piece 1 changes `.dockerignore` only, piece 2 is report-only). `COPY
+  server/src/` and `COPY server/utils/` take the directories whole and this repository keeps a test
+  beside its source, so **62 files under `/app/src` + `/app/utils` were HALF tests** — the missed two
+  are in `server/utils/`, which the original count never looked at. Excluded in the allow-list's own
+  idiom rather than by a Dockerfile step, because that file is the one place deciding what the image
+  contains. **Established by shape first**: no `.spec.`, no `__tests__`, and **no test-only fixture or
+  helper** — all 31 non-test files resolve to a production consumer. ★ **Proved by booting with NO
+  source mounts on an empty volume**: seeds itself 10 tracks and 10 backgrounds, 200 · 200 · 401,
+  clean logs; 62 → 31 files, 31 → 0 tests; context 88 files/52.47 MB → 57/52.13 MB. **A method note**:
+  the first classifier matched by BASENAME and returned a zero it had not earned; redone by import
+  specifier with four controls, one of which came back "unexpected" and was my expectation being
+  wrong, not the harness. Piece 2 inventories the whole image and **recommends removing nothing**:
+  `seeds/backgrounds` is 51.6 MB and is the artwork, `better-sqlite3` 27.5 MB and **`date-fns` 27.1 MB
+  arrives transitively through the session store**; `@vitest` is an EMPTY orphan directory and no
+  devDependency ships. Notes that **nothing routes on or checks `.dockerignore`**, and that there is
+  no `client/.dockerignore` so the named context sends `client/node_modules` on every build.
+
 - [CLOSE-AUDIT-CHAIN-1.md](CLOSE-AUDIT-CHAIN-1.md) — **the client-suite regression is NOT REAL, and
   the tree the audit could not see holds 42 unconsumed exports** (2026-09-04, read-only; pieces 5 and
   6 of the CLOSE-WHAT-THE-AUDIT-FOUND chain). Six A/B **interleaved** runs, because the machine could
