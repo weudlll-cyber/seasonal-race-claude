@@ -51,7 +51,21 @@ services:
       # The cost, stated: editing `shared/nameLimits.mjs` now needs `docker compose build` rather
       # than a restart. It is one 4.5 KB constants file, and clarity about what the image contains is
       # worth more than live-editing it.
-      - /app/node_modules             # keep container's npm install isolated from host
+      # `- /app/node_modules` WAS HERE AND IS DELETED (DEPS-SERVER-AUDIT-1, 2026-09-04). It was an
+      # anonymous volume, and its comment said it kept "the container's npm install isolated from
+      # host" — but NOTHING mounts over /app or /app/node_modules. The four binds above are
+      # /app/src, /app/utils, /app/data and /app/seeds. There was nothing to isolate it from; the
+      # line is left over from when the mount was `./server:/app`.
+      #
+      # WHAT IT ACTUALLY DID, and this was measured rather than reasoned. An anonymous volume is
+      # populated from the image ONCE, when the container is first created, and then persists. So
+      # `docker compose up -d --build` recreated the container, mounted the SAME two-day-old volume,
+      # and the running server kept the old dependency tree. Caught on exactly the change that
+      # exposes it: after the qs override the IMAGE had `qs 6.16.0` and the RUNNING CONTAINER
+      # reported `qs 6.15.3` — the vulnerable one — from a rebuild that reported success.
+      #
+      # THAT IS THE SEED-REDELIVERY FAILURE ONE LAYER DOWN: a delivery that silently never arrives,
+      # while everything says it did. The seeds mount above exists because of the same shape.
     # node --watch (Node 20 built-in) auto-restarts on src file changes.
     # Note: on Windows Docker Desktop, file-change events across the WSL2 boundary
     # can be slow; if auto-restart doesn't fire, use `docker compose restart server`.
