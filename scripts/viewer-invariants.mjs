@@ -201,7 +201,10 @@ function geometries() {
 //     are at the head of `endgame-sheet.mjs`.
 //
 //     SO THE EXCLUSION IS NO LONGER JUSTIFIED BY A DEFECT. It is justified by items that object to
-//     something wanted, which is a different and weaker reason than the one recorded above. That is
+//     something wanted, which is a different and weaker reason than the one recorded above. ★ THAT
+//     IS NOW TRUE OF ALL THREE EXCLUDED TRACKS, which it was not when this was written: dirt-oval's
+//     item 7 was the one remaining defect-shaped reason and ITEM7-MEMBERSHIP-1 showed it was an
+//     artefact of what item 7 graded. That is
 //     reported, not acted on: WIDENING THE GATE NOW WOULD MAKE IT RED ON DAY ONE for behaviour he
 //     has accepted, which is the trap GATE-GARDEN-PATH-1 avoided a few hours earlier.
 //
@@ -212,10 +215,20 @@ function geometries() {
 //                    fails item 2, which is behaviour (i) measured directly — still accepted.)
 //       luger-hill   item 2 ONLY, and item 2 is NOT one of the two he named. Same behaviour, a
 //                    different item; only seed 9 has been measured for this track.
-//       dirt-oval    item 2 at seed 9 — but ITEM 7 AT SEED 3, a contender off canvas on 78 frames.
-//                    ★ THAT ONE IS NOT ACCEPTED BEHAVIOUR and is not one of the two items. So
-//                    dirt-oval's exclusion does NOT rest on accepted behaviour alone, and it is the
-//                    one of the three where something real is still hidden by the exclusion.
+//       dirt-oval    item 2 ONLY, at seed 9. ★ CORRECTED 2026-09-04 (ITEM7-MEMBERSHIP-1): this
+//                    entry used to read "but ITEM 7 AT SEED 3, a contender off canvas on 78 frames
+//                    — that one is NOT accepted behaviour ... the one of the three where something
+//                    real is still hidden". BOTH HALVES WERE WRONG. It was a GRADING ARTEFACT, not
+//                    a picture defect: item 7 graded `_abreastContenders`, whose fallback to the top
+//                    two is a framing device and no verdict on who can win, and the racer it demanded
+//                    was 3.66 body lengths back with the framing already released. It was also NEVER
+//                    SPECIFIC TO DIRT-OVAL — the same artefact failed 10 races of 80 over four
+//                    tracks. Item 7 now grades the racers who can still win and reads 0 of 80.
+//                    SO DIRT-OVAL'S EXCLUSION NOW RESTS ON ITEM 2 ALONE — the same standing as
+//                    luger-hill: item 2 is behaviour (i) of the acceptance measured directly, and it
+//                    is NOT one of the two items he named. NOTHING REAL IS HIDDEN BY ANY OF THE
+//                    THREE EXCLUSIONS ANY LONGER. Widening the gate is still a separate decision and
+//                    is still not taken here.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific

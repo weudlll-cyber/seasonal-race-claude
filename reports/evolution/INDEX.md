@@ -336,6 +336,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ITEM7-MEMBERSHIP-1.md](ITEM7-MEMBERSHIP-1.md) — **item 7 stops requiring racers who can no longer
+  win: 10 failing of 80 → 0** (2026-09-04, instrument and documentation only; no default, threshold,
+  ease or gate exclusion moved, the fallback untouched, requirement 7's wording unchanged, nothing
+  minted). The owner's decision of 2026-09-04 encoded as a MEMBERSHIP: **the geometric loop's
+  survivors minus every racer at contention weight 0**. The loop is split into `_abreastSurvivors` so
+  the fallback can be excluded without duplicating the level and lane tests. ★ **The honest headline
+  is that his decision is NOT what fixed these ten** — the weight rule dropped **nobody** in any
+  failing race; all ten fell to recognising that `_abreastContenders`' fallback to the top two is a
+  FRAMING device and no verdict on who can win. The weight rule is not inert: it fires on 14 of the
+  80 races (15,943 racer-frames dropped by the fallback rule, 1,783 by the weight rule), every one of
+  which passed both before and after. ★ **The question the block existed for is answered: NOT ONE
+  off-canvas racer had a weight above zero, so no real picture defect was hiding under it.**
+  Monotonicity **checked, not assumed** — no race moved PASS → FAIL and no off-frame count rose.
+  **80 against 76 is resolved rather than left side by side**: 80 of 80 scored here, garden-path now
+  crosses in all eight of its races, and ENDGAME-COMPLETE-1's own wording cannot be reconciled
+  arithmetically (it would give 72) — its "12 of 76" is a report figure from a different tree and is
+  used for nothing. **All four fingerprints unmoved**, which is the evidence for the camera and the
+  drawing **because `engine-reach` answers only the world question** while `render-fingerprint.mjs:85`
+  declares `CameraDirector.js` a reach entry. Sabotage caught; a test file had to be created because
+  **nothing tested `_abreastContenders`** (25 files name it, one is a test — the new one). Corrects
+  MORNING.md, BACKLOG.md, the `GATE_TRACKS` comment (**dirt-oval's exclusion now rests on item 2
+  alone**) and `CAMERA_DIRECTOR.md`'s item-7-against-item-9 conflict, and names the sentence of
+  DIRT-OVAL-OFFCANVAS-1 it supersedes.
+
 - [DIRT-OVAL-OFFCANVAS-1.md](DIRT-OVAL-OFFCANVAS-1.md) — **the contender who leaves the frame was
   never in contention** (2026-09-04, DIAGNOSIS ONLY — nothing repaired, proposed or minted). Item 7
   reproduced exactly on dirt-oval seed 3: **FAIL 78 frames, which is 15.1% of the 517-frame endgame

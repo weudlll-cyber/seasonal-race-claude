@@ -372,9 +372,25 @@ these carries a recommendation.**
    product code and is on no product path** — nothing the game runs imports it. It is, however, **a
    declared `reach` entry of the world fingerprint**, so it is inside that instrument's dependency
    set and a change to it selects the fingerprint.
-3. **dirt-oval fails gate item 7 at seed 3** — a contender off canvas on 78 frames. **This is NOT
-   accepted behaviour**: the accepted finish covers the late photo-finish zoom and the battle shot by
-   name, and this is neither. It is the one real thing a track exclusion still hides.
+3. ~~dirt-oval fails gate item 7 at seed 3 — the one real thing a track exclusion still hides~~
+   **CLOSED 2026-09-04 as a GRADING ARTEFACT.** Report:
+   [ITEM7-MEMBERSHIP-1](../reports/evolution/ITEM7-MEMBERSHIP-1.md).
+
+   **This item was false on both of its counts, and the corrections are worth keeping because both
+   are the kind of mistake that recurs.** It was **not a picture defect**: item 7 graded
+   `_abreastContenders`, and that function ends by falling back to the top two when nobody is level —
+   a FRAMING device so the photo finish has somebody to hold, silent about who can win. The racer it
+   demanded in shot was 3.66 body lengths back and the framing had already released him, 6,866 ms
+   before the crossing, after which he sits exactly on the leader and constrains nothing. And it was
+   **never specific to dirt-oval**: the payload builds that set on every drawn frame with no
+   condition on track and none on camera state, and the same artefact failed **10 races of 80** —
+   dirt-oval, city-circuit, space-sprint and ice-track, seeds 1 and 3, in both configs.
+
+   Item 7 now grades the racers who can still win — the geometric loop's survivors minus every racer
+   at contention weight 0 — and reads **0 failing of 80**, with **no race moving PASS → FAIL**.
+   ★ **The question this was worth opening for is answered: not one off-canvas racer had a contention
+   weight above zero, so no real defect was hiding under it.** Requirement 7's wording is unchanged;
+   only the set that answers it changed.
 4. **42 unconsumed exports in the trees the audit did not measure** — `scripts/` 37, `server/` 5,
    `shared/` 0. Measured, not acted on: two `client/` candidates turned out to be reached through a
    string a test generates at runtime, so each of the 42 needs that check individually.
