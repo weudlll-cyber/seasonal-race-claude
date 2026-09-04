@@ -10,21 +10,41 @@
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_ROW_LAYOUT_CONFIG } from './storage/defaults.js';
 import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
+import { applyKeyRules } from './storage/configValidate.js';
+import { reportRejectedKeys, reportStoreDefects } from './storage/configReport.js';
 
 export { DEFAULT_ROW_LAYOUT_CONFIG };
+
+/**
+ * PER-KEY-REJECT-1: what this store accepts, one rule per constraint. A failing key falls back to
+ * ITS default and every other key survives — see `storage/configValidate.js` for the rule and for
+ * why the fallback is the default rather than a clamp.
+ */
+export const ROW_LAYOUT_RULES = [
+  { keys: ['rowGapMultiplier'], ok: (c) => !(c.rowGapMultiplier <= 0), why: 'it must be above 0' },
+  {
+    keys: ['speedBonusFactor'],
+    ok: (c) => !(c.speedBonusFactor < 0),
+    why: 'it must not be negative',
+  },
+  {
+    keys: ['maxCapacityFactor'],
+    ok: (c) => !(c.maxCapacityFactor <= 0 || c.maxCapacityFactor > 1),
+    why: 'it must be above 0 and at most 1',
+  },
+];
 
 export function loadRowLayoutConfig() {
   pruneStoredRowLayoutConfig();
   const merged = resolveFromDefaults(storageGet(KEYS.ROW_LAYOUT_CONFIG), DEFAULT_ROW_LAYOUT_CONFIG);
-  if (
-    merged.rowGapMultiplier <= 0 ||
-    merged.speedBonusFactor < 0 ||
-    merged.maxCapacityFactor <= 0 ||
-    merged.maxCapacityFactor > 1
-  ) {
-    return { ...DEFAULT_ROW_LAYOUT_CONFIG };
-  }
-  return merged;
+  const { config, rejected, storeDefects } = applyKeyRules(
+    merged,
+    DEFAULT_ROW_LAYOUT_CONFIG,
+    ROW_LAYOUT_RULES
+  );
+  reportRejectedKeys(KEYS.ROW_LAYOUT_CONFIG, rejected);
+  reportStoreDefects(KEYS.ROW_LAYOUT_CONFIG, storeDefects);
+  return config;
 }
 
 /**

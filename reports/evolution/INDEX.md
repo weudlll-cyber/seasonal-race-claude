@@ -788,6 +788,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
   a search. **Not a discipline failure, and not fixable by trying harder.**
 
+- [PER-KEY-REJECT-1.md](PER-KEY-REJECT-1.md) — **a bad key now costs the key, not the config; and the
+  accepted set did not move by one value in 160,004** (2026-09-04; all four fingerprints unmoved, no
+  migration). Five of the seven stores answered any single bad value with `return { ...DEFAULTS }` —
+  **one key outside its range and the operator lost every tuning in that store**, never told which.
+  It also had a second cost that shaped decisions rather than storage: **a loader bound could never
+  be tightened**, because tightening it would confiscate everything else from anyone holding the
+  newly-illegal value. That is why `choreoOutcomeStart` sat at 0.70 in writing while 0.60 was the
+  measured edge. ★ **THE CENSUS CORRECTS WHERE TO LOOK**: the brief said the camera validator, and
+  the camera store **validates nothing at all** — the whole-object reject is in `raceDynamicsConfig`.
+  ★ **AND THE FIRST ATTEMPT SILENTLY CHANGED THE ACCEPTED SET, 4,204 TIMES IN 60,003, ALL `NaN`**:
+  `!(x <= 0)` is not `x > 0`, and it differs on exactly the one value nobody re-reads a range check
+  for. Caught by running the new rules against the **old chains extracted from `master`**, not by
+  reading the diff; every rule is now the literal negation of the clause it replaced, and the second
+  run is **0 in 160,004**. ★ **His live localStorage could not be read** (blocked, correctly) —
+  **what replaces it is stronger**: the loaders are pure, the accepted set is identical, and a config
+  with no failing key is returned untouched, so *any* config that loaded before loads identically
+  now. ★ **A test that proved nothing, caught by its own guard**: an "operator setting" of
+  `runoutZone: 0.05` **is** the shipped default, so the old-loader proof compared a value against
+  itself and passed for the wrong reason.
+
 - [MAX-FIELD-1.md](MAX-FIELD-1.md) — **it was never a disagreement: three different limits and one
   dead key, wearing names close enough to look like four answers** (2026-09-04; no limit's VALUE
   moved, all four fingerprints unmoved). `maxPlayersClosed`/`Open` 40/100 is **the only field cap**;

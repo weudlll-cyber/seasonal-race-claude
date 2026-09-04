@@ -11,6 +11,8 @@ import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
+import { applyKeyRules } from './storage/configValidate.js';
+import { reportRejectedKeys, reportStoreDefects } from './storage/configReport.js';
 
 export { DEFAULT_RACE_BEHAVIOR_CONFIG };
 
@@ -41,6 +43,163 @@ export function computeEffectiveBrakeFactor(config, isOpen, raceElapsedMs) {
 // Old default before D7c Phase 4 — migrate stored 0.7 → 0.95
 const LEGACY_START_SPREAD_DEFAULT = 0.7;
 
+/**
+ * PER-KEY-REJECT-1: what this store accepts, one rule per constraint.
+ *
+ * These are the SAME predicates the single `||`-chain held, negated one at a time - the set of
+ * ACCEPTED configs is unchanged, and this module's suite pins that. What changed is the
+ * CONSEQUENCE: a failing key now falls back to its own default and the other forty-two survive,
+ * where before one bad `draftingConeAngle` returned every default in the store.
+ *
+ * `isFinite` rather than `Number.isFinite` wherever the original used it - the global coerces its
+ * argument, so the two disagree on a numeric STRING. Keeping each predicate exactly as it was is
+ * the point; tightening one here would be a behaviour change smuggled inside a repair.
+ *
+ * ONE CROSS-KEY RULE: the look-before-brake re-engage margin must sit below the brake-zone
+ * multiplier, else no pass window exists. It names BOTH keys, because nothing in a stored object
+ * says which of the two is the mistake.
+ */
+export const RACE_BEHAVIOR_RULES = [
+  {
+    keys: ['startSpreadRange'],
+    ok: (c) => !(c.startSpreadRange <= 0 || c.startSpreadRange > 1),
+    why: 'it must be above 0 and at most 1',
+  },
+  {
+    keys: ['comfortThreshold'],
+    ok: (c) => !(c.comfortThreshold <= 0 || c.comfortThreshold >= 1),
+    why: 'it must be strictly between 0 and 1',
+  },
+  {
+    keys: ['softRepulsionStrength'],
+    ok: (c) => !(c.softRepulsionStrength <= 0),
+    why: 'it must be above 0',
+  },
+  { keys: ['lateralForce'], ok: (c) => !(c.lateralForce <= 0), why: 'it must be above 0' },
+  { keys: ['maxLateral'], ok: (c) => !(c.maxLateral <= 0), why: 'it must be above 0' },
+  {
+    keys: ['speedBrakeYThreshold'],
+    ok: (c) => !(c.speedBrakeYThreshold <= 0),
+    why: 'it must be above 0',
+  },
+  {
+    keys: ['speedBrakeTMultiplier'],
+    ok: (c) => !(c.speedBrakeTMultiplier <= 0),
+    why: 'it must be above 0',
+  },
+  {
+    keys: ['speedBrakeFactor'],
+    ok: (c) => !(c.speedBrakeFactor <= 0 || c.speedBrakeFactor > 1),
+    why: 'it must be above 0 and at most 1',
+  },
+  {
+    keys: ['draftingMaxDistance'],
+    ok: (c) => !(c.draftingMaxDistance <= 0),
+    why: 'it must be above 0',
+  },
+  {
+    keys: ['draftingConeAngle'],
+    ok: (c) => !(c.draftingConeAngle <= 0 || c.draftingConeAngle >= 180),
+    why: 'it must be above 0 and below 180 degrees',
+  },
+  { keys: ['draftingBoost'], ok: (c) => !(c.draftingBoost < 1), why: 'it must be at least 1' },
+  {
+    keys: ['runoutZone'],
+    ok: (c) => !(c.runoutZone < 0 || c.runoutZone > 0.2),
+    why: 'it must be between 0 and 0.2',
+  },
+  {
+    keys: ['avoidanceWarmupMs'],
+    ok: (c) => !(!isFinite(c.avoidanceWarmupMs) || c.avoidanceWarmupMs < 0),
+    why: 'it must be a finite number of milliseconds and not negative',
+  },
+  {
+    keys: ['lateralDamping'],
+    ok: (c) => !(c.lateralDamping <= 0 || c.lateralDamping >= 1),
+    why: 'it must be strictly between 0 and 1',
+  },
+  {
+    keys: ['speedMatchMinDifferential'],
+    ok: (c) => !(c.speedMatchMinDifferential <= 0),
+    why: 'it must be above 0',
+  },
+  {
+    keys: ['speedMatchSafetyMargin'],
+    ok: (c) => !(c.speedMatchSafetyMargin <= 0 || c.speedMatchSafetyMargin >= 1),
+    why: 'it must be strictly between 0 and 1',
+  },
+  {
+    keys: ['brakeHoldTimeoutFrames'],
+    ok: (c) => !!(c.brakeHoldTimeoutFrames > 0),
+    why: 'it must be above 0 frames',
+  },
+  {
+    keys: ['brakeHoldEscapeReleaseDurationFrames'],
+    ok: (c) => !!(c.brakeHoldEscapeReleaseDurationFrames > 0),
+    why: 'it must be above 0 frames',
+  },
+  {
+    keys: ['brakeHoldEscapeCooldownFrames'],
+    ok: (c) => !!(c.brakeHoldEscapeCooldownFrames > 0),
+    why: 'it must be above 0 frames',
+  },
+  {
+    keys: ['brakeReleaseDebounceFrames'],
+    ok: (c) => !!(c.brakeReleaseDebounceFrames > 0),
+    why: 'it must be above 0 frames',
+  },
+  // Layer 1 (Soft Steering): positive-float guards. Lenient by design - clearancePct and
+  // hysteresisY default to 0.0, so they allow 0; strength must be > 0.
+  {
+    keys: ['softSteeringStrength'],
+    ok: (c) => !(!isFinite(c.softSteeringStrength) || c.softSteeringStrength <= 0),
+    why: 'it must be a finite number above 0',
+  },
+  {
+    keys: ['softSteeringClearancePct'],
+    ok: (c) => !(!isFinite(c.softSteeringClearancePct) || c.softSteeringClearancePct < 0),
+    why: 'it must be a finite number and not negative',
+  },
+  {
+    keys: ['softSteeringHysteresisY'],
+    ok: (c) => !(!isFinite(c.softSteeringHysteresisY) || c.softSteeringHysteresisY < 0),
+    why: 'it must be a finite number and not negative',
+  },
+  {
+    keys: ['lookBeforeBrakePassStrength'],
+    ok: (c) => !(!isFinite(c.lookBeforeBrakePassStrength) || c.lookBeforeBrakePassStrength <= 0),
+    why: 'it must be a finite number above 0',
+  },
+  {
+    keys: ['lookBeforeBrakeReengageTMultiplier'],
+    ok: (c) =>
+      !(
+        !isFinite(c.lookBeforeBrakeReengageTMultiplier) || c.lookBeforeBrakeReengageTMultiplier < 1
+      ),
+    why: 'it must be a finite number of at least 1 - a margin below the touching distance would drop the brake past contact',
+  },
+  {
+    keys: ['lookBeforeBrakeReengageTMultiplier', 'speedBrakeTMultiplier'],
+    ok: (c) => !(c.lookBeforeBrakeReengageTMultiplier >= c.speedBrakeTMultiplier),
+    why: 'the re-engage margin must stay below the brake-zone multiplier, else no pass window exists',
+  },
+  // lookBeforeBrakeLagFrames: whole frames of worst-case closing reserved for the one-frame
+  // brake-application lag; at least 1 (the lag frame itself).
+  {
+    keys: ['lookBeforeBrakeLagFrames'],
+    ok: (c) => !(!isFinite(c.lookBeforeBrakeLagFrames) || c.lookBeforeBrakeLagFrames < 1),
+    why: 'it must be a finite number of at least 1 frame',
+  },
+  // lookBeforeBrakeMinDifferential: dedicated real-overtake bar for the LBB pass path; must be > 0
+  // (the same positivity guard as speedMatchMinDifferential).
+  {
+    keys: ['lookBeforeBrakeMinDifferential'],
+    ok: (c) =>
+      !(!isFinite(c.lookBeforeBrakeMinDifferential) || c.lookBeforeBrakeMinDifferential <= 0),
+    why: 'it must be a finite number above 0',
+  },
+];
+
 export function loadRaceBehaviorConfig() {
   pruneStoredRaceBehaviorConfig();
   const merged = resolveFromDefaults(
@@ -58,63 +217,14 @@ export function loadRaceBehaviorConfig() {
   // DEFAULT keys, so a retired stored key never enters the object at all and an absent new key is
   // already its default. Both halves are structural now, and a hand-maintained list of renamed keys
   // is exactly what this block exists to stop accumulating.
-  if (
-    merged.startSpreadRange <= 0 ||
-    merged.startSpreadRange > 1 ||
-    merged.comfortThreshold <= 0 ||
-    merged.comfortThreshold >= 1 ||
-    merged.softRepulsionStrength <= 0 ||
-    merged.lateralForce <= 0 ||
-    merged.maxLateral <= 0 ||
-    merged.speedBrakeYThreshold <= 0 ||
-    merged.speedBrakeTMultiplier <= 0 ||
-    merged.speedBrakeFactor <= 0 ||
-    merged.speedBrakeFactor > 1 ||
-    merged.draftingMaxDistance <= 0 ||
-    merged.draftingConeAngle <= 0 ||
-    merged.draftingConeAngle >= 180 ||
-    merged.draftingBoost < 1 ||
-    merged.runoutZone < 0 ||
-    merged.runoutZone > 0.2 ||
-    !isFinite(merged.avoidanceWarmupMs) ||
-    merged.avoidanceWarmupMs < 0 ||
-    merged.lateralDamping <= 0 ||
-    merged.lateralDamping >= 1 ||
-    merged.speedMatchMinDifferential <= 0 ||
-    merged.speedMatchSafetyMargin <= 0 ||
-    merged.speedMatchSafetyMargin >= 1 ||
-    !(merged.brakeHoldTimeoutFrames > 0) ||
-    !(merged.brakeHoldEscapeReleaseDurationFrames > 0) ||
-    !(merged.brakeHoldEscapeCooldownFrames > 0) ||
-    !(merged.brakeReleaseDebounceFrames > 0) ||
-    // Layer 1 (Soft Steering): positive-float guards. Lenient by design —
-    // clearancePct and hysteresisY default to 0.0, so they allow 0; strength must be > 0.
-    !isFinite(merged.softSteeringStrength) ||
-    merged.softSteeringStrength <= 0 ||
-    !isFinite(merged.softSteeringClearancePct) ||
-    merged.softSteeringClearancePct < 0 ||
-    !isFinite(merged.softSteeringHysteresisY) ||
-    merged.softSteeringHysteresisY < 0 ||
-    // Look-before-brake: pass strength must be > 0; re-engage margin must be ≥ 1 (a
-    // margin below the touching distance would drop the brake past contact) and < the
-    // brake-zone multiplier (else no pass window exists).
-    !isFinite(merged.lookBeforeBrakePassStrength) ||
-    merged.lookBeforeBrakePassStrength <= 0 ||
-    !isFinite(merged.lookBeforeBrakeReengageTMultiplier) ||
-    merged.lookBeforeBrakeReengageTMultiplier < 1 ||
-    merged.lookBeforeBrakeReengageTMultiplier >= merged.speedBrakeTMultiplier ||
-    // lookBeforeBrakeLagFrames: whole frames of worst-case closing reserved for the
-    // one-frame brake-application lag; ≥ 1 (at least the lag frame itself).
-    !isFinite(merged.lookBeforeBrakeLagFrames) ||
-    merged.lookBeforeBrakeLagFrames < 1 ||
-    // lookBeforeBrakeMinDifferential: dedicated real-overtake bar for the LBB pass path;
-    // must be > 0 (same positivity guard as speedMatchMinDifferential).
-    !isFinite(merged.lookBeforeBrakeMinDifferential) ||
-    merged.lookBeforeBrakeMinDifferential <= 0
-  ) {
-    return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
-  }
-  return merged;
+  const { config, rejected, storeDefects } = applyKeyRules(
+    merged,
+    DEFAULT_RACE_BEHAVIOR_CONFIG,
+    RACE_BEHAVIOR_RULES
+  );
+  reportRejectedKeys(KEYS.RACE_BEHAVIOR_CONFIG, rejected);
+  reportStoreDefects(KEYS.RACE_BEHAVIOR_CONFIG, storeDefects);
+  return config;
 }
 
 /**
