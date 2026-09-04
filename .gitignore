@@ -29,7 +29,9 @@ diagnosis/
 server/data/**
 !server/data/README.md
 client/tmp/
-docs/diagnose/*.ndjson
+# AUDIT-DOCS-1 (2026-09-04): `docs/diagnose/` no longer exists — the index was archived and
+# diagnose reports live under `reports/`. Rule kept as a no-op would be a claim about a directory
+# that is gone, so it is removed with the reason rather than left to puzzle the next reader.
 # Root-level diagnostic screenshots and sweep artifacts (not part of the codebase)
 /*.png
 /sweep-*.txt

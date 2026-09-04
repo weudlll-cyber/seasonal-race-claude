@@ -275,11 +275,18 @@ See LESSONS.md L53, L65, L67, L68, L69.
 
 ### Output-Medium Convention
 
-Persistent diagnose results belong in Markdown reports under `docs/diagnose/` or in the
+Persistent diagnose results belong in Markdown reports under `reports/` or in the
 in-screen diagnose HUD — not in `console.log`. Console output is permitted for one-shot
 trace tools during active diagnosis (Stage-23 pattern: temporary, isolated commit, removed
 together with the fix). Diagnose reports are committed to the repo so that Strategic Claude
 and future sessions can read the data without running the code.
+
+*(Corrected 2026-09-04, AUDIT-DOCS-1: this said `docs/diagnose/`, which **has not existed since that
+index was archived** — `docs/archive/README.md` records it as "the index that used to live at
+`docs/diagnose/README.md`". Diagnose reports go under `reports/`, in a directory `check-index`
+knows about, and every one written since has gone there. It was the only LIVE RULE still pointing at
+the old location; the other mentions are dated log rows in `AUDIT.md` and `LESSONS.md`, which are
+history and correct as such.)*
 
 Example: `archive/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
 

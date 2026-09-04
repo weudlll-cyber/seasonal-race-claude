@@ -86,3 +86,21 @@ verdict with numbers on each axis, not a list of work.
   grains, and the tree's size has no 09-01 counterpart — and **one figure that looks worse is flagged
   with its confound rather than concluded**: the client suite reads 286 s against the census's 170 s
   for 3% more tests, on a different day under different load.
+
+- [AUDIT-DOCS-1.md](AUDIT-DOCS-1.md) — **2,789 claims checked, 2 false, and the shape that keeps
+  escaping.** Five claim classes over the 40 tracked living documents — paths, commands, symbols,
+  line citations and counts — each resolved against the tree and every candidate opened by hand.
+  **0.07% false**, both under three days old, both corrected, both with one second site apiece and
+  both swept. **The previous rate (97 false at a median 43 days, then 3 in three days) has held.**
+  ★ **BOTH FALSE CLAIMS ARE ONE SEARCH SHAPE**: `docs/PROJECT-PRINCIPLES.md` pointed a live rule at
+  `docs/diagnose/`, a directory archived long ago and still correct in four dated log rows; and
+  `docs/API.md` listed `/api/surface-classes` as "missing entirely" **while documenting all five of
+  its routes two screens below** — a claim wrong in a list and right in a heading of the same file,
+  written two days earlier by the correction that fixed a larger error. ★ **THE AUTOMATIC PASS WAS
+  FOOLED THE SAME WAY THREE TIMES AND IT IS RECORDED AS THE MEASUREMENT'S OWN ERROR BAR**: documents
+  mark a removal at the SECTION level and a checker reads a LINE, so `TRACK_LIFECYCLE`, `FORCE-MAP`
+  and `ARCHITECTURE` all read as false and are all correct. ★ **UNDOCUMENTED: 76 of 284 source files
+  (27%) are named in no living document — and the ten that matter are `server/src`**, including the
+  static-file server, the data-path resolver and four route modules, which is exactly the surface
+  piece 8 must audit. Also: `.github/copilot-instructions.md` carries working rules that appear in no
+  repository document and that the reading order never reaches.
