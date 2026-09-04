@@ -86,7 +86,7 @@ export function loadFrameTimingConfig() {
  *
  * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
  */
-export function pruneStoredFrameTimingConfig() {
+function pruneStoredFrameTimingConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.FRAME_TIMING_CONFIG),
     DEFAULT_FRAME_TIMING_CONFIG

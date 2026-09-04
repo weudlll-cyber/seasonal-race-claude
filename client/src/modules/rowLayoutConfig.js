@@ -54,7 +54,7 @@ export function loadRowLayoutConfig() {
  *
  * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
  */
-export function pruneStoredRowLayoutConfig() {
+function pruneStoredRowLayoutConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.ROW_LAYOUT_CONFIG),
     DEFAULT_ROW_LAYOUT_CONFIG

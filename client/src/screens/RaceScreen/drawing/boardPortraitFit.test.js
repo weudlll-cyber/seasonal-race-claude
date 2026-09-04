@@ -22,12 +22,7 @@ import { drawStartBoard, START_BOARD_GEOMETRY } from './startBoardRendering.js';
 // copies of all four numbers — so narrowing the column in the module would have left these tests
 // asserting that the portraits fit a column that no longer exists, GREEN while the board overlapped
 // again. A test that hardcodes what it tests is the sharpest form of a duplicated fact.
-const {
-  spriteBox: SPRITE_BOX,
-  portraitFrac: PORTRAIT_FRAC,
-  cellH: CELL_H,
-  numberBox: NUMBER_BOX,
-} = START_BOARD_GEOMETRY;
+const { spriteBox: SPRITE_BOX, portraitFrac: PORTRAIT_FRAC, cellH: CELL_H } = START_BOARD_GEOMETRY;
 const BOX_W = SPRITE_BOX * PORTRAIT_FRAC;
 const BOX_H = CELL_H * PORTRAIT_FRAC;
 

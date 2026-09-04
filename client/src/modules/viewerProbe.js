@@ -640,7 +640,7 @@ function _progressOf(f) {
 }
 
 /** The verdict: every violation as an event, plus context that is never the verdict. */
-export function readViewerProbe() {
+function readViewerProbe() {
   const byInvariant = {};
   for (const e of _events) byInvariant[e.invariant] = (byInvariant[e.invariant] ?? 0) + 1;
   return {

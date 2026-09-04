@@ -61,7 +61,7 @@ export function loadBaseSpeedConfig() {
  *
  * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
  */
-export function pruneStoredBaseSpeedConfig() {
+function pruneStoredBaseSpeedConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.BASE_SPEED_CONFIG),
     DEFAULT_BASE_SPEED_CONFIG

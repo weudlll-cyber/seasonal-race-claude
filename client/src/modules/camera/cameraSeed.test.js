@@ -3,73 +3,22 @@
 // Project:     RaceArena — CAMERA-SEED-AND-LINE-1
 //
 // THE PROMISE: the same race seed gives the same camera, shot for shot; different race seeds do
-// not. The first half is the one that matters and it is the one that can pass vacuously, so it is
-// SABOTAGE-PROVED — the test is re-run against a deliberately broken derivation and must fail.
+// not. THIS FILE HOLDS THE DERIVATION HALF ONLY. The trajectory half lives in
+// `scripts/camera-seed-determinism.test.mjs`, on the real driver and a real track, and the closing
+// comment in this file records why it had to move there.
 //
-// A trajectory here is the DIRECTOR'S OWN state over a driven race, not a proxy for it: the zoom,
-// the centre and the state name, frame by frame. Two cameras that agree on all three for every
-// frame are the same camera.
+// DEAD-LINES-1 (2026-09-04) removed a 44-line `trajectory()` helper and the whole fixture that
+// existed only to feed it — a CameraDirector import, a synthetic track shape, and four constants.
+// It was never called, by anything, from the commit that introduced it (`76742cab`, where the file
+// arrives as 116 added lines). It is the BLIND hand-built fixture the closing comment below
+// describes: the one where the director rolled its dice once in 600 frames against a weight of 1,
+// so two different seeds produced identical trajectories and the assertion proved nothing. The test
+// that used it was correctly moved out; the fixture was left behind, and the header still described
+// it as though it were live.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
 import { cameraSeedForRace } from './cameraSeed.js';
-import { CameraDirector, CAM_STATE } from './CameraDirector.js';
-import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
-
-const WORLD = 4000;
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
-const FINISH_T = 1;
-
-const makeShape = () => ({
-  isOpen: true,
-  getPosition: (t) => ({ x: Math.max(0, Math.min(1, t)) * WORLD, y: 360 }),
-  getActualTrackWidth: () => 300,
-});
-
-/**
- * Drive one race with a given CAMERA seed and record the camera each frame.
- * The race itself is identical in every call — only the camera seed varies — so any difference in
- * the recording is the camera's own.
- */
-function trajectory(cameraSeed, frames = 400) {
-  const cd = new CameraDirector(
-    WORLD,
-    CANVAS_H,
-    true,
-    { ...DEFAULT_CAMERA_CONFIG },
-    36,
-    makeShape(),
-    300
-  );
-  cd.setRandomSeed(cameraSeed);
-  cd.state = CAM_STATE.OVERVIEW;
-  const out = [];
-  let ts = 1000;
-  for (let f = 0; f < frames; f++) {
-    const p = 0.05 + (0.9 * f) / frames;
-    // A field that CLUSTERS and SWAPS. The director only rolls a die when it has a choice to make,
-    // so a fixture where nobody ever contends never touches the RNG — which is exactly what the
-    // sabotage assertion below caught in the first version of this test.
-    const racers = Array.from({ length: 8 }, (_, i) => {
-      const wobble = 0.004 * Math.sin(f / 9 + i * 1.7);
-      const t = Math.max(0, p - i * 0.0015 + wobble);
-      return { index: i, t: t * FINISH_T, x: t * WORLD, y: 360 + (i - 4) * 6 };
-    });
-    cd.update(
-      racers,
-      ts,
-      // PAST the start window from frame 1: inside it the director is forced to one state and has
-      // nothing to choose, so the dice would never be rolled.
-      { finishT: FINISH_T, finishedCount: 0, raceElapsed: 20000 + f * (1000 / 60) },
-      CANVAS_W,
-      CANVAS_H
-    );
-    out.push(`${cd.zoom.toFixed(9)}|${cd.offsetX.toFixed(6)}|${cd.offsetY.toFixed(6)}|${cd.state}`);
-    ts += 1000 / 60;
-  }
-  return out.join('\n');
-}
 
 describe('CAMERA-SEED-AND-LINE-1 — the camera seed comes from the race seed', () => {
   // IF DELETED: the whole point of the block goes unguarded — a later change could return to

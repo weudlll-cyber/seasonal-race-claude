@@ -30,7 +30,7 @@ import { canonicalJson, hashWorld } from '../raceConfigWorld.js';
 export const CHECKPOINT_INTERVAL_MS = 5000;
 
 /** t values are compared at this precision; below it the two engines are the same float. */
-export const T_PRECISION = 6;
+const T_PRECISION = 6;
 
 /**
  * Content hash of a track's GEOMETRY — the shape the race is run on, nothing else.

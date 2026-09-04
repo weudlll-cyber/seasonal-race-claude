@@ -7293,7 +7293,6 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
   const EDGE = 4000 * DEFAULT_CAMERA_CONFIG.endgameThreshold; // exactly at the threshold
   const IN_EARLY = EDGE + (4000 - EDGE) * 0.2; // just inside the window
   const IN_LATE = EDGE + (4000 - EDGE) * 0.6; // well inside it
-  const BEFORE = EDGE * 0.5; // nowhere near it
 
   it('adds no camera state — CAM_STATE is still the six the framing rule describes', () => {
     expect(Object.keys(CAM_STATE)).not.toContain('RUN_IN');

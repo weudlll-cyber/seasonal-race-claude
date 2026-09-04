@@ -84,7 +84,6 @@ import {
   GUARANTEE,
   POSITION,
   corridorGuarantee,
-  pairGuarantee,
   contenderGuarantee,
   companyGuarantee,
   fieldGuarantee,
@@ -4515,7 +4514,6 @@ export class CameraDirector {
     this._updateContentionWatch(racers, raceState, ts);
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
-    const framing = framingFor(this.state);
     const stateZoom = this._stateCamZoom();
 
     // ── WHO ────────────────────────────────────────────────────────────────────────────────────

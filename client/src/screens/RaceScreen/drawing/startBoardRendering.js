@@ -323,7 +323,7 @@ export function startBoardHeading(count) {
  *
  * The caller sets font, fill and `textAlign = 'left'`; this only positions.
  */
-export function fillTracked(ctx, text, cx, y, track) {
+function fillTracked(ctx, text, cx, y, track) {
   const chars = [...text];
   let w = 0;
   for (const ch of chars) w += ctx.measureText(ch).width + track;
