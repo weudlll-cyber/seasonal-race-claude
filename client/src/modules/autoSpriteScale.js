@@ -162,7 +162,17 @@ export function getEffectiveMaxTargetScreenPx(typeOverridePx, globalMaxPx) {
   return typeOverridePx != null ? typeOverridePx : globalMaxPx;
 }
 
-/** Load config from localStorage, merging with defaults. */
+/**
+ * Load config from localStorage, merging with defaults.
+ *
+ * PER-KEY-REJECT-1 CENSUS, 2026-09-04: this store VALIDATES NOTHING, and that is left standing.
+ * It and `cameraConfig` are the two of the seven that never discarded anything, so there was no
+ * whole-object reject here to repair — and giving them rules now would mean INVENTING bounds nobody
+ * has ever stated, for keys whose only real constraint (`minScale <= maxScale`) the formula already
+ * survives by clamping. The camera store states its own version of this reasoning at length in its
+ * header; it is the same answer. A store's behaviour may differ when there is a reason, and the
+ * reason here is that nothing has ever been measured to bound these five numbers.
+ */
 export function loadAutoScaleConfig() {
   pruneStoredAutoScaleConfig();
   return resolveFromDefaults(storageGet(KEYS.AUTO_SCALE_CONFIG, null), DEFAULT_AUTO_SCALE_CONFIG);

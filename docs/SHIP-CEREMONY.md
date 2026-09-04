@@ -50,10 +50,10 @@ is inside them is arithmetic and nothing else. Regenerate with
 
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
-| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 76 |
+| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 78 |
 | tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 108 |
 | of those, files that CANNOT reach the engine | 51 |
-| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs` |
+| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/modules/storage/configReport.js`, `client/src/modules/storage/configValidate.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs` |
 
 <!-- END GENERATED: engine-reach counts -->
 
@@ -182,16 +182,16 @@ decision, not a documentation fix, and it is on the owner's list.
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
 
-**Costs below are GENERATED, never typed** — measured on commit `b1a3bb1b`, 2026-08-11 08:37 UTC, on `Testrechner`,
+**Costs below are GENERATED, never typed** — measured on commit `4f01900f`, 2026-09-04 07:11 UTC, on `Testrechner`,
 by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[ra-elapsed-ms N]`;
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
 | guard | cost |
 |---|---|
-| `scripts/fingerprint-default.mjs` — **world** | 117 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 57 s |
-| `scripts/render-fingerprint.mjs` — **render** | 54 s |
+| `scripts/fingerprint-default.mjs` — **world** | 38 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 18 s |
+| `scripts/render-fingerprint.mjs` — **render** | 21 s |
 | `scripts/check-doc-links.mjs` | 0 s |
 | `scripts/check-index.mjs` | 0 s |
 | `scripts/check-tags.mjs` | 1 s |

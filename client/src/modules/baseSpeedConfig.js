@@ -12,8 +12,29 @@
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from './storage/defaults.js';
 import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
+import { applyKeyRules } from './storage/configValidate.js';
+import { reportRejectedKeys, reportStoreDefects } from './storage/configReport.js';
 
 export { DEFAULT_BASE_SPEED_CONFIG };
+
+/**
+ * PER-KEY-REJECT-1: what this store accepts. The `normalSpeedPxPerSec` rule was ALREADY per-key —
+ * it repaired that one field and left the rest alone, which is the behaviour this whole change
+ * generalises. The min/max rule was the whole-object one; it is a CROSS-KEY rule, so it names both
+ * and reverts whichever of them the operator actually set (see `storage/configValidate.js`).
+ */
+export const BASE_SPEED_RULES = [
+  {
+    keys: ['min', 'max'],
+    ok: (c) => !(c.min <= 0 || c.min >= c.max),
+    why: 'the minimum must be above 0 and below the maximum',
+  },
+  {
+    keys: ['normalSpeedPxPerSec'],
+    ok: (c) => !(!Number.isFinite(c.normalSpeedPxPerSec) || c.normalSpeedPxPerSec <= 0),
+    why: 'it must be a finite speed above 0',
+  },
+];
 
 /** Load config from localStorage, merging with defaults. */
 export function loadBaseSpeedConfig() {
@@ -22,16 +43,14 @@ export function loadBaseSpeedConfig() {
     storageGet(KEYS.BASE_SPEED_CONFIG, null),
     DEFAULT_BASE_SPEED_CONFIG
   );
-  // Guard: min must be > 0 and < max
-  if (merged.min <= 0 || merged.min >= merged.max) return { ...DEFAULT_BASE_SPEED_CONFIG };
-  // MIGRATION: configs stored before the speed/duration ship carry only min/max. The spread
-  // above merges the new normal-speed field in; this guard also repairs a stored value that
-  // is absent, non-numeric or non-positive, so a legacy localStorage entry can never leave
-  // the game without a pace.
-  if (!Number.isFinite(merged.normalSpeedPxPerSec) || merged.normalSpeedPxPerSec <= 0) {
-    merged.normalSpeedPxPerSec = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec;
-  }
-  return merged;
+  const { config, rejected, storeDefects } = applyKeyRules(
+    merged,
+    DEFAULT_BASE_SPEED_CONFIG,
+    BASE_SPEED_RULES
+  );
+  reportRejectedKeys(KEYS.BASE_SPEED_CONFIG, rejected);
+  reportStoreDefects(KEYS.BASE_SPEED_CONFIG, storeDefects);
+  return config;
 }
 
 /** Persist config to localStorage. */
