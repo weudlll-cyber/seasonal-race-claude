@@ -122,3 +122,21 @@ verdict with numbers on each axis, not a list of work.
   built, so both startup migrations skip) — but it is a loaded gun on the race path, so it is
   **reported and not touched**. Of the twelve groups, **A3 and A4 are the only two unguarded**; A3 has
   never disagreed, A4 disagrees 24 times.
+
+- [AUDIT-DEAD-1.md](AUDIT-DEAD-1.md) — **knip says 41 dead things; after verification the number is
+  ZERO** (2026-09-04; nothing removed, because nothing was provably dead). A real tool was used —
+  **`knip`, which this repository already has a config for and which is not a dependency and not
+  installed**, a finding in itself. Its 2 unused files, 39 unused exports and 1 unused devDependency
+  all resolve to something its scope cannot see: **9 are imported by `scripts/` (it ran with
+  `cwd=client`), 1 lives on a `window` global the browser sweep reads, 3 are test-only, 1 is the
+  pre-commit hook's binary, and 18 are used INSIDE THEIR OWN FILE** — an unnecessary `export`, not
+  dead code, and left alone because twelve files including two in the engine hull is not an audit's
+  business. ★ **This confirms `DEAD-CODE-VERIFIED-1` rather than repeating it — "no importer" is not
+  "dead"**: that pass took 87 candidates to 8, this one takes 41 to 0. **ESLint: 8 warnings, 0 errors
+  — and one was MINE from the day before**, fixed; the two in `CameraDirector.js` are reported and
+  untouched because that file is the picture, and the unused `pairGuarantee` was **read before
+  reporting** and is a leftover of a deliberate replacement, not a dropped guarantee. Config keys,
+  assets, report links and lint all clean; the **14 diag scripts named nowhere** are the class
+  `DEAD-OR-ALIVE-1` settled, and its discriminator was **re-verified, not trusted**. ★ Honest holes:
+  **knip covered `client/` only — ~240 of 479 source files are unmeasured for dead exports** — and an
+  acorn AST pass **failed on all 134 JSX files** and is reported as a failure rather than hidden.

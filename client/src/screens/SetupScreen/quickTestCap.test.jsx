@@ -18,7 +18,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SetupScreen from './SetupScreen.jsx';
 import { fieldCapFor, quickTestFieldSize } from './fieldCap.js';
-import { storageSet, KEYS } from '../../modules/storage/storage.js';
+import { storageSet } from '../../modules/storage/storage.js';
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import { QUICK_TEST_NAMES } from '../../modules/racerNames.js';
 import { forbidNetwork } from '../../test/mockServerTracks.js';
