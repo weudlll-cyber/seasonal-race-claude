@@ -140,3 +140,18 @@ verdict with numbers on each axis, not a list of work.
   `DEAD-OR-ALIVE-1` settled, and its discriminator was **re-verified, not trusted**. ★ Honest holes:
   **knip covered `client/` only — ~240 of 479 source files are unmeasured for dead exports** — and an
   acorn AST pass **failed on all 134 JSX files** and is reported as a failure rather than hidden.
+
+- [AUDIT-SIZE-1.md](AUDIT-SIZE-1.md) — **RaceScreen is not the only one, and the second case is
+  worse** (2026-09-04; read-only, nothing split). The known case is confirmed precisely:
+  **`RaceScreen/index.jsx` is 1,917 lines with one importer and NO TEST THAT MOUNTS IT** — `App.test.jsx`
+  mocks it to `() => null`, and the one test in its own folder that calls `render()` mounts a **child**
+  and reads RaceScreen's source as **text**. ★ **THE CASE NOBODY HAD NAMED IS WORSE:
+  `scripts/sim-fairness.mjs` is 6,195 lines — the largest file in the repository — and `runSingleRace`
+  alone is 2,766 of them, 45% of the file and half again the whole of RaceScreen. Nothing tests it**,
+  and it is not a screen: it is the sim half of the Sim-Browser Parity Rule, the instrument every
+  fairness verdict rests on. **The two deepest nesting points in the repository (brace depth 10) are
+  these same two files** — the same finding measured a second way. Everything else large is the job or
+  is tested: `CameraDirector.js` at 5,351 has an **8,191-line test**, `defaults.js` is long because the
+  reasoning beside each value is the point, and **seven of the eight largest UI files are mounted by a
+  test** — RaceScreen is the exception and the largest. Nothing split: both headline cases change
+  behaviour a person would notice, and the second changes every fairness number this project has.
