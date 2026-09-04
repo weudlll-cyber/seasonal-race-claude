@@ -14,7 +14,10 @@ const _cache = new Map();
  * Returns null until the image is ready. Subsequent calls with the same path
  * return the same Image instance.
  *
- * @param {string} path - Absolute path from public root, e.g. '/assets/tracks/backgrounds/dirt-oval.jpg'
+ * @param {string} path - the URL to load. In the product this is always the API's background
+ *   endpoint, which `trackLoader.js` builds: `<API_BASE_URL>/api/tracks/<id>/background`.
+ *   (This example used to name a file under `/assets/tracks/backgrounds/`; that folder was emptied
+ *   on 2026-09-04 and never fed this function in the first place — DROP-DEAD-BACKGROUNDS-1.)
  * @returns {HTMLImageElement | null}
  */
 export function getBackgroundImage(path) {
