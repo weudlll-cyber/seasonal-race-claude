@@ -4,12 +4,21 @@
 
 > **⚠ THIS FILE IS NOT COMPLETE, AND UNTIL 2026-09-02 IT SAID IT WAS.** The line above read *"every
 > endpoint"*. Measured against the tree: the server mounts **eight** API routers registering **49**
-> routes, and this document describes **13**. Missing entirely: `/api/auth`, `/api/users`,
-> `/api/surface-classes`, `/api/player-groups`, `/api/brands`, `/api/racers` and `/api/seed-notices`.
+> routes, and this document describes **13** — 7 of the 8 track routes, all 5 surface-class routes,
+> and `/api/health`. Missing entirely: `/api/auth`, `/api/users`, `/api/player-groups`,
+> `/api/brands`, `/api/racers` and `/api/seed-notices`.
 > **`/api/auth` is documented in [AUTH.md](AUTH.md)**, which covers its seven endpoints correctly;
-> the others are documented nowhere. **The ownership claim is corrected rather than the gap filled**
-> — writing 36 endpoint descriptions would be completeness work, and a document that admits its
-> boundary is more useful than one that overstates it (DOC-TRUTH-2, 2026-09-02).
+> the others are documented nowhere.
+> **The ownership claim is corrected rather than the gap filled** — writing 36 endpoint descriptions
+> would be completeness work, and a document that admits its boundary is more useful than one that
+> overstates it (DOC-TRUTH-2, 2026-09-02).
+>
+> *(★ Corrected again 2026-09-04, AUDIT-DOCS-1: the missing list ALSO named `/api/surface-classes`,
+> while §Surface-Class API two screens below documents all five of its routes — and the "13" it
+> stands beside already counted them. **A claim wrong in a list and right in a heading of the same
+> file**, which is the exact search shape these passes keep missing. All three counts were
+> re-measured against the tree today and all three still hold: **8 routers, 49 routes, 36
+> undocumented**.)*
 
 The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/`.
 
