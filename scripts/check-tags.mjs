@@ -194,11 +194,18 @@ function parseLsRemote(raw) {
   return tags;
 }
 
+// INSTRUMENT-FAILS-LOUD-1 (2026-09-04): the ONLY two children in `scripts/` that talk to the
+// NETWORK, and therefore the only synchronous ones that can block without limit — git will sit on a
+// credential prompt or a dead connection forever, and `execSync` has no default timeout. 45 s, and
+// the catch below already turns a failure into a loud one. Every other child in this tree is a local
+// git or node call, which cannot wait on anything but the disk.
+const REMOTE_TIMEOUT_MS = 45_000;
+
 let tags;
 try {
   const raw = TAGS_FILE
     ? readFileSync(resolve(TAGS_FILE), "utf8")
-    : execSync("git ls-remote --tags origin", { encoding: "utf8" });
+    : execSync("git ls-remote --tags origin", { encoding: "utf8", timeout: REMOTE_TIMEOUT_MS });
   tags = parseLsRemote(raw);
 } catch (e) {
   fail(
@@ -320,7 +327,7 @@ try {
   heads = parseHeads(
     HEADS_FILE
       ? readFileSync(resolve(HEADS_FILE), "utf8")
-      : execSync("git ls-remote --heads origin", { encoding: "utf8" }),
+      : execSync("git ls-remote --heads origin", { encoding: "utf8", timeout: REMOTE_TIMEOUT_MS }),
   );
 } catch (e) {
   headsError = e.message;

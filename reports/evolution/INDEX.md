@@ -788,6 +788,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over so a grep drowns the one wrong use, and **a PICTURE**, which is prose to a human and noise to
   a search. **Not a discipline failure, and not fixable by trying harder.**
 
+- [INSTRUMENT-FAILS-LOUD-1.md](INSTRUMENT-FAILS-LOUD-1.md) — **fifteen minutes of silence becomes 1.7
+  seconds and a sentence, and the class turns out to be three** (2026-09-04). The browser sweep's
+  build ran with `stdio: "ignore"` and was awaited on `exit` ALONE with no timeout and no check that
+  it produced anything — **three faults in four lines, any one of them enough.** ★ **THE OLD PROMISE
+  IS DEMONSTRATED TO HANG, not argued to**: extracted verbatim from `master` and run against a child
+  that cannot start, it never settles. Three sabotages — exits 0 writing nothing, fails with output,
+  cannot be started — now fail in **under 2 s each**, naming what was expected and what was found.
+  ★ **I COULD NOT REPRODUCE THE ORIGINAL HANG** and say so: the repair is of the CLASS, which is the
+  only honest one available when the symptom will not return. ★ **THE CLASS IS SMALLER THAN THE GREP
+  SUGGESTS — and its worst member was not the one I was sent for.** The discriminator is not "ignored
+  stdio" but **asynchronous, or reaching the network**: ~14 synchronous children cannot hang on a
+  promise, and the two `git ls-remote` calls in `check-tags.mjs` — **the only children in `scripts/`
+  that touch the network** — had no timeout at all, so a credential prompt would block a gating guard
+  forever. ★ **AND TWO DEFECTS IN MY OWN FIX, both found by running it**: `spawn` out of scope (a
+  repair for a hang that shipped a crash), and a failed build **leaking the API server** so the NEXT
+  run would fail at a login — the exact failure this file's own teardown comment describes.
+
 - [PER-KEY-REJECT-1.md](PER-KEY-REJECT-1.md) — **a bad key now costs the key, not the config; and the
   accepted set did not move by one value in 160,004** (2026-09-04; all four fingerprints unmoved, no
   migration). Five of the seven stores answered any single bad value with `return { ...DEFAULTS }` —

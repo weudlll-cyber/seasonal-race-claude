@@ -40,7 +40,8 @@
 
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { gradeRace, printSheet } from "./endgame-sheet.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -354,6 +355,105 @@ const NEWLINE = /\r?\n/;
 const SPACES = /\s+/;
 const LISTENING = /LISTEN|ABH/i;
 
+// ── AN INSTRUMENT MUST FAIL, NOT HANG (INSTRUMENT-FAILS-LOUD-1, his decision 2026-09-04) ────────
+//
+// THE INCIDENT. This sweep's first run hung for FIFTEEN MINUTES with no output at all: `dist-sweep`
+// empty, nothing listening on the app port, and nothing on the console to say so. Run by hand the
+// same build succeeds in 873 ms.
+//
+// THE MECHANISM, and there are three faults in four lines, each of which alone is enough:
+//   1. `stdio: "ignore"` on the build. A build that printed an error printed it into a void, so a
+//      failure and a slow success looked identical from outside.
+//   2. `build.on("exit")` was the ONLY listener. A child that fails to START emits `error`, and on
+//      some paths never `exit` — so the promise could never settle and the run waited forever. There
+//      was no timeout either, so "forever" meant exactly that.
+//   3. NOTHING CHECKED THAT THE BUILD PRODUCED ANYTHING. Exit 0 was taken as "the bundle is there",
+//      and the next step was a 60-second wait on a preview server that had nothing to serve.
+//
+// ★ I COULD NOT REPRODUCE THE ORIGINAL HANG, and say so rather than claiming a diagnosis: the build
+// succeeds here every time it is run. So this fixes the CLASS — every way that spawn can fail
+// silently — rather than the one instance, which is the only honest repair available when the
+// symptom will not come back on demand.
+//
+// A HANG LOOKS LIKE PATIENCE. That is the whole reason this is worth four extra lines: a run that
+// fails in 2 seconds costs 2 seconds, and a run that hangs costs however long it takes a person to
+// lose confidence in it — which on 2026-09-03 was fifteen minutes of his evening.
+
+/** Live output is worth more than captured output when the failure mode is a HANG: a stalled build
+ *  shows you the last thing it managed to say. Kept per-child too, so a later failure can quote it. */
+const TAILS = new Map();
+function watch(child, what, echo = false) {
+  TAILS.set(what, []);
+  const take = (chunk) => {
+    const t = TAILS.get(what);
+    for (const line of String(chunk).split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      t.push(line);
+      if (t.length > 40) t.shift();
+      if (echo) console.log(`    [${what}] ${line}`);
+    }
+  };
+  child.stdout?.on("data", take);
+  child.stderr?.on("data", take);
+  child.on("error", (e) => take(`spawn failed: ${e.message}`));
+  return child;
+}
+
+/** The last few lines a child managed to say, for a message that would otherwise name only a URL. */
+function tailOf(what) {
+  const t = TAILS.get(what) ?? [];
+  return t.length ? `\n  what ${what} said:\n    ${t.slice(-12).join("\n    ")}` : `\n  (${what} said nothing at all, which is itself the finding)`;
+}
+
+// Three minutes. The build takes ~1 s by hand and ~40 s cold on this machine, so this is not a
+// performance budget — it is the line past which waiting has stopped being reasonable and the run
+// should say so instead of continuing to wait.
+const BUILD_TIMEOUT_MS = Number(ARG("build-timeout-ms", "180000"));
+
+async function runBuild(spawn, outDir, apiPort) {
+  // Delete first, so "the build produced nothing" cannot be satisfied by a bundle an EARLIER run
+  // left behind. Without this the check below would pass on a stale `dist-sweep` and the sweep would
+  // measure yesterday's bundle while reporting today's — a worse failure than the hang, because it
+  // returns numbers.
+  rmSync(outDir, { recursive: true, force: true });
+
+  const t0 = Date.now();
+  const build = spawn(
+    "npx",
+    ["vite", "build", "--outDir", "dist-sweep"],
+    { cwd: join(ROOT, "client"), env: { ...process.env, VITE_API_URL: `http://localhost:${apiPort}` }, shell: true, stdio: ["ignore", "pipe", "pipe"] }
+  );
+  watch(build, "the sweep build", true);
+
+  await new Promise((res, rej) => {
+    const timer = setTimeout(() => {
+      try { build.kill(); } catch { /* already gone */ }
+      rej(new Error(`the sweep build did not finish within ${(BUILD_TIMEOUT_MS / 1000).toFixed(0)} s.${tailOf("the sweep build")}`));
+    }, BUILD_TIMEOUT_MS);
+    // BOTH events, and that is the fix for the hang: `error` fires when the child cannot be started
+    // at all, and on that path `exit` may never come.
+    build.on("error", (e) => { clearTimeout(timer); rej(new Error(`the sweep build could not be started: ${e.message}`)); });
+    build.on("exit", (c) => {
+      clearTimeout(timer);
+      c === 0 ? res() : rej(new Error(`the sweep build exited ${c}.${tailOf("the sweep build")}`));
+    });
+  });
+
+  // EXIT 0 IS NOT A BUNDLE. Name what was expected and what was found, because "empty dist-sweep"
+  // was the actual state on the night this was filed and nothing said it.
+  const entry = join(outDir, "index.html");
+  if (!existsSync(entry)) {
+    const found = existsSync(outDir) ? readdirSync(outDir) : null;
+    throw new Error(
+      `the sweep build exited 0 but produced no bundle.\n` +
+      `  expected: ${entry}\n` +
+      `  found:    ${found === null ? `${outDir} does not exist` : found.length ? found.join(", ") : "an empty directory"}` +
+      tailOf("the sweep build")
+    );
+  }
+  console.log(`  built in ${((Date.now() - t0) / 1000).toFixed(1)}s -> ${outDir}`);
+}
+
 async function startStack() {
   const { spawn } = await import("node:child_process");
   const { randomUUID } = await import("node:crypto");
@@ -390,23 +490,15 @@ async function startStack() {
     }
   }
 
-  const api = spawn("npm", ["start"], { cwd: join(ROOT, "server"), env, shell: true, stdio: "ignore" });
-  const outDir = join(ROOT, "client", "dist-sweep");
-  const build = spawn(
-    "npx",
-    ["vite", "build", "--outDir", "dist-sweep"],
-    { cwd: join(ROOT, "client"), env: { ...process.env, VITE_API_URL: `http://localhost:${apiPort}` }, shell: true, stdio: "ignore" }
-  );
-  await new Promise((res, rej) => {
-    build.on("exit", (c) => (c === 0 ? res() : rej(new Error(`the sweep build exited ${c}`))));
-  });
-  const app = spawn(
-    "npx",
-    ["vite", "preview", "--outDir", "dist-sweep", "--port", String(appPort), "--strictPort"],
-    { cwd: join(ROOT, "client"), shell: true, stdio: "ignore" }
-  );
+  const api = spawn("npm", ["start"], { cwd: join(ROOT, "server"), env, shell: true, stdio: ["ignore", "pipe", "pipe"] });
+  watch(api, "the isolated API");
 
-  // Wait for both, and say WHICH one never came up rather than timing out anonymously.
+  const outDir = join(ROOT, "client", "dist-sweep");
+
+  // Wait for both, and say WHICH one never came up rather than timing out anonymously — and, since
+  // INSTRUMENT-FAILS-LOUD-1, WHAT IT SAID on the way down. A server that dies at boot used to leave
+  // a 60-second silence and one sentence naming a URL; the cause was in the stderr this run threw
+  // away.
   const wait = async (url, what) => {
     for (let i = 0; i < 120; i++) {
       try {
@@ -417,20 +509,43 @@ async function startStack() {
       }
       await new Promise((r) => setTimeout(r, 500));
     }
-    throw new Error(`${what} never answered at ${url}`);
+    throw new Error(`${what} never answered at ${url} within 60 s.${tailOf(what)}`);
   };
-  await wait(`http://localhost:${apiPort}/api/auth/setup-needed`, "the isolated API");
-  await wait(`http://localhost:${appPort}/`, "the sweep's preview server");
+  async function bootWait() {
+    await wait(`http://localhost:${apiPort}/api/auth/setup-needed`, "the isolated API");
+    await wait(`http://localhost:${appPort}/`, "the sweep's preview server");
+  }
 
-  // The account, created the way a first-time user creates one, against an empty data directory.
-  const needed = await (await fetch(`http://localhost:${apiPort}/api/auth/setup-needed`)).json();
-  if (needed.setupNeeded) {
-    const r = await fetch(`http://localhost:${apiPort}/api/auth/setup`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-bootstrap-token": env.RA_BOOTSTRAP_TOKEN },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!r.ok) throw new Error(`first-run setup was refused (${r.status})`);
+  let app = null;
+  // INSTRUMENT-FAILS-LOUD-1: EVERY failure below happens with the API ALREADY RUNNING, so an
+  // un-caught one leaves a node process holding port 4361 and the NEXT run fails at a login with a
+  // timeout that reads like a product defect. That exact leak is why `stop` takes the process tree
+  // explicitly, and it applies just as much to the boot path as to the teardown one — an instrument
+  // that fails loudly and then poisons the next attempt has only moved the confusion.
+  try {
+    await runBuild(spawn, outDir, apiPort);
+    app = spawn(
+      "npx",
+      ["vite", "preview", "--outDir", "dist-sweep", "--port", String(appPort), "--strictPort"],
+      { cwd: join(ROOT, "client"), shell: true, stdio: ["ignore", "pipe", "pipe"] }
+    );
+    watch(app, "the sweep's preview server");
+    await bootWait();
+
+    // The account, created the way a first-time user creates one, against an empty data directory.
+    // INSIDE the try: it can refuse, and a refusal here leaks exactly the same two processes.
+    const needed = await (await fetch(`http://localhost:${apiPort}/api/auth/setup-needed`)).json();
+    if (needed.setupNeeded) {
+      const r = await fetch(`http://localhost:${apiPort}/api/auth/setup`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-bootstrap-token": env.RA_BOOTSTRAP_TOKEN },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!r.ok) throw new Error(`first-run setup was refused (${r.status})${tailOf("the isolated API")}`);
+    }
+  } catch (e) {
+    kill([api, app]);
+    throw e;
   }
   return {
     apiPort,
@@ -438,24 +553,30 @@ async function startStack() {
     username,
     password,
     base: `http://localhost:${appPort}`,
-    // BOTH SERVERS ARE SPAWNED THROUGH A SHELL, so `p.kill()` kills the SHELL and leaves the
-    // node process holding the port. The next run then cannot bind and fails at the login with a
-    // timeout that looks like a product defect — which is exactly how this was found. On Windows
-    // the tree has to be taken explicitly; elsewhere the process group does it.
-    stop: () => {
-      for (const p of [api, app]) {
-        try {
-          if (process.platform === "win32" && p.pid) {
-            spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore", shell: true });
-          } else {
-            p.kill();
-          }
-        } catch {
-          /* already gone */
-        }
-      }
-    },
+    // ONE teardown, shared with the boot path's failure branch above (INSTRUMENT-FAILS-LOUD-1).
+    stop: () => kill([api, app]),
   };
+}
+
+/**
+ * BOTH SERVERS ARE SPAWNED THROUGH A SHELL, so `p.kill()` kills the SHELL and leaves the node
+ * process holding the port. The next run then cannot bind and fails at the login with a timeout that
+ * looks like a product defect — which is exactly how this was found. On Windows the tree has to be
+ * taken explicitly; elsewhere the process group does it.
+ */
+function kill(children) {
+  for (const p of children) {
+    if (!p) continue;
+    try {
+      if (process.platform === "win32" && p.pid) {
+        spawnSync("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore", shell: true });
+      } else {
+        p.kill();
+      }
+    } catch {
+      /* already gone */
+    }
+  }
 }
 
 /**
