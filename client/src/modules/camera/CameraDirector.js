@@ -3027,26 +3027,30 @@ export class CameraDirector {
     return this._levelHeld;
   }
 
-  _abreastContenders(ordered) {
+  /**
+   * THE GEOMETRIC LOOP ON ITS OWN — the racers who are actually level with the leader on a free
+   * lane, with NO fallback and no floor. May be one racer, and that is a real answer.
+   *
+   * WHY IT IS SPLIT OUT (ITEM7-MEMBERSHIP-1). `_abreastContenders` ends by falling back to the top
+   * two when fewer than two survive, and that fallback is a FRAMING device: it exists so the photo
+   * finish has somebody to hold. It says nothing about who can still win. The viewer sheet's item 7
+   * — "everyone still in with a chance is in frame" — was reading the fallback as if it did, and so
+   * required a racer in shot on the strength of a rule that was only ever about composition.
+   *
+   * THE LOOP IS NOT DUPLICATED. `_abreastContenders` calls this and then applies its own guards and
+   * its fallback, so there is exactly one copy of the level test and the lane test.
+   *
+   * NO CALLER IN THE CAMERA USES THIS. It is read by the probe payload, beside the director's other
+   * fields, and it changes no framing decision.
+   *
+   * @param {object[]} ordered racers sorted by `t`, leader first
+   * @returns {object[]} the survivors, leader first; possibly just the leader
+   */
+  _abreastSurvivors(ordered) {
     const tw = this._trackWidthPx;
     const leader = ordered[0];
-    if (!(tw > 0) || !leader) return ordered.slice(0, 2);
-    // ── THE RULE IS GEOMETRIC, SO WITHOUT GEOMETRY IT CANNOT BE APPLIED ───────────────────────
-    //
-    // BOTH conditions below are built from quantities the RACE puts on a racer — `pathLengthPx`,
-    // `drawnBodyLengthPx`, `drawnBodyWidthPx`. A caller that supplies none of them (a director test
-    // driving bare `{t, x, y, index}` shapes, `camera-replay`'s marker fields) would silently pass
-    // EVERY racer through both tests and frame the whole field.
-    //
-    // THAT IS NOT HYPOTHETICAL AND IT WAS NOT CAUGHT BY MEASUREMENT. Five FINISH-PAIR-1 tests went
-    // red because their fixture's third racer — sitting at t = 0.6 against a leader at 0.98, THIRTY-
-    // EIGHT PER CENT OF A LAP BACK — was being admitted as a contender. He is not one by any
-    // reading; the level condition had simply evaporated with `pathLengthPx` absent. The tests were
-    // right and this guard is the repair. Real races carry all three fields on every racer.
+    if (!leader) return [];
     const pathLen = leader.pathLengthPx ?? 0;
-    const hasGeometry =
-      pathLen > 0 && (leader.drawnBodyLengthPx ?? 0) > 0 && (leader.drawnBodyWidthPx ?? 0) > 0;
-    if (!hasGeometry) return ordered.slice(0, 2);
     const out = [];
     for (const r of ordered) {
       // ── CONDITION 1: NEARLY LEVEL WITH THE LEADER ─────────────────────────────────────────
@@ -3058,7 +3062,10 @@ export class CameraDirector {
       if (r !== leader) {
         const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
         const contactLength = CameraDirector.contactLengthBetween(leader, r);
-        if (!(contactLength > 0) || gapPx > contactLength) continue;
+        // `pathLen > 0` is tested HERE rather than relied on from the caller: `_abreastContenders`
+        // still refuses a geometry-less field before it ever gets here, but this function is also
+        // called directly and must not admit the whole grid on a zero gap.
+        if (!(pathLen > 0) || !(contactLength > 0) || gapPx > contactLength) continue;
       }
       // ── CONDITION 2: ON A FREE LANE ───────────────────────────────────────────────────────
       // Blocked by somebody ahead across the track means he would have to move aside AND then still
@@ -3075,9 +3082,44 @@ export class CameraDirector {
       }
       if (!blocked) out.push(r);
     }
+    return out;
+  }
+
+  /**
+   * THE SET THE FRAMING USES — the survivors, or the top two when fewer than two survive.
+   *
+   * UNCHANGED IN BEHAVIOUR by ITEM7-MEMBERSHIP-1: the same two guards, the same loop (now in
+   * `_abreastSurvivors`), the same fallback. What changed is that the loop's own answer is now
+   * readable without it, so a caller asking "who can still win" and a caller asking "who does the
+   * shot hold" no longer get the same array.
+   */
+  _abreastContenders(ordered) {
+    const tw = this._trackWidthPx;
+    const leader = ordered[0];
+    if (!(tw > 0) || !leader) return ordered.slice(0, 2);
+    // ── THE RULE IS GEOMETRIC, SO WITHOUT GEOMETRY IT CANNOT BE APPLIED ───────────────────────
+    //
+    // BOTH conditions in the loop are built from quantities the RACE puts on a racer —
+    // `pathLengthPx`, `drawnBodyLengthPx`, `drawnBodyWidthPx`. A caller that supplies none of them
+    // (a director test driving bare `{t, x, y, index}` shapes, `camera-replay`'s marker fields)
+    // would silently pass EVERY racer through both tests and frame the whole field.
+    //
+    // THAT IS NOT HYPOTHETICAL AND IT WAS NOT CAUGHT BY MEASUREMENT. Five FINISH-PAIR-1 tests went
+    // red because their fixture's third racer — sitting at t = 0.6 against a leader at 0.98, THIRTY-
+    // EIGHT PER CENT OF A LAP BACK — was being admitted as a contender. He is not one by any
+    // reading; the level condition had simply evaporated with `pathLengthPx` absent. The tests were
+    // right and this guard is the repair. Real races carry all three fields on every racer.
+    const pathLen = leader.pathLengthPx ?? 0;
+    const hasGeometry =
+      pathLen > 0 && (leader.drawnBodyLengthPx ?? 0) > 0 && (leader.drawnBodyWidthPx ?? 0) > 0;
+    if (!hasGeometry) return ordered.slice(0, 2);
+    const out = this._abreastSurvivors(ordered);
     // Fewer than two survivors means nobody is contesting the line with the leader — and a field
     // with no geometry at all (a harness racer carries no physicalY) lands here too. Fall back to
     // the pair, which is master's behaviour, rather than framing one racer or the whole grid.
+    //
+    // ★ THIS IS A FRAMING DEVICE AND NOT A VERDICT ON WHO CAN WIN. Read `_abreastSurvivors` if the
+    // question is the second one; ITEM7-MEMBERSHIP-1 exists because item 7 was reading this.
     return out.length >= 2 ? out : ordered.slice(0, 2);
   }
 

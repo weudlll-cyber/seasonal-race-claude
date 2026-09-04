@@ -368,18 +368,35 @@ export function recordViewerFrame(f) {
         const chord = Math.abs(ux) * CW + Math.abs(uy) * CH;
         leadFrac = 0.5 + ((LX2 - CW / 2) * ux + (LY2 - CH / 2) * uy) / chord;
       }
-      // ITEM 7: the racers still in with a chance, by the director's OWN definition, and whether
-      // each is on the canvas. No rank cut and no threshold is added here.
-      let contOff = 0;
-      if (f.contenderIdx) {
-        for (const idx of f.contenderIdx) {
+      // ── ITEM 7 (ITEM7-MEMBERSHIP-1) ──────────────────────────────────────────────────────────
+      //
+      // THE SET GRADED IS `f.item7.member`: the survivors of `_abreastSurvivors`' geometric loop,
+      // minus every racer whose contention weight has reached 0. It is built at the payload site
+      // from two director methods and is named here so the reader knows exactly what is being asked.
+      //
+      // THE COMMENT THIS REPLACES SAID "by the director's OWN definition", AND THAT WAS FALSE.
+      // It graded `f.contenderIdx` — `_abreastContenders`, INCLUDING its fallback to the top two —
+      // while the director does not use that array in PHOTO_FINISH at all: `_framingSubjects` takes
+      // the captured `_photoFinishContenders` through `_contentionEased`, and at weight 0 a released
+      // racer sits on the leader, pulling the anchor nowhere and asking for no width. So item 7 was
+      // requiring a racer in shot that the shot itself had already let go.
+      //
+      // `contOffOld` grades the OLD set beside it, so one browser pass yields both columns and the
+      // before/after comparison is exact rather than taken across two runs.
+      const offIn = (idxList) => {
+        let n = 0;
+        if (!idxList) return 0;
+        for (const idx of idxList) {
           const r = f.racers.find((q) => q.index === idx);
           if (!r) continue;
           const X = sx(r);
           const Y = sy(r);
-          if (!(X >= 0 && X <= CW && Y >= 0 && Y <= CH)) contOff++;
+          if (!(X >= 0 && X <= CW && Y >= 0 && Y <= CH)) n++;
         }
-      }
+        return n;
+      };
+      const contOff = offIn(f.item7?.member ?? null);
+      const contOffOld = offIn(f.contenderIdx);
       _sheet.win.push({
         i,
         ms: Math.round(f.ts),
@@ -391,7 +408,13 @@ export function recordViewerFrame(f) {
         courseIn,
         leadFrac: leadFrac === null ? null : +leadFrac.toFixed(4),
         contOff,
-        contN: f.contenderIdx?.length ?? 0,
+        // The size of the GRADED set, plus how many racers the two rules each removed from what
+        // used to be graded — kept apart, because they are different reasons.
+        contN: f.item7?.member?.length ?? 0,
+        contOffOld,
+        contNOld: f.contenderIdx?.length ?? 0,
+        dropFallback: f.item7?.byFallback ?? 0,
+        dropWeight: f.item7?.byWeight ?? 0,
         state: f.state,
       });
       if (_sheet.deadline === null)
