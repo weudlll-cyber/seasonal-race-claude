@@ -336,6 +336,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DIRT-OVAL-OFFCANVAS-1.md](DIRT-OVAL-OFFCANVAS-1.md) — **the contender who leaves the frame was
+  never in contention** (2026-09-04, DIAGNOSIS ONLY — nothing repaired, proposed or minted). Item 7
+  reproduced exactly on dirt-oval seed 3: **FAIL 78 frames, which is 15.1% of the 517-frame endgame
+  window**. Read from the frames: **one racer (index 36), one contiguous run (7306–7383, 1.30 s),
+  ending on the frame before the winner crosses**, leaving by the **LEFT** edge and growing from 9 px
+  to **305 px — 0.238 canvas widths — outside**, with the camera in `PHOTO_FINISH` and anchored on the
+  pair **16/36 on every one of those frames**. ★ **He is 3.66 body lengths back and
+  `withinOneLength` is FALSE on all 78 frames**; the contention watch had **released him 409 frames
+  earlier**, along with 38 others, leaving the leader as the only racer never released. He is in the
+  set because `_abreastContenders` ends `return out.length >= 2 ? out : ordered.slice(0, 2)` — nobody
+  is contesting the line, so the rule names second place anyway so the photo finish has a pair to
+  frame, and **item 7 reads that same set and requires every member on canvas**. `hasGeometry` is
+  TRUE, so the early fallback is not involved. The arithmetic closes: at 1.012 corridors the frame
+  shows ~180 world px and the pair is 140 apart, which puts him ~0.24 canvas widths out. Step 3 gives
+  the Quick-Test settings (**Dirt Oval · horse · 40 · name set `current` · 2 laps · 3 winners · race
+  plan on · SEED 3**) and reports that **`outcome-parity.mjs` cannot prove the match** — it is
+  hard-wired to river-run/20/duck and compares two headless arms — so a field-by-field source
+  comparison is given instead and nothing was built to close the gap. **Two fields diverge**:
+  `trackSurfaceClasses` is **visual only** (its sole consumer is the trail emitter, established by an
+  uncapped four-spelling search), and **`raceActionStage` IS physics** — the gate falls back to
+  `quiet`, Quick Test sends his stored dial, so the races match only if it is still `quiet`. Three
+  files were instrumented and **all three reverted to the byte**; `CameraDirector.js` was not touched.
+
 - [IMAGE-NO-TESTS-1.md](IMAGE-NO-TESTS-1.md) — **31 server test files left the image, and it is 31 and
   not 29** (2026-09-04; piece 1 changes `.dockerignore` only, piece 2 is report-only). `COPY
   server/src/` and `COPY server/utils/` take the directories whole and this repository keeps a test
