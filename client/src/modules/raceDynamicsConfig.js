@@ -165,39 +165,50 @@ export const RACE_DYNAMICS_RULES = [
       ),
     why: 'it must be a number between 0.10 and 0.60, the measured chain-world plateau',
   },
-  // ── choreoOutcomeStart - the PULK/OUTCOME seam. Shipped 0.60. ─────────────────────────────────
+  // ── choreoOutcomeStart — the PULK/OUTCOME seam. Shipped 0.60. ─────────────────────────────────
   //
-  // ★★ TWO NUMBERS HERE, AND THEY ARE DELIBERATELY DIFFERENT.
+  // ★★ THE BOUND IS 0.60, AND THIS IS THE LINE THAT SAYS WHY.
   //
-  //   THE ACCEPTED RANGE IS [0.25, 0.60], and the Dev Screen's slider enforces it. THE TOP IS
-  //   0.60 BECAUSE THAT IS THE EDGE OF WHAT HAS BEEN MEASURED, not because the mechanism stops
-  //   there. The mechanism's wall is 0.70 - `choreoResolveB3` is a fixed 0.70, so B3's settling
-  //   window `[this, 0.70]` is ZERO wide there - and SWEEP 2 measured 0.70 as holding the gate on
-  //   3 of 4 tracks. But SWEEP 2 is 2026-07-17, before the speed-150 re-baseline, COMBO15,
-  //   gap-reroll's flip and the B2 attackers at count 3. NOTHING ABOVE 0.60 HAS BEEN MEASURED ON
-  //   THE TREE THAT SHIPS. The owner raised the slider to 0.70 on 2026-09-03 and REVERSED IT ON
-  //   2026-09-04 for exactly that reason.
+  //   THE TOP IS 0.60 BECAUSE THAT IS THE EDGE OF WHAT HAS BEEN MEASURED ON THE TREE THAT SHIPS.
+  //   IT IS NOT A LIMIT OF THE MECHANISM. The mechanism's wall is 0.70 — `choreoResolveB3` is a
+  //   fixed 0.70, so B3's OUTCOME settling window `[this, 0.70]` is ZERO wide there — and SWEEP 2
+  //   measured 0.70 as holding the band-reach gate on 3 of 4 tracks. A reader who checks the
+  //   mechanism will therefore find 0.70 and conclude this bound is too tight. IT IS NOT, and the
+  //   reason is the date: SWEEP 2 is 2026-07-17, from a world that no longer exists. The speed-150
+  //   re-baseline, COMBO15, gap-reroll's flip and the B2 attackers at count 3 all landed after it.
+  //   NOTHING ABOVE 0.60 HAS BEEN MEASURED ON TODAY'S TREE.
   //
-  //   THIS LOADER STILL TOLERATES UP TO 0.70. Until 2026-09-04 that was load-bearing and said so:
-  //   the slider stood at 0.70 for a day, so a stored 0.65 is reachable, and this validator
-  //   discarded the WHOLE OBJECT on any failure - tightening the bound would have thrown away an
-  //   operator's brake, boost, intensity and attacker count to correct one key. **PER-KEY-REJECT-1
-  //   REMOVED THAT COST.** A rejected key now falls back to its own default alone and the operator
-  //   is told which one. So the tolerance is no longer protecting anything, and whether to tighten
-  //   it to 0.60 is now a plain question about the bound rather than a hostage situation.
+  //   ★ SO: DO NOT RAISE THIS WITHOUT A MEASUREMENT ON TODAY'S TREE. Re-running SWEEP 2 is 16
+  //   configs x 100 races. If it says 0.70 still holds, this bound may move and this comment moves
+  //   with it. Reading `choreoResolveB3` and concluding 0.70 is exactly the step that was taken on
+  //   2026-09-03 and reversed by the owner on 2026-09-04.
   //
-  // ★ THIS BOUND AND THE DEV SCREEN'S MUST STILL MOVE TOGETHER. It was 0.6 here while the widget
-  // was being raised to 0.70. A widget that can write a value its loader rejects is a control that
-  // silently does nothing - which is a smaller fault than it was, but still a fault.
+  // ── WHY IT WAS 0.70 UNTIL NOW, AND WHY THAT REASON IS GONE (LOADER-BOUND-060-1) ───────────────
+  //
+  //   This loader tolerated 0.70 DELIBERATELY, and said so. The slider stood at 0.70 for a day
+  //   (SLIDER-HEADROOM-1, reversed by SLIDER-BOUND-060-1), so a stored 0.65 is reachable — and this
+  //   validator used to discard the WHOLE OBJECT on any failure. Tightening the bound would have
+  //   thrown away an operator's brake, boost, intensity and attacker count in order to correct one
+  //   key they could no longer set. THE TOLERANCE WAS PROTECTING PEOPLE FROM THE VALIDATOR, NOT
+  //   FROM THE VALUE.
+  //
+  //   PER-KEY-REJECT-1 removed that cost on 2026-09-04: a rejected key falls back to its own default
+  //   alone, every other key survives, and the operator is told which one. So a stored 0.65 now
+  //   costs exactly the 0.65 — replaced by 0.60, which is the value the product ships and the value
+  //   the slider has offered since the reversal. Nothing else in the config moves.
+  //
+  // ★ THIS BOUND AND THE DEV SCREEN'S MUST MOVE TOGETHER, and they are both 0.60 now. It was 0.6
+  // here while the widget was being raised to 0.70, which is how a control that silently does
+  // nothing gets built: a widget that can write a value its loader rejects.
   {
     keys: ['choreoOutcomeStart'],
     ok: (c) =>
       !(
         typeof c.choreoOutcomeStart !== 'number' ||
         c.choreoOutcomeStart < 0.25 ||
-        c.choreoOutcomeStart > 0.7
+        c.choreoOutcomeStart > 0.6
       ),
-    why: 'it must be a number between 0.25 and 0.70',
+    why: 'it must be a number between 0.25 and 0.60 — 0.60 is the edge of what has been MEASURED on the tree that ships, not a limit of the mechanism',
   },
   // Front-act window. `contestWindowStart` must sit inside the OUTCOME act it measures: after
   // OUTCOME begins and strictly before the release, else the measurement window is empty or spans a
