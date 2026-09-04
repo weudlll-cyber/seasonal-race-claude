@@ -198,7 +198,7 @@ export function drawEditorTrackSurface(ctx, shape, effZoomX = 1, effZoomY = 1) {
  * @param {{x:number,y:number}} pOuter  the other
  * @param {number} fwdAngle  the track's forward direction at the line, in world radians
  */
-export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY) {
+function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY) {
   const dx = pOuter.x - pInner.x;
   const dy = pOuter.y - pInner.y;
   const span = Math.hypot(dx, dy);

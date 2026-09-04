@@ -219,7 +219,7 @@ export function feasibleTiming(
 // checkpoint (hero-privilege; the standard B2 0.80 resolve does not apply). Peak timing is drawn from the
 // config window, clamped feasible. `idx` varies the jitter per attacker so two attackers don't peak in
 // lockstep. null = infeasible (climb+fall can't fit the runway). ─────────────────────────────────────
-export function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, config, seed, idx) {
+function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, config, seed, idx) {
   const ap = config.anchorProgress;
   const bc = config.b2AttackResolveProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress;
   if (maxRankRate <= 0) return null;
@@ -373,15 +373,7 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
 }
 
 // ── Casting (A6/A7): assign 2–4 heroes + a feasible story to each. Seeded, jittered (anti-repetition). ─
-export function castHeroes(
-  rng,
-  postChaos,
-  finalRanks,
-  drama,
-  finishT,
-  seed,
-  config = GENERATOR_CONFIG
-) {
+function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = GENERATOR_CONFIG) {
   const n = postChaos.length;
   const stateOf = new Map(postChaos.map((p) => [p.index, p]));
   const winnerIdx = [...finalRanks.entries()].find(([, r]) => r === 1)?.[0];
@@ -511,7 +503,7 @@ export function castHeroes(
 
 // ── Camera plan (A8): forward-looking cast + roles + beat timing for the camera director, shaped to
 // EXTEND the existing updateRacePlan(b1Indices) channel (backward-compatible Set + richer beats). ──
-export function buildCameraPlan(cast, curves, finalRanks) {
+function buildCameraPlan(cast, curves, finalRanks) {
   const b1Indices = new Set(
     [...finalRanks.entries()].filter(([, r]) => r <= BAND_EDGES[0]).map(([i]) => i)
   );

@@ -12,7 +12,7 @@
 // ============================================================
 
 /** Convert a #rrggbb hex to an rgba() string with the given alpha; falls back to a pale blue. */
-export function hexToRgba(hex, a) {
+function hexToRgba(hex, a) {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(200,216,232,${a})`;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

@@ -151,14 +151,41 @@ deleted** — and the honest measurement method is written down in the commit fo
 
 ---
 
+**Piece 4b — the dead code is gone, and the audit's figure of 18 was right.** `clean(DEAD-LINES-1)`.
+
+**ESLint: 8 warnings → 0.** Both `CameraDirector.js` lines removed — the unused `pairGuarantee`
+import, and `const framing = framingFor(this.state)`, whose call was checked first and is a pure
+table lookup (`return FRAMING_BY_STATE[state] ?? …`), so dropping it cannot move anything.
+
+★ **One "unused local" was a 44-line helper, and removing it cascaded.** `trajectory()` in
+`cameraSeed.test.js` was never called **by anything, from the commit that introduced it** — and the
+file's own closing comment says why: it is the BLIND hand-built fixture where the director rolled
+its dice once in 600 frames, so two different seeds gave identical trajectories and the assertion
+proved nothing. That test was correctly moved to `scripts/camera-seed-determinism.test.mjs`; the
+fixture was left behind, and removing it exposed seven more dead things that existed only to feed
+it. All gone, and the file header — which still described the helper as live — now says what the
+file actually holds.
+
+**18 exports narrowed, and the number was re-derived rather than trusted.** knip's raw 37 is not it:
+11 are alive in `scripts/`, and **two more are reached through a STRING** — `readBuildInfo` and
+`gitIdentityPaths` are called as `m.readBuildInfo()` inside a child-process script that
+`buildIdentityWorktree.test.js` generates, which no import parser can see. My first checker missed
+`gitIdentityPaths` for exactly that reason and a hand check caught it. **37 − 11 − 2 − 6 redundant
+defaults = 18.**
+
+**Nothing moved.** verify PASS 17 FAIL 0, and **all four fingerprints were run and compared against
+`docs/fingerprints.json` — world, camera, render and world-off all match**. `check-runin-frame` and
+`check-ending-frame` green too. (The values are not repeated here; the record is their one home, and
+the containment guard caught the first draft of this paragraph for writing them down.)
+
+---
+
 ## WHAT IS STILL OPEN IN THIS CHAIN
 
-4b. **The dead code** — two lines in `CameraDirector.js`, the needless exports, five unused test
-   locals. Not started. **Do not take the audit's figure of 18, or knip's 37, as the number**: 11 of
-   knip's are alive (piece 4c), and six more are redundant `default` exports sitting beside a named
-   one, which is a different question from dead code. The count is whatever survives checking each.
-5. **Why the client suite got slower** — read-only. Not started. This is open end 2 above.
-6. **What the audit could not see** — read-only, propose-only. Not started.
+**Pieces 1 to 4 are all merged.** Two remain, both read-only:
+
+5. **Why the client suite got slower** — this is open end 2 at the top. Not started.
+6. **What the audit could not see** — propose-only. Not started.
 
 ---
 

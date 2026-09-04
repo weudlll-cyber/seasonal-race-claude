@@ -485,7 +485,7 @@ describe('ONE ALPHABETICAL LIST, and the row rides along (START-BOARD-3)', () =>
     });
     const L = startBoardLayout(40, CW, CH);
     const entries = startBoardEntries(field(40));
-    const { x, y } = L.cellAt(0);
+    const { y } = L.cellAt(0);
     const midY = y + L.cellH / 2;
     const numCall = ctx.textCalls.find(
       (c) => c.t === raceNumberLabel(entries[0].raceNumber) && Math.abs(c.y - midY) < 0.5

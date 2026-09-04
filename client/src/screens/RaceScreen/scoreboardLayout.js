@@ -40,8 +40,8 @@ export const ROW_PITCH_PX = 35.333;
 export const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
 /** The fallbacks the old row spelled inline as `?? '#888'`, `?? '#444'` and `?? '#ddd'`. */
-export const RANK_TEXT_FALLBACK = '#888';
-export const RANK_BORDER_FALLBACK = '#444';
+const RANK_TEXT_FALLBACK = '#888';
+const RANK_BORDER_FALLBACK = '#444';
 export const CARD_TEXT_FALLBACK = '#ddd';
 
 /** The badge's text colour for a 1-based place. */

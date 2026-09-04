@@ -232,7 +232,7 @@ export function loadRaceBehaviorConfig() {
  * default, so an untouched key goes back to following the default. Idempotent and write-free when
  * there is nothing to drop.
  */
-export function pruneStoredRaceBehaviorConfig() {
+function pruneStoredRaceBehaviorConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.RACE_BEHAVIOR_CONFIG),
     DEFAULT_RACE_BEHAVIOR_CONFIG

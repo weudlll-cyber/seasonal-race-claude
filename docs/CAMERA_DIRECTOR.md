@@ -1037,7 +1037,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5506f28c 2026-09-03 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6e48dd31 2026-09-04 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED 2026-09-04 (DEAD-LINES-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is two DELETIONS and can move nothing**: an unused `pairGuarantee` import that was never called, and `const framing = framingFor(this.state)`, an assignment nothing read whose right-hand side was checked before the line was cut — `framingFor` is `return FRAMING_BY_STATE[state] ?? FRAMING_BY_STATE.LEADER_ZOOM`, a pure table lookup with no side effect. **All four fingerprints were run against the record and all four match**, camera and render included. Nothing was re-run; the stamp records that the dependency moved inertly.
 
 **RE-STAMPED 2026-09-03 (CONTROL-BOUNDS-1) WITHOUT RE-MEASURING, DELIBERATELY.** `camera/framingConfig.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is a COMMENT ONLY** — the paragraph over `DEFAULT_MIN_RACERS_VISIBLE` still called it "deliberately a literal rather than an import" two lines above the import, and pointed at a file that no longer carries that wording. `verify` reports the camera and render fingerprints matching the record on this tree, and its own routing reports no token change in any world-hull file. Nothing was re-run; the stamp records that the dependency moved inertly.
 

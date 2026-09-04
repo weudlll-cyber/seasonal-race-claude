@@ -29,7 +29,7 @@ export const QUICK_TEST_SEED_MIN = 1;
 export const QUICK_TEST_SEED_MAX = 9999;
 // The upper bound a TYPED seed is clamped to — kept at MAX_SAFE_INTEGER so the value survives as an
 // exact integer for mulberry32 (any larger and Number() would round it).
-export const QUICK_TEST_SEED_TYPED_MAX = Number.MAX_SAFE_INTEGER;
+const QUICK_TEST_SEED_TYPED_MAX = Number.MAX_SAFE_INTEGER;
 
 /**
  * Normalize what the user typed into the seed field.

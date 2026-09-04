@@ -20,7 +20,6 @@ import { describe, it, expect } from 'vitest';
 
 import {
   CANVAS_W,
-  CANVAS_H,
   OVERLAY_ANCHORS,
   overlayRectCssPx,
   overlayRectCssPxShipped,

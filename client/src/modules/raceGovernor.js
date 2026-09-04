@@ -85,7 +85,7 @@ function clamp(v, lo, hi) {
  * @param {number} corrStartFrac live OUTCOME-start (corridorStart) fraction
  * @returns {number} weight in [0,1]
  */
-export function governorFadeStart(pulkEndFrac, corrStartFrac) {
+function governorFadeStart(pulkEndFrac, corrStartFrac) {
   return corrStartFrac - Math.max(corrStartFrac - pulkEndFrac, MIN_FADE_SPAN);
 }
 

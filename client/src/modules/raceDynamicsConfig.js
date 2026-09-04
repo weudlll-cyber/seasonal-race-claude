@@ -254,7 +254,7 @@ export function loadRaceDynamicsConfig() {
  *
  * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
  */
-export function pruneStoredRaceDynamicsConfig() {
+function pruneStoredRaceDynamicsConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.RACE_DYNAMICS_CONFIG),
     DEFAULT_RACE_DYNAMICS_CONFIG

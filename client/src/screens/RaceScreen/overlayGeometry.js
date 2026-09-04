@@ -125,7 +125,7 @@ export function overlayRectCssPx(key, { wrapperCssW, wrapperCssH }) {
  * them off the CSS is not portable across test environments; encoding them alongside the current
  * anchors is what makes "did anything move at any size" a measurement rather than an assertion.
  */
-export const SHIPPED_ANCHORS = {
+const SHIPPED_ANCHORS = {
   brandLogoBottomRight: { rightCssPx: 16, bottomCssPx: 16, widthCssPx: 90, heightCssPx: 90 },
   stateOverlay: { bottomCssPx: 28, widthCssPx: 260, heightCssPx: 28, centered: true },
 };
