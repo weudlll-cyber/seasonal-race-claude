@@ -208,3 +208,16 @@ verdict with numbers on each axis, not a list of work.
   changes on the auth/deployment path, so **nothing was fixed** and both go to the morning sheet. The
   report keeps **exploitable / hardening / theoretical** strictly apart, and the exploitable list is
   empty.
+
+- [AUDIT-VERDICT-1.md](AUDIT-VERDICT-1.md) — **is this project clean? YES, and unusually so.** The
+  one document written for him rather than for an engineer: every piece's numbers in one table, then
+  what is clean, what is open and mechanical, what needs him ordered by the cost of leaving it, and
+  what cannot be known by this method. ★ **THE HEADLINE: 22 of 26 guards sabotaged, all 22 fired, zero
+  inert** — and `render-fingerprint`, the census's one demonstrably INERT check three weeks ago, now
+  moves on a one-pixel shift. ★ **ONE AXIS IS WORSE AND IT IS SAID FIRST**: the client suite is 286 s
+  against 170 s for 3% more tests, with its confound named. ★ **AND THE CLOSING SENTENCE, which is the
+  point of the whole chain: NOTHING WATCHES THE THING THAT DECIDES WHAT GETS WATCHED.** Every other
+  axis is held by something proved to fire; `closureOf` is not, and it sits upstream of all of them.
+  The report ends with which guards hold which axis, the seven axes nothing holds, and what will have
+  rotted in a month — documents, and only slowly, because the difference between 0.07% and 97 false
+  claims is not a guard but somebody checking.

@@ -3,181 +3,147 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-04, after the THIRD chain of the day — your two decisions on the pictures
-and the finish. **Eight pieces, eight merges across the day, master green after every one, step 12
-done each time, clean tree.** Origin holds `master` and nothing else. **Nothing was minted; no minting
-permission was given and none was needed.**
+**Last rewritten:** 2026-09-04, after THE FULL AUDIT — nine pieces, nine branches, nine merges.
+Master green after every one, step 12 done each time, clean tree. Origin holds `master` and nothing
+else. **Nothing was minted; no minting permission was given and none was needed.**
 
 ---
 
-## ★★ WHERE THE EIGHT WENT — AND THE ONE THAT DID NOT DO WHAT WAS ASKED
+## ★★ IS IT CLEAN? — YES, AND UNUSUALLY SO
 
-| | | |
+Three weeks ago an audit found things nobody knew about. **This one went looking with better tools
+and found almost nothing.** The two real findings are both about the **checking machinery**, not
+about the game.
+
+**The number that matters: of 26 guards, 22 were sabotaged and ALL 22 FIRED. Zero are inert.**
+
+| axis | measured | |
 | --- | --- | --- |
-| **6** | **the validator no longer discards a whole config over one key** | MERGED. The repair you ordered — and it **removed the reason piece 4 needed a precondition at all** |
-| **4** | **the loader's bound matches the slider's**, with the reason written at the bound | MERGED |
-| **1b** | **the duplicate-by-capital is gone** — one picture stored twice | MERGED |
-| **3** | **Quick Test obeys the track's cap** | MERGED |
-| **5** | **the sweep fails in under two seconds instead of hanging fifteen minutes** | MERGED |
-| **2** | **garden-path was NOT taken into the gate** | MERGED as a diagnosis. **Your own rule stopped it** |
-| **1a** | the five pictures were laid out for your eye | **ANSWERED — all five deleted** |
-| **7** | **the five dead client pictures are gone**, 21.32 MB to 0 | MERGED |
-| **8** | **the accepted finish behaviour is recorded beside the items** | MERGED |
+| documents | **2,789 claims checked, 2 false — 0.07%** | ✅ |
+| duplicated facts | **27 census disagreements → 0** | ✅ |
+| duplicated logic | **0.37%**, all of it in `scripts/`, none in the product | ✅ |
+| dead code | **41 candidates → 0 dead**; ESLint 8 warnings, 0 errors | ✅ |
+| tests | **320 files, 311 wired, 0 unwired**; 17 sabotages, 15 caught | ✅ |
+| guards | **22 of 26 sabotaged, 22 fired, 0 inert** | ✅ |
+| security | **0 exploitable** | ✅ |
+| size | **2 oversized things, not 1** | ⚠️ |
+
+★ **`render-fingerprint` was the census's one demonstrably INERT check — the instrument that watches
+the picture could not go red. Today a one-pixel shift in a single scoreboard row moves it.** That is
+the largest improvement in the project's checking surface, proved by sabotage rather than assumed.
+
+**⚠ AND ONE AXIS IS WORSE, said first:** the client suite takes **286 s against 170 s** three weeks
+ago, for 3% more tests. Different day, different machine load — a real confound — but it is the one
+number that moved the wrong way.
 
 ---
 
-## ★★ BOTH OF YESTERDAY'S OPEN DECISIONS ARE CLOSED
+## ★★ THE ONE THING THAT NEEDS YOU
 
-**THE FIVE PICTURES ARE GONE.** You looked at all five pairs and wanted the picture the game already
-uses in every case, so all five were deleted — **12,585,667 bytes**, and with the duplicate removed
-earlier the folder went from **21.32 MB to 0**. Reachability was re-established **uncapped** first,
-because deletion is the irreversible step: six searches, including the path built in PIECES and
-`url()`/`<img>`/`src=` across every stylesheet and markup file. **But what settles it is not a grep** —
-`trackLoader.js` builds *every* client-side background path as an API URL, and the one module that
-loads a background is fed from exactly two call sites that read that field.
+> **Nothing watches the thing that decides what gets watched.**
 
-**THE FINISH BEHAVIOUR IS ON THE RECORD.** Items 9 and 10 now say, where a reader meets them, that
-they encode an ideal you considered and rejected.
+`scripts/lib/routing.mjs` → `closureOf` decides which guards `verify` runs. **Break it and no test
+fails** — but on a diff that touches the engine hull, the plan **silently loses all three
+fingerprints**, `check-seed-versions` and `check-tags`. On exactly the change that most needs them,
+`verify` prints PASS over a plan that no longer contains them.
 
----
+`verify.test.mjs` tests the **inputs** to `closureOf` and never its **output**.
 
-## ★★ ONE NEW THING THAT NEEDS YOU
-
-**DIRT-OVAL FAILS ITEM 7 AT SEED 3 — A CONTENDER OFF CANVAS ON 78 FRAMES.** It is not one of the two
-items, it is **not accepted behaviour**, and it is the one thing an exclusion is still hiding. It fell
-out of re-reading data already measured; it is reported and **not diagnosed** — how a racer still in
-with a chance leaves the canvas for over a second is unexamined.
-
-*(Also still open from before, unchanged: whether item 2 — which measures the accepted closing-zoom
-behaviour **directly** — should carry the same acceptance note. Your acceptance named two items and
-item 2 was not one of them, so it is flagged and left to you.)*
+**Everything else in this project is held by something proved to fire. This is not, and it sits
+upstream of all of it.** Fixing it means writing one test, which is building rather than auditing —
+so it was reported, not done.
 
 ---
 
-## ★★ THE GATE STILL HAS NOT MOVED — AND NOW THE EXCLUSIONS MEAN SOMETHING DIFFERENT
+## WHAT ELSE IS OPEN AND NEEDS YOU — by the cost of leaving it
 
-Garden-path was not taken in: both its failures are real picture behaviours, and the gate runs the one
-seed where it fails both. **That still stands.** What changed is *why* the exclusion is unjustified.
-
-**It is no longer justified by a defect.** Items 9 and 10 object to the two behaviours you have now
-accepted, so the exclusion is justified by items that object to something wanted — **a different and
-weaker reason**. Widening the gate now would make it red on day one for behaviour you chose, which is
-the trap the earlier piece avoided.
-
-★ **THE THREE EXCLUDED TRACKS ARE IN THREE DIFFERENT CASES**, and a reader working from memory will
-get this wrong:
-
-| | fails | rests on the two accepted items alone? |
-| --- | --- | --- |
-| **garden-path** | items 9 and 10 at the gate's seed, and nothing else | **yes** |
-| **luger-hill** | item 2 only | **no** — same behaviour, a different item |
-| **dirt-oval** | item 2, **and item 7 at seed 3** | **no** — and item 7 is not accepted |
-
-★ And what the exclusion costs is still **not a track**: both gate tracks cross with the zoom already
-arrived, so the gate is structurally blind to these behaviours. **The lever is which RACE it runs.**
+1. **`server/src/routes/tracks.js` holds a stale copy of all ten tracks** — 85 values, **24 wrong**,
+   including `garden-path → snail` where the seed says `beetle`. That is **the exact staleness the
+   fingerprint instrument was repaired for two days ago, in a second home the repair never reached.**
+   **Proved inert today** (every seed carries the fields the startup migrations would fill), but it is
+   a loaded gun on the race path and it drifts with every seed edit.
+2. **`RaceScreen` has no test that mounts it.** 1,917 lines. Forcing its background path to null —
+   which blanks every track in the game — **passes every test.**
+3. **`scripts/sim-fairness.mjs`: 6,195 lines, one 2,766-line function, no test.** The largest file in
+   the repository and the sim half of the parity rule every fairness verdict rests on.
+4. **Two picture questions from earlier today** — should the closing zoom have arrived by the
+   crossing, and should the leader's walk survive a battle shot. Both accepted as-is.
+5. **`server/src` is documented nowhere** — ten files including the static-file server and four route
+   modules, which is exactly the surface the security piece had to audit blind.
 
 ---
 
-## ★★ THE ONE THAT CHANGED THE MOST IS THE ONE YOU ORDERED
+## ANYBODY COULD FINISH THESE — no decision needed
 
-**A single bad key used to cost an operator EVERY tuning in that store**, silently, with nothing
-naming the key that did it. Five of the seven stores did it; the dynamics store alone gated forty-odd
-keys behind one `return`.
-
-It had a second cost, and that one shaped decisions rather than storage: **a loader bound could never
-be TIGHTENED**, because tightening it confiscated everything else from anyone holding the
-newly-illegal value. **The tolerance was protecting people from the validator, not from the value.**
-
-Now a rejected key falls back to **its own default, alone**; every other key survives; and the
-console says which key, what was stored, and what is being used instead. **Then piece 4 moved the
-bound an hour later with nothing at risk.**
-
-★ **THE CENSUS CORRECTS WHERE TO LOOK.** The brief named the camera validator. **The camera store
-validates nothing at all** — the whole-object reject is in the dynamics store. Five discard
-wholesale; two never validated anything, and those two are **left alone**, because giving them rules
-would mean inventing bounds nobody has measured.
-
-★ **AND MY FIRST ATTEMPT SILENTLY CHANGED WHICH CONFIGS ARE LEGAL — 4,204 times in 60,003.** Every
-one was `NaN`: `!(x <= 0)` is **not** `x > 0`, and they differ on exactly the one value nobody
-re-reads a range check for. Caught by running the new rules against **the old chains extracted from
-`master`**, not by reading the diff. Every rule is now the literal negation of the clause it
-replaced, and the second run is **0 disagreements in 160,004**.
-
-★ **YOUR STORED CONFIG: I COULD NOT READ IT.** Reading a browser profile is blocked here, correctly,
-and that is said rather than worked around. **What replaces it is stronger than one snapshot**: these
-loaders are pure functions of the stored object, the accepted set is now proven identical, and a
-config with no failing key is returned untouched — so **any** config that loaded correctly before
-loads identically now, whatever it holds.
+1. `npm audit fix` in `server/` — **3 moderate advisories that reach the running product**
+   (`body-parser`, `qs`, both DoS-shaped, both via express).
+2. Add `USER node` to `server/Dockerfile` — **the container runs as root.**
+3. Two dead lines in `CameraDirector.js` (an unused import, an unread const) — left alone only
+   because that file is the picture.
+4. Drop the `export` keyword from 18 symbols used only inside their own file.
+5. Five unused locals in test files.
+6. Wire `knip` — its config exists, the tool is not a dependency, nothing runs it.
 
 ---
 
-## ★★ THE INSTRUMENT THAT HUNG — AND THE ONE I WAS NOT SENT FOR
+## SECURITY, IN ONE PARAGRAPH
 
-The sweep's build ran with its output discarded, was awaited on `exit` **alone** with no timeout, and
-nothing checked that it had produced anything — **three faults in four lines**, any one enough. Three
-sabotages now fail in **under two seconds each**, naming what was expected and what was found.
-
-★ **The old promise is DEMONSTRATED to hang**, not argued to: extracted from `master` and run against
-a child that cannot start, it never settles.
-
-★ **I could not reproduce the original fifteen minutes**, and say so rather than dressing a guess as
-a diagnosis. The repair is of the **class** — the only honest one available when the symptom will not
-come back on demand.
-
-★ **THE CLASS IS SMALLER THAN THE GREP SUGGESTS, AND ITS WORST MEMBER WAS NOT THE ONE I WAS SENT
-FOR.** The discriminator is not "ignored stdio" but **asynchronous, or reaching the network**. The
-two `git ls-remote` calls in `check-tags.mjs` — the only children in `scripts/` that touch the
-network — had **no timeout at all**, so a credential prompt would block a gating guard indefinitely.
-Bounded now. Roughly fourteen synchronous children cannot hang on a promise and are not members.
-
-★ **AND TWO DEFECTS IN MY OWN FIX, both found by RUNNING it and neither by reading it**: `spawn` out
-of scope — a repair for a hang that shipped a crash — and a failed build **leaking the API server**,
-so the next run would have failed at a login with a timeout that reads like a product defect. That is
-word for word the failure that file's own teardown comment already describes.
+**Nothing is exploitable today.** Measured against a live isolated server: all seven non-public
+routers return **401** unauthenticated — **including the four that did not exist when the auth work
+was done**, which inherit the global guard rather than opting in. Path traversal **404s on every
+shape tried**. A foreign-origin mutating request gets **403**. The login limiter fires at the tenth
+attempt. The cookie is HttpOnly, SameSite=Lax, Secure-in-production, `__Host-` named when Secure is
+guaranteed. **No secret has ever been committed** — `users.json` never, no keys or tokens in the
+history, and the one `.env.example` held a placeholder and was deleted. Session invalidation was
+verified **by sabotage**, not by reading. The two hardenings are in the list above.
 
 ---
 
-## ★ THE SMALLER THREE
+## ★ WHAT NOTHING HOLDS — the honest list
 
-**QUICK TEST NOW OBEYS THE TRACK.** It capped its own roster at a hardcoded number whatever the track
-was, so a Quick Test could start a field the Start button had just learned to refuse. It reads the
-same authority now, through **one** expression — so the piece **removed a copy rather than adding
-one**. Two halves, mirroring the Start button: the input stops at the cap, **and** the field is still
-checked, because switching the quick track from an open one to a closed one reaches an over-cap field
-with no control misused. **Told, not tidied.** ★ Green on the first run proves nothing, so it was
-sabotaged: **a clamp-only implementation looks like a fix and fails exactly the three specs that
-matter.**
+These rot silently because no machine watches them:
 
-**THE DUPLICATE PICTURE IS GONE.** Same sha256, same byte count, two spellings of one name — the same
-name to Windows and a different name to git. The lowercase copy in the seeds is kept: it is the one
-the API serves, it matches every other filename in both directories, and the client copy was read by
-nothing.
+1. **the routing machinery itself** (above)
+2. **the `tracks.js` literal** — no rule compares it to the seeds
+3. **prose claims in documents** — the mechanical classes are guarded; a sentence is not
+4. **dead exports** — `knip` is configured and unwired
+5. **file and function size** — nothing notices growth
+6. **container hardening and dependency advisories** — the daily audit reports, nothing gates
+7. **`surfaceClasses` arrays** — Rule A is scalars-only by its own declaration
 
-**AND RULE F CAUGHT MY OWN EDIT AGAIN**, the second time in two days. Inserting lines into
-`SetupScreen.jsx` shifted three paired citations in `branding.md` off their targets — and reading them
-showed they were **already wrong in intent**, passing only because a symbol happened to fall inside a
-line range. Re-anchored to the code their sentences are actually about, rather than re-pointed at a
-fresh coincidence.
+**Everything else looks after itself.** The race cannot move without a fingerprint saying so; a route
+cannot join without a role; a report cannot land unindexed; an artwork byte cannot change in silence.
+Three of those guards fired unprompted during this audit.
 
----
-
-## ★ WHAT NONE OF THIS COVERS
-
-- **Four seeds per track, not forty**, behind every garden-path claim. The nightly sweep would settle
-  the battle-shot hypothesis and how often the late photo-finish happens.
-- **The `NaN` hole in the config validators is PRESERVED on purpose.** The old chains accepted it and
-  so do these. It is unreachable through storage — `JSON.stringify(NaN)` is `null` — and tightening
-  it is its own decision, not a side effect of this one.
-- **The five diag runners still have no `error` handler.** They terminate rather than hang, so that is
-  a message improvement and not a hang removal.
-- **Nothing was minted, and nothing needed to be.** All four fingerprints match the record after every
-  piece that could reach them, run rather than argued from routing.
+**What will have rotted in a month: documents, and only slowly.** The rate is 0.07% today and was 97
+false at a median of 43 days three weeks ago — **the difference is not a guard, it is that somebody
+has been checking.** The unguarded shape is the one both of today's findings had: *a term used
+correctly thirty times and wrongly once.*
 
 ---
 
-## THE PREVIOUS CHAIN — 2026-09-04, EARLIER
+## ★ WHAT THIS AUDIT COULD NOT KNOW
 
-The fifteen pieces of the first chain are recorded in `reports/evolution/`, and their five open
-decisions (A–E) are the ones this chain closed: **A** is the five pictures above, still yours; **B**
-was the gate; **C** was Quick Test and the four maxima; **D** was the stored 0.65; **E** was the
-instrument that hung. **B through E are done.**
+- **Prose has no denominator.** The 0.07% covers paths, symbols, counts, commands and line citations.
+- **17 mutations is a 0.3% sample**, and my choice was biased toward load-bearing lines.
+- **Dead exports were measured in `client/` only** — ~240 of 479 source files unmeasured.
+- **"Does any test assert something no other test asserts?"** was not measured at all.
+- ★ **Four of my own sabotages, and three of my first five "holes", were errors in my harness** — a
+  comment where a mutation should have been, two scopes that omitted the very test written for the
+  behaviour, an en-dash for a hyphen, and a truncated read that nearly made me report an honest
+  instrument as silent. **All named in their reports.** The corrected results all fired.
+
+---
+
+## THE NINE PIECES
+
+`reports/audit/` — `AUDIT-SCOPE-1` · `AUDIT-DOCS-1` · `AUDIT-REDUNDANCY-1` · `AUDIT-DEAD-1` ·
+`AUDIT-SIZE-1` · `AUDIT-TESTS-1` · `AUDIT-GUARDS-1` · `AUDIT-SECURITY-1` · **`AUDIT-VERDICT-1`**,
+which is the one to read if you read only one.
+
+---
+
+## STILL OPEN FROM BEFORE THE AUDIT
+
+Nothing. The five client pictures were deleted on your word, the finish behaviour is recorded beside
+the items that object to it, and the gate stayed as it was.
