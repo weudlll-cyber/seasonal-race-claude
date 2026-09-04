@@ -173,3 +173,20 @@ verdict with numbers on each axis, not a list of work.
   only counts once the mutation is shown to change behaviour AND the scope is shown to contain the
   test that should care**; both surviving misses were put through that. Also verified in passing:
   **disabling the session-epoch check IS caught**, which piece 8 inherits as fact rather than claim.
+
+- [AUDIT-GUARDS-1.md](AUDIT-GUARDS-1.md) — **22 of 26 guards sabotaged, ALL 22 FIRED, ZERO inert**
+  (2026-09-04; every revert proved byte-identical). ★ **`render-fingerprint` was the census's one
+  DEMONSTRABLY INERT check three weeks ago — it is not any more**: a one-pixel shift in a single
+  scoreboard row moves it `733b3f10…` → `2f46d07e…`. **All three fingerprints fire and were proved in
+  BOTH directions** — sabotage moves the hash, revert returns it exactly (`world` 0.6→0.55 gives
+  `00e4ff00…`, `camera` gives `3d517407…`). ★ **No instrument hardcodes the track set any more** — the
+  defect `FINGERPRINT-TRACK-DEFAULTS-1` repaired has no second site across all 197 `scripts/` modules.
+  Of the four not sabotaged, **three fired within this session anyway** (`ceremony-counts` naturally on
+  `PER-KEY-REJECT-1`; the three suites went red 15 times in piece 6), and the fourth —
+  `check-hooks-installed` — is named as **COULD NOT BE SABOTAGED SAFELY**, because its assertion is
+  that *git will run the hook*, and testing it means editing git config on his machine unattended.
+  **Demonstrably load-bearing: 85% measured, 100% including the inferred — both numbers given, because
+  one is a measurement and one is not.** ★ And **four of my own sabotages were wrong before they were
+  right** — an en-dash for a hyphen, a pattern in the wrong section of `TAGS.md`, a mutation in a path
+  node cannot reach, and a truncated read that nearly made me report an honest instrument as silent.
+  All named.
