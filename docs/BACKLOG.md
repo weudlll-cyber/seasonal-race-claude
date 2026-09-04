@@ -318,6 +318,71 @@ previous subject into the run-in.
 
 ---
 
+## THE HYGIENE PHASE IS CLOSED (2026-09-04)
+
+**The audit is finished, both of its open ends are closed, and the next thing to happen here is the
+game.** This section is a STATE, not work: it records what the phase established so nothing has to be
+remembered, and it proposes nothing. Full record:
+[reports/audit/AUDIT-VERDICT-1.md](../reports/audit/AUDIT-VERDICT-1.md) with its two corrections,
+[reports/evolution/CLOSE-AUDIT-CHAIN-1.md](../reports/evolution/CLOSE-AUDIT-CHAIN-1.md) and
+[reports/evolution/IMAGE-NO-TESTS-1.md](../reports/evolution/IMAGE-NO-TESTS-1.md); the day-to-day
+version is [MORNING.md](MORNING.md).
+
+### The axes the audit found CLEAN
+
+Duplicated facts (27 census disagreements → 0) · duplicated logic (0.37%, all in `scripts/`, none in
+the product) · dead code · wired tests (320 files, 0 unwired) · security (0 exploitable) ·
+mechanical document claims (2,789 checked, 2 false).
+
+### What is held by a guard that PROVABLY FIRES
+
+**22 of 26 guards were sabotaged and all 22 went red; 0 are inert.** In particular: the race cannot
+move without a fingerprint saying so, and `render-fingerprint` is no longer the exception — a
+one-pixel scoreboard shift moves it. A route cannot join without a role. A report cannot land
+unindexed. An artwork byte cannot change without its seed version being raised. **And since
+2026-09-04 the ROUTER's output is held too** — a track seed selecting the three fingerprints is
+asserted, where two one-token sabotages used to pass all 44 tests.
+
+### ★ WHICH AXES NOTHING HOLDS — the sentence that matters
+
+- **Documents rot, and only a person catches it.** The mechanical classes are guarded; **a sentence
+  is not, and cannot be** — prose has no enumerable population, so there is no denominator to check
+  against. The rate is 0.07% today and was 97 false claims at a median age of 43 days three weeks
+  ago. **The difference is not a guard. It is that somebody has been checking.** The one route that
+  would work is converting claims into a checkable form, so the count measures adoption rather than
+  truth; that is continuous discipline, not a project.
+- **File and function growth is watched by nothing.** `sim-fairness.mjs` reached 6,195 lines with a
+  2,766-line function and no instrument noticed, because none is looking.
+- **Dependency advisories** are reported daily and gate nothing.
+- **`.dockerignore` — the file that decides what the image contains — is held by no guard.** Nothing
+  routes on it and `check-container-paths` does not read it (IMAGE-NO-TESTS-1).
+- **`surfaceClasses` arrays** are outside `check-fallback-agreement` RULE A, which is scalars-only by
+  its own declaration.
+
+### What remains open — by name, with no verdict on any of it
+
+**Listed so nothing has to be remembered. Whether any of it is worth doing is his call, and none of
+these carries a recommendation.**
+
+1. **`RaceScreen` has no test that mounts it.** 1,917 lines. Forcing its background path to `null` —
+   which blanks every track background in the game — passes every test in its own directory and
+   `App.test.jsx`. See the existing section *`RaceScreen` is not testable* below, which is the
+   evidence for it.
+2. **`scripts/sim-fairness.mjs` is 6,195 lines with a 2,766-line function and no test.** **It is NOT
+   product code and is on no product path** — nothing the game runs imports it. It is, however, **a
+   declared `reach` entry of the world fingerprint**, so it is inside that instrument's dependency
+   set and a change to it selects the fingerprint.
+3. **dirt-oval fails gate item 7 at seed 3** — a contender off canvas on 78 frames. **This is NOT
+   accepted behaviour**: the accepted finish covers the late photo-finish zoom and the battle shot by
+   name, and this is neither. It is the one real thing a track exclusion still hides.
+4. **42 unconsumed exports in the trees the audit did not measure** — `scripts/` 37, `server/` 5,
+   `shared/` 0. Measured, not acted on: two `client/` candidates turned out to be reached through a
+   string a test generates at runtime, so each of the 42 needs that check individually.
+5. **Gate item 2 measures the finish behaviour he accepted, under a different name**, and
+   **luger-hill's exclusion rests on it.**
+
+---
+
 ## THE REST — open, in the order they were already in
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
