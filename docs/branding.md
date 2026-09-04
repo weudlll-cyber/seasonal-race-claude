@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `handleQuickTest`](../client/src/screens/SetupScreen/SetupScreen.jsx#L501-L524)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L709-L734)):
 
 ```
 Branding: None ▼
@@ -166,7 +166,7 @@ The canvas carrier chain in full:
    ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L181-L185)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `speedMultiplier`](../client/src/screens/SetupScreen/SetupScreen.jsx#L457-L499)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L665-L700)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 
@@ -321,7 +321,7 @@ These items are **not** visible in the browser today.
 | **Per-race sponsor overlay on/off**  | `BrandingProfiles.jsx` UI copy mentions "Sponsor Overlay — whether to show your sponsor branding during races" ([`BrandingProfiles.jsx:133–134`](../client/src/screens/DevScreen/sections/BrandingProfiles.jsx#L133-L134)), but no toggle field exists on the profile schema and SetupScreen has no control for this. The in-race logo always shows when a profile with a logo is active; there is no per-race enable/disable.                                                                                         |
 | **In-race sponsor tagline**          | `sponsorText` appears only on the ResultScreen footer. It is not rendered anywhere during the race itself (no in-race text overlay).                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Overlay position configurability** | `logoCorner` is stored on the profile and the UI copy mentions "Overlay Position" ([`BrandingProfiles.jsx:137`](../client/src/screens/DevScreen/sections/BrandingProfiles.jsx#L137)), but no position selector exists in the form. The in-race logo position is **data-driven** (`profile.logoCorner`, fallback `'bottom-right'`, [`BrandLogoOverlay.jsx:30`](../client/src/screens/RaceScreen/BrandLogoOverlay.jsx#L30)) — what is missing is a UI control to set it. The ResultScreen logo is hardcoded to top-left. |
-| **Broader UI tinting**               | The SetupScreen header ([`SetupScreen.jsx` → `duration`](../client/src/screens/SetupScreen/SetupScreen.jsx#L473) `--brand-primary`, [`SetupScreen.jsx:489`](../client/src/screens/SetupScreen/SetupScreen.jsx#L489) `--brand-secondary`) and the screen-transition overlay ([`TransitionOverlay.css:13`](../client/src/contexts/TransitionOverlay.css#L13)) already consume brand vars. Broader tinting — buttons, podium slot colors, other headers — is not wired.                                                            |
+| **Broader UI tinting**               | The SetupScreen header ([`SetupScreen.jsx` → `--brand-primary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L88) and [`SetupScreen.jsx` → `--brand-secondary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L89), set on the document root) and the screen-transition overlay ([`TransitionOverlay.css:13`](../client/src/contexts/TransitionOverlay.css#L13)) already consume brand vars. Broader tinting — buttons, podium slot colors, other headers — is not wired.                                                            |
 | **`isDefault` as activation driver** | Flag is stored and shown as a star in BrandingProfiles; it does not currently drive automatic activation. Could be wired to pre-select the default profile on SetupScreen mount.                                                                                                                                                                                                                                                                                                                                       |
 
 ---

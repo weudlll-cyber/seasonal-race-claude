@@ -14,6 +14,7 @@ import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
 import PlayerGroupPicker from './PlayerGroupPicker.jsx';
 import { sectionsOf } from './rosterGroups.js';
+import { fieldCapFor, quickTestFieldSize } from './fieldCap.js';
 import TrackSelector from './TrackSelector.jsx';
 import RaceSettings from './RaceSettings.jsx';
 import { useStorage } from '../../modules/storage/useStorage.js';
@@ -254,9 +255,10 @@ function SetupScreen() {
 
   // PLAYER-GROUPS-1: the field cap, resolved ONCE. It was computed inline at the one place that
   // needed it; two components need it now, and two copies of a `??` chain is how they drift apart.
-  const effectiveMaxPlayers = trackIsOpen
-    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
-    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed);
+  // QUICKTEST-CAP-1 moved the `??` chain itself into `fieldCap.js`, because a THIRD caller appeared
+  // — Quick Test, which needs the same answer for a different track — and the chain is where the
+  // three named maxima could quietly become four again.
+  const effectiveMaxPlayers = fieldCapFor(trackIsOpen, raceDefaults);
 
   // PLAYER-GROUPS-1: the roster split by group, for the start bar. One derivation, shared with the
   // Players tab, so the two can never disagree about who is in which group.
@@ -388,6 +390,21 @@ function SetupScreen() {
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
   // QUIET-FAILURES-1 — the same question for the Quick Test track. See `selectedGeometryReady`.
   const quickGeometryReady = !!quickTrack?.geometryId && !!getTrack(quickTrack.geometryId);
+  // QUICKTEST-CAP-1: the Quick Test track's own open/closed flag, at RENDER time. `handleQuickTest`
+  // already derived it from the geometry at click time; the cap has to be known before the click, to
+  // clamp the N input and to refuse before the button is pressed rather than after.
+  const quickTrackIsOpen = useMemo(() => {
+    if (!quickTrack?.geometryId) return false;
+    const geom = getTrack(quickTrack.geometryId);
+    return geom ? !geom.closed : false;
+  }, [quickTrack]);
+
+  // THE SAME AUTHORITY THE NORMAL PATH READS — `maxPlayersOpen`/`maxPlayersClosed`, through the one
+  // expression in `fieldCap.js`. Quick Test used to cap itself at a hardcoded 100 whatever the track
+  // was, so a Quick Test at N=60 started on a track that holds 40: exactly the field the Start
+  // button now refuses.
+  const quickMaxPlayers = fieldCapFor(quickTrackIsOpen, raceDefaults);
+
   const [quickTestCount, setQuickTestCount] = useState(20);
   // Quick-Test seed field. EMPTY (the default) = draw a fresh random seed for each race: every race
   // differs — the normal Quick-Test case, zero input needed — yet each one stays replayable, because
@@ -433,6 +450,31 @@ function SetupScreen() {
       setQuickTestRacerTypeId(null);
     }
   }, [quickCompatibleRacerTypeIds, quickTestRacerTypeId]);
+
+  // ── QUICK TEST OBEYS THE TRACK'S CAP (QUICKTEST-CAP-1, his decision 2026-09-04) ───────────────
+  //
+  // TWO HALVES, and they mirror the two the normal path already has, deliberately — he uses Quick
+  // Test himself, so what he sees when a roster is too big must be what the setup screen shows him
+  // and not a third treatment invented here.
+  //
+  //   THE INPUT STOPS AT THE CAP, the way PlayerSetup's Add button always has. Typing 60 on a track
+  //   that holds 40 gives 40; the value cannot be reached, so it cannot be refused.
+  //   AND THE FIELD IS STILL CHECKED, because the input is not the only door — the SAME route
+  //   REFUSE-OVERSIZED-1 named for the normal path exists here and nothing else watches it:
+  //
+  //     pick an OPEN quick track (cap 100) -> set N to 60 -> pick a CLOSED quick track (cap 40).
+  //
+  //   N does not change when the track does, so the field is 60 against a cap of 40 with no control
+  //   misused. The roster is a second such route: 60 players on screen start 60 whatever N says.
+  //   Neither is silently corrected — a value quietly clamped on a track switch is the same fault as
+  //   a name silently cut from a roster, and he chose being told over being tidied.
+  const quickFieldSize = useMemo(
+    () => quickTestFieldSize(players, quickTestCount, resolveNameSet(quickTestNameSet)),
+    [players, quickTestCount, quickTestNameSet]
+  );
+  const quickOverCap = quickFieldSize > quickMaxPlayers;
+  // Said once, so the notice, the button's tooltip and the console refusal cannot drift apart.
+  const quickOverCapMessage = `${quickFieldSize} racers would start and this track allows ${quickMaxPlayers}. Lower N, remove ${quickFieldSize - quickMaxPlayers} from the roster, or pick a track that allows more.`;
 
   function handleStartRace() {
     // QUIET-FAILURES-1 — the same refusal as Quick Test, for the same reason: `trackIsOpen`
@@ -521,6 +563,24 @@ function SetupScreen() {
     }
 
     const quickIsOpen = !geom.closed;
+
+    // QUICKTEST-CAP-1 — the refusal, repeated here rather than trusted to the disabled button, for
+    // the same reason the geometry check above is: the button is the guard a person sees, this is
+    // the guard that holds if the roster or the track changes between render and click. Reading the
+    // cap off `geom` rather than off `quickMaxPlayers` keeps this branch honest even then.
+    const clickCap = fieldCapFor(quickIsOpen, raceDefaults);
+    const clickField = quickTestFieldSize(
+      players,
+      quickTestCount,
+      resolveNameSet(quickTestNameSet)
+    );
+    if (clickField > clickCap) {
+      console.warn(
+        `[setup] Quick Test refused: ${clickField} racers would start on "${track.name ?? track.id}" and it allows ${clickCap}`
+      );
+      return;
+    }
+
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     // Use the Quick Test racer selector; fall back to track default (backward-compatible).
     const effectiveTypeId =
@@ -1228,13 +1288,19 @@ function SetupScreen() {
                   }}
                 >
                   N:
+                  {/* QUICKTEST-CAP-1: the ceiling is the TRACK's, not a hardcoded 100. The clamp is
+                      the enforcing one — a browser treats `max` on a number input as advice when a
+                      value is typed — and it mirrors PlayerSetup's Add button, which has always
+                      stopped at the cap rather than accepting and then refusing. */}
                   <input
                     type="number"
                     min={1}
-                    max={100}
+                    max={quickMaxPlayers}
                     value={quickTestCount}
                     onChange={(e) =>
-                      setQuickTestCount(Math.max(1, Math.min(100, Number(e.target.value) || 1)))
+                      setQuickTestCount(
+                        Math.max(1, Math.min(quickMaxPlayers, Number(e.target.value) || 1))
+                      )
                     }
                     style={{
                       width: '46px',
@@ -1280,17 +1346,28 @@ function SetupScreen() {
                   />
                 </label>
               </div>
+              {/* QUICKTEST-CAP-1: the HARD cap, said where the Quick Test button is, in the same
+                  warning treatment the Start button's refusal uses — numbers and the way out, never
+                  names. */}
+              {quickOverCap && (
+                <p role="alert" data-testid="quick-over-cap-refusal" className={styles.groupNotice}>
+                  <span aria-hidden="true">⚠️</span>
+                  <span>{quickOverCapMessage}</span>
+                </p>
+              )}
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                disabled={!quickGeometryReady}
+                disabled={!quickGeometryReady || quickOverCap}
                 title={
-                  quickGeometryReady
-                    ? `Auto-fill to ${quickTestCount} test players and start race`
-                    : quickTrack?.geometryId
-                      ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
-                        'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
-                      : 'Draw a track in the Track Editor first'
+                  quickOverCap
+                    ? quickOverCapMessage
+                    : quickGeometryReady
+                      ? `Auto-fill to ${quickTestCount} test players and start race`
+                      : quickTrack?.geometryId
+                        ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
+                          'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                        : 'Draw a track in the Track Editor first'
                 }
               >
                 ⚡ Quick Test ({quickTestCount})
