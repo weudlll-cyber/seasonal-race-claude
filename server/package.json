@@ -24,6 +24,10 @@
     "helmet": "^8.2.0",
     "multer": "^2.2.0"
   },
+  "_overridesNote": "DEPS-SERVER-AUDIT-1 (2026-09-04). `npm audit fix` moved the lockfile and fixed NOTHING — it took body-parser to 1.20.6, which cleared that package's own advisory, and left all three counts standing because the root is `qs`. The two remaining advisories (GHSA-x5fp-wj9c-mxmx array-limit bypass, GHSA-4mjr-xmp4-gh2g DoS via attacker-controlled isBuffer) are fixed in qs 6.16.0, and both express 4.22.2 and body-parser 1.20.6 pin `qs: ~6.15.1`, so no in-range resolution can reach it. npm's own advice is `npm audit fix` again, which loops, or express 5 — a MAJOR bump of a direct dependency, which this repository does not take for a moderate DoS advisory. So the resolution is forced HERE, one minor version of one transitive package, rather than by widening an allowlist: an allowlist records that we decided not to care, an override records what we actually run. Remove this when express ships a 4.x that requires a patched qs.",
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.8",
     "supertest": "^7.0.0",
