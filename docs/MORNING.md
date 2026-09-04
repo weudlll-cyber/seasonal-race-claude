@@ -3,13 +3,14 @@
 **Owns:** where the chain stands, right now. Rewritten after every piece, not at the end.
 Whoever reads this at 7 a.m. should not have to open a single report to know where things are.
 
-**Last rewritten:** 2026-09-04, after the SECOND chain of the day — your five decisions plus the one
-you ordered. **Six pieces, six merges, master green after every one, step 12 done each time, clean
-tree.** Origin holds `master` and nothing else.
+**Last rewritten:** 2026-09-04, after the THIRD chain of the day — your two decisions on the pictures
+and the finish. **Eight pieces, eight merges across the day, master green after every one, step 12
+done each time, clean tree.** Origin holds `master` and nothing else. **Nothing was minted; no minting
+permission was given and none was needed.**
 
 ---
 
-## ★★ WHERE THE SIX WENT — AND THE ONE THAT DID NOT DO WHAT WAS ASKED
+## ★★ WHERE THE EIGHT WENT — AND THE ONE THAT DID NOT DO WHAT WAS ASKED
 
 | | | |
 | --- | --- | --- |
@@ -19,67 +20,61 @@ tree.** Origin holds `master` and nothing else.
 | **3** | **Quick Test obeys the track's cap** | MERGED |
 | **5** | **the sweep fails in under two seconds instead of hanging fifteen minutes** | MERGED |
 | **2** | **garden-path was NOT taken into the gate** | MERGED as a diagnosis. **Your own rule stopped it** |
-| **1a** | **the five pictures are laid out for your eye** | **WAITING ON YOU.** Nothing deleted |
+| **1a** | the five pictures were laid out for your eye | **ANSWERED — all five deleted** |
+| **7** | **the five dead client pictures are gone**, 21.32 MB to 0 | MERGED |
+| **8** | **the accepted finish behaviour is recorded beside the items** | MERGED |
 
 ---
 
-## ★★ THE TWO THINGS THAT NEED YOU
+## ★★ BOTH OF YESTERDAY'S OPEN DECISIONS ARE CLOSED
 
-### A. THE FIVE PICTURES
+**THE FIVE PICTURES ARE GONE.** You looked at all five pairs and wanted the picture the game already
+uses in every case, so all five were deleted — **12,585,667 bytes**, and with the duplicate removed
+earlier the folder went from **21.32 MB to 0**. Reachability was re-established **uncapped** first,
+because deletion is the irreversible step: six searches, including the path built in PIECES and
+`url()`/`<img>`/`src=` across every stylesheet and markup file. **But what settles it is not a grep** —
+`trackLoader.js` builds *every* client-side background path as an API URL, and the one module that
+loads a background is fed from exactly two call sites that read that field.
 
-They are on one page, each beside the seed picture it shares a name with, with a measured difference
-map — openable with no build and no server:
-
-**https://claude.ai/code/artifact/bb599320-aa57-41e3-b8c3-14b68f78ad40**
-
-What each one is. **No judgement about which is better:**
-
-| | |
-| --- | --- |
-| `garden-path.png` | **the same garden, replanted.** Identical composition — same greenhouse in the corner, same fountain along the bottom — different planting |
-| `space-sprint.jpg` | **the same sky, graded differently.** Same galaxy, nebula band and ringed planet in the same places; cool violet against warm rose |
-| `dirt-oval.jpg` | **the same racecourse, a different day.** Same aerial, same grandstands; a bleached straw infield against a deep green one with horses working the far turn |
-| `river-run.png` | **two different rivers.** A naturalistic daylight aerial — willows, canoes, swans — against a dark, graphic, stone-lined channel |
-| `city-circuit.png` | **night stadium against day speedway.** Only the word "oval" is common to them |
-
-**Nothing is deleted until you say so.** The sixth file — the byte-identical duplicate — is already
-gone, because that was never a picture question.
-
-### B. TWO PICTURE QUESTIONS OUT OF THE GATE WORK
-
-Both raised by measurement, neither repairable without your eye:
-
-1. **Should the photo-finish shot have ARRIVED by the crossing?** Today it has not on **three of ten
-   tracks** at the seed the gate runs. On garden-path that leaves the winner near the bottom edge of
-   the frame, with the shot still tightening, more than a second after he wins.
-2. **Should the leader's walk survive a battle shot?** A battle shot in the endgame window frames the
-   battle rather than the leader, and the walk does not happen.
+**THE FINISH BEHAVIOUR IS ON THE RECORD.** Items 9 and 10 now say, where a reader meets them, that
+they encode an ideal you considered and rejected.
 
 ---
 
-## ★★ THE GATE DID NOT MOVE — AND THAT IS YOUR RULE APPLIED, NOT OVERRIDDEN
+## ★★ ONE NEW THING THAT NEEDS YOU
 
-You authorised taking garden-path in **conditional on the diagnosis**, and gave the rule: *the
-instrument's or a threshold's, fix it and take the track in; genuinely the track's, STOP.*
+**DIRT-OVAL FAILS ITEM 7 AT SEED 3 — A CONTENDER OFF CANVAS ON 78 FRAMES.** It is not one of the two
+items, it is **not accepted behaviour**, and it is the one thing an exclusion is still hiding. It fell
+out of re-reading data already measured; it is reported and **not diagnosed** — how a racer still in
+with a chance leaves the canvas for over a second is unexamined.
 
-**Sixteen races later: both failures are real, and NEITHER BELONGS TO GARDEN-PATH.** It **passes item
-9 at three of the four seeds measured** and item 10 at two of four. Item 9 fails when **the
-photo-finish zoom has not arrived at the crossing** — the camera is still tightening *under* the
-winner, who slides down the frame past the bound. Item 10 fails when a **battle shot** sits in the
-endgame window. **Both are per-RACE camera behaviours, and both appear on more than one track.**
+*(Also still open from before, unchanged: whether item 2 — which measures the accepted closing-zoom
+behaviour **directly** — should carry the same acceptance note. Your acceptance named two items and
+item 2 was not one of them, so it is flagged and left to you.)*
 
-**The gate runs one seed — and it is exactly the race where garden-path fails both.** It would have
-been red the day it was widened, which is how a gate stops gating. **So the gate is UNCHANGED:
-neither stricter nor wider.**
+---
 
-★ **AND WHAT THE EXCLUSION COSTS IS NOT A TRACK.** Both gate tracks cross with the zoom **already
-arrived**, so the gate is **structurally blind** to both behaviours — not because garden-path is
-missing, but because neither of its own two races shows them. **The lever is which RACE the gate
-runs, not which track.**
+## ★★ THE GATE STILL HAS NOT MOVED — AND NOW THE EXCLUSIONS MEAN SOMETHING DIFFERENT
 
-★ **Garden-path is also not the only excluded track that fails.** **luger-hill and dirt-oval fail
-item 2** at the same seed, from the *same* late-zoom mechanism. Three excluded tracks fail something,
-on two items, from one underlying behaviour — and none of it is visible to the gate.
+Garden-path was not taken in: both its failures are real picture behaviours, and the gate runs the one
+seed where it fails both. **That still stands.** What changed is *why* the exclusion is unjustified.
+
+**It is no longer justified by a defect.** Items 9 and 10 object to the two behaviours you have now
+accepted, so the exclusion is justified by items that object to something wanted — **a different and
+weaker reason**. Widening the gate now would make it red on day one for behaviour you chose, which is
+the trap the earlier piece avoided.
+
+★ **THE THREE EXCLUDED TRACKS ARE IN THREE DIFFERENT CASES**, and a reader working from memory will
+get this wrong:
+
+| | fails | rests on the two accepted items alone? |
+| --- | --- | --- |
+| **garden-path** | items 9 and 10 at the gate's seed, and nothing else | **yes** |
+| **luger-hill** | item 2 only | **no** — same behaviour, a different item |
+| **dirt-oval** | item 2, **and item 7 at seed 3** | **no** — and item 7 is not accepted |
+
+★ And what the exclusion costs is still **not a track**: both gate tracks cross with the zoom already
+arrived, so the gate is structurally blind to these behaviours. **The lever is which RACE it runs.**
 
 ---
 

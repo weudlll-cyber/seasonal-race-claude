@@ -192,6 +192,30 @@ function geometries() {
 //     which track. Three excluded tracks fail something at seed 9: garden-path (items 9 and 10) and
 //     luger-hill and dirt-oval (item 2) — and item 2's failures are the SAME late-zoom mechanism.
 //     The nightly sweep still runs all ten, so all of it is visible a day later rather than never.
+//
+//     ★★ AND AS OF 2026-09-04 THOSE FAILURES ARE ACCEPTED BEHAVIOUR, WHICH CHANGES WHAT THIS
+//     EXCLUSION MEANS (ACCEPTED-FINISH-1). The owner decided the finish sequence stays exactly as
+//     it is: the closing zoom need not have arrived by the crossing, and a battle shot may take the
+//     frame near the finish. Items 9 and 10 object to precisely those two things, so they encode an
+//     ideal HE HAS CONSIDERED AND REJECTED — the full statement, and the CAUSES that are accepted,
+//     are at the head of `endgame-sheet.mjs`.
+//
+//     SO THE EXCLUSION IS NO LONGER JUSTIFIED BY A DEFECT. It is justified by items that object to
+//     something wanted, which is a different and weaker reason than the one recorded above. That is
+//     reported, not acted on: WIDENING THE GATE NOW WOULD MAKE IT RED ON DAY ONE for behaviour he
+//     has accepted, which is the trap GATE-GARDEN-PATH-1 avoided a few hours earlier.
+//
+//     ★ WHERE EACH EXCLUDED TRACK STANDS, measured over 16 races and NOT the same answer for all
+//     three — this is the part a reader will get wrong from memory:
+//       garden-path  at seed 9, ITEMS 9 AND 10 AND NOTHING ELSE. Its exclusion rests on the two
+//                    accepted items alone, at the seed this gate runs. (Across seeds 1-3 it also
+//                    fails item 2, which is behaviour (i) measured directly — still accepted.)
+//       luger-hill   item 2 ONLY, and item 2 is NOT one of the two he named. Same behaviour, a
+//                    different item; only seed 9 has been measured for this track.
+//       dirt-oval    item 2 at seed 9 — but ITEM 7 AT SEED 3, a contender off canvas on 78 frames.
+//                    ★ THAT ONE IS NOT ACCEPTED BEHAVIOUR and is not one of the two items. So
+//                    dirt-oval's exclusion does NOT rest on accepted behaviour alone, and it is the
+//                    one of the three where something real is still hidden by the exclusion.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
