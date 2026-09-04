@@ -233,9 +233,98 @@ function geometries() {
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
 // defect is caught, not whether.
+//
+// ★★ AND THE PLAIN VERSION OF THE ABOVE, BECAUSE IT IS SPREAD OVER THREE PER-TRACK ENTRIES AND A
+//    READER WILL MISS IT: TWO OF THE THREE EXCLUSIONS HANG ON ONE BEHAVIOUR COUNTED TWICE.
+//    (Re-established at source 2026-09-04, on the night chain; nothing here is changed by it.)
+//
+//    ITEM 2 AND ITEM 9 MEASURE THE SAME THING UNDER DIFFERENT NAMES. Item 2 asks whether the shot
+//    is at one of the director's two named factors at the crossing; item 9's ACCEPTED CAUSE is the
+//    camera still on the `level` binding with the photo-finish zoom in flight. A zoom that has not
+//    arrived is exactly how item 2's question gets the answer no. `endgame-sheet.mjs:98-103` says
+//    so in the sheet's own words and leaves the consequence to the owner.
+//
+//    THE CONSEQUENCE, STATED HERE: the owner's acceptance of 2026-09-04 names two behaviours and
+//    TWO ITEMS — 9 and 10. Item 2 is not on that list, so the same accepted behaviour is accepted
+//    under one name and still counted as a failure under another. luger-hill and dirt-oval are
+//    excluded on item 2 ALONE, at seed 9, and on nothing else. If the acceptance reaches item 2,
+//    BOTH exclusions lose their last reason on the day it does.
+//
+//    ★ NO EXCLUSION IS CHANGED HERE AND NONE MAY BE CHANGED ON THIS OBSERVATION. Whether the
+//    acceptance formally reaches item 2 is the owner's word and has not been given; and widening
+//    the gate would still make it red on day one for behaviour he has accepted, which is the trap
+//    GATE-GARDEN-PATH-1 avoided. This comment exists so the question is asked ONCE, plainly, rather
+//    than re-derived from three scattered entries every time someone reads this file.
 const GATE_TRACKS = "space-sprint,city-circuit";
 const trackArg = ARG("tracks", GATE ? GATE_TRACKS : null);
-const TRACKS = geometries().filter((g) => (trackArg ? trackArg.split(",").includes(g.id) : true));
+const ALL_GEOMETRIES = geometries();
+const TRACKS = ALL_GEOMETRIES.filter((g) =>
+  trackArg ? trackArg.split(",").includes(g.id) : true
+);
+
+// ── A NAME THIS HARNESS DOES NOT KNOW IS A MISTAKE, NOT AN EMPTY SET ────────────────────────────
+//
+// WHY THIS EXISTS. On 2026-09-04 a run asked for `--tracks=all`. No geometry has the id `all`, the
+// filter above returned nothing, and the harness reported 0 races in 52 seconds and EXITED CLEAN.
+// It is the silent-zero class the backlog has carried since the night of 2026-08-25, and this is
+// its next occurrence — see BACKLOG.md, "A SWEEP CELL THAT ASKS FOR 60 RACES AND RETURNS 0".
+//
+// WHAT IT COST is not the 52 seconds. It is that the run LOOKED LIKE AN ANSWER: a sweep that
+// measured nothing is indistinguishable, on the way out, from a sweep that measured everything and
+// found nothing wrong. That is the failure worth being loud about.
+//
+// THE CHECK NAMES BOTH SIDES — what was asked for and what exists — because a rejection that only
+// says "unknown" sends the reader back to the filesystem to find out what the legal names are.
+if (trackArg !== null) {
+  const asked = trackArg
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const known = new Set(ALL_GEOMETRIES.map((g) => g.id));
+  const unknown = asked.filter((id) => !known.has(id));
+  if (asked.length === 0 || unknown.length > 0) {
+    console.error(
+      `viewer-invariants: --tracks=${trackArg} names ${
+        asked.length === 0 ? "no track at all" : `no such track: ${unknown.join(", ")}`
+      }.\n` +
+        `  asked for: ${asked.length ? asked.join(", ") : "(nothing)"}\n` +
+        `  this repository has: ${[...known].join(", ")}\n` +
+        `  There is no "all" — OMIT --tracks to run every track.\n` +
+        `  Refusing to run: a filter that matches nothing would report 0 races and exit 0.`
+    );
+    process.exit(2);
+  }
+}
+
+// ── AND THE BACKSTOP: A RUN THAT WOULD SCORE NOTHING NEVER STARTS ───────────────────────────────
+//
+// The name check above catches the one cause that has actually happened. This catches the CLASS,
+// including the causes it cannot see: an empty `server/data/tracks`, a `--seeds=` range that runs
+// backwards. The run's scope is the product ARMS x TRACKS x SEEDS — the same three lists `WORK` is
+// built from, several hundred lines below — so the message prints all three rather than guessing
+// which one is at fault.
+//
+// IT SITS HERE, NOT AT `WORK`, ON PURPOSE: the browser is launched between the two points, and a
+// refusal that costs a browser launch is a refusal that arrives after the run has begun.
+//
+// ★ ARMS IS NOT IN THE CONDITION, AND THAT IS DELIBERATE. `ARG("arm", …).split(",")` can never
+// return an empty array — `"".split(",")` is `[""]` — so a limb testing `ARMS.length === 0` would
+// be UNREACHABLE, and an unreachable limb in a guard is the defect this guard exists to prevent,
+// wearing the guard's own clothes. What `--arm=` actually produces is one arm NAMED `""`, which
+// runs and scores. That is silent GARBAGE, not a silent zero, it is a different defect, and it is
+// left unguarded here and named in the piece-E report rather than half-covered.
+if (TRACKS.length === 0 || SEEDS.length === 0) {
+  console.error(
+    `viewer-invariants: this run would drive 0 races. Refusing to start.\n` +
+      `  arms   (${ARMS.length}): ${ARMS.join(", ") || "(none)"} — from --arm=\n` +
+      `  tracks (${TRACKS.length}): ${TRACKS.map((g) => g.id).join(", ") || "(none)"}` +
+      `${trackArg === null ? " — from server/data/tracks" : ` — filtered by --tracks=${trackArg}`}\n` +
+      `  seeds  (${SEEDS.length}): ${SEEDS.join(", ") || "(none)"} — from --seeds=${seedArg}\n` +
+      `  A sweep that measures nothing must not report success; that is how a silent zero gets read ` +
+      `as a clean result.`
+  );
+  process.exit(2);
+}
 
 // ── THE VIRTUAL CLOCK ──────────────────────────────────────────────────────────────────────────
 //
