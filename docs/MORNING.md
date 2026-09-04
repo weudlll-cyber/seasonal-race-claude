@@ -114,10 +114,49 @@ rebuilt and restarted in place and its log is clean.
 
 ---
 
+**Piece 4a — the three server advisories are gone.** `deps(DEPS-SERVER-AUDIT-1)`.
+
+`npm audit fix` **moved the lockfile and fixed nothing** — the root is `qs`, and express 4 pins it
+out of reach at `~6.15.1`. npm's only remaining advice is express 5, a major bump this does not
+take. An `overrides` entry takes `qs` to 6.16.0 — one minor version of one transitive package.
+**3 moderate → 0, express stays 4.22.2.**
+
+★ **And the fix could not REACH your running server.** After `docker compose build && up -d` the
+image reported `qs 6.16.0` and the **running container reported `qs 6.15.3`** — the vulnerable one —
+from a rebuild that reported success. The cause was `- /app/node_modules` in `docker-compose.yml`, an
+anonymous volume populated from the image ONCE, two days ago, and remounted on every rebuild since.
+Nothing mounts over `/app`, so it was isolating the container from nothing. **That is the
+seed-redelivery failure one layer down** — a delivery that silently never arrives while everything
+reports success. The line is deleted; your container now reports `qs 6.16.0`.
+
+The build-identity proof is worth knowing: **the byte-identical test as specified cannot be run**,
+because the client build stamps `git status --porcelain` as a `dirty` flag, so editing the lockfile
+changes the bundle by construction. Held the identity constant instead — same commit, same branch,
+an untracked marker keeping `dirty` true in both arms — and **39 of 39 dist files were identical**.
+All four fingerprints unmoved.
+
+**Piece 4c — `knip` is REMOVED, not wired, and the measurement is why.** `tools(KNIP-CONFIG-1)`.
+
+The config was a claim nothing honoured. Installing knip and running it showed **the claim was also
+wrong**: it reports **37 unused exports in `client/`, and 11 of them are alive** — read by
+`scripts/`, including `BOARD_FADE_MS` by the render fingerprint, `FIXED_DT` by the camera
+fingerprint, and six symbols by `goldenRunner.mjs`. Acting on that list would have broken the
+instruments that watch the picture.
+
+**It cannot be fixed where it lives.** knip ignores entry patterns outside its workspace root, so
+`../scripts/**` changed nothing (measured: still 37). A repo-root config sees the workspaces wrong
+and reported **99 false "unlisted dependencies"** because `react` lives in `client/package.json`. A
+correct config is workspace-aware and is a project, not a mechanical item. **So the configuration is
+deleted** — and the honest measurement method is written down in the commit for whoever wants it.
+
+---
+
 ## WHAT IS STILL OPEN IN THIS CHAIN
 
-4. **The four mechanical items** — `npm audit fix` in `server/`, two dead lines in
-   `CameraDirector.js`, 18 needless exports, five unused test locals, and wiring `knip`. Not started.
+4b. **The dead code** — two lines in `CameraDirector.js`, the needless exports, five unused test
+   locals. Not started. **Do not take the audit's figure of 18, or knip's 37, as the number**: 11 of
+   knip's are alive (piece 4c), and six more are redundant `default` exports sitting beside a named
+   one, which is a different question from dead code. The count is whatever survives checking each.
 5. **Why the client suite got slower** — read-only. Not started. This is open end 2 above.
 6. **What the audit could not see** — read-only, propose-only. Not started.
 
@@ -155,7 +194,8 @@ runs as `node`, proved standalone and on your compose file.
 These rot silently because no machine watches them:
 
 1. **prose claims in documents** — the mechanical classes are guarded; a sentence is not
-2. **dead exports** — `knip` is configured and unwired
+2. **dead exports** — no tool watches them. The `knip` config is gone rather than wired; see piece 4
+   for why wiring it would have been worse than nothing
 3. **file and function size** — nothing notices growth
 4. **dependency advisories** — the daily audit reports, nothing gates. (The container's `USER` is a
    Dockerfile line now, so it cannot silently regress the way an unwritten habit could.)
