@@ -793,12 +793,28 @@ from the picture says so rather than carrying an easier number in its place — 
 
 ### THE TWO PROVEN CONFLICTS — neither is a bug, and both are his to overturn
 
-**Item 7 against item 9.** "Everyone still in with a chance" is answered geometrically by
-`_abreastContenders` — within one body length NOW — while the contention watch answers it by
-projection. Holding a racer the geometry still calls a contender pulls the frame back off the winner
-and corners him: measured, city-circuit put the winner at `x = 0.105` with 24 cut frames, breaking
-items 9 and 2 together. Releasing him leaves exactly one racer at the frame edge on a minority of
-races. **Item 9 took the win, on his own sentence that the crossing is the moment.**
+**Item 7 against item 9 — ★ THE TRADE NO LONGER BINDS (ITEM7-MEMBERSHIP-1, 2026-09-04), and the
+reason is that one side of it was measuring the wrong set.** As written, this conflict was: "everyone
+still in with a chance" is answered geometrically by `_abreastContenders` — within one body length
+NOW — while the contention watch answers it by projection; holding a racer the geometry still calls a
+contender pulls the frame back off the winner and corners him (measured, city-circuit put the winner
+at `x = 0.105` with 24 cut frames, breaking items 9 and 2 together), while releasing him "leaves
+exactly one racer at the frame edge on a minority of races". **Item 9 took the win, on his own
+sentence that the crossing is the moment**, and that decision stands.
+
+**What changed is that the residue on item 7's side was an ARTEFACT.** Item 7 was grading
+`_abreastContenders` INCLUDING its fallback to the top two — a framing device so the photo finish has
+somebody to hold, silent about who can win. Graded instead over the racers who can still win — the
+geometric loop's survivors minus every racer at contention weight 0 — **item 7 reads 0 failing of 80
+races** (ten tracks, four seeds, both configs), against 10 failing on the same 80 before. **No race
+moved PASS → FAIL.** So the "one racer at the frame edge" that item 7 was trading against item 9 for
+is not there once item 7 asks the right question.
+
+**This is NOT a claim that items 9 and 2 are resolved.** On the same run item 9 fails 2 races and
+item 2 fails 18, and those are the accepted finish behaviour, unchanged and still his to overturn.
+What is resolved is the TRADE: item 7 no longer objects to the shot item 9 wants. The camera itself
+did not move — all four fingerprints are unmoved across that change — so items 9 and 2 grade exactly
+the picture they graded before.
 
 **Item 4 against item 5.** Keeping the band findable costs width, and width is exactly what item 4
 bounds. Both numbers are reported side by side on every run; no setting maximises both.
@@ -1037,7 +1053,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 84cec096 2026-09-04 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 01cbbbf6 2026-09-04 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED 2026-09-04 (ITEM7-MEMBERSHIP-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is a pure SPLIT and cannot move these numbers**: the geometric loop of `_abreastContenders` was lifted into `_abreastSurvivors`, which `_abreastContenders` now calls before applying its own two guards and its unchanged fallback. No framing decision, no default, no threshold and no ease was touched, and the only edit inside the moved code is a `pathLen > 0` test that is dead on the path `_abreastContenders` takes. **All four fingerprints were run against the record and all four match** — camera and render included, which are the two that would move if the shot or the draw sequence had. Nothing was re-run; the stamp records that the dependency moved inertly.
 
 **RE-STAMPED 2026-09-04 (DEAD-LINES-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is two DELETIONS and can move nothing**: an unused `pairGuarantee` import that was never called, and `const framing = framingFor(this.state)`, an assignment nothing read whose right-hand side was checked before the line was cut — `framingFor` is `return FRAMING_BY_STATE[state] ?? FRAMING_BY_STATE.LEADER_ZOOM`, a pure table lookup with no side effect. **All four fingerprints were run against the record and all four match**, camera and render included. Nothing was re-run; the stamp records that the dependency moved inertly.
 

@@ -185,9 +185,21 @@ export function gradeRace(p, run) {
   R.i6 = R.i6_worst <= STEP_LN_MAX;
 
   // 7 — the line, the leader and everyone still in with a chance
+  //
+  // ITEM7-MEMBERSHIP-1: `contOff` is now graded over the racers who can still WIN — the geometric
+  // loop's survivors minus everyone the contention watch has released — rather than over
+  // `_abreastContenders`' output, which includes a fallback to the top two that exists so the photo
+  // finish has somebody to hold and says nothing about chances. `contOffOld` is the same count over
+  // the old set, carried so one browser pass reports both columns.
   R.i7_off = w.filter((x) => x.contOff > 0).length;
   R.i7_worst = Math.max(...w.map((x) => x.contOff));
   R.i7 = R.i7_off === 0;
+  R.i7_before_off = w.filter((x) => x.contOffOld > 0).length;
+  R.i7_before = R.i7_before_off === 0;
+  // Why each dropped racer dropped, summed over the window, kept apart because they are different
+  // reasons: the fallback never called him a contender, or the race has already decided him.
+  R.i7_dropFallback = w.reduce((a, x) => a + (x.dropFallback ?? 0), 0);
+  R.i7_dropWeight = w.reduce((a, x) => a + (x.dropWeight ?? 0), 0);
 
   // 8 — the pause is allowed; the long standstill is not. Report, do not gate.
   const still = rate.map((x) => Math.abs(x) < STILL_LN_S);
@@ -263,7 +275,7 @@ export function printSheet(rows, label) {
         " |" + ok(r.i4) + String(r.i4_widest).padStart(6),
         " |" + ok(r.i5) + String(r.i5_min).padStart(6) + "/" + String(r.i5_med).padStart(5) + "/" + String(r.i5_zero).padStart(3),
         " |" + ok(r.i6) + String(r.i6_worst).padStart(7),
-        " |" + ok(r.i7) + String(r.i7_off).padStart(4),
+        " |" + ok(r.i7) + String(r.i7_off).padStart(4) + "(" + String(r.i7_before_off ?? "-") + ")",
         " |" + String(r.i8_pct).padStart(3) + "%" + String(r.i8_longestMs).padStart(5),
         " |" + ok(r.i9) + " " + String(r.i9_atX).padStart(5) + "," + String(r.i9_atY).padStart(5) + String(r.i9_cut).padStart(4),
         " |" + ok(r.i10) + String(r.i10_min).padStart(6),
@@ -278,6 +290,14 @@ export function printSheet(rows, label) {
   console.log(
     `  FAILING RACES per item —  1:${cnt("i1")}  2:${cnt("i2")}  4:${cnt("i4")}  5:${cnt("i5")}  ` +
       `6:${cnt("i6")}  7:${cnt("i7")}  9:${cnt("i9")}  10:${cnt("i10")}  11:${cnt("i11")}   of ${s.length} races`
+  );
+  // ITEM7-MEMBERSHIP-1: both columns from ONE pass. `7:` grades the racers who can still win;
+  // `7 before:` is the same count over `_abreastContenders`' output, fallback included, which is
+  // what item 7 used to grade. The membership is a subset on every frame, so this can only fall.
+  console.log(
+    `  ITEM 7 — after ${cnt("i7")} failing, before ${cnt("i7_before")} failing` +
+      `  ·  racers dropped by the FALLBACK rule ${s.reduce((a, r) => a + (r.i7_dropFallback ?? 0), 0)},` +
+      ` by the WEIGHT rule ${s.reduce((a, r) => a + (r.i7_dropWeight ?? 0), 0)} (frame-sums)`
   );
   console.log(
     `  3 and 8 are REPORTED not gated (his requirement 8 makes the pause a cost, not a fail); ` +

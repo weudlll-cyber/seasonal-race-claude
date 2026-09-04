@@ -70,9 +70,18 @@ of these carries a recommendation.
 2. **`scripts/sim-fairness.mjs`: 6,195 lines, one 2,766-line function, no test.** **Not product code
    and on no product path** — but a declared `reach` entry of the world fingerprint, so it sits
    inside that instrument's dependency set.
-3. **dirt-oval fails gate item 7 at seed 3** — a contender off canvas on 78 frames. **Not accepted
-   behaviour**: the accepted finish names the late photo-finish zoom and the battle shot, and this is
-   neither. The one real thing a track exclusion still hides.
+3. ~~dirt-oval fails gate item 7 at seed 3 — the one real thing a track exclusion still hides~~
+   **CLOSED 2026-09-04, and it was a GRADING ARTEFACT — see
+   [ITEM7-MEMBERSHIP-1](../reports/evolution/ITEM7-MEMBERSHIP-1.md).** This entry was wrong on both
+   counts. **It was not a picture defect:** item 7 graded `_abreastContenders`, whose fallback to the
+   top two exists so the photo finish has somebody to hold and says nothing about who can win — the
+   racer was 3.66 body lengths back and the framing had released him 6,866 ms before the crossing.
+   **And it was never specific to dirt-oval:** the grading has no track condition and no camera-state
+   condition, and the same artefact failed **10 races of 80** across four tracks and two seeds in
+   both configs. Item 7 now grades the racers who can still win — the geometric loop's survivors
+   minus everyone at contention weight 0 — and reads **0 failing of 80**, with no race moving
+   PASS → FAIL. ★ **And the question worth asking was answered: not one off-canvas racer had a
+   contention weight above zero, so there was no real defect underneath it.**
 4. **42 unconsumed exports** in the trees the audit never measured — `scripts/` 37, `server/` 5,
    `shared/` 0. Each needs an individual check first: two `client/` candidates turned out to be
    reached through a string a test generates at runtime.
