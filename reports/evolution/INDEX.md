@@ -349,6 +349,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MERGE-NIGHT-2026-09-04.md](MERGE-NIGHT-2026-09-04.md) — **closing the night thread: ten pieces,
+  one merge** (2026-09-05; no behaviour changed, nothing minted). Master had moved, so the branch was
+  caught up first. ★ **The predicted three colliding files were two** — the night never touched
+  `endgame-sheet.mjs`. **One conflict hunk, and it was a question meeting its answer:** the night's
+  observation that item 2 and item 9 measure the same behaviour under two names, against master's
+  D27 deciding that the acceptance reaches item 2. **Resolved by keeping both, in that order**, with
+  master's block byte-verbatim and the night's two overtaken sentences **annotated rather than
+  edited** — rewriting either side to fit is what a merge may not do. Then the references master
+  could not resolve while the files did not exist: **`DEPLOY-NOTES.md` §2 now points at D30** rather
+  than restating it, and seven bare report names became links. **verify PASS 15 / FAIL 0; client
+  suite 241 files, 4,476 tests.** The trees differ, so **all four fingerprints were run and all four
+  are UNMOVED**; the night's sweeps were NOT re-run (R18).
+
 - [ACCEPTED-FINISH-ATTRIBUTION-1.md](ACCEPTED-FINISH-ATTRIBUTION-1.md) — **one attribution corrected,
   four decisions recorded** (2026-09-05; comments, one printed string and documents only — no logic,
   threshold, default, gate exclusion or camera behaviour, nothing minted, `engine-reach` selects
