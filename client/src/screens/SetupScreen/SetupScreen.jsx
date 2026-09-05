@@ -500,16 +500,36 @@ function SetupScreen() {
   // Only defined for a TYPED seed: an empty field means "draw one at press time", so there is no
   // particular race to name yet and offering a string would be naming a race that does not exist.
   // Null while the field holds an identifier too — that string already IS the answer.
+  //
+  // ★ IT RETURNS A REASON, NEVER A BARE NULL (IDENTIFIER-SPEAKS-1, 2026-09-05). It used to return
+  // `null` three different ways and the panel simply had no row, so an operator with racers, a track
+  // and a typed seed had nothing to read and nothing to act on — the owner spent time on exactly
+  // that. Worse, the third way was a `catch {}` that swallowed the throw whole: a screen state the
+  // identifier could not describe looked identical to one where the row was never meant to appear.
+  // That is the silent-zero shape this project has spent the week removing.
+  //
+  // So every path out of here carries `note`, which is what the panel shows where the row would have
+  // been. `identifier` is still null in exactly the same states as before — nothing about WHEN a
+  // string is offered has changed, only whether the screen says why it is not.
   const currentRaceIdentifier = useMemo(() => {
-    if (raceSeed === '' || looksLikeRaceIdentifier(raceSeed)) return null;
-    if (!selectedGeometryReady || players.length === 0) return null;
+    const none = (note) => ({ identifier: null, note });
+    if (looksLikeRaceIdentifier(raceSeed))
+      return none('This field already holds a race identifier — that string is the race.');
+    if (raceSeed === '')
+      return none('Type a seed to get the identifier that repeats this exact race elsewhere.');
+    if (!selectedGeometryReady)
+      return none(
+        'Pick a track whose geometry is loaded, and the identifier for this race appears here.'
+      );
+    if (players.length === 0)
+      return none('Add at least one racer, and the identifier for this race appears here.');
     try {
       const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
       const typeId = filteredRacerTypeIds.includes(preferredId)
         ? preferredId
         : (filteredRacerTypeIds[0] ?? preferredId);
       const stage = normalizeRaceActionStage(raceDefaults.raceActionStage);
-      return encodeRaceIdentifier({
+      const identifier = encodeRaceIdentifier({
         geometryId: selectedTrack?.geometryId,
         racerTypeId: typeId,
         names: players.map((p) => p.name),
@@ -532,9 +552,22 @@ function SetupScreen() {
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
         buildId: raceIdentifierBuildId(),
       });
-    } catch {
-      // A screen state an identifier cannot describe yet must not take the panel down with it.
-      return null;
+      return { identifier, note: null };
+    } catch (err) {
+      // ★ THE FAILURE SPEAKS. A screen state an identifier cannot describe must not take the panel
+      // down with it — that part of the original comment was right and the catch stays. What it must
+      // ALSO not do is vanish: without the message below, a throw here and a deliberately absent row
+      // are the same blank space, and the only way to tell them apart is to open a console.
+      //
+      // The message names the ERROR, because the state that produced it lives in this operator's own
+      // stored settings and cannot be guessed from anywhere else — it is the one fact a person
+      // reading the screen has that nobody else does.
+      console.warn('[setup] the race identifier could not be built for this screen state:', err);
+      return none(
+        `This race cannot be turned into an identifier: ${err?.message ?? String(err)}. ` +
+          `The race itself still starts normally. Restoring the shipped settings on the Dev Screen ` +
+          `is what makes a race describable again.`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1223,7 +1256,8 @@ function SetupScreen() {
                 onSeedChange={setRaceSeed}
                 lastRaceSeed={lastRaceSeed}
                 identifierError={identifierError}
-                raceIdentifier={currentRaceIdentifier}
+                raceIdentifier={currentRaceIdentifier.identifier}
+                raceIdentifierNote={currentRaceIdentifier.note}
               />
             </>
           )}

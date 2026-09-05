@@ -32,6 +32,8 @@ function RaceSettings({
   // RACE-IDENTIFIER-1
   identifierError = null,
   raceIdentifier = null,
+  // IDENTIFIER-SPEAKS-1: why there is no identifier, when there is none. Shown in the row's place.
+  raceIdentifierNote = null,
 }) {
   const { duration, winners, eventName } = settings;
 
@@ -108,6 +110,14 @@ function RaceSettings({
             names a race only on the machine that ran it — this names it anywhere. It needs a TYPED
             seed, because an empty field means "draw one at press time" and there is no race to
             name yet. */}
+        {/* IDENTIFIER-SPEAKS-1: the row's place is never simply empty. Either the identifier is
+            here, or one line says why it is not — a blank space where a control should be is what
+            sent the owner looking for a field that was working as designed. */}
+        {!raceIdentifier && raceIdentifierNote && (
+          <div className={styles.settingHint} data-testid="race-identifier-note">
+            {raceIdentifierNote}
+          </div>
+        )}
         {raceIdentifier && (
           <div className={styles.settingHint} data-testid="race-identifier-row">
             <button
