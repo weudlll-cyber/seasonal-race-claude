@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "license": "AGPL-3.0-or-later",
-  "engines": { "node": ">=20" },
-  "description": "RaceArena local backend — Phase L. `test` dropped --no-file-parallelism at TEST-ACCOUNTS-1: that flag was serialisation standing in for isolation, and the isolation is now real (a users store per test file, and no shared account). See server/test/env-setup.js.",
+  "engines": {
+    "node": ">=20"
+  },
+  "description": "RaceArena local backend \u2014 Phase L. `test` dropped --no-file-parallelism at TEST-ACCOUNTS-1: that flag was serialisation standing in for isolation, and the isolation is now real (a users store per test file, and no shared account). See server/test/env-setup.js.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch scripts/dev-start.js",
     "restart": "node scripts/restart-dev.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "node ../client/node_modules/eslint/bin/eslint.js src",
+    "lint:fix": "node ../client/node_modules/eslint/bin/eslint.js src --fix",
+    "format": "node ../client/node_modules/prettier/bin/prettier.cjs --config ../client/.prettierrc --write src",
+    "format:check": "node ../client/node_modules/prettier/bin/prettier.cjs --config ../client/.prettierrc --check src"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -24,7 +30,7 @@
     "helmet": "^8.2.0",
     "multer": "^2.2.0"
   },
-  "_overridesNote": "DEPS-SERVER-AUDIT-1 (2026-09-04). `npm audit fix` moved the lockfile and fixed NOTHING — it took body-parser to 1.20.6, which cleared that package's own advisory, and left all three counts standing because the root is `qs`. The two remaining advisories (GHSA-x5fp-wj9c-mxmx array-limit bypass, GHSA-4mjr-xmp4-gh2g DoS via attacker-controlled isBuffer) are fixed in qs 6.16.0, and both express 4.22.2 and body-parser 1.20.6 pin `qs: ~6.15.1`, so no in-range resolution can reach it. npm's own advice is `npm audit fix` again, which loops, or express 5 — a MAJOR bump of a direct dependency, which this repository does not take for a moderate DoS advisory. So the resolution is forced HERE, one minor version of one transitive package, rather than by widening an allowlist: an allowlist records that we decided not to care, an override records what we actually run. Remove this when express ships a 4.x that requires a patched qs.",
+  "_overridesNote": "DEPS-SERVER-AUDIT-1 (2026-09-04). `npm audit fix` moved the lockfile and fixed NOTHING \u2014 it took body-parser to 1.20.6, which cleared that package's own advisory, and left all three counts standing because the root is `qs`. The two remaining advisories (GHSA-x5fp-wj9c-mxmx array-limit bypass, GHSA-4mjr-xmp4-gh2g DoS via attacker-controlled isBuffer) are fixed in qs 6.16.0, and both express 4.22.2 and body-parser 1.20.6 pin `qs: ~6.15.1`, so no in-range resolution can reach it. npm's own advice is `npm audit fix` again, which loops, or express 5 \u2014 a MAJOR bump of a direct dependency, which this repository does not take for a moderate DoS advisory. So the resolution is forced HERE, one minor version of one transitive package, rather than by widening an allowlist: an allowlist records that we decided not to care, an override records what we actually run. Remove this when express ships a 4.x that requires a patched qs.",
   "overrides": {
     "qs": "^6.16.0"
   },
