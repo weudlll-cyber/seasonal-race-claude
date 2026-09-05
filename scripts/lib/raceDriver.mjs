@@ -248,6 +248,20 @@ export function loadTracks({ only = null } = {}) {
   return geos;
 }
 
+/** How many laps a CLOSED track runs, from its own record. Never guessed — see the call site. */
+function lapsOfClosedTrack(geo) {
+  const n = geo.defaultLaps;
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(
+      `raceDriver: track "${geo.id}" is closed but its record does not say how many laps it runs ` +
+        `(defaultLaps=${JSON.stringify(n)}). Refusing to substitute a default — a lap count nobody ` +
+        `chose is how a race silently becomes one this project does not run. Set defaultLaps on the ` +
+        `track record.`
+    );
+  }
+  return n;
+}
+
 /**
  * Build one race + camera for a track under an identity and a camera config.
  *
@@ -307,7 +321,22 @@ export function buildRace(geo, identity, cameraConfig) {
     rowConfig: W.rowLayoutConfig,
     dynamicsConfig: W.raceDynamicsConfig,
     normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig),
-    laps: shape.isOpen ? 1 : 2,
+    // ── THE LAP COUNT COMES FROM THE TRACK RECORD, NOT FROM A LITERAL ────────────────────────────
+    //
+    // It was `shape.isOpen ? 1 : 2` — a hard 2 for every closed track, no matter what the track
+    // itself said. That literal is half of the canonical silent zero this repository has carried
+    // since GARDEN-PATH-NO-FINISH-1: garden-path's 360 discarded races were a race too long for the
+    // ceiling below, at a lap count nobody had chosen for it, and the defect was healed by ACCIDENT
+    // when the beetle made the race shorter. The literal never moved. Now it is gone.
+    //
+    // AN OPEN TRACK RUNS ONE LAP BY DEFINITION — it has no lap structure to read, and every open
+    // record here carries no `defaultLaps` — so only the closed branch consults the record.
+    //
+    // IT THROWS RATHER THAN SUBSTITUTING. A closed track whose record does not say how many laps it
+    // runs is a track this driver cannot honestly race: quietly picking 2 is how the old literal
+    // came to be believed. Measured 2026-09-04: all five closed tracks say `defaultLaps: 2`, so this
+    // reads exactly what the literal did and no fingerprint moves.
+    laps: shape.isOpen ? 1 : lapsOfClosedTrack(geo),
     requestedSeconds: identity.seconds,
     nRacers: identity.racers,
     racePlanSeed: identity.raceSeed,
@@ -349,6 +378,9 @@ export function buildRace(geo, identity, cameraConfig) {
 
   return {
     shape,
+    // Carried so the ceiling below can NAME the track it refused to truncate. A failure that says
+    // "a race did not finish" and not WHICH sends the reader back to the sweep log to find out.
+    trackId: geo.id ?? null,
     trackWidthPx,
     racerTypeId,
     racerType: rt,
@@ -381,6 +413,8 @@ export function buildRace(geo, identity, cameraConfig) {
  */
 export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   const { st, raceCfg, cd } = race;
+  // The ceiling, named once so the loop and the refusal below cannot drift apart.
+  const CEILING_MS = 200000;
   const { canvasW: CW, canvasH: CH } = identity;
   // ── CAMERA-NONDETERMINISM-1: THE FRAME CLOCK IS NOW OPTIONALLY VARIABLE ─────────────────────
   //
@@ -425,7 +459,8 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   let slowStart = 0;
   let fadeProg = 0;
   let physicsSteps = 0;
-  while (st.finishedCount < identity.racers && ts - raceStart < 200000) {
+  let stoppedByCaller = false;
+  while (st.finishedCount < identity.racers && ts - raceStart < CEILING_MS) {
     const RAW = frameMsOf(frame);
     let dilation = 1;
     if (slowmo) {
@@ -475,7 +510,40 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
     const verdict = onFrame({ cd, st, ts, raceStart, frame, physicsSteps, dtMs: RAW });
     frame++;
     ts += RAW;
-    if (verdict === false) break;
+    if (verdict === false) {
+      stoppedByCaller = true;
+      break;
+    }
+  }
+
+  // ── A TRUNCATED RACE IS NOT A RACE, AND IT MUST NOT BE RETURNED AS ONE ──────────────────────────
+  //
+  // The loop has always had three exits and returned ONE indistinguishable value for all of them:
+  // everyone finished, the caller said stop, or the ceiling ran out. Of 44 callers of this function,
+  // exactly one reads the return value at all (its own test), so the third exit has been invisible
+  // at every call site in the repository. That is the silent-zero class in its original form —
+  // GARDEN-PATH-NO-FINISH-1 discarded 360 of 360 races through this exit and no harness said a word.
+  //
+  // WHY THROW RATHER THAN RETURN A FLAG. A flag repeats the defect: 43 callers would not read it
+  // either. Every number taken from a truncated race describes a race the product does not run, so
+  // there is no correct way to CONTINUE past this — the only safe outcome is that the harness stops.
+  //
+  // ★ THE CEILING IS NOT RAISED HERE, DELIBERATELY. Choosing a bigger number is the owner's call and
+  // needs a reason; making the existing one audible needs none. Measured 2026-09-04: all ten shipped
+  // tracks finish at their own defaults, the longest being dirt-oval at 93.1 s of a 200 s ceiling,
+  // so nothing in the tree reaches this today.
+  //
+  // A CALLER THAT STOPPED THE RUN ITSELF IS NOT A TRUNCATION — `onFrame` returning false is the
+  // window harnesses' documented way to measure part of a race, and they finish nobody on purpose.
+  if (!stoppedByCaller && st.finishedCount < identity.racers) {
+    throw new Error(
+      `raceDriver: the race on "${race.trackId ?? "(unnamed track)"}" hit the ${CEILING_MS / 1000} s ` +
+        `ceiling with ${st.finishedCount} of ${identity.racers} racers finished, after ` +
+        `${((ts - raceStart) / 1000).toFixed(1)} s of virtual time. ` +
+        `Refusing to return it: every number taken from a truncated race describes a race the ` +
+        `product does not run. Raising the ceiling is a decision, not a fix — see this function's ` +
+        `header.`
+    );
   }
   return { frames: frame, endTs: ts };
 }

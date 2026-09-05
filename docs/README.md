@@ -68,6 +68,7 @@ What a stranger needs in order to understand and change RaceArena.
 | [AUTH.md](AUTH.md)                 | Authentication as it is BUILT: what an operator supplies, what is protected. |
 | [ENVIRONMENT.md](ENVIRONMENT.md)   | Every environment variable, and what happens when one is missing or wrong. |
 | [DEPLOYMENT.md](DEPLOYMENT.md)     | Public same-origin hosting and the environment it needs.           |
+| [DEPLOY-NOTES.md](DEPLOY-NOTES.md) | What stands between here and a one-command deploy, priced — and which choices are the owner's. Not how-to; that is DEPLOYMENT.md's. |
 
 ### The data model
 

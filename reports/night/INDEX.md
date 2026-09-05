@@ -8,6 +8,107 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CLOSING-CUT-1.md](CLOSING-CUT-1.md) — **what the closing phase interrupts** (2026-09-04, PIECE B).
+  The feasibility gate passed: the closing phase's start IS observable from an existing instrument —
+  the first frame with the director's `_runInComposingNow`, dumped as `comp`. Ten tracks, seed 9, the
+  real browser on the production build. ★ **FOUR different phases are caught at the cut** —
+  `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2, `BATTLE_ZOOM` 1; there is no "it mostly interrupts
+  X". A median **2,492 ms / 59%** of the phase is still ahead, with only 35% of its zoom travel done —
+  and the zoom is caught EARLIER than the pan in ALL TEN, so the cut removes the glide. ★ **It was
+  never "doing nothing anyway": 0 of 10**, so the cheap version of this change is not available.
+  ★ **AND ONE CASE COLLIDES WITH THE ACCEPTANCE:** on city-circuit — a gate track — the interrupted
+  phase is a `BATTLE_ZOOM` with **98% still to come**, and behaviour (ii) of ACCEPTED-FINISH-1
+  protects exactly that shot. **NEEDS HIS WORD.** One seed only; §6 says what that cannot support.
+
+- [ACTION-LEVERS-1.md](ACTION-LEVERS-1.md) — **what each action lever actually does** (2026-09-04,
+  PIECE A, the point of that night's chain). Candidate list re-established at source, not taken from
+  ACTION-KEYS-1. ★ **The action dial is NOT unbuilt:** `RACE_ACTION_STAGES` ships a three-position
+  host selector accepted 2026-08-24, mapping onto exactly two keys — so the question is whether they
+  are the right two. ★ **They move the FRONT FIGHT and nothing else:** `pulkLeaderBrake` and
+  `pulkChallengerBoost` move lead changes, passes and the leader's longest hold by 10–38%, 10/10
+  tracks, p = 0.002 — and **neither moves how close the field runs or the gap at the line**.
+  `pulkLeaderBrake` is about twice the other. ★ **EVERY CAP IN THE PULK MECHANISM IS SLACK:** three
+  arms — the realism envelope, the boost headroom and the attacker slots, all raised — give a
+  **bit-identical race on all ten tracks**. The game never reaches its own ceilings, so those keys
+  can only be turned DOWN; a dial built on them would have a dead half. ★ **And the key the tree
+  calls "the future Action-slider backing", `choreoIntensity`, MOVES NOTHING** in either direction.
+  Two smaller real levers found (`pulkBoostHeadroom` downward, −15% passes; `pulkLeadRotationAttackerSlots`
+  downward, −8%), and two that run BACKWARDS from their names — `chaosSteerGain` (less steer, MORE
+  lead changes) and `b2AttackHeroes` (more attackers, FEWER passes and a tighter field, on a window
+  different from the one it was shipped on). ★ **`contestWindowStart` excluded with reason: it is a
+  RULER, not a lever.** **COMPLETE — 290 cells, 0 failures, 14 levers × 10 tracks × N=30.** §8 records
+  what an earlier partial revision of the report got wrong. No default moved, nothing designed.
+
+- [RACESCREEN-MOUNT-1.md](RACESCREEN-MOUNT-1.md) — **a test that mounts `RaceScreen`** (2026-09-04,
+  PIECE C). It mounts: three tests render the real component past its `Loading…` placeholder, and the
+  run log shows the real `CameraDirector` initialising, so the race is built rather than the chrome
+  merely drawn. ★ **It supersedes owner decision D2, which is not withdrawn** — D2 closed the
+  question of whether to act; the chain re-opened it because the action dial is about to be built on
+  this screen. **No production code changed**; RACESCREEN-SEAM-1's one-line seam was not needed.
+  ★ **The Router is the finding:** grepping `index.jsx` for `react-router` says it needs none, and
+  that is wrong — `useFadeNavigate()` falls back to `useNavigate()`. Found by running, not reading.
+  Sabotage 3/3. ★ **AND THE SABOTAGE THE CHAIN NAMED IS STILL GREEN** — blanking every track
+  background still passes 31 files and 405 tests, and cannot be caught here; the backlog item is
+  corrected to say so rather than struck.
+
+- [SIM-FAIRNESS-PIN-1.md](SIM-FAIRNESS-PIN-1.md) — **characterisation tests for `sim-fairness.mjs`**
+  (2026-09-04, PIECE F). Shape re-established with acorn: 6,195 lines, 340 functions, the longest
+  `runSingleRace` at **2,766** — matching the backlog. ★ **Two facts it does not carry decide what is
+  testable:** `runSingleRace` is EXPORTED, and the whole sweep sits behind `if (isMain)`, so the file
+  can be driven without touching it. 12 tests pin the module's shape, the analysis helpers, and
+  `runSingleRace` end to end on real tracks in BOTH regimes, with one golden digest so a change that
+  moves only open tracks cannot pass by averaging. ★ **Both return shapes were established by RUNNING
+  the code and both first drafts were wrong.** Sabotage: a physics constant CAUGHT by the golden; a
+  tie-break NOT caught — and correctly so, because `finalRank` is a strict ordering and the branch is
+  unreachable, measured over 15 races. The `isMain` block stays unpinned and is named. World
+  fingerprint unmoved.
+
+- [SILENT-ZERO-TRACKS-1.md](SILENT-ZERO-TRACKS-1.md) — **a sweep that measures nothing must not exit
+  clean** (2026-09-04, PIECE E of that night's chain). `--tracks=all` matched no geometry, and the
+  harness did not merely report zero — **it printed `Every frame of every race swept satisfied all
+  five invariants. PASS` and exited 0**, in 43 s, measured by removing the new guard and re-running
+  the incident. ★ **The fix already existed in this repository and never travelled:**
+  `company-spread-sweep.mjs:160` carries the same guard, written after its own silent zero. Two
+  checks added to `viewer-invariants.mjs`, both before the client build. One guard limb was found
+  UNREACHABLE by measurement and removed rather than left looking protective. 28 other `--tracks`
+  entry points are named and deliberately not guarded, and `sim-fairness.mjs` holds a third variant —
+  a silent DEFAULT, not a zero. **Not wired into CI, verify or a hook.**
+
+- [HARNESS-CEILING-LAPS-1.md](HARNESS-CEILING-LAPS-1.md) — **the fixed ceiling and the hardcoded lap
+  count** (2026-09-04, PIECE H). ★ **The track records already say how many laps they run** —
+  `defaultLaps`, 2 on all five closed tracks — so the driver was ignoring the data, not filling a gap
+  in it. Measured over ten tracks at their own defaults: **0 of 10 exceed the 200 s ceiling**, the
+  longest being dirt-oval at 93.1 s. The driver now reads the record and THROWS rather than
+  substituting, and a truncated race throws instead of being returned as though it were a race.
+  **The ceiling is NOT raised** — choosing a new limit is a decision; making the existing one audible
+  is not. Sabotage 4/4 with two controls. All four fingerprints unmoved.
+
+- [RENDER-CAMERA-GAP-1.md](RENDER-CAMERA-GAP-1.md) — **the render fingerprint's blind spot, the guard
+  half only** (2026-09-04, PIECE G). The instrument builds the frame camera as a three-member literal
+  against a six-member contract. ★ **The correction: it costs TWO fields, not three** —
+  `anchorRacerIndex` and `runInArrived`, both label behaviours; `camera.state` is no longer read by
+  live code and survives only inside the comment recording its removal. **The repair is NOT done — it
+  moves the render hash and is therefore a mint and the owner's to order.** A test pins exactly which
+  members are missing today, so the gap can no longer widen or change silently. Sabotage 3/3.
+
+- [IMAGE-DATE-FNS-1.md](IMAGE-DATE-FNS-1.md) — **why `date-fns` is in the image** (2026-09-04,
+  PIECE J). Pulled by `better-sqlite3-session-store`; it appears in no `package.json` in the tree.
+  **27.1 MB measured INSIDE the image — 42% of its dependency tree** — and ★ **the package that
+  declares it never imports it**: its only mentions there are its own `package.json` and its TEST
+  file, and nothing else in the image imports it either. **Not removed, and that is a judgement
+  rather than a rule:** the three clean routes are the ones the piece forbids, and an `rm -rf` would
+  leave the image disagreeing with its own manifest — the anonymous-volume defect one layer over.
+  NEEDS HIS WORD.
+
+- [BACKLOG-CORRECTIONS-2026-09-04.md](BACKLOG-CORRECTIONS-2026-09-04.md) — **three document
+  corrections, each established at source first** (2026-09-04, PIECE K). Player Group Selection was
+  unbuilt on 2026-09-02 and **shipped on 2026-09-03**; verified at source and moved to PART TWO, with
+  the one requirement that did NOT ship named rather than covered by the tick mark — it asked for a
+  FILTER, and what shipped is ADDITIVE selection. Gate item 2 still measures accepted behaviour under
+  a different name, now stated plainly in the `GATE_TRACKS` comment — **and it is now two of the three
+  excluded tracks, not one**; no exclusion was changed. The `--tracks=all` silent zero is recorded as
+  the class's next occurrence.
+
 - [NIGHT-2026-08-25.md](NIGHT-2026-08-25.md) — **the morning sheet for the night of 2026-08-25**
   (the gate that stopped gating, and seven pieces behind it). **Not a findings report: it is the
   running state of that night's chain** — done, running, left, and the three forks that need his word

@@ -292,12 +292,12 @@ PHASE, WHATEVER CAMERA PHASE IS RUNNING MUST BE ENDED — whichever one it was.*
 previous subject into the run-in.
 
 **★ AND A BATTLE SHOT IS NOT AN EXCEPTION — his decision of 2026-09-05, recorded as D28 below.**
-The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because CLOSING-CUT-1
+The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md)
 found one running at the cut on city-circuit, a SHIP-gate track, with 98% of it still to come, and at
 the time a battle shot near the finish was wrongly recorded as accepted behaviour — see
 ACCEPTED-FINISH-ATTRIBUTION-1, which corrected that attribution.
 
-**THE MEASURED FACT THAT GOES WITH IT** (CLOSING-CUT-1, ten tracks at seed 9, one race each): **four
+**THE MEASURED FACT THAT GOES WITH IT** ([CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md), ten tracks at seed 9, one race each): **four
 different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
 `BATTLE_ZOOM` 1, ten of ten — and **`PHOTO_FINISH` is not among them.** So the requirement covers a
 varied set rather than one special case. **BUILD NOTHING: the rebuild is its own block, and nothing
@@ -376,10 +376,19 @@ asserted, where two one-token sabotages used to pass all 44 tests.
 **Listed so nothing has to be remembered. Whether any of it is worth doing is his call, and none of
 these carries a recommendation.**
 
-1. **`RaceScreen` has no test that mounts it.** 1,917 lines. Forcing its background path to `null` —
-   which blanks every track background in the game — passes every test in its own directory and
-   `App.test.jsx`. See the existing section *`RaceScreen` is not testable* below, which is the
-   evidence for it.
+1. ~~**`RaceScreen` has no test that mounts it.**~~ **HALF ANSWERED 2026-09-04 ([RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md)),
+   and the half that is not is the half this item actually measured.** `mount.test.jsx` now renders
+   the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
+   red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
+   NAMED HERE IS STILL GREEN, re-measured on the night of 2026-09-04:** forcing `bgImagePath` to
+   `null` at `index.jsx:435` — which blanks every track background in the game — passes **31 files
+   and 405 tests** in that directory, the new mount test among them.
+   **★ AND IT CANNOT BE CAUGHT THERE.** The mount test stubs the 2D context, so nothing it does is
+   drawn; it proves the screen RENDERS, never WHAT it renders. A test that asserted draw calls would
+   be a worse copy of `render-fingerprint.mjs`, which draws the real bundle. So what remains open is
+   **not** "mount the screen" — it is whether the render fingerprint's coverage should reach the
+   background layer, which is a different question and belongs with the instrument. The file is
+   **1,959 lines** (was 1,917 when this was written) and no rewrite is implied, proposed or wanted.
 2. **`scripts/sim-fairness.mjs` is 6,195 lines with a 2,766-line function and no test.** **It is NOT
    product code and is on no product path** — nothing the game runs imports it. It is, however, **a
    declared `reach` entry of the world fingerprint**, so it is inside that instrument's dependency
@@ -449,6 +458,23 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       in the report.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:273` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:155`, the driver's own test. Waiting on BUILDING.
+
+      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
+      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
+      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
+      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
+      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
+      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
+      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
+      established at source:** `scripts/viewer-invariants.mjs` filters
+      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
+      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
+      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
+      race is driven, so `runRace`'s return value could not have caught it either.
+      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
+      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
+      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
+      `--tracks` entry point named in the piece-E report still has the defect.
 
 - [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
       GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
@@ -599,54 +625,6 @@ nothing is designed here, no key is added, and no change is implied.
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it and still returns nothing — `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx` exits 1, where the same pattern over `SetupScreen.jsx` returns 6 lines, so the pattern can match. Waiting on the durable record carrying the race's inputs and on the config-storage design question the entry names.
 
 ---
-
-## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
-
-- [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
-      lives inside it can only be proven by READING ITS SOURCE.** This is a finding with evidence, not
-      a proposal — nothing is proposed here, and no rewrite is implied.
-
-  **The evidence, established at source on 2026-08-22:**
-
-  - **One component, 1907 lines.** `wc -l client/src/screens/RaceScreen/index.jsx`.
-  - **One file imports it to USE it, and no test in the tree renders it.**
-    `git grep -n "screens/RaceScreen/index.jsx"` over the whole tree returns exactly one real import
-    — `client/src/App.jsx:13`. **The two test files that name it both name it in order to AVOID it**,
-    and they are the finding rather than a footnote to it:
-    `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
-    — the app's own test replaces the race screen with an empty component — and
-    `client/src/modules/buildIdentitySource.test.js` opens it with `readFileSync` and asserts
-    against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
-    `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
-    workaround: what needed testing was moved OUT, one file at a time.
-  - **First paint returns a placeholder.** `index.jsx:1746` — `if (!raceData) return <Loading…>`.
-    `raceData` is null on mount (`:175`) and is filled by an effect that reads
-    `sessionStorage['activeRace']` and throws into an error state when the key is absent (`:381-389`).
-    So a bare mount renders the loading card and nothing under test is ever constructed.
-  - **The race is built inside a second effect that needs a canvas AND a geometry.**
-    `:393` — `if (!raceData || !canvasRef.current) return;` — then `:416` `getTrack(...)`, which reads
-    the geometry out of `localStorage` and returns null when it is not there, setting an error.
-  - **The draw loop is rAF-driven** (`:1684`, `:1687`) and wants a 2D context.
-  - **Six `useEffect`s**, of which the two above gate everything the screen does.
-
-  **What it has already cost, named because it is the reason this entry exists.** CEREMONY-SKIP-2
-  (`608ad5ba`) was ordered to prove three guards on the ceremony-skip handler by mounting the screen.
-  **All three had to be written against a FIXTURE that reproduces the screen's DOM shape plus a
-  TRANSCRIPTION of the handler**, because mounting the real component would have tested the
-  scaffolding and every one of its failure modes would have landed on that file as a flake. The
-  compromise was stated in the report rather than implied — and it forced two further source-reading
-  tests to hold the transcription and the attachment to the real file
-  (`ceremonySkip.test.jsx`, the two `readFileSync` tests). **A source-reading test is a lexical
-  approximation of behaviour**; it catches a rename and a move, and it cannot catch a wrong value at
-  runtime.
-
-  **verify:** `git grep -n "render(<RaceScreen" -- '*.jsx'`. **STILL OPEN while it returns nothing
-  and exits 1** — that is today's output. The day it returns a line, somebody has mounted the screen
-  and the finding is answered. **The empty result is evidence because the pattern can match:**
-  `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
-  Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the finding holds — `git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing where `render(<` matches in 34 test files. Waiting on nobody: D2 (2026-08-23) declined to act on it and RACESCREEN-SEAM-1 (`81904563`, 2026-09-02) priced the seam at **one line** — a default parameter for `canvas.getContext` — and concluded the file does not need it, because everything a mount would exercise already has a better driver.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
@@ -1193,33 +1171,6 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1717-1719`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
-
-### 2 — Player Group Selection 🔜 PRIORITY 1 after Camera Phase
-
-The game master selects in setup which player group enters the race (e.g. "Group A", "All", "Selection").
-Currently all configured players are always shown — there is no mechanism for subgroups.
-
-**Use cases:**
-
-- Tournament with multiple groups: only Group A races in round 1, Group B in round 2
-
-- Ad-hoc race with participants from the full roster
-
-- Quick selection without manually deselecting all inactive players
-
-**Requirements (spec still pending):**
-
-- Player groups definable in `PlayerGroupsManager` (group name + player assignment)
-
-- Setup screen: selection filter "Which group races?" before race start
-
-- No change to the race engine — only which players end up in `sessionStorage.activeRace`
-
-- UI principle 1: everything configurable (group names, sizes, assignments) without code changes
-
-**Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `SetupScreen.jsx` consumes an ACTIVE_GROUP handed to it by the Dev Panel (`:139-146`) and has no "which group races?" filter. Waiting on the spec the entry says is still pending.
 
 ---
 
@@ -2587,17 +2538,17 @@ gate that gets ignored within a week.
 2026-08-24 — *at the start of the closing phase, whatever camera phase is running must be ended* —
 **applies to every phase running at that moment, with no exception for a battle shot.**
 
-**Why it needed saying.** CLOSING-CUT-1 (the night of 2026-09-04) measured what is actually running
+**Why it needed saying.** [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md) (the night of 2026-09-04) measured what is actually running
 at that moment and found a `BATTLE_ZOOM` on city-circuit, a SHIP-gate track, with 98% of it still to
 come. That met the then-recorded claim that a battle shot near the finish was accepted behaviour, so
 the instruction and the acceptance appeared to point opposite ways. **Two things resolve it:** he has
 answered the collision here, and the acceptance claim itself was wrong — see the correction below.
 
-**THE MEASURED FACT THAT GOES WITH IT**, from CLOSING-CUT-1, ten tracks at seed 9, one race each:
+**THE MEASURED FACT THAT GOES WITH IT**, from [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md), ten tracks at seed 9, one race each:
 **four different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
 `BATTLE_ZOOM` 1, ten of ten races — and **`PHOTO_FINISH` is not among them.** So this decision covers
-a real and varied set, not one special case. *(That report is on the unmerged `night/2026-09-04`
-branch at the time of writing.)*
+a real and varied set, not one special case. *(That report was on an unmerged branch when D28 was
+written; it landed on 2026-09-05 and is linked above.)*
 
 **BUILD NOTHING. Nothing in `CameraDirector.js` ends a running phase at the closing boundary today**,
 and this decision does not build it — the rebuild is its own block. What is recorded is that the
@@ -2612,7 +2563,7 @@ running after 95% falls under his rule like any other. That line needed no chang
 **His decision: leave it. Nothing is removed, no dependency is changed, no Dockerfile line is
 written.**
 
-IMAGE-DATE-FNS-1 (the night of 2026-09-04) established that `date-fns@2.16.1` is pulled by
+[IMAGE-DATE-FNS-1](../reports/night/IMAGE-DATE-FNS-1.md) (the night of 2026-09-04) established that `date-fns@2.16.1` is pulled by
 `better-sqlite3-session-store`, appears in no `package.json` in the tree, measures **27.1 MB inside
 the image — 42% of its dependency tree** — and that **the package which declares it never imports
 it**: its only mentions there are its own `package.json` and its test file, and nothing else in the
@@ -2641,7 +2592,7 @@ one command.
 
 **His decision: resolve it at START time**, so one image works at any address without a rebuild.
 
-**WHICH OPTIONS THIS CLOSES.** DEPLOY-NOTES.md §2 laid out three and chose none:
+**WHICH OPTIONS THIS CLOSES.** [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §2 laid out three and chose none:
 
 - **A · keep it** — one image per public origin, rebuilt per deployment. **CLOSED.**
 - **B · make the default RELATIVE** so every call is same-origin. **CLOSED** — it still decides the
@@ -2655,10 +2606,12 @@ lives. **The server has no TLS at all** — searched for, not assumed — and th
 rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
 terminator in front.
 
-**⚠ WHERE THIS BELONGS.** `docs/DEPLOY-NOTES.md` carries the three options this closes, and it is on
-the unmerged `night/2026-09-04` branch — it does not exist on master, so the decision is filed here,
-in the register that is its proper home anyway. **When that branch merges, §2 of that document should
-point at D30 rather than restate it.**
+**WHERE THIS BELONGS — settled 2026-09-05 when `night/2026-09-04` merged.**
+[DEPLOY-NOTES.md](DEPLOY-NOTES.md) carries the three options this closes. It did not exist on master
+when D30 was written, so the decision was filed here — the register being its proper home anyway —
+with a note to connect the two once the branch landed. **That is done: §2 of that document now points
+at D30 and does not restate the reasoning, and its "one command" checklist marks hurdle 2 answered
+but NOT YET BUILT.**
 
 ## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
 
@@ -2723,6 +2676,112 @@ point at D30 rather than restate it.**
       nowhere in the tree. **The rule it stated stands and is why the line is kept:** two controls
       governing different moments must not be able to read as one control at a glance — a tooltip
       that explains the difference is not a substitute for a label that shows it.
+
+## `RaceScreen` is not testable — ✅ ANSWERED 2026-09-04 ([RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md))
+
+**It mounts.** `client/src/screens/RaceScreen/mount.test.jsx` renders the real component, gets it
+past its own `Loading…` placeholder, and asserts the race chrome is on the page. Three tests, and
+the run log shows the real `CameraDirector` initialising (`[RA CAMERA LIVE TRUTH] … cameraSeed=…`),
+so the race is genuinely built rather than the chrome merely drawn.
+
+**★ THIS SUPERSEDES D2, WHICH IS NOT WITHDRAWN.** D2 (2026-08-23) decided to keep the finding and
+do no work — *"what is closed is the question of whether to act on it"*. The night chain of
+2026-09-04 re-opened exactly that question and ordered the test, with its own reason: **the action
+dial is about to be built on this screen.** D2 was not wrong; the trade changed when the next
+feature landed on this file.
+
+**NO PRODUCTION CODE WAS CHANGED.** RACESCREEN-SEAM-1 priced a seam at one line (a default
+parameter for `canvas.getContext`) and concluded the file did not need it. **It still does not** —
+`getContext` is stubbed in the test, which is where scaffolding belongs. Five things are supplied
+from outside the component: `sessionStorage['activeRace']`, the track geometry in `localStorage`
+(**the real shipped record** from `server/seeds/tracks/`, not a hand-made shape), a 2D context, a
+bounded `requestAnimationFrame`, and a Router.
+
+**★ AND THE FIFTH ONE IS THE FINDING WORTH KEEPING.** `index.jsx` imports no router package, so
+grepping the file for `react-router` says it needs none — **and that is wrong.** It calls
+`useFadeNavigate()` at `:121`, and that hook (`contexts/TransitionContext.jsx:47`) falls back to
+`useNavigate()`, which throws outside a Router. It was found by RUNNING the mount, not by reading
+for it. That is a small live example of this entry's own thesis: a source-reading test is a lexical
+approximation of behaviour.
+
+**SABOTAGE — 3 of 3 caught, with a green control, each mutation applied to the real `index.jsx` and
+the file restored byte-identical:**
+
+| the defect it stands for | result |
+| --- | --- |
+| a reference error in the animation effect — the screen never renders | **RED**, 3/3 tests |
+| the load effect never setting `raceData` — a permanent `Loading…` card, no error, no crash | **RED**, 3/3 tests |
+| the geometry lookup always failing — the error card instead of the race | **RED**, 3/3 tests |
+
+All three ship silently on master today, because not one existing test renders the component —
+`App.test.jsx:18` replaces it with `() => null`.
+
+**⚠ THIS ENTRY'S OWN `verify` COMMAND DOES NOT FIRE, AND IT IS NOT GOING TO.**
+`git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing and exits 1 — because the screen
+**cannot** be rendered in that shape. It needs a Router, so the mount reads
+`render(<MemoryRouter …><RaceScreen /></MemoryRouter>)`. The verify line was written against a form
+the component does not have. **The command to use instead is
+`git grep -ln "RaceScreen" -- 'client/src/screens/RaceScreen/mount.test.jsx'`, or simply run that
+file.** Recorded rather than quietly fixed, because a liveness check that was itself a lexical
+guess is the same lesson one level up.
+
+**WHAT THIS DOES NOT DO.** It is a smoke test: it proves the screen renders, not that it renders
+anything correctly. Nothing about the picture, the camera or the physics is asserted, and it must
+not grow into that — `render-fingerprint.mjs` and `viewer-invariants.mjs` drive the real bundle in
+a real browser and are strictly better instruments for every one of those questions. **What this
+catches is the class they cannot: the screen failing to render at all.** The file is still 1,959
+lines and no rewrite is implied, proposed or wanted.
+
+<details><summary>The original PART ONE entry, verbatim</summary>
+
+
+- [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
+      lives inside it can only be proven by READING ITS SOURCE.** This is a finding with evidence, not
+      a proposal — nothing is proposed here, and no rewrite is implied.
+
+  **The evidence, established at source on 2026-08-22:**
+
+  - **One component, 1907 lines.** `wc -l client/src/screens/RaceScreen/index.jsx`.
+  - **One file imports it to USE it, and no test in the tree renders it.**
+    `git grep -n "screens/RaceScreen/index.jsx"` over the whole tree returns exactly one real import
+    — `client/src/App.jsx:13`. **The two test files that name it both name it in order to AVOID it**,
+    and they are the finding rather than a footnote to it:
+    `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
+    — the app's own test replaces the race screen with an empty component — and
+    `client/src/modules/buildIdentitySource.test.js` opens it with `readFileSync` and asserts
+    against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
+    `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
+    workaround: what needed testing was moved OUT, one file at a time.
+  - **First paint returns a placeholder.** `index.jsx:1746` — `if (!raceData) return <Loading…>`.
+    `raceData` is null on mount (`:175`) and is filled by an effect that reads
+    `sessionStorage['activeRace']` and throws into an error state when the key is absent (`:381-389`).
+    So a bare mount renders the loading card and nothing under test is ever constructed.
+  - **The race is built inside a second effect that needs a canvas AND a geometry.**
+    `:393` — `if (!raceData || !canvasRef.current) return;` — then `:416` `getTrack(...)`, which reads
+    the geometry out of `localStorage` and returns null when it is not there, setting an error.
+  - **The draw loop is rAF-driven** (`:1684`, `:1687`) and wants a 2D context.
+  - **Six `useEffect`s**, of which the two above gate everything the screen does.
+
+  **What it has already cost, named because it is the reason this entry exists.** CEREMONY-SKIP-2
+  (`608ad5ba`) was ordered to prove three guards on the ceremony-skip handler by mounting the screen.
+  **All three had to be written against a FIXTURE that reproduces the screen's DOM shape plus a
+  TRANSCRIPTION of the handler**, because mounting the real component would have tested the
+  scaffolding and every one of its failure modes would have landed on that file as a flake. The
+  compromise was stated in the report rather than implied — and it forced two further source-reading
+  tests to hold the transcription and the attachment to the real file
+  (`ceremonySkip.test.jsx`, the two `readFileSync` tests). **A source-reading test is a lexical
+  approximation of behaviour**; it catches a rename and a move, and it cannot catch a wrong value at
+  runtime.
+
+  **verify:** `git grep -n "render(<RaceScreen" -- '*.jsx'`. **STILL OPEN while it returns nothing
+  and exits 1** — that is today's output. The day it returns a line, somebody has mounted the screen
+  and the finding is answered. **The empty result is evidence because the pattern can match:**
+  `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
+  Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
+
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** the finding holds — `git grep -n "render(<RaceScreen" -- '*.jsx'` still returns nothing where `render(<` matches in 34 test files. Waiting on nobody: D2 (2026-08-23) declined to act on it and RACESCREEN-SEAM-1 (`81904563`, 2026-09-02) priced the seam at **one line** — a default parameter for `canvas.getContext` — and concluded the file does not need it, because everything a mount would exercise already has a better driver.
+
+</details>
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
@@ -3045,6 +3104,62 @@ point at D30 rather than restate it.**
 - ✅ City Circuit
 
 Additionally: Space (Custom Track) already present.
+
+### 2 — Player Group Selection — ✅ SHIPPED 2026-09-03
+
+**Moved here from PART ONE on 2026-09-04, verified at source.** The 2026-09-02 verdict below said
+unbuilt and was true on the day it was written; the feature landed the next day and the verdict was
+never revisited. What the tree holds today:
+
+- **The picker exists and is mounted.** `client/src/screens/SetupScreen/PlayerGroupPicker.jsx`
+  (198 lines, header dated 2026-09-03), rendered at `client/src/screens/SetupScreen/SetupScreen.jsx:803`.
+- **Several groups, not one.** `addGroup` appends a group's players to the roster and `removeGroup`
+  takes back exactly the ones it put there; which groups are on is DERIVED from the roster
+  (`players.map(p => p.group)`), so any number can be in the field at once. The one-shot
+  `KEYS.ACTIVE_GROUP` hand-off the verdict described is gone from `SetupScreen.jsx` — the key
+  survives only on the Dev Screen's own Load-to-Setup path.
+- **An oversized field is REFUSED, not truncated.** `addGroup` returns without adding when
+  `players.length + incoming.length > maxPlayers`, and says how many over the cap it would be.
+  That is REFUSE-OVERSIZED-1, the owner's decision of 2026-09-04.
+
+Shipped by `aea89b22` *feat(PLAYER-GROUPS-1)* (2026-09-03), with `210697d1` (REFUSE-OVERSIZED-1),
+`648fd223` (DROP-RACER-NUMBER-1) and `a4e38b54` (CHIP-CONTRAST-1) on the same day. All on master.
+
+**One requirement of the original spec is NOT what shipped, and it is worth naming rather than
+letting the tick mark cover it:** the entry asked for a filter — "*which* group races?" — and what
+was built is ADDITIVE selection: picking a group fills the roster, it does not narrow a field. For
+the use cases the entry lists (one group per tournament round; an ad-hoc mixed field) additive
+selection does the same work and does more, which is presumably why it was built that way. If the
+filter reading was the one you wanted, that is a fresh entry, not this one.
+
+<details><summary>The original PART ONE entry, verbatim</summary>
+
+
+The game master selects in setup which player group enters the race (e.g. "Group A", "All", "Selection").
+Currently all configured players are always shown — there is no mechanism for subgroups.
+
+**Use cases:**
+
+- Tournament with multiple groups: only Group A races in round 1, Group B in round 2
+
+- Ad-hoc race with participants from the full roster
+
+- Quick selection without manually deselecting all inactive players
+
+**Requirements (spec still pending):**
+
+- Player groups definable in `PlayerGroupsManager` (group name + player assignment)
+
+- Setup screen: selection filter "Which group races?" before race start
+
+- No change to the race engine — only which players end up in `sessionStorage.activeRace`
+
+- UI principle 1: everything configurable (group names, sizes, assignments) without code changes
+
+**Priority:** First priority after the camera phase is complete. Before D8 (full racer editor) and Surface Zones.
+
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. `SetupScreen.jsx` consumes an ACTIVE_GROUP handed to it by the Dev Panel (`:139-146`) and has no "which group races?" filter. Waiting on the spec the entry says is still pending.
+</details>
 
 ## Ready — spec exists, concept decided
 
