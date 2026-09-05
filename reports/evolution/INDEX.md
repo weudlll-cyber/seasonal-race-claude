@@ -349,6 +349,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GATE-WIRED-AND-CAUSED-1.md](GATE-WIRED-AND-CAUSED-1.md) — **the ship gate joins `verify`, learns
+  a cause, and stops describing tracks as excluded** (2026-09-05; tooling, tests and documents only —
+  no camera behaviour, no default, no threshold, **no change to which tracks the gate runs**, nothing
+  minted, `engine-reach --check` selects nothing on all ten changed paths). ★ **`viewer-invariants.mjs`
+  declared its routing to nobody**: the collector picks guards by filename pattern and that name
+  matched none, so the gate was wired to no `verify` run, no CI job, no hook and no npm script. Named
+  explicitly in the collector — **the pattern was not loosened** — and selected only when BOTH hold,
+  `--premerge` given AND a declared path changed, with the skip line naming whichever condition
+  failed. ★ **Sabotage (b), a gate wired never to fire, is caught by the two new tests and by nothing
+  else** — every other verify run in the repo is a run without the flag, where not selecting is
+  correct. **MEASURED: the gate is 336.9 s for two races, ran alone**, corroborating
+  SHIP-CEREMONY's 340 s row to within 1% — so the header's `~340 s` was right and what it lacked was a
+  method, not a measurement. Then `endgame-sheet.mjs` computes the **accepted cause from the crossing
+  frame** — `binding "level"` with the closing zoom short of `photoFinishZoom` by more than item 2's
+  own existing tolerance, **no new number, no track name, no seed, no list** — and prints `ACC` apart
+  from `FAIL` on items 2 and 9; **luger-hill and dirt-oval now read ACC on item 2, garden-path reads
+  ACC on 9 and a plain FAIL on 10 in the same row**. ★ **Item 10 is deliberately excluded from that
+  treatment and a test enforces it**: its supposed accepted cause is the sentence stripped of its
+  attribution on 2026-09-05, and a verdict column would re-assert it. Finally **there is no exclusion
+  mechanism and there never was** — `GATE_TRACKS` NAMES two tracks and the harness keeps the
+  geometries on that list; six sites that gave three tracks a standing of their own are rewritten,
+  five more examined and left with reasons. Closes **D31** (three owner entries) and records the
+  pattern the four closed entries shared. **verify PASS 14 / FAIL 0 with the gate green.**
+
 - [MERGE-NIGHT-2026-09-04.md](MERGE-NIGHT-2026-09-04.md) — **closing the night thread: ten pieces,
   one merge** (2026-09-05; no behaviour changed, nothing minted). Master had moved, so the branch was
   caught up first. ★ **The predicted three colliding files were two** — the night never touched

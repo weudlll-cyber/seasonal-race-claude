@@ -32,11 +32,22 @@
 //   lives in. Nothing can forget it. That is miss 3 and miss 5's cousin closed for every guard that
 //   exists or will exist, by construction.
 //
-//   REACH, declared but CROSS-CHECKED. The measurement harnesses reach into `client/` through
+//   REACH, declared. The measurement harnesses reach into `client/` through
 //   `await import(u("client/..."))`, which a static walk of `from "..."` cannot follow. Those entry
-//   points are declared, and `routing.test.mjs` extracts every such literal from the guard's own
-//   source and fails if one is not inside the guard's resolved set. The declaration cannot drift
-//   from the script, because the script is what checks it.
+//   points are declared, and every declared path is checked to EXIST — `declaredPathProblems` below,
+//   REACH-CONTRACT-1, and `verify` refuses the run rather than routing on a declaration it cannot
+//   trust.
+//
+//   ★ WHAT IS *NOT* CHECKED, corrected 2026-09-05 (GATE-WIRED-AND-CAUSED-1). This paragraph used to
+//   say that "`routing.test.mjs` extracts every such literal from the guard's own source and fails
+//   if one is not inside the guard's resolved set". **THERE IS NO `routing.test.mjs`** — established
+//   by `git ls-files | grep -i routing`, which returns two diagnostics, two night reports and this
+//   file, and by searching every `*.test.mjs` under `scripts/` for such an extraction, which finds
+//   none. So a guard that dynamically imports a path it does not cover would NOT be caught here.
+//   The property still HOLDS for the harnesses in the tree — checked by hand on the same date for
+//   `viewer-invariants.mjs`, whose three literals are covered by `files`, by the declared
+//   `camera/` dir, and by `dataReach` respectively — but it holds by inspection, not by
+//   construction. Writing that check is a guard of its own and is not done here.
 //
 //   DIRS / FILES, declared plainly. Containment for what no import can reach: a directory of
 //   documents, a suite's own configuration. This is the only genuinely hand-written part, it is
@@ -217,6 +228,15 @@ export const SUITE_GUARDS = [
  * same two conditions — it declares and exits before any of that, and `verify.mjs` gives it
  * `--check-counts`.
  *
+ * `viewer-invariants.mjs` is the third name to earn it (GATE-WIRED-AND-CAUSED-1), and it is the one
+ * that would be most expensive to get wrong: run with no arguments it builds the client, boots an
+ * isolated API and preview server, opens Chromium and drives forty races. It qualifies on exactly
+ * the same two conditions as the other two — its `--declare` branch is the first statement after the
+ * declaration object and MEASURED at 0.28 s, before any of that can start, and `verify.mjs` gives it
+ * `--gate`. Until this line it declared its routing to nobody: it matched no pattern here, so its
+ * declaration was never read, and it was wired to no `verify` run, no CI job, no hook and no npm
+ * script. A guard nothing invokes is not a guard.
+ *
  * IT DOES NOT RECURSE, and that is worth knowing rather than discovering (NIGHT-2026-08-18 finding
  * 16). `readdirSync` reads the top level of `scripts/` only, so a guard placed in a subdirectory
  * would never be discovered, never routed and never run locally — silently, because nothing counts
@@ -229,7 +249,7 @@ export function guardScripts(dir = SCRIPTS) {
   for (const f of readdirSync(dir)) {
     if (!f.endsWith(".mjs") || f.endsWith(".test.mjs")) continue;
     if (
-      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$|^gen-ceremony-costs\.mjs$/.test(
+      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$|^gen-ceremony-costs\.mjs$|^viewer-invariants\.mjs$/.test(
         f,
       )
     )

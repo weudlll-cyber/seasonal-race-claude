@@ -54,7 +54,10 @@ either. **Not removed** — see NEEDS HIS WORD.
 [BACKLOG-CORRECTIONS-2026-09-04](../reports/night/BACKLOG-CORRECTIONS-2026-09-04.md).
 Player Group Selection was unbuilt on 2026-09-02 and **shipped on 2026-09-03**; verified at source
 and moved to PART TWO. Gate item 2's doubling now stated plainly in the `GATE_TRACKS` comment — **and
-it is now two of the three excluded tracks, not one**. No exclusion changed.
+it is now two of the three tracks that fail something at seed 9, not one**. Which tracks the gate
+runs was not changed. *(Wording corrected 2026-09-05, GATE-WIRED-AND-CAUSED-1: this line read "two of
+the three excluded tracks". There is no exclusion — `GATE_TRACKS` NAMES the two the gate runs, and
+eight are simply not named.)*
 
 **I · What a one-command deploy actually needs** — [DEPLOY-NOTES.md](DEPLOY-NOTES.md). Nothing built,
 nothing recommended. See NEEDS HIS WORD.
@@ -136,11 +139,16 @@ progress 0.93 is a per-RACE question.
 
 ## NEEDS HIS WORD
 
-1. **Does the acceptance of 2026-09-04 reach gate item 2?** (piece K2) Item 2 and item 9 measure the
-   same behaviour under different names — a closing zoom that has not arrived at the crossing. Your
-   acceptance names items 9 and 10; item 2 is not on it. **luger-hill and dirt-oval are excluded from
-   the gate on item 2 ALONE.** If the acceptance reaches it, both exclusions lose their last reason
-   on the same day. No exclusion was changed on this observation.
+1. ~~**Does the acceptance of 2026-09-04 reach gate item 2?**~~ (piece K2) **ANSWERED 2026-09-05: it
+   does.** Item 2 and item 9 measure the same behaviour under different names — a closing zoom that
+   has not arrived at the crossing. Your acceptance of 2026-09-04 named item 9; you extended it to
+   item 2 the next day, and `scripts/endgame-sheet.mjs` now tells that cause from any other one
+   itself (PART TWO D27, GATE-WIRED-AND-CAUSED-1). **luger-hill and dirt-oval fail item 2 ALONE at
+   seed 9, and both of those failures carry the accepted cause.** Which tracks the gate runs was not
+   changed. *(Wording corrected 2026-09-05: this item said the two tracks were "excluded from the
+   gate" and that "both exclusions lose their last reason". There is no exclusion mechanism —
+   `GATE_TRACKS` names the two tracks the gate runs and eight are simply not named. The measured
+   facts are unchanged.)*
 
 2. **Is 27 MB worth it?** (piece J) Nothing in the image loads `date-fns`. The three clean ways to
    remove it are the ones the chain forbade — an `overrides` entry, dropping the session store, a

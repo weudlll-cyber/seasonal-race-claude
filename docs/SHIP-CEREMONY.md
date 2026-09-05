@@ -567,10 +567,18 @@ went missing).
       deliberately NOT counted: it swept two seeds across five tracks at a different concurrency, so
       it is the same race COUNT and not the same command.)
 
-      **Why it is HERE and not in `verify`.** It builds a bundle, starts its own API and app server
-      and launches a browser; putting that in `verify` changes what `verify` IS, and `verify` runs on
-      every commit. A ship is the moment the cost is worth paying — it is paid once per ship, and it
-      is the only thing in this repository that grades the camera the OWNER actually sees.
+      **★ SINCE 2026-09-05 `verify` CAN RUN IT, ONCE PER BRANCH (GATE-WIRED-AND-CAUSED-1).**
+      `npm run verify -- --premerge` selects it when BOTH hold: the flag was given, and the branch
+      diff touches something the guard declares. Without the flag it is never selected however the
+      diff looks, and either way `verify` prints which of the two conditions was not met. **This step
+      is unchanged and is still the authority** — the invocation above and `--premerge` run exactly
+      the same two races.
+
+      **Why it is not simply part of every `verify` run.** It builds a bundle, starts its own API and
+      app server and launches a browser; `verify` runs on every commit, and a per-commit cost of
+      minutes is how a gate stops being run. The owner's cadence, 2026-09-05: once per branch, before
+      the merge — which is why the flag exists rather than a plain route. It is still the only thing
+      in this repository that grades the camera the OWNER actually sees.
 
       **Why it is not optional for a camera change.** The headless director and the browser have
       diverged three times, and every time the headless side was the blind one: the camera's random
@@ -647,7 +655,11 @@ went missing).
       garden-path reaches PHOTO_FINISH with the winner on canvas and IS graded, passing ten of the
       twelve and **failing two** (item 9, winner cut; item 10, walk). **The gate's scope is not
       changed here** — what reddens a build is the owner's call — but the ground it stood on is gone:
-      excluding the track does not cost nothing.
+      not running the track does not cost nothing.
+      *(Wording corrected 2026-09-05, GATE-WIRED-AND-CAUSED-1: this read "excluding the track". There
+      is no exclusion — `GATE_TRACKS` NAMES the two tracks `--gate` runs, and the harness keeps the
+      geometries on that list. Eight of the ten are simply not named, and the ones that get discussed
+      have no standing the rest lack.)*
       *(It was flagged DOUBTFUL here on 2026-09-03 rather than corrected, because two OTHER harnesses
       had retracted the same claim and settling a third on their evidence is the exact mistake
       BACKLOG-VERDICTS-1 made about this track. The race that settles it was run a day later.)*
