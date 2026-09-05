@@ -36,9 +36,10 @@ sign-consistent amounts. Neither moves the field's spread at 0.90, and neither m
 at the line. **A host turning the shipped dial to "wild" gets a busier front and the same finish.**
 
 **★ AND ONE CANDIDATE IS NOT A LEVER AT ALL.** `pulkEnvelopeMaxEffect` — the realism envelope — gives
-a **bit-identical race** on all ten tracks at HALF its shipped value and at DOUBLE it. It clamps
-nothing, because the contest strengths never reach it. That is a good answer and it retires the key
-from the dial question.
+a **bit-identical race on all ten tracks at HALF its shipped value**. It clamps nothing, because the
+contest strengths never reach it. That is a good answer and it retires the key from the dial
+question. *(The DOUBLE arm reached only two tracks before the night ended, and agrees on both. §5
+keeps the two Ns apart rather than averaging them into one claim.)*
 
 ---
 
@@ -171,18 +172,27 @@ finish gap.**
 
 ## 5. ★ The lever that is a rail: `pulkEnvelopeMaxEffect` is INERT
 
-10/10 tracks. **Race signature differs from baseline on 0 of 10 tracks — at 0.06 AND at 0.24.**
+**At HALF the shipped value — 0.06, all ten tracks — the race signature differs from baseline on
+0 of 10.** Every race is **bit-identical**: same finishing order, every race, every track.
 
-Every race is **bit-identical**: same finishing order, every race, every track, at half the shipped
-value and at double it.
+**At DOUBLE — 0.24 — only TWO tracks were reached before the night ended** (city-circuit and
+dirt-oval), and both are bit-identical too. **That is suggestive, not established**, and it is
+reported at its own N rather than folded into the row above.
 
 **This is not the metric being blind — the signature says the race did not change.** The realism
-envelope is a clamp on `|governorMult − 1|`, and at the shipped contest strengths the governor never
-reaches it. **It clamps nothing.** The documented ±12% is a bound the game does not currently
-approach, not a setting; and it cannot be a dial position, because moving it changes no race.
+envelope is a clamp on `|governorMult − 1|`, and **on the ten-track evidence at 0.06 the governor
+never reaches it**, so halving the clamp binds nothing. The documented ±12% is a bound the game does
+not currently approach rather than a setting, and on that evidence it cannot be a dial position:
+loosening or tightening it changes no race.
 
-*(This is stronger than, and consistent with, ACTION-KEYS-1's note that the key "has NO headroom" —
-measured here in both directions, on ten tracks, with a signature rather than a metric.)*
+★ **THE ONE THING THIS DOES NOT YET ESTABLISH** is the upward direction at full breadth. Two tracks
+at 0.24 agree with the ten at 0.06, and the mechanism says they should — a clamp that never binds is
+insensitive in both directions — but two is two. **Finishing that arm is the cheapest remaining
+question in this piece.**
+
+*(Consistent with, and on the downward side stronger than, ACTION-KEYS-1's note that the key "has NO
+headroom": measured here on ten tracks with a race SIGNATURE rather than a metric, so "no effect" is
+distinguished from "the instrument could not see one".)*
 
 ---
 

@@ -11,6 +11,9 @@ WAS MINTED.** All four — world, world-off, camera and render — were re-compu
 and every one matches its recorded value in [fingerprints.json](fingerprints.json). *(The values are
 not restated here; that record is their one home.)*
 
+**`npm run verify` on this branch: PASS 15, FAIL 0, SKIP 11** — 452 s wall clock, client suite
+green alone in 311.6 s, retry ledger disabled (no test was retried).
+
 ---
 
 ## DONE
@@ -69,11 +72,29 @@ facts the backlog does not carry, and they are what made this possible without e
 physics constant sabotage was caught by the golden; a tie-break one was not, correctly, because the
 branch is unreachable. World fingerprint unmoved.
 
+**B · What the closing phase interrupts** — [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md).
+**Ten tracks, seed 9, in the real browser on the production build.** The feasibility gate passed —
+the closing phase's start IS observable from an existing instrument (the first frame with the
+director's `_runInComposingNow`, dumped as `comp`), so none was built.
+★ **FOUR different phases are caught at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
+`BATTLE_ZOOM` 1. There is no "it mostly interrupts X". A median **2,492 ms — 59% of the phase — is
+still ahead**, with only 35% of its zoom travel done; and the zoom is caught EARLIER than the pan in ALL TEN, so **the cut removes the glide**, which is exactly what this project's standing warning
+about big zoom changes says not to do. ★ **It was never "doing nothing anyway": 0 of 10** — the cheap
+version of this change is not available. ★ **And one case collides with your own acceptance — see question 4.** One seed only; the report says what that cannot support.
+
 ## RUNNING
 
-**A · What each action lever actually does.** Stage 1: 29 arms × 10 tracks × **N=30 races**, one
-lever at a time, everything else shipped. **0 failures**, and it flushes every cell as it lands, so
-it is resumable and readable at any moment. **Five levers complete at the time of writing.**
+**A · What each action lever actually does** — [ACTION-LEVERS-1](../reports/night/ACTION-LEVERS-1.md).
+Stage 1: 10 tracks × **N=30 races** per arm, one lever at a time, everything else shipped.
+**0 failures in 102 cells. Five levers complete**, and the report carries only complete rows — the
+arms run lever by lever, so nothing is half-measured.
+
+**★ IT IS STILL RUNNING, DELIBERATELY, AND IT IS SAFE TO STOP.** Every cell is flushed to a journal
+the moment it lands (`C:/tmp/night-2026-09-04/pieceA/rows-s1.jsonl`) and a restart skips what is
+already there, so killing it loses at most the handful of races in flight. The remaining arms were
+re-ordered so the most informative candidates run first — `b2AttackHeroes`, `choreoIntensity`,
+`chaosSteerGain`, then the rest. **To stop it:** `Stop-Process -Force` on the `node run.mjs` process.
+**To read it at any moment:** `node analyse.mjs` in that directory.
 
 **What is already clear — every row 10/10 tracks, N=30 races each, sign test across the ten tracks
 p = 0.002:**
@@ -84,28 +105,22 @@ p = 0.002:**
 | `pulkChallengerBoost` 0.03 → 0.12 | −10% → **+17%** | −9% → **+12%** | +8% → **−16%** | *nothing* | *nothing* |
 | `pulkFrontPool` 4 → 16 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
 | `pulkBiasGain` 1 → 4 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
-| `pulkEnvelopeMaxEffect` 0.06 → 0.24 | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
+| `pulkEnvelopeMaxEffect` 0.06 *(0.24: only 2 tracks)* | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
 
 ★ **THE SHIPPED DIAL'S TWO KEYS MOVE THE FRONT FIGHT AND LEAVE THE FIELD SPACING AND THE FINISH
 ALONE.** Neither of them moves how close the field runs, and neither moves the leader's gap at the
 line. `pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it does move.
 
 ★ **AND `pulkEnvelopeMaxEffect` IS NOT A LEVER AT ALL — it is a rail that never touches.** At HALF
-its shipped value and at DOUBLE it, the race is **bit-identical** to the baseline on all ten tracks
-(same finishing order, every race). The realism envelope is never reached at the shipped contest
-strengths, so it clamps nothing. That is a good answer, and it means the ±12% figure is a bound the
-game does not currently approach rather than a setting.
+its shipped value the race is **bit-identical** to the baseline on **all ten tracks** — same
+finishing order, every race. The realism envelope is never reached at the shipped contest strengths,
+so halving the clamp binds nothing: the documented bound is one the game does not currently approach
+rather than a setting. *(The DOUBLE arm reached only **two** tracks before the night ended and agrees
+on both — suggestive, not established. Finishing it is the cheapest question left in piece A.)*
 
 `pulkFrontPool` and `pulkBiasGain` DO change the race — the finishing orders differ — but move none
 of the five quantities readably at N=30. They are reported as such and get no larger run, per the
 piece's own rule.
-
-**B · What the closing phase interrupts.** Running beside A. Ten tracks at seed 9, the shipped arm,
-with the browser harness's own `--dump`. **The feasibility gate the piece set is passed:** the
-closing phase's start IS observable from an existing instrument — it is the first frame on which the
-director's `_runInComposingNow` is true, dumped as `comp` by `viewerProbe.js`. No instrument was
-built. *(Both runs are deterministic — the sim is seeded and the viewer harness runs a fixed virtual
-clock — so sharing the machine changes wall-clock only, never a number.)*
 
 ## OPEN
 
@@ -139,7 +154,15 @@ clock — so sharing the machine changes wall-clock only, never a number.)*
    image is origin-specific: there is no one image and therefore no one command. Three options are
    laid out in [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §2 and none is chosen.
 
-4. **The deploy decisions that are not code:** a domain, which reverse proxy terminates TLS, and
+4. **Does the closing phase end a BATTLE SHOT too?** (piece B) Your instruction of 2026-08-24 is that
+   at the start of the closing phase whatever camera phase is running must be ended. On city-circuit —
+   one of the two SHIP-gate tracks — the phase running at that moment is a **BATTLE_ZOOM with 98% of
+   it still to come**, and your acceptance of 2026-09-04 protects exactly that shot: behaviour (ii),
+   *"a battle shot may take the frame near the finish"*. **The two were given about different things,
+   five weeks apart, and neither says which wins.** Building the cut as instructed would silently
+   reverse an accepted behaviour on at least one track. Nothing was built and nothing is proposed.
+
+5. **The deploy decisions that are not code:** a domain, which reverse proxy terminates TLS, and
    where the data lives. **The server has no TLS at all** — searched for, not assumed — and that is a
    design decision rather than an omission: it sets `trust proxy` and issues `__Host-` Secure
    cookies, expecting a terminator in front.

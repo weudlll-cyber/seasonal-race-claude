@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CLOSING-CUT-1.md](CLOSING-CUT-1.md) — **what the closing phase interrupts** (2026-09-04, PIECE B).
+  The feasibility gate passed: the closing phase's start IS observable from an existing instrument —
+  the first frame with the director's `_runInComposingNow`, dumped as `comp`. Ten tracks, seed 9, the
+  real browser on the production build. ★ **FOUR different phases are caught at the cut** —
+  `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2, `BATTLE_ZOOM` 1; there is no "it mostly interrupts
+  X". A median **2,492 ms / 59%** of the phase is still ahead, with only 35% of its zoom travel done —
+  and the zoom is caught EARLIER than the pan in ALL TEN, so the cut removes the glide. ★ **It was
+  never "doing nothing anyway": 0 of 10**, so the cheap version of this change is not available.
+  ★ **AND ONE CASE COLLIDES WITH THE ACCEPTANCE:** on city-circuit — a gate track — the interrupted
+  phase is a `BATTLE_ZOOM` with **98% still to come**, and behaviour (ii) of ACCEPTED-FINISH-1
+  protects exactly that shot. **NEEDS HIS WORD.** One seed only; §6 says what that cannot support.
+
 - [ACTION-LEVERS-1.md](ACTION-LEVERS-1.md) — **what each action lever actually does** (2026-09-04,
   PIECE A, the point of that night's chain). Candidate list re-established at source, not taken from
   ACTION-KEYS-1. ★ **The action dial is NOT unbuilt:** `RACE_ACTION_STAGES` ships a three-position
@@ -16,7 +28,8 @@ directions.
   `pulkChallengerBoost` move lead changes, passes and the leader's longest hold by 10–38%, 10/10
   tracks, p = 0.002 — and **neither moves how close the field runs or the gap at the line**.
   `pulkLeaderBrake` is about twice the other. ★ **`pulkEnvelopeMaxEffect` is INERT** — a bit-identical
-  race at half and at double, so the realism envelope clamps nothing. `pulkFrontPool` and
+  race on all ten tracks at HALF its value, so the realism envelope clamps nothing (the DOUBLE arm
+  reached only two tracks and agrees on both; the report keeps the two Ns apart). `pulkFrontPool` and
   `pulkBiasGain` change the race and move no quantity readably. ★ **Two candidates excluded with
   reason:** `contestWindowStart` is a RULER, not a lever (only the observer reads it), and
   `pulkLeadRotationAttackerSlots` is hard-clamped to [1,2] so its upward arm is unmeasurable by
