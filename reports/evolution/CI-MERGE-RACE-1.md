@@ -115,7 +115,7 @@ The rest of that report stands; this corrects one inference drawn from a single 
 
 | file | before | after | what moved |
 | --- | --- | --- | --- |
-| `reports/evolution/CI-MERGE-RACE-1.md` | 0 | 133 | this report |
+| `reports/evolution/CI-MERGE-RACE-1.md` | 0 | 160 | this report |
 | `reports/evolution/INDEX.md` | — | — | one entry |
 
 **No guard, script, workflow, default or document outside these two was touched.** No scratch file
@@ -133,6 +133,20 @@ entered the repository.
 
 This piece's own merge was performed with **the sweep chained to the push** — the practice that
 carried the other 27 — rather than under a new ordering, because no new ordering was built.
+
+**THE PUSH-TRIGGERED RUN FOR THE MERGE SHA IS GREEN**, which is what the piece turned on. Recorded
+in a follow-up commit on master because the SHA cannot exist before the merge — the same pattern
+SHIP-CEREMONY step 11 uses for a provisional hash:
+
+```
+completed  success  merge(CI-MERGE-RACE-1): the race is real, but it is not every merge -…  CI  master  push  33965738399  2m0s
+
+run=33965738399  event=push  status=completed  conclusion=success
+headSha=7ab19976feffba6d32d8585e34244e561cd36185
+```
+
+**`event=push`, not `workflow_dispatch`** — the run the merge itself fired. Origin at that moment
+held one head, `refs/heads/master`, because the sweep had already landed.
 
 ## FINGERPRINTS
 
