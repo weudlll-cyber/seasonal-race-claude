@@ -1766,6 +1766,49 @@ export default function RaceScreen() {
     }
   }
 
+  // ── Cancel the race ──────────────────────────────────────────────────────
+  //
+  // ONE CONTROL, ONE EFFECT: end the running race and go back to where it was started from, leaving
+  // nothing behind. No confirmation, no countdown, no undo, no shortcut — those are the owner's to
+  // ask for.
+  //
+  // WHAT "LEAVES NOTHING BEHIND" MEANS HERE was established by reading the START path rather than
+  // guessed, and every item is unwound by somebody:
+  //
+  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx:540` (and `:652` for Quick
+  //     Test). Removed here. Left in place it is a race payload with no race, and the next mount of
+  //     this screen would start it again.
+  //   * the rAF loop, the finish-nav timer, the winner-card timers, the long-task observer, the
+  //     camera markers and the effect instances — all released by the animation effect's own
+  //     cleanup on unmount (:1740-1752), which navigating away runs. Nothing to do here, and doing
+  //     it here as well would be a second owner for state that already has one.
+  //   * the `fullscreenchange` listener — removed by its own effect cleanup (:378).
+  //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
+  //     `toggleFullscreen` above puts the document into fullscreen on `screenRef`; leaving the
+  //     screen does not take it out, so the operator landed back on Setup with the browser still
+  //     fullscreen and the only control that could undo it left behind on the race screen.
+  //
+  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:543`
+  // into a store that outlives the tab. It is the RECORD of a seed that really was used — a race did
+  // run — and erasing it would destroy the only trace of a drawn seed. And `raceResults`, which this
+  // race never wrote: it is written only once every racer has finished (:1088), so a cancelled race
+  // leaves no result of its own. Clearing an EARLIER race's result would be touching the result
+  // recording, which this piece must not do.
+  function cancelRace() {
+    // Order matters only in that fullscreen is asked for before the component goes away: after the
+    // navigation this handler's element is gone, and `exitFullscreen` rejects if the document is not
+    // in fullscreen, so it is both guarded and caught.
+    if (document.fullscreenElement) {
+      try {
+        document.exitFullscreen?.()?.catch?.(() => {});
+      } catch {
+        /* a browser that refuses the exit must not also lose the operator the way back to Setup */
+      }
+    }
+    sessionStorage.removeItem('activeRace');
+    fadeNavigate('/setup');
+  }
+
   // ── Error / loading states ───────────────────────────────────────────────
   if (error) {
     return (
@@ -1781,13 +1824,7 @@ export default function RaceScreen() {
           )}
           <div className="race-error-title">Error</div>
           <div className="race-error-msg">{error}</div>
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
+          <button className="race-back-btn" onClick={cancelRace}>
             ← Back to Setup
           </button>
         </div>
@@ -1917,14 +1954,12 @@ export default function RaceScreen() {
         </div>
 
         <aside className="race-hud">
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
-            ← Setup
+          {/* The SAME control and the same one effect throughout; only its name follows what it is
+              doing. While the race is running it cancels one, and saying "← Setup" was the reason
+              the fullscreen leak went unnoticed — it read as navigation. Once every racer is home
+              there is no longer a race to cancel and it is navigation again. */}
+          <button className="race-back-btn" data-testid="cancel-race" onClick={cancelRace}>
+            {phase === PHASE.FINISHED ? '← Setup' : 'Cancel Race'}
           </button>
 
           {/* STANDINGS-RULE: the panel's composition lives in Scoreboard.jsx, so the guard that
