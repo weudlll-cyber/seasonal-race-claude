@@ -56,33 +56,65 @@ it is now two of the three excluded tracks, not one**. No exclusion changed.
 **I · What a one-command deploy actually needs** — [DEPLOY-NOTES.md](DEPLOY-NOTES.md). Nothing built,
 nothing recommended. See NEEDS HIS WORD.
 
+**C · A test that mounts `RaceScreen`** — [RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md).
+It mounts, and the real camera director initialises in it. ★ **It supersedes D2, which is not
+withdrawn** — you closed the question of whether to act; the chain re-opened it because the dial is
+about to be built here. No production code changed. Sabotage 3/3. ★ **But the sabotage the chain
+named is STILL GREEN** — blanking every track background passes 405 tests, and cannot be caught by a
+mount test; the backlog item is corrected rather than struck.
+
+**F · Characterisation tests for `sim-fairness.mjs`** — [SIM-FAIRNESS-PIN-1](../reports/night/SIM-FAIRNESS-PIN-1.md).
+12 tests, file untouched. ★ **`runSingleRace` is EXPORTED and the sweep sits behind `isMain`** — two
+facts the backlog does not carry, and they are what made this possible without editing the file. A
+physics constant sabotage was caught by the golden; a tie-break one was not, correctly, because the
+branch is unreachable. World fingerprint unmoved.
+
 ## RUNNING
 
 **A · What each action lever actually does.** Stage 1: 29 arms × 10 tracks × **N=30 races**, one
-lever at a time, everything else shipped. **~61 of 290 cells at the time of writing, 0 failures**,
-and it flushes every cell as it lands, so it is resumable and readable at any moment. Complete so far: the baseline
-and `pulkLeaderBrake`, `pulkChallengerBoost`, with `pulkFrontPool` in flight.
+lever at a time, everything else shipped. **0 failures**, and it flushes every cell as it lands, so
+it is resumable and readable at any moment. **Five levers complete at the time of writing.**
 
-**The first result, already clear (10/10 tracks, sign test p=0.002):**
+**What is already clear — every row 10/10 tracks, N=30 races each, sign test across the ten tracks
+p = 0.002:**
 
 | lever | lead changes | held top-5 passes | leader's longest hold | field spread | finish gap |
 | --- | --- | --- | --- | --- | --- |
 | `pulkLeaderBrake` 0.05 → 0.15 | −37% → **+31%** | −38% → **+12%** | +55% → **−33%** | *nothing* | *nothing* |
 | `pulkChallengerBoost` 0.03 → 0.12 | −10% → **+17%** | −9% → **+12%** | +8% → **−16%** | *nothing* | *nothing* |
+| `pulkFrontPool` 4 → 16 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
+| `pulkBiasGain` 1 → 4 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
+| `pulkEnvelopeMaxEffect` 0.06 → 0.24 | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
 
-★ **Both of the shipped dial's two keys move the FRONT FIGHT and leave the field spacing and the
-finish alone.** `pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it moves.
+★ **THE SHIPPED DIAL'S TWO KEYS MOVE THE FRONT FIGHT AND LEAVE THE FIELD SPACING AND THE FINISH
+ALONE.** Neither of them moves how close the field runs, and neither moves the leader's gap at the
+line. `pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it does move.
+
+★ **AND `pulkEnvelopeMaxEffect` IS NOT A LEVER AT ALL — it is a rail that never touches.** At HALF
+its shipped value and at DOUBLE it, the race is **bit-identical** to the baseline on all ten tracks
+(same finishing order, every race). The realism envelope is never reached at the shipped contest
+strengths, so it clamps nothing. That is a good answer, and it means the ±12% figure is a bound the
+game does not currently approach rather than a setting.
+
+`pulkFrontPool` and `pulkBiasGain` DO change the race — the finishing orders differ — but move none
+of the five quantities readably at N=30. They are reported as such and get no larger run, per the
+piece's own rule.
+
+**B · What the closing phase interrupts.** Running beside A. Ten tracks at seed 9, the shipped arm,
+with the browser harness's own `--dump`. **The feasibility gate the piece set is passed:** the
+closing phase's start IS observable from an existing instrument — it is the first frame on which the
+director's `_runInComposingNow` is true, dumped as `comp` by `viewerProbe.js`. No instrument was
+built. *(Both runs are deterministic — the sim is seeded and the viewer harness runs a fixed virtual
+clock — so sharing the machine changes wall-clock only, never a number.)*
 
 ## OPEN
 
-**Not reached tonight, in the chain's own fall order.** The machine is a 2 P-core laptop and piece A
-saturates it; the browser sweeps cannot share it and cannot overlap each other.
+**Not reached tonight.** The machine is a two-P-core laptop; piece A alone is a four-hour run.
 
-- **B · what the closing phase interrupts** — the highest-ranked piece after A. Starts when A stops.
-- **L · does the camera's guess match the plan's beats** — after B.
-- **D · the item-7 gap** — the chain's own fall order puts it last of the sweeps.
-- **C · a test that mounts `RaceScreen`** and **F · characterisation tests for `sim-fairness.mjs`** —
-  code pieces, not started.
+- **L · does the camera's guess match the plan's beats** — not started.
+- **D · the item-7 gap** — not started. The chain's own fall order puts it last of the sweeps.
+- **A's remaining levers** — nine of the fourteen candidates. The arms run lever by lever, so every
+  lever is either fully measured on ten tracks or not at all; there are no half-measured rows.
 
 ## NEEDS HIS WORD
 
