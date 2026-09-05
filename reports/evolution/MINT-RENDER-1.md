@@ -101,6 +101,25 @@ offered, and it is **not** called harmless.
 
 ---
 
+## CHECKS
+
+- **`npm run verify`** — `PASS 12  FAIL 0  SKIP 17`. ★ **`render-fingerprint` was among the twelve**,
+  selected by its own routing and passing against the newly written record:
+  `render-fingerprint  RENDER 74946ddbeca517a9`. The script suite ran too, at 127.3 s.
+- **The client suite** — **241 files, 4,476 tests, 0 failures**, 321.58 s.
+- **`node scripts/engine-reach.mjs --check`** on the branch's five paths, verbatim:
+
+```
+ENGINE REACH: none of 5 path(s) carry a change that can reach the race engine.
+  5 outside the hull (cannot reach the engine at all): docs/fingerprints.json, reports/evolution/INDEX.md, reports/evolution/MINT-RENDER-1.md, scripts/render-fingerprint.mjs, scripts/render-fingerprint.test.mjs
+```
+
+It selects nothing — **and it could not have spoken to this mint either way**: it answers the WORLD
+question, and the role that moved is RENDER. The world roles' own `--check` runs are what settle
+that, and both passed.
+
+No sweep and no browser gate were run, per the brief.
+
 ## SOURCE HYGIENE
 
 | file | before | after | what moved |
@@ -108,7 +127,7 @@ offered, and it is **not** called harmless.
 | `docs/fingerprints.json` | 96 | 96 | the render role re-minted: new `value`, `date`, `mintedOn`, `mintedBy`, `lastVerified`; the previous mint preserved whole in `supersededMintedBy` / `supersededDate` / `supersededOn` / `supersededNote`. **Line count unchanged, 36,100 -> 35,860 bytes** — the fields are long single lines, so lines are the wrong unit here and bytes are given instead |
 | `scripts/render-fingerprint.mjs` | 786 | 796 | blind item 5 in the header; one entry in the machine-read `blind` list. *(786 is the branch's count after piece 1; master's is 765, and the difference is piece 1's own repair, unchanged here)* |
 | `scripts/render-fingerprint.test.mjs` | 167 | 152 | **untouched by this piece** — piece 1's rewritten guard, listed so the merge's whole diff is accounted for |
-| `reports/evolution/MINT-RENDER-1.md` | 0 | 125 | this report |
+| `reports/evolution/MINT-RENDER-1.md` | 0 | 146 | this report |
 | `reports/evolution/INDEX.md` | — | — | one entry |
 
 **Piece 1's own change is unchanged from INVISIBLE-FOUR-1 and was not extended:** the instrument
