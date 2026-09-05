@@ -38,16 +38,32 @@
 //   REACH-CONTRACT-1, and `verify` refuses the run rather than routing on a declaration it cannot
 //   trust.
 //
-//   ★ WHAT IS *NOT* CHECKED, corrected 2026-09-05 (GATE-WIRED-AND-CAUSED-1). This paragraph used to
-//   say that "`routing.test.mjs` extracts every such literal from the guard's own source and fails
-//   if one is not inside the guard's resolved set". **THERE IS NO `routing.test.mjs`** — established
-//   by `git ls-files | grep -i routing`, which returns two diagnostics, two night reports and this
-//   file, and by searching every `*.test.mjs` under `scripts/` for such an extraction, which finds
-//   none. So a guard that dynamically imports a path it does not cover would NOT be caught here.
-//   The property still HOLDS for the harnesses in the tree — checked by hand on the same date for
-//   `viewer-invariants.mjs`, whose three literals are covered by `files`, by the declared
-//   `camera/` dir, and by `dataReach` respectively — but it holds by inspection, not by
-//   construction. Writing that check is a guard of its own and is not done here.
+//   ★ AND IT IS GUARANTEED BY CONSTRUCTION — established 2026-09-05 (INVISIBLE-FOUR-1), after two
+//   earlier attempts to describe it got it wrong in opposite directions.
+//
+//   The paragraph first claimed a `routing.test.mjs` extracted every such literal and failed if one
+//   fell outside the guard's set. **THERE IS NO `routing.test.mjs`** and never was, so
+//   GATE-WIRED-AND-CAUSED-1 corrected it to say the property held "by inspection, not by
+//   construction". **THAT CORRECTION WAS ALSO WRONG, and this is the measurement that settles it.**
+//
+//   `dataReach` already closes it. Its rule — its own header states it — is: *if a guard's own code
+//   names a tracked repository path, a change to that path selects the guard.* A dynamically
+//   imported STRING LITERAL is, by definition, the guard's code naming a path. So the literal is in
+//   the guard's resolved set the moment it is written, with no declaration needed and no test to
+//   forget. PROVED by sabotage rather than argued: giving `check-ending-frame` an
+//   `import(u("server/src/index.js"))` — a path far outside its declared `drawing/` directory —
+//   makes `matches("server/src/index.js")` return TRUE, via `dataDirs`, with `dataFrom` naming
+//   `scripts/check-ending-frame.mjs` as the file that named it.
+//
+//   A guard written to check this was built on the same date and DELETED rather than shipped: it
+//   read 36 literals across 25 guards, found 0 outside their sets, and could not be made to fail —
+//   an inert guard that would have looked like coverage forever. The one thing it did catch was
+//   itself, reading the examples in its own header.
+//
+//   ★ THE RESIDUAL, which no static check can close: a dynamic import whose specifier is a VARIABLE
+//   — `import(spec)`, `import(pathToFileURL(join(ROOT, m)))`. There are TEN in the guards today.
+//   `dataReach` cannot see a path that is computed rather than written, and neither could any
+//   reader. That is the honest edge of this guarantee, and it is stated rather than left implied.
 //
 //   DIRS / FILES, declared plainly. Containment for what no import can reach: a directory of
 //   documents, a suite's own configuration. This is the only genuinely hand-written part, it is
