@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ACTION-LEVERS-1.md](ACTION-LEVERS-1.md) — **what each action lever actually does** (2026-09-04,
+  PIECE A, the point of that night's chain). Candidate list re-established at source, not taken from
+  ACTION-KEYS-1. ★ **The action dial is NOT unbuilt:** `RACE_ACTION_STAGES` ships a three-position
+  host selector accepted 2026-08-24, mapping onto exactly two keys — so the question is whether they
+  are the right two. ★ **They move the FRONT FIGHT and nothing else:** `pulkLeaderBrake` and
+  `pulkChallengerBoost` move lead changes, passes and the leader's longest hold by 10–38%, 10/10
+  tracks, p = 0.002 — and **neither moves how close the field runs or the gap at the line**.
+  `pulkLeaderBrake` is about twice the other. ★ **`pulkEnvelopeMaxEffect` is INERT** — a bit-identical
+  race at half and at double, so the realism envelope clamps nothing. `pulkFrontPool` and
+  `pulkBiasGain` change the race and move no quantity readably. ★ **Two candidates excluded with
+  reason:** `contestWindowStart` is a RULER, not a lever (only the observer reads it), and
+  `pulkLeadRotationAttackerSlots` is hard-clamped to [1,2] so its upward arm is unmeasurable by
+  construction. **INCOMPLETE — nine of fourteen levers not reached**, named in §7; no default moved,
+  nothing designed.
+
 - [RACESCREEN-MOUNT-1.md](RACESCREEN-MOUNT-1.md) — **a test that mounts `RaceScreen`** (2026-09-04,
   PIECE C). It mounts: three tests render the real component past its `Loading…` placeholder, and the
   run log shows the real `CameraDirector` initialising, so the race is built rather than the chrome
