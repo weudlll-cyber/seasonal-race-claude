@@ -349,6 +349,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [INVISIBLE-FOUR-1.md](INVISIBLE-FOUR-1.md) — **the four items the owner does not see in the race;
+  three land, one waits on his word** (2026-09-05; tooling and comments — no behaviour, no threshold,
+  **nothing minted**). ★ **THE RENDER FINGERPRINT WAS HASHING A PICTURE THE GAME DOES NOT DRAW.** The
+  instrument built its frame camera as a hand-written literal with three members where
+  `frameCameraInputs.js` declares five plus a method; two of the absent three are read by the very
+  draw path it measures — the focus racer and whether a label says a NAME or a number. Repaired to
+  import the one home, **and the hash MOVED. Bisected one field at a time with a control, the cause
+  is EXACTLY ONE FIELD, `runInArrived`**; `state` and `anchorRacerIndex` each moved nothing.
+  **The mint is the owner's: piece 1's commits are left on the branch, unmerged.** Then `verify`
+  gains **lint and format:check** (CI ran both, verify ran neither — it ran the FORMATTER, which
+  cannot fail; the server declares no such scripts at all), and **`--premerge` now also runs what CI
+  runs unconditionally**, the set **DERIVED from `ci.yml`** and mapped through the guards' own
+  `source` — 11 scripts + the suite, 0 unmappable — proven by a sabotage an ordinary run misses
+  (PASS 8/FAIL 0) and `--premerge` catches (FAIL 1). ★ **The fourth piece shipped NOTHING, and that
+  is its finding:** the `routing.mjs` property it was to check is **already guaranteed by
+  construction** — `dataReach` puts every path a guard's code NAMES into its set, and a dynamic
+  import literal is exactly that — so the built check could not be made to fail and was deleted
+  rather than shipped as inert coverage. That paragraph is corrected for the second time in two
+  days, in the opposite direction from the first.
+
 - [LEFTOVERS-1.md](LEFTOVERS-1.md) — **everything the recent runs named and left, cleared**
   (2026-09-05; documents only — no behaviour, no threshold, no guard logic, nothing minted,
   `engine-reach --check` selects nothing on all five changed paths). Eight items, all closed.

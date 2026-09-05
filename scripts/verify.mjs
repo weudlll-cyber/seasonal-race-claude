@@ -27,7 +27,8 @@
 //   npm run verify -- --dry        # print the plan and exit; runs nothing
 //   npm run verify -- --no-format  # skip the formatting pass (prints that it did)
 //   npm run verify -- --jobs=2     # cap concurrency (default: all chosen guards at once)
-//   npm run verify -- --premerge   # ALSO run the browser ship gate, if the diff reaches it
+//   npm run verify -- --premerge   # the PRE-MERGE run: the browser ship gate if the diff reaches
+//                                  # it, PLUS everything ci.yml runs unconditionally
 // ============================================================
 
 import { execFile, execFileSync } from "node:child_process";
@@ -37,6 +38,9 @@ import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
 import { engineReach, splitInert } from "./engine-reach.mjs";
 import { collect, reasonFor } from "./lib/routing.mjs";
+// PREMERGE-CI-SET-1: what `ci.yml` runs on every push, DERIVED from the workflow rather than
+// retyped here. See that module for why a list would be the very defect it closes.
+import { premergeForcedIds, CI_FILE } from "./lib/ciUnconditional.mjs";
 // GATE-SERIAL-BCRYPT-1: how the server suite runs, derived from the test files, and the ONE
 // home both this scheduler and `server/vitest.config.js` read. Node builtins only, so it
 // resolves from the repository root where `vitest/config` does not.
@@ -339,6 +343,34 @@ export function commandFor(g) {
   }
   if (g.id === "script-suite")
     return { cmd: ["node", "--test", ...scriptTestFiles()] };
+  // ── VERIFY-LINT-1: THE TWO CI CHECKS, AND WHERE THE FORMAT ONE HAS TO SIT ────────────────────
+  //
+  // Invoked through the package scripts for the same reason the suites are: ONE definition of how
+  // they run, in `client/package.json`, so this file cannot disagree with CI about what `lint`
+  // means. CI runs the identical two commands in its Client job.
+  //
+  // ★ THE ORDERING, AND IT IS THE WHOLE SUBTLETY OF ADDING `format:check` TO THIS PARTICULAR
+  // COMMAND. `verify` FORMATS the tree before it measures (§3, the `format:` step in the main block
+  // below) — `prettier --write src` — and `format:check` is `prettier --check src` over the SAME
+  // scope. So on the ordinary path this check runs AFTER the writer has already fixed everything it
+  // could complain about, and it passes by construction. That is not a reason to move it earlier:
+  // moving it BEFORE the format pass would make `verify` red for exactly the fault it is about to
+  // repair, which is the opposite of what §3 is for.
+  //
+  // IT IS HERE BECAUSE OF THE PATH WHERE IT IS NOT TAUTOLOGICAL: `--no-format`. That flag skips the
+  // writer, and until now nothing then asked whether the tree was formatted — so a `--no-format` run
+  // could be green while CI's `format:check` was red on the very same tree. Placed here it answers
+  // the question CI actually asks, which is about the tree AS IT STANDS AT MEASUREMENT TIME, and
+  // that tree is the one the hook commits.
+  //
+  // `lint` has no such subtlety: `verify` never ran it at all, on any path.
+  if (g.id === "client-lint")
+    return { cmd: ["npm", "run", "lint", "--silent"], cwd: join(ROOT, "client") };
+  if (g.id === "client-format-check")
+    return {
+      cmd: ["npm", "run", "format:check", "--silent"],
+      cwd: join(ROOT, "client"),
+    };
   // GATE-WIRED-AND-CAUSED-1. `--gate` is the harness's own two-race pre-merge mode; with no argv it
   // would drive the forty-seed nightly sweep instead, which is hours. The flag lives here with the
   // rest of the argv, and GATE_TRACKS, the seed and the arm stay where they are — in the harness.
@@ -448,6 +480,33 @@ export function plan(
     : { hit: [], inert: [] };
   const inertSet = new Set(inert.map((i) => i.path));
 
+  // PREMERGE-CI-SET-1. Derived from `ci.yml` every time, never cached and never listed here. On an
+  // ordinary run this is not even computed, so the cost lands only on the run that asked for it.
+  let forcedIds = [];
+  if (premerge) {
+    const derived = premergeForcedIds(gs);
+    // A DERIVATION THAT CANNOT MAP A STEP MUST NOT QUIETLY COVER LESS THAN IT CLAIMS. `--premerge`
+    // exists to predict CI; if CI runs something this cannot, the operator hears it here rather
+    // than from a red master.
+    if (derived.problems.length) {
+      console.error(
+        `
+  REFUSED: --premerge cannot derive what ${CI_FILE} runs unconditionally.
+`,
+      );
+      for (const w of derived.problems) console.error(`           ${w}`);
+      console.error(
+        `
+           Fix the workflow or the guard's declaration. A pre-merge run that silently
+` +
+          `           covers less than CI is the defect this flag was added to close.
+`,
+      );
+      process.exit(EXIT_REFUSED);
+    }
+    forcedIds = derived.ids;
+  }
+
   return gs.map((g) => {
     let hits = files.filter((f) => g.matches(f));
     if (g.id === "world-fingerprint")
@@ -463,11 +522,25 @@ export function plan(
       g.id === GATE_GUARD
         ? premergeDecision(hits.length > 0, premerge)
         : null;
+    // ── PREMERGE-CI-SET-1: THE ROUTING GAP, CLOSED ONLY WHEN THE FLAG IS GIVEN ─────────────────
+    //
+    // `ci.yml`'s docs job has no `if:` conditions, so it runs these guards on every push whatever
+    // the diff. Ordinary `verify` runs keep routing by diff and stay exactly as fast as they were;
+    // a `--premerge` run additionally forces the derived set, because that is the run whose job is
+    // to predict CI. The forcing is NEVER silent — the reason says which guard was forced and why,
+    // the same way a skip says why it was skipped (the constraint at the head of this file).
+    const forced = premerge && !gate && forcedIds.includes(g.id) && hits.length === 0;
     return {
       id: g.id,
       ...commandFor(g),
-      run: gate ? gate.run : hits.length > 0,
-      reason: reasonFor(g, hits) + inertNote + (gate ? gate.note : ""),
+      run: forced || (gate ? gate.run : hits.length > 0),
+      reason:
+        reasonFor(g, hits) +
+        inertNote +
+        (gate ? gate.note : "") +
+        (forced
+          ? `  ·  FORCED by --premerge: ${CI_FILE} runs this on every push, unconditionally`
+          : ""),
       covers: g.covers,
       blind: g.blind ?? [],
       // CARRIED THROUGH so a consumer can ask the DECLARATION whether a guard is always-on rather
