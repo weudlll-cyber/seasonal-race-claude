@@ -180,7 +180,7 @@ which reverse proxy terminates TLS, and where the data lives."*
 | `docs/BACKLOG.md` | 4420 | 4438 | the closing-phase section (45 lines) lifted out of PART ONE and rewritten into PART TWO as **D32**; **D33** added; line 45's stale range named |
 | `docs/MORNING.md` | 208 | 209 | the `date-fns` question struck and marked answered |
 | `scripts/verify.mjs` | 781 | 781 | one string interpolation; **no logic** |
-| `reports/evolution/OPEN-LIST-TRUTH-1.md` | 0 | 209 | this report |
+| `reports/evolution/OPEN-LIST-TRUTH-1.md` | 0 | 232 | this report |
 | `reports/evolution/INDEX.md` | — | — | one entry |
 
 **Noticed and deliberately left:**
@@ -193,6 +193,29 @@ which reverse proxy terminates TLS, and where the data lives."*
   instead. Recorded because the guard doing its job is worth the line.
 - **`DEPLOY-NOTES.md` and `ARCHITECTURE.md:1018-1033` both describe TLH-3 as deferred**, which is
   still accurate; item 4 needed nothing there.
+
+---
+
+## CHECKS
+
+`npm run verify` on this branch — the doc guards plus the script suite, which `scripts/verify.mjs`
+selects because it changed:
+
+```
+  PASS  check-doc-facts     0.3s          PASS  check-config-claims 2.4s
+  PASS  check-hooks-installed 0.3s        PASS  check-measured-stamps 4.0s
+  PASS  check-doc-links     0.5s          PASS  fingerprint-containment 17.7s
+  PASS  check-fallback-agreement 1.5s     PASS  check-writable      32.1s
+  PASS  check-index         1.6s          PASS  script-suite        81.0s
+  PASS  check-language-closed 1.8s
+
+  wall clock 81.2s — PASS 11   FAIL 0   SKIP 16
+```
+
+The client suite is not selected (no `client/` path changed), so it was run separately:
+**241 files, 4,476 tests, 0 failures, 269.88 s.** Both green.
+
+Nothing else was run, and nothing here could change a measured answer.
 
 ---
 
