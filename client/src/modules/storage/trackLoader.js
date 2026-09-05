@@ -84,12 +84,26 @@ export function removeCachedTrackData(geometryId) {
  * track list in the local cache. Falls back to the last cached list on any error.
  * @returns {Promise<object[]>}  array of server track summary objects
  */
+/** SERVER-GONE-1: report by event, never by import — this file is in the engine hull. See apiClient.js. */
+function reportServerReachable(reachable) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('racearena:server-status', { detail: { reachable } }));
+}
+
 export async function fetchServerTracks() {
+  // SERVER-GONE-1: whether the server ANSWERED this call, which is not the same question as the
+  // module-wide status — that could still say `reachable` from an earlier request, and reading it
+  // here would let a real transport failure pass unreported.
+  let answered = false;
   try {
     const res = await withTimeout(
       fetch(`${API_BASE_URL}/api/tracks`, { credentials: 'include' }),
       FETCH_TIMEOUT_MS
     );
+    // SERVER-GONE-1: this loader has its own fetch and does not pass through `apiClient.apiCall`,
+    // so it reports for itself. A response of any status is an answer; see `serverStatus.js`.
+    answered = true;
+    reportServerReachable(true);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tracks = await res.json();
     storageSet(CACHE_KEY, tracks);
@@ -106,6 +120,9 @@ export async function fetchServerTracks() {
     }
     return tracks;
   } catch (err) {
+    // SERVER-GONE-1: an HTTP error from a running server is NOT an unreachable server, and this
+    // catch takes both. Only the branch where nothing answered is reported.
+    if (!answered) reportServerReachable(false);
     // QUIET-FAILURES-1: the list itself failed, so what is on screen is the LAST KNOWN list, not
     // the server's. Silently identical to a successful load until now.
     const cached = getCachedServerTracks();

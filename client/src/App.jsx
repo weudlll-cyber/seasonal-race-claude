@@ -24,6 +24,7 @@ import { useActiveBrandProfile } from './modules/branding/useActiveBrandProfile.
 import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
+import ServerStatusBanner from './components/ServerStatusBanner.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
@@ -53,6 +54,10 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/* SERVER-GONE-1: above the router, so the one message about the server does not depend on
+            which screen the player happens to be on. It renders nothing unless a request has
+            actually failed to get an answer. */}
+        <ServerStatusBanner />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
         <TransitionProvider>
