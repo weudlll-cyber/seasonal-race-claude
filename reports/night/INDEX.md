@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SERVER-LINT-1.md](SERVER-LINT-1.md) — **the server was linted by nobody, and now it is red**
+  (2026-09-06, NIGHT-2026-09-05 piece 4). `server/package.json` declared four scripts and neither a
+  lint nor a format check; CI's Server job runs neither. Both are now built and wired into `verify`
+  in the same shape as the client's. ★ **Nothing was installed:** eslint and prettier live only in
+  `client/node_modules`, and a bare specifier resolves relative to the file that IMPORTS it, so
+  `server/eslint.config.js` imports the CLIENT'S config array and overrides only the environment.
+  ★ **The server does NOT pass — 9 lint errors across 7 files and 35 unformatted files — and not one
+  line was fixed**, per the order: `verify` is now red for a pre-existing reason and a server-wide
+  cleanup is its own decision. Sabotage named a new fault in both guards; `no-undef` firing proves
+  the Node override is live. `ci.yml` untouched.
+- [GATE-COST-TRUTH-1.md](GATE-COST-TRUTH-1.md) — **the ceremony said the setup dominates; the setup
+  is 2%** (2026-09-06, NIGHT-2026-09-05 piece 3). `SHIP-CEREMONY.md` claimed a build, two servers
+  and a browser cost **~200 s before any race runs**. Measured with timestamps on a deliberate gate
+  run: the build ends at 3.2 s, the stack is up at **5.2 s**, the last race is home at 262.6 s —
+  **2% setup, 98% racing**, wrong by a factor of forty and in the direction that mattered. ★ What
+  makes extra races cheap is **concurrency** (`viewer-invariants.mjs:814` runs six at a time), not
+  setup — which also explains the old table's 1-race 267 s against 2-race 340 s. ★ **Four tracks
+  would stay bounded by the slowest race rather than doubling — that bound is measured, the
+  four-track figure is NOT**, and no four-track run was made. `GATE_TRACKS` untouched.
 - [COMEBACK-BEATS-1.md](COMEBACK-BEATS-1.md) — **the plan writes the comeback, and the camera is
   somewhere else** (2026-09-05, PLAYABLE-FOUR-1 piece A). Ten tracks x seeds 1-4, N=40, race plan ON,
   shipped defaults, nothing changed. The plan named **74 comebackers** and wrote **215 beats**; the
