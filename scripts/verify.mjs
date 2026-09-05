@@ -41,6 +41,11 @@ import { collect, reasonFor } from "./lib/routing.mjs";
 // PREMERGE-CI-SET-1: what `ci.yml` runs on every push, DERIVED from the workflow rather than
 // retyped here. See that module for why a list would be the very defect it closes.
 import { premergeForcedIds, CI_FILE } from "./lib/ciUnconditional.mjs";
+import {
+  advanceMarker,
+  chooseBase,
+  gatherMarkerContext,
+} from "./lib/verifyMarker.mjs";
 // GATE-SERIAL-BCRYPT-1: how the server suite runs, derived from the test files, and the ONE
 // home both this scheduler and `server/vitest.config.js` read. Node builtins only, so it
 // resolves from the repository root where `vitest/config` does not.
@@ -54,7 +59,8 @@ const arg = (k, d) => {
 };
 const has = (k) => process.argv.slice(2).includes(`--${k}`);
 
-const BASE = arg("base", "master");
+const EXPLICIT_BASE = arg("base", null) !== null;
+const DEFAULT_BRANCH = "master";
 const DRY = has("dry");
 const NO_FORMAT = has("no-format");
 const JOBS = Number(arg("jobs", 0)) || 0;
@@ -66,6 +72,28 @@ const CHEAP_TRACK = arg("cheap-track", null);
 // GATE-WIRED-AND-CAUSED-1: the caller asking for the PRE-MERGE run. See `premergeDecision` below
 // for what it gates and why the cadence is once per branch rather than once per commit.
 const PREMERGE = has("premerge");
+
+// ── VERIFY-INCREMENTAL-1: WHAT THIS RUN COMPARES ITSELF AGAINST ────────────────────────────────
+//
+// An intermediate run asks "is what I just did all right", and answering it against master re-checks
+// everything the branch has ever touched — 31 files on `feat/playable-four-1`, which cost a two-line
+// SetupScreen fix a 112 s world-fingerprint run over a file changed two days earlier.
+//
+// ★ THE SAFETY: the FULL comparison against master still happens, exactly once, in the `--premerge`
+// run before the merge — which never reads or writes the marker. So this can only ever skip work a
+// GREEN run already covered. Every doubt falls back to master and SAYS SO in the header; the reasons
+// live in `scripts/lib/verifyMarker.mjs` and are tested there rather than read off a run.
+const MARKER_CTX = gatherMarkerContext(ROOT, DEFAULT_BRANCH);
+const BASE_CHOICE = chooseBase({
+  premerge: PREMERGE,
+  explicitBase: EXPLICIT_BASE,
+  branch: MARKER_CTX.branch,
+  defaultBranch: DEFAULT_BRANCH,
+  marker: MARKER_CTX.marker,
+  masterSha: MARKER_CTX.masterSha,
+  markerIsAncestor: MARKER_CTX.markerIsAncestor,
+});
+const BASE = BASE_CHOICE.base ?? arg("base", DEFAULT_BRANCH);
 
 // ── AN ARGUMENT THIS SCRIPT DOES NOT UNDERSTAND IS AN ERROR (VERIFY-COST-3) ────────────────────
 // This is the generalising half, and it is why `--cheap` could be wrong for weeks: the script
@@ -265,7 +293,7 @@ export function cheapArgs(cheap = CHEAP, track = CHEAP_TRACK) {
 // ── WHAT CHANGED ────────────────────────────────────────────────────────────────────────────────
 // Committed-on-this-branch UNION uncommitted. Both matter: a block measures before it commits, and
 // the branch's earlier commits are part of what it is shipping.
-function changedFiles() {
+function changedFiles(base = BASE) {
   const run = (args) => {
     try {
       return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" })
@@ -277,7 +305,7 @@ function changedFiles() {
     }
   };
   const set = new Set([
-    ...(BASE === "HEAD" ? [] : run(["diff", "--name-only", `${BASE}...HEAD`])),
+    ...(base === "HEAD" ? [] : run(["diff", "--name-only", `${base}...HEAD`])),
     ...run(["diff", "--name-only", "HEAD"]),
     ...run(["ls-files", "--others", "--exclude-standard"]),
   ]);
@@ -655,12 +683,42 @@ if (IS_ENTRY) {
     process.exit(EXIT_REFUSED);
   }
 
-  const files = changedFiles();
-  const tasks = plan(files);
+  // VERIFY-INCREMENTAL-1 — the base this run actually used, and why.
+  let usedBase = BASE;
+  let baseNote = BASE_CHOICE.note;
+  let files = changedFiles(usedBase);
+
+  // ★ AN EMPTY INCREMENTAL DIFF FALLS BACK TO MASTER RATHER THAN REPORTING A RUN THAT CHECKED
+  // NOTHING. It means "no change since the last green run", which is a legitimate state — but
+  // VERIFY-BASE-1's rule is that a run which verified nothing must not exit 0, and quietly carving
+  // an exception out of it here is the kind of local weakening this mode must not introduce. The
+  // conservative option costs a full run in a case that only arises when verify is run twice with
+  // no edits in between.
+  if (BASE_CHOICE.incremental && files.length === 0) {
+    usedBase = DEFAULT_BRANCH;
+    baseNote = `nothing has changed since the last green verify, so the incremental diff was empty — comparing against ${DEFAULT_BRANCH} rather than reporting a run that checked nothing`;
+    files = changedFiles(usedBase);
+  }
+  const tasks = plan(files, usedBase);
   const chosen = tasks.filter((t) => t.run);
   const skipped = tasks.filter((t) => !t.run);
 
-  console.log(`\nVERIFY — ${files.length} changed file(s) vs ${BASE}\n`);
+  const usedBaseSha = (() => {
+    if (usedBase === "HEAD") return MARKER_CTX.head;
+    try {
+      return execFileSync("git", ["rev-parse", `${usedBase}^{commit}`], {
+        cwd: ROOT,
+        encoding: "utf8",
+      }).trim();
+    } catch {
+      return null;
+    }
+  })();
+  console.log(
+    `\nVERIFY — ${files.length} changed file(s) vs ${usedBase}` +
+      (usedBaseSha ? ` (${usedBaseSha.slice(0, 8)})` : "") +
+      `\n         ${baseNote}\n`,
+  );
   console.log("  WILL RUN:");
   for (const t of chosen) console.log(`    ${t.id.padEnd(26)} ${t.reason}`);
   if (!chosen.length) console.log("    (nothing — the diff reaches no guard)");
@@ -693,14 +751,14 @@ if (IS_ENTRY) {
       }
     };
     const baseSha =
-      BASE === "HEAD"
+      usedBase === "HEAD"
         ? git1(["rev-parse", "HEAD"])
-        : git1(["rev-parse", `${BASE}^{commit}`]);
+        : git1(["rev-parse", `${usedBase}^{commit}`]);
     const headSha = git1(["rev-parse", "HEAD"]);
     const { headline, remedy } = describeEmptyRun({
-      base: BASE,
+      base: usedBase,
       baseExists: !!baseSha,
-      hasMergeBase: !!(baseSha && git1(["merge-base", BASE, "HEAD"])),
+      hasMergeBase: !!(baseSha && git1(["merge-base", usedBase, "HEAD"])),
       baseSha: baseSha ?? "",
       headSha: headSha ?? "",
       fileCount: files.length,
@@ -849,6 +907,30 @@ if (IS_ENTRY) {
     );
   } else {
     console.log("");
+  }
+
+  // ── VERIFY-INCREMENTAL-1: THE MARKER ADVANCES HERE AND NOWHERE ELSE ──────────────────────────
+  //
+  // ★ THIS LINE IS THE WHOLE SAFETY OF THE INCREMENTAL MODE, so read what has to be true to reach
+  // it. It is after every guard has finished and been counted, so an interrupted run never gets
+  // here; it is guarded on `failed === 0`, so one red guard leaves the marker where it was and the
+  // next run re-checks the ground that just failed; and it is skipped for `--premerge`, which must
+  // neither read nor write the marker because it is the full comparison the mode leans on.
+  //
+  // A run that fell back to master is still recorded — it verified MORE than an incremental run
+  // would have, so it is at least as good a floor to measure the next run from.
+  if (failed === 0 && !PREMERGE && !DRY) {
+    advanceMarker(ROOT, {
+      path: MARKER_CTX.path,
+      head: MARKER_CTX.head,
+      branch: MARKER_CTX.branch,
+      masterSha: MARKER_CTX.masterSha,
+      // The outcome travels WITH the request: `advanceMarker` refuses on its own if this run was
+      // not green, so removing the `failed === 0` guard above is not enough to record a red tree.
+      failed,
+      premerge: PREMERGE,
+      dry: DRY,
+    });
   }
   process.exit(failed === 0 ? 0 : 1);
 }
