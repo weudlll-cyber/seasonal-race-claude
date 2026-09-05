@@ -150,7 +150,8 @@ progress 0.93 is a per-RACE question.
    `GATE_TRACKS` names the two tracks the gate runs and eight are simply not named. The measured
    facts are unchanged.)*
 
-2. **Is 27 MB worth it?** (piece J) Nothing in the image loads `date-fns`. The three clean ways to
+2. ~~**Is 27 MB worth it?**~~ **ANSWERED 2026-09-05 — `date-fns` STAYS, PART TWO D29.** (piece J)
+   Nothing in the image loads `date-fns`. The three clean ways to
    remove it are the ones the chain forbade — an `overrides` entry, dropping the session store, a
    version bump — and the only remaining route, deleting the directory in the Dockerfile, would leave
    the image's tree disagreeing with its own manifest. That is the anonymous-volume defect one layer
