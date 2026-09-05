@@ -21,7 +21,7 @@
 //
 // NOT asserted: anything about the picture, the camera, the physics or the finish. The unmount
 // cleanup that releases the rAF loop, the timers, the observer and the effects is React's to run and
-// `index.jsx:1740-1752` already owns it; a test here that re-checked it would be asserting the
+// `index.jsx:1760-1773` already owns it; a test here that re-checked it would be asserting the
 // framework. The scaffolding (canvas, geometry, bounded rAF) is `mount.test.jsx`'s, repeated here
 // because the two files must be able to fail independently.
 // ============================================================

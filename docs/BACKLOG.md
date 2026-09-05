@@ -376,14 +376,33 @@ in the reports named; this is the map, not a second home.
 
 | what | where it stands, at source |
 | --- | --- |
-| **Cancel Race** — the open half of PR-G | Not in the client at all: no `cancelRace` and no such control under `client/src` or `server/src`. The other half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`. |
-| **TLH-3** — offline fallback + status banner | `client/src/modules/storage/defaultTracks.js` does not exist; no fallback-mode or status-banner code in `client/src`. Deferred by its own entry until after the Camera Phase. |
-| **A short race identifier to replace the seed** | **His decision, 2026-09-05 — PART TWO D33.** The seed fixes the plan (`SetupScreen.jsx:533`) but not the world: `RaceScreen/index.jsx:476` and `:483` gather config from the HOST'S storage at race start, so one seed on two machines is two races. **Not designed.** |
-| **The comeback BEATS reaching the camera** | **PART TWO D14, and D33 says MEASURE FIRST** — night piece L, not reached. `comebackDetector.js:64-75` keeps `role === 'comebacker'` and drops the `beats` array; nothing under `client/src/modules/camera/` reads a hero's beats. |
-| **The render fingerprint's blind spot** | **D33: into a night run.** `frameCameraInputs.js:39` declares five fields plus a method; `render-fingerprint.mjs:447-449` supplies three. **THREE fields absent, TWO behaviours blind** — `camera.state` is read by no live drawing code. |
-| **The missing `routing.mjs` guard** | `scripts/lib/routing.mjs:41-51` records it in the file itself: there is no `routing.test.mjs`, and nothing extracts a guard's `await import(u("…"))` literals to check they are inside its resolved set. The property holds **by inspection, not by construction**. |
-| **`lint` and `format:check` are not in `verify`** | `verify` runs `npm run format` — the formatter, not a check. `ci.yml:115`, `:119` and `:125` run `npm run lint`, `npm run format:check` and `npm run test:coverage`; none has a counterpart in `verify`. See SHIP-CEREMONY § *A green `verify` on the branch does not predict a green CI on master*. |
+| **Cancel Race** — the open half of PR-G | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** ★ **This row was half wrong and the correction is the finding:** there is no `cancelRace` symbol (0 hits, all spellings), but a control that ends the race and returns to Setup ALREADY existed in the race HUD. What it did not do was leave FULLSCREEN, and it is the only screen that can. The fullscreen half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`, re-verified 2026-09-05. |
+| **TLH-3** — offline fallback + status banner | **BANNER BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed.** `defaultTracks.js` still does not exist and was not created. ★ **The FALLBACK was already in the tree** — the track list falls back to `getCachedServerTracks()`, the geometry comes from localStorage, results come from sessionStorage, and the built-in racer types are static exports. What was missing was the TELLING: every failure was announced to the CONSOLE. So only the banner was built, per the brief's own rule against inventing work to fill a piece. |
+| **A short race identifier to replace the seed** | **BUILT 2026-09-05 on `feat/playable-four-1`, UNMERGED — his eye owed, AND ONE DECISION IS HIS.** All three addresses re-verified: `SetupScreen.jsx:533` fixes the plan; `RaceScreen/index.jsx:476` and `:483` gathered config from the HOST'S storage, which is why one seed on two machines was two races. The identifier encodes all nine engine inputs EXACTLY — the config as a diff against the shipped defaults, which is lossless because those defaults are in the build, with a build stamp that REFUSES a foreign build rather than reproducing it wrongly. ★ **IT IS NOT TYPABLE, and that is his call, not a defect to fix by making it lossy:** measured at **210 characters for 4 racers, 450 for 20, 743 for 40** on shipped defaults. |
+| **The comeback BEATS reaching the camera** | **MEASURED 2026-09-05 — D33's "measure first" is DONE and the decision is now his.** `comebackDetector.js:64-75` still keeps `role === 'comebacker'` and drops the `beats` array, and the beats were deliberately NOT passed through. Over N=40 the plan wrote 74 comebackers and the camera showed 11: it never names the wrong racer (0 of 11) and is early EVERY time (11 of 11, median 9.90 s before the resolve beat). The beats die in the DIRECTOR'S weighted contest, not in the detector. [COMEBACK-BEATS-1](../reports/night/COMEBACK-BEATS-1.md). |
 | **Deployment — domain, TLS, where the data lives** | **Still his.** PART TWO D30 chose runtime resolution for the API address and states plainly: *"Still his, and not decided here: a domain, which reverse proxy terminates TLS, and where the data lives."* The server has no TLS and expects a terminator in front. |
+
+**THREE ENTRIES LEFT THIS TABLE ON 2026-09-05 (PLAYABLE-FOUR-1 housekeeping), each re-checked at
+source before it was moved rather than taken from a report:**
+
+- **The render fingerprint's blind spot** — **DONE, and the mint is the owner's, taken on his order.**
+  The record's `render` role carries the new value, dated 2026-09-05; the value itself lives only in
+  [fingerprints.json](fingerprints.json) and is not repeated here. `render-fingerprint.mjs` now builds
+  its frame camera from `frameCameraInputs(cd)` — importing the field list instead of retyping it, so
+  a sixth field would reach the instrument with no edit. What the mint did NOT close is written beside
+  the value: text measurement in the recorder is synthetic. See
+  [MINT-RENDER-1](../reports/evolution/MINT-RENDER-1.md).
+- **The missing `routing.mjs` guard** — **DONE by deletion, which is the honest outcome.** The guard
+  was built, proved INERT against the tree, and removed: `dataReach` (`scripts/lib/routing.mjs:97`)
+  already guarantees the property by construction, because it puts any tracked path a guard's own code
+  NAMES into that guard's resolved set. A second check that can never fire is a maintenance cost
+  pretending to be a safety net. Verified 2026-09-05: no `check-guard-imports` exists anywhere in
+  `scripts/` or `package.json`. See [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
+- **`lint` and `format:check` are not in `verify`** — **DONE for the client, and the server needs
+  nothing.** `scripts/lib/routing.mjs:224` and `:239` declare `client-lint` and `client-format-check`,
+  both scoped to `client/` outside `client/e2e/`, and both were selected and passed in this chain's
+  verify runs. ★ **The server is not a gap:** `server/package.json` declares exactly four scripts —
+  `dev`, `restart`, `start`, `test` — so it has no `lint` or `format:check` to run.
 
 ---
 

@@ -24,6 +24,7 @@ import {
   DEFAULT_RACE_DEFAULTS,
   DEFAULT_BRANDING,
   DEFAULT_ACTIVE_SESSION,
+  DEFAULT_CONFIG_WORLD,
 } from '../../modules/storage/defaults.js';
 import {
   getRacerType,
@@ -32,6 +33,13 @@ import {
 } from '../../modules/racer-types/index.js';
 import { filterRacerTypesForTrack } from '../../modules/surface-effects/registry.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
+import {
+  decodeRaceIdentifier,
+  encodeRaceIdentifier,
+  looksLikeRaceIdentifier,
+} from '../../modules/raceIdentifier.js';
+import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
+import { buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
   deriveRaceDuration,
@@ -68,6 +76,9 @@ const LAP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
 
 function SetupScreen() {
   const navigate = useNavigate();
+  // RACE-IDENTIFIER-1: why the last identifier was refused. Shown beside the field, because a
+  // refusal the operator cannot see is indistinguishable from a button that does nothing.
+  const [identifierError, setIdentifierError] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
   const [racerTypeOverrides] = useStorage(KEYS.RACER_TYPE_OVERRIDES, {});
@@ -476,7 +487,140 @@ function SetupScreen() {
   // Said once, so the notice, the button's tooltip and the console refusal cannot drift apart.
   const quickOverCapMessage = `${quickFieldSize} racers would start and this track allows ${quickMaxPlayers}. Lower N, remove ${quickFieldSize - quickMaxPlayers} from the roster, or pick a track that allows more.`;
 
+  /**
+   * RACE-IDENTIFIER-1 — start the race a string names, on this machine.
+   *
+   * Everything the payload needs comes from the decoded identifier. The fields that do NOT decide
+   * the race — the event name, the branding, how many winners the result screen lists — still come
+   * from this screen, because they are what this operator is showing tonight and reproducing a race
+   * is not the same as reproducing somebody's poster.
+   */
+  // RACE-IDENTIFIER-1 — the identifier for the race this screen would start RIGHT NOW.
+  //
+  // Only defined for a TYPED seed: an empty field means "draw one at press time", so there is no
+  // particular race to name yet and offering a string would be naming a race that does not exist.
+  // Null while the field holds an identifier too — that string already IS the answer.
+  const currentRaceIdentifier = useMemo(() => {
+    if (raceSeed === '' || looksLikeRaceIdentifier(raceSeed)) return null;
+    if (!selectedGeometryReady || players.length === 0) return null;
+    try {
+      const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
+      const typeId = filteredRacerTypeIds.includes(preferredId)
+        ? preferredId
+        : (filteredRacerTypeIds[0] ?? preferredId);
+      const stage = normalizeRaceActionStage(raceDefaults.raceActionStage);
+      return encodeRaceIdentifier({
+        geometryId: selectedTrack?.geometryId,
+        racerTypeId: typeId,
+        names: players.map((p) => p.name),
+        racePlanSeed: Number(raceSeed),
+        raceActionStage: stage,
+        targetLaps: trackIsOpen ? undefined : effectiveLaps,
+        targetDurationSec: trackIsOpen ? effectiveOpenTrackDuration : undefined,
+        // Derived exactly as the start path derives it, from the same model.
+        racePlanEnabled:
+          deriveRaceDuration({
+            isOpen: trackIsOpen,
+            pathLengthPx: selectedPathLengthPx,
+            laps: effectiveLaps,
+            requestedSeconds: effectiveOpenTrackDuration,
+            normalSpeedPxPerSec,
+            speedMultiplier: getRacerType(typeId)?.getSpeedMultiplier() ?? 1.0,
+            runoutZone: behaviorConfig.runoutZone,
+          }).realizedDurationSec >= racePlanMinDur,
+        world: buildWorldConfig({ raceActionStage: stage }),
+        defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        buildId: raceIdentifierBuildId(),
+      });
+    } catch {
+      // A screen state an identifier cannot describe yet must not take the panel down with it.
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    raceSeed,
+    selectedGeometryReady,
+    selectedTrack,
+    players,
+    racerTypeOverride,
+    filteredRacerTypeIds,
+    raceDefaults.raceActionStage,
+    trackIsOpen,
+    effectiveLaps,
+    effectiveOpenTrackDuration,
+    selectedPathLengthPx,
+    normalSpeedPxPerSec,
+    racePlanMinDur,
+  ]);
+
+  function startRaceFromIdentifier(text) {
+    let decoded;
+    try {
+      decoded = decodeRaceIdentifier(text, {
+        defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        buildId: raceIdentifierBuildId(),
+      });
+    } catch (err) {
+      setIdentifierError(err?.message ?? 'This race identifier could not be read.');
+      return;
+    }
+    const geom = getTrack(decoded.geometryId);
+    if (!geom) {
+      // The one input an identifier cannot carry: the track's own geometry lives on this machine.
+      // Refusing is the honest answer — racing a track this client does not have would guess.
+      setIdentifierError(
+        `This race was run on a track this device does not have ("${decoded.geometryId}"). Load that track, then try again.`
+      );
+      return;
+    }
+    setIdentifierError(null);
+    const track = tracks.find((t) => t.geometryId === decoded.geometryId) ?? null;
+    const race = {
+      // The roster IS the name list, in order — a name is physics, so this cannot be rebuilt from
+      // whoever is in the lobby right now.
+      racers: decoded.names.map((name) => ({ name })),
+      trackId: track?.id ?? decoded.geometryId,
+      trackName: track?.name ?? decoded.geometryId,
+      geometryId: decoded.geometryId,
+      racerTypeId: decoded.racerTypeId,
+      worldWidth: track?.worldWidth ?? 1280,
+      worldHeight: track?.worldHeight ?? 720,
+      duration: raceSettings.duration,
+      eventName: raceSettings.eventName,
+      subtitle: activeBrandProfile?.subtitle ?? '',
+      sponsorText: activeBrandProfile?.sponsorText ?? '',
+      winners: raceSettings.winners,
+      raceMode: decoded.targetDurationSec == null ? 'laps' : 'time',
+      targetLaps: decoded.targetLaps,
+      targetDurationSec: decoded.targetDurationSec,
+      trackSurfaceClasses: track?.surfaceClasses ?? [],
+      racePlanEnabled: decoded.racePlanEnabled,
+      racePlanSeed: decoded.racePlanSeed,
+      raceActionStage: decoded.raceActionStage,
+      // ★ The half a seed never carried: the config world this race was recorded with. RaceScreen
+      // prefers it over this machine's stored config — see the note at `RaceScreen/index.jsx:466`.
+      worldConfigOverride: decoded.world,
+      timestamp: new Date().toISOString(),
+    };
+    sessionStorage.setItem('activeRace', JSON.stringify(race));
+    navigate('/race');
+  }
+
   function handleStartRace() {
+    // ── RACE-IDENTIFIER-1: the field may hold a whole race rather than a seed ──────────────────
+    //
+    // An identifier carries all nine engine inputs, so a race started from one takes NOTHING from
+    // this screen's current selection — not the track, not the racer type, not the roster, and not
+    // this machine's stored config. That is the entire point: the same string on two machines is
+    // the same race, which a seed alone has never been able to promise.
+    //
+    // It REFUSES rather than falls back. A damaged or foreign identifier that quietly started the
+    // race the screen happens to be showing would be the worst outcome available — a race claiming
+    // to be the one in the string.
+    if (looksLikeRaceIdentifier(raceSeed)) {
+      startRaceFromIdentifier(raceSeed);
+      return;
+    }
     // QUIET-FAILURES-1 — the same refusal as Quick Test, for the same reason: `trackIsOpen`
     // resolves a missing geometry to CLOSED, and `raceMode` below is derived straight from it.
     if (!selectedGeometryReady) {
@@ -1078,6 +1222,8 @@ function SetupScreen() {
                 seed={raceSeed}
                 onSeedChange={setRaceSeed}
                 lastRaceSeed={lastRaceSeed}
+                identifierError={identifierError}
+                raceIdentifier={currentRaceIdentifier}
               />
             </>
           )}

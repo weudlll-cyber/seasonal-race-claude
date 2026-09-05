@@ -3,12 +3,14 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-05 by PLAYABLE-FOUR-1 **piece A**. **Master is `d407f090`.** Origin now
-holds TWO heads: `master`, and **`feat/playable-four-1`, which is NOT merged and needs your eye.**
+**Last rewritten:** 2026-09-05, after **all four pieces** of PLAYABLE-FOUR-1. **Master is
+`d407f090`.** Origin holds TWO heads: `master`, and **`feat/playable-four-1`, which is NOT merged.**
 
-**★ THE ONE THING TO KNOW FIRST: A BRANCH IS WAITING FOR YOU.** `feat/playable-four-1` carries the
-comeback measurement you asked for on 2026-09-05, and pieces B, C and D are being built on top of it.
-**No merge permission was given and none was taken.** Nothing on it is minted.
+**★ THE ONE THING TO KNOW FIRST: THREE THINGS ARE WAITING FOR YOUR EYE, AND THEY ARE ALL ON ONE
+BRANCH.** `feat/playable-four-1` carries Cancel Race, the server-is-gone banner, and the race
+identifier — plus the comeback measurement you asked for. **The dev server is running on that branch
+so you can see all three without doing anything.** No merge permission was given and none was taken;
+nothing on the branch is minted, and all four fingerprint roles were re-measured and are unmoved.
 
 **THE PICTURE, A DEFAULT, A THRESHOLD AND EVERY SHIPPED VALUE ARE UNMOVED SINCE THE NIGHT CHAIN, and
 one fingerprint has been minted since: the RENDER role**, on your order, by MINT-RENDER-1 — that is
@@ -17,6 +19,34 @@ the item that stood at the top of NEEDS HIS WORD and it is answered.
 ---
 
 ## DONE
+
+**CANCEL RACE — built, and the premise was half wrong** — PLAYABLE-FOUR-1 piece B, on
+`feat/playable-four-1`, UNMERGED. There is no `cancelRace` in the client (0 hits, every spelling),
+but **a control that ends the race and returns to Setup already existed** in the race HUD. What it
+did not do was leave **FULLSCREEN** — and this is the only screen with a control that can, so you
+landed back on Setup in a fullscreen browser with no way out. Everything else the race sets up was
+already released on unmount; the start path was read to establish that rather than guessed. One
+control, one effect: no confirmation, no countdown, no undo, no shortcut. It is now called **Cancel
+Race** while the race runs and **← Setup** once everyone is home — calling it "← Setup" always is
+why the leak went unnoticed, because it read as navigation.
+
+**THE SERVER IS GONE AND YOU ARE NOW TOLD** — piece C, UNMERGED. Every failure was already handled
+and every one was announced **to the console**, so the screen looked exactly like a working one
+while the track list was stale or empty. ★ **The offline FALLBACK was already in the tree** — the
+track list falls back to its cache, the geometry to localStorage, the results to sessionStorage, the
+built-in racers need nothing — so only the banner was built, and nothing was invented to fill the
+piece. It never polls: it records what the app's own requests already found out. And **an HTTP
+error means the server is THERE** — a 500 says so and does not claim it is down, which would send
+you to restart a backend that is running.
+
+**A RACE IDENTIFIER — built, and ONE DECISION IS YOURS** — piece D, UNMERGED. It encodes all nine
+engine inputs exactly, so the same string is the same race on another machine — which a seed never
+was, because the config came from whichever machine pressed Start. It REFUSES rather than guesses:
+a foreign build, a damaged string, a track this device does not have. ★ **IT IS NOT TYPABLE:**
+**210 characters for 4 racers, 450 for 20, 743 for 40.** The brief said not to make it lossy to
+shorten it, so it is exact and it is a copy-and-paste value. **The options are laid out for you in
+the report** — leave it copy-only, shorten it by keeping the payload on the server (which makes
+repeating a race need the server), or a short form that refuses to exist when it would lie.
 
 **★ THE CAMERA CATCHES THE RIGHT RACER AND THE WRONG MOMENT — measured, nothing changed** —
 [COMEBACK-BEATS-1](../reports/night/COMEBACK-BEATS-1.md), on `feat/playable-four-1`, UNMERGED.
@@ -105,10 +135,8 @@ three gaps between a green branch and a green CI, and the open list below.
 
 ## RUNNING
 
-**`feat/playable-four-1` — four pieces, one branch, NO MERGE PERMISSION.** Piece **A** (the comeback
-measurement) is **done and pushed**. Pieces **B** (Cancel Race), **C** (server-gone banner and
-fallback) and **D** (a short race identifier) follow in that order; if time runs short the fall order
-is C then B. Nothing on the branch is minted, and no fingerprint has moved.
+**The dev server, on `feat/playable-four-1`** — so the three things above can be looked at. Nothing
+else is in flight: no sweep and no measurement is running. **All four pieces are done and pushed.**
 
 ---
 
@@ -117,11 +145,13 @@ is C then B. Nothing on the branch is minted, and no fingerprint has moved.
 **Checked against the tree on 2026-09-05 before being listed. The full version with source addresses
 is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.**
 
-- **Cancel Race** — not in the client at all. The fullscreen half of PR-G is wired.
-- **TLH-3** — `defaultTracks.js` does not exist; no status banner. Deferred by its own entry.
-- **A short race identifier to replace the seed** — your decision of 2026-09-05 (**D33**). The seed
-  fixes the plan but not the world; config is read from the host's storage at race start, so one seed
-  on two machines is two races. **Not designed.**
+- ~~**Cancel Race**~~ — **BUILT, unmerged, your eye owed.** A control existed; the fullscreen leak
+  did not have an owner.
+- ~~**TLH-3**~~ — **BANNER BUILT, unmerged, your eye owed.** The fallback was already in the tree;
+  `defaultTracks.js` still does not exist and was not created.
+- ~~**A short race identifier to replace the seed**~~ — **BUILT, unmerged, and one decision is
+  yours: it is not typable.** The seed fixed the plan but not the world; that is closed — a race
+  started from an identifier now uses the config the identifier carries, not this machine's.
 - **The comeback BEATS reaching the camera** — **MEASURED (piece A above); the decision is now
   yours.** Passing the beats through was deliberately NOT built. What the measurement gives you: the
   camera never picks the wrong racer, and is early every single time by a median 9.90 s.
@@ -129,16 +159,18 @@ is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.
   shared driver hard-codes `isOutcomePhase: false`; only `camera-replay.mjs` does it the browser's
   way. **The camera fingerprint is taken with that window closed.** Nothing was changed — it is
   recorded so it is not re-discovered.
-- **The missing `routing.mjs` guard** — nothing checks that a guard's dynamic-import literals are
-  inside its own resolved set. The property holds **by inspection, not by construction**.
-- **`lint` and `format:check` are not in `verify`** — it runs the formatter, not a check. CI runs
-  all three; `verify` runs none of them.
 - **Deployment** — see NEEDS HIS WORD.
 
-**Not on this list, because the tree says they are done:** piece **D** (the item-7 gap) — closed by
+**Struck above, and struck for a reason:** the three crossed-out items are BUILT and pushed, not
+merged. They leave this list when you have looked at them and they land — not before.
+
+**Not on this list, because the tree says they are done:** the item-7 gap — closed by
 ITEM7-MEMBERSHIP-1, item 7 reads 0 of 80. The **closing-phase cut** — already built, D32. The
 **deployed client's API address** — decided, D30 chose runtime resolution; the *build* is part of
-deployment below.
+deployment below. **The render fingerprint's blind spot** — minted on your order. **The missing
+`routing.mjs` guard** — built, proved inert against the tree, and DELETED: `dataReach` already
+guarantees the property by construction. **`lint` and `format:check` in `verify`** — both now run for
+the client, and the server declares neither script, so there is nothing there to run.
 
 ---
 

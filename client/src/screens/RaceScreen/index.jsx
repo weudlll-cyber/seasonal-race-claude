@@ -463,29 +463,49 @@ export default function RaceScreen() {
     const trackEmoji = racerType.getEmoji() ?? null;
     const speedMultiplier = racerType.getSpeedMultiplier();
 
-    const baseSpeedConfig = loadBaseSpeedConfig();
+    // ── RACE-IDENTIFIER-1: where a REPRODUCED race stops reading this machine ──────────────────
+    //
+    // Every loader below reads THE HOST'S localStorage, and that is exactly why a seed alone does
+    // not repeat a race: two operators on the same seed and the same build get two races, because
+    // their stored config differs and nothing on screen says so.
+    //
+    // When a race was started from a race identifier, the identifier carries the config world it was
+    // recorded with, and the payload brings it here. `cfg()` prefers that copy and otherwise reads
+    // the host exactly as before — so with no identifier in play this is the same code it replaced,
+    // loader for loader, which is why no fingerprint moves.
+    const overrideConfigs = raceData.worldConfigOverride?.configs ?? null;
+    const cfg = (name, load) => overrideConfigs?.[name] ?? load();
 
-    const behaviorConfig = loadRaceBehaviorConfig();
+    const baseSpeedConfig = cfg('baseSpeedConfig', loadBaseSpeedConfig);
+
+    const behaviorConfig = cfg('raceBehaviorConfig', loadRaceBehaviorConfig);
     behaviorConfig.isOpen = isOpenTrack;
-    const rowConfig = loadRowLayoutConfig();
+    const rowConfig = cfg('rowLayoutConfig', loadRowLayoutConfig);
     // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
     // than from the live Dev Screen setting — so changing the control while a race is on screen
     // cannot change the race on screen, and a replayed payload runs the stage it recorded. A payload
     // from before this change carries no stage and normalises to the shipped one.
     const raceActionStage = normalizeRaceActionStage(raceData.raceActionStage);
-    const dynamicsConfig = applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
-    const frameTimingConfig = loadFrameTimingConfig();
+    // The stage is applied on TOP of the stored dynamics, and the identifier records the config
+    // world AFTER that application (`buildWorldConfig` does the same), so a reproduced race takes
+    // the recorded block whole rather than re-applying a stage to it.
+    const dynamicsConfig = overrideConfigs?.raceDynamicsConfig
+      ? overrideConfigs.raceDynamicsConfig
+      : applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
+    const frameTimingConfig = cfg('frameTimingConfig', loadFrameTimingConfig);
 
     // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
     // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
     // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
     // badge and the marker can never disagree about what this race was configured with.
-    const cfgWorld = buildWorldConfig({ raceActionStage });
+    // The badge and the camera marker must describe the world the race is ACTUALLY running with,
+    // which for a reproduced race is the recorded one.
+    const cfgWorld = raceData.worldConfigOverride ?? buildWorldConfig({ raceActionStage });
     const cfgBadge = configFingerprintBadge(cfgWorld);
     const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
-    const autoScaleConfig = loadAutoScaleConfig();
+    const autoScaleConfig = cfg('autoScaleConfig', loadAutoScaleConfig);
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     // WINNER-CARD-1: the timer list, captured here rather than read from the ref in the cleanup.
@@ -1775,12 +1795,12 @@ export default function RaceScreen() {
   // WHAT "LEAVES NOTHING BEHIND" MEANS HERE was established by reading the START path rather than
   // guessed, and every item is unwound by somebody:
   //
-  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx:540` (and `:652` for Quick
+  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx:684` (and `:796` for Quick
   //     Test). Removed here. Left in place it is a race payload with no race, and the next mount of
   //     this screen would start it again.
   //   * the rAF loop, the finish-nav timer, the winner-card timers, the long-task observer, the
   //     camera markers and the effect instances — all released by the animation effect's own
-  //     cleanup on unmount (:1740-1752), which navigating away runs. Nothing to do here, and doing
+  //     cleanup on unmount (:1760-1773), which navigating away runs. Nothing to do here, and doing
   //     it here as well would be a second owner for state that already has one.
   //   * the `fullscreenchange` listener — removed by its own effect cleanup (:378).
   //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
@@ -1788,10 +1808,10 @@ export default function RaceScreen() {
   //     screen does not take it out, so the operator landed back on Setup with the browser still
   //     fullscreen and the only control that could undo it left behind on the race screen.
   //
-  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:543`
+  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:688`
   // into a store that outlives the tab. It is the RECORD of a seed that really was used — a race did
   // run — and erasing it would destroy the only trace of a drawn seed. And `raceResults`, which this
-  // race never wrote: it is written only once every racer has finished (:1088), so a cancelled race
+  // race never wrote: it is written only once every racer has finished (:1108), so a cancelled race
   // leaves no result of its own. Clearing an EARLIER race's result would be touching the result
   // recording, which this piece must not do.
   function cancelRace() {

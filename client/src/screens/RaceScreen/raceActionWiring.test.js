@@ -38,13 +38,32 @@ describe('RACE-ACTION-CONTROL-1 — the race path runs the stage the RACE carrie
   });
 
   // PROPERTY 1 — the config the engine is handed must be the stage-applied one.
+  //
+  // RACE-IDENTIFIER-1 (2026-09-05) put a second author in front of this value, and the assertion
+  // follows it rather than being relaxed. A race started from a race identifier runs the config
+  // world the identifier RECORDED — the stage was already applied when that world was captured, so
+  // re-applying it would be applying it twice. Every other race takes the branch this property has
+  // always been about. What is asserted is therefore the SHAPE OF THE FALLBACK: the stage is applied
+  // to the loaded dynamics whenever no recorded world is in play.
+  //
+  // Sabotage for this property is unchanged in spirit — build the config from the raw loader again —
+  // and it still fails here, because the raw loader may appear exactly once and only inside the
+  // stage call.
   it('hands the engine the stage-applied dynamics config', () => {
     expect(src).toMatch(
-      /const dynamicsConfig = applyRaceActionStage\(\s*loadRaceDynamicsConfig\(\),\s*raceActionStage\s*\)/
+      /applyRaceActionStage\(\s*loadRaceDynamicsConfig\(\),\s*raceActionStage\s*\)/
     );
     // And the raw loader is not ALSO used to build a dynamics config that could reach the engine —
     // one author for this value on this path, which is the whole point of the stage.
     expect(src.match(/loadRaceDynamicsConfig\(\)/g)).toHaveLength(1);
+  });
+
+  // RACE-IDENTIFIER-1 — the override is a PREFERENCE, never a replacement of the fallback. If the
+  // recorded branch stopped being conditional, every ordinary race would run whatever the last
+  // payload happened to carry.
+  it('prefers a recorded config world only when the race carries one', () => {
+    expect(src).toMatch(/overrideConfigs\?\.raceDynamicsConfig/);
+    expect(src).toMatch(/raceData\.worldConfigOverride\?\.configs \?\? null/);
   });
 
   // PROPERTY 3 — the HUD's config badge and the CAMERA-REPRO-1 marker are built from this world.
@@ -53,5 +72,8 @@ describe('RACE-ACTION-CONTROL-1 — the race path runs the stage the RACE carrie
   it('builds the HUD/marker world for the same stage', () => {
     expect(src).toMatch(/buildWorldConfig\(\{\s*raceActionStage\s*\}\)/);
     expect(src).not.toMatch(/buildWorldConfig\(\s*\)/);
+    // RACE-IDENTIFIER-1: and a reproduced race's badge and marker describe the world it is ACTUALLY
+    // running with — the recorded one — or they would name a config the race is not using.
+    expect(src).toMatch(/raceData\.worldConfigOverride \?\? buildWorldConfig\(/);
   });
 });

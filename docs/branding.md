@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L709-L734)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L853-L878)):
 
 ```
 Branding: None ▼
@@ -93,7 +93,7 @@ explicitly select a profile in the SetupScreen selector to activate it.
 
 Whenever the active profile changes, a `useEffect` in SetupScreen writes two CSS custom properties
 directly onto `document.documentElement.style`
-([`SetupScreen.jsx:163–178`](../client/src/screens/SetupScreen/SetupScreen.jsx#L163-L178)):
+([`SetupScreen.jsx:163–178`](../client/src/screens/SetupScreen/SetupScreen.jsx#L174-L189)):
 
 ```js
 root.setProperty("--brand-primary", profile.primaryColor);
@@ -156,22 +156,22 @@ each surface reads them differs — there is no single shared chain:
   ([`ResultScreen/index.jsx:98`](../client/src/screens/ResultScreen/index.jsx#L98)).
 
 `sponsorText` is the one exception: the ResultScreen reads it from `race.sponsorText` (carrier path
-[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L386), see "Sponsor strip
+[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L397), see "Sponsor strip
 carrier" below), not directly from the profile.
 
 The canvas carrier chain in full:
 
 1. **Seed into raceSettings**: when the active profile changes, a `useEffect` sets
    `raceSettings.eventName` from `profile.eventName`
-   ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L181-L185)).
+   ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L192-L196)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L665-L700)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L809-L844)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 
 3. **Carried into activeRace**: written to `sessionStorage.activeRace` when a race is started
-   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L384-L385)):
+   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L395-L396)):
 
    ```js
    eventName: raceSettings.eventName,
@@ -182,10 +182,10 @@ The canvas carrier chain in full:
    ([`index.jsx` → `lcData`](../client/src/screens/RaceScreen/index.jsx#L332-L334))
    and passes it to:
    - `drawTitle(ctx, shape, raceData)` for closed tracks
-     ([`RaceScreen/index.jsx:1449`](../client/src/screens/RaceScreen/index.jsx#L1449),
+     ([`RaceScreen/index.jsx:1449`](../client/src/screens/RaceScreen/index.jsx#L1469),
      [`overlayRendering.js` → `drawTitle`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L22-L41))
    - `drawTitleOpen(ctx, raceData)` for open tracks
-     ([`RaceScreen/index.jsx:1447`](../client/src/screens/RaceScreen/index.jsx#L1447),
+     ([`RaceScreen/index.jsx:1447`](../client/src/screens/RaceScreen/index.jsx#L1467),
      [`overlayRendering.js` → `drawTitleOpen`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L48-L62))
 
    Both functions render `eventName` in gold (`#ffd700`) and, when present, `subtitle` below it in
@@ -247,7 +247,7 @@ Formatting is handled by a shared utility
 ([`client/src/utils/formatRaceTime.js`](../client/src/utils/formatRaceTime.js))
 that formats milliseconds as `ss.hh` (e.g. `29.34`) or `m:ss.hh` (e.g. `1:05.32`). It is consumed
 by both the in-race live scoreboard
-([`RaceScreen/index.jsx:1639–1640`](../client/src/screens/RaceScreen/index.jsx#L1639-L1640))
+([`RaceScreen/index.jsx:1639–1640`](../client/src/screens/RaceScreen/index.jsx#L1659-L1660))
 and the ResultScreen podium slots and rank rows.
 
 #### Sponsor strip carrier
@@ -321,7 +321,7 @@ These items are **not** visible in the browser today.
 | **Per-race sponsor overlay on/off**  | `BrandingProfiles.jsx` UI copy mentions "Sponsor Overlay — whether to show your sponsor branding during races" ([`BrandingProfiles.jsx:133–134`](../client/src/screens/DevScreen/sections/BrandingProfiles.jsx#L133-L134)), but no toggle field exists on the profile schema and SetupScreen has no control for this. The in-race logo always shows when a profile with a logo is active; there is no per-race enable/disable.                                                                                         |
 | **In-race sponsor tagline**          | `sponsorText` appears only on the ResultScreen footer. It is not rendered anywhere during the race itself (no in-race text overlay).                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Overlay position configurability** | `logoCorner` is stored on the profile and the UI copy mentions "Overlay Position" ([`BrandingProfiles.jsx:137`](../client/src/screens/DevScreen/sections/BrandingProfiles.jsx#L137)), but no position selector exists in the form. The in-race logo position is **data-driven** (`profile.logoCorner`, fallback `'bottom-right'`, [`BrandLogoOverlay.jsx:30`](../client/src/screens/RaceScreen/BrandLogoOverlay.jsx#L30)) — what is missing is a UI control to set it. The ResultScreen logo is hardcoded to top-left. |
-| **Broader UI tinting**               | The SetupScreen header ([`SetupScreen.jsx` → `--brand-primary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L88) and [`SetupScreen.jsx` → `--brand-secondary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L89), set on the document root) and the screen-transition overlay ([`TransitionOverlay.css:13`](../client/src/contexts/TransitionOverlay.css#L13)) already consume brand vars. Broader tinting — buttons, podium slot colors, other headers — is not wired.                                                            |
+| **Broader UI tinting**               | The SetupScreen header ([`SetupScreen.jsx` → `--brand-primary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L99) and [`SetupScreen.jsx` → `--brand-secondary`](../client/src/screens/SetupScreen/SetupScreen.jsx#L100), set on the document root) and the screen-transition overlay ([`TransitionOverlay.css:13`](../client/src/contexts/TransitionOverlay.css#L13)) already consume brand vars. Broader tinting — buttons, podium slot colors, other headers — is not wired.                                                            |
 | **`isDefault` as activation driver** | Flag is stored and shown as a star in BrandingProfiles; it does not currently drive automatic activation. Could be wired to pre-select the default profile on SetupScreen mount.                                                                                                                                                                                                                                                                                                                                       |
 
 ---
