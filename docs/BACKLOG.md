@@ -292,12 +292,12 @@ PHASE, WHATEVER CAMERA PHASE IS RUNNING MUST BE ENDED — whichever one it was.*
 previous subject into the run-in.
 
 **★ AND A BATTLE SHOT IS NOT AN EXCEPTION — his decision of 2026-09-05, recorded as D28 below.**
-The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because CLOSING-CUT-1
+The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md)
 found one running at the cut on city-circuit, a SHIP-gate track, with 98% of it still to come, and at
 the time a battle shot near the finish was wrongly recorded as accepted behaviour — see
 ACCEPTED-FINISH-ATTRIBUTION-1, which corrected that attribution.
 
-**THE MEASURED FACT THAT GOES WITH IT** (CLOSING-CUT-1, ten tracks at seed 9, one race each): **four
+**THE MEASURED FACT THAT GOES WITH IT** ([CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md), ten tracks at seed 9, one race each): **four
 different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
 `BATTLE_ZOOM` 1, ten of ten — and **`PHOTO_FINISH` is not among them.** So the requirement covers a
 varied set rather than one special case. **BUILD NOTHING: the rebuild is its own block, and nothing
@@ -376,7 +376,7 @@ asserted, where two one-token sabotages used to pass all 44 tests.
 **Listed so nothing has to be remembered. Whether any of it is worth doing is his call, and none of
 these carries a recommendation.**
 
-1. ~~**`RaceScreen` has no test that mounts it.**~~ **HALF ANSWERED 2026-09-04 (RACESCREEN-MOUNT-1),
+1. ~~**`RaceScreen` has no test that mounts it.**~~ **HALF ANSWERED 2026-09-04 ([RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md)),
    and the half that is not is the half this item actually measured.** `mount.test.jsx` now renders
    the real component past its placeholder, and three render-class sabotages of `index.jsx` all go
    red (see *`RaceScreen` is not testable — ✅ ANSWERED* in PART TWO). **BUT THE BACKGROUND SABOTAGE
@@ -2538,17 +2538,17 @@ gate that gets ignored within a week.
 2026-08-24 — *at the start of the closing phase, whatever camera phase is running must be ended* —
 **applies to every phase running at that moment, with no exception for a battle shot.**
 
-**Why it needed saying.** CLOSING-CUT-1 (the night of 2026-09-04) measured what is actually running
+**Why it needed saying.** [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md) (the night of 2026-09-04) measured what is actually running
 at that moment and found a `BATTLE_ZOOM` on city-circuit, a SHIP-gate track, with 98% of it still to
 come. That met the then-recorded claim that a battle shot near the finish was accepted behaviour, so
 the instruction and the acceptance appeared to point opposite ways. **Two things resolve it:** he has
 answered the collision here, and the acceptance claim itself was wrong — see the correction below.
 
-**THE MEASURED FACT THAT GOES WITH IT**, from CLOSING-CUT-1, ten tracks at seed 9, one race each:
+**THE MEASURED FACT THAT GOES WITH IT**, from [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md), ten tracks at seed 9, one race each:
 **four different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
 `BATTLE_ZOOM` 1, ten of ten races — and **`PHOTO_FINISH` is not among them.** So this decision covers
-a real and varied set, not one special case. *(That report is on the unmerged `night/2026-09-04`
-branch at the time of writing.)*
+a real and varied set, not one special case. *(That report was on an unmerged branch when D28 was
+written; it landed on 2026-09-05 and is linked above.)*
 
 **BUILD NOTHING. Nothing in `CameraDirector.js` ends a running phase at the closing boundary today**,
 and this decision does not build it — the rebuild is its own block. What is recorded is that the
@@ -2563,7 +2563,7 @@ running after 95% falls under his rule like any other. That line needed no chang
 **His decision: leave it. Nothing is removed, no dependency is changed, no Dockerfile line is
 written.**
 
-IMAGE-DATE-FNS-1 (the night of 2026-09-04) established that `date-fns@2.16.1` is pulled by
+[IMAGE-DATE-FNS-1](../reports/night/IMAGE-DATE-FNS-1.md) (the night of 2026-09-04) established that `date-fns@2.16.1` is pulled by
 `better-sqlite3-session-store`, appears in no `package.json` in the tree, measures **27.1 MB inside
 the image — 42% of its dependency tree** — and that **the package which declares it never imports
 it**: its only mentions there are its own `package.json` and its test file, and nothing else in the
@@ -2592,7 +2592,7 @@ one command.
 
 **His decision: resolve it at START time**, so one image works at any address without a rebuild.
 
-**WHICH OPTIONS THIS CLOSES.** DEPLOY-NOTES.md §2 laid out three and chose none:
+**WHICH OPTIONS THIS CLOSES.** [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §2 laid out three and chose none:
 
 - **A · keep it** — one image per public origin, rebuilt per deployment. **CLOSED.**
 - **B · make the default RELATIVE** so every call is same-origin. **CLOSED** — it still decides the
@@ -2606,10 +2606,12 @@ lives. **The server has no TLS at all** — searched for, not assumed — and th
 rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
 terminator in front.
 
-**⚠ WHERE THIS BELONGS.** `docs/DEPLOY-NOTES.md` carries the three options this closes, and it is on
-the unmerged `night/2026-09-04` branch — it does not exist on master, so the decision is filed here,
-in the register that is its proper home anyway. **When that branch merges, §2 of that document should
-point at D30 rather than restate it.**
+**WHERE THIS BELONGS — settled 2026-09-05 when `night/2026-09-04` merged.**
+[DEPLOY-NOTES.md](DEPLOY-NOTES.md) carries the three options this closes. It did not exist on master
+when D30 was written, so the decision was filed here — the register being its proper home anyway —
+with a note to connect the two once the branch landed. **That is done: §2 of that document now points
+at D30 and does not restate the reasoning, and its "one command" checklist marks hurdle 2 answered
+but NOT YET BUILT.**
 
 ## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
 
@@ -2675,7 +2677,7 @@ point at D30 rather than restate it.**
       governing different moments must not be able to read as one control at a glance — a tooltip
       that explains the difference is not a substitute for a label that shows it.
 
-## `RaceScreen` is not testable — ✅ ANSWERED 2026-09-04 (RACESCREEN-MOUNT-1)
+## `RaceScreen` is not testable — ✅ ANSWERED 2026-09-04 ([RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md))
 
 **It mounts.** `client/src/screens/RaceScreen/mount.test.jsx` renders the real component, gets it
 past its own `Loading…` placeholder, and asserts the race chrome is on the page. Three tests, and

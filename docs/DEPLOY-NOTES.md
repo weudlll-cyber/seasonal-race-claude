@@ -98,7 +98,13 @@ not when it was loaded.
 is recorded here is the *consequence* — **the artefact is origin-specific, so there is no one image
 and no one command.**
 
-**The three real answers, laid out and not chosen:**
+**★ ANSWERED — his decision of 2026-09-05 is [BACKLOG.md](BACKLOG.md) D30: the address moves from
+BUILD time to START time, which is option C.** A and B are closed. **D30 is the one home for that
+decision and the reasoning is not restated here**; the three options stay below because they are what
+it chose between, and because the COSTS in the table are still what C will have to pay.
+**BUILD NOTHING — it is its own block.**
+
+**The three options it chose between:**
 
 | option | what it means | what it costs |
 | --- | --- | --- |
@@ -106,9 +112,9 @@ and no one command.**
 | **B · make the default RELATIVE** — `API_BASE_URL` becomes `''` so every call is same-origin | the bundle works at whatever address it is served from | the same-origin model SERVE-SPA-1 already moved the project towards. Breaks the split-host arrangement unless `VITE_API_URL` is still honoured when set — which it can be. Touches one file. **The client dev server and the API are on different ports (5173 and 4000) with no Vite proxy**, so development would need either a proxy or the variable set, and that is the real cost. |
 | **C · resolve it at RUNTIME** — the server injects its own origin into the served `index.html`, or the client reads a small config endpoint | one image, any address, no rebuild | the most work, and it puts a runtime step where there is currently none. It is the only option that makes the image genuinely portable. |
 
-**NEEDS HIS WORD.** B is the small change and matches where the project already went with SERVE-SPA-1;
-C is what "one command, any machine" actually requires. **Nothing here is a recommendation — the
-options differ in what he wants the image to BE**, and that is not a question the code can answer.
+*(This paragraph read "NEEDS HIS WORD" until 2026-09-05, when he gave it. It said B was the small
+change and C what "one command, any machine" actually requires, and that the options differ in what
+he wants the image to BE rather than in anything the code can settle. **He chose C.**)*
 
 ---
 
@@ -183,7 +189,9 @@ returned.
 
 Written as a checklist of decisions, not as a plan:
 
-1. **Hurdle 2 resolved** (option B or C), so one image works at any address. Without this, no.
+1. ~~**Hurdle 2 resolved** (option B or C), so one image works at any address. Without this, no.~~
+   **DECIDED 2026-09-05 — option C, resolve at start time ([BACKLOG.md](BACKLOG.md) D30). Not yet
+   BUILT**, so this line is answered but not yet done.
 2. A compose file that includes a TLS-terminating proxy, with the domain as its one variable.
 3. The secrets generated rather than copied from an example — `openssl rand` in the compose
    environment, or a `.env` the operator fills in once.
