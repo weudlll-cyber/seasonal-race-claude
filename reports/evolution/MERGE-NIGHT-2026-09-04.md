@@ -99,7 +99,14 @@ catch-up can change a measurement already taken on the branch, and re-running an
 
 ## 5. The sweep
 
-The branch is deleted locally and at origin. **`git ls-remote --heads origin` output is in the merge
-commit and shows master alone.** No annotated tag was cut: the night's evidence is its ten reports
-and `docs/MORNING.md`, all of which travel in the merge, so there is nothing a tag would preserve
-that the history does not.
+The branch is deleted locally and at origin. **`git ls-remote --heads origin`, verbatim:**
+
+```
+1a8bc6e6a39c6d522b6423b0e15fa0e2aa4d4719	refs/heads/master
+```
+
+**Master is the only branch left.** *(This block was added after the sweep — the rest of the report
+was written before it, so it could not carry an output that did not yet exist.)*
+
+No annotated tag was cut: the night's evidence is its ten reports and `docs/MORNING.md`, all of which
+travel in the merge, so there is nothing a tag would preserve that the history does not.
