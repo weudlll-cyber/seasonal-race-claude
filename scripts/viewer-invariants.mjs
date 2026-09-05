@@ -193,12 +193,17 @@ function geometries() {
 //     luger-hill and dirt-oval (item 2) — and item 2's failures are the SAME late-zoom mechanism.
 //     The nightly sweep still runs all ten, so all of it is visible a day later rather than never.
 //
-//     ★★ AND AS OF 2026-09-04 THOSE FAILURES ARE ACCEPTED BEHAVIOUR, WHICH CHANGES WHAT THIS
-//     EXCLUSION MEANS (ACCEPTED-FINISH-1). The owner decided the finish sequence stays exactly as
-//     it is: the closing zoom need not have arrived by the crossing, and a battle shot may take the
-//     frame near the finish. Items 9 and 10 object to precisely those two things, so they encode an
-//     ideal HE HAS CONSIDERED AND REJECTED — the full statement, and the CAUSES that are accepted,
-//     are at the head of `endgame-sheet.mjs`.
+//     ★★ AND AS OF 2026-09-04 ONE OF THOSE FAILURES IS ACCEPTED BEHAVIOUR, WHICH CHANGES WHAT THIS
+//     EXCLUSION MEANS (ACCEPTED-FINISH-1). The owner decided the closing zoom need not have arrived
+//     by the crossing. Item 9 objects to precisely that, so it encodes an ideal HE HAS CONSIDERED
+//     AND REJECTED — the full statement is at the head of `endgame-sheet.mjs`.
+//
+//     ★ CORRECTED 2026-09-05 (ACCEPTED-FINISH-ATTRIBUTION-1). This paragraph used to attribute a
+//     SECOND acceptance to him — "a battle shot may take the frame near the finish" — and he says
+//     that wording is not his. Item 10's usual cause IS measured (a `BATTLE_ZOOM` in the window
+//     holds the leader forward, per the lines above), but that is a measurement, not a behaviour he
+//     accepted, and whether such a fail is a defect is not settled. WHAT HE ACCEPTED BEYOND THE
+//     CLOSING ZOOM IS NOT ESTABLISHED, and nothing is put in its place.
 //
 //     SO THE EXCLUSION IS NO LONGER JUSTIFIED BY A DEFECT. It is justified by items that object to
 //     something wanted, which is a different and weaker reason than the one recorded above. ★ THAT
@@ -210,11 +215,13 @@ function geometries() {
 //
 //     ★ WHERE EACH EXCLUDED TRACK STANDS, measured over 16 races and NOT the same answer for all
 //     three — this is the part a reader will get wrong from memory:
-//       garden-path  at seed 9, ITEMS 9 AND 10 AND NOTHING ELSE. Its exclusion rests on the two
-//                    accepted items alone, at the seed this gate runs. (Across seeds 1-3 it also
-//                    fails item 2, which is behaviour (i) measured directly — still accepted.)
-//       luger-hill   item 2 ONLY, and item 2 is NOT one of the two he named. Same behaviour, a
-//                    different item; only seed 9 has been measured for this track.
+//       garden-path  at seed 9, ITEMS 9 AND 10 AND NOTHING ELSE, at the seed this gate runs. Item 9
+//                    is accepted; item 10's usual cause is measured but NOT accepted (2026-09-05).
+//                    (Across seeds 1-3 it also fails item 2, which is behaviour (i) measured
+//                    directly — accepted, and since 2026-09-05 accepted explicitly.)
+//       luger-hill   item 2 ONLY; only seed 9 has been measured for this track. ★ ITEM 2 IS NOW
+//                    INSIDE THE ACCEPTANCE — his decision of 2026-09-05 — so this exclusion now
+//                    rests entirely on accepted behaviour. THE EXCLUSION IS NOT CHANGED HERE.
 //       dirt-oval    item 2 ONLY, at seed 9. ★ CORRECTED 2026-09-04 (ITEM7-MEMBERSHIP-1): this
 //                    entry used to read "but ITEM 7 AT SEED 3, a contender off canvas on 78 frames
 //                    — that one is NOT accepted behaviour ... the one of the three where something
@@ -225,14 +232,28 @@ function geometries() {
 //                    SPECIFIC TO DIRT-OVAL — the same artefact failed 10 races of 80 over four
 //                    tracks. Item 7 now grades the racers who can still win and reads 0 of 80.
 //                    SO DIRT-OVAL'S EXCLUSION NOW RESTS ON ITEM 2 ALONE — the same standing as
-//                    luger-hill: item 2 is behaviour (i) of the acceptance measured directly, and it
-//                    is NOT one of the two items he named. NOTHING REAL IS HIDDEN BY ANY OF THE
-//                    THREE EXCLUSIONS ANY LONGER. Widening the gate is still a separate decision and
-//                    is still not taken here.
+//                    luger-hill: item 2 is behaviour (i) of the acceptance measured directly, and
+//                    ★ SINCE 2026-09-05 THE ACCEPTANCE EXPLICITLY REACHES IT. NOTHING REAL IS
+//                    HIDDEN BY ANY OF THE THREE EXCLUSIONS ANY LONGER. Widening the gate is still a
+//                    separate decision and is still not taken here.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
 // defect is caught, not whether.
+//
+// ★★ HIS DECISION OF 2026-09-05: THE ACCEPTANCE OF 2026-09-04 REACHES GATE ITEM 2.
+//
+// It had been reported as an open question — item 2 measures behaviour (i) directly, and his
+// acceptance named item 9 rather than item 2. He has now said it reaches item 2 as well.
+//
+// THE CONSEQUENCE, RECORDED AND NOT TAKEN: luger-hill and dirt-oval are excluded from this gate on
+// item 2 ALONE, at seed 9, and item 2 is now accepted behaviour. So **both exclusions now rest
+// entirely on behaviour the owner has accepted**, and neither hides a defect.
+//
+// ★ NO EXCLUSION IS CHANGED HERE, AND NONE MAY BE CHANGED ON THIS DECISION ALONE. Widening the gate
+// is its own decision and has not been given. The reason recorded above still stands: a gate that
+// goes red on day one for accepted behaviour is a gate that gets ignored within a week, which is the
+// trap GATE-GARDEN-PATH-1 avoided.
 const GATE_TRACKS = "space-sprint,city-circuit";
 const trackArg = ARG("tracks", GATE ? GATE_TRACKS : null);
 const TRACKS = geometries().filter((g) => (trackArg ? trackArg.split(",").includes(g.id) : true));
