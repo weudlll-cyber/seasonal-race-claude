@@ -27,6 +27,7 @@
 //   npm run verify -- --dry        # print the plan and exit; runs nothing
 //   npm run verify -- --no-format  # skip the formatting pass (prints that it did)
 //   npm run verify -- --jobs=2     # cap concurrency (default: all chosen guards at once)
+//   npm run verify -- --premerge   # ALSO run the browser ship gate, if the diff reaches it
 // ============================================================
 
 import { execFile, execFileSync } from "node:child_process";
@@ -58,6 +59,9 @@ const JOBS = Number(arg("jobs", 0)) || 0;
 // looking like it had not. It cost one seven-minute run and sat uselessly in specs for weeks.
 const CHEAP = has("cheap");
 const CHEAP_TRACK = arg("cheap-track", null);
+// GATE-WIRED-AND-CAUSED-1: the caller asking for the PRE-MERGE run. See `premergeDecision` below
+// for what it gates and why the cadence is once per branch rather than once per commit.
+const PREMERGE = has("premerge");
 
 // ── AN ARGUMENT THIS SCRIPT DOES NOT UNDERSTAND IS AN ERROR (VERIFY-COST-3) ────────────────────
 // This is the generalising half, and it is why `--cheap` could be wrong for weeks: the script
@@ -68,7 +72,7 @@ const CHEAP_TRACK = arg("cheap-track", null);
 // Anything not on this list stops the run before any work happens. Adding a flag means adding it
 // here, which is one line and is the point.
 const KNOWN_VALUE_FLAGS = ["base", "jobs", "cheap-track"];
-const KNOWN_BARE_FLAGS = ["dry", "no-format", "cheap"];
+const KNOWN_BARE_FLAGS = ["dry", "no-format", "cheap", "premerge"];
 function rejectUnknownFlags(argv = process.argv.slice(2)) {
   const bad = argv.filter((a) => {
     if (!a.startsWith("--")) return true;
@@ -194,6 +198,60 @@ export function describeEmptyRun({
   };
 }
 
+// ── THE SHIP GATE RUNS ONCE PER BRANCH, AND SAYS SO WHEN IT DOES NOT (GATE-WIRED-AND-CAUSED-1) ──
+//
+// WHAT WAS WRONG. `scripts/viewer-invariants.mjs` carried a complete routing declaration — two
+// directories, two files — and nothing read it. `guardScripts()` collects by filename pattern and
+// that name matched none of them, so the gate was wired to no `verify` run, no CI job, no hook and
+// no npm script. It was invoked by a person typing it, or not at all.
+//
+// WHY IT IS NOT SIMPLY "SELECT IT LIKE EVERY OTHER GUARD". It builds the client, boots an isolated
+// API and preview server, opens Chromium and drives two races. That is minutes, not seconds, and a
+// per-commit cost of minutes is how a gate gets skipped rather than run. THE OWNER'S DECISION,
+// 2026-09-05: it belongs in verify, at the cadence a branch is finished — ONCE PER BRANCH, BEFORE
+// THE MERGE. Since a topic now stays on one branch until it is done, that is one flag away from
+// where verify already is: `--base` defaults to master, so a run on a branch already routes the
+// WHOLE branch's diff, and the gate needs no separate notion of what the branch changed.
+//
+// THE TWO CONDITIONS ARE BOTH NECESSARY AND NEITHER IS SUFFICIENT. The flag alone must not start a
+// five-minute browser run on a diff the gate cannot see anything in; a camera change alone must not
+// start one on every commit. So: the caller asked, AND the diff reaches what the gate declares.
+//
+// ★ AND THE SKIP IS NAMED, which is the half that is easy to leave out. `verify.mjs`'s own stated
+// constraint is at the head of this file — a skipped guard is a visible decision, never an
+// omission — and a guard skipped for TWO possible reasons whose line says only "nothing changed"
+// breaks it just as surely as one that prints nothing. The note below names which condition failed,
+// and names both when both did.
+export const GATE_GUARD = "viewer-invariants";
+
+/**
+ * Does the pre-merge gate run, and what does the plan say about it either way?
+ *
+ * PURE, and exported so the decision is tested rather than read off a run. `touched` is whether the
+ * diff reached anything the guard declares — computed by the same matcher every other guard uses,
+ * so the gate has no private idea of what a camera change is.
+ *
+ * @param {boolean} touched   the diff reached a declared path
+ * @param {boolean} premerge  `--premerge` was given
+ * @returns {{run: boolean, note: string}}
+ */
+export function premergeDecision(touched, premerge) {
+  if (touched && premerge)
+    return {
+      run: true,
+      note: "  ·  PRE-MERGE GATE: --premerge given and a declared path changed",
+    };
+  const missing = [];
+  if (!premerge) missing.push("--premerge was not given");
+  if (!touched) missing.push("nothing it declares changed");
+  return {
+    run: false,
+    note:
+      `  ·  PRE-MERGE GATE NOT SELECTED — ${missing.join(", and ")}. ` +
+      `It needs BOTH, and runs once per branch before the merge: \`npm run verify -- --premerge\`.`,
+  };
+}
+
 /** The flags a spawned fingerprint job inherits. One home, so a new one cannot reach only some. */
 export function cheapArgs(cheap = CHEAP, track = CHEAP_TRACK) {
   if (!cheap) return [];
@@ -281,6 +339,17 @@ export function commandFor(g) {
   }
   if (g.id === "script-suite")
     return { cmd: ["node", "--test", ...scriptTestFiles()] };
+  // GATE-WIRED-AND-CAUSED-1. `--gate` is the harness's own two-race pre-merge mode; with no argv it
+  // would drive the forty-seed nightly sweep instead, which is hours. The flag lives here with the
+  // rest of the argv, and GATE_TRACKS, the seed and the arm stay where they are — in the harness.
+  //
+  // EXCLUSIVE, and the reason is process model rather than timing. It runs `vite build`, boots an
+  // API and a preview server on FIXED ports, and drives Chromium — machine-level resources no other
+  // guard's process expects to share — and its build carries a hard 180 s timeout, where a timeout
+  // is a FAIL and not a slow pass. Its MEASUREMENT is contention-proof (the page runs on a fixed
+  // 1/60 s virtual clock, so what it grades cannot change with machine load); its SCHEDULE is not.
+  if (g.id === GATE_GUARD)
+    return { cmd: ["node", g.source, "--gate"], exclusive: true };
   // VERIFY-COST-3: `--cheap` is forwarded HERE, the only place the three are spawned. `cheapArgs()`
   // is one home so a fourth fingerprint job cannot be added and quietly miss it.
   const cheap = [
@@ -354,8 +423,15 @@ export function commandFor(g) {
  *   the seam the ROUTING tests use — they pass synthetic paths that are byte-identical to the base,
  *   which the real splitter correctly calls inert.
  * @param {object[]} [guards] injected guard set, so the tests do not spawn thirteen processes
+ * @param {boolean} [premerge] whether `--premerge` was given; the ship gate's second condition
  */
-export function plan(files, base = BASE, splitter = splitInert, guards = null) {
+export function plan(
+  files,
+  base = BASE,
+  splitter = splitInert,
+  guards = null,
+  premerge = PREMERGE,
+) {
   const gs = guards ?? _collect().guards;
   // VERIFY-COST-2: a hull file whose edit is comments and whitespace only cannot change what the
   // engine computes, so it does not select the world fingerprint. REPORTED below, never silent.
@@ -374,11 +450,18 @@ export function plan(files, base = BASE, splitter = splitInert, guards = null) {
       g.id === "world-fingerprint" && !hits.length && inert.length
         ? `  ·  ${inert.length} hull file(s) changed but are INERT (${inert.map((i) => i.path).join(", ")}): comments and whitespace only, identical tokens`
         : "";
+    // The ship gate is the ONE guard whose selection is not "the diff reached it". Both conditions
+    // and the wording of either outcome live in `premergeDecision`; nothing about the shape of the
+    // declaration is special-cased, so `hits` is computed by the same matcher as everyone else's.
+    const gate =
+      g.id === GATE_GUARD
+        ? premergeDecision(hits.length > 0, premerge)
+        : null;
     return {
       id: g.id,
       ...commandFor(g),
-      run: hits.length > 0,
-      reason: reasonFor(g, hits) + inertNote,
+      run: gate ? gate.run : hits.length > 0,
+      reason: reasonFor(g, hits) + inertNote + (gate ? gate.note : ""),
       covers: g.covers,
       blind: g.blind ?? [],
       // CARRIED THROUGH so a consumer can ask the DECLARATION whether a guard is always-on rather

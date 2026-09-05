@@ -217,6 +217,15 @@ export const SUITE_GUARDS = [
  * same two conditions — it declares and exits before any of that, and `verify.mjs` gives it
  * `--check-counts`.
  *
+ * `viewer-invariants.mjs` is the third name to earn it (GATE-WIRED-AND-CAUSED-1), and it is the one
+ * that would be most expensive to get wrong: run with no arguments it builds the client, boots an
+ * isolated API and preview server, opens Chromium and drives forty races. It qualifies on exactly
+ * the same two conditions as the other two — its `--declare` branch is the first statement after the
+ * declaration object and MEASURED at 0.28 s, before any of that can start, and `verify.mjs` gives it
+ * `--gate`. Until this line it declared its routing to nobody: it matched no pattern here, so its
+ * declaration was never read, and it was wired to no `verify` run, no CI job, no hook and no npm
+ * script. A guard nothing invokes is not a guard.
+ *
  * IT DOES NOT RECURSE, and that is worth knowing rather than discovering (NIGHT-2026-08-18 finding
  * 16). `readdirSync` reads the top level of `scripts/` only, so a guard placed in a subdirectory
  * would never be discovered, never routed and never run locally — silently, because nothing counts
@@ -229,7 +238,7 @@ export function guardScripts(dir = SCRIPTS) {
   for (const f of readdirSync(dir)) {
     if (!f.endsWith(".mjs") || f.endsWith(".test.mjs")) continue;
     if (
-      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$|^gen-ceremony-costs\.mjs$/.test(
+      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$|^gen-ceremony-costs\.mjs$|^viewer-invariants\.mjs$/.test(
         f,
       )
     )

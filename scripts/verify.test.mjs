@@ -21,6 +21,7 @@ import {
   cheapArgs,
   commandFor,
   describeEmptyRun,
+  premergeDecision,
   EXIT_REFUSED,
 } from "./verify.mjs";
 import { collect } from "./lib/routing.mjs";
@@ -888,4 +889,87 @@ test("A DECLARED REACH ENTRY OUTSIDE client/ still selects its guard", () => {
   // the simulator, and a router that widened to select them here would be wrong in the other way.
   for (const id of ["camera-fingerprint", "render-fingerprint"])
     assert.ok(!ids.includes(id), `sim-fairness must NOT select ${id}`);
+});
+
+// ── THE SHIP GATE, AND ITS TWO CONDITIONS (GATE-WIRED-AND-CAUSED-1) ─────────────────────────────
+//
+// WHAT BREAKS IF THESE ARE DELETED: the state the gate was found in. `viewer-invariants.mjs`
+// declared two directories and two files and NOTHING READ THE DECLARATION — the collector picks
+// guards by filename pattern and that name matched none of them, so the gate was wired to no
+// verify run, no CI job, no hook and no npm script. A guard nothing invokes looks exactly like a
+// guard, which is the shape this project has now paid for four times.
+//
+// The three tests below assert the DECISION in all four combinations, and the fourth asserts the
+// COMMAND — because a gate selected correctly and then invoked without `--gate` would drive the
+// forty-seed nightly sweep from inside `npm run verify`.
+
+test("THE SHIP GATE IS COLLECTED AT ALL — its own declaration does the routing", () => {
+  const ids = plan([]).map((t) => t.id);
+  assert.ok(
+    ids.includes("viewer-invariants"),
+    `the gate must appear in the plan, run or not; got ${ids.join(",")}`,
+  );
+});
+
+test("THE SHIP GATE NEEDS BOTH CONDITIONS — the flag alone is not enough, nor is the diff", () => {
+  const camera = ["client/src/modules/camera/CameraDirector.js"];
+  const docs = ["docs/BACKLOG.md"];
+  const gate = (files, premerge) =>
+    plan(files, "master", NOTHING_INERT, null, premerge).find(
+      (t) => t.id === "viewer-invariants",
+    );
+
+  // BOTH: the only combination that runs it.
+  assert.equal(gate(camera, true).run, true, "camera change + --premerge must run the gate");
+  // SABOTAGE (b) CATCHER: a gate wired never to select is caught here and nowhere else — every
+  // other verify run in this repository is a run WITHOUT --premerge, where not selecting is right.
+  assert.ok(/PRE-MERGE GATE:/.test(gate(camera, true).reason));
+
+  // The flag without the diff. A five-minute browser run on a diff the gate cannot see into is the
+  // cost that makes people stop typing the flag.
+  assert.equal(gate(docs, true).run, false);
+  assert.match(gate(docs, true).reason, /nothing it declares changed/);
+
+  // The diff without the flag — the per-commit case, which is every ordinary run.
+  // SABOTAGE (a) CATCHER: a gate selected unconditionally is caught by this line.
+  assert.equal(gate(camera, false).run, false);
+  assert.match(gate(camera, false).reason, /--premerge was not given/);
+
+  // Neither. The skip line must name BOTH missing conditions, not just the first one it noticed.
+  const neither = gate(docs, false).reason;
+  assert.match(neither, /--premerge was not given/);
+  assert.match(neither, /nothing it declares changed/);
+});
+
+test("premergeDecision is the whole rule, and it is pure", () => {
+  // The decision is asserted directly as well as through `plan`, so a future refactor cannot move
+  // the rule into the plan and leave this passing on a stale copy.
+  assert.equal(premergeDecision(true, true).run, true);
+  for (const [touched, premerge] of [
+    [true, false],
+    [false, true],
+    [false, false],
+  ])
+    assert.equal(premergeDecision(touched, premerge).run, false, `${touched}/${premerge}`);
+  // A skip that does not say WHICH condition failed breaks verify's own stated constraint — a
+  // skipped guard is a visible decision, never an omission (head of verify.mjs).
+  assert.match(premergeDecision(true, false).note, /--premerge/);
+  assert.match(premergeDecision(false, true).note, /nothing it declares changed/);
+});
+
+test("THE SHIP GATE IS INVOKED WITH --gate, ALONE — not as the nightly sweep", () => {
+  const cmd = commandFor({
+    id: "viewer-invariants",
+    source: "scripts/viewer-invariants.mjs",
+  });
+  assert.deepEqual(cmd.cmd, [
+    "node",
+    "scripts/viewer-invariants.mjs",
+    "--gate",
+  ]);
+  // Without `--gate` the same script drives ten tracks at forty seeds and both arms — hours, from
+  // inside a command people run before a merge.
+  assert.ok(cmd.cmd.includes("--gate"), "the two-race mode is the flag, not the default");
+  // It builds the client, boots an API and a preview server on fixed ports and drives Chromium.
+  assert.equal(cmd.exclusive, true, "the gate owns the machine while it runs");
 });
