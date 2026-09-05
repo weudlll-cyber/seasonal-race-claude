@@ -321,6 +321,24 @@ used.
     this moment". See THE CONTAINMENT CHECK immediately below for *how* to decide, because the
     obvious way to decide is wrong.
 
+    **★ WHEN: IMMEDIATELY AFTER THE PUSH IN STEP 9 — NOT AFTER THE WAIT IN STEP 10.** Added
+    2026-09-05 from [CI-MERGE-RACE-1](../reports/evolution/CI-MERGE-RACE-1.md). **This step keeps its
+    number and its position in the list; what is corrected is WHEN it is carried out** — the number
+    is load-bearing, because `scripts/check-tags.mjs` cites "step 12" five times, once in the very
+    failure message this step answers.
+
+    **The reason it cannot wait.** `ci.yml` runs `check-tags.mjs` as the fifth step of its docs job
+    and reaches Rule B **about 13 seconds after the push**, while step 10 waits MINUTES for the whole
+    run to finish. So a ceremony followed in list order has the branch **always** still standing at
+    origin when Rule B is evaluated, and the merge's own push run goes red over a branch that is
+    about to be deleted anyway. **Delete the branch as the next command after the push, then turn to
+    step 10.**
+
+    **The evidence, measured over the last 28 merges:** 27 were green, and they were green precisely
+    because the sweep is done immediately in practice rather than in list order. The one that was not
+    — `bd91fac0`, which waited for CI first — is the one that failed Rule B. This paragraph makes the
+    document say what already works.
+
 13. **Clear the WORKTREE STUBS, and clear the ReadOnly attribute FIRST.** If the block used a
     `git worktree`, `.git/worktrees/` is left holding inert metadata that `git worktree prune` alone
     cannot delete on this machine:
@@ -492,14 +510,15 @@ doing it.** The first draft of step 6 claimed `check-tags` would now be green on
 cannot be: a register line for a tag that has not been pushed yet fails the guard's SECOND direction
 — *every registered tag exists at origin* — for as long as the branch is unmerged. **Commit that
 step with `--no-verify` and say so in the commit message**; the guard is green again the moment
-master and the tag are pushed together in step 10.
+master and the tag are pushed together in step 9. *(Was "step 10" until 2026-09-05; the merge and
+the tag are pushed in step 9 and have been since the follow-up commit became its own step.)*
 
 **This is the inconsistency window moving, and it moves in the right direction:**
 
 | | old order | new order |
 | --- | --- | --- |
 | where the inconsistency lives | **in history, permanently** — the merge commit forever fails `check-tags` | **on an unmerged branch, transiently** |
-| when it ends | never | at the push in step 10 |
+| when it ends | never | at the push in step 9 |
 | what a checkout of the tag shows | red | green |
 
 **A branch is work in progress; history is not.** Trading a permanent inconsistency in the record for
