@@ -140,6 +140,86 @@ const ARG = (k, d) => {
 };
 const BASE_WIDEST = Number(ARG("baseline-widest", "0")) || null;
 
+// ── THE SHEET TELLS THE TWO KINDS OF FAILURE APART ITSELF (GATE-WIRED-AND-CAUSED-1) ─────────────
+//
+// WHAT WAS WRONG. Everything above was already established and written down — the acceptance, the
+// cause that is accepted, the cause that is still a finding — and it lived ONLY as prose beside the
+// items. The sheet printed a plain FAIL either way, so a reader had to know this file existed, find
+// it, and read four paragraphs before they could tell "the picture he asked for" from "a defect".
+// A distinction nobody can see on the sheet is a distinction that will be missed on the night it
+// matters. HIS DECISION, 2026-09-05: the check should tell them apart itself.
+//
+// NOTHING IS MUTED AND NO THRESHOLD MOVES. `i2` and `i9` are computed exactly as before and still
+// say how far the picture went. What is ADDED is a second, independent reading of the crossing
+// frame that says WHY a failing row failed, and a verdict column that carries both.
+//
+// ★ THE CAUSE IS COMPUTED FROM THE FRAMES, and that is the whole point of doing it this way. The
+// alternative — a list of known-failing track/seed pairs — is what this replaces: it would go stale
+// the first time the camera changed, it would hide a NEW failure on a listed race, and it would say
+// nothing at all about a race nobody had run yet. Nothing here reads a track name, a seed, or an
+// arm. Two fields of one frame decide it.
+//
+// ── WHAT THE ACCEPTED CAUSE IS, IN THE SHEET'S OWN WORDS ────────────────────────────────────────
+// "the camera is still on the `level` binding with the photo-finish zoom in flight" — the two
+// conditions the item-9 note above already tells a reader to look for on the crossing row. Both, or
+// it is not the accepted cause:
+//
+//   binding === "level"   the width is being decided by the LEVEL guarantee, not by the state's own
+//                         setting. This is the shot tightening under the winner rather than sitting
+//                         where the finish shot means to sit.
+//   camZoom short of      the closing zoom has NOT ARRIVED. "Short of" is on the wide side and in ln,
+//   photoFinishZoom       against ITEM 2'S OWN TOLERANCE — no new number enters the file. PHOTO_FINISH
+//                         is the tightest setting shipped, so `photoFinishZoom > camZoom` is exactly
+//                         "still on its way in".
+//
+// WHY ONE TEST SERVES BOTH ITEMS, rather than two that could drift apart. The head of
+// `viewer-invariants.mjs` records the finding this rests on: item 2 and item 9 measure the same
+// behaviour under different names — item 2 asks whether the shot is AT one of the two named factors
+// at the crossing, and a zoom that has not arrived is precisely how that question gets the answer
+// no. The owner's decision of 2026-09-05 put item 2 inside the same acceptance for that reason. One
+// behaviour, one computation.
+//
+// ★ ITEM 10 IS DELIBERATELY NOT GIVEN THIS TREATMENT, and the reason is a correction, not an
+// omission. Its supposed accepted cause was the sentence ACCEPTED-FINISH-ATTRIBUTION-1 stripped of
+// its attribution on 2026-09-05: what is established about a `BATTLE_ZOOM` in the window is a
+// MEASUREMENT — the shot frames the battle, so the leader is held forward — and NOT that the
+// resulting failure is accepted. Whether such a fail is a defect is not settled. Item 10 therefore
+// keeps behaving exactly as it did: a plain FAIL, no cause logic, nothing inferred "for symmetry".
+
+/**
+ * Does this crossing frame carry the ACCEPTED CAUSE? Computed from the frame and nothing else.
+ *
+ * @param {object|null} at  the crossing row the probe recorded (`crossing.at`)
+ * @returns {{accepted: boolean, binding: string|null, shortLn: number}|null}
+ *   null when the frame cannot answer — the crossing was never recorded, or the director's own
+ *   zoom values are missing, which is the same condition items 2 and 9 already report as `—`.
+ */
+export function acceptedCause(at) {
+  if (!at) return null;
+  if (!(at.camZoom > 0) || !(at.photoFinishZoom > 0)) return null;
+  // How far the closing zoom still had to travel, in ln, positive = not yet arrived.
+  const shortLn = Math.log(at.photoFinishZoom / at.camZoom);
+  return {
+    accepted: at.binding === "level" && shortLn > FACTOR_TOL_LN,
+    binding: at.binding ?? null,
+    shortLn: +shortLn.toFixed(4),
+  };
+}
+
+/**
+ * One item's outcome, with the cause folded in. The measurement is UNCHANGED; this only names what
+ * the row means.
+ *
+ * @param {boolean|null} pass      what the item measured
+ * @param {{accepted: boolean}|null} cause
+ * @returns {"ok"|"accepted"|"FAIL"|null}
+ */
+export function verdictOf(pass, cause) {
+  if (pass === null || pass === undefined) return null;
+  if (pass) return "ok";
+  return cause?.accepted ? "accepted" : "FAIL";
+}
+
 /** Grade one race's probe output against all twelve. Returns a row of verdicts and numbers. */
 export function gradeRace(p, run) {
   const sh = p?.sheet;
@@ -147,6 +227,12 @@ export function gradeRace(p, run) {
   const c = p?.crossing ?? null;
   const R = { track: run.track, seed: run.seed, arm: run.arm, n: run.n, frames: w.length };
   if (!w.length) return { ...R, notScorable: true };
+  // GATE-WIRED-AND-CAUSED-1: read ONCE, from the crossing frame, and shared by items 2 and 9 —
+  // they measure one behaviour under two names, so two copies of this test could disagree.
+  const cause = acceptedCause(c?.at ?? null);
+  R.cause_binding = cause?.binding ?? null;
+  R.cause_shortLn = cause?.shortLn ?? null;
+  R.cause_accepted = cause ? cause.accepted : null;
 
   const lnW = w.map((x) => x.lnW);
   const steps = [];
@@ -176,6 +262,8 @@ export function gradeRace(p, run) {
     R.i2 = R.i2_err <= FACTOR_TOL_LN;
     R.i2_which = dl < dp ? "leader" : "photo";
   } else R.i2 = null;
+  // The measurement above is untouched. This says what a FAIL on it MEANS — see the cause block.
+  R.i2_verdict = verdictOf(R.i2, cause);
 
   // 3 — the close begins early and runs slowly, continuously. WHERE IT TURNS is the widest frame;
   // how slowly it runs is the rate it then holds.
@@ -243,6 +331,7 @@ export function gradeRace(p, run) {
     R.i9_atY = +c.at.fy.toFixed(3);
     R.i9 = cut.length === 0;
   } else R.i9 = null;
+  R.i9_verdict = verdictOf(R.i9, cause);
 
   // 10 — the leader's walk back through the run-in stays
   // ★ ACCEPTED-FINISH-1 measured the CAUSE of a fail here: a BATTLE_ZOOM in the window holds the
@@ -250,6 +339,9 @@ export function gradeRace(p, run) {
   // whether such a fail is a defect is not settled (corrected 2026-09-05). A fail with NO battle
   // shot in the window is still a finding either way, and is what this item was written to catch.
   // Head of file.
+  // ★ AND SO THIS ITEM GETS NO VERDICT COLUMN, unlike 2 and 9 (GATE-WIRED-AND-CAUSED-1). There is
+  // no ACCEPTED cause here to compute — only a measured one — so a verdict of "accepted" would be
+  // inventing the very attribution that was withdrawn on 2026-09-05. It reports a plain FAIL.
   const fracs = w.map((x) => x.leadFrac).filter((x) => x !== null);
   R.i10_min = fracs.length ? +Math.min(...fracs).toFixed(3) : null;
   R.i10 = fracs.length ? R.i10_min < 0.5 : null;
@@ -272,6 +364,12 @@ export function gradeRace(p, run) {
 /** The sheet, as one screen. */
 export function printSheet(rows, label) {
   const ok = (v) => (v === null ? " —" : v ? " ok" : "FAIL");
+  // GATE-WIRED-AND-CAUSED-1: the same four columns, with the third outcome visible. `ACC` is a
+  // failure of the measurement WITH the accepted cause — the closing zoom not yet arrived at the
+  // crossing. `FAIL` on these two items now means what it always should have: a failure from some
+  // OTHER cause, which is a finding. Printed rather than left to the summary, because the row is
+  // where a person looks first and the whole defect was a distinction nobody could see.
+  const okc = (v, verdict) => (verdict === "accepted" ? " ACC" : ok(v));
   console.log(`\n══ THE ACCEPTANCE SHEET — ${label} ══`);
   console.log(
     "track            seed arm      | 1 line+winner |2 factor|3 turn/rate |4 widest|5 band min/med/0" +
@@ -288,14 +386,14 @@ export function printSheet(rows, label) {
         String(r.seed).padStart(4),
         " " + r.arm.padEnd(8),
         "|" + ok(r.i1) + " " + String(r.i1_band ?? "-").padStart(5),
-        " |" + ok(r.i2) + " " + String(r.i2_err ?? "-").padStart(6),
+        " |" + okc(r.i2, r.i2_verdict) + " " + String(r.i2_err ?? "-").padStart(6),
         " |" + String(r.i3_turnP).padStart(6) + "/" + String(r.i3_rateMed).padStart(6),
         " |" + ok(r.i4) + String(r.i4_widest).padStart(6),
         " |" + ok(r.i5) + String(r.i5_min).padStart(6) + "/" + String(r.i5_med).padStart(5) + "/" + String(r.i5_zero).padStart(3),
         " |" + ok(r.i6) + String(r.i6_worst).padStart(7),
         " |" + ok(r.i7) + String(r.i7_off).padStart(4) + "(" + String(r.i7_before_off ?? "-") + ")",
         " |" + String(r.i8_pct).padStart(3) + "%" + String(r.i8_longestMs).padStart(5),
-        " |" + ok(r.i9) + " " + String(r.i9_atX).padStart(5) + "," + String(r.i9_atY).padStart(5) + String(r.i9_cut).padStart(4),
+        " |" + okc(r.i9, r.i9_verdict) + " " + String(r.i9_atX).padStart(5) + "," + String(r.i9_atY).padStart(5) + String(r.i9_cut).padStart(4),
         " |" + ok(r.i10) + String(r.i10_min).padStart(6),
         " |" + ok(r.i11),
         " |" + String(r.i12_pre).padStart(5),
@@ -317,14 +415,29 @@ export function printSheet(rows, label) {
       `  ·  racers dropped by the FALLBACK rule ${s.reduce((a, r) => a + (r.i7_dropFallback ?? 0), 0)},` +
       ` by the WEIGHT rule ${s.reduce((a, r) => a + (r.i7_dropWeight ?? 0), 0)} (frame-sums)`
   );
+  // GATE-WIRED-AND-CAUSED-1: the two outcomes, counted apart. The line above still counts what the
+  // ITEMS measure and is deliberately unchanged — no threshold moved, so no count may move with it.
+  // This one says which of those failures are the picture the owner asked for and which are not.
+  const accepted = (k) => s.filter((r) => r[`${k}_verdict`] === "accepted").length;
+  const findings = (r, k) => r[`${k}_verdict`] === "FAIL";
+  console.log(
+    `  CAUSE (2 and 9) — the ACCEPTED cause is the closing zoom not yet arrived at the crossing:` +
+      ` binding "level" AND camZoom short of photoFinishZoom by more than item 2's own` +
+      ` ${FACTOR_TOL_LN} ln tolerance. Computed from the crossing FRAME — no track, seed or list.` +
+      `\n    item 2 — ACC ${accepted("i2")}, FAIL ${s.filter((r) => findings(r, "i2")).length}` +
+      `   |   item 9 — ACC ${accepted("i9")}, FAIL ${s.filter((r) => findings(r, "i9")).length}` +
+      `   (ACC + FAIL = the failing counts above; nothing is muted)`
+  );
   console.log(
     `  3 and 8 are REPORTED not gated (his requirement 8 makes the pause a cost, not a fail); ` +
       `12 is graded by comparing two runs.` +
-      `\n  ★ 9 encodes an ideal the owner CONSIDERED AND REJECTED on 2026-09-04: the closing zoom` +
-      ` need not have arrived by the crossing. A fail on 9 FROM THAT CAUSE is not a regression;` +
-      ` from any other cause it still is.` +
-      `\n    10's usual cause is MEASURED, not accepted: a BATTLE_ZOOM in the window holds the` +
-      ` leader forward. Whether such a fail is a defect is not settled. Head of this file.`
+      `\n  ★ 9 encodes an ideal the owner CONSIDERED AND REJECTED on 2026-09-04, and 2 measures the` +
+      ` same behaviour (his decision of 2026-09-05): the closing zoom need not have arrived by the` +
+      ` crossing. A fail on either FROM THAT CAUSE prints ACC and is not a regression; from any` +
+      ` other cause it prints FAIL and still is.` +
+      `\n    10 IS NOT GIVEN THAT TREATMENT and prints a plain FAIL: its usual cause is MEASURED,` +
+      ` not accepted — a BATTLE_ZOOM in the window holds the leader forward — and whether such a` +
+      ` fail is a defect is not settled. Head of this file.`
   );
   const worstStep = Math.max(...s.map((r) => r.i6_worst));
   const widest = Math.max(...s.map((r) => r.i4_widest));
