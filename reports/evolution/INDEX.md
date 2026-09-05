@@ -349,6 +349,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MINT-RENDER-1.md](MINT-RENDER-1.md) — **the render fingerprint is re-minted, and what it does NOT
+  cover is written beside it** (2026-09-05; the owner ordered the mint. One role moves; no drawing
+  code, default or threshold changed). **render `733b3f100d6a819f` -> `74946ddbeca517a9`**, and
+  world, world-off and camera were re-measured in the same pass and are UNMOVED, the two world roles
+  confirming with their own `--check`. The value was re-measured on the caught-up branch tip BEFORE
+  the record was written, not carried from the previous piece. ★ **The old hash describes a picture
+  the game does not draw** — the harness supplied neither `anchorRacerIndex` (`renderRaceFrame.js:212`)
+  nor `runInArrived` (`:220`), so it hashed the leader fallback and labels showing NUMBERS while the
+  game draws the anchored subject and NAMES; **every render-hash comparison older than this mint is
+  not comparable across it**. ★ **And the limit that REMAINS is recorded beside the new value, not
+  only in the recorder**: text measurement is synthetic (`recordingContext.js:26-31`), so the hash
+  pins the tag-layout RULE — same widths in, same labels out — and **not** the real
+  name-versus-number count the owner sees, which is the browser gate's and his eye's.
+  `anchorRacerIndex` is read live and moved the hash by nothing: recorded as **observed and
+  unexplained**, not as harmless.
+
 - [INVISIBLE-FOUR-1.md](INVISIBLE-FOUR-1.md) — **the four items the owner does not see in the race;
   three land, one waits on his word** (2026-09-05; tooling and comments — no behaviour, no threshold,
   **nothing minted**). ★ **THE RENDER FINGERPRINT WAS HASHING A PICTURE THE GAME DOES NOT DRAW.** The

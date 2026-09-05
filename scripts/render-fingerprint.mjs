@@ -40,6 +40,15 @@
 //      Also not exercised: PARTICLES and SURFACE TRAILS. Both draw from buffers the component's
 //      loop fills, so in this harness both are empty and their two layers are no-ops. Discovered
 //      by a sabotage that swapped them and did NOT move the hash. Named fix in the report.
+//   5. ★ THE REAL LABEL COUNT, because TEXT MEASUREMENT IS SYNTHETIC. Recorded here 2026-09-05 with
+//      MINT-RENDER-1, because a reader meets the instrument before they meet the recorder.
+//      `recordingContext.js:26-31` returns a DETERMINISTIC SYNTHETIC WIDTH from `measureText` — it
+//      has to return something, and the name-tag layout consumes that width to decide which labels
+//      are drawn. A real browser's width depends on the installed font. SO THIS FINGERPRINT PINS THE
+//      TAG-LAYOUT RULE — same widths in, same labels out — AND NOT THE NUMBER OF LABELS a real
+//      browser would fall back to numbers on for want of space. A change to the layout rule is
+//      caught here; a change in font metrics, and the real name-versus-number count the owner sees,
+//      are not. Those are the browser gate's and his eye's.
 //   4. THE CEREMONY'S DOM. The brand card and the corner logo are React components, not canvas, so
 //      no fingerprint of draw calls can ever see them. RENDER-SAMPLER-CEREMONY turns the brand ON
 //      so the BRAND BEAT exists and its canvas — the venue shot, held — is sampled; the CARD on top
@@ -77,6 +86,7 @@ export const GUARD = {
   blind: [
     "the rasteriser and the artwork — it records calls, not pixels",
     "the sprite blit itself: node has no Image, so the racer body falls back to its procedural branch",
+    "the REAL label count: text measurement is synthetic (recordingContext.js:26-31), so this pins the tag-layout RULE — same widths in, same labels out — and not how many labels a real browser falls back to numbers on for want of space",
   ],
   dirs: [],
   files: [],
