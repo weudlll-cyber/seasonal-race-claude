@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PLAYER-WORDS-1.md](PLAYER-WORDS-1.md) — **the player was told to run `docker compose up`**
+  (2026-09-06, NIGHT-2026-09-05 piece 5). Wording only. Five search forms, uncapped, whole tree;
+  ★ **form 1 alone would have missed it on a capped read** — the first ten hits for `compose` are
+  the word *composes* in CameraDirector's comments. **Five sites found, ONE reaches the player:**
+  `apiClient.js:36` is the message of the Error every service call throws, and
+  `PlayerGroupPicker.jsx:145` renders it verbatim on the setup screen. It now points at the status
+  banner instead of naming a terminal command; the phrase "Server not reachable" is KEPT, because
+  four test files match on it and the diagnosis was never the problem. The developer instruction
+  moved to the console. The two Dev Screen strings and the `console.warn` in `bgImageCache.js` were
+  LEFT — developers read those.
 - [SERVER-LINT-1.md](SERVER-LINT-1.md) — **the server was linted by nobody, and now it is red**
   (2026-09-06, NIGHT-2026-09-05 piece 4). `server/package.json` declared four scripts and neither a
   lint nor a format check; CI's Server job runs neither. Both are now built and wired into `verify`
