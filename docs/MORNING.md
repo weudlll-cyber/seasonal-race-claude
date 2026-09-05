@@ -3,18 +3,37 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-05 by LEFTOVERS-1, covering everything since the night chain of
-2026-09-04. **Master is `fe50e8f7` and CI is GREEN on it.** Origin holds one head, `master`.
+**Last rewritten:** 2026-09-05 by PLAYABLE-FOUR-1 **piece A**. **Master is `d407f090`.** Origin now
+holds TWO heads: `master`, and **`feat/playable-four-1`, which is NOT merged and needs your eye.**
 
-**NOTHING SINCE THE NIGHT CHAIN HAS MOVED THE PICTURE, A DEFAULT, A THRESHOLD OR A SHIPPED VALUE. NO
-FINGERPRINT HAS BEEN MINTED.** Every piece below is tooling, measurement logic or documentation.
+**★ THE ONE THING TO KNOW FIRST: A BRANCH IS WAITING FOR YOU.** `feat/playable-four-1` carries the
+comeback measurement you asked for on 2026-09-05, and pieces B, C and D are being built on top of it.
+**No merge permission was given and none was taken.** Nothing on it is minted.
 
-**★ THE ONE THING TO KNOW FIRST: CI WAS RED ON MASTER FOR THREE DAYS AND 24 PUSH RUNS, AND IT IS
-FIXED.** Not by anything you did — by a test that read the developer's git identity. Details in DONE.
+**THE PICTURE, A DEFAULT, A THRESHOLD AND EVERY SHIPPED VALUE ARE UNMOVED SINCE THE NIGHT CHAIN, and
+one fingerprint has been minted since: the RENDER role**, on your order, by MINT-RENDER-1 — that is
+the item that stood at the top of NEEDS HIS WORD and it is answered.
 
 ---
 
 ## DONE
+
+**★ THE CAMERA CATCHES THE RIGHT RACER AND THE WRONG MOMENT — measured, nothing changed** —
+[COMEBACK-BEATS-1](../reports/night/COMEBACK-BEATS-1.md), on `feat/playable-four-1`, UNMERGED.
+N=40, ten tracks x seeds 1-4, race plan ON, shipped defaults. The plan named **74 comebackers** and
+wrote **215 beats**; the camera showed **11 comebacks**. **The subject is never wrong — 0 of 11 were
+on a racer the plan had not named**, and it cannot be, because the cast REPLACES the candidate pool.
+**The moment is always early: 11 of 11, a median 9.90 s before the beat where the authored climb
+lands** — the camera catches the climb in flight and is never there for the arrival. **63 of 74
+written comebackers were never shown at all; 29 of 40 races held no comeback shot.** The beats do
+NOT die at the detector (a candidate existed in 40 of 40 races) nor for want of an offer window
+(35 of 40): they lose the director's weighted contest, and across the 7,510 frames a named comeback
+was live and offerable the camera was on BATTLE 34%, LEADER 21%, LEAD_CHANGE 13%. ★ **A method
+finding came with it:** the shared harness hands the director a hard-coded `isOutcomePhase: false`
+where the browser hands it the plan's own OUTCOME phase — 11 shots against 1, so the harness path
+alone would have given a confident wrong answer. **The camera fingerprint is taken with that window
+closed.** Recorded; nothing changed and nothing minted. **The decision is yours and the measurement
+does not judge it.**
 
 **★ CI was red on master from 2026-09-02 to 2026-09-05 — one cause, now fixed** —
 CI-RED-3e6c0b87 *(that piece reported in the session and filed no report of its own; its findings
@@ -86,7 +105,10 @@ three gaps between a green branch and a green CI, and the open list below.
 
 ## RUNNING
 
-**Nothing.** No sweep, no measurement and no branch is in flight. Origin holds `master` alone.
+**`feat/playable-four-1` — four pieces, one branch, NO MERGE PERMISSION.** Piece **A** (the comeback
+measurement) is **done and pushed**. Pieces **B** (Cancel Race), **C** (server-gone banner and
+fallback) and **D** (a short race identifier) follow in that order; if time runs short the fall order
+is C then B. Nothing on the branch is minted, and no fingerprint has moved.
 
 ---
 
@@ -100,10 +122,13 @@ is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.
 - **A short race identifier to replace the seed** — your decision of 2026-09-05 (**D33**). The seed
   fixes the plan but not the world; config is read from the host's storage at race start, so one seed
   on two machines is two races. **Not designed.**
-- **The comeback BEATS reaching the camera** — night **piece L**, not reached. **D33: measure first.**
-  The detector keeps `role === 'comebacker'` and drops the beats.
-- **The render fingerprint's blind spot** — **D33: into a night run.** Three declared fields absent,
-  two behaviours blind.
+- **The comeback BEATS reaching the camera** — **MEASURED (piece A above); the decision is now
+  yours.** Passing the beats through was deliberately NOT built. What the measurement gives you: the
+  camera never picks the wrong racer, and is early every single time by a median 9.90 s.
+- **★ NEW, from piece A: the harness camera is not the browser camera for the comeback shot.** The
+  shared driver hard-codes `isOutcomePhase: false`; only `camera-replay.mjs` does it the browser's
+  way. **The camera fingerprint is taken with that window closed.** Nothing was changed — it is
+  recorded so it is not re-discovered.
 - **The missing `routing.mjs` guard** — nothing checks that a guard's dynamic-import literals are
   inside its own resolved set. The property holds **by inspection, not by construction**.
 - **`lint` and `format:check` are not in `verify`** — it runs the formatter, not a check. CI runs
@@ -119,22 +144,23 @@ deployment below.
 
 ## NEEDS HIS WORD
 
-**Two items.**
+**One item — and one branch.**
 
-1. ★ **MAY THE RENDER FINGERPRINT BE RE-MINTED?** (INVISIBLE-FOUR-1, piece 1) The instrument built
-   its frame camera as a hand-written literal with three members where `frameCameraInputs.js`
-   declares five plus a method — and **two of the absent three are read by the draw path it
-   measures**: the focus racer, and whether a label says a NAME or a number. So the fingerprint has
-   been hashing a frame drawn with the leader fallback and with numbers, while the game drew the
-   subject and his name. **Repairing it MOVES THE RENDER HASH.** Bisected one field at a time with a
-   control, the cause is **exactly one field, `runInArrived`**; `state` and `anchorRacerIndex` each
-   moved nothing. **No mint was taken and the record is untouched.** The commits sit on
-   `fix/invisible-four-1` at origin, unmerged, waiting on you. Both values and the bisection are in
-   [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
+★ **THE BRANCH FIRST: `feat/playable-four-1` is at origin, unmerged, and pieces B, C and D on it
+change what you see.** They are built for your eye before anything lands. At the end of the chain
+the dev server is put on that branch so you can look at all three without doing anything.
 
-**And the one that was already here. The other four that stood here have been answered.**
+~~**MAY THE RENDER FINGERPRINT BE RE-MINTED?**~~ **ANSWERED — you ordered it, and it is minted.**
+MINT-RENDER-1 re-measured the value on the tree master took before writing anything, and the other
+three roles were re-measured in the same pass and are unmoved. The value lives in
+[fingerprints.json](fingerprints.json) and nowhere else. What the mint did **not** close is written
+beside it: text measurement in the recorder is synthetic, so the hash pins the tag-layout RULE and
+not the name-versus-number count you actually see on screen.
 
-2. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**
+**So one question stands, and it is the one that was already here. Every other item that stood in
+this section has been answered.**
+
+1. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**
    **The server has no TLS at all** — searched for, not assumed — and that is a design decision
    rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
    terminator in front. **D30 already chose HOW the client finds the API** (resolve at start time,
