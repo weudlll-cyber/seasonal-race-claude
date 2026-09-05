@@ -256,6 +256,30 @@ test("a declaration without a backticked SHA is not a declaration — the sha is
 // here — no network — while still exercising the real `git ls-tree` comparison.
 
 const sh = (cmd) => execSync(cmd, { cwd: REPO, encoding: "utf8" }).trim();
+
+// ── WRITING A COMMIT NEEDS AN AUTHOR, AND CI HAS NONE (CI-RED-3e6c0b87) ────────────────────────
+//
+// `git commit-tree` refuses without an identity — *"Author identity unknown … unable to auto-detect
+// email address"* — and a GitHub runner has no `user.name` or `user.email` configured. A developer
+// machine has one globally, so these two tests passed for whoever wrote them and were RED on EVERY
+// master push from 2026-09-03, when RULE-B-CONTENT-1 (`cd47fcce`) introduced them. The test depended
+// on ambient configuration it never declared, which is the whole defect: the identity below travels
+// with the test, so the result no longer depends on whose machine runs it.
+//
+// It is passed as environment rather than written with `git config`, so nothing outside this process
+// is touched — the same reason the index below is an explicit `GIT_INDEX_FILE`.
+const TEST_AUTHOR = {
+  GIT_AUTHOR_NAME: "RaceArena Test",
+  GIT_AUTHOR_EMAIL: "test@racearena.invalid",
+  GIT_COMMITTER_NAME: "RaceArena Test",
+  GIT_COMMITTER_EMAIL: "test@racearena.invalid",
+};
+const commitTree = (tree, parent, msg) =>
+  execSync(`git commit-tree ${tree} -p ${parent} -m ${msg}`, {
+    cwd: REPO,
+    encoding: "utf8",
+    env: { ...process.env, ...TEST_AUTHOR },
+  }).trim();
 const TAGS_OK = ["# Tags", "- `pre/alpha`", "- `pre/beta`", ""].join(String.fromCharCode(10));
 const headsFixture = (entries) =>
   entries.map(([sha, name]) => `${sha}\trefs/heads/${name}`).join("\n") + "\n";
@@ -294,7 +318,7 @@ test("RULE B: a branch that only MODIFIES a file is NOT reported — the false p
     encoding: "utf8",
     env: { ...process.env, GIT_INDEX_FILE: idx },
   }).trim();
-  const commit = sh(`git commit-tree ${tree} -p ${master} -m modify-only`);
+  const commit = commitTree(tree, master, "modify-only");
   rmSync(idx, { force: true });
 
   const p = fixture({
@@ -325,7 +349,7 @@ test("RULE B: a branch whose tree holds a path master lacks is NOT reported", ()
     encoding: "utf8",
     env: { ...process.env, GIT_INDEX_FILE: idx },
   }).trim();
-  const commit = sh(`git commit-tree ${tree} -p ${master} -m probe`);
+  const commit = commitTree(tree, master, "probe");
   rmSync(idx, { force: true });
 
   const p = fixture({
