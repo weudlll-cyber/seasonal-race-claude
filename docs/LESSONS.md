@@ -2652,7 +2652,7 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 
 **Consequence:** Export one accessor (effectiveDriveMult(r)) and route every consumer through it — the brake-match denominator, the game t-update, the sim t-update, and the camera lookahead (r.vt) all read the identical capped value. Game/sim parity then follows automatically because both call the same function with the same one-frame-lag inputs. Never apply the same cap or transform at two call sites.
 
-**Reference:** client/src/modules/raceBehavior.js:123 (effectiveDriveMult), read at raceBehavior.js:560-561 (brake-match), index.jsx t-update, sim-fairness.mjs t-update. Commit f7c295f. Session 2026-06-20.
+**Reference:** index.jsx t-update, sim-fairness.mjs t-update. *(Corrected 2026-09-05, LEFTOVERS-1: this reference used to name `client/src/modules/raceBehavior.js:123 (effectiveDriveMult)`, read at `raceBehavior.js:560-561`. **`effectiveDriveMult` no longer exists anywhere in the tree** — searched across `client/src` and `scripts` — and neither line holds what was cited. The SYMBOL is gone, not merely moved, so no replacement address is offered; the lesson itself is unaffected.)* Commit f7c295f. Session 2026-06-20.
 
 ---
 
