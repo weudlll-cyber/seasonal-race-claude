@@ -160,132 +160,110 @@ function geometries() {
 // ONE RACE WOULD NOT DO. An open track cannot stand in for a closed one here; that is structural,
 // not statistical, and it is why this is two and not one.
 //
-// WHAT THE TWO-RACE SCOPE NO LONGER COVERS, written down rather than assumed away:
-//   - the eight tracks' own geometry: searound's tight corners, luger-hill's gradient, dirt-oval's
-//     and river-run's shapes. A defect that needs one of THOSE curves to appear now reaches the
-//     nightly sweep instead of the gate, i.e. a day later rather than before the merge.
-//   - garden-path entirely. The reason recorded here was that its race never finishes at seed 9,
-//     so it was never scorable anyway.
+// WHAT THE TWO-RACE SCOPE DOES NOT COVER, written down rather than assumed away:
+//   - the eight other tracks' own geometry: searound's tight corners, luger-hill's gradient,
+//     dirt-oval's and river-run's shapes. A defect that needs one of THOSE curves to appear reaches
+//     the nightly sweep instead of the gate, i.e. a day later rather than before the merge.
+//   - garden-path's own race. The reason recorded here was that it never finishes at seed 9, so it
+//     was never scorable anyway.
 //     ★★ THAT REASON IS FALSE, MEASURED ON THIS HARNESS, 2026-09-04 (GP-SPEC-TRIM-1). Garden-path
 //     FINISHES AND IS SCORABLE: it reaches PHOTO_FINISH with the winner on canvas, and is graded on
 //     the twelve items — passing ten and FAILING two, item 9 (winner cut) and item 10 (walk).
-//
-//     ★★ AND THE WIDENING WAS THEN CONSIDERED IN FULL AND STOPPED — GATE-GARDEN-PATH-1, 2026-09-04,
-//     16 races. DO NOT REDO THIS WITHOUT READING THAT REPORT; the obvious move has been made and
-//     measured. In one paragraph:
-//
-//       BOTH FAILURES ARE REAL AND NEITHER BELONGS TO GARDEN-PATH. It PASSES item 9 at seeds 1, 2
-//       and 3 and item 10 at seeds 1 and 3. Item 9 fails when the PHOTO-FINISH ZOOM HAS NOT ARRIVED
-//       AT THE CROSSING — the camera is still on the `level` binding, tightening under the winner,
-//       who slides to 0.855 of the frame against a 0.85 bound. Item 10 fails when a BATTLE_ZOOM sits
-//       in the endgame window: a battle shot frames the battle, so the leader is held forward and
-//       never walks back behind centre. Both are per-RACE camera behaviours, on more than one track.
-//
-//       SO IT WAS NOT ADDED. The gate runs SEED 9 and nothing else, and seed 9 is exactly where
-//       garden-path fails both — a gate that is red the day it is widened is a gate that gets
-//       ignored within a week. The two behaviours are picture questions and went to the owner.
-//
-//     ★ WHAT THE EXCLUSION ACTUALLY COSTS IS NOT A TRACK, AND THIS IS THE PART WORTH KNOWING HERE.
-//     Both gate tracks cross with `binding: state` and the camera ALREADY at `photoFinishZoom`, so
-//     THIS GATE IS STRUCTURALLY BLIND TO BOTH BEHAVIOURS — not because garden-path is missing, but
-//     because neither of its own two races exhibits them. The lever is WHICH RACE the gate runs, not
-//     which track. Three excluded tracks fail something at seed 9: garden-path (items 9 and 10) and
-//     luger-hill and dirt-oval (item 2) — and item 2's failures are the SAME late-zoom mechanism.
-//     The nightly sweep still runs all ten, so all of it is visible a day later rather than never.
-//
-//     ★★ AND AS OF 2026-09-04 ONE OF THOSE FAILURES IS ACCEPTED BEHAVIOUR, WHICH CHANGES WHAT THIS
-//     EXCLUSION MEANS (ACCEPTED-FINISH-1). The owner decided the closing zoom need not have arrived
-//     by the crossing. Item 9 objects to precisely that, so it encodes an ideal HE HAS CONSIDERED
-//     AND REJECTED — the full statement is at the head of `endgame-sheet.mjs`.
-//
-//     ★ CORRECTED 2026-09-05 (ACCEPTED-FINISH-ATTRIBUTION-1). This paragraph used to attribute a
-//     SECOND acceptance to him — "a battle shot may take the frame near the finish" — and he says
-//     that wording is not his. Item 10's usual cause IS measured (a `BATTLE_ZOOM` in the window
-//     holds the leader forward, per the lines above), but that is a measurement, not a behaviour he
-//     accepted, and whether such a fail is a defect is not settled. WHAT HE ACCEPTED BEYOND THE
-//     CLOSING ZOOM IS NOT ESTABLISHED, and nothing is put in its place.
-//
-//     SO THE EXCLUSION IS NO LONGER JUSTIFIED BY A DEFECT. It is justified by items that object to
-//     something wanted, which is a different and weaker reason than the one recorded above. ★ THAT
-//     IS NOW TRUE OF ALL THREE EXCLUDED TRACKS, which it was not when this was written: dirt-oval's
-//     item 7 was the one remaining defect-shaped reason and ITEM7-MEMBERSHIP-1 showed it was an
-//     artefact of what item 7 graded. That is
-//     reported, not acted on: WIDENING THE GATE NOW WOULD MAKE IT RED ON DAY ONE for behaviour he
-//     has accepted, which is the trap GATE-GARDEN-PATH-1 avoided a few hours earlier.
-//
-//     ★ WHERE EACH EXCLUDED TRACK STANDS, measured over 16 races and NOT the same answer for all
-//     three — this is the part a reader will get wrong from memory:
-//       garden-path  at seed 9, ITEMS 9 AND 10 AND NOTHING ELSE, at the seed this gate runs. Item 9
-//                    is accepted; item 10's usual cause is measured but NOT accepted (2026-09-05).
-//                    (Across seeds 1-3 it also fails item 2, which is behaviour (i) measured
-//                    directly — accepted, and since 2026-09-05 accepted explicitly.)
-//       luger-hill   item 2 ONLY; only seed 9 has been measured for this track. ★ ITEM 2 IS NOW
-//                    INSIDE THE ACCEPTANCE — his decision of 2026-09-05 — so this exclusion now
-//                    rests entirely on accepted behaviour. THE EXCLUSION IS NOT CHANGED HERE.
-//       dirt-oval    item 2 ONLY, at seed 9. ★ CORRECTED 2026-09-04 (ITEM7-MEMBERSHIP-1): this
-//                    entry used to read "but ITEM 7 AT SEED 3, a contender off canvas on 78 frames
-//                    — that one is NOT accepted behaviour ... the one of the three where something
-//                    real is still hidden". BOTH HALVES WERE WRONG. It was a GRADING ARTEFACT, not
-//                    a picture defect: item 7 graded `_abreastContenders`, whose fallback to the top
-//                    two is a framing device and no verdict on who can win, and the racer it demanded
-//                    was 3.66 body lengths back with the framing already released. It was also NEVER
-//                    SPECIFIC TO DIRT-OVAL — the same artefact failed 10 races of 80 over four
-//                    tracks. Item 7 now grades the racers who can still win and reads 0 of 80.
-//                    SO DIRT-OVAL'S EXCLUSION NOW RESTS ON ITEM 2 ALONE — the same standing as
-//                    luger-hill: item 2 is behaviour (i) of the acceptance measured directly, and
-//                    ★ SINCE 2026-09-05 THE ACCEPTANCE EXPLICITLY REACHES IT. NOTHING REAL IS
-//                    HIDDEN BY ANY OF THE THREE EXCLUSIONS ANY LONGER. Widening the gate is still a
-//                    separate decision and is still not taken here.
 //   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
 //     two define is invisible here and was visible before.
 // The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
 // defect is caught, not whether.
 //
-// ★★ THE PLAIN VERSION OF THE ABOVE, BECAUSE IT IS SPREAD OVER THREE PER-TRACK ENTRIES AND A
-//    READER WILL MISS IT: TWO OF THE THREE EXCLUSIONS HANG ON ONE BEHAVIOUR COUNTED TWICE.
-//    (Re-established at source 2026-09-04, on the night chain; nothing here is changed by it.)
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// ★★ THIS BLOCK WAS REWRITTEN ON 2026-09-05 BECAUSE ITS WHOLE IDEA WAS WRONG, NOT ITS WORDING
+//    (GATE-WIRED-AND-CAUSED-1). It is worth knowing what it used to say, because the mistake is an
+//    easy one to make again from any of the reports that quote it.
 //
-//    ⚠ TWO SENTENCES BELOW WERE OVERTAKEN THE NEXT DAY and are kept as written rather than edited,
-//    because this is the observation that produced the question the owner then answered. What
-//    overtook them: ACCEPTED-FINISH-ATTRIBUTION-1 (2026-09-05) established that the acceptance names
-//    ONE behaviour, not two — item 10's cause is a MEASUREMENT and was wrongly attributed — and his
-//    decision of the same day, immediately below, answers the open question this block ends on.
+//    IT DESCRIBED THREE TRACKS AS "EXCLUDED" AND GAVE THEM A STANDING OF THEIR OWN — "where each
+//    excluded track stands", "this exclusion rests on", "both exclusions lose their last reason",
+//    "what the exclusion actually costs". THERE IS NO EXCLUSION, AND THERE NEVER WAS. Read the four
+//    lines directly below this comment: `GATE_TRACKS` NAMES TWO TRACKS, and `TRACKS` keeps the
+//    geometries whose id is on that list. It is an INCLUSION filter and there is nothing else in
+//    this file — no exclusion list, no exception mechanism, no skip, and no line anywhere that
+//    treats one track differently from another. `geometries()` reads every track in
+//    `server/data/tracks`; two of the ten are chosen and eight are simply not.
 //
-//    ITEM 2 AND ITEM 9 MEASURE THE SAME THING UNDER DIFFERENT NAMES. Item 2 asks whether the shot
-//    is at one of the director's two named factors at the crossing; item 9's ACCEPTED CAUSE is the
-//    camera still on the `level` binding with the photo-finish zoom in flight. A zoom that has not
-//    arrived is exactly how item 2's question gets the answer no. `endgame-sheet.mjs` says so in the
-//    sheet's own words and leaves the consequence to the owner.
+//    WHY THAT IS NOT PEDANTRY. A mechanism that does not exist cannot be audited, changed or
+//    removed — and three separate blocks of reasoning here were spent on what "the exclusions rest
+//    on", what they "cost", and the day they would "lose their last reason". They were reasoning
+//    about nothing. Worse, the framing implied that the three tracks that get discussed have a
+//    status the other five do not. THEY DO NOT: the other tracks in `server/data/tracks` are not
+//    chosen either, for exactly the same reason, and nobody wrote a paragraph about them.
+//    Everything MEASURED that those blocks carried is kept below, in the form it actually has — a
+//    finding from the nightly sweep, not a ground for a choice.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
 //
-//    THE CONSEQUENCE, STATED HERE: the owner's acceptance of 2026-09-04 names two behaviours and
-//    TWO ITEMS — 9 and 10. Item 2 is not on that list, so the same accepted behaviour is accepted
-//    under one name and still counted as a failure under another. luger-hill and dirt-oval are
-//    excluded on item 2 ALONE, at seed 9, and on nothing else. If the acceptance reaches item 2,
-//    BOTH exclusions lose their last reason on the day it does.
-//        ⚠ "two behaviours and TWO ITEMS" is the wording corrected on 2026-09-05; read it as ONE
-//          behaviour and item 9. The rest of the paragraph stands, and the "if" is now answered.
+// ── WHY THESE TWO ARE CHOSEN ────────────────────────────────────────────────────────────────────
 //
-//    ★ NO EXCLUSION IS CHANGED HERE AND NONE MAY BE CHANGED ON THIS OBSERVATION. Whether the
-//    acceptance formally reaches item 2 is the owner's word and has not been given; and widening
-//    the gate would still make it red on day one for behaviour he has accepted, which is the trap
-//    GATE-GARDEN-PATH-1 avoided. This comment exists so the question is asked ONCE, plainly, rather
-//    than re-derived from three scattered entries every time someone reads this file.
-//        ⚠ "has not been given" was true when written. It was given the next day — see immediately
-//          below. The refusal to change an exclusion is UNAFFECTED and still binding.
+// It is stated in full above and it rests on measurement: these two hold both extremes of every
+// column the acceptance sheet reports, and the two topological regimes, and the other eight sit
+// strictly inside them. THAT IS THE WHOLE REASON. It was not derived from what any other track
+// passes or fails, and no other track's items are part of it.
 //
-// ★★ HIS DECISION OF 2026-09-05: THE ACCEPTANCE OF 2026-09-04 REACHES GATE ITEM 2.
+// ── WHAT THE SWEEP FINDS ON OTHER TRACKS AT SEED 9 — FINDINGS, NOT GROUNDS ──────────────────────
 //
-// It had been reported as an open question — item 2 measures behaviour (i) directly, and his
-// acceptance named item 9 rather than item 2. He has now said it reaches item 2 as well.
+// These are results, and they are recorded here because a reader of this file will want them; they
+// are not why the gate runs two tracks. Measured over 16 races (GATE-GARDEN-PATH-1 and
+// ACCEPTED-FINISH-1, 2026-09-04) and re-measured on three races at seed 9 on 2026-09-05
+// (GATE-WIRED-AND-CAUSED-1). They are NOT the same answer for the three, which is the part a reader
+// will get wrong from memory:
 //
-// THE CONSEQUENCE, RECORDED AND NOT TAKEN: luger-hill and dirt-oval are excluded from this gate on
-// item 2 ALONE, at seed 9, and item 2 is now accepted behaviour. So **both exclusions now rest
-// entirely on behaviour the owner has accepted**, and neither hides a defect.
+//   garden-path  at seed 9: items 9 AND 10, and nothing else. Item 9's cause is the accepted one
+//                (below) and the sheet now prints ACC for it. Item 10 is a plain FAIL and stays
+//                one — what is established about its usual cause is a MEASUREMENT, not an accepted
+//                behaviour (see `endgame-sheet.mjs`). Across seeds 1-3 it also fails item 2, which
+//                is behaviour (i) measured directly.
+//   luger-hill   item 2 only; only seed 9 has been measured for this track. Item 2 is inside the
+//                acceptance since his decision of 2026-09-05, and the crossing carries the accepted
+//                cause: `binding "level"`, camZoom 0.2585 ln short of `photoFinishZoom`.
+//   dirt-oval    item 2 only, at seed 9, and the crossing carries the accepted cause the same way
+//                (0.5373 ln short). ★ CORRECTED 2026-09-04 (ITEM7-MEMBERSHIP-1): this entry used to
+//                read "but ITEM 7 AT SEED 3, a contender off canvas on 78 frames — that one is NOT
+//                accepted behaviour ... the one of the three where something real is still hidden".
+//                BOTH HALVES WERE WRONG. It was a GRADING ARTEFACT, not a picture defect: item 7
+//                graded `_abreastContenders`, whose fallback to the top two is a framing device and
+//                no verdict on who can win, and the racer it demanded was 3.66 body lengths back
+//                with the framing already released. It was also NEVER SPECIFIC TO DIRT-OVAL — the
+//                same artefact failed 10 races of 80 over four tracks. Item 7 now grades the racers
+//                who can still win and reads 0 of 80.
 //
-// ★ NO EXCLUSION IS CHANGED HERE, AND NONE MAY BE CHANGED ON THIS DECISION ALONE. Widening the gate
-// is its own decision and has not been given. The reason recorded above still stands: a gate that
-// goes red on day one for accepted behaviour is a gate that gets ignored within a week, which is the
-// trap GATE-GARDEN-PATH-1 avoided.
+// SO NOTHING ON THAT LIST IS A DEFECT THE GATE'S SCOPE IS HIDING. Every one of those failures is
+// either an accepted behaviour or an item whose standing is explicitly unsettled and which the
+// nightly sweep reports every night on all ten tracks.
+//
+// ── WHAT THE GATE'S SCOPE ACTUALLY COSTS, AND IT IS NOT A TRACK ─────────────────────────────────
+//
+// Both gate tracks cross with `binding: state` and the camera ALREADY at `photoFinishZoom`, so THIS
+// GATE IS STRUCTURALLY BLIND TO THE TWO BEHAVIOURS ABOVE — not because a track is missing, but
+// because neither of its own two races exhibits them. THE LEVER IS WHICH RACE THE GATE RUNS, NOT
+// WHICH TRACK. Adding a track at seed 9 would not reach them either; a different seed would.
+//
+// ── ITEM 2 AND ITEM 9 MEASURE ONE BEHAVIOUR UNDER TWO NAMES ─────────────────────────────────────
+//
+// Item 2 asks whether the shot is at one of the director's two named factors at the crossing; item
+// 9's accepted cause is the camera still on the `level` binding with the photo-finish zoom in
+// flight. A zoom that has not arrived is exactly how item 2's question gets the answer no. That
+// observation was recorded on 2026-09-04 with a question left open, because the owner's acceptance
+// of that date named item 9 and not item 2.
+//
+// ★★ HIS DECISION OF 2026-09-05: THE ACCEPTANCE OF 2026-09-04 REACHES GATE ITEM 2. So the same
+// accepted behaviour is no longer accepted under one name and counted as a failure under another.
+//
+// ★★ AND SINCE 2026-09-05 THE SHEET SAYS SO ITSELF (GATE-WIRED-AND-CAUSED-1). `endgame-sheet.mjs`
+// computes the accepted cause FROM THE CROSSING FRAME — no track name, no seed, no list — and
+// prints ACC for a failure that carries it and FAIL for one that does not. Both items still measure
+// exactly what they measured and no threshold moved. That is where the acceptance now lives; this
+// comment does not restate its rule.
+//
+// ★ WIDENING THE GATE IS ITS OWN DECISION AND IS NOT TAKEN HERE. The reason recorded above still
+// stands and is unaffected by any of this: a gate that goes red on day one for accepted behaviour
+// is a gate that gets ignored within a week, which is the trap GATE-GARDEN-PATH-1 avoided. Nothing
+// on this page changes which tracks `--gate` runs.
 const GATE_TRACKS = "space-sprint,city-circuit";
 const trackArg = ARG("tracks", GATE ? GATE_TRACKS : null);
 const ALL_GEOMETRIES = geometries();

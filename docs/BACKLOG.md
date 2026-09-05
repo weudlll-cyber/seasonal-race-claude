@@ -82,6 +82,13 @@ line added above it. They were gathered into one place so they can be answered i
 the instruction this pass was given; the reasoning above for keeping such items in place is left
 standing so a later reader can see the trade that was made. **Nothing else in PART ONE waits on him.**
 
+**★ FOUR OF THE SEVEN WERE CLOSED ON 2026-09-05 — PART TWO D31 — AND WHAT THEY HAD IN COMMON IS
+WORTH KNOWING ONCE.** Three of them attributed a question to the owner with no date and no source:
+one said he "has raised" a simplification, and two recorded a parked item and a deferred design
+question with nothing behind them. One of those contained no content at all — it recorded that a
+symptom existed without recording the symptom. That is a fact about how this set was assembled, not
+a rule for anybody to follow.
+
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the repair moves the hash, so it is a mint and only he can order it. Re-verified at source today: `scripts/render-fingerprint.mjs` still builds the frame camera as a hand-written literal with three members (`hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`); `frameCameraInputs` is imported by five client files and by that instrument not at all. The guard half still needs only BUILDING.
 
 - [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
@@ -144,38 +151,16 @@ standing so a later reader can see the trade that was made. **Nothing else in PA
 
 ---
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the entry says so itself — the band count is his to fix before any work starts, and moving it re-baselines every fairness number in the project.
+**CLOSED BY THE OWNER 2026-09-05 — PART TWO D31.**
 
-- ⏳ **Coarser fairness bands.** A product-level simplification the owner has raised: reduce the number of
-  finishing-place bands so "reached your band" is a coarser, more forgiving promise. Would touch the band
-  definition used by `computeZoneSuccessRate` / the draw and would re-baseline every fairness number — a
-  deliberate product decision, not a tuning tweak. Owner to decide the band count before any work starts.
-
----
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** design-first by his own instruction; no mechanism until he fixes the definitions.
-
-- ⏳ **The story layer (owner-cast narrative toolkit).** The banked owner-cast toolkit for authored race
-  stories: the **multi-role rule** (a racer may hold several narrative roles across the race provided their
-  windows are DISJOINT, smoothly welded, and resolve to ONE endpoint — no contradictory simultaneous roles);
-  **comebacker** and **fallbacker** definitions (a racer authored to climb, or to slide, over a bounded window);
-  and the **drawn-not-patterned** counts (how many of each role per race are DRAWN from a distribution, never a
-  fixed recurring pattern the eye learns). Design-first; no mechanism until the owner fixes the definitions.
-
----
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** it cannot be actioned until he restates the symptom, which is what the entry records.
-
-- ⏳ **Camera block reset.** Parked camera item (block reset) from the camera saga handoff — needs the owner to
-  restate the exact symptom before it is actionable; recorded here so it is not lost.
-
----
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** a design question he deferred; relative or absolute is not derivable from the tree.
-
-- ⏳ **Camera-weights design question — relative vs absolute weighting (deferred).** Whether the camera's
-  subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
-  A design question the owner deferred; no implementation until it is answered.
+- [x] ~~**Coarser fairness bands.**~~ **CLOSED — not traceable.** The entry asserted the owner had
+  raised it and carried no date, no source and no evidence. PART TWO D31.
+- [x] ~~**The story layer (owner-cast narrative toolkit).**~~ **CLOSED — the subject is implemented by
+  the director.** PART TWO D31.
+- [x] ~~**Camera block reset.**~~ **CLOSED — not traceable; the entry records no symptom, so there is
+  nothing to investigate.** PART TWO D31.
+- [x] ~~**Camera-weights design question — relative vs absolute weighting (deferred).**~~ **CLOSED for
+  the same reason — no date, no source.** PART TWO D31.
 
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
 
@@ -415,8 +400,16 @@ these carries a recommendation.**
 4. **42 unconsumed exports in the trees the audit did not measure** — `scripts/` 37, `server/` 5,
    `shared/` 0. Measured, not acted on: two `client/` candidates turned out to be reached through a
    string a test generates at runtime, so each of the 42 needs that check individually.
-5. **Gate item 2 measures the finish behaviour he accepted, under a different name**, and
-   **luger-hill's exclusion rests on it.**
+5. **Gate item 2 measures the finish behaviour he accepted, under a different name.** ★ **ANSWERED
+   AND ACTED ON, 2026-09-05.** He decided the acceptance reaches item 2 (PART TWO D27), and
+   `scripts/endgame-sheet.mjs` now computes that cause from the crossing frame and prints it as a
+   distinct outcome (GATE-WIRED-AND-CAUSED-1). ★ **The second half of this line was struck rather
+   than kept, and the reason is the same block:** it read *"and luger-hill's exclusion rests on it"*,
+   which describes a mechanism that does not exist. `GATE_TRACKS` NAMES the two tracks the gate runs;
+   there is no exclusion list, no exception and no skip anywhere in `viewer-invariants.mjs`, so
+   luger-hill is not kept out of anything and has no standing the five tracks nobody writes about do
+   not also have. What luger-hill actually has is a FINDING from the sweep — item 2 at seed 9, whose
+   crossing carries the accepted cause.
 
 ---
 
@@ -2524,13 +2517,23 @@ other cause is still a finding.
 **What does NOT change:** item 2's computation, its tolerance, and what it reports. Nothing was
 touched (`scripts/endgame-sheet.mjs`).
 
-**★ THE CONSEQUENCE, RECORDED AND NOT TAKEN.** luger-hill and dirt-oval are excluded from the SHIP
-gate on item 2 **alone**, at seed 9. With item 2 inside the acceptance, **both exclusions now rest
-entirely on accepted behaviour and neither hides a defect.** That is written into the `GATE_TRACKS`
-comment in `scripts/viewer-invariants.mjs`. **NO EXCLUSION WAS CHANGED**, and none may be changed on
-this decision alone — widening the gate is its own decision and has not been given. The reason
-already recorded there still stands: a gate that goes red on day one for accepted behaviour is a
-gate that gets ignored within a week.
+**★ THE CONSEQUENCE, RECORDED AND NOT TAKEN.** luger-hill and dirt-oval each fail item 2 **alone** at
+seed 9, and nothing else. With item 2 inside the acceptance, **both of those failures are accepted
+behaviour and neither hides a defect** — measured again on 2026-09-05: both crossings carry the
+accepted cause, `binding "level"` with the closing zoom still 0.2585 and 0.5373 ln short of
+`photoFinishZoom`. That is written into the `GATE_TRACKS` comment in
+`scripts/viewer-invariants.mjs`. **WHICH TRACKS THE GATE RUNS WAS NOT CHANGED**, and may not be
+changed on this decision alone — widening the gate is its own decision and has not been given. The
+reason already recorded there still stands: a gate that goes red on day one for accepted behaviour
+is a gate that gets ignored within a week.
+
+★ **THE WORDING OF THIS PARAGRAPH WAS CORRECTED ON 2026-09-05 (GATE-WIRED-AND-CAUSED-1) AND THE
+CORRECTION IS NOT COSMETIC.** It said the two tracks were *"excluded from the SHIP gate"* and that
+*"both exclusions now rest entirely on accepted behaviour"*. **There is no exclusion.** `GATE_TRACKS`
+names two tracks and the harness keeps the geometries on that list; there is no exclusion list, no
+exception mechanism and no skip. Eight tracks are not chosen, and the three that get discussed have
+no standing the other five lack. Every measured fact above survives the correction; only the invented
+status is gone.
 
 ### D28 · The closing phase WILL end a `BATTLE_ZOOM` too · 2026-09-05
 
@@ -2613,7 +2616,38 @@ with a note to connect the two once the branch landed. **That is done: §2 of th
 at D30 and does not restate the reasoning, and its "one command" checklist marks hurdle 2 answered
 but NOT YET BUILT.**
 
-## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
+### D31 · Three of THE SEVEN THAT ARE HIS are closed, and one of them was already built · 2026-09-05
+
+**His decisions, taken together because they were taken together. Nothing is proposed in their place
+and no successor item is opened.**
+
+**1 · Coarser fairness bands — CLOSED, not traceable.** The entry said the owner "has raised" a
+product-level simplification of the finishing-place bands. It carried **no date, no source and no
+evidence** that he did. A question attributed to him that nothing can be traced back to him is not
+his to answer, and it has sat in his set since 2026-09-02 on that attribution alone.
+
+**2 · The story layer (owner-cast narrative toolkit) — CLOSED. The subject is implemented by the
+director.** ★ **Both source facts were re-established before this was written, not taken from the
+entry:**
+
+- `client/src/modules/racePlanner.js:728` — *"Retain the authored ROLE (sovereign-lead / comebacker /
+  faller) the generator already produced"*, populated into `plan._heroRoles` and, beside it,
+  `plan._cameraPlan` carrying the full authored cast.
+- `client/src/modules/camera/comebackDetector.js:64` — `setPlan(cameraPlan)` reads
+  `h.role === 'comebacker'` and keeps those indices as the primary comeback candidates. The roles
+  are **consumed**, in the shipped camera.
+
+So the roles the entry asked to have DEFINED already exist, are authored per race, and reach the
+camera. He considers the subject implemented by the director. **What this does NOT close, because it
+is a different question already recorded elsewhere:** the authored **beats** are still discarded on
+arrival — that is **PART TWO D14**, unchanged and still his.
+
+**3 · Camera block reset — CLOSED, not traceable.** The entry recorded that a symptom existed
+without recording the symptom: *"needs the owner to restate the exact symptom before it is
+actionable"*. There is nothing to investigate, and nothing to restate a question about.
+**The `relative vs absolute camera weights` question that sat beside it is closed for the same
+reason** — no date, no source, and a design question with neither is not a deferral, it is a note
+somebody wrote.
 
 **verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
 

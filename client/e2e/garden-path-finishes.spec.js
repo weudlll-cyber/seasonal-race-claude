@@ -4,8 +4,13 @@
 // WHAT THIS FILE IS FOR, and it is one claim: **garden-path runs to the finish in a real browser.**
 //
 // It is the ONLY assertion anywhere that says so. No other e2e spec names the track; the camera and
-// render fingerprints are headless drivers; and `scripts/viewer-invariants.mjs` EXCLUDES garden-path
-// from the browser sweep on the opposite claim. If this test goes, that claim has no evidence at all.
+// render fingerprints are headless drivers; and `scripts/viewer-invariants.mjs --gate` does not RUN
+// garden-path — its `GATE_TRACKS` names space-sprint and city-circuit, and the note recorded beside
+// it said the track never finishes. If this test goes, that claim has no evidence at all.
+// *(Corrected 2026-09-05, GATE-WIRED-AND-CAUSED-1: this line said the sweep "EXCLUDES" the track.
+// It does not — there is no exclusion list, no exception and no skip in that file; `GATE_TRACKS`
+// NAMES the two tracks the gate runs and eight of the ten are simply not named. The nightly sweep
+// runs all ten. The reason this spec exists is unaffected.)*
 //
 // TRIMMED to exactly that claim on 2026-09-04 (GP-SPEC-TRIM-1), at the owner's decision revising his
 // earlier "delete the file": keep only what is needed. The history — a second test that asserted the
