@@ -40,6 +40,15 @@
 //      Also not exercised: PARTICLES and SURFACE TRAILS. Both draw from buffers the component's
 //      loop fills, so in this harness both are empty and their two layers are no-ops. Discovered
 //      by a sabotage that swapped them and did NOT move the hash. Named fix in the report.
+//   5. ★ THE REAL LABEL COUNT, because TEXT MEASUREMENT IS SYNTHETIC. Recorded here 2026-09-05 with
+//      MINT-RENDER-1, because a reader meets the instrument before they meet the recorder.
+//      `recordingContext.js:26-31` returns a DETERMINISTIC SYNTHETIC WIDTH from `measureText` — it
+//      has to return something, and the name-tag layout consumes that width to decide which labels
+//      are drawn. A real browser's width depends on the installed font. SO THIS FINGERPRINT PINS THE
+//      TAG-LAYOUT RULE — same widths in, same labels out — AND NOT THE NUMBER OF LABELS a real
+//      browser would fall back to numbers on for want of space. A change to the layout rule is
+//      caught here; a change in font metrics, and the real name-versus-number count the owner sees,
+//      are not. Those are the browser gate's and his eye's.
 //   4. THE CEREMONY'S DOM. The brand card and the corner logo are React components, not canvas, so
 //      no fingerprint of draw calls can ever see them. RENDER-SAMPLER-CEREMONY turns the brand ON
 //      so the BRAND BEAT exists and its canvas — the venue shot, held — is sampled; the CARD on top
@@ -77,11 +86,16 @@ export const GUARD = {
   blind: [
     "the rasteriser and the artwork — it records calls, not pixels",
     "the sprite blit itself: node has no Image, so the racer body falls back to its procedural branch",
+    "the REAL label count: text measurement is synthetic (recordingContext.js:26-31), so this pins the tag-layout RULE — same widths in, same labels out — and not how many labels a real browser falls back to numbers on for want of space",
   ],
   dirs: [],
   files: [],
   reach: [
     "client/src/screens/RaceScreen/renderRaceFrame.js",
+    // RENDER-CAMERA-FIELDS-1: the instrument now builds its frame camera through the SAME function
+    // the game uses, so that function's file is part of what this guard depends on. Declared rather
+    // than assumed — a dynamic import is invisible to the static closure walk.
+    "client/src/screens/RaceScreen/frameCameraInputs.js",
     "client/src/modules/camera/CameraDirector.js",
     "client/src/modules/raceCore.js",
     "client/src/modules/storage/defaults.js",
@@ -151,6 +165,11 @@ const { BOARD_FADE_MS } = await import(
 );
 const { createRecordingContext } = await import(
   u("client/src/modules/parity/recordingContext.js")
+);
+// RENDER-CAMERA-FIELDS-1: the game's own frame-camera builder, so this instrument cannot supply a
+// different set of fields from the one the renderer is given. See the call site for what it cost.
+const { frameCameraInputs } = await import(
+  u("client/src/screens/RaceScreen/frameCameraInputs.js")
 );
 const { DEFAULT_TRACK_LIGHTS, sampleBoundaryAtInterval, LIGHT_SPACING_PX } =
   await import(u("client/src/modules/trackLights.js"));
@@ -443,11 +462,23 @@ function trackHash(geo, wantOps) {
     trackLightsConfig,
     racerType: rt,
     cameraConfig: DEFAULT_CAMERA_CONFIG,
-    camera: {
-      hudState: cd.hudState,
-      comebackLockedRacerIndex: cd.comebackLockedRacerIndex,
-      detectBattleGroup: (racers) => cd.detectBattleGroup(racers),
-    },
+    // ── THE FRAME CAMERA COMES FROM THE ONE HOME (RENDER-CAMERA-FIELDS-1) ─────────────────────
+    //
+    // THIS WAS A HAND-WRITTEN LITERAL WITH THREE MEMBERS, and `frameCameraInputs.js` declares FIVE
+    // fields plus this method. The three absent ones were `state`, `anchorRacerIndex` and
+    // `runInArrived` — and two of them are read by the very draw path this instrument measures:
+    // `renderRaceFrame.js:212` reads `camera?.anchorRacerIndex` for the focus racer, and `:220`
+    // reads `camera?.runInArrived` to decide whether a label says a NAME or a number. So the
+    // fingerprint was hashing a frame drawn with the leader fallback and with numbers, on every
+    // frame of every track, while the game drew the subject and his name.
+    //
+    // It is the SAME defect `frameCameraInputs.js` was created for, one layer out: that file's own
+    // header records `RaceScreen/index.jsx` listing three fields by hand and the owner reporting
+    // "the comebacker shows no name". The literal here was the second copy of that mistake.
+    //
+    // ONE HOME, so it cannot happen a third time: the list is not retyped here, it is imported. A
+    // field added to `FRAME_CAMERA_FIELDS` reaches this instrument with no edit to this file.
+    camera: frameCameraInputs(cd),
     displaySize: ds,
     displaySizeScale: br.bodyNarrow / ds,
     assignmentByRacer: meta.assignmentByRacer ?? new Map(),
