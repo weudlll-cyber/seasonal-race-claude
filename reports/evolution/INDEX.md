@@ -6,6 +6,19 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-05 — [ACCEPTED-FINISH-1](ACCEPTED-FINISH-1.md) ATTRIBUTED A SECOND ACCEPTANCE TO THE
+  OWNER THAT IS NOT HIS.** That report recorded a **measured** cause for item 10's failure — a
+  `BATTLE_ZOOM` in the endgame window holds the leader forward — and elsewhere stated it as a
+  behaviour he had accepted: *"a battle shot may take the frame near the finish"*. **On 2026-09-05 he
+  said that wording is not his.** **Behaviour (i) is untouched and still his** — the closing zoom need
+  not have arrived by the crossing — and item 9's standing is unchanged. What is withdrawn is the
+  SECOND acceptance and the claim that items 9 **and 10** both encode a rejected ideal: item 10's
+  cause is a measurement, and **whether a fail from it is a defect is not settled.** No substitute
+  acceptance is put in its place; what he accepted beyond behaviour (i) is not established.
+  [ACCEPTED-FINISH-ATTRIBUTION-1](ACCEPTED-FINISH-ATTRIBUTION-1.md) corrects the seven sites in
+  `endgame-sheet.mjs` and `viewer-invariants.mjs`, including the sheet's printed legend, and records
+  four decisions of 2026-09-05 as **D27–D30**. Nothing computed, thresholded or excluded was changed.
+
 - **2026-09-03 — [CENSUS-CHECKS-1](CENSUS-CHECKS-1.md)'s "DEMONSTRABLY INERT — 1" is REPAIRED, and
   the count it belongs to moves with it.** That census found `render-fingerprint.mjs` could not go red
   under the argv `verify` gives it, and named `camera-fingerprint.mjs`'s headline half as inert for the
@@ -335,6 +348,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [ACCEPTED-FINISH-ATTRIBUTION-1.md](ACCEPTED-FINISH-ATTRIBUTION-1.md) — **one attribution corrected,
+  four decisions recorded** (2026-09-05; comments, one printed string and documents only — no logic,
+  threshold, default, gate exclusion or camera behaviour, nothing minted, `engine-reach` selects
+  nothing). ACCEPTED-FINISH-1 stated a MEASURED cause for item 10 as a behaviour the owner accepted;
+  **he says that wording is not his**, so it goes back to being a measurement, attributed to nobody,
+  with the defect question left open. **Behaviour (i) is unchanged and no substitute acceptance is
+  put in its place** — "he accepted the photo finish instead" would be the same mistake with another
+  noun. Seven sites corrected across `endgame-sheet.mjs` and `viewer-invariants.mjs`; **two more
+  re-verified and deliberately left**, including one that already read as a measurement. Then
+  **D27–D30**: the acceptance reaches gate item 2 (**the consequence for luger-hill and dirt-oval is
+  recorded, NOT taken — no exclusion changed**); the closing phase will end a `BATTLE_ZOOM` too, with
+  CLOSING-CUT-1's four-phases-at-the-cut beside it; `date-fns` stays; the API address moves to start
+  time, closing DEPLOY-NOTES §2's options A and B. **Nothing is built.** ⚠ D30's stated home is on
+  the unmerged `night/2026-09-04` branch, so it is filed in the register instead and says so.
 
 - [ITEM7-MEMBERSHIP-1.md](ITEM7-MEMBERSHIP-1.md) — **item 7 stops requiring racers who can no longer
   win: 10 failing of 80 → 0** (2026-09-04, instrument and documentation only; no default, threshold,
