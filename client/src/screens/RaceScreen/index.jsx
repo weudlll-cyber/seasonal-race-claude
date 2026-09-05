@@ -461,7 +461,28 @@ export default function RaceScreen() {
     racerTypeRef.current = racerType;
 
     const trackEmoji = racerType.getEmoji() ?? null;
-    const speedMultiplier = racerType.getSpeedMultiplier();
+
+    // ── ★ RACE-IDENTIFIER-2: THE RACER TYPE IS PART OF THE RACE, AND IT WAS BEING TAKEN FROM THIS
+    //    MACHINE. This is the defect the owner hit: he retuned a racer, pasted an identifier, and
+    //    got HIS racer at HIS speed under the identifier's name.
+    //
+    //    `getRacerType` returns the type with THIS host's stored overrides already applied
+    //    (`racer-types/index.js:293-300` applies them at boot). The identifier has recorded the
+    //    same fields all along — `effectiveRacerTypes`, which `exportRaceConfig.js` builds from
+    //    `SIM_TYPE_FIELDS` — and nothing on the race path read them. `speedMultiplier` is a
+    //    first-order physics input, so the result was a DIFFERENT RACE under the same identifier,
+    //    silently, which is the one outcome this feature exists to prevent.
+    //
+    //    NOTHING ABOUT THE ENCODING CHANGES HERE. The values were always in the string; this is the
+    //    read that was missing. A race with no identifier takes the live type exactly as before.
+    const recordedType = raceData.worldConfigOverride?.effectiveRacerTypes?.[typeId] ?? null;
+    const typeField = (name) =>
+      recordedType && name in recordedType ? recordedType[name] : racerType.config[name];
+
+    const speedMultiplier =
+      recordedType && 'speedMultiplier' in recordedType
+        ? recordedType.speedMultiplier
+        : racerType.getSpeedMultiplier();
 
     // ── RACE-IDENTIFIER-1: where a REPRODUCED race stops reading this machine ──────────────────
     //
@@ -514,9 +535,12 @@ export default function RaceScreen() {
     // it is honest here rather than a silencing, because a cleanup that read the ref LATER could in
     // principle be looking at a different race's list.
     const winnerCardTimers = winnerCardTimersRef.current;
-    const displaySize = racerType.config.displaySize;
-    const _bfNarrowRaw = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
-    const _bfLongRaw = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    // RACE-IDENTIFIER-2: the other three SIM fields the identifier records, read the same way.
+    // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
+    // a retuned SIZE moves the race exactly as a retuned speed does.
+    const displaySize = typeField('displaySize');
+    const _bfNarrowRaw = Math.min(typeField('bodyFillX'), typeField('bodyFillY'));
+    const _bfLongRaw = Math.max(typeField('bodyFillX'), typeField('bodyFillY'));
     const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
     const bodyFillLong = Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
     const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
@@ -590,6 +614,29 @@ export default function RaceScreen() {
       bodyFillLong,
       constSpeedActive,
     });
+    // ── RACE-INPUTS-PROBE-1: what the race was ACTUALLY built with, for a browser test ───────────
+    //
+    // INERT UNLESS SWITCHED ON, the same shape as `?constSpeed=1` (:423) and the viewer probe: no
+    // normal race writes this. It exists because the one question the owner's report raised — did a
+    // pasted identifier run ITS race or this machine's — had NO observable in the browser at all,
+    // and a test that cannot see the engine's inputs can only guess from the payload.
+    //
+    // It reports the values that actually reached `createRaceFromIdentity` above, so it cannot
+    // drift from them: it is read from the same variables, one line later.
+    try {
+      if (localStorage.getItem('racearena:raceInputsProbe') === '1') {
+        window.__raRaceInputs = {
+          racerTypeId: typeId,
+          speedMultiplier,
+          racePlanSeed,
+          raceActionStage,
+          racePlanPulkStart: dynamicsConfig?.racePlanPulkStart ?? null,
+          fromIdentifier: !!raceData.worldConfigOverride,
+        };
+      }
+    } catch {
+      /* storage unavailable — the probe is a diagnostic and must never take a race down */
+    }
     const raceState = race.state;
     const raceCfg = race.config;
     const raceMeta = race.meta;

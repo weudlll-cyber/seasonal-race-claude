@@ -287,7 +287,36 @@ function SetupScreen() {
   // no control was misused to get there. Refusing at the group picker alone would have left that
   // door open, and the failure would have arrived at the start line rather than while choosing.
   const overCap = players.length > effectiveMaxPlayers;
-  const canStart = canStartBase && !overCap;
+  // ── RACE-IDENTIFIER-3: PASTING THE IDENTIFIER IS ENOUGH ─────────────────────────────────────
+  //
+  // The owner's words: the racer list, the track and the lap count are inside the value, so he
+  // should not have to select them again. He was right, and the Start button disagreed — `canStartBase`
+  // demands a roster and a selected track, which the identifier supplies itself.
+  //
+  // ★ THE ONE THING IT CANNOT SUPPLY, and it is a real gap in the encoding rather than an oversight
+  // here: THE TRACK'S GEOMETRY. The identifier carries the track's ID, not its shape — the shape is
+  // kilobytes of spline and putting it in would multiply the length the owner is already deciding
+  // about. So a race can only be reproduced on a device that HAS that track, and when it does not,
+  // the screen says which track is missing rather than refusing silently.
+  const pastedIdentifier = useMemo(() => {
+    if (!looksLikeRaceIdentifier(raceSeed)) return null;
+    try {
+      const decoded = decodeRaceIdentifier(raceSeed, {
+        defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        buildId: raceIdentifierBuildId(),
+      });
+      const geometryHere = !!getTrack(decoded.geometryId);
+      return { decoded, geometryHere, error: null };
+    } catch (err) {
+      return { decoded: null, geometryHere: false, error: err?.message ?? String(err) };
+    }
+  }, [raceSeed]);
+
+  // With a usable identifier in the field the screen's own selection is irrelevant: everything the
+  // race needs travels in the string, except the geometry, which must be on this device.
+  const canStart = pastedIdentifier
+    ? !!pastedIdentifier.decoded && pastedIdentifier.geometryHere
+    : canStartBase && !overCap;
 
   // ── Canonical model inputs for the selected track ─────────────────────────────────────────
   // One normal speed (px/s) for every track; the race's PACE is that speed times the selected
@@ -513,8 +542,23 @@ function SetupScreen() {
   // string is offered has changed, only whether the screen says why it is not.
   const currentRaceIdentifier = useMemo(() => {
     const none = (note) => ({ identifier: null, note });
-    if (looksLikeRaceIdentifier(raceSeed))
-      return none('This field already holds a race identifier — that string is the race.');
+    if (looksLikeRaceIdentifier(raceSeed)) {
+      // RACE-IDENTIFIER-3: a pasted identifier says what it WILL run, or why it cannot — the screen's
+      // own track and roster no longer decide, so leaving the reader to guess is worse than before.
+      if (pastedIdentifier?.error)
+        return none(`This race identifier cannot be used: ${pastedIdentifier.error}`);
+      if (pastedIdentifier && !pastedIdentifier.geometryHere)
+        return none(
+          `This race was run on a track this device does not have ("${pastedIdentifier.decoded.geometryId}"). ` +
+            `Load that track and it will start — the identifier carries the track's ID, not its shape.`
+        );
+      const d = pastedIdentifier?.decoded;
+      return none(
+        d
+          ? `Ready: this identifier runs ${d.names.length} racers on ${d.geometryId}, seed ${d.racePlanSeed}. It supplies the racers, the track and the settings — nothing on this screen is used.`
+          : 'This field already holds a race identifier — that string is the race.'
+      );
+    }
     if (raceSeed === '')
       return none('Type a seed to get the identifier that repeats this exact race elsewhere.');
     if (!selectedGeometryReady)
@@ -587,16 +631,28 @@ function SetupScreen() {
   ]);
 
   function startRaceFromIdentifier(text) {
-    let decoded;
-    try {
-      decoded = decodeRaceIdentifier(text, {
-        defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
-        buildId: raceIdentifierBuildId(),
-      });
-    } catch (err) {
-      setIdentifierError(err?.message ?? 'This race identifier could not be read.');
+    // The SAME decode the Start button was enabled on — see `pastedIdentifier`. Decoding a second
+    // time here would let the gate and the run disagree about the same string.
+    const parsed =
+      pastedIdentifier ??
+      (() => {
+        try {
+          return {
+            decoded: decodeRaceIdentifier(text, {
+              defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+              buildId: raceIdentifierBuildId(),
+            }),
+            error: null,
+          };
+        } catch (err) {
+          return { decoded: null, error: err?.message ?? String(err) };
+        }
+      })();
+    if (!parsed.decoded) {
+      setIdentifierError(parsed.error ?? 'This race identifier could not be read.');
       return;
     }
+    const decoded = parsed.decoded;
     const geom = getTrack(decoded.geometryId);
     if (!geom) {
       // The one input an identifier cannot carry: the track's own geometry lives on this machine.

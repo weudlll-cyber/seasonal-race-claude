@@ -6,6 +6,7 @@
 // Description: Race configuration controls — duration, winner count, event name, race seed
 // ============================================================
 
+import { useState } from 'react';
 import styles from './SetupScreen.module.css';
 import {
   sanitizeQuickTestSeedInput,
@@ -35,6 +36,8 @@ function RaceSettings({
   // IDENTIFIER-SPEAKS-1: why there is no identifier, when there is none. Shown in the row's place.
   raceIdentifierNote = null,
 }) {
+  // COPY-FEEDBACK-1
+  const [copied, setCopied] = useState(false);
   const { duration, winners, eventName } = settings;
 
   function set(patch) {
@@ -124,10 +127,21 @@ function RaceSettings({
               type="button"
               className={styles.linkBtn}
               data-testid="copy-race-identifier"
-              onClick={() => navigator.clipboard?.writeText?.(raceIdentifier)}
+              onClick={() => {
+                // COPY-FEEDBACK-1: the smallest confirmation there is — the link says so itself for
+                // a moment. No toast, no component, no new state machine: one boolean that resets.
+                try {
+                  navigator.clipboard?.writeText?.(raceIdentifier);
+                } catch {
+                  /* a refused clipboard must not look like a successful copy */
+                  return;
+                }
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
               title="Copy the identifier for the race this screen would start. Pasting it into this field on another machine runs the same race."
             >
-              copy this race&rsquo;s identifier
+              {copied ? 'copied ✓' : 'copy this race’s identifier'}
             </button>{' '}
             <span style={{ opacity: 0.7 }}>({raceIdentifier.length} characters)</span>
           </div>

@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L886-L911)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L942-L967)):
 
 ```
 Branding: None ▼
@@ -156,7 +156,7 @@ each surface reads them differs — there is no single shared chain:
   ([`ResultScreen/index.jsx:98`](../client/src/screens/ResultScreen/index.jsx#L98)).
 
 `sponsorText` is the one exception: the ResultScreen reads it from `race.sponsorText` (carrier path
-[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L397), see "Sponsor strip
+[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L426), see "Sponsor strip
 carrier" below), not directly from the profile.
 
 The canvas carrier chain in full:
@@ -166,12 +166,12 @@ The canvas carrier chain in full:
    ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L192-L196)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L842-L877)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L898-L933)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 
 3. **Carried into activeRace**: written to `sessionStorage.activeRace` when a race is started
-   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L395-L396)):
+   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L424-L425)):
 
    ```js
    eventName: raceSettings.eventName,
@@ -182,10 +182,10 @@ The canvas carrier chain in full:
    ([`index.jsx` → `lcData`](../client/src/screens/RaceScreen/index.jsx#L332-L334))
    and passes it to:
    - `drawTitle(ctx, shape, raceData)` for closed tracks
-     ([`RaceScreen/index.jsx:1449`](../client/src/screens/RaceScreen/index.jsx#L1469),
+     ([`RaceScreen/index.jsx:1449`](../client/src/screens/RaceScreen/index.jsx#L1516),
      [`overlayRendering.js` → `drawTitle`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L22-L41))
    - `drawTitleOpen(ctx, raceData)` for open tracks
-     ([`RaceScreen/index.jsx:1447`](../client/src/screens/RaceScreen/index.jsx#L1467),
+     ([`RaceScreen/index.jsx:1447`](../client/src/screens/RaceScreen/index.jsx#L1514),
      [`overlayRendering.js` → `drawTitleOpen`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L48-L62))
 
    Both functions render `eventName` in gold (`#ffd700`) and, when present, `subtitle` below it in
@@ -247,7 +247,7 @@ Formatting is handled by a shared utility
 ([`client/src/utils/formatRaceTime.js`](../client/src/utils/formatRaceTime.js))
 that formats milliseconds as `ss.hh` (e.g. `29.34`) or `m:ss.hh` (e.g. `1:05.32`). It is consumed
 by both the in-race live scoreboard
-([`RaceScreen/index.jsx:1639–1640`](../client/src/screens/RaceScreen/index.jsx#L1659-L1660))
+([`RaceScreen/index.jsx:1639–1640`](../client/src/screens/RaceScreen/index.jsx#L1706-L1707))
 and the ResultScreen podium slots and rank rows.
 
 #### Sponsor strip carrier

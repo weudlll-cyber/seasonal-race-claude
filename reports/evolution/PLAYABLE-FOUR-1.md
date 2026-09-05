@@ -205,6 +205,15 @@ length, lay out the options. **Measured, on shipped defaults:**
 | 20 racers, two config keys off default | 563 |
 | 20 racers, the whole camera config off default | 3,250 |
 
+> ★ **CORRECTION, 2026-09-06 — EVERY NUMBER IN THIS TABLE IS TOO SMALL.** Measured on the running
+> screen, 40 racers on shipped defaults is **4,016 characters**, not 743. The fixture that produced
+> the table passed `effectiveRacerTypes: {}`, while the real `buildWorldConfig()` always includes all
+> twenty racer types with their five sim fields — regardless of whether anything is off default. The
+> owner's screen reported 4,590, which is this plus his own stored config, and it was right.
+> ★ The omitted field is the very one RACE-IDENTIFIER-2 found the race path was ignoring, so the
+> same fixture hid both the true length and a defect. The table is left standing with this note
+> rather than edited, because the report is append-only.
+
 *(RACE-IDENTITY-1 estimated ≈200–350 for a field of twenty; measured it is 450. The estimate assumed
 compression, which was not used — adding a dependency to shorten a string is the wrong trade.)*
 

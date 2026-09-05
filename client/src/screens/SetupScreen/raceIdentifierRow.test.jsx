@@ -138,13 +138,18 @@ describe('IDENTIFIER-SPEAKS-1 — when there is no row, the screen says why', ()
   });
 
   // What breaks if deleted: pasting an identifier would blank the row with no word about it.
-  it('a pasted identifier says the field already holds the race', () => {
+  //
+  // RACE-IDENTIFIER-3 (2026-09-05) improved what this says: a DAMAGED identifier now names the
+  // reason it cannot be used rather than the generic "this field holds an identifier". `RA1-abcdef`
+  // is damaged — it carries the prefix and nothing decodable — so the refusal is the honest message,
+  // and the assertion follows the behaviour rather than pinning the older wording.
+  it('a DAMAGED pasted identifier says why it cannot be used', () => {
     renderStartable();
     openSettings();
     typeSeed('RA1-abcdef');
 
     expect(screen.queryByTestId('race-identifier-row')).not.toBeInTheDocument();
-    expect(screen.getByTestId('race-identifier-note')).toHaveTextContent(/already holds/i);
+    expect(screen.getByTestId('race-identifier-note')).toHaveTextContent(/cannot be used/i);
   });
 
   // What breaks if deleted: the two KNOWN absences would go back to being indistinguishable from a
