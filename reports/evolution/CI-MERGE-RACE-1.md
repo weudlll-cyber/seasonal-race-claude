@@ -121,6 +121,19 @@ The rest of that report stands; this corrects one inference drawn from a single 
 **No guard, script, workflow, default or document outside these two was touched.** No scratch file
 entered the repository.
 
+## CHECKS
+
+- **`npm run verify`** — `PASS 6  FAIL 0  SKIP 21`, 2.9 s wall clock.
+- **The script suite as CI runs it** (`find scripts -name '*.test.mjs'`, `node --test`), with the git
+  identity suppressed so it matches a runner — **532 tests, 532 pass, 0 fail**. Run because this
+  piece read a guard CI executes unconditionally, even though it changed none of it.
+- **The client suite** — **241 files, 4,476 tests, 0 failures.**
+
+## THE MERGE, AND ITS PUSH RUN
+
+This piece's own merge was performed with **the sweep chained to the push** — the practice that
+carried the other 27 — rather than under a new ordering, because no new ordering was built.
+
 ## FINGERPRINTS
 
 `node scripts/engine-reach.mjs --check` on the changed paths, **verbatim**:
