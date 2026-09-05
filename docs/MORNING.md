@@ -3,207 +3,134 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-05, during the night chain of 2026-09-04. Branch `night/2026-09-04` off
-master `6953722d`, pushed, **not merged — the merges are yours to decide from this sheet.**
+**Last rewritten:** 2026-09-05 by LEFTOVERS-1, covering everything since the night chain of
+2026-09-04. **Master is `fe50e8f7` and CI is GREEN on it.** Origin holds one head, `master`.
 
-**NOTHING IN THIS CHAIN MOVED THE PICTURE, A DEFAULT, A THRESHOLD OR A SHIPPED VALUE. NO FINGERPRINT
-WAS MINTED.** All four — world, world-off, camera and render — were re-computed on the changed tree
-and every one matches its recorded value in [fingerprints.json](fingerprints.json). *(The values are
-not restated here; that record is their one home.)*
+**NOTHING SINCE THE NIGHT CHAIN HAS MOVED THE PICTURE, A DEFAULT, A THRESHOLD OR A SHIPPED VALUE. NO
+FINGERPRINT HAS BEEN MINTED.** Every piece below is tooling, measurement logic or documentation.
 
-**`npm run verify` on this branch: PASS 15, FAIL 0, SKIP 11** — 452 s wall clock, client suite
-green alone in 311.6 s, retry ledger disabled (no test was retried).
+**★ THE ONE THING TO KNOW FIRST: CI WAS RED ON MASTER FOR THREE DAYS AND 24 PUSH RUNS, AND IT IS
+FIXED.** Not by anything you did — by a test that read the developer's git identity. Details in DONE.
 
 ---
 
 ## DONE
 
-**E · A sweep that measures nothing no longer exits clean** —
-[SILENT-ZERO-TRACKS-1](../reports/night/SILENT-ZERO-TRACKS-1.md).
-★ **The harness did not merely report zero — it printed `PASS`.** Measured by removing the new guard
-and re-running the incident: exit 0, 43 s, *"Every frame of every race swept satisfied all five
-invariants. PASS"*, over zero races. ★ **And the fix already existed here and never travelled** —
-`company-spread-sweep.mjs:160` has the same guard, written after its own silent zero. Two checks now
-refuse before the 72 s client build. **28 other `--tracks` entry points are named and left alone**;
-`sim-fairness.mjs` has a third variant, a silent DEFAULT rather than a zero. Not wired into CI,
-verify or a hook.
+**★ CI was red on master from 2026-09-02 to 2026-09-05 — one cause, now fixed** —
+CI-RED-3e6c0b87 *(that piece reported in the session and filed no report of its own; its findings
+are re-established and superseded where they were wrong by
+[CI-MERGE-RACE-1](../reports/evolution/CI-MERGE-RACE-1.md))*.
+Last green push run: `1640fbdf` at 21:47 on 2026-09-02. First red: `f6e98767`, **twelve minutes
+later** — the merge that added the first of two Rule B tests. **24 consecutive red push runs, same
+job, same step, same two assertions.** `git commit-tree` refuses without an author identity; a
+developer machine has one globally and a GitHub runner has none, so the tests were green for whoever
+wrote them and red on every runner. The identity now travels with the test. **No guard disabled, no
+exception, no allowlist widened.** Proved both ways with the identity suppressed: before, exactly the
+two CI failures; after, 532/532.
 
-**G · The render fingerprint's blind spot — guard only** —
-[RENDER-CAMERA-GAP-1](../reports/night/RENDER-CAMERA-GAP-1.md).
-★ **The backlog says three fields; the tree says the blindness costs TWO.** `anchorRacerIndex` and
-`runInArrived` are both label behaviours the instrument draws wrongly; `camera.state` is no longer
-read by live code and survives only in the comment recording its removal. **The repair is NOT done —
-it moves the render hash and is yours to order.** A test now pins exactly which members are missing,
-so the gap cannot widen silently. Sabotage 3/3.
+**The ship gate is wired into `verify`, and the sheet now tells an accepted failure from a defect** —
+[GATE-WIRED-AND-CAUSED-1](../reports/evolution/GATE-WIRED-AND-CAUSED-1.md).
+`viewer-invariants.mjs` declared its routing to **nobody** — it matched no pattern in the collector,
+so it was wired to no verify run, no CI job, no hook, no npm script. It now runs from
+**`npm run verify -- --premerge`**, selected only when the flag is given **and** a declared path
+changed, with the skip line naming whichever condition failed. **Measured: 337–369 s for two races,
+running alone.** And `endgame-sheet.mjs` now computes the accepted cause **from the crossing frame** —
+no track name, no seed, no list — printing **`ACC`** where the closing zoom had not arrived and
+**`FAIL`** for anything else, on items 2 and 9. **Item 10 deliberately keeps a plain FAIL**, and a
+test enforces it: its supposed acceptance was a sentence stripped of its attribution.
 
-**H · The harness ceiling and the hardcoded lap count** —
-[HARNESS-CEILING-LAPS-1](../reports/night/HARNESS-CEILING-LAPS-1.md).
-★ **The track records already say how many laps they run** (`defaultLaps`, 2 on all five closed
-tracks) — the driver was ignoring the data, not filling a gap in it. Measured: **0 of 10 tracks
-exceed the 200 s ceiling**, longest dirt-oval at 93.1 s. The driver now reads the record and throws
-rather than substituting; a truncated race throws rather than being returned as a race. **The ceiling
-is NOT raised** — that is your decision; making it audible was not. Sabotage 4/4 with two controls.
+**The gate CHOOSES two tracks — it excludes nothing** (same report). `GATE_TRACKS` names
+space-sprint and city-circuit; the harness keeps the geometries on that list. **There is no exclusion
+list, no exception mechanism and no skip anywhere in that file.** Six sites that gave three tracks a
+standing of their own are rewritten. Which tracks the gate runs did not change.
 
-**J · Why `date-fns` is in the image** — [IMAGE-DATE-FNS-1](../reports/night/IMAGE-DATE-FNS-1.md).
-27.1 MB measured **inside the image**, 42% of its dependencies, pulled by
-`better-sqlite3-session-store`. ★ **The package that declares it never imports it** — its only
-mentions are its own `package.json` and its TEST file, and nothing else in the image imports it
-either. **Not removed** — see NEEDS HIS WORD.
+**Item 7 was failing on a grading artefact, not a picture defect** —
+[ITEM7-MEMBERSHIP-1](../reports/evolution/ITEM7-MEMBERSHIP-1.md).
+It graded `_abreastContenders`, whose fallback to the top two is a framing device and says nothing
+about who can win. **It was never specific to dirt-oval** — the same artefact failed 10 races of 80
+across four tracks. Item 7 now grades the racers who can still win and reads **0 of 80**.
 
-**K · Three document corrections** —
-[BACKLOG-CORRECTIONS-2026-09-04](../reports/night/BACKLOG-CORRECTIONS-2026-09-04.md).
-Player Group Selection was unbuilt on 2026-09-02 and **shipped on 2026-09-03**; verified at source
-and moved to PART TWO. Gate item 2's doubling now stated plainly in the `GATE_TRACKS` comment — **and
-it is now two of the three tracks that fail something at seed 9, not one**. Which tracks the gate
-runs was not changed. *(Wording corrected 2026-09-05, GATE-WIRED-AND-CAUSED-1: this line read "two of
-the three excluded tracks". There is no exclusion — `GATE_TRACKS` NAMES the two the gate runs, and
-eight are simply not named.)*
+**The battle sentence goes back to being a measurement** —
+[ACCEPTED-FINISH-ATTRIBUTION-1](../reports/evolution/ACCEPTED-FINISH-ATTRIBUTION-1.md).
+A second acceptance had been attributed to you — *"a battle shot may take the frame near the finish"*
+— and you said that wording is not yours. It is a **measurement**, attributed to nobody. Behaviour
+(i) is untouched. Recorded with it: **D27–D30**.
 
-**I · What a one-command deploy actually needs** — [DEPLOY-NOTES.md](DEPLOY-NOTES.md). Nothing built,
-nothing recommended. See NEEDS HIS WORD.
+**Ten open items checked against the tree; one was already built** —
+[OPEN-LIST-TRUTH-1](../reports/evolution/OPEN-LIST-TRUTH-1.md).
+★ **Your closing-phase instruction of 2026-08-24 is IN THE TREE.** `CameraDirector.js:1663` forces
+`LEADER_ZOOM` past the endgame threshold, bypassing the cooldown, with `LEAD_CHANGE` the only
+exception — closed as **D32**. It lands at the running shot's next decision point, and its boundary
+is the endgame threshold while the run-in begins composing earlier, which is why four different
+phases were seen at the cut. The render-fingerprint count two records disagreed on is settled:
+**three declared fields absent, two behaviours blind.** **D33** records three decisions of 2026-09-05.
 
-**C · A test that mounts `RaceScreen`** — [RACESCREEN-MOUNT-1](../reports/night/RACESCREEN-MOUNT-1.md).
-It mounts, and the real camera director initialises in it. ★ **It supersedes D2, which is not
-withdrawn** — you closed the question of whether to act; the chain re-opened it because the dial is
-about to be built here. No production code changed. Sabotage 3/3. ★ **But the sabotage the chain
-named is STILL GREEN** — blanking every track background passes 405 tests, and cannot be caught by a
-mount test; the backlog item is corrected rather than struck.
+**The merge race was investigated and NOTHING was built** —
+[CI-MERGE-RACE-1](../reports/evolution/CI-MERGE-RACE-1.md).
+The claim was "every merge has this window". **It is 1 merge in 28.** The window is real and measured
+at ~13 s, and the single failure is the one merge whose sweep was delayed past it. The piece's own
+gate stopped it before any change — a fix for a race that does not happen is worse than the mails.
 
-**F · Characterisation tests for `sim-fairness.mjs`** — [SIM-FAIRNESS-PIN-1](../reports/night/SIM-FAIRNESS-PIN-1.md).
-12 tests, file untouched. ★ **`runSingleRace` is EXPORTED and the sweep sits behind `isMain`** — two
-facts the backlog does not carry, and they are what made this possible without editing the file. A
-physics constant sabotage was caught by the golden; a tie-break one was not, correctly, because the
-branch is unreachable. World fingerprint unmoved.
+**The ceremony now says what already works** — `docs/SHIP-CEREMONY.md` step 12. Followed in list
+order the ceremony **could not** produce a green push run: CI reaches Rule B ~13 s after the push
+while step 10 waits minutes. Step 12's wording now says the sweep happens **immediately after the
+push in step 9**. Nothing moved, nothing renumbered — the numbers are load-bearing in five
+`check-tags.mjs` sites.
 
-**B · What the closing phase interrupts** — [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md).
-**Ten tracks, seed 9, in the real browser on the production build.** The feasibility gate passed —
-the closing phase's start IS observable from an existing instrument (the first frame with the
-director's `_runInComposingNow`, dumped as `comp`), so none was built.
-★ **FOUR different phases are caught at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
-`BATTLE_ZOOM` 1. There is no "it mostly interrupts X". A median **2,492 ms — 59% of the phase — is
-still ahead**, with only 35% of its zoom travel done; and the zoom is caught EARLIER than the pan in ALL TEN, so **the cut removes the glide**, which is exactly what this project's standing warning
-about big zoom changes says not to do. ★ **It was never "doing nothing anyway": 0 of 10** — the cheap
-version of this change is not available. ★ **And one case collides with your own acceptance — see question 4.** One seed only; the report says what that cannot support.
-
-**A · What each action lever actually does** — [ACTION-LEVERS-1](../reports/night/ACTION-LEVERS-1.md).
-**COMPLETE: 290 cells, 0 failures — all 14 candidate levers on all ten tracks at N = 30 races**, one
-lever at a time, everything else shipped. It finished after the rest of the chain did.
-
-**Every row below is 10/10 tracks. The sign test is across the ten tracks; 10/0 or 0/10 is p = 0.002.**
-
-| lever | lead changes | held top-5 passes | leader's longest hold | field spread | finish gap |
-| --- | --- | --- | --- | --- | --- |
-| `pulkLeaderBrake` 0.05 → 0.15 | −37% → **+31%** | −38% → **+12%** | +55% → **−33%** | *nothing* | *nothing* |
-| `pulkChallengerBoost` 0.03 → 0.12 | −10% → **+17%** | −9% → **+12%** | +8% → **−16%** | *nothing* | *nothing* |
-| `pulkBoostHeadroom` 0 → 0.2 | **−9%** → INERT | **−15%** → INERT | **+13%** → INERT | *nothing* | *nothing* |
-| `pulkLeadRotationAttackerSlots` 1 → 3 | **−8%** → INERT | **−8%** → INERT | *nothing* | *nothing* | *nothing* |
-| `chaosSteerGain` 0.03 → 0.12 | **+7%** → −2% | *nothing* | −4% → *nothing* | *nothing* | *nothing* |
-| `b2AttackHeroes` 0 → 6 | *nothing* | +3% → **−5%** | **−8%** → +4% | +9% → **−8%** | *nothing* |
-| `pulkEnvelopeMaxEffect` 0.06 → 0.24 | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
-| `choreoIntensity` 0.3 → 0.9 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
-| `pulkFrontPool` · `pulkBiasGain` · `pulkLeadRotationDropDepthLengths` · `pulkLeadRotationOutsiderMaxReachLengths` · `gapRerollStrength` · `gapRerollThresholdLengths` | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
-
-★ **THE SHIPPED DIAL'S TWO KEYS MOVE THE FRONT FIGHT AND LEAVE THE FIELD SPACING AND THE FINISH
-ALONE.** Neither moves how close the field runs, and neither moves the leader's gap at the line.
-`pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it does move.
-
-★ **EVERY CAP IN THE PULK MECHANISM IS SLACK — three raised arms give a BIT-IDENTICAL race on all ten
-tracks.** The realism envelope (both directions), the boost headroom raised, and the attacker slots
-raised: same finishing order in all 300 races of each. **The game never reaches its own ceilings, so
-those keys can only be turned DOWN — a dial built on them would have a dead half.** The attacker-slot
-result also confirms by measurement the `[1, 2]` clamp found at source: 3 becomes 2, so nothing moves.
-
-★ **AND `choreoIntensity` — which `defaults.js` itself calls "the future Action-slider backing" —
-MOVES NOTHING.** It changes the race on all ten tracks in both directions and moves not one of the
-five quantities readably. **If the dial was going to be built on that key, this says it cannot be.**
-
-★ **Two levers run BACKWARDS from their names.** LESS `chaosSteerGain` gives MORE lead changes
-(+7%, 10/0) and MORE gives slightly fewer. MORE `b2AttackHeroes` gives FEWER held passes (−5%) and a
-TIGHTER front group (−8%) — though on a different window from the OUTCOME one that key was shipped
-on, so it is a new fact beside the old claim rather than against it.
-
-## OPEN
-
-**Two of the twelve pieces were not reached.** The machine is a two-P-core laptop and the three
-browser sweeps cannot overlap; A alone was a four-hour run and B another hour and a half.
-
-- **L · does the camera's guess match the plan's beats** — not started. Its source half was
-  established, though: `racePlanner.js` hands the authored plan to `comebackDetector.setPlan`, and
-  the piece's question is whether the camera's own guess lands where the plan wrote the beat.
-- **D · the item-7 gap** — not started. The chain's own fall order puts it last of the sweeps, and
-  it is the cheapest of the three to run: it re-reads the 80-race set ITEM7-MEMBERSHIP-1 already has.
-
-**Also open, and cheaper than either:** piece B ran **one seed**, not the four asked for. Its report
-argues that adding seeds matters more than adding tracks, because which camera phase is running at
-progress 0.93 is a per-RACE question.
-
-## NEEDS HIS WORD
-
-1. ~~**Does the acceptance of 2026-09-04 reach gate item 2?**~~ (piece K2) **ANSWERED 2026-09-05: it
-   does.** Item 2 and item 9 measure the same behaviour under different names — a closing zoom that
-   has not arrived at the crossing. Your acceptance of 2026-09-04 named item 9; you extended it to
-   item 2 the next day, and `scripts/endgame-sheet.mjs` now tells that cause from any other one
-   itself (PART TWO D27, GATE-WIRED-AND-CAUSED-1). **luger-hill and dirt-oval fail item 2 ALONE at
-   seed 9, and both of those failures carry the accepted cause.** Which tracks the gate runs was not
-   changed. *(Wording corrected 2026-09-05: this item said the two tracks were "excluded from the
-   gate" and that "both exclusions lose their last reason". There is no exclusion mechanism —
-   `GATE_TRACKS` names the two tracks the gate runs and eight are simply not named. The measured
-   facts are unchanged.)*
-
-2. ~~**Is 27 MB worth it?**~~ **ANSWERED 2026-09-05 — `date-fns` STAYS, PART TWO D29.** (piece J)
-   Nothing in the image loads `date-fns`. The three clean ways to
-   remove it are the ones the chain forbade — an `overrides` entry, dropping the session store, a
-   version bump — and the only remaining route, deleting the directory in the Dockerfile, would leave
-   the image's tree disagreeing with its own manifest. That is the anonymous-volume defect one layer
-   over, so it was **not** taken unasked.
-
-3. **What should the deployed client's API address BE?** (piece I) This is the one thing standing
-   between here and a one-command deploy, and it is a design question, not a configuration.
-   `client/src/services/api.js:16-18` bakes `VITE_API_URL` in at **build** time with the fallback
-   `http://localhost:4000`, and there is no `.env` anywhere in the tree. **Measured inside the image:
-   its baked bundle carries exactly one occurrence of `localhost:4000` — that fallback.** So a
-   visitor loading the app from a public origin sends every API call to *their own machine*, and the
-   image is origin-specific: there is no one image and therefore no one command. Three options are
-   laid out in [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §2 and none is chosen.
-
-4. **Does the closing phase end a BATTLE SHOT too?** (piece B) Your instruction of 2026-08-24 is that
-   at the start of the closing phase whatever camera phase is running must be ended. On city-circuit —
-   one of the two SHIP-gate tracks — the phase running at that moment is a **BATTLE_ZOOM with 98% of
-   it still to come**, and your acceptance of 2026-09-04 protects exactly that shot: behaviour (ii),
-   *"a battle shot may take the frame near the finish"*. **The two were given about different things,
-   five weeks apart, and neither says which wins.** Building the cut as instructed would silently
-   reverse an accepted behaviour on at least one track. Nothing was built and nothing is proposed.
-
-5. **The deploy decisions that are not code:** a domain, which reverse proxy terminates TLS, and
-   where the data lives. **The server has no TLS at all** — searched for, not assumed — and that is a
-   design decision rather than an omission: it sets `trust proxy` and issues `__Host-` Secure
-   cookies, expecting a terminator in front.
+**Everything the recent runs named and left is cleared** —
+[LEFTOVERS-1](../reports/evolution/LEFTOVERS-1.md). Twelve stale code addresses in `docs/`, the two
+remaining ship-order drifts, the two-lists-both-reach-12 trap, the `workflow_dispatch` caveat, the
+three gaps between a green branch and a green CI, and the open list below.
 
 ---
 
-## A discrepancy in the chain's own ordering, recorded rather than guessed at
+## RUNNING
 
-The header says the sweeps run "A, B, D, L — in that order". The per-piece annotations say A · start
-first, B · second, **L · third**, D · fourth. The two disagree on D and L. The per-piece ordinals are
-the more specific instruction, so the intended run order is **A, B, L, D**. Only B was reachable
-tonight, so the disagreement cost nothing.
+**Nothing.** No sweep, no measurement and no branch is in flight. Origin holds `master` alone.
 
-## Two things found at source before any measurement
+---
 
-**1. THE ACTION DIAL IS NOT UNBUILT.** `client/src/modules/storage/defaults.js` exports
-`RACE_ACTION_STAGES` — a three-position selector (`quiet` / `medium` / `wild`) applied by
-`client/src/modules/raceActionStage.js`, judged on a production build and accepted **2026-08-24**. It
-maps onto exactly **two** keys: `pulkChallengerBoost` and `pulkLeaderBrake`. So piece A's question is
-not "what should a dial map onto" from nothing — it is "are those the right two, and what do the
-other twelve candidates do". The answer is in the piece-A block above, and in its report.
+## OPEN
 
-**2. `contestWindowStart` IS NOT AN ACTION LEVER and is excluded from piece A with reason.** It sets
-`plan._contestWindowStart` (`client/src/modules/racePlanner.js:401`), which only
-`scripts/sim/observers/outcome-front-battle.mjs` reads. No engine path reads it: moving it moves the
-MEASUREMENT WINDOW, not the race. `docs/SWEEP-HARNESS.md:167` already says so. Sweeping it would have
-produced a table of a ruler measuring itself.
+**Checked against the tree on 2026-09-05 before being listed. The full version with source addresses
+is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.**
 
-## What stands from the previous sheet
+- **Cancel Race** — not in the client at all. The fullscreen half of PR-G is wired.
+- **TLH-3** — `defaultTracks.js` does not exist; no status banner. Deferred by its own entry.
+- **A short race identifier to replace the seed** — your decision of 2026-09-05 (**D33**). The seed
+  fixes the plan but not the world; config is read from the host's storage at race start, so one seed
+  on two machines is two races. **Not designed.**
+- **The comeback BEATS reaching the camera** — night **piece L**, not reached. **D33: measure first.**
+  The detector keeps `role === 'comebacker'` and drops the beats.
+- **The render fingerprint's blind spot** — **D33: into a night run.** Three declared fields absent,
+  two behaviours blind.
+- **The missing `routing.mjs` guard** — nothing checks that a guard's dynamic-import literals are
+  inside its own resolved set. The property holds **by inspection, not by construction**.
+- **`lint` and `format:check` are not in `verify`** — it runs the formatter, not a check. CI runs
+  all three; `verify` runs none of them.
+- **Deployment** — see NEEDS HIS WORD.
 
-The hygiene phase is closed; the durable version is
-[BACKLOG.md → THE HYGIENE PHASE IS CLOSED](BACKLOG.md).
+**Not on this list, because the tree says they are done:** piece **D** (the item-7 gap) — closed by
+ITEM7-MEMBERSHIP-1, item 7 reads 0 of 80. The **closing-phase cut** — already built, D32. The
+**deployed client's API address** — decided, D30 chose runtime resolution; the *build* is part of
+deployment below.
+
+---
+
+## NEEDS HIS WORD
+
+**One item. The other four that stood here have been answered.**
+
+1. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**
+   **The server has no TLS at all** — searched for, not assumed — and that is a design decision
+   rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
+   terminator in front. **D30 already chose HOW the client finds the API** (resolve at start time,
+   so one image works at any address) **and that change is not built** — it is its own block, and it
+   waits on these three answers.
+
+**Answered since this sheet was last written, and struck for that reason:**
+~~Does the acceptance reach gate item 2?~~ **D27 — yes**, and the sheet now says so itself.
+~~Is 27 MB of `date-fns` worth it?~~ **D29 — it stays.**
+~~What should the deployed client's API address be?~~ **D30 — resolved at start time.**
+~~Does the closing phase end a battle shot too?~~ **D28 — yes**, and the premise it rested on was
+withdrawn; the cut itself turned out to be **already in the tree** (D32).

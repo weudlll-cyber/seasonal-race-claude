@@ -288,6 +288,19 @@ used.
 
 ### The steps
 
+> **★ THIS DOCUMENT HOLDS TWO INDEPENDENT NUMBERED LISTS, AND THEY BOTH RUN TO 12.** Recorded
+> 2026-09-05 (LEFTOVERS-1) because it is invisible until it costs somebody an hour. **THE SHIP
+> ORDER** is the list immediately below — 1 to 13, the git sequence of a merge. **The checklist** is
+> a different list further down, and its own step 12 is *"Commit, push, verify"*, not this one's
+> *"Clear the branches AT ORIGIN"*.
+>
+> **EVERY "step N" REFERENCE ANYWHERE IN THIS REPOSITORY MEANS THE SHIP ORDER — the list below.**
+> That includes the five in `scripts/check-tags.mjs`, one of them in the failure message an operator
+> reads, and the references in `docs/TAGS.md` and `docs/BACKLOG.md`. **These numbers are therefore
+> load-bearing: do not renumber this list, and do not reorder it into a renumber.** A reorder that
+> looked obvious was examined on 2026-09-05 and refused for exactly this reason; the sweep's timing
+> was fixed in step 12's own wording instead, which cost no number.
+
 1. **Catch up with master.** `git merge --no-ff master` on the branch, resolve, and run
    `npm run verify` green on the result. From here the branch tip's tree is the post-merge tree.
 2. **Read what the merge puts on master** — the `git diff --name-only master...<branch>` check above.
@@ -383,6 +396,27 @@ untidiness.** `feat/leader-whole-setback-1` was the only home of a 195-line repo
 master's own index carried a line saying where to go and look — a repository that has to point
 outside itself for its own evidence. Deleting that branch on the wrong day would have destroyed it.
 
+### A GREEN `verify` ON THE BRANCH DOES NOT PREDICT A GREEN CI ON MASTER
+
+**Three gaps, all verified at source on 2026-09-05 (LEFTOVERS-1). Recorded because master was red
+for three days and 24 push runs while every one of those merges had run `verify` green first.**
+Nothing is proposed here; this is what the two commands are, so the difference is not rediscovered.
+
+1. **`verify` ROUTES BY DIFF; CI'S DOCS JOB DOES NOT.** `verify` selects guards from what the branch
+   changed. The `Living-doc guards + script tests` job in `.github/workflows/ci.yml` carries
+   **zero `if:` conditions** — counted, not assumed — so it runs eleven `check-*` guards **and the
+   whole script suite** on every push regardless of the diff. Any guard `verify` skips locally can
+   be red in CI.
+2. **`verify` RUNS NO `lint` AND NO `format:check`.** It runs `npm run format` (`scripts/verify.mjs`,
+   the `format:` step) — **the formatter, which writes; not a check, which fails.** CI runs
+   `npm run lint` (`ci.yml:115`), `npm run format:check` (`:119`) and `npm run test:coverage`
+   (`:125`). None of those three has any counterpart in `verify`.
+3. **THE ENVIRONMENT DIFFERS, AND THAT IS WHAT THE THREE DAYS COST.** The failure was
+   `git commit-tree` refusing with *"Author identity unknown"* — a developer machine has a global
+   git identity and a GitHub runner has none. The tests ran locally, passed locally, and could not
+   pass on any runner. **No amount of routing would have caught it**, which is why this gap is
+   listed separately from the first two.
+
 ### THE CONTAINMENT CHECK — a TREE question, not a COMMIT question
 
 **Get this wrong and the check reports "safe to delete" for a branch holding a file master lacks.**
@@ -467,6 +501,17 @@ worked on 2026-08-22 (run `32262308114`, head `242e6cb3`) and is the reason `ci.
 `workflow_dispatch` trigger — it takes a ref, and a tag is a ref that can only mean one commit.
 **`--ref <sha>` is not a substitute: the dispatch API takes a branch or tag, not an arbitrary SHA.**
 
+**★ AND `workflow_dispatch` AT A *BRANCH* IS NOT A PRE-MERGE CI PROXY. Established 2026-09-05
+(CI-RED-3e6c0b87), after it cost an hour.** Dispatching the workflow at an unmerged branch to "see
+whether CI would pass" produces a red run that means nothing: a dispatched branch checkout has **no
+local `master` ref**, and two script tests need one. `scripts/check-tags.test.mjs` dies on
+`git rev-parse master` — *"fatal: ambiguous argument 'master': unknown revision"* — and
+`scripts/engine-reach.test.mjs` fails *"an honest negative must stay exit 1"* with exit 2, because
+the check refuses rather than answering without a base. **Neither is a defect, and neither tells you
+anything about the merge.** The dispatch route above is for a TAG, which resolves to the merge
+commit; there is no branch equivalent. If you want CI's answer for work that is not yet on master,
+the answer is that you get it after the merge — which is what steps 9 and 10 are for.
+
 ### TRAP B — A `MEASURED:` STAMP CANNOT CARRY A PLACEHOLDER
 
 **Found in the same ship, and it cost more than TRAP A because it failed in the wrong place.** The
@@ -529,14 +574,14 @@ a temporary one in a branch nobody has merged is the whole of what this reorderi
 **A commit cannot name its own hash.** The register line's SHA and `mintedOn` both want the merge
 commit's hash, and neither can have it until that commit exists. So step 5 writes them provisionally
 — the branch tip's short SHA is the honest provisional value, because it is the commit the tree
-actually came from — and step 9 corrects them. **A `MEASURED:` stamp is NOT one of these** — it names the commit that last changed its
+actually came from — and step 11 corrects them. **A `MEASURED:` stamp is NOT one of these** — it names the commit that last changed its
 `depends=` paths, which already exists, so it is written once and corrected never. This
 paragraph said the opposite until 2026-08-22 and TRAP B above is what that cost.
 
 **This costs nothing that matters, and it is measured rather than assumed:** `check-tags` declares in
 its own header that it checks **names, not shas** ("whether a tag points where the register SAYS it
 points — names are checked, not shas"). So the merge commit passes the guard with a provisional SHA,
-which is the whole point of the reordering; the correction in step 9 is for the human reader.
+which is the whole point of the reordering; the correction in step 11 is for the human reader.
 
 **It is also the pattern this repository already uses** for the `MEASURED:` stamps, where a commit
 that carries a measurement cannot name the commit the measurement was taken on until it exists —
@@ -560,6 +605,11 @@ checkout of one of those four tags shows the inconsistency.
 ---
 
 ## The checklist
+
+> **★ THIS IS THE SECOND OF THIS DOCUMENT'S TWO NUMBERED LISTS, and its numbers are its own.** A
+> "step 12" cited anywhere in the repository means THE SHIP ORDER's step 12 — clear the branches at
+> origin — not this list's. The full note, and why those numbers must not be renumbered, is at
+> [THE SHIP ORDER § The steps](#the-steps); it is not restated here.
 
 Work top to bottom. Steps that are marked **ONE step** are a single unit of work with two artefacts —
 never do one artefact and defer the other (that is exactly how the INDEX entry and the tag register

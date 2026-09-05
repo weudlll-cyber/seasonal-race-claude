@@ -197,7 +197,7 @@ line numbers are the address; read the value there.
 
 ### The two surfaces, with addresses
 
-- **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx:930` renders the **Race Settings**
+- **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx:1074` renders the **Race Settings**
   panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
   and carries THREE controls today — Race Duration, Number of Winners, and an optional Event Name.**
   This is the surface the requirement names, and it is nearly empty, which is the useful part of
@@ -367,6 +367,26 @@ these carries a recommendation.**
 
 ---
 
+## ★ WHAT IS ACTUALLY OPEN — the whole list, 2026-09-05 (LEFTOVERS-1)
+
+**Assembled so the next reader does not rebuild it from conversation.** Every entry was checked
+against the tree on 2026-09-05 before it was listed; anything already done is not here. **This list
+is complete as of that date and nothing else belongs on it.** Detail lives in the entries below and
+in the reports named; this is the map, not a second home.
+
+| what | where it stands, at source |
+| --- | --- |
+| **Cancel Race** — the open half of PR-G | Not in the client at all: no `cancelRace` and no such control under `client/src` or `server/src`. The other half is wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`. |
+| **TLH-3** — offline fallback + status banner | `client/src/modules/storage/defaultTracks.js` does not exist; no fallback-mode or status-banner code in `client/src`. Deferred by its own entry until after the Camera Phase. |
+| **A short race identifier to replace the seed** | **His decision, 2026-09-05 — PART TWO D33.** The seed fixes the plan (`SetupScreen.jsx:533`) but not the world: `RaceScreen/index.jsx:476` and `:483` gather config from the HOST'S storage at race start, so one seed on two machines is two races. **Not designed.** |
+| **The comeback BEATS reaching the camera** | **PART TWO D14, and D33 says MEASURE FIRST** — night piece L, not reached. `comebackDetector.js:64-75` keeps `role === 'comebacker'` and drops the `beats` array; nothing under `client/src/modules/camera/` reads a hero's beats. |
+| **The render fingerprint's blind spot** | **D33: into a night run.** `frameCameraInputs.js:39` declares five fields plus a method; `render-fingerprint.mjs:447-449` supplies three. **THREE fields absent, TWO behaviours blind** — `camera.state` is read by no live drawing code. |
+| **The missing `routing.mjs` guard** | `scripts/lib/routing.mjs:41-51` records it in the file itself: there is no `routing.test.mjs`, and nothing extracts a guard's `await import(u("…"))` literals to check they are inside its resolved set. The property holds **by inspection, not by construction**. |
+| **`lint` and `format:check` are not in `verify`** | `verify` runs `npm run format` — the formatter, not a check. `ci.yml:115`, `:119` and `:125` run `npm run lint`, `npm run format:check` and `npm run test:coverage`; none has a counterpart in `verify`. See SHIP-CEREMONY § *A green `verify` on the branch does not predict a green CI on master*. |
+| **Deployment — domain, TLS, where the data lives** | **Still his.** PART TWO D30 chose runtime resolution for the API address and states plainly: *"Still his, and not decided here: a domain, which reverse proxy terminates TLS, and where the data lives."* The server has no TLS and expects a terminator in front. |
+
+---
+
 ## THE REST — open, in the order they were already in
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
@@ -404,7 +424,7 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
       in the report.
 
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:273` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:155`, the driver's own test. Waiting on BUILDING.
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:414` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:157`, the driver's own test. Waiting on BUILDING.
 
       **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
       tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
@@ -1059,7 +1079,7 @@ verified against `git log` / `git tag`.
 
 - **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:166`) still produces one `realizedIntensity` for the whole cast at `:541`. Waiting on the eye-test the entry itself asks for before building.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:166`) still produces one `realizedIntensity` for the whole cast at `:533`. Waiting on the eye-test the entry itself asks for before building.
 
 - **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest. **AND SO DOES THE OPEN POINT IT NOW CARRIES (PART TWO D14):** the beats a faller shot would need are delivered to the director and discarded by `comebackDetector.setPlan` along with everybody else's.
 
@@ -1117,7 +1137,7 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 
 Approach: PR-A1 → PR-A2-Diagnose → PR-A2 → PR-A3 → Phase 4 → PR-B → PR-C → PR-D → PR-E → PR-F → PR-G.
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1717-1719`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (PR-G, the one open remainder):** half of it has landed and half has not. `requestFullscreen`/`exitFullscreen` are wired at `client/src/screens/RaceScreen/index.jsx:1763` and `:1765`; **Cancel Race is not in the client at all** — no `cancelRace` and no such control. Waiting on the Cancel Race half.
 
 ---
 
@@ -1654,7 +1674,7 @@ already-settled questions.
 
 - **V-9** — Fullscreen toggle — functionally unverified
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired at `RaceScreen/index.jsx:1717-1719`, so what is unverified is the behaviour, not the existence.)*
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (V-6 through V-9, all four):** each is a manual verification that nobody has performed, and none can be established mechanically. Waiting on a verification sprint (Phase V). *(V-9 is narrower than it reads: `requestFullscreen`/`exitFullscreen` ARE wired at `RaceScreen/index.jsx:1763` and `:1765`, so what is unverified is the behaviour, not the existence.)*
 
 ### Phase T (Tooltip Retrofit)
 
@@ -2213,7 +2233,7 @@ his eye afterwards.**
 
 The generator authors each hero with a ROLE **and BEATS** — `anchor`, `peak`, `resolve`
 (`client/src/modules/heroCurveGenerator.js`, `buildCameraPlan`). The **full** `cameraPlan` IS
-delivered to the director: `client/src/screens/RaceScreen/index.jsx:1002` calls
+delivered to the director: `client/src/screens/RaceScreen/index.jsx:1012` calls
 `CameraDirector.setCameraPlan(cp)` once the heroes are cast mid-race. But
 `client/src/modules/camera/comebackDetector.js` (`setPlan`) reads **only** `role === 'comebacker'`
 and keeps the indices — **the beats are discarded on arrival.**
@@ -2906,7 +2926,7 @@ lines and no rewrite is implied, proposed or wanted.
       n=65 context), and the defect was that nothing said so where the numbers are read.
 
 - [x] **DONE — `check-index` now passes BOTH directions** (verified 2026-08-22 by
-      OPEN-ITEMS-2026-08-22 against the source, not the report). `scripts/check-index.mjs:18` states
+      OPEN-ITEMS-2026-08-22 against the source, not the report). `scripts/check-index.mjs:11-12` states
       it, and its run line reports dangling links as well as unindexed reports. The text below is
       kept because its REASONING — a partial guard is indistinguishable from a complete one while
       everything is clean — is the general rule, and it is why the fix was worth making.
@@ -3045,7 +3065,7 @@ lines and no rewrite is implied, proposed or wanted.
 
 - **B2-attacker "Attack & Fall" heroes — front-action feature** ✅ **SHIPPED ON (`v-b2-heroes-complete` = master `8bf54ca`, 2026-07-20)** — extra choreographed heroes cast from FRONT-post-chaos B2-finishers (`heroCurveGenerator.js castHeroes` + `attackerTiming`, bypasses the 0.80 B2 resolve for role `attacker-b2`) that climb to ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release: the servo frees them the moment they re-enter B2 on the way down — `racePlanner.js` `atkParams` branch). **Shipped ON: `b2AttackHeroes=3`, `b2AttackPeakRank=5`, `b2AttackFinalRank=7`, `b2AttackBandArrival=true`** — the sim-validated winner: **+21% top-5 OUTCOME action** vs the no-attacker floor, with **B1/B2 band-reach ≥70% on all four tracks** and **Holm at the pre-existing 2/4 baseline** (no regression). count=0 restores the pre-feature game byte-identical. **New shipped-default fingerprint `72c3360fb75225ef`** (count=3); count=0 is still `4ec8e64dd2641ad3`. **3-phase validation** (exploration N=50 → count-confirm N=100 → hybrid N=100): finalRank (release height) is the action knob, NOT peak depth; count scales super-additively (1→+7%, 2→+10%, 3→+21%); band-arrival ties fixed-final on fairness and is simpler (no finalRank pinning). Web: DevScreen B2-count slider (PULK card) + hero-highlight rings (Camera Advanced). Tooling: `scripts/exp-b2-attack.mjs` (`--phase 1a/1b/holm3/2/fr/ba/uba`); reports in `exp-b2-attack-results/PHASE{1A,1B,2}-REPORT.md`. Owner eye-test PASS. Tests 3203/3203. _(Cleanup 2026-07-20: the `exp-b2-attack.mjs` driver was removed from tracking — recoverable at commit `c441e7c~1` (git history) — and the result tables were archived to `reports/exp-archive/exp-b2-attack-results/`. Investigation CLOSED; findings preserved.)_
 
-- **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:772); the stale "NOT committed to the feature branch" clause is gone.
+- **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:1395); the stale "NOT committed to the feature branch" clause is gone.
 
 - **Dead scaffold + N-mismatch bundle** (sim-fairness.mjs) — ✅ **DONE (2026-07-14 audit)** — `trackClosedSsf` no longer exists in scripts/sim-fairness.mjs (removed); `trackNaturalBase` is now `isOpen ? … : undefined` (open-only, line ~2644); and the `expectedMinSF` derivation uses the per-combo `nRacers` (line ~566), not the global `N_RACERS`.
 
@@ -4213,10 +4233,10 @@ behaviourally null, and left his edit intact, so the install is correct today ei
 
 ---
 
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`), the same commit that closed the item above it — the backlog simply never heard. Verified at source: `scripts/verify.mjs:250-272` carries the corrected comment and schedules on `exclusive: !shape.singleWorker` derived from `server/test/suiteShape.mjs`, and `.github/workflows/ci.yml:184-193` says the flag was removed and that CI schedules nothing. Neither file asserts `--no-file-parallelism` any more.
+**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — ALREADY DONE:** closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`), the same commit that closed the item above it — the backlog simply never heard. Verified at source: `scripts/verify.mjs:310-337` carries the corrected comment and schedules on `exclusive: !shape.singleWorker` derived from `server/test/suiteShape.mjs`, and `.github/workflows/ci.yml:184-193` says the flag was removed and that CI schedules nothing. Neither file asserts `--no-file-parallelism` any more.
 
 - [x] ~~**TWO FILES STILL DOCUMENT THE FLAG THAT COMMIT REMOVED, AND ONE OF THEM SCHEDULES ON IT.**~~ — **CLOSED 2026-09-03 (BACKLOG-CHECKBOXES-1): closed 2026-08-26 by GATE-SERIAL-BCRYPT-1 (`9089c479`). Re-checked at source 2026-09-03: `server/package.json`'s `test` is `vitest run` with no `--no-file-parallelism`, and both `scripts/verify.mjs` and `.github/workflows/ci.yml` carry corrected comments describing the removal.** *(The verdict below said ALREADY DONE on 2026-09-02 and the box never moved; closing it is mechanical, not a new judgement.)* 
-      `scripts/verify.mjs:246` and `.github/workflows/ci.yml:184` both assert
+      `scripts/verify.mjs:337` and `.github/workflows/ci.yml:184` both assert
       `--no-file-parallelism` is in the server package's `npm test`. It is not. `verify.mjs` then
       runs the server suite **non-exclusively, beside the fingerprint jobs**, on the ground that the
       suite is single-worker — which is why the GATE rather than the suite is where the red appears.

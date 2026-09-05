@@ -349,6 +349,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LEFTOVERS-1.md](LEFTOVERS-1.md) — **everything the recent runs named and left, cleared**
+  (2026-09-05; documents only — no behaviour, no threshold, no guard logic, nothing minted,
+  `engine-reach --check` selects nothing on all five changed paths). Eight items, all closed.
+  ★ **Every `client/src`/`scripts` citation in `docs/` was opened at its cited line and compared with
+  the claim it supports: 12 corrected, 1 left with its reason, the rest verified correct** — including
+  `verify.mjs:246`, which the GATE-WIRED-AND-CAUSED-1 work had turned into different code, and one
+  where the SYMBOL is gone rather than moved (`effectiveDriveMult` exists nowhere in the tree). Then
+  the two remaining ship-order drifts (the provisional-SHA correction is step 11, not 9); the
+  **two-lists-both-reach-12 trap** recorded once with a pointer, and why those numbers must never be
+  renumbered; **`workflow_dispatch` at a branch is not a pre-merge CI proxy** recorded in TRAP A; and
+  the **three gaps between a green branch and a green CI** — routing, no `lint`/`format:check`, and
+  the environment — each verified at source. ★ **`MORNING.md` rewritten whole, and the check against
+  the tree removed FOUR things still standing as open** (piece D, the closing-phase cut, the API
+  address, `date-fns`): NEEDS HIS WORD went from five items to one. The open list, eight entries with
+  source addresses, now lives in the backlog.
+
 - [CI-MERGE-RACE-1.md](CI-MERGE-RACE-1.md) — **the race is real, and it is NOT every merge, so
   nothing was built** (2026-09-05; one report and one index line — no guard, script, workflow,
   default or fingerprint touched). ★ **THE PIECE'S OWN GATE STOPPED IT.** Rule B failed on the push
