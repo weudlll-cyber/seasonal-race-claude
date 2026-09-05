@@ -291,6 +291,18 @@ never been seen, so there is nothing to assert about it. The measurement named b
 PHASE, WHATEVER CAMERA PHASE IS RUNNING MUST BE ENDED — whichever one it was.** No carrying the
 previous subject into the run-in.
 
+**★ AND A BATTLE SHOT IS NOT AN EXCEPTION — his decision of 2026-09-05, recorded as D28 below.**
+The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because CLOSING-CUT-1
+found one running at the cut on city-circuit, a SHIP-gate track, with 98% of it still to come, and at
+the time a battle shot near the finish was wrongly recorded as accepted behaviour — see
+ACCEPTED-FINISH-ATTRIBUTION-1, which corrected that attribution.
+
+**THE MEASURED FACT THAT GOES WITH IT** (CLOSING-CUT-1, ten tracks at seed 9, one race each): **four
+different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
+`BATTLE_ZOOM` 1, ten of ten — and **`PHOTO_FINISH` is not among them.** So the requirement covers a
+varied set rather than one special case. **BUILD NOTHING: the rebuild is its own block, and nothing
+in `CameraDirector.js` ends a running phase at that boundary today.**
+
 - [ ] **The requirement above is RECORDED, NOT BUILT, and this entry deliberately proposes nothing.**
       Under the project's own rule the visible consequence is measured before it is built, and the
       one thing nobody knows is exactly the visible consequence — see the last bullet.
@@ -2495,6 +2507,109 @@ than beside it, and it names the surfaces so that whoever does the move lands on
 after all. The reason to leave the wording alone is that nobody outside development will read it;
 if that stops being true, the reason stops holding and the wording question comes back — with the
 key names already available to whoever picks it up.
+
+
+### D27 · The acceptance of 2026-09-04 REACHES gate item 2 · 2026-09-05
+
+**His decision. Recorded in three places and ACTED ON IN NONE.**
+
+ACCEPTED-FINISH-1 reported this as an open question: item 2 measures behaviour (i) — the closing
+zoom not having arrived at the crossing — directly, while his acceptance named item 9. It was
+flagged and left to him. **He has now answered: the acceptance reaches item 2.**
+
+**What changes:** what a FAIL on item 2 MEANS. A fail whose cause is the closing zoom not yet
+arrived is not, by itself, evidence of a regression — the same standing item 9 has. A fail from any
+other cause is still a finding.
+
+**What does NOT change:** item 2's computation, its tolerance, and what it reports. Nothing was
+touched (`scripts/endgame-sheet.mjs`).
+
+**★ THE CONSEQUENCE, RECORDED AND NOT TAKEN.** luger-hill and dirt-oval are excluded from the SHIP
+gate on item 2 **alone**, at seed 9. With item 2 inside the acceptance, **both exclusions now rest
+entirely on accepted behaviour and neither hides a defect.** That is written into the `GATE_TRACKS`
+comment in `scripts/viewer-invariants.mjs`. **NO EXCLUSION WAS CHANGED**, and none may be changed on
+this decision alone — widening the gate is its own decision and has not been given. The reason
+already recorded there still stands: a gate that goes red on day one for accepted behaviour is a
+gate that gets ignored within a week.
+
+### D28 · The closing phase WILL end a `BATTLE_ZOOM` too · 2026-09-05
+
+**His decision, and it settles a collision rather than adding a rule.** His instruction of
+2026-08-24 — *at the start of the closing phase, whatever camera phase is running must be ended* —
+**applies to every phase running at that moment, with no exception for a battle shot.**
+
+**Why it needed saying.** CLOSING-CUT-1 (the night of 2026-09-04) measured what is actually running
+at that moment and found a `BATTLE_ZOOM` on city-circuit, a SHIP-gate track, with 98% of it still to
+come. That met the then-recorded claim that a battle shot near the finish was accepted behaviour, so
+the instruction and the acceptance appeared to point opposite ways. **Two things resolve it:** he has
+answered the collision here, and the acceptance claim itself was wrong — see the correction below.
+
+**THE MEASURED FACT THAT GOES WITH IT**, from CLOSING-CUT-1, ten tracks at seed 9, one race each:
+**four different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
+`BATTLE_ZOOM` 1, ten of ten races — and **`PHOTO_FINISH` is not among them.** So this decision covers
+a real and varied set, not one special case. *(That report is on the unmerged `night/2026-09-04`
+branch at the time of writing.)*
+
+**BUILD NOTHING. Nothing in `CameraDirector.js` ends a running phase at the closing boundary today**,
+and this decision does not build it — the rebuild is its own block. What is recorded is that the
+requirement admits no battle-shot exception.
+
+**Consistent with what the gate already assumes:** `scripts/viewer-invariants.mjs` already notes that
+the exemption for the group-framing states is about the EARLIER race, so a battle or comeback shot
+running after 95% falls under his rule like any other. That line needed no change.
+
+### D29 · `date-fns` STAYS — the 27.1 MB is accepted · 2026-09-05
+
+**His decision: leave it. Nothing is removed, no dependency is changed, no Dockerfile line is
+written.**
+
+IMAGE-DATE-FNS-1 (the night of 2026-09-04) established that `date-fns@2.16.1` is pulled by
+`better-sqlite3-session-store`, appears in no `package.json` in the tree, measures **27.1 MB inside
+the image — 42% of its dependency tree** — and that **the package which declares it never imports
+it**: its only mentions there are its own `package.json` and its test file, and nothing else in the
+image imports it either.
+
+**It was not removed then and it is not removed now.** The three clean routes each required something
+that was out of scope — an `overrides` entry, dropping the session store, or a version bump — and the
+only remaining route, deleting the directory in the Dockerfile, would leave the image's tree
+disagreeing with its own manifest. **That is the anonymous-volume defect one layer over**, and the
+trade was not worth taking unasked. **He has now made it a decision rather than an open question.**
+
+**WHAT WOULD REOPEN IT:** the session store gaining a real use for `date-fns`, or being replaced for
+an unrelated reason — at which point the weight goes with it and nobody needs to decide anything.
+
+### D30 · The deployed client's API address moves from BUILD time to START time · 2026-09-05
+
+**His decision on the one thing standing between this project and a one-command deploy. BUILD
+NOTHING — the change is its own block.**
+
+**The problem, measured rather than argued.** `client/src/services/api.js` resolves `API_BASE_URL`
+from `VITE_API_URL` **at build time**, falling back to a hard-coded localhost address, and there is
+no `.env` anywhere in the tree. Read inside the shipped image, the baked bundle carries exactly one
+occurrence of that fallback. **So a visitor loading the app from a public origin sends every API call
+to their own machine**, and the artefact is origin-specific: there is no one image, and therefore no
+one command.
+
+**His decision: resolve it at START time**, so one image works at any address without a rebuild.
+
+**WHICH OPTIONS THIS CLOSES.** DEPLOY-NOTES.md §2 laid out three and chose none:
+
+- **A · keep it** — one image per public origin, rebuilt per deployment. **CLOSED.**
+- **B · make the default RELATIVE** so every call is same-origin. **CLOSED** — it still decides the
+  address when the bundle is built, and it would need the dev server's split ports handled anyway.
+- **C · resolve it at RUNTIME** — the server injects its own origin into the served `index.html`, or
+  the client reads a small config endpoint. **CHOSEN.** It is the most work and the only one that
+  makes the image genuinely portable.
+
+**Still his, and not decided here:** a domain, which reverse proxy terminates TLS, and where the data
+lives. **The server has no TLS at all** — searched for, not assumed — and that is a design decision
+rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
+terminator in front.
+
+**⚠ WHERE THIS BELONGS.** `docs/DEPLOY-NOTES.md` carries the three options this closes, and it is on
+the unmerged `night/2026-09-04` branch — it does not exist on master, so the decision is filed here,
+in the register that is its proper home anyway. **When that branch merges, §2 of that document should
+point at D30 rather than restate it.**
 
 ## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1) — CLOSED 2026-08-23 by D13
 
