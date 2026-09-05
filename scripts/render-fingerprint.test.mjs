@@ -73,95 +73,80 @@ test("the roster is long enough for the field the harness runs", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════
-// THE FRAME CAMERA — THE INSTRUMENT AND THE GAME MUST NOT DRIFT FURTHER APART (night of 2026-09-04)
+// THE FRAME CAMERA — THE INSTRUMENT NOW BUILDS IT THROUGH THE ONE HOME (RENDER-CAMERA-FIELDS-1)
 //
-// WHAT IS TRUE TODAY, read at source rather than taken from the backlog:
+// WHAT WAS TRUE UNTIL 2026-09-05, and what this test used to pin: `render-fingerprint.mjs` built
+// the frame's `camera` as a HAND-WRITTEN LITERAL with three members — `hudState`,
+// `comebackLockedRacerIndex`, `detectBattleGroup` — while
+// `client/src/screens/RaceScreen/frameCameraInputs.js` declares FIVE fields plus that method. So
+// `state`, `anchorRacerIndex` and `runInArrived` were `undefined` on every frame the instrument
+// drew. The old test recorded that gap and said the repair "MOVES THE RENDER HASH … it is a mint".
 //
-//   `client/src/screens/RaceScreen/frameCameraInputs.js` is the ONE home of the frame's `camera`
-//   object. It declares FIVE fields (`state`, `anchorRacerIndex`, `comebackLockedRacerIndex`,
-//   `hudState`, `runInArrived`) and adds the `detectBattleGroup` method — SIX members. The game
-//   builds its camera through it (`RaceScreen/index.jsx:1546`).
+// ★ THE REPAIR LANDED AND THE PREDICTION WAS RIGHT. The instrument now calls
+// `frameCameraInputs(cd)`, and THE RENDER HASH MOVED. Bisected one field at a time, with a control,
+// the mover is EXACTLY ONE FIELD — `runInArrived`, which decides whether a label draws a NAME or a
+// NUMBER and so changes the call stream. Adding `state` alone and `anchorRacerIndex` alone each
+// reproduced the recorded hash unchanged. **THE MINT IS THE OWNER'S AND HAS NOT BEEN GIVEN**; the
+// record still carries the pre-repair value. Both values are in the report, which is where a
+// superseded hash may be written down — `docs/fingerprints.json` is the record's one home.
 //
-//   `render-fingerprint.mjs` builds the same object as a HAND-WRITTEN LITERAL with THREE members:
-//   `hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`. So `state`, `anchorRacerIndex` and
-//   `runInArrived` are `undefined` on every frame this instrument draws.
-//
-// ★ WHAT THAT ACTUALLY COSTS IS TWO FIELDS, NOT THREE, AND THE DIFFERENCE IS WORTH RECORDING.
-//   `renderRaceFrame.js` reads `anchorRacerIndex` (:212 — who keeps their name) and `runInArrived`
-//   (:220 — names from the arrival, numbers before it), so the instrument draws the labels wrongly
-//   on both counts. It does NOT read `camera.state` in live code any more: the only surviving
-//   occurrence is inside the comment at :284 recording that LABEL-OVERLAP-FIX-1 removed that read.
-//   `state` therefore stays on the declared contract and costs the instrument nothing today.
-//   (It also means `frameCameraInputs.test.js`'s greps of the renderer source count a mention in a
-//   COMMENT as a read — harmless there, since it only ever adds fields to the required set.)
-//
-// ── WHY THIS TEST PINS THE GAP INSTEAD OF FAILING ON IT ─────────────────────────────────────────
-// The repair is one line — `camera: frameCameraInputs(cd)` — and IT MOVES THE RENDER HASH, which
-// makes it a mint and the owner's to order. It is not done here. What is done here is that the gap
-// can no longer widen or change SILENTLY: this records exactly which members are missing today, and
-// goes red if a field is added to the contract that the instrument does not get, if the instrument
-// starts supplying something the contract does not declare, or if the repair lands (at which point
-// the expected set below is what has to be updated, deliberately, alongside the mint).
+// ── WHAT THIS TEST GUARDS NOW ───────────────────────────────────────────────────────────────────
+// Not "the gap is exactly these three" — there is no gap. The property is stronger and cheaper to
+// keep: the instrument does not have its own list at all. It cannot drift, because there is nothing
+// to drift from. What can still go wrong is somebody re-introducing a literal, which is precisely
+// how this defect was born twice — once in `RaceScreen/index.jsx` and once here.
 const FCI = await import(
   pathToFileURL(
     join(HERE, "..", "client/src/screens/RaceScreen/frameCameraInputs.js"),
   ).href
 );
 
-/** The keys of the `camera:` object literal the instrument hands `renderRaceFrame`. */
-function instrumentCameraMembers(src) {
-  const at = src.indexOf("\n    camera: {");
-  assert.ok(at >= 0, "the instrument's `camera:` literal was not found — this guard is blind");
-  const open = src.indexOf("{", at);
-  let depth = 0;
-  let end = -1;
-  for (let i = open; i < src.length; i++) {
-    if (src[i] === "{") depth++;
-    else if (src[i] === "}" && --depth === 0) {
-      end = i;
-      break;
-    }
-  }
-  assert.ok(end > open, "the `camera:` literal is unbalanced");
-  const body = src.slice(open + 1, end);
-  // Top-level keys only: skip anything nested inside a deeper brace or paren.
-  const keys = [];
-  let d = 0;
-  for (const line of body.split("\n")) {
-    const m = d === 0 && line.match(/^\s{6}([A-Za-z_$][\w$]*)\s*:/);
-    if (m) keys.push(m[1]);
-    for (const ch of line) {
-      if (ch === "{" || ch === "(" || ch === "[") d++;
-      else if (ch === "}" || ch === ")" || ch === "]") d--;
-    }
-  }
-  return new Set(keys);
-}
-
-// What breaks if deleted: a sixth camera field could be added to the game and the instrument would
-// keep drawing without it.
-// What goes unnoticed: the render fingerprint's coverage narrowing while the hash stays stable and
-// authoritative — the instrument reporting confidently about a picture it no longer draws. That is
-// the same defect this file's first test was written about, one level up.
-test("the instrument's frame camera differs from the game's by EXACTLY the known gap", () => {
-  const canonical = new Set([...FCI.FRAME_CAMERA_FIELDS, "detectBattleGroup"]);
-  const supplied = instrumentCameraMembers(SRC);
-
-  // The instrument must never invent a member the one home does not declare.
-  const invented = [...supplied].filter((k) => !canonical.has(k)).sort();
-  assert.deepEqual(
-    invented,
-    [],
-    `render-fingerprint supplies camera member(s) frameCameraInputs does not declare: ${invented.join(", ")}`,
+// What breaks if deleted: the instrument can go back to listing camera fields by hand, and the
+// render fingerprint resumes hashing a frame drawn with the wrong labels while reporting
+// confidently about a picture it does not draw.
+test("the instrument builds its frame camera through the ONE HOME, not a literal", () => {
+  // 1 — IT GOES THROUGH THE FUNCTION. This is the whole repair in one line.
+  assert.match(
+    SRC,
+    /camera: frameCameraInputs\(cd\),/,
+    "render-fingerprint must build its frame camera with `frameCameraInputs(cd)`",
   );
 
-  // And the members it is MISSING are exactly the three recorded above — no more, no fewer.
-  const missing = [...canonical].filter((k) => !supplied.has(k)).sort();
+  // 2 — AND THERE IS NO HAND-WRITTEN LITERAL LEFT. The `camera: {` shape is the defect itself.
+  assert.ok(
+    !new RegExp(String.raw`
+\s{4}camera: \{`).test(SRC),
+    "render-fingerprint has a hand-written `camera: {` literal again — that is the defect this " +
+      "repair removed; build it with frameCameraInputs(cd) instead",
+  );
+
+  // 3 — IT IMPORTS THE ONE HOME rather than re-implementing it.
+  assert.match(
+    SRC,
+    /frameCameraInputs \} = await import\(/,
+    "render-fingerprint must import frameCameraInputs, not define its own",
+  );
+
+  // 4 — AND THE ONE HOME REALLY YIELDS EVERY DECLARED MEMBER, so 1-3 are worth something. A stub
+  // director is enough: the builder reads each declared key off it and attaches the method.
+  const canonical = [...FCI.FRAME_CAMERA_FIELDS, "detectBattleGroup"].sort();
+  const built = FCI.frameCameraInputs({ detectBattleGroup: () => null });
   assert.deepEqual(
-    missing,
-    ["anchorRacerIndex", "runInArrived", "state"],
-    `the instrument's frame-camera blind spot CHANGED (missing: ${missing.join(", ") || "nothing"}). ` +
-      `If a field was added to FRAME_CAMERA_FIELDS, the instrument needs it too. If the instrument ` +
-      `was repaired, that MOVES THE RENDER HASH — it is a mint, and this list is updated with it.`,
+    Object.keys(built).sort(),
+    canonical,
+    "frameCameraInputs no longer yields every member it declares",
+  );
+});
+
+// The dynamic import above is only inside this guard's dependency set because the guard DECLARES it.
+// A dynamically imported path is invisible to the static closure walk, so without this the render
+// fingerprint would silently stop being selected when the frame-camera contract changed.
+test("render-fingerprint DECLARES the frame-camera contract it now imports", () => {
+  // Read off the SOURCE, not by importing the module — importing it would run the whole
+  // fingerprint, which is minutes of work to answer a question about a string.
+  assert.match(
+    SRC,
+    /reach: \[[^\]]*"client\/src\/screens\/RaceScreen\/frameCameraInputs\.js"/s,
+    "frameCameraInputs.js is imported by the instrument and must be in its declared `reach`",
   );
 });
