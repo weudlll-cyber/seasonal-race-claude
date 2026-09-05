@@ -35,8 +35,21 @@ export const KEYS = {
   // explicitly "watch a race, close the browser, come back and re-run it". A session store cannot
   // serve that, and the drawn seed is the one a session store would lose — the field stays empty
   // by design so the next race draws again.
+  //   LAST_RACE_IDENTIFIER
+  //                   the RACE IDENTIFIER of the last race that actually ran — the whole race, not
+  //                   just its seed. Added by RUN-IT-AGAIN-1 BESIDE `LAST_RACE_SEED`, never instead
+  //                   of it: the seed stays the short human name the operator reads off the race
+  //                   screen, and remains the record that a race really ran.
+  //   ★ WHY BOTH. `run it again` used to put the SEED back in the field, and a seed does not
+  //   reproduce a race: the config comes from whatever this machine is set to NOW, so changing one
+  //   setting between the race and the click ran a DIFFERENT race under the old race's number. The
+  //   identifier carries the whole race, so it is what the button fills in. It can legitimately be
+  //   absent — a race from before this key existed, or a screen state that could not be encoded —
+  //   and the panel then falls back to the seed AND SAYS SO, rather than offering the weaker thing
+  //   as though it were the stronger.
   RACE_SEED: 'racearena:raceSeed',
   LAST_RACE_SEED: 'racearena:lastRaceSeed',
+  LAST_RACE_IDENTIFIER: 'racearena:lastRaceIdentifier',
 };
 
 // QUIET-FAILURES-1: which keys have already announced a failed read. NOT app state and not a UI

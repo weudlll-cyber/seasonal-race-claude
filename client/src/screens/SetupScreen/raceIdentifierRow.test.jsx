@@ -173,6 +173,42 @@ describe('IDENTIFIER-SPEAKS-1 — when there is no row, the screen says why', ()
   });
 });
 
+describe('RUN-IT-AGAIN-1 — repeating a race repeats THAT race', () => {
+  // What breaks if deleted: `run it again` goes back to filling in a SEED, which reproduces a race
+  // only if nothing on the machine changed since — the defect this closed.
+  it('fills the field with the recorded IDENTIFIER, not the seed', () => {
+    storageSet(KEYS.LAST_RACE_SEED, 3);
+    storageSet(KEYS.LAST_RACE_IDENTIFIER, 'RA1-recorded-identifier');
+    renderStartable();
+    openSettings();
+
+    // The seed is still the LABEL — scoped to the last-race row, since '3' is also in the field.
+    expect(screen.getByTestId('run-it-again').parentElement).toHaveTextContent(/Last race:\s*3/);
+    fireEvent.click(screen.getByTestId('run-it-again'));
+    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue('RA1-recorded-identifier');
+  });
+
+  // ★ What breaks if deleted: a race with only a seed recorded would offer the weaker repeat in the
+  // place the stronger one lives, with nothing said — which is worse than not offering it.
+  it('falls back to the seed when no identifier was recorded, and SAYS so', () => {
+    storageSet(KEYS.LAST_RACE_SEED, 3);
+    renderStartable();
+    openSettings();
+
+    expect(screen.getByTestId('run-it-again-seed-only')).toHaveTextContent(/by seed only/i);
+    fireEvent.click(screen.getByTestId('run-it-again'));
+    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue('3');
+  });
+
+  it('says nothing about seeds when the whole race was recorded', () => {
+    storageSet(KEYS.LAST_RACE_SEED, 3);
+    storageSet(KEYS.LAST_RACE_IDENTIFIER, 'RA1-recorded-identifier');
+    renderStartable();
+    openSettings();
+    expect(screen.queryByTestId('run-it-again-seed-only')).not.toBeInTheDocument();
+  });
+});
+
 describe('IDENTIFIER-SPEAKS-1 — a swallowed throw is the defect this closes', () => {
   // ★ THE ONE THAT MATTERS. What breaks if deleted: the `catch` goes back to returning a bare null,
   // and a screen state the identifier cannot describe is once again a blank space — the exact

@@ -142,6 +142,50 @@ function SetupScreen() {
     const v = Number(storageGet(KEYS.LAST_RACE_SEED, 0));
     return Number.isSafeInteger(v) && v > 0 ? v : null;
   });
+  // RUN-IT-AGAIN-1: the whole last race, beside its number. Null is a real and expected state — a
+  // race from before this key existed, or one whose screen state could not be encoded — and the
+  // panel says so rather than pretending the seed is as good.
+  const [lastRaceIdentifier, setLastRaceIdentifier] = useState(() => {
+    const v = storageGet(KEYS.LAST_RACE_IDENTIFIER, null);
+    return looksLikeRaceIdentifier(v) ? v : null;
+  });
+
+  // RUN-IT-AGAIN-1 — record the race that is about to run, as a whole race.
+  //
+  // ★ IT ENCODES THE SAME VALUES THE PAYLOAD CARRIES, from the payload itself, so the recorded
+  // identifier cannot describe a different race from the one that starts. The world is read the
+  // same way the race path reads it moments later (`RaceScreen/index.jsx:476-503` with no override
+  // in play), which is what makes this a record of THIS race rather than of this screen.
+  //
+  // A failure here must never stop a race: the race is the point, the record is a convenience, so
+  // it is caught and stored as absent — which the panel then reports honestly.
+  function rememberStartedRace(race, identifierIfPasted = null) {
+    storageSet(KEYS.LAST_RACE_SEED, race.racePlanSeed);
+    setLastRaceSeed(race.racePlanSeed);
+    let id = identifierIfPasted;
+    if (!id) {
+      try {
+        id = encodeRaceIdentifier({
+          geometryId: race.geometryId,
+          racerTypeId: race.racerTypeId,
+          names: race.racers.map((r) => r.name),
+          racePlanSeed: race.racePlanSeed,
+          raceActionStage: race.raceActionStage,
+          targetLaps: race.targetLaps,
+          targetDurationSec: race.targetDurationSec,
+          racePlanEnabled: race.racePlanEnabled,
+          world: buildWorldConfig({ raceActionStage: race.raceActionStage }),
+          defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+          buildId: raceIdentifierBuildId(),
+        });
+      } catch (err) {
+        console.warn('[setup] this race could not be recorded as an identifier:', err);
+        id = null;
+      }
+    }
+    storageSet(KEYS.LAST_RACE_IDENTIFIER, id);
+    setLastRaceIdentifier(id);
+  }
 
   // Seed eventName from the active brand profile; clear unconditionally when no profile is active.
   useEffect(() => {
@@ -692,6 +736,9 @@ function SetupScreen() {
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
+    // A race started FROM an identifier really ran, so it becomes the last race like any other —
+    // and its identifier is the string that started it, which needs no re-encoding.
+    rememberStartedRace(race, text.trim());
     navigate('/race');
   }
 
@@ -774,8 +821,7 @@ function SetupScreen() {
     // The seed this race RAN with, in a store that survives the tab closing. Written for a drawn
     // seed as well as a typed one — the drawn case is the whole reason the key exists, because the
     // field stays empty and would otherwise be the only record.
-    storageSet(KEYS.LAST_RACE_SEED, startSeed);
-    setLastRaceSeed(startSeed);
+    rememberStartedRace(race);
     navigate('/race');
   }
 
@@ -1311,6 +1357,7 @@ function SetupScreen() {
                 seed={raceSeed}
                 onSeedChange={setRaceSeed}
                 lastRaceSeed={lastRaceSeed}
+                lastRaceIdentifier={lastRaceIdentifier}
                 identifierError={identifierError}
                 raceIdentifier={currentRaceIdentifier.identifier}
                 raceIdentifierNote={currentRaceIdentifier.note}
@@ -1611,6 +1658,7 @@ function SetupScreen() {
             </div>
             <button
               className={styles.startBtn}
+              data-testid="start-race"
               disabled={!canStart}
               onClick={handleStartRace}
               title={

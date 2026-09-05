@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L942-L967)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L988-L1013)):
 
 ```
 Branding: None ▼
@@ -93,7 +93,7 @@ explicitly select a profile in the SetupScreen selector to activate it.
 
 Whenever the active profile changes, a `useEffect` in SetupScreen writes two CSS custom properties
 directly onto `document.documentElement.style`
-([`SetupScreen.jsx:163–178`](../client/src/screens/SetupScreen/SetupScreen.jsx#L174-L189)):
+([`SetupScreen.jsx:163–178`](../client/src/screens/SetupScreen/SetupScreen.jsx#L218-L233)):
 
 ```js
 root.setProperty("--brand-primary", profile.primaryColor);
@@ -156,22 +156,22 @@ each surface reads them differs — there is no single shared chain:
   ([`ResultScreen/index.jsx:98`](../client/src/screens/ResultScreen/index.jsx#L98)).
 
 `sponsorText` is the one exception: the ResultScreen reads it from `race.sponsorText` (carrier path
-[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L426), see "Sponsor strip
+[`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L470), see "Sponsor strip
 carrier" below), not directly from the profile.
 
 The canvas carrier chain in full:
 
 1. **Seed into raceSettings**: when the active profile changes, a `useEffect` sets
    `raceSettings.eventName` from `profile.eventName`
-   ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L192-L196)).
+   ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L236-L240)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L898-L933)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L944-L979)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 
 3. **Carried into activeRace**: written to `sessionStorage.activeRace` when a race is started
-   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L424-L425)):
+   ([`SetupScreen.jsx:384–385`](../client/src/screens/SetupScreen/SetupScreen.jsx#L468-L469)):
 
    ```js
    eventName: raceSettings.eventName,

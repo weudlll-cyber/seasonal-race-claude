@@ -89,7 +89,7 @@ async function pickTrackAndOpenSettings(page) {
 
 /** Start the race and wait for the race screen to actually be running. */
 async function startAndWaitForRace(page) {
-  await page.getByTitle('Start the race!').click();
+  await page.getByTestId('start-race').click();
   await expect(page).toHaveURL(/\/race/);
   await expect(page.locator('canvas.race-canvas')).toBeVisible();
 }
@@ -201,6 +201,50 @@ test.describe('RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this
     expect(used.speedMultiplier).not.toBeCloseTo(2.5, 5);
   });
 
+  // ★ RUN-IT-AGAIN-1. `run it again` refilled the field with the SEED of the race that ran, and this
+  // piece has just established that a seed does not reproduce a race. Change one setting between the
+  // race and the click and it runs a DIFFERENT race under the old race's number — the exact defect
+  // the identifier exists to remove, two lines below the identifier.
+  test('run it again repeats the race that RAN, not the current settings', async ({ page }) => {
+    await seedRoster(page);
+    await page.addInitScript(() => localStorage.setItem('racearena:raceInputsProbe', '1'));
+
+    // ── A race really runs, at the shipped stage.
+    await setStage(page, 'quiet');
+    await page.goto('/setup');
+    await waitForTrackGeometry(page, 'Dirt Oval');
+    await pickTrackAndOpenSettings(page);
+    await page.getByTestId('race-seed-input').fill('3');
+    await startAndWaitForRace(page);
+
+    const first = await activeRace(page);
+    expect(first.raceActionStage).toBe('quiet');
+
+    // ── The machine is retuned AFTER that race. This is the whole point.
+    await setStage(page, 'wild');
+
+    // ── Back on Setup, the offer to repeat it is there and is taken.
+    await pickTrackAndOpenSettings(page);
+    const again = page.getByTestId('run-it-again');
+    await expect(again).toBeVisible();
+    await again.click();
+    await startAndWaitForRace(page);
+
+    const repeated = await activeRace(page);
+
+    // ★ THE ASSERTION. Repeating a race must repeat THAT race.
+    expect(repeated.racePlanSeed).toBe(first.racePlanSeed);
+    expect(repeated.raceActionStage).toBe('quiet');
+    expect(repeated.worldConfigOverride).toBeTruthy();
+
+    // And it is not merely that the setting change failed to take: a plain typed seed still picks up
+    // the machine's new stage, so the two paths provably differ.
+    await pickTrackAndOpenSettings(page);
+    await page.getByTestId('race-seed-input').fill('3');
+    await startAndWaitForRace(page);
+    expect((await activeRace(page)).raceActionStage).toBe('wild');
+  });
+
   test('a corrupted identifier is REFUSED, never silently run as a seed', async ({
     page,
     context,
@@ -219,10 +263,15 @@ test.describe('RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this
     // Corrupt the payload, keeping the prefix — the shape a truncated paste really takes.
     const corrupted = identifier.slice(0, identifier.length - 40);
     await page.getByTestId('race-seed-input').fill(corrupted);
-    await page.getByTitle('Start the race!').click();
 
-    // ★ It must SAY SO and stay put. Silently becoming a different race is the worst outcome.
-    await expect(page.getByTestId('identifier-error')).toBeVisible();
+    // ★ IT MUST SAY SO AND STAY PUT. Silently becoming a different race is the worst outcome.
+    //
+    // RACE-IDENTIFIER-3 made the refusal EARLIER than it was: because a usable identifier is now
+    // what enables Start, an unusable one DISABLES it, so the race cannot be begun at all rather
+    // than being begun and then refused. The assertion follows that — the button is dead and the
+    // row says why.
+    await expect(page.getByTestId('start-race')).toBeDisabled();
+    await expect(page.getByTestId('race-identifier-note')).toContainText(/cannot be used/i);
     await expect(page).not.toHaveURL(/\/race/);
     expect(await activeRace(page)).toBeNull();
   });

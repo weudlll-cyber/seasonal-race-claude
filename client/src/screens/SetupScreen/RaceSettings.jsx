@@ -35,6 +35,8 @@ function RaceSettings({
   raceIdentifier = null,
   // IDENTIFIER-SPEAKS-1: why there is no identifier, when there is none. Shown in the row's place.
   raceIdentifierNote = null,
+  // RUN-IT-AGAIN-1: the whole last race. Null = only its seed was recorded, which the row says.
+  lastRaceIdentifier = null,
 }) {
   // COPY-FEEDBACK-1
   const [copied, setCopied] = useState(false);
@@ -148,14 +150,35 @@ function RaceSettings({
         )}
         {lastRaceSeed != null && (
           <div className={styles.settingHint}>
+            {/* RUN-IT-AGAIN-1 — THE LABEL IS THE SEED, WHAT THE BUTTON FILLS IN IS THE RACE.
+                The number stays because it is the short human name for the race and it is what he
+                reads off the race screen. But putting that number back in the field repeats a race
+                by SEED, and a seed does not reproduce a race — the config would come from whatever
+                this machine is set to now. So the button fills in the recorded IDENTIFIER, which
+                carries the whole race.
+                ★ WHEN THERE IS NO IDENTIFIER — a race from before this existed, or one that could
+                not be encoded — it falls back to the seed and SAYS SO. Offering the weaker thing
+                silently, in the place the stronger one used to be, is the failure this avoids. */}
             Last race: <strong>{lastRaceSeed}</strong>{' '}
             <button
               type="button"
               className={styles.linkBtn}
-              onClick={() => onSeedChange?.(String(lastRaceSeed))}
+              data-testid="run-it-again"
+              title={
+                lastRaceIdentifier
+                  ? 'Fills in that race’s identifier — the whole race, so it runs the same here whatever this machine is set to now.'
+                  : 'Fills in that race’s seed. Only the seed was recorded for it, so the race will use THIS machine’s current settings.'
+              }
+              onClick={() => onSeedChange?.(lastRaceIdentifier ?? String(lastRaceSeed))}
             >
               run it again
             </button>
+            {!lastRaceIdentifier && (
+              <span data-testid="run-it-again-seed-only">
+                {' '}
+                — by seed only, so this machine&rsquo;s current settings will apply
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -206,6 +206,12 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
     expect(localStorage.getItem(KEYS.RACE_SEED)).toBeNull();
   });
 
+  // RUN-IT-AGAIN-1 (2026-09-06) changed what this button FILLS IN, and the assertion follows the
+  // behaviour rather than pinning the old one. The seed is still the label — that half is what this
+  // test was written for and it is unchanged — but clicking now fills in the recorded IDENTIFIER,
+  // because putting the seed back reproduces a race only if nothing on the machine changed since.
+  // The seed-only fallback, for a race with no identifier recorded, is held in
+  // `raceIdentifierRow.test.jsx`.
   it('the last race seed is offered back in the panel, so he need not have written it down', () => {
     renderStartable();
     clickStart();
@@ -213,7 +219,11 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
     openSettingsTab();
     expect(screen.getByText(String(drawn))).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /run it again/i }));
-    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue(String(drawn));
+
+    // The whole race came back, and it is the race that ran: its identifier decodes to that seed.
+    const filled = screen.getByLabelText('Race seed or identifier').value;
+    expect(filled.startsWith('RA1-')).toBe(true);
+    expect(storageGet(KEYS.LAST_RACE_IDENTIFIER, null)).toBe(filled);
   });
 });
 
