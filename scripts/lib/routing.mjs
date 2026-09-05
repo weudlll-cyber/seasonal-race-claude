@@ -193,6 +193,46 @@ export const SUITE_GUARDS = [
     reach: [],
     exclusive: false,
   },
+  // ── VERIFY-LINT-1 (2026-09-05): THE TWO CHECKS CI RUNS AND `verify` DID NOT ──────────────────
+  //
+  // ESTABLISHED AT SOURCE, not carried from a report. `.github/workflows/ci.yml`'s Client job runs
+  // `npm run lint` and `npm run format:check`; `verify` ran neither. What it DID run is
+  // `npm run format` — the FORMATTER, which writes — so the tree it measures is the tree the hook
+  // will commit. A formatter is not a check: it cannot fail, and it says nothing about a tree
+  // somebody formatted differently.
+  //
+  // ONLY THE CLIENT, and that is not an omission: `server/package.json` declares NO `lint` and NO
+  // `format` script of any kind, and CI's Server job runs neither. Checked at source on 2026-09-05.
+  // If the server ever gains them, it gains a guard here in the same shape.
+  {
+    id: "client-lint",
+    covers:
+      "eslint over client/src — the check CI's Client job runs and `verify` did not, so a lint fault was invisible until after the merge",
+    blind: [
+      "the server, which declares no lint script at all",
+      "scripts/ and the repository root: eslint is scoped to `client/src` by the client's own `lint` script",
+      "whether the RULES are the right rules. It runs the configuration that exists.",
+    ],
+    dirs: ["client/"],
+    notDirs: ["client/e2e/"],
+    files: [],
+    reach: [],
+    exclusive: false,
+  },
+  {
+    id: "client-format-check",
+    covers:
+      "prettier --check over client/src — whether the tree AS IT STANDS is formatted, which is the question CI asks of the committed tree",
+    blind: [
+      "the server, which declares no format script at all",
+      "everything outside `client/src`: both the format and the check are scoped there by the client's own scripts, so they cannot disagree about scope",
+    ],
+    dirs: ["client/"],
+    notDirs: ["client/e2e/"],
+    files: [],
+    reach: [],
+    exclusive: false,
+  },
   {
     id: "script-suite",
     suite: true,

@@ -339,6 +339,34 @@ export function commandFor(g) {
   }
   if (g.id === "script-suite")
     return { cmd: ["node", "--test", ...scriptTestFiles()] };
+  // ── VERIFY-LINT-1: THE TWO CI CHECKS, AND WHERE THE FORMAT ONE HAS TO SIT ────────────────────
+  //
+  // Invoked through the package scripts for the same reason the suites are: ONE definition of how
+  // they run, in `client/package.json`, so this file cannot disagree with CI about what `lint`
+  // means. CI runs the identical two commands in its Client job.
+  //
+  // ★ THE ORDERING, AND IT IS THE WHOLE SUBTLETY OF ADDING `format:check` TO THIS PARTICULAR
+  // COMMAND. `verify` FORMATS the tree before it measures (§3, the `format:` step in the main block
+  // below) — `prettier --write src` — and `format:check` is `prettier --check src` over the SAME
+  // scope. So on the ordinary path this check runs AFTER the writer has already fixed everything it
+  // could complain about, and it passes by construction. That is not a reason to move it earlier:
+  // moving it BEFORE the format pass would make `verify` red for exactly the fault it is about to
+  // repair, which is the opposite of what §3 is for.
+  //
+  // IT IS HERE BECAUSE OF THE PATH WHERE IT IS NOT TAUTOLOGICAL: `--no-format`. That flag skips the
+  // writer, and until now nothing then asked whether the tree was formatted — so a `--no-format` run
+  // could be green while CI's `format:check` was red on the very same tree. Placed here it answers
+  // the question CI actually asks, which is about the tree AS IT STANDS AT MEASUREMENT TIME, and
+  // that tree is the one the hook commits.
+  //
+  // `lint` has no such subtlety: `verify` never ran it at all, on any path.
+  if (g.id === "client-lint")
+    return { cmd: ["npm", "run", "lint", "--silent"], cwd: join(ROOT, "client") };
+  if (g.id === "client-format-check")
+    return {
+      cmd: ["npm", "run", "format:check", "--silent"],
+      cwd: join(ROOT, "client"),
+    };
   // GATE-WIRED-AND-CAUSED-1. `--gate` is the harness's own two-race pre-merge mode; with no argv it
   // would drive the forty-seed nightly sweep instead, which is hours. The flag lives here with the
   // rest of the argv, and GATE_TRACKS, the seed and the arm stay where they are — in the harness.
