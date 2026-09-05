@@ -119,9 +119,22 @@ deployment below.
 
 ## NEEDS HIS WORD
 
-**One item. The other four that stood here have been answered.**
+**Two items.**
 
-1. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**
+1. ★ **MAY THE RENDER FINGERPRINT BE RE-MINTED?** (INVISIBLE-FOUR-1, piece 1) The instrument built
+   its frame camera as a hand-written literal with three members where `frameCameraInputs.js`
+   declares five plus a method — and **two of the absent three are read by the draw path it
+   measures**: the focus racer, and whether a label says a NAME or a number. So the fingerprint has
+   been hashing a frame drawn with the leader fallback and with numbers, while the game drew the
+   subject and his name. **Repairing it MOVES THE RENDER HASH.** Bisected one field at a time with a
+   control, the cause is **exactly one field, `runInArrived`**; `state` and `anchorRacerIndex` each
+   moved nothing. **No mint was taken and the record is untouched.** The commits sit on
+   `fix/invisible-four-1` at origin, unmerged, waiting on you. Both values and the bisection are in
+   [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
+
+**And the one that was already here. The other four that stood here have been answered.**
+
+2. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**
    **The server has no TLS at all** — searched for, not assumed — and that is a design decision
    rather than an omission: it sets `trust proxy` and issues `__Host-` Secure cookies, expecting a
    terminator in front. **D30 already chose HOW the client finds the API** (resolve at start time,
