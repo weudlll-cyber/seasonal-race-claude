@@ -349,6 +349,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [OPEN-LIST-TRUTH-1.md](OPEN-LIST-TRUTH-1.md) — **ten open items checked against the tree; one was
+  already built** (2026-09-05; documents plus one string in a script — no behaviour, no threshold,
+  nothing minted, `engine-reach --check` selects nothing on all four changed paths). ★ **THE CLOSING
+  PHASE ALREADY ENDS WHATEVER WAS RUNNING**: `CameraDirector.js:1663` forces `LEADER_ZOOM` past
+  `_endgameThreshold`, bypassing the cooldown, with `LEAD_CHANGE` the only exception — so that
+  section's own *"nothing in `CameraDirector.js` ends a running phase at that boundary today"* and
+  the BACKLOG-VERDICTS-1 verdict repeating it are **superseded by the tree**. Closed as **D32**, with
+  the two facts that bound it: the force lands at the shot's next decision point (`holdGate`, `:956`),
+  and its boundary is the endgame threshold while the run-in begins composing earlier (`:3505`) —
+  which is why CLOSING-CUT-1 saw four phases at the cut. The RUNIN-OWNS-1 limit and the slow-motion
+  trigger it protects (`RaceScreen/index.jsx:943`) were both verified before the closure was written.
+  ★ **THE RENDER-FINGERPRINT COUNT IS SETTLED and both earlier records were right about different
+  quantities**: `frameCameraInputs.js:39` declares five fields plus a method, the instrument supplies
+  three, so **THREE fields are absent and the blindness costs TWO behaviours** — `camera.state` is
+  read by no live code. **Eight items stay open**, each with the one line that is genuinely missing;
+  three one-line remnants are fixed (`verify.mjs`'s hardcoded "seven skips" now reads the count).
+  **D33** records three owner decisions of 2026-09-05 on items that stay open. **Nothing was built.**
+
 - [GATE-WIRED-AND-CAUSED-1.md](GATE-WIRED-AND-CAUSED-1.md) — **the ship gate joins `verify`, learns
   a cause, and stops describing tracks as excluded** (2026-09-05; tooling, tests and documents only —
   no camera behaviour, no default, no threshold, **no change to which tracks the gate runs**, nothing

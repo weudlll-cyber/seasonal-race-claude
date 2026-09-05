@@ -42,7 +42,9 @@ place. *(Conservative option at a fork, stated as required.)*
 now closed by D13 and lives in PART TWO.
 
 **THE INDEX — every open item below that only he can move.** **REWRITTEN 2026-08-23: every row the
-previous version carried has been answered**, and the answers are PART TWO's DECISIONS D10–D24. The
+previous version carried has been answered**, and the answers are PART TWO's DECISIONS, from D10
+onward *(a range was written here and went stale twice — the decisions now run past D30, so the
+series is named rather than bounded)*. The
 table is not deleted-and-forgotten — each old row is listed below with the decision that took it,
 because a question that vanishes from an index looks like a question nobody asked.
 
@@ -264,54 +266,6 @@ lives there and is not restated here.
 and the four decisions of 2026-08-23 that narrowed it.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the section):** question 1 waits on a MEASUREMENT, not on him — the table is `reports/night/ACTION-KEYS-1.md` and the design block starts from it; question 4's fingerprint half waits on question 1. Nothing here is blocked on a word from him.
-
----
-
-## THE CLOSING PHASE ENDS WHATEVER WAS RUNNING (2026-08-24, the owner's instruction)
-
-**verify (section-wide):** none yet, and the reason is the item itself — the shot this produces has
-never been seen, so there is nothing to assert about it. The measurement named below comes first.
-
-**THE REQUIREMENT, in his terms — his instruction of 2026-08-24.** **AT THE START OF THE CLOSING
-PHASE, WHATEVER CAMERA PHASE IS RUNNING MUST BE ENDED — whichever one it was.** No carrying the
-previous subject into the run-in.
-
-**★ AND A BATTLE SHOT IS NOT AN EXCEPTION — his decision of 2026-09-05, recorded as D28 below.**
-The requirement admits no exception for a `BATTLE_ZOOM`. This needed saying because [CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md)
-found one running at the cut on city-circuit, a SHIP-gate track, with 98% of it still to come, and at
-the time a battle shot near the finish was wrongly recorded as accepted behaviour — see
-ACCEPTED-FINISH-ATTRIBUTION-1, which corrected that attribution.
-
-**THE MEASURED FACT THAT GOES WITH IT** ([CLOSING-CUT-1](../reports/night/CLOSING-CUT-1.md), ten tracks at seed 9, one race each): **four
-different camera phases occur at the cut** — `LEADER_ZOOM` 4, `OVERVIEW` 3, `LEAD_CHANGE` 2,
-`BATTLE_ZOOM` 1, ten of ten — and **`PHOTO_FINISH` is not among them.** So the requirement covers a
-varied set rather than one special case. **BUILD NOTHING: the rebuild is its own block, and nothing
-in `CameraDirector.js` ends a running phase at that boundary today.**
-
-- [ ] **The requirement above is RECORDED, NOT BUILT, and this entry deliberately proposes nothing.**
-      Under the project's own rule the visible consequence is measured before it is built, and the
-      one thing nobody knows is exactly the visible consequence — see the last bullet.
-
-- [ ] **WHAT THE MEASUREMENT ALREADY SAYS ABOUT THE COST AND THE BENEFIT.** From
-      [LATE-LEAD-HUNT-1](../reports/evolution/LATE-LEAD-HUNT-1.md) and
-      [LATE-LEAD-AXIS-1](../reports/evolution/LATE-LEAD-AXIS-1.md), over 1,260 races:
-      the **opening-glide group is 250 hits**; its **median length is 32 frames** (mean 30.3 — the
-      figure was carried as 29 and did not reproduce on recomputation, LATE-LEAD-AXIS-1 §9); the
-      camera is **anchored on somebody else on 82% of its frames**; and **it hits P1 hardest — 114 of
-      the 250 hits are the winner**. LATE-LEAD-AXIS-1 adds the direction: **90.7% of the group's
-      frames are a racer thrown off the AHEAD end of the frame**, and **all 103 of the winner's
-      along-track cases are in this group and none of them reaches the line.** So the group this
-      requirement is aimed at is short, front-loaded, and carries the previous shot's subject
-      visibly — which is what "anchored on somebody else" means in one number.
-
-- [ ] **WHAT IS NOT KNOWN, and it is the whole of what stands between this entry and a build:
-      NOBODY HAS SEEN WHAT THE SHOT LOOKS LIKE WHEN THE PREVIOUS PHASE IS CUT RATHER THAN ALLOWED TO
-      FINISH.** Every number above measures the glide as it is; none of them measures the alternative.
-      The project's own standing warning applies — a big zoom change needs a glide or an anchor, and
-      cutting a phase removes one of the two. **Per the project's rule the visible consequence gets
-      measured before that is built.** Nothing here proposes how.
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE (the section):** waiting on somebody seeing what the shot looks like when the previous phase is CUT rather than allowed to finish. No such measurement exists in the tree; nothing in `CameraDirector.js` ends a running phase at the closing boundary today.
 
 ---
 
@@ -2648,6 +2602,70 @@ actionable"*. There is nothing to investigate, and nothing to restate a question
 **The `relative vs absolute camera weights` question that sat beside it is closed for the same
 reason** — no date, no source, and a design question with neither is not a deferral, it is a note
 somebody wrote.
+
+### D32 · THE CLOSING PHASE ENDS WHATEVER WAS RUNNING — CLOSED, it is in the tree · 2026-09-05
+
+**His instruction of 2026-08-24 — *at the start of the closing phase, whatever camera phase is
+running must be ended, whichever one it was* — is BUILT. The section that carried it as open work is
+closed here and moved whole into this register.** Established at source on 2026-09-05
+([OPEN-LIST-TRUTH-1](../reports/evolution/OPEN-LIST-TRUTH-1.md)).
+
+**WHAT THE TREE DOES.** `client/src/modules/camera/CameraDirector.js:1663` —
+`if (leaderProgress > this._endgameThreshold)` — returns `CAM_STATE.LEADER_ZOOM` at **:1680**,
+labelled *"Endgame — leader past threshold → LEADER, bypasses cooldown"*. It admits **one**
+exception, `LEAD_CHANGE` at **:1668-1673**, and that exception is itself weight-gated
+(CAMERA-WEIGHTS-1). No phase carries its subject past that point by any other route.
+
+**★ IT IS NOT FRAME-EXACT, AND THAT IS THE DELAY `CLOSING-CUT-1` MEASURED.** `_pickNextState`
+(**:1544**) is reached only through `_transition` (**:1788**), which `update()` calls only when
+`decideTransition` returns TRANSITION — gated by `holdGate = minHold === 0 ? 0 : Math.max(minHold,
+stateCap)` at **:956**. So the force takes effect at the running shot's **next decision point**, not
+on the frame the closing phase begins.
+
+**★ AND THE TWO BOUNDARIES ARE NOT THE SAME MOMENT, which is why four different phases were seen at
+the cut.** The force fires at `_endgameThreshold`, whose value lives in `defaults.js`. The run-in begins
+COMPOSING earlier — `_runInComposingNow` is set at **:3505**, after `_scheduleEngaged(...)`, with
+`_endgameThreshold` used at **:3493** as the schedule's *deadline* rather than its start. Between
+those two moments the previous shot is still running, which is exactly what CLOSING-CUT-1 recorded.
+
+**★ THE LIMIT, AND ITS PRICE — recorded so this does not come back as a proposal.**
+`CameraDirector.js:1675-1678` (RUNIN-OWNS-1): *"the run-in owns the endgame's FRAMING, not its state
+slot… Taking the slot here was the previous shape and it cost the photo finish its slow motion,
+which RaceScreen triggers off `hudState === 'PHOTO_FINISH'`."* **Both halves verified at source:**
+the branch returns a state and touches no framing, and
+`client/src/screens/RaceScreen/index.jsx:943` reads `const isPhotoFinish = hud === 'PHOTO_FINISH'`,
+which selects `photoFinishSlowmoFactor` at **:946-947**. A rebuild that takes the state slot removes
+the slow motion.
+
+**SUPERSEDED BY THE TREE:** that section's own closing sentence — *"nothing in `CameraDirector.js`
+ends a running phase at that boundary today"* — and the BACKLOG-VERDICTS-1 verdict of 2026-09-02 that
+repeated it. Both are wrong about the tree as it stands. **Everything else the section carried is
+measurement and is not withdrawn**: CLOSING-CUT-1's four phases at the cut, LATE-LEAD-HUNT-1's and
+LATE-LEAD-AXIS-1's 250 opening-glide hits over 1,260 races, and the standing warning that a big zoom
+change needs a glide or an anchor. **Nothing was built here and nothing is proposed.**
+
+### D33 · Three items are to be MEASURED or NAMED first — recorded, not designed · 2026-09-05
+
+**His decisions of 2026-09-05, given together, on three items that stay OPEN.** Recorded here so the
+items keep their place unchanged and the reason they are still open is not re-derived.
+
+**1 · The race identity.** A new short value is to REPLACE the seed as the thing that repeats a race.
+**Not designed here.** What the seed does today, at source: `SetupScreen.jsx:533` puts `racePlanSeed`
+in the payload and `:508` and `:537` put the roster and the action stage there with it — but
+`RaceScreen/index.jsx:476` and `:483` gather every config through `loadRaceDynamicsConfig()` and
+`buildWorldConfig(...)`, which read the HOST'S STORAGE at race start. So the same seed on two
+machines is two races.
+
+**2 · The comeback BEATS (D14).** To be **MEASURED first** — night piece L, which was not reached.
+Re-established at source: `comebackDetector.js:64-75` keeps `role === 'comebacker'` and nothing else;
+the per-hero `beats` array is dropped on arrival, and no code under
+`client/src/modules/camera/` reads a hero's beats.
+
+**3 · The render fingerprint's blind spot.** To be taken into a **night run**. Its entry under THE
+SEVEN THAT ARE HIS is left exactly as it stands; the count two records disagreed on is settled in
+[OPEN-LIST-TRUTH-1](../reports/evolution/OPEN-LIST-TRUTH-1.md) and both were right about different
+quantities — **THREE declared fields are absent from the instrument, and the blindness costs TWO
+behaviours**, because the third (`state`) is read by no live drawing code.
 
 **verify (section-wide):** none possible — **this is his time.** No command can report whether he has watched a race.
 

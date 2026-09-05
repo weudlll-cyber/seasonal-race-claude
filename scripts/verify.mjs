@@ -639,7 +639,7 @@ if (IS_ENTRY) {
       `  REFUSED: this run would verify NOTHING, and a run that verified nothing must not exit 0.\n\n` +
         `           ${headline}\n\n` +
         remedy.map((r) => `           ${r}`).join("\n") +
-        `\n\n           (VERIFY-BASE-1. The seven skips above are each correct; it is their SUM\n` +
+        `\n\n           (VERIFY-BASE-1. The ${skipped.length} skips above are each correct; it is their SUM\n` +
         `           that is the problem. Exit ${EXIT_REFUSED} = refused, not a guard failure.)\n`,
     );
     process.exit(EXIT_REFUSED);
