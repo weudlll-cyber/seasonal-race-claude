@@ -27,14 +27,17 @@ directions.
   are the right two. ★ **They move the FRONT FIGHT and nothing else:** `pulkLeaderBrake` and
   `pulkChallengerBoost` move lead changes, passes and the leader's longest hold by 10–38%, 10/10
   tracks, p = 0.002 — and **neither moves how close the field runs or the gap at the line**.
-  `pulkLeaderBrake` is about twice the other. ★ **`pulkEnvelopeMaxEffect` is INERT** — a bit-identical
-  race on all ten tracks at HALF its value, so the realism envelope clamps nothing (the DOUBLE arm
-  reached only two tracks and agrees on both; the report keeps the two Ns apart). `pulkFrontPool` and
-  `pulkBiasGain` change the race and move no quantity readably. ★ **Two candidates excluded with
-  reason:** `contestWindowStart` is a RULER, not a lever (only the observer reads it), and
-  `pulkLeadRotationAttackerSlots` is hard-clamped to [1,2] so its upward arm is unmeasurable by
-  construction. **INCOMPLETE — nine of fourteen levers not reached**, named in §7; no default moved,
-  nothing designed.
+  `pulkLeaderBrake` is about twice the other. ★ **EVERY CAP IN THE PULK MECHANISM IS SLACK:** three
+  arms — the realism envelope, the boost headroom and the attacker slots, all raised — give a
+  **bit-identical race on all ten tracks**. The game never reaches its own ceilings, so those keys
+  can only be turned DOWN; a dial built on them would have a dead half. ★ **And the key the tree
+  calls "the future Action-slider backing", `choreoIntensity`, MOVES NOTHING** in either direction.
+  Two smaller real levers found (`pulkBoostHeadroom` downward, −15% passes; `pulkLeadRotationAttackerSlots`
+  downward, −8%), and two that run BACKWARDS from their names — `chaosSteerGain` (less steer, MORE
+  lead changes) and `b2AttackHeroes` (more attackers, FEWER passes and a tighter field, on a window
+  different from the one it was shipped on). ★ **`contestWindowStart` excluded with reason: it is a
+  RULER, not a lever.** **COMPLETE — 290 cells, 0 failures, 14 levers × 10 tracks × N=30.** §8 records
+  what an earlier partial revision of the report got wrong. No default moved, nothing designed.
 
 - [RACESCREEN-MOUNT-1.md](RACESCREEN-MOUNT-1.md) — **a test that mounts `RaceScreen`** (2026-09-04,
   PIECE C). It mounts: three tests render the real component past its `Loading…` placeholder, and the

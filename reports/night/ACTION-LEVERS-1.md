@@ -9,10 +9,10 @@ order)*, one measurement further on than
 **READ-ONLY. No default was moved** — every setting was passed as a flag for the run and nothing was
 written back. **No mapping, curve, key name or dial was designed.** No fingerprint was minted.
 
-**★ THIS RUN IS INCOMPLETE AND SAYS SO IN EVERY TABLE.** The machine is a two-P-core laptop and the
-sweep is a four-hour run; it was still going when the night ended. **Every lever below is either
-fully measured on all ten tracks or absent — the arms run lever by lever, so there are no
-half-measured rows.** §7 names exactly which candidates were not reached.
+**★ THE RUN IS COMPLETE: 290 cells, 0 failures, all 14 candidates on all ten tracks at N = 30.**
+*(An earlier revision of this report was written while it was still running and said five levers were
+done; it finished afterwards. Every table below is the full set, and §8 records what the partial
+version got wrong.)*
 
 ---
 
@@ -35,11 +35,14 @@ Both change lead changes, passes and how long the leader is uncontested, by larg
 sign-consistent amounts. Neither moves the field's spread at 0.90, and neither moves the leader's gap
 at the line. **A host turning the shipped dial to "wild" gets a busier front and the same finish.**
 
-**★ AND ONE CANDIDATE IS NOT A LEVER AT ALL.** `pulkEnvelopeMaxEffect` — the realism envelope — gives
-a **bit-identical race on all ten tracks at HALF its shipped value**. It clamps nothing, because the
-contest strengths never reach it. That is a good answer and it retires the key from the dial
-question. *(The DOUBLE arm reached only two tracks before the night ended, and agrees on both. §5
-keeps the two Ns apart rather than averaging them into one claim.)*
+**★ AND THE SECOND HALF HAS A SINGLE SHAPE: EVERY CAP IN THE PULK MECHANISM IS SLACK.** Four arms
+raise a ceiling — the realism envelope, the boost headroom, the attacker slots, and the envelope
+again downward — and **three of them produce a BIT-IDENTICAL RACE on all ten tracks.** The game never
+reaches any of its own caps. **Lowering them changes the race; raising them cannot.** §5.
+
+**★ AND THE KEY THE TREE ITSELF CALLS "the future Action-slider backing" MOVES NOTHING.**
+`choreoIntensity` at 0.3 and at 0.9 changes the race on all ten tracks and moves **not one** of the
+five quantities readably. §6.
 
 ---
 
@@ -77,8 +80,10 @@ produced a table of a ruler measuring itself.
 **`pulkLeadRotationAttackerSlots` cannot be raised.**
 `client/src/modules/raceGovernor.js:197` is
 `Math.max(1, Math.min(2, Math.round(cfg.attackerSlots ?? 2)))` — **hard-clamped to [1, 2]**, and it
-ships at 2. There is no "clearly higher" setting; the key can only go down. It is measured downward
-only, and its upward arm is **unmeasurable by construction**, not unmeasured.
+ships at 2. There is no "clearly higher" setting the engine can honour. **It was swept upward anyway,
+at 3, precisely to test that reading — and the race came back BIT-IDENTICAL on all ten tracks, which
+is what a clamp to the shipped value must produce.** The source claim is therefore confirmed by
+measurement rather than by reading alone (§5).
 
 ### Where the tree and the report disagree
 
@@ -170,77 +175,143 @@ finish gap.**
 
 ---
 
-## 5. ★ The lever that is a rail: `pulkEnvelopeMaxEffect` is INERT
+## 5. ★ THE CAPS ARE ALL SLACK — three arms give a BIT-IDENTICAL race
 
-**At HALF the shipped value — 0.06, all ten tracks — the race signature differs from baseline on
-0 of 10.** Every race is **bit-identical**: same finishing order, every race, every track.
+This is the night's cleanest result and it has one shape. **Three of the fourteen levers, raised,
+change nothing at all** — not "nothing measurable", but nothing: the race signature is identical on
+every one of the ten tracks, meaning the same finishing order in every one of the 300 races.
 
-**At DOUBLE — 0.24 — only TWO tracks were reached before the night ended** (city-circuit and
-dirt-oval), and both are bit-identical too. **That is suggestive, not established**, and it is
-reported at its own N rather than folded into the row above.
-
-**This is not the metric being blind — the signature says the race did not change.** The realism
-envelope is a clamp on `|governorMult − 1|`, and **on the ten-track evidence at 0.06 the governor
-never reaches it**, so halving the clamp binds nothing. The documented ±12% is a bound the game does
-not currently approach rather than a setting, and on that evidence it cannot be a dial position:
-loosening or tightening it changes no race.
-
-★ **THE ONE THING THIS DOES NOT YET ESTABLISH** is the upward direction at full breadth. Two tracks
-at 0.24 agree with the ten at 0.06, and the mechanism says they should — a clamp that never binds is
-insensitive in both directions — but two is two. **Finishing that arm is the cheapest remaining
-question in this piece.**
-
-*(Consistent with, and on the downward side stronger than, ACTION-KEYS-1's note that the key "has NO
-headroom": measured here on ten tracks with a race SIGNATURE rather than a metric, so "no effect" is
-distinguished from "the instrument could not see one".)*
-
----
-
-## 6. The levers that change the race but move nothing readably
-
-Reported as such, and **given no larger run**, which is the piece's own rule.
-
-### `pulkFrontPool` — 4 and 16 (shipped 8)
-
-| | signature differs | the largest move |
+| arm | signature differs from baseline | what it is |
 | --- | --- | --- |
-| 4 | 10 of 10 | lead changes −2.5% (0/9, p = 0.004 — **sign-consistent but far below 5%**) |
-| 16 | **7 of 10** | nothing above 1% |
+| `pulkEnvelopeMaxEffect` = 0.06 *(half)* | **0 of 10** | the PULK realism envelope |
+| `pulkEnvelopeMaxEffect` = 0.24 *(double)* | **0 of 10** | the same |
+| `pulkBoostHeadroom` = 0.2 *(double)* | **0 of 10** | additive ceiling headroom above the band max |
+| `pulkLeadRotationAttackerSlots` = 3 *(above the range)* | **0 of 10** | parallel attacker slots |
 
-Two things worth keeping. **At 16 the race is IDENTICAL on 3 of 10 tracks** — the pool is already at
-or beyond the front group those tracks produce, so raising it is a no-op there. And at 4 the *sign*
-is consistent while the *size* is 2.5%: **a real but tiny effect, which is exactly what the two-part
-screen is for.** A test that looked only at p would have called this a lever.
+**Every one of them is a CEILING, and the game never reaches any of its own ceilings.**
 
-### `pulkBiasGain` — 1 and 4 (shipped 2)
+- **`pulkEnvelopeMaxEffect` is inert in BOTH directions.** It clamps `|governorMult − 1|`, and at the
+  shipped contest strengths the governor is never near it — so halving the clamp binds nothing and
+  doubling it releases nothing. **The documented bound is a rail the game does not currently touch,
+  not a setting**, and it cannot be a dial position.
+- **`pulkBoostHeadroom` is inert UPWARD and a real lever DOWNWARD** — see §6a. So the headroom the
+  game has is being used; there is simply none left above it.
+- **`pulkLeadRotationAttackerSlots = 3` is inert because it is CLAMPED.**
+  `client/src/modules/raceGovernor.js:197` is `Math.max(1, Math.min(2, …))`, so 3 becomes 2, which is
+  the shipped value. **This is the source claim in §2 confirmed by measurement rather than by
+  reading** — a bit-identical race is exactly what a clamp to the shipped value must produce, and it
+  is the strongest possible evidence that the clamp is live.
 
-Signature differs on 10 of 10 in both arms. **No quantity moves more than 1.4% and no sign test
-reaches p ≤ 0.05.** It changes the race and does not change the action.
-
----
-
-## 7. ★ What was NOT reached, and it is most of the list
-
-**Nine of the fourteen candidates.** The sweep is 290 cells at 30 races each on a two-P-core laptop,
-and it was still running when the night ended.
-
-Not measured: `pulkBoostHeadroom` · `pulkLeadRotationAttackerSlots` ·
-`pulkLeadRotationDropDepthLengths` · `pulkLeadRotationOutsiderMaxReachLengths` · `chaosSteerGain` ·
-`b2AttackHeroes` · `gapRerollStrength` · `gapRerollThresholdLengths` · `choreoIntensity`.
-
-**The remaining arms were re-ordered part-way through so the most informative candidates run first**
-— `b2AttackHeroes` (the tree's own "OUTCOME front-action lever"), `choreoIntensity` ("the future
-Action-slider backing"), `chaosSteerGain` (the owner's own candidate), then the rest. That changes
-only the ORDER; every lever is measured identically, and the run resumes from a per-cell journal, so
-finishing it is a matter of leaving it running.
-
-**Nothing here is a recommendation, a mapping, a curve or a stage definition**, and nothing about
-fairness is measured — the levers' fairness cost is
-[ACTION-FAIRNESS-1](../evolution/ACTION-FAIRNESS-1.md)'s, and it is not revisited.
+**What this means for a dial:** three of the fourteen candidates can only ever be turned DOWN. A dial
+built on them would have a dead half.
 
 ---
 
-## 8. Source hygiene
+## 6. The levers that MOVE something, beyond the two on the shipped dial
+
+Four more arms clear the screen. **All of them are smaller than `pulkLeaderBrake`, and two of them
+point the opposite way from what their names suggest.**
+
+### 6a. `pulkBoostHeadroom` — a real lever, downward only
+
+`0` (shipped 0.1): signature differs on 10 of 10.
+
+| quantity | change | tracks up/down | p |
+| --- | --- | --- | --- |
+| lead changes | **−8.8%** | 0/10 | 0.002 |
+| held top-5 passes | **−15.1%** | 0/10 | 0.002 |
+| longest single-leader hold | **+13.0%** | 9/1 | 0.021 |
+
+**Removing the headroom removes real action** — the largest single effect after the two dial keys.
+Raising it does nothing (§5). So the key is *contributing* at its shipped value and is *saturated*
+above it.
+
+### 6b. `pulkLeadRotationAttackerSlots` — the same story
+
+`1` (shipped 2): signature differs on 10 of 10. **Lead changes −7.8%** (0/10, p = 0.002) and **held
+top-5 passes −8.4%** (0/10, p = 0.002). Dropping to one attacker slot costs about 8% of both. The
+upward arm is impossible (§5).
+
+### 6c. ★ `chaosSteerGain` runs BACKWARDS, and it is not monotone
+
+| arm | lead changes | held passes | longest hold |
+| --- | --- | --- | --- |
+| `0.03` *(half)* | **+7.0%** — 10/0, p = 0.002 | +2.1% | **−3.5%** — 1/9, p = 0.021 |
+| `0.12` *(double)* | **−1.7%** — 1/8, p = 0.039 | **−2.7%** — 1/9, p = 0.021 | −1.4% |
+
+**LESS chaos steer gives MORE lead changes and a SHORTER leader hold; MORE gives fewer.** Both
+directions are sign-consistent and they point opposite ways, so this is a direction, not noise — but
+only the `0.03` arm clears the 5% size bar, and the `0.12` arm's effects are ~2%.
+
+**The sign is the finding, and it is contrary to the key's name.** Steering the field harder during
+chaos does not buy front action; it costs a little. *(Consistent with ACTION-KEYS-1's note that this
+key is saturated, and stronger: it is saturated on the high side and mildly inverted.)*
+
+### 6d. ★ `b2AttackHeroes` — more attackers make the field TIGHTER and the passes FEWER
+
+| arm | held passes | top-5 spread at 0.90 | longest hold | leader→P2 at the line |
+| --- | --- | --- | --- | --- |
+| `0` *(shipped 3)* | +3.0% (9/1, p = 0.021) | +9.1% | **−8.2%** — 0/10, p = 0.002 | +13.5% |
+| `6` | **−5.2%** — 1/9, p = 0.021 | **−8.4%** — 1/9, p = 0.021 | +4.1% | −6.2% |
+
+**Doubling the attackers tightens the front group by 8% and costs 5% of the held passes.** Removing
+them entirely shortens the leader's longest hold by 8%.
+
+**★ THIS IS NOT A CONTRADICTION OF THE KEY'S OWN RECORD, AND THE DIFFERENCE MATTERS.**
+`defaults.js` records this key as shipping at 3 for **"+21% top-5 OUTCOME action vs the no-attacker
+floor"**. That figure is measured over the **OUTCOME** window by `outcome-front-battle.mjs`. **None of
+this piece's five quantities is that measure** — `heldTop5Overtakes` is the PULK window, and the two
+gap quantities are checkpoints. So these numbers describe a *different window* and do not test the
+claim the key was shipped on. **They say the attackers are not free elsewhere in the race**, which is
+a new fact beside the old one rather than against it.
+
+---
+
+## 7. The levers that change the race and move nothing readably
+
+Reported as such and, per the piece's own rule, **given no larger run**. All of these change the race
+— the signature differs on all ten tracks — so these are not blind cells; they are keys that move
+none of the five quantities by 5% with a consistent sign.
+
+| lever | arms | the largest single move |
+| --- | --- | --- |
+| **`choreoIntensity`** | 0.3, 0.9 | top-5 spread −4.0% (p = 0.021) at 0.3; nothing else past 3% |
+| `pulkFrontPool` | 4, 16 | lead changes −2.5% at 4 (0/9, p = 0.004 — real sign, tiny size). **At 16 the race is IDENTICAL on 3 of 10 tracks** — the pool already exceeds those tracks' front group |
+| `pulkBiasGain` | 1, 4 | nothing above 1.4%, no p ≤ 0.05 |
+| `pulkLeadRotationDropDepthLengths` | 4, 16 | nothing — despite `defaults.js` calling it *"the depth lever"* |
+| `pulkLeadRotationOutsiderMaxReachLengths` | 8, 30 | nothing |
+| `gapRerollStrength` | 0.5, 2 | nothing |
+| `gapRerollThresholdLengths` | 0.25, 1 | nothing |
+
+**★ `choreoIntensity` IS THE ONE TO NOTICE.** `defaults.js` calls it *"the future Action-slider
+backing"* — it is the key the dial was expected to be built on — and on all five quantities, in both
+directions, over ten tracks at N = 30, **it does not move the action.** It changes the race; it does
+not change how much is happening in it.
+
+**The two gap-reroll keys are an expected null and are recorded as one.** ACTION-KEYS-1 established
+that gap-reroll's transform is gated on `phaseProgress ≥ corridorStart`, which is disjoint from the
+`--front-action` window — so three of these five quantities could not have seen it. The two
+`--gap-metrics` quantities CAN see past that boundary (0.90 and at-the-line) and they show nothing
+either, which is the part that is new here.
+
+---
+
+## 8. ★ What the partial version of this report got wrong
+
+Recorded rather than quietly overwritten, because it is the same class of error this chain keeps
+finding in other people's documents.
+
+An earlier revision was written while the sweep was still running and said **five levers were
+complete and nine were not reached**. It also said `pulkEnvelopeMaxEffect` was inert *"at half and at
+double"* when the double arm had reached **two tracks**, not ten — caught by re-reading the run's own
+journal rather than trusting the analyser's roll-up, and corrected before it was pushed. **The run
+then finished, and both halves of that claim are now true on all ten tracks.**
+
+**The lesson is the roll-up, not the impatience:** an analyser that averages whatever rows exist will
+happily present a 2-track arm and a 10-track arm in one table. The per-arm track count is printed on
+every row of the raw analysis for exactly that reason, and it is what caught this.
+
+## 9. Source hygiene
 
 **No file in the repository was changed by this piece.** The orchestrator and the analysis live in
 `C:/tmp/night-2026-09-04/pieceA/` and no scratch file entered the repository. Every arm's settings

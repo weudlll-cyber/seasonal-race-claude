@@ -82,54 +82,57 @@ still ahead**, with only 35% of its zoom travel done; and the zoom is caught EAR
 about big zoom changes says not to do. ★ **It was never "doing nothing anyway": 0 of 10** — the cheap
 version of this change is not available. ★ **And one case collides with your own acceptance — see question 4.** One seed only; the report says what that cannot support.
 
-## RUNNING
-
 **A · What each action lever actually does** — [ACTION-LEVERS-1](../reports/night/ACTION-LEVERS-1.md).
-Stage 1: 10 tracks × **N=30 races** per arm, one lever at a time, everything else shipped.
-**0 failures in 102 cells. Five levers complete**, and the report carries only complete rows — the
-arms run lever by lever, so nothing is half-measured.
+**COMPLETE: 290 cells, 0 failures — all 14 candidate levers on all ten tracks at N = 30 races**, one
+lever at a time, everything else shipped. It finished after the rest of the chain did.
 
-**★ IT IS STILL RUNNING, DELIBERATELY, AND IT IS SAFE TO STOP.** Every cell is flushed to a journal
-the moment it lands (`C:/tmp/night-2026-09-04/pieceA/rows-s1.jsonl`) and a restart skips what is
-already there, so killing it loses at most the handful of races in flight. The remaining arms were
-re-ordered so the most informative candidates run first — `b2AttackHeroes`, `choreoIntensity`,
-`chaosSteerGain`, then the rest. **To stop it:** `Stop-Process -Force` on the `node run.mjs` process.
-**To read it at any moment:** `node analyse.mjs` in that directory.
-
-**What is already clear — every row 10/10 tracks, N=30 races each, sign test across the ten tracks
-p = 0.002:**
+**Every row below is 10/10 tracks. The sign test is across the ten tracks; 10/0 or 0/10 is p = 0.002.**
 
 | lever | lead changes | held top-5 passes | leader's longest hold | field spread | finish gap |
 | --- | --- | --- | --- | --- | --- |
 | `pulkLeaderBrake` 0.05 → 0.15 | −37% → **+31%** | −38% → **+12%** | +55% → **−33%** | *nothing* | *nothing* |
 | `pulkChallengerBoost` 0.03 → 0.12 | −10% → **+17%** | −9% → **+12%** | +8% → **−16%** | *nothing* | *nothing* |
-| `pulkFrontPool` 4 → 16 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
-| `pulkBiasGain` 1 → 4 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
-| `pulkEnvelopeMaxEffect` 0.06 *(0.24: only 2 tracks)* | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
+| `pulkBoostHeadroom` 0 → 0.2 | **−9%** → INERT | **−15%** → INERT | **+13%** → INERT | *nothing* | *nothing* |
+| `pulkLeadRotationAttackerSlots` 1 → 3 | **−8%** → INERT | **−8%** → INERT | *nothing* | *nothing* | *nothing* |
+| `chaosSteerGain` 0.03 → 0.12 | **+7%** → −2% | *nothing* | −4% → *nothing* | *nothing* | *nothing* |
+| `b2AttackHeroes` 0 → 6 | *nothing* | +3% → **−5%** | **−8%** → +4% | +9% → **−8%** | *nothing* |
+| `pulkEnvelopeMaxEffect` 0.06 → 0.24 | **INERT** | **INERT** | **INERT** | **INERT** | **INERT** |
+| `choreoIntensity` 0.3 → 0.9 | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
+| `pulkFrontPool` · `pulkBiasGain` · `pulkLeadRotationDropDepthLengths` · `pulkLeadRotationOutsiderMaxReachLengths` · `gapRerollStrength` · `gapRerollThresholdLengths` | *nothing* | *nothing* | *nothing* | *nothing* | *nothing* |
 
 ★ **THE SHIPPED DIAL'S TWO KEYS MOVE THE FRONT FIGHT AND LEAVE THE FIELD SPACING AND THE FINISH
-ALONE.** Neither of them moves how close the field runs, and neither moves the leader's gap at the
-line. `pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it does move.
+ALONE.** Neither moves how close the field runs, and neither moves the leader's gap at the line.
+`pulkLeaderBrake` is about twice `pulkChallengerBoost` on every quantity it does move.
 
-★ **AND `pulkEnvelopeMaxEffect` IS NOT A LEVER AT ALL — it is a rail that never touches.** At HALF
-its shipped value the race is **bit-identical** to the baseline on **all ten tracks** — same
-finishing order, every race. The realism envelope is never reached at the shipped contest strengths,
-so halving the clamp binds nothing: the documented bound is one the game does not currently approach
-rather than a setting. *(The DOUBLE arm reached only **two** tracks before the night ended and agrees
-on both — suggestive, not established. Finishing it is the cheapest question left in piece A.)*
+★ **EVERY CAP IN THE PULK MECHANISM IS SLACK — three raised arms give a BIT-IDENTICAL race on all ten
+tracks.** The realism envelope (both directions), the boost headroom raised, and the attacker slots
+raised: same finishing order in all 300 races of each. **The game never reaches its own ceilings, so
+those keys can only be turned DOWN — a dial built on them would have a dead half.** The attacker-slot
+result also confirms by measurement the `[1, 2]` clamp found at source: 3 becomes 2, so nothing moves.
 
-`pulkFrontPool` and `pulkBiasGain` DO change the race — the finishing orders differ — but move none
-of the five quantities readably at N=30. They are reported as such and get no larger run, per the
-piece's own rule.
+★ **AND `choreoIntensity` — which `defaults.js` itself calls "the future Action-slider backing" —
+MOVES NOTHING.** It changes the race on all ten tracks in both directions and moves not one of the
+five quantities readably. **If the dial was going to be built on that key, this says it cannot be.**
+
+★ **Two levers run BACKWARDS from their names.** LESS `chaosSteerGain` gives MORE lead changes
+(+7%, 10/0) and MORE gives slightly fewer. MORE `b2AttackHeroes` gives FEWER held passes (−5%) and a
+TIGHTER front group (−8%) — though on a different window from the OUTCOME one that key was shipped
+on, so it is a new fact beside the old claim rather than against it.
 
 ## OPEN
 
-**Not reached tonight.** The machine is a two-P-core laptop; piece A alone is a four-hour run.
+**Two of the twelve pieces were not reached.** The machine is a two-P-core laptop and the three
+browser sweeps cannot overlap; A alone was a four-hour run and B another hour and a half.
 
-- **L · does the camera's guess match the plan's beats** — not started.
-- **D · the item-7 gap** — not started. The chain's own fall order puts it last of the sweeps.
-- **A's remaining levers** — nine of the fourteen candidates. The arms run lever by lever, so every
-  lever is either fully measured on ten tracks or not at all; there are no half-measured rows.
+- **L · does the camera's guess match the plan's beats** — not started. Its source half was
+  established, though: `racePlanner.js` hands the authored plan to `comebackDetector.setPlan`, and
+  the piece's question is whether the camera's own guess lands where the plan wrote the beat.
+- **D · the item-7 gap** — not started. The chain's own fall order puts it last of the sweeps, and
+  it is the cheapest of the three to run: it re-reads the 80-race set ITEM7-MEMBERSHIP-1 already has.
+
+**Also open, and cheaper than either:** piece B ran **one seed**, not the four asked for. Its report
+argues that adding seeds matters more than adding tracks, because which camera phase is running at
+progress 0.93 is a per-RACE question.
 
 ## NEEDS HIS WORD
 
@@ -183,7 +186,7 @@ tonight, so the disagreement cost nothing.
 `client/src/modules/raceActionStage.js`, judged on a production build and accepted **2026-08-24**. It
 maps onto exactly **two** keys: `pulkChallengerBoost` and `pulkLeaderBrake`. So piece A's question is
 not "what should a dial map onto" from nothing — it is "are those the right two, and what do the
-other twelve candidates do". The first answer is in RUNNING above.
+other twelve candidates do". The answer is in the piece-A block above, and in its report.
 
 **2. `contestWindowStart` IS NOT AN ACTION LEVER and is excluded from piece A with reason.** It sets
 `plan._contestWindowStart` (`client/src/modules/racePlanner.js:401`), which only
