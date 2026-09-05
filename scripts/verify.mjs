@@ -343,11 +343,17 @@ export function commandFor(g) {
   // would drive the forty-seed nightly sweep instead, which is hours. The flag lives here with the
   // rest of the argv, and GATE_TRACKS, the seed and the arm stay where they are — in the harness.
   //
-  // EXCLUSIVE, and the reason is process model rather than timing. It runs `vite build`, boots an
-  // API and a preview server on FIXED ports, and drives Chromium — machine-level resources no other
-  // guard's process expects to share — and its build carries a hard 180 s timeout, where a timeout
-  // is a FAIL and not a slow pass. Its MEASUREMENT is contention-proof (the page runs on a fixed
-  // 1/60 s virtual clock, so what it grades cannot change with machine load); its SCHEDULE is not.
+  // EXCLUSIVE, AND THAT IS MEASURED RATHER THAN CAUTIOUS. `docs/SHIP-CEREMONY.md` records what
+  // sharing the machine with this harness has already cost twice: once with `npm run verify`
+  // alongside it — Chromium killed mid-run, ten races lost, and vitest's workers timed out under the
+  // same saturation, which then read as a test failure — and once with two measurement scripts
+  // alongside it, 64 of 80 races failed. Running it INSIDE verify would be exactly that collision if
+  // it shared the queue. It also boots an API and a preview server on FIXED ports and its build
+  // carries a hard 180 s timeout, where a timeout is a FAIL and not a slow pass.
+  //
+  // Note what is NOT the reason: its MEASUREMENT is contention-proof, because the page runs on a
+  // fixed 1/60 s virtual clock and what it grades cannot change with machine load. The schedule is
+  // the fragile part, not the number. MEASURED under verify, alone: 336.9 s for the two races.
   if (g.id === GATE_GUARD)
     return { cmd: ["node", g.source, "--gate"], exclusive: true };
   // VERIFY-COST-3: `--cheap` is forwarded HERE, the only place the three are spawned. `cheapArgs()`

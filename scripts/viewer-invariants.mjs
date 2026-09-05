@@ -35,7 +35,15 @@
 // Usage:
 //   node scripts/viewer-invariants.mjs --tracks=space-sprint --seeds=9 --arm=shipped --headed
 //   node scripts/viewer-invariants.mjs --seeds=1-40                    # the nightly sweep
-//   node scripts/viewer-invariants.mjs --gate                          # the SHIP gate: 2 races, ~340 s
+//   node scripts/viewer-invariants.mjs --gate                     # the SHIP gate: 2 races, 337-369 s
+//   npm run verify -- --premerge                                  # the same two races, from verify
+//
+// THE 337-369 s CARRIES ITS METHOD (GATE-WIRED-AND-CAUSED-1, 2026-09-05): TWO runs, each timed by
+// `verify` around the child process on this machine with the gate as the only thing running —
+// `PASS viewer-invariants 336.9s (ran alone)` and `369.0s (ran alone)`. Two races each. n = 2, one
+// machine, one day: it is a range observed, not an average of anything larger, and it moves with
+// the machine. It agrees with `docs/SHIP-CEREMONY.md`'s cost table (2 races, 340 s), which also
+// records why most of it is FIXED cost — a build, two servers and a browser before any race runs.
 // ============================================================
 
 import { join, dirname } from "node:path";

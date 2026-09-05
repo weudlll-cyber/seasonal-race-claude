@@ -32,11 +32,22 @@
 //   lives in. Nothing can forget it. That is miss 3 and miss 5's cousin closed for every guard that
 //   exists or will exist, by construction.
 //
-//   REACH, declared but CROSS-CHECKED. The measurement harnesses reach into `client/` through
+//   REACH, declared. The measurement harnesses reach into `client/` through
 //   `await import(u("client/..."))`, which a static walk of `from "..."` cannot follow. Those entry
-//   points are declared, and `routing.test.mjs` extracts every such literal from the guard's own
-//   source and fails if one is not inside the guard's resolved set. The declaration cannot drift
-//   from the script, because the script is what checks it.
+//   points are declared, and every declared path is checked to EXIST — `declaredPathProblems` below,
+//   REACH-CONTRACT-1, and `verify` refuses the run rather than routing on a declaration it cannot
+//   trust.
+//
+//   ★ WHAT IS *NOT* CHECKED, corrected 2026-09-05 (GATE-WIRED-AND-CAUSED-1). This paragraph used to
+//   say that "`routing.test.mjs` extracts every such literal from the guard's own source and fails
+//   if one is not inside the guard's resolved set". **THERE IS NO `routing.test.mjs`** — established
+//   by `git ls-files | grep -i routing`, which returns two diagnostics, two night reports and this
+//   file, and by searching every `*.test.mjs` under `scripts/` for such an extraction, which finds
+//   none. So a guard that dynamically imports a path it does not cover would NOT be caught here.
+//   The property still HOLDS for the harnesses in the tree — checked by hand on the same date for
+//   `viewer-invariants.mjs`, whose three literals are covered by `files`, by the declared
+//   `camera/` dir, and by `dataReach` respectively — but it holds by inspection, not by
+//   construction. Writing that check is a guard of its own and is not done here.
 //
 //   DIRS / FILES, declared plainly. Containment for what no import can reach: a directory of
 //   documents, a suite's own configuration. This is the only genuinely hand-written part, it is
