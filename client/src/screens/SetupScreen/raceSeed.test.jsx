@@ -22,6 +22,10 @@
 // is the only new way this change could lie about reproducibility.
 // ============================================================
 
+// RACE-IDENTIFIER-1 (2026-09-05): the field's accessible name became 'Race seed or identifier'
+// when it started accepting a race identifier as well as a seed. These selections follow the
+// label rather than pinning the old one — the name changed because what the field takes changed,
+// and a test that kept selecting 'Race seed' would be asserting a name the interface no longer has.
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -143,7 +147,9 @@ describe('SEED-REAL-RACE-1 — an explicitly given seed wins', () => {
   it('a typed seed is the seed the race runs with', () => {
     renderStartable();
     openSettingsTab();
-    fireEvent.change(screen.getByLabelText('Race seed'), { target: { value: '4242' } });
+    fireEvent.change(screen.getByLabelText('Race seed or identifier'), {
+      target: { value: '4242' },
+    });
     clickStart();
     expect(startedRace().racePlanSeed).toBe(4242);
   });
@@ -151,7 +157,7 @@ describe('SEED-REAL-RACE-1 — an explicitly given seed wins', () => {
   it('a typed seed beats the draw on every start, so two races in a row are the same race', () => {
     renderStartable();
     openSettingsTab();
-    fireEvent.change(screen.getByLabelText('Race seed'), { target: { value: '77' } });
+    fireEvent.change(screen.getByLabelText('Race seed or identifier'), { target: { value: '77' } });
     clickStart();
     const first = startedRace().racePlanSeed;
     sessionStorage.removeItem('activeRace');
@@ -163,7 +169,7 @@ describe('SEED-REAL-RACE-1 — an explicitly given seed wins', () => {
   it('typing 0 cannot reach the unseeded path — it is clamped up, not accepted', () => {
     renderStartable();
     openSettingsTab();
-    fireEvent.change(screen.getByLabelText('Race seed'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Race seed or identifier'), { target: { value: '0' } });
     clickStart();
     expect(startedRace().racePlanSeed).toBeGreaterThan(0);
   });
@@ -173,7 +179,9 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
   it('a TYPED seed is kept in localStorage, which survives the tab closing', () => {
     renderStartable();
     openSettingsTab();
-    fireEvent.change(screen.getByLabelText('Race seed'), { target: { value: '1234' } });
+    fireEvent.change(screen.getByLabelText('Race seed or identifier'), {
+      target: { value: '1234' },
+    });
     expect(storageGet(KEYS.RACE_SEED, null)).toBe('1234');
     // The sabotage this catches is writing to sessionStorage, which looks identical in a running
     // tab and loses the value the moment the browser closes.
@@ -183,7 +191,7 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
   it('clearing the field REMOVES the key rather than storing an empty string', () => {
     renderStartable();
     openSettingsTab();
-    const field = screen.getByLabelText('Race seed');
+    const field = screen.getByLabelText('Race seed or identifier');
     fireEvent.change(field, { target: { value: '1234' } });
     fireEvent.change(field, { target: { value: '' } });
     expect(localStorage.getItem(KEYS.RACE_SEED)).toBeNull();
@@ -198,6 +206,12 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
     expect(localStorage.getItem(KEYS.RACE_SEED)).toBeNull();
   });
 
+  // RUN-IT-AGAIN-1 (2026-09-06) changed what this button FILLS IN, and the assertion follows the
+  // behaviour rather than pinning the old one. The seed is still the label — that half is what this
+  // test was written for and it is unchanged — but clicking now fills in the recorded IDENTIFIER,
+  // because putting the seed back reproduces a race only if nothing on the machine changed since.
+  // The seed-only fallback, for a race with no identifier recorded, is held in
+  // `raceIdentifierRow.test.jsx`.
   it('the last race seed is offered back in the panel, so he need not have written it down', () => {
     renderStartable();
     clickStart();
@@ -205,7 +219,11 @@ describe('SEED-REAL-RACE-1 — the seed outlives the session', () => {
     openSettingsTab();
     expect(screen.getByText(String(drawn))).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /run it again/i }));
-    expect(screen.getByLabelText('Race seed')).toHaveValue(String(drawn));
+
+    // The whole race came back, and it is the race that ran: its identifier decodes to that seed.
+    const filled = screen.getByLabelText('Race seed or identifier').value;
+    expect(filled.startsWith('RA1-')).toBe(true);
+    expect(storageGet(KEYS.LAST_RACE_IDENTIFIER, null)).toBe(filled);
   });
 });
 

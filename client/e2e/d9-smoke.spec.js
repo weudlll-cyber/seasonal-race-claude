@@ -425,12 +425,21 @@ test.describe('D9 — race screen startup', () => {
     await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
-  test('← Setup button returns to setup screen', async ({ page }) => {
+  // CANCEL-RACE-1: this control used to be called '← Setup' at every phase and this test selected
+  // it by that name. It now says 'Cancel Race' while a race is running — 500 ms in, that is the
+  // countdown — and goes back to '← Setup' only once every racer is home. Selected by its test id
+  // so the name can say what the control is doing without the test having to follow it.
+  test('Cancel Race ends the running race and returns to setup', async ({ page }) => {
     await seedRaceSession(page);
     await page.goto('/race');
     await page.waitForTimeout(500);
-    await page.getByRole('button', { name: /Setup/i }).click();
+    const cancel = page.getByTestId('cancel-race');
+    await expect(cancel).toHaveText('Cancel Race');
+    await cancel.click();
     await expect(page).toHaveURL(/\/setup/);
+    // AND IT LEFT NO RACE BEHIND: the payload the Setup screen wrote is gone, so nothing can
+    // restart the cancelled race.
+    expect(await page.evaluate(() => sessionStorage.getItem('activeRace'))).toBeNull();
   });
 
   test('scoreboard lists all racers', async ({ page }) => {

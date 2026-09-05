@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-BEATS-1.md](COMEBACK-BEATS-1.md) — **the plan writes the comeback, and the camera is
+  somewhere else** (2026-09-05, PLAYABLE-FOUR-1 piece A). Ten tracks x seeds 1-4, N=40, race plan ON,
+  shipped defaults, nothing changed. The plan named **74 comebackers** and wrote **215 beats**; the
+  camera showed **11 comebacks**. ★ **The subject is never wrong — 0 of 11 were on a racer the plan
+  had not named** (`_cast` replaces the candidate pool, so it cannot be) — **and the moment is
+  always early: 11 of 11**, by a median 0.134 of the race against the `resolve` beat, landing in the
+  gap between the plan's peak and its landing. **63 of 74 written comebackers were never shown; 29
+  of 40 races contained no comeback shot at all.** ★ The beats do NOT die at the detector (a
+  candidate existed in 40 of 40 races) nor for want of an offer window (35 of 40) — they lose the
+  DIRECTOR'S weighted contest: during the 7,510 frames a named comeback was live and offerable, the
+  camera was on BATTLE_ZOOM 34%, LEADER_ZOOM 21%, LEAD_CHANGE 13%. ★ **AND A METHOD FINDING THAT
+  DECIDES THE NUMBERS: `raceDriver.mjs` hands the director `isOutcomePhase: false` as a hard-coded
+  literal** where the browser hands it the plan's own OUTCOME phase — measured both ways, that is 11
+  shots against 1. Of the 9 files naming the flag, `camera-replay.mjs` alone does it the browser's
+  way; **the camera fingerprint is taken with this window closed.** Nothing was changed and nothing
+  was minted.
 - [CLOSING-CUT-1.md](CLOSING-CUT-1.md) — **what the closing phase interrupts** (2026-09-04, PIECE B).
   The feasibility gate passed: the closing phase's start IS observable from an existing instrument —
   the first frame with the director's `_runInComposingNow`, dumped as `comp`. Ten tracks, seed 9, the

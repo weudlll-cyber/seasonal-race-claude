@@ -349,6 +349,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
+  minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall
+  order was never needed. **A** measured the comeback beats against the camera (N=40): the subject is
+  never wrong, **0 of 11**, and the moment is always early, **11 of 11**, median **9.90 s** before
+  the beat — the beats lose the DIRECTOR'S weighted contest, not the detector's gates. **B** Cancel
+  Race — ★ a control already existed and the leak was **FULLSCREEN**, which no one unwound. **C** the
+  server-gone banner — ★ the offline FALLBACK was already in the tree, so only the banner was built.
+  **D** a race identifier encoding all nine engine inputs exactly — ★ **it is NOT typable (210 / 450
+  / 743 characters for 4 / 20 / 40 racers)** and the brief forbade making it lossy, so the options
+  are the owner's. ★ **Three briefed premises did not survive being checked**, and each changed what
+  was built; the largest is that `raceDriver.mjs` hands the director a hard-coded
+  `isOutcomePhase: false` where the browser hands the plan's OUTCOME phase — **11 comeback shots
+  against 1**, so the harness path alone would have answered piece A wrongly. All four fingerprint
+  roles re-measured per piece and UNMOVED.
 - [MINT-RENDER-1.md](MINT-RENDER-1.md) — **the render fingerprint is re-minted, and what it does NOT
   cover is written beside it** (2026-09-05; the owner ordered the mint. One role moves; no drawing
   code, default or threshold changed). **render `733b3f100d6a819f` -> `74946ddbeca517a9`**, and

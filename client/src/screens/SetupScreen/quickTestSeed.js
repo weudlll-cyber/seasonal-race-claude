@@ -21,6 +21,8 @@
 // name here for a broken address there. Conservative option at a fork, stated rather than assumed.
 // ============================================================
 
+import { looksLikeRaceIdentifier } from '../../modules/raceIdentifier.js';
+
 // The minimum typed/drawn seed (0 = the unseeded legacy path, deliberately unreachable from Quick-Test).
 export const QUICK_TEST_SEED_MIN = 1;
 // The AUTO-DRAW ceiling only: a randomly-drawn seed stays small enough to read off the HUD and type
@@ -41,6 +43,12 @@ const QUICK_TEST_SEED_TYPED_MAX = Number.MAX_SAFE_INTEGER;
  * @returns {string} '' or a decimal integer string in [MIN, MAX_SAFE_INTEGER]
  */
 export function sanitizeQuickTestSeedInput(raw) {
+  // RACE-IDENTIFIER-1: the field takes a RACE IDENTIFIER as well as a seed, and an identifier is
+  // base64url — so the digits-only filter below would silently shred one into a nonsense number.
+  // It is passed through whole; whether it is VALID is `raceIdentifier.js`'s question, asked at
+  // start time where a refusal can be shown, not here on every keystroke.
+  const asText = String(raw ?? '').trim();
+  if (looksLikeRaceIdentifier(asText)) return asText;
   const digits = String(raw ?? '').replace(/[^0-9]/g, '');
   if (digits === '') return '';
   const n = Math.min(QUICK_TEST_SEED_TYPED_MAX, Math.max(QUICK_TEST_SEED_MIN, Number(digits)));
@@ -71,6 +79,14 @@ export function drawQuickTestSeed(rng = Math.random) {
  *          empty so the next race draws again)
  */
 export function resolveQuickTestSeed(fieldValue, rng = Math.random) {
+  // RACE-IDENTIFIER-1: an identifier carries its own seed among the other eight inputs, and the
+  // caller decodes it before reaching here. Drawing a random seed for one would throw that away, so
+  // this refuses rather than guesses — reaching this line with an identifier is a caller bug.
+  if (looksLikeRaceIdentifier(fieldValue)) {
+    throw new Error(
+      'resolveQuickTestSeed was given a race identifier. Decode it first — its seed travels inside it.'
+    );
+  }
   const typed = sanitizeQuickTestSeedInput(fieldValue);
   if (typed === '') return { seed: drawQuickTestSeed(rng), drawn: true };
   return { seed: Number(typed), drawn: false };

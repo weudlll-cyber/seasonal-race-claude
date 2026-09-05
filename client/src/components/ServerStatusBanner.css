@@ -1,0 +1,44 @@
+/* ============================================================
+   File:        ServerStatusBanner.css
+   Path:        client/src/components/ServerStatusBanner.css
+   Project:     RaceArena — SERVER-GONE-1
+
+   A bar across the top of every screen, in the flow rather than over it: the race screen composes
+   its own layout to a fixed canvas, and a floating bar would sit on top of the picture. Pinning it
+   to the document top and letting the app move down keeps it out of the race.
+   ============================================================ */
+
+.server-status-banner {
+  position: sticky;
+  top: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #7a2718;
+  color: #ffe9e2;
+  border-bottom: 1px solid #a4432c;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.server-status-banner strong {
+  color: #fff;
+}
+
+.server-status-banner__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff6b4a;
+  box-shadow: 0 0 8px rgba(255, 107, 74, 0.9);
+}
+
+/* Fullscreen belongs to the race and nothing may overlay it — the banner is still there the moment
+   the operator leaves fullscreen, so nothing is lost by standing down while the race owns the
+   screen. */
+:fullscreen .server-status-banner {
+  display: none;
+}

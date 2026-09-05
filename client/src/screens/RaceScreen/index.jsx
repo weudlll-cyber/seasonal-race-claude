@@ -461,31 +461,72 @@ export default function RaceScreen() {
     racerTypeRef.current = racerType;
 
     const trackEmoji = racerType.getEmoji() ?? null;
-    const speedMultiplier = racerType.getSpeedMultiplier();
 
-    const baseSpeedConfig = loadBaseSpeedConfig();
+    // ── ★ RACE-IDENTIFIER-2: THE RACER TYPE IS PART OF THE RACE, AND IT WAS BEING TAKEN FROM THIS
+    //    MACHINE. This is the defect the owner hit: he retuned a racer, pasted an identifier, and
+    //    got HIS racer at HIS speed under the identifier's name.
+    //
+    //    `getRacerType` returns the type with THIS host's stored overrides already applied
+    //    (`racer-types/index.js:293-300` applies them at boot). The identifier has recorded the
+    //    same fields all along — `effectiveRacerTypes`, which `exportRaceConfig.js` builds from
+    //    `SIM_TYPE_FIELDS` — and nothing on the race path read them. `speedMultiplier` is a
+    //    first-order physics input, so the result was a DIFFERENT RACE under the same identifier,
+    //    silently, which is the one outcome this feature exists to prevent.
+    //
+    //    NOTHING ABOUT THE ENCODING CHANGES HERE. The values were always in the string; this is the
+    //    read that was missing. A race with no identifier takes the live type exactly as before.
+    const recordedType = raceData.worldConfigOverride?.effectiveRacerTypes?.[typeId] ?? null;
+    const typeField = (name) =>
+      recordedType && name in recordedType ? recordedType[name] : racerType.config[name];
 
-    const behaviorConfig = loadRaceBehaviorConfig();
+    const speedMultiplier =
+      recordedType && 'speedMultiplier' in recordedType
+        ? recordedType.speedMultiplier
+        : racerType.getSpeedMultiplier();
+
+    // ── RACE-IDENTIFIER-1: where a REPRODUCED race stops reading this machine ──────────────────
+    //
+    // Every loader below reads THE HOST'S localStorage, and that is exactly why a seed alone does
+    // not repeat a race: two operators on the same seed and the same build get two races, because
+    // their stored config differs and nothing on screen says so.
+    //
+    // When a race was started from a race identifier, the identifier carries the config world it was
+    // recorded with, and the payload brings it here. `cfg()` prefers that copy and otherwise reads
+    // the host exactly as before — so with no identifier in play this is the same code it replaced,
+    // loader for loader, which is why no fingerprint moves.
+    const overrideConfigs = raceData.worldConfigOverride?.configs ?? null;
+    const cfg = (name, load) => overrideConfigs?.[name] ?? load();
+
+    const baseSpeedConfig = cfg('baseSpeedConfig', loadBaseSpeedConfig);
+
+    const behaviorConfig = cfg('raceBehaviorConfig', loadRaceBehaviorConfig);
     behaviorConfig.isOpen = isOpenTrack;
-    const rowConfig = loadRowLayoutConfig();
+    const rowConfig = cfg('rowLayoutConfig', loadRowLayoutConfig);
     // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
     // than from the live Dev Screen setting — so changing the control while a race is on screen
     // cannot change the race on screen, and a replayed payload runs the stage it recorded. A payload
     // from before this change carries no stage and normalises to the shipped one.
     const raceActionStage = normalizeRaceActionStage(raceData.raceActionStage);
-    const dynamicsConfig = applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
-    const frameTimingConfig = loadFrameTimingConfig();
+    // The stage is applied on TOP of the stored dynamics, and the identifier records the config
+    // world AFTER that application (`buildWorldConfig` does the same), so a reproduced race takes
+    // the recorded block whole rather than re-applying a stage to it.
+    const dynamicsConfig = overrideConfigs?.raceDynamicsConfig
+      ? overrideConfigs.raceDynamicsConfig
+      : applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
+    const frameTimingConfig = cfg('frameTimingConfig', loadFrameTimingConfig);
 
     // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
     // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
     // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
     // badge and the marker can never disagree about what this race was configured with.
-    const cfgWorld = buildWorldConfig({ raceActionStage });
+    // The badge and the camera marker must describe the world the race is ACTUALLY running with,
+    // which for a reproduced race is the recorded one.
+    const cfgWorld = raceData.worldConfigOverride ?? buildWorldConfig({ raceActionStage });
     const cfgBadge = configFingerprintBadge(cfgWorld);
     const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
-    const autoScaleConfig = loadAutoScaleConfig();
+    const autoScaleConfig = cfg('autoScaleConfig', loadAutoScaleConfig);
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     // WINNER-CARD-1: the timer list, captured here rather than read from the ref in the cleanup.
@@ -494,9 +535,12 @@ export default function RaceScreen() {
     // it is honest here rather than a silencing, because a cleanup that read the ref LATER could in
     // principle be looking at a different race's list.
     const winnerCardTimers = winnerCardTimersRef.current;
-    const displaySize = racerType.config.displaySize;
-    const _bfNarrowRaw = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
-    const _bfLongRaw = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
+    // RACE-IDENTIFIER-2: the other three SIM fields the identifier records, read the same way.
+    // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
+    // a retuned SIZE moves the race exactly as a retuned speed does.
+    const displaySize = typeField('displaySize');
+    const _bfNarrowRaw = Math.min(typeField('bodyFillX'), typeField('bodyFillY'));
+    const _bfLongRaw = Math.max(typeField('bodyFillX'), typeField('bodyFillY'));
     const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
     const bodyFillLong = Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
     const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
@@ -570,6 +614,29 @@ export default function RaceScreen() {
       bodyFillLong,
       constSpeedActive,
     });
+    // ── RACE-INPUTS-PROBE-1: what the race was ACTUALLY built with, for a browser test ───────────
+    //
+    // INERT UNLESS SWITCHED ON, the same shape as `?constSpeed=1` (:423) and the viewer probe: no
+    // normal race writes this. It exists because the one question the owner's report raised — did a
+    // pasted identifier run ITS race or this machine's — had NO observable in the browser at all,
+    // and a test that cannot see the engine's inputs can only guess from the payload.
+    //
+    // It reports the values that actually reached `createRaceFromIdentity` above, so it cannot
+    // drift from them: it is read from the same variables, one line later.
+    try {
+      if (localStorage.getItem('racearena:raceInputsProbe') === '1') {
+        window.__raRaceInputs = {
+          racerTypeId: typeId,
+          speedMultiplier,
+          racePlanSeed,
+          raceActionStage,
+          racePlanPulkStart: dynamicsConfig?.racePlanPulkStart ?? null,
+          fromIdentifier: !!raceData.worldConfigOverride,
+        };
+      }
+    } catch {
+      /* storage unavailable — the probe is a diagnostic and must never take a race down */
+    }
     const raceState = race.state;
     const raceCfg = race.config;
     const raceMeta = race.meta;
@@ -1766,6 +1833,49 @@ export default function RaceScreen() {
     }
   }
 
+  // ── Cancel the race ──────────────────────────────────────────────────────
+  //
+  // ONE CONTROL, ONE EFFECT: end the running race and go back to where it was started from, leaving
+  // nothing behind. No confirmation, no countdown, no undo, no shortcut — those are the owner's to
+  // ask for.
+  //
+  // WHAT "LEAVES NOTHING BEHIND" MEANS HERE was established by reading the START path rather than
+  // guessed, and every item is unwound by somebody:
+  //
+  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx:684` (and `:796` for Quick
+  //     Test). Removed here. Left in place it is a race payload with no race, and the next mount of
+  //     this screen would start it again.
+  //   * the rAF loop, the finish-nav timer, the winner-card timers, the long-task observer, the
+  //     camera markers and the effect instances — all released by the animation effect's own
+  //     cleanup on unmount (:1760-1773), which navigating away runs. Nothing to do here, and doing
+  //     it here as well would be a second owner for state that already has one.
+  //   * the `fullscreenchange` listener — removed by its own effect cleanup (:378).
+  //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
+  //     `toggleFullscreen` above puts the document into fullscreen on `screenRef`; leaving the
+  //     screen does not take it out, so the operator landed back on Setup with the browser still
+  //     fullscreen and the only control that could undo it left behind on the race screen.
+  //
+  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:688`
+  // into a store that outlives the tab. It is the RECORD of a seed that really was used — a race did
+  // run — and erasing it would destroy the only trace of a drawn seed. And `raceResults`, which this
+  // race never wrote: it is written only once every racer has finished (:1108), so a cancelled race
+  // leaves no result of its own. Clearing an EARLIER race's result would be touching the result
+  // recording, which this piece must not do.
+  function cancelRace() {
+    // Order matters only in that fullscreen is asked for before the component goes away: after the
+    // navigation this handler's element is gone, and `exitFullscreen` rejects if the document is not
+    // in fullscreen, so it is both guarded and caught.
+    if (document.fullscreenElement) {
+      try {
+        document.exitFullscreen?.()?.catch?.(() => {});
+      } catch {
+        /* a browser that refuses the exit must not also lose the operator the way back to Setup */
+      }
+    }
+    sessionStorage.removeItem('activeRace');
+    fadeNavigate('/setup');
+  }
+
   // ── Error / loading states ───────────────────────────────────────────────
   if (error) {
     return (
@@ -1781,13 +1891,7 @@ export default function RaceScreen() {
           )}
           <div className="race-error-title">Error</div>
           <div className="race-error-msg">{error}</div>
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
+          <button className="race-back-btn" onClick={cancelRace}>
             ← Back to Setup
           </button>
         </div>
@@ -1917,14 +2021,12 @@ export default function RaceScreen() {
         </div>
 
         <aside className="race-hud">
-          <button
-            className="race-back-btn"
-            onClick={() => {
-              sessionStorage.removeItem('activeRace');
-              fadeNavigate('/setup');
-            }}
-          >
-            ← Setup
+          {/* The SAME control and the same one effect throughout; only its name follows what it is
+              doing. While the race is running it cancels one, and saying "← Setup" was the reason
+              the fullscreen leak went unnoticed — it read as navigation. Once every racer is home
+              there is no longer a race to cancel and it is navigation again. */}
+          <button className="race-back-btn" data-testid="cancel-race" onClick={cancelRace}>
+            {phase === PHASE.FINISHED ? '← Setup' : 'Cancel Race'}
           </button>
 
           {/* STANDINGS-RULE: the panel's composition lives in Scoreboard.jsx, so the guard that

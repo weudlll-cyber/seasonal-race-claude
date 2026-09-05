@@ -51,8 +51,8 @@ is inside them is arithmetic and nothing else. Regenerate with
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
 | files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 78 |
-| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 110 |
-| of those, files that CANNOT reach the engine | 51 |
+| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 113 |
+| of those, files that CANNOT reach the engine | 54 |
 | closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs` |
 
 <!-- END GENERATED: engine-reach counts -->
