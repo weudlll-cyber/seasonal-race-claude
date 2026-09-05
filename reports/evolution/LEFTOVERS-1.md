@@ -144,7 +144,7 @@ Eight entries, each with the source address that decided it, in
 | `docs/SHIP-CEREMONY.md` | 805 | 855 | 2 step-drift fixes; the two-lists note + its pointer; the `workflow_dispatch` caveat; the three-gaps section |
 | `docs/MORNING.md` | 209 | 136 | rewritten whole |
 | `docs/LESSONS.md` | 4171 | 4171 | one dangling reference annotated |
-| `reports/evolution/LEFTOVERS-1.md` | 0 | 169 | this report |
+| `reports/evolution/LEFTOVERS-1.md` | 0 | 177 | this report |
 | `reports/evolution/INDEX.md` | — | — | one entry |
 
 **Noticed and deliberately left:**
@@ -156,6 +156,13 @@ Eight entries, each with the source address that decided it, in
   wrong it is superseded by CI-MERGE-RACE-1. **Reports are append-only and none was edited here.**
 - **`docs/archive/`** was excluded from the address sweep — it records the past on purpose, and
   `check-doc-links` already treats it as such.
+
+## CHECKS
+
+- **`npm run verify`** — `PASS 12  FAIL 0  SKIP 15`, 129.6 s.
+- **The script suite as CI runs it**, identity suppressed to match a runner — **532 tests, 532 pass,
+  0 fail.** Run because item 3 touches text `check-tags.mjs` reads.
+- **The client suite** — **241 files, 4,476 tests, 0 failures**, 334.36 s.
 
 ## FINGERPRINTS
 
