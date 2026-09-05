@@ -349,6 +349,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CI-MERGE-RACE-1.md](CI-MERGE-RACE-1.md) — **the race is real, and it is NOT every merge, so
+  nothing was built** (2026-09-05; one report and one index line — no guard, script, workflow,
+  default or fingerprint touched). ★ **THE PIECE'S OWN GATE STOPPED IT.** Rule B failed on the push
+  run of **1 merge in 28**; the other 27 passed it. That is decisive rather than suggestive because
+  `check-tags.mjs` runs at `ci.yml:286`, **before** the script suite at `:354`, and a failed step ends
+  the job — so all 29 runs that failed at the script suite had already passed Rule B. The window is
+  real and **measured at ~13 s** (job start `11:44:52Z`, Rule B `11:45:05Z`), and the one failure is
+  the one merge whose sweep was delayed past it. ★ **This supersedes CI-RED-3e6c0b87's *"every merge
+  has this window; the commit-tree red was masking it"* on BOTH halves** — not every merge, and not
+  masked, since a Rule B failure would have replaced the commit-tree one as the failing step.
+  **Noticed and left:** SHIP-CEREMONY steps 10 and 12 contradict each other — step 10 waits for a
+  green run that step 12 is required to make possible — so the green push run is today a matter of
+  how fast the sweep is typed rather than of structure. That is the owner's to order.
+
 - [OPEN-LIST-TRUTH-1.md](OPEN-LIST-TRUTH-1.md) — **ten open items checked against the tree; one was
   already built** (2026-09-05; documents plus one string in a script — no behaviour, no threshold,
   nothing minted, `engine-reach --check` selects nothing on all four changed paths). ★ **THE CLOSING
