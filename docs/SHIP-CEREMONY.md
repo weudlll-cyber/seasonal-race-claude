@@ -94,7 +94,7 @@ re-counted. Re-counted on 2026-09-07 and STILL ELEVEN. SHARED-CANONICAL-1 touche
 `ENGINE_INPUT_MODULES`, which is why the stamp is renewed rather than the figure changed. Counted
 by importing the module and reading `.length`, not by eye.
 
-<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ 0049d69b 2026-09-07 depends=client/src/modules/raceConfigWorld.js -->
+<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ ba9801a1 2026-09-07 depends=client/src/modules/raceConfigWorld.js -->
 
 **The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
 what carries the argument; the number is not load-bearing, so it is not stated at all rather than
