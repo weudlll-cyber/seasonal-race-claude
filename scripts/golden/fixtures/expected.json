@@ -1,0 +1,112 @@
+{
+  "races": {
+    "closed-garden-path-12": {
+      "recordedOn": "2026-09-06",
+      "recordedCommit": "bcf41a9b",
+      "recordedBecause": "first recording — no previous expectation existed",
+      "realizedDurationSec": 35.35360572287397,
+      "results": [
+        {
+          "name": "Flash",
+          "rank": 1,
+          "finishTimeSec": 36.592
+        },
+        {
+          "name": "Nitro",
+          "rank": 2,
+          "finishTimeSec": 36.624
+        },
+        {
+          "name": "Zephyr",
+          "rank": 3,
+          "finishTimeSec": 36.688
+        },
+        {
+          "name": "Turbo",
+          "rank": 4,
+          "finishTimeSec": 36.72
+        },
+        {
+          "name": "Drift",
+          "rank": 5,
+          "finishTimeSec": 36.768
+        },
+        {
+          "name": "Thunder",
+          "rank": 6,
+          "finishTimeSec": 36.928
+        },
+        {
+          "name": "Storm",
+          "rank": 7,
+          "finishTimeSec": 36.944
+        },
+        {
+          "name": "Rocket",
+          "rank": 8,
+          "finishTimeSec": 36.976
+        },
+        {
+          "name": "Speedy",
+          "rank": 9,
+          "finishTimeSec": 36.976
+        },
+        {
+          "name": "Bolt",
+          "rank": 10,
+          "finishTimeSec": 37.152
+        },
+        {
+          "name": "Comet",
+          "rank": 11,
+          "finishTimeSec": 38.096
+        },
+        {
+          "name": "Blaze",
+          "rank": 12,
+          "finishTimeSec": 39.024
+        }
+      ],
+      "history": []
+    },
+    "open-river-run-6": {
+      "recordedOn": "2026-09-06",
+      "recordedCommit": "bcf41a9b",
+      "recordedBecause": "first recording — no previous expectation existed",
+      "realizedDurationSec": 29.999999999999996,
+      "results": [
+        {
+          "name": "Rocket",
+          "rank": 1,
+          "finishTimeSec": 27.936
+        },
+        {
+          "name": "Thunder",
+          "rank": 2,
+          "finishTimeSec": 28.208
+        },
+        {
+          "name": "Blaze",
+          "rank": 3,
+          "finishTimeSec": 28.848
+        },
+        {
+          "name": "Turbo",
+          "rank": 4,
+          "finishTimeSec": 29.904
+        },
+        {
+          "name": "Speedy",
+          "rank": 5,
+          "finishTimeSec": 30.08
+        },
+        {
+          "name": "Flash",
+          "rank": 6,
+          "finishTimeSec": 30.368
+        }
+      ],
+      "history": []
+    }
+  }
+}
