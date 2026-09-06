@@ -91,6 +91,12 @@ CREATE TABLE IF NOT EXISTS racer_types (
 CREATE TABLE IF NOT EXISTS races (
   id                   TEXT PRIMARY KEY,
 
+  -- THE CLIENT'S OWN ID FOR THIS RACE, and the reason the same race cannot land twice.
+  -- The result screen already mints one (newId(), ResultScreen:208) before anything is sent, so a
+  -- retry, a double click or a second tab all carry the id the first attempt carried. UNIQUE makes
+  -- that a property of the table rather than of the code that happens to insert today.
+  client_race_id       TEXT NOT NULL UNIQUE,
+
   -- Who may see it. Both forms, for the same reason a user carries both (TEAMS-1): the display
   -- spelling is what a person reads, the normalised key is what a query joins on.
   team                 TEXT NOT NULL,
@@ -253,6 +259,25 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     // No `size` column: the field size is the roster's length and that is its one home. A stored
     // count would be a second copy of a derived fact, which is the shape that drifts. The history
     // piece can add an indexed count when it has a query that needs one.
+    // ★ THE SAME RACE ARRIVING TWICE IS STORED ONCE, and this is where that is decided. The check
+    // is on the CLIENT'S id, not on the content hash, because the two answer different questions: a
+    // hash asks "are these bytes identical", and a resend that was rebuilt from the same race can
+    // differ in a field that does not matter (a re-serialised result list, a field added by a later
+    // build) while still being the same race. Keyed on the id the result screen minted, a second
+    // arrival is recognised whatever else moved, and it is ACCEPTED QUIETLY — the caller gets the
+    // race that is already stored, not an error, because a retry succeeding is the normal case.
+    const already = db
+      .prepare('SELECT * FROM races WHERE client_race_id = ?')
+      .get(String(race.clientRaceId ?? ''));
+    if (already) {
+      return {
+        id: already.id,
+        rosterId: already.roster_id,
+        racerTypesId: already.racer_types_id,
+        stored: { race: false, roster: false, racerTypes: false },
+      };
+    }
+
     const roster = putContent('rosters', { names: race.names });
 
     // THE TUNED RACER VALUES: the two halves of the world that carry per-racer tuning, and the
@@ -265,6 +290,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     });
 
     const row = {
+      client_race_id: required(race, 'clientRaceId'),
       team: String(race.team).trim(),
       team_normalized: normalizeTeam(race.team),
       finished_at: required(race, 'finishedAt'),
@@ -324,6 +350,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
 
     return {
       id: row.id,
+      clientRaceId: row.client_race_id,
       team: row.team,
       teamNormalized: row.team_normalized,
       finishedAt: row.finished_at,
@@ -354,6 +381,11 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   /** One race by its id, references resolved. `null` when there is no such race. */
   function getRaceById(id) {
     return hydrate(db.prepare('SELECT * FROM races WHERE id = ?').get(id));
+  }
+
+  /** One race by the id the CLIENT minted for it. `null` when it has not been stored. */
+  function getRaceByClientId(clientRaceId) {
+    return hydrate(db.prepare('SELECT * FROM races WHERE client_race_id = ?').get(clientRaceId));
   }
 
   /**
@@ -395,6 +427,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   return {
     storeRace,
     getRaceById,
+    getRaceByClientId,
     listRacesByTeam,
     getRoster,
     getRacerTypes,

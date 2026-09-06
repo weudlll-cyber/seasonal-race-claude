@@ -53,8 +53,14 @@ const CHANGED_RACER_VALUES = {
   effectiveRacerTypes: { beetle: { normalSpeed: 175, areaBonus: 0.1 } },
 };
 
+/**
+ * One race. `clientRaceId` defaults to a FIXED value on purpose: two calls to `aRace()` with no id
+ * are THE SAME RACE arriving twice, which is what the store dedupes on. A test that means two
+ * different races passes two different ids, and says so at the call site.
+ */
 function aRace(overrides = {}) {
   return {
+    clientRaceId: 'client-race-1',
     team: 'Seasonal Entertainment',
     finishedAt: '2026-09-06T10:00:00.000Z',
     identifierVersion: 1,
@@ -84,8 +90,8 @@ function aRace(overrides = {}) {
 
 describe('content addressing — identical content lands once', () => {
   it('the same roster stored twice yields ONE row and the SAME reference', () => {
-    const a = store.storeRace(aRace({ racePlanSeed: 1 }));
-    const b = store.storeRace(aRace({ racePlanSeed: 2 }));
+    const a = store.storeRace(aRace({ clientRaceId: 'a', racePlanSeed: 1 }));
+    const b = store.storeRace(aRace({ clientRaceId: 'b', racePlanSeed: 2 }));
 
     expect(a.rosterId).toBe(b.rosterId);
     expect(a.stored.roster).toBe(true);   // the first race wrote it
@@ -94,8 +100,8 @@ describe('content addressing — identical content lands once', () => {
   });
 
   it('the same racer values stored twice yield ONE row and the SAME reference', () => {
-    const a = store.storeRace(aRace({ racePlanSeed: 1 }));
-    const b = store.storeRace(aRace({ racePlanSeed: 2 }));
+    const a = store.storeRace(aRace({ clientRaceId: 'a', racePlanSeed: 1 }));
+    const b = store.storeRace(aRace({ clientRaceId: 'b', racePlanSeed: 2 }));
 
     expect(a.racerTypesId).toBe(b.racerTypesId);
     expect(b.stored.racerTypes).toBe(false);
@@ -103,8 +109,8 @@ describe('content addressing — identical content lands once', () => {
   });
 
   it('a DIFFERENT roster gets a different reference and its own row', () => {
-    const a = store.storeRace(aRace());
-    const b = store.storeRace(aRace({ names: ['Ada', 'Grace', 'Alan', 'Edsger'] }));
+    const a = store.storeRace(aRace({ clientRaceId: 'a' }));
+    const b = store.storeRace(aRace({ clientRaceId: 'b', names: ['Ada', 'Grace', 'Alan', 'Edsger'] }));
 
     expect(a.rosterId).not.toBe(b.rosterId);
     expect(store.counts().rosters).toBe(2);
@@ -113,13 +119,15 @@ describe('content addressing — identical content lands once', () => {
   it('the roster order is CONTENT — a name is physics, so a reordering is a different roster', () => {
     // `stablePairBit` hashes the racer's name, so the same three names in another order is not the
     // same starting field. Nothing in the store may sort them into agreement.
-    const a = store.storeRace(aRace({ names: ['Ada', 'Grace', 'Alan'] }));
-    const b = store.storeRace(aRace({ names: ['Grace', 'Ada', 'Alan'] }));
+    const a = store.storeRace(aRace({ clientRaceId: 'a', names: ['Ada', 'Grace', 'Alan'] }));
+    const b = store.storeRace(aRace({ clientRaceId: 'b', names: ['Grace', 'Ada', 'Alan'] }));
 
     expect(a.rosterId).not.toBe(b.rosterId);
   });
 
-  it('storing the identical race twice is idempotent — one row, one id', () => {
+  it('storing the same race twice is idempotent — one row, keyed on the CLIENT id', () => {
+    // Both calls carry the fixture's default `clientRaceId`, which is what "the same race" means:
+    // a retry, a double click, or a second tab sending the entry the result screen already minted.
     const a = store.storeRace(aRace());
     const b = store.storeRace(aRace());
 
@@ -141,13 +149,13 @@ describe('★ a stored row is never overwritten — the Dev Screen changes, the 
   it('store a race, CHANGE the racer values, store a second race: the first still resolves to the ORIGINAL values, byte for byte', () => {
     // 1. Last week's race, on the values as they stood then.
     const first = store.storeRace(
-      aRace({ finishedAt: '2026-09-01T10:00:00.000Z', racePlanSeed: 111, ...ORIGINAL_RACER_VALUES })
+      aRace({ clientRaceId: 'last-week', finishedAt: '2026-09-01T10:00:00.000Z', racePlanSeed: 111, ...ORIGINAL_RACER_VALUES })
     );
 
     // 2. The owner opens the Dev Screen and changes the beetle's speed. Today's race runs on the
     //    new values — same racerTypeId, same roster, same track.
     const second = store.storeRace(
-      aRace({ finishedAt: '2026-09-06T10:00:00.000Z', racePlanSeed: 222, ...CHANGED_RACER_VALUES })
+      aRace({ clientRaceId: 'today', finishedAt: '2026-09-06T10:00:00.000Z', racePlanSeed: 222, ...CHANGED_RACER_VALUES })
     );
 
     // 3. Changed values are DIFFERENT CONTENT, so they got a NEW reference and a NEW row.
@@ -172,8 +180,8 @@ describe('★ a stored row is never overwritten — the Dev Screen changes, the 
   });
 
   it('the roster survives the same way — an old race keeps its field when a later one differs', () => {
-    const first = store.storeRace(aRace({ racePlanSeed: 1, names: ['Ada', 'Grace'] }));
-    store.storeRace(aRace({ racePlanSeed: 2, names: ['Ada', 'Grace', 'Alan'] }));
+    const first = store.storeRace(aRace({ clientRaceId: 'a', racePlanSeed: 1, names: ['Ada', 'Grace'] }));
+    store.storeRace(aRace({ clientRaceId: 'b', racePlanSeed: 2, names: ['Ada', 'Grace', 'Alan'] }));
 
     expect(store.getRaceById(first.id).names).toEqual(['Ada', 'Grace']);
     expect(store.getRaceById(first.id).fieldSize).toBe(2);
@@ -232,8 +240,8 @@ describe('lookup', () => {
   });
 
   it('★ finds a race by its team and NOT by another team\'s', () => {
-    store.storeRace(aRace({ team: 'Seasonal Entertainment', racePlanSeed: 1 }));
-    store.storeRace(aRace({ team: 'Other Team', racePlanSeed: 2 }));
+    store.storeRace(aRace({ clientRaceId: 'ours', team: 'Seasonal Entertainment', racePlanSeed: 1 }));
+    store.storeRace(aRace({ clientRaceId: 'theirs', team: 'Other Team', racePlanSeed: 2 }));
 
     const ours = store.listRacesByTeam('Seasonal Entertainment');
     expect(ours).toHaveLength(1);
@@ -252,9 +260,9 @@ describe('lookup', () => {
   });
 
   it('lists a team\'s races newest first', () => {
-    store.storeRace(aRace({ finishedAt: '2026-09-01T00:00:00.000Z', racePlanSeed: 1 }));
-    store.storeRace(aRace({ finishedAt: '2026-09-05T00:00:00.000Z', racePlanSeed: 2 }));
-    store.storeRace(aRace({ finishedAt: '2026-09-03T00:00:00.000Z', racePlanSeed: 3 }));
+    store.storeRace(aRace({ clientRaceId: 'a', finishedAt: '2026-09-01T00:00:00.000Z', racePlanSeed: 1 }));
+    store.storeRace(aRace({ clientRaceId: 'b', finishedAt: '2026-09-05T00:00:00.000Z', racePlanSeed: 2 }));
+    store.storeRace(aRace({ clientRaceId: 'c', finishedAt: '2026-09-03T00:00:00.000Z', racePlanSeed: 3 }));
 
     expect(store.listRacesByTeam('Seasonal Entertainment').map((r) => r.racePlanSeed)).toEqual([
       2, 3, 1,
@@ -272,6 +280,7 @@ describe('what storeRace refuses', () => {
     ['no geometryId', { geometryId: null }, 'INVALID_RACE'],
     ['no buildId', { buildId: null }, 'INVALID_RACE'],
     ['no seed', { racePlanSeed: null }, 'INVALID_RACE'],
+    ['no clientRaceId', { clientRaceId: null }, 'INVALID_RACE'],
   ])('refuses a race with %s', (_label, override, code) => {
     expect(() => store.storeRace(aRace(override))).toThrow(expect.objectContaining({ code }));
     expect(store.counts().races).toBe(0);

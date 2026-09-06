@@ -34,6 +34,7 @@ import playerGroupsRouter  from '../routes/playerGroups.js';
 import brandsRouter        from '../routes/brands.js';
 import racersRouter        from '../routes/racers.js';
 import seedNoticesRouter   from '../routes/seedNotices.js';
+import racesRouter         from '../routes/races.js';
 
 const MOUNT_MAP = [
   { prefix: '/api/auth',            router: authRouter },
@@ -44,6 +45,7 @@ const MOUNT_MAP = [
   { prefix: '/api/brands',          router: brandsRouter },
   { prefix: '/api/racers',          router: racersRouter },
   { prefix: '/api/seed-notices',    router: seedNoticesRouter },
+  { prefix: '/api/races',           router: racesRouter },
 ];
 
 // ── Operator-plus allowlist (these do NOT require admin) ──────────────────────
@@ -84,6 +86,11 @@ const OPERATOR_PLUS_ALLOWLIST = [
   // It writes nothing but the dismissal and reads nothing but record names already visible to
   // any signed-in user through /api/tracks.
   { method: 'POST',   pathPattern: '/api/seed-notices/dismiss' },
+  // /api/races — RACE-SAVE-3. Operator+ ON PURPOSE: every operator runs races and every operator's
+  // races must be kept, so an operator-only install must be able to store its own. It is still
+  // authenticated (not on PUBLIC_PATHS), and the TEAM it is filed under comes from the session, not
+  // from the body — so being able to call it does not let anyone choose whose history they join.
+  { method: 'POST',   pathPattern: '/api/races' },
 ];
 
 // ── Route extraction ──────────────────────────────────────────────────────────

@@ -349,6 +349,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RACE-SAVE-3.md](RACE-SAVE-3.md) — **a finished race is written locally, then to the server**
+  (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Third piece of the
+  team-races topic, on the owner's rule of 2026-09-06: **local first, always; the server is a second
+  store, never a gatekeeper.** ★ **The full input set was NOT reachable where the result is
+  written** — `raceData` carries seven of the nine identifier inputs but NOT the config world, which
+  exists only at `RaceScreen:524` (`cfgWorld`). It is now CARRIED to the result screen on the
+  `raceResults` payload; re-gathering it there would read the Dev Screen **as it is now** and claim
+  values the race never ran. `POST /api/races` takes the **team from the SESSION** and ignores one in
+  the body; idempotence is keyed on the **client's own race id** (`newId()`), not on the content
+  hash, because a genuine retry can differ in a field that does not matter. ★ **The 100-cap used to
+  be a way to lose a race** — it now keeps the newest hundred PLUS every unsent or failed entry, so
+  the list may exceed 100 while races are pending. The flush trigger is **SERVER-GONE-1's existing
+  status signal**; no polling, no timer, no reconnection loop was added. Proved in a **browser**: a
+  real race run with every `/api/**` aborted finished, recorded, went pending, then **sent** on
+  reconnect, and a resend answered 200 with the same id (1.8 min). Sabotage (a) reddened 3 tests,
+  (b) reddened 2 — and the store's content hash still absorbed the identical-payload case, which is
+  why the client-id check is the one that matters. ★ **There is no RACE-IDENTIFIER-2** report,
+  though the principle the brief named is real and lives at source. `engine-reach` selects nothing
+  (`RaceScreen/index.jsx` included); nothing minted.
+
 - [RACE-STORE-2.md](RACE-STORE-2.md) — **the database the races will live in, and it cannot be
   edited** (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Second piece of
   the team-races topic. **THE SHELF ONLY: nothing writes to it and nothing reads it**, no route, no
