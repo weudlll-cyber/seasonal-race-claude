@@ -246,3 +246,101 @@ describe('sync state', () => {
     expect(storageGet(KEYS.RACE_HISTORY, [])).toEqual([]);
   });
 });
+
+// ── ★ The entry's inputs AGREE with the identifier's, and that is checked ─────
+
+describe('★ `inputs` and raceIdentifier.js name the same set of inputs', () => {
+  // `buildHistoryEntry` lists the fields it stores, and `encodeRaceIdentifier` lists the fields it
+  // encodes. Those are TWO ENUMERATIONS OF ONE FACT — "the inputs that decide a race" — and nothing
+  // in the module system makes them agree, so this makes them agree here. The server has the same
+  // guard at its end (`raceStore.test.js` → "the identifier mapping is complete"); this is the
+  // client half, and without it a field could be added to the identifier and silently never stored.
+  //
+  // The alternative was to store the identifier STRING and decode it server-side. It was rejected:
+  // the identifier REFUSES to decode across builds by design (raceIdentifier.js:225-232), which is
+  // right for a string a person passes to someone else and wrong for a race being filed forever.
+
+  it('every input the identifier encodes round-trips through what the entry stores', async () => {
+    const { encodeRaceIdentifier, decodeRaceIdentifier } = await import('./raceIdentifier.js');
+
+    const entry = buildHistoryEntry(aParsedResult());
+    const defaultWorldConfigs = { cameraConfig: { minRacersVisible: 4 } };
+
+    // Rebuild the identifier FROM THE STORED ENTRY. If the entry were missing an input, the
+    // identifier built from it would differ from the race that ran.
+    const identifier = encodeRaceIdentifier({
+      geometryId: entry.inputs.geometryId,
+      racerTypeId: entry.inputs.racerTypeId,
+      names: entry.inputs.names,
+      racePlanSeed: entry.inputs.racePlanSeed,
+      raceActionStage: entry.inputs.raceActionStage,
+      targetLaps: entry.inputs.targetLaps,
+      targetDurationSec: entry.inputs.targetDurationSec,
+      racePlanEnabled: entry.inputs.racePlanEnabled,
+      world: {
+        schemaVersion: entry.inputs.worldSchemaVersion,
+        configs: entry.inputs.worldConfigs,
+        racerTypeOverrides: entry.inputs.racerTypeOverrides,
+        effectiveRacerTypes: entry.inputs.effectiveRacerTypes,
+      },
+      defaultWorldConfigs,
+      buildId: entry.inputs.buildId,
+    });
+
+    const decoded = decodeRaceIdentifier(identifier, {
+      defaultWorldConfigs,
+      buildId: entry.inputs.buildId,
+    });
+
+    expect(decoded.geometryId).toBe(entry.inputs.geometryId);
+    expect(decoded.racerTypeId).toBe(entry.inputs.racerTypeId);
+    expect(decoded.names).toEqual(entry.inputs.names);
+    expect(decoded.racePlanSeed).toBe(entry.inputs.racePlanSeed);
+    expect(decoded.raceActionStage).toBe(entry.inputs.raceActionStage);
+    expect(decoded.targetDurationSec).toBe(entry.inputs.targetDurationSec);
+    expect(decoded.racePlanEnabled).toBe(entry.inputs.racePlanEnabled);
+    expect(decoded.world.schemaVersion).toBe(entry.inputs.worldSchemaVersion);
+    expect(decoded.world.configs).toEqual(entry.inputs.worldConfigs);
+    expect(decoded.world.racerTypeOverrides).toEqual(entry.inputs.racerTypeOverrides);
+    expect(decoded.world.effectiveRacerTypes).toEqual(entry.inputs.effectiveRacerTypes);
+  });
+
+  it('★ fails if the identifier gains an input the entry does not store', async () => {
+    // THE GUARD ITSELF. The decoder's field set is the authority; every one of its fields must be
+    // answerable from `entry.inputs`, or be named here as derived.
+    const { decodeRaceIdentifier, encodeRaceIdentifier } = await import('./raceIdentifier.js');
+
+    const entry = buildHistoryEntry(aParsedResult());
+    const decoded = decodeRaceIdentifier(
+      encodeRaceIdentifier({
+        geometryId: 'g',
+        racerTypeId: 't',
+        names: ['A'],
+        racePlanSeed: 1,
+        raceActionStage: 'wild',
+        racePlanEnabled: false,
+        world: {},
+        defaultWorldConfigs: {},
+        buildId: entry.inputs.buildId,
+      }),
+      { defaultWorldConfigs: {}, buildId: entry.inputs.buildId }
+    );
+
+    /** Decoder fields the entry answers with a differently-named key, or derives. */
+    const ANSWERED_ELSEWHERE = {
+      world:
+        'flattened into worldSchemaVersion / worldConfigs / racerTypeOverrides / effectiveRacerTypes',
+      fieldSize:
+        'derived from names.length — raceIdentifier.js:24-26 says it is never encoded twice',
+    };
+
+    const unanswered = Object.keys(decoded).filter(
+      (k) => !(k in entry.inputs) && !(k in ANSWERED_ELSEWHERE)
+    );
+    expect(
+      unanswered,
+      `raceIdentifier.js yields ${unanswered.join(', ')}, which the history entry does not store. ` +
+        'Add it to `inputs` in buildHistoryEntry, or to ANSWERED_ELSEWHERE with the reason.'
+    ).toEqual([]);
+  });
+});

@@ -212,7 +212,7 @@ export function pendingEntries() {
  * A race whose entry has since been deleted is a no-op rather than an error — the person removed
  * it, and re-adding it here would be the store arguing with them.
  */
-export function setSyncState(id, sync) {
+function setSyncState(id, sync) {
   const list = readHistory();
   const idx = list.findIndex((e) => e?.id === id);
   if (idx === -1) return false;

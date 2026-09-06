@@ -156,6 +156,110 @@ the server is not taking races, and walking the rest to fail identically costs a
 
 ---
 
+## ★ What was reused, and what is genuinely new
+
+Nothing here re-answers a question the tree had already answered. Every module this piece added is
+listed with what it imports rather than reimplements.
+
+### Reused — the existing home, imported
+
+| the question | its one home | who reuses it |
+|---|---|---|
+| Is the server answering? | `modules/serverStatus.js` (SERVER-GONE-1 / the banner) | `pendingRaces.js` via `subscribeServerStatus` / `getServerStatus` |
+| Did THIS request reach the server? | `services/apiClient.js` (`apiCall`) — which is also what FEEDS the signal above | `racesApi.js` |
+| What are a race's deciding inputs? | `modules/raceIdentifier.js` | `raceHistory.js` imports `RACE_IDENTIFIER_VERSION`; the field set is checked against the decoder (below) |
+| Which build is this? | `modules/raceIdentifierBuild.js` | `raceHistory.js` |
+| Which action stage? | `modules/raceActionStage.js` (`normalizeRaceActionStage`) | `raceHistory.js` |
+| Canonical serialisation | `client/src/modules/raceConfigWorld.js` — its header forbids copying it | `server/src/races/contentAddress.js`, imported across packages as `sim-fairness.mjs:111` does |
+| The content address | `server/src/races/contentAddress.js` (RACE-STORE-2) | `raceStore.js` |
+| Where a race is stored | `server/src/races/raceStore.js` (RACE-STORE-2) — **extended**, not replaced | `routes/races.js` |
+| The local history write | `ResultScreen/index.jsx:206-227` — **extended and moved**, not duplicated | `raceHistory.js` is now the ONE place a race is written locally, and `ResultScreen` calls it |
+| Where the config world came from | `RaceScreen:524` `cfgWorld` — **carried**, not re-gathered | the `raceResults` payload |
+
+**There is exactly one notion of "the server is gone"** and this piece did not add a second.
+`racesApi.js` classifies the outcome of *its own request* (a status, or none) — it does not decide
+reachability; `apiCall` reports that to `serverStatus.js` as it always did.
+
+### ★ The one duplication that was real, and how it was closed
+
+`buildHistoryEntry` names the fields it stores, and `encodeRaceIdentifier` names the fields it
+encodes. **Those are two enumerations of one fact**, and nothing in the module system made them
+agree — a field added to the identifier could have gone silently unstored.
+
+Found while auditing against this addendum, and closed with a test rather than a comment:
+`raceHistory.test.js` → *"★ `inputs` and raceIdentifier.js name the same set of inputs"* builds an
+identifier **from the stored entry**, decodes it, and requires every decoded field to be answerable
+from `inputs` or listed as derived. **Proven non-inert**: removing `racePlanSeed` from the stored
+inputs produces *"raceIdentifier.js yields racePlanSeed, which the history entry does not store."*
+The server has the matching guard at its end (RACE-STORE-2's mapping test); this is the client half.
+
+**Why not store the identifier STRING and decode it server-side, avoiding the second list
+entirely?** Because the identifier **refuses to decode across builds by design**
+(`raceIdentifier.js:225-232) — correct for a string a person hands to someone else, wrong for a race
+being filed forever. The structured form is stored, and the agreement is checked instead.
+
+### Genuinely new, each with one home
+
+| module | why it is new |
+|---|---|
+| `client/src/modules/raceHistory.js` | The history entry's SHAPE, its cap and its sync state had no module — the write was inline in a screen and could not be tested without one. It is now the single place a race is written locally. |
+| `client/src/modules/pendingRaces.js` | "Which races still have to go up, and when do they go" existed nowhere. It owns no state of its own: the queue IS the history, filtered. |
+| `client/src/services/racesApi.js` | One thin service per API domain is the established shape (`usersApi.js`, `authApi.js`); it reuses `apiCall` and `API_BASE_URL` and adds only the status→retryable reading. |
+| `client/src/components/PendingRaceSync.jsx` | Follows the existing `*SyncOnAuth` component shape, but triggers on server REACHABILITY rather than auth state, because "the server came back" is the event that matters here. No code is shared between them — there is no abstraction to reuse, only a pattern to match. |
+| `server/src/routes/races.js` | The first race route. |
+
+---
+
+## ★ What the next piece imports
+
+The fourth piece — the history and the short key — reads exactly what this one writes. Nothing it
+needs is inside a screen component or a route handler, so nothing has to be copied or rewritten:
+
+| the next piece needs | it imports |
+|---|---|
+| every race this device knows about, with its sync state | `raceHistory.readHistory()` |
+| the races the TEAM can see | `raceStore.listRacesByTeam(team)` — already written and tested, no route yet |
+| one race, references resolved | `raceStore.getRaceById(id)` |
+| the inputs to re-run a race | `entry.inputs` on the local entry, `getRaceById(...)` on the server — the same field set, and the two are held to it by a guard at each end |
+| whether a race has gone up | `entry.sync.state` and `raceHistory.SYNC` |
+| a race's content address, for the short key | `contentAddress.contentId` and the `races.id` it already produces |
+| sending a race | `pendingRaces.sendOne` / `flushPendingRaces` — a retry button needs no new sending code |
+
+**Every rule is in a module.** `routes/races.js` holds no logic of its own beyond reading the team
+from the session and turning a store error into a status — the store decides everything else, so it
+is callable and testable without HTTP. `ResultScreen` holds none: it calls `recordFinishedRace` and
+`sendOne` and does nothing else about saving.
+
+---
+
+## ★ Dead weight removed
+
+Three things this piece built and did not need. Found by listing every export it added and grepping
+for readers outside the defining module, not by eye:
+
+| removed | why |
+|---|---|
+| `setSyncState` **export** in `raceHistory.js` | Exported, but only `markSent`/`markFailed` ever called it — no other module, no test. It is now a module-local function; the two named verbs stay the API. |
+| `getRoster` in `raceStore.js` | **Nothing read it at all**, not even a test. `hydrate` already returns `names` on every race, so it was a second path to a fact the first path already gives. |
+| `api` / `adminAgent` / `beforeAll` in `races.test.js` | Scaffolding copied from `seedNotices.test.js` and then not used — the access tests use `request(app)` and `operatorAgent` directly. The variable was assigned and never read. |
+
+Also removed earlier in the piece, on review rather than at the end: the **`retryable` field in the
+response body** (the status code already carries it) and the **`size` column** on `rosters` (a
+derived duplicate of `names.length`).
+
+**Nothing else was dead.** Every other export has a reader: `toServerPayload`, `pendingEntries`,
+`markSent`, `markFailed` and `postRace` are used across modules; `capHistory`, `buildHistoryEntry`,
+`readHistory`, `writeHistory`, `HISTORY_CAP`, `flushPendingRaces`, `counts` and `getRacerTypes` are
+used by their tests, which is a reader — and `readHistory`, `listRacesByTeam` and `flushPendingRaces`
+are the next piece's entry points, named above.
+
+**Noticed outside this piece's work and LEFT, as instructed:** `check-fallback-agreement` reports two
+long-standing UNRESOLVED mirrors — `cameraTimingComputation.js:maxStateDuration` and
+`durationModel.js:normalSpeedPxPerSec`, each naming a default constant not declared in its own file.
+Neither is mine, both predate this branch, and the guard passes with them.
+
+---
+
 ## Proof
 
 ### ★ The browser test — `client/e2e/race-save.spec.js`, **PASSED** (1.8 min)
@@ -219,11 +323,11 @@ Both sabotages were reverted; zero markers remain.
 | check | result |
 |---|---|
 | server suite | **792 passed / 792** (34 files) |
-| client — `raceHistory.test.js` | **19 passed** |
+| client — `raceHistory.test.js` | **21 passed** |
 | client — `pendingRaces.test.js` | **14 passed** |
 | server — `races.test.js` | **11 passed** |
 | browser — `race-save.spec.js` | **PASSED**, 1.8 min |
-| `npm run verify` (plain, not `--premerge`) | **PASS 19, FAIL 0, SKIP 10** — exit 0, 405.2 s |
+| `npm run verify` (plain, not `--premerge`) | **PASS 20, FAIL 0, SKIP 9** — exit 0, 423.9 s |
 | `engine-reach --check` | selects nothing |
 
 ```
@@ -248,8 +352,15 @@ recording because both are invisible to a reader and to every test I had written
    the same convention RULE A states for literals in comments. The comment was reworded to describe
    the call instead of spelling it.
 
-Neither would have been found by running the code. The third failure was `check-index`, which is
-simply the report not yet being indexed.
+3. **`ceremony-counts`**, on the run after the dead-weight removal. `docs/SHIP-CEREMONY.md` carries
+   a GENERATED table of engine-reach counts, and adding two modules under `client/src/modules/`
+   moved it: **113 → 115** files, of which **54 → 56** cannot reach the engine. Regenerated with
+   `gen-ceremony-costs.mjs --counts`; the two new entries are `raceHistory.js` and `pendingRaces.js`,
+   both correctly classified as unable to reach the engine, which is the same verdict
+   `engine-reach --check` gives them.
+
+Neither of the first two would have been found by running the code. The remaining failure was
+`check-index`, which is simply the report not yet being indexed.
 
 **`RaceScreen/index.jsx` was touched and is still outside the hull** — the hull is `raceCore.js`'s
 import closure, and a screen file that writes a payload is not in it. Nothing selected, so nothing
@@ -284,7 +395,7 @@ there was nothing to delete again.
 | `client/src/App.jsx` | 138 → 141 |
 
 **New:** `server/src/routes/races.js` (104), `server/src/routes/races.test.js` (197),
-`client/src/modules/raceHistory.js` (245), `client/src/modules/raceHistory.test.js` (248),
+`client/src/modules/raceHistory.js` (245), `client/src/modules/raceHistory.test.js` (344),
 `client/src/modules/pendingRaces.js` (119), `client/src/modules/pendingRaces.test.js` (211),
 `client/src/services/racesApi.js` (59), `client/src/components/PendingRaceSync.jsx` (24),
 `client/e2e/race-save.spec.js` (138).
@@ -292,8 +403,9 @@ there was nothing to delete again.
 `ResultScreen` got **shorter**: the history write moved into `raceHistory.js`, where it can be
 tested without a screen, and three now-unused imports went with it.
 
-**Also changed:** `docs/FORCE-MAP.md` (2 citation line ranges repointed — see above). No prose in
-that document changed.
+**Also changed:** `docs/FORCE-MAP.md` (2 citation line ranges repointed) and
+`docs/SHIP-CEREMONY.md` (2 generated count values) — both mechanical consequences of the code,
+caught by guards and applied with the generator rather than by hand. No prose in either changed.
 
 ### Noticed and deliberately left
 

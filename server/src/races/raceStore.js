@@ -405,12 +405,13 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     return rows.map(hydrate);
   }
 
-  /** The raw stored content of a roster / racer-type row, for tests and for a later history piece. */
-  function getRoster(id) {
-    const row = db.prepare('SELECT content FROM rosters WHERE id = ?').get(id);
-    return row ? { id, ...JSON.parse(row.content) } : null;
-  }
-
+  /**
+   * The raw stored content of a racer-type row — the bytes that were hashed, which is what lets a
+   * test assert an old race's values byte for byte rather than by deep equality.
+   *
+   * There is no `getRoster` twin: `hydrate` already returns `names` on every race, so a second way
+   * to read a roster would be a second path to one fact. One is added when something needs it.
+   */
   function getRacerTypes(id) {
     const row = db.prepare('SELECT content FROM racer_types WHERE id = ?').get(id);
     return row ? { id, ...JSON.parse(row.content) } : null;
@@ -429,7 +430,6 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     getRaceById,
     getRaceByClientId,
     listRacesByTeam,
-    getRoster,
     getRacerTypes,
     counts,
     close: () => db.close(),

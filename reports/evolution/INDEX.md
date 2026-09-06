@@ -365,7 +365,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   real race run with every `/api/**` aborted finished, recorded, went pending, then **sent** on
   reconnect, and a resend answered 200 with the same id (1.8 min). Sabotage (a) reddened 3 tests,
   (b) reddened 2 — and the store's content hash still absorbed the identical-payload case, which is
-  why the client-id check is the one that matters. ★ **There is no RACE-IDENTIFIER-2** report,
+  why the client-id check is the one that matters. ★ **Nothing was built twice**: the report lists
+  what each new module REUSES, and the one real duplication found in that audit — the entry's input
+  list against `raceIdentifier.js`'s — is now closed by a guard test, proven non-inert. **Three dead
+  items removed** (an over-exported `setSyncState`, a `getRoster` nothing read at all, and unused
+  `beforeAll` scaffolding), and the report names what the fourth piece will import. ★ **There is no RACE-IDENTIFIER-2** report,
   though the principle the brief named is real and lives at source. `engine-reach` selects nothing
   (`RaceScreen/index.jsx` included); nothing minted.
 

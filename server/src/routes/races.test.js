@@ -14,24 +14,19 @@
 //              default store is never opened, so nothing here can write into the owner's data.
 // ============================================================
 
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { adminAgent, operatorAgent } from '../../test/authAgent.js';
+import { operatorAgent } from '../../test/authAgent.js';
 import { createApp } from '../app.js';
 import { createRaceStore } from '../races/raceStore.js';
 import { createRacesRouter } from './races.js';
 
 const app = createApp();
-
-let api;
-beforeAll(async () => {
-  api = await adminAgent(app);
-});
 
 // ── A second app whose /api/races is bound to a store we can read ────────────
 //
