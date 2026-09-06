@@ -3,23 +3,64 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-05, after **all four pieces** of PLAYABLE-FOUR-1. **Master is
-`d407f090`.** Origin holds TWO heads: `master`, and **`feat/playable-four-1`, which is NOT merged.**
+**Last rewritten:** 2026-09-06, after NIGHT-2026-09-05. **`feat/playable-four-1` IS MERGED — master
+is `bcf41a9b` and CI is GREEN on that exact SHA** (push run, conclusion `success`). Origin holds
+`master` and **`night/2026-09-05`, which is NOT merged.**
 
-**★ THE ONE THING TO KNOW FIRST: THREE THINGS ARE WAITING FOR YOUR EYE, AND THEY ARE ALL ON ONE
-BRANCH.** `feat/playable-four-1` carries Cancel Race, the server-is-gone banner, and the race
-identifier — plus the comeback measurement you asked for. **The dev server is running on that branch
-so you can see all three without doing anything.** No merge permission was given and none was taken;
-nothing on the branch is minted, and all four fingerprint roles were re-measured and are unmoved.
+**★ THE TWO THINGS TO KNOW FIRST.**
 
-**THE PICTURE, A DEFAULT, A THRESHOLD AND EVERY SHIPPED VALUE ARE UNMOVED SINCE THE NIGHT CHAIN, and
-one fingerprint has been minted since: the RENDER role**, on your order, by MINT-RENDER-1 — that is
-the item that stood at the top of NEEDS HIS WORD and it is answered.
+**1. Everything you were looking at last night has landed.** Cancel Race, the server-gone banner and
+the race identifier are on master, together with the three repairs your own testing found: the
+identifier row now says why it is absent, a pasted identifier runs ITS racers rather than this
+machine's, and `run it again` repeats the race that RAN rather than its seed. The merge gate was
+the full one — `verify --premerge` PASS 26 FAIL 0 with the browser gate green — and all four
+fingerprints were unmoved. **Nothing was minted.**
 
+**2. `npm run verify` IS RED on the night branch, on purpose.** Piece 4 gave the server a linter and
+a format check for the first time, and the server has never been linted: **9 lint errors across 7
+files and 35 unformatted files**, all pre-dating the guard. The order was not to fix them. **CI is
+unaffected — `ci.yml` was not touched and master is green.**
 ---
 
 ## DONE
 
+**★ THE NIGHT OF 2026-09-05 — five pieces on `night/2026-09-05`, none merged.**
+
+**1 · What it would cost to show the comebacks** —
+[COMEBACK-WEIGHT-1](../reports/night/COMEBACK-WEIGHT-1.md). One lever over the same 40 races.
+Comeback shots rise **11 → 19 of 74** as the weight goes 0.6 → 8; races with no comeback at all fall
+29 → 21 of 40. **The cost is +2.24 points of frame share, two thirds of it paid by the battle shot.**
+★ **The shots stay EARLY at every setting — never once late** — so this lever buys MORE comebacks and
+does not move them to the moment the plan wrote. ★ **And it flattens:** a thirteen-fold rise still
+leaves 55 of 74 comebackers unshown. **No weight is proposed — the table is there for you to choose
+from, and nothing was changed.**
+
+**2 · What each shorter identifier would cost** —
+[IDENTIFIER-LENGTH-1](../reports/night/IDENTIFIER-LENGTH-1.md). Re-measured: **3,487 / 3,715 /
+4,008** characters at 4 / 20 / 40 racers. ★ **One field is four-fifths of it** — `effectiveRacerTypes`
+is carried in full for every racer type whether the race uses it or not, while the config diff the
+identifier exists to carry is **two characters** on a default machine. Carrying that field as a diff
+instead would give **218 / 446 / 739 and cost nothing**; lossless compression gives ~1,494; a
+server-stored key gives a handful but makes repeating a race need the server. ★ **And the opposite
+direction is priced: carrying a track's SHAPE would add ~26,400 characters per track.** Nothing was
+built and nothing is recommended.
+
+**3 · The ceremony's cost table was wrong by a factor of forty** —
+[GATE-COST-TRUTH-1](../reports/night/GATE-COST-TRUTH-1.md). It said a build, two servers and a
+browser cost ~200 s before any race runs. **Measured with timestamps: 5.2 s — 2% setup, 98% racing.**
+What makes extra races cheap is CONCURRENCY (six at a time), not setup. ★ **Four tracks would stay
+bounded by the slowest race rather than doubling — that bound is measured, the four-track figure is
+NOT, and no four-track run was made.** `GATE_TRACKS` untouched; widening the gate is still yours.
+
+**4 · The server had no linter at all** — [SERVER-LINT-1](../reports/night/SERVER-LINT-1.md). Both
+scripts built, reusing the CLIENT'S configuration and installing nothing, and wired into `verify`.
+**It is red — see the second thing to know, above.** Not one line of server source was changed.
+
+**5 · A player was told to run `docker compose up`** —
+[PLAYER-WORDS-1](../reports/night/PLAYER-WORDS-1.md). Five search forms, uncapped: five sites, **one
+reaches the player** — the setup screen's "Saved groups could not be loaded (…)" printed the
+developer instruction verbatim. It now points at the status banner; the developer detail moved to
+the console. The two Dev Screen strings were left alone, because developers read those.
 **CANCEL RACE — built, and the premise was half wrong** — PLAYABLE-FOUR-1 piece B, on
 `feat/playable-four-1`, UNMERGED. There is no `cancelRace` in the client (0 hits, every spelling),
 but **a control that ends the race and returns to Setup already existed** in the race HUD. What it
@@ -135,8 +176,8 @@ three gaps between a green branch and a green CI, and the open list below.
 
 ## RUNNING
 
-**The dev server, on `feat/playable-four-1`** — so the three things above can be looked at. Nothing
-else is in flight: no sweep and no measurement is running. **All four pieces are done and pushed.**
+**Nothing.** Every sweep is finished and no measurement is in flight. The dev server is on
+`night/2026-09-05`.
 
 ---
 
@@ -145,13 +186,12 @@ else is in flight: no sweep and no measurement is running. **All four pieces are
 **Checked against the tree on 2026-09-05 before being listed. The full version with source addresses
 is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.**
 
-- ~~**Cancel Race**~~ — **BUILT, unmerged, your eye owed.** A control existed; the fullscreen leak
-  did not have an owner.
-- ~~**TLH-3**~~ — **BANNER BUILT, unmerged, your eye owed.** The fallback was already in the tree;
-  `defaultTracks.js` still does not exist and was not created.
-- ~~**A short race identifier to replace the seed**~~ — **BUILT, unmerged, and one decision is
-  yours: it is not typable.** The seed fixed the plan but not the world; that is closed — a race
-  started from an identifier now uses the config the identifier carries, not this machine's.
+- ~~**Cancel Race**~~ — **DONE and MERGED.**
+- ~~**TLH-3**~~ — **BANNER DONE and MERGED.** The fallback was already in the tree; `defaultTracks.js`
+  still does not exist and was not created.
+- ~~**A short race identifier to replace the seed**~~ — **BUILT and MERGED. One decision is still
+  yours: it is not typable** — 4,008 characters at 40 racers, and piece 2 now prices every way of
+  shortening it. The seed fixed the plan but not the world; that is closed.
 - **The comeback BEATS reaching the camera** — **MEASURED (piece A above); the decision is now
   yours.** Passing the beats through was deliberately NOT built. What the measurement gives you: the
   camera never picks the wrong racer, and is early every single time by a median 9.90 s.
@@ -160,6 +200,11 @@ is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.
   way. **The camera fingerprint is taken with that window closed.** Nothing was changed — it is
   recorded so it is not re-discovered.
 - **Deployment** — see NEEDS HIS WORD.
+- **★ NEW, from the night: the server does not lint.** 9 errors across 7 files, 35 unformatted
+  files. The guards are wired and `verify` is red on the night branch because of it. **A server-wide
+  cleanup is its own decision and was not taken.**
+- **★ NEW: `effectiveRacerTypes` is four-fifths of the race identifier**, carried in full whether the
+  race uses it or not. Carrying it as a diff would cost nothing and cut 4,008 to 739.
 
 **Struck above, and struck for a reason:** the three crossed-out items are BUILT and pushed, not
 merged. They leave this list when you have looked at them and they land — not before.
@@ -189,7 +234,16 @@ three roles were re-measured in the same pass and are unmoved. The value lives i
 beside it: text measurement in the recorder is synthetic, so the hash pins the tag-layout RULE and
 not the name-versus-number count you actually see on screen.
 
-**So one question stands, and it is the one that was already here. Every other item that stood in
+**★ AND THREE THE NIGHT PUT IN FRONT OF YOU, each with its numbers and no recommendation:**
+
+- **The comeback weight.** The table in [COMEBACK-WEIGHT-1](../reports/night/COMEBACK-WEIGHT-1.md)
+  is there to choose from. What a comeback shot is worth against a battle shot is your eye's
+  question — the measurement will not answer it, and it does not try.
+- **The identifier's length.** [IDENTIFIER-LENGTH-1](../reports/night/IDENTIFIER-LENGTH-1.md) prices
+  four ways down and one way up. The cheapest is free and cuts it by 80%.
+- **Whether the server's 9 lint errors get cleaned up**, and when.
+
+**And one question stands from before, and it is the one that was already here. Every other item that stood in
 this section has been answered.**
 
 1. **Deployment — a domain, which reverse proxy terminates TLS, and where the data lives.**

@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-WEIGHT-1.md](COMEBACK-WEIGHT-1.md) — **what it would cost to show the comebacks**
+  (2026-09-06, NIGHT-2026-09-05 piece 1). One lever, `comebackWeight`, over the same 40 races at
+  0.6 / 1 / 2 / 4 / 8, nothing else changed and no shipped default written. Shots rise **11 → 13 →
+  13 → 18 → 19 of 74**, races with no comeback fall 29 → 21 of 40, and the cost is **+2.24 points of
+  frame share for the comeback against −2.16 across the others, two thirds of it paid by
+  BATTLE_ZOOM** — which is what COMEBACK-BEATS-1 predicted from the other side. ★ **The shots stay
+  EARLY at every setting — 11/11, 13/13, 18/18, 19/19, never once late** — so the lever buys MORE
+  comebacks and does not move them to the written moment. ★ **1 and 2 are byte-identical** (
+  `_acceptsOffer` saturates at 1), and ★ **the curve flattens: a thirteen-fold rise takes 11 of 74 to
+  19 of 74**, leaving 21 of 40 races with no comeback even at 8. Two stages, and stage 1 held an
+  artefact the larger corpus corrected — 4 and 8 looked identical at N=30 and are not at N=40. No
+  weight is proposed.
 - [IDENTIFIER-LENGTH-1.md](IDENTIFIER-LENGTH-1.md) — **what is in the 4,008 characters, and what
   each way of shortening it costs** (2026-09-06, NIGHT-2026-09-05 piece 2). Nothing built, nothing
   recommended. Re-measured with the REAL `buildWorldConfig`: **3,487 / 3,715 / 4,008** at 4 / 20 / 40

@@ -104,12 +104,35 @@ const ARG = (k, d) => {
 const SEEDS = ARG("seeds", "1,2,3").split(",").map(Number).filter(Number.isFinite);
 const JSON_OUT = ARG("json", null);
 const OUTCOME_ARM = ARG("outcome", "browser");
+
+// ── COMEBACK-WEIGHT-1: the one lever this sweep moves ────────────────────────────────────────
+//
+// THE WEIGHT ACTS TWICE, established at source on 2026-09-06 and stated here because a reader who
+// assumes it acts once will mis-read the table: `_weightedRandomPick` (`cameraDirector.js:726-742`)
+// draws PROPORTIONALLY among the eligible candidates, and the winner then faces `_acceptsOffer`
+// (`:720-724`), which rolls again against that same weight and falls through to the LEADER default
+// when it declines. So raising it both wins the draw more often and declines less often, and at
+// >= 1 the second roll always accepts.
+//
+// ★ NO SHIPPED DEFAULT IS TOUCHED. The value is overridden on a COPY of the config for the
+// duration of one run; `defaults.js` is never written and nothing persists.
+const WEIGHT = ARG("comeback-weight", null);
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
 }
 if (SEEDS.length === 0) {
   console.error("comeback-beats: --seeds resolved to nothing. Refusing to measure zero races.");
+  process.exit(2);
+}
+
+// The config this sweep actually runs, which is the shipped one unless a weight was asked for.
+const CAMERA_CONFIG =
+  WEIGHT == null
+    ? DEFAULT_CAMERA_CONFIG
+    : { ...DEFAULT_CAMERA_CONFIG, comebackWeight: Number(WEIGHT) };
+if (WEIGHT != null && !Number.isFinite(CAMERA_CONFIG.comebackWeight)) {
+  console.error(`comeback-beats: --comeback-weight=${WEIGHT} is not a number.`);
   process.exit(2);
 }
 
@@ -127,7 +150,7 @@ const rows = [];
 for (const geo of tracks) {
   for (const seed of SEEDS) {
     const identity = resolveIdentity({ raceSeed: seed, racers: 40 });
-    const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
+    const race = buildRace(geo, identity, CAMERA_CONFIG);
     const { st, meta, cd } = race;
 
     // THE BROWSER'S OUTCOME FLAG, supplied locally. The shared driver is not touched: this wraps
@@ -173,7 +196,7 @@ for (const geo of tracks) {
     const crossedAt = new Map(); // progress value -> ms since race start on the frame it was reached
     const watch = []; // every beat progress this race needs a time for
 
-    runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ cd: dir, st: state, ts, raceStart }) => {
+    runRace(race, identity, CAMERA_CONFIG, ({ cd: dir, st: state, ts, raceStart }) => {
       // THE BROWSER'S DELIVERY, reproduced. One frame later than RaceScreen's at most.
       if (meta.racePlanController && !planDelivered) {
         const cp = meta.racePlanController.getCameraPlan?.();
