@@ -39,7 +39,9 @@ afterEach(() => {
   for (const p of Object.values(paths)) {
     try {
       if (existsSync(p)) unlinkSync(p);
-    } catch {}
+    } catch {
+      // Test teardown on a file that may never have been created.
+    }
   }
 });
 

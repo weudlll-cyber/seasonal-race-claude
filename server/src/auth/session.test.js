@@ -64,14 +64,18 @@ describe('session middleware — lifecycle', () => {
     if (mw._db) {
       try {
         mw._db.close();
-      } catch {}
+      } catch {
+        // Test teardown: the handle may already be closed.
+      }
     }
     for (const suffix of ['', '-wal', '-shm']) {
       const p = tempDb + suffix;
       if (existsSync(p))
         try {
           unlinkSync(p);
-        } catch {}
+        } catch {
+          // Test teardown on a file that may never have been created.
+        }
     }
   });
 
@@ -263,7 +267,9 @@ describe('session middleware — maxAge and rolling', () => {
     if (mw._db) {
       try {
         mw._db.close();
-      } catch {}
+      } catch {
+        // Test teardown: the handle may already be closed.
+      }
     }
   });
 

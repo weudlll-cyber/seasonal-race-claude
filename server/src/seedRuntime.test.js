@@ -24,7 +24,9 @@ describe('seedTypeFromSnapshot — fresh DATA_ROOT', () => {
     for (const r of roots.splice(0)) {
       try {
         rmSync(r, { recursive: true, force: true });
-      } catch {}
+      } catch {
+        // Test teardown on a directory that may never have been created.
+      }
     }
   });
 

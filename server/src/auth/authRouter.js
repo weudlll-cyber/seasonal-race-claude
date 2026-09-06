@@ -98,7 +98,10 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
         fd = null;
         try {
           unlinkSync(setupMarkerPath);
-        } catch {}
+        } catch {
+          // Best effort. The marker is being cleared only to match the store, which already
+          // says setup is complete; the 409 below is the answer either way.
+        }
         return res.status(409).json({ error: 'setup already complete' });
       }
 
@@ -148,12 +151,18 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       if (fd !== null) {
         try {
           closeSync(fd);
-        } catch {}
+        } catch {
+          // Already unwinding a failure. A close error here would replace the error that
+          // actually matters with a less informative one.
+        }
       }
       if (!committed) {
         try {
           unlinkSync(setupMarkerPath);
-        } catch {}
+        } catch {
+          // Best effort rollback. If the unlink fails the marker is stale, but setup is NOT
+          // committed, so the next attempt still finds no admin and re-runs.
+        }
       } // only roll back pre-commit
       if (!res.headersSent) {
         if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE'].includes(err.code)) {

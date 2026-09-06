@@ -66,7 +66,9 @@ describe('authRouter', () => {
       if (existsSync(p))
         try {
           unlinkSync(p);
-        } catch {}
+        } catch {
+          // Test teardown on a file that may never have been created.
+        }
     }
   });
 
