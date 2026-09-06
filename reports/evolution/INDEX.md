@@ -6,6 +6,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
+  `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
+  and named them the owner's call: `index.js:17` (the startup banner) and `staticClient.js:82` (the
+  `log = console.log` default), both deliberate operator output, where the only fix the rule allows
+  moves them to stderr. **The owner decided on 2026-09-06 that both stay on stdout.**
+  CONSOLE-DECISIONS-1 (merge `4a838660`) closed them **at source** — each site now states why the
+  stream is deliberate and carries ESLint's own per-line directive
+  `eslint-disable-next-line no-console -- <reason>`, so the next reader sees a decision rather than
+  an oversight while a third `console` call anywhere else is still reported. **Nothing in that
+  report is withdrawn and its counts stand**; what changes is only that the two it left open are no
+  longer open. Server lint on master is now **0 problems**, not 2 warnings.
+
 - **2026-09-05 — [ACCEPTED-FINISH-1](ACCEPTED-FINISH-1.md) ATTRIBUTED A SECOND ACCEPTANCE TO THE
   OWNER THAT IS NOT HIS.** That report recorded a **measured** cause for item 10's failure — a
   `BATTLE_ZOOM` in the endgame window holds the leader forward — and elsewhere stated it as a
