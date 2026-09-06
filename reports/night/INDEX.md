@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [IDENTIFIER-LENGTH-1.md](IDENTIFIER-LENGTH-1.md) — **what is in the 4,008 characters, and what
+  each way of shortening it costs** (2026-09-06, NIGHT-2026-09-05 piece 2). Nothing built, nothing
+  recommended. Re-measured with the REAL `buildWorldConfig`: **3,487 / 3,715 / 4,008** at 4 / 20 / 40
+  racers. ★ **ONE FIELD IS FOUR-FIFTHS OF IT** — `effectiveRacerTypes` is 2,454 chars, carried in
+  full for every racer type whether the race uses it or not, while the config diff the identifier
+  exists to carry is **2 characters** on a default machine. ★ **And PLAYABLE-FOUR-1's 743 is
+  explained rather than retracted: it was unknowingly a measurement of option A**, which measures
+  739 today. Options costed at 4/20/40: **A** (that field as a diff) 218/446/739 and costs nothing;
+  **C** (lossless compression) 1,356/1,422/1,494, needs a compressor; **D** (server-stored key) a
+  handful of characters but makes repeating a race need the server the offline banner exists for.
+  ★ **The opposite direction is priced too: carrying a track's SHAPE adds ~26,400 characters per
+  track** — six to eight times the whole identifier.
 - [PLAYER-WORDS-1.md](PLAYER-WORDS-1.md) — **the player was told to run `docker compose up`**
   (2026-09-06, NIGHT-2026-09-05 piece 5). Wording only. Five search forms, uncapped, whole tree;
   ★ **form 1 alone would have missed it on a capped read** — the first ten hits for `compose` are
