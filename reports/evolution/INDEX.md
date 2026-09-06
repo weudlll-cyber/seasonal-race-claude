@@ -412,6 +412,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   without an intended-change reason**, is **not permission** (the owner's word, per occurrence), and
   **keeps the previous expectation** dated with its commit and reason. Runs in **~0.6 s**;
   `fingerprint-default.mjs` untouched and the overlap reported; nothing minted, nothing moved.
+- [REPEAT-RECOMPUTE-6.md](REPEAT-RECOMPUTE-6.md) — ★ **STOPPED at the recompute seam; no code
+  changed** (2026-09-07, `feat/team-races-1`). The owner's decision replaced the fingerprint
+  comparison REPEAT-REFUSE-5 rejected with a RECOMPUTATION: repeat a stored race only if re-running
+  it still produces the recorded outcome. ★ **The named stop condition PASSES** — the engine loads
+  in a worker with no engine change: of the 64 files in its closure only three touch the DOM, all
+  at call time, proven by `render-fingerprint.mjs` importing them under Node and failing later at
+  `[warmup] … Image is not defined`. ★ **The comparison needs no tolerance** (`finishTimeMs` is a
+  strict FIXED_DT multiple and the stored `finishOrder` already carries it), and ★ **the three doors
+  already converge on one function**, `startRaceFromIdentifier`. **What blocks it is the params:**
+  `createRaceFromIdentity` takes a ~60-line derivation that lives at `RaceScreen/index.jsx:540-627`
+  — drawing code this piece may not change — which reads this machine's overrides live and whose
+  `physicalSpriteSize` drives `rowGapPx`/`rowCount`, i.e. physics. **It has already been mirrored
+  twice knowingly** (`camera-replay.mjs:164`, `goldenRunner.mjs:655-692`), both in `scripts/` and
+  neither importable from the client. A third mirror is the drift that refuses races which still
+  run identically — the outcome REPEAT-REFUSE-5 defined as wrong. **The fix is to extract that
+  derivation into a shared module, which would DELETE two mirrors rather than add one — and it is a
+  piece of its own that touches drawing code and needs his word.** RACE-HISTORY-4's warn-and-run is
+  deliberately left in place: it is replaced, not layered over, and removing it first would leave
+  the product with neither.
+
 - [REPEAT-REFUSE-5.md](REPEAT-REFUSE-5.md) — ★ **STOPPED at the establish step; no code changed**
   (2026-09-06, `feat/team-races-1`). The addendum asked whether the **world role in
   `docs/fingerprints.json`** can reach the product and be compared per race. **It CAN reach it** —
