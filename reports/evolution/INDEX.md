@@ -349,6 +349,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RECOMPUTE-COST-1.md](RECOMPUTE-COST-1.md) — **what verifying a stored race by recomputation
+  costs** (2026-09-06, `diag/recompute-cost-1` off master `119771bc`; MEASUREMENT ONLY, nothing
+  built). ★ **Recomputing has NO side effects** — instrumented before import and through a full run:
+  zero storage, filesystem, events, unseeded random or clock reads. ★ **And the heaviest race the
+  product allows costs ~7.4 s**, not the 0.6 s GOLDEN-RACES-1 measured on two small ones — twelve to
+  twenty times more. Worst case established at source: **100 racers** (`maxPlayersOpen`; closed is
+  capped at 40) on an open track for **120 s** (the longest `DURATION_OPTIONS` offers). **7 243 –
+  7 450 ms**, one run per fresh process, 3% spread; ★ **~13 s each when repeated in one process** —
+  heap pressure, reported rather than smoothed away. **Field size dominates**: ×2.5 field → ×3.9
+  cost, ×4 duration → ×2.5, roughly n^1.5 at the top and NOT quadratic. **The fetch is ~1 ms and
+  8 KB in ONE request** (`hydrate` resolves both references server-side) — not a term in the
+  decision. It can run in the client (the engine is client code and needs no canvas) but blocks the
+  main thread throughout; server-side would need the engine in the image, which **`client/src` is
+  not**. Order AND every finishing time are stored, so the comparison is not weaker — but **the
+  geometry is not stored, only `geometryId`**, so a track edit would be indistinguishable from an
+  engine change. ★ Named and left: `feat/team-races-1`'s `contentAddress.js` imports `client/src`,
+  which is absent from the image. **No recommendation made.**
+
 - [GOLDEN-RACES-1.md](GOLDEN-RACES-1.md) — **two fixed races with known outcomes, re-run only when
   a change can affect them** (2026-09-06, `feat/golden-races-1` off master `bcf41a9b` — a GUARD, and
   it ships on its own). **Every input is pinned in the fixture** — geometry, track width, the racer's
