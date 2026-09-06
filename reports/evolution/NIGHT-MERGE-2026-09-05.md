@@ -198,21 +198,27 @@ never speak to a fingerprint."* Step 2 touched `server/src` and nothing else.
 
 ## Steps 5–7 — the merge, the branch, CI
 
-- **Merge:** `MERGE_SHA` to master, `--no-ff`, with the six night commits and the three of this piece
-  kept as history. Nothing squashed.
+- **Merge:** `7bc2f99f` to master, `--no-ff`, with the six night commits and the four of this piece
+  kept as history (`f573ca64` catch-up, `ec8f7297` format, `986d3d82` no-empty, `83596326`
+  no-unused-vars, `336a8ce0` report). Nothing squashed.
 - **Branch deleted at origin as the very next command after the push** — deleting late reddens
   master, because the origin-branch guard reads the remote live.
 
 Final `git ls-remote --heads origin`:
 
 ```
-LSREMOTE
+d784e3211f7591c36aba3d4565b1355ccfd5e7b5	refs/heads/feat/team-races-1
+7bc2f99f960af85309caa088a93b2785423a25a5	refs/heads/master
 ```
 
 Only `master` and `feat/team-races-1` remain, which is the intended end state: **`feat/team-races-1`
 was not touched, not merged, and not deleted.**
 
-- **CI on the merge SHA (the PUSH run):** `CI_CONCLUSION`
+- **CI on the merge SHA (the PUSH run):** run `34060779867`, head sha
+  `7bc2f99f960af85309caa088a93b2785423a25a5` — **conclusion `success`** in 4m8s. All three jobs
+  green: *Server tests*, *Client checks*, *Living-doc guards + script tests*. The run carries one
+  annotation, unrelated to this piece and pre-existing: GitHub forcing `actions/checkout@v4` and
+  `actions/setup-node@v4` onto Node 24 because Node 20 is deprecated on its runners.
 
 ---
 
