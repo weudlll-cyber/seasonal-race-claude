@@ -143,7 +143,13 @@ describe('setup when the marker and the store disagree — TODAY’S behaviour, 
   // the next attempt repeats the whole dance.
   describe('STATE 2 — the marker is ABSENT and users are PRESENT', () => {
     beforeEach(async () => {
-      await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'existing', password: 'pw123456', role: 'admin' });
+      await store.createUser({
+        team: 'Seasonal Entertainment',
+        allowNewTeam: true,
+        username: 'existing',
+        password: 'pw123456',
+        role: 'admin',
+      });
     });
 
     // DELETE THIS and `setup-needed` could start answering `true` on a machine that already has

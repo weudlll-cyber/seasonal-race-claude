@@ -43,7 +43,11 @@ import { FOUNDING_TEAM, isWellFormedTeam } from './teams.js';
  * @returns {Promise<{changed: number, skipped: number, total: number, team: string,
  *                    changedUsernames: string[], dryRun: boolean}>}
  */
-export async function migrateTeams({ store = defaultStore, team = FOUNDING_TEAM, dryRun = false } = {}) {
+export async function migrateTeams({
+  store = defaultStore,
+  team = FOUNDING_TEAM,
+  dryRun = false,
+} = {}) {
   const users = store.readUsers();
   const needing = users.filter((u) => !isWellFormedTeam(u.team));
 

@@ -22,9 +22,9 @@ const SqliteStore = sqliteStoreFactory(session);
 // that doesn't set NODE_ENV=production). 'auto' delegates to express-session's trust-proxy logic.
 export function resolveCookieSecure(isProduction) {
   const v = process.env.RA_COOKIE_SECURE;
-  if (v === 'true')  return true;
+  if (v === 'true') return true;
   if (v === 'false') return false;
-  if (v === 'auto')  return 'auto';
+  if (v === 'auto') return 'auto';
   return isProduction;
 }
 
@@ -37,7 +37,9 @@ export function resolveCookieName(secureResolved) {
   if (mode === 'legacy') return 'ra.sid';
   if (mode === 'host') {
     if (secureResolved !== true) {
-      const e = new Error('RA_COOKIE_NAME_MODE=host requires guaranteed Secure (RA_COOKIE_SECURE=true)');
+      const e = new Error(
+        'RA_COOKIE_NAME_MODE=host requires guaranteed Secure (RA_COOKIE_SECURE=true)'
+      );
       e.code = 'COOKIE_NAME_MODE_INVALID';
       throw e;
     }
@@ -54,12 +56,13 @@ export function getActiveCookieName() {
 }
 
 export function createSessionMiddleware(opts = {}) {
-  const isProduction = opts.isProduction ?? (process.env.NODE_ENV === 'production');
+  const isProduction = opts.isProduction ?? process.env.NODE_ENV === 'production';
   const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
 
   // dbPath: explicit opt > test in-memory default > env override > file default
-  const dbPath = opts.dbPath
-    ?? (isTest ? ':memory:' : (process.env.RA_SESSION_DB ?? join(DATA_ROOT, 'sessions.sqlite')));
+  const dbPath =
+    opts.dbPath ??
+    (isTest ? ':memory:' : (process.env.RA_SESSION_DB ?? join(DATA_ROOT, 'sessions.sqlite')));
 
   // Secret resolution
   let secret = opts.secret ?? process.env.RA_SESSION_SECRET;
@@ -71,7 +74,9 @@ export function createSessionMiddleware(opts = {}) {
     }
     secret = randomUUID();
     // Warn once per process start; createSessionMiddleware is called once at module scope in app.js.
-    console.warn('[auth] Using ephemeral dev session secret — sessions will not survive restart. Set RA_SESSION_SECRET to silence this.');
+    console.warn(
+      '[auth] Using ephemeral dev session secret — sessions will not survive restart. Set RA_SESSION_SECRET to silence this.'
+    );
   }
 
   const enableSweep = opts.enableSweep ?? !isTest;
@@ -95,8 +100,14 @@ export function createSessionMiddleware(opts = {}) {
     store,
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: cookieSecure, path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 },
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: cookieSecure,
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    },
   });
-  mw._db = db;  // exposed for test teardown (store.client alias)
+  mw._db = db; // exposed for test teardown (store.client alias)
   return mw;
 }

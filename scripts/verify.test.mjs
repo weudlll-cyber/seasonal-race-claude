@@ -222,10 +222,26 @@ test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that 
   // Delete this and the whole point of WIRE-SUITES-1 is unguarded: the server suite could quietly
   // stop being selected and go back to being 615 tests nobody runs, which is the state it was found
   // in and which looks exactly like coverage.
-  assert.deepEqual(routesTo("server/index.js"), ["check-language-closed", "server-suite"]);
+  // SERVER-LINT-1 (2026-09-06) GREW THIS SET, and the test catching it is the same routing
+  // declaration doing the same job a third time. The server had no linter and no format check at
+  // all, so a `server/` change selected the language guard and its suite and nothing else. It now
+  // selects the two guards that read the code as well. The expected set follows the behaviour
+  // rather than pinning the smaller one — a set that stopped growing when a guard was added would
+  // be asserting that the guard is not wired.
+  assert.deepEqual(routesTo("server/index.js"), [
+    "check-language-closed",
+    "server-format-check",
+    "server-lint",
+    "server-suite",
+  ]);
   // `server/`, not `server/src/` — the package manifest decides how the suite RUNS, and naming the
   // source subdirectory is the miss client-suite already paid for twice.
-  assert.deepEqual(routesTo("server/package.json"), ["check-language-closed", "server-suite"]);
+  assert.deepEqual(routesTo("server/package.json"), [
+    "check-language-closed",
+    "server-format-check",
+    "server-lint",
+    "server-suite",
+  ]);
 });
 
 test("NOT ROUTED: the e2e suite is NIGHT WORK, and that is deliberate", () => {

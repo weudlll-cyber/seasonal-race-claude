@@ -30,22 +30,52 @@ describe('session middleware — lifecycle', () => {
 
   beforeEach(() => {
     tempDb = makeTempDb();
-    mw = createSessionMiddleware({ dbPath: tempDb, secret: 'test-secret', isProduction: false, enableSweep: false });
+    mw = createSessionMiddleware({
+      dbPath: tempDb,
+      secret: 'test-secret',
+      isProduction: false,
+      enableSweep: false,
+    });
     const app = express();
     app.use(express.json());
     app.use(mw);
-    app.post('/touch',  (req, res) => { req.session.userId = 'u1'; res.json({ sid: req.sessionID }); });
-    app.post('/login',  (req, res) => { req.session.regenerate(e => { if (e) return res.status(500).end(); req.session.userId = 'u1'; res.json({ sid: req.sessionID }); }); });
-    app.get('/me',      (req, res) => res.json({ userId: req.session.userId ?? null }));
-    app.post('/logout', (req, res) => { req.session.destroy(() => { res.clearCookie('ra.sid'); res.json({ ok: true }); }); });
+    app.post('/touch', (req, res) => {
+      req.session.userId = 'u1';
+      res.json({ sid: req.sessionID });
+    });
+    app.post('/login', (req, res) => {
+      req.session.regenerate((e) => {
+        if (e) return res.status(500).end();
+        req.session.userId = 'u1';
+        res.json({ sid: req.sessionID });
+      });
+    });
+    app.get('/me', (req, res) => res.json({ userId: req.session.userId ?? null }));
+    app.post('/logout', (req, res) => {
+      req.session.destroy(() => {
+        res.clearCookie('ra.sid');
+        res.json({ ok: true });
+      });
+    });
     agent = request.agent(app);
   });
 
   afterEach(() => {
-    if (mw._db) { try { mw._db.close(); } catch {} }
+    if (mw._db) {
+      try {
+        mw._db.close();
+      } catch {
+        // Test teardown: the handle may already be closed.
+      }
+    }
     for (const suffix of ['', '-wal', '-shm']) {
       const p = tempDb + suffix;
-      if (existsSync(p)) try { unlinkSync(p); } catch {}
+      if (existsSync(p))
+        try {
+          unlinkSync(p);
+        } catch {
+          // Test teardown on a file that may never have been created.
+        }
     }
   });
 
@@ -115,8 +145,9 @@ describe('session middleware — secret policy', () => {
     const saved = process.env.RA_SESSION_SECRET;
     delete process.env.RA_SESSION_SECRET;
     try {
-      expect(() => createSessionMiddleware({ isProduction: true }))
-        .toThrow(expect.objectContaining({ code: 'SESSION_SECRET_MISSING' }));
+      expect(() => createSessionMiddleware({ isProduction: true })).toThrow(
+        expect.objectContaining({ code: 'SESSION_SECRET_MISSING' })
+      );
     } finally {
       if (saved !== undefined) process.env.RA_SESSION_SECRET = saved;
     }
@@ -136,7 +167,9 @@ describe('session middleware — secret policy', () => {
 // ── Unit: resolveCookieSecure ─────────────────────────────────────────────────
 
 describe('resolveCookieSecure', () => {
-  afterEach(() => { delete process.env.RA_COOKIE_SECURE; });
+  afterEach(() => {
+    delete process.env.RA_COOKIE_SECURE;
+  });
 
   it('RA_COOKIE_SECURE=true → true, overrides isProduction:false', () => {
     process.env.RA_COOKIE_SECURE = 'true';
@@ -188,14 +221,16 @@ describe('resolveCookieName', () => {
 
   it('host + false → throws COOKIE_NAME_MODE_INVALID', () => {
     process.env.RA_COOKIE_NAME_MODE = 'host';
-    expect(() => resolveCookieName(false))
-      .toThrow(expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' }));
+    expect(() => resolveCookieName(false)).toThrow(
+      expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' })
+    );
   });
 
   it('host + "auto" → throws COOKIE_NAME_MODE_INVALID', () => {
     process.env.RA_COOKIE_NAME_MODE = 'host';
-    expect(() => resolveCookieName('auto'))
-      .toThrow(expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' }));
+    expect(() => resolveCookieName('auto')).toThrow(
+      expect.objectContaining({ code: 'COOKIE_NAME_MODE_INVALID' })
+    );
   });
 
   it('legacy → ra.sid regardless of secureResolved', () => {
@@ -212,17 +247,30 @@ describe('session middleware — maxAge and rolling', () => {
   let agent;
 
   beforeEach(() => {
-    mw = createSessionMiddleware({ secret: 'test-secret', isProduction: false, enableSweep: false });
+    mw = createSessionMiddleware({
+      secret: 'test-secret',
+      isProduction: false,
+      enableSweep: false,
+    });
     const app = express();
     app.use(express.json());
     app.use(mw);
-    app.post('/touch', (req, res) => { req.session.userId = 'u1'; res.json({}); });
-    app.get('/me',    (req, res) => res.json({ userId: req.session.userId ?? null }));
+    app.post('/touch', (req, res) => {
+      req.session.userId = 'u1';
+      res.json({});
+    });
+    app.get('/me', (req, res) => res.json({ userId: req.session.userId ?? null }));
     agent = request.agent(app);
   });
 
   afterEach(() => {
-    if (mw._db) { try { mw._db.close(); } catch {} }
+    if (mw._db) {
+      try {
+        mw._db.close();
+      } catch {
+        // Test teardown: the handle may already be closed.
+      }
+    }
   });
 
   it('Set-Cookie Expires is ~30 days in the future (maxAge:2592000000 applied)', async () => {

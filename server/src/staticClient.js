@@ -75,16 +75,23 @@ export function clientBuildExists(dist = CLIENT_DIST) {
   return existsSync(join(dist, 'index.html'));
 }
 
+// ★ THE `console.log` DEFAULT BELOW IS STDOUT BY DECISION (the owner, 2026-09-06). What it logs is
+// not a fault: "no built client — serving the API only" is a legitimate install (SERVE-SPA-1), so it
+// is an ordinary statement of what the server is doing, not a shortfall. Its sibling
+// `reportStartupReadiness` defaults to `console.warn` (startupReadiness.js:95) BECAUSE that one does
+// report a shortfall — the two defaults differ on purpose, and warning here would erase that. The
+// parameter stays injectable, which is how staticClient.test.js reads the text without a stream.
 /**
  * Mount the static assets. Call BEFORE the auth guards — see the header.
  * @returns {boolean} whether anything was mounted
  */
+// eslint-disable-next-line no-console -- deliberate: normal output, and the default is a seam, above
 export function mountClientAssets(app, dist = CLIENT_DIST, log = console.log) {
   if (!clientBuildExists(dist)) {
     // Plain, and it names the path, because "why is / a 404" is the question this line answers.
     log(
       `[client] no built client at ${dist} — serving the API only. ` +
-        'Run `npm run build` in client/ (or set RA_CLIENT_DIST) to serve the app from this server.',
+        'Run `npm run build` in client/ (or set RA_CLIENT_DIST) to serve the app from this server.'
     );
     return false;
   }

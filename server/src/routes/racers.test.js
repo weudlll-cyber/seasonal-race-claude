@@ -50,8 +50,7 @@ const JPEG_MAGIC = Buffer.from([
 
 // PNG signature bytes (8 bytes) + enough padding for the 12-byte magic-byte check
 const PNG_MAGIC = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 
 // Non-image content with a valid filename/MIME header — used for the honesty proof
@@ -89,31 +88,31 @@ describe('validateBody', () => {
   });
 
   it('rejects missing emoji', () => {
-    const { emoji, ...rest } = BASE_RACER;
+    const { emoji: _emoji, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/emoji/i);
   });
 
   it('rejects missing frameCount', () => {
-    const { frameCount, ...rest } = BASE_RACER;
+    const { frameCount: _frameCount, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/frameCount/i);
   });
 
   it('rejects missing basePeriodMs', () => {
-    const { basePeriodMs, ...rest } = BASE_RACER;
+    const { basePeriodMs: _basePeriodMs, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/basePeriodMs/i);
   });
 
   it('rejects missing displaySize', () => {
-    const { displaySize, ...rest } = BASE_RACER;
+    const { displaySize: _displaySize, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/displaySize/i);
   });
 
   it('rejects missing trailStyle', () => {
-    const { trailStyle, ...rest } = BASE_RACER;
+    const { trailStyle: _trailStyle, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/trailStyle/i);
   });
@@ -130,7 +129,7 @@ describe('validateBody', () => {
   });
 
   it('rejects missing primaryColor', () => {
-    const { primaryColor, ...rest } = BASE_RACER;
+    const { primaryColor: _primaryColor, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/primaryColor/i);
   });
@@ -189,7 +188,9 @@ describe('loadAll: corrupt file is skipped (boot safety)', () => {
     );
 
     let map;
-    expect(() => { map = loadAll(tmpDir); }).not.toThrow();
+    expect(() => {
+      map = loadAll(tmpDir);
+    }).not.toThrow();
     expect(map).toBeInstanceOf(Map);
     expect(map.has('valid-racer')).toBe(true);
     expect(map.size).toBe(1);
@@ -261,14 +262,16 @@ describe('POST /api/racers', () => {
   });
 
   it('returns 400 for missing name', async () => {
-    const { name, ...rest } = BASE_RACER;
+    const { name: _name, ...rest } = BASE_RACER;
     const res = await admin.post('/api/racers').send(rest);
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
   });
 
   it('returns 400 for coats:[]', async () => {
-    const res = await admin.post('/api/racers').send({ id: 'test-racer-empty-coats', ...BASE_RACER, coats: [] });
+    const res = await admin
+      .post('/api/racers')
+      .send({ id: 'test-racer-empty-coats', ...BASE_RACER, coats: [] });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('errors');
   });
@@ -313,7 +316,9 @@ describe('PUT /api/racers/:id', () => {
       .post(`/api/racers/${id}/sprite`)
       .attach('sprite', JPEG_MAGIC, { filename: 'r.jpg', contentType: 'image/jpeg' });
 
-    const updated = await admin.put(`/api/racers/${id}`).send({ ...BASE_RACER, name: 'Updated With Sprite' });
+    const updated = await admin
+      .put(`/api/racers/${id}`)
+      .send({ ...BASE_RACER, name: 'Updated With Sprite' });
     expect(updated.status).toBe(200);
     expect(updated.body.spriteFile).toBeTruthy();
   });

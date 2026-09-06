@@ -6,6 +6,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
+  `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
+  and named them the owner's call: `index.js:17` (the startup banner) and `staticClient.js:82` (the
+  `log = console.log` default), both deliberate operator output, where the only fix the rule allows
+  moves them to stderr. **The owner decided on 2026-09-06 that both stay on stdout.**
+  CONSOLE-DECISIONS-1 (merge `4a838660`) closed them **at source** — each site now states why the
+  stream is deliberate and carries ESLint's own per-line directive
+  `eslint-disable-next-line no-console -- <reason>`, so the next reader sees a decision rather than
+  an oversight while a third `console` call anywhere else is still reported. **Nothing in that
+  report is withdrawn and its counts stand**; what changes is only that the two it left open are no
+  longer open. Server lint on master is now **0 problems**, not 2 warnings.
+
 - **2026-09-05 — [ACCEPTED-FINISH-1](ACCEPTED-FINISH-1.md) ATTRIBUTED A SECOND ACCEPTANCE TO THE
   OWNER THAT IS NOT HIS.** That report recorded a **measured** cause for item 10's failure — a
   `BATTLE_ZOOM` in the endgame window holds the leader forward — and elsewhere stated it as a
@@ -349,6 +361,57 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-MERGE-2026-09-05.md](NIGHT-MERGE-2026-09-05.md) — **the night branch cleaned and merged**
+  (2026-09-06, `night/2026-09-05` onto master; HYGIENE + MERGE, nothing built, no behaviour moved).
+  Ten finished pieces had been pushed and left unmerged, and two of them — SERVER-LINT-1's `lint` and
+  `format:check` — were **red on arrival for pre-existing reasons**: the server had never been linted
+  or formatted by anything. ★ **The catch-up had nothing to resolve** — master's four commits and the
+  night's six are disjoint by file, so `ort` merged with zero conflicts; the golden races were re-run
+  after it and PASS, so the night changed no race. ★ **Formatting 35 files → 0 and lint 36 → 2**, in
+  three classes: `no-empty` 9 → 0 through the rule's own comment accommodation, `no-unused-vars`
+  25 → 0 in **three different kinds** (7 dead and deleted, 3 live statements with a dead name, 15
+  unused *by design* and marked with the `^_` prefix the config already declares). Nothing disabled,
+  no inline suppression, no configuration narrowed; the format pass proven code-identical by comparing
+  all 35 acorn syntax trees before and after (0 differ). ★ **The two left standing are both
+  `no-console`** on deliberate stdout operator output (`index.js:17`, `staticClient.js:82`) — the only
+  allowed fix moves them to stderr, which is a behaviour change and the owner's call. verify
+  `--premerge` **PASS 22 FAIL 0**, server suite 725/725 green after every commit, and **all four
+  fingerprints run and UNMOVED — nothing minted**.
+
+- [RECOMPUTE-COST-1.md](RECOMPUTE-COST-1.md) — **what verifying a stored race by recomputation
+  costs** (2026-09-06, `diag/recompute-cost-1` off master `119771bc`; MEASUREMENT ONLY, nothing
+  built). ★ **Recomputing has NO side effects** — instrumented before import and through a full run:
+  zero storage, filesystem, events, unseeded random or clock reads. ★ **And the heaviest race the
+  product allows costs ~7.4 s**, not the 0.6 s GOLDEN-RACES-1 measured on two small ones — twelve to
+  twenty times more. Worst case established at source: **100 racers** (`maxPlayersOpen`; closed is
+  capped at 40) on an open track for **120 s** (the longest `DURATION_OPTIONS` offers). **7 243 –
+  7 450 ms**, one run per fresh process, 3% spread; ★ **~13 s each when repeated in one process** —
+  heap pressure, reported rather than smoothed away. **Field size dominates**: ×2.5 field → ×3.9
+  cost, ×4 duration → ×2.5, roughly n^1.5 at the top and NOT quadratic. **The fetch is ~1 ms and
+  8 KB in ONE request** (`hydrate` resolves both references server-side) — not a term in the
+  decision. It can run in the client (the engine is client code and needs no canvas) but blocks the
+  main thread throughout; server-side would need the engine in the image, which **`client/src` is
+  not**. Order AND every finishing time are stored, so the comparison is not weaker — but **the
+  geometry is not stored, only `geometryId`**, so a track edit would be indistinguishable from an
+  engine change. ★ Named and left: `feat/team-races-1`'s `contentAddress.js` imports `client/src`,
+  which is absent from the image. **No recommendation made.**
+
+- [GOLDEN-RACES-1.md](GOLDEN-RACES-1.md) — **two fixed races with known outcomes, re-run only when
+  a change can affect them** (2026-09-06, `feat/golden-races-1` off master `bcf41a9b` — a GUARD, and
+  it ships on its own). **Every input is pinned in the fixture** — geometry, track width, the racer's
+  tuned values, every config object, the roster BY NAME (a name is physics), the seed, the stage — so
+  no seed, default or stored setting can move them. One closed track (12 racers, wild, 35.35 s) and
+  one open (6 racers, quiet, 30 s); ★ the closed one is decided by a **two-frame finish**, chosen by
+  sweeping seeds so the ORDER is sensitive and not only the times. The expectation is a **result
+  list, not a hash**: a failure names the racer and both values. The declaration is **DERIVED** —
+  `reach: ["raceCore.js"]`, expanded to 29 files by `engine-reach`'s closure — and proved in both
+  directions, including `mathUtils.js`, which it reaches only INDIRECTLY. ★ **Sabotage (b) is the
+  whole point**: the seed edit that moves the world fingerprint (`8a1977187e9c99b4` →
+  `dc4647be0f55ebdb`) leaves the golden races passing, so this check does not have the fragility
+  REPEAT-REFUSE-5 found in that instrument. Re-recording is a SEPARATE command that **REFUSES
+  without an intended-change reason**, is **not permission** (the owner's word, per occurrence), and
+  **keeps the previous expectation** dated with its commit and reason. Runs in **~0.6 s**;
+  `fingerprint-default.mjs` untouched and the overlap reported; nothing minted, nothing moved.
 - [REPEAT-REFUSE-5.md](REPEAT-REFUSE-5.md) — ★ **STOPPED at the establish step; no code changed**
   (2026-09-06, `feat/team-races-1`). The addendum asked whether the **world role in
   `docs/fingerprints.json`** can reach the product and be compared per race. **It CAN reach it** —
@@ -442,6 +505,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   every spec shares one `storageState`. Sabotage reddened **5** tests across both layers, and the
   HTTP-layer test **did not exist until the sabotage showed it was missing**. `engine-reach` selects
   nothing; **nothing minted**.
+||||||| bcf41a9b
 
 - [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
   minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall

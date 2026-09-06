@@ -102,8 +102,10 @@ describe('POST /api/races — access', () => {
 // ── ★ The team comes from the session ────────────────────────────────────────
 
 describe('★ the team comes from the SESSION and the body cannot choose one', () => {
-  it('files the race under the signed-in user\'s team', async () => {
-    const res = await request(appWithUser({ id: 'u1', username: 'ada', role: 'operator', team: 'Seasonal Entertainment' }))
+  it("files the race under the signed-in user's team", async () => {
+    const res = await request(
+      appWithUser({ id: 'u1', username: 'ada', role: 'operator', team: 'Seasonal Entertainment' })
+    )
       .post('/api/races')
       .send(aRace());
 
@@ -111,8 +113,10 @@ describe('★ the team comes from the SESSION and the body cannot choose one', (
     expect(store.getRaceById(res.body.id).team).toBe('Seasonal Entertainment');
   });
 
-  it('★ IGNORES a team in the body — a client cannot file into another team\'s history', async () => {
-    const res = await request(appWithUser({ id: 'u1', username: 'ada', role: 'operator', team: 'Seasonal Entertainment' }))
+  it("★ IGNORES a team in the body — a client cannot file into another team's history", async () => {
+    const res = await request(
+      appWithUser({ id: 'u1', username: 'ada', role: 'operator', team: 'Seasonal Entertainment' })
+    )
       .post('/api/races')
       .send(aRace({ team: 'Some Other Team' }));
 
@@ -126,7 +130,9 @@ describe('★ the team comes from the SESSION and the body cannot choose one', (
 
   it('a user with NO team is told to keep the race and retry, not that it failed', async () => {
     // A user who predates TEAMS-1's backfill. The race must not be lost over it.
-    const res = await request(appWithUser({ id: 'u1', username: 'old', role: 'operator', team: null }))
+    const res = await request(
+      appWithUser({ id: 'u1', username: 'old', role: 'operator', team: null })
+    )
       .post('/api/races')
       .send(aRace());
 
@@ -167,8 +173,12 @@ describe('★ the same race arriving twice is stored once', () => {
   });
 
   it('two DIFFERENT races both land', async () => {
-    await request(appWithUser(user)).post('/api/races').send(aRace({ clientRaceId: 'one' }));
-    await request(appWithUser(user)).post('/api/races').send(aRace({ clientRaceId: 'two', racePlanSeed: 99 }));
+    await request(appWithUser(user))
+      .post('/api/races')
+      .send(aRace({ clientRaceId: 'one' }));
+    await request(appWithUser(user))
+      .post('/api/races')
+      .send(aRace({ clientRaceId: 'two', racePlanSeed: 99 }));
     expect(store.counts().races).toBe(2);
   });
 });
@@ -182,13 +192,16 @@ describe('a rejection says whether retrying could ever help', () => {
     ['no roster', { names: [] }],
     ['no seed', { racePlanSeed: null }],
     ['results that are not an array', { results: 'first!' }],
-  ])('a race with %s is 400 and NOT retryable — the same bytes would fail forever', async (_l, bad) => {
-    const res = await request(appWithUser(user)).post('/api/races').send(aRace(bad));
-    // 400 is the whole message: these bytes are wrong and repeating them cannot help.
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBeTruthy();
-    expect(store.counts().races).toBe(0);
-  });
+  ])(
+    'a race with %s is 400 and NOT retryable — the same bytes would fail forever',
+    async (_l, bad) => {
+      const res = await request(appWithUser(user)).post('/api/races').send(aRace(bad));
+      // 400 is the whole message: these bytes are wrong and repeating them cannot help.
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBeTruthy();
+      expect(store.counts().races).toBe(0);
+    }
+  );
 });
 
 // ── ★ Reading a team's races ─────────────────────────────────────────────────
@@ -205,7 +218,13 @@ describe('GET /api/races — the team reads its own', () => {
     ]) {
       await request(appWithUser(user))
         .post('/api/races')
-        .send(aRace({ clientRaceId: `${user.team}-${i}`, finishedAt: when, racePlanSeed: 100 + i.charCodeAt(0) }));
+        .send(
+          aRace({
+            clientRaceId: `${user.team}-${i}`,
+            finishedAt: when,
+            racePlanSeed: 100 + i.charCodeAt(0),
+          })
+        );
     }
   }
 
@@ -213,7 +232,7 @@ describe('GET /api/races — the team reads its own', () => {
     expect((await request(app).get('/api/races')).status).toBe(401);
   });
 
-  it('returns this team\'s races newest first, and NOT another team\'s', async () => {
+  it("returns this team's races newest first, and NOT another team's", async () => {
     await store3(ours);
     await store3(theirs);
 
@@ -280,8 +299,12 @@ describe('★ GET /api/races/:shortKey', () => {
   });
 
   it('two races get two DIFFERENT keys — a key is never derived from the race', async () => {
-    const a = await request(appWithUser(ours)).post('/api/races').send(aRace({ clientRaceId: 'one' }));
-    const b = await request(appWithUser(ours)).post('/api/races').send(aRace({ clientRaceId: 'two' }));
+    const a = await request(appWithUser(ours))
+      .post('/api/races')
+      .send(aRace({ clientRaceId: 'one' }));
+    const b = await request(appWithUser(ours))
+      .post('/api/races')
+      .send(aRace({ clientRaceId: 'two' }));
     expect(a.body.shortKey).not.toBe(b.body.shortKey);
   });
 
@@ -312,7 +335,7 @@ describe('★ GET /api/races/:shortKey', () => {
     }
   });
 
-  it('★ ANOTHER TEAM\'S key is NOT FOUND — not forbidden, which would confirm it exists', async () => {
+  it("★ ANOTHER TEAM'S key is NOT FOUND — not forbidden, which would confirm it exists", async () => {
     const stored = await request(appWithUser(ours)).post('/api/races').send(aRace());
     const res = await request(appWithUser(theirs)).get(`/api/races/${stored.body.shortKey}`);
 

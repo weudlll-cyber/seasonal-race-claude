@@ -37,7 +37,11 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const p of Object.values(paths)) {
-    try { if (existsSync(p)) unlinkSync(p); } catch {}
+    try {
+      if (existsSync(p)) unlinkSync(p);
+    } catch {
+      // Test teardown on a file that may never have been created.
+    }
   }
 });
 
@@ -147,7 +151,14 @@ describe('rearmSetup — marker present, no users', () => {
 
 describe('rearmSetup — marker present, users exist', () => {
   it('removes the marker but reports setupWillWork: false when users are present', async () => {
-    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
+      username: 'alice',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     writeFileSync(paths.markerPath, JSON.stringify({ completedAt: new Date().toISOString() }));
 
     const result = rearmSetup({
@@ -164,7 +175,14 @@ describe('rearmSetup — marker present, users exist', () => {
   });
 
   it('setupWillWork is false regardless of marker state when users exist', async () => {
-    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
+      username: 'alice',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     // No marker — still setupWillWork must be false
     const result = rearmSetup({
       markerPath: paths.markerPath,
@@ -214,8 +232,8 @@ describe('Audit log — promoteOrCreate', () => {
   it('audit line NEVER contains a password or bcrypt hash', async () => {
     await promoteOrCreate('alice', 'secret-pw-xyz', { store, auditLogPath: paths.auditPath });
     const content = readFileSync(paths.auditPath, 'utf8');
-    expect(content).not.toMatch(/\$2[ab]\$/);          // no bcrypt hash
-    expect(content).not.toContain('secret-pw-xyz');    // no plaintext password
+    expect(content).not.toMatch(/\$2[ab]\$/); // no bcrypt hash
+    expect(content).not.toContain('secret-pw-xyz'); // no plaintext password
     expect(content.toLowerCase()).not.toContain('password'); // no password field
   });
 });

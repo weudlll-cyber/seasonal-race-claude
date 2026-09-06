@@ -12,7 +12,9 @@
 // (e.g. RA_CLIENT_ORIGIN=http://localhost:5173). Unset → same-origin only.
 export function getAllowedClientOrigins() {
   return (process.env.RA_CLIENT_ORIGIN ?? '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 // ── CORS options ──────────────────────────────────────────────────────────────
@@ -35,9 +37,9 @@ export const corsOptions = (() => {
 // 'auto'/unset → falls back to isProduction (same pattern as resolveCookieSecure).
 export function resolveCsrfStrict(isProduction) {
   const v = process.env.RA_CSRF_STRICT;
-  if (v === 'true')  return true;
+  if (v === 'true') return true;
   if (v === 'false') return false;
-  return isProduction;  // 'auto' and unset both fall through to the env default
+  return isProduction; // 'auto' and unset both fall through to the env default
 }
 
 // ── CSRF Origin/Referer guard ─────────────────────────────────────────────────
@@ -49,17 +51,21 @@ export function createCsrfOriginGuard({
 } = {}) {
   return function csrfOriginGuard(req, res, next) {
     const path = req.path;
-    if (path !== '/api' && !path.startsWith('/api/')) return next();  // scope: /api only
+    if (path !== '/api' && !path.startsWith('/api/')) return next(); // scope: /api only
 
     const method = String(req.method).toUpperCase();
-    if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return next();  // mutating only
+    if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return next(); // mutating only
 
     // Determine the claimed origin: Origin header, else Referer's origin component.
     let candidate = req.get('origin') || null;
     if (!candidate) {
       const ref = req.get('referer');
       if (ref) {
-        try { candidate = new URL(ref).origin; } catch { candidate = null; }
+        try {
+          candidate = new URL(ref).origin;
+        } catch {
+          candidate = null;
+        }
       }
     }
 
@@ -76,17 +82,16 @@ export function createCsrfOriginGuard({
     if (candidate === 'null') {
       return res.status(403).json({ error: 'cross-origin request rejected' });
     }
-    try { new URL(candidate); } catch {
+    try {
+      new URL(candidate);
+    } catch {
       return res.status(403).json({ error: 'cross-origin request rejected' });
     }
 
     // Self is the canonical server origin: explicit RA_PUBLIC_ORIGIN when set (production),
     // otherwise derived from the incoming Host header (dev/local).
     const self = selfOrigin ?? `${req.protocol}://${req.get('host')}`;
-    const allowed = new Set([
-      normalizeOrigin(self),
-      ...getAllowedOrigins().map(normalizeOrigin),
-    ]);
+    const allowed = new Set([normalizeOrigin(self), ...getAllowedOrigins().map(normalizeOrigin)]);
 
     if (!allowed.has(normalizeOrigin(candidate))) {
       return res.status(403).json({ error: 'cross-origin request rejected' });

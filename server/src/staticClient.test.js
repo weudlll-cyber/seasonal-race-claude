@@ -48,7 +48,7 @@ function makeApp({ withBuild = true, authed = true } = {}) {
   mountClientAssets(app, target, () => {});
   mountSpaFallback(app, target);
   app.use((req, res, next) =>
-    authed ? next() : res.status(401).json({ error: 'not authenticated' }),
+    authed ? next() : res.status(401).json({ error: 'not authenticated' })
   );
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.get('/api/tracks', (_req, res) => res.json([{ id: 'dirt-oval' }]));

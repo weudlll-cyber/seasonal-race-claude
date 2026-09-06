@@ -25,11 +25,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isValidId } from '../../utils/isValidId.js';
-import {
-  PLAYER_NAME_MAX_LENGTH,
-  tooLongNames,
-  nameTooLongMessage,
-} from '../../../shared/nameLimits.mjs';
+import { tooLongNames, nameTooLongMessage } from '../../../shared/nameLimits.mjs';
 
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
@@ -39,11 +35,6 @@ const NAME_MAX = 100;
 // track, 100 on an open one, in client defaults.js). Named for what it limits, because `PLAYER_MAX`
 // beside `maxPlayersClosed` read as a third opinion about the same thing.
 const SAVED_GROUP_MAX_NAMES = 200;
-// NAME-LIMIT-1: the limit has ONE home, above both packages, because it must be identical on both
-// sides of this HTTP boundary. This route is the ONLY place a name can be enforced for real — a
-// client is untrusted and an input attribute is a hint to a browser.
-const PLAYER_NAME_MAX = PLAYER_NAME_MAX_LENGTH;
-
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 // ── In-memory store ───────────────────────────────────────────────────────────
@@ -131,7 +122,9 @@ router.post('/', (req, res) => {
   let id = req.body.id;
   if (id !== undefined) {
     if (!isValidId(id)) {
-      errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
+      errors.push(
+        'id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)'
+      );
     }
   } else {
     id = randomUUID(); // lowercase hex + hyphens — satisfies isValidId

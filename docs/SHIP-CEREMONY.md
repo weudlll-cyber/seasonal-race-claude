@@ -676,9 +676,39 @@ went missing).
       once with two single-threaded measurement scripts alongside it (64 of 80 races failed). It is
       the last thing done before the report, with nothing else on the machine.
 
-      **WHY TEN AND NOT ONE — the trade, measured rather than assumed.** The fixed cost dominates:
-      a build, two servers and a browser is about 200 s before any race runs, so the races themselves
-      are cheap at the margin.
+      **WHY TEN AND NOT ONE — the trade, measured rather than assumed.**
+
+      > ★ **CORRECTED 2026-09-06 (NIGHT-2026-09-05 piece 3). THE SENTENCE THAT STOOD HERE WAS WRONG,
+      > AND IT WAS WRONG IN THE DIRECTION THAT MATTERS.** It read: *"The fixed cost dominates: a
+      > build, two servers and a browser is about 200 s before any race runs, so the races themselves
+      > are cheap at the margin."*
+      >
+      > **MEASURED, WITH TIMESTAMPS, on 2026-09-05:** `node scripts/viewer-invariants.mjs --gate`
+      > was run once with every line of its output stamped against the process start. The sweep
+      > build finished at **3.2 s**, the isolated stack (API, app server, browser) was up at
+      > **5.2 s**, the first race started there, the last race was home at **262.6 s**, and the run
+      > ended at 263.7 s.
+      >
+      > **So the fixed cost is about 5 s, not 200 — it is 2% of the run, and the races are 98%.**
+      > The old sentence had it exactly the wrong way round, and the conclusion drawn from it — that
+      > extra races are cheap at the margin — does not follow from the fixed cost at all.
+      >
+      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:814`
+      > runs races **six at a time** by default, and `:877` starts that many workers. Two races
+      > therefore overlap: on the measured run one finished at 209.2 s and the other at 262.6 s, and
+      > the run's wall clock is the SLOWER of them, not their sum.
+      >
+      > ★ **WHAT A GATE OF FOUR TRACKS WOULD COST, and which part of this is measured.** Four races
+      > still fit in one wave of six, so the wall clock stays bounded by the SLOWEST race rather than
+      > growing with the count — roughly a 2-race run, not double it. **That bound is measured; the
+      > four-track figure is NOT.** Four concurrent Chromium races contend for the machine in a way
+      > two do not, so the true number is somewhere between the slowest single race and the sum, and
+      > only a four-track run would settle it. It has not been run, and this note does not guess one.
+      >
+      > **The table below is left as it was**, because its wall-clock column was measured and is not
+      > what was wrong; what was wrong is the sentence that explained it. The 1-race figure (267 s)
+      > against the measured 2-race run (263.7 s) is itself evidence for concurrency rather than for
+      > a large fixed cost.
 
       | scope | wall clock | what it holds |
       | --- | --- | --- |

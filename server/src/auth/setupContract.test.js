@@ -75,7 +75,11 @@ describe('POST /api/auth/setup — the client/server contract', () => {
       let req = request(app)[String(method).toLowerCase()](path);
       for (const [k, v] of Object.entries(headers)) req = req.set(k, v);
       const res = await (body === undefined ? req.send() : req.send(body));
-      return { ok: res.status >= 200 && res.status < 300, status: res.status, json: async () => res.body };
+      return {
+        ok: res.status >= 200 && res.status < 300,
+        status: res.status,
+        json: async () => res.body,
+      };
     });
   });
 
@@ -115,7 +119,9 @@ describe('POST /api/auth/setup — the client/server contract', () => {
   });
 
   it('a WRONG token is refused, so the success above is the token and not the bridge', async () => {
-    await expect(setup('admin', 'pw123456', 'NOT-THE-TOKEN')).rejects.toMatchObject({ status: 403 });
+    await expect(setup('admin', 'pw123456', 'NOT-THE-TOKEN')).rejects.toMatchObject({
+      status: 403,
+    });
     expect(existsSync(markerPath)).toBe(false);
   });
 

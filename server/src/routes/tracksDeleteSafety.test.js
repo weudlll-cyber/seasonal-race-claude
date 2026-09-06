@@ -55,7 +55,7 @@ describe('a background file belongs to exactly one track, by construction', () =
       if (rec.backgroundImageFile === null || rec.backgroundImageFile === undefined) continue;
       expect(
         rec.backgroundImageFile,
-        `${rec.id} names a background that is not derived from its id`,
+        `${rec.id} names a background that is not derived from its id`
       ).toMatch(new RegExp(`^${rec.id}\\.[a-z0-9]+$`));
     }
   });
@@ -65,7 +65,7 @@ describe('a background file belongs to exactly one track, by construction', () =
     for (const rec of seedRecords()) {
       if (!rec.backgroundImageFile) continue;
       expect(seen.has(rec.backgroundImageFile), `${rec.backgroundImageFile} is named twice`).toBe(
-        false,
+        false
       );
       seen.set(rec.backgroundImageFile, rec.id);
     }
@@ -92,13 +92,19 @@ describe('a background file belongs to exactly one track, by construction', () =
   }
 
   it('CREATE cannot set a background, whatever the body says', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ id: 'share-probe-create', name: 'Share Probe', ...GEOM, backgroundImageFile: 'dirt-oval.jpg' });
+    const res = await api.post('/api/tracks').send({
+      id: 'share-probe-create',
+      name: 'Share Probe',
+      ...GEOM,
+      backgroundImageFile: 'dirt-oval.jpg',
+    });
     expect(res.status, JSON.stringify(res.body)).toBe(201);
     const id = res.body.id ?? 'share-probe-create';
     const bg = await backgroundStateOf(id);
-    expect(bg.status, 'CREATE honoured a body-supplied background — two tracks can now share one').toBe(404);
+    expect(
+      bg.status,
+      'CREATE honoured a body-supplied background — two tracks can now share one'
+    ).toBe(404);
     expect(bg.error).toBe('No background');
     await api.delete(`/api/tracks/${id}`);
   });
@@ -116,7 +122,10 @@ describe('a background file belongs to exactly one track, by construction', () =
     expect(put.status, JSON.stringify(put.body)).toBe(200);
 
     const bg = await backgroundStateOf(id);
-    expect(bg.status, 'UPDATE honoured a body-supplied background — two tracks can now share one').toBe(404);
+    expect(
+      bg.status,
+      'UPDATE honoured a body-supplied background — two tracks can now share one'
+    ).toBe(404);
     expect(bg.error).toBe('No background');
     await api.delete(`/api/tracks/${id}`);
   });
@@ -149,13 +158,16 @@ describe('deleting a background never touches a file the server did not write', 
     const realWarn = console.warn;
     console.warn = (...a) => warned.push(a.join(' '));
     try {
-      removeBackgroundFile({ id: 'traversal-probe', backgroundImageFile: '../delete-safety-bystander.txt' });
+      removeBackgroundFile({
+        id: 'traversal-probe',
+        backgroundImageFile: '../delete-safety-bystander.txt',
+      });
     } finally {
       console.warn = realWarn;
     }
     expect(
       existsSync(OUTSIDE),
-      'a file outside the backgrounds directory was deleted by a track delete',
+      'a file outside the backgrounds directory was deleted by a track delete'
     ).toBe(true);
     expect(warned.join(' ')).toMatch(/refusing to delete background/);
   });
@@ -163,7 +175,10 @@ describe('deleting a background never touches a file the server did not write', 
   it('still removes an ordinary background — the check must not break deletion', () => {
     // The other direction. A guard that refuses everything would pass the test above and be useless.
     writeFileSync(LEGIT, 'jpeg-bytes');
-    removeBackgroundFile({ id: 'delete-safety-legit', backgroundImageFile: 'delete-safety-legit.jpg' });
+    removeBackgroundFile({
+      id: 'delete-safety-legit',
+      backgroundImageFile: 'delete-safety-legit.jpg',
+    });
     expect(existsSync(LEGIT), 'a legitimate background was NOT removed').toBe(false);
   });
 

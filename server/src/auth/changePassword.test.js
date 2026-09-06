@@ -46,7 +46,14 @@ const uniq = (tag) => `selfpw-${tag}-${Date.now()}-${seq++}`;
 
 async function makeLoggedInUser({ role = 'operator', password = 'Start-Pass-1!' } = {}) {
   const username = uniq(role);
-  const user = await defaultStore.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username, password, role, createdBy: 'setup' });
+  const user = await defaultStore.createUser({
+    team: 'Seasonal Entertainment',
+    allowNewTeam: true,
+    username,
+    password,
+    role,
+    createdBy: 'setup',
+  });
   const agent = request.agent(app);
   const res = await agent.post('/api/auth/login').send({ username, password });
   if (res.status !== 200) throw new Error(`login failed (${res.status})`);

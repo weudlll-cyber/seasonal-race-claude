@@ -16,12 +16,12 @@ const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
 export function createLoginLimiter(opts = {}) {
   return rateLimit({
     windowMs: opts.windowMs ?? Number(process.env.RA_LOGIN_RL_WINDOW_MS ?? 15 * 60 * 1000),
-    limit:    opts.limit    ?? Number(process.env.RA_LOGIN_RL_MAX        ?? 10),
+    limit: opts.limit ?? Number(process.env.RA_LOGIN_RL_MAX ?? 10),
     standardHeaders: true,
-    legacyHeaders:   false,
-    skipSuccessfulRequests: opts.skipSuccessfulRequests ?? true,  // only failed logins count
-    skip: opts.skip ?? (() => isTest),                             // off in test (shared-IP buckets)
-    validate: { trustProxy: false },  // app.set('trust proxy', 1) is deliberate — suppress warning
+    legacyHeaders: false,
+    skipSuccessfulRequests: opts.skipSuccessfulRequests ?? true, // only failed logins count
+    skip: opts.skip ?? (() => isTest), // off in test (shared-IP buckets)
+    validate: { trustProxy: false }, // app.set('trust proxy', 1) is deliberate — suppress warning
     handler: (_req, res) =>
       res.status(429).json({ error: 'too many attempts, please try again later' }),
   });
@@ -32,10 +32,10 @@ export function createLoginLimiter(opts = {}) {
 export function createSetupLimiter(opts = {}) {
   return rateLimit({
     windowMs: opts.windowMs ?? Number(process.env.RA_SETUP_RL_WINDOW_MS ?? 60 * 60 * 1000),
-    limit:    opts.limit    ?? Number(process.env.RA_SETUP_RL_MAX        ?? 10),
+    limit: opts.limit ?? Number(process.env.RA_SETUP_RL_MAX ?? 10),
     standardHeaders: true,
-    legacyHeaders:   false,
-    skipSuccessfulRequests: opts.skipSuccessfulRequests ?? false,  // setup is one-time; count all
+    legacyHeaders: false,
+    skipSuccessfulRequests: opts.skipSuccessfulRequests ?? false, // setup is one-time; count all
     skip: opts.skip ?? (() => isTest),
     validate: { trustProxy: false },
     handler: (_req, res) =>
@@ -72,9 +72,9 @@ export function createSetupLimiter(opts = {}) {
 export function createChangePasswordLimiter(opts = {}) {
   return rateLimit({
     windowMs: opts.windowMs ?? Number(process.env.RA_LOGIN_RL_WINDOW_MS ?? 15 * 60 * 1000),
-    limit:    opts.limit    ?? 5,
+    limit: opts.limit ?? 5,
     standardHeaders: true,
-    legacyHeaders:   false,
+    legacyHeaders: false,
     skipSuccessfulRequests: opts.skipSuccessfulRequests ?? true,
     keyGenerator: opts.keyGenerator ?? ((req) => req.authUser?.id ?? ipKeyGenerator(req.ip)),
     skip: opts.skip ?? (() => isTest),

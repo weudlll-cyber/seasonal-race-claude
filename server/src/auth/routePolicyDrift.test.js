@@ -26,26 +26,26 @@ import { requiredRole } from './guards.js';
 
 // ── Router imports + mount map (mirrors app.js) ───────────────────────────────
 
-import authRouter    from './authRouter.js';
-import usersRouter   from './usersRouter.js';
-import tracksRouter       from '../routes/tracks.js';
+import authRouter from './authRouter.js';
+import usersRouter from './usersRouter.js';
+import tracksRouter from '../routes/tracks.js';
 import surfaceClassesRouter from '../routes/surfaceClasses.js';
-import playerGroupsRouter  from '../routes/playerGroups.js';
-import brandsRouter        from '../routes/brands.js';
-import racersRouter        from '../routes/racers.js';
-import seedNoticesRouter   from '../routes/seedNotices.js';
-import racesRouter         from '../routes/races.js';
+import playerGroupsRouter from '../routes/playerGroups.js';
+import brandsRouter from '../routes/brands.js';
+import racersRouter from '../routes/racers.js';
+import seedNoticesRouter from '../routes/seedNotices.js';
+import racesRouter from '../routes/races.js';
 
 const MOUNT_MAP = [
-  { prefix: '/api/auth',            router: authRouter },
-  { prefix: '/api/users',           router: usersRouter },
-  { prefix: '/api/tracks',          router: tracksRouter },
+  { prefix: '/api/auth', router: authRouter },
+  { prefix: '/api/users', router: usersRouter },
+  { prefix: '/api/tracks', router: tracksRouter },
   { prefix: '/api/surface-classes', router: surfaceClassesRouter },
-  { prefix: '/api/player-groups',   router: playerGroupsRouter },
-  { prefix: '/api/brands',          router: brandsRouter },
-  { prefix: '/api/racers',          router: racersRouter },
-  { prefix: '/api/seed-notices',    router: seedNoticesRouter },
-  { prefix: '/api/races',           router: racesRouter },
+  { prefix: '/api/player-groups', router: playerGroupsRouter },
+  { prefix: '/api/brands', router: brandsRouter },
+  { prefix: '/api/racers', router: racersRouter },
+  { prefix: '/api/seed-notices', router: seedNoticesRouter },
+  { prefix: '/api/races', router: racesRouter },
 ];
 
 // ── Operator-plus allowlist (these do NOT require admin) ──────────────────────
@@ -66,31 +66,31 @@ const OPERATOR_PLUS_ALLOWLIST = [
   // requesting session's own user (never the body) — so operator+ is the correct classification.
   { method: 'POST', pathPattern: '/api/auth/change-password' },
   // /api/tracks CRUD + background asset (set-default/clear-default are admin via ROUTE_POLICY)
-  { method: 'POST',   pathPattern: '/api/tracks' },
-  { method: 'PUT',    pathPattern: '/api/tracks' },
+  { method: 'POST', pathPattern: '/api/tracks' },
+  { method: 'PUT', pathPattern: '/api/tracks' },
   { method: 'DELETE', pathPattern: '/api/tracks' },
   // /api/player-groups CRUD (set-default/clear-default/export-seed are admin via ROUTE_POLICY)
-  { method: 'POST',   pathPattern: '/api/player-groups' },
-  { method: 'PUT',    pathPattern: '/api/player-groups' },
+  { method: 'POST', pathPattern: '/api/player-groups' },
+  { method: 'PUT', pathPattern: '/api/player-groups' },
   { method: 'DELETE', pathPattern: '/api/player-groups' },
   // /api/brands CRUD + logo asset (set-default/clear-default/export-seed are admin via ROUTE_POLICY)
-  { method: 'POST',   pathPattern: '/api/brands' },
-  { method: 'PUT',    pathPattern: '/api/brands' },
+  { method: 'POST', pathPattern: '/api/brands' },
+  { method: 'PUT', pathPattern: '/api/brands' },
   { method: 'DELETE', pathPattern: '/api/brands' },
   // /api/racers CRUD + sprite asset (no admin sub-routes)
-  { method: 'POST',   pathPattern: '/api/racers' },
-  { method: 'PUT',    pathPattern: '/api/racers' },
+  { method: 'POST', pathPattern: '/api/racers' },
+  { method: 'PUT', pathPattern: '/api/racers' },
   { method: 'DELETE', pathPattern: '/api/racers' },
   // /api/seed-notices/dismiss — SEED-REDELIVERY-1. Operator+ on purpose: EVERY operator is owed
   // the redelivery warning, so an operator-only install must be able to clear its own banner.
   // It writes nothing but the dismissal and reads nothing but record names already visible to
   // any signed-in user through /api/tracks.
-  { method: 'POST',   pathPattern: '/api/seed-notices/dismiss' },
+  { method: 'POST', pathPattern: '/api/seed-notices/dismiss' },
   // /api/races — RACE-SAVE-3. Operator+ ON PURPOSE: every operator runs races and every operator's
   // races must be kept, so an operator-only install must be able to store its own. It is still
   // authenticated (not on PUBLIC_PATHS), and the TEAM it is filed under comes from the session, not
   // from the body — so being able to call it does not let anyone choose whose history they join.
-  { method: 'POST',   pathPattern: '/api/races' },
+  { method: 'POST', pathPattern: '/api/races' },
 ];
 
 // ── Route extraction ──────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ const MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
 function extractRoutes(router, mountPrefix) {
   const routes = [];
-  for (const layer of (router.stack ?? [])) {
+  for (const layer of router.stack ?? []) {
     if (layer.route) {
       const routePath = layer.route.path === '/' ? '' : layer.route.path;
       const fullPath = mountPrefix + routePath;
@@ -144,7 +144,7 @@ describe('route-surface drift guard', () => {
     expect(
       unclassified,
       `Unclassified mutating routes found — add each to OPERATOR_PLUS_ALLOWLIST ` +
-      `(operator+) or ROUTE_POLICY in guards.js (admin): ${unclassified.join(', ')}`
+        `(operator+) or ROUTE_POLICY in guards.js (admin): ${unclassified.join(', ')}`
     ).toEqual([]);
   });
 
@@ -152,10 +152,7 @@ describe('route-surface drift guard', () => {
     const usersMutating = allMutating.filter(({ path }) => path.startsWith('/api/users'));
     expect(usersMutating.length).toBeGreaterThan(0);
     for (const { method, path } of usersMutating) {
-      expect(
-        requiredRole(method, path),
-        `${method} ${path} must be admin-only`
-      ).toBe('admin');
+      expect(requiredRole(method, path), `${method} ${path} must be admin-only`).toBe('admin');
     }
   });
 
@@ -163,10 +160,7 @@ describe('route-surface drift guard', () => {
     const scMutating = allMutating.filter(({ path }) => path.startsWith('/api/surface-classes'));
     expect(scMutating.length).toBeGreaterThan(0);
     for (const { method, path } of scMutating) {
-      expect(
-        requiredRole(method, path),
-        `${method} ${path} must be admin-only`
-      ).toBe('admin');
+      expect(requiredRole(method, path), `${method} ${path} must be admin-only`).toBe('admin');
     }
   });
 });

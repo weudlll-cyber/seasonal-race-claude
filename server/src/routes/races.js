@@ -73,7 +73,8 @@ export function createRacesRouter({ store } = {}) {
           'Run scripts/migrate-teams.mjs. The race is safe on the client and will be sent again.'
       );
       return res.status(503).json({
-        error: 'This account has no team yet, so the race cannot be filed. It stays on this device.',
+        error:
+          'This account has no team yet, so the race cannot be filed. It stays on this device.',
       });
     }
 
@@ -82,7 +83,9 @@ export function createRacesRouter({ store } = {}) {
       if (existing) {
         // Recognised and accepted quietly — the second arrival of a race is a retry that worked,
         // not a fault. The stored id comes back so the client can mark it sent either way.
-        return res.status(200).json({ id: existing.id, shortKey: existing.shortKey, alreadyStored: true });
+        return res
+          .status(200)
+          .json({ id: existing.id, shortKey: existing.shortKey, alreadyStored: true });
       }
 
       const result = resolveStore().storeRace({ ...body, team });
@@ -95,8 +98,12 @@ export function createRacesRouter({ store } = {}) {
       // A malformed race is 400 because sending the same bytes again will fail the same way. The
       // code travels with it so the client can record WHY that race never went up, against the
       // entry, where a person will see it.
-      if (['INVALID_RACE', 'INVALID_ROSTER', 'INVALID_RESULTS', 'INVALID_TEAM'].includes(err.code)) {
-        console.warn(`[races] rejected a race from ${req.authUser?.username}: ${err.code} ${err.message}`);
+      if (
+        ['INVALID_RACE', 'INVALID_ROSTER', 'INVALID_RESULTS', 'INVALID_TEAM'].includes(err.code)
+      ) {
+        console.warn(
+          `[races] rejected a race from ${req.authUser?.username}: ${err.code} ${err.message}`
+        );
         return res.status(400).json({ error: err.message, code: err.code });
       }
       // Anything else — a locked database, a disk error — is the server's problem and will very

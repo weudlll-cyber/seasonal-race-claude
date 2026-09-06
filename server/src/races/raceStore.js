@@ -205,7 +205,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
       if (existing.content !== content) {
         const err = new Error(
           `SHA-256 collision in ${table} for id ${id} — refusing to store, because reusing this row ` +
-            'would silently give one race another race\'s values'
+            "would silently give one race another race's values"
         );
         err.code = 'HASH_COLLISION';
         throw err;
@@ -388,7 +388,9 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   function hydrate(row) {
     if (!row) return null;
     const roster = db.prepare('SELECT content FROM rosters WHERE id = ?').get(row.roster_id);
-    const racerTypes = db.prepare('SELECT content FROM racer_types WHERE id = ?').get(row.racer_types_id);
+    const racerTypes = db
+      .prepare('SELECT content FROM racer_types WHERE id = ?')
+      .get(row.racer_types_id);
     const rosterContent = JSON.parse(roster.content);
     const racerTypesContent = JSON.parse(racerTypes.content);
 

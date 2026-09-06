@@ -94,8 +94,8 @@ describe('content addressing — identical content lands once', () => {
     const b = store.storeRace(aRace({ clientRaceId: 'b', racePlanSeed: 2 }));
 
     expect(a.rosterId).toBe(b.rosterId);
-    expect(a.stored.roster).toBe(true);   // the first race wrote it
-    expect(b.stored.roster).toBe(false);  // the second recognised it as already stored
+    expect(a.stored.roster).toBe(true); // the first race wrote it
+    expect(b.stored.roster).toBe(false); // the second recognised it as already stored
     expect(store.counts()).toMatchObject({ races: 2, rosters: 1 });
   });
 
@@ -110,7 +110,9 @@ describe('content addressing — identical content lands once', () => {
 
   it('a DIFFERENT roster gets a different reference and its own row', () => {
     const a = store.storeRace(aRace({ clientRaceId: 'a' }));
-    const b = store.storeRace(aRace({ clientRaceId: 'b', names: ['Ada', 'Grace', 'Alan', 'Edsger'] }));
+    const b = store.storeRace(
+      aRace({ clientRaceId: 'b', names: ['Ada', 'Grace', 'Alan', 'Edsger'] })
+    );
 
     expect(a.rosterId).not.toBe(b.rosterId);
     expect(store.counts().rosters).toBe(2);
@@ -149,13 +151,23 @@ describe('★ a stored row is never overwritten — the Dev Screen changes, the 
   it('store a race, CHANGE the racer values, store a second race: the first still resolves to the ORIGINAL values, byte for byte', () => {
     // 1. Last week's race, on the values as they stood then.
     const first = store.storeRace(
-      aRace({ clientRaceId: 'last-week', finishedAt: '2026-09-01T10:00:00.000Z', racePlanSeed: 111, ...ORIGINAL_RACER_VALUES })
+      aRace({
+        clientRaceId: 'last-week',
+        finishedAt: '2026-09-01T10:00:00.000Z',
+        racePlanSeed: 111,
+        ...ORIGINAL_RACER_VALUES,
+      })
     );
 
     // 2. The owner opens the Dev Screen and changes the beetle's speed. Today's race runs on the
     //    new values — same racerTypeId, same roster, same track.
     const second = store.storeRace(
-      aRace({ clientRaceId: 'today', finishedAt: '2026-09-06T10:00:00.000Z', racePlanSeed: 222, ...CHANGED_RACER_VALUES })
+      aRace({
+        clientRaceId: 'today',
+        finishedAt: '2026-09-06T10:00:00.000Z',
+        racePlanSeed: 222,
+        ...CHANGED_RACER_VALUES,
+      })
     );
 
     // 3. Changed values are DIFFERENT CONTENT, so they got a NEW reference and a NEW row.
@@ -180,7 +192,9 @@ describe('★ a stored row is never overwritten — the Dev Screen changes, the 
   });
 
   it('the roster survives the same way — an old race keeps its field when a later one differs', () => {
-    const first = store.storeRace(aRace({ clientRaceId: 'a', racePlanSeed: 1, names: ['Ada', 'Grace'] }));
+    const first = store.storeRace(
+      aRace({ clientRaceId: 'a', racePlanSeed: 1, names: ['Ada', 'Grace'] })
+    );
     store.storeRace(aRace({ clientRaceId: 'b', racePlanSeed: 2, names: ['Ada', 'Grace', 'Alan'] }));
 
     expect(store.getRaceById(first.id).names).toEqual(['Ada', 'Grace']);
@@ -198,7 +212,9 @@ describe('★ a stored row is never overwritten — the Dev Screen changes, the 
     ).toThrow(/immutable/);
 
     expect(() =>
-      store._db.prepare('UPDATE rosters SET content = ? WHERE id = ?').run('{}', store.getRaceById(id).rosterId)
+      store._db
+        .prepare('UPDATE rosters SET content = ? WHERE id = ?')
+        .run('{}', store.getRaceById(id).rosterId)
     ).toThrow(/immutable/);
 
     expect(() =>
@@ -239,8 +255,10 @@ describe('lookup', () => {
     expect(store.getRaceById('nope')).toBeNull();
   });
 
-  it('★ finds a race by its team and NOT by another team\'s', () => {
-    store.storeRace(aRace({ clientRaceId: 'ours', team: 'Seasonal Entertainment', racePlanSeed: 1 }));
+  it("★ finds a race by its team and NOT by another team's", () => {
+    store.storeRace(
+      aRace({ clientRaceId: 'ours', team: 'Seasonal Entertainment', racePlanSeed: 1 })
+    );
     store.storeRace(aRace({ clientRaceId: 'theirs', team: 'Other Team', racePlanSeed: 2 }));
 
     const ours = store.listRacesByTeam('Seasonal Entertainment');
@@ -259,10 +277,16 @@ describe('lookup', () => {
     expect(store.listRacesByTeam('  seasonal   ENTERTAINMENT ')).toHaveLength(1);
   });
 
-  it('lists a team\'s races newest first', () => {
-    store.storeRace(aRace({ clientRaceId: 'a', finishedAt: '2026-09-01T00:00:00.000Z', racePlanSeed: 1 }));
-    store.storeRace(aRace({ clientRaceId: 'b', finishedAt: '2026-09-05T00:00:00.000Z', racePlanSeed: 2 }));
-    store.storeRace(aRace({ clientRaceId: 'c', finishedAt: '2026-09-03T00:00:00.000Z', racePlanSeed: 3 }));
+  it("lists a team's races newest first", () => {
+    store.storeRace(
+      aRace({ clientRaceId: 'a', finishedAt: '2026-09-01T00:00:00.000Z', racePlanSeed: 1 })
+    );
+    store.storeRace(
+      aRace({ clientRaceId: 'b', finishedAt: '2026-09-05T00:00:00.000Z', racePlanSeed: 2 })
+    );
+    store.storeRace(
+      aRace({ clientRaceId: 'c', finishedAt: '2026-09-03T00:00:00.000Z', racePlanSeed: 3 })
+    );
 
     expect(store.listRacesByTeam('Seasonal Entertainment').map((r) => r.racePlanSeed)).toEqual([
       2, 3, 1,
@@ -355,9 +379,8 @@ describe('★ the identifier mapping is complete', () => {
   };
 
   it('every field a decoded identifier yields is either stored or declared absent', async () => {
-    const { encodeRaceIdentifier, decodeRaceIdentifier } = await import(
-      '../../../client/src/modules/raceIdentifier.js'
-    );
+    const { encodeRaceIdentifier, decodeRaceIdentifier } =
+      await import('../../../client/src/modules/raceIdentifier.js');
 
     const defaultWorldConfigs = { cameraConfig: { minRacersVisible: 4 } };
     const identifier = encodeRaceIdentifier({
@@ -408,9 +431,10 @@ describe('★ the identifier mapping is complete', () => {
     const stored = store.getRaceById(id);
 
     for (const [field, read] of Object.entries(STORED_AS)) {
-      expect(read(stored), `identifier field "${field}" did not round-trip through the store`).toEqual(
-        decoded[field]
-      );
+      expect(
+        read(stored),
+        `identifier field "${field}" did not round-trip through the store`
+      ).toEqual(decoded[field]);
     }
 
     // The one declared absence really is derivable rather than lost.
@@ -422,9 +446,8 @@ describe('★ the identifier mapping is complete', () => {
     // CameraDirector and the surface emitter but no engine file — they decide what a race looks
     // like, not who wins. They are not in the identifier, so they are not in this store either, and
     // this asserts the decoder still yields neither rather than trusting the comment.
-    const { decodeRaceIdentifier, encodeRaceIdentifier } = await import(
-      '../../../client/src/modules/raceIdentifier.js'
-    );
+    const { decodeRaceIdentifier, encodeRaceIdentifier } =
+      await import('../../../client/src/modules/raceIdentifier.js');
     const id = encodeRaceIdentifier({
       geometryId: 'g',
       racerTypeId: 't',

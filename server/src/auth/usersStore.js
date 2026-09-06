@@ -114,7 +114,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     const users = usersList ?? readUsers();
     const byKey = new Map();
     for (const u of users) {
-      if (!isWellFormedTeam(u.team)) continue;  // a user awaiting the backfill has none; skip, never invent
+      if (!isWellFormedTeam(u.team)) continue; // a user awaiting the backfill has none; skip, never invent
       const key = u.teamNormalized ?? normalizeTeam(u.team);
       const seen = byKey.get(key);
       if (seen) seen.memberCount += 1;
@@ -153,7 +153,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
       const err = new Error(
         known.length
           ? `Unknown team "${String(raw).trim()}". Existing teams: ${known.map((t) => t.name).join(', ')}. ` +
-            'Pick one, or pass allowNewTeam to create a new team on purpose.'
+              'Pick one, or pass allowNewTeam to create a new team on purpose.'
           : `Unknown team "${String(raw).trim()}". No team exists yet; pass allowNewTeam to create the first one.`
       );
       err.code = 'UNKNOWN_TEAM';
@@ -178,7 +178,8 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
       // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
       if (process.platform !== 'win32') {
         const fileMode = statSync(filePath).mode & 0o777;
-        if (fileMode & 0o077) {  // any group/other permission bit set
+        if (fileMode & 0o077) {
+          // any group/other permission bit set
           const err = new Error('users.json could not be secured to 0o600');
           err.code = 'USERS_STORE_PERM';
           throw err;
@@ -197,7 +198,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     const result = lockChain.then(run);
     lockChain = result.then(
       () => {},
-      () => {},
+      () => {}
     );
     return result;
   }
@@ -240,19 +241,19 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
 
       const record = {
         id: randomUUID(),
-        username: String(username).trim(),  // display form
-        usernameNormalized,                 // uniqueness key (NFC + lowercased)
+        username: String(username).trim(), // display form
+        usernameNormalized, // uniqueness key (NFC + lowercased)
         passwordHash: await hashPassword(password),
         role,
-        team: resolvedTeam.team,                       // display form, adopted from the team if it exists
-        teamNormalized: resolvedTeam.teamNormalized,   // the join key — see teams.js
+        team: resolvedTeam.team, // display form, adopted from the team if it exists
+        teamNormalized: resolvedTeam.teamNormalized, // the join key — see teams.js
         // THE SESSION-INVALIDATION MECHANISM, and the only one. Bumping this ends every session
         // that predates the bump, because requireAuth (guards.js) compares the session's stamped
         // copy against this and rejects a mismatch. It is bumped in updateUser inside the same
         // serialised write as the new hash, so a password can never change without it.
         // DO NOT BUILD A SECOND ONE beside it — no enumerating the session store, no deleting
         // rows. A route that must keep the REQUESTING session alive calls restampSession.js.
-        sessionEpoch: 0,                    // bumped on password reset; login writes this into session
+        sessionEpoch: 0, // bumped on password reset; login writes this into session
         createdAt: new Date().toISOString(),
         createdBy: createdBy ?? 'setup',
       };

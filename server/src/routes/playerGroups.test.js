@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createApp } from '../app.js';
@@ -70,7 +70,10 @@ describe('validateBody', () => {
   });
 
   it('rejects players with more than 200 entries', () => {
-    const errs = validateBody({ name: 'Group', players: Array.from({ length: 201 }, (_, i) => `P${i}`) });
+    const errs = validateBody({
+      name: 'Group',
+      players: Array.from({ length: 201 }, (_, i) => `P${i}`),
+    });
     expect(errs.join(' ')).toMatch(/200/);
   });
 
@@ -92,13 +95,19 @@ describe('loadAll: corrupt file is skipped (boot safety)', () => {
     const tmpDir = join(DATA_DIR, '__test-corrupt__');
     mkdirSync(tmpDir, { recursive: true });
     writeFileSync(join(tmpDir, 'broken.json'), 'NOT JSON {{{', 'utf8');
-    writeFileSync(join(tmpDir, 'valid.json'), JSON.stringify({ id: 'ok', name: 'ok', players: ['X'], isDefault: false }), 'utf8');
+    writeFileSync(
+      join(tmpDir, 'valid.json'),
+      JSON.stringify({ id: 'ok', name: 'ok', players: ['X'], isDefault: false }),
+      'utf8'
+    );
 
     let map;
-    expect(() => { map = loadAll(tmpDir); }).not.toThrow();
+    expect(() => {
+      map = loadAll(tmpDir);
+    }).not.toThrow();
     expect(map).toBeInstanceOf(Map);
-    expect(map.has('ok')).toBe(true);   // valid file loaded
-    expect(map.size).toBe(1);           // corrupt file was skipped
+    expect(map.has('ok')).toBe(true); // valid file loaded
+    expect(map.size).toBe(1); // corrupt file was skipped
 
     rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -170,7 +179,9 @@ describe('POST /api/player-groups', () => {
   it('creates a group and returns 201', async () => {
     const id = 'test-post-basic';
     const res = await admin.post('/api/player-groups').send({
-      id, name: 'Basic Group', players: ['Alice', 'Bob'],
+      id,
+      name: 'Basic Group',
+      players: ['Alice', 'Bob'],
     });
     expect(res.status).toBe(201);
     expect(res.body.id).toBe(id);
@@ -183,7 +194,8 @@ describe('POST /api/player-groups', () => {
 
   it('auto-generates id when none is provided', async () => {
     const res = await admin.post('/api/player-groups').send({
-      name: 'Auto ID Group', players: ['X'],
+      name: 'Auto ID Group',
+      players: ['X'],
     });
     expect(res.status).toBe(201);
     expect(typeof res.body.id).toBe('string');
@@ -206,20 +218,26 @@ describe('POST /api/player-groups', () => {
   });
 
   it('returns 400 for empty players array', async () => {
-    const res = await admin.post('/api/player-groups').send({ id: 'test-empty-players', name: 'G', players: [] });
+    const res = await admin
+      .post('/api/player-groups')
+      .send({ id: 'test-empty-players', name: 'G', players: [] });
     expect(res.status).toBe(400);
   });
 
   it('returns 400 for too many players', async () => {
     const res = await admin.post('/api/player-groups').send({
-      id: 'test-toomany', name: 'Big', players: Array.from({ length: 201 }, (_, i) => `P${i}`),
+      id: 'test-toomany',
+      name: 'Big',
+      players: Array.from({ length: 201 }, (_, i) => `P${i}`),
     });
     expect(res.status).toBe(400);
   });
 
   it('returns 400 for invalid id format (uppercase)', async () => {
     const res = await admin.post('/api/player-groups').send({
-      id: 'InvalidID', name: 'G', players: ['X'],
+      id: 'InvalidID',
+      name: 'G',
+      players: ['X'],
     });
     expect(res.status).toBe(400);
   });
@@ -241,7 +259,9 @@ describe('PUT /api/player-groups/:id', () => {
     await admin.post('/api/player-groups').send({ id, name: 'Original', players: ['A'] });
     createdIds.push(id);
 
-    const res = await admin.put(`/api/player-groups/${id}`).send({ name: 'Updated', players: ['A', 'B'] });
+    const res = await admin
+      .put(`/api/player-groups/${id}`)
+      .send({ name: 'Updated', players: ['A', 'B'] });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated');
     expect(res.body.players).toEqual(['A', 'B']);
@@ -249,15 +269,21 @@ describe('PUT /api/player-groups/:id', () => {
 
   it('preserves createdAt on update', async () => {
     const id = 'test-put-createdat';
-    const created = await admin.post('/api/player-groups').send({ id, name: 'Preserve', players: ['A'] });
+    const created = await admin
+      .post('/api/player-groups')
+      .send({ id, name: 'Preserve', players: ['A'] });
     createdIds.push(id);
 
-    const updated = await admin.put(`/api/player-groups/${id}`).send({ name: 'Preserve2', players: ['A'] });
+    const updated = await admin
+      .put(`/api/player-groups/${id}`)
+      .send({ name: 'Preserve2', players: ['A'] });
     expect(updated.body.createdAt).toBe(created.body.createdAt);
   });
 
   it('returns 404 for unknown id', async () => {
-    const res = await admin.put('/api/player-groups/nonexistent-put-xyz').send({ name: 'X', players: ['Y'] });
+    const res = await admin
+      .put('/api/player-groups/nonexistent-put-xyz')
+      .send({ name: 'X', players: ['Y'] });
     expect(res.status).toBe(404);
   });
 
@@ -308,7 +334,10 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
   it('[POST] body isDefault:true is ignored — stored record has isDefault:false', async () => {
     const id = 'test-inv2-post-proof';
     const res = await admin.post('/api/player-groups').send({
-      id, name: 'Proof POST', players: ['X'], isDefault: true, // attacker sends isDefault:true
+      id,
+      name: 'Proof POST',
+      players: ['X'],
+      isDefault: true, // attacker sends isDefault:true
     });
     expect(res.status).toBe(201);
     expect(res.body.isDefault).toBe(false); // protection: body.isDefault is never used in POST
@@ -321,7 +350,9 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
     createdIds.push(id);
 
     const res = await admin.put(`/api/player-groups/${id}`).send({
-      name: 'PUT Proof Updated', players: ['X', 'Y'], isDefault: true, // attacker tries to promote
+      name: 'PUT Proof Updated',
+      players: ['X', 'Y'],
+      isDefault: true, // attacker tries to promote
     });
     expect(res.status).toBe(200);
     expect(res.body.isDefault).toBe(false); // protection: existing.isDefault (false) is kept
@@ -333,7 +364,9 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
     expect(def).toBeDefined();
 
     const res = await admin.put(`/api/player-groups/${def.id}`).send({
-      name: def.name, players: def.players, isDefault: false, // attacker tries to demote
+      name: def.name,
+      players: def.players,
+      isDefault: false, // attacker tries to demote
     });
     expect(res.status).toBe(200);
     expect(res.body.isDefault).toBe(true); // protection: existing.isDefault (true) is kept
@@ -403,7 +436,9 @@ describe('Admin: POST /:id/set-default and POST /:id/clear-default', () => {
 describe('Admin: GET /:id/export-seed', () => {
   it('returns the full record as seed-ready JSON', async () => {
     const id = 'test-admin-export';
-    const created = await admin.post('/api/player-groups').send({ id, name: 'Export Me', players: ['A', 'B'] });
+    const created = await admin
+      .post('/api/player-groups')
+      .send({ id, name: 'Export Me', players: ['A', 'B'] });
     createdIds.push(id);
 
     const res = await admin.get(`/api/player-groups/${id}/export-seed`);
@@ -448,7 +483,9 @@ describe('Operator: can perform normal CRUD (operator+)', () => {
 
   it('operator POST / creates a group', async () => {
     const id = 'test-operator-create';
-    const res = await operator.post('/api/player-groups').send({ id, name: 'Op Group', players: ['X'] });
+    const res = await operator
+      .post('/api/player-groups')
+      .send({ id, name: 'Op Group', players: ['X'] });
     expect(res.status).toBe(201);
     expect(res.body.isDefault).toBe(false);
     createdIds.push(id);
@@ -458,7 +495,9 @@ describe('Operator: can perform normal CRUD (operator+)', () => {
     const id = 'test-operator-put';
     await operator.post('/api/player-groups').send({ id, name: 'Op Put', players: ['X'] });
     createdIds.push(id);
-    const res = await operator.put(`/api/player-groups/${id}`).send({ name: 'Op Put Updated', players: ['X', 'Y'] });
+    const res = await operator
+      .put(`/api/player-groups/${id}`)
+      .send({ name: 'Op Put Updated', players: ['X', 'Y'] });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Op Put Updated');
   });

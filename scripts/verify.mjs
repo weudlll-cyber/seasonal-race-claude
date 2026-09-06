@@ -399,6 +399,16 @@ export function commandFor(g) {
       cmd: ["npm", "run", "format:check", "--silent"],
       cwd: join(ROOT, "client"),
     };
+  // SERVER-LINT-1: the same two, for the half of the tree that had neither. Same shape, same npm
+  // script names, a different `cwd` — which is the whole difference, and is why they cannot
+  // disagree about scope with the client pair above.
+  if (g.id === "server-lint")
+    return { cmd: ["npm", "run", "lint", "--silent"], cwd: join(ROOT, "server") };
+  if (g.id === "server-format-check")
+    return {
+      cmd: ["npm", "run", "format:check", "--silent"],
+      cwd: join(ROOT, "server"),
+    };
   // GATE-WIRED-AND-CAUSED-1. `--gate` is the harness's own two-race pre-merge mode; with no argv it
   // would drive the forty-seed nightly sweep instead, which is hours. The flag lives here with the
   // rest of the argv, and GATE_TRACKS, the seed and the arm stay where they are — in the harness.

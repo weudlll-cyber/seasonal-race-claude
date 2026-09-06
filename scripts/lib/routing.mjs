@@ -217,15 +217,17 @@ export const SUITE_GUARDS = [
   // will commit. A formatter is not a check: it cannot fail, and it says nothing about a tree
   // somebody formatted differently.
   //
-  // ONLY THE CLIENT, and that is not an omission: `server/package.json` declares NO `lint` and NO
-  // `format` script of any kind, and CI's Server job runs neither. Checked at source on 2026-09-05.
-  // If the server ever gains them, it gains a guard here in the same shape.
+  // ★ NO LONGER ONLY THE CLIENT. Until 2026-09-06 this note read: "`server/package.json` declares
+  // NO `lint` and NO `format` script of any kind" — true when written, and SERVER-LINT-1 ended it.
+  // The server now declares both, reusing the client's own configuration rather than a second one,
+  // and has the two guards below in the same shape as these. The sentence is corrected rather than
+  // deleted, because the reason it was written is the reason the server guards now exist.
   {
     id: "client-lint",
     covers:
       "eslint over client/src — the check CI's Client job runs and `verify` did not, so a lint fault was invisible until after the merge",
     blind: [
-      "the server, which declares no lint script at all",
+      "whether the RULES are the right rules for the server — the server guard below runs the same configuration in a Node environment",
       "scripts/ and the repository root: eslint is scoped to `client/src` by the client's own `lint` script",
       "whether the RULES are the right rules. It runs the configuration that exists.",
     ],
@@ -240,11 +242,49 @@ export const SUITE_GUARDS = [
     covers:
       "prettier --check over client/src — whether the tree AS IT STANDS is formatted, which is the question CI asks of the committed tree",
     blind: [
-      "the server, which declares no format script at all",
+      "the server, which has its own format guard below — the two are scoped apart and cannot disagree",
       "everything outside `client/src`: both the format and the check are scoped there by the client's own scripts, so they cannot disagree about scope",
     ],
     dirs: ["client/"],
     notDirs: ["client/e2e/"],
+    files: [],
+    reach: [],
+    exclusive: false,
+  },
+  // ── SERVER-LINT-1: the server half, built 2026-09-06 ─────────────────────────────────────────
+  //
+  // WHY IT DID NOT EXIST: the server declared no such script, so there was nothing to route to. It
+  // now does, and it runs THE CLIENT'S OWN CONFIGURATION — `server/eslint.config.js` imports the
+  // client's config array and overrides only the environment, so a rule added on the client side
+  // applies here without anyone remembering. Nothing was installed to make that work.
+  //
+  // ★ THESE TWO ARE RED ON THE TREE AS BUILT, and deliberately so. The server has never been linted,
+  // so it carries 9 lint errors and 35 unformatted files that pre-date this guard by years. The
+  // order that built them said not to fix the findings: a server-wide cleanup is its own decision.
+  // The guards are wired anyway, because a check that is not wired is a check nobody runs.
+  {
+    id: "server-lint",
+    covers:
+      "eslint over server/src, with the client's rules in a Node environment — code that until now was linted by nobody at all",
+    blind: [
+      "whether the RULES are the right rules. It runs the client's configuration, corrected for Node and nothing else.",
+      "the repository root and scripts/, which no lint script covers",
+      "CI, which still runs neither for the server — ci.yml was deliberately not touched",
+    ],
+    dirs: ["server/"],
+    files: [],
+    reach: [],
+    exclusive: false,
+  },
+  {
+    id: "server-format-check",
+    covers:
+      "prettier --check over server/src against the CLIENT'S .prettierrc — one style for the repository rather than two",
+    blind: [
+      "everything outside `server/src`",
+      "CI, which still runs neither for the server — ci.yml was deliberately not touched",
+    ],
+    dirs: ["server/"],
     files: [],
     reach: [],
     exclusive: false,

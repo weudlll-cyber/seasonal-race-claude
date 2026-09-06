@@ -8,7 +8,7 @@
 //              admin→allowed. Store isolation via RA_USERS_DB (test/env-setup.js).
 // ============================================================
 
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';
@@ -111,16 +111,24 @@ describe('POST /api/users', () => {
   });
 
   it('admin invalid role → 400', async () => {
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username: `userstest-bad-${Date.now()}`, password: 'pw-valid-123', role: 'superuser', team: TEST_TEAM, allowNewTeam: true });
+    const res = await adminApi.post('/api/users').send({
+      username: `userstest-bad-${Date.now()}`,
+      password: 'pw-valid-123',
+      role: 'superuser',
+      team: TEST_TEAM,
+      allowNewTeam: true,
+    });
     expect(res.status).toBe(400);
   });
 
   it('admin empty password → 400', async () => {
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username: `userstest-nopw-${Date.now()}`, password: '', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
+    const res = await adminApi.post('/api/users').send({
+      username: `userstest-nopw-${Date.now()}`,
+      password: '',
+      role: 'operator',
+      team: TEST_TEAM,
+      allowNewTeam: true,
+    });
     expect(res.status).toBe(400);
   });
 
@@ -150,9 +158,12 @@ describe('POST /api/users', () => {
 
   it('admin create with a MISTYPED team → 400 naming the teams that exist, and no user', async () => {
     const username = `userstest-typo-${Date.now()}`;
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username, password: 'pw-valid-123', role: 'operator', team: 'Seasonal entertainmnet' });
+    const res = await adminApi.post('/api/users').send({
+      username,
+      password: 'pw-valid-123',
+      role: 'operator',
+      team: 'Seasonal entertainmnet',
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.knownTeams).toContain(TEST_TEAM);
@@ -163,16 +174,19 @@ describe('POST /api/users', () => {
 
   it('admin create with a team typed in the wrong case adopts the EXISTING spelling', async () => {
     const username = `userstest-case-${Date.now()}`;
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username, password: 'pw-valid-123', role: 'operator', team: TEST_TEAM.toLowerCase() });
+    const res = await adminApi.post('/api/users').send({
+      username,
+      password: 'pw-valid-123',
+      role: 'operator',
+      team: TEST_TEAM.toLowerCase(),
+    });
 
     expect(res.status).toBe(201);
-    expect(res.body.team).toBe(TEST_TEAM);  // not the lower-cased form the admin typed
+    expect(res.body.team).toBe(TEST_TEAM); // not the lower-cased form the admin typed
   });
 
   it('POST response body never contains passwordHash or sessionEpoch (incl. error responses)', async () => {
-    const res = await adminApi.post('/api/users').send(NEW_USER);  // duplicate → 409
+    const res = await adminApi.post('/api/users').send(NEW_USER); // duplicate → 409
     expect(res.status).toBe(409);
     expect(res.body).not.toHaveProperty('passwordHash');
     expect(res.body).not.toHaveProperty('sessionEpoch');
@@ -185,9 +199,13 @@ describe('DELETE /api/users/:id', () => {
   let targetId;
 
   beforeAll(async () => {
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username: `del-target-${Date.now()}`, password: 'del-pass-123', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
+    const res = await adminApi.post('/api/users').send({
+      username: `del-target-${Date.now()}`,
+      password: 'del-pass-123',
+      role: 'operator',
+      team: TEST_TEAM,
+      allowNewTeam: true,
+    });
     targetId = res.body.id;
   });
 
@@ -244,9 +262,13 @@ describe('PUT /api/users/:id', () => {
   let targetId;
 
   beforeAll(async () => {
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username: `put-target-${Date.now()}`, password: 'put-pass-123', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
+    const res = await adminApi.post('/api/users').send({
+      username: `put-target-${Date.now()}`,
+      password: 'put-pass-123',
+      role: 'operator',
+      team: TEST_TEAM,
+      allowNewTeam: true,
+    });
     targetId = res.body.id;
   });
 

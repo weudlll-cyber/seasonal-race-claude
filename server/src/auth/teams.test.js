@@ -56,7 +56,7 @@ describe('normalizeTeam', () => {
     const key = normalizeTeam('Seasonal Entertainment');
     expect(normalizeTeam('seasonal entertainment')).toBe(key);
     expect(normalizeTeam('  SEASONAL   Entertainment  ')).toBe(key);
-    expect(normalizeTeam('Seasonal Entertainment')).toBe(key);  // pasted non-breaking space
+    expect(normalizeTeam('Seasonal Entertainment')).toBe(key); // pasted non-breaking space
   });
 
   it('treats NFC and NFD spellings of the same name as one key', () => {
@@ -64,16 +64,18 @@ describe('normalizeTeam', () => {
     // hazard. `not.toBe` below is what proves this test is testing something: if a later edit
     // normalised the file and made both spellings composed, that assertion goes red rather than
     // the test quietly passing on two copies of one string.
-    const nfc = 'Équipe Rouge';   // composed: one codepoint for E-acute
-    const nfd = 'Équipe Rouge';  // decomposed: E + combining acute
-    expect(nfc).not.toBe(nfd);                            // genuinely different strings
-    expect(normalizeTeam(nfc)).toBe(normalizeTeam(nfd));  // and one team all the same
+    const nfc = 'Équipe Rouge'; // composed: one codepoint for E-acute
+    const nfd = 'Équipe Rouge'; // decomposed: E + combining acute
+    expect(nfc).not.toBe(nfd); // genuinely different strings
+    expect(normalizeTeam(nfc)).toBe(normalizeTeam(nfd)); // and one team all the same
   });
 
   it('does NOT fold a misspelling — which is exactly why the closed set exists', () => {
     // If this ever passes, normalisation has started guessing, and the UNKNOWN_TEAM gate below is
     // no longer the thing standing between a typo and a split team.
-    expect(normalizeTeam('Seasonal entertainmnet')).not.toBe(normalizeTeam('Seasonal Entertainment'));
+    expect(normalizeTeam('Seasonal entertainmnet')).not.toBe(
+      normalizeTeam('Seasonal Entertainment')
+    );
   });
 });
 
@@ -91,9 +93,14 @@ describe('isWellFormedTeam', () => {
 describe('createUser — the team is required', () => {
   it('REFUSES a create with no team at all', async () => {
     await expect(
-      store.createUser({ username: 'a', password: 'pw-123456', role: 'operator', allowNewTeam: true })
+      store.createUser({
+        username: 'a',
+        password: 'pw-123456',
+        role: 'operator',
+        allowNewTeam: true,
+      })
     ).rejects.toMatchObject({ code: 'INVALID_TEAM' });
-    expect(store.countUsers()).toBe(0);  // and writes nothing
+    expect(store.countUsers()).toBe(0); // and writes nothing
   });
 
   it.each([
@@ -102,7 +109,13 @@ describe('createUser — the team is required', () => {
     ['null', null],
   ])('REFUSES a create whose team is %s', async (_label, team) => {
     await expect(
-      store.createUser({ username: 'a', password: 'pw-123456', role: 'operator', team, allowNewTeam: true })
+      store.createUser({
+        username: 'a',
+        password: 'pw-123456',
+        role: 'operator',
+        team,
+        allowNewTeam: true,
+      })
     ).rejects.toMatchObject({ code: 'INVALID_TEAM' });
     expect(store.countUsers()).toBe(0);
   });
@@ -127,36 +140,46 @@ describe('createUser — two users cannot land in different teams by typo', () =
     await seedFounder();
 
     const err = await store
-      .createUser({ username: 'bob', password: 'pw-123456', role: 'operator', team: 'Seasonal entertainmnet' })
+      .createUser({
+        username: 'bob',
+        password: 'pw-123456',
+        role: 'operator',
+        team: 'Seasonal entertainmnet',
+      })
       .catch((e) => e);
 
     expect(err.code).toBe('UNKNOWN_TEAM');
     expect(err.knownTeams).toEqual([FOUNDING_TEAM]);
     // The admin who mistyped is shown what they meant, not only that they were wrong.
     expect(err.message).toContain(FOUNDING_TEAM);
-    expect(store.countUsers()).toBe(1);  // the typo user was NOT written
+    expect(store.countUsers()).toBe(1); // the typo user was NOT written
   });
 
   it('ADOPTS the existing spelling when the key matches, so one team keeps one display form', async () => {
-    await seedFounder();  // "Seasonal Entertainment"
+    await seedFounder(); // "Seasonal Entertainment"
 
     const bob = await store.createUser({
       username: 'bob',
       password: 'pw-123456',
       role: 'operator',
-      team: '  seasonal   ENTERTAINMENT ',  // the same team, typed carelessly
+      team: '  seasonal   ENTERTAINMENT ', // the same team, typed carelessly
       createdBy: 'test',
     });
 
-    expect(bob.team).toBe(FOUNDING_TEAM);       // not the carelessly typed form
-    expect(store.listTeams()).toHaveLength(1);  // and no second team appeared
+    expect(bob.team).toBe(FOUNDING_TEAM); // not the carelessly typed form
+    expect(store.listTeams()).toHaveLength(1); // and no second team appeared
   });
 
   it('allows a new team only when the caller says so EXPLICITLY', async () => {
     await seedFounder();
 
     await expect(
-      store.createUser({ username: 'c', password: 'pw-123456', role: 'operator', team: 'Other Team' })
+      store.createUser({
+        username: 'c',
+        password: 'pw-123456',
+        role: 'operator',
+        team: 'Other Team',
+      })
     ).rejects.toMatchObject({ code: 'UNKNOWN_TEAM' });
 
     const made = await store.createUser({
@@ -167,7 +190,12 @@ describe('createUser — two users cannot land in different teams by typo', () =
       allowNewTeam: true,
     });
     expect(made.team).toBe('Other Team');
-    expect(store.listTeams().map((t) => t.name).sort()).toEqual(['Other Team', 'Seasonal Entertainment']);
+    expect(
+      store
+        .listTeams()
+        .map((t) => t.name)
+        .sort()
+    ).toEqual(['Other Team', 'Seasonal Entertainment']);
   });
 
   it('refuses even the FIRST team when the caller did not say it was founding one', async () => {

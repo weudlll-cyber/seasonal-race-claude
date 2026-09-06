@@ -48,7 +48,9 @@ function createUsersRouter({ store } = {}) {
       if (err.code === 'UNKNOWN_TEAM') {
         return res.status(400).json({ error: err.message, knownTeams: err.knownTeams ?? [] });
       }
-      if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE', 'INVALID_TEAM'].includes(err.code)) {
+      if (
+        ['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE', 'INVALID_TEAM'].includes(err.code)
+      ) {
         return res.status(400).json({ error: err.message });
       }
       console.error('[users] createUser failed:', err.code ?? err.message);
