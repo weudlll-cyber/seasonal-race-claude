@@ -4,19 +4,20 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-07, after PIECE 1 of the night chain of 2026-09-06.
+**Last rewritten:** 2026-09-07, after PIECE 2 of the night chain of 2026-09-06.
 
-**Where the code is.** Master is `554f348e` and CI is green on it. Two topic branches are open and
-**NEITHER IS MERGED**: `feat/team-races-1`, which waits for your eye, and `night/2026-09-06`, which
-does not exist yet — it is branched off master after the team pieces are finished.
+**Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
+catch-up and pieces 1-2 and is **NOT MERGED** — it waits for your eye. `night/2026-09-06` does not
+exist yet; it is branched off master once the team pieces are finished.
 
-**★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and it can now.**
-`server/src/races/contentAddress.js` imported the canonical serialiser from `client/src/…`, and the
-root `.dockerignore` deliberately keeps the client source out of the server image. So the import
-could not resolve in a container. **Searching for others found two more of the same shape**, both in
-the team topic's own new files. All three are fixed: the shared rules now live in `shared/`, above
-both packages, where `nameLimits.mjs` already lives. **Nothing about a race changed** — the golden
-races pass and all four fingerprints are unmoved.
+**★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
+silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
+the root `.dockerignore` deliberately keeps out of the server image, so the import could not resolve
+in a container. Searching found **two more of the same shape**. All three are fixed by moving the
+shared rules into `shared/`, above both packages. **Then the new check found a fourth**: those files
+were allowed into the build context but never COPYed, so the container still died — the build
+reported success either way. **Nothing about a race changed** anywhere in this: golden races pass,
+all four fingerprints unmoved, nothing minted.
 
 ---
 
@@ -25,57 +26,64 @@ races pass and all four fingerprints are unmoved.
 ### DONE
 
 **Catch-up · the team topic is up to date with master.** 14 files touched by both sides, 7
-conflicted, 31 hunks — and every code hunk was the same shape: the topic changed the SEMANTICS,
-master had only re-FORMATTED the same lines (NIGHT-MERGE ran Prettier over 35 server files that had
-never been formatted). Both sides survive by construction: the topic's side inside each conflict,
-then master's formatter over the result. One of master's lint fixes fell inside a conflict region
-and was lost by that rule — `usersStore.test.js`'s unused `a1` — **found by re-running eslint rather
-than by remembering**, and re-applied. **Golden races PASS after the catch-up**, so the topic changed
-no race.
+conflicted, 31 hunks — every code hunk the same shape: the topic changed the SEMANTICS, master had
+only re-FORMATTED those lines. Both sides survive by construction: the topic's side inside each
+conflict, then master's formatter over the result. One of master's lint fixes fell inside a conflict
+region and was lost by that rule — **found by re-running eslint rather than by remembering** — and
+re-applied. **Golden races PASS after the catch-up.**
 
-**PIECE 1 · The shared rules belong to neither side** — `ba9801a1`, on `feat/team-races-1`.
-Re-verified at source first: the import at `contentAddress.js:53`, and `.dockerignore` as an
-allow-list whose only re-includes are `server/{package.json,src,utils,seeds}` and **named files**
-under `shared/`. ★ **The search found FIVE crossings, not one.** Three ship and break the image and
-are fixed — `contentAddress.js`, `raceStore.js`, `shortKey.js`. Four cannot reach a container and are
-named and left: two contract tests, one dynamic import in a test, and the server's eslint config;
-the contract tests SHOULD read the client's copy, which is their whole point.
-★ **`canonicalJson` moved alone** (of `raceConfigWorld.js`'s eight exports, only that one is read by
-the server — established by resolving every importer); **`raceShortKey.js` moved whole**, because
-the server uses three of its four exports and splitting it would put the alphabet in one file and a
-function that tests against the alphabet in another. **One version, no copy, no shim, no build step.**
-★ **The output is proven identical, not asserted**: 18 exact strings captured from the PRE-MOVE
-implementation recovered out of git, including a pinned quirk (integer-like keys serialise in numeric
-order, not the lexicographic order the sort asks for). Two file headers that argued FOR the crossing
-are corrected — the "established pattern" they cited was this defect propagating.
-verify **PASS 24 FAIL 0**; server suite 806/806; four fingerprints unmoved; **nothing minted**.
+**PIECE 1 · The shared rules belong to neither side** — `ba9801a1`.
+★ **The search found FIVE crossings from server code into `client/src`, not the one that was known.**
+Three ship and break the image and are fixed; four cannot reach a container and are **named and
+left** (two contract tests, a dynamic import in a test, the server's eslint config — the contract
+tests SHOULD read the client's copy, which is their point). `canonicalJson` moved **alone** (of eight
+exports, only that one is read by the server); `raceShortKey.js` moved **whole**, because splitting
+it would put the alphabet in one file and a function that tests against it in another. One version,
+no copy, no shim. ★ **Output proven identical**, 18 exact strings captured from the pre-move
+implementation recovered out of git — including a pinned quirk: integer-like keys serialise in
+numeric order, not the lexicographic order the sort asks for. Two headers that argued FOR the
+crossing are corrected: the "established pattern" they cited was this defect propagating.
+
+**PIECE 2 · A check that the packaged image actually starts** — `de463da0`,
+`scripts/check-image-starts.mjs`. ★ **It found a real defect on its first run** — piece 1's, one
+commit earlier: `.dockerignore` decides only what enters the build CONTEXT; the Dockerfile COPYs
+`shared/` **per file**, and the two new lines were missing, so the container died with
+`Cannot find module '/shared/raceShortKey.mjs'` from a build that reported success. Both COPY lines
+added. ★ **The container is not the image**: compose binds `./server/src` over the image's own copy,
+so a container started that way proves nothing — this one runs `docker run` with **no bind mounts**.
+★ **Its path declaration is derived from the Dockerfile's COPY lines**, not hand-written, and picked
+up the two new modules by itself; `docs/` cannot select it. Sabotage went red as required.
+**Cost, stated plainly: 121 s cold, 7.4 s warm, 55-67 s under verify's load.** Not wired into CI —
+`ci.yml` untouched — but verify does select it, so **verify now needs a Docker daemon** when a
+declared path changes, and says so loudly rather than passing.
 
 ### RUNNING
 
-Nothing is running. Piece 2 is next.
+Nothing is running. Piece 3 is next.
 
-### OPEN — the five pieces not yet started
+### OPEN — the four pieces not yet started
 
-- **PIECE 2** · a check that the packaged image actually starts — nothing in the project checks this
-  today, which is why piece 1's defect was found by accident. Not wired into CI in this piece.
-- **PIECE 3** · a stored race is recomputed before it is repeated, off the main thread. On
-  `feat/team-races-1`, then that branch is pushed and **left unmerged**.
-- **PIECE 4** · the race plan's beats reach the camera, behind a key defaulting to today's behaviour.
-  On a new `night/2026-09-06` off master.
+- **PIECE 3** · a stored race is recomputed before it is repeated, off the main thread, and refused
+  if the outcome moved. Last piece on `feat/team-races-1`; that branch is then pushed and **left
+  unmerged**.
+- **PIECE 4** · the race plan's beats reach the camera, behind a key defaulting to today's
+  behaviour. On a new `night/2026-09-06` off master.
 - **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only.
 - **PIECE 6** · the identifier carries only what differs from the shipped defaults.
 
 ### NEEDS HIS WORD
 
-- **★ THE TEAM TOPIC MERGES ONCE, WHEN YOU HAVE LOOKED AT IT.** `feat/team-races-1` is finished
-  through piece 3 and pushed, and nothing on it is merged. That is the standing instruction, not a
-  blocker anyone hit.
+- **★ THE TEAM TOPIC MERGES ONCE, WHEN YOU HAVE LOOKED AT IT.** `feat/team-races-1` is pushed and
+  nothing on it is merged. That is the standing instruction, not a blocker anyone hit.
 - **★ PIECE 4's KEY IS OFF BY DEFAULT AND THE POINT IS THAT YOU TRY IT BOTH WAYS.** The camera
-  knowing when a comeback happens is contested behaviour and you have not seen it. Nothing changes
-  for you until you turn it on. The dev server is left on `night/2026-09-06` for exactly this.
+  knowing when a comeback happens is contested behaviour and you have not seen it. The dev server is
+  left on `night/2026-09-06` for exactly this.
+- **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
+  costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
 - **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
   in this chain has asked for it.
 <!-- END CHAIN STATUS -->
+
 
 ## EARLIER — the night of 2026-09-05, for context
 
