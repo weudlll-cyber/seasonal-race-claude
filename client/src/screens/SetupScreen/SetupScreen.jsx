@@ -39,7 +39,7 @@ import {
   looksLikeRaceIdentifier,
 } from '../../modules/raceIdentifier.js';
 import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
-import { looksLikeShortKey, normalizeShortKey } from '../../modules/raceShortKey.js';
+import { looksLikeShortKey, normalizeShortKey } from '../../../../shared/raceShortKey.mjs';
 import { identifierForStoredInputs, takeArmedRepeat } from '../../modules/repeatRace.js';
 import { fetchRaceByShortKey } from '../../services/racesApi.js';
 import { buildWorldConfig } from '../../modules/exportRaceConfig.js';

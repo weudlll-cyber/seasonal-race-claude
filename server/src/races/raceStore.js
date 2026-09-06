@@ -67,7 +67,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { normalizeTeam, isWellFormedTeam } from '../auth/teams.js';
 import { canonicalString, contentId } from './contentAddress.js';
 import { generateShortKey } from './shortKey.js';
-import { normalizeShortKey } from '../../../client/src/modules/raceShortKey.js';
+import { normalizeShortKey } from '../../../shared/raceShortKey.mjs';
 
 const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sqlite');
 

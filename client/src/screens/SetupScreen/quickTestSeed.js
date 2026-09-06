@@ -22,7 +22,7 @@
 // ============================================================
 
 import { looksLikeRaceIdentifier } from '../../modules/raceIdentifier.js';
-import { looksLikeShortKey } from '../../modules/raceShortKey.js';
+import { looksLikeShortKey } from '../../../../shared/raceShortKey.mjs';
 
 // The minimum typed/drawn seed (0 = the unseeded legacy path, deliberately unreachable from Quick-Test).
 export const QUICK_TEST_SEED_MIN = 1;

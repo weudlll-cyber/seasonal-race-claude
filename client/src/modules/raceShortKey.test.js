@@ -14,7 +14,7 @@ import {
   SHORT_KEY_LENGTH,
   normalizeShortKey,
   looksLikeShortKey,
-} from './raceShortKey.js';
+} from '../../../shared/raceShortKey.mjs';
 
 describe('the alphabet', () => {
   it('★ contains NEITHER member of each confusable pair', () => {

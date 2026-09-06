@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   WORLD_SCHEMA_VERSION,
-  canonicalJson,
   hashWorld,
   unsimulatableReasons,
   worldStamp,
@@ -23,11 +22,6 @@ const baseWorld = {
 };
 
 describe('raceConfigWorld — hash determinism + sensitivity', () => {
-  it('canonicalJson is key-order independent', () => {
-    expect(canonicalJson({ a: 1, b: 2 })).toBe(canonicalJson({ b: 2, a: 1 }));
-    expect(canonicalJson({ x: { p: 1, q: 2 } })).toBe(canonicalJson({ x: { q: 2, p: 1 } }));
-  });
-
   it('same content → same hash (deterministic)', () => {
     expect(hashWorld(baseWorld).full).toBe(hashWorld(JSON.parse(JSON.stringify(baseWorld))).full);
   });

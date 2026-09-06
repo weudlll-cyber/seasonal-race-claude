@@ -1,25 +1,39 @@
 // ============================================================
-// File:        raceShortKey.js
-// Path:        client/src/modules/raceShortKey.js
-// Project:     RaceArena — RACE-HISTORY-4
-// Created:     2026-09-06
+// File:        raceShortKey.mjs
+// Path:        shared/raceShortKey.mjs
+// Project:     RaceArena — RACE-HISTORY-4, moved here by SHARED-CANONICAL-1
 // Description: THE SHORT NAME A RACE CAN BE READ ALOUD BY — its alphabet, its length, and how a
 //              typed one is read. The ONE home for all three.
 //
-//              ★ WHY THIS LIVES ON THE CLIENT AND THE SERVER IMPORTS IT. Both sides need the same
-//              answer to "is this string a key": the setup screen, to tell a key from a seed before
-//              it asks the server anything, and the server, to look one up. Two copies of an
-//              alphabet is the silent-divergence shape — one side would accept a character the
-//              other rejects, and the failure would be a race that cannot be fetched by the key it
-//              was given. `server/src/races/shortKey.js` imports this and adds only the generator,
-//              which needs `node:crypto` and has no business in a browser bundle. The direction is
-//              the one the project already uses: `server/src/races/contentAddress.js` imports
-//              `raceConfigWorld.js` the same way, as `scripts/sim-fairness.mjs:111` does.
+// ── WHY IT IS HERE AND NOT IN client/, WHICH IS A CORRECTION ────────────────────────────────────
 //
-//              This module has NO imports, so nothing browser-only travels with it.
+// It used to live at `client/src/modules/raceShortKey.js`, and its header argued that the server
+// should reach across and import it — citing `server/src/races/contentAddress.js` importing
+// `client/src/modules/raceConfigWorld.js` as the direction "the project already uses".
 //
-//              ★ WHAT IT DELIBERATELY IS NOT: a permission. Knowing a key grants nothing — see the
-//              header of the server module, which owns that argument.
+// ★ THAT PRECEDENT WAS A DEFECT, NOT A PATTERN. The root `.dockerignore` is an allow-list: it
+// re-includes `server/src`, `server/utils`, `server/seeds`, `server/package.json` and NAMED FILES
+// under `shared/`, and deliberately excludes the client source, which has no business in a server
+// image. So every one of those imports is unresolvable in the image and the containerised server
+// cannot start. `raceStore.js` and `shortKey.js` both import from this module, so both carried the
+// same defect.
+//
+// The rule the project actually uses is the one `shared/nameLimits.mjs` established: something that
+// must be IDENTICAL in two runtimes lives above both packages. Neither can import from the other —
+// the server is not part of the client's build, and a server importing from a UI package has its
+// layering backwards.
+//
+// ── WHY THE WHOLE MODULE MOVED, RATHER THAN THE THREE EXPORTS THE SERVER USES ───────────────────
+//
+// The server imports `SHORT_KEY_ALPHABET`, `SHORT_KEY_LENGTH` and `normalizeShortKey`; only
+// `looksLikeShortKey` is client-only, and it is one line over `normalizeShortKey`. Splitting the
+// file would have put the alphabet here and a function that tests against the alphabet somewhere
+// else — two homes for one rule, which is the thing this file exists to prevent. It has no imports,
+// so nothing browser-only travels with it.
+//
+// ★ WHAT IT DELIBERATELY IS NOT: a permission. Knowing a key grants nothing — see the header of
+// `server/src/races/shortKey.js`, which owns that argument, and which adds the generator that needs
+// `node:crypto` and has no business in a browser bundle.
 //
 // ── THE ALPHABET, AND WHY BOTH HALVES OF EACH CONFUSABLE PAIR ARE GONE ──────────────────────────
 // Excluded: 0 and O, 1 and I and L. The usual approach (Crockford base32) keeps 0 and 1 and FOLDS

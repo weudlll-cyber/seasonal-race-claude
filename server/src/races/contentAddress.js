@@ -21,15 +21,17 @@
 // pointed at. That is the owner's requirement of 2026-09-06 made structural rather than obeyed.
 //
 // ── canonicalJson IS IMPORTED, NEVER COPIED ─────────────────────────────────────────────────────
-// `client/src/modules/raceConfigWorld.js` carries the canonical serialiser, and its own header
-// states the rule this file obeys: *"If either side ever re-implements this, the safeguard becomes
-// the next silent divergence, so: never copy this logic — import it."* Two serialisers that
+// `shared/canonicalJson.mjs` carries the canonical serialiser, and the rule this file obeys is the
+// one it states: never re-implement this logic on either side — import it. Two serialisers that
 // disagree about key order would hash the same content to two ids, which is the dedup failing
 // silently — exactly the class the module was written against.
 //
-// The import crosses from `server/` into `client/` and that is the ESTABLISHED pattern, not a new
-// coupling: `scripts/sim-fairness.mjs:111` imports the same module the same way, and the module
-// has NO imports of its own, so nothing client-only comes with it.
+// ★ IT USED TO BE IMPORTED FROM `client/src/modules/raceConfigWorld.js`, AND THAT WAS A DEFECT
+// RATHER THAN A PATTERN (corrected 2026-09-07, SHARED-CANONICAL-1). This file's header argued the
+// crossing was established because a script imports the same module the same way — but a script
+// runs from the repository, and this file runs in the IMAGE, where the root `.dockerignore`
+// deliberately excludes the client source. The import could not resolve there, so the containerised
+// server could not start. `scripts/check-image-starts.mjs` is the check that would have caught it.
 //
 // ── WHY NOT `hashWorld` FROM THAT SAME MODULE ───────────────────────────────────────────────────
 // It is FNV-1a folded to 32 bits — eight hex characters. That is a fine cache key and it is not a
@@ -50,7 +52,7 @@
 // ============================================================
 
 import { createHash } from 'node:crypto';
-import { canonicalJson } from '../../../client/src/modules/raceConfigWorld.js';
+import { canonicalJson } from '../../../shared/canonicalJson.mjs';
 
 /**
  * The canonical string a value is hashed and stored as. Exported because the store writes THIS

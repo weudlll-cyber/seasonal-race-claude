@@ -5,11 +5,16 @@
 // Created:     2026-09-06
 // Description: THE GENERATOR for a race's short key, and nothing else.
 //
-//              The alphabet, the length and the reader live in `client/src/modules/raceShortKey.js`
-//              and are IMPORTED here rather than restated — both sides must agree about what a key
-//              is, and two copies of an alphabet is the silent-divergence shape that module's
-//              header describes. This file adds only what a browser has no business carrying: a
+//              The alphabet, the length and the reader live in `shared/raceShortKey.mjs` and are
+//              IMPORTED here rather than restated — both sides must agree about what a key is, and
+//              two copies of an alphabet is the silent-divergence shape that module's header
+//              describes. This file adds only what a browser has no business carrying: a
 //              cryptographic random source.
+//
+//              ★ THAT MODULE MOVED OUT OF `client/` ON 2026-09-07 (SHARED-CANONICAL-1) AND THIS
+//              FILE IS WHY. It was imported from `client/src/modules/`, which the root
+//              `.dockerignore` excludes from the server image on purpose — so this import could not
+//              resolve in the container and the packaged server could not start.
 //
 // ── ★ WHAT A KEY IS NOT: A PERMISSION ───────────────────────────────────────────────────────────
 // Knowing a key grants nothing. `GET /api/races/:key` requires a session like every other route,
@@ -26,7 +31,7 @@
 // ============================================================
 
 import { randomInt } from 'node:crypto';
-import { SHORT_KEY_ALPHABET, SHORT_KEY_LENGTH } from '../../../client/src/modules/raceShortKey.js';
+import { SHORT_KEY_ALPHABET, SHORT_KEY_LENGTH } from '../../../shared/raceShortKey.mjs';
 
 /** A fresh key. Random, never derived from the race — two identical races get two different keys. */
 export function generateShortKey() {
