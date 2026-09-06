@@ -34,12 +34,21 @@ COPY server/utils/ ./utils/
 # this install's accounts, and every directory the server needs there is created at runtime anyway.
 COPY server/seeds/ ./seeds/
 
-# THE ONE FILE FROM OUTSIDE `server/`, and the reason the context moved.
+# THE FILES FROM OUTSIDE `server/`, and the reason the context moved.
 # `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`, which from
 # `/app/src/routes/` resolves to `/shared/` — outside WORKDIR, which is why the destination is an
-# absolute path rather than something under /app. Established by resolving all 65 relative specifiers
-# in `server/src` and `server/utils`; this is the entire list.
+# absolute path rather than something under /app. Established by resolving the relative specifiers
+# in `server/src` and `server/utils`, not by copying a directory that looked relevant.
+#
+# ★ THIS LIST IS PER FILE, AND SO IS THE ROOT `.dockerignore`'S — TWO LISTS, BOTH REQUIRED. Being
+# allowed into the build context does not put a file in the image; only a COPY does. IMAGE-STARTS-1
+# caught exactly that on its first run: SHARED-CANONICAL-1 named the two new modules in
+# `.dockerignore` and not here, the build reported success, and the container died at import time
+# with `Cannot find module '/shared/raceShortKey.mjs'`. The drift between these two lists is now
+# caught mechanically by `scripts/check-image-starts.mjs`, which starts the image and asks it.
 COPY shared/nameLimits.mjs /shared/nameLimits.mjs
+COPY shared/canonicalJson.mjs /shared/canonicalJson.mjs
+COPY shared/raceShortKey.mjs /shared/raceShortKey.mjs
 
 # SERVE-SPA-1 — THE BUILT CLIENT, FROM A NAMED BUILD CONTEXT.
 #
