@@ -349,6 +349,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [GOLDEN-RACES-1.md](GOLDEN-RACES-1.md) — **two fixed races with known outcomes, re-run only when
+  a change can affect them** (2026-09-06, `feat/golden-races-1` off master `bcf41a9b` — a GUARD, and
+  it ships on its own). **Every input is pinned in the fixture** — geometry, track width, the racer's
+  tuned values, every config object, the roster BY NAME (a name is physics), the seed, the stage — so
+  no seed, default or stored setting can move them. One closed track (12 racers, wild, 35.35 s) and
+  one open (6 racers, quiet, 30 s); ★ the closed one is decided by a **two-frame finish**, chosen by
+  sweeping seeds so the ORDER is sensitive and not only the times. The expectation is a **result
+  list, not a hash**: a failure names the racer and both values. The declaration is **DERIVED** —
+  `reach: ["raceCore.js"]`, expanded to 29 files by `engine-reach`'s closure — and proved in both
+  directions, including `mathUtils.js`, which it reaches only INDIRECTLY. ★ **Sabotage (b) is the
+  whole point**: the seed edit that moves the world fingerprint (`8a1977187e9c99b4` →
+  `dc4647be0f55ebdb`) leaves the golden races passing, so this check does not have the fragility
+  REPEAT-REFUSE-5 found in that instrument. Re-recording is a SEPARATE command that **REFUSES
+  without an intended-change reason**, is **not permission** (the owner's word, per occurrence), and
+  **keeps the previous expectation** dated with its commit and reason. Runs in **~0.6 s**;
+  `fingerprint-default.mjs` untouched and the overlap reported; nothing minted, nothing moved.
+
 - [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
   minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall
   order was never needed. **A** measured the comeback beats against the camera (N=40): the subject is
