@@ -349,6 +349,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RACE-STORE-2.md](RACE-STORE-2.md) — **the database the races will live in, and it cannot be
+  edited** (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Second piece of
+  the team-races topic. **THE SHELF ONLY: nothing writes to it and nothing reads it**, no route, no
+  client change. Three content-addressed tables in **their OWN SQLite file, not the session
+  database** — clearing sessions is a legitimate act and must not delete the history, and
+  `session.js` uses `:memory:` under test. Ids are **SHA-256 of canonical JSON**; `canonicalJson` is
+  IMPORTED from `raceConfigWorld.js` per that module's own rule, and its `hashWorld` is deliberately
+  NOT used (FNV-1a at 32 bits is a cache key, not a content address). ★ A collision is **detected,
+  not assumed away**: an insert onto an existing id re-reads the stored bytes and throws unless they
+  match. ★ The owner's no-overwrite requirement is enforced **three times** — content addressing, no
+  UPDATE statement, and **SQLite triggers**; sabotage (b) was caught by the **trigger**, not by an
+  assertion. Every `raceIdentifier.js` field is stored or declared absent and **that accounting is a
+  test**, proven non-inert. `world.configs` is stored **resolved**, not as the identifier's diff —
+  the identifier compresses for typability and a database has no such constraint. ★ **Corrects
+  TEAMS-1's claim that the suites write into the real data directory: they do not and have not since
+  2026-06-17.** The engine-change limitation is stated and **nothing is proposed**. `engine-reach`
+  selects nothing; nothing minted.
+
 - [TEAMS-1.md](TEAMS-1.md) — **a user belongs to a team, and the admin assigns it** (2026-09-06,
   `feat/team-races-1` off master `bcf41a9b`, **unmerged — his eye owed on the sign-in path**). The
   first piece of the topic the owner opened on 2026-09-05: races stored on the server, visible to a
