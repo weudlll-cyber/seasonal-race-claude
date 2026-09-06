@@ -62,7 +62,9 @@ describe('an admin sets ANOTHER user password', () => {
     const victim = await makeLoggedInUser();
     expect((await victim.agent.get('/api/auth/me')).status).toBe(200);
 
-    const put = await adminApi.put(`/api/users/${victim.user.id}`).send({ password: 'Reset-Pass-2!' });
+    const put = await adminApi
+      .put(`/api/users/${victim.user.id}`)
+      .send({ password: 'Reset-Pass-2!' });
     expect(put.status).toBe(200);
 
     // The very next request — not after an expiry, not after a sweep.
@@ -108,7 +110,9 @@ describe('a user changes their OWN password', () => {
   it('keeps the session that made the request valid', async () => {
     const self = await makeLoggedInUser({ role: 'admin' });
 
-    const put = await self.agent.put(`/api/users/${self.user.id}`).send({ password: 'Own-Pass-2!' });
+    const put = await self.agent
+      .put(`/api/users/${self.user.id}`)
+      .send({ password: 'Own-Pass-2!' });
     expect(put.status).toBe(200);
 
     expect((await self.agent.get('/api/auth/me')).status).toBe(200);

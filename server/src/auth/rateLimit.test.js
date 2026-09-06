@@ -9,7 +9,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { createLoginLimiter, createSetupLimiter, createChangePasswordLimiter } from './rateLimit.js';
+import {
+  createLoginLimiter,
+  createSetupLimiter,
+  createChangePasswordLimiter,
+} from './rateLimit.js';
 
 // Each test gets a fresh app + fresh limiter so per-IP buckets never bleed between cases.
 
@@ -17,7 +21,7 @@ function makeLoginApp({ limit, responseStatus = 401, skipSuccessfulRequests }) {
   const limiter = createLoginLimiter({
     limit,
     windowMs: 60_000,
-    skip: () => false,  // force ON in test env
+    skip: () => false, // force ON in test env
     ...(skipSuccessfulRequests !== undefined ? { skipSuccessfulRequests } : {}),
   });
   const app = express();
@@ -99,7 +103,6 @@ describe('setupLimiter', () => {
   });
 });
 
-
 // ── Change-password limiter (START: PIECE 1, the owner's FIVE) ─────────────────────────────────
 //
 // It keys on the SESSION'S USER, not the IP, so these apps stamp `req.authUser` the way the guard
@@ -113,7 +116,9 @@ function makeChangePwApp({ limit = 5, responseStatus = 401, userId = 'u1' } = {}
     next();
   });
   app.use(limiter);
-  app.post('/api/auth/change-password', (_req, res) => res.status(responseStatus).json({ ok: true }));
+  app.post('/api/auth/change-password', (_req, res) =>
+    res.status(responseStatus).json({ ok: true })
+  );
   return app;
 }
 
@@ -164,12 +169,16 @@ describe('changePasswordLimiter', () => {
       await request(app).post('/api/auth/change-password').set('x-test-user', 'alice').send({});
     }
     const aliceNext = await request(app)
-      .post('/api/auth/change-password').set('x-test-user', 'alice').send({});
+      .post('/api/auth/change-password')
+      .set('x-test-user', 'alice')
+      .send({});
     const bobFirst = await request(app)
-      .post('/api/auth/change-password').set('x-test-user', 'bob').send({});
+      .post('/api/auth/change-password')
+      .set('x-test-user', 'bob')
+      .send({});
 
-    expect(aliceNext.status).toBe(429);   // alice is spent
-    expect(bobFirst.status).toBe(401);    // bob is untouched
+    expect(aliceNext.status).toBe(429); // alice is spent
+    expect(bobFirst.status).toBe(401); // bob is untouched
   });
 
   // DELETE THIS and a limited caller could start being told something the login path would not

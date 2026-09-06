@@ -22,11 +22,7 @@ import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
 import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
-import {
-  mountClientAssets,
-  mountSpaFallback,
-  mountApiNotFound,
-} from './staticClient.js';
+import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -34,7 +30,9 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } })
+  );
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
   app.use(sessionMiddleware);

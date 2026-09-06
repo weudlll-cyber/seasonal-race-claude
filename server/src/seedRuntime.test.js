@@ -22,7 +22,9 @@ describe('seedTypeFromSnapshot — fresh DATA_ROOT', () => {
   const roots = [];
   afterEach(() => {
     for (const r of roots.splice(0)) {
-      try { rmSync(r, { recursive: true, force: true }); } catch {}
+      try {
+        rmSync(r, { recursive: true, force: true });
+      } catch {}
     }
   });
 

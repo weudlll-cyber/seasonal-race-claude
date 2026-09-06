@@ -35,7 +35,12 @@ import {
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
-import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
+import {
+  detectMagicType,
+  IMAGE_MIME,
+  MAX_IMAGE_BYTES,
+  createUpload,
+} from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
@@ -184,7 +189,9 @@ router.post('/', (req, res) => {
   let id = req.body.id;
   if (id !== undefined) {
     if (!isValidId(id)) {
-      errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
+      errors.push(
+        'id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)'
+      );
     }
   } else {
     id = randomUUID();
@@ -233,12 +240,20 @@ router.put('/:id', (req, res) => {
     ...existing,
     name: req.body.name.trim(),
     eventName: req.body.eventName.trim(),
-    subtitle: req.body.subtitle !== undefined ? String(req.body.subtitle).trim() : existing.subtitle,
+    subtitle:
+      req.body.subtitle !== undefined ? String(req.body.subtitle).trim() : existing.subtitle,
     primaryColor: req.body.primaryColor ?? existing.primaryColor,
     secondaryColor: req.body.secondaryColor ?? existing.secondaryColor,
-    sponsorText: req.body.sponsorText !== undefined ? String(req.body.sponsorText).trim() : existing.sponsorText,
-    logoMaxHeight: req.body.logoMaxHeight !== undefined ? Number(req.body.logoMaxHeight) : existing.logoMaxHeight,
-    logoOpacity: req.body.logoOpacity !== undefined ? Number(req.body.logoOpacity) : existing.logoOpacity,
+    sponsorText:
+      req.body.sponsorText !== undefined
+        ? String(req.body.sponsorText).trim()
+        : existing.sponsorText,
+    logoMaxHeight:
+      req.body.logoMaxHeight !== undefined
+        ? Number(req.body.logoMaxHeight)
+        : existing.logoMaxHeight,
+    logoOpacity:
+      req.body.logoOpacity !== undefined ? Number(req.body.logoOpacity) : existing.logoOpacity,
     logoCorner: req.body.logoCorner ?? existing.logoCorner,
     isDefault: existing.isDefault, // Invariant 2: body.isDefault is never read here
     updatedAt: now,
@@ -276,7 +291,8 @@ router.get('/:id/logo', (req, res) => {
   const brand = brandsMap.get(req.params.id);
   if (!brand) return res.status(404).json({ error: 'Brand not found' });
   if (!brand.logoFile) return res.status(404).json({ error: 'No logo' });
-  if (!isSafeAssetFilename(brand.logoFile)) return res.status(404).json({ error: 'Logo file missing' });
+  if (!isSafeAssetFilename(brand.logoFile))
+    return res.status(404).json({ error: 'Logo file missing' });
 
   const logoPath = join(LOGO_DIR, brand.logoFile);
   if (!existsSync(logoPath)) return res.status(404).json({ error: 'Logo file missing' });
@@ -292,50 +308,59 @@ router.get('/:id/logo', (req, res) => {
 });
 
 // POST /api/brands/:id/logo — upload logo (multipart/form-data, field name: logo)
-router.post('/:id/logo', (req, res, next) => {
-  upload.single('logo')(req, res, (err) => {
-    if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res
-          .status(413)
-          .json({ error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.` });
+router.post(
+  '/:id/logo',
+  (req, res, next) => {
+    upload.single('logo')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({
+            error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.`,
+          });
+        }
+        if (err.code === 'INVALID_TYPE') {
+          return res
+            .status(400)
+            .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
+        }
+        return res.status(400).json({ error: 'File upload failed.' });
       }
-      if (err.code === 'INVALID_TYPE') {
-        return res.status(400).json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-      }
-      return res.status(400).json({ error: 'File upload failed.' });
+      next();
+    });
+  },
+  (req, res) => {
+    const brand = brandsMap.get(req.params.id);
+    if (!brand) return res.status(404).json({ error: 'Brand not found' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: logo)' });
+
+    // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
+    const detectedType = detectMagicType(req.file.buffer);
+    if (!detectedType) {
+      return res
+        .status(400)
+        .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
     }
-    next();
-  });
-}, (req, res) => {
-  const brand = brandsMap.get(req.params.id);
-  if (!brand) return res.status(404).json({ error: 'Brand not found' });
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: logo)' });
 
-  // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
-  const detectedType = detectMagicType(req.file.buffer);
-  if (!detectedType) {
-    return res.status(400).json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
+    const ext =
+      detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
+    const filename = `${brand.id}.${ext}`;
+    const logoPath = join(LOGO_DIR, filename);
+
+    // Delete old logo file if it had a different name (e.g. jpg → png swap).
+    if (brand.logoFile && brand.logoFile !== filename) {
+      const oldPath = join(LOGO_DIR, brand.logoFile);
+      if (existsSync(oldPath)) unlinkSync(oldPath);
+    }
+
+    writeFileSync(logoPath, req.file.buffer);
+
+    const updatedBrand = { ...brand, logoFile: filename, updatedAt: new Date().toISOString() };
+    atomicWriteJson(filePath(brand.id), updatedBrand);
+    brandsMap.set(brand.id, updatedBrand);
+
+    res.json({ logoFile: filename });
   }
-
-  const ext = detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
-  const filename = `${brand.id}.${ext}`;
-  const logoPath = join(LOGO_DIR, filename);
-
-  // Delete old logo file if it had a different name (e.g. jpg → png swap).
-  if (brand.logoFile && brand.logoFile !== filename) {
-    const oldPath = join(LOGO_DIR, brand.logoFile);
-    if (existsSync(oldPath)) unlinkSync(oldPath);
-  }
-
-  writeFileSync(logoPath, req.file.buffer);
-
-  const updatedBrand = { ...brand, logoFile: filename, updatedAt: new Date().toISOString() };
-  atomicWriteJson(filePath(brand.id), updatedBrand);
-  brandsMap.set(brand.id, updatedBrand);
-
-  res.json({ logoFile: filename });
-});
+);
 
 // DELETE /api/brands/:id/logo — remove logo
 router.delete('/:id/logo', (req, res) => {

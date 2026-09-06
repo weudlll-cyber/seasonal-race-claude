@@ -102,7 +102,8 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
       // from the tmp inode. Only fail loud if the file is ACTUALLY left more permissive than 0o600.
       if (process.platform !== 'win32') {
         const fileMode = statSync(filePath).mode & 0o777;
-        if (fileMode & 0o077) {  // any group/other permission bit set
+        if (fileMode & 0o077) {
+          // any group/other permission bit set
           const err = new Error('users.json could not be secured to 0o600');
           err.code = 'USERS_STORE_PERM';
           throw err;
@@ -121,7 +122,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
     const result = lockChain.then(run);
     lockChain = result.then(
       () => {},
-      () => {},
+      () => {}
     );
     return result;
   }
@@ -155,8 +156,8 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
 
       const record = {
         id: randomUUID(),
-        username: String(username).trim(),  // display form
-        usernameNormalized,                 // uniqueness key (NFC + lowercased)
+        username: String(username).trim(), // display form
+        usernameNormalized, // uniqueness key (NFC + lowercased)
         passwordHash: await hashPassword(password),
         role,
         // THE SESSION-INVALIDATION MECHANISM, and the only one. Bumping this ends every session
@@ -165,7 +166,7 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
         // serialised write as the new hash, so a password can never change without it.
         // DO NOT BUILD A SECOND ONE beside it — no enumerating the session store, no deleting
         // rows. A route that must keep the REQUESTING session alive calls restampSession.js.
-        sessionEpoch: 0,                    // bumped on password reset; login writes this into session
+        sessionEpoch: 0, // bumped on password reset; login writes this into session
         createdAt: new Date().toISOString(),
         createdBy: createdBy ?? 'setup',
       };

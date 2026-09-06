@@ -45,8 +45,7 @@ const JPEG_MAGIC = Buffer.from([
 
 // PNG signature bytes (8 bytes) + enough padding for the 12-byte magic-byte check
 const PNG_MAGIC = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 
 // Non-image content with a valid filename/MIME header — used for the honesty proof
@@ -130,7 +129,9 @@ describe('loadAll: corrupt file is skipped (boot safety)', () => {
     );
 
     let map;
-    expect(() => { map = loadAll(tmpDir); }).not.toThrow();
+    expect(() => {
+      map = loadAll(tmpDir);
+    }).not.toThrow();
     expect(map).toBeInstanceOf(Map);
     expect(map.has('ok')).toBe(true);
     expect(map.size).toBe(1);
@@ -237,7 +238,9 @@ describe('POST /api/brands', () => {
   });
 
   it('returns 400 for missing name', async () => {
-    const res = await admin.post('/api/brands').send({ id: 'test-brand-no-name', eventName: 'Event' });
+    const res = await admin
+      .post('/api/brands')
+      .send({ id: 'test-brand-no-name', eventName: 'Event' });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');
   });
@@ -249,7 +252,9 @@ describe('POST /api/brands', () => {
 
   it('returns 400 for invalid id format (uppercase)', async () => {
     const res = await admin.post('/api/brands').send({
-      id: 'InvalidBrand', name: 'G', eventName: 'E',
+      id: 'InvalidBrand',
+      name: 'G',
+      eventName: 'E',
     });
     expect(res.status).toBe(400);
   });
@@ -271,7 +276,9 @@ describe('PUT /api/brands/:id', () => {
     await admin.post('/api/brands').send({ id, name: 'Original', eventName: 'Orig Event' });
     createdIds.push(id);
 
-    const res = await admin.put(`/api/brands/${id}`).send({ name: 'Updated', eventName: 'Updated Event' });
+    const res = await admin
+      .put(`/api/brands/${id}`)
+      .send({ name: 'Updated', eventName: 'Updated Event' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated');
     expect(res.body.eventName).toBe('Updated Event');
@@ -282,12 +289,16 @@ describe('PUT /api/brands/:id', () => {
     const created = await admin.post('/api/brands').send({ id, name: 'Preserve', eventName: 'E' });
     createdIds.push(id);
 
-    const updated = await admin.put(`/api/brands/${id}`).send({ name: 'Preserve2', eventName: 'E2' });
+    const updated = await admin
+      .put(`/api/brands/${id}`)
+      .send({ name: 'Preserve2', eventName: 'E2' });
     expect(updated.body.createdAt).toBe(created.body.createdAt);
   });
 
   it('returns 404 for unknown id', async () => {
-    const res = await admin.put('/api/brands/nonexistent-put-xyz').send({ name: 'X', eventName: 'Y' });
+    const res = await admin
+      .put('/api/brands/nonexistent-put-xyz')
+      .send({ name: 'X', eventName: 'Y' });
     expect(res.status).toBe(404);
   });
 
@@ -338,7 +349,10 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
   it('[POST] body isDefault:true is ignored — stored record has isDefault:false', async () => {
     const id = 'test-brand-inv2-post';
     const res = await admin.post('/api/brands').send({
-      id, name: 'Proof POST', eventName: 'E', isDefault: true,
+      id,
+      name: 'Proof POST',
+      eventName: 'E',
+      isDefault: true,
     });
     expect(res.status).toBe(201);
     expect(res.body.isDefault).toBe(false);
@@ -351,7 +365,9 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
     createdIds.push(id);
 
     const res = await admin.put(`/api/brands/${id}`).send({
-      name: 'PUT Proof Updated', eventName: 'E2', isDefault: true,
+      name: 'PUT Proof Updated',
+      eventName: 'E2',
+      isDefault: true,
     });
     expect(res.status).toBe(200);
     expect(res.body.isDefault).toBe(false);
@@ -363,7 +379,9 @@ describe('Honesty proof — Invariant 2: isDefault never inherited from POST/PUT
     expect(def).toBeDefined();
 
     const res = await admin.put(`/api/brands/${def.id}`).send({
-      name: def.name, eventName: def.eventName, isDefault: false,
+      name: def.name,
+      eventName: def.eventName,
+      isDefault: false,
     });
     expect(res.status).toBe(200);
     expect(res.body.isDefault).toBe(true);
@@ -563,7 +581,9 @@ describe('Admin: POST /:id/set-default and POST /:id/clear-default', () => {
 describe('Admin: GET /:id/export-seed', () => {
   it('returns the full record as seed-ready JSON', async () => {
     const id = 'test-brand-export';
-    const created = await admin.post('/api/brands').send({ id, name: 'Export Me', eventName: 'Exp Event' });
+    const created = await admin
+      .post('/api/brands')
+      .send({ id, name: 'Export Me', eventName: 'Exp Event' });
     createdIds.push(id);
 
     const res = await admin.get(`/api/brands/${id}/export-seed`);
@@ -627,7 +647,9 @@ describe('Operator: can perform normal CRUD (operator+)', () => {
 
   it('operator POST / creates a brand', async () => {
     const id = 'test-brand-operator-create';
-    const res = await operator.post('/api/brands').send({ id, name: 'Op Brand', eventName: 'Op Event' });
+    const res = await operator
+      .post('/api/brands')
+      .send({ id, name: 'Op Brand', eventName: 'Op Event' });
     expect(res.status).toBe(201);
     expect(res.body.isDefault).toBe(false);
     createdIds.push(id);
@@ -637,7 +659,9 @@ describe('Operator: can perform normal CRUD (operator+)', () => {
     const id = 'test-brand-operator-put';
     await operator.post('/api/brands').send({ id, name: 'Op Put', eventName: 'E' });
     createdIds.push(id);
-    const res = await operator.put(`/api/brands/${id}`).send({ name: 'Op Put Updated', eventName: 'E2' });
+    const res = await operator
+      .put(`/api/brands/${id}`)
+      .send({ name: 'Op Put Updated', eventName: 'E2' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Op Put Updated');
   });

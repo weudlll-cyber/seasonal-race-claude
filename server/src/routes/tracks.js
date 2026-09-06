@@ -19,7 +19,12 @@ import {
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
-import { detectMagicType, IMAGE_MIME, MAX_IMAGE_BYTES, createUpload } from '../../utils/imageUpload.js';
+import {
+  detectMagicType,
+  IMAGE_MIME,
+  MAX_IMAGE_BYTES,
+  createUpload,
+} from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot, readSeedType } from '../seedRuntime.js';
@@ -85,9 +90,7 @@ export const DEFAULT_TRACK_SEEDS = readSeedType('tracks').map(
 const SEED_SURFACE_CLASSES = Object.fromEntries(
   DEFAULT_TRACK_SEEDS.map((s) => [s.id, s.surfaceClasses])
 );
-const SEED_TRACK_LIGHTS = Object.fromEntries(
-  DEFAULT_TRACK_SEEDS.map((s) => [s.id, s.trackLights])
-);
+const SEED_TRACK_LIGHTS = Object.fromEntries(DEFAULT_TRACK_SEEDS.map((s) => [s.id, s.trackLights]));
 
 const CUSTOM_TRACK_LIGHTS_DEFAULT = { color: '#ffffff', style: 'sequence', speed: 1.0 };
 
@@ -201,7 +204,11 @@ migrateTrackSurfaceClasses();
 // Idempotent — only mutates tracks where the field is missing or not an object.
 function migrateTrackLights() {
   for (const [id, track] of tracksMap.entries()) {
-    if (track.trackLights && typeof track.trackLights === 'object' && !Array.isArray(track.trackLights)) {
+    if (
+      track.trackLights &&
+      typeof track.trackLights === 'object' &&
+      !Array.isArray(track.trackLights)
+    ) {
       continue;
     }
     const lights = SEED_TRACK_LIGHTS[id] ?? CUSTOM_TRACK_LIGHTS_DEFAULT;
@@ -272,7 +279,7 @@ export function removeBackgroundFile(track) {
   if (!isSafeAssetFilename(name)) {
     console.warn(
       `[tracks] refusing to delete background for "${track.id}": stored filename ${JSON.stringify(name)} ` +
-        'is not a plain filename this server could have written. The file was left in place.',
+        'is not a plain filename this server could have written. The file was left in place.'
     );
     return;
   }
@@ -313,8 +320,7 @@ function validateTrackBodyForCreate(body) {
   if (typeof body.worldWidth !== 'number' || typeof body.worldHeight !== 'number') {
     errors.push('worldWidth and worldHeight must be numbers');
   }
-  const hasCenter =
-    Array.isArray(body.centerPoints) && body.centerPoints.length >= 2;
+  const hasCenter = Array.isArray(body.centerPoints) && body.centerPoints.length >= 2;
   const hasInnerOuter =
     Array.isArray(body.innerPoints) &&
     body.innerPoints.length >= 2 &&
@@ -335,7 +341,10 @@ function validateTrackBodyForCreate(body) {
     }
   }
   if ('surfaceClasses' in body) {
-    if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
+    if (
+      !Array.isArray(body.surfaceClasses) ||
+      !body.surfaceClasses.every((c) => typeof c === 'string')
+    ) {
       errors.push('surfaceClasses must be an array of strings');
     }
   }
@@ -409,7 +418,10 @@ function validateTrackBodyForUpdate(body) {
     }
   }
   if ('surfaceClasses' in body) {
-    if (!Array.isArray(body.surfaceClasses) || !body.surfaceClasses.every((c) => typeof c === 'string')) {
+    if (
+      !Array.isArray(body.surfaceClasses) ||
+      !body.surfaceClasses.every((c) => typeof c === 'string')
+    ) {
       errors.push('surfaceClasses must be an array of strings');
     }
   }
@@ -448,7 +460,8 @@ router.get('/:id/background', (req, res) => {
   const track = tracksMap.get(req.params.id);
   if (!track) return res.status(404).json({ error: 'Track not found' });
   if (!track.backgroundImageFile) return res.status(404).json({ error: 'No background' });
-  if (!isSafeAssetFilename(track.backgroundImageFile)) return res.status(404).json({ error: 'Background file missing' });
+  if (!isSafeAssetFilename(track.backgroundImageFile))
+    return res.status(404).json({ error: 'Background file missing' });
 
   const bgPath = join(BG_DIR, track.backgroundImageFile);
   if (!existsSync(bgPath)) return res.status(404).json({ error: 'Background file missing' });
@@ -570,58 +583,68 @@ router.delete('/:id/background', (req, res) => {
 });
 
 // POST /api/tracks/:id/background — upload background image (multipart/form-data)
-router.post('/:id/background', (req, res, next) => {
-  upload.single('background')(req, res, (err) => {
-    if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res
-          .status(413)
-          .json({ error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.` });
+router.post(
+  '/:id/background',
+  (req, res, next) => {
+    upload.single('background')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({
+            error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.`,
+          });
+        }
+        if (err.code === 'INVALID_TYPE') {
+          return res
+            .status(400)
+            .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
+        }
+        return res.status(400).json({ error: 'File upload failed.' });
       }
-      if (err.code === 'INVALID_TYPE') {
-        return res.status(400).json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-      }
-      return res.status(400).json({ error: 'File upload failed.' });
+      next();
+    });
+  },
+  (req, res) => {
+    const track = tracksMap.get(req.params.id);
+    if (!track) return res.status(404).json({ error: 'Track not found' });
+    if (!req.file)
+      return res.status(400).json({ error: 'No file uploaded (field name: background)' });
+
+    // Verify actual file content against magic bytes — ignores the client-supplied
+    // Content-Type header so a polyglot file with a valid image MIME is still caught.
+    const detectedType = detectMagicType(req.file.buffer);
+    if (!detectedType) {
+      return res
+        .status(400)
+        .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
     }
-    next();
-  });
-}, (req, res) => {
-  const track = tracksMap.get(req.params.id);
-  if (!track) return res.status(404).json({ error: 'Track not found' });
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: background)' });
 
-  // Verify actual file content against magic bytes — ignores the client-supplied
-  // Content-Type header so a polyglot file with a valid image MIME is still caught.
-  const detectedType = detectMagicType(req.file.buffer);
-  if (!detectedType) {
-    return res.status(400).json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
+    const ext =
+      detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
+    const filename = `${track.id}.${ext}`;
+    const bgPath = join(BG_DIR, filename);
+
+    if (!existsSync(BG_DIR)) mkdirSync(BG_DIR, { recursive: true });
+
+    // Delete old background file if it had a different name (e.g. jpg → png swap)
+    if (track.backgroundImageFile && track.backgroundImageFile !== filename) {
+      const oldPath = join(BG_DIR, track.backgroundImageFile);
+      if (existsSync(oldPath)) unlinkSync(oldPath);
+    }
+
+    writeFileSync(bgPath, req.file.buffer);
+
+    const updatedTrack = {
+      ...track,
+      backgroundImageFile: filename,
+      updatedAt: new Date().toISOString(),
+    };
+    atomicWriteJson(join(DATA_DIR, `${track.id}.json`), updatedTrack);
+    tracksMap.set(track.id, updatedTrack);
+    writeTrackBackup(track.id, updatedTrack);
+
+    res.json({ backgroundImageFile: filename });
   }
-
-  const ext = detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
-  const filename = `${track.id}.${ext}`;
-  const bgPath = join(BG_DIR, filename);
-
-  if (!existsSync(BG_DIR)) mkdirSync(BG_DIR, { recursive: true });
-
-  // Delete old background file if it had a different name (e.g. jpg → png swap)
-  if (track.backgroundImageFile && track.backgroundImageFile !== filename) {
-    const oldPath = join(BG_DIR, track.backgroundImageFile);
-    if (existsSync(oldPath)) unlinkSync(oldPath);
-  }
-
-  writeFileSync(bgPath, req.file.buffer);
-
-  const updatedTrack = {
-    ...track,
-    backgroundImageFile: filename,
-    updatedAt: new Date().toISOString(),
-  };
-  atomicWriteJson(join(DATA_DIR, `${track.id}.json`), updatedTrack);
-  tracksMap.set(track.id, updatedTrack);
-  writeTrackBackup(track.id, updatedTrack);
-
-  res.json({ backgroundImageFile: filename });
-});
+);
 
 // ── Admin: promote / demote / export-seed ────────────────────────────────────
 // Guarded admin-only via ROUTE_POLICY in guards.js (the CRUD + background routes above are operator+).

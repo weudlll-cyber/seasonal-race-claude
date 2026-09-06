@@ -11,8 +11,8 @@ import defaultStore from './usersStore.js';
 // ── Allow-list (no auth required) ────────────────────────────────────────────
 
 export const PUBLIC_PATHS = [
-  { method: 'GET',  path: '/api/health' },
-  { method: 'GET',  path: '/api/auth/setup-needed' },
+  { method: 'GET', path: '/api/health' },
+  { method: 'GET', path: '/api/auth/setup-needed' },
   { method: 'POST', path: '/api/auth/setup' },
   { method: 'POST', path: '/api/auth/login' },
 ];
@@ -38,7 +38,8 @@ const ROUTE_POLICY = [
   // Regex matches ONLY the three sub-paths — NOT the general CRUD paths (role-leak guard).
   {
     methods: ['GET', 'POST'],
-    test: (p) => /^\/api\/player-groups\/[^/]+(\/set-default|\/clear-default|\/export-seed)$/.test(p),
+    test: (p) =>
+      /^\/api\/player-groups\/[^/]+(\/set-default|\/clear-default|\/export-seed)$/.test(p),
     role: 'admin',
     desc: 'player-groups promote/demote/export-seed — admin only (D1)',
   },
@@ -88,9 +89,7 @@ function findPolicyEntry(routePolicy, method, path) {
 export function isPublicPath(method, path) {
   const m = normalizeMethod(method);
   const p = normalizePath(path);
-  return PUBLIC_PATHS.some(
-    (e) => normalizeMethod(e.method) === m && normalizePath(e.path) === p
-  );
+  return PUBLIC_PATHS.some((e) => normalizeMethod(e.method) === m && normalizePath(e.path) === p);
 }
 
 export function requiredRole(method, path) {
@@ -109,7 +108,11 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
     // This is scoping, NOT an auth wildcard — the allowlist is still exact-match.
     if (path !== '/api' && !path.startsWith('/api/')) return next();
 
-    if (publicPaths.some((e) => normalizeMethod(e.method) === method && normalizePath(e.path) === path)) {
+    if (
+      publicPaths.some(
+        (e) => normalizeMethod(e.method) === method && normalizePath(e.path) === path
+      )
+    ) {
       return next();
     }
 
@@ -130,7 +133,7 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
       return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
     }
 
-    req.authUser = { id: user.id, username: user.username, role: user.role };  // no hash
+    req.authUser = { id: user.id, username: user.username, role: user.role }; // no hash
     next();
   };
 }

@@ -131,7 +131,9 @@ router.post('/', (req, res) => {
   let id = req.body.id;
   if (id !== undefined) {
     if (!isValidId(id)) {
-      errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
+      errors.push(
+        'id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)'
+      );
     }
   } else {
     id = randomUUID(); // lowercase hex + hyphens — satisfies isValidId

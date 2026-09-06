@@ -10,41 +10,49 @@ import { describe, it, expect } from 'vitest';
 import express from 'express';
 import session from 'express-session';
 import request from 'supertest';
-import {
-  isPublicPath,
-  requiredRole,
-  createRequireAuth,
-  createRequireAdmin,
-} from './guards.js';
+import { isPublicPath, requiredRole, createRequireAuth, createRequireAdmin } from './guards.js';
 
 // ── Part A — matcher unit tests ───────────────────────────────────────────────
 
 describe('isPublicPath', () => {
   it('GET /api/health → true', () => expect(isPublicPath('GET', '/api/health')).toBe(true));
-  it('GET /api/health/ (trailing slash) → true', () => expect(isPublicPath('GET', '/api/health/')).toBe(true));
+  it('GET /api/health/ (trailing slash) → true', () =>
+    expect(isPublicPath('GET', '/api/health/')).toBe(true));
   it('POST /api/health → false', () => expect(isPublicPath('POST', '/api/health')).toBe(false));
   it('GET /api/healthx → false', () => expect(isPublicPath('GET', '/api/healthx')).toBe(false));
-  it('GET /api/auth/setup-needed → true', () => expect(isPublicPath('GET', '/api/auth/setup-needed')).toBe(true));
-  it('POST /api/auth/login → true', () => expect(isPublicPath('POST', '/api/auth/login')).toBe(true));
-  it('GET /api/auth/login → false', () => expect(isPublicPath('GET', '/api/auth/login')).toBe(false));
+  it('GET /api/auth/setup-needed → true', () =>
+    expect(isPublicPath('GET', '/api/auth/setup-needed')).toBe(true));
+  it('POST /api/auth/login → true', () =>
+    expect(isPublicPath('POST', '/api/auth/login')).toBe(true));
+  it('GET /api/auth/login → false', () =>
+    expect(isPublicPath('GET', '/api/auth/login')).toBe(false));
   it('GET /api/tracks → false', () => expect(isPublicPath('GET', '/api/tracks')).toBe(false));
 });
 
 describe('requiredRole', () => {
-  it('POST /api/surface-classes → admin', () => expect(requiredRole('POST', '/api/surface-classes')).toBe('admin'));
-  it('PUT /api/surface-classes/abc → admin', () => expect(requiredRole('PUT', '/api/surface-classes/abc')).toBe('admin'));
-  it('DELETE /api/surface-classes/abc/ → admin (trailing slash normalised)', () => expect(requiredRole('DELETE', '/api/surface-classes/abc/')).toBe('admin'));
-  it('post (lowercase) /api/surface-classes → admin (method normalisation)', () => expect(requiredRole('post', '/api/surface-classes')).toBe('admin'));
-  it('GET /api/surface-classes → null (read is operator+)', () => expect(requiredRole('GET', '/api/surface-classes')).toBeNull());
-  it('GET /api/surface-classes/abc → null', () => expect(requiredRole('GET', '/api/surface-classes/abc')).toBeNull());
-  it('POST /api/tracks → null (operator+ route)', () => expect(requiredRole('POST', '/api/tracks')).toBeNull());
+  it('POST /api/surface-classes → admin', () =>
+    expect(requiredRole('POST', '/api/surface-classes')).toBe('admin'));
+  it('PUT /api/surface-classes/abc → admin', () =>
+    expect(requiredRole('PUT', '/api/surface-classes/abc')).toBe('admin'));
+  it('DELETE /api/surface-classes/abc/ → admin (trailing slash normalised)', () =>
+    expect(requiredRole('DELETE', '/api/surface-classes/abc/')).toBe('admin'));
+  it('post (lowercase) /api/surface-classes → admin (method normalisation)', () =>
+    expect(requiredRole('post', '/api/surface-classes')).toBe('admin'));
+  it('GET /api/surface-classes → null (read is operator+)', () =>
+    expect(requiredRole('GET', '/api/surface-classes')).toBeNull());
+  it('GET /api/surface-classes/abc → null', () =>
+    expect(requiredRole('GET', '/api/surface-classes/abc')).toBeNull());
+  it('POST /api/tracks → null (operator+ route)', () =>
+    expect(requiredRole('POST', '/api/tracks')).toBeNull());
 });
 
 describe('requiredRole — /api/users policy (C3a)', () => {
   it('GET /api/users → admin', () => expect(requiredRole('GET', '/api/users')).toBe('admin'));
   it('POST /api/users → admin', () => expect(requiredRole('POST', '/api/users')).toBe('admin'));
-  it('DELETE /api/users/abc → admin (future sub-routes pre-gated)', () => expect(requiredRole('DELETE', '/api/users/abc')).toBe('admin'));
-  it('GET /api/users/ (trailing slash normalised) → admin', () => expect(requiredRole('GET', '/api/users/')).toBe('admin'));
+  it('DELETE /api/users/abc → admin (future sub-routes pre-gated)', () =>
+    expect(requiredRole('DELETE', '/api/users/abc')).toBe('admin'));
+  it('GET /api/users/ (trailing slash normalised) → admin', () =>
+    expect(requiredRole('GET', '/api/users/')).toBe('admin'));
 });
 
 // ── HEAD-gate fix — HEAD must inherit the GET role policy ─────────────────────
@@ -70,8 +78,10 @@ describe('requiredRole — HEAD inherits GET role policy (HEAD-gate fix)', () =>
 
 const fakeStore = {
   findAuthRecordById: (id) =>
-    ({ op1: { id: 'op1', username: 'op', role: 'operator' },
-       ad1: { id: 'ad1', username: 'ad', role: 'admin' } }[id] ?? null),
+    ({
+      op1: { id: 'op1', username: 'op', role: 'operator' },
+      ad1: { id: 'ad1', username: 'ad', role: 'admin' },
+    })[id] ?? null,
 };
 
 const customPublicPaths = [{ method: 'GET', path: '/api/_public' }];
@@ -92,8 +102,8 @@ function makeApp() {
   app.use(createRequireAdmin({ routePolicy: customPolicy }));
 
   app.get('/api/_public', (_req, res) => res.json({ ok: true }));
-  app.get('/api/_op',     (req, res) => res.json({ user: req.authUser }));
-  app.get('/api/_admin',  (_req, res) => res.json({ ok: true }));
+  app.get('/api/_op', (req, res) => res.json({ user: req.authUser }));
+  app.get('/api/_admin', (_req, res) => res.json({ ok: true }));
 
   return app;
 }

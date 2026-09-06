@@ -104,9 +104,11 @@ describe('POST /api/users', () => {
   });
 
   it('admin invalid role → 400', async () => {
-    const res = await adminApi
-      .post('/api/users')
-      .send({ username: `userstest-bad-${Date.now()}`, password: 'pw-valid-123', role: 'superuser' });
+    const res = await adminApi.post('/api/users').send({
+      username: `userstest-bad-${Date.now()}`,
+      password: 'pw-valid-123',
+      role: 'superuser',
+    });
     expect(res.status).toBe(400);
   });
 
@@ -125,7 +127,7 @@ describe('POST /api/users', () => {
   });
 
   it('POST response body never contains passwordHash or sessionEpoch (incl. error responses)', async () => {
-    const res = await adminApi.post('/api/users').send(NEW_USER);  // duplicate → 409
+    const res = await adminApi.post('/api/users').send(NEW_USER); // duplicate → 409
     expect(res.status).toBe(409);
     expect(res.body).not.toHaveProperty('passwordHash');
     expect(res.body).not.toHaveProperty('sessionEpoch');

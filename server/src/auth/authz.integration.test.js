@@ -27,7 +27,15 @@ const VALID_SURFACE_CLASS = {
   id: 'authz-test-lava',
   label: 'Authz Test Lava',
   generatorId: 'particle',
-  config: { color: '#ff4400', sizeMin: 2, sizeMax: 5, lifetimeFrames: 20, spawnProbability: 0.5, drift: 1, gravity: 0 },
+  config: {
+    color: '#ff4400',
+    sizeMin: 2,
+    sizeMax: 5,
+    lifetimeFrames: 20,
+    spawnProbability: 0.5,
+    drift: 1,
+    gravity: 0,
+  },
 };
 
 const VALID_TRACK = {
@@ -36,9 +44,21 @@ const VALID_TRACK = {
   closed: true,
   worldWidth: 1280,
   worldHeight: 720,
-  centerPoints: [{ x: 100, y: 100 }, { x: 200, y: 200 }, { x: 300, y: 100 }],
-  innerPoints:  [{ x: 80,  y: 80  }, { x: 200, y: 180 }, { x: 320, y: 80  }],
-  outerPoints:  [{ x: 120, y: 120 }, { x: 200, y: 220 }, { x: 280, y: 120 }],
+  centerPoints: [
+    { x: 100, y: 100 },
+    { x: 200, y: 200 },
+    { x: 300, y: 100 },
+  ],
+  innerPoints: [
+    { x: 80, y: 80 },
+    { x: 200, y: 180 },
+    { x: 320, y: 80 },
+  ],
+  outerPoints: [
+    { x: 120, y: 120 },
+    { x: 200, y: 220 },
+    { x: 280, y: 120 },
+  ],
   effects: [],
 };
 
@@ -129,7 +149,8 @@ describe('ADMIN-GATED: surface-classes mutations', () => {
 
 describe('CSRF: Origin/Referer guard sits in front of route handlers', () => {
   it('adminAgent POST /api/tracks with bad Origin → 403 before handler', async () => {
-    const res = await adminApi.post('/api/tracks')
+    const res = await adminApi
+      .post('/api/tracks')
       .set('Origin', 'http://evil.test')
       .send(VALID_TRACK);
     expect(res.status).toBe(403);
@@ -181,9 +202,7 @@ describe('ROUTE-PRESENCE: every /api route denies anonymous access', () => {
   it('no /api route (outside PUBLIC_PATHS) returns 2xx for anonymous request', async () => {
     const routes = collectRoutes(app).filter((r) => r.path.startsWith('/api'));
 
-    const publicSet = new Set(
-      PUBLIC_PATHS.map((e) => `${e.method.toUpperCase()} ${e.path}`)
-    );
+    const publicSet = new Set(PUBLIC_PATHS.map((e) => `${e.method.toUpperCase()} ${e.path}`));
 
     const failures = [];
     for (const { method, path } of routes) {

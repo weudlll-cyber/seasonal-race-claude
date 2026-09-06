@@ -50,8 +50,7 @@ const JPEG_MAGIC = Buffer.from([
 
 // PNG signature bytes (8 bytes) + enough padding for the 12-byte magic-byte check
 const PNG_MAGIC = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
 
 // Non-image content with a valid filename/MIME header — used for the honesty proof
@@ -189,7 +188,9 @@ describe('loadAll: corrupt file is skipped (boot safety)', () => {
     );
 
     let map;
-    expect(() => { map = loadAll(tmpDir); }).not.toThrow();
+    expect(() => {
+      map = loadAll(tmpDir);
+    }).not.toThrow();
     expect(map).toBeInstanceOf(Map);
     expect(map.has('valid-racer')).toBe(true);
     expect(map.size).toBe(1);
@@ -268,7 +269,9 @@ describe('POST /api/racers', () => {
   });
 
   it('returns 400 for coats:[]', async () => {
-    const res = await admin.post('/api/racers').send({ id: 'test-racer-empty-coats', ...BASE_RACER, coats: [] });
+    const res = await admin
+      .post('/api/racers')
+      .send({ id: 'test-racer-empty-coats', ...BASE_RACER, coats: [] });
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('errors');
   });
@@ -313,7 +316,9 @@ describe('PUT /api/racers/:id', () => {
       .post(`/api/racers/${id}/sprite`)
       .attach('sprite', JPEG_MAGIC, { filename: 'r.jpg', contentType: 'image/jpeg' });
 
-    const updated = await admin.put(`/api/racers/${id}`).send({ ...BASE_RACER, name: 'Updated With Sprite' });
+    const updated = await admin
+      .put(`/api/racers/${id}`)
+      .send({ ...BASE_RACER, name: 'Updated With Sprite' });
     expect(updated.status).toBe(200);
     expect(updated.body.spriteFile).toBeTruthy();
   });
