@@ -88,31 +88,31 @@ describe('validateBody', () => {
   });
 
   it('rejects missing emoji', () => {
-    const { emoji, ...rest } = BASE_RACER;
+    const { emoji: _emoji, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/emoji/i);
   });
 
   it('rejects missing frameCount', () => {
-    const { frameCount, ...rest } = BASE_RACER;
+    const { frameCount: _frameCount, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/frameCount/i);
   });
 
   it('rejects missing basePeriodMs', () => {
-    const { basePeriodMs, ...rest } = BASE_RACER;
+    const { basePeriodMs: _basePeriodMs, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/basePeriodMs/i);
   });
 
   it('rejects missing displaySize', () => {
-    const { displaySize, ...rest } = BASE_RACER;
+    const { displaySize: _displaySize, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/displaySize/i);
   });
 
   it('rejects missing trailStyle', () => {
-    const { trailStyle, ...rest } = BASE_RACER;
+    const { trailStyle: _trailStyle, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/trailStyle/i);
   });
@@ -129,7 +129,7 @@ describe('validateBody', () => {
   });
 
   it('rejects missing primaryColor', () => {
-    const { primaryColor, ...rest } = BASE_RACER;
+    const { primaryColor: _primaryColor, ...rest } = BASE_RACER;
     const errs = validateBody(rest);
     expect(errs.join(' ')).toMatch(/primaryColor/i);
   });
@@ -262,7 +262,7 @@ describe('POST /api/racers', () => {
   });
 
   it('returns 400 for missing name', async () => {
-    const { name, ...rest } = BASE_RACER;
+    const { name: _name, ...rest } = BASE_RACER;
     const res = await admin.post('/api/racers').send(rest);
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error');

@@ -274,9 +274,7 @@ describe('PUT /api/surface-classes/:id', () => {
 
 describe('DELETE /api/surface-classes/:id', () => {
   it('deletes an existing class and returns 204', async () => {
-    const createRes = await api
-      .post('/api/surface-classes')
-      .send({ ...VALID_CUSTOM, id: 'test-delete' });
+    await api.post('/api/surface-classes').send({ ...VALID_CUSTOM, id: 'test-delete' });
 
     const deleteRes = await api.delete('/api/surface-classes/test-delete');
     expect(deleteRes.status).toBe(204);
@@ -291,9 +289,7 @@ describe('DELETE /api/surface-classes/:id', () => {
   });
 
   it('deleted class no longer appears in GET list', async () => {
-    const createRes = await api
-      .post('/api/surface-classes')
-      .send({ ...VALID_CUSTOM, id: 'test-delete-list' });
+    await api.post('/api/surface-classes').send({ ...VALID_CUSTOM, id: 'test-delete-list' });
 
     await api.delete('/api/surface-classes/test-delete-list');
 

@@ -389,7 +389,7 @@ describe('deleteUser', () => {
   });
 
   it('returns the safe user record of the deleted entry (no passwordHash)', async () => {
-    const a1 = await store.createUser({
+    await store.createUser({
       username: 'da1',
       password: 'pw',
       role: 'admin',

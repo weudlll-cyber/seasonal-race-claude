@@ -8,7 +8,7 @@
 //              admin→allowed. Store isolation via RA_USERS_DB (test/env-setup.js).
 // ============================================================
 
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
 import { adminAgent, operatorAgent } from '../../test/authAgent.js';

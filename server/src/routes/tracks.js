@@ -82,7 +82,7 @@ const tracksMap = loadAllTracks();
 // points are drawn by the user in the Track Editor, `tracksMap` already holds them, and a second
 // in-memory copy of 324 KB of geometry would buy nothing.
 export const DEFAULT_TRACK_SEEDS = readSeedType('tracks').map(
-  ({ innerPoints, outerPoints, centerPoints, ...rest }) => rest
+  ({ innerPoints: _i, outerPoints: _o, centerPoints: _c, ...rest }) => rest
 );
 
 // Lookup maps derived from seeds — used by startup migrations to patch tracks written
@@ -221,7 +221,13 @@ function migrateTrackLights() {
 migrateTrackLights();
 
 // Strip geometry arrays from list response; expose compact pointCount for display.
-function toSummary({ innerPoints, outerPoints, centerPoints, backgroundImageFile, ...rest }) {
+function toSummary({
+  innerPoints,
+  outerPoints,
+  centerPoints: _centerPoints,
+  backgroundImageFile: _backgroundImageFile,
+  ...rest
+}) {
   return {
     ...rest,
     pointCount: {
@@ -452,7 +458,7 @@ router.get('/', (_req, res) => {
 router.get('/:id', (req, res) => {
   const track = tracksMap.get(req.params.id);
   if (!track) return res.status(404).json({ error: 'Track not found' });
-  const { backgroundImageFile, ...trackData } = track;
+  const { backgroundImageFile: _backgroundImageFile, ...trackData } = track;
   res.json(trackData);
 });
 
@@ -487,7 +493,7 @@ router.post('/', (req, res) => {
   const geometryId = req.body.geometryId || generateGeometryId();
   const now = new Date().toISOString();
 
-  const { backgroundImage, ...rest } = req.body;
+  const { backgroundImage: _backgroundImage, ...rest } = req.body;
   const track = {
     // Sensible defaults — overridden by anything in req.body
     icon: '🏁',
@@ -527,7 +533,7 @@ router.put('/:id', (req, res) => {
   const errors = validateTrackBodyForUpdate(req.body);
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
-  const { backgroundImage, ...rest } = req.body;
+  const { backgroundImage: _backgroundImage, ...rest } = req.body;
   const track = {
     ...existing,
     ...rest,
