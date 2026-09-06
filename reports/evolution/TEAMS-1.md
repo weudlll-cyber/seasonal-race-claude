@@ -212,7 +212,7 @@ The mutation was reverted (0 occurrences of the marker remain) and both files ar
 | `teams.test.js` (new) | **26 passed** |
 | client `UserManagementSection.test.jsx` | **17 passed** (12 before, 5 added) |
 | browser suite — `teams-session.spec.js` | **3 passed** (setup + 2) |
-| `npm run verify` (plain, not `--premerge`) | **see below** |
+| `npm run verify` (plain, not `--premerge`) | **PASS 14, FAIL 0, SKIP 15** — exit 0, 369.0 s |
 | `engine-reach --check` | selects nothing |
 
 `engine-reach` line, verbatim, over all 12 changed paths:
@@ -225,9 +225,24 @@ ENGINE REACH: none of 12 path(s) carry a change that can reach the race engine.
 Nothing selected, so **nothing was minted** — as the brief required, and no fingerprint decision was
 taken on my own authority.
 
-**The server lint and format steps are RED for pre-existing reasons** (added on `night/2026-09-05`,
-`dd0c867d` / `80f7118e`, and deliberately shipped red). **Nothing there was fixed** — that is its own
-session.
+`npm run verify` ran twice. The first run measured the working tree before the commit; the
+pre-commit hook then reformatted two client files, so it was **re-run against the committed tree**
+and that is the number above. Both passed. The 14 guards include `client-suite`, `server-suite`,
+`script-suite`, `client-lint`, `client-format-check` and `fingerprint-containment`; the 15 skips are
+the camera/render/world guards, each of which reports `nothing changed`.
+
+### ★ A correction to the brief: there are no server lint or format steps to report
+
+The brief expected the server lint and format steps added on the night branch to be **RED for
+pre-existing reasons**, and told me to report them as such and fix nothing.
+
+**They are not on this branch, so there was nothing to report and nothing to leave alone.** They
+live only on `night/2026-09-05` (`dd0c867d`, `80f7118e`), which is the owner's to merge and which I
+did not touch. This branch is off master `bcf41a9b`, where `server/package.json` declares **no lint
+and no format script at all** — `verify`'s own skip reasons say so in its words: *"the server, which
+declares no lint script at all"* and *"the server, which declares no format script at all"*.
+`server/eslint.config.js` does not exist in this tree. Nothing in `server/` was linted or formatted
+by me, which is the outcome the instruction wanted by a different route.
 
 ---
 
