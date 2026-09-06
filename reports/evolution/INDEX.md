@@ -349,6 +349,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REPEAT-REFUSE-5.md](REPEAT-REFUSE-5.md) — ★ **STOPPED at the establish step; no code changed**
+  (2026-09-06, `feat/team-races-1`). The addendum asked whether the **world role in
+  `docs/fingerprints.json`** can reach the product and be compared per race. **It CAN reach it** —
+  the client is built outside Docker, so `vite-plugin-ra-build` can read the file from the repo
+  root the way it already reads git, and the server never needs it. **But it does not MEAN what the
+  requirement needs**, on three counts from the project's own record: it **already moved without
+  the game changing** (2026-09-02, an instrument correction, with CONTROL B and CONTROL C proving
+  the simulation was untouched); it **moves on shipped-seed defaults a stored race does not use**
+  (one track's default racer moved the combined hash while **nine per-track hashes were
+  byte-identical**); and its own `GUARD.blind` says it is blind to **"configs other than the shipped
+  default"**, which is exactly what a stored race carries. **Too broad for refusing and too narrow
+  for accepting.** Per the addendum: no build-comparison fallback, no third comparison invented,
+  RACE-HISTORY-4's warn-and-run left in place, and the decision left to the owner.
+
 - [RACE-HISTORY-4.md](RACE-HISTORY-4.md) — **the team's races, a button that repeats one, and a
   short key** (2026-09-06, `feat/team-races-1`, **unmerged — the owner tests the whole topic at
   once**). Fourth and last piece of the team-races topic. ★ **The history view was ALREADY
