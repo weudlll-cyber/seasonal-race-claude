@@ -136,7 +136,7 @@ describe('createUsersStore', () => {
   });
 
   it('createUser persists and readUsers reflects the new record', async () => {
-    await store.createUser({ username: 'Alice', password: 'pass1', role: 'admin' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'Alice', password: 'pass1', role: 'admin' });
     expect(store.countUsers()).toBe(1);
     const users = store.readUsers();
     expect(users[0].username).toBe('Alice');
@@ -144,7 +144,7 @@ describe('createUsersStore', () => {
   });
 
   it('createUser returned object has required fields and no passwordHash', async () => {
-    const user = await store.createUser({ username: ' Bob ', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: ' Bob ', password: 'pw', role: 'operator', createdBy: 'test' });
     expect(user).toHaveProperty('id');
     expect(user.username).toBe('Bob');              // trimmed display form
     expect(user.usernameNormalized).toBe('bob');
@@ -155,12 +155,12 @@ describe('createUsersStore', () => {
   });
 
   it('createUser defaults createdBy to "setup" when omitted', async () => {
-    const user = await store.createUser({ username: 'carol', password: 'pw', role: 'operator' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'carol', password: 'pw', role: 'operator' });
     expect(user.createdBy).toBe('setup');
   });
 
   it('findAuthRecordByUsername matches regardless of case and surrounding whitespace', async () => {
-    await store.createUser({ username: 'Alice', password: 'pass', role: 'admin' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'Alice', password: 'pass', role: 'admin' });
     expect(store.findAuthRecordByUsername('ALICE')).not.toBeNull();
     expect(store.findAuthRecordByUsername('  alice  ')).not.toBeNull();
   });
@@ -170,13 +170,13 @@ describe('createUsersStore', () => {
   });
 
   it('findAuthRecordByUsername returns the full record including passwordHash', async () => {
-    await store.createUser({ username: 'Dave', password: 'pw', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'Dave', password: 'pw', role: 'operator' });
     const found = store.findAuthRecordByUsername('dave');
     expect(found).toHaveProperty('passwordHash');
   });
 
   it('findAuthRecordById returns full record (incl. passwordHash) for existing id', async () => {
-    const safeUser = await store.createUser({ username: 'Eve', password: 'pw', role: 'operator' });
+    const safeUser = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'Eve', password: 'pw', role: 'operator' });
     const found = store.findAuthRecordById(safeUser.id);
     expect(found).not.toBeNull();
     expect(found.id).toBe(safeUser.id);
@@ -189,40 +189,40 @@ describe('createUsersStore', () => {
   });
 
   it('rejects duplicate normalized username with USERNAME_TAKEN and does not write', async () => {
-    await store.createUser({ username: 'Alice', password: 'pw1', role: 'admin' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'Alice', password: 'pw1', role: 'admin' });
     await expect(
-      store.createUser({ username: '  alice  ', password: 'pw2', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: '  alice  ', password: 'pw2', role: 'operator' })
     ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
     expect(store.countUsers()).toBe(1);
   });
 
   it('rejects invalid role with INVALID_ROLE', async () => {
     await expect(
-      store.createUser({ username: 'eve', password: 'pw', role: 'superuser' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'eve', password: 'pw', role: 'superuser' })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
   });
 
   it('rejects empty username with INVALID_USERNAME', async () => {
     await expect(
-      store.createUser({ username: '   ', password: 'pw', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: '   ', password: 'pw', role: 'operator' })
     ).rejects.toMatchObject({ code: 'INVALID_USERNAME' });
   });
 
   it('rejects empty password with INVALID_PASSWORD', async () => {
     await expect(
-      store.createUser({ username: 'frank', password: '', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'frank', password: '', role: 'operator' })
     ).rejects.toMatchObject({ code: 'INVALID_PASSWORD' });
   });
 
   it('rejects whitespace-only password with INVALID_PASSWORD', async () => {
     await expect(
-      store.createUser({ username: 'grace', password: '   ', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'grace', password: '   ', role: 'operator' })
     ).rejects.toMatchObject({ code: 'INVALID_PASSWORD' });
   });
 
   it('persisted hash is a valid bcrypt hash that verifies the original password (SF3)', async () => {
     const plaintext = 'mypassword123';
-    await store.createUser({ username: 'hashtest', password: plaintext, role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'hashtest', password: plaintext, role: 'operator' });
     const record = store.findAuthRecordByUsername('hashtest');
     expect(record.passwordHash).toMatch(/^\$2/);
     expect(record.passwordHash).not.toBe(plaintext);
@@ -241,7 +241,7 @@ describe('createUsersStore', () => {
 
   it('createUser writes credential file with mode 0o600 (SF1, POSIX only)', async () => {
     if (process.platform === 'win32') return;
-    await store.createUser({ username: 'permtest', password: 'pw', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'permtest', password: 'pw', role: 'operator' });
     expect(statSync(tempPath).mode & 0o777).toBe(0o600);
   });
 
@@ -250,7 +250,7 @@ describe('createUsersStore', () => {
     chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
     statSync.mockReturnValueOnce({ mode: 0o644 });
     await expect(
-      store.createUser({ username: 'permfail', password: 'pw', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'permfail', password: 'pw', role: 'operator' })
     ).rejects.toMatchObject({ code: 'USERS_STORE_PERM' });
   });
 
@@ -258,7 +258,7 @@ describe('createUsersStore', () => {
     if (process.platform === 'win32') return;
     chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
     statSync.mockReturnValueOnce({ mode: 0o600 });
-    const user = await store.createUser({ username: 'permsafe', password: 'pw', role: 'operator' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'permsafe', password: 'pw', role: 'operator' });
     expect(user).not.toHaveProperty('passwordHash');
   });
 });
@@ -279,8 +279,8 @@ describe('createUser — concurrency serialization (C2)', () => {
 
   it('T1: two concurrent createUser with different usernames — both are persisted', async () => {
     await Promise.all([
-      store.createUser({ username: 'userA', password: 'passA-123', role: 'operator' }),
-      store.createUser({ username: 'userB', password: 'passB-456', role: 'operator' }),
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'userA', password: 'passA-123', role: 'operator' }),
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'userB', password: 'passB-456', role: 'operator' }),
     ]);
     expect(store.countUsers()).toBe(2);
     expect(store.findAuthRecordByUsername('usera')).not.toBeNull();
@@ -289,8 +289,8 @@ describe('createUser — concurrency serialization (C2)', () => {
 
   it('T2: two concurrent createUser with the same username — exactly one succeeds, one rejects with USERNAME_TAKEN', async () => {
     const results = await Promise.allSettled([
-      store.createUser({ username: 'dupuser', password: 'pass1-xxx', role: 'operator' }),
-      store.createUser({ username: 'dupuser', password: 'pass2-xxx', role: 'admin' }),
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'dupuser', password: 'pass1-xxx', role: 'operator' }),
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'dupuser', password: 'pass2-xxx', role: 'admin' }),
     ]);
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');
@@ -304,17 +304,17 @@ describe('createUser — concurrency serialization (C2)', () => {
   // the lock so subsequent calls are not deadlocked. Concurrency/TOCTOU is
   // covered by the allSettled-based T1/T2 tests above.
   it('T3: rejected createUser releases the lock — subsequent calls are not deadlocked', async () => {
-    await store.createUser({ username: 'existing', password: 'pass-xyz', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'existing', password: 'pass-xyz', role: 'operator' });
     // Cause USERNAME_TAKEN
     await expect(
-      store.createUser({ username: 'existing', password: 'other-pw', role: 'operator' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'existing', password: 'other-pw', role: 'operator' })
     ).rejects.toMatchObject({ code: 'USERNAME_TAKEN' });
     // Cause INVALID_ROLE
     await expect(
-      store.createUser({ username: 'newuser', password: 'pw', role: 'superuser' })
+      store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'newuser', password: 'pw', role: 'superuser' })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
     // Next valid call must succeed — no deadlock
-    const user = await store.createUser({ username: 'fresh', password: 'fresh-pass', role: 'admin' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'fresh', password: 'fresh-pass', role: 'admin' });
     expect(user).toMatchObject({ username: 'fresh', role: 'admin' });
     expect(store.countUsers()).toBe(2);
   });
@@ -337,19 +337,19 @@ describe('deleteUser', () => {
   });
 
   it('removes the user; subsequent findAuthRecordById returns null', async () => {
-    const created = await store.createUser({ username: 'todel', password: 'pw', role: 'operator', createdBy: 'test' });
+    const created = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'todel', password: 'pw', role: 'operator', createdBy: 'test' });
     // Need a second admin so the delete is allowed
-    await store.createUser({ username: 'admin2', password: 'pw2', role: 'admin', createdBy: 'test' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'admin2', password: 'pw2', role: 'admin', createdBy: 'test' });
     // Create another admin so we can delete the first one
-    await store.createUser({ username: 'admin1', password: 'pw1', role: 'admin', createdBy: 'test' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'admin1', password: 'pw1', role: 'admin', createdBy: 'test' });
     await store.deleteUser(created.id);
     expect(store.findAuthRecordById(created.id)).toBeNull();
     expect(store.countUsers()).toBe(2);
   });
 
   it('returns the safe user record of the deleted entry (no passwordHash)', async () => {
-    const a1 = await store.createUser({ username: 'da1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'da2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'da1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'da2', password: 'pw', role: 'admin', createdBy: 'test' });
     const result = await store.deleteUser(a2.id);
     expect(result).not.toHaveProperty('passwordHash');
     expect(result.id).toBe(a2.id);
@@ -362,14 +362,14 @@ describe('deleteUser', () => {
   });
 
   it('rejects deleting the only admin with LAST_ADMIN', async () => {
-    const admin = await store.createUser({ username: 'soleadmin', password: 'pw', role: 'admin', createdBy: 'test' });
+    const admin = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'soleadmin', password: 'pw', role: 'admin', createdBy: 'test' });
     await expect(store.deleteUser(admin.id)).rejects.toMatchObject({ code: 'LAST_ADMIN' });
     expect(store.countUsers()).toBe(1);  // admin still in store
   });
 
   it('allows deleting an admin when ≥2 admins exist', async () => {
-    const a1 = await store.createUser({ username: 'adel1', password: 'pw', role: 'admin', createdBy: 'test' });
-    await store.createUser({ username: 'adel2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'adel1', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'adel2', password: 'pw', role: 'admin', createdBy: 'test' });
     await expect(store.deleteUser(a1.id)).resolves.not.toThrow();
     expect(store.findAuthRecordById(a1.id)).toBeNull();
     expect(store.countUsers()).toBe(1);
@@ -393,7 +393,7 @@ describe('updateUser', () => {
   });
 
   it('role change is persisted and returned without passwordHash', async () => {
-    const op = await store.createUser({ username: 'uprole', password: 'pw', role: 'operator', createdBy: 'test' });
+    const op = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'uprole', password: 'pw', role: 'operator', createdBy: 'test' });
     const result = await store.updateUser(op.id, { role: 'admin' });
     expect(result.role).toBe('admin');
     expect(result).not.toHaveProperty('passwordHash');
@@ -401,7 +401,7 @@ describe('updateUser', () => {
   });
 
   it('rejects demoting the only admin with LAST_ADMIN', async () => {
-    const admin = await store.createUser({ username: 'soleadm', password: 'pw', role: 'admin', createdBy: 'test' });
+    const admin = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'soleadm', password: 'pw', role: 'admin', createdBy: 'test' });
     await expect(
       store.updateUser(admin.id, { role: 'operator' })
     ).rejects.toMatchObject({ code: 'LAST_ADMIN' });
@@ -409,21 +409,21 @@ describe('updateUser', () => {
   });
 
   it('allows demoting an admin when ≥2 admins exist', async () => {
-    const a1 = await store.createUser({ username: 'demote1', password: 'pw', role: 'admin', createdBy: 'test' });
-    await store.createUser({ username: 'demote2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'demote1', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'demote2', password: 'pw', role: 'admin', createdBy: 'test' });
     const result = await store.updateUser(a1.id, { role: 'operator' });
     expect(result.role).toBe('operator');
   });
 
   it('rejects invalid role with INVALID_ROLE', async () => {
-    const op = await store.createUser({ username: 'badrole', password: 'pw', role: 'operator', createdBy: 'test' });
+    const op = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'badrole', password: 'pw', role: 'operator', createdBy: 'test' });
     await expect(
       store.updateUser(op.id, { role: 'superuser' })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
   });
 
   it('password reset: new hash verifies new password; old hash not re-used', async () => {
-    const user = await store.createUser({ username: 'resetpw', password: 'oldpass', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'resetpw', password: 'oldpass', role: 'operator', createdBy: 'test' });
     const oldRecord = store.findAuthRecordById(user.id);
     const oldHash = oldRecord.passwordHash;
 
@@ -435,7 +435,7 @@ describe('updateUser', () => {
   });
 
   it('password reset bumps sessionEpoch on the record', async () => {
-    const user = await store.createUser({ username: 'epochtest', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'epochtest', password: 'pw', role: 'operator', createdBy: 'test' });
     const epochBefore = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
     await store.updateUser(user.id, { password: 'newpassword-x' });
     const epochAfter = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
@@ -443,7 +443,7 @@ describe('updateUser', () => {
   });
 
   it('password reset returns safe user without passwordHash', async () => {
-    const user = await store.createUser({ username: 'safereset', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'safereset', password: 'pw', role: 'operator', createdBy: 'test' });
     const result = await store.updateUser(user.id, { password: 'newpassword-y' });
     expect(result).not.toHaveProperty('passwordHash');
   });
@@ -455,7 +455,7 @@ describe('updateUser', () => {
   });
 
   it('rejects empty update (no role, no password) with EMPTY_UPDATE', async () => {
-    const user = await store.createUser({ username: 'emptyup', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'emptyup', password: 'pw', role: 'operator', createdBy: 'test' });
     await expect(store.updateUser(user.id, {})).rejects.toMatchObject({ code: 'EMPTY_UPDATE' });
   });
 
@@ -464,7 +464,7 @@ describe('updateUser', () => {
   // Concurrency/TOCTOU is covered by the allSettled-based tests in the
   // "updateUser + deleteUser — concurrency" suite below.
   it('T3b: rejected updateUser releases the lock — subsequent calls are not deadlocked', async () => {
-    const admin = await store.createUser({ username: 'noblk', password: 'pw', role: 'admin', createdBy: 'test' });
+    const admin = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'noblk', password: 'pw', role: 'admin', createdBy: 'test' });
     // Fail: LAST_ADMIN
     await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({ code: 'LAST_ADMIN' });
     // Fail: NOT_FOUND
@@ -492,8 +492,8 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
   });
 
   it('two concurrent role-demotions of two admins: exactly one allowed, ≥1 admin remains', async () => {
-    const a1 = await store.createUser({ username: 'toctou1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'toctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'toctou1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'toctou2', password: 'pw', role: 'admin', createdBy: 'test' });
 
     const results = await Promise.allSettled([
       store.updateUser(a1.id, { role: 'operator' }),
@@ -511,8 +511,8 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
   });
 
   it('two concurrent deletes of two admins: exactly one allowed, ≥1 admin remains', async () => {
-    const a1 = await store.createUser({ username: 'dtoctou1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'dtoctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'dtoctou1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a2 = await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'dtoctou2', password: 'pw', role: 'admin', createdBy: 'test' });
 
     const results = await Promise.allSettled([
       store.deleteUser(a1.id),

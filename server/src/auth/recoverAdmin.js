@@ -16,6 +16,7 @@ import { join } from 'path';
 import defaultStore from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { FOUNDING_TEAM } from './teams.js';
 
 const DEFAULT_AUDIT_LOG_PATH = join(DATA_ROOT, 'recover-admin-audit.log');
 
@@ -56,10 +57,18 @@ export async function promoteOrCreate(username, newPassword, {
     result = await store.updateUser(existing.id, { role: 'admin', password: newPassword });
     action = 'PROMOTE_RESET';
   } else {
+    // THE TEAM ON THE RECOVERY PATH. This branch runs when the named user does not exist — the
+    // "I have locked myself out and there is no account" case — so it must work against a store
+    // that is empty and has no team to pick from. It founds the same team a fresh install founds
+    // (teams.js), explicitly. The PROMOTE branch above deliberately passes no team at all: an
+    // existing user keeps whichever team they are already in, because recovering an account is not
+    // an occasion to move somebody between teams.
     result = await store.createUser({
       username,
       password: newPassword,
       role: 'admin',
+      team: FOUNDING_TEAM,
+      allowNewTeam: true,
       createdBy: 'recover-admin-cli',
     });
     action = 'CREATE_ADMIN';

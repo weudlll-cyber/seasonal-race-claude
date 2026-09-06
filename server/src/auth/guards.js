@@ -130,7 +130,37 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
       return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
     }
 
-    req.authUser = { id: user.id, username: user.username, role: user.role };  // no hash
+    // ── THE TEAM RIDES ON THE REQUEST, THE SAME WAY THE ROLE DOES ──────────────────────────────
+    // A later piece filters stored races by team; it reads `req.authUser.team` and needs no second
+    // lookup, which is what "the session carries the team" has to mean to be useful.
+    //
+    // IT IS DERIVED HERE, NOT FROZEN INTO THE SESSION AT LOGIN, and that is a decision rather than
+    // an omission. `role` is already done exactly this way and `sessionEpoch` is the only user fact
+    // stamped into the session — because the epoch's whole job is to be the OLD value, compared
+    // against the record to detect staleness. A team stamped at login would be stale in the same
+    // way with nothing to detect it: an admin moves a user to another team, and until that user
+    // happens to log out and back in, the server keeps filing and showing their races under the
+    // team they left. Reading it from the record per request costs nothing extra — requireAuth
+    // already has the record in hand for the epoch check — and cannot go stale.
+    //
+    // A MISSING TEAM IS REPORTED, NEVER A REFUSAL. A user who predates the backfill has no team;
+    // they still authenticate, and `team` is null. Turning a missing team into a 401 would lock
+    // the owner out of his own only admin account if the migration had not been run, which is the
+    // one outcome this piece must not be able to produce.
+    if (!user.team) {
+      console.warn(
+        `[auth] user ${user.username} has no team — see scripts/migrate-teams.mjs. ` +
+        'Sign-in is unaffected; anything filtered by team will not find this user.'
+      );
+    }
+
+    req.authUser = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      team: user.team ?? null,
+      teamNormalized: user.teamNormalized ?? null,
+    };  // no hash
     next();
   };
 }

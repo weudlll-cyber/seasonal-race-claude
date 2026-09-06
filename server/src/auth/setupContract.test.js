@@ -105,7 +105,12 @@ describe('POST /api/auth/setup — the client/server contract', () => {
 
   it('END TO END: the real client call against the real handler CREATES the first admin', async () => {
     const out = await setup('admin', 'pw123456', TOKEN);
-    expect(out).toEqual({ username: 'admin', role: 'admin' });
+    // The founding team is asserted as a LITERAL, not imported from teams.js, and deliberately so:
+    // the spelling is the owner's ("Seasonal Entertainment", 2026-09-05) and it is the join key
+    // every existing user was backfilled onto. Importing the constant would make this test agree
+    // with any future edit of it automatically, including a typo; written out, changing the team a
+    // fresh install founds takes an edit HERE too, in front of somebody.
+    expect(out).toEqual({ username: 'admin', role: 'admin', team: 'Seasonal Entertainment' });
     expect(existsSync(markerPath)).toBe(true);
   });
 

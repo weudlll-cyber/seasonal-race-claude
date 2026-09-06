@@ -145,7 +145,7 @@ describe('authRouter', () => {
   });
 
   it('setup: restore-safety — users exist but no marker → 409, still one user', async () => {
-    await store.createUser({ username: 'existing', password: 'pw', role: 'admin' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'existing', password: 'pw', role: 'admin' });
     const res = await agent.post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
       .send({ username: 'admin', password: 'pw123' });
@@ -162,14 +162,14 @@ describe('authRouter', () => {
   });
 
   it('login: correct user, wrong password → 401', async () => {
-    await store.createUser({ username: 'alice', password: 'correct', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'correct', role: 'operator' });
     const res = await agent.post('/api/auth/login').send({ username: 'alice', password: 'wrong' });
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('invalid credentials');
   });
 
   it('login: correct credentials → 200 { username, role } + ra.sid cookie', async () => {
-    await store.createUser({ username: 'alice', password: 'correct', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'correct', role: 'operator' });
     const res = await agent.post('/api/auth/login').send({ username: 'alice', password: 'correct' });
     expect(res.status).toBe(200);
     expect(res.body.username).toBe('alice');
@@ -186,7 +186,7 @@ describe('authRouter', () => {
   });
 
   it('me: after login → { username, role }', async () => {
-    await store.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'operator' });
     await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
     const res = await agent.get('/api/auth/me');
     expect(res.status).toBe(200);
@@ -201,7 +201,7 @@ describe('authRouter', () => {
   });
 
   it('logout: after login → { ok:true }, then /me → 401', async () => {
-    await store.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'operator' });
     await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
     const logoutRes = await agent.post('/api/auth/logout');
     expect(logoutRes.status).toBe(200);
@@ -211,7 +211,7 @@ describe('authRouter', () => {
   });
 
   it('logout: response Set-Cookie clears the active cookie name (ra.sid in test env)', async () => {
-    await store.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+    await store.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'operator' });
     await agent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
     const logoutRes = await agent.post('/api/auth/logout');
     expect(logoutRes.status).toBe(200);
@@ -228,7 +228,7 @@ describe('authRouter', () => {
       localApp.use(express.json());
       localApp.use(makeSession());
       localApp.use('/api/auth', createAuthRouter({ store: localStore, setupMarkerPath: markerPath, getBootstrapToken: () => 'TEST-TOKEN' }));
-      await localStore.createUser({ username: 'alice', password: 'pw', role: 'operator' });
+      await localStore.createUser({ team: 'Seasonal Entertainment', allowNewTeam: true, username: 'alice', password: 'pw', role: 'operator' });
       const localAgent = request.agent(localApp);
       await localAgent.post('/api/auth/login').send({ username: 'alice', password: 'pw' });
       const logoutRes = await localAgent.post('/api/auth/logout');
@@ -304,22 +304,29 @@ describe('authRouter', () => {
 
   // ── No-leak ───────────────────────────────────────────────────────────────
 
-  it('no-leak: setup/login/me success bodies contain ONLY { username, role }', async () => {
+  // TEAM WAS ADDED TO THIS LIST ON PURPOSE, 2026-09-06 (TEAMS-1), and the list stays EXACT.
+  // What this test defends is that these three bodies carry nothing but the fields named here —
+  // it exists so a passwordHash, a sessionEpoch or a whole user record can never arrive in a
+  // response because somebody returned `record` instead of picking fields. A team is neither
+  // secret nor derived from one: it is the same class of fact as the role, which has always been
+  // in this list, and the client needs it for the same reason it needs the role. Widening the
+  // list by one NAMED field does not weaken the guard; deleting the exactness would.
+  it('no-leak: setup/login/me success bodies contain ONLY { username, role, team }', async () => {
     const setupRes = await agent.post('/api/auth/setup')
       .set('x-bootstrap-token', 'TEST-TOKEN')
       .send({ username: 'admin', password: 'pw123' });
     expect(setupRes.status).toBe(201);
-    expect(Object.keys(setupRes.body).sort()).toEqual(['role', 'username']);
+    expect(Object.keys(setupRes.body).sort()).toEqual(['role', 'team', 'username']);
 
     // Agent is auto-logged-in after setup; check /me
     const meRes = await agent.get('/api/auth/me');
     expect(meRes.status).toBe(200);
-    expect(Object.keys(meRes.body).sort()).toEqual(['role', 'username']);
+    expect(Object.keys(meRes.body).sort()).toEqual(['role', 'team', 'username']);
 
     // Logout then login to test /login response shape
     await agent.post('/api/auth/logout');
     const loginRes = await agent.post('/api/auth/login').send({ username: 'admin', password: 'pw123' });
     expect(loginRes.status).toBe(200);
-    expect(Object.keys(loginRes.body).sort()).toEqual(['role', 'username']);
+    expect(Object.keys(loginRes.body).sort()).toEqual(['role', 'team', 'username']);
   });
 });

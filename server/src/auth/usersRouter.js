@@ -25,12 +25,17 @@ function createUsersRouter({ store } = {}) {
 
   // POST / — create a new race director; delegates entirely to the serialised store.createUser
   router.post('/', async (req, res) => {
-    const { username, password, role } = req.body ?? {};
+    // `team` is taken from the body with NO fallback — a create that names no team is a 400, not a
+    // user quietly filed under somebody else's team. `allowNewTeam` is the admin's explicit "yes,
+    // this really is a new team"; without it a team that matches nothing is refused (teams.js).
+    const { username, password, role, team, allowNewTeam } = req.body ?? {};
     try {
       const user = await store.createUser({
         username,
         password,
         role,
+        team,
+        allowNewTeam: allowNewTeam === true,
         createdBy: req.authUser?.username ?? 'api',
       });
       res.status(201).json(user);
@@ -38,7 +43,12 @@ function createUsersRouter({ store } = {}) {
       if (err.code === 'USERNAME_TAKEN') {
         return res.status(409).json({ error: 'username already taken' });
       }
-      if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE'].includes(err.code)) {
+      // UNKNOWN_TEAM is a 400 carrying the teams that DO exist, so the admin who mistyped one is
+      // shown what they meant instead of being told only that they were wrong.
+      if (err.code === 'UNKNOWN_TEAM') {
+        return res.status(400).json({ error: err.message, knownTeams: err.knownTeams ?? [] });
+      }
+      if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE', 'INVALID_TEAM'].includes(err.code)) {
         return res.status(400).json({ error: err.message });
       }
       console.error('[users] createUser failed:', err.code ?? err.message);
@@ -61,10 +71,15 @@ function createUsersRouter({ store } = {}) {
   // home for that (POST /api/auth/change-password calls the same function). Every OTHER session
   // of that user still carries the old epoch and still dies on its next request.
   router.put('/:id', async (req, res) => {
-    const { role, password } = req.body ?? {};
+    const { role, password, team, allowNewTeam } = req.body ?? {};
     const changedOwnPassword = password !== undefined && req.params.id === req.authUser?.id;
     try {
-      const user = await store.updateUser(req.params.id, { role, password });
+      const user = await store.updateUser(req.params.id, {
+        role,
+        password,
+        team,
+        allowNewTeam: allowNewTeam === true,
+      });
 
       if (changedOwnPassword) {
         await restampSession(req, store, req.params.id);
@@ -74,7 +89,10 @@ function createUsersRouter({ store } = {}) {
     } catch (err) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ error: 'user not found' });
       if (err.code === 'LAST_ADMIN') return res.status(409).json({ error: err.message });
-      if (['INVALID_ROLE', 'INVALID_PASSWORD', 'EMPTY_UPDATE'].includes(err.code)) {
+      if (err.code === 'UNKNOWN_TEAM') {
+        return res.status(400).json({ error: err.message, knownTeams: err.knownTeams ?? [] });
+      }
+      if (['INVALID_ROLE', 'INVALID_PASSWORD', 'INVALID_TEAM', 'EMPTY_UPDATE'].includes(err.code)) {
         return res.status(400).json({ error: err.message });
       }
       console.error('[users] updateUser failed:', err.code ?? err.message);

@@ -25,10 +25,17 @@ import { fetchUsers, createUser, updateUser, deleteUser } from '../../../service
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
+// Both fixtures carry a team, because every user the server can return does (TEAMS-1). The Team
+// select is populated FROM this list, so a fixture without one would leave the form with nothing
+// to pick and would be testing a state the product cannot reach.
+const TEST_TEAM = 'Seasonal Entertainment';
+
 const ADMIN_USER = {
   id: 'admin-id',
   username: 'testadmin',
   role: 'admin',
+  team: TEST_TEAM,
+  teamNormalized: 'seasonal entertainment',
   createdAt: '2026-06-14T00:00:00.000Z',
   createdBy: 'setup',
 };
@@ -37,6 +44,8 @@ const OP_USER = {
   id: 'op-id',
   username: 'alice',
   role: 'operator',
+  team: TEST_TEAM,
+  teamNormalized: 'seasonal entertainment',
   createdAt: '2026-06-14T00:00:00.000Z',
   createdBy: 'admin',
 };
@@ -106,10 +115,14 @@ describe('UserManagementSection — create user', () => {
       fireEvent.click(screen.getByRole('button', { name: /Add User/i }));
     });
 
+    // The team is NOT typed: it was preselected from the team the listed users are already in,
+    // which is the ordinary path — adding a colleague to the team you have.
     expect(createUser).toHaveBeenCalledWith({
       username: 'bob',
       password: 'bob-pass-123',
       role: 'operator',
+      team: TEST_TEAM,
+      allowNewTeam: false,
     });
     // fetchUsers called on mount + after create
     expect(fetchUsers).toHaveBeenCalledTimes(2);
@@ -290,5 +303,95 @@ describe('UserManagementSection — error surfacing', () => {
     const alerts = screen.getAllByRole('alert');
     const errorAlert = alerts.find((el) => el.textContent.includes('Cannot demote the last admin'));
     expect(errorAlert).toBeDefined();
+  });
+});
+
+// ── The team on the create form (TEAMS-1) ─────────────────────────────────────
+
+describe('UserManagementSection — team assignment', () => {
+  it('offers the teams that exist rather than a free-text box', async () => {
+    await act(async () => {
+      render(<UserManagementSection />);
+    });
+
+    const select = document.getElementById('um-team');
+    const values = [...select.options].map((o) => o.value);
+    expect(values).toContain(TEST_TEAM);
+    // Nothing to mistype: the new-team input only appears once "New team…" is chosen.
+    expect(document.getElementById('um-new-team')).toBeNull();
+  });
+
+  it('will not submit a new team with no name — the create is disabled, not silently defaulted', async () => {
+    await act(async () => {
+      render(<UserManagementSection />);
+    });
+
+    fireEvent.change(document.getElementById('um-username'), { target: { value: 'bob' } });
+    fireEvent.change(document.getElementById('um-password'), { target: { value: 'bob-pass-123' } });
+    fireEvent.change(document.getElementById('um-team'), { target: { value: '__new__' } });
+
+    expect(screen.getByRole('button', { name: /Add User/i }).disabled).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Add User/i }));
+    });
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it('founding a new team sends allowNewTeam — the deliberate second act', async () => {
+    createUser.mockResolvedValue({
+      id: 'new-id',
+      username: 'bob',
+      role: 'operator',
+      team: 'Other Team',
+    });
+
+    await act(async () => {
+      render(<UserManagementSection />);
+    });
+
+    fireEvent.change(document.getElementById('um-username'), { target: { value: 'bob' } });
+    fireEvent.change(document.getElementById('um-password'), { target: { value: 'bob-pass-123' } });
+    fireEvent.change(document.getElementById('um-team'), { target: { value: '__new__' } });
+    fireEvent.change(document.getElementById('um-new-team'), { target: { value: 'Other Team' } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Add User/i }));
+    });
+
+    expect(createUser).toHaveBeenCalledWith({
+      username: 'bob',
+      password: 'bob-pass-123',
+      role: 'operator',
+      team: 'Other Team',
+      allowNewTeam: true,
+    });
+  });
+
+  it('moving a user to another team calls updateUser with just the team', async () => {
+    updateUser.mockResolvedValue({ ...OP_USER, team: TEST_TEAM });
+
+    await act(async () => {
+      render(<UserManagementSection />);
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Team for alice'), { target: { value: TEST_TEAM } });
+    });
+
+    expect(updateUser).toHaveBeenCalledWith('op-id', { team: TEST_TEAM });
+  });
+
+  it('shows a user who has no team as such, rather than inventing one', async () => {
+    fetchUsers.mockResolvedValue([
+      ADMIN_USER,
+      { ...OP_USER, team: undefined, teamNormalized: undefined },
+    ]);
+
+    await act(async () => {
+      render(<UserManagementSection />);
+    });
+
+    expect(screen.getByText('no team')).toBeDefined();
   });
 });

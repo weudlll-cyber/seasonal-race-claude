@@ -13,6 +13,7 @@ import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { resolveCookieSecure, getActiveCookieName } from './session.js';
 import { restampSession } from './restampSession.js';
+import { FOUNDING_TEAM } from './teams.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
@@ -99,7 +100,28 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
         return res.status(409).json({ error: 'setup already complete' });
       }
 
-      const safeAdmin = await store.createUser({ username, password, role: 'admin', createdBy: 'setup' });
+      // THE FOUNDING TEAM, AND WHY THIS CALL SITE PASSES A CONSTANT.
+      //
+      // Everywhere else a team is CHOSEN by an admin from the teams that exist, and a name that
+      // matches none of them is refused (teams.js). Setup is the one call that cannot work that
+      // way, in both directions: there are no teams yet to choose from, and there is no admin yet
+      // to do the choosing — the account being created here IS the first admin. The piece's own
+      // rule that nobody assigns their own team would be broken by reading a team out of this
+      // request body, since the only person who could put it there is the account's owner.
+      //
+      // So the first account founds the first team, and it is the SAME constant the backfill uses,
+      // named once in teams.js. This is not the "silent default" the piece forbids — that is a
+      // default standing in for an admin's choice on the admin-facing create path, and POST
+      // /api/users has none: it refuses a create with no team. Here there is no choice to stand in
+      // for, and the team a fresh install lands in is visible in this file rather than implied.
+      const safeAdmin = await store.createUser({
+        username,
+        password,
+        role: 'admin',
+        team: FOUNDING_TEAM,
+        allowNewTeam: true,  // the store is empty by definition here; nothing exists to match
+        createdBy: 'setup',
+      });
 
       writeFileSync(setupMarkerPath, JSON.stringify({ completedAt: new Date().toISOString(), adminId: safeAdmin.id }));
       closeSync(fd); fd = null;
@@ -117,12 +139,12 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
             req.session.save((err2) => { if (err2) return reject(err2); resolve(); });
           });
         });
-        return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
+        return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role, team: safeAdmin.team });
       } catch (sessErr) {
         // Setup IS committed. Auto-login failed (rare). Do NOT roll back — the admin exists and
         // can log in manually; the client will route to /login on the next 401 from /me.
         console.warn('[auth] setup committed but auto-login failed:', sessErr?.code ?? sessErr?.message);
-        if (!res.headersSent) return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
+        if (!res.headersSent) return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role, team: safeAdmin.team });
         return;
       }
     } catch (err) {
@@ -159,7 +181,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       req.session.sessionEpoch = record.sessionEpoch ?? 0;
       req.session.save((err2) => {
         if (err2) return res.status(500).json({ error: 'login failed' });
-        res.json({ username: record.username, role: record.role });
+        res.json({ username: record.username, role: record.role, team: record.team ?? null });
       });
     });
   });
@@ -247,7 +269,8 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       return;
     }
     const safe = toSafeUser(record);
-    res.json({ username: safe.username, role: safe.role });
+    // `team` is null for a user who predates the backfill — reported, never a reason to refuse.
+    res.json({ username: safe.username, role: safe.role, team: safe.team ?? null });
   });
 
   return router;

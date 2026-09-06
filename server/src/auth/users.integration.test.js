@@ -19,10 +19,17 @@ let adminApi;
 let operatorApi;
 
 // Unique per test-run so repeated runs don't collide within the shared temp store.
+// Every create in this file names a team, because POST /api/users refuses one that does not
+// (TEAMS-1). `allowNewTeam` covers the first create against a store where the team does not exist
+// yet; once it does, later creates match it and adopt its spelling.
+const TEST_TEAM = 'Seasonal Entertainment';
+
 const NEW_USER = {
   username: `userstest-${Date.now()}`,
   password: 'Alice-Pass-123!',
   role: 'operator',
+  team: TEST_TEAM,
+  allowNewTeam: true,
 };
 
 beforeAll(async () => {
@@ -106,22 +113,62 @@ describe('POST /api/users', () => {
   it('admin invalid role → 400', async () => {
     const res = await adminApi
       .post('/api/users')
-      .send({ username: `userstest-bad-${Date.now()}`, password: 'pw-valid-123', role: 'superuser' });
+      .send({ username: `userstest-bad-${Date.now()}`, password: 'pw-valid-123', role: 'superuser', team: TEST_TEAM, allowNewTeam: true });
     expect(res.status).toBe(400);
   });
 
   it('admin empty password → 400', async () => {
     const res = await adminApi
       .post('/api/users')
-      .send({ username: `userstest-nopw-${Date.now()}`, password: '', role: 'operator' });
+      .send({ username: `userstest-nopw-${Date.now()}`, password: '', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
     expect(res.status).toBe(400);
   });
 
   it('admin missing username → 400', async () => {
     const res = await adminApi
       .post('/api/users')
-      .send({ password: 'pw-valid-123', role: 'operator' });
+      .send({ password: 'pw-valid-123', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
     expect(res.status).toBe(400);
+  });
+
+  // ── The team, over HTTP (TEAMS-1) ───────────────────────────────────────────────────────────
+  // The store's own refusals are proved in teams.test.js. These three exist because the store is
+  // not what an admin talks to: a route that forgot to forward `team`, or that quietly supplied
+  // one of its own, would pass every store test and still create teamless users all day.
+
+  it('admin create with NO team → 400, and the user is not created', async () => {
+    const username = `userstest-noteam-${Date.now()}`;
+    const res = await adminApi
+      .post('/api/users')
+      .send({ username, password: 'pw-valid-123', role: 'operator' });
+
+    expect(res.status).toBe(400);
+
+    const list = await adminApi.get('/api/users');
+    expect(list.body.some((u) => u.username === username)).toBe(false);
+  });
+
+  it('admin create with a MISTYPED team → 400 naming the teams that exist, and no user', async () => {
+    const username = `userstest-typo-${Date.now()}`;
+    const res = await adminApi
+      .post('/api/users')
+      .send({ username, password: 'pw-valid-123', role: 'operator', team: 'Seasonal entertainmnet' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.knownTeams).toContain(TEST_TEAM);
+
+    const list = await adminApi.get('/api/users');
+    expect(list.body.some((u) => u.username === username)).toBe(false);
+  });
+
+  it('admin create with a team typed in the wrong case adopts the EXISTING spelling', async () => {
+    const username = `userstest-case-${Date.now()}`;
+    const res = await adminApi
+      .post('/api/users')
+      .send({ username, password: 'pw-valid-123', role: 'operator', team: TEST_TEAM.toLowerCase() });
+
+    expect(res.status).toBe(201);
+    expect(res.body.team).toBe(TEST_TEAM);  // not the lower-cased form the admin typed
   });
 
   it('POST response body never contains passwordHash or sessionEpoch (incl. error responses)', async () => {
@@ -140,7 +187,7 @@ describe('DELETE /api/users/:id', () => {
   beforeAll(async () => {
     const res = await adminApi
       .post('/api/users')
-      .send({ username: `del-target-${Date.now()}`, password: 'del-pass-123', role: 'operator' });
+      .send({ username: `del-target-${Date.now()}`, password: 'del-pass-123', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
     targetId = res.body.id;
   });
 
@@ -199,7 +246,7 @@ describe('PUT /api/users/:id', () => {
   beforeAll(async () => {
     const res = await adminApi
       .post('/api/users')
-      .send({ username: `put-target-${Date.now()}`, password: 'put-pass-123', role: 'operator' });
+      .send({ username: `put-target-${Date.now()}`, password: 'put-pass-123', role: 'operator', team: TEST_TEAM, allowNewTeam: true });
     targetId = res.body.id;
   });
 
@@ -259,6 +306,8 @@ describe('C3b — Session invalidation on password reset (Inv. 4)', () => {
     username: `victim-${Date.now()}`,
     password: 'victim-pass-123',
     role: 'operator',
+    team: TEST_TEAM,
+    allowNewTeam: true,
   };
 
   beforeAll(async () => {

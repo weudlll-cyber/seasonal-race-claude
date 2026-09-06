@@ -3,7 +3,7 @@
 // Path:        client/src/screens/DevScreen/sections/UserManagementSection.jsx
 // Project:     RaceArena
 // Description: User Management — Dev-Screen section (Phase C step 4).
-//              Admin-only ADVANCED section: list, create, role change,
+//              Admin-only ADVANCED section: list, create, role change, TEAM assignment,
 //              password reset, and delete race directors via /api/users.
 //              Gating is handled by the SECTIONS tier system in DevScreen.jsx;
 //              no inline role check needed here.
@@ -14,6 +14,32 @@ import { fetchUsers, createUser, updateUser, deleteUser } from '../../../service
 import s from '../DevScreen.module.css';
 
 const ROLES = ['operator', 'admin'];
+
+// The sentinel the Team select uses for "this is a team that does not exist yet". It is not a team
+// name and can never collide with one: a real team name is a non-empty trimmed string, and this is
+// the only value the select can hold that the server is never sent.
+const NEW_TEAM = '__new__';
+
+/**
+ * The teams that exist, derived from the users already listed.
+ *
+ * THIS IS WHY THE FORM IS A PICKER AND NOT A TEXT BOX. A team is the key a later piece will use to
+ * decide whose races you can see, so two spellings of one team split it in a way nothing reports —
+ * see server/src/auth/teams.js, which is where that reasoning lives and is not repeated here. The
+ * admin picks from what exists; typing a name is the deliberate exception, not the default path.
+ *
+ * No endpoint of its own: GET /api/users already returns every user, so the live teams are already
+ * in hand. A /api/teams route would be a second home for a fact this list already carries.
+ */
+function teamsOf(users) {
+  const byKey = new Map();
+  for (const u of users) {
+    if (!u.team) continue; // a user awaiting the backfill has none
+    const key = u.teamNormalized ?? u.team.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, u.team);
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+}
 
 function RoleBadge({ role }) {
   const style =
@@ -48,6 +74,10 @@ function UserManagementSection() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('operator');
+  // '' until the user list has loaded and a real team can be preselected; NEW_TEAM when the admin
+  // is deliberately founding one.
+  const [newTeam, setNewTeam] = useState('');
+  const [newTeamName, setNewTeamName] = useState('');
 
   // Inline password reset — stores the id of the user whose form is open
   const [resetForId, setResetForId] = useState(null);
@@ -57,6 +87,14 @@ function UserManagementSection() {
     try {
       const data = await fetchUsers();
       setUsers(data);
+      // Preselect a team that EXISTS, so the ordinary act of adding a colleague to the team you
+      // already have takes no typing at all. With no teams yet (a store whose users all predate
+      // the backfill) the only honest option is founding one.
+      setNewTeam((current) => {
+        if (current) return current;
+        const teams = teamsOf(data);
+        return teams.length ? teams[0] : NEW_TEAM;
+      });
       setLoadError(null);
     } catch (e) {
       setLoadError(e.message ?? 'Failed to load users');
@@ -84,6 +122,22 @@ function UserManagementSection() {
       await loadUsers();
     } catch (e) {
       setMutationError(e.message ?? 'Failed to update role');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  // Moving a user between teams that ALREADY EXIST. Founding a team is deliberately not possible
+  // from this control — it happens once, on the create form, where the admin is already typing.
+  async function handleTeamChange(id, team) {
+    if (isBusy) return;
+    setMutationError(null);
+    setIsBusy(true);
+    try {
+      await updateUser(id, { team });
+      await loadUsers();
+    } catch (e) {
+      setMutationError(e.message ?? 'Failed to update team');
     } finally {
       setIsBusy(false);
     }
@@ -126,11 +180,24 @@ function UserManagementSection() {
     if (isBusy) return;
     setMutationError(null);
     setIsBusy(true);
+    // `allowNewTeam` is the admin's explicit "yes, this really is a new team". Without it the
+    // server refuses a team it does not recognise, which is what stops a typo becoming a second
+    // team nobody notices.
+    const foundingNewTeam = newTeam === NEW_TEAM;
+    const team = foundingNewTeam ? newTeamName : newTeam;
+
     try {
-      await createUser({ username: newUsername, password: newPassword, role: newRole });
+      await createUser({
+        username: newUsername,
+        password: newPassword,
+        role: newRole,
+        team,
+        allowNewTeam: foundingNewTeam,
+      });
       setNewUsername('');
       setNewPassword('');
       setNewRole('operator');
+      setNewTeamName('');
       await loadUsers();
     } catch (e) {
       setMutationError(e.message ?? 'Failed to create user');
@@ -138,6 +205,8 @@ function UserManagementSection() {
       setIsBusy(false);
     }
   }
+
+  const teams = teamsOf(users);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -186,6 +255,40 @@ function UserManagementSection() {
                   {user.username}
                 </span>
                 <RoleBadge role={user.role} />
+                {/* A user with no team predates the backfill (scripts/migrate-teams.mjs). It is
+                    SHOWN rather than hidden or silently filled in — an admin who can see it is an
+                    admin who can fix it, and nothing here is entitled to guess which team the
+                    owner meant. */}
+                {user.team ? (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      color: 'var(--color-muted)',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user.team}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#e0a800', whiteSpace: 'nowrap' }}>
+                    no team
+                  </span>
+                )}
+                <select
+                  aria-label={`Team for ${user.username}`}
+                  className={s.select}
+                  value={user.team ?? ''}
+                  disabled={isBusy || teams.length === 0}
+                  onChange={(e) => handleTeamChange(user.id, e.target.value)}
+                  style={{ width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                >
+                  {!user.team && <option value="">— no team —</option>}
+                  {teams.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
                 <select
                   aria-label={`Role for ${user.username}`}
                   className={s.select}
@@ -305,12 +408,50 @@ function UserManagementSection() {
                 ))}
               </select>
             </div>
+            <div className={s.formGroup}>
+              <label className={s.label} htmlFor="um-team">
+                Team
+              </label>
+              <select
+                id="um-team"
+                className={s.select}
+                value={newTeam}
+                onChange={(e) => setNewTeam(e.target.value)}
+                aria-label="New user team"
+              >
+                {teams.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+                <option value={NEW_TEAM}>New team…</option>
+              </select>
+            </div>
           </div>
+
+          {/* Only shown once the admin has said they are founding a team, so the ordinary path —
+              adding somebody to the team that already exists — never offers a box to mistype a
+              team name into. */}
+          {newTeam === NEW_TEAM && (
+            <div className={s.formGroup} style={{ marginTop: '0.75rem' }}>
+              <label className={s.label} htmlFor="um-new-team">
+                New team name
+              </label>
+              <input
+                id="um-new-team"
+                className={s.input}
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                autoComplete="off"
+                aria-label="New team name"
+              />
+            </div>
+          )}
           <div className={s.btnRow} style={{ marginTop: '1rem' }}>
             <button
               type="submit"
               className={`${s.btn} ${s.btnPrimary}`}
-              disabled={isBusy}
+              disabled={isBusy || !newTeam || (newTeam === NEW_TEAM && !newTeamName.trim())}
               aria-label="Add user"
             >
               {isBusy ? 'Saving…' : 'Add User'}

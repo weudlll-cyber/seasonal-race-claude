@@ -349,6 +349,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [TEAMS-1.md](TEAMS-1.md) — **a user belongs to a team, and the admin assigns it** (2026-09-06,
+  `feat/team-races-1` off master `bcf41a9b`, **unmerged — his eye owed on the sign-in path**). The
+  first piece of the topic the owner opened on 2026-09-05: races stored on the server, visible to a
+  team. **Only the team on the user is built here** — no race storage, no filtering. A user record
+  gains `team` + `teamNormalized`; the team is **REQUIRED** at creation with **no default in the
+  store**. ★ The typo that would silently split a team is closed in **two parts**: normalisation
+  takes the variant case (and a matching create **adopts the existing spelling**), and a **closed
+  set derived from the users themselves** takes the misspelling — an unknown team is refused,
+  naming the teams that exist, unless the caller passes `allowNewTeam`. **No teams table**, so no
+  second home and no migration to keep two things agreeing. The property is not "a typo is
+  impossible" but that **a typo is never accepted SILENTLY**. The team rides `req.authUser`, derived
+  per request exactly as `role` is — **deliberately not frozen into the session**, which would go
+  stale when an admin moves a user. **A missing team never refuses a sign-in.** Backfill: **30 users
+  changed, one team, idempotent, no `sessionEpoch` bumped** — ★ the brief expected **2**, and 28 of
+  the 30 are **test debris** in the gitignored dev store, flagged and not deleted. Proved in a
+  **browser** (3 passed: create through the admin's picker, sign out, sign in, assert `/me` over the
+  page's own cookie) — ★ which found that **a spec that signs out logs the whole suite out**, since
+  every spec shares one `storageState`. Sabotage reddened **5** tests across both layers, and the
+  HTTP-layer test **did not exist until the sabotage showed it was missing**. `engine-reach` selects
+  nothing; **nothing minted**.
+
 - [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
   minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall
   order was never needed. **A** measured the comeback beats against the camera (N=40): the subject is
