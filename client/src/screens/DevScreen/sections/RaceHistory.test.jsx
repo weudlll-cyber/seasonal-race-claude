@@ -8,7 +8,8 @@
 //              RaceHistory (reads) that surfaced during PR-A3 browser testing.
 // ============================================================
 
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -21,11 +22,27 @@ vi.mock('../../../modules/storage/useServerTracks.js', () => ({
   useServerTracks: vi.fn(() => []),
 }));
 
+// RACE-HISTORY-4: the section now also shows the TEAM's races from the server and can navigate to
+// the setup screen to repeat one. Neither belongs in these tests — they are about how a LOCAL entry
+// renders — so the fetch is stubbed to an empty page and the router is provided below.
+vi.mock('../../../services/racesApi.js', () => ({
+  fetchRacesPage: vi.fn(async () => ({
+    races: [],
+    hasMore: false,
+    offset: 0,
+    limit: 20,
+    team: null,
+  })),
+}));
+
 import RaceHistory from './RaceHistory.jsx';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { SAMPLE_TRACKS } from '../../../test/fixtures/sampleTracks.js';
 
 const DIRT_OVAL = SAMPLE_TRACKS.find((t) => t.name === 'Dirt Oval');
+
+/** `RaceHistory` navigates (the Run again button), so it needs a router around it. */
+const render = (ui) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,7 +51,7 @@ beforeEach(() => {
 describe('RaceHistory — section subtitle and tooltips (PR-A3.1)', () => {
   it('renders the section subtitle', () => {
     render(<RaceHistory />);
-    expect(screen.getByText(/Browse all past races/)).toBeTruthy();
+    expect(screen.getByText(/Every race your team has run/)).toBeTruthy();
   });
 
   it('renders filter label tooltips', () => {

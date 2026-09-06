@@ -66,8 +66,13 @@ import { join } from 'path';
 import { DATA_ROOT } from '../dataPaths.js';
 import { normalizeTeam, isWellFormedTeam } from '../auth/teams.js';
 import { canonicalString, contentId } from './contentAddress.js';
+import { generateShortKey } from './shortKey.js';
+import { normalizeShortKey } from '../../../client/src/modules/raceShortKey.js';
 
 const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sqlite');
+
+/** How many short keys to draw before declaring the random source broken. See the insert loop. */
+const SHORT_KEY_ATTEMPTS = 8;
 
 // ── The schema ────────────────────────────────────────────────────────────────
 //
@@ -96,6 +101,11 @@ CREATE TABLE IF NOT EXISTS races (
   -- retry, a double click or a second tab all carry the id the first attempt carried. UNIQUE makes
   -- that a property of the table rather than of the code that happens to insert today.
   client_race_id       TEXT NOT NULL UNIQUE,
+
+  -- THE SHORT NAME a person can read aloud (RACE-HISTORY-4). Random, not sequential, and UNIQUE —
+  -- the constraint is what makes uniqueness a fact rather than a hope, because a random key can
+  -- collide and the insert retries when it does. Rows are immutable, so a key is never reassigned.
+  short_key            TEXT NOT NULL UNIQUE,
 
   -- Who may see it. Both forms, for the same reason a user carries both (TEAMS-1): the display
   -- spelling is what a person reads, the normalised key is what a query joins on.
@@ -272,6 +282,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     if (already) {
       return {
         id: already.id,
+        shortKey: already.short_key,
         rosterId: already.roster_id,
         racerTypesId: already.racer_types_id,
         stored: { race: false, roster: false, racerTypes: false },
@@ -316,24 +327,57 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     // different races always differ somewhere (the seed, the time, the outcome), so this never
     // merges two real races; what it makes idempotent is storing the SAME race twice, which a
     // retry or a double-submit would otherwise turn into two rows of one event.
+    //
+    // ★ THE SHORT KEY IS NOT IN `row` AND SO NOT IN THIS HASH, deliberately. It is drawn at random,
+    // so folding it in would make the address of identical content different every time — which is
+    // the dedupe above defeated by the very field added for reading a race aloud.
     const id = contentId(row);
-    const existing = db.prepare('SELECT id FROM races WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT id, short_key FROM races WHERE id = ?').get(id);
     if (existing) {
       return {
         id,
+        shortKey: existing.short_key,
         rosterId: roster.id,
         racerTypesId: racerTypes.id,
         stored: { race: false, roster: roster.stored, racerTypes: racerTypes.stored },
       };
     }
 
-    const cols = ['id', ...Object.keys(row)];
-    db.prepare(
+    // ★ UNIQUENESS IS CHECKED AT INSERT, NOT ASSUMED. A random key can collide; the UNIQUE column
+    // is what turns that from a silent overwrite into a refused insert, and this loop is what turns
+    // the refusal into another draw. At 31^6 the second attempt is already vanishingly unlikely, so
+    // the loop is about being CORRECT rather than about being likely — an attempt cap is kept so a
+    // genuinely broken random source fails loudly instead of spinning forever.
+    const cols = ['id', 'short_key', ...Object.keys(row)];
+    const insert = db.prepare(
       `INSERT INTO races (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`
-    ).run(id, ...Object.values(row));
+    );
+
+    let shortKey = null;
+    for (let attempt = 0; attempt < SHORT_KEY_ATTEMPTS; attempt++) {
+      const candidate = generateShortKey();
+      try {
+        insert.run(id, candidate, ...Object.values(row));
+        shortKey = candidate;
+        break;
+      } catch (err) {
+        // Only a short-key collision is retried. Any other constraint failure is a real fault and
+        // must not be swallowed by a loop that looks like it is handling it.
+        if (!String(err.message).includes('races.short_key')) throw err;
+      }
+    }
+    if (shortKey === null) {
+      const err = new Error(
+        `could not find an unused short key in ${SHORT_KEY_ATTEMPTS} attempts — the random source ` +
+          'or the key space is not what this store believes it is'
+      );
+      err.code = 'SHORT_KEY_EXHAUSTED';
+      throw err;
+    }
 
     return {
       id,
+      shortKey,
       rosterId: roster.id,
       racerTypesId: racerTypes.id,
       stored: { race: true, roster: roster.stored, racerTypes: racerTypes.stored },
@@ -351,6 +395,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     return {
       id: row.id,
       clientRaceId: row.client_race_id,
+      shortKey: row.short_key,
       team: row.team,
       teamNormalized: row.team_normalized,
       finishedAt: row.finished_at,
@@ -389,6 +434,25 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   }
 
   /**
+   * One race by its short key, WITHIN A TEAM.
+   *
+   * ★ THE TEAM IS A REQUIRED ARGUMENT, not an optional filter, and that is the whole security shape
+   * of the key. A key is a name, not a permission (shortKey.js): looking one up without saying whose
+   * history is being searched would turn every key into a capability, so this function cannot be
+   * called in a way that forgets. A key from another team finds nothing here, which is the same
+   * answer a key that was never issued gets — the caller cannot tell them apart, and must not.
+   */
+  function getRaceByShortKey(shortKey, team) {
+    const key = normalizeShortKey(shortKey);
+    if (key === null || !isWellFormedTeam(team)) return null;
+    return hydrate(
+      db
+        .prepare('SELECT * FROM races WHERE short_key = ? AND team_normalized = ?')
+        .get(key, normalizeTeam(team))
+    );
+  }
+
+  /**
    * Every race belonging to a team, newest first.
    *
    * Matched on the NORMALISED key, so a caller that types the team in a different case gets the
@@ -403,6 +467,22 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
       )
       .all(normalizeTeam(team), limit, offset);
     return rows.map(hydrate);
+  }
+
+  /**
+   * One PAGE of a team's races, newest first, with whether there is another.
+   *
+   * ★ PAGINATED FROM THE FIRST VERSION, on purpose, with three rows in the table. A list that is
+   * built unpaginated is built against an assumption that stops being true quietly: the screen
+   * keeps working, then one evening it is fetching a season. `hasMore` is answered by asking for
+   * ONE ROW MORE than the page and seeing whether it came back — no COUNT(*) over the whole team,
+   * which is a second query whose cost grows with exactly the thing paging exists to bound.
+   */
+  function listRacesPage(team, { limit = 20, offset = 0 } = {}) {
+    const size = Math.max(1, Math.min(100, Number(limit) || 20));
+    const from = Math.max(0, Number(offset) || 0);
+    const rows = listRacesByTeam(team, { limit: size + 1, offset: from });
+    return { races: rows.slice(0, size), hasMore: rows.length > size, offset: from, limit: size };
   }
 
   /**
@@ -429,7 +509,9 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     storeRace,
     getRaceById,
     getRaceByClientId,
+    getRaceByShortKey,
     listRacesByTeam,
+    listRacesPage,
     getRacerTypes,
     counts,
     close: () => db.close(),

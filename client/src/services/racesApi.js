@@ -57,3 +57,39 @@ export async function postRace(payload) {
   const body = await res.json();
   return { ok: true, id: body.id, alreadyStored: !!body.alreadyStored };
 }
+
+/**
+ * One page of THIS TEAM's races, newest first. The team is read from the session server-side; there
+ * is no team parameter here and there must not be one.
+ *
+ * @returns {Promise<{races: object[], hasMore: boolean, offset: number, limit: number, team: string|null}>}
+ */
+export async function fetchRacesPage({ limit = 20, offset = 0 } = {}) {
+  const res = await apiCall(`${BASE_URL}?limit=${limit}&offset=${offset}`, {
+    _skipAuthRedirect: true,
+  });
+  return res.json();
+}
+
+/**
+ * One race by the short key a person typed.
+ *
+ * Returns `null` for "no race with that key" — which the server answers for a key that was never
+ * issued AND for one belonging to another team, deliberately indistinguishably. Every other failure
+ * throws, because "the server is down" and "that race does not exist" must not look the same to the
+ * person who typed it.
+ *
+ * @param {string} shortKey
+ * @returns {Promise<object|null>}
+ */
+export async function fetchRaceByShortKey(shortKey) {
+  try {
+    const res = await apiCall(`${BASE_URL}/${encodeURIComponent(shortKey)}`, {
+      _skipAuthRedirect: true,
+    });
+    return await res.json();
+  } catch (err) {
+    if (err?.status === 404) return null;
+    throw err;
+  }
+}

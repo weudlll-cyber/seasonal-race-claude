@@ -349,6 +349,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RACE-HISTORY-4.md](RACE-HISTORY-4.md) — **the team's races, a button that repeats one, and a
+  short key** (2026-09-06, `feat/team-races-1`, **unmerged — the owner tests the whole topic at
+  once**). Fourth and last piece of the team-races topic. ★ **The history view was ALREADY
+  operator-reachable** (`tier: 'operator'`, `/dev` has no `requiredRole`), so it was EXTENDED in
+  place and the tree still has one race list. The row button reuses the `run it again` path exactly:
+  the identifier goes into `KEYS.RACE_SEED` and `startRaceFromIdentifier` runs it — one starter,
+  unchanged. The short key is **six characters with BOTH members of each confusable pair removed**
+  (0/O, 1/I/L), because Crockford-style FOLDING can land a mistyped key on somebody else's race;
+  random not sequential, UNIQUE with retry-on-collision, and **a name rather than a permission** —
+  another team's key gets the same 404 body as one never issued. Paginated from the first version.
+  ★ Build mismatch: **warn-and-run** is tonight's rule and **NEEDS HIS WORD**. ★ **The browser test
+  found two defects nothing else could**: `RaceScreen` MUTATED the recorded config world
+  (`isOpen` leaked into the store, so a repeat differed from its original on paper), and the armed
+  repeat was consumed during RENDER and lost to StrictMode's double mount. ★ Sabotage (b) reddened
+  only the WRITE path — the two READ paths were correct but **unproven**, and two tests were added
+  under the sabotage. 4 browser tests passed; `engine-reach` selects nothing; nothing minted.
+
 - [RACE-SAVE-3.md](RACE-SAVE-3.md) — **a finished race is written locally, then to the server**
   (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Third piece of the
   team-races topic, on the owner's rule of 2026-09-06: **local first, always; the server is a second

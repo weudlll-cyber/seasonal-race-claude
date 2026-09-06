@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L988-L1013)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1121-L1146)):
 
 ```
 Branding: None ▼
@@ -166,7 +166,7 @@ The canvas carrier chain in full:
    ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L236-L240)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L944-L979)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1085-L1120)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 

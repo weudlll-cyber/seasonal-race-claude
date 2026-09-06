@@ -22,6 +22,7 @@
 // ============================================================
 
 import { looksLikeRaceIdentifier } from '../../modules/raceIdentifier.js';
+import { looksLikeShortKey } from '../../modules/raceShortKey.js';
 
 // The minimum typed/drawn seed (0 = the unseeded legacy path, deliberately unreachable from Quick-Test).
 export const QUICK_TEST_SEED_MIN = 1;
@@ -49,6 +50,11 @@ export function sanitizeQuickTestSeedInput(raw) {
   // start time where a refusal can be shown, not here on every keystroke.
   const asText = String(raw ?? '').trim();
   if (looksLikeRaceIdentifier(asText)) return asText;
+  // RACE-HISTORY-4: and a SHORT KEY is the third form, for exactly the reason the identifier is the
+  // second — the digits filter below would shred "ABC234" to "234" and start a race with a seed
+  // nobody typed. It is passed through as typed; whether it NAMES a race is the server's question,
+  // asked when the person asks for it, not here on every keystroke.
+  if (looksLikeShortKey(asText)) return asText;
   const digits = String(raw ?? '').replace(/[^0-9]/g, '');
   if (digits === '') return '';
   const n = Math.min(QUICK_TEST_SEED_TYPED_MAX, Math.max(QUICK_TEST_SEED_MIN, Number(digits)));

@@ -8,7 +8,7 @@
 //              changes are reflected immediately
 // ============================================================
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SeedRedeliveryNotice from '../../components/SeedRedeliveryNotice.jsx';
 import PlayerSetup from './PlayerSetup.jsx';
@@ -39,6 +39,9 @@ import {
   looksLikeRaceIdentifier,
 } from '../../modules/raceIdentifier.js';
 import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
+import { looksLikeShortKey, normalizeShortKey } from '../../modules/raceShortKey.js';
+import { identifierForStoredInputs, takeArmedRepeat } from '../../modules/repeatRace.js';
+import { fetchRaceByShortKey } from '../../services/racesApi.js';
 import { buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
@@ -149,6 +152,17 @@ function SetupScreen() {
     const v = storageGet(KEYS.LAST_RACE_IDENTIFIER, null);
     return looksLikeRaceIdentifier(v) ? v : null;
   });
+
+  // RACE-HISTORY-4 — THE BUILD A REPEAT ASKED TO BE READ AGAINST.
+  //
+  // Null for everything typed or pasted by hand, which is the ordinary case and keeps the pasted
+  // path exactly as it was: a stranger's string is still checked against THIS build and still
+  // refused when it disagrees. It is set only when the person clicked a race in their own team's
+  // history, where refusing would make every race older than the last deploy useless. See
+  // `repeatRace.js` for the owner's rule this implements.
+  const [repeatBuildId, setRepeatBuildId] = useState(null);
+  // What a typed short key is doing: looking it up, or the reason it failed.
+  const [shortKeyState, setShortKeyState] = useState({ busy: false, error: null });
 
   // RUN-IT-AGAIN-1 — record the race that is about to run, as a whole race.
   //
@@ -347,14 +361,110 @@ function SetupScreen() {
     try {
       const decoded = decodeRaceIdentifier(raceSeed, {
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
-        buildId: raceIdentifierBuildId(),
+        // A repeat out of the history is read against the build it was RECORDED under; anything
+        // else against this one. Two lines up from a refusal either way — this decides which
+        // question is being asked, not whether it is asked.
+        buildId: repeatBuildId ?? raceIdentifierBuildId(),
       });
       const geometryHere = !!getTrack(decoded.geometryId);
       return { decoded, geometryHere, error: null };
     } catch (err) {
       return { decoded: null, geometryHere: false, error: err?.message ?? String(err) };
     }
-  }, [raceSeed]);
+  }, [raceSeed, repeatBuildId]);
+
+  // ★ THE RACE WAS RECORDED UNDER A DIFFERENT BUILD, and the person is told BEFORE it starts.
+  // It still runs — the owner's rule of 2026-09-06 — but "possibly not identical" is said out loud
+  // rather than left for somebody to notice in the result.
+  const repeatBuildMismatch = repeatBuildId != null && repeatBuildId !== raceIdentifierBuildId();
+
+  // Anything typed or pasted by hand is a NEW question, so the build a previous repeat asked to be
+  // read against stops applying — otherwise a race clicked out of the history would silently lend
+  // its build to the next string the person typed.
+  function handleSeedChange(value) {
+    setRepeatBuildId(null);
+    setShortKeyState({ busy: false, error: null });
+    setIdentifierError(null);
+    setRaceSeed(value);
+  }
+
+  // ── RACE-HISTORY-4: a race clicked in the history ────────────────────────────────────────────
+  //
+  // The history row armed a repeat and navigated here. The identifier is already in the field
+  // (`repeatRace.armRepeat` writes the same key the field reads), so this only has to adopt the
+  // build it was recorded under and start it. ONE-SHOT: `takeArmedRepeat` removes the note as it
+  // reads it, so coming back to this screen later does not run the race again unasked.
+  //
+  // It waits for the tracks, because starting needs the geometry and `startRaceFromIdentifier`
+  // would otherwise refuse a race this device does in fact have.
+  // ★ THE NOTE IS READ IN AN EFFECT, NOT DURING RENDER, and that is a defect this piece already
+  // paid for once. Reading it in the component body consumed it on the FIRST render; StrictMode
+  // mounts, unmounts and mounts again, so the second mount got a fresh ref and an empty note and
+  // the race never started. The browser test caught it — nothing at the unit layer could have,
+  // because the double mount is React's behaviour and not the component's.
+  //
+  // The ref guard is what makes it once-per-instance across StrictMode's double effect, and the
+  // note is not consumed until the tracks are here: taking it earlier would spend it on a render
+  // that cannot start a race, and the race would be lost rather than delayed.
+  const armedRepeatConsumed = useRef(false);
+
+  useEffect(() => {
+    if (armedRepeatConsumed.current) return;
+    if (!tracks.length) return;
+    const armed = takeArmedRepeat();
+    armedRepeatConsumed.current = true;
+    if (!armed) return;
+    // The banner reads this; the start below does not depend on it having settled.
+    setRepeatBuildId(armed.buildId ?? null);
+    startRaceFromIdentifier(armed.identifier, armed.buildId ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks.length]);
+
+  // ── RACE-HISTORY-4: a SHORT KEY typed into the same field ────────────────────────────────────
+  //
+  // ★ THE THIRD FORM THIS FIELD ACCEPTS, beside a seed and a long identifier — and deliberately not
+  // a second input. A key names a race on the server, so unlike the other two it needs a fetch; the
+  // race's inputs come back, become an identifier through the same encoder the history button uses,
+  // and the existing start path takes it from there.
+  //
+  // ★ IT NEVER FALLS THROUGH TO SEED BEHAVIOUR. A six-character key is not a number, so nothing
+  // would have treated it as a seed — but an UNKNOWN key must not quietly become "random seed"
+  // either, so the failure is stated and `canStart` is held down until the field changes.
+  const typedShortKey = looksLikeShortKey(raceSeed) ? normalizeShortKey(raceSeed) : null;
+
+  async function resolveShortKey(key) {
+    setShortKeyState({ busy: true, error: null });
+    let race;
+    try {
+      race = await fetchRaceByShortKey(key);
+    } catch (err) {
+      setShortKeyState({
+        busy: false,
+        error: `Could not look that key up: ${err?.message ?? String(err)}`,
+      });
+      return;
+    }
+    if (!race) {
+      setShortKeyState({
+        busy: false,
+        error: `No race with the key ${key} in your team. Check the key, or ask for it again.`,
+      });
+      return;
+    }
+    let identifier;
+    try {
+      identifier = identifierForStoredInputs(race);
+    } catch (err) {
+      setShortKeyState({
+        busy: false,
+        error: `That race is stored but cannot be rebuilt here: ${err?.message ?? String(err)}`,
+      });
+      return;
+    }
+    setShortKeyState({ busy: false, error: null });
+    setRepeatBuildId(race.buildId ?? null);
+    setRaceSeed(identifier);
+  }
 
   // With a usable identifier in the field the screen's own selection is irrelevant: everything the
   // race needs travels in the string, except the geometry, which must be on this device.
@@ -674,17 +784,24 @@ function SetupScreen() {
     racePlanMinDur,
   ]);
 
-  function startRaceFromIdentifier(text) {
+  /**
+   * @param {string} text
+   * @param {string|null} [buildIdForDecode] RACE-HISTORY-4: the build a REPEAT was recorded under.
+   *        Given, it is decoded against instead of the running build AND the memo is bypassed —
+   *        `pastedIdentifier` is memoised on state that may not have settled yet when a repeat
+   *        starts, and a decode against the wrong build is the one mistake this must not make.
+   */
+  function startRaceFromIdentifier(text, buildIdForDecode = null) {
     // The SAME decode the Start button was enabled on — see `pastedIdentifier`. Decoding a second
     // time here would let the gate and the run disagree about the same string.
     const parsed =
-      pastedIdentifier ??
+      (buildIdForDecode == null ? pastedIdentifier : null) ??
       (() => {
         try {
           return {
             decoded: decodeRaceIdentifier(text, {
               defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
-              buildId: raceIdentifierBuildId(),
+              buildId: buildIdForDecode ?? raceIdentifierBuildId(),
             }),
             error: null,
           };
@@ -755,6 +872,22 @@ function SetupScreen() {
     // to be the one in the string.
     if (looksLikeRaceIdentifier(raceSeed)) {
       startRaceFromIdentifier(raceSeed);
+      return;
+    }
+    // ★ RACE-HISTORY-4 — A SHORT KEY MUST NEVER FALL THROUGH TO SEED BEHAVIOUR.
+    //
+    // The field holds a name, not a race, until the key has been looked up and replaced by the
+    // identifier it names. Without this the code below would read "ABC234" as a seed, `Number()`
+    // it to NaN, and start a race with a DRAWN seed — a different race, started silently, in
+    // answer to a request for a specific one. Refusing here is the same rule the identifier path
+    // states two comments up, for the same reason.
+    if (looksLikeShortKey(raceSeed)) {
+      setShortKeyState({
+        busy: false,
+        error:
+          `${normalizeShortKey(raceSeed)} is a race key, and it has not been looked up yet. ` +
+          'Use "find this race" first — starting now would run a different race.',
+      });
       return;
     }
     // QUIET-FAILURES-1 — the same refusal as Quick Test, for the same reason: `trackIsOpen`
@@ -1355,7 +1488,12 @@ function SetupScreen() {
                 settings={raceSettings}
                 onChange={setRaceSettings}
                 seed={raceSeed}
-                onSeedChange={setRaceSeed}
+                onSeedChange={handleSeedChange}
+                typedShortKey={typedShortKey}
+                shortKeyBusy={shortKeyState.busy}
+                shortKeyError={shortKeyState.error}
+                onResolveShortKey={resolveShortKey}
+                buildMismatch={repeatBuildMismatch}
                 lastRaceSeed={lastRaceSeed}
                 lastRaceIdentifier={lastRaceIdentifier}
                 identifierError={identifierError}
