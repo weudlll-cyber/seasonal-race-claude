@@ -213,10 +213,10 @@ describe('GET /api/tracks/:id/background', () => {
     // Tiny valid JPEG (1×1 pixel).
     const tinyJpeg = Buffer.from(
       '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
-      'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
-      'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
-      'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
-      'AAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABmX/9k=',
+        'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+        'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+        'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+        'AAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABmX/9k=',
       'base64'
     );
     const uploadRes = await api
@@ -276,9 +276,7 @@ describe('POST /api/tracks', () => {
   });
 
   it('returns 400 when closed is not boolean', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, closed: 'yes' });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, closed: 'yes' });
     expect(res.status).toBe(400);
   });
 
@@ -341,9 +339,7 @@ describe('PUT /api/tracks/:id', () => {
     const originalGeometryId = createRes.body.geometryId;
     const createdAt = createRes.body.createdAt;
 
-    const updateRes = await api
-      .put(`/api/tracks/${id}`)
-      .send({ ...VALID_TRACK, name: 'Updated' });
+    const updateRes = await api.put(`/api/tracks/${id}`).send({ ...VALID_TRACK, name: 'Updated' });
     expect(updateRes.body.geometryId).toBe(originalGeometryId);
     expect(updateRes.body.createdAt).toBe(createdAt);
   });
@@ -353,9 +349,7 @@ describe('PUT /api/tracks/:id', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const updateRes = await api
-      .put(`/api/tracks/${id}`)
-      .send({ geometryId: null });
+    const updateRes = await api.put(`/api/tracks/${id}`).send({ geometryId: null });
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.geometryId).toBeNull();
   });
@@ -477,9 +471,7 @@ describe('POST /api/tracks — surfaceClasses', () => {
   });
 
   it('creates a track with empty surfaceClasses: []', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, surfaceClasses: [] });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, surfaceClasses: [] });
     expect(res.status).toBe(201);
     expect(res.body.surfaceClasses).toEqual([]);
     createdIds.push(res.body.id);
@@ -561,9 +553,7 @@ describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)'
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ name: 'Bad Closed', closed: 'yes' });
+    const res = await api.put(`/api/tracks/${id}`).send({ name: 'Bad Closed', closed: 'yes' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/closed must be a boolean/i);
   });
@@ -573,9 +563,7 @@ describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)'
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ centerPoints: [{ x: 1, y: 1 }] });
+    const res = await api.put(`/api/tracks/${id}`).send({ centerPoints: [{ x: 1, y: 1 }] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/geometry/i);
   });
@@ -585,10 +573,12 @@ describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)'
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const newCenter = [{ x: 10, y: 20 }, { x: 30, y: 40 }, { x: 50, y: 20 }];
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ closed: true, centerPoints: newCenter });
+    const newCenter = [
+      { x: 10, y: 20 },
+      { x: 30, y: 40 },
+      { x: 50, y: 20 },
+    ];
+    const res = await api.put(`/api/tracks/${id}`).send({ closed: true, centerPoints: newCenter });
     expect(res.status).toBe(200);
 
     const detail = await api.get(`/api/tracks/${id}`);
@@ -609,17 +599,13 @@ describe('PUT /api/tracks/:id — partial metadata update (no geometry in body)'
 
 describe('POST /api/tracks — surfaceClasses validation', () => {
   it('returns 400 when surfaceClasses is an object, not an array', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, surfaceClasses: {} });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, surfaceClasses: {} });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
   });
 
   it('returns 400 when surfaceClasses is a string', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, surfaceClasses: 'earth' });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, surfaceClasses: 'earth' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
   });
@@ -648,9 +634,7 @@ describe('PUT /api/tracks/:id — surfaceClasses validation', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ surfaceClasses: 'water' });
+    const res = await api.put(`/api/tracks/${id}`).send({ surfaceClasses: 'water' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
   });
@@ -660,9 +644,7 @@ describe('PUT /api/tracks/:id — surfaceClasses validation', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ surfaceClasses: [null, 'earth'] });
+    const res = await api.put(`/api/tracks/${id}`).send({ surfaceClasses: [null, 'earth'] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/surfaceClasses must be an array of strings/i);
   });
@@ -672,9 +654,7 @@ describe('PUT /api/tracks/:id — surfaceClasses validation', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ surfaceClasses: ['air'] });
+    const res = await api.put(`/api/tracks/${id}`).send({ surfaceClasses: ['air'] });
     expect(res.status).toBe(200);
     expect(res.body.surfaceClasses).toEqual(['air']);
   });
@@ -682,42 +662,32 @@ describe('PUT /api/tracks/:id — surfaceClasses validation', () => {
 
 describe('POST /api/tracks — maxRacers validation', () => {
   it('returns 400 when maxRacers is negative', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: -1 });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: -1 });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
   });
 
   it('returns 400 when maxRacers is a string', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: 'auto' });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: 'auto' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
   });
 
   it('returns 400 when maxRacers is an array', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: [] });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: [] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/maxRacers must be a positive number or null/i);
   });
 
   it('returns 201 when maxRacers is a positive number', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: 10 });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: 10 });
     expect(res.status).toBe(201);
     expect(res.body.maxRacers).toBe(10);
     createdIds.push(res.body.id);
   });
 
   it('returns 201 when maxRacers is null', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: null });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: null });
     expect(res.status).toBe(201);
     expect(res.body.maxRacers).toBeNull();
     createdIds.push(res.body.id);
@@ -756,9 +726,7 @@ describe('PUT /api/tracks/:id — maxRacers validation', () => {
   });
 
   it('returns 200 when maxRacers is updated to null', async () => {
-    const createRes = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, maxRacers: 12 });
+    const createRes = await api.post('/api/tracks').send({ ...VALID_TRACK, maxRacers: 12 });
     const id = createRes.body.id;
     createdIds.push(id);
 
@@ -795,9 +763,7 @@ describe('trackLights field — startup migration', () => {
 
 describe('POST /api/tracks — trackLights', () => {
   it('creates a track with valid trackLights and returns it in the response', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, trackLights: VALID_LIGHTS });
     expect(res.status).toBe(201);
     expect(res.body.trackLights).toMatchObject(VALID_LIGHTS);
     createdIds.push(res.body.id);
@@ -853,9 +819,7 @@ describe('POST /api/tracks — trackLights', () => {
   });
 
   it('returns 400 when trackLights is an array', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, trackLights: [] });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, trackLights: [] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/trackLights must be an object/i);
   });
@@ -892,9 +856,7 @@ describe('PUT /api/tracks/:id — trackLights update', () => {
     createdIds.push(id);
 
     const newLights = { color: '#ff8844', style: 'sync_pulse', speed: 0.7 };
-    const updateRes = await api
-      .put(`/api/tracks/${id}`)
-      .send({ trackLights: newLights });
+    const updateRes = await api.put(`/api/tracks/${id}`).send({ trackLights: newLights });
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.trackLights).toMatchObject(newLights);
   });
@@ -1079,12 +1041,22 @@ describe('POST /api/tracks/:id/background', () => {
 // C1 — effect config.count must be a finite integer 0–1000
 describe('POST /api/tracks — C1: effect count validation', () => {
   it('rejects count: 1e12 (the audit exploit payload)', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        effects: [{ id: 'dust', config: { count: 1e12, size: 1, color: '#fff', opacity: 0.5, drift: 1, direction: 'random' } }],
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      effects: [
+        {
+          id: 'dust',
+          config: {
+            count: 1e12,
+            size: 1,
+            color: '#fff',
+            opacity: 0.5,
+            drift: 1,
+            direction: 'random',
+          },
+        },
+      ],
+    });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/count/i);
   });
@@ -1118,23 +1090,31 @@ describe('POST /api/tracks — C1: effect count validation', () => {
   });
 
   it('accepts count: 500 (highest UI slider max) — valid track created', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        effects: [{ id: 'dust', config: { count: 500, size: 1, color: '#fff', opacity: 0.5, drift: 1, direction: 'random' } }],
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      effects: [
+        {
+          id: 'dust',
+          config: {
+            count: 500,
+            size: 1,
+            color: '#fff',
+            opacity: 0.5,
+            drift: 1,
+            direction: 'random',
+          },
+        },
+      ],
+    });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
 
   it('accepts count: 1000 (cap boundary) — valid track created', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        effects: [{ id: 'dust', config: { count: 1000 } }],
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      effects: [{ id: 'dust', config: { count: 1000 } }],
+    });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
@@ -1189,49 +1169,50 @@ describe('PUT /api/tracks/:id — C1: effect count validation', () => {
 // C2 — geometry coordinates must be finite numbers within bounds
 describe('POST /api/tracks — C2: geometry coordinate validation', () => {
   it('rejects centerPoints: [[null,"hello"],[Infinity,-Infinity]] (the audit exploit payload)', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [[null, 'hello'], [Infinity, -Infinity]],
-        innerPoints: undefined,
-        outerPoints: undefined,
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        [null, 'hello'],
+        [Infinity, -Infinity],
+      ],
+      innerPoints: undefined,
+      outerPoints: undefined,
+    });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/centerPoints/i);
   });
 
   it('rejects centerPoints with NaN coordinate', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [{ x: NaN, y: 100 }, { x: 200, y: 100 }],
-        innerPoints: undefined,
-        outerPoints: undefined,
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        { x: NaN, y: 100 },
+        { x: 200, y: 100 },
+      ],
+      innerPoints: undefined,
+      outerPoints: undefined,
+    });
     expect(res.status).toBe(400);
   });
 
   it('rejects centerPoints coordinate exceeding COORD_BOUND (1e10)', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [{ x: 1e10, y: 100 }, { x: 200, y: 100 }],
-        innerPoints: undefined,
-        outerPoints: undefined,
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        { x: 1e10, y: 100 },
+        { x: 200, y: 100 },
+      ],
+      innerPoints: undefined,
+      outerPoints: undefined,
+    });
     expect(res.status).toBe(400);
   });
 
   it('rejects innerPoints with null entry', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        innerPoints: [null, { x: 200, y: 100 }, { x: 300, y: 100 }],
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      innerPoints: [null, { x: 200, y: 100 }, { x: 300, y: 100 }],
+    });
     expect(res.status).toBe(400);
   });
 
@@ -1242,39 +1223,51 @@ describe('POST /api/tracks — C2: geometry coordinate validation', () => {
   });
 
   it('accepts [x,y] array points within bounds — valid track created', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [[100, 200], [300, 400], [500, 200]],
-        innerPoints: [[80, 180], [300, 380], [520, 180]],
-        outerPoints: [[120, 220], [300, 420], [480, 220]],
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        [100, 200],
+        [300, 400],
+        [500, 200],
+      ],
+      innerPoints: [
+        [80, 180],
+        [300, 380],
+        [520, 180],
+      ],
+      outerPoints: [
+        [120, 220],
+        [300, 420],
+        [480, 220],
+      ],
+    });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
 
   it('rejects a coord just above COORD_BOUND (10001)', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [{ x: 10001, y: 0 }, { x: 200, y: 100 }],
-        innerPoints: undefined,
-        outerPoints: undefined,
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        { x: 10001, y: 0 },
+        { x: 200, y: 100 },
+      ],
+      innerPoints: undefined,
+      outerPoints: undefined,
+    });
     expect(res.status).toBe(400);
   });
 
   it('accepts a coord at COORD_BOUND (10000)', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({
-        ...VALID_TRACK,
-        centerPoints: [{ x: 10000, y: 0 }, { x: 200, y: 100 }],
-        innerPoints: undefined,
-        outerPoints: undefined,
-      });
+    const res = await api.post('/api/tracks').send({
+      ...VALID_TRACK,
+      centerPoints: [
+        { x: 10000, y: 0 },
+        { x: 200, y: 100 },
+      ],
+      innerPoints: undefined,
+      outerPoints: undefined,
+    });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
@@ -1283,17 +1276,13 @@ describe('POST /api/tracks — C2: geometry coordinate validation', () => {
 // H4 — track name length limit
 describe('POST /api/tracks — H4: name length limit', () => {
   it('rejects a name longer than 100 characters', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, name: 'A'.repeat(101) });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, name: 'A'.repeat(101) });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/name/i);
   });
 
   it('accepts a name of exactly 100 characters', async () => {
-    const res = await api
-      .post('/api/tracks')
-      .send({ ...VALID_TRACK, name: 'A'.repeat(100) });
+    const res = await api.post('/api/tracks').send({ ...VALID_TRACK, name: 'A'.repeat(100) });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);
   });
@@ -1305,9 +1294,7 @@ describe('PUT /api/tracks/:id — H4: name length limit', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ name: 'B'.repeat(101) });
+    const res = await api.put(`/api/tracks/${id}`).send({ name: 'B'.repeat(101) });
     expect(res.status).toBe(400);
   });
 
@@ -1316,9 +1303,7 @@ describe('PUT /api/tracks/:id — H4: name length limit', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const res = await api
-      .put(`/api/tracks/${id}`)
-      .send({ name: 'B'.repeat(100) });
+    const res = await api.put(`/api/tracks/${id}`).send({ name: 'B'.repeat(100) });
     expect(res.status).toBe(200);
   });
 });
@@ -1332,11 +1317,11 @@ const MINIMAL_PNG = Buffer.from(
 );
 const MINIMAL_JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U' +
-  'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
-  'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
-  'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
-  'AAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA' +
-  '/9oADAMBAAIRAxEAPwCwABmX/9k=',
+    'HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgN' +
+    'DRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+    'MjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAA' +
+    'AAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA' +
+    '/9oADAMBAAIRAxEAPwCwABmX/9k=',
   'base64'
 );
 const MINIMAL_WEBP = Buffer.from(
@@ -1403,7 +1388,10 @@ describe('POST /api/tracks/:id/background — C4: content validation', () => {
     const id = createRes.body.id;
     createdIds.push(id);
 
-    const gifBytes = Buffer.from('47494638 39 61 01 00 01 00 00 00 00 3b'.replace(/\s/g,''), 'hex');
+    const gifBytes = Buffer.from(
+      '47494638 39 61 01 00 01 00 00 00 00 3b'.replace(/\s/g, ''),
+      'hex'
+    );
     const res = await api
       .post(`/api/tracks/${id}/background`)
       .attach('background', gifBytes, { filename: 'img.gif', contentType: 'image/gif' });
@@ -1418,7 +1406,10 @@ describe('POST /api/tracks/:id/background — C4: content validation', () => {
 
     const res = await api
       .post(`/api/tracks/${id}/background`)
-      .attach('background', Buffer.from('<html>evil</html>'), { filename: 'evil.html', contentType: 'text/html' });
+      .attach('background', Buffer.from('<html>evil</html>'), {
+        filename: 'evil.html',
+        contentType: 'text/html',
+      });
     expect(res.status).toBe(400);
   });
 

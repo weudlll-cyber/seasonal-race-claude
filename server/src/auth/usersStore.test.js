@@ -34,8 +34,8 @@ describe('normalizeUsername', () => {
   });
 
   it('treats NFC-composed and NFD-decomposed accents as equal', () => {
-    const nfc = 'José';                    // single NFC codepoint
-    const nfd = 'José'.normalize('NFD');   // decomposed: e + U+0301
+    const nfc = 'José'; // single NFC codepoint
+    const nfd = 'José'.normalize('NFD'); // decomposed: e + U+0301
     expect(normalizeUsername(nfc)).toBe(normalizeUsername(nfd));
   });
 });
@@ -111,7 +111,16 @@ describe('toSafeUser', () => {
   });
 
   it('strips sessionEpoch even when it is 0 (falsy)', () => {
-    const full = { id: '3', username: 'Carol', usernameNormalized: 'carol', passwordHash: 'h', sessionEpoch: 0, role: 'admin', createdAt: '', createdBy: '' };
+    const full = {
+      id: '3',
+      username: 'Carol',
+      usernameNormalized: 'carol',
+      passwordHash: 'h',
+      sessionEpoch: 0,
+      role: 'admin',
+      createdAt: '',
+      createdBy: '',
+    };
     expect(toSafeUser(full)).not.toHaveProperty('sessionEpoch');
   });
 });
@@ -144,9 +153,14 @@ describe('createUsersStore', () => {
   });
 
   it('createUser returned object has required fields and no passwordHash', async () => {
-    const user = await store.createUser({ username: ' Bob ', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({
+      username: ' Bob ',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     expect(user).toHaveProperty('id');
-    expect(user.username).toBe('Bob');              // trimmed display form
+    expect(user.username).toBe('Bob'); // trimmed display form
     expect(user.usernameNormalized).toBe('bob');
     expect(user.role).toBe('operator');
     expect(user.createdAt).toBeTruthy();
@@ -231,12 +245,16 @@ describe('createUsersStore', () => {
 
   it('readUsers throws USERS_STORE_CORRUPT for a JSON object (not array) (SF2)', () => {
     writeFileSync(tempPath, '{"not":"an array"}', 'utf8');
-    expect(() => store.readUsers()).toThrow(expect.objectContaining({ code: 'USERS_STORE_CORRUPT' }));
+    expect(() => store.readUsers()).toThrow(
+      expect.objectContaining({ code: 'USERS_STORE_CORRUPT' })
+    );
   });
 
   it('readUsers throws USERS_STORE_CORRUPT for invalid JSON (SF2)', () => {
     writeFileSync(tempPath, 'not valid json!!!', 'utf8');
-    expect(() => store.readUsers()).toThrow(expect.objectContaining({ code: 'USERS_STORE_CORRUPT' }));
+    expect(() => store.readUsers()).toThrow(
+      expect.objectContaining({ code: 'USERS_STORE_CORRUPT' })
+    );
   });
 
   it('createUser writes credential file with mode 0o600 (SF1, POSIX only)', async () => {
@@ -247,7 +265,9 @@ describe('createUsersStore', () => {
 
   it('throws USERS_STORE_PERM when chmod fails and file is left insecure (POSIX only)', async () => {
     if (process.platform === 'win32') return;
-    chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
+    chmodSync.mockImplementationOnce(() => {
+      throw new Error('EPERM');
+    });
     statSync.mockReturnValueOnce({ mode: 0o644 });
     await expect(
       store.createUser({ username: 'permfail', password: 'pw', role: 'operator' })
@@ -256,7 +276,9 @@ describe('createUsersStore', () => {
 
   it('does not throw when chmod fails but file is already 0o600 (POSIX only)', async () => {
     if (process.platform === 'win32') return;
-    chmodSync.mockImplementationOnce(() => { throw new Error('EPERM'); });
+    chmodSync.mockImplementationOnce(() => {
+      throw new Error('EPERM');
+    });
     statSync.mockReturnValueOnce({ mode: 0o600 });
     const user = await store.createUser({ username: 'permsafe', password: 'pw', role: 'operator' });
     expect(user).not.toHaveProperty('passwordHash');
@@ -314,7 +336,11 @@ describe('createUser — concurrency serialization (C2)', () => {
       store.createUser({ username: 'newuser', password: 'pw', role: 'superuser' })
     ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
     // Next valid call must succeed — no deadlock
-    const user = await store.createUser({ username: 'fresh', password: 'fresh-pass', role: 'admin' });
+    const user = await store.createUser({
+      username: 'fresh',
+      password: 'fresh-pass',
+      role: 'admin',
+    });
     expect(user).toMatchObject({ username: 'fresh', role: 'admin' });
     expect(store.countUsers()).toBe(2);
   });
@@ -337,38 +363,73 @@ describe('deleteUser', () => {
   });
 
   it('removes the user; subsequent findAuthRecordById returns null', async () => {
-    const created = await store.createUser({ username: 'todel', password: 'pw', role: 'operator', createdBy: 'test' });
+    const created = await store.createUser({
+      username: 'todel',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     // Need a second admin so the delete is allowed
-    await store.createUser({ username: 'admin2', password: 'pw2', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      username: 'admin2',
+      password: 'pw2',
+      role: 'admin',
+      createdBy: 'test',
+    });
     // Create another admin so we can delete the first one
-    await store.createUser({ username: 'admin1', password: 'pw1', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      username: 'admin1',
+      password: 'pw1',
+      role: 'admin',
+      createdBy: 'test',
+    });
     await store.deleteUser(created.id);
     expect(store.findAuthRecordById(created.id)).toBeNull();
     expect(store.countUsers()).toBe(2);
   });
 
   it('returns the safe user record of the deleted entry (no passwordHash)', async () => {
-    const a1 = await store.createUser({ username: 'da1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'da2', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      username: 'da1',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
+    const a2 = await store.createUser({
+      username: 'da2',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     const result = await store.deleteUser(a2.id);
     expect(result).not.toHaveProperty('passwordHash');
     expect(result.id).toBe(a2.id);
   });
 
   it('rejects unknown id with NOT_FOUND', async () => {
-    await expect(
-      store.deleteUser('00000000-0000-0000-0000-000000000000')
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(store.deleteUser('00000000-0000-0000-0000-000000000000')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 
   it('rejects deleting the only admin with LAST_ADMIN', async () => {
-    const admin = await store.createUser({ username: 'soleadmin', password: 'pw', role: 'admin', createdBy: 'test' });
+    const admin = await store.createUser({
+      username: 'soleadmin',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     await expect(store.deleteUser(admin.id)).rejects.toMatchObject({ code: 'LAST_ADMIN' });
-    expect(store.countUsers()).toBe(1);  // admin still in store
+    expect(store.countUsers()).toBe(1); // admin still in store
   });
 
   it('allows deleting an admin when ≥2 admins exist', async () => {
-    const a1 = await store.createUser({ username: 'adel1', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({
+      username: 'adel1',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     await store.createUser({ username: 'adel2', password: 'pw', role: 'admin', createdBy: 'test' });
     await expect(store.deleteUser(a1.id)).resolves.not.toThrow();
     expect(store.findAuthRecordById(a1.id)).toBeNull();
@@ -393,7 +454,12 @@ describe('updateUser', () => {
   });
 
   it('role change is persisted and returned without passwordHash', async () => {
-    const op = await store.createUser({ username: 'uprole', password: 'pw', role: 'operator', createdBy: 'test' });
+    const op = await store.createUser({
+      username: 'uprole',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     const result = await store.updateUser(op.id, { role: 'admin' });
     expect(result.role).toBe('admin');
     expect(result).not.toHaveProperty('passwordHash');
@@ -401,29 +467,54 @@ describe('updateUser', () => {
   });
 
   it('rejects demoting the only admin with LAST_ADMIN', async () => {
-    const admin = await store.createUser({ username: 'soleadm', password: 'pw', role: 'admin', createdBy: 'test' });
-    await expect(
-      store.updateUser(admin.id, { role: 'operator' })
-    ).rejects.toMatchObject({ code: 'LAST_ADMIN' });
-    expect(store.findAuthRecordById(admin.id).role).toBe('admin');  // unchanged
+    const admin = await store.createUser({
+      username: 'soleadm',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
+    await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({
+      code: 'LAST_ADMIN',
+    });
+    expect(store.findAuthRecordById(admin.id).role).toBe('admin'); // unchanged
   });
 
   it('allows demoting an admin when ≥2 admins exist', async () => {
-    const a1 = await store.createUser({ username: 'demote1', password: 'pw', role: 'admin', createdBy: 'test' });
-    await store.createUser({ username: 'demote2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({
+      username: 'demote1',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
+    await store.createUser({
+      username: 'demote2',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     const result = await store.updateUser(a1.id, { role: 'operator' });
     expect(result.role).toBe('operator');
   });
 
   it('rejects invalid role with INVALID_ROLE', async () => {
-    const op = await store.createUser({ username: 'badrole', password: 'pw', role: 'operator', createdBy: 'test' });
-    await expect(
-      store.updateUser(op.id, { role: 'superuser' })
-    ).rejects.toMatchObject({ code: 'INVALID_ROLE' });
+    const op = await store.createUser({
+      username: 'badrole',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
+    await expect(store.updateUser(op.id, { role: 'superuser' })).rejects.toMatchObject({
+      code: 'INVALID_ROLE',
+    });
   });
 
   it('password reset: new hash verifies new password; old hash not re-used', async () => {
-    const user = await store.createUser({ username: 'resetpw', password: 'oldpass', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({
+      username: 'resetpw',
+      password: 'oldpass',
+      role: 'operator',
+      createdBy: 'test',
+    });
     const oldRecord = store.findAuthRecordById(user.id);
     const oldHash = oldRecord.passwordHash;
 
@@ -435,7 +526,12 @@ describe('updateUser', () => {
   });
 
   it('password reset bumps sessionEpoch on the record', async () => {
-    const user = await store.createUser({ username: 'epochtest', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({
+      username: 'epochtest',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     const epochBefore = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
     await store.updateUser(user.id, { password: 'newpassword-x' });
     const epochAfter = store.findAuthRecordById(user.id).sessionEpoch ?? 0;
@@ -443,7 +539,12 @@ describe('updateUser', () => {
   });
 
   it('password reset returns safe user without passwordHash', async () => {
-    const user = await store.createUser({ username: 'safereset', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({
+      username: 'safereset',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     const result = await store.updateUser(user.id, { password: 'newpassword-y' });
     expect(result).not.toHaveProperty('passwordHash');
   });
@@ -455,7 +556,12 @@ describe('updateUser', () => {
   });
 
   it('rejects empty update (no role, no password) with EMPTY_UPDATE', async () => {
-    const user = await store.createUser({ username: 'emptyup', password: 'pw', role: 'operator', createdBy: 'test' });
+    const user = await store.createUser({
+      username: 'emptyup',
+      password: 'pw',
+      role: 'operator',
+      createdBy: 'test',
+    });
     await expect(store.updateUser(user.id, {})).rejects.toMatchObject({ code: 'EMPTY_UPDATE' });
   });
 
@@ -464,11 +570,20 @@ describe('updateUser', () => {
   // Concurrency/TOCTOU is covered by the allSettled-based tests in the
   // "updateUser + deleteUser — concurrency" suite below.
   it('T3b: rejected updateUser releases the lock — subsequent calls are not deadlocked', async () => {
-    const admin = await store.createUser({ username: 'noblk', password: 'pw', role: 'admin', createdBy: 'test' });
+    const admin = await store.createUser({
+      username: 'noblk',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     // Fail: LAST_ADMIN
-    await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({ code: 'LAST_ADMIN' });
+    await expect(store.updateUser(admin.id, { role: 'operator' })).rejects.toMatchObject({
+      code: 'LAST_ADMIN',
+    });
     // Fail: NOT_FOUND
-    await expect(store.updateUser('no-such-id', { role: 'operator' })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(store.updateUser('no-such-id', { role: 'operator' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     // Succeed: role is still admin, so promoting again is fine; use password reset
     const result = await store.updateUser(admin.id, { password: 'newpw-safe' });
     expect(result).toMatchObject({ username: 'noblk' });
@@ -492,8 +607,18 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
   });
 
   it('two concurrent role-demotions of two admins: exactly one allowed, ≥1 admin remains', async () => {
-    const a1 = await store.createUser({ username: 'toctou1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'toctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({
+      username: 'toctou1',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
+    const a2 = await store.createUser({
+      username: 'toctou2',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
 
     const results = await Promise.allSettled([
       store.updateUser(a1.id, { role: 'operator' }),
@@ -511,13 +636,20 @@ describe('updateUser + deleteUser — concurrency: TOCTOU last-admin protection'
   });
 
   it('two concurrent deletes of two admins: exactly one allowed, ≥1 admin remains', async () => {
-    const a1 = await store.createUser({ username: 'dtoctou1', password: 'pw', role: 'admin', createdBy: 'test' });
-    const a2 = await store.createUser({ username: 'dtoctou2', password: 'pw', role: 'admin', createdBy: 'test' });
+    const a1 = await store.createUser({
+      username: 'dtoctou1',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
+    const a2 = await store.createUser({
+      username: 'dtoctou2',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
 
-    const results = await Promise.allSettled([
-      store.deleteUser(a1.id),
-      store.deleteUser(a2.id),
-    ]);
+    const results = await Promise.allSettled([store.deleteUser(a1.id), store.deleteUser(a2.id)]);
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');

@@ -9,13 +9,20 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { getAllowedClientOrigins, normalizeOrigin, createCsrfOriginGuard, resolveCsrfStrict } from './csrf.js';
+import {
+  getAllowedClientOrigins,
+  normalizeOrigin,
+  createCsrfOriginGuard,
+  resolveCsrfStrict,
+} from './csrf.js';
 
 // ── Part A — unit tests ───────────────────────────────────────────────────────
 
 describe('getAllowedClientOrigins', () => {
   let saved;
-  beforeEach(() => { saved = process.env.RA_CLIENT_ORIGIN; });
+  beforeEach(() => {
+    saved = process.env.RA_CLIENT_ORIGIN;
+  });
   afterEach(() => {
     if (saved === undefined) delete process.env.RA_CLIENT_ORIGIN;
     else process.env.RA_CLIENT_ORIGIN = saved;
@@ -54,7 +61,9 @@ describe('normalizeOrigin', () => {
 // ── Part A2 — resolveCsrfStrict unit tests ────────────────────────────────────
 
 describe('resolveCsrfStrict', () => {
-  afterEach(() => { delete process.env.RA_CSRF_STRICT; });
+  afterEach(() => {
+    delete process.env.RA_CSRF_STRICT;
+  });
 
   it('RA_CSRF_STRICT=true → true, overrides isProduction:false', () => {
     process.env.RA_CSRF_STRICT = 'true';
@@ -94,13 +103,15 @@ function makeCsrfApp() {
   const app = express();
   app.use(csrfGuard);
   app.post('/api/_m', (_req, res) => res.json({ ok: true }));
-  app.get('/api/_g',  (_req, res) => res.json({ ok: true }));
+  app.get('/api/_g', (_req, res) => res.json({ ok: true }));
   return app;
 }
 
 describe('csrfOriginGuard behaviour', () => {
   let app;
-  beforeEach(() => { app = makeCsrfApp(); });
+  beforeEach(() => {
+    app = makeCsrfApp();
+  });
 
   it('POST /api/_m with no Origin/Referer → 200 (non-browser client allowed)', async () => {
     const res = await request(app).post('/api/_m');
@@ -113,7 +124,8 @@ describe('csrfOriginGuard behaviour', () => {
   });
 
   it("POST /api/_m Host 'example.test' + Origin 'http://example.test' → 200 (same-origin self)", async () => {
-    const res = await request(app).post('/api/_m')
+    const res = await request(app)
+      .post('/api/_m')
       .set('Host', 'example.test')
       .set('Origin', 'http://example.test');
     expect(res.status).toBe(200);
@@ -152,7 +164,7 @@ function makeStrictCsrfApp({ selfOrigin } = {}) {
   const app = express();
   app.use(csrfGuard);
   app.post('/api/_m', (_req, res) => res.json({ ok: true }));
-  app.get('/api/_g',  (_req, res) => res.json({ ok: true }));
+  app.get('/api/_g', (_req, res) => res.json({ ok: true }));
   return app;
 }
 
@@ -171,21 +183,22 @@ describe('csrfOriginGuard strict:true', () => {
     expect(res.body.error).toBe('cross-origin request rejected');
   });
 
-  it("valid allowed Origin → 200", async () => {
+  it('valid allowed Origin → 200', async () => {
     const app = makeStrictCsrfApp();
     const res = await request(app).post('/api/_m').set('Origin', 'https://client.example');
     expect(res.status).toBe(200);
   });
 
-  it("valid same-origin (Host-derived) → 200", async () => {
+  it('valid same-origin (Host-derived) → 200', async () => {
     const app = makeStrictCsrfApp();
-    const res = await request(app).post('/api/_m')
+    const res = await request(app)
+      .post('/api/_m')
       .set('Host', 'example.test')
       .set('Origin', 'http://example.test');
     expect(res.status).toBe(200);
   });
 
-  it("cross-origin evil → 403", async () => {
+  it('cross-origin evil → 403', async () => {
     const app = makeStrictCsrfApp();
     const res = await request(app).post('/api/_m').set('Origin', 'http://evil.test');
     expect(res.status).toBe(403);
@@ -195,7 +208,8 @@ describe('csrfOriginGuard strict:true', () => {
   it('selfOrigin from RA_PUBLIC_ORIGIN is used when set', async () => {
     const app = makeStrictCsrfApp({ selfOrigin: 'https://myapp.example.com' });
     // Host-derived self is NOT in allowed; canonical selfOrigin IS
-    const res = await request(app).post('/api/_m')
+    const res = await request(app)
+      .post('/api/_m')
       .set('Host', 'localhost:4000')
       .set('Origin', 'https://myapp.example.com');
     expect(res.status).toBe(200);

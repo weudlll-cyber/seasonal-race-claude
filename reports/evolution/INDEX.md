@@ -349,6 +349,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-MERGE-2026-09-05.md](NIGHT-MERGE-2026-09-05.md) — **the night branch cleaned and merged**
+  (2026-09-06, `night/2026-09-05` onto master; HYGIENE + MERGE, nothing built, no behaviour moved).
+  Ten finished pieces had been pushed and left unmerged, and two of them — SERVER-LINT-1's `lint` and
+  `format:check` — were **red on arrival for pre-existing reasons**: the server had never been linted
+  or formatted by anything. ★ **The catch-up had nothing to resolve** — master's four commits and the
+  night's six are disjoint by file, so `ort` merged with zero conflicts; the golden races were re-run
+  after it and PASS, so the night changed no race. ★ **Formatting 35 files → 0 and lint 36 → 2**, in
+  three classes: `no-empty` 9 → 0 through the rule's own comment accommodation, `no-unused-vars`
+  25 → 0 in **three different kinds** (7 dead and deleted, 3 live statements with a dead name, 15
+  unused *by design* and marked with the `^_` prefix the config already declares). Nothing disabled,
+  no inline suppression, no configuration narrowed; the format pass proven code-identical by comparing
+  all 35 acorn syntax trees before and after (0 differ). ★ **The two left standing are both
+  `no-console`** on deliberate stdout operator output (`index.js:17`, `staticClient.js:82`) — the only
+  allowed fix moves them to stderr, which is a behaviour change and the owner's call. verify
+  `--premerge` **PASS 22 FAIL 0**, server suite 725/725 green after every commit, and **all four
+  fingerprints run and UNMOVED — nothing minted**.
+
 - [RECOMPUTE-COST-1.md](RECOMPUTE-COST-1.md) — **what verifying a stored race by recomputation
   costs** (2026-09-06, `diag/recompute-cost-1` off master `119771bc`; MEASUREMENT ONLY, nothing
   built). ★ **Recomputing has NO side effects** — instrumented before import and through a full run:

@@ -35,10 +35,11 @@ function writeAuditLine(auditLogPath, record) {
  * @param {{ store?, auditLogPath? }} [opts]
  * @returns {{ action: 'PROMOTE_RESET'|'CREATE_ADMIN', user: object }}
  */
-export async function promoteOrCreate(username, newPassword, {
-  store = defaultStore,
-  auditLogPath = DEFAULT_AUDIT_LOG_PATH,
-} = {}) {
+export async function promoteOrCreate(
+  username,
+  newPassword,
+  { store = defaultStore, auditLogPath = DEFAULT_AUDIT_LOG_PATH } = {}
+) {
   if (!username || !String(username).trim()) {
     const err = new Error('Username is required');
     err.code = 'MISSING_USERNAME';
@@ -87,7 +88,11 @@ export function rearmSetup({
 
   if (markerPresent) {
     unlinkSync(markerPath);
-    writeAuditLine(auditLogPath, { action: 'REARM_SETUP', username: '-', outcome: 'marker-removed' });
+    writeAuditLine(auditLogPath, {
+      action: 'REARM_SETUP',
+      username: '-',
+      outcome: 'marker-removed',
+    });
   }
 
   return {

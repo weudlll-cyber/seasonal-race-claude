@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { resolve, join, dirname } from 'path';
+import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveDataRoot, DATA_ROOT } from './dataPaths.js';
 

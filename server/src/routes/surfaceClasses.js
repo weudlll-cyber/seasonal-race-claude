@@ -15,13 +15,7 @@
 // ============================================================
 
 import express from 'express';
-import {
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-  existsSync,
-  mkdirSync,
-} from 'fs';
+import { readFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
 import { DATA_ROOT } from '../dataPaths.js';
@@ -68,7 +62,9 @@ function filePath(id) {
 function validateBody(body) {
   const errors = [];
   if (!isValidId(body.id)) {
-    errors.push('id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)');
+    errors.push(
+      'id must be a non-empty lowercase alphanumeric string (hyphens/underscores allowed)'
+    );
   }
   if (!body.label || typeof body.label !== 'string' || !body.label.trim()) {
     errors.push('label is required');

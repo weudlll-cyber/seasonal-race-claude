@@ -94,15 +94,30 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     try {
       // Paranoid post-gate check: users exist without marker (restore-safety path)
       if (store.countUsers() > 0) {
-        closeSync(fd); fd = null;
-        try { unlinkSync(setupMarkerPath); } catch {}
+        closeSync(fd);
+        fd = null;
+        try {
+          unlinkSync(setupMarkerPath);
+        } catch {
+          // Best effort. The marker is being cleared only to match the store, which already
+          // says setup is complete; the 409 below is the answer either way.
+        }
         return res.status(409).json({ error: 'setup already complete' });
       }
 
-      const safeAdmin = await store.createUser({ username, password, role: 'admin', createdBy: 'setup' });
+      const safeAdmin = await store.createUser({
+        username,
+        password,
+        role: 'admin',
+        createdBy: 'setup',
+      });
 
-      writeFileSync(setupMarkerPath, JSON.stringify({ completedAt: new Date().toISOString(), adminId: safeAdmin.id }));
-      closeSync(fd); fd = null;
+      writeFileSync(
+        setupMarkerPath,
+        JSON.stringify({ completedAt: new Date().toISOString(), adminId: safeAdmin.id })
+      );
+      closeSync(fd);
+      fd = null;
 
       // Admin + marker are durably written — setup is committed from this point on.
       committed = true;
@@ -113,21 +128,42 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
           req.session.regenerate((err) => {
             if (err) return reject(err);
             req.session.userId = safeAdmin.id;
-            req.session.sessionEpoch = 0;  // new user always starts at epoch 0
-            req.session.save((err2) => { if (err2) return reject(err2); resolve(); });
+            req.session.sessionEpoch = 0; // new user always starts at epoch 0
+            req.session.save((err2) => {
+              if (err2) return reject(err2);
+              resolve();
+            });
           });
         });
         return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
       } catch (sessErr) {
         // Setup IS committed. Auto-login failed (rare). Do NOT roll back — the admin exists and
         // can log in manually; the client will route to /login on the next 401 from /me.
-        console.warn('[auth] setup committed but auto-login failed:', sessErr?.code ?? sessErr?.message);
-        if (!res.headersSent) return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
+        console.warn(
+          '[auth] setup committed but auto-login failed:',
+          sessErr?.code ?? sessErr?.message
+        );
+        if (!res.headersSent)
+          return res.status(201).json({ username: safeAdmin.username, role: safeAdmin.role });
         return;
       }
     } catch (err) {
-      if (fd !== null) { try { closeSync(fd); } catch {} }
-      if (!committed) { try { unlinkSync(setupMarkerPath); } catch {} }  // only roll back pre-commit
+      if (fd !== null) {
+        try {
+          closeSync(fd);
+        } catch {
+          // Already unwinding a failure. A close error here would replace the error that
+          // actually matters with a less informative one.
+        }
+      }
+      if (!committed) {
+        try {
+          unlinkSync(setupMarkerPath);
+        } catch {
+          // Best effort rollback. If the unlink fails the marker is stale, but setup is NOT
+          // committed, so the next attempt still finds no admin and re-runs.
+        }
+      } // only roll back pre-commit
       if (!res.headersSent) {
         if (['INVALID_USERNAME', 'INVALID_PASSWORD', 'INVALID_ROLE'].includes(err.code)) {
           return res.status(400).json({ error: 'invalid username or password' });
@@ -143,7 +179,7 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
     const record = store.findAuthRecordByUsername(username);
 
     if (!record) {
-      await verifyPassword(password, DUMMY_HASH);  // timing equalization — result ignored
+      await verifyPassword(password, DUMMY_HASH); // timing equalization — result ignored
       return res.status(401).json({ error: 'invalid credentials' });
     }
 

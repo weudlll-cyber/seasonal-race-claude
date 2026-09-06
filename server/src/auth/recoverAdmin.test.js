@@ -37,7 +37,11 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const p of Object.values(paths)) {
-    try { if (existsSync(p)) unlinkSync(p); } catch {}
+    try {
+      if (existsSync(p)) unlinkSync(p);
+    } catch {
+      // Test teardown on a file that may never have been created.
+    }
   }
 });
 
@@ -208,8 +212,8 @@ describe('Audit log — promoteOrCreate', () => {
   it('audit line NEVER contains a password or bcrypt hash', async () => {
     await promoteOrCreate('alice', 'secret-pw-xyz', { store, auditLogPath: paths.auditPath });
     const content = readFileSync(paths.auditPath, 'utf8');
-    expect(content).not.toMatch(/\$2[ab]\$/);          // no bcrypt hash
-    expect(content).not.toContain('secret-pw-xyz');    // no plaintext password
+    expect(content).not.toMatch(/\$2[ab]\$/); // no bcrypt hash
+    expect(content).not.toContain('secret-pw-xyz'); // no plaintext password
     expect(content.toLowerCase()).not.toContain('password'); // no password field
   });
 });

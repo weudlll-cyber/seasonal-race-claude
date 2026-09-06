@@ -84,7 +84,7 @@ export function mountClientAssets(app, dist = CLIENT_DIST, log = console.log) {
     // Plain, and it names the path, because "why is / a 404" is the question this line answers.
     log(
       `[client] no built client at ${dist} — serving the API only. ` +
-        'Run `npm run build` in client/ (or set RA_CLIENT_DIST) to serve the app from this server.',
+        'Run `npm run build` in client/ (or set RA_CLIENT_DIST) to serve the app from this server.'
     );
     return false;
   }

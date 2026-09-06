@@ -8,6 +8,59 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-WEIGHT-1.md](COMEBACK-WEIGHT-1.md) — **what it would cost to show the comebacks**
+  (2026-09-06, NIGHT-2026-09-05 piece 1). One lever, `comebackWeight`, over the same 40 races at
+  0.6 / 1 / 2 / 4 / 8, nothing else changed and no shipped default written. Shots rise **11 → 13 →
+  13 → 18 → 19 of 74**, races with no comeback fall 29 → 21 of 40, and the cost is **+2.24 points of
+  frame share for the comeback against −2.16 across the others, two thirds of it paid by
+  BATTLE_ZOOM** — which is what COMEBACK-BEATS-1 predicted from the other side. ★ **The shots stay
+  EARLY at every setting — 11/11, 13/13, 18/18, 19/19, never once late** — so the lever buys MORE
+  comebacks and does not move them to the written moment. ★ **1 and 2 are byte-identical** (
+  `_acceptsOffer` saturates at 1), and ★ **the curve flattens: a thirteen-fold rise takes 11 of 74 to
+  19 of 74**, leaving 21 of 40 races with no comeback even at 8. Two stages, and stage 1 held an
+  artefact the larger corpus corrected — 4 and 8 looked identical at N=30 and are not at N=40. No
+  weight is proposed.
+- [IDENTIFIER-LENGTH-1.md](IDENTIFIER-LENGTH-1.md) — **what is in the 4,008 characters, and what
+  each way of shortening it costs** (2026-09-06, NIGHT-2026-09-05 piece 2). Nothing built, nothing
+  recommended. Re-measured with the REAL `buildWorldConfig`: **3,487 / 3,715 / 4,008** at 4 / 20 / 40
+  racers. ★ **ONE FIELD IS FOUR-FIFTHS OF IT** — `effectiveRacerTypes` is 2,454 chars, carried in
+  full for every racer type whether the race uses it or not, while the config diff the identifier
+  exists to carry is **2 characters** on a default machine. ★ **And PLAYABLE-FOUR-1's 743 is
+  explained rather than retracted: it was unknowingly a measurement of option A**, which measures
+  739 today. Options costed at 4/20/40: **A** (that field as a diff) 218/446/739 and costs nothing;
+  **C** (lossless compression) 1,356/1,422/1,494, needs a compressor; **D** (server-stored key) a
+  handful of characters but makes repeating a race need the server the offline banner exists for.
+  ★ **The opposite direction is priced too: carrying a track's SHAPE adds ~26,400 characters per
+  track** — six to eight times the whole identifier.
+- [PLAYER-WORDS-1.md](PLAYER-WORDS-1.md) — **the player was told to run `docker compose up`**
+  (2026-09-06, NIGHT-2026-09-05 piece 5). Wording only. Five search forms, uncapped, whole tree;
+  ★ **form 1 alone would have missed it on a capped read** — the first ten hits for `compose` are
+  the word *composes* in CameraDirector's comments. **Five sites found, ONE reaches the player:**
+  `apiClient.js:36` is the message of the Error every service call throws, and
+  `PlayerGroupPicker.jsx:145` renders it verbatim on the setup screen. It now points at the status
+  banner instead of naming a terminal command; the phrase "Server not reachable" is KEPT, because
+  four test files match on it and the diagnosis was never the problem. The developer instruction
+  moved to the console. The two Dev Screen strings and the `console.warn` in `bgImageCache.js` were
+  LEFT — developers read those.
+- [SERVER-LINT-1.md](SERVER-LINT-1.md) — **the server was linted by nobody, and now it is red**
+  (2026-09-06, NIGHT-2026-09-05 piece 4). `server/package.json` declared four scripts and neither a
+  lint nor a format check; CI's Server job runs neither. Both are now built and wired into `verify`
+  in the same shape as the client's. ★ **Nothing was installed:** eslint and prettier live only in
+  `client/node_modules`, and a bare specifier resolves relative to the file that IMPORTS it, so
+  `server/eslint.config.js` imports the CLIENT'S config array and overrides only the environment.
+  ★ **The server does NOT pass — 9 lint errors across 7 files and 35 unformatted files — and not one
+  line was fixed**, per the order: `verify` is now red for a pre-existing reason and a server-wide
+  cleanup is its own decision. Sabotage named a new fault in both guards; `no-undef` firing proves
+  the Node override is live. `ci.yml` untouched.
+- [GATE-COST-TRUTH-1.md](GATE-COST-TRUTH-1.md) — **the ceremony said the setup dominates; the setup
+  is 2%** (2026-09-06, NIGHT-2026-09-05 piece 3). `SHIP-CEREMONY.md` claimed a build, two servers
+  and a browser cost **~200 s before any race runs**. Measured with timestamps on a deliberate gate
+  run: the build ends at 3.2 s, the stack is up at **5.2 s**, the last race is home at 262.6 s —
+  **2% setup, 98% racing**, wrong by a factor of forty and in the direction that mattered. ★ What
+  makes extra races cheap is **concurrency** (`viewer-invariants.mjs:814` runs six at a time), not
+  setup — which also explains the old table's 1-race 267 s against 2-race 340 s. ★ **Four tracks
+  would stay bounded by the slowest race rather than doubling — that bound is measured, the
+  four-track figure is NOT**, and no four-track run was made. `GATE_TRACKS` untouched.
 - [COMEBACK-BEATS-1.md](COMEBACK-BEATS-1.md) — **the plan writes the comeback, and the camera is
   somewhere else** (2026-09-05, PLAYABLE-FOUR-1 piece A). Ten tracks x seeds 1-4, N=40, race plan ON,
   shipped defaults, nothing changed. The plan named **74 comebackers** and wrote **215 beats**; the

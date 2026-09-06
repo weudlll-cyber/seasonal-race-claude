@@ -101,7 +101,10 @@ function copyOne(relFile, dataRoot) {
  * always available because it is half of the unit key.
  */
 function labelFor(unitKey, dataRoot) {
-  const [type, id] = [unitKey.slice(0, unitKey.indexOf('/')), unitKey.slice(unitKey.indexOf('/') + 1)];
+  const [type, id] = [
+    unitKey.slice(0, unitKey.indexOf('/')),
+    unitKey.slice(unitKey.indexOf('/') + 1),
+  ];
   const KIND = { tracks: 'track', brands: 'brand', 'player-groups': 'player group' };
   let name = id;
   try {
