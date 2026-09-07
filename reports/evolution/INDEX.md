@@ -361,8 +361,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MERGE-TEAM-RACES.md](MERGE-TEAM-RACES.md) — **the team-races topic closes, and the ports go back**
+  (2026-09-07, merge `2cc60029` on master; `feat/team-races-1` **deleted at origin**). Eleven pieces
+  land — TEAMS-1, RACE-STORE-2, RACE-SAVE-3, RACE-HISTORY-4, SHARED-CANONICAL-1, IMAGE-STARTS-1,
+  HISTORY-NEVER-VANISHES-1, HISTORY-FILTER-SAYS-SO-1, PROD-SAVE-1, SEED-FIELD-TYPING-1 and
+  REPEAT-PROOF-1. ★ **The catch-up was a NO-OP**: `origin/master` `554f348e` was already an ancestor
+  (taken in at `0049d69b`), so GOLDEN-RACES-1, RECOMPUTE-COST-1 and CONSOLE-DECISIONS-1 were all
+  already in — *"Already up to date"*, **no hunk resolved, no line changed**. Golden races **PASS**;
+  `verify -- --premerge` **PASS 29 FAIL 0 SKIP 4** in 729.9 s (client-suite 251.5 s, server-suite
+  47.8 s, viewer-invariants 205.3 s, world-fingerprint `8a1977187e9c99b4` **unmoved**).
+  ★ **No fingerprint was re-run and the reason is structural**: the merge result's tree is
+  byte-identical to the branch tip's (`6d9f5430…`), and a fingerprint is a function of the tree.
+  ★ **AND A FINDING ON THE PORTS.** The brief said production belongs on **5173**; the project says
+  the opposite in **eight** places — `VERIFY-RULES.md` R10, `serve-production.mjs:44`,
+  `vite.config.js:21`, `e2e-env.js:19`, `docker-compose.override.yml`, the dev-start skill,
+  `night-task.md` and `SETUP.md` — **production on 4173, the dev server on 5173**, unchanged since
+  `40183ec5` on 2026-08-10. So the pre-session state was restored (4173 stopped, nothing on 5173,
+  the owner's API on 4000 never touched) and **the swap was NOT made**: R10 records a real incident
+  the swap would re-create. Reported, not acted on.
 - [REPEAT-PROOF-1.md](REPEAT-PROOF-1.md) — **a repeat IS the same race, to the millisecond, through
-  all three doors** (2026-09-07, `feat/team-races-1` @ `21bfe5c4`, unmerged; verification and
+  all three doors** (2026-09-07, `feat/team-races-1` @ `21bfe5c4`, **merged** in `2cc60029`;
+  verification and
   measurement only — nothing built, changed or minted). ★ **The owner's last walkthrough item
   PASSES.** A race was stored, Race Action was moved `quiet` → `wild`, and the race was repeated from
   the history row's button, from a TYPED short key and from a PASTED long identifier: all 20 racers
