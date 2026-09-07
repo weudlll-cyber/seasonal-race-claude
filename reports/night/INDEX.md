@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-SHAPE-1.md](COMEBACK-SHAPE-1.md) — **what the plan writes and what the camera shows,
+  side by side** (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, comeback key OFF
+  throughout, nothing minted). ★ **CARRIES A CORRECTION TO [OUTCOME-WINDOW-1](OUTCOME-WINDOW-1.md):**
+  its §1 conclusion that the outcome flag is *inert* is **WITHDRAWN** — `comeback-beats.mjs:170-184`
+  already wraps `cd.update` and supplies the browser's value on its default arm, so that piece's
+  driver-level change was overridden and could not have differed. The comparison the flag exists for
+  (`--outcome=driver`, N=30) gives **7 shots against 1**, COMEBACK_ZOOM 2.60% → 0.37%: **the window is
+  decisive.** The rest of that report stands, and COMEBACK-BEATS-1 / -WEIGHT-1 / -CONNECT-1 were all
+  measured on the browser's window, which is the right one. ★ **And the camera is not first allowed
+  to look at 0.75** — that is the internal fallback; the plan's OUTCOME opens at **0.600** in 40 of 40
+  races. ★ **THE SHAPES, N=40 / 74 planned comebackers / 11 shots:** a planned climb runs **0.150 →
+  0.780** (median length 0.630 of the race, from rank 8 to rank 2, 5 places); a shot runs a median
+  **0.646 → 0.756** (0.107 long) and starts a median **0.134 BEFORE** the plan's landing — the camera
+  shows about a sixth of the arc, and the part before it lands. **0 of 74 climbs finish before 0.75.**
+  ★ **Shown and never-shown are the same shape** — identical start, finish, length and landing rank;
+  medians differ only in places gained, 7 against 5 — **but the deepest climbs were never shown**
+  (19, 19, 17, 16, 16, 15 places), and 10 of the 63 unshown gained ten or more. Camera never picked an
+  unplanned racer: **0 of 11**. Columns A, B, C and the never-shown rows are tables. **No
+  recommendation, no proposal.**
+
 - [OUTCOME-WINDOW-1.md](OUTCOME-WINDOW-1.md) — **the harness camera is not the browser camera**
   (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, nothing built, **nothing minted**).
   ★ **Two corrections to the premise, both at source.** The window is not CLOSED — the consumer is an
