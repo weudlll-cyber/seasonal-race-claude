@@ -181,6 +181,26 @@ function RaceHistory() {
     return [...unsent, ...stored];
   }, [filtered, page.races, filterDate, filterTrack, tracks]);
 
+  // ★ HISTORY-FILTER-SAYS-SO-1 — A FILTER MAY HIDE A RACE; IT MAY NOT HIDE THAT IT IS HIDING ONE.
+  //
+  // The track and date filters apply to BOTH halves of this list — the device's own races and the
+  // team's page — so with one set, a race that exists in both places is on screen in neither. That
+  // is the same silent absence HISTORY-NEVER-VANISHES-1 removed one layer up, arrived at from the
+  // other side: nothing is broken, the person simply cannot tell a filtered list from a complete
+  // one. A date filter left on a past month shows exactly the races of that month and nothing since,
+  // which reads precisely like new races never being recorded.
+  //
+  // So the count is computed the same way the rows are, minus the filters, and the difference is
+  // stated. It is a number, not a warning: the filters are a feature and using them is not a fault.
+  const hiddenByFilters = useMemo(() => {
+    if (!filterTrack && !filterDate) return 0;
+    const onThisPage = new Set(page.races.map((r) => r.id).filter(Boolean));
+    const localAll = history.filter(
+      (e) => e.sync?.state !== SYNC.SENT || !onThisPage.has(e.sync?.serverId)
+    ).length;
+    return localAll + page.races.length - rows.length;
+  }, [history, page.races, rows.length, filterTrack, filterDate]);
+
   function trackFor(row) {
     return (
       tracks.find((t) => t.id === row.trackId) ??
@@ -349,12 +369,19 @@ function RaceHistory() {
             Loading your team&rsquo;s races…
           </p>
         )}
+        {hiddenByFilters > 0 && (
+          <p data-testid="history-hidden-count" style={{ fontSize: '0.78rem', color: '#e0a800' }}>
+            {hiddenByFilters} race{hiddenByFilters === 1 ? '' : 's'} hidden by the filters above.
+          </p>
+        )}
         {/* The empty state does NOT wait on the server. This device's own races are already known
             the moment the screen renders, so "no races recorded yet" is a statement about them and
             stays true whether or not the team's page has arrived. */}
         {rows.length === 0 ? (
-          <p className={s.emptyState}>
-            No races recorded yet. Races will appear here after they finish.
+          <p className={s.emptyState} data-testid="history-empty">
+            {filterTrack || filterDate
+              ? 'No races match these filters. Clear them to see everything this device and your team have.'
+              : 'No races recorded yet. Races will appear here after they finish.'}
           </p>
         ) : (
           <table className={s.table} data-testid="race-history-table">
