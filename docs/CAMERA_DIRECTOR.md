@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 554f348e 2026-09-07 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 918423c8 2026-09-07 depends=client/src/modules/camera/ -->
 
 **RE-STAMPED 2026-09-04 (ITEM7-MEMBERSHIP-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is a pure SPLIT and cannot move these numbers**: the geometric loop of `_abreastContenders` was lifted into `_abreastSurvivors`, which `_abreastContenders` now calls before applying its own two guards and its unchanged fallback. No framing decision, no default, no threshold and no ease was touched, and the only edit inside the moved code is a `pathLen > 0` test that is dead on the path `_abreastContenders` takes. **All four fingerprints were run against the record and all four match** — camera and render included, which are the two that would move if the shot or the draw sequence had. Nothing was re-run; the stamp records that the dependency moved inertly.
 
