@@ -10,6 +10,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary.jsx';
+import './styles/fonts.css';
 import './styles/main.css';
 
 // one-time cleanup: obsolete background cache removed (images 4-10 MB exceeded localStorage limit)

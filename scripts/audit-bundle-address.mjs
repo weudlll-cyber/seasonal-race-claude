@@ -31,10 +31,13 @@
 //   · `http://localhost:4000` — the fallback the brief requires to stay: with nothing configured
 //     the client must behave exactly as it does today. It is a loopback literal, not a deployment
 //     address, and it ties the package to nothing.
-//   · `fonts.googleapis.com` / `fonts.gstatic.com` — a font stylesheet linked from
-//     `client/index.html`, PRE-DATING this piece. Not an install address and not something this
-//     piece introduced or removed. It IS reported, because it is a real external dependency of the
-//     package and an air-gapped install would get no fonts — see the report.
+//   · `fonts.googleapis.com` / `fonts.gstatic.com` STOOD HERE and are GONE, removed by
+//     SELF-HOSTED-FONT-1 on 2026-09-07. Their reason was "a font stylesheet linked from
+//     `client/index.html`, PRE-DATING this piece", and RUNTIME-API-URL-1's report listed that link
+//     as item 5 of what was still needed. The link is gone and the 'Inter' faces are served by the
+//     app itself, so the allowance has no subject left — and dropping it is what makes this file
+//     REFUSE a re-added Google <link> instead of waving it through. That is the point of removing
+//     an allowance rather than leaving a harmless-looking line behind.
 //
 // Anything else that looks like a host is a FAILURE, because the only way one gets in is a
 // build-time bake, which is the thing being removed.
@@ -69,8 +72,6 @@ const DIST = join(ROOT, arg('dist', 'client/dist'));
 export const ALLOWED = [
   { host: 'localhost', why: 'the required fallback — today’s behaviour with nothing configured' },
   { host: '127.0.0.1', why: 'loopback, same reason as localhost' },
-  { host: 'fonts.googleapis.com', why: 'font stylesheet linked from index.html, pre-dates this piece' },
-  { host: 'fonts.gstatic.com', why: 'where that stylesheet loads its font files from' },
   { host: 'www.w3.org', why: 'XML namespace URI in inlined SVG — an identifier, never fetched' },
   { host: 'reactjs.org', why: 'React error-decoder link inside a vendored error string' },
   { host: 'reactrouter.com', why: 'React Router docs link inside a vendored error string' },
