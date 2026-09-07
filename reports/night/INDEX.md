@@ -8,6 +8,24 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [OUTCOME-WINDOW-1.md](OUTCOME-WINDOW-1.md) — **the harness camera is not the browser camera**
+  (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, nothing built, **nothing minted**).
+  ★ **Two corrections to the premise, both at source.** The window is not CLOSED — the consumer is an
+  OR (`CameraDirector.js:1717`), so a hard-coded `false` falls back to `leaderProgress > 0.75` and the
+  window opens by a DIFFERENT RULE. And `camera-fingerprint.mjs:270` hard-codes its own `false` in its
+  own loop; it does not use `raceDriver` at all. ★ **What the different rule hides, N=40 / 172,013
+  frames: the browser calls OUTCOME on 77,488 frames, the fallback on 53,184, and 24,344 frames
+  (14.2%, in 40 of 40 races) are opened only by the browser — with a live comeback candidate on 18,932
+  of them.** ★ **Yet NO camera state occurs that did not, on ZERO frames**: given the browser's value
+  the whole corpus re-runs BYTE-IDENTICAL, shots 11 → 11 — and the arm was proven live first (2,272
+  true frames on one track) because a zero from a disconnected lever is worthless. ★ **THE CAMERA
+  FINGERPRINT DOES MOVE: `152cf295c4c9ff54` → `75aef5cd474c54e5`, on 4 of 10 tracks** (city-circuit,
+  dirt-oval, ice-track, space-sprint), frame counts identical everywhere. **The value is reported and
+  NOT minted.** ★ **76 files import that driver** and are named, not repaired — including the SHIP
+  GATE (`viewer-invariants.mjs`), the `check-runin-frame` guard, and the two measurements stamped into
+  CAMERA_DIRECTOR.md and ENDING-PHASES.md. What blocks adopting the browser's value is not technical:
+  it re-bases the camera's whole measurement history and needs a mint. **Nothing is proposed.**
+
 - [IDENTIFIER-DIFF-1.md](IDENTIFIER-DIFF-1.md) — **the identifier carries only what differs**
   (2026-09-07, `night/2026-09-06`, unmerged). `effectiveRacerTypes` was written in FULL — all twenty
   types, every race — while the config block beside it was already a diff, so the mechanism was in
