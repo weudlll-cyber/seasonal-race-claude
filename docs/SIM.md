@@ -188,7 +188,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/track-editor/EditorShape.js` | Race-engine shape adapter for track-editor geometry; wraps inner/outer Catmull-Rom splines. |
 | `modules/track-editor/catmullRom.js` | Pure Catmull-Rom spline math — no DOM, no React. |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
-| `services/api.js` | Single-export config — exposes API_BASE_URL read from VITE_API_URL env var (set in .env to override; fallback localhost:4000). |
+| `services/api.js` | THE ONE HOME for the address of the API. |
 | `services/apiClient.js` | Shared fetch boilerplate for API service modules. |
 | `services/racerApi.js` | Frontend API client for racer CRUD + sprite operations (D5/D6a). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |

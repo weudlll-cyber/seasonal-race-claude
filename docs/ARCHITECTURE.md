@@ -1000,8 +1000,12 @@ seasonal-race-claude/
 
 ⚠️ **Before VPS deployment: add auth.** Currently any browser visitor has full write access. See Phase 5.
 
-**Frontend config hook** — `client/src/services/api.js` exports `API_BASE_URL` (defaults to
-`http://localhost:4000`). Set `VITE_API_URL` in a `.env` file to point at staging or VPS.
+**Frontend config hook** — `client/src/services/api.js` exports `API_BASE_URL`. Since
+RUNTIME-API-URL-1 it is resolved at **runtime**, not at build time: the server injects the installed
+address into the `index.html` it serves and the client reads it there. Unset → `http://localhost:4000`,
+as before. The address is set with `npm run configure`, which writes `RA_PUBLIC_ORIGIN`;
+`VITE_API_URL` still exists but is for harnesses only and must not be used for a deployment. See
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Track Lifecycle and Hybrid Persistence
 

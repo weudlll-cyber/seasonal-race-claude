@@ -44,6 +44,58 @@ describe('getAllowedClientOrigins', () => {
   });
 });
 
+// ── RUNTIME-API-URL-1: the installed address is an allowed origin, DERIVED not repeated ─────────
+//
+// The point of these is that an operator who answers `npm run configure` does not ALSO have to
+// remember RA_CLIENT_ORIGIN. VERIFY-RULES R10 records what forgetting costs: a login screen that
+// will not log in, reporting "Server not reachable", which names the wrong cause.
+describe('getAllowedClientOrigins — RA_PUBLIC_ORIGIN is folded in', () => {
+  let savedClient;
+  let savedPublic;
+  beforeEach(() => {
+    savedClient = process.env.RA_CLIENT_ORIGIN;
+    savedPublic = process.env.RA_PUBLIC_ORIGIN;
+    delete process.env.RA_CLIENT_ORIGIN;
+    delete process.env.RA_PUBLIC_ORIGIN;
+  });
+  afterEach(() => {
+    if (savedClient === undefined) delete process.env.RA_CLIENT_ORIGIN;
+    else process.env.RA_CLIENT_ORIGIN = savedClient;
+    if (savedPublic === undefined) delete process.env.RA_PUBLIC_ORIGIN;
+    else process.env.RA_PUBLIC_ORIGIN = savedPublic;
+  });
+
+  it('★ the configured address is allowed without anyone repeating it', () => {
+    process.env.RA_PUBLIC_ORIGIN = 'https://races.example.com';
+    expect(getAllowedClientOrigins()).toEqual(['https://races.example.com']);
+  });
+
+  it('it is added to an explicit list, not instead of it', () => {
+    process.env.RA_CLIENT_ORIGIN = 'http://localhost:5173';
+    process.env.RA_PUBLIC_ORIGIN = 'https://races.example.com';
+    expect(getAllowedClientOrigins()).toEqual([
+      'http://localhost:5173',
+      'https://races.example.com',
+    ]);
+  });
+
+  it('★ listing it in BOTH is not a mistake and does not duplicate the entry', () => {
+    process.env.RA_CLIENT_ORIGIN = 'https://races.example.com';
+    process.env.RA_PUBLIC_ORIGIN = 'https://races.example.com/';
+    expect(getAllowedClientOrigins()).toEqual(['https://races.example.com']);
+  });
+
+  it('a malformed public origin adds nothing — index.js is what refuses to start', () => {
+    process.env.RA_CLIENT_ORIGIN = 'http://localhost:5173';
+    process.env.RA_PUBLIC_ORIGIN = 'races.example.com';
+    expect(getAllowedClientOrigins()).toEqual(['http://localhost:5173']);
+  });
+
+  it('★ neither set → [] — same-origin only, exactly as before this piece', () => {
+    expect(getAllowedClientOrigins()).toEqual([]);
+  });
+});
+
 describe('normalizeOrigin', () => {
   it('lowercases and removes trailing slash', () => {
     expect(normalizeOrigin('HTTP://A.test/')).toBe('http://a.test');

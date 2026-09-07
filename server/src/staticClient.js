@@ -46,9 +46,10 @@
 // ============================================================
 
 import express from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { injectRuntimeConfig, resolvePublicOrigin } from './runtimeConfig.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -106,9 +107,27 @@ export function mountClientAssets(app, dist = CLIENT_DIST, log = console.log) {
  * Mount the SPA fallback. Call BEFORE the auth guards, AFTER the static mount.
  * @returns {boolean} whether anything was mounted
  */
-export function mountSpaFallback(app, dist = CLIENT_DIST) {
+export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
   if (!clientBuildExists(dist)) return false;
   const indexFile = join(dist, 'index.html');
+  // ── RUNTIME-API-URL-1: the address is handed to the bundle HERE, and only here ────────────────
+  //
+  // This is the ONE place `index.html` is served — `express.static` above is mounted with
+  // `index: false` precisely so that stays true — which is what makes a single injection point
+  // possible at all.
+  //
+  // Read ONCE at mount, not per request: the shell is the same bytes for every visitor and the
+  // origin cannot change while the process runs (`corsOptions` is built once at module load for the
+  // same reason). A per-request read would be a second answer to a question already settled.
+  //
+  // ★ WHEN NOTHING IS CONFIGURED, NOTHING CHANGES. `injectRuntimeConfig` returns the html
+  // untouched, and the branch below sends the FILE exactly as it did before this piece — same
+  // `sendFile`, same headers, same ETag. The owner's dev server and his 4173 preview never take the
+  // injected path at all, because neither is served by this function.
+  const publicOrigin = resolvePublicOrigin(env);
+  const injectedHtml = publicOrigin
+    ? injectRuntimeConfig(readFileSync(indexFile, 'utf8'), publicOrigin)
+    : null;
   app.use((req, res, next) => {
     // THE API IS NEVER ANSWERED WITH THE APP. This is the whole guard, and it is first.
     if (req.path === '/api' || req.path.startsWith(API_PREFIX)) return next();
@@ -128,7 +147,8 @@ export function mountSpaFallback(app, dist = CLIENT_DIST) {
     // (`/track/my.track`) is treated as an asset and 404s instead of loading the app. No route in
     // this client has that shape; if one ever does, this is the line that decides it.
     if (/\.[^/]+$/.test(req.path)) return next();
-    res.sendFile(indexFile);
+    if (injectedHtml === null) return res.sendFile(indexFile);
+    res.type('html').send(injectedHtml);
   });
   return true;
 }

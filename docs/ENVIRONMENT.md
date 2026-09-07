@@ -85,17 +85,30 @@ values become `NaN` and the limiter's behaviour is then undefined — set a numb
 running build. With none of them set it reports `unknown` **and the reason why**, which is correct but
 not useful; it never guesses.
 
-## The client's own, at BUILD time
+## The client's address, at INSTALL time
 
-`VITE_API_URL` is read when the client is **built**, not when it runs, and it is baked into the
-bundle. It defaults to `http://localhost:4000`.
-
-**If you serve the app anywhere other than `http://localhost:4000`, you must set it when building**,
-or the app your visitors download will call *their* machine instead of your server:
+**`RA_PUBLIC_ORIGIN` is the address this install is reached at**, and it is the only place it is
+written down. Set it with:
 
 ```sh
-cd client && VITE_API_URL=https://your.host npm run build
+npm run configure          # asks, and refuses to finish without an answer
 ```
+
+It is read when the server **starts**, not when the client is built, and the server hands it to the
+browser by injecting one line into the `index.html` it serves. **The built client contains no
+address**, so one build can be installed anywhere; changing the address is a restart, never a
+rebuild. The same value is also folded into the CORS allow-list, so the client and the server cannot
+disagree about where this install is.
+
+- **Unset** → the client talks to `http://localhost:4000`, which is what it has always done. That is
+  the dev machine, and it is a legitimate state.
+- **Set but malformed** → **the server refuses to start**, naming what is wrong. A deployed instance
+  falling back to `localhost` would serve every visitor a bundle pointing at their own machine.
+
+`VITE_API_URL` still exists and is **build-time**, but it is now for HARNESSES only — the e2e suite
+and `scripts/viewer-invariants.mjs` build a throwaway client against a random port with it. **Do not
+set it for a deployment**: it bakes an address into the artefact, which is the thing
+`RA_PUBLIC_ORIGIN` replaced. `node scripts/check-bundle-address.mjs` fails a build that carries one.
 
 ## Test-only
 
