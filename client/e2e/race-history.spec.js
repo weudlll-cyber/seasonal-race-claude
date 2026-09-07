@@ -83,9 +83,21 @@ test('the team sees its races, and the button repeats one exactly as it ran', as
   });
 
   // ── 4. The button runs it again ──────────────────────────────────────────────────────────────
+  //
+  // ★ THE ROW IS FOUND BY ITS OWN KEY, NOT BY BEING FIRST. `fullyParallel` is false, which
+  // serialises tests INSIDE a file and still runs FILES in parallel — this run reported "7 tests
+  // using 3 workers". The history specs share one API and one storage state, so another file can
+  // store a race between this one storing its own and reading the list, and `.first()` then points
+  // at a race this test never ran. It did exactly that once PROD-SAVE-1 added two more
+  // race-storing spec files: the repeat came back with seed 854 where 5230 was expected. The key
+  // was already read at step 2; using it makes the selection true under any ordering.
   await openHistory(page);
-  await page.locator('[data-testid="history-row-stored"]').first()
-    .locator('[data-testid="run-again"]').click();
+  await page
+    .locator('[data-testid="history-row-stored"]')
+    .filter({ has: page.locator(`[data-testid="short-key"]:text-is("${shortKey}")`) })
+    .first()
+    .locator('[data-testid="run-again"]')
+    .click();
 
   // One control, no dialog: it lands on the setup screen with the race armed and starts it.
   await expect(page, 'the button starts the race').toHaveURL(/\/race|\/setup/, { timeout: 30_000 });

@@ -361,6 +361,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [PROD-SAVE-1.md](PROD-SAVE-1.md) — **the race was in the list all along, at row 14** (2026-09-07,
+  `feat/team-races-1`, unmerged). The owner's race was missing from the history on the PRODUCTION
+  build. ★ **The save path is not broken there**: reproduced on `serve-production.mjs` at :4173 on a
+  COPY of his data — POST `201 Created`, the local entry written and marked `sent`, and the browser
+  console carrying one error that is not ours (a pre-login `401 /api/auth/me`). ★ **It is lost in the
+  list's ORDER.** `RaceHistory.jsx` returned `[...unsent, ...stored]` — local rows as a block, then
+  server rows, each half sorted only within itself — so a newly stored race was appended BELOW every
+  local entry however old. Measured in his build: twelve rows from 11 August and 10 June at 0-11, and
+  **his own `733DSV` at row 14**. Sorted whole, newest first, it is row 2. ★ **The build was a red
+  herring and that is said plainly** — no build-mode branch exists on the save path (the client's only
+  two `import.meta.env` uses are the API base URL), the bundle builds clean, and the defect is
+  data-volume-dependent, not bundle-dependent. ★ **The browser harness CANNOT drive the production
+  build** — `baseURL` is the dev server and its `webServer` runs `npm run dev`; `VITE_API_URL` is
+  inlined at build time, so a production arm is a decision about the harness's shape, not a switch.
+  Every browser proof this project has taken was taken in an environment the owner does not use.
+  ★ Also records a collision this piece caused in the SUITE (file-level parallelism against one shared
+  API) and its precise-selector fix. **Part 2, ESTABLISHED ONLY, nothing changed:**
+  `ceremonySkipOnClick` is `false` at `defaults.js:299` — the shipped default, never any other value;
+  it covers ONLY the RaceScreen countdown (`index.jsx:1955`), never other screens (the result screen
+  has a separate always-on skip); **it is NOT gated on the build mode anywhere**; and one commit ever
+  touched it, `d46fd443` of 2026-08-22. It is a setting, and it is off.
+
 - [NIGHT-MERGE-2026-09-05.md](NIGHT-MERGE-2026-09-05.md) — **the night branch cleaned and merged**
   (2026-09-06, `night/2026-09-05` onto master; HYGIENE + MERGE, nothing built, no behaviour moved).
   Ten finished pieces had been pushed and left unmerged, and two of them — SERVER-LINT-1's `lint` and

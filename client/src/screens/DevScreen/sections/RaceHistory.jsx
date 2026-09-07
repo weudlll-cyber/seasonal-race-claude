@@ -166,8 +166,7 @@ function RaceHistory() {
     const onThisPage = new Set(page.races.map((r) => r.id).filter(Boolean));
     const unsent = filtered
       .filter((e) => e.sync?.state !== SYNC.SENT || !onThisPage.has(e.sync?.serverId))
-      .map(rowFromLocalEntry)
-      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      .map(rowFromLocalEntry);
 
     const stored = page.races.map(rowFromServerRace).filter((r) => {
       if (filterDate && !String(r.date).startsWith(filterDate)) return false;
@@ -178,7 +177,24 @@ function RaceHistory() {
       return true;
     });
 
-    return [...unsent, ...stored];
+    // ★ PROD-SAVE-1 — ONE LIST, ONE ORDER. NEWEST FIRST, ACROSS BOTH STORES.
+    //
+    // This used to return `[...unsent, ...stored]`: every local row as a block, then every server
+    // row, each half sorted only within itself. So a race that had just been stored — which IS a
+    // server row — was appended BELOW every local entry the device held, however old those were.
+    //
+    // MEASURED, on the production build, in a browser: twelve local entries from 11 August and
+    // 10 June occupied rows 0-11, and the three races from 7 September sat at rows 12, 13 and 14.
+    // The owner's own missing race, 733DSV, was row 14. It was in the list the whole time, under a
+    // screenful of older rows — which reads exactly like never having been recorded, and is why he
+    // reported it as absent from the server AND from the device.
+    //
+    // The date column is what a person sorts a history by, so the WHOLE list is sorted by it. The
+    // "unsent first" grouping this replaces was deliberate, and it is the thing that caused the
+    // symptom: an unsent race is still visible and still says it is unsent, it simply no longer
+    // outranks a newer race for being unsent. `date` is an ISO string on both row kinds
+    // (`entry.date` and `race.finishedAt`), so a lexicographic compare is a chronological one.
+    return [...unsent, ...stored].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   }, [filtered, page.races, filterDate, filterTrack, tracks]);
 
   // ★ HISTORY-FILTER-SAYS-SO-1 — A FILTER MAY HIDE A RACE; IT MAY NOT HIDE THAT IT IS HIDING ONE.
