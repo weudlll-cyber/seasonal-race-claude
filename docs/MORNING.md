@@ -4,10 +4,10 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-07, after PIECE 6 of the night chain of 2026-09-06.
+**Last rewritten:** 2026-09-07, after PIECE 5 — the chain is finished of 2026-09-06.
 
 **Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
-catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries pieces 4 and 6; also **NOT MERGED**.
+catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries pieces 4, 6 and 5; also **NOT MERGED**.
 
 **★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
 silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
@@ -103,14 +103,23 @@ no base, so the diff came out as the full object); fixed before the sabotage, wh
 red — but only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
 is blind to a moved default by construction.
 
+**PIECE 5 · The harness camera is not the browser camera — ★ MEASURED** — `28e2f8d1`,
+[OUTCOME-WINDOW-1](../reports/night/OUTCOME-WINDOW-1.md). Measurement only; both temporary arms
+reverted. ★ **Two corrections to the premise:** the window is not CLOSED — the consumer is an OR, so
+a hard-coded `false` falls back to `leaderProgress > 0.75` and the window opens by a *different rule*
+— and `camera-fingerprint.mjs` hard-codes its own `false` in its own loop, so its exposure is not
+inherited from the driver. ★ **What the different rule hides:** the browser calls OUTCOME on 77,488
+of 172,013 frames against the fallback's 53,184, and **24,344 frames (14.2%, in 40 of 40 races) open
+only for the browser** — with a live comeback candidate on 18,932 of them. ★ **Yet no camera state
+occurs that did not, on zero frames** — the corpus re-runs byte-identical, and the arm was proven
+live first. ★ **THE CAMERA FINGERPRINT DOES MOVE — to `75aef5cd474c54e5`, on 4 of 10 tracks** (city-circuit, dirt-oval, ice-track, space-sprint). The recorded value is where it always is,
+in `docs/fingerprints.json`. **The new one is reported and NOT minted.** **76 files** run on that driver — named, not repaired — including the **ship gate**, the
+`check-runin-frame` guard, and the two measurements stamped into CAMERA_DIRECTOR.md and
+ENDING-PHASES.md.
+
 ### RUNNING
 
-Nothing is running. Piece 5 is next and is the last.
-
-### OPEN — the one piece not yet started
-
-- **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only, nothing
-  built, nothing minted.
+Nothing is running. **The chain is finished** — six pieces, two branches, no merges.
 
 ### NEEDS HIS WORD
 
@@ -130,9 +139,14 @@ Nothing is running. Piece 5 is next and is the last.
   is why nothing is recommended.
 - **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
   costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
+- **★ THE CAMERA FINGERPRINT WOULD MOVE IF THE HARNESS MEASURED THE WINDOW THE WAY THE BROWSER
+  DOES**, to `75aef5cd474c54e5`. Nothing was minted and nothing was changed. Adopting the browser's
+  value is four lines, but it re-bases every figure the 76 consumers have produced — the ship gate
+  and two stamped documents among them — so it is a decision, not a repair.
 - **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
   in this chain has asked for it.
 <!-- END CHAIN STATUS -->
+
 
 
 ## EARLIER — the night of 2026-09-05, for context
