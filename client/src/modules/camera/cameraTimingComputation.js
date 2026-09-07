@@ -327,6 +327,12 @@ export function computeTimingFromConfig(config) {
     config?.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap;
   const comebackMaxCurrentRankPct =
     config?.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct;
+  // COMEBACK-CONNECT-1. It is read HERE, beside the four gates it travels with, because this
+  // function is the only door into the director's timing config: a key absent from this list is
+  // `undefined` downstream no matter what the config object holds. That is not hypothetical — the
+  // first N=30 of COMEBACK-CONNECT-1 ran both arms with this line missing and produced two
+  // BYTE-IDENTICAL columns, which reads exactly like "the lever does nothing".
+  const comebackUseBeats = config?.comebackUseBeats ?? DEFAULT_CAMERA_CONFIG.comebackUseBeats;
   // Override COMEBACK_ZOOM minStateHold when explicitly configured.
   if (config?.comebackMinDuration != null) {
     minStateHoldByState['COMEBACK_ZOOM'] = comebackMinDuration * 1000;
@@ -442,6 +448,7 @@ export function computeTimingFromConfig(config) {
     outcomePhaseThreshold,
     comebackMinStartGap,
     comebackMaxCurrentRankPct,
+    comebackUseBeats,
     leadChangeMinGap,
     leadChangeDebounceMs,
     leadChangeMinDuration,

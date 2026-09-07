@@ -35,6 +35,7 @@ export class ComebackDetector {
     this._b1 = null; // Set<racerIndex> | null — null disables detection entirely
     this._history = new Map(); // Map<racerIndex, Array<{ts, rank}>>
     this._cast = null; // Set<racerIndex> | null — the plan's named comebackers
+    this._resolveByIndex = new Map(); // Map<racerIndex, progress> — the plan's authored resolve beat
   }
 
   /**
@@ -68,10 +69,36 @@ export class ComebackDetector {
       return;
     }
     const set = new Set();
+    // COMEBACK-CONNECT-1: the RESOLVE beat, kept on the same walk over the same array that already
+    // reads the role. This is deliberately not a second channel — the plan arrives here once, and
+    // what was being thrown away is now kept beside what was being used.
+    //
+    // ★ RESOLVE, NOT PEAK, AND THE FIRST DRAFT HAD IT WRONG. `peak` is where the authored curve is
+    // steepest and reads like the moment the shot is about — but MEASURED over 30 races the peaks
+    // run 0.18 to 0.676, and the director will not even consider a comeback until the outcome phase
+    // opens at `outcomePhaseThreshold` (0.75 shipped). EVERY authored peak is already behind the
+    // camera by the time it is allowed to look, so a peak gate cannot bite: both arms came back
+    // byte-identical. `resolve` is where the authored climb LANDS, it sits just past the window
+    // (0.78 in the sampled plans), and it is the beat COMEBACK-BEATS-1's own distance metric is
+    // measured against. Keeping `anchor` and `peak` too would be storing values nothing reads.
+    const resolves = new Map();
     for (const h of heroes) {
-      if (h && h.role === 'comebacker' && Number.isInteger(h.index)) set.add(h.index);
+      if (h && h.role === 'comebacker' && Number.isInteger(h.index)) {
+        set.add(h.index);
+        const beat = Array.isArray(h.beats) ? h.beats.find((b) => b?.event === 'resolve') : null;
+        if (beat && Number.isFinite(beat.progress)) resolves.set(h.index, beat.progress);
+      }
     }
     this._cast = set.size > 0 ? set : null;
+    this._resolveByIndex = resolves;
+  }
+
+  /**
+   * The authored resolve beat for one racer, or null when the plan named none. Read by the
+   * measurement harness; `best()` uses the map directly.
+   */
+  resolveFor(index) {
+    return this._resolveByIndex?.get(index) ?? null;
   }
 
   /** True when detection is switched on at all (a roster exists). */
@@ -120,7 +147,7 @@ export class ComebackDetector {
    * @param {number} ts
    * @returns {object|null} the live racer object
    */
-  best(racers, ts) {
+  best(racers, ts, progress = null) {
     if (!this.active) return null;
     const g = this._gates;
     const cutoff = ts - g.windowSec * 1000;
@@ -134,6 +161,24 @@ export class ComebackDetector {
     for (const idx of candidates) {
       const currentRank = rankByIndex.get(idx);
       if (currentRank == null) continue; // finished or absent
+      // ── COMEBACK-CONNECT-1: THE PLAN SAYS WHEN, WHEN IT IS SWITCHED ON ──────────────────────
+      //
+      // OFF (`comebackUseBeats: false`, the shipped default) this whole clause is skipped and the
+      // moment is whatever the rank-history gates below make it — today's behaviour, unchanged.
+      //
+      // ON, a racer the plan NAMED is not offered before the plan's resolve beat. This does not decide
+      // whether the comeback is real: every gate below still runs, so a racer who never gains the
+      // positions is still never offered. It decides only that the shot cannot be taken before the
+      // moment it is about — the defect COMEBACK-BEATS-1 measured, where the shot was on the right
+      // racer every time and early by a median 0.134 of the race.
+      //
+      // ★ A CANDIDATE THE PLAN DID NOT NAME IS UNTOUCHED, deliberately. `_b1` fallback candidates
+      // and heroes with no peak beat have no authored moment, and inventing one for them would be
+      // this feature making up the very thing it exists to stop the camera making up.
+      if (g.useBeats && progress != null) {
+        const landing = this._resolveByIndex.get(idx);
+        if (landing != null && progress < landing) continue;
+      }
       const hist = this._history.get(idx);
       if (!hist || hist.length < 2) continue;
       const start = earliestAtOrAfter(hist, cutoff);

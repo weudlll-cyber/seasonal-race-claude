@@ -42,7 +42,7 @@ import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
 import { looksLikeShortKey, normalizeShortKey } from '../../../../shared/raceShortKey.mjs';
 import { identifierForStoredInputs, takeArmedRepeat } from '../../modules/repeatRace.js';
 import { fetchRaceByShortKey } from '../../services/racesApi.js';
-import { buildWorldConfig } from '../../modules/exportRaceConfig.js';
+import { buildWorldConfig, defaultEffectiveRacerTypes } from '../../modules/exportRaceConfig.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
   deriveRaceDuration,
@@ -190,6 +190,7 @@ function SetupScreen() {
           racePlanEnabled: race.racePlanEnabled,
           world: buildWorldConfig({ raceActionStage: race.raceActionStage }),
           defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+          defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
           buildId: raceIdentifierBuildId(),
         });
       } catch (err) {
@@ -361,6 +362,7 @@ function SetupScreen() {
     try {
       const decoded = decodeRaceIdentifier(raceSeed, {
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
         // A repeat out of the history is read against the build it was RECORDED under; anything
         // else against this one. Two lines up from a refusal either way — this decides which
         // question is being asked, not whether it is asked.
@@ -748,6 +750,7 @@ function SetupScreen() {
           }).realizedDurationSec >= racePlanMinDur,
         world: buildWorldConfig({ raceActionStage: stage }),
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
         buildId: raceIdentifierBuildId(),
       });
       return { identifier, note: null };
@@ -801,6 +804,7 @@ function SetupScreen() {
           return {
             decoded: decodeRaceIdentifier(text, {
               defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+              defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
               buildId: buildIdForDecode ?? raceIdentifierBuildId(),
             }),
             error: null,

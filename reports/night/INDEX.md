@@ -8,6 +8,81 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-SHAPE-1.md](COMEBACK-SHAPE-1.md) — **what the plan writes and what the camera shows,
+  side by side** (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, comeback key OFF
+  throughout, nothing minted). ★ **CARRIES A CORRECTION TO [OUTCOME-WINDOW-1](OUTCOME-WINDOW-1.md):**
+  its §1 conclusion that the outcome flag is *inert* is **WITHDRAWN** — `comeback-beats.mjs:170-184`
+  already wraps `cd.update` and supplies the browser's value on its default arm, so that piece's
+  driver-level change was overridden and could not have differed. The comparison the flag exists for
+  (`--outcome=driver`, N=30) gives **7 shots against 1**, COMEBACK_ZOOM 2.60% → 0.37%: **the window is
+  decisive.** The rest of that report stands, and COMEBACK-BEATS-1 / -WEIGHT-1 / -CONNECT-1 were all
+  measured on the browser's window, which is the right one. ★ **And the camera is not first allowed
+  to look at 0.75** — that is the internal fallback; the plan's OUTCOME opens at **0.600** in 40 of 40
+  races. ★ **THE SHAPES, N=40 / 74 planned comebackers / 11 shots:** a planned climb runs **0.150 →
+  0.780** (median length 0.630 of the race, from rank 8 to rank 2, 5 places); a shot runs a median
+  **0.646 → 0.756** (0.107 long) and starts a median **0.134 BEFORE** the plan's landing — the camera
+  shows about a sixth of the arc, and the part before it lands. **0 of 74 climbs finish before 0.75.**
+  ★ **Shown and never-shown are the same shape** — identical start, finish, length and landing rank;
+  medians differ only in places gained, 7 against 5 — **but the deepest climbs were never shown**
+  (19, 19, 17, 16, 16, 15 places), and 10 of the 63 unshown gained ten or more. Camera never picked an
+  unplanned racer: **0 of 11**. Columns A, B, C and the never-shown rows are tables. **No
+  recommendation, no proposal.**
+
+- [OUTCOME-WINDOW-1.md](OUTCOME-WINDOW-1.md) — **the harness camera is not the browser camera**
+  (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, nothing built, **nothing minted**).
+  ★ **Two corrections to the premise, both at source.** The window is not CLOSED — the consumer is an
+  OR (`CameraDirector.js:1717`), so a hard-coded `false` falls back to `leaderProgress > 0.75` and the
+  window opens by a DIFFERENT RULE. And `camera-fingerprint.mjs:270` hard-codes its own `false` in its
+  own loop; it does not use `raceDriver` at all. ★ **What the different rule hides, N=40 / 172,013
+  frames: the browser calls OUTCOME on 77,488 frames, the fallback on 53,184, and 24,344 frames
+  (14.2%, in 40 of 40 races) are opened only by the browser — with a live comeback candidate on 18,932
+  of them.** ★ **Yet NO camera state occurs that did not, on ZERO frames**: given the browser's value
+  the whole corpus re-runs BYTE-IDENTICAL, shots 11 → 11 — and the arm was proven live first (2,272
+  true frames on one track) because a zero from a disconnected lever is worthless. ★ **THE CAMERA
+  FINGERPRINT DOES MOVE: `152cf295c4c9ff54` → `75aef5cd474c54e5`, on 4 of 10 tracks** (city-circuit,
+  dirt-oval, ice-track, space-sprint), frame counts identical everywhere. **The value is reported and
+  NOT minted.** ★ **76 files import that driver** and are named, not repaired — including the SHIP
+  GATE (`viewer-invariants.mjs`), the `check-runin-frame` guard, and the two measurements stamped into
+  CAMERA_DIRECTOR.md and ENDING-PHASES.md. What blocks adopting the browser's value is not technical:
+  it re-bases the camera's whole measurement history and needs a mint. **Nothing is proposed.**
+
+- [IDENTIFIER-DIFF-1.md](IDENTIFIER-DIFF-1.md) — **the identifier carries only what differs**
+  (2026-09-07, `night/2026-09-06`, unmerged). `effectiveRacerTypes` was written in FULL — all twenty
+  types, every race — while the config block beside it was already a diff, so the mechanism was in
+  the file and applied to one of the two halves. It now uses the same `diffFromDefaults`/`applyDiff`
+  pair against `CONFIG_SNAPSHOT`, the registry's own frozen copy of its code defaults, so **no engine
+  change and no new snapshot were needed.** ★ **Re-measured on this build: 2,547 → 230 at 4 racers,
+  2,775 → 458 at 20, 3,068 → 751 at 40 — a CONSTANT 2,317 characters saved** (91% / 83.5% / 75.5%),
+  which reproduces Option A's predicted 739 independently. ★ **Old identifiers still work**: `ed`
+  present means a diff, `e` means the old full form, and the discriminator is which key exists —
+  **no version bump and no migration**, because a bump would refuse every string already copied out.
+  ★ **THE COST, STATED AND NOT SOLVED: a diff means whatever the DECODING build's defaults say it
+  means.** If a shipped racer-type value moves, an old identifier silently describes a different
+  race — demonstrated by a test that decodes one string against a moved base. ★ **The existing
+  reproduction test was green for the wrong reason** — it passed no base, so the diff came out as the
+  full object and the new path was never exercised; fixed before the sabotage, which then went **2 of
+  13 red** only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
+  is blind to a moved default by construction. Nothing minted; golden races pass.
+
+- [COMEBACK-CONNECT-1.md](COMEBACK-CONNECT-1.md) — **the plan's beats reach the camera, and what
+  that costs** (2026-09-07, `night/2026-09-06`, unmerged; the key ships OFF). The plan already writes
+  per comebacker where the climb lands and `setPlan` was dropping it; the beats now decide WHEN a
+  named comebacker may be offered, behind `comebackUseBeats` whose default is today's behaviour
+  exactly. Contest, weights, roles and everything that draws are untouched. ★ **THE TWO COLUMNS over
+  40 races / 74 written comebackers: shots 11 → 0, races with a comebacker and no shot 29 → 40 of
+  40, COMEBACK_ZOOM frame share 3.07% → 0.00% with two thirds of it going to LEADER_ZOOM
+  (+2.08).** The arms are proven to have run IDENTICAL races — every camera-independent field equal,
+  0 differences in 40. ★ **WHY IT IS ZERO IS THE FINDING:** candidate frames inside the offer window
+  fall **7,510 (35 of 40 races) → 45 (2 of 40)** — the authored landing and the camera's admissible
+  window barely overlap, because by the time the climb has landed the racer is near the front and the
+  detector's own `maxCurrentRankPct` stops calling it a comeback. ★ **The other end is measured too:**
+  gating on the PEAK beat instead changes NOTHING (two byte-identical columns), because every
+  authored peak (0.18–0.676) is behind the camera before the outcome phase opens. ★ **Two defects in
+  the instrument, both caught by disbelieving a zero** — the key was never carried into the timing
+  config, and the harness's own gate read omitted the new argument, so two rows were describing a
+  detector the run was not using. Sabotage red 2 of 9; the detector had **no test at all** before
+  this. Four fingerprints unmoved, golden races pass, nothing minted, **and no value is recommended.**
+
 - [COMEBACK-WEIGHT-1.md](COMEBACK-WEIGHT-1.md) — **what it would cost to show the comebacks**
   (2026-09-06, NIGHT-2026-09-05 piece 1). One lever, `comebackWeight`, over the same 40 races at
   0.6 / 1 / 2 / 4 / 8, nothing else changed and no shipped default written. Shots rise **11 → 13 →

@@ -35,9 +35,25 @@ import { raceHash } from '../../../scripts/lib/raceDriver.mjs';
 import { hashWorld } from './raceConfigWorld.js';
 import { decodeRaceIdentifier, encodeRaceIdentifier } from './raceIdentifier.js';
 import { DEFAULT_CONFIG_WORLD, DEFAULT_CAMERA_CONFIG } from './storage/defaults.js';
+import { defaultEffectiveRacerTypes } from './exportRaceConfig.js';
 
 const BUILD = 'abc12345';
-const OPTS = { defaultWorldConfigs: DEFAULT_CONFIG_WORLD, buildId: BUILD };
+
+// ── IDENTIFIER-DIFF-1: THE RACER-TYPE BASE, AND WHY IT HAD TO BE ADDED HERE ─────────────────────
+//
+// The identifier now carries the racer types as a DIFF against the shipped values, so both ends
+// need that base. Before this piece these fixtures passed none — and everything still went green,
+// because with no base the diff is taken against `{}` and comes out as the FULL object again. That
+// is the round-trip passing for the wrong reason: the new path was never exercised.
+//
+// So the real base is used here. `defaultEffectiveRacerTypes()` reads `CONFIG_SNAPSHOT`, the copy
+// the registry freezes before any stored override, so it is the same on any machine.
+const DEFAULT_TYPES = defaultEffectiveRacerTypes();
+const OPTS = {
+  defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+  defaultEffectiveRacerTypes: DEFAULT_TYPES,
+  buildId: BUILD,
+};
 
 /** A race whose host has drifted off the shipped defaults — the case a seed cannot reproduce. */
 function originalRace() {
@@ -60,6 +76,19 @@ function originalRace() {
   };
 }
 
+/**
+ * A race on an UNTOUCHED machine: its racer types are exactly the shipped ones, so the diff the
+ * identifier carries for them is empty and every value has to come back from the decoder's own
+ * defaults. This is the race IDENTIFIER-DIFF-1 exists for, and the one that goes red if a value the
+ * identifier now OMITS stops matching the base it is read against.
+ */
+function shippedTypesRace() {
+  return {
+    ...originalRace(),
+    world: { ...originalRace().world, effectiveRacerTypes: structuredClone(DEFAULT_TYPES) },
+  };
+}
+
 /** The identity shape `raceHash` hashes, built from a set of race inputs the same way both times. */
 const identityOf = (r) => ({
   racers: r.names.length,
@@ -73,7 +102,12 @@ const identityOf = (r) => ({
 });
 
 const encode = (r) =>
-  encodeRaceIdentifier({ ...r, defaultWorldConfigs: DEFAULT_CONFIG_WORLD, buildId: BUILD });
+  encodeRaceIdentifier({
+    ...r,
+    defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+    defaultEffectiveRacerTypes: DEFAULT_TYPES,
+    buildId: BUILD,
+  });
 
 describe('RACE-IDENTIFIER-1 — a reproduced race is the same race', () => {
   // ★ THE PROOF. What breaks if deleted: the feature's only promise.
@@ -152,5 +186,92 @@ describe('RACE-IDENTIFIER-1 — the check goes red when an input is corrupted', 
     const corrupted = decodeRaceIdentifier(encode({ ...original, world: drifted }), OPTS);
 
     expect(hashWorld(corrupted.world).full).not.toBe(hashWorld(original.world).full);
+  });
+});
+
+// ── IDENTIFIER-DIFF-1 ───────────────────────────────────────────────────────────────────────────
+describe('IDENTIFIER-DIFF-1 — the shortened form means the same race', () => {
+  // ★ THE SABOTAGE CATCHER. The identifier now OMITS every racer-type value that equals the shipped
+  // one, so those values come back from the decoder's base instead of from the string. Corrupt one
+  // of those omitted defaults and the world that comes back is not the world that went in — this is
+  // the test that says so.
+  it('★ a race on shipped racer types round-trips to the SAME world', () => {
+    const original = shippedTypesRace();
+    const back = decodeRaceIdentifier(encode(original), OPTS);
+
+    expect(hashWorld(back.world).full).toBe(hashWorld(original.world).full);
+    expect(back.world.effectiveRacerTypes).toEqual(original.world.effectiveRacerTypes);
+  });
+
+  it('a racer-type value that DIFFERS from shipped still travels', () => {
+    const original = shippedTypesRace();
+    const drifted = structuredClone(original.world);
+    drifted.effectiveRacerTypes.horse.speedMultiplier = 1.37;
+    const back = decodeRaceIdentifier(encode({ ...original, world: drifted }), OPTS);
+
+    expect(back.world.effectiveRacerTypes.horse.speedMultiplier).toBe(1.37);
+    expect(hashWorld(back.world).full).toBe(hashWorld(drifted).full);
+  });
+
+  // ★ THE SABOTAGE CATCHER, and it has to be a LITERAL. The obvious test — round-trip and compare —
+  // cannot catch a moved default at all: encoder and decoder read the SAME base inside one build, so
+  // a changed shipped value shifts both sides equally and the comparison still passes. That is not a
+  // weakness in the test, it is the mechanism, and it is the cost this piece states openly: a diff
+  // means whatever the defaults of the build DECODING it say it means.
+  //
+  // So this pins the value that is no longer in the string to the number it is supposed to be. Change
+  // a shipped racer-type default and this goes red, which is the only place that movement is visible.
+  it('★ an OMITTED default comes back as the value it is supposed to be', () => {
+    const back = decodeRaceIdentifier(encode(shippedTypesRace()), OPTS);
+    // horse.speedMultiplier is not written into the identifier any more — it is restored from the
+    // decoder's own shipped values. HorseRacerType.js says 1.0.
+    expect(back.world.effectiveRacerTypes.horse.speedMultiplier).toBe(1.0);
+  });
+
+  // ★ THE COST, MADE VISIBLE RATHER THAN ARGUED. Decode the same string against a base in which one
+  // omitted value has moved, and the race that comes back is a different race. This is what happens
+  // to an identifier written before a shipped racer-type default changes.
+  it('★ decoded against MOVED defaults, the same string is a different race', () => {
+    const original = shippedTypesRace();
+    const str = encode(original);
+    const movedBase = structuredClone(DEFAULT_TYPES);
+    movedBase.horse.speedMultiplier = 1.23;
+    const back = decodeRaceIdentifier(str, { ...OPTS, defaultEffectiveRacerTypes: movedBase });
+
+    expect(back.world.effectiveRacerTypes.horse.speedMultiplier).toBe(1.23);
+    expect(hashWorld(back.world).full).not.toBe(hashWorld(original.world).full);
+  });
+
+  it('the shortened form is SHORTER, and by the whole racer-type block', () => {
+    const original = shippedTypesRace();
+    const short = encode(original);
+    // The old form, reproduced: the full set under `e` and no `ed`.
+    const long = encodeRaceIdentifier({
+      ...original,
+      defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+      defaultEffectiveRacerTypes: {},
+      buildId: BUILD,
+    });
+    expect(short.length).toBeLessThan(long.length);
+  });
+
+  // ★ OLD IDENTIFIERS MUST STILL WORK, or this piece does not ship. An identifier written before
+  // this change carries `e` in full and no `ed`; the decoder tells the two apart by which key is
+  // present, so a string the owner copied out last week still decodes to the race it always did.
+  it('★ an identifier in the OLD form still decodes, to the same racer types', () => {
+    const original = shippedTypesRace();
+    const oldForm = encodeRaceIdentifier({
+      ...original,
+      defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+      defaultEffectiveRacerTypes: {},
+      buildId: BUILD,
+    });
+    const back = decodeRaceIdentifier(oldForm, OPTS);
+
+    expect(back.world.effectiveRacerTypes).toEqual(original.world.effectiveRacerTypes);
+    expect(hashWorld(back.world).full).toBe(hashWorld(original.world).full);
+    expect(raceHash(identityOf(back), back.world.configs.cameraConfig)).toBe(
+      raceHash(identityOf(original), original.world.configs.cameraConfig)
+    );
   });
 });

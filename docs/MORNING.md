@@ -4,11 +4,10 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-07, after PIECE 3 of the night chain of 2026-09-06.
+**Last rewritten:** 2026-09-07, after PIECE 5 — the chain is finished of 2026-09-06.
 
 **Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
-catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` does not
-exist yet; it is branched off master once the team pieces are finished.
+catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries pieces 4, 6 and 5; also **NOT MERGED**.
 
 **★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
 silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
@@ -57,8 +56,10 @@ up the two new modules by itself; `docs/` cannot select it. Sabotage went red as
 `ci.yml` untouched — but verify does select it, so **verify now needs a Docker daemon** when a
 declared path changes, and says so loudly rather than passing.
 
-**PIECE 3 · A repeat is recomputed first — ★ STOPPED, no code changed** — `2c938327`,
-[REPEAT-RECOMPUTE-6](../reports/evolution/REPEAT-RECOMPUTE-6.md). Everything it was asked to
+**PIECE 3 · A repeat is recomputed first — ★ STOPPED, no code changed** — `2c938327`, report
+`reports/evolution/REPEAT-RECOMPUTE-6.md`. ★ **That report is on `feat/team-races-1`, not on this
+branch**, which is why it is named here rather than linked: piece 3 belongs to the team topic and
+this sheet also has to be readable from the night branch. Everything it was asked to
 establish, it established. ★ **The named stop condition PASSES**: the engine loads in a worker with
 no engine change — of the 64 files in its closure only three touch the DOM, all at call time. The
 comparison needs **no tolerance** (`finishTimeMs` is a strict FIXED_DT multiple, already stored), and
@@ -71,16 +72,54 @@ A third mirror drifts, and a drifting recompute refuses races that still run ide
 outcome REPEAT-REFUSE-5 established as wrong. **RACE-HISTORY-4's warn-and-run is deliberately left
 running**: it is replaced, not layered over, and removing it first would leave you with neither.
 
+**PIECE 4 · The plan's beats reach the camera — ★ BUILT, AND THE KEY IS OFF** — `918423c8`,
+[COMEBACK-CONNECT-1](../reports/night/COMEBACK-CONNECT-1.md). `comebackUseBeats` ships **false**, so
+nothing changes until you turn it on; there is a Dev Screen control for it. ★ **THE TWO COLUMNS over
+40 races / 74 written comebackers: shots 11 → 0**, races with a comebacker and no shot 29/40 → 40/40,
+COMEBACK_ZOOM frame share 3.07% → 0.00% with two thirds going to LEADER_ZOOM. The arms are **proven
+to have run identical races** — 0 differences in every camera-independent field. ★ **Why it is zero
+IS the finding:** candidate frames inside the offer window fall **7,510 (35 of 40 races) → 45 (2 of
+40)**. The authored landing and the camera's admissible window barely overlap, because by the time
+the climb lands the racer is near the front and the detector's own gate stops calling it a comeback.
+★ **The other end is measured too:** gating on the PEAK beat changes NOTHING — every authored peak
+(0.18–0.676) is behind the camera before the outcome phase opens at 0.75. ★ **Two defects in my own
+instrument, both caught by disbelieving a zero**: the key was never carried into the timing config,
+and the harness's gate read omitted the new argument. **No value is recommended.** Four fingerprints
+unmoved, golden races pass, nothing minted.
+
+**PIECE 6 · The identifier carries only what differs — ★ BUILT** — `dd6bea53`,
+[IDENTIFIER-DIFF-1](../reports/night/IDENTIFIER-DIFF-1.md). `effectiveRacerTypes` was written in
+full — all twenty types, every race — while the config block beside it was already a diff. Same
+`diffFromDefaults`/`applyDiff` pair now, against `CONFIG_SNAPSHOT`, the registry's own frozen copy of
+its code defaults: **no engine change and no new mechanism.** ★ **Re-measured here: 2,547 → 230 at 4
+racers, 2,775 → 458 at 20, 3,068 → 751 at 40 — a CONSTANT 2,317 characters saved** (91% / 83.5% /
+75.5%), reproducing Option A's predicted 739 independently. ★ **Old identifiers still work** — `ed`
+means a diff, `e` means the old full form, and which key is present decides; **no version bump, no
+migration**, because a bump would refuse every string you have already copied out. ★ **The cost,
+stated and not solved: a diff means whatever the DECODING build's defaults say it means** — if a
+shipped racer-type value moves, an old identifier silently describes a different race. Demonstrated
+by a test, not argued. ★ **The existing reproduction test was green for the wrong reason** (it passed
+no base, so the diff came out as the full object); fixed before the sabotage, which then went 2 of 13
+red — but only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
+is blind to a moved default by construction.
+
+**PIECE 5 · The harness camera is not the browser camera — ★ MEASURED** — `28e2f8d1`,
+[OUTCOME-WINDOW-1](../reports/night/OUTCOME-WINDOW-1.md). Measurement only; both temporary arms
+reverted. ★ **Two corrections to the premise:** the window is not CLOSED — the consumer is an OR, so
+a hard-coded `false` falls back to `leaderProgress > 0.75` and the window opens by a *different rule*
+— and `camera-fingerprint.mjs` hard-codes its own `false` in its own loop, so its exposure is not
+inherited from the driver. ★ **What the different rule hides:** the browser calls OUTCOME on 77,488
+of 172,013 frames against the fallback's 53,184, and **24,344 frames (14.2%, in 40 of 40 races) open
+only for the browser** — with a live comeback candidate on 18,932 of them. ★ **Yet no camera state
+occurs that did not, on zero frames** — the corpus re-runs byte-identical, and the arm was proven
+live first. ★ **THE CAMERA FINGERPRINT DOES MOVE — to `75aef5cd474c54e5`, on 4 of 10 tracks** (city-circuit, dirt-oval, ice-track, space-sprint). The recorded value is where it always is,
+in `docs/fingerprints.json`. **The new one is reported and NOT minted.** **76 files** run on that driver — named, not repaired — including the **ship gate**, the
+`check-runin-frame` guard, and the two measurements stamped into CAMERA_DIRECTOR.md and
+ENDING-PHASES.md.
+
 ### RUNNING
 
-Nothing is running. Piece 4 is next, on a new `night/2026-09-06` off master.
-
-### OPEN — the three pieces not yet started
-
-- **PIECE 4** · the race plan's beats reach the camera, behind a key defaulting to today's
-  behaviour. On a new `night/2026-09-06` off master.
-- **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only.
-- **PIECE 6** · the identifier carries only what differs from the shipped defaults.
+Nothing is running. **The chain is finished** — six pieces, two branches, no merges.
 
 ### NEEDS HIS WORD
 
@@ -94,9 +133,16 @@ Nothing is running. Piece 4 is next, on a new `night/2026-09-06` off master.
   through, and its proof is the parity suite plus the golden races plus your eye. **Not started.**
 - **★ PIECE 4's KEY IS OFF BY DEFAULT AND THE POINT IS THAT YOU TRY IT BOTH WAYS.** The camera
   knowing when a comeback happens is contested behaviour and you have not seen it. The dev server is
-  left on `night/2026-09-06` for exactly this.
+  left on `night/2026-09-06` for exactly this — the switch is in Dev Screen → Camera (advanced),
+  *"Let the race plan say WHEN a comeback is shown"*. ★ **Read the two columns before you flick it:**
+  ON, the measurement says every comeback shot disappears. That is a real result, not a bug, and it
+  is why nothing is recommended.
 - **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
   costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
+- **★ THE CAMERA FINGERPRINT WOULD MOVE IF THE HARNESS MEASURED THE WINDOW THE WAY THE BROWSER
+  DOES**, to `75aef5cd474c54e5`. Nothing was minted and nothing was changed. Adopting the browser's
+  value is four lines, but it re-bases every figure the 76 consumers have produced — the ship gate
+  and two stamped documents among them — so it is a decision, not a repair.
 - **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
   in this chain has asked for it.
 <!-- END CHAIN STATUS -->
@@ -255,14 +301,14 @@ three gaps between a green branch and a green CI, and the open list below.
 
 ---
 
-## RUNNING (as of the night of 2026-09-05)
+## RUNNING
 
 **Nothing.** Every sweep is finished and no measurement is in flight. The dev server is on
 `night/2026-09-05`.
 
 ---
 
-## OPEN (as of the night of 2026-09-05)
+## OPEN
 
 **Checked against the tree on 2026-09-05 before being listed. The full version with source addresses
 is in [BACKLOG.md § WHAT IS ACTUALLY OPEN](BACKLOG.md); this is the short form.**
@@ -300,7 +346,7 @@ the client, and the server declares neither script, so there is nothing there to
 
 ---
 
-## NEEDS HIS WORD (as of the night of 2026-09-05)
+## NEEDS HIS WORD
 
 **One item — and one branch.**
 

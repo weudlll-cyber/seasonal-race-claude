@@ -117,6 +117,18 @@ const OUTCOME_ARM = ARG("outcome", "browser");
 // ★ NO SHIPPED DEFAULT IS TOUCHED. The value is overridden on a COPY of the config for the
 // duration of one run; `defaults.js` is never written and nothing persists.
 const WEIGHT = ARG("comeback-weight", null);
+
+// ── COMEBACK-CONNECT-1: the arm switch, on the SAME copy-the-config mechanism as the weight ────
+//
+// `--use-beats=1` turns on `comebackUseBeats`, which lets the plan's PEAK beat decide when a named
+// comebacker may be offered. Off is the shipped default and today's behaviour.
+//
+// ★ NO SHIPPED DEFAULT IS TOUCHED, exactly as above: the value is set on a COPY for the duration of
+// one run. Two runs at the same `--seeds` therefore drive IDENTICAL races — camera configuration
+// cannot reach the physics — and that is checkable rather than assumed: every camera-independent
+// field this script records (`comebackers` and their beats, `crossedAt`, `b1Size`, `raceMs`) must
+// be equal between the arms, and COMEBACK-CONNECT-1 compares them.
+const USE_BEATS = ARG("use-beats", null);
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -127,10 +139,11 @@ if (SEEDS.length === 0) {
 }
 
 // The config this sweep actually runs, which is the shipped one unless a weight was asked for.
-const CAMERA_CONFIG =
-  WEIGHT == null
-    ? DEFAULT_CAMERA_CONFIG
-    : { ...DEFAULT_CAMERA_CONFIG, comebackWeight: Number(WEIGHT) };
+const CAMERA_CONFIG = {
+  ...DEFAULT_CAMERA_CONFIG,
+  ...(WEIGHT == null ? {} : { comebackWeight: Number(WEIGHT) }),
+  ...(USE_BEATS == null ? {} : { comebackUseBeats: USE_BEATS === "1" || USE_BEATS === "true" }),
+};
 if (WEIGHT != null && !Number.isFinite(CAMERA_CONFIG.comebackWeight)) {
   console.error(`comeback-beats: --comeback-weight=${WEIGHT} is not a number.`);
   process.exit(2);
@@ -196,6 +209,39 @@ for (const geo of tracks) {
     const crossedAt = new Map(); // progress value -> ms since race start on the frame it was reached
     const watch = []; // every beat progress this race needs a time for
 
+    // ── COMEBACK-SHAPE-1: THE SHAPE OF A CLIMB, AND THE SHAPE OF A SHOT ─────────────────────────
+    //
+    // A PROPER PART OF THIS DIAGNOSTIC, not temporary instrumentation. COMEBACK-BEATS-1 recorded
+    // WHEN a beat was written and WHEN a shot fired; it never recorded WHERE IN THE FIELD either one
+    // was, so "the plan says rank 20 -> 3" and "the camera showed him going 9th -> 7th" could not be
+    // put on one row. These two maps are that missing half, and nothing here changes what the camera
+    // or the plan does — every read is a read.
+    //
+    // ★ WHAT CANNOT BE RECORDED HERE, and it is not worked around. The plan's AUTHORED rank at each
+    // beat lives in `plan._heroCurves` (`heroChoreography.js:111` — every curve point is
+    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:511-517`) keeps only
+    // `{progress, event}`. The controller exposes `getCameraPlan` and `getHeroRoles` and no getter
+    // for the curves, so the authored rank is NOT reachable from the delivered plan. What is
+    // recorded instead is the racer's ACTUAL rank at the moment the authored progress is reached —
+    // measured, not authored — and the report says which of the two it is showing.
+    // ★ WHEN THE CAMERA IS FIRST ALLOWED TO LOOK AT ALL, which is NOT a constant. The director's
+    // test is an OR: the external `isOutcomePhase` the product supplies from the race plan's phase
+    // (`RaceScreen/index.jsx:1484`), or the internal fallback `leaderProgress > outcomePhaseThreshold`
+    // (0.75 shipped). The browser arm above supplies the first, so on this harness the window opens
+    // at whichever comes first — and the plan's OUTCOME normally comes first. Recording it is the
+    // only way a reader can tell "the camera was not allowed to look" from "it was allowed and did
+    // not".
+    let outcomeOpensAt = null;
+    const rankAtBeat = new Map(); // `${index}@${progress}` -> actual rank when that progress arrived
+    const beatWatch = []; // [{ index, progress }] — one entry per comebacker per beat
+    // Ranks are only computed on the frames that need one: a beat crossing, or a shot's first and
+    // last frame. A per-frame sort over the whole field would be pure waste on ~4,300 frames a race.
+    const rankOf = (st, index) => {
+      const sorted = [...st.racers].sort((a, b) => b.t - a.t);
+      const i = sorted.findIndex((r) => r.index === index);
+      return i < 0 ? null : i + 1;
+    };
+
     runRace(race, identity, CAMERA_CONFIG, ({ cd: dir, st: state, ts, raceStart }) => {
       // THE BROWSER'S DELIVERY, reproduced. One frame later than RaceScreen's at most.
       if (meta.racePlanController && !planDelivered) {
@@ -207,6 +253,11 @@ for (const geo of tracks) {
           b1 = cp.b1Indices instanceof Set ? new Set(cp.b1Indices) : null;
           for (const h of cp.heroes ?? [])
             for (const bt of h.beats ?? []) if (!watch.includes(bt.progress)) watch.push(bt.progress);
+          // COMEBACK-SHAPE-1: one watch entry per COMEBACKER per beat, so each racer's rank is
+          // sampled at HIS OWN beats rather than at everybody's.
+          for (const h of cp.heroes ?? [])
+            if (h.role === "comebacker")
+              for (const bt of h.beats ?? []) beatWatch.push({ index: h.index, progress: bt.progress });
           beats = (cp.heroes ?? []).map((h) => ({
             index: h.index,
             role: h.role,
@@ -215,13 +266,31 @@ for (const geo of tracks) {
           }));
         }
       }
+      if (
+        outcomeOpensAt == null &&
+        meta.racePlanController?.getPhase?.(state.physicsTs, state.raceProgress) === "OUTCOME"
+      ) {
+        outcomeOpensAt = +(state.raceProgress ?? 0).toFixed(4);
+      }
       for (const w of watch) {
         if (!crossedAt.has(w) && (state.raceProgress ?? 0) >= w) crossedAt.set(w, ts - raceStart);
+      }
+      // COMEBACK-SHAPE-1: the rank each comebacker actually held when his own beat arrived.
+      for (const bw of beatWatch) {
+        const k = `${bw.index}@${bw.progress}`;
+        if (!rankAtBeat.has(k) && (state.raceProgress ?? 0) >= bw.progress)
+          rankAtBeat.set(k, rankOf(state, bw.index));
       }
       const s = dir.state;
       stateFrames.set(s, (stateFrames.get(s) ?? 0) + 1);
       // A PURE READ of the detector, to separate the two gates. Mutates nothing, rolls nothing.
-      const cand = dir._comeback?.best?.(state.racers, ts) ?? null;
+      //
+      // ★ THE PROGRESS ARGUMENT IS NOT OPTIONAL HERE (COMEBACK-CONNECT-1). `best()` gained a third
+      // parameter that the beats gate reads, and it defaults to null = "no beat gating". This call
+      // omitted it in the first draft, so GATE 1 and GATE 2a below came back BYTE-IDENTICAL in both
+      // arms — they were measuring a detector the run was not using. Passing the same progress the
+      // director passes makes this row describe the arm that is actually running.
+      const cand = dir._comeback?.best?.(state.racers, ts, state.raceProgress ?? null) ?? null;
       if (cand) {
         candidateFrames++;
         candidateRacers.add(cand.index);
@@ -235,12 +304,34 @@ for (const geo of tracks) {
         }
       }
       if (s === "COMEBACK_ZOOM" && prevState !== "COMEBACK_ZOOM") {
+        const who = dir.comebackLockedRacerIndex ?? null;
         shots.push({
           ts,
           ms: ts - raceStart,
           progress: +(state.raceProgress ?? 0).toFixed(4),
-          racer: dir.comebackLockedRacerIndex ?? null,
+          racer: who,
+          // COMEBACK-SHAPE-1 — where in the field he was when the shot began.
+          rankAtStart: who == null ? null : rankOf(state, who),
+          // ★ THE TWO PROGRESS AXES ARE NOT THE SAME NUMBER, and a report that mixed them would be
+          // wrong. `st.raceProgress` (`raceCore.js:518-524`) is a running MAX over UNFINISHED racers,
+          // clamped to 1 — it is the axis the race plan's beats are written in. The director compares
+          // its own `leader.t / finishT` (`CameraDirector.js:1551`) over ALL racers, uncapped. They
+          // agree until the first racer finishes. Both are recorded so the gap can be shown rather
+          // than assumed away.
+          leaderRatio: (() => {
+            const t = Math.max(...state.racers.map((r) => r.t));
+            return state.finishT > 0 ? +(t / state.finishT).toFixed(4) : null;
+          })(),
+          endProgress: null,
+          rankAtEnd: null,
         });
+      }
+      // COMEBACK-SHAPE-1 — and where he was when it ended. The shot is not the climb, so its own
+      // extent has to be recorded rather than inferred from the beat it sits near.
+      if (s !== "COMEBACK_ZOOM" && prevState === "COMEBACK_ZOOM" && shots.length) {
+        const last = shots[shots.length - 1];
+        last.endProgress = +(state.raceProgress ?? 0).toFixed(4);
+        last.rankAtEnd = last.racer == null ? null : rankOf(state, last.racer);
       }
       prevState = s;
       return true;
@@ -255,6 +346,9 @@ for (const geo of tracks) {
       states: Object.fromEntries([...stateFrames].sort((x, y) => y[1] - x[1])),
       comebackers: comebackers.map((h) => ({
         index: h.index,
+        // COMEBACK-SHAPE-1: the plan's authored FINAL rank. `buildCameraPlan` delivers it and this
+        // row was dropping it, so "from -> to" had no `to`.
+        finalRank: h.finalRank ?? null,
         resolve: h.beats.find((b) => b.event === "resolve")?.progress ?? null,
         peak: h.beats.filter((b) => b.event === "peak").map((b) => b.progress),
         anchor: h.beats.find((b) => b.event === "anchor")?.progress ?? null,
@@ -269,6 +363,9 @@ for (const geo of tracks) {
       overlapStates: Object.fromEntries([...overlapStates].sort((x, y) => y[1] - x[1])),
       candidateRacers: [...candidateRacers],
       shots,
+      // COMEBACK-SHAPE-1 — `${racerIndex}@${beatProgress}` -> the rank he actually held there.
+      rankAtBeat: Object.fromEntries(rankAtBeat),
+      outcomeOpensAt,
       raceMs: st.physicsTs ?? null,
     });
     process.stderr.write(
@@ -278,7 +375,15 @@ for (const geo of tracks) {
   }
 }
 
-if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ seeds: SEEDS, rows }, null, 1));
+if (JSON_OUT)
+  writeFileSync(
+    JSON_OUT,
+    JSON.stringify(
+      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, rows },
+      null,
+      1,
+    ),
+  );
 
 // ── THE ACCOUNT ──────────────────────────────────────────────────────────────────────────────
 const N = rows.length;
