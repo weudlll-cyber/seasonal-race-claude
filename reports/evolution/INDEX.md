@@ -378,9 +378,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   writing to `docker-compose.override.yml` — the file this project already used for per-install
   environment. ★ **Only ONE build-time site ever existed** (`api.js:17`) — PROD-SAVE-1's "two uses"
   are two references on one line. `virtual:ra-build` **could not** carry this: it resolves at build
-  time by construction. **Sabotage went red naming the host.** ★ **The bundle still carries
+  time by construction. **Sabotage went red naming the host.** ★ **The bundle still carried
   `fonts.googleapis.com`** from `index.html`, pre-dating this piece — named, not hidden, in the
-  "still needed" list with six other things a real install wants.
+  "still needed" list with six other things a real install wants. **Item 5 of that list is now
+  CLOSED by SELF-HOSTED-FONT-1, below, on the same branch.**
+- [SELF-HOSTED-FONT-1.md](SELF-HOSTED-FONT-1.md) — **the font ships with the package; nothing is
+  fetched from a third party at runtime** (2026-09-07, `feat/runtime-api-url-1`, commit `e01109a4`,
+  **unmerged** — the owner looks at the whole branch at once). `client/index.html` preconnected to
+  `fonts.googleapis.com` and linked `Inter` from it, so a running instance could not draw its own
+  text without a machine the owner does not run. **Closes item 5 of RUNTIME-API-URL-1's "still
+  needed" list.** ★ **A full sweep of `client/` found that link was the ONLY runtime third-party
+  fetch** — no `@import` anywhere, no `url(` in any of the 19 CSS files; the other seven hits are
+  build-time, test fixtures, or identifiers that are never dereferenced, each named and left. ★ **The
+  faces are STATIC INSTANCES, not the variable font, and that is the whole fidelity argument**:
+  `.ceremony-brand__title` asks Inter for `font-weight: 800`, which the link never supplied, so the
+  browser picks the 700 — a variable Inter would answer with a real 800 and make that heading heavier
+  than he has ever seen it. Verified by parsing the woff2 table directories: **no `fvar`/`gvar`**.
+  Inter 4.001 (`git-66647c0bb`), Google Fonts v20, weights 400/500/600/700, no italic, subsets latin
+  + latin-ext + **greek** (load-bearing — the Dev Screen's statistics labels use Greek letters no
+  other subset covers), woff2 only, `font-display: swap` matching the old `&display=swap`. **OFL 1.1
+  ships beside the files** and is reachable in the running container. **+276,309 B** in the package,
+  but `unicode-range` is kept so a Latin page still fetches only **96,744 B**. ★ **PROVED by
+  rendering, not by grep**: `audit-offline-render.mjs` serves the real build to Chromium with every
+  remote host aborted and compares text widths against a control font — identical widths are what a
+  failed font looks like. 0 external requests, 7/7 probes in Inter, the four weights measuring four
+  different widths. **Sabotage exit 1**; and `audit-bundle-address.mjs` **loses its font-host
+  allowance**, so a re-added link is now refused there too. Nothing moved: the canvas draws in
+  `sans-serif` and never names Inter.
 - [MERGE-NIGHT-2026-09-06.md](MERGE-NIGHT-2026-09-06.md) — **the night branch closes** (2026-09-07,
   catch-up `018b47dd`, merge `dc15f5e2`). Two product changes land — **COMEBACK-CONNECT-1**, the
   plan's beats reaching the camera behind `comebackUseBeats` which **ships `false`**, and

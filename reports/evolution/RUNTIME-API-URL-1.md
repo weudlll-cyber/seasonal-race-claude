@@ -462,11 +462,15 @@ none of it reads as done.
    run before `docker compose up`, because `client/dist` arrives through a named build context. A
    stranger who skips it gets a server that starts and serves no app — it says so, but only in a log
    line.
-5. **★ The package fetches fonts from `fonts.googleapis.com`.** `client/index.html` links a Google
-   Fonts stylesheet, so an air-gapped or privacy-restricted install gets no fonts and makes an
-   outbound request on every page load. **Pre-dates this piece and was left alone**; it is named
-   because "the package contains no domain" is not strictly true while it is there, and the owner
-   should decide rather than discover it.
+5. ~~**★ The package fetches fonts from `fonts.googleapis.com`.**~~ **CLOSED 2026-09-07 by
+   [SELF-HOSTED-FONT-1](SELF-HOSTED-FONT-1.md)**, on this same branch. The item read: *"`client/
+   index.html` links a Google Fonts stylesheet, so an air-gapped or privacy-restricted install gets
+   no fonts and makes an outbound request on every page load."* The preconnect and the link are
+   gone; `Inter` 4.001 ships in `client/public/fonts/` with its OFL 1.1 licence and is served by the
+   app itself. **A sweep of the whole client tree confirmed that link was the only runtime
+   third-party fetch there was**, so "the package contains no domain" is now true without
+   qualification — and `audit-bundle-address.mjs` has lost its allowance for the two font hosts,
+   which is what makes it refuse a re-added link rather than wave it through.
 6. **No health check and no restart policy.** Neither `server/Dockerfile` nor `docker-compose.yml`
    declares a `HEALTHCHECK`, so nothing notices a server that started and then died.
 7. **`audit-bundle-address.mjs` is not wired into `verify`, so nothing runs it automatically.** It
