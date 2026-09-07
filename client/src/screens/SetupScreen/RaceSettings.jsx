@@ -8,11 +8,9 @@
 
 import { useState } from 'react';
 import styles from './SetupScreen.module.css';
-import {
-  sanitizeQuickTestSeedInput,
-  QUICK_TEST_SEED_MIN,
-  QUICK_TEST_SEED_MAX,
-} from './quickTestSeed.js';
+// SEED-FIELD-TYPING-1: `sanitizeQuickTestSeedInput` is no longer imported here. It ran on every
+// keystroke and that was the defect; it still runs at submit, inside `resolveQuickTestSeed`.
+import { QUICK_TEST_SEED_MIN, QUICK_TEST_SEED_MAX } from './quickTestSeed.js';
 
 const DURATION_OPTIONS = [
   { value: 30, label: '30 s' },
@@ -111,7 +109,25 @@ function RaceSettings({
           data-testid="race-seed-input"
           title={`Leave empty and every race draws its own seed — the race screen shows it, and this panel remembers the last one. Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to run that exact race again on THIS machine. Paste a race identifier, or type a six-character race key, to run that exact race here, whatever this machine's own settings are.`}
           value={seed}
-          onChange={(e) => onSeedChange?.(sanitizeQuickTestSeedInput(e.target.value))}
+          // ★ SEED-FIELD-TYPING-1 — JUDGED ON SUBMIT, NOT ON EVERY KEYSTROKE.
+          //
+          // This used to run `sanitizeQuickTestSeedInput` here, on every change. That function
+          // passes a value through when it recognises an identifier or a short key and reduces
+          // anything else to its DIGITS — and a half-typed key is not yet recognisable. Typing
+          // "733DSV" was judged at "7", "73", "733", "733D"… and the first letter was shredded, so
+          // only digits ever survived. A PASTE arrived complete and was recognised in one go, which
+          // is why the key could be copied but never read out to somebody — the one thing it is for.
+          //
+          // RACE-HISTORY-4 added the key as that function's third accepted form and proved it in a
+          // browser with `fill()`. `fill()` assigns the value in one step, which IS a paste, so it
+          // could never exercise the intermediate states typing goes through.
+          //
+          // Nothing needed to be built to fix it: the start handler ALREADY asks all three
+          // questions on the raw value — `looksLikeRaceIdentifier`, then `looksLikeShortKey`, then
+          // `resolveQuickTestSeed` (which still sanitises, at submit, where a refusal can be shown).
+          // So the field simply stops destroying what it cannot yet interpret. An unfinished input
+          // is not an error.
+          onChange={(e) => onSeedChange?.(e.target.value)}
         />
         {/* RACE-IDENTIFIER-1: a refused identifier says why, beside the field. Without this a
             refusal is indistinguishable from a Start button that does nothing. */}

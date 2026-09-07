@@ -361,6 +361,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SEED-FIELD-TYPING-1.md](SEED-FIELD-TYPING-1.md) — **a key you can paste but not read out**
+  (2026-09-07, `feat/team-races-1`, unmerged). A six-character short key pasted into the seed field
+  worked; TYPED, only the digits survived — so a key could be copied but never read aloud to
+  somebody, which is the one thing it exists for. ★ **Why:** `sanitizeQuickTestSeedInput` ran on
+  EVERY KEYSTROKE (`RaceSettings.jsx:114`) and reduces to digits anything it cannot yet place;
+  `looksLikeShortKey` needs exactly six characters, so every prefix failed it and the letters were
+  eaten — `733D` became `733`. A paste arrives complete and is recognised in one judgement.
+  ★ **Why RACE-HISTORY-4's third form did not cover it:** that piece added the key correctly AND
+  proved it in a browser — **with `fill()`**, which assigns in one step and IS a paste, so it could
+  never exercise the states typing goes through. The sanitiser's own comment said the key is judged
+  "not here on every keystroke" while the call site did exactly that, and the proof could not tell
+  them apart. ★ **The fix built nothing:** the start handler already asks all three questions of the
+  raw value at submit, so the field stops destroying what it cannot yet interpret — one line, plus a
+  now-dead import removed. **Five browser proofs** (typing via `pressSequentially`, never `fill`):
+  key typed, key pasted, number typed, identifier pasted, unknown key typed and refused — **3 failed
+  before, all green after**, and the two that passed before were exactly the two pastes. The other,
+  numeric-only Quick-Test field is named and deliberately left. Nothing minted.
+
 - [PROD-SAVE-1.md](PROD-SAVE-1.md) — **the race was in the list all along, at row 14** (2026-09-07,
   `feat/team-races-1`, unmerged). The owner's race was missing from the history on the PRODUCTION
   build. ★ **The save path is not broken there**: reproduced on `serve-production.mjs` at :4173 on a
