@@ -377,6 +377,23 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the field. Prevents triggering for racers already in the lead group.
   // E.g. 0.10 = must currently be outside the top 10% (i.e. not P1–P4 in a 40-racer field).
   comebackMaxCurrentRankPct: 0.2,
+  // ── COMEBACK-CONNECT-1: let the PLAN say when a comeback happens, instead of the camera
+  // inferring it from rank history alone.
+  //
+  // The race plan already authors, per named comebacker, an anchor/peak/resolve beat; the plan
+  // reaches the detector today and those beats are dropped on arrival, so the camera re-derives a
+  // moment the plan had already written down. COMEBACK-BEATS-1 measured the consequence: the shot
+  // is never on the wrong racer, and it is EARLY every time — by a median 0.134 of the race.
+  //
+  // ON, a named comebacker is not offered until the race reaches its PEAK beat. The rank-history
+  // gates still decide whether the gain is real; this decides only WHEN it may be shown. A
+  // candidate the plan did not name is untouched, so nothing invents a moment for a racer the plan
+  // never wrote one for.
+  //
+  // ★ FALSE IS TODAY'S BEHAVIOUR, EXACTLY. This is contested and the owner has not seen it, so
+  // nothing moves until he turns it on. It changes no weight and no contest — a comeback that is
+  // offered still has to win the same weighted pick it wins now.
+  comebackUseBeats: false,
   // LEAD_CHANGE camera tuning
   leadChangeMinGap: 0.002, // minimum T-space gap between P1 and P2 for a stable lead read
   leadChangeDebounceMs: 800, // ms the new leader must hold before change is confirmed

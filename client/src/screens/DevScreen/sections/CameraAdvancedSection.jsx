@@ -1268,6 +1268,22 @@ function CameraAdvancedSection() {
             tip="Racer must not have a better normalised rank than this at trigger time. 0.20 = top 20% excluded (e.g. P1–P8 with 40 racers). Default 20%."
           />
         </div>
+        {/* COMEBACK-CONNECT-1 — the plan already writes when each comeback peaks, and the camera
+            has been re-deriving that moment from rank history. OFF is today's behaviour exactly. */}
+        <label
+          className={s.label}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}
+        >
+          <input
+            type="checkbox"
+            checked={config.comebackUseBeats ?? DEFAULT_CAMERA_CONFIG.comebackUseBeats}
+            onChange={(e) => set('comebackUseBeats', e.target.checked)}
+            data-testid="comeback-use-beats-toggle"
+          />
+          Let the race plan say WHEN a comeback is shown — a named comebacker is not offered before
+          the plan’s peak beat. The gates above still decide whether the gain is real; this decides
+          only the moment. Off = today’s behaviour.
+        </label>
       </div>
 
       {/* ── 6. BATTLE Slowmo ── */}

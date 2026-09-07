@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-CONNECT-1.md](COMEBACK-CONNECT-1.md) — **the plan's beats reach the camera, and what
+  that costs** (2026-09-07, `night/2026-09-06`, unmerged; the key ships OFF). The plan already writes
+  per comebacker where the climb lands and `setPlan` was dropping it; the beats now decide WHEN a
+  named comebacker may be offered, behind `comebackUseBeats` whose default is today's behaviour
+  exactly. Contest, weights, roles and everything that draws are untouched. ★ **THE TWO COLUMNS over
+  40 races / 74 written comebackers: shots 11 → 0, races with a comebacker and no shot 29 → 40 of
+  40, COMEBACK_ZOOM frame share 3.07% → 0.00% with two thirds of it going to LEADER_ZOOM
+  (+2.08).** The arms are proven to have run IDENTICAL races — every camera-independent field equal,
+  0 differences in 40. ★ **WHY IT IS ZERO IS THE FINDING:** candidate frames inside the offer window
+  fall **7,510 (35 of 40 races) → 45 (2 of 40)** — the authored landing and the camera's admissible
+  window barely overlap, because by the time the climb has landed the racer is near the front and the
+  detector's own `maxCurrentRankPct` stops calling it a comeback. ★ **The other end is measured too:**
+  gating on the PEAK beat instead changes NOTHING (two byte-identical columns), because every
+  authored peak (0.18–0.676) is behind the camera before the outcome phase opens. ★ **Two defects in
+  the instrument, both caught by disbelieving a zero** — the key was never carried into the timing
+  config, and the harness's own gate read omitted the new argument, so two rows were describing a
+  detector the run was not using. Sabotage red 2 of 9; the detector had **no test at all** before
+  this. Four fingerprints unmoved, golden races pass, nothing minted, **and no value is recommended.**
+
 - [COMEBACK-WEIGHT-1.md](COMEBACK-WEIGHT-1.md) — **what it would cost to show the comebacks**
   (2026-09-06, NIGHT-2026-09-05 piece 1). One lever, `comebackWeight`, over the same 40 races at
   0.6 / 1 / 2 / 4 / 8, nothing else changed and no shipped default written. Shots rise **11 → 13 →

@@ -650,6 +650,10 @@ export class CameraDirector {
       minPositionsGained: t.comebackMinPositionsGained,
       minStartGap: t.comebackMinStartGap,
       maxCurrentRankPct: t.comebackMaxCurrentRankPct,
+      // COMEBACK-CONNECT-1. It travels with the four gates because the detector applies it in the
+      // same loop, and a fifth value arriving by a different route would be the second channel this
+      // piece exists to avoid. Default false = today's behaviour.
+      useBeats: !!t.comebackUseBeats,
     };
     this._comeback ??= new ComebackDetector(this._comebackGates);
     this._comeback.setGates(this._comebackGates);
@@ -817,8 +821,8 @@ export class CameraDirector {
   }
 
   /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
-  _detectComebackRacer(racers, ts) {
-    return this._comeback.best(racers, ts);
+  _detectComebackRacer(racers, ts, progress = null) {
+    return this._comeback.best(racers, ts, progress);
   }
 
   /**
@@ -1714,7 +1718,10 @@ export class CameraDirector {
         comebackCooledDown &&
         this._comebackWeight > 0
       ) {
-        _comebackRacer = this._detectComebackRacer(racers, ts);
+        // `leaderProgress` is the same value the outcome-phase test one line above already uses,
+        // read here rather than recomputed. COMEBACK-CONNECT-1 needs it because the plan's beats
+        // are written in race progress, not in wall-clock ms.
+        _comebackRacer = this._detectComebackRacer(racers, ts, leaderProgress);
         if (_comebackRacer) {
           candidates.push({
             state: CAM_STATE.COMEBACK_ZOOM,

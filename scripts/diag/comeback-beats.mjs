@@ -117,6 +117,18 @@ const OUTCOME_ARM = ARG("outcome", "browser");
 // ★ NO SHIPPED DEFAULT IS TOUCHED. The value is overridden on a COPY of the config for the
 // duration of one run; `defaults.js` is never written and nothing persists.
 const WEIGHT = ARG("comeback-weight", null);
+
+// ── COMEBACK-CONNECT-1: the arm switch, on the SAME copy-the-config mechanism as the weight ────
+//
+// `--use-beats=1` turns on `comebackUseBeats`, which lets the plan's PEAK beat decide when a named
+// comebacker may be offered. Off is the shipped default and today's behaviour.
+//
+// ★ NO SHIPPED DEFAULT IS TOUCHED, exactly as above: the value is set on a COPY for the duration of
+// one run. Two runs at the same `--seeds` therefore drive IDENTICAL races — camera configuration
+// cannot reach the physics — and that is checkable rather than assumed: every camera-independent
+// field this script records (`comebackers` and their beats, `crossedAt`, `b1Size`, `raceMs`) must
+// be equal between the arms, and COMEBACK-CONNECT-1 compares them.
+const USE_BEATS = ARG("use-beats", null);
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -127,10 +139,11 @@ if (SEEDS.length === 0) {
 }
 
 // The config this sweep actually runs, which is the shipped one unless a weight was asked for.
-const CAMERA_CONFIG =
-  WEIGHT == null
-    ? DEFAULT_CAMERA_CONFIG
-    : { ...DEFAULT_CAMERA_CONFIG, comebackWeight: Number(WEIGHT) };
+const CAMERA_CONFIG = {
+  ...DEFAULT_CAMERA_CONFIG,
+  ...(WEIGHT == null ? {} : { comebackWeight: Number(WEIGHT) }),
+  ...(USE_BEATS == null ? {} : { comebackUseBeats: USE_BEATS === "1" || USE_BEATS === "true" }),
+};
 if (WEIGHT != null && !Number.isFinite(CAMERA_CONFIG.comebackWeight)) {
   console.error(`comeback-beats: --comeback-weight=${WEIGHT} is not a number.`);
   process.exit(2);
@@ -221,7 +234,13 @@ for (const geo of tracks) {
       const s = dir.state;
       stateFrames.set(s, (stateFrames.get(s) ?? 0) + 1);
       // A PURE READ of the detector, to separate the two gates. Mutates nothing, rolls nothing.
-      const cand = dir._comeback?.best?.(state.racers, ts) ?? null;
+      //
+      // ★ THE PROGRESS ARGUMENT IS NOT OPTIONAL HERE (COMEBACK-CONNECT-1). `best()` gained a third
+      // parameter that the beats gate reads, and it defaults to null = "no beat gating". This call
+      // omitted it in the first draft, so GATE 1 and GATE 2a below came back BYTE-IDENTICAL in both
+      // arms — they were measuring a detector the run was not using. Passing the same progress the
+      // director passes makes this row describe the arm that is actually running.
+      const cand = dir._comeback?.best?.(state.racers, ts, state.raceProgress ?? null) ?? null;
       if (cand) {
         candidateFrames++;
         candidateRacers.add(cand.index);
@@ -278,7 +297,15 @@ for (const geo of tracks) {
   }
 }
 
-if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ seeds: SEEDS, rows }, null, 1));
+if (JSON_OUT)
+  writeFileSync(
+    JSON_OUT,
+    JSON.stringify(
+      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, rows },
+      null,
+      1,
+    ),
+  );
 
 // ── THE ACCOUNT ──────────────────────────────────────────────────────────────────────────────
 const N = rows.length;
