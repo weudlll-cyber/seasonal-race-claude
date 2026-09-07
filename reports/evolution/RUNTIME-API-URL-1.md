@@ -422,6 +422,28 @@ check-golden-races: 2 race(s), every finishing position and time as recorded (35
 
 ---
 
+# THE BUILD, AND THE PORTS AS LEFT
+
+`cd client && npm run build` then `node scripts/serve-production.mjs --port=4173` — the project's
+own command, unchanged. **The ports are exactly as the project has them: 4173 is the production
+build, 5173 is dev.** Nothing was reassigned and the owner's API on `:4000` was never stopped or
+restarted.
+
+★ **THE BUILD BADGE**, read out of the served bundle rather than off a screen — `assets/index-KRoGd_WY.js`:
+
+```js
+{ commit: `04a4b6df`, branch: `feat/runtime-api-url-1`, dirty: !1, reason: null }
+```
+
+**`04a4b6df`, clean, no `+dirty`.**
+
+★ **And one thing worth seeing on that page:** the served HTML carries **no injected runtime config**,
+because `serve-production.mjs` is a static file server and not our API. So the preview on 4173
+behaves exactly as it always has — the client falls back to `http://localhost:4000` and talks to his
+API. **The change is invisible from where he judges.**
+
+---
+
 # ★ WHAT IS STILL NEEDED BEFORE SOMEBODY COULD INSTALL THIS ON A SERVER
 
 This is the owner's next decision, not this piece's work. Stated as a list rather than as prose so
