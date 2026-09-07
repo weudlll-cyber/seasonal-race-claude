@@ -1060,6 +1060,19 @@ and in that commit's message.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
 - [MORNING-2026-09-07.md](MORNING-2026-09-07.md) — **the morning sheet for the 2026-09-07 night chain**: DONE / RUNNING / OPEN / NEEDS HIS WORD, rewritten after every piece so it is true at whatever moment the chain was interrupted.
+- [CLIENT-BUILD-VERIFIED-1.md](CLIENT-BUILD-VERIFIED-1.md) — **nothing built the client** (night
+  chain 2026-09-07, piece 2). Re-established at source: neither `verify` nor `ci.yml` contained a
+  single `vite build` or `npm run build`, and `client/eslint.config.js` carries **no import plugin**,
+  so no rule it runs resolves a specifier. New `scripts/check-client-build.mjs` builds the client and
+  then runs the bundle-address audit on what it just built. **The declaration is derived** — `client/`
+  because that is Vite's root, minus `client/e2e/` which is never bundled — so a client change selects
+  it and a documentation change does not. ★ **`audit-bundle-address.mjs` is wired as a STEP of the
+  build guard, not as its own routed guard**: `verify` runs guards 14-at-once, so a separate audit
+  could read `client/dist` mid-write — a race that would fail for no defect. ★ **Sabotage (a) is the
+  whole argument**: an import of a name that does not exist leaves **ESLint at exit 0** and takes the
+  **build to exit 1** (`[MISSING_EXPORT]`). ★ **Sabotage (b) did not go red on the first try** — an
+  UNUSED baked address is tree-shaken out and never reaches the package; baking it into the live
+  fallback reddened the audit. Measured cost: **~2.0 s, 0.55% of a run**. `ci.yml` untouched.
 - [ONE-HOME-RACE-PARAMS-1.md](ONE-HOME-RACE-PARAMS-1.md) — **the race-params derivation gets one
   home** (night chain 2026-09-07, piece 1; `night/2026-09-07` off `fe4e111c`, **unmerged**).
   ★ **The premise did not survive re-verification: the derivation was mirrored THIRTEEN times, not
