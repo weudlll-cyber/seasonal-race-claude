@@ -361,6 +361,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REPEAT-PROOF-1.md](REPEAT-PROOF-1.md) — **a repeat IS the same race, to the millisecond, through
+  all three doors** (2026-09-07, `feat/team-races-1` @ `21bfe5c4`, unmerged; verification and
+  measurement only — nothing built, changed or minted). ★ **The owner's last walkthrough item
+  PASSES.** A race was stored, Race Action was moved `quiet` → `wild`, and the race was repeated from
+  the history row's button, from a TYPED short key and from a PASTED long identifier: all 20 racers
+  finished at the **identical millisecond** in all four rows, whose `results` JSON is byte-identical.
+  The control proves the setting bites — the same seed at `wild` gives a **different winner**
+  (Surge over Apex) and a different time for every racer. ★ **Taken on a PRODUCTION build, driven by
+  hand**, because PROD-SAVE-1's blocker stands: the harness pins `baseURL` to the dev server.
+  ★ **His own two rows `DJ3ZMF` / `NU3Q2U` are also the same race** — every input equal, all **40**
+  finishing times equal, `results` byte-identical; only `elapsed_sec` differs, 45 vs 44.
+  ★ **`elapsedSec` is WALL CLOCK** — `Math.round((ts - st.raceStart)/1000)` at
+  `RaceScreen/index.jsx:1185`, where `ts` is the rAF timestamp — while `finishTimeMs` is `physicsTs`
+  (`raceCore.js:672`), which is why one column moves and the rest cannot. **Part 4 measures where the
+  testing time goes** and recommends nothing: the unit suite spends **530.71 s standing up jsdoms
+  against 229.95 s running tests** (one jsdom per FILE, 252 per run, `isolate` default `true`);
+  **9 of the suite's 16 browser races are pure set-up**; and building a bundle with the e2e API
+  inlined — the first of PROD-SAVE-1's three requirements — costs **0.70 s**, not the 2.4 s estimated.
 - [SEED-FIELD-TYPING-1.md](SEED-FIELD-TYPING-1.md) — **a key you can paste but not read out**
   (2026-09-07, `feat/team-races-1`, unmerged). A six-character short key pasted into the seed field
   worked; TYPED, only the digits survived — so a key could be copied but never read aloud to
