@@ -77,12 +77,20 @@ server/utils/**/*.test.js
 # (proven by booting an image against an empty volume), so they are load-bearing and must be here.
 !server/seeds/**
 
-# THE ONLY THING THE SERVER IMPORTS FROM OUTSIDE `server/`, and the reason the context moved at all.
+# WHAT THE SERVER IMPORTS FROM OUTSIDE `server/`, and the reason the context moved at all.
 # Established by resolving every relative specifier in `server/src` and `server/utils` against its
-# importing file — 65 of them — rather than by copying the directory because it looked relevant:
-# `server/src/routes/playerGroups.js` imports `../../../shared/nameLimits.mjs`, which from
-# `/app/src/routes/` resolves to `/shared/`. That is the whole list; `shared/` contains this one file.
+# importing file, rather than by copying the directory because it looked relevant.
+#
+# ★ THIS LIST IS PER FILE, NOT `shared/**`, AND THAT IS THE TRAP. A new shared module is NOT in the
+# image until it is named here, and nothing about the failure says so: the build succeeds, the layer
+# is simply missing the file, and the container dies at import time on the first start. SHARED-
+# CANONICAL-1 added the second and third entries for exactly that reason — `contentAddress.js`,
+# `raceStore.js` and `shortKey.js` had been importing from `client/src/**`, which this file excludes
+# on purpose, so the image could not start at all. `scripts/check-image-starts.mjs` is the check
+# that now catches it; keeping the list per file is what makes each entry a decision.
 !shared/nameLimits.mjs
+!shared/canonicalJson.mjs
+!shared/raceShortKey.mjs
 
 # ── Deliberately NOT re-included, named so the absences are decisions rather than oversights ─────
 #

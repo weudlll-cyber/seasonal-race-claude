@@ -236,7 +236,16 @@ test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that 
   ]);
   // `server/`, not `server/src/` — the package manifest decides how the suite RUNS, and naming the
   // source subdirectory is the miss client-suite already paid for twice.
+  //
+  // IMAGE-STARTS-1 (2026-09-07) GREW THIS SET A FOURTH TIME, and only for the manifest — which is
+  // the interesting half. `check-image-starts` derives what it declares from the Dockerfile's COPY
+  // lines, and `COPY server/package.json ./` is one of them: change the manifest and the image's
+  // dependency tree changes, so whether the image still starts is exactly the question that becomes
+  // open again. `server/index.js` above is NOT in any COPY source, so it does not select the check
+  // and that assertion is unchanged. This pair is therefore also the proof that the derivation is
+  // discriminating rather than matching all of `server/`.
   assert.deepEqual(routesTo("server/package.json"), [
+    "check-image-starts",
     "check-language-closed",
     "server-format-check",
     "server-lint",

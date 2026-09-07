@@ -25,6 +25,7 @@ import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
+import PendingRaceSync from './components/PendingRaceSync.jsx';
 
 const DEFAULT_TITLE = 'RaceArena';
 
@@ -58,6 +59,8 @@ function App() {
             which screen the player happens to be on. It renders nothing unless a request has
             actually failed to get an answer. */}
         <ServerStatusBanner />
+        {/* RACE-SAVE-3: sends races that could not go up when they finished. Renders nothing. */}
+        <PendingRaceSync />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
         <TransitionProvider>

@@ -361,6 +361,64 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [REPEAT-PROOF-1.md](REPEAT-PROOF-1.md) — **a repeat IS the same race, to the millisecond, through
+  all three doors** (2026-09-07, `feat/team-races-1` @ `21bfe5c4`, unmerged; verification and
+  measurement only — nothing built, changed or minted). ★ **The owner's last walkthrough item
+  PASSES.** A race was stored, Race Action was moved `quiet` → `wild`, and the race was repeated from
+  the history row's button, from a TYPED short key and from a PASTED long identifier: all 20 racers
+  finished at the **identical millisecond** in all four rows, whose `results` JSON is byte-identical.
+  The control proves the setting bites — the same seed at `wild` gives a **different winner**
+  (Surge over Apex) and a different time for every racer. ★ **Taken on a PRODUCTION build, driven by
+  hand**, because PROD-SAVE-1's blocker stands: the harness pins `baseURL` to the dev server.
+  ★ **His own two rows `DJ3ZMF` / `NU3Q2U` are also the same race** — every input equal, all **40**
+  finishing times equal, `results` byte-identical; only `elapsed_sec` differs, 45 vs 44.
+  ★ **`elapsedSec` is WALL CLOCK** — `Math.round((ts - st.raceStart)/1000)` at
+  `RaceScreen/index.jsx:1185`, where `ts` is the rAF timestamp — while `finishTimeMs` is `physicsTs`
+  (`raceCore.js:672`), which is why one column moves and the rest cannot. **Part 4 measures where the
+  testing time goes** and recommends nothing: the unit suite spends **530.71 s standing up jsdoms
+  against 229.95 s running tests** (one jsdom per FILE, 252 per run, `isolate` default `true`);
+  **9 of the suite's 16 browser races are pure set-up**; and building a bundle with the e2e API
+  inlined — the first of PROD-SAVE-1's three requirements — costs **0.70 s**, not the 2.4 s estimated.
+- [SEED-FIELD-TYPING-1.md](SEED-FIELD-TYPING-1.md) — **a key you can paste but not read out**
+  (2026-09-07, `feat/team-races-1`, unmerged). A six-character short key pasted into the seed field
+  worked; TYPED, only the digits survived — so a key could be copied but never read aloud to
+  somebody, which is the one thing it exists for. ★ **Why:** `sanitizeQuickTestSeedInput` ran on
+  EVERY KEYSTROKE (`RaceSettings.jsx:114`) and reduces to digits anything it cannot yet place;
+  `looksLikeShortKey` needs exactly six characters, so every prefix failed it and the letters were
+  eaten — `733D` became `733`. A paste arrives complete and is recognised in one judgement.
+  ★ **Why RACE-HISTORY-4's third form did not cover it:** that piece added the key correctly AND
+  proved it in a browser — **with `fill()`**, which assigns in one step and IS a paste, so it could
+  never exercise the states typing goes through. The sanitiser's own comment said the key is judged
+  "not here on every keystroke" while the call site did exactly that, and the proof could not tell
+  them apart. ★ **The fix built nothing:** the start handler already asks all three questions of the
+  raw value at submit, so the field stops destroying what it cannot yet interpret — one line, plus a
+  now-dead import removed. **Five browser proofs** (typing via `pressSequentially`, never `fill`):
+  key typed, key pasted, number typed, identifier pasted, unknown key typed and refused — **3 failed
+  before, all green after**, and the two that passed before were exactly the two pastes. The other,
+  numeric-only Quick-Test field is named and deliberately left. Nothing minted.
+
+- [PROD-SAVE-1.md](PROD-SAVE-1.md) — **the race was in the list all along, at row 14** (2026-09-07,
+  `feat/team-races-1`, unmerged). The owner's race was missing from the history on the PRODUCTION
+  build. ★ **The save path is not broken there**: reproduced on `serve-production.mjs` at :4173 on a
+  COPY of his data — POST `201 Created`, the local entry written and marked `sent`, and the browser
+  console carrying one error that is not ours (a pre-login `401 /api/auth/me`). ★ **It is lost in the
+  list's ORDER.** `RaceHistory.jsx` returned `[...unsent, ...stored]` — local rows as a block, then
+  server rows, each half sorted only within itself — so a newly stored race was appended BELOW every
+  local entry however old. Measured in his build: twelve rows from 11 August and 10 June at 0-11, and
+  **his own `733DSV` at row 14**. Sorted whole, newest first, it is row 2. ★ **The build was a red
+  herring and that is said plainly** — no build-mode branch exists on the save path (the client's only
+  two `import.meta.env` uses are the API base URL), the bundle builds clean, and the defect is
+  data-volume-dependent, not bundle-dependent. ★ **The browser harness CANNOT drive the production
+  build** — `baseURL` is the dev server and its `webServer` runs `npm run dev`; `VITE_API_URL` is
+  inlined at build time, so a production arm is a decision about the harness's shape, not a switch.
+  Every browser proof this project has taken was taken in an environment the owner does not use.
+  ★ Also records a collision this piece caused in the SUITE (file-level parallelism against one shared
+  API) and its precise-selector fix. **Part 2, ESTABLISHED ONLY, nothing changed:**
+  `ceremonySkipOnClick` is `false` at `defaults.js:299` — the shipped default, never any other value;
+  it covers ONLY the RaceScreen countdown (`index.jsx:1955`), never other screens (the result screen
+  has a separate always-on skip); **it is NOT gated on the build mode anywhere**; and one commit ever
+  touched it, `d46fd443` of 2026-08-22. It is a setting, and it is off.
+
 - [NIGHT-MERGE-2026-09-05.md](NIGHT-MERGE-2026-09-05.md) — **the night branch cleaned and merged**
   (2026-09-06, `night/2026-09-05` onto master; HYGIENE + MERGE, nothing built, no behaviour moved).
   Ten finished pieces had been pushed and left unmerged, and two of them — SERVER-LINT-1's `lint` and
@@ -412,6 +470,120 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   without an intended-change reason**, is **not permission** (the owner's word, per occurrence), and
   **keeps the previous expectation** dated with its commit and reason. Runs in **~0.6 s**;
   `fingerprint-default.mjs` untouched and the overlap reported; nothing minted, nothing moved.
+- [REPEAT-RECOMPUTE-6.md](REPEAT-RECOMPUTE-6.md) — ★ **STOPPED at the recompute seam; no code
+  changed** (2026-09-07, `feat/team-races-1`). The owner's decision replaced the fingerprint
+  comparison REPEAT-REFUSE-5 rejected with a RECOMPUTATION: repeat a stored race only if re-running
+  it still produces the recorded outcome. ★ **The named stop condition PASSES** — the engine loads
+  in a worker with no engine change: of the 64 files in its closure only three touch the DOM, all
+  at call time, proven by `render-fingerprint.mjs` importing them under Node and failing later at
+  `[warmup] … Image is not defined`. ★ **The comparison needs no tolerance** (`finishTimeMs` is a
+  strict FIXED_DT multiple and the stored `finishOrder` already carries it), and ★ **the three doors
+  already converge on one function**, `startRaceFromIdentifier`. **What blocks it is the params:**
+  `createRaceFromIdentity` takes a ~60-line derivation that lives at `RaceScreen/index.jsx:540-627`
+  — drawing code this piece may not change — which reads this machine's overrides live and whose
+  `physicalSpriteSize` drives `rowGapPx`/`rowCount`, i.e. physics. **It has already been mirrored
+  twice knowingly** (`camera-replay.mjs:164`, `goldenRunner.mjs:655-692`), both in `scripts/` and
+  neither importable from the client. A third mirror is the drift that refuses races which still
+  run identically — the outcome REPEAT-REFUSE-5 defined as wrong. **The fix is to extract that
+  derivation into a shared module, which would DELETE two mirrors rather than add one — and it is a
+  piece of its own that touches drawing code and needs his word.** RACE-HISTORY-4's warn-and-run is
+  deliberately left in place: it is replaced, not layered over, and removing it first would leave
+  the product with neither.
+
+- [REPEAT-REFUSE-5.md](REPEAT-REFUSE-5.md) — ★ **STOPPED at the establish step; no code changed**
+  (2026-09-06, `feat/team-races-1`). The addendum asked whether the **world role in
+  `docs/fingerprints.json`** can reach the product and be compared per race. **It CAN reach it** —
+  the client is built outside Docker, so `vite-plugin-ra-build` can read the file from the repo
+  root the way it already reads git, and the server never needs it. **But it does not MEAN what the
+  requirement needs**, on three counts from the project's own record: it **already moved without
+  the game changing** (2026-09-02, an instrument correction, with CONTROL B and CONTROL C proving
+  the simulation was untouched); it **moves on shipped-seed defaults a stored race does not use**
+  (one track's default racer moved the combined hash while **nine per-track hashes were
+  byte-identical**); and its own `GUARD.blind` says it is blind to **"configs other than the shipped
+  default"**, which is exactly what a stored race carries. **Too broad for refusing and too narrow
+  for accepting.** Per the addendum: no build-comparison fallback, no third comparison invented,
+  RACE-HISTORY-4's warn-and-run left in place, and the decision left to the owner.
+
+- [RACE-HISTORY-4.md](RACE-HISTORY-4.md) — **the team's races, a button that repeats one, and a
+  short key** (2026-09-06, `feat/team-races-1`, **unmerged — the owner tests the whole topic at
+  once**). Fourth and last piece of the team-races topic. ★ **The history view was ALREADY
+  operator-reachable** (`tier: 'operator'`, `/dev` has no `requiredRole`), so it was EXTENDED in
+  place and the tree still has one race list. The row button reuses the `run it again` path exactly:
+  the identifier goes into `KEYS.RACE_SEED` and `startRaceFromIdentifier` runs it — one starter,
+  unchanged. The short key is **six characters with BOTH members of each confusable pair removed**
+  (0/O, 1/I/L), because Crockford-style FOLDING can land a mistyped key on somebody else's race;
+  random not sequential, UNIQUE with retry-on-collision, and **a name rather than a permission** —
+  another team's key gets the same 404 body as one never issued. Paginated from the first version.
+  ★ Build mismatch: **warn-and-run** is tonight's rule and **NEEDS HIS WORD**. ★ **The browser test
+  found two defects nothing else could**: `RaceScreen` MUTATED the recorded config world
+  (`isOpen` leaked into the store, so a repeat differed from its original on paper), and the armed
+  repeat was consumed during RENDER and lost to StrictMode's double mount. ★ Sabotage (b) reddened
+  only the WRITE path — the two READ paths were correct but **unproven**, and two tests were added
+  under the sabotage. 4 browser tests passed; `engine-reach` selects nothing; nothing minted.
+
+- [RACE-SAVE-3.md](RACE-SAVE-3.md) — **a finished race is written locally, then to the server**
+  (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Third piece of the
+  team-races topic, on the owner's rule of 2026-09-06: **local first, always; the server is a second
+  store, never a gatekeeper.** ★ **The full input set was NOT reachable where the result is
+  written** — `raceData` carries seven of the nine identifier inputs but NOT the config world, which
+  exists only at `RaceScreen:524` (`cfgWorld`). It is now CARRIED to the result screen on the
+  `raceResults` payload; re-gathering it there would read the Dev Screen **as it is now** and claim
+  values the race never ran. `POST /api/races` takes the **team from the SESSION** and ignores one in
+  the body; idempotence is keyed on the **client's own race id** (`newId()`), not on the content
+  hash, because a genuine retry can differ in a field that does not matter. ★ **The 100-cap used to
+  be a way to lose a race** — it now keeps the newest hundred PLUS every unsent or failed entry, so
+  the list may exceed 100 while races are pending. The flush trigger is **SERVER-GONE-1's existing
+  status signal**; no polling, no timer, no reconnection loop was added. Proved in a **browser**: a
+  real race run with every `/api/**` aborted finished, recorded, went pending, then **sent** on
+  reconnect, and a resend answered 200 with the same id (1.8 min). Sabotage (a) reddened 3 tests,
+  (b) reddened 2 — and the store's content hash still absorbed the identical-payload case, which is
+  why the client-id check is the one that matters. ★ **Nothing was built twice**: the report lists
+  what each new module REUSES, and the one real duplication found in that audit — the entry's input
+  list against `raceIdentifier.js`'s — is now closed by a guard test, proven non-inert. **Three dead
+  items removed** (an over-exported `setSyncState`, a `getRoster` nothing read at all, and unused
+  `beforeAll` scaffolding), and the report names what the fourth piece will import. ★ **There is no RACE-IDENTIFIER-2** report,
+  though the principle the brief named is real and lives at source. `engine-reach` selects nothing
+  (`RaceScreen/index.jsx` included); nothing minted.
+
+- [RACE-STORE-2.md](RACE-STORE-2.md) — **the database the races will live in, and it cannot be
+  edited** (2026-09-06, `feat/team-races-1`, **unmerged — the topic merges once**). Second piece of
+  the team-races topic. **THE SHELF ONLY: nothing writes to it and nothing reads it**, no route, no
+  client change. Three content-addressed tables in **their OWN SQLite file, not the session
+  database** — clearing sessions is a legitimate act and must not delete the history, and
+  `session.js` uses `:memory:` under test. Ids are **SHA-256 of canonical JSON**; `canonicalJson` is
+  IMPORTED from `raceConfigWorld.js` per that module's own rule, and its `hashWorld` is deliberately
+  NOT used (FNV-1a at 32 bits is a cache key, not a content address). ★ A collision is **detected,
+  not assumed away**: an insert onto an existing id re-reads the stored bytes and throws unless they
+  match. ★ The owner's no-overwrite requirement is enforced **three times** — content addressing, no
+  UPDATE statement, and **SQLite triggers**; sabotage (b) was caught by the **trigger**, not by an
+  assertion. Every `raceIdentifier.js` field is stored or declared absent and **that accounting is a
+  test**, proven non-inert. `world.configs` is stored **resolved**, not as the identifier's diff —
+  the identifier compresses for typability and a database has no such constraint. ★ **Corrects
+  TEAMS-1's claim that the suites write into the real data directory: they do not and have not since
+  2026-06-17.** The engine-change limitation is stated and **nothing is proposed**. `engine-reach`
+  selects nothing; nothing minted.
+
+- [TEAMS-1.md](TEAMS-1.md) — **a user belongs to a team, and the admin assigns it** (2026-09-06,
+  `feat/team-races-1` off master `bcf41a9b`, **unmerged — his eye owed on the sign-in path**). The
+  first piece of the topic the owner opened on 2026-09-05: races stored on the server, visible to a
+  team. **Only the team on the user is built here** — no race storage, no filtering. A user record
+  gains `team` + `teamNormalized`; the team is **REQUIRED** at creation with **no default in the
+  store**. ★ The typo that would silently split a team is closed in **two parts**: normalisation
+  takes the variant case (and a matching create **adopts the existing spelling**), and a **closed
+  set derived from the users themselves** takes the misspelling — an unknown team is refused,
+  naming the teams that exist, unless the caller passes `allowNewTeam`. **No teams table**, so no
+  second home and no migration to keep two things agreeing. The property is not "a typo is
+  impossible" but that **a typo is never accepted SILENTLY**. The team rides `req.authUser`, derived
+  per request exactly as `role` is — **deliberately not frozen into the session**, which would go
+  stale when an admin moves a user. **A missing team never refuses a sign-in.** Backfill: **30 users
+  changed, one team, idempotent, no `sessionEpoch` bumped** — ★ the brief expected **2**, and 28 of
+  the 30 are **test debris** in the gitignored dev store, flagged and not deleted. Proved in a
+  **browser** (3 passed: create through the admin's picker, sign out, sign in, assert `/me` over the
+  page's own cookie) — ★ which found that **a spec that signs out logs the whole suite out**, since
+  every spec shares one `storageState`. Sabotage reddened **5** tests across both layers, and the
+  HTTP-layer test **did not exist until the sabotage showed it was missing**. `engine-reach` selects
+  nothing; **nothing minted**.
+||||||| bcf41a9b
 
 - [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
   minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall

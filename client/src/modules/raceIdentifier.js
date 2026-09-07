@@ -50,7 +50,7 @@
 // `CompressionStream` is not available in every environment this module is tested in.
 // ============================================================
 
-import { canonicalJson } from './raceConfigWorld.js';
+import { canonicalJson } from '../../../shared/canonicalJson.mjs';
 
 /**
  * The identifier's own format version. It is NOT the world schema version — this counts changes to

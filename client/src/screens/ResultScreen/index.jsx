@@ -35,14 +35,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
-import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/storage';
+import { recordFinishedRace, SYNC } from '../../modules/raceHistory.js';
+import { sendOne } from '../../modules/pendingRaces.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import './ResultScreen.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { normalizeRaceActionStage } from '../../modules/raceActionStage.js';
-import { DEFAULT_RACE_DEFAULTS, DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
+import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 
 /**
  * The sequence, counted in BEATS rather than in milliseconds — the one config key multiplies them.
@@ -202,29 +203,24 @@ function ResultScreen() {
     setElapsedTime(parsed.elapsedTime || 0);
     setRace(parsed.race || {});
 
-    // Persist to race history
-    const history = storageGet(KEYS.RACE_HISTORY, []);
-    history.unshift({
-      id: newId(),
-      date: new Date().toISOString(),
-      trackId: parsed.race?.trackId,
-      duration: parsed.elapsedTime,
-      playerCount: order.length,
-      // SEED-REAL-RACE-1: the seed this race ran with, stored WITH the race and in localStorage, so
-      // it outlives the session the way the rest of the entry already does. `null` for a race from
-      // before the seed existed, and for the legacy unseeded value 0 — a race that cannot be
-      // reproduced should say so rather than claim seed zero, which reads like a seed.
-      seed: Number(parsed.race?.racePlanSeed) > 0 ? Number(parsed.race.racePlanSeed) : null,
-      // RACE-ACTION-CONTROL-1: the Race Action stage this race ran, stored beside the seed because
-      // the two together are what makes an entry reproducible. An entry from before this change has
-      // no stage in its payload and normalises to the shipped one — which is what it ran.
-      raceActionStage: normalizeRaceActionStage(parsed.race?.raceActionStage),
-      winners: order
-        .slice(0, parsed.race?.winners ?? DEFAULT_RACE_DEFAULTS.winners)
-        .map((r) => r.name),
-      finishOrder: order,
-    });
-    storageSet(KEYS.RACE_HISTORY, history.slice(0, 100));
+    // ── The race is recorded LOCALLY FIRST, and that is the only part that has to work ──────────
+    //
+    // RACE-SAVE-3, the owner's rule of 2026-09-06: the server is a SECOND store, never a gatekeeper.
+    // The entry itself is unchanged in everything a person reads; what it gained is `inputs` (what
+    // re-running needs) and `sync` (where it is on its way to the server). The building and the
+    // capping moved to `modules/raceHistory.js` so they can be tested without a screen, and so the
+    // cap can stop deleting a race that has not been sent yet.
+    //
+    // ★ NOTHING BELOW MAY INTERRUPT THIS SCREEN. `recordFinishedRace` never throws — a full quota
+    // is logged and returns null — and the send is deliberately not awaited: the player is looking
+    // at who won, and that must not wait on a network call or be replaced by an error if one fails.
+    const entry = recordFinishedRace(parsed);
+    if (entry?.sync?.state === SYNC.PENDING) {
+      sendOne(entry).catch(() => {
+        // Unreachable in practice — `sendOne` catches its own failures — and harmless if it ever
+        // is not: the entry stays pending and the next successful contact sends it.
+      });
+    }
   }, [navigate]);
 
   const handleReturnToSetup = () => {

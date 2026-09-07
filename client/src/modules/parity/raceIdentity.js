@@ -24,7 +24,8 @@
 // diagnostics only; nothing on the shipped race path reads it.
 // ============================================================
 
-import { canonicalJson, hashWorld } from '../raceConfigWorld.js';
+import { hashWorld } from '../raceConfigWorld.js';
+import { canonicalJson } from '../../../../shared/canonicalJson.mjs';
 
 /** Checkpoint cadence, in physics ms — the diag emitter's convention (micro-divergence.mjs). */
 export const CHECKPOINT_INTERVAL_MS = 5000;

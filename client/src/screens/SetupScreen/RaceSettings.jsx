@@ -8,11 +8,9 @@
 
 import { useState } from 'react';
 import styles from './SetupScreen.module.css';
-import {
-  sanitizeQuickTestSeedInput,
-  QUICK_TEST_SEED_MIN,
-  QUICK_TEST_SEED_MAX,
-} from './quickTestSeed.js';
+// SEED-FIELD-TYPING-1: `sanitizeQuickTestSeedInput` is no longer imported here. It ran on every
+// keystroke and that was the defect; it still runs at submit, inside `resolveQuickTestSeed`.
+import { QUICK_TEST_SEED_MIN, QUICK_TEST_SEED_MAX } from './quickTestSeed.js';
 
 const DURATION_OPTIONS = [
   { value: 30, label: '30 s' },
@@ -37,6 +35,13 @@ function RaceSettings({
   raceIdentifierNote = null,
   // RUN-IT-AGAIN-1: the whole last race. Null = only its seed was recorded, which the row says.
   lastRaceIdentifier = null,
+  // RACE-HISTORY-4 — the field's THIRD accepted form: a short key naming a race on the server.
+  typedShortKey = null,
+  shortKeyBusy = false,
+  shortKeyError = null,
+  onResolveShortKey = null,
+  // RACE-HISTORY-4 — the race being repeated was recorded under a different build.
+  buildMismatch = false,
 }) {
   // COPY-FEEDBACK-1
   const [copied, setCopied] = useState(false);
@@ -93,22 +98,76 @@ function RaceSettings({
           state here ("draw a fresh one"), and number inputs make emptiness awkward. Same reasoning,
           and the same sanitizer, as the Quick-Test field. */}
       <div className={styles.settingGroup}>
-        <span className={styles.settingLabel}>Race Seed or Identifier (optional)</span>
+        {/* RACE-HISTORY-4: the field now takes THREE forms, and the label says so — a control that
+            accepts something it does not mention is a feature nobody finds. */}
+        <span className={styles.settingLabel}>Race Seed, Key or Identifier (optional)</span>
         <input
           className={styles.textInput}
           type="text"
           placeholder="random"
-          aria-label="Race seed or identifier"
+          aria-label="Race seed, key or identifier"
           data-testid="race-seed-input"
-          title={`Leave empty and every race draws its own seed — the race screen shows it, and this panel remembers the last one. Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to run that exact race again on THIS machine. Paste a race identifier to run that exact race here, whatever this machine's own settings are.`}
+          title={`Leave empty and every race draws its own seed — the race screen shows it, and this panel remembers the last one. Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to run that exact race again on THIS machine. Paste a race identifier, or type a six-character race key, to run that exact race here, whatever this machine's own settings are.`}
           value={seed}
-          onChange={(e) => onSeedChange?.(sanitizeQuickTestSeedInput(e.target.value))}
+          // ★ SEED-FIELD-TYPING-1 — JUDGED ON SUBMIT, NOT ON EVERY KEYSTROKE.
+          //
+          // This used to run `sanitizeQuickTestSeedInput` here, on every change. That function
+          // passes a value through when it recognises an identifier or a short key and reduces
+          // anything else to its DIGITS — and a half-typed key is not yet recognisable. Typing
+          // "733DSV" was judged at "7", "73", "733", "733D"… and the first letter was shredded, so
+          // only digits ever survived. A PASTE arrived complete and was recognised in one go, which
+          // is why the key could be copied but never read out to somebody — the one thing it is for.
+          //
+          // RACE-HISTORY-4 added the key as that function's third accepted form and proved it in a
+          // browser with `fill()`. `fill()` assigns the value in one step, which IS a paste, so it
+          // could never exercise the intermediate states typing goes through.
+          //
+          // Nothing needed to be built to fix it: the start handler ALREADY asks all three
+          // questions on the raw value — `looksLikeRaceIdentifier`, then `looksLikeShortKey`, then
+          // `resolveQuickTestSeed` (which still sanitises, at submit, where a refusal can be shown).
+          // So the field simply stops destroying what it cannot yet interpret. An unfinished input
+          // is not an error.
+          onChange={(e) => onSeedChange?.(e.target.value)}
         />
         {/* RACE-IDENTIFIER-1: a refused identifier says why, beside the field. Without this a
             refusal is indistinguishable from a Start button that does nothing. */}
         {identifierError && (
           <div className={styles.settingHint} role="alert" data-testid="identifier-error">
             <strong>{identifierError}</strong>
+          </div>
+        )}
+        {/* RACE-HISTORY-4 — A SHORT KEY IN THE SAME FIELD.
+            The key names a race on the server, so unlike a seed and a long identifier it has to be
+            looked up before anything can start. The button is the act of looking it up; until it
+            succeeds the field holds a name, not a race, and Start stays down. */}
+        {typedShortKey && (
+          <div className={styles.settingHint} data-testid="short-key-row">
+            That looks like a race key. <strong>{typedShortKey}</strong>{' '}
+            <button
+              type="button"
+              className={styles.linkBtn}
+              data-testid="resolve-short-key"
+              disabled={shortKeyBusy}
+              onClick={() => onResolveShortKey?.(typedShortKey)}
+            >
+              {shortKeyBusy ? 'looking it up…' : 'find this race'}
+            </button>
+          </div>
+        )}
+        {shortKeyError && (
+          <div className={styles.settingHint} role="alert" data-testid="short-key-error">
+            <strong>{shortKeyError}</strong>
+          </div>
+        )}
+        {/* ★ RACE-HISTORY-4 — SAID BEFORE IT STARTS, not discovered afterwards. The race still
+            runs (the owner's rule of 2026-09-06); what is refused is letting a possibly-different
+            race pass as the same one. */}
+        {buildMismatch && (
+          <div className={styles.settingHint} role="alert" data-testid="build-mismatch">
+            <strong>
+              This race was recorded on a different build of RaceArena. It will run, but the result
+              may not be identical to the original.
+            </strong>
           </div>
         )}
         {/* The other direction: the identifier for the race this screen would start now. A seed

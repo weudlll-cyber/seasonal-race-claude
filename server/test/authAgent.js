@@ -38,6 +38,7 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import defaultStore from '../src/auth/usersStore.js';
+import { FOUNDING_TEAM } from '../src/auth/teams.js';
 
 /** A name no other call can produce, in any file, in any order, in any process. */
 const uniqueName = (role) => `ra-${role}-${randomUUID().slice(0, 12)}`;
@@ -49,7 +50,17 @@ async function loginAgent(app, { role }) {
   // A fixed password is fine and is NOT shared state: it is never a lookup key, and the record it
   // belongs to exists only for this call.
   const password = 'testpass123';
-  const user = await defaultStore.createUser({ username, password, role, createdBy: 'setup' });
+  // Every helper-made account lands in the SAME team, and `allowNewTeam` is what lets the first
+  // one in a fresh store found it. Sharing one team is deliberate: a test that wants to prove
+  // something about two DIFFERENT teams should say so itself rather than inherit it from here.
+  const user = await defaultStore.createUser({
+    username,
+    password,
+    role,
+    team: FOUNDING_TEAM,
+    allowNewTeam: true,
+    createdBy: 'setup',
+  });
   const agent = request.agent(app);
   const res = await agent.post('/api/auth/login').send({ username, password });
   if (res.status !== 200) throw new Error(`loginAgent: login failed (${res.status})`);
