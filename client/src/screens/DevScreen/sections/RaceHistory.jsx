@@ -51,6 +51,11 @@ const STATE_LABEL = {
   [SYNC.PENDING]: { text: 'not sent yet', color: '#e0a800' },
   [SYNC.FAILED]: { text: 'could not be sent', color: '#e63946' },
   local: { text: 'this device only', color: 'var(--color-muted)' },
+  // HISTORY-NEVER-VANISHES-1. A race that reached the server is normally shown from the SERVER
+  // copy, so this label used to be unreachable. It is reachable now, and it is the honest sentence
+  // for the case it covers: the device has this race and the server has it too, but the page of the
+  // team's races currently on screen does not carry it — so this is the local copy, standing in.
+  [SYNC.SENT]: { text: 'on the server, not on this page', color: 'var(--color-muted)' },
 };
 
 /**
@@ -144,8 +149,23 @@ function RaceHistory() {
    * — so `sent` local entries are dropped here rather than appearing twice.
    */
   const rows = useMemo(() => {
+    // ★ HISTORY-NEVER-VANISHES-1 — A RACE THIS DEVICE HOLDS IS NEVER DROPPED UNLESS ITS SERVER COPY
+    // IS ACTUALLY ON SCREEN.
+    //
+    // This used to drop every `sent` entry outright, on the reasoning that the server copy would be
+    // showing instead. That holds only when the server page CONTAINS it, and there are ordinary
+    // reasons it does not: the fetch failed, the page came back empty, or the race is on a page the
+    // person is not looking at — this list is paginated at 20 from the first version. In any of
+    // those the local copy was hidden because it had been sent, nothing replaced it, and a race the
+    // device was holding appeared nowhere at all, with nothing on screen saying so. That is the one
+    // failure the local-first rule exists to prevent, and it is what the owner hit.
+    //
+    // So the test is now the real one — is the server copy of THIS race among the rows about to be
+    // rendered — rather than a proxy for it. When it is, the local row is dropped exactly as before
+    // and nothing appears twice.
+    const onThisPage = new Set(page.races.map((r) => r.id).filter(Boolean));
     const unsent = filtered
-      .filter((e) => e.sync?.state !== SYNC.SENT)
+      .filter((e) => e.sync?.state !== SYNC.SENT || !onThisPage.has(e.sync?.serverId))
       .map(rowFromLocalEntry)
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
