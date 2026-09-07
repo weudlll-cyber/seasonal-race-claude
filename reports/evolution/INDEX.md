@@ -361,6 +361,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MERGE-NIGHT-2026-09-06.md](MERGE-NIGHT-2026-09-06.md) — **the night branch closes** (2026-09-07,
+  catch-up `018b47dd`, merge `dc15f5e2`). Two product changes land — **COMEBACK-CONNECT-1**, the
+  plan's beats reaching the camera behind `comebackUseBeats` which **ships `false`**, and
+  **IDENTIFIER-DIFF-1**, the identifier carrying only what differs from the shipped racer types —
+  plus OUTCOME-WINDOW-1 and COMEBACK-SHAPE-1, both measurement only. ★ **The named collision was
+  real and is NOT a defect.** Master adds a fifth identifier call site the night never saw —
+  `repeatRace.js:60`, which passes no `defaultEffectiveRacerTypes` — so a repeat **encodes** the
+  racer types against `{}` while the setup screen **decodes** against the real base. Measured on the
+  merged tree: that asymmetric round-trip is **LOSSLESS**; the only cost is that the shortening does
+  not reach the repeat path. **A first run of that measurement said LOSSY on all 20 types and was
+  wrong — `JSON.stringify` key order, not content.** The server is unaffected: it stores racer types
+  **resolved** and never sees the identifier string. ★ **The browser proofs failed 3 of 12 first
+  time, and it was the HARNESS**: `playwright.config.js` sets no `workers`, so three race-storing
+  specs ran in **7 parallel workers** against one shared API and team — exactly the hazard
+  PROD-SAVE-1 predicted. **Serially: 12 of 12 pass.** ★ And the half-closed fix is located —
+  PROD-SAVE-1 repaired the row *selection* at `race-history.spec.js:95`, but `:65` still reads the
+  short key from `.first()` of the **server-backed** list, so the test can adopt another spec's key.
+  **Left untouched; reported.** Golden races **PASS**.
 - [MERGE-TEAM-RACES.md](MERGE-TEAM-RACES.md) — **the team-races topic closes, and the ports go back**
   (2026-09-07, merge `2cc60029` on master; `feat/team-races-1` **deleted at origin**). Eleven pieces
   land — TEAMS-1, RACE-STORE-2, RACE-SAVE-3, RACE-HISTORY-4, SHARED-CANONICAL-1, IMAGE-STARTS-1,
