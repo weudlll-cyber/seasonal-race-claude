@@ -19,6 +19,7 @@ import {
   computeStartRowCount,
 } from './rowLayout.js';
 import { BODY_LONG_AXIS_MAX_RATIO } from './racer-types/SpriteRacerType.js';
+import { W_REF_MAX } from './raceParams.js';
 
 // ── computeRacersPerRow ────────────────────────────────────────────────────
 
@@ -765,7 +766,9 @@ describe('BODY_LONG_AXIS_MAX_RATIO — sleeping guard is inert for all 20 curren
 // On narrow tracks (effW<285): W_REF=effW<285 → body-narrow packing is strictly within the slot.
 
 const AUTOCONFIG_GUARD = { minScale: 0.65, maxScale: 2.5, referenceValue: 23 };
-const W_REF_MAX = 285; // must match the constant in RaceScreen/index.jsx
+// ONE-HOME-RACE-PARAMS-1: imported, not restated. This line used to be
+// `const W_REF_MAX = 285; // must match the constant in RaceScreen/index.jsx` — a number kept in
+// step with another file by a comment, which is exactly the shape `raceParams.js` exists to end.
 
 // All 20 current racer types with their bodyFillX/Y values.
 const ALL_RACERS_GUARD = [

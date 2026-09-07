@@ -1059,6 +1059,22 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [MORNING-2026-09-07.md](MORNING-2026-09-07.md) — **the morning sheet for the 2026-09-07 night chain**: DONE / RUNNING / OPEN / NEEDS HIS WORD, rewritten after every piece so it is true at whatever moment the chain was interrupted.
+- [ONE-HOME-RACE-PARAMS-1.md](ONE-HOME-RACE-PARAMS-1.md) — **the race-params derivation gets one
+  home** (night chain 2026-09-07, piece 1; `night/2026-09-07` off `fe4e111c`, **unmerged**).
+  ★ **The premise did not survive re-verification: the derivation was mirrored THIRTEEN times, not
+  twice** — established by searching for the derivation's SHAPE (`computeRacerLayout(...).spriteSize`
+  beside `computeBodyNarrowRef(Math.min(285, ...))`), 136 occurrences across 34 files, each opened
+  and classified. ★ **And the copies were not copies**: the browser guards on `autoScale.enabled` and
+  a `displaySize` override, every harness derives unconditionally, and the two agree only because a
+  default happens to be `true`. New `client/src/modules/raceParams.js` holds the guarded form;
+  **8 mirrors deleted, 0 added**, including all three the brief named plus the golden path and three
+  fingerprint instruments. **Six full mirrors remain and are named**, `sim-fairness.mjs` among them
+  (piece 9 owns it). **All four fingerprints UNMOVED, nothing minted**; golden races PASS.
+  ★ **The sabotage came back GREEN first, and that was the finding** — the golden path was still a
+  mirror, so it could not see the extraction; after converting it, both golden races moved and the
+  check exited 1. ★ Also named: `engine-reach` calls all ten paths "outside the hull", yet sabotaging
+  this module moved both golden races — the hull is narrower than "can change how a race comes out".
 
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does

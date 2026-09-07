@@ -45,10 +45,10 @@
 import { createRaceFromIdentity, stepRacePhysics } from '../../client/src/modules/raceCore.js';
 import { applyRaceActionStage } from '../../client/src/modules/raceActionStage.js';
 import { EditorShape } from '../../client/src/modules/track-editor/EditorShape.js';
-import {
-  computeRacerLayout,
-  computeBodyNarrowRef,
-} from '../../client/src/modules/rowLayout.js';
+// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, shared with the browser. The fixture's
+// OWN autoScale config is passed in — this module reads no defaults, which is what keeps the
+// golden fixture isolated from `DEFAULT_AUTO_SCALE_CONFIG`.
+import { deriveSpriteGeometry } from '../../client/src/modules/raceParams.js';
 
 /**
  * Run one pinned race.
@@ -94,21 +94,15 @@ export function runGoldenRace(race, sharedConfigs) {
   // Sprite geometry is DERIVED by the engine's own auto-scale from pinned inputs, rather than
   // pinned as numbers: the derivation is engine behaviour and belongs under test. What it is not
   // allowed to do is read `DEFAULT_AUTO_SCALE_CONFIG` — the fixture carries its own copy.
-  const { spriteSize: physicalSpriteSize } = computeRacerLayout(
-    effectiveWidth,
-    field.names.length,
-    racer.displaySize,
-    configs.autoScale,
-  );
-  const bodyFillNarrow = Math.min(racer.bodyFillX, racer.bodyFillY);
-  const bodyFillLong = Math.max(racer.bodyFillX, racer.bodyFillY);
-  const bodyRef = computeBodyNarrowRef(
-    Math.min(285, effectiveWidth),
-    field.names.length,
-    racer.displaySize,
-    bodyFillNarrow,
-    configs.autoScale,
-  );
+  const { physicalSpriteSize, drawnBodyWidthRefPx, bodyFillNarrow, bodyFillLong } =
+    deriveSpriteGeometry({
+      displaySize: racer.displaySize,
+      bodyFillX: racer.bodyFillX,
+      bodyFillY: racer.bodyFillY,
+      nRacers: field.names.length,
+      effectiveWidth,
+      autoScaleConfig: configs.autoScale,
+    });
 
   const { state, config, meta } = createRaceFromIdentity({
     shape,
@@ -127,7 +121,7 @@ export function runGoldenRace(race, sharedConfigs) {
     racePlanSeed: plan.seed,
     racePlanEnabledFlag: plan.racePlanEnabled,
     physicalSpriteSize,
-    drawnBodyWidthRefPx: bodyRef.bodyNarrow,
+    drawnBodyWidthRefPx,
     bodyFillNarrow,
     bodyFillLong,
   });

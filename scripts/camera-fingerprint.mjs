@@ -93,8 +93,9 @@ const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
 const { normalSpeedFrom } = await import(
   u("client/src/modules/durationModel.js")
 );
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u("client/src/modules/rowLayout.js")
+// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the browser's own module.
+const { deriveSpriteGeometry } = await import(
+  u("client/src/modules/raceParams.js")
 );
 const RT = await (async () => {
   const re = console.error;
@@ -147,18 +148,21 @@ function trackHash(geo) {
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
   const rt = RT.getRacerType(geo.defaultRacerTypeId ?? "horse");
   const ds = rt.config.displaySize;
-  const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
-  const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(
-    Math.min(285, effW),
-    N,
-    ds,
-    bfN,
-    W.autoScaleConfig,
-  );
-  const bodyRef = ds * (br.bodyNarrow / ds);
+  // ONE-HOME-RACE-PARAMS-1: one derivation, shared with the browser (modules/raceParams.js).
+  const {
+    physicalSpriteSize: pss,
+    drawnBodyWidthRefPx: bodyRef,
+    bodyFillNarrow: bfN,
+    bodyFillLong: bfL,
+  } = deriveSpriteGeometry({
+    displaySize: ds,
+    bodyFillX: rt.config.bodyFillX,
+    bodyFillY: rt.config.bodyFillY,
+    nRacers: N,
+    effectiveWidth: effW,
+    autoScaleConfig: W.autoScaleConfig,
+  });
   const built = createRaceFromIdentity({
     shape,
     isOpenTrack: shape.isOpen,

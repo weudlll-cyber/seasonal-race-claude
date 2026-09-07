@@ -35,7 +35,7 @@ import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { computeRacerLayout, computeBodyNarrowRef } from '../../modules/rowLayout.js';
+import { deriveSpriteGeometry } from '../../modules/raceParams.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { applyRaceActionStage, normalizeRaceActionStage } from '../../modules/raceActionStage.js';
@@ -550,47 +550,32 @@ export default function RaceScreen() {
     // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
     // a retuned SIZE moves the race exactly as a retuned speed does.
     const displaySize = typeField('displaySize');
-    const _bfNarrowRaw = Math.min(typeField('bodyFillX'), typeField('bodyFillY'));
-    const _bfLongRaw = Math.max(typeField('bodyFillX'), typeField('bodyFillY'));
-    const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
-    const bodyFillLong = Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
     const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
-    // physicalSpriteSize: frame-based scale from real track width — drives rowGapPx / rowCount (physics).
-    let physicalSpriteSize = displaySize;
-    // displaySizeScale: body-narrow-based scale from W_REF.
-    // Used for camera normalization (drawnBodyWidthRefPx) and render (frameDisplayScale).
-    let displaySizeScale = 1;
-    if (autoScaleConfig.enabled) {
-      const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
-      const typeOverride = rawOverrides[typeId];
-      const hasDisplaySizeOverride =
-        typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride;
-      if (!hasDisplaySizeOverride) {
-        // Physical layout: real width, frame-based (unchanged — drives rowGapPx/rowCount)
-        const racerLayout = computeRacerLayout(
-          effectiveWidth,
-          nRacers,
-          displaySize,
-          autoScaleConfig
-        );
-        physicalSpriteSize = racerLayout.spriteSize;
-        // Render/camera reference: body-narrow-based, capped at real track width.
-        // W_REF=285 matches wide open tracks; capping at effectiveWidth prevents visible
-        // bodies from exceeding physical avoidance slots on narrow closed tracks.
-        const W_REF = Math.min(285, effectiveWidth);
-        const bodyRef = computeBodyNarrowRef(
-          W_REF,
-          nRacers,
-          displaySize,
-          bodyFillNarrow,
-          autoScaleConfig
-        );
-        displaySizeScale = bodyRef.bodyNarrow / displaySize;
-      }
-    }
-    // drawnBodyWidthRefPx = body-narrow world-px: camera zoom set so visible narrow-axis body
-    // is the camera's body-size reference for OVERVIEW-FRAMING-1's sprite floor.
-    const drawnBodyWidthRefPx = displaySize * displaySizeScale;
+    // ── ONE-HOME-RACE-PARAMS-1: this derivation lives in `modules/raceParams.js` now ────────────
+    // It used to be ~35 lines here, and the same arithmetic stood at thirteen other sites — every
+    // headless harness that has to call `createRaceFromIdentity` had transcribed it. The browser
+    // reading its own copy is what let the copies drift apart unnoticed.
+    //
+    // The OVERRIDE LOOKUP stays here on purpose: it is a storage read, and the module deliberately
+    // reads no storage. It is handed the answer rather than going to find it.
+    const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
+    const typeOverride = rawOverrides[typeId];
+    const {
+      physicalSpriteSize,
+      displaySizeScale,
+      drawnBodyWidthRefPx,
+      bodyFillNarrow,
+      bodyFillLong,
+    } = deriveSpriteGeometry({
+      displaySize,
+      bodyFillX: typeField('bodyFillX'),
+      bodyFillY: typeField('bodyFillY'),
+      nRacers,
+      effectiveWidth,
+      autoScaleConfig,
+      hasDisplaySizeOverride:
+        !!typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride,
+    });
 
     // ── The REAL race init, extracted to modules/raceCore.js (createRaceFromIdentity) ───────────
     // The canonical duration model, the seeded physics stream (raceRng), the row layout, the re-roll
