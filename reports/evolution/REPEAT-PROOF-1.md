@@ -803,4 +803,12 @@ and its index line uncommitted at that moment. **Nothing in `client/` or `server
 `21bfe5c4`** — `git status` showed exactly two paths, both under `reports/`. The bundle was rebuilt
 and re-served after the commit; the badge it carries now is recorded in the line below.
 
-<!--BADGE2-->
+★ **THE BADGE AS LEFT, after the commit — rebuilt and re-served.** `assets/index-qKq_H4X_.js`:
+
+```js
+{ commit: `bdfd55fc`, branch: `feat/team-races-1`, dirty: !1, reason: null }
+```
+
+**The HUD pill reads `bdfd55fc` — clean, no `+dirty`, `reason: null`.** `bdfd55fc` is this report's
+own commit, one above the `21bfe5c4` the proof was taken on, and it changes only two files under
+`reports/`. **`http://localhost:4173/` is serving that build now.**
