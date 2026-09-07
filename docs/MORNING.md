@@ -4,10 +4,10 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-07, after PIECE 4 of the night chain of 2026-09-06.
+**Last rewritten:** 2026-09-07, after PIECE 6 of the night chain of 2026-09-06.
 
 **Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
-catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries piece 4; also **NOT MERGED**.
+catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries pieces 4 and 6; also **NOT MERGED**.
 
 **★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
 silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
@@ -87,14 +87,30 @@ instrument, both caught by disbelieving a zero**: the key was never carried into
 and the harness's gate read omitted the new argument. **No value is recommended.** Four fingerprints
 unmoved, golden races pass, nothing minted.
 
+**PIECE 6 · The identifier carries only what differs — ★ BUILT** — `dd6bea53`,
+[IDENTIFIER-DIFF-1](../reports/night/IDENTIFIER-DIFF-1.md). `effectiveRacerTypes` was written in
+full — all twenty types, every race — while the config block beside it was already a diff. Same
+`diffFromDefaults`/`applyDiff` pair now, against `CONFIG_SNAPSHOT`, the registry's own frozen copy of
+its code defaults: **no engine change and no new mechanism.** ★ **Re-measured here: 2,547 → 230 at 4
+racers, 2,775 → 458 at 20, 3,068 → 751 at 40 — a CONSTANT 2,317 characters saved** (91% / 83.5% /
+75.5%), reproducing Option A's predicted 739 independently. ★ **Old identifiers still work** — `ed`
+means a diff, `e` means the old full form, and which key is present decides; **no version bump, no
+migration**, because a bump would refuse every string you have already copied out. ★ **The cost,
+stated and not solved: a diff means whatever the DECODING build's defaults say it means** — if a
+shipped racer-type value moves, an old identifier silently describes a different race. Demonstrated
+by a test, not argued. ★ **The existing reproduction test was green for the wrong reason** (it passed
+no base, so the diff came out as the full object); fixed before the sabotage, which then went 2 of 13
+red — but only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
+is blind to a moved default by construction.
+
 ### RUNNING
 
-Nothing is running. Piece 6 is next (the fall order is 6, then 5).
+Nothing is running. Piece 5 is next and is the last.
 
-### OPEN — the two pieces not yet started
+### OPEN — the one piece not yet started
 
-- **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only.
-- **PIECE 6** · the identifier carries only what differs from the shipped defaults.
+- **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only, nothing
+  built, nothing minted.
 
 ### NEEDS HIS WORD
 
@@ -117,6 +133,7 @@ Nothing is running. Piece 6 is next (the fall order is 6, then 5).
 - **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
   in this chain has asked for it.
 <!-- END CHAIN STATUS -->
+
 
 ## EARLIER — the night of 2026-09-05, for context
 
