@@ -405,6 +405,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   different widths. **Sabotage exit 1**; and `audit-bundle-address.mjs` **loses its font-host
   allowance**, so a re-added link is now refused there too. Nothing moved: the canvas draws in
   `sans-serif` and never names Inter.
+- [MERGE-RUNTIME-API-URL.md](MERGE-RUNTIME-API-URL.md) — **the deployment-readiness topic closes**
+  (2026-09-07, merge `79fc2b6c` into `dc1f252f` from `feat/runtime-api-url-1` at `45168e75`, **branch
+  deleted at origin**). Both pieces above land together after the owner accepted them on the running
+  build. ★ **The catch-up had NOTHING to resolve** — `git merge origin/master` said *"Already up to
+  date"*, because the merge-base **was** master's tip; no hunk, no file, no line. `verify
+  --premerge` **PASS 24 FAIL 0 SKIP 9** (406.5 s) with the client and server suites among its rows;
+  **golden races PASS**, run separately because routing did not select them. ★ **The pre-merge
+  browser gate was NOT selected and said so in its own words** — nothing it declares changed, this
+  topic being an HTML shell, a stylesheet, fonts, `services/api.js` and the static-serving path,
+  none of it inside the camera or the RaceScreen. ★ **Both proofs re-run on ONE build with nothing
+  rebuilt between them**: `index-D8aE1XqL.js` served under `https://races.example.com` and
+  `http://198.51.100.7:8080` with the same filename and hash and unconfigured byte-identical to disk;
+  and the blocked-network render, 0 external requests, 7/7 probes in Inter. ★ **No fingerprint was
+  re-run, and the reason is proved rather than asserted**: `git diff` between the branch tip and the
+  merge result is empty and the two **tree objects are the same SHA**, so the branch's measurements
+  *are* measurements of the merged tree. ★ **CI went RED first and the reason is kept**: `check-tags`
+  Rule B read origin **15 s after the push** and still saw the merged branch — deleting it as the very
+  next command does NOT win that race — so the first run failed, the branch was confirmed gone, and
+  the re-run is **success** on the merge SHA. Next merge: delete the branch BEFORE pushing master, or
+  expect to re-run. `RUNTIME-API-URL-1`'s "still needed" list is untouched except for item 5, which
+  the font piece closed; the other six stay open and stay named.
 - [MERGE-NIGHT-2026-09-06.md](MERGE-NIGHT-2026-09-06.md) — **the night branch closes** (2026-09-07,
   catch-up `018b47dd`, merge `dc15f5e2`). Two product changes land — **COMEBACK-CONNECT-1**, the
   plan's beats reaching the camera behind `comebackUseBeats` which **ships `false`**, and
