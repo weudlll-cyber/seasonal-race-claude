@@ -163,6 +163,7 @@ export function encodeRaceIdentifier({
   racePlanEnabled,
   world,
   defaultWorldConfigs,
+  defaultEffectiveRacerTypes,
   buildId,
 }) {
   const payload = {
@@ -183,7 +184,19 @@ export function encodeRaceIdentifier({
       sv: world?.schemaVersion ?? null,
       c: diffFromDefaults(world?.configs ?? {}, defaultWorldConfigs ?? {}) ?? {},
       o: world?.racerTypeOverrides ?? {},
-      e: world?.effectiveRacerTypes ?? {},
+      // ── IDENTIFIER-DIFF-1: the racer types as a DIFF, under a NEW key ────────────────────────
+      //
+      // `e` used to carry all twenty types in full — 2,454 of a 40-racer identifier's 4,008
+      // characters, four fifths of it, whether the race used them or not, while the real difference
+      // from the shipped values on an untouched machine is nothing at all.
+      //
+      // ★ THE KEY IS `ed` AND `e` IS NO LONGER WRITTEN, WHICH IS HOW BOTH FORMS STAY READABLE. No
+      // version bump and no migration: an identifier made before this piece has `e` and no `ed`,
+      // one made after has `ed` and no `e`, and the decoder tells them apart by which key is
+      // present. A version bump would have REFUSED every string the owner has already copied out,
+      // which is the one thing this piece may not do.
+      ed:
+        diffFromDefaults(world?.effectiveRacerTypes ?? {}, defaultEffectiveRacerTypes ?? {}) ?? {},
     },
   };
   return RACE_IDENTIFIER_PREFIX + toBase64Url(canonicalJson(payload));
@@ -207,7 +220,10 @@ export function looksLikeRaceIdentifier(s) {
  * @param {string} opts.buildId             this build, to compare with the encoded one
  * @returns {object} the inputs, with `world` reconstructed whole
  */
-export function decodeRaceIdentifier(text, { defaultWorldConfigs, buildId } = {}) {
+export function decodeRaceIdentifier(
+  text,
+  { defaultWorldConfigs, defaultEffectiveRacerTypes, buildId } = {}
+) {
   if (!looksLikeRaceIdentifier(text)) {
     throw new Error('That is not a race identifier.');
   }
@@ -247,7 +263,18 @@ export function decodeRaceIdentifier(text, { defaultWorldConfigs, buildId } = {}
       schemaVersion: payload.w?.sv ?? null,
       configs: applyDiff(defaultWorldConfigs ?? {}, payload.w?.c ?? {}),
       racerTypeOverrides: payload.w?.o ?? {},
-      effectiveRacerTypes: payload.w?.e ?? {},
+      // ★ BOTH FORMS ARE RECOGNISED, and the discriminator is which key the payload carries.
+      //   · `ed` present  -> made after IDENTIFIER-DIFF-1: a diff, read against THIS build's
+      //                      shipped racer-type values.
+      //   · otherwise     -> made before it: `e` is the full set and is used verbatim, exactly as
+      //                      it always was. An identifier the owner copied out last week still
+      //                      decodes to the same race it always did.
+      // `'ed' in` rather than a truthiness test, because an empty diff — the whole point of this
+      // piece on an untouched machine — is `{}` and must not fall through to the old branch.
+      effectiveRacerTypes:
+        payload.w && 'ed' in payload.w
+          ? applyDiff(defaultEffectiveRacerTypes ?? {}, payload.w.ed ?? {})
+          : (payload.w?.e ?? {}),
     },
   };
 }

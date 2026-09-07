@@ -15,7 +15,7 @@ import { loadBaseSpeedConfig } from './baseSpeedConfig.js';
 import { loadAutoScaleConfig } from './autoSpriteScale.js';
 import { loadFrameTimingConfig } from './frameTimingConfig.js';
 import { loadCameraConfig } from './cameraConfig.js';
-import { RACER_TYPE_IDS, getRacerType } from './racer-types/index.js';
+import { RACER_TYPE_IDS, getRacerType, CONFIG_SNAPSHOT } from './racer-types/index.js';
 import { storageGet, KEYS } from './storage/storage.js';
 import {
   DEFAULT_RACE_DYNAMICS_CONFIG,
@@ -46,16 +46,44 @@ const SIM_TYPE_FIELDS = [
   'surfaceClasses',
 ];
 
-function effectiveRacerTypes() {
+/**
+ * The sim-relevant fields of every racer type, read out of `configFor(id)`.
+ *
+ * ONE BODY, TWO CALLERS (IDENTIFIER-DIFF-1). `effectiveRacerTypes()` reads the LIVE registry, whose
+ * configs already carry any stored override; `defaultEffectiveRacerTypes()` reads `CONFIG_SNAPSHOT`,
+ * the frozen copy the registry takes of its code defaults BEFORE any override is applied. The two
+ * must produce the same SHAPE — same field list, same "omit a field the config does not have" rule —
+ * or the diff between them would report a difference that is really a shape mismatch. Sharing the
+ * body is what makes that true by construction rather than by care.
+ */
+function racerTypeFields(configFor) {
   const out = {};
   for (const id of RACER_TYPE_IDS) {
-    const cfg = getRacerType(id)?.config ?? {};
+    const cfg = configFor(id) ?? {};
     const e = {};
     for (const f of SIM_TYPE_FIELDS)
       if (f in cfg) e[f] = Array.isArray(cfg[f]) ? [...cfg[f]] : cfg[f];
     out[id] = e;
   }
   return out;
+}
+
+function effectiveRacerTypes() {
+  return racerTypeFields((id) => getRacerType(id)?.config);
+}
+
+/**
+ * What `effectiveRacerTypes()` would be on a machine with NO racer-type overrides — the shipped
+ * values. This is the base an identifier's racer-type diff is read against, so it must be derivable
+ * on any build from code alone, which is exactly what `CONFIG_SNAPSHOT` is.
+ *
+ * ★ A field present in the snapshot but ABSENT from the live config, or the other way round, is a
+ * real difference and `diffFromDefaults` records it — the snapshot carries every TUNABLE_FIELD while
+ * a type's config carries only the ones it defines, so the `f in cfg` filter above is what keeps the
+ * two comparable.
+ */
+export function defaultEffectiveRacerTypes() {
+  return racerTypeFields((id) => CONFIG_SNAPSHOT[id]);
 }
 
 // RACE-ACTION-CONTROL-1: which Race Action stage this world describes. The race path passes the

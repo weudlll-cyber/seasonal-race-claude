@@ -8,6 +8,24 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [IDENTIFIER-DIFF-1.md](IDENTIFIER-DIFF-1.md) — **the identifier carries only what differs**
+  (2026-09-07, `night/2026-09-06`, unmerged). `effectiveRacerTypes` was written in FULL — all twenty
+  types, every race — while the config block beside it was already a diff, so the mechanism was in
+  the file and applied to one of the two halves. It now uses the same `diffFromDefaults`/`applyDiff`
+  pair against `CONFIG_SNAPSHOT`, the registry's own frozen copy of its code defaults, so **no engine
+  change and no new snapshot were needed.** ★ **Re-measured on this build: 2,547 → 230 at 4 racers,
+  2,775 → 458 at 20, 3,068 → 751 at 40 — a CONSTANT 2,317 characters saved** (91% / 83.5% / 75.5%),
+  which reproduces Option A's predicted 739 independently. ★ **Old identifiers still work**: `ed`
+  present means a diff, `e` means the old full form, and the discriminator is which key exists —
+  **no version bump and no migration**, because a bump would refuse every string already copied out.
+  ★ **THE COST, STATED AND NOT SOLVED: a diff means whatever the DECODING build's defaults say it
+  means.** If a shipped racer-type value moves, an old identifier silently describes a different
+  race — demonstrated by a test that decodes one string against a moved base. ★ **The existing
+  reproduction test was green for the wrong reason** — it passed no base, so the diff came out as the
+  full object and the new path was never exercised; fixed before the sabotage, which then went **2 of
+  13 red** only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
+  is blind to a moved default by construction. Nothing minted; golden races pass.
+
 - [COMEBACK-CONNECT-1.md](COMEBACK-CONNECT-1.md) — **the plan's beats reach the camera, and what
   that costs** (2026-09-07, `night/2026-09-06`, unmerged; the key ships OFF). The plan already writes
   per comebacker where the climb lands and `setPlan` was dropping it; the beats now decide WHEN a

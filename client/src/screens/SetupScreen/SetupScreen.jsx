@@ -39,7 +39,7 @@ import {
   looksLikeRaceIdentifier,
 } from '../../modules/raceIdentifier.js';
 import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
-import { buildWorldConfig } from '../../modules/exportRaceConfig.js';
+import { buildWorldConfig, defaultEffectiveRacerTypes } from '../../modules/exportRaceConfig.js';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import {
   deriveRaceDuration,
@@ -176,6 +176,7 @@ function SetupScreen() {
           racePlanEnabled: race.racePlanEnabled,
           world: buildWorldConfig({ raceActionStage: race.raceActionStage }),
           defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+          defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
           buildId: raceIdentifierBuildId(),
         });
       } catch (err) {
@@ -347,6 +348,7 @@ function SetupScreen() {
     try {
       const decoded = decodeRaceIdentifier(raceSeed, {
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
         buildId: raceIdentifierBuildId(),
       });
       const geometryHere = !!getTrack(decoded.geometryId);
@@ -638,6 +640,7 @@ function SetupScreen() {
           }).realizedDurationSec >= racePlanMinDur,
         world: buildWorldConfig({ raceActionStage: stage }),
         defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+        defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
         buildId: raceIdentifierBuildId(),
       });
       return { identifier, note: null };
@@ -684,6 +687,7 @@ function SetupScreen() {
           return {
             decoded: decodeRaceIdentifier(text, {
               defaultWorldConfigs: DEFAULT_CONFIG_WORLD,
+              defaultEffectiveRacerTypes: defaultEffectiveRacerTypes(),
               buildId: raceIdentifierBuildId(),
             }),
             error: null,
