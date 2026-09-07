@@ -1,28 +1,124 @@
+<!-- BEGIN CHAIN STATUS — rewritten after every piece -->
 # Morning sheet
 
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-06, after NIGHT-2026-09-05. **`feat/playable-four-1` IS MERGED — master
-is `bcf41a9b` and CI is GREEN on that exact SHA** (push run, conclusion `success`). Origin holds
-`master` and **`night/2026-09-05`, which is NOT merged.**
+**Last rewritten:** 2026-09-07, after PIECE 4 of the night chain of 2026-09-06.
 
-**★ THE TWO THINGS TO KNOW FIRST.**
+**Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
+catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries piece 4; also **NOT MERGED**.
 
-**1. Everything you were looking at last night has landed.** Cancel Race, the server-gone banner and
-the race identifier are on master, together with the three repairs your own testing found: the
-identifier row now says why it is absent, a pasted identifier runs ITS racers rather than this
-machine's, and `run it again` repeats the race that RAN rather than its seed. The merge gate was
-the full one — `verify --premerge` PASS 26 FAIL 0 with the browser gate green — and all four
-fingerprints were unmoved. **Nothing was minted.**
+**★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
+silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
+the root `.dockerignore` deliberately keeps out of the server image, so the import could not resolve
+in a container. Searching found **two more of the same shape**. All three are fixed by moving the
+shared rules into `shared/`, above both packages. **Then the new check found a fourth**: those files
+were allowed into the build context but never COPYed, so the container still died — the build
+reported success either way. **Nothing about a race changed** anywhere in this: golden races pass,
+all four fingerprints unmoved, nothing minted.
 
-**2. `npm run verify` IS RED on the night branch, on purpose.** Piece 4 gave the server a linter and
-a format check for the first time, and the server has never been linted: **9 lint errors across 7
-files and 35 unformatted files**, all pre-dating the guard. The order was not to fix them. **CI is
-unaffected — `ci.yml` was not touched and master is green.**
 ---
 
-## DONE
+## TONIGHT'S CHAIN — 2026-09-06, six pieces on two branches
+
+### DONE
+
+**Catch-up · the team topic is up to date with master.** 14 files touched by both sides, 7
+conflicted, 31 hunks — every code hunk the same shape: the topic changed the SEMANTICS, master had
+only re-FORMATTED those lines. Both sides survive by construction: the topic's side inside each
+conflict, then master's formatter over the result. One of master's lint fixes fell inside a conflict
+region and was lost by that rule — **found by re-running eslint rather than by remembering** — and
+re-applied. **Golden races PASS after the catch-up.**
+
+**PIECE 1 · The shared rules belong to neither side** — `ba9801a1`.
+★ **The search found FIVE crossings from server code into `client/src`, not the one that was known.**
+Three ship and break the image and are fixed; four cannot reach a container and are **named and
+left** (two contract tests, a dynamic import in a test, the server's eslint config — the contract
+tests SHOULD read the client's copy, which is their point). `canonicalJson` moved **alone** (of eight
+exports, only that one is read by the server); `raceShortKey.js` moved **whole**, because splitting
+it would put the alphabet in one file and a function that tests against it in another. One version,
+no copy, no shim. ★ **Output proven identical**, 18 exact strings captured from the pre-move
+implementation recovered out of git — including a pinned quirk: integer-like keys serialise in
+numeric order, not the lexicographic order the sort asks for. Two headers that argued FOR the
+crossing are corrected: the "established pattern" they cited was this defect propagating.
+
+**PIECE 2 · A check that the packaged image actually starts** — `de463da0`,
+`scripts/check-image-starts.mjs`. ★ **It found a real defect on its first run** — piece 1's, one
+commit earlier: `.dockerignore` decides only what enters the build CONTEXT; the Dockerfile COPYs
+`shared/` **per file**, and the two new lines were missing, so the container died with
+`Cannot find module '/shared/raceShortKey.mjs'` from a build that reported success. Both COPY lines
+added. ★ **The container is not the image**: compose binds `./server/src` over the image's own copy,
+so a container started that way proves nothing — this one runs `docker run` with **no bind mounts**.
+★ **Its path declaration is derived from the Dockerfile's COPY lines**, not hand-written, and picked
+up the two new modules by itself; `docs/` cannot select it. Sabotage went red as required.
+**Cost, stated plainly: 121 s cold, 7.4 s warm, 55-67 s under verify's load.** Not wired into CI —
+`ci.yml` untouched — but verify does select it, so **verify now needs a Docker daemon** when a
+declared path changes, and says so loudly rather than passing.
+
+**PIECE 3 · A repeat is recomputed first — ★ STOPPED, no code changed** — `2c938327`, report
+`reports/evolution/REPEAT-RECOMPUTE-6.md`. ★ **That report is on `feat/team-races-1`, not on this
+branch**, which is why it is named here rather than linked: piece 3 belongs to the team topic and
+this sheet also has to be readable from the night branch. Everything it was asked to
+establish, it established. ★ **The named stop condition PASSES**: the engine loads in a worker with
+no engine change — of the 64 files in its closure only three touch the DOM, all at call time. The
+comparison needs **no tolerance** (`finishTimeMs` is a strict FIXED_DT multiple, already stored), and
+★ **the three doors already converge on one function**, `startRaceFromIdentifier`. ★ **What blocks it
+is the params.** `createRaceFromIdentity` takes a ~60-line derivation that lives inside
+`RaceScreen/index.jsx` — drawing code this piece may not change — which reads this machine's
+overrides live and whose `physicalSpriteSize` drives `rowGapPx`/`rowCount`, i.e. physics. **It has
+been mirrored twice already, knowingly**, both in `scripts/` and neither importable from the client.
+A third mirror drifts, and a drifting recompute refuses races that still run identically — the exact
+outcome REPEAT-REFUSE-5 established as wrong. **RACE-HISTORY-4's warn-and-run is deliberately left
+running**: it is replaced, not layered over, and removing it first would leave you with neither.
+
+**PIECE 4 · The plan's beats reach the camera — ★ BUILT, AND THE KEY IS OFF** — `918423c8`,
+[COMEBACK-CONNECT-1](../reports/night/COMEBACK-CONNECT-1.md). `comebackUseBeats` ships **false**, so
+nothing changes until you turn it on; there is a Dev Screen control for it. ★ **THE TWO COLUMNS over
+40 races / 74 written comebackers: shots 11 → 0**, races with a comebacker and no shot 29/40 → 40/40,
+COMEBACK_ZOOM frame share 3.07% → 0.00% with two thirds going to LEADER_ZOOM. The arms are **proven
+to have run identical races** — 0 differences in every camera-independent field. ★ **Why it is zero
+IS the finding:** candidate frames inside the offer window fall **7,510 (35 of 40 races) → 45 (2 of
+40)**. The authored landing and the camera's admissible window barely overlap, because by the time
+the climb lands the racer is near the front and the detector's own gate stops calling it a comeback.
+★ **The other end is measured too:** gating on the PEAK beat changes NOTHING — every authored peak
+(0.18–0.676) is behind the camera before the outcome phase opens at 0.75. ★ **Two defects in my own
+instrument, both caught by disbelieving a zero**: the key was never carried into the timing config,
+and the harness's gate read omitted the new argument. **No value is recommended.** Four fingerprints
+unmoved, golden races pass, nothing minted.
+
+### RUNNING
+
+Nothing is running. Piece 6 is next (the fall order is 6, then 5).
+
+### OPEN — the two pieces not yet started
+
+- **PIECE 5** · what the harness camera's closed outcome window hides. Measurement only.
+- **PIECE 6** · the identifier carries only what differs from the shipped defaults.
+
+### NEEDS HIS WORD
+
+- **★ THE TEAM TOPIC MERGES ONCE, WHEN YOU HAVE LOOKED AT IT.** `feat/team-races-1` is pushed and
+  nothing on it is merged. That is the standing instruction, not a blocker anyone hit.
+- **★ THE ONE DECISION THAT UNBLOCKS PIECE 3, and it is worth taking on its own merits.** Extract
+  the race-init derivation out of `RaceScreen/index.jsx` into a shared module — one function from
+  (stored inputs, geometry, racer type, config world) to `createRaceFromIdentity` params. It would
+  **DELETE the two existing mirrors** rather than add a third, and it is what a recompute needs. It
+  is a piece of its own: it touches drawing code, it moves the path every race in the product runs
+  through, and its proof is the parity suite plus the golden races plus your eye. **Not started.**
+- **★ PIECE 4's KEY IS OFF BY DEFAULT AND THE POINT IS THAT YOU TRY IT BOTH WAYS.** The camera
+  knowing when a comeback happens is contested behaviour and you have not seen it. The dev server is
+  left on `night/2026-09-06` for exactly this — the switch is in Dev Screen → Camera (advanced),
+  *"Let the race plan say WHEN a comeback is shown"*. ★ **Read the two columns before you flick it:**
+  ON, the measurement says every comeback shot disappears. That is a real result, not a bug, and it
+  is why nothing is recommended.
+- **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
+  costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
+- **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
+  in this chain has asked for it.
+<!-- END CHAIN STATUS -->
+
+## EARLIER — the night of 2026-09-05, for context
 
 **★ THE NIGHT OF 2026-09-05 — five pieces on `night/2026-09-05`, none merged.**
 
