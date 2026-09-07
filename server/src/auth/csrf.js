@@ -6,15 +6,39 @@
 // Description: CORS options + Origin/Referer CSRF guard for the same-origin posture (§4a/§7.1)
 // ============================================================
 
+import { resolvePublicOrigin } from '../runtimeConfig.js';
+
 // ── Allowed client origins ────────────────────────────────────────────────────
 
 // Comma-separated explicit client origins for the cross-origin/dev case
 // (e.g. RA_CLIENT_ORIGIN=http://localhost:5173). Unset → same-origin only.
+//
+// ── RUNTIME-API-URL-1: RA_PUBLIC_ORIGIN IS ADDED HERE, DERIVED RATHER THAN DUPLICATED ──────────
+//
+// The installed address is the address the browser is on, so it is by definition an allowed client
+// origin. Before this it had to be repeated into RA_CLIENT_ORIGIN by hand, and VERIFY-RULES R10
+// records what that costs: on 2026-08-10 the API was told about 5173 while the owner was pointed at
+// 4173, and the first thing he hit was a login screen that would not log in — the client reports
+// "Server not reachable" and names the wrong cause, because a missing allow-list entry and a dead
+// backend look identical from the browser.
+//
+// ★ ONE VALUE, TWO CONSUMERS, NO SECOND LIST. `RA_PUBLIC_ORIGIN` is the same variable the CSRF
+// self-origin already reads below (`resolveSelfOrigin`), so the allow-list and the self-origin
+// cannot disagree about where this install is. A malformed value never reaches here: `index.js`
+// stops the process at start-up (`assertPublicOriginUsable`), which is why this can use the
+// permissive resolver and simply get `null` for "not configured".
+//
+// De-duplicated because an operator who also lists the public origin in RA_CLIENT_ORIGIN is not
+// making a mistake, and `cors` would otherwise carry the same entry twice.
 export function getAllowedClientOrigins() {
-  return (process.env.RA_CLIENT_ORIGIN ?? '')
+  const explicit = (process.env.RA_CLIENT_ORIGIN ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+  const publicOrigin = resolvePublicOrigin();
+  if (!publicOrigin) return explicit;
+  const seen = new Set(explicit.map(normalizeOrigin));
+  return seen.has(normalizeOrigin(publicOrigin)) ? explicit : [...explicit, publicOrigin];
 }
 
 // ── CORS options ──────────────────────────────────────────────────────────────

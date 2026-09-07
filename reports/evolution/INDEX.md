@@ -361,6 +361,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [RUNTIME-API-URL-1.md](RUNTIME-API-URL-1.md) — **one package, installable anywhere; the address is
+  asked for at install time** (2026-09-07, `feat/runtime-api-url-1` off `dc1f252f`, **unmerged** — he
+  starts a race on his own machine first). The client used to bake `VITE_API_URL` into the bundle at
+  BUILD time, so an artefact built for one host could not be installed on another and DEPLOYMENT.md
+  told every operator to rebuild with their own domain. ★ **Now resolved at RUNTIME**: the server
+  injects the address into the `index.html` it serves — the one place it is served, because
+  `express.static` is mounted `index: false` — and `services/api.js` reads it, staying the one home
+  all 24 importers use. ★ **PROVED, not argued: the same bundle `index-DbGEboZB.js` served
+  `https://races.example.com` and `http://198.51.100.7:8080` with NO rebuild**; unconfigured, the
+  served HTML is **byte-identical** to `client/dist/index.html`. ★ **ONE VALUE, THREE CONSUMERS** —
+  `RA_PUBLIC_ORIGIN`, which already existed, now feeds the CSRF self-origin, the CORS allow-list and
+  the client's API base, so **the R10 mismatch class is removed by construction rather than
+  guarded**. Malformed → **the server refuses to start** before anything binds; absent → today's
+  `http://localhost:4000`. **`npm run configure`** asks and refuses to finish without an answer,
+  writing to `docker-compose.override.yml` — the file this project already used for per-install
+  environment. ★ **Only ONE build-time site ever existed** (`api.js:17`) — PROD-SAVE-1's "two uses"
+  are two references on one line. `virtual:ra-build` **could not** carry this: it resolves at build
+  time by construction. **Sabotage went red naming the host.** ★ **The bundle still carries
+  `fonts.googleapis.com`** from `index.html`, pre-dating this piece — named, not hidden, in the
+  "still needed" list with six other things a real install wants.
 - [MERGE-NIGHT-2026-09-06.md](MERGE-NIGHT-2026-09-06.md) — **the night branch closes** (2026-09-07,
   catch-up `018b47dd`, merge `dc15f5e2`). Two product changes land — **COMEBACK-CONNECT-1**, the
   plan's beats reaching the camera behind `comebackUseBeats` which **ships `false`**, and

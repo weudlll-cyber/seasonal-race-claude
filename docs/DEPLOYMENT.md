@@ -35,14 +35,25 @@ checkout, verify with `curl` before trusting the page.
 cd client && npm install && npm run build     # produces client/dist
 ```
 
-**And you must build it with `VITE_API_URL` set to your public origin**, because the client bakes its
-API address in at build time and its default is `http://localhost:4000`:
+**Do NOT set `VITE_API_URL`.** Since RUNTIME-API-URL-1 the built client carries **no address at
+all** — the same build can be installed on any server, and the address is asked for at install time
+instead. Setting `VITE_API_URL` bakes one back into the artefact and ties it to one host;
+`node scripts/check-bundle-address.mjs` fails a build that carries one.
+
+**Tell the install where it will be reached:**
 
 ```sh
-cd client && VITE_API_URL=https://racearena.example.com npm run build
+npm run configure          # asks for the address; refuses to finish without one
 ```
 
-Leave `VITE_API_URL` unset **only** if the app will actually be reached at `http://localhost:4000`.
+That writes `RA_PUBLIC_ORIGIN` into `docker-compose.override.yml` (gitignored — this install's own).
+Not using Docker? Set the same variable on the command line; the minimal start below does.
+
+The server reads it when it **starts** and injects it into the `index.html` it serves, so changing
+the address is a restart and never a rebuild. The same value is folded into the CORS allow-list, so
+the client and the server cannot disagree about where this install is. **Set but malformed → the
+server refuses to start**, naming what is wrong; unset → the client talks to `http://localhost:4000`
+exactly as it always has.
 
 ### Required environment variables
 
@@ -53,7 +64,7 @@ Leave `VITE_API_URL` unset **only** if the app will actually be reached at `http
 | `RA_BOOTSTRAP_TOKEN`| `<random string>`               | **Required to create the first admin.** Without it `POST /api/auth/setup` answers `403 setup not available` and the install can never be signed into. See [AUTH.md](AUTH.md).                                                                                                                  |
 | `RA_COOKIE_SECURE`  | `true` or `auto`                | Marks the session cookie `Secure` so it is only sent over HTTPS. Use `auto` to let Express infer from the trust-proxy setting; use `true` when you are certain HTTPS is always in use.                                                                                                        |
 | `RA_CSRF_STRICT`    | `auto` or `true`                | Rejects mutating API requests that lack an `Origin` header (strict browser enforcement). `auto` enables strict when `NODE_ENV=production`; `true` forces it regardless of `NODE_ENV`.                                                                                                          |
-| `RA_PUBLIC_ORIGIN`  | `https://racearena.example.com` | Canonical self-origin for CSRF validation. The CSRF guard compares incoming `Origin` headers against this value instead of deriving it from the `Host` header on each request. Set this whenever the public address differs from the value Express would derive (e.g. behind a reverse proxy). |
+| `RA_PUBLIC_ORIGIN`  | `https://racearena.example.com` | **The address this install is reached at — the one place it is written down.** Three consumers read this single value: the client is handed it at runtime (injected into the served `index.html`, so the build carries no address); it is folded into the CORS allow-list, so you need not repeat it in `RA_CLIENT_ORIGIN`; and the CSRF guard uses it as the canonical self-origin instead of deriving one from the `Host` header. **Set but malformed → the server refuses to start.** Set it with `npm run configure`. |
 
 ### Optional variables
 
@@ -67,7 +78,7 @@ Leave `VITE_API_URL` unset **only** if the app will actually be reached at `http
 ### Minimal production start
 
 ```sh
-cd client && VITE_API_URL=https://racearena.example.com npm run build && cd ..
+cd client && npm run build && cd ..
 
 NODE_ENV=production \
 RA_SESSION_SECRET="$(openssl rand -hex 32)" \
