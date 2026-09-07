@@ -24,12 +24,8 @@ import {
   DEFAULT_RACE_DEFAULTS,
 } from './storage/defaults.js';
 import { applyRaceActionStage } from './raceActionStage.js';
-import {
-  WORLD_SCHEMA_VERSION,
-  hashWorld,
-  unsimulatableReasons,
-  canonicalJson,
-} from './raceConfigWorld.js';
+import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons } from './raceConfigWorld.js';
+import { canonicalJson } from '../../../shared/canonicalJson.mjs';
 import { splitConfigDiffs, raceRelevantWorldHash } from './parity/configFingerprint.js';
 
 // The shipped-default value of every race-path config block — the reference the HUD badge diffs

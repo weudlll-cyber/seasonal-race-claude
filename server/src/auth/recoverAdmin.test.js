@@ -50,6 +50,8 @@ afterEach(() => {
 describe('promoteOrCreate — existing operator user', () => {
   it('sets role to admin and verifies new password after promote', async () => {
     await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
       username: 'alice',
       password: 'old-pass-123',
       role: 'operator',
@@ -72,6 +74,8 @@ describe('promoteOrCreate — existing operator user', () => {
 
   it('works when the existing user is already admin (idempotent promote + password reset)', async () => {
     await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
       username: 'bob',
       password: 'old-pw',
       role: 'admin',
@@ -91,6 +95,8 @@ describe('promoteOrCreate — existing operator user', () => {
 
   it('bumps sessionEpoch on existing user (old sessions invalidated)', async () => {
     await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
       username: 'carol',
       password: 'pw1',
       role: 'operator',
@@ -145,7 +151,14 @@ describe('rearmSetup — marker present, no users', () => {
 
 describe('rearmSetup — marker present, users exist', () => {
   it('removes the marker but reports setupWillWork: false when users are present', async () => {
-    await store.createUser({ username: 'alice', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
+      username: 'alice',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     writeFileSync(paths.markerPath, JSON.stringify({ completedAt: new Date().toISOString() }));
 
     const result = rearmSetup({
@@ -162,7 +175,14 @@ describe('rearmSetup — marker present, users exist', () => {
   });
 
   it('setupWillWork is false regardless of marker state when users exist', async () => {
-    await store.createUser({ username: 'alice', password: 'pw', role: 'admin', createdBy: 'test' });
+    await store.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
+      username: 'alice',
+      password: 'pw',
+      role: 'admin',
+      createdBy: 'test',
+    });
     // No marker — still setupWillWork must be false
     const result = rearmSetup({
       markerPath: paths.markerPath,

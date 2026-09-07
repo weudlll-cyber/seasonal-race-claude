@@ -499,7 +499,18 @@ export default function RaceScreen() {
 
     const baseSpeedConfig = cfg('baseSpeedConfig', loadBaseSpeedConfig);
 
-    const behaviorConfig = cfg('raceBehaviorConfig', loadRaceBehaviorConfig);
+    // ★ COPIED BEFORE IT IS MUTATED, and the copy is the whole point of the spread.
+    //
+    // `cfg()` returns the RECORDED config when a race was started from an identifier — the very
+    // object that also sits in `cfgWorld` below and, since RACE-SAVE-3, gets stored as the race's
+    // world. Writing `isOpen` onto it therefore wrote a derived field INTO THE RECORD: a repeated
+    // race was stored with one key its original did not have, so the two were no longer the same
+    // race on paper even though they ran identically. Found by the browser test in RACE-HISTORY-4,
+    // which compares a repeat's stored world against the original's.
+    //
+    // `loadRaceBehaviorConfig()` already returns a fresh object each call, so the non-override path
+    // never had the problem and is unaffected by the copy.
+    const behaviorConfig = { ...cfg('raceBehaviorConfig', loadRaceBehaviorConfig) };
     behaviorConfig.isOpen = isOpenTrack;
     const rowConfig = cfg('rowLayoutConfig', loadRowLayoutConfig);
     // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
@@ -1173,6 +1184,18 @@ export default function RaceScreen() {
                 })),
                 elapsedTime: Math.round((ts - st.raceStart) / 1000),
                 race: raceData,
+                // RACE-SAVE-3: THE CONFIG WORLD THIS RACE ACTUALLY RAN WITH, carried to the result
+                // screen rather than re-gathered there.
+                //
+                // `raceData` alone cannot describe a race. Two of the identifier's nine inputs are
+                // read from the HOST at race start and never travel in the payload — the config
+                // world is one of them (`cfgWorld` above, the same value the badge and the camera
+                // marker use). The result screen has only `raceData`, so it would have to gather
+                // the world itself, from the loaders that read the Dev Screen AS IT IS NOW: change
+                // a setting while the race is on screen and the stored race would claim values it
+                // never ran. That is the exact class RACE-IDENTIFIER-1 exists to prevent, and it is
+                // why this is a carry rather than a second gather.
+                worldConfig: cfgWorld,
               })
             );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;

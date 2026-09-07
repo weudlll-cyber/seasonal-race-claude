@@ -8,6 +8,13 @@
 // This module changes NO race behaviour. It only serialises, hashes, and classifies config.
 // ============================================================
 
+// ── Canonical serialisation: stable key order at every depth → identical string on both sides.
+// It lives in `shared/` because the SERVER hashes and stores races with it too, and the client
+// source is not in the server image — see that file's header. `hashWorld` below is its only user
+// here; a consumer that wants the serialiser itself imports it from `shared/`, not through this
+// module, so there is one door rather than two names for one function. ──
+import { canonicalJson } from '../../../shared/canonicalJson.mjs';
+
 // Bump when the world SHAPE changes (added/removed config key). A result stamped with an old schema
 // version does not describe the current world shape and must be re-exported.
 // v2: raceZoneConfig removed (race-zones feature deleted). An old v1 world.json carries raceZoneConfig;
@@ -59,21 +66,6 @@ export const ENGINE_INPUT_MODULES = [
   './camera/lapUtils.js',
   '../utils/mathUtils.js',
 ];
-
-// ── Canonical serialisation: stable key order at every depth → identical string on both sides. ──
-export function canonicalJson(value) {
-  const seen = new WeakSet();
-  const norm = (v) => {
-    if (v === null || typeof v !== 'object') return v;
-    if (seen.has(v)) throw new Error('canonicalJson: circular reference');
-    seen.add(v);
-    if (Array.isArray(v)) return v.map(norm);
-    const out = {};
-    for (const k of Object.keys(v).sort()) out[k] = norm(v[k]);
-    return out;
-  };
-  return JSON.stringify(norm(value));
-}
 
 // ── Deterministic content hash (FNV-1a 32-bit → 8 hex chars). Pure JS: identical in Node and the
 // browser (no crypto dependency, no platform floats). Short form = first 6 chars (the `world:` string). ──

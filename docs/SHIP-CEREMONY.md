@@ -50,10 +50,10 @@ is inside them is arithmetic and nothing else. Regenerate with
 
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
-| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 78 |
-| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 113 |
-| of those, files that CANNOT reach the engine | 54 |
-| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs` |
+| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 79 |
+| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 116 |
+| of those, files that CANNOT reach the engine | 57 |
+| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs`, `shared/canonicalJson.mjs` |
 
 <!-- END GENERATED: engine-reach counts -->
 
@@ -89,9 +89,12 @@ recorded the opposite until 2026-08-13, and correctly for its day: `check-measur
 scanned `docs/CAMERA_DIRECTOR.md` and nothing else, so a stamp placed here would have looked guarded
 and been decoration, which is worse than an honest date. It now scans every living document, so the
 stamp below is real — the day `raceConfigWorld.js` changes, this figure goes red and asks to be
-re-counted. Re-counted by hand on 2026-08-13 and still eleven; the array is eleven lines long.
+re-counted. Re-counted on 2026-09-07 and STILL ELEVEN. SHARED-CANONICAL-1 touched this file — it moved
+`canonicalJson` out to `shared/` and added the import that replaces it — and touched nothing in
+`ENGINE_INPUT_MODULES`, which is why the stamp is renewed rather than the figure changed. Counted
+by importing the module and reading `.length`, not by eye.
 
-<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ 86d542f0 2026-08-13 depends=client/src/modules/raceConfigWorld.js -->
+<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ ba9801a1 2026-09-07 depends=client/src/modules/raceConfigWorld.js -->
 
 **The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
 what carries the argument; the number is not load-bearing, so it is not stated at all rather than

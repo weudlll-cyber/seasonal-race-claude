@@ -9,7 +9,8 @@
 //              Pure and side-effect free: this module hashes/diffs config, it changes no behaviour.
 // ============================================================
 
-import { WORLD_CONFIG_KEYS, canonicalJson, hashWorld } from '../raceConfigWorld.js';
+import { WORLD_CONFIG_KEYS, hashWorld } from '../raceConfigWorld.js';
+import { canonicalJson } from '../../../../shared/canonicalJson.mjs';
 
 // The world config blocks split by whether they can change the RACE OUTCOME. The 5 RACE-RELEVANT blocks
 // are the ones the sim consumes and that move finishing order (see reports/parity/DIVERGENCE-AUDIT.md

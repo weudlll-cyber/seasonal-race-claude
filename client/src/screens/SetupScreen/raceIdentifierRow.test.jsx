@@ -102,7 +102,7 @@ function renderStartable({ withPlayers = true, withTrack = true } = {}) {
 
 const openSettings = () => fireEvent.click(screen.getAllByRole('tab')[2]);
 const typeSeed = (v) =>
-  fireEvent.change(screen.getByLabelText('Race seed or identifier'), { target: { value: v } });
+  fireEvent.change(screen.getByLabelText('Race seed, key or identifier'), { target: { value: v } });
 
 beforeEach(() => {
   localStorage.clear();
@@ -185,7 +185,9 @@ describe('RUN-IT-AGAIN-1 — repeating a race repeats THAT race', () => {
     // The seed is still the LABEL — scoped to the last-race row, since '3' is also in the field.
     expect(screen.getByTestId('run-it-again').parentElement).toHaveTextContent(/Last race:\s*3/);
     fireEvent.click(screen.getByTestId('run-it-again'));
-    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue('RA1-recorded-identifier');
+    expect(screen.getByLabelText('Race seed, key or identifier')).toHaveValue(
+      'RA1-recorded-identifier'
+    );
   });
 
   // ★ What breaks if deleted: a race with only a seed recorded would offer the weaker repeat in the
@@ -197,7 +199,7 @@ describe('RUN-IT-AGAIN-1 — repeating a race repeats THAT race', () => {
 
     expect(screen.getByTestId('run-it-again-seed-only')).toHaveTextContent(/by seed only/i);
     fireEvent.click(screen.getByTestId('run-it-again'));
-    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue('3');
+    expect(screen.getByLabelText('Race seed, key or identifier')).toHaveValue('3');
   });
 
   it('says nothing about seeds when the whole race was recorded', () => {
@@ -245,7 +247,7 @@ describe('IDENTIFIER-SPEAKS-1 — a swallowed throw is the defect this closes', 
     typeSeed('3');
 
     // The seed field itself still works, which is the proof the panel survived.
-    expect(screen.getByLabelText('Race seed or identifier')).toHaveValue('3');
+    expect(screen.getByLabelText('Race seed, key or identifier')).toHaveValue('3');
     expect(screen.getByText('Event Name (optional)')).toBeInTheDocument();
   });
 });

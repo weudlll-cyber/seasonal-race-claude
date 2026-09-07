@@ -60,6 +60,8 @@ describe('POST /api/auth/change-password — the client/server contract', () => 
     const password = 'Contract-Pass-1!';
     actor = { username, password };
     actor.record = await defaultStore.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
       username,
       password,
       role: 'operator',
@@ -129,6 +131,8 @@ describe('POST /api/auth/change-password — the client/server contract', () => 
     const victimName = uniq('victim');
     const victimPass = 'Victim-Pass-1!';
     const victim = await defaultStore.createUser({
+      team: 'Seasonal Entertainment',
+      allowNewTeam: true,
       username: victimName,
       password: victimPass,
       role: 'operator',
