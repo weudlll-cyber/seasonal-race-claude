@@ -1059,6 +1059,23 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [COMEBACK-QUICK-1.md](COMEBACK-QUICK-1.md) — **a fast first look, and a correction to the two
+  before it** (2026-09-08, ten races, two tracks). ★ **THE INSTRUMENT QUESTION, ANSWERED**: this and
+  the two earlier comeback pieces run `raceDriver.mjs` → `raceCore.stepRacePhysics`, the engine
+  RaceScreen itself renders through — and `sim-fairness.mjs:120` **imports and calls that same
+  function**, so the two share ONE race loop (`DIVERGENCE-AUDIT.md` D-INIT/D-RUNOUT/D-NAME/D-ROWCOUNT
+  all CLOSED). raceDriver runs the product's engine; only absolute band-reach is non-comparable to the
+  record. A "the instruments differ" alarm raised here was **my misconfiguration** (no plan, no shared
+  RNG) and is recorded as disproved. ★★ **THE CORRECTION: COMEBACK-DEF-1 and -2 read the finishing
+  place from a sort that carried no order** — `finishTime` does not exist on those racers, so it fell
+  through to sorting by `t`, which `advanceRacerT` clamps equal for every finisher. **Their finishing
+  places are void, including "finishes 8th–15th" and "more time does not help".** ★ With the correct
+  field AND the drawn place inside the top 5 (his actual requirement, not P1): **dirt-oval 10/10 in
+  the top 5, river-run 8/10**; among races where he was genuinely deep at release, **10 of 10**. ★ **The
+  mechanism is named with its address**: `brake` and `trajectoryMult` are two factors in the SAME
+  product (`raceCore.js:625-627`, `raceStep.js:123-132`), so `speedBrakeFactor` 0.945 turns his +10%
+  into +4% and `brakeMatchFactor` can cut it to the blocker's pace — measured, he is blocked while
+  asking for 19–30% of the climb. The hold arm was removed; world fingerprint unmoved, golden PASS.
 - [SIM-PINNED-1.md](SIM-PINNED-1.md) — **the small leftovers** (day chain 2026-09-08, piece 7).
   **(a)** The other seed field is still per-keystroke, and typing a short key into it IS destroyed
   (`A`→`""`, `ABC2`→`"2"`; only a PASTED whole key survives) — ★ **but the answer is LEAVE IT**: the
