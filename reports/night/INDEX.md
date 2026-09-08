@@ -1059,6 +1059,23 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [SIM-PINNED-1.md](SIM-PINNED-1.md) — **the small leftovers** (day chain 2026-09-08, piece 7).
+  **(a)** The other seed field is still per-keystroke, and typing a short key into it IS destroyed
+  (`A`→`""`, `ABC2`→`"2"`; only a PASTED whole key survives) — ★ **but the answer is LEAVE IT**: the
+  Quick-Test path has no short-key resolver, so `resolveQuickTestSeed("ABC234")` returns
+  `seed: null`. Removing the sanitiser would let a person type letters, see them stay, and get a
+  silently wrong race. The brief's premise "no short-key path reads it" was false — the sanitiser is
+  SHARED with the fixed field. **(b)** ★ **72 unconsumed exports, not 42** (scripts/ 55, server/ 17)
+  — and **nothing was deleted**: the scanner over-matches on generic names, a name assembled from
+  string fragments is unfindable, and several sit in `sim/observers/` which the world fingerprint
+  reaches. The census is the deliverable; the deletions are not. **(c)** `DELETE
+  /api/racers/:id/sprite` **still has no caller from any screen** — confirmed in five search forms;
+  reported, not removed. **(d)** `sim-fairness.mjs` (6,195 lines, no test) now has **9 characterisation
+  tests** pinning `runSingleRace` — both the main entry AND the longest function — by finishing order,
+  times and duration. ★ **The sabotage took two goes and the first corrected the tests**: offsetting
+  `makePRNG` reddened only its own test, proving `runSingleRace` rides on a DIFFERENT stream
+  (`makeRaceRng`); the header now says so. A 0.1% `race_baseSpeed` change reddens all three. World
+  fingerprint UNMOVED; `sim-fairness.mjs` itself untouched.
 - [HARNESS-OUTCOME-1.md](HARNESS-OUTCOME-1.md) — **the harness camera is not the browser camera**
   (day chain 2026-09-08, piece 6). ★★ **STOPPED AT THE FORK: the camera fingerprint MOVED and
   NOTHING WAS MINTED — `docs/fingerprints.json` is untouched and the fix awaits his word.**
