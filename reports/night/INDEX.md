@@ -1059,6 +1059,33 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [INSTALL-READY-1.md](INSTALL-READY-1.md) — **what an install still needs, minus his decisions**
+  (day chain 2026-09-08, piece 5). **(a)** `npm run configure` now GENERATES `RA_SESSION_SECRET` and
+  `RA_BOOTSTRAP_TOKEN` — 32 random bytes each, into `docker-compose.override.yml`, **never printed**,
+  and **never rolled if the install already has one** (pinned by two tests: rolling the session key
+  would sign every user out). **(b)** The plaintext `dev-bootstrap-token-not-for-production` at
+  `docker-compose.yml:21` is **GONE with no fallback** — a stranger running plain `docker compose up`
+  got a working token whose value is in a public repo. ★ Named consequence: **his own override has no
+  `RA_BOOTSTRAP_TOKEN`**, so his install can no longer run `auth/setup` — which costs him nothing, as
+  that route creates the FIRST admin and his install has one. **(c)** `HEALTHCHECK` against the
+  existing `/api/health` plus `restart: unless-stopped`; it probes with `node -e` because
+  `node:20-alpine` has neither curl nor wget. ★ **(d) was ALREADY CLOSED and is reported, not
+  changed**: `COPY --from=client dist/` already fails the build loudly (`"/dist": not found`, exit 1,
+  tested), and the only path that starts-and-serves-nothing is one the owner deliberately made
+  legitimate on 2026-09-06 — turning it into a refusal would contradict a recorded decision.
+- [E2E-ONE-WORKER-1.md](E2E-ONE-WORKER-1.md) — **the browser suite was reporting failures it did not
+  have** (day chain 2026-09-08, piece 3). ★ **14 failed / 108 passed at the default 7 workers; 1
+  failed / 121 passed at one worker.** `fullyParallel: false` reads like a serial suite and is not
+  one — it only serialises WITHIN a file, so seven spec files ran at once against **one** API, **one**
+  team and **one** shared `storageState`. The fourteen were all config-and-state specs asserting on
+  state another spec was writing; **the same five files re-run with `--workers=1` and nothing else
+  changed: 66 passed, 0 failed.** ★ **The survivor is not the fix failing** — `garden-path-finishes`
+  passes alone in **105.5 s of its 600 s budget**, so it is the known flake, now visible instead of
+  buried. **Cost: 18.0 → 33.6 min (+87%), stated not hidden.** ★ **No set-up race was removed,
+  because there were none of the expected kind**: the races that looked like set-up never wait for an
+  ending at all (`race-identifier` abandons four), and every race that IS waited on is the spec's own
+  evidence. The remaining lever is DURATION, not field size — `OPEN_TRACK_MIN_SECONDS = 10`
+  (`durationModel.js:56`) — named with why it was not taken here.
 - [SUITE-ENV-SPLIT-1.md](SUITE-ENV-SPLIT-1.md) — **the unit suite builds a browser it does not
   need** (day chain 2026-09-08, piece 2). Re-established off an ordinary `npm test`: 254 files,
   **environment 503.7 s against tests 211.2 s** — twice as long building browsers as running

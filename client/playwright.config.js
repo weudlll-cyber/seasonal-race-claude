@@ -29,6 +29,38 @@ import { E2E, STATE_FILE } from './e2e/e2e-env.js';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
+  // ── E2E-ONE-WORKER-1: THE SUITE SHARES ONE API, ONE TEAM AND ONE SIGN-IN ────────────────────
+  //
+  // `fullyParallel: false` only serialises tests WITHIN a file. Different spec FILES still run in
+  // parallel, one per worker, and Playwright's default is half the cores — SEVEN on this machine.
+  // But the `webServer` block below starts exactly ONE API on one data directory, every spec signs
+  // in as the same user from one shared `storageState`, and the Dev Screen writes config to that
+  // one server. Seven browsers editing one installation's settings is not a test, it is a race.
+  //
+  // ★ MEASURED, NOT FEARED. The full suite at the default worker count:
+  //
+  //     14 failed, 108 passed (18.0 min)
+  //
+  // and the fourteen were not spread at random — they were the config-and-state specs:
+  // `vre-2-ux-verification` (3), `camera-polish-ux-verification` (3), `d11-ux-verification` (3),
+  // `race-identifier` (3), `teams-session` (2). Every one of them asserts on state another spec was
+  // simultaneously writing: "unchecking Enabled persists across reload", "saving a code-default
+  // class creates a Modified override", "the admin cannot create a user with no team at all".
+  //
+  // THE SAME FIVE FILES, RE-RUN WITH `--workers=1` AND NOTHING ELSE CHANGED: **66 passed, 0 failed**
+  // in 3.5 min. The failures were the parallelism, not the specs.
+  //
+  // WHAT IT COSTS is real and is not hidden: the suite is now serial. The saving that pays for it is
+  // a separate question — most of the wall clock is a handful of files waiting for real races to
+  // finish (`race-history` 14.5 min, `seed-field-typing` 10.5 min, `d9-smoke` 7.1 min,
+  // `race-history-real-route` 6.7 min), and those races run at the track's full length when
+  // `OPEN_TRACK_MIN_SECONDS` (`durationModel.js:56`) is 10. Shortening them is the next piece of
+  // work and is written up in the report; it is not done here, because a suite that reports
+  // fourteen failures it does not have is the more urgent defect.
+  //
+  // NOT AN ENV OVERRIDE, deliberately: a variable that silently restores seven workers would
+  // reintroduce exactly this, and the failures it causes look like product defects.
+  workers: 1,
   retries: 0,
   // The old config had no explicit timeout, so a spec blocked at the login gate sat for Playwright's
   // default. 30 s is long enough for a real page and short enough that a suite-wide failure reports

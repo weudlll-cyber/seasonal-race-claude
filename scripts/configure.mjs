@@ -35,6 +35,7 @@
 // ============================================================
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
@@ -84,6 +85,48 @@ export function withPublicOrigin(existing, origin) {
   }
   // No `environment:` block to extend: say so rather than guess where it belongs.
   return null;
+}
+
+/**
+ * ★ INSTALL-SECRETS-1 — the two secrets an install needs, generated rather than hand-copied.
+ *
+ * They used to be transcribed out of a document by hand, which is how installs come to share a
+ * secret: the value written in a document is the value everybody uses. These are 32 random bytes
+ * each, so they are unique per install by construction.
+ *
+ *   RA_SESSION_SECRET   signs sessions. In production the server REFUSES to start without it
+ *                       (`server/src/auth/session.js:71`); in development it invents an ephemeral
+ *                       one and every restart signs everybody out.
+ *   RA_BOOTSTRAP_TOKEN  authorises `POST /api/auth/setup`, the call that creates the FIRST admin.
+ *                       Without it that route answers 403 and a fresh install cannot be opened.
+ *
+ * ★ NEITHER IS EVER PRINTED — not to the terminal, not to a log, not into this script's output.
+ * They are written to `docker-compose.override.yml`, the gitignored file that is already this
+ * install's home for its own environment, and that file is where the operator reads them. A secret
+ * echoed to a terminal is a secret in a scrollback buffer and in a screen recording.
+ */
+export function generateSecret() {
+  return randomBytes(32).toString('base64url');
+}
+
+/**
+ * Upsert one `- KEY=value` line under `services: server: environment:`.
+ *
+ * ★ IT NEVER REPLACES A VALUE THAT IS ALREADY THERE, and that is the opposite rule from the
+ * address. Re-running `configure` on a live install must not roll its session secret — that would
+ * sign every user out — nor its bootstrap token. So an existing key is LEFT ALONE and reported as
+ * kept. Returns null when there is no `environment:` block to extend.
+ */
+export function withKeptEnv(existing, key, value) {
+  if (existing === null) return null;
+  const lines = existing.split('\n');
+  if (lines.some((l) => new RegExp(`^\\s*-\\s*${key}=`).test(l))) {
+    return { text: existing, added: false };
+  }
+  const envAt = lines.findIndex((l) => /^\s*environment:\s*$/.test(l));
+  if (envAt === -1) return null;
+  lines.splice(envAt + 1, 0, `      - ${key}=${value}`);
+  return { text: lines.join('\n'), added: true };
 }
 
 async function main() {
@@ -140,15 +183,30 @@ async function main() {
     );
     process.exit(1);
   }
-  writeFileSync(OVERRIDE, next, 'utf8');
+  // ── The two secrets, generated if this install does not already carry them ────────────────────
+  let text = next;
+  const secretReport = [];
+  for (const key of ['RA_SESSION_SECRET', 'RA_BOOTSTRAP_TOKEN']) {
+    const r = withKeptEnv(text, key, generateSecret());
+    if (r === null) {
+      console.error(`Refusing: ${OVERRIDE} has no \`environment:\` block to put ${key} in.`);
+      process.exit(1);
+    }
+    text = r.text;
+    secretReport.push(`${key} ${r.added ? 'generated' : 'kept — this install already had one'}`);
+  }
+  writeFileSync(OVERRIDE, text, 'utf8');
 
   console.log(`\n  Address set to ${origin}`);
+  for (const line of secretReport) console.log(`  ${line}`);
   console.log(`  Written to     docker-compose.override.yml  (gitignored — this install's own)`);
   console.log('\n  Docker:      docker compose up --build');
   console.log(`  Without it:  RA_PUBLIC_ORIGIN=${origin} node server/src/index.js`);
   console.log('\n  The client is NOT rebuilt for this. The same build serves any address.');
-  console.log('  Still needed for a real deployment: RA_SESSION_SECRET, RA_BOOTSTRAP_TOKEN,');
-  console.log('  NODE_ENV=production and TLS in front. See docs/DEPLOYMENT.md.\n');
+  console.log('\n  The two secrets are IN docker-compose.override.yml and are deliberately NOT');
+  console.log('  printed here — read them from that file if you ever need them.');
+  console.log('  Still needed for a real deployment: NODE_ENV=production and TLS in front.');
+  console.log('  See docs/DEPLOYMENT.md.\n');
 }
 
 // Importable for the test without running the prompt.
