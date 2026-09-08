@@ -1059,6 +1059,34 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [HARNESS-OUTCOME-1.md](HARNESS-OUTCOME-1.md) — **the harness camera is not the browser camera**
+  (day chain 2026-09-08, piece 6). ★★ **STOPPED AT THE FORK: the camera fingerprint MOVED and
+  NOTHING WAS MINTED — `docs/fingerprints.json` is untouched and the fix awaits his word.**
+  `152cf295c4c9ff54` → **`75aef5cd474c54e5`**, **4 of 10 tracks** — city-circuit, dirt-oval,
+  ice-track, space-sprint — exactly the four OUTCOME-WINDOW-1 predicted, re-established here by
+  measuring both ways rather than carried over. The harness told the director the outcome window was
+  permanently SHUT (`isOutcomePhase: false`); the browser derives it as
+  `racePlanController.getPhase(...) === 'OUTCOME'` (`index.jsx:1492`/`:1271`). Six tracks agree
+  anyway because the director's internal progress threshold opens the window at about the same
+  moment; on four it does not. ★ **The premise needed correcting: it is TWO sites, not one** —
+  `camera-fingerprint.mjs` does NOT use the shared driver and carried its own copy, so fixing the
+  driver alone would have moved nothing. ★ **A THIRD site was deliberately left**:
+  `render-fingerprint.mjs:584` still says `false`, so the render fingerprint is UNMOVED at
+  `74946ddbeca517a9` and that instrument still measures the shut window — named, his to order.
+  World, world-off and the golden races are all unmoved: the physics never hears this.
+- [PROD-ARM-1.md](PROD-ARM-1.md) — **the harness can drive the production build now** (day chain
+  2026-09-08, piece 4). Every browser proof this project has taken was taken on a Vite DEV server the
+  owner does not use. ★ **What blocked a production arm was one line**: the dev arm hands the client
+  its address as `VITE_API_URL` at BUILD time — and RUNTIME-API-URL-1 removed the need for it, so the
+  arm needs no build-time variable and **one process instead of two** (the server serves API and
+  client on one origin, so `RA_CLIENT_ORIGIN` is unnecessary too). **The production arm is simpler
+  than the dev arm.** New `playwright.prod.config.js` + `e2e/prod-ports.js`; **no existing spec,
+  helper or config was edited** — `e2e-env.js` already honoured `RA_E2E_*_PORT`, so that mechanism was
+  reused and `auth.setup.js` needed no change. ★ **PROVED, not asserted**: the arm serves
+  `assets/index-Dx9rj88y.js` with **no `/src/main.jsx`**, an address the SERVER injected
+  (`{"apiBaseUrl":"http://localhost:4599"}`), and a build identity naming the commit — plus
+  **15 specs passing in 25.0 s**. Not wired into `verify` or CI (no browsers there); the cost and the
+  candidate homes, including a sub-minute raceless subset, are named rather than chosen.
 - [INSTALL-READY-1.md](INSTALL-READY-1.md) — **what an install still needs, minus his decisions**
   (day chain 2026-09-08, piece 5). **(a)** `npm run configure` now GENERATES `RA_SESSION_SECRET` and
   `RA_BOOTSTRAP_TOKEN` — 32 random bytes each, into `docker-compose.override.yml`, **never printed**,

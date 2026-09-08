@@ -271,7 +271,14 @@ function trackHash(geo) {
         finishedCount: st.finishedCount,
         winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
-        isOutcomePhase: false,
+        // ── OUTCOME-WINDOW-1 / HARNESS-OUTCOME-1: THE BROWSER'S VALUE, NOT A CONSTANT ──────────
+        // This read `false` unconditionally, so the camera here was measured with the outcome
+        // window permanently SHUT — a shot the product never takes. The browser derives it at
+        // `RaceScreen/index.jsx:1492` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
+        // `racePlanController.getPhase(physicsTs, raceProgress)` (`index.jsx:1271`). Same call,
+        // same two arguments, so the harness and the product cannot disagree about the window.
+        isOutcomePhase:
+          raceCfg.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
         physicsRacers: st.racers,
       },
       CW,
