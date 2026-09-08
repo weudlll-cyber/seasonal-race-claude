@@ -1059,6 +1059,21 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [COMEBACK-DEF-1.md](COMEBACK-DEF-1.md) — **the owner's comebacker: is it possible, and is it
+  fair?** (day chain 2026-09-08, piece 1; sweep, ran alone). ★ **THE SHAPE IS NOT POSSIBLE WITHIN THE
+  EXISTING LIMITS.** The tempo clamp is `maxMult 1.10 / minMult 0.85` (`racePlanner.js:98-99`,
+  enforced `:891`) — at most **+10%** of a racer's own base speed. A racer who **drew P1** and is held
+  at rank ~16 until 70% finishes **8th–15th** (30 races/track, field 40, all 10 tracks), while already
+  **pinned at the ceiling for 23–40% of the climb**: he is clamped for two-fifths of it and still does
+  not arrive. ★ **The arithmetic was optimistic by 7–14 places** — it assumes the field is passive,
+  and it is not. ★ **"Not every race needs one" DOES NOT HOLD: 0 of 200 races had zero comebackers**
+  (mean 1.5–2.0). ★ **Field size: every track allows ≥20** (72 on searound to 1092), so the shape is
+  expressible everywhere — but "rank 15–20" is the BACK of a 20-field and mid-field at 40, which is
+  one phrase describing two different races; **his gap to close, no fallback invented**. ★ **Fairness:
+  the rest of the field is unharmed** (band-reach −1.6 to +3.7 pp, up on six tracks); the cost lands
+  on the held racer alone (16.7–50.0% against ~45%). ★ **The Holm gate is NOT answered and says so** —
+  wrong instrument, and the SHIPPED control arm already fails whole-table χ² on 8 of 10 tracks here.
+  The temporary arm was removed; world fingerprint unmoved, golden races pass, nothing minted.
 - [MORNING-2026-09-07.md](MORNING-2026-09-07.md) — **the morning sheet for the 2026-09-07 night chain**: DONE / RUNNING / OPEN / NEEDS HIS WORD, rewritten after every piece so it is true at whatever moment the chain was interrupted.
 - [CLIENT-BUILD-VERIFIED-1.md](CLIENT-BUILD-VERIFIED-1.md) — **nothing built the client** (night
   chain 2026-09-07, piece 2). Re-established at source: neither `verify` nor `ci.yml` contained a
