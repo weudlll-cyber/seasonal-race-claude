@@ -1,3 +1,6 @@
+// @vitest-environment node
+// SUITE-ENV-SPLIT: no DOM and no browser global, here or in anything this file imports — see the
+// note in vitest.config.js. Verified by running it in BOTH environments: same tests, same count.
 // ============================================================
 // Diagnostic: T-uniform vs arc-length step-distance variation
 // Run with: npx vitest run catmullRom.diagnostic

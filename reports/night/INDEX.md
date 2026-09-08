@@ -1059,6 +1059,20 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [SUITE-ENV-SPLIT-1.md](SUITE-ENV-SPLIT-1.md) — **the unit suite builds a browser it does not
+  need** (day chain 2026-09-08, piece 2). Re-established off an ordinary `npm test`: 254 files,
+  **environment 503.7 s against tests 211.2 s** — twice as long building browsers as running
+  assertions. 69 files now carry `// @vitest-environment node`; **jsdom stays the default**, so a new
+  test file is safe by construction. ★ **Membership was decided per file in TWO passes that both had
+  to agree** — a TRANSITIVE static scan (a test whose *import* names `localStorage` stays), then
+  running every candidate in BOTH environments and keeping only those with the **identical number of
+  passing and skipped tests**. ★ **The sabotage shows why that second count is the real gate**:
+  forcing `storage.test.js` into node gives **11 failed and 2 PASSED**, one of them literally named
+  "an ABSENT key is not a failure" — green because `localStorage` is gone. A pass/fail check would
+  have accepted it at 2/13. ★ **69, not the briefed 137** — the transitive rule is stricter, which is
+  the brief's own "if it is not clear, it stays"; 189 s of environment remains in the other 184 files
+  and is named as an opportunity, not guessed at. **232.2 s → 172.0 s (−26%), all 4630 tests still
+  pass.** `maxWorkers: 4` untouched.
 - [COMEBACK-DEF-1.md](COMEBACK-DEF-1.md) — **the owner's comebacker: is it possible, and is it
   fair?** (day chain 2026-09-08, piece 1; sweep, ran alone). ★ **THE SHAPE IS NOT POSSIBLE WITHIN THE
   EXISTING LIMITS.** The tempo clamp is `maxMult 1.10 / minMult 0.85` (`racePlanner.js:98-99`,

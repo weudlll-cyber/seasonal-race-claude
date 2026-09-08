@@ -16,6 +16,31 @@ export default defineConfig({
   // real mechanism rather than a stub that could drift from it.
   plugins: [react(), raBuildInfo()],
   test: {
+    // ── SUITE-ENV-SPLIT: jsdom IS STILL THE DEFAULT, AND THAT IS THE POINT ─────────────────────
+    //
+    // `isolate` defaults to true, so vitest builds ONE jsdom per test file. Measured on this suite,
+    // 253 files: **environment 503.7 s against tests 211.2 s** — more than twice as long spent
+    // constructing browsers as running assertions.
+    //
+    // 69 of those files touch no DOM object and no browser global, and they now carry
+    // `// @vitest-environment node` at the top. THE DEFAULT HERE DOES NOT CHANGE: a file gets a
+    // browser unless it has opted out, so a NEW test file is safe by construction and the only way
+    // to lose an environment is to write the line deliberately.
+    //
+    // ★ MEMBERSHIP WAS ESTABLISHED PER FILE, NOT BY FOLDER AND NOT BY NAME, in two passes that
+    // both had to agree:
+    //   1. STATIC, and TRANSITIVE: a file is a candidate only if neither it nor ANY module it
+    //      imports from `src/` names a DOM object, a browser-only global (`localStorage`,
+    //      `window`, `fetch`, `OffscreenCanvas`, …) or a library that reaches for one. Transitive
+    //      is what makes it conservative — a test whose *import* touches localStorage stays.
+    //   2. EMPIRICAL: every candidate was then run in BOTH environments and kept only if it
+    //      produced the IDENTICAL number of passing AND skipped tests. That second count is the
+    //      one that matters: a file going green because a global quietly vanished, or because its
+    //      tests were skipped, is worse than a slow one.
+    //
+    // All 69 passed both. 184 files keep the browser — 62 because they are `.jsx`, 51 for
+    // `localStorage`, 28 for `document`, 20 for `window`, and the rest for jsdom, `fetch`,
+    // `OffscreenCanvas`, canvas or testing-library.
     environment: 'jsdom',
     // Expose describe/it/expect/vi globally so tests don't need to import them
     globals: true,
