@@ -209,25 +209,70 @@ PASS  server-suite         49.9s  (ran alone)
 
 The camera guard was the only thing red before the mint, and the mint is what cleared it.
 
-### ★ The one other failure, and why it is NOT a finding
+### ★ THE ONE OTHER FAILURE IS A REAL FINDING — AND MY FIRST DIAGNOSIS OF IT WAS WRONG
 
-The first verify run came back **21 PASS / 1 FAIL** on `check-client-build`, which the brief says to
-treat as something hidden behind the camera failure. **It is not.** The failure was:
+**THE MERGE IS NOT TAKEN. The brief says to STOP if anything else is red, and something else is red.**
+
+`check-client-build` failed with:
 
 ```
 Error: EPERM, Permission denied: ...\client\distssets
     at Object.rmSync ... at emptyDir ... at prepareOutDir
 ```
 
-Established rather than assumed: `client/dist` is **gitignored build output**, not repository
-content (`.gitignore:4`), and `client\distssets` carried the attribute word `0x80410` — the
-**ReparsePoint** bit, i.e. a OneDrive cloud placeholder. Vite failed clearing a stale synced
-directory before it ever compiled anything. The commit under test changed three files, all of them
-JSON or Markdown, none of which a bundler reads.
+**WHAT I FIRST CONCLUDED, AND IT WAS WRONG.** `client/dist` is gitignored build output and
+`client\distssets` carries the ReparsePoint attribute, so I read this as the OneDrive
+placeholder EPERM this machine is known for, cleared `dist`, got a green run, and wrote that it was
+an environment artefact and not a finding. **That is withdrawn.** It survived one green run by luck
+of timing, and the next two runs falsified it.
 
-**The test was to remove the stale `dist` and re-run the guard alone — it passed in 1.8 s**, and it
-passed again inside the green full run above. This is the OneDrive EPERM class this machine is known
-for, not a defect the camera guard was concealing.
+**THE DECISIVE TEST.** With the *same* placeheld `dist` present (attributes `525328`, the
+reparse-point placeholder), `check-client-build` run **alone** passes in **2.0 s**. The placeholder
+is not what fails it.
+
+**WHAT ACTUALLY FAILS IT — two guards race on `client/dist`.**
+
+- `check-image-starts` builds the server image passing `--build-context client=./client`
+  (`check-image-starts.mjs:185`), because `server/Dockerfile:68` does `COPY --from=client dist/`.
+  BuildKit therefore holds `client/` open as a build context for the 20–84 s that guard takes.
+- `check-client-build` runs the vite build, whose first act is `emptyDir(client/dist)`.
+- `verify` runs **up to 14 guards at once**, and nothing serialises these two:
+  `check-client-build` declares `dirs: ["client/"]` with `exclusive: false`, while
+  **`check-image-starts` does not declare `client/` at all** — its `dirs` are `server/seeds/`,
+  `server/src/`, `server/utils/`. The guard that READS `client/dist` never says it does, so the
+  scheduler has no reason to keep the guard that WIPES it away from it.
+
+**The two failure modes are complementary, which is what proves it is the shared directory:**
+
+| run | `client/dist` at start | `check-client-build` | `check-image-starts` |
+| --- | --- | --- | --- |
+| verify #1 | stale, present | **FAIL** (EPERM) | PASS 66.5s |
+| verify #2 | fresh, present | PASS 29.9s | PASS 55.9s |
+| premerge #1 | present | **FAIL** (EPERM) 21.1s | PASS 83.8s |
+| premerge #2 | **absent** (I deleted it) | PASS 33.2s | **FAIL** — `"/dist": not found` |
+| premerge #3 | fresh, present | **FAIL** (EPERM) 15.9s | PASS 81.6s |
+| guard alone | stale, present | **PASS 2.0s** | not run |
+
+Delete `dist` and the image guard fails for want of it; leave `dist` and the build guard fails
+trying to wipe it while BuildKit reads it. Run either one on its own and it passes. On this machine
+`verify --premerge` currently cannot go green for that reason, and **no amount of re-running fixes
+it, because it is an ordering defect and not a flake** — which is exactly what verify's own label
+(`SPAWN FAILURE — a finding, not a flake`) said before I talked myself out of it.
+
+**WHY NOBODY HAD SEEN IT.** Before this mint `verify` was already red on `camera-fingerprint`, so
+the run's verdict was `Do not commit` whatever else happened. The mint cleared the camera guard and
+this surfaced underneath it — which is precisely the case the brief told me to stop for.
+
+**NOT FIXED HERE.** The fix is in the guards' declarations or verify's scheduling — most likely
+`check-image-starts` declaring the `client/` context it actually reads, and one of the two taking
+`exclusive`. That is tooling work, it is a separate decision, and this piece changes no tooling.
+
+### The mint itself is unaffected
+
+The finding is in how two guards are scheduled, not in anything this mint recorded.
+`camera-fingerprint` **PASSED in all four runs** and reported `75aef5cd474c54e5` every time, and
+`render-fingerprint`, `golden-races`, `viewer-invariants`, `fingerprint-containment`, `check-tags`
+and both suites passed in the premerge runs.
 
 ### Golden races — PASS
 
