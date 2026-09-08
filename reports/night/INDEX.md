@@ -1059,6 +1059,20 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [COMEBACK-QUICK-2.md](COMEBACK-QUICK-2.md) — **the same ten races at 55, 60, 65 and 70 percent**
+  (2026-09-08). ★★ **FIRST: THE HOLD WAS NEVER HOLDING.** `racePlanner.js:805-808` pins a NON-HERO to
+  1.0 before OUTCOME, and the hold override sat after that `continue` — under choreo OUTCOME begins at
+  ~0.50, so the hold had no window at all. Traced: `trajectoryMult` 1.00 across the whole window while
+  the racer drifted rank 27→1 and 4→35. **That invalidates QUICK-1's 0.50 column too** — its 10/10 was
+  a racer who drew 3rd racing normally to 3rd. The brief said not to re-run 0.50 because it was "the
+  one valid measurement"; that premise was false, so it was re-run with the rest. Fixed by deciding
+  the hold ABOVE the pin (relaxes no limit — it changes only which rank the servo aims at); the racer
+  now settles at 16–20 by 25–30% and stays. ★ **With a hold that holds, the shape reaches the TOP 5 at
+  EVERY release point including 70%**: dirt-oval 9/10, 10/10, 9/10, 10/10, 9/10 and river-run 8/10,
+  9/10, 8/10, 7/10, 10/10 at 0.50/0.55/0.60/0.65/0.70. Rank at release is now **13–22** against
+  QUICK-1's 1–35, so the all-races and deep-only columns are all but identical. PINNED 31–45% on the
+  closed track against 14–20% on the open one — the flat-versus-ramped brake showing through. Arm
+  removed; world fingerprint unmoved, golden PASS. No recommendation, no release point picked.
 - [COMEBACK-QUICK-1.md](COMEBACK-QUICK-1.md) — **a fast first look, and a correction to the two
   before it** (2026-09-08, ten races, two tracks). ★ **THE INSTRUMENT QUESTION, ANSWERED**: this and
   the two earlier comeback pieces run `raceDriver.mjs` → `raceCore.stepRacePhysics`, the engine
