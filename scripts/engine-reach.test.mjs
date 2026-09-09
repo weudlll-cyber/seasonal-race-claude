@@ -251,6 +251,26 @@ test("the specifier parser ignores bare package imports", () => {
 // because both are "non-zero" to a shell `if`. WHAT WOULD GO UNNOTICED: a caller that substituted
 // an empty path list being told "nothing can reach the engine" and skipping a mint on that basis.
 
+test("★ REFUSES on --check when the HULL itself came back broken, instead of answering 1", () => {
+  // FOUND BY SABOTAGING THIS TOOL (HULL-FIX-1). The three floor checks — empty hull, no drivers, an
+  // unfollowable dynamic import — sat BELOW the `--check` branch, so the one branch a caller acts on
+  // was the one branch with no floor under it. A stubbed-empty hull answered "cannot reach the
+  // engine at all" about `raceCore.js`, exit 1, which the pre-commit tripwire reads as "say nothing".
+  //
+  // REPRODUCED FOR REAL, not with a stub: the up-step reads `git ls-files`, so a run that cannot
+  // execute `git` finds no drivers — which is precisely the "tree git cannot list" case the floor's
+  // own message names. PATH is emptied and node is invoked by absolute path, the same technique
+  // `client/src/modules/buildIdentityReason.test.js` uses for the same reason.
+  const r = spawnSync(process.execPath, [CLI, "--check", "client/src/modules/raceCore.js"], {
+    encoding: "utf8",
+    cwd: join(HERE, ".."),
+    env: { ...process.env, PATH: "", Path: "" },
+  });
+  // 2 is REFUSED. 1 would be a real negative answer about the ENGINE ITSELF, and that is the defect.
+  assert.equal(r.status, 2, `expected REFUSED (2), got ${r.status}: ${r.stdout}${r.stderr}`);
+  assert.match(r.stderr, /FAIL:/);
+});
+
 test("REFUSES when --check is given no paths at all", () => {
   const r = runCli("--check");
   assert.equal(r.code, 2, "an empty path list must REFUSE (2), not answer no (1)");

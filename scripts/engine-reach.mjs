@@ -400,6 +400,45 @@ if (
   resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))
 ) {
   const { files, dynamic, drivers, entries } = raceHull();
+
+  // ── ★ THE FLOOR, AND IT GUARDS `--check` TOO (HULL-FIX-1) ───────────────────────────────────
+  //
+  // LOUD FAILURE (Lesson 187): a hull that came back empty or unfollowable is not a pass. These
+  // three checks existed — but only on the LISTING path, below the `--check` branch, so `--check`
+  // never reached them. Found by sabotaging this file: with `raceHull` stubbed to return nothing,
+  //
+  //     node scripts/engine-reach.mjs --check client/src/modules/raceCore.js
+  //     ENGINE REACH: none of 1 path(s) carry a change that can reach the race engine.
+  //       1 outside the hull (cannot reach the engine at all): .../raceCore.js
+  //
+  // exit 1, silently, about the ENGINE ITSELF — and exit 1 is the code the pre-commit tripwire
+  // reads as "say nothing". The branch a caller acts on was the one branch with no floor under it.
+  // Now both paths refuse first, with exit 2 = REFUSED, which every caller already distinguishes.
+  const floor = () => {
+    if (files.length < 5)
+      return `engine reach returned only ${files.length} files — refusing to bless that.`;
+    // A DRIVERLESS HULL IS A BROKEN SCAN, NOT A NARROW REPOSITORY. `driversOf` reads `git ls-files`,
+    // and a tree git cannot list yields zero drivers and a hull that has quietly gone back to being
+    // the import closure — the exact failure this piece repaired. It has to be louder than a number.
+    if (!drivers.length)
+      return (
+        `the hull found NO drivers of ${entries.join(", ")} — the up-step found nothing, so ` +
+        `this is the old import-closure answer wearing the new name. Check that \`git ls-files\` works here.`
+      );
+    if (dynamic.length)
+      return (
+        `an unfollowable dynamic import() inside the hull (${dynamic.join(", ")}) — its ` +
+        `specifier is not a string literal, so a static walk cannot see where it goes and this ` +
+        `list is no longer complete.`
+      );
+    return null;
+  };
+  const broken = floor();
+  if (broken) {
+    console.error(`FAIL: ${broken}`);
+    process.exit(2);
+  }
+
   // The hull's own entry set, used for every DATA question below: a driver names data paths too —
   // `RaceScreen` reaching a track record is the same fact as `sim-fairness.mjs` reaching one.
   const hullEntries = [...entryPoints(), ...drivers.map((d) => join(ROOT, d))];
@@ -559,31 +598,6 @@ if (
         `  ${dataUnchanged.length} DATA read by the engine but unchanged against ${base}: ${dataUnchanged.join(", ")}`,
       );
     process.exit(1);
-  }
-  // LOUD FAILURE (Lesson 187): a closure that came back empty or unfollowable is not a pass.
-  if (files.length < 5) {
-    console.error(
-      `FAIL: engine reach returned only ${files.length} files — refusing to bless that.`,
-    );
-    process.exit(2);
-  }
-  // A DRIVERLESS HULL IS A BROKEN SCAN, NOT A NARROW REPOSITORY. `driversOf` reads `git ls-files`,
-  // and a tree git cannot list yields zero drivers and a hull that has quietly gone back to being
-  // the import closure — the exact failure this piece repaired. It has to be louder than a number.
-  if (!drivers.length) {
-    console.error(
-      `FAIL: the hull found NO drivers of ${entries.join(", ")} — the up-step found nothing, so ` +
-        `this is the old import-closure answer wearing the new name. Check that \`git ls-files\` works here.`,
-    );
-    process.exit(2);
-  }
-  if (dynamic.length) {
-    console.error(
-      `FAIL: an unfollowable dynamic import() inside the hull (${dynamic.join(", ")}) — its ` +
-        `specifier is not a string literal, so a static walk cannot see where it goes and this ` +
-        `list is no longer complete.`,
-    );
-    process.exit(2);
   }
   console.log(
     `RACE HULL — ${files.length} files can change the race ` +
