@@ -361,6 +361,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BUILD-RACE-CLOSED-1.md](BUILD-RACE-CLOSED-1.md) — **the failure reproduces, the render record is
+  minted, the night merges** (2026-09-09, `night/2026-09-08` off master `1e10df1a`, the owner's
+  decision). ★ **THE EPERM THAT WOULD NOT REPRODUCE, REPRODUCED**: with all three parts of
+  GUARD-CONTEXT-RACE-1's fix reverted, 9 runs gave **2 failures**, both with the original signature
+  (16.2 s and 17.4 s against 15.9-21.1 s), and **both in ONE cell — cold Docker cache with `client/dist`
+  present, 2 of 3** — zero in the other six. That cell is why the earlier sabotage looked clean: four
+  runs never landed in it. The other half reproduced too: `check-image-starts` failed `"/dist": not
+  found` in 3 of 3 `dist`-absent runs with the pull-in reverted. ★ **AFTER the fix: 0 failures, cell 3
+  of 3 — AND THE REPORT SAYS WHAT THAT IS WORTH.** Three clean runs in a cell that failed 2 of 3 is a
+  ~1-in-27 fluke and weak alone; what carries it is structural — `check-client-build` now runs at
+  **2.2-3.7 s "ran alone"** against 16-38 s in the shared queue, so its `emptyDir` can no longer land
+  inside BuildKit's ingest window. Eight clean runs would have taken the doubt to 0.015 %; **stopping at
+  three was the owner's call on time, not a claim about the evidence**. ★ **FIVE ALTERNATIVES EXCLUDED
+  BY MEASUREMENT** — OneDrive spontaneous locking (300/300 clean), a fresh 1 MB write with a 2 s dwell
+  (15/15), **dehydrated placeholders** (dehydration forced and confirmed by attribute `0x100000`, delete
+  still succeeded), `audit-offline-render` (not collected by verify) and `audit-bundle-address` (runs
+  after the `emptyDir`); Defender and the VS Code watcher stay named and unfixed. ★ **RENDER MINTED**
+  — re-measured on the tree rather than carried; six tracks move, not the camera mint's four, and the
+  two lists are NOT comparable because the instruments run different windows.
+
 - [MINT-CAMERA-1.md](MINT-CAMERA-1.md) — **the camera record starts describing the product's own
   picture** (2026-09-08, `night/2026-09-07` off `fe4e111c`, the owner's decision). The camera role moves;
   the value lives in [docs/fingerprints.json](../../docs/fingerprints.json), which is its one home.
