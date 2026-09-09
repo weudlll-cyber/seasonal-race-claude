@@ -361,6 +361,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HULL-FIX-1.md](HULL-FIX-1.md) - **the tool that decides whether a change can reach a race starts
+  telling the truth** (2026-09-09, `fix/hull-1` off master `678ce9be`, **NOT MERGED - the owner reads
+  what the hull costs first**). `engine-reach` walked DOWN from `raceCore.js` only, so every module
+  that PRODUCES the engine's arguments was invisible **by construction** - the hole
+  `SHIP-CEREMONY.md` had been carrying as a standing warning. It now also walks UP, to every file that
+  constructs a race, and down again: **hull 79 -> 197, a strict superset, nothing left it.** The two
+  proven outsiders re-sabotaged RED; ★ **all three of HULL-REACH-1's "argued, not proven" are now
+  PROVEN** against the shipped-path arm (`realArm`), which HULL-REACH-1 had missed as a probe. ★ **The
+  names sabotage nearly produced a false green twice**: `stablePairBit`'s bit is a PARITY of odd
+  character codes, so `Rocket`->`Rokket` and a uniform prefix are inert by construction - a mutation
+  can be loaded, reachable AND at a live call site and still be inert. ★ **Sabotaging the tool found a
+  real defect**: the floor checks sat below the `--check` branch, so the one branch a caller acts on
+  answered exit 1 - "cannot reach the engine at all" - about `raceCore.js` itself; fixed. **COST,
+  measured over 411 merges: the tripwire fires on 28% instead of 15%**, +52 merges in 8 weeks,
+  dominated by `scripts/` instruments and `camera/`; two historical merges touched a proven
+  race-changing file and were cleared. **`verify`'s selection is UNCHANGED** and that is a finding, not
+  a relief. ★ **THREE THINGS LEFT FOR THE OWNER**: `sim-fairness.mjs:1120` carries its own `285` copy
+  of `W_REF_MAX`, so **the world fingerprint is blind to the file that decides every start position**;
+  nothing routes on the hull; and the over-report's honest fix is splitting `racer-types/index.js`,
+  which is product code. Nothing minted, no race changed.
+
 - [BUILD-RACE-CLOSED-1.md](BUILD-RACE-CLOSED-1.md) — **the failure reproduces, the render record is
   minted, the night merges** (2026-09-09, `night/2026-09-08` off master `1e10df1a`, the owner's
   decision). ★ **THE EPERM THAT WOULD NOT REPRODUCE, REPRODUCED**: with all three parts of
