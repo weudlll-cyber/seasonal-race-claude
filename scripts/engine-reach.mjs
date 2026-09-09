@@ -2,23 +2,47 @@
 // File:        scripts/engine-reach.mjs
 // Project:     RaceArena — VERIFY-COST-1
 //
-// WHAT CAN CHANGE THE RACE: the transitive closure of `raceCore.js`'s imports, computed from source
-// rather than remembered. This is the mint tripwire's trigger set.
+// WHAT CAN CHANGE THE RACE — the RACE HULL, computed from source rather than remembered. This is
+// the mint tripwire's trigger set.
 //
-// WHY A CLOSURE AND NOT `ENGINE_INPUT_MODULES`. That list is `raceCore.js`'s DIRECT imports — eleven
-// of them — and its guard checks exactly that. The closure is NINETEEN files, and the eight in the
-// gap include `autoSpriteScale.js`, which is the precise file the mint tripwire was created for
-// (CAMERA-MINT-TRIPWIRE-1), and `storage/defaults.js`. Triggering on the direct list would therefore
-// have stopped catching the incident that produced the rule. Measured, not assumed.
+// ── ★ HOW THE RULE DECIDES (HULL-FIX-1). READ THIS PARAGRAPH; IT IS THE WHOLE MECHANISM. ────────
 //
-// WHY A CLOSURE AND NOT THE FOLDER. The blunt trigger is "any file under client/src/modules/ that is
-// not under camera/" — 103 files. The closure is 19. The other 84 cannot reach the engine at all, so
-// minting for them proves what the diff already proved.
+// A race is produced by the engine READING ITS ARGUMENTS, so the question "can a change to this file
+// change how a race comes out?" has two halves and this tool used to answer only one. Half one, DOWN
+// the arrow: everything the engine imports, transitively, from each ENTRY POINT (`raceCore.js` plus
+// whatever the fingerprint guards declare they drive). Half two, UP the arrow and then down again: a
+// DRIVER is any tracked source file that imports an entry point — that is, any file in this
+// repository that constructs or steps a race — and the whole import closure of every driver counts
+// too, because a driver's imports are the candidate producers of the values it hands the engine and
+// a static walker cannot tell an argument-producer from a bystander. The hull is the union. The
+// up-step is taken ONCE, from the entry points only and not from every member of the closure: a file
+// that imports a mid-hull module is READING a shared value, not CONSTRUCTING a race, and up-walking
+// from (say) `storage/defaults.js` would drag in every screen that shows a setting and make the hull
+// the whole application. Every race construction in this repository goes through an entry point,
+// because `createRaceFromIdentity` / `stepRacePhysics` / `runRaceHeadless` all live in `raceCore.js`
+// — engine-reach.test.mjs asserts exactly that, so the up-step cannot silently stop being complete.
 //
-// WHY THIS IS SAFE TO COMPUTE STATICALLY: there is not one dynamic `import()` anywhere in the
-// closure, so a static walk of the `from '...'` specifiers sees every edge. That is asserted by
-// engine-reach.test.mjs rather than left as a claim — if a dynamic import ever appears in the
-// closure, the guard fails and this script stops being the authority.
+// ── WHY THE UP-STEP EXISTS, WITH THE MEASUREMENT THAT FORCED IT (HULL-REACH-1, HULL-FIX-1) ──────
+//
+// `raceParams.js` (`W_REF_MAX`, which decides sprite geometry → row layout → every start position)
+// and `raceActionStage.js` (`pulkLeaderBrake`) are imported by the engine's CALLERS and passed IN as
+// arguments. Breaking either moves both golden races. This tool called them OUTSIDE THE HULL for as
+// long as it walked imports only — a file that changes a race while the arbiter of "can this change
+// a race" says no. `baseSpeedConfig.js`, `rowLayoutConfig.js` and `racerNames.js` are the same shape
+// and were proven the same way against the shipped-path arm. Five files, all reached only by going
+// up the arrow first.
+//
+// WHY THE ERRORS ARE NOT SYMMETRIC, AND WHICH WAY THIS LEANS. A file wrongly OUTSIDE means a race
+// change ships unmeasured; a file wrongly INSIDE means a run nobody needed. The first is a
+// correctness failure and the second is a bill, so every uncertainty here resolves to INSIDE. That
+// is why a driver's whole closure counts rather than some narrower guess at which of its imports
+// really flow into the constructor.
+//
+// WHAT A STATIC WALK CAN SEE. Every edge is followed from a STRING LITERAL: a static `from '...'`
+// specifier, or a literal inside a dynamic `import(...)` call — the instruments in `scripts/` reach
+// the engine through `import(u("client/src/modules/raceCore.js"))` and those edges are real. An
+// `import()` whose specifier is NOT a literal cannot be followed at all; such a file is reported in
+// `dynamic` and the CLI REFUSES rather than presenting an incomplete list as an answer.
 //
 // Usage:
 //   node scripts/engine-reach.mjs                  # the closure, one path per line
@@ -30,7 +54,7 @@
 // caller may act on; exit 2 means the question was broken and nothing was examined.
 // ============================================================
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -91,11 +115,175 @@ export function entryPoints() {
   return [...new Set([ENTRY, ...declaredReachEntries()])];
 }
 
-/** Every relative specifier a file imports from. Static `from '...'` edges only — see the header. */
+/**
+ * Every relative specifier a file imports from. Static `from '...'` edges only.
+ *
+ * KEPT AS IT WAS, deliberately: `scripts/lib/dataReach.mjs` resolves these against the importing
+ * file's directory, so widening this function's contract would silently mis-resolve there. The
+ * walk's own richer edge reader is `importEdges` below.
+ */
 export function importSpecifiers(src) {
   return [...src.matchAll(/from\s+["']([^"']+)["']/g)]
     .map((m) => m[1])
     .filter((s) => s.startsWith("."));
+}
+
+/**
+ * Every string literal that appears inside a dynamic `import(...)` call, plus a flag for the calls
+ * that carry NO literal and therefore cannot be followed.
+ *
+ * WHY THE WHOLE CALL IS SCANNED AND NOT JUST ITS FIRST ARGUMENT. Every instrument in `scripts/`
+ * reaches the engine as `import(u("client/src/modules/raceCore.js"))` or
+ * `import(u(join(ROOT, "client/src/modules/raceCore.js")))` — the literal is real and one or two
+ * calls deep. Reading it is the difference between following those edges and refusing.
+ *
+ * @returns {{literals: string[], opaque: boolean}}
+ */
+export function dynamicImportLiterals(src) {
+  const literals = [];
+  let opaque = false;
+  const re = /(^|[^.\w$])import\s*\(/g;
+  let m;
+  while ((m = re.exec(src))) {
+    let i = re.lastIndex - 1;
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "(") depth++;
+      else if (src[i] === ")") {
+        depth--;
+        if (!depth) break;
+      }
+    }
+    const call = src.slice(re.lastIndex, i);
+    const found = [...call.matchAll(/["']([^"'\n]+)["']/g)].map((q) => q[1]);
+    if (found.length) literals.push(...found);
+    else opaque = true;
+  }
+  return { literals, opaque };
+}
+
+/**
+ * Resolve one specifier to an absolute file, or null when it names nothing in this repository.
+ *
+ * TWO SHAPES ARE UNDERSTOOD, and they are the two this repository writes: a RELATIVE specifier,
+ * resolved against the importing file, and a REPO-RELATIVE one (`client/...`, `scripts/...`,
+ * `server/...`, `shared/...`), which is how the dynamic instruments name what they load. Bare
+ * package names resolve to nothing here on purpose — node_modules is not the subject.
+ *
+ * THE EXTENSION FALLBACK IS A WIDENING AND IS THERE FOR A MEASURED REASON. `resolve(dir, spec)` with
+ * no fallback silently drops an extensionless edge, and this repository writes them:
+ * `client/src/modules/raceHistory.js` imports `'./storage/storage'`. That edge was invisible. A
+ * dropped edge is a file wrongly OUTSIDE, which is the failure this whole file exists to stop.
+ */
+function resolveSpecifier(fromAbs, spec) {
+  let base;
+  if (spec.startsWith(".")) base = resolve(dirname(fromAbs), spec);
+  else if (/^(client|scripts|server|shared)\//.test(spec)) base = join(ROOT, spec);
+  else return null;
+  for (const c of [
+    base,
+    `${base}.js`,
+    `${base}.jsx`,
+    `${base}.mjs`,
+    join(base, "index.js"),
+  ]) {
+    try {
+      if (statSync(c).isFile()) return c;
+    } catch {
+      // not this candidate
+    }
+  }
+  return null;
+}
+
+/**
+ * The source with COMMENT-ONLY LINES removed — every line whose first non-space character is `//`,
+ * `*` or `/*`.
+ *
+ * ★ WHY THIS IS SAFE, AND IT IS THE ONLY REASON IT IS DONE THIS WAY. A file's prose talks about
+ * imports: this file's own header writes `import(u("client/src/modules/raceCore.js"))` to explain
+ * the rule, and the scanner read that as an edge and made the arbiter a driver of the engine. But
+ * a comment stripper that gets it wrong DELETES A REAL EDGE, which is the failure this piece
+ * exists to repair — so nothing clever is attempted. A line that begins with `//`, `*` or `/*`
+ * cannot contain an import statement or a live `import()` call, because it is not code. Comments
+ * that TRAIL code are left alone; a phantom edge from one is an over-inclusion, which costs a run
+ * and never costs correctness.
+ */
+function withoutCommentLines(src) {
+  return src
+    .split("\n")
+    .map((l) => (/^\s*(\/\/|\*|\/\*)/.test(l) ? "" : l))
+    .join("\n");
+}
+
+/**
+ * Every import edge out of one file, already resolved.
+ * @returns {{edges: string[], opaque: boolean}} `opaque` = it has an `import()` nothing could follow.
+ */
+export function importEdges(fromAbs, rawSrc) {
+  const src = withoutCommentLines(rawSrc);
+  const { literals, opaque } = dynamicImportLiterals(src);
+  const edges = [];
+  for (const spec of [...importSpecifiers(src), ...literals]) {
+    const abs = resolveSpecifier(fromAbs, spec);
+    if (abs) edges.push(abs);
+  }
+  return { edges, opaque };
+}
+
+/**
+ * Every tracked source file in the repository, absolute.
+ *
+ * GIT IS THE AUTHORITY on what is in the repository — a directory walk would also find build
+ * output, scratch files and anything a night left behind, and none of those can change a shipped
+ * race. Memoised: the driver scan reads every one of these files once.
+ */
+let _trackedCache = null;
+function trackedSourceFiles() {
+  if (_trackedCache) return _trackedCache;
+  let out = [];
+  try {
+    out = execFileSync("git", ["ls-files"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      maxBuffer: 1 << 28,
+    })
+      .split("\n")
+      .filter((f) => /\.(mjs|cjs|js|jsx|ts|tsx)$/.test(f))
+      .map((f) => join(ROOT, f));
+  } catch {
+    // A tree git cannot list yields NO drivers, which shrinks the hull — so it must be loud rather
+    // than absorbed. `raceHull` turns an empty listing into a refusal; see there.
+  }
+  _trackedCache = out;
+  return out;
+}
+
+/**
+ * THE DRIVERS: every tracked source file that imports an entry point, i.e. every file in this
+ * repository that constructs or steps a race. Derived on every run, never listed.
+ *
+ * ONE STEP UP, and the header says why. A driver's own importers are not race constructors; they
+ * hand the driver its props, and following them would end at `main.jsx`.
+ *
+ * @param {string[]} entries absolute entry-point paths
+ * @returns {string[]} absolute driver paths, sorted
+ */
+export function driversOf(entries) {
+  const want = new Set(entries.map((e) => resolve(e)));
+  const out = [];
+  for (const f of trackedSourceFiles()) {
+    if (want.has(resolve(f))) continue; // an entry point is not its own driver
+    let src;
+    try {
+      src = readFileSync(f, "utf8");
+    } catch {
+      continue;
+    }
+    const { edges } = importEdges(f, src);
+    if (edges.some((e) => want.has(resolve(e)))) out.push(f);
+  }
+  return out.sort();
 }
 
 /**
@@ -140,17 +328,35 @@ export function splitInert(paths, base = "master") {
   return { hit, inert };
 }
 
-/** True if a file contains a DYNAMIC import, which a static walk cannot follow. */
+/**
+ * True if a file contains a dynamic `import()` the walk CANNOT follow — one with no string literal
+ * anywhere in the call.
+ *
+ * NARROWED FROM "HAS ANY import()" (HULL-FIX-1), and the narrowing is a widening of the hull, not a
+ * shrinking of it. This used to be "any dynamic import at all", which was a true completeness test
+ * only while no reached file had one. The instruments that drive the engine all do — and they reach
+ * it THROUGH one, `import(u("client/src/modules/raceCore.js"))`. Those edges are now followed, so
+ * the property worth guarding is the one that is still unfollowable: a specifier that is not a
+ * literal. A file with one of those is named and the CLI refuses.
+ */
 export function hasDynamicImport(src) {
-  return /(^|[^.\w])import\s*\(/.test(src);
+  return dynamicImportLiterals(src).opaque;
 }
 
 /**
- * Every file the race engine can reach from `raceCore.js`, as repo-relative paths.
+ * The import closure of an entry, as repo-relative paths — HALF ONE of the rule, down the arrow.
+ *
+ * ★ THIS IS NOT THE HULL. It answers "what does this file read, transitively"; `raceHull()` below
+ * answers "what can change a race". `scripts/lib/routing.mjs`'s `closureOf` is this function and
+ * must stay this function: it expands EVERY guard's declared `reach`, so giving it the up-step would
+ * up-walk from things like `storage/defaults.js` and hand unrelated guards the whole application.
+ *
+ * @param {string|string[]} entry absolute path(s) to walk from — required, because a default here
+ *   would read as "the hull" and it is not.
  * @returns {{files: string[], dynamic: string[]}} `dynamic` names any reached file the walk cannot
  *   fully follow — it must be empty for this script to be the authority it claims to be.
  */
-export function engineReach(entry = entryPoints()) {
+export function engineReach(entry) {
   const entries = Array.isArray(entry) ? entry : [entry];
   const seen = new Set();
   const dynamic = [];
@@ -159,20 +365,44 @@ export function engineReach(entry = entryPoints()) {
     if (seen.has(real) || !existsSync(real)) return;
     seen.add(real);
     const src = readFileSync(real, "utf8");
-    if (hasDynamicImport(src)) dynamic.push(real);
-    for (const spec of importSpecifiers(src))
-      walk(resolve(dirname(real), spec));
+    const { edges, opaque } = importEdges(real, src);
+    if (opaque) dynamic.push(real);
+    for (const e of edges) walk(e);
   };
   for (const e of entries) walk(e);
   const rel = (f) => relative(ROOT, f).split(sep).join("/");
   return { files: [...seen].map(rel).sort(), dynamic: dynamic.map(rel).sort() };
 }
 
+/**
+ * ★ THE RACE HULL — every file whose change can change how a race comes out. Both halves of the
+ * rule: the entry points' closures, plus the closure of every DRIVER of an entry point.
+ *
+ * This is what the CLI answers with, what the pre-commit tripwire prints, and what a mint decision
+ * rests on. `entries` is injectable for the tests only; nothing in the repository passes it.
+ *
+ * @returns {{files: string[], dynamic: string[], drivers: string[], entries: string[]}}
+ */
+export function raceHull(entries = entryPoints()) {
+  const drivers = driversOf(entries);
+  const { files, dynamic } = engineReach([...entries, ...drivers]);
+  const rel = (f) => relative(ROOT, f).split(sep).join("/");
+  return {
+    files,
+    dynamic,
+    drivers: drivers.map(rel).sort(),
+    entries: entries.map(rel).sort(),
+  };
+}
+
 if (
   process.argv[1] &&
   resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))
 ) {
-  const { files, dynamic } = engineReach();
+  const { files, dynamic, drivers, entries } = raceHull();
+  // The hull's own entry set, used for every DATA question below: a driver names data paths too —
+  // `RaceScreen` reaching a track record is the same fact as `sim-fairness.mjs` reaching one.
+  const hullEntries = [...entryPoints(), ...drivers.map((d) => join(ROOT, d))];
   const checkIdx = process.argv.indexOf("--check");
   if (checkIdx >= 0) {
     const wanted = process.argv
@@ -254,7 +484,7 @@ if (
     // "can change the race". A hull file in that state is correctly reported as carrying no change,
     // and a data file must be held to the same standard — the question this command answers is
     // whether the PATHS IT WAS GIVEN carry a reaching change, not whether they could in principle.
-    const dataPrefixes = dataReach(entryPoints()).paths;
+    const dataPrefixes = dataReach(hullEntries).paths;
     const reachesAsData = (w) =>
       !files.includes(w) &&
       dataPrefixes.some((p) => w === p || w.startsWith(`${p}/`));
@@ -299,7 +529,7 @@ if (
       // there by being NAMED by engine code rather than imported by it, because that is the fact
       // this line was wrong about for months.
       for (const d of dataHits) {
-        const via = dataReach(entryPoints()).from[
+        const via = dataReach(hullEntries).from[
           dataPrefixes.find((p) => d === p || d.startsWith(`${p}/`))
         ];
         console.log(
@@ -337,15 +567,27 @@ if (
     );
     process.exit(2);
   }
+  // A DRIVERLESS HULL IS A BROKEN SCAN, NOT A NARROW REPOSITORY. `driversOf` reads `git ls-files`,
+  // and a tree git cannot list yields zero drivers and a hull that has quietly gone back to being
+  // the import closure — the exact failure this piece repaired. It has to be louder than a number.
+  if (!drivers.length) {
+    console.error(
+      `FAIL: the hull found NO drivers of ${entries.join(", ")} — the up-step found nothing, so ` +
+        `this is the old import-closure answer wearing the new name. Check that \`git ls-files\` works here.`,
+    );
+    process.exit(2);
+  }
   if (dynamic.length) {
     console.error(
-      `FAIL: dynamic import() inside the closure (${dynamic.join(", ")}) — a static walk cannot ` +
-        `see those edges, so this list is no longer complete.`,
+      `FAIL: an unfollowable dynamic import() inside the hull (${dynamic.join(", ")}) — its ` +
+        `specifier is not a string literal, so a static walk cannot see where it goes and this ` +
+        `list is no longer complete.`,
     );
     process.exit(2);
   }
   console.log(
-    `ENGINE REACH — ${files.length} files can change the race (from raceCore.js)`,
+    `RACE HULL — ${files.length} files can change the race ` +
+      `(${entries.length} entry point(s), ${drivers.length} driver(s) of them)`,
   );
   for (const f of files) console.log("  " + f);
 }

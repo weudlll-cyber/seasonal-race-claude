@@ -36,7 +36,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
-import { engineReach, splitInert } from "./engine-reach.mjs";
+import { raceHull, splitInert } from "./engine-reach.mjs";
 import { collect, reasonFor } from "./lib/routing.mjs";
 // PREMERGE-CI-SET-1: what `ci.yml` runs on every push, DERIVED from the workflow rather than
 // retyped here. See that module for why a list would be the very defect it closes.
@@ -543,7 +543,7 @@ export function plan(
   const gs = guards ?? _collect().guards;
   // VERIFY-COST-2: a hull file whose edit is comments and whitespace only cannot change what the
   // engine computes, so it does not select the world fingerprint. REPORTED below, never silent.
-  const hull = new Set(engineReach().files);
+  const hull = new Set(raceHull().files);
   const hullHits = files.filter((f) => hull.has(f));
   const { inert } = hullHits.length
     ? splitter(hullHits, base)

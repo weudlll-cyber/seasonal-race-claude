@@ -14,14 +14,24 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import {
+  writeFileSync,
+  readFileSync,
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   engineReach,
+  raceHull,
+  driversOf,
+  entryPoints,
   importSpecifiers,
+  dynamicImportLiterals,
   hasDynamicImport,
 } from "./engine-reach.mjs";
 
@@ -37,8 +47,8 @@ function runCli(...args) {
   return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
 }
 
-test("the real closure reaches the engine, and reaches it THROUGH a dependency", () => {
-  const { files } = engineReach();
+test("the real hull reaches the engine, and reaches it THROUGH a dependency", () => {
+  const { files } = raceHull();
   // A direct import of raceCore: if this is missing the walk is not reading the real file.
   assert.ok(
     files.includes("client/src/modules/raceBehavior.js"),
@@ -53,15 +63,94 @@ test("the real closure reaches the engine, and reaches it THROUGH a dependency",
   assert.ok(files.length > 10, `closure suspiciously small: ${files.length}`);
 });
 
-test("the closure EXCLUDES presentation code — otherwise it saves nothing", () => {
-  const { files } = engineReach();
-  const camera = files.filter((f) => f.includes("/modules/camera/"));
-  // lapUtils is the one camera file the engine genuinely reads; anything else would mean the
-  // closure has swallowed the camera and the trigger is the blunt one again under a new name.
-  assert.deepEqual(camera, ["client/src/modules/camera/lapUtils.js"]);
+// ── ★ REPLACED BY HULL-FIX-1, AND WHAT IT USED TO SAY MATTERS ──────────────────────────────────
+//
+// This test asserted that the set contained NO `/screens/` file and exactly one camera file. That
+// was a true description of `raceCore.js`'s import closure and a FALSE description of what can
+// change a race: `client/src/screens/RaceScreen/index.jsx` is the product's own race setup, and it
+// computes `raceParams.js`'s sprite geometry and applies `raceActionStage.js`'s brake, handing both
+// to the engine as arguments. Breaking either moves both golden races. The old assertion had to be
+// deleted to widen the hull — so it is REPLACED here by the property that actually needs guarding,
+// rather than by nothing.
+//
+// WHAT STILL NEEDS GUARDING is the opposite failure: the hull must not become the blunt "everything"
+// trigger under a new name. The line it may not cross is the rest of the application — the screens
+// and services that never construct a race.
+test("the hull stops SHORT of the whole application — it is not the blunt trigger renamed", () => {
+  const { files } = raceHull();
+  for (const stranger of [
+    "client/src/App.jsx",
+    "client/src/main.jsx",
+    "client/src/screens/SetupScreen/SetupScreen.jsx",
+    "client/src/screens/ResultScreen/ResultScreen.jsx",
+  ]) {
+    assert.ok(
+      !files.includes(stranger),
+      `${stranger} is in the hull — the up-step has stopped being one step`,
+    );
+  }
+  // And the tracked source tree is much larger than the hull: if these ever meet, the tool has
+  // stopped discriminating and every commit pays for a fingerprint.
   assert.ok(
-    !files.some((f) => f.includes("/screens/")),
-    "no screen code should be reachable",
+    files.length < 400,
+    `hull is ${files.length} files — that is no longer a discrimination`,
+  );
+});
+
+test("★ the hull CONTAINS the five files that reach a race only as ARGUMENTS", () => {
+  const { files } = raceHull();
+  // Each was proven by sabotage to move a race while the old import-closure answer called it
+  // outside. They are named here — the one place a name list is right — because each is a
+  // MEASUREMENT that has been paid for, and a rule change that silently drops one must go red.
+  for (const proven of [
+    "client/src/modules/raceParams.js", // W_REF_MAX -> both golden races moved
+    "client/src/modules/raceActionStage.js", // pulkLeaderBrake -> both golden races moved
+    "client/src/modules/baseSpeedConfig.js", // normalSpeedPxPerSec -> shipped-arm outcome moved
+    "client/src/modules/rowLayoutConfig.js", // rowGapMultiplier -> shipped-arm outcome moved
+    "client/src/modules/racerNames.js", // one renamed racer -> shipped-arm outcome moved
+  ]) {
+    assert.ok(files.includes(proven), `${proven} must be in the hull`);
+  }
+});
+
+test("★ every race construction goes through an entry point — the up-step's premise", () => {
+  // The up-step finds DRIVERS by asking who imports an entry point. That is complete only while
+  // every way of building a race runs through one. If a second engine entry ever appears — a
+  // `createRace` somewhere else, a transcribed copy of the init — this fails, and the rule's
+  // paragraph in engine-reach.mjs stops being true.
+  const tracked = spawnSync("git", ["ls-files"], {
+    encoding: "utf8",
+    cwd: join(HERE, ".."),
+    maxBuffer: 1 << 28,
+  })
+    .stdout.split("\n")
+    .filter((f) => /\.(mjs|cjs|js|jsx)$/.test(f));
+  const drivers = new Set(driversOf(entryPoints()).map((d) => resolve(d)));
+  const entries = new Set(entryPoints().map((e) => resolve(e)));
+  const offenders = [];
+  for (const f of tracked) {
+    const abs = join(HERE, "..", f);
+    let src;
+    try {
+      src = readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    // A CALL, not a mention: the name at a word boundary followed by `(`. A doc line that merely
+    // says the name is not a construction, and a comment-only line is dropped first.
+    const code = src
+      .split("\n")
+      .map((l) => (/^\s*(\/\/|\*|\/\*)/.test(l) ? "" : l))
+      .join("\n");
+    if (!/(^|[^\w.])(createRaceFromIdentity|runRaceHeadless)\s*\(/m.test(code))
+      continue;
+    if (drivers.has(resolve(abs)) || entries.has(resolve(abs))) continue;
+    offenders.push(f);
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these construct a race without importing an entry point, so the up-step cannot see them: ${offenders.join(", ")}`,
   );
 });
 
@@ -108,11 +197,39 @@ test("SABOTAGE: a TRANSITIVE import is followed, not just the direct one", () =>
   }
 });
 
-test("the dynamic-import detector can fire — the completeness claim is checkable", () => {
-  assert.equal(hasDynamicImport("const m = await import('./x.js');"), true);
+test("the UNFOLLOWABLE-import detector can fire — the completeness claim is checkable", () => {
+  // A LITERAL specifier is followable however it is wrapped, so it is not the failure case: every
+  // instrument in scripts/ reaches the engine through exactly this shape.
+  assert.equal(hasDynamicImport("const m = await import('./x.js');"), false);
+  assert.equal(hasDynamicImport('const m = await import(u("scripts/a.mjs"));'), false);
   assert.equal(hasDynamicImport("import { a } from './x.js';"), false);
-  // ...and the real closure currently contains none, which is what makes a static walk complete.
-  assert.deepEqual(engineReach().dynamic, []);
+  // A specifier that is NOT a literal cannot be followed at all — that is what must fire.
+  assert.equal(hasDynamicImport("const m = await import(whereverThisGoes);"), true);
+  assert.deepEqual(
+    dynamicImportLiterals('await import(u(join(R, "client/a.js")));').literals,
+    ["client/a.js"],
+  );
+  // ...and the real hull currently contains none, which is what makes a static walk complete.
+  assert.deepEqual(raceHull().dynamic, []);
+});
+
+test("★ the hull is a SUPERSET of the entry closure — nothing may leave by widening", () => {
+  const closure = engineReach(entryPoints()).files;
+  const hull = new Set(raceHull().files);
+  const lost = closure.filter((f) => !hull.has(f));
+  assert.deepEqual(lost, [], `left the hull: ${lost.join(", ")}`);
+  assert.ok(hull.size > closure.length, "the up-step found nothing at all");
+});
+
+test("★ the up-step finds drivers — a driverless hull is the OLD answer wearing the new name", () => {
+  const { drivers } = raceHull();
+  assert.ok(drivers.length > 3, `only ${drivers.length} driver(s) found`);
+  // The product's own race setup is the one that must never be missing: it is where the shipped
+  // race gets every argument it runs on.
+  assert.ok(
+    drivers.includes("client/src/screens/RaceScreen/index.jsx"),
+    "RaceScreen/index.jsx is not a driver — the product path is invisible again",
+  );
 });
 
 test("the specifier parser ignores bare package imports", () => {
