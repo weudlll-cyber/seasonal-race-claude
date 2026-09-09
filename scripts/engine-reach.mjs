@@ -383,7 +383,21 @@ export function engineReach(entry) {
  *
  * @returns {{files: string[], dynamic: string[], drivers: string[], entries: string[]}}
  */
-export function raceHull(entries = entryPoints()) {
+let _hullCache = null;
+export function raceHull(entries = null) {
+  // MEMOISED for the DEFAULT question only. `scripts/lib/routing.mjs` asks it once per guard
+  // while resolving a plan — thirty-odd times — and each answer costs a `git ls-files`, a read
+  // of every tracked source file and twenty closure walks. The tree cannot change inside one
+  // process, so the answer cannot either. An explicit `entries` argument (the tests) is never
+  // cached, because then it would be a cache keyed on nothing.
+  if (entries === null && _hullCache) return _hullCache;
+  const ents = entries ?? entryPoints();
+  const out = _raceHull(ents);
+  if (entries === null) _hullCache = out;
+  return out;
+}
+
+function _raceHull(entries) {
   const drivers = driversOf(entries);
   const { files, dynamic } = engineReach([...entries, ...drivers]);
   const rel = (f) => relative(ROOT, f).split(sep).join("/");

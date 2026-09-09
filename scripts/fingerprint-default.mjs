@@ -68,10 +68,31 @@ export const GUARD = {
     "anything the CAMERA decides and anything DRAWN — those are the camera and render fingerprints",
     "configs other than the shipped default, and seeds outside its fixed sample",
     "timing and frame pacing: it hashes outcomes, not how long they took",
+    "★ MOST OF THE RACE HULL IT NOW SELECTS ON (HULL-WIRED-1). This instrument spawns `sim-fairness.mjs`, and a module-resolution probe over that run records 80 repository modules against the hull's 197. Of the five files PROVEN by sabotage to change a race, exactly ONE — `raceParams.js` — is loaded here; `raceActionStage.js`, `baseSpeedConfig.js`, `rowLayoutConfig.js` and `racerNames.js` are NOT, because the sim reads the DEFAULT_* objects directly rather than through the loaders, pins its own roster, and applies no action stage. Those four ARE detected — by `goldenRealArm.test.js` in the client suite, which drives the shipped path. ★ A GREEN HERE IS THEREFORE NOT A CLEARANCE FOR A HULL FILE THIS RUN DOES NOT LOAD.",
   ],
   dirs: [],
   files: [],
   reach: ["client/src/modules/raceCore.js", "scripts/sim-fairness.mjs"],
+  // ── ★ HULL-WIRED-1: AND EVERYTHING ELSE THAT CAN CHANGE A RACE ────────────────────────────
+  //
+  // The two entries above expand what the engine and the sim IMPORT. That misses everything
+  // that PRODUCES the engine's arguments — five such files were proven by sabotage to move a
+  // race while this guard routed past them (HULL-FIX-1).
+  //
+  // ★ THIS ONE COSTS ~107 SECONDS, AND IT IS DECLARED WITH ITS EYES OPEN. Saying yes selects
+  // this guard for about 115 hull files it did not cover before, most of them camera, drawing
+  // and HUD code that this instrument DOES NOT LOAD and therefore cannot judge. Measured, not
+  // feared: a module-resolution probe over the sim's own run records 80 repository modules, and
+  // of the five proven race-changers exactly ONE — `raceParams.js`, since W-REF-ONE-HOME-1 —
+  // is among them. So most of what this newly selects will come back green without having
+  // looked.
+  //
+  // IT IS DECLARED ANYWAY, because the two errors are not symmetric. A green run nobody needed
+  // costs 107 seconds; a race change shipped unmeasured costs a record nobody can trust, and
+  // this project has paid that twice in eight weeks. What must NOT be read into a green here is
+  // coverage — `blind` below says which files this instrument cannot see, and that list is the
+  // honest half of this declaration.
+  hull: true,
 };
 if (process.argv.includes("--declare")) {
   console.log(JSON.stringify(GUARD));

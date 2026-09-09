@@ -361,6 +361,28 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HULL-WIRED-1.md](HULL-WIRED-1.md) - **the hull stops being advice and starts selecting the
+  guards** (2026-09-10, night chain 2026-09-09 piece 2, on `fix/hull-1`). HULL-FIX-1 left the hull
+  unwired because the world fingerprint was blind to what would newly select it; piece 1 attacked
+  that reason. ★ **ESTABLISHED BY MODULE-RESOLUTION PROBE RATHER THAN ASSUMED, and the answer is ONE
+  FILE OF FIVE**: the sim's graph went 79 -> 80 modules, gaining exactly `raceParams.js`;
+  `raceActionStage.js`, `baseSpeedConfig.js`, `rowLayoutConfig.js` and `racerNames.js` are still not
+  loaded by it. ★ **THE GAP WAS SIZED BEFORE IT WAS FILLED**: of 197 hull files, **181 already
+  selected a race detector** - the 16 that did not were all `scripts/` instruments - so what this
+  piece replaces is not an absence of coverage but an **accident** of it (`golden-races` reached
+  `raceParams.js` only because its own closure happens to contain `goldenRace.mjs`). The mechanism is
+  `hull: true`, a declared RELATIONSHIP and not a path list, honoured by `resolveGuard`; declared by
+  `golden-races` (0.4 s, trivially) and `world-fingerprint` (107 s, with its eyes open **and a new
+  measured `blind` entry saying its run loads 80 modules against the hull's 197 - selecting is not
+  seeing**). **COST, measured on 411 real merges with a control that first reported +0 and was
+  WRONG** (`collect()` returns resolved guards, so the control still carried the hull): world
+  fingerprint 18%->29% of merges, golden races 12%->28%, **+85 guard-seconds per day** over 8 weeks
+  and **+123/day** over the last 3 - about two extra minutes of waiting a day, essentially all of it
+  the world fingerprint. Two existing tests that asserted "a camera file does not select the world
+  fingerprint" were **replaced, not deleted**. **NAMED AND LEFT**: `goldenRealArm.test.js` imports
+  `scripts/parity/goldenRunner.mjs` but `client-suite` routes on `client/`, so a change to the runner
+  still does not select the suite that runs it.
+
 - [W-REF-ONE-HOME-1.md](W-REF-ONE-HOME-1.md) - **the world fingerprint stops being blind to the
   number that sets every start position** (2026-09-10, night chain 2026-09-09 piece 1, on
   `fix/hull-1`). `scripts/sim-fairness.mjs:1120` - the file that DRIVES the world fingerprint -
