@@ -82,6 +82,13 @@ import {
   computeSpeedBonus,
   computeStartRowCount,
 } from "../client/src/modules/rowLayout.js";
+// ONE HOME FOR THE BODY-NARROW CEILING (W-REF-ONE-HOME-1). This file carried its own
+// `Math.min(285, effectiveWidth)` with a comment saying it "matches the game's cap" — a constant
+// kept in step by a comment, which is the shape `raceParams.js` was extracted to remove. It
+// mattered more here than anywhere else: this file DRIVES THE WORLD FINGERPRINT, so while the
+// copy existed a green world value was not a clearance for the number that decides every start
+// position. Proven by sabotage in HULL-FIX-1 and again in W-REF-ONE-HOME-1.
+import { W_REF_MAX } from "../client/src/modules/raceParams.js";
 import { REFERENCE_FPS } from "../client/src/modules/camera/lapUtils.js";
 import { computeRaceBaseSpeed } from "../client/src/modules/raceBaseSpeed.js";
 // THE canonical speed/duration model — the same module the browser imports, used verbatim.
@@ -1114,10 +1121,10 @@ export function runSingleRace({
     );
     // Body narrow/long references — mirror index.jsx W_REF + computeBodyNarrowRef call.
     // bodyFillNarrow = min(X,Y); bodyFillLong = max(X,Y) — narrow axis identified by fill fraction.
-    // W_REF cap at 285 matches the game's cap for the camera reference width.
+    // The cap is READ from its one home (`raceParams.js`), never re-typed — see the import.
     const bodyFillNarrow = Math.min(bodyFillX, bodyFillY);
     const bodyFillLong = Math.max(bodyFillX, bodyFillY);
-    const W_REF = Math.min(285, effectiveWidth);
+    const W_REF = Math.min(W_REF_MAX, effectiveWidth);
     const bodyRef = computeBodyNarrowRef(
       W_REF,
       nRacers,

@@ -91,6 +91,8 @@ const { normalSpeedFrom } = await import(
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u("client/src/modules/rowLayout.js")
 );
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 const { projectionForTrack } = await import(
   u("client/src/modules/camera/projection.js")
 );
@@ -137,7 +139,7 @@ function runTrack(geo) {
   const effW = TW * behaviorConfig.startSpreadRange;
   const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
   const br = computeBodyNarrowRef(
-    Math.min(285, effW),
+    Math.min(W_REF_MAX, effW),
     N,
     ds,
     bfN,

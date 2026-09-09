@@ -29,6 +29,11 @@ import {
   computeSpeedBonus,
   computeBodyNarrowRef,
 } from './rowLayout.js';
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ rather than re-typed. The L207 note three
+// lines below said fallbacks in this file read the default instead of copying it, while the
+// file carried `Math.min(285, effectiveWidth)`. This model is deliberately NOT the game (see the
+// header), but the cap is not one of its deliberate differences — it is the game's cap.
+import { W_REF_MAX } from './raceParams.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
@@ -172,7 +177,7 @@ export function simulateRace({
   // computeBodyNarrowRef is called only when autoScaleConfig.enabled && !hasDisplaySizeOverride,
   // matching the if(autoScaleConfig.enabled)+if(!hasDisplaySizeOverride) guard in RaceScreen.
   // Bypass path: displaySizeScale=1 → drawnBodyWidthPx=displaySize (same as browser bypass).
-  const W_REF = Math.min(285, effectiveWidth);
+  const W_REF = Math.min(W_REF_MAX, effectiveWidth);
   const bodyFillNarrow = racerTypeConfig
     ? Math.min(racerTypeConfig.bodyFillX, racerTypeConfig.bodyFillY)
     : 0;

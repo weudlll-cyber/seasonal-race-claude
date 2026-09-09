@@ -51,6 +51,8 @@ const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
   u("client/src/modules/storage/defaults.js")
 );
 const { computeBodyNarrowRef } = await import(u("client/src/modules/rowLayout.js"));
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 const { getEffectiveMaxTargetScreenPx } = await import(u("client/src/modules/autoSpriteScale.js"));
 const { effectiveZoom } = await import(u("client/src/modules/camera/openTrackCamera.js"));
 const { OPEN_TRACK_BASE_ZOOM } = await import(u("client/src/modules/camera/projection.js"));
@@ -99,7 +101,7 @@ function measure(geo, N, cfg, armLabel) {
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
   const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * behaviorConfig.startSpreadRange;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+  const br = computeBodyNarrowRef(Math.min(W_REF_MAX, effW), N, ds, bfN, W.autoScaleConfig);
   const displaySizeScale = br.bodyNarrow / ds;
 
   const bsX = CW / (geo.worldWidth || CW);
