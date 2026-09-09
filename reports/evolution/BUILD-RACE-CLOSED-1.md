@@ -235,7 +235,16 @@ The pair this piece spent its morning on, so all three were run:
   that deleting afterwards loses a 15-second race against CI's own branch guard.
 - `git ls-remote --heads origin` afterwards: **only `master`**, at `e50b09e0`.
 
-<!-- CI -->
+## CI on the merge SHA
+
+```
+e50b09e0  CONCLUSION: success
+  Server tests: success
+  Living-doc guards + script tests: success
+  Client checks: success
+```
+
+Green on the push run, all three jobs.
 
 
 ---
