@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-CAMERA-1.md](COMEBACK-CAMERA-1.md) — **does the camera show him, at the point piece 3
+  chose** (2026-09-08, `night/2026-09-08`, piece 4; measurement only, the comeback key ON only inside
+  the measurement, its shipped default untouched). Release 0.70 and 0.50 x `comebackUseBeats` OFF/ON,
+  100 races per arm. ★ **THE KEY MAKES IT WORSE**: shots 30 -> 7 at 0.70 and 30 -> 5 at 0.50.
+  COMEBACK-CONNECT-1's 11 -> 0 reproduces in DIRECTION but not magnitude — the brief's premise that the
+  held shape would move the climb into the window is half right. ★ **THE REASON IS THAT THE TWO GATES
+  BARELY OVERLAP**: the beats gate opens at the resolve beat (median 0.7800) while
+  `comebackMaxCurrentRankPct` withdraws eligibility when he reaches rank <= 8 (median 0.7522 at release
+  0.70). The window is EMPTY in 30 of 42 races at 0.70 and 39 of 42 at 0.50. ★ **THE GATE DOES NOT CUT
+  THE SHOT SHORT** — contradicting the worry: no shot started after the crossing and most ran past it,
+  because eligibility governs STARTING a shot, not sustaining one. ★ **THE BIGGER LOSS IS THE
+  DIRECTOR'S CONTEST**: 27,543 candidate frames inside the window produced 30 shots. The held racer is
+  shown in 14 of 100 races with the key off and 3-4 of 100 with it on, and **16 of 30 shots are on the
+  WRONG racer**. The gate was NOT changed.
+
 - [COMEBACK-RELEASE-1.md](COMEBACK-RELEASE-1.md) — **which release point, on all ten tracks**
   (2026-09-08, `night/2026-09-08`, piece 3; measurement only, nothing minted, nothing built that could
   ship). Five release points 0.50-0.70 x ten tracks x 30 races = **1,500 races**, the held racer drawn
