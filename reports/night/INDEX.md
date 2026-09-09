@@ -8,6 +8,66 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RENDER-OUTCOME-1.md](RENDER-OUTCOME-1.md) — **the second instrument, built and stopped at the
+  fork** (2026-09-08, `night/2026-09-08`, piece 6; ★ **NOT MINTED — no minting permission was given**).
+  `render-fingerprint.mjs:584` carried the same `isOutcomePhase: false` the camera instrument carried.
+  The fix makes the browser's own call; the value was RE-MEASURED rather than carried and reproduced
+  MINT-CAMERA-1's probe exactly. ★ **SIX TRACKS MOVE, NOT THE CAMERA'S FOUR** — dirt-oval, garden-path,
+  ice-track, luger-hill, searound, seatrack, against the camera's city-circuit, dirt-oval, ice-track,
+  space-sprint, overlapping in only two. **The two instruments do not run the same window**: the camera
+  stops at all-home plus the ending schedule, the render runs a fixed 5,600 frames and never stops
+  physics, so their track lists cannot be compared. ★ **THE PICTURE ACCOUNTS FOR THE HASH WITH NOTHING
+  LEFT OVER**: the six moved tracks are exactly the six with differing camera frames (480-1,343 of
+  5,600) and the four unmoved have precisely zero; on five of the six the change is a `COMEBACK_ZOOM`
+  the old arm never took, 8-22 s a race, while ice-track gains no new state and is a redistribution.
+  `verify` is RED on `render-fingerprint` on this branch, deliberately.
+
+- [HULL-REACH-1.md](HULL-REACH-1.md) — **the hull is narrower than "can change a race", in both
+  directions** (2026-09-08, `night/2026-09-08`, piece 5; REPORT ONLY — `engine-reach` not changed, hull
+  not widened, nothing minted). ★ **OUTSIDE AND STILL REACHING: 2 of 2 sampled moved both golden races**
+  — `raceParams.js` (`W_REF_MAX`) and `raceActionStage.js`. ★ **THE MECHANISM IS THE DIRECTION OF THE
+  GRAPH, not a dynamic import**: `engine-reach.mjs:45` walks the closure of what `raceCore.js` IMPORTS,
+  so modules that PRODUCE raceCore's INPUTS — imported by its callers and passed in as arguments — are
+  invisible by construction. ★ **INSIDE AND UNABLE: 3 of the hull's 79 files are never loaded at all**
+  (`services/api.js`, `racerApi.js`, `apiClient.js`), pulled in by `racer-types/index.js:75-82`, which
+  needs the registry for the engine and carries the HTTP editing layer in the same module; two more
+  exports are loaded but inert. ★ **A FAILED SABOTAGE IS NOT A FINDING** — every "did not move" is
+  backed by a module-level `throw` reachability probe, after my first round produced two false greens
+  from mutations that were inert by construction. Three further under-reports (`baseSpeedConfig.js`,
+  `rowLayoutConfig.js`, `racerNames.js`) are ARGUED and explicitly NOT proven — no headless probe in the
+  repository imports them.
+
+- [COMEBACK-CAMERA-1.md](COMEBACK-CAMERA-1.md) — **does the camera show him, at the point piece 3
+  chose** (2026-09-08, `night/2026-09-08`, piece 4; measurement only, the comeback key ON only inside
+  the measurement, its shipped default untouched). Release 0.70 and 0.50 x `comebackUseBeats` OFF/ON,
+  100 races per arm. ★ **THE KEY MAKES IT WORSE**: shots 30 -> 7 at 0.70 and 30 -> 5 at 0.50.
+  COMEBACK-CONNECT-1's 11 -> 0 reproduces in DIRECTION but not magnitude — the brief's premise that the
+  held shape would move the climb into the window is half right. ★ **THE REASON IS THAT THE TWO GATES
+  BARELY OVERLAP**: the beats gate opens at the resolve beat (median 0.7800) while
+  `comebackMaxCurrentRankPct` withdraws eligibility when he reaches rank <= 8 (median 0.7522 at release
+  0.70). The window is EMPTY in 30 of 42 races at 0.70 and 39 of 42 at 0.50. ★ **THE GATE DOES NOT CUT
+  THE SHOT SHORT** — contradicting the worry: no shot started after the crossing and most ran past it,
+  because eligibility governs STARTING a shot, not sustaining one. ★ **THE BIGGER LOSS IS THE
+  DIRECTOR'S CONTEST**: 27,543 candidate frames inside the window produced 30 shots. The held racer is
+  shown in 14 of 100 races with the key off and 3-4 of 100 with it on, and **16 of 30 shots are on the
+  WRONG racer**. The gate was NOT changed.
+
+- [COMEBACK-RELEASE-1.md](COMEBACK-RELEASE-1.md) — **which release point, on all ten tracks**
+  (2026-09-08, `night/2026-09-08`, piece 3; measurement only, nothing minted, nothing built that could
+  ship). Five release points 0.50-0.70 x ten tracks x 30 races = **1,500 races**, the held racer drawn
+  for place 3 and held at rank 18. ★ **THE CHOICE IS 0.70**, by the owner's stated rule (when similar,
+  take the latest) — and it did not need the tie-break: 0.70 is also the highest top-5 rate (90.3%),
+  the best mean place (3.00) and the deepest median rank at release (16). **No point is distinguishable
+  from it** (all |z| < 1.96 at n=300 per point). ★ **STAGE 2 WAS NOT RUN, as a decision**: 0.70 is
+  simultaneously the latest point and the best rate, so no larger N could change the answer. **One race
+  in 1,500 released inside the top 5** — the hold holds. ★ **BLOCKED IS EXACTLY 0 ON THE FIVE OPEN
+  TRACKS and 19-31% on the five closed ones**, and the zero was PROVEN real rather than assumed: the
+  metric fires 677/3,840 frames for the field on river-run, while the held racer's `brakeMatchFactor`
+  stays exactly 1.0000 for all ~1,040 climb frames there — on an open track he goes around instead of
+  queueing (`raceBehavior.js:880-905`, inside `if (!takeFreeLane)`). ★ **A CORRECTION**: the racer drawn
+  for a top-5 place IS a B1 hero, so COMEBACK-QUICK-2's "(not a hero)" cannot hold; excluding heroes
+  gave n=0 in every cell. No arithmetic appears anywhere, as instructed.
+
 - [GUARD-CONTEXT-RACE-1.md](GUARD-CONTEXT-RACE-1.md) — **two guards share `client/dist`, and nothing
   knew it** (2026-09-08, `night/2026-09-07`, piece 1 of the night chain; tooling only, nothing minted here).
   `check-image-starts` builds the image from a named `client` build context (`server/Dockerfile:68`) while

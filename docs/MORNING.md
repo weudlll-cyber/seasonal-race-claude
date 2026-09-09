@@ -4,79 +4,59 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-09, after the FULL chain of 2026-09-08 — seven pieces, all finished.
+**Last rewritten:** 2026-09-09, after BUILD-RACE-CLOSED-1 — the night of 2026-09-08 is merged.
 
-**Where the code is.** Master is `b42ce114`: it carries the merged night of 2026-09-07 **and** the
-security-audit fix. `night/2026-09-08` is pushed at `14e03061` and **NOT MERGED** — six pieces of
-measurement waiting for your eye. Nothing else exists at origin.
+**Where the code is.** Master carries everything: the night of 2026-09-07, the security-audit fix,
+and now the night of 2026-09-08. **Nothing is unmerged.** `night/2026-09-08` is deleted at origin.
 
-**★ THE ONE THING TO KNOW FIRST — CI SHOULD BE GREEN AGAIN.** It went red on the 2026-09-07 merge
-through no fault of that merge: `multer` (three HIGH, **production**) and `js-yaml` (HIGH, dev-only)
-advisories were published between the morning's green run and the evening's push. Both are now
-fixed with the **smallest** bumps that clear them — multer a minor inside major 2, js-yaml a patch
-via an overrides entry — and neither is a migration. No allowlist entry: they are fixed, not excused.
+**★ THE ONE THING TO KNOW FIRST — THE EPERM THAT WOULD NOT REPRODUCE, REPRODUCED.** GUARD-CONTEXT-RACE-1
+fixed a proven mechanism but its sabotage never reproduced the failure that actually fired, so nobody
+had shown the fix closed the right thing. It does. With all three parts reverted, 9 runs gave **2
+failures**, both with the original signature, and **both in one cell: a cold Docker cache with
+`client/dist` already present — 2 of 3 there, 0 of 6 elsewhere.** That cell is why the earlier
+sabotage looked clean; four runs never landed in it.
+★ **And the strength is stated rather than inflated.** After the fix that cell is 3 of 3 clean, which
+alone is only a 1-in-27 fluke. What carries it is structural: `check-client-build` now runs at
+**2.2–3.7 s "ran alone"** against 16–38 s in the shared queue, so its `emptyDir` can no longer land
+inside BuildKit's ingest window. Eight clean runs would have taken the doubt to 0.015 %; **stopping at
+three was your call on time, not a claim about the evidence.** It is still a race — unlikely to
+recur, not impossible — and the report records the cell to reproduce in and the evidence that would
+identify it if it fires again.
 
 ---
 
-## TONIGHT'S CHAIN — 2026-09-08, seven pieces
+## WHAT IS ON MASTER NOW
 
-### DONE, AND ON MASTER
+**The render record is minted** — re-measured on the tree rather than carried; the value lives in
+[docs/fingerprints.json](fingerprints.json), which is its one home.
+An instrument correction, not a drawing change: four lines in `render-fingerprint.mjs`, nothing under
+`client/src/` or `server/`. World, world-off and camera unmoved, camera against its own new record.
+★ **Every render figure older than this mint describes the old, blind picture on dirt-oval,
+garden-path, ice-track, luger-hill, searound and seatrack, and is not comparable across it.**
+★ **Six tracks moved, not the camera mint's four, and the two lists are NOT comparable** — the two
+instruments do not run the same window.
 
-**PIECE 1 · the camera mint, and the two guards that raced** — merge `c5e0cb8b`.
-Your camera mint is recorded. **An instrument correction, not a camera change**: `CameraDirector.js`
-untouched, four tracks move, six show zero differing frames.
-The guard race: `check-image-starts` and `check-client-build` shared `client/dist` with nothing
-between them. Root was a declaration that did not describe what the guard reads. Fixed in three
-parts; premerge green from every starting state.
-★ **THE SABOTAGE DID NOT REPRODUCE — 4 of 4 passed with the fix reverted.** The mechanism is proven
-on demand, the fix is not proven to be what repaired the original rate, and that rate stays
-unexplained. Kept anyway (2 seconds, closes something real) and **reported rather than claimed**.
-★ **A second defect is named and NOT fixed**: `invalid file request dist/assets/racers/*`.
-
-**PIECE 7 · the audit gate goes green** — merge `b42ce114`, the only other thing that merged, and
-only because you asked for it. Upload paths run specifically (32 real multipart uploads, 274 tests),
-golden races pass, **all four fingerprints match their records — run BY HAND because routing skipped
-all five as "nothing changed"**. Nothing minted.
-
-### DONE, WAITING ON YOUR EYE — `night/2026-09-08`, unmerged
-
-**PIECE 3 · the release point is 0.70.** 1,500 races. Chosen by your rule — when similar, take the
-latest — and it did not need the tie-break: 0.70 is also the best top-5 rate, the best mean place and
-the deepest rank at release. No point is distinguishable from it. **Stage 2 was skipped as a
-decision**: 0.70 is simultaneously latest and best, so no larger N could change the answer. One race
-in 1,500 released already inside the top 5 — the hold holds.
-★ **The climb is FREE on open tracks and costs a fifth to a third of its frames on closed ones**, and
-that zero was proven rather than assumed.
-
-**PIECE 4 · the camera key makes it WORSE.** Shots 30 → 7 at 0.70. ★ **The two gates barely
-overlap**: the beats gate opens at the resolve beat (median 0.7800) while the rank gate withdraws
-eligibility at rank ≤ 8 (median 0.7522). The window is **empty in 30 of 42 races**. The camera is
-told it may show him just after being told he no longer counts. The gate does **not** cut shots
-short — it costs starts, not endings. The real loss is the director's contest: 27,543 candidate
-frames inside the window produced 30 shots. **16 of 30 shots are on the wrong racer.**
-
-**PIECE 5 · the hull is wrong in BOTH directions.** Two of two sampled out-of-hull input-producers
-move both golden races. The mechanism is the **direction of the graph**, not a dynamic import.
-Three of the 79 hull files are **never loaded at all**. `engine-reach` NOT changed — a wrong widening
-costs every future run.
-
-**PIECE 6 · the render instrument, built and STOPPED at the fork.** Re-measured, not trusted.
-★ **Six tracks move, not the camera's four**, because the two instruments do not run the same window.
-The picture accounts for the hash with nothing left over. **NOT MINTED.** `verify` is deliberately
-red on `render-fingerprint` on that branch, and only there.
+**The night of 2026-09-08's six measurement pieces** are now on master: the release point (0.70), the
+comeback camera key, the hull, the render instrument, and the two guards that raced.
 
 ### NEEDS HIS WORD
 
-1. **The release point.** 0.70, chosen by your rule, not recommended. Overrule freely.
-2. **The comeback key.** It is worse, and the reason is the two gates. Moving either
-   `comebackMaxCurrentRankPct` or the resolve beat is yours; I changed neither. Shipped default
-   stays OFF.
-3. **The render mint.** The fix sits on the night branch, measured, unminted.
-4. **The hull.** The narrow repair is to declare the input producers the way
-   `fingerprint-default.mjs` already declares its reach entries. Named, not built.
-5. **The BuildKit `invalid file request` defect** from piece 1.
-6. **Ice-track's render change** needs an eye rather than a hash — no new camera state, only a
-   reordering.
+1. **The release point.** 0.70, chosen by your own rule — when the numbers are similar, take the
+   latest — and it did not need the tie-break: it is also the best top-5 rate, the best mean place and
+   the deepest rank at release. Not recommended, chosen. Overrule freely.
+2. **The comeback key** (`comebackUseBeats`). Turning it on makes things **worse** — shots 30 → 7 —
+   because the beats gate opens at the resolve beat (median 0.7800) while `comebackMaxCurrentRankPct`
+   withdraws eligibility at rank ≤ 8 (median 0.7522). **The window is empty in 30 of 42 races.**
+   Moving either number is yours; neither was touched, and the shipped default stays OFF.
+3. **The hull.** `engine-reach` under-reports (2 of 2 sampled outsiders change a race) and
+   over-reports (3 of its 79 files are never loaded). The narrow repair is named and **not built** —
+   a wrong widening costs every future run, and you have said this is a separate order.
+4. **Ice-track's render change** — 848 differing frames but no new camera state. A reordering, so it
+   needs your eye rather than a hash.
+5. **The BuildKit `invalid file request dist/assets/racers/*` defect**, named in
+   GUARD-CONTEXT-RACE-1 and still not fixed.
+6. **Defender and the VS Code watcher** remain formally unexcluded as EPERM causes. Both are unlikely
+   given how cleanly the failure tracked one cell, and **no speculative fix was invented** for either.
 7. `check-image-starts` is still not wired into CI, and its own blind list says so.
 
 <!-- END CHAIN STATUS -->
