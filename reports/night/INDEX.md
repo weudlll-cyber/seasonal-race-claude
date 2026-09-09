@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RENDER-OUTCOME-1.md](RENDER-OUTCOME-1.md) — **the second instrument, built and stopped at the
+  fork** (2026-09-08, `night/2026-09-08`, piece 6; ★ **NOT MINTED — no minting permission was given**).
+  `render-fingerprint.mjs:584` carried the same `isOutcomePhase: false` the camera instrument carried.
+  The fix makes the browser's own call; the value was RE-MEASURED rather than carried and reproduced
+  MINT-CAMERA-1's probe exactly. ★ **SIX TRACKS MOVE, NOT THE CAMERA'S FOUR** — dirt-oval, garden-path,
+  ice-track, luger-hill, searound, seatrack, against the camera's city-circuit, dirt-oval, ice-track,
+  space-sprint, overlapping in only two. **The two instruments do not run the same window**: the camera
+  stops at all-home plus the ending schedule, the render runs a fixed 5,600 frames and never stops
+  physics, so their track lists cannot be compared. ★ **THE PICTURE ACCOUNTS FOR THE HASH WITH NOTHING
+  LEFT OVER**: the six moved tracks are exactly the six with differing camera frames (480-1,343 of
+  5,600) and the four unmoved have precisely zero; on five of the six the change is a `COMEBACK_ZOOM`
+  the old arm never took, 8-22 s a race, while ice-track gains no new state and is a redistribution.
+  `verify` is RED on `render-fingerprint` on this branch, deliberately.
+
 - [HULL-REACH-1.md](HULL-REACH-1.md) — **the hull is narrower than "can change a race", in both
   directions** (2026-09-08, `night/2026-09-08`, piece 5; REPORT ONLY — `engine-reach` not changed, hull
   not widened, nothing minted). ★ **OUTSIDE AND STILL REACHING: 2 of 2 sampled moved both golden races**

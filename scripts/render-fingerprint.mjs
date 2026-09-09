@@ -581,7 +581,17 @@ function trackHash(geo, wantOps) {
         finishedCount: st.finishedCount,
         winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
-        isOutcomePhase: false,
+        // ── RENDER-OUTCOME-1: THE BROWSER'S VALUE, NOT A CONSTANT ──────────────────────────
+        // This read `false` unconditionally, so every render hash ever taken was measured with the
+        // race plan's OUTCOME window permanently SHUT — a camera the product never runs, and
+        // therefore frames the product never draws. The browser derives it at
+        // `RaceScreen/index.jsx:1271` as
+        // `racePlanController.getPhase(physicsTs, st.raceProgress) === 'OUTCOME'` and reads it back
+        // into the director's `raceState` at `:1492`. The camera instrument was corrected this way
+        // by HARNESS-OUTCOME-1 and minted by MINT-CAMERA-1; this is the same repair on the second
+        // instrument, made with the same call and the same two arguments so the two cannot disagree.
+        isOutcomePhase:
+          raceCfg.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
         physicsRacers: st.racers,
       },
       CW,
