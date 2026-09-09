@@ -27,7 +27,8 @@ identify it if it fires again.
 
 ## WHAT IS ON MASTER NOW
 
-**The render record is minted** — `40b2de6fcc5bafd8`, re-measured on the tree rather than carried.
+**The render record is minted** — re-measured on the tree rather than carried; the value lives in
+[docs/fingerprints.json](fingerprints.json), which is its one home.
 An instrument correction, not a drawing change: four lines in `render-fingerprint.mjs`, nothing under
 `client/src/` or `server/`. World, world-off and camera unmoved, camera against its own new record.
 ★ **Every render figure older than this mint describes the old, blind picture on dirt-oval,
