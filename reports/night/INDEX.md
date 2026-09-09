@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [HULL-REACH-1.md](HULL-REACH-1.md) — **the hull is narrower than "can change a race", in both
+  directions** (2026-09-08, `night/2026-09-08`, piece 5; REPORT ONLY — `engine-reach` not changed, hull
+  not widened, nothing minted). ★ **OUTSIDE AND STILL REACHING: 2 of 2 sampled moved both golden races**
+  — `raceParams.js` (`W_REF_MAX`) and `raceActionStage.js`. ★ **THE MECHANISM IS THE DIRECTION OF THE
+  GRAPH, not a dynamic import**: `engine-reach.mjs:45` walks the closure of what `raceCore.js` IMPORTS,
+  so modules that PRODUCE raceCore's INPUTS — imported by its callers and passed in as arguments — are
+  invisible by construction. ★ **INSIDE AND UNABLE: 3 of the hull's 79 files are never loaded at all**
+  (`services/api.js`, `racerApi.js`, `apiClient.js`), pulled in by `racer-types/index.js:75-82`, which
+  needs the registry for the engine and carries the HTTP editing layer in the same module; two more
+  exports are loaded but inert. ★ **A FAILED SABOTAGE IS NOT A FINDING** — every "did not move" is
+  backed by a module-level `throw` reachability probe, after my first round produced two false greens
+  from mutations that were inert by construction. Three further under-reports (`baseSpeedConfig.js`,
+  `rowLayoutConfig.js`, `racerNames.js`) are ARGUED and explicitly NOT proven — no headless probe in the
+  repository imports them.
+
 - [COMEBACK-CAMERA-1.md](COMEBACK-CAMERA-1.md) — **does the camera show him, at the point piece 3
   chose** (2026-09-08, `night/2026-09-08`, piece 4; measurement only, the comeback key ON only inside
   the measurement, its shipped default untouched). Release 0.70 and 0.50 x `comebackUseBeats` OFF/ON,
