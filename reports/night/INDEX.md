@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GUARD-CONTEXT-RACE-1.md](GUARD-CONTEXT-RACE-1.md) — **two guards share `client/dist`, and nothing
+  knew it** (2026-09-08, `night/2026-09-07`, piece 1 of the night chain; tooling only, nothing minted here).
+  `check-image-starts` builds the image from a named `client` build context (`server/Dockerfile:68`) while
+  `check-client-build` runs vite, whose first act is `emptyDir(client/dist)` — and `verify` ran up to 14
+  guards at once with nothing between them. ★ **The root is a declaration that did not describe what the
+  guard reads**: `copySources()` skips every `COPY --from=` line, so the one path read outside the repo
+  context was the one path never declared. ★ **The window is ~0.3 s** — BuildKit ingests the context at
+  BUILD START, not at the COPY step — which is why it read as flake and why one green run produced a wrong
+  diagnosis in [MINT-CAMERA-1](../evolution/MINT-CAMERA-1.md). Fixed in three parts: the declaration
+  (`client/` minus `e2e/`), `check-client-build` made `exclusive` (2 s, and it puts the producer before the
+  consumer), and the consumer pulling in its producer. All three `--premerge` runs green from `dist`
+  present/absent/fresh. ★ **THE SABOTAGE DID NOT REPRODUCE — 4 of 4 passed with the fix reverted**, so the
+  mechanism is proven but the exclusivity is NOT demonstrated to be what repaired the original 3-in-5 rate,
+  which stays unexplained. ★ **A SECOND DEFECT IS NAMED AND NOT FIXED**: `invalid file request
+  dist/assets/racers/*` — BuildKit rejecting a just-written file under parallel load, an adjacency this
+  fix created.
+
 - [COMEBACK-SHAPE-1.md](COMEBACK-SHAPE-1.md) — **what the plan writes and what the camera shows,
   side by side** (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, comeback key OFF
   throughout, nothing minted). ★ **CARRIES A CORRECTION TO [OUTCOME-WINDOW-1](OUTCOME-WINDOW-1.md):**

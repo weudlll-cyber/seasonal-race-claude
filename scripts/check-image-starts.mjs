@@ -122,7 +122,32 @@ export const GUARD = {
     "the client build itself — `client/dist` is an input, and a stale one produces a healthy container serving a stale app",
   ],
   // DERIVED from the Dockerfile's COPY lines — see the header. Never hand-written.
-  dirs: derived.dirs.map((d) => `${d}/`),
+  //
+  // ── GUARD-CONTEXT-RACE-1: THE NAMED BUILD CONTEXT IS DECLARED, BECAUSE IT IS READ ─────────────
+  //
+  // The header above said the client build was "named separately below". It was not: it was named
+  // as `CLIENT_CONTEXT_DIR`, a constant for the docker command line, and never reached this
+  // declaration — `copySources` skips every `COPY --from=` line, so the one path this guard reads
+  // outside the repository context was the one path it did not declare. A guard whose declaration
+  // omits what it reads is how two guards came to share `client/dist` with nothing knowing it.
+  //
+  // ★ `client/` AND NOT `client/dist/`, and the first attempt got this wrong. `client/dist/` is the
+  // exact path `server/Dockerfile:68` copies, so it looked like the more precise declaration — but
+  // it is GITIGNORED and absent whenever nobody has built, and `verify` REFUSES a declaration whose
+  // path does not resolve: *"a declaration that names something gone is a guard whose coverage has
+  // silently shrunk — which looks exactly like coverage"* (exit 2, not a guard failure). That
+  // refusal is correct and it is the reason this says `client/`.
+  //
+  // WHAT IT COSTS, stated rather than discovered later: routing now selects this guard on any
+  // change under `client/`, so a client edit buys an image build — about 7 s warm and up to 174 s
+  // cold. That is a real cost and it is the honest one: BuildKit ingests the whole named context,
+  // so `client/` IS what this guard reads.
+  dirs: [...derived.dirs.map((d) => `${d}/`), `${CLIENT_CONTEXT_DIR}/`],
+  // `client/e2e/` is EXCLUDED for the same reason `check-client-build` excludes it: Playwright
+  // specs are never bundled, so they cannot reach `client/dist` and cannot change what this image
+  // serves. Caught by this guard's own routing test — declaring `client/` whole put a 174 s cold
+  // image build on every edit of a night-work e2e spec.
+  notDirs: [`${CLIENT_CONTEXT_DIR}/e2e/`],
   files: [...derived.files, DOCKERFILE, DOCKERIGNORE].sort(),
   reach: [],
 };
