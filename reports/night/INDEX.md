@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-RELEASE-1.md](COMEBACK-RELEASE-1.md) — **which release point, on all ten tracks**
+  (2026-09-08, `night/2026-09-08`, piece 3; measurement only, nothing minted, nothing built that could
+  ship). Five release points 0.50-0.70 x ten tracks x 30 races = **1,500 races**, the held racer drawn
+  for place 3 and held at rank 18. ★ **THE CHOICE IS 0.70**, by the owner's stated rule (when similar,
+  take the latest) — and it did not need the tie-break: 0.70 is also the highest top-5 rate (90.3%),
+  the best mean place (3.00) and the deepest median rank at release (16). **No point is distinguishable
+  from it** (all |z| < 1.96 at n=300 per point). ★ **STAGE 2 WAS NOT RUN, as a decision**: 0.70 is
+  simultaneously the latest point and the best rate, so no larger N could change the answer. **One race
+  in 1,500 released inside the top 5** — the hold holds. ★ **BLOCKED IS EXACTLY 0 ON THE FIVE OPEN
+  TRACKS and 19-31% on the five closed ones**, and the zero was PROVEN real rather than assumed: the
+  metric fires 677/3,840 frames for the field on river-run, while the held racer's `brakeMatchFactor`
+  stays exactly 1.0000 for all ~1,040 climb frames there — on an open track he goes around instead of
+  queueing (`raceBehavior.js:880-905`, inside `if (!takeFreeLane)`). ★ **A CORRECTION**: the racer drawn
+  for a top-5 place IS a B1 hero, so COMEBACK-QUICK-2's "(not a hero)" cannot hold; excluding heroes
+  gave n=0 in every cell. No arithmetic appears anywhere, as instructed.
+
 - [GUARD-CONTEXT-RACE-1.md](GUARD-CONTEXT-RACE-1.md) — **two guards share `client/dist`, and nothing
   knew it** (2026-09-08, `night/2026-09-07`, piece 1 of the night chain; tooling only, nothing minted here).
   `check-image-starts` builds the image from a named `client` build context (`server/Dockerfile:68`) while
