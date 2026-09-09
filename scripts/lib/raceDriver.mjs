@@ -53,8 +53,9 @@ const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
 const { normalSpeedFrom } = await import(
   u("client/src/modules/durationModel.js")
 );
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u("client/src/modules/rowLayout.js")
+// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the browser's own module.
+const { deriveSpriteGeometry } = await import(
+  u("client/src/modules/raceParams.js")
 );
 // HARNESS-CAMERA-SEED-2: the BROWSER's own derivation, imported rather than re-implemented, so the
 // harness cannot drift from the product it is supposed to be reproducing.
@@ -292,23 +293,21 @@ export function buildRace(geo, identity, cameraConfig) {
       : identity.racerType;
   const rt = RT.getRacerType(racerTypeId);
   const ds = rt.config.displaySize;
-  const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
-  const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = trackWidthPx * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(
-    effW,
-    identity.racers,
-    ds,
-    W.autoScaleConfig,
-  ).spriteSize;
-  const br = computeBodyNarrowRef(
-    Math.min(285, effW),
-    identity.racers,
-    ds,
-    bfN,
-    W.autoScaleConfig,
-  );
-  const bodyRef = ds * (br.bodyNarrow / ds);
+  // ONE-HOME-RACE-PARAMS-1: one derivation, shared with the browser (modules/raceParams.js).
+  const {
+    physicalSpriteSize: pss,
+    drawnBodyWidthRefPx: bodyRef,
+    bodyFillNarrow: bfN,
+    bodyFillLong: bfL,
+  } = deriveSpriteGeometry({
+    displaySize: ds,
+    bodyFillX: rt.config.bodyFillX,
+    bodyFillY: rt.config.bodyFillY,
+    nRacers: identity.racers,
+    effectiveWidth: effW,
+    autoScaleConfig: W.autoScaleConfig,
+  });
 
   const built = createRaceFromIdentity({
     shape,
@@ -498,7 +497,14 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
         finishedCount: st.finishedCount,
         winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
-        isOutcomePhase: false,
+        // ── OUTCOME-WINDOW-1 / HARNESS-OUTCOME-1: THE BROWSER'S VALUE, NOT A CONSTANT ──────────
+        // This read `false` unconditionally, so the camera here was measured with the outcome
+        // window permanently SHUT — a shot the product never takes. The browser derives it at
+        // `RaceScreen/index.jsx:1492` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
+        // `racePlanController.getPhase(physicsTs, raceProgress)` (`index.jsx:1271`). Same call,
+        // same two arguments, so the harness and the product cannot disagree about the window.
+        isOutcomePhase:
+          raceCfg.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
         physicsRacers: st.racers,
       },
       CW,

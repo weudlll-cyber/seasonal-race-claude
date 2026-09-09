@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GUARD-CONTEXT-RACE-1.md](GUARD-CONTEXT-RACE-1.md) — **two guards share `client/dist`, and nothing
+  knew it** (2026-09-08, `night/2026-09-07`, piece 1 of the night chain; tooling only, nothing minted here).
+  `check-image-starts` builds the image from a named `client` build context (`server/Dockerfile:68`) while
+  `check-client-build` runs vite, whose first act is `emptyDir(client/dist)` — and `verify` ran up to 14
+  guards at once with nothing between them. ★ **The root is a declaration that did not describe what the
+  guard reads**: `copySources()` skips every `COPY --from=` line, so the one path read outside the repo
+  context was the one path never declared. ★ **The window is ~0.3 s** — BuildKit ingests the context at
+  BUILD START, not at the COPY step — which is why it read as flake and why one green run produced a wrong
+  diagnosis in [MINT-CAMERA-1](../evolution/MINT-CAMERA-1.md). Fixed in three parts: the declaration
+  (`client/` minus `e2e/`), `check-client-build` made `exclusive` (2 s, and it puts the producer before the
+  consumer), and the consumer pulling in its producer. All three `--premerge` runs green from `dist`
+  present/absent/fresh. ★ **THE SABOTAGE DID NOT REPRODUCE — 4 of 4 passed with the fix reverted**, so the
+  mechanism is proven but the exclusivity is NOT demonstrated to be what repaired the original 3-in-5 rate,
+  which stays unexplained. ★ **A SECOND DEFECT IS NAMED AND NOT FIXED**: `invalid file request
+  dist/assets/racers/*` — BuildKit rejecting a just-written file under parallel load, an adjacency this
+  fix created.
+
 - [COMEBACK-SHAPE-1.md](COMEBACK-SHAPE-1.md) — **what the plan writes and what the camera shows,
   side by side** (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, comeback key OFF
   throughout, nothing minted). ★ **CARRIES A CORRECTION TO [OUTCOME-WINDOW-1](OUTCOME-WINDOW-1.md):**
@@ -1059,6 +1076,167 @@ and in that commit's message.
   direction, the generated ceremony cost column, and the pixel and documentation audits below.
 - [E-doc-audit.md](E-doc-audit.md) — the documentation audit from NIGHT-TOOLS-1 stage E.
 - [D-pixel-audit.md](D-pixel-audit.md) — the pixel audit from NIGHT-TOOLS-1 stage D.
+- [COMEBACK-QUICK-2.md](COMEBACK-QUICK-2.md) — **the same ten races at 55, 60, 65 and 70 percent**
+  (2026-09-08). ★★ **FIRST: THE HOLD WAS NEVER HOLDING.** `racePlanner.js:805-808` pins a NON-HERO to
+  1.0 before OUTCOME, and the hold override sat after that `continue` — under choreo OUTCOME begins at
+  ~0.50, so the hold had no window at all. Traced: `trajectoryMult` 1.00 across the whole window while
+  the racer drifted rank 27→1 and 4→35. **That invalidates QUICK-1's 0.50 column too** — its 10/10 was
+  a racer who drew 3rd racing normally to 3rd. The brief said not to re-run 0.50 because it was "the
+  one valid measurement"; that premise was false, so it was re-run with the rest. Fixed by deciding
+  the hold ABOVE the pin (relaxes no limit — it changes only which rank the servo aims at); the racer
+  now settles at 16–20 by 25–30% and stays. ★ **With a hold that holds, the shape reaches the TOP 5 at
+  EVERY release point including 70%**: dirt-oval 9/10, 10/10, 9/10, 10/10, 9/10 and river-run 8/10,
+  9/10, 8/10, 7/10, 10/10 at 0.50/0.55/0.60/0.65/0.70. Rank at release is now **13–22** against
+  QUICK-1's 1–35, so the all-races and deep-only columns are all but identical. PINNED 31–45% on the
+  closed track against 14–20% on the open one — the flat-versus-ramped brake showing through. Arm
+  removed; world fingerprint unmoved, golden PASS. No recommendation, no release point picked.
+- [COMEBACK-QUICK-1.md](COMEBACK-QUICK-1.md) — **a fast first look, and a correction to the two
+  before it** (2026-09-08, ten races, two tracks). ★ **THE INSTRUMENT QUESTION, ANSWERED**: this and
+  the two earlier comeback pieces run `raceDriver.mjs` → `raceCore.stepRacePhysics`, the engine
+  RaceScreen itself renders through — and `sim-fairness.mjs:120` **imports and calls that same
+  function**, so the two share ONE race loop (`DIVERGENCE-AUDIT.md` D-INIT/D-RUNOUT/D-NAME/D-ROWCOUNT
+  all CLOSED). raceDriver runs the product's engine; only absolute band-reach is non-comparable to the
+  record. A "the instruments differ" alarm raised here was **my misconfiguration** (no plan, no shared
+  RNG) and is recorded as disproved. ★★ **THE CORRECTION: COMEBACK-DEF-1 and -2 read the finishing
+  place from a sort that carried no order** — `finishTime` does not exist on those racers, so it fell
+  through to sorting by `t`, which `advanceRacerT` clamps equal for every finisher. **Their finishing
+  places are void, including "finishes 8th–15th" and "more time does not help".** ★ With the correct
+  field AND the drawn place inside the top 5 (his actual requirement, not P1): **dirt-oval 10/10 in
+  the top 5, river-run 8/10**; among races where he was genuinely deep at release, **10 of 10**. ★ **The
+  mechanism is named with its address**: `brake` and `trajectoryMult` are two factors in the SAME
+  product (`raceCore.js:625-627`, `raceStep.js:123-132`), so `speedBrakeFactor` 0.945 turns his +10%
+  into +4% and `brakeMatchFactor` can cut it to the blocker's pace — measured, he is blocked while
+  asking for 19–30% of the climb. The hold arm was removed; world fingerprint unmoved, golden PASS.
+- [SIM-PINNED-1.md](SIM-PINNED-1.md) — **the small leftovers** (day chain 2026-09-08, piece 7).
+  **(a)** The other seed field is still per-keystroke, and typing a short key into it IS destroyed
+  (`A`→`""`, `ABC2`→`"2"`; only a PASTED whole key survives) — ★ **but the answer is LEAVE IT**: the
+  Quick-Test path has no short-key resolver, so `resolveQuickTestSeed("ABC234")` returns
+  `seed: null`. Removing the sanitiser would let a person type letters, see them stay, and get a
+  silently wrong race. The brief's premise "no short-key path reads it" was false — the sanitiser is
+  SHARED with the fixed field. **(b)** ★ **72 unconsumed exports, not 42** (scripts/ 55, server/ 17)
+  — and **nothing was deleted**: the scanner over-matches on generic names, a name assembled from
+  string fragments is unfindable, and several sit in `sim/observers/` which the world fingerprint
+  reaches. The census is the deliverable; the deletions are not. **(c)** `DELETE
+  /api/racers/:id/sprite` **still has no caller from any screen** — confirmed in five search forms;
+  reported, not removed. **(d)** `sim-fairness.mjs` (6,195 lines, no test) now has **9 characterisation
+  tests** pinning `runSingleRace` — both the main entry AND the longest function — by finishing order,
+  times and duration. ★ **The sabotage took two goes and the first corrected the tests**: offsetting
+  `makePRNG` reddened only its own test, proving `runSingleRace` rides on a DIFFERENT stream
+  (`makeRaceRng`); the header now says so. A 0.1% `race_baseSpeed` change reddens all three. World
+  fingerprint UNMOVED; `sim-fairness.mjs` itself untouched.
+- [HARNESS-OUTCOME-1.md](HARNESS-OUTCOME-1.md) — **the harness camera is not the browser camera**
+  (day chain 2026-09-08, piece 6). ★★ **STOPPED AT THE FORK: the camera fingerprint MOVED and
+  NOTHING WAS MINTED — `docs/fingerprints.json` is untouched and the fix awaits his word.**
+  `152cf295c4c9ff54` → **`75aef5cd474c54e5`**, **4 of 10 tracks** — city-circuit, dirt-oval,
+  ice-track, space-sprint — exactly the four OUTCOME-WINDOW-1 predicted, re-established here by
+  measuring both ways rather than carried over. The harness told the director the outcome window was
+  permanently SHUT (`isOutcomePhase: false`); the browser derives it as
+  `racePlanController.getPhase(...) === 'OUTCOME'` (`index.jsx:1492`/`:1271`). Six tracks agree
+  anyway because the director's internal progress threshold opens the window at about the same
+  moment; on four it does not. ★ **The premise needed correcting: it is TWO sites, not one** —
+  `camera-fingerprint.mjs` does NOT use the shared driver and carried its own copy, so fixing the
+  driver alone would have moved nothing. ★ **A THIRD site was deliberately left**:
+  `render-fingerprint.mjs:584` still says `false`, so the render fingerprint is UNMOVED at
+  `74946ddbeca517a9` and that instrument still measures the shut window — named, his to order.
+  World, world-off and the golden races are all unmoved: the physics never hears this.
+- [PROD-ARM-1.md](PROD-ARM-1.md) — **the harness can drive the production build now** (day chain
+  2026-09-08, piece 4). Every browser proof this project has taken was taken on a Vite DEV server the
+  owner does not use. ★ **What blocked a production arm was one line**: the dev arm hands the client
+  its address as `VITE_API_URL` at BUILD time — and RUNTIME-API-URL-1 removed the need for it, so the
+  arm needs no build-time variable and **one process instead of two** (the server serves API and
+  client on one origin, so `RA_CLIENT_ORIGIN` is unnecessary too). **The production arm is simpler
+  than the dev arm.** New `playwright.prod.config.js` + `e2e/prod-ports.js`; **no existing spec,
+  helper or config was edited** — `e2e-env.js` already honoured `RA_E2E_*_PORT`, so that mechanism was
+  reused and `auth.setup.js` needed no change. ★ **PROVED, not asserted**: the arm serves
+  `assets/index-Dx9rj88y.js` with **no `/src/main.jsx`**, an address the SERVER injected
+  (`{"apiBaseUrl":"http://localhost:4599"}`), and a build identity naming the commit — plus
+  **15 specs passing in 25.0 s**. Not wired into `verify` or CI (no browsers there); the cost and the
+  candidate homes, including a sub-minute raceless subset, are named rather than chosen.
+- [INSTALL-READY-1.md](INSTALL-READY-1.md) — **what an install still needs, minus his decisions**
+  (day chain 2026-09-08, piece 5). **(a)** `npm run configure` now GENERATES `RA_SESSION_SECRET` and
+  `RA_BOOTSTRAP_TOKEN` — 32 random bytes each, into `docker-compose.override.yml`, **never printed**,
+  and **never rolled if the install already has one** (pinned by two tests: rolling the session key
+  would sign every user out). **(b)** The plaintext `dev-bootstrap-token-not-for-production` at
+  `docker-compose.yml:21` is **GONE with no fallback** — a stranger running plain `docker compose up`
+  got a working token whose value is in a public repo. ★ Named consequence: **his own override has no
+  `RA_BOOTSTRAP_TOKEN`**, so his install can no longer run `auth/setup` — which costs him nothing, as
+  that route creates the FIRST admin and his install has one. **(c)** `HEALTHCHECK` against the
+  existing `/api/health` plus `restart: unless-stopped`; it probes with `node -e` because
+  `node:20-alpine` has neither curl nor wget. ★ **(d) was ALREADY CLOSED and is reported, not
+  changed**: `COPY --from=client dist/` already fails the build loudly (`"/dist": not found`, exit 1,
+  tested), and the only path that starts-and-serves-nothing is one the owner deliberately made
+  legitimate on 2026-09-06 — turning it into a refusal would contradict a recorded decision.
+- [E2E-ONE-WORKER-1.md](E2E-ONE-WORKER-1.md) — **the browser suite was reporting failures it did not
+  have** (day chain 2026-09-08, piece 3). ★ **14 failed / 108 passed at the default 7 workers; 1
+  failed / 121 passed at one worker.** `fullyParallel: false` reads like a serial suite and is not
+  one — it only serialises WITHIN a file, so seven spec files ran at once against **one** API, **one**
+  team and **one** shared `storageState`. The fourteen were all config-and-state specs asserting on
+  state another spec was writing; **the same five files re-run with `--workers=1` and nothing else
+  changed: 66 passed, 0 failed.** ★ **The survivor is not the fix failing** — `garden-path-finishes`
+  passes alone in **105.5 s of its 600 s budget**, so it is the known flake, now visible instead of
+  buried. **Cost: 18.0 → 33.6 min (+87%), stated not hidden.** ★ **No set-up race was removed,
+  because there were none of the expected kind**: the races that looked like set-up never wait for an
+  ending at all (`race-identifier` abandons four), and every race that IS waited on is the spec's own
+  evidence. The remaining lever is DURATION, not field size — `OPEN_TRACK_MIN_SECONDS = 10`
+  (`durationModel.js:56`) — named with why it was not taken here.
+- [SUITE-ENV-SPLIT-1.md](SUITE-ENV-SPLIT-1.md) — **the unit suite builds a browser it does not
+  need** (day chain 2026-09-08, piece 2). Re-established off an ordinary `npm test`: 254 files,
+  **environment 503.7 s against tests 211.2 s** — twice as long building browsers as running
+  assertions. 69 files now carry `// @vitest-environment node`; **jsdom stays the default**, so a new
+  test file is safe by construction. ★ **Membership was decided per file in TWO passes that both had
+  to agree** — a TRANSITIVE static scan (a test whose *import* names `localStorage` stays), then
+  running every candidate in BOTH environments and keeping only those with the **identical number of
+  passing and skipped tests**. ★ **The sabotage shows why that second count is the real gate**:
+  forcing `storage.test.js` into node gives **11 failed and 2 PASSED**, one of them literally named
+  "an ABSENT key is not a failure" — green because `localStorage` is gone. A pass/fail check would
+  have accepted it at 2/13. ★ **69, not the briefed 137** — the transitive rule is stricter, which is
+  the brief's own "if it is not clear, it stays"; 189 s of environment remains in the other 184 files
+  and is named as an opportunity, not guessed at. **232.2 s → 172.0 s (−26%), all 4630 tests still
+  pass.** `maxWorkers: 4` untouched.
+- [COMEBACK-DEF-1.md](COMEBACK-DEF-1.md) — **the owner's comebacker: is it possible, and is it
+  fair?** (day chain 2026-09-08, piece 1; sweep, ran alone). ★ **THE SHAPE IS NOT POSSIBLE WITHIN THE
+  EXISTING LIMITS.** The tempo clamp is `maxMult 1.10 / minMult 0.85` (`racePlanner.js:98-99`,
+  enforced `:891`) — at most **+10%** of a racer's own base speed. A racer who **drew P1** and is held
+  at rank ~16 until 70% finishes **8th–15th** (30 races/track, field 40, all 10 tracks), while already
+  **pinned at the ceiling for 23–40% of the climb**: he is clamped for two-fifths of it and still does
+  not arrive. ★ **The arithmetic was optimistic by 7–14 places** — it assumes the field is passive,
+  and it is not. ★ **"Not every race needs one" DOES NOT HOLD: 0 of 200 races had zero comebackers**
+  (mean 1.5–2.0). ★ **Field size: every track allows ≥20** (72 on searound to 1092), so the shape is
+  expressible everywhere — but "rank 15–20" is the BACK of a 20-field and mid-field at 40, which is
+  one phrase describing two different races; **his gap to close, no fallback invented**. ★ **Fairness:
+  the rest of the field is unharmed** (band-reach −1.6 to +3.7 pp, up on six tracks); the cost lands
+  on the held racer alone (16.7–50.0% against ~45%). ★ **The Holm gate is NOT answered and says so** —
+  wrong instrument, and the SHIPPED control arm already fails whole-table χ² on 8 of 10 tracks here.
+  The temporary arm was removed; world fingerprint unmoved, golden races pass, nothing minted.
+- [MORNING-2026-09-07.md](MORNING-2026-09-07.md) — **the morning sheet for the 2026-09-07 night chain**: DONE / RUNNING / OPEN / NEEDS HIS WORD, rewritten after every piece so it is true at whatever moment the chain was interrupted.
+- [CLIENT-BUILD-VERIFIED-1.md](CLIENT-BUILD-VERIFIED-1.md) — **nothing built the client** (night
+  chain 2026-09-07, piece 2). Re-established at source: neither `verify` nor `ci.yml` contained a
+  single `vite build` or `npm run build`, and `client/eslint.config.js` carries **no import plugin**,
+  so no rule it runs resolves a specifier. New `scripts/check-client-build.mjs` builds the client and
+  then runs the bundle-address audit on what it just built. **The declaration is derived** — `client/`
+  because that is Vite's root, minus `client/e2e/` which is never bundled — so a client change selects
+  it and a documentation change does not. ★ **`audit-bundle-address.mjs` is wired as a STEP of the
+  build guard, not as its own routed guard**: `verify` runs guards 14-at-once, so a separate audit
+  could read `client/dist` mid-write — a race that would fail for no defect. ★ **Sabotage (a) is the
+  whole argument**: an import of a name that does not exist leaves **ESLint at exit 0** and takes the
+  **build to exit 1** (`[MISSING_EXPORT]`). ★ **Sabotage (b) did not go red on the first try** — an
+  UNUSED baked address is tree-shaken out and never reaches the package; baking it into the live
+  fallback reddened the audit. Measured cost: **~2.0 s, 0.55% of a run**. `ci.yml` untouched.
+- [ONE-HOME-RACE-PARAMS-1.md](ONE-HOME-RACE-PARAMS-1.md) — **the race-params derivation gets one
+  home** (night chain 2026-09-07, piece 1; `night/2026-09-07` off `fe4e111c`, **unmerged**).
+  ★ **The premise did not survive re-verification: the derivation was mirrored THIRTEEN times, not
+  twice** — established by searching for the derivation's SHAPE (`computeRacerLayout(...).spriteSize`
+  beside `computeBodyNarrowRef(Math.min(285, ...))`), 136 occurrences across 34 files, each opened
+  and classified. ★ **And the copies were not copies**: the browser guards on `autoScale.enabled` and
+  a `displaySize` override, every harness derives unconditionally, and the two agree only because a
+  default happens to be `true`. New `client/src/modules/raceParams.js` holds the guarded form;
+  **8 mirrors deleted, 0 added**, including all three the brief named plus the golden path and three
+  fingerprint instruments. **Six full mirrors remain and are named**, `sim-fairness.mjs` among them
+  (piece 9 owns it). **All four fingerprints UNMOVED, nothing minted**; golden races PASS.
+  ★ **The sabotage came back GREEN first, and that was the finding** — the golden path was still a
+  mirror, so it could not see the extraction; after converting it, both golden races moved and the
+  check exited 1. ★ Also named: `engine-reach` calls all ten paths "outside the hull", yet sabotaging
+  this module moved both golden races — the hull is narrower than "can change how a race comes out".
 
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does

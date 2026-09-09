@@ -1,3 +1,6 @@
+// @vitest-environment node
+// SUITE-ENV-SPLIT: no DOM and no browser global, here or in anything this file imports — see the
+// note in vitest.config.js. Verified by running it in BOTH environments: same tests, same count.
 // ============================================================
 // raceLengths.test.js — the racer-LENGTH unit is ONE source, and bit-identical to the inline
 // formulas it replaced (GovernorDiagHUD.jsx:62/75, raceGovernor.js:214, sim-fairness.mjs:947).

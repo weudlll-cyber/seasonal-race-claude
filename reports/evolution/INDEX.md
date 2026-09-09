@@ -361,6 +361,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MINT-CAMERA-1.md](MINT-CAMERA-1.md) — **the camera record starts describing the product's own
+  picture** (2026-09-08, `night/2026-09-07` off `fe4e111c`, the owner's decision). The camera role moves;
+  the value lives in [docs/fingerprints.json](../../docs/fingerprints.json), which is its one home.
+  ★ **AN INSTRUMENT CORRECTION, NOT A CAMERA CHANGE** — `CameraDirector.js` is untouched by the branch,
+  established by diff. The harness handed the director `isOutcomePhase: false` as a literal, so every
+  camera hash ever taken was measured with the race plan's OUTCOME window permanently SHUT; the browser
+  derives it from the plan, and that derivation was established correct AT SOURCE first (same signature,
+  thresholds from one `plan._phases`, and the identical predicate the plan itself steers by at
+  `racePlanner.js:557`) — a fix on the wrong side would have been enshrined by the mint. **Four tracks
+  moved and SIX SHOW ZERO DIFFERING FRAMES**: on dirt-oval, ice-track and space-sprint the game takes an
+  **8.0 s `COMEBACK_ZOOM`** the instrument could not see, entering at leader progress 0.639/0.683/0.705;
+  on **city-circuit no comeback shot is taken in either arm** — a losing candidate in the pool re-rolls
+  the closing stretch, which is a different finding and is recorded as one. Offsets are SCREEN px, so the
+  deltas (up to 7091 px, a different anchor racer for 6.8–12.3 s) are pictures, not hash noise.
+  ★ **EVERY CAMERA FIGURE OLDER THAN THIS MINT IS NOT COMPARABLE ACROSS IT ON THOSE FOUR TRACKS.**
+  World, world-off and render were run in the same pass and are UNMOVED, each self-checked.
+  **The second instrument is REPORTED, NOT FIXED**: `render-fingerprint.mjs:584` carries the same
+  literal and fixing it would move the render record to `40b2de6fcc5bafd8` — a second mint, not taken.
+
 - [RUNTIME-API-URL-1.md](RUNTIME-API-URL-1.md) — **one package, installable anywhere; the address is
   asked for at install time** (2026-09-07, `feat/runtime-api-url-1` off `dc1f252f`, **unmerged** — he
   starts a race on his own machine first). The client used to bake `VITE_API_URL` into the bundle at

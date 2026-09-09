@@ -16,9 +16,25 @@ services:
         client: ./client
     ports:
       - "4000:4000"
+    # ── INSTALL-SECRETS-1: a container that dies must not sit there dead ─────────────────────────
+    # Nothing noticed a server that started and then exited: no HEALTHCHECK, no restart policy. The
+    # image now declares a HEALTHCHECK against `/api/health` (server/Dockerfile), so `docker ps`
+    # reports healthy/unhealthy rather than merely "Up", and this line brings it back when it dies.
+    # `unless-stopped` rather than `always`, so an operator who deliberately stops it stays stopped.
+    restart: unless-stopped
     environment:
       - PORT=4000
-      - RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production
+      # ★ `RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production` STOOD HERE AND IS GONE
+      # (INSTALL-SECRETS-1, 2026-09-08). It was overridden on any real install, but a stranger who
+      # ran a plain `docker compose up` got a WORKING bootstrap token whose value is in the public
+      # repository — which is the one credential that opens a fresh install's first admin account.
+      #
+      # There is no fallback now, and that is the point: with the variable unset,
+      # `POST /api/auth/setup` answers 403 and `startupReadinessLines()` says so at boot. An install
+      # that cannot be opened is a loud, fixable state; an install anybody can open is not.
+      #
+      # `npm run configure` GENERATES this and RA_SESSION_SECRET into docker-compose.override.yml,
+      # unique per install and never printed. That is the supported way to get one.
       # RA_CLIENT_DIST is NOT set here any more: IMAGE-STANDALONE-1 made the image declare its own
       # layout with an ENV, so a plain `docker run` serves the app too. One home for the fact.
       # RA_SESSION_SECRET and RA_CLIENT_ORIGIN come from docker-compose.override.yml

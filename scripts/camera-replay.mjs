@@ -73,8 +73,9 @@ const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
 const { normalSpeedFrom, MIN_LAPS } = await import(
   u(join(ROOT, "client/src/modules/durationModel.js"))
 );
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u(join(ROOT, "client/src/modules/rowLayout.js"))
+// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the one module the browser uses.
+const { deriveSpriteGeometry } = await import(
+  u(join(ROOT, "client/src/modules/raceParams.js"))
 );
 // racer-types warms sprite images at import time; headless there is no Image, and it says so 31
 // times. The failures are cosmetic (this replay draws no sprites) — mute the boot, not the module.
@@ -191,45 +192,22 @@ function buildRace(marker, world, geometry) {
   const racerType = getRacerType(race.type ?? "horse");
   const speedMultiplier = racerType.getSpeedMultiplier();
   const displaySize = racerType.config.displaySize;
-  const _bfNarrowRaw = Math.min(
-    racerType.config.bodyFillX,
-    racerType.config.bodyFillY,
-  );
-  const _bfLongRaw = Math.max(
-    racerType.config.bodyFillX,
-    racerType.config.bodyFillY,
-  );
-  const bodyFillNarrow =
-    Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
-  const bodyFillLong =
-    Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
   const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
   const nRacers = race.n;
 
-  let physicalSpriteSize = displaySize;
-  let displaySizeScale = 1;
-  if (autoScaleConfig.enabled) {
-    const hasDisplaySizeOverride =
-      "displaySize" in (marker.cfg?.types?.[race.type] ?? {});
-    if (!hasDisplaySizeOverride) {
-      physicalSpriteSize = computeRacerLayout(
-        effectiveWidth,
-        nRacers,
-        displaySize,
-        autoScaleConfig,
-      ).spriteSize;
-      const W_REF = Math.min(285, effectiveWidth);
-      const bodyRef = computeBodyNarrowRef(
-        W_REF,
-        nRacers,
-        displaySize,
-        bodyFillNarrow,
-        autoScaleConfig,
-      );
-      displaySizeScale = bodyRef.bodyNarrow / displaySize;
-    }
-  }
-  const drawnBodyWidthRefPx = displaySize * displaySizeScale;
+  // ONE-HOME-RACE-PARAMS-1: this was a transcription of RaceScreen's derivation. It is now the
+  // same function the browser calls, so the two cannot drift. The override question is answered
+  // from the MARKER's recorded config rather than from storage, which is this script's whole job.
+  const { physicalSpriteSize, drawnBodyWidthRefPx, bodyFillNarrow, bodyFillLong } =
+    deriveSpriteGeometry({
+      displaySize,
+      bodyFillX: racerType.config.bodyFillX,
+      bodyFillY: racerType.config.bodyFillY,
+      nRacers,
+      effectiveWidth,
+      autoScaleConfig,
+      hasDisplaySizeOverride: "displaySize" in (marker.cfg?.types?.[race.type] ?? {}),
+    });
 
   const built = createRaceFromIdentity({
     shape,

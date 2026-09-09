@@ -244,7 +244,17 @@ test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that 
   // open again. `server/index.js` above is NOT in any COPY source, so it does not select the check
   // and that assertion is unchanged. This pair is therefore also the proof that the derivation is
   // discriminating rather than matching all of `server/`.
+  //
+  // GUARD-CONTEXT-RACE-1 (2026-09-08) GREW THIS SET A FIFTH TIME, and for a reason the four before
+  // it did not have: `check-client-build` is here not because the diff reached it, but because
+  // `check-image-starts` CONSUMES what it produces. The image build reads a named `client` context
+  // and `server/Dockerfile:68` copies `dist/` out of it, so selecting the consumer without the
+  // producer fails the image build `"/dist": not found` on any tree where nobody has built. The
+  // pull-in lives in `plan()` and states itself in the guard's own reason line. Same rule as above:
+  // the expected set follows the behaviour, and a set that stopped growing here would be asserting
+  // that the dependency is not wired.
   assert.deepEqual(routesTo("server/package.json"), [
+    "check-client-build",
     "check-image-starts",
     "check-language-closed",
     "server-format-check",

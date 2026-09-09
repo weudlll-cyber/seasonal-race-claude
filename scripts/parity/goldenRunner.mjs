@@ -45,10 +45,10 @@ import {
 } from "../../client/src/modules/racePlanner.js";
 import {
   computeEvenRowLayout,
-  computeRacerLayout,
-  computeBodyNarrowRef,
   computeStartRowCount,
 } from "../../client/src/modules/rowLayout.js";
+// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the one module the browser uses.
+import { deriveSpriteGeometry } from "../../client/src/modules/raceParams.js";
 import { loadRowLayoutConfig } from "../../client/src/modules/rowLayoutConfig.js";
 import {
   createRaceFromIdentity,
@@ -436,12 +436,14 @@ function execute({
     ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
   // D-ROWCOUNT: use the ONE shared start-row count (rowLayout.js) — the browser's formula, which disagrees
   // with computeRacerLayout.rowCount for small sprites (dolphin: 4 vs 3). createRaceFromIdentity uses it too.
-  const physicalSpriteSize = computeRacerLayout(
-    effectiveWidth,
+  const { physicalSpriteSize } = deriveSpriteGeometry({
+    displaySize: cfg.displaySize,
+    bodyFillX: cfg.bodyFillX,
+    bodyFillY: cfg.bodyFillY,
     nRacers,
-    cfg.displaySize,
-    DEFAULT_AUTO_SCALE_CONFIG,
-  ).spriteSize;
+    effectiveWidth,
+    autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+  });
   const totalRows = computeStartRowCount(
     effectiveWidth,
     nRacers,
@@ -652,22 +654,15 @@ export function realArm(identity) {
   // 600-identity soak already proved the browser and sim body dims agree on every identity).
   const effectiveWidth =
     ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
-  const { spriteSize: physicalSpriteSize } = computeRacerLayout(
-    effectiveWidth,
-    identity.nRacers,
-    cfg.displaySize,
-    DEFAULT_AUTO_SCALE_CONFIG,
-  );
-  const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
-  const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
-  const W_REF = Math.min(285, effectiveWidth);
-  const bodyRef = computeBodyNarrowRef(
-    W_REF,
-    identity.nRacers,
-    cfg.displaySize,
-    bodyFillNarrow,
-    DEFAULT_AUTO_SCALE_CONFIG,
-  );
+  const { physicalSpriteSize, drawnBodyWidthRefPx, bodyFillNarrow, bodyFillLong } =
+    deriveSpriteGeometry({
+      displaySize: cfg.displaySize,
+      bodyFillX: cfg.bodyFillX,
+      bodyFillY: cfg.bodyFillY,
+      nRacers: identity.nRacers,
+      effectiveWidth,
+      autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+    });
 
   // Build the REAL browser race via the shared core, then AUGMENT each racer with the browser's roster
   // name — exactly as RaceScreen does before rendering (the avoidance symmetry tiebreak keys on r.name).
@@ -689,7 +684,7 @@ export function realArm(identity) {
     racePlanSeed: identity.seed,
     racePlanEnabledFlag: true,
     physicalSpriteSize,
-    drawnBodyWidthRefPx: bodyRef.bodyNarrow,
+    drawnBodyWidthRefPx,
     bodyFillNarrow,
     bodyFillLong,
   });

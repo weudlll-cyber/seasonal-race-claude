@@ -16,7 +16,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { withPublicOrigin } from "./configure.mjs";
+import { withPublicOrigin, withKeptEnv, generateSecret } from "./configure.mjs";
 
 const OWNERS_FILE = [
   "# Local dev only. Gitignored — never committed.",
@@ -61,4 +61,42 @@ test("the secrets already in the file survive", () => {
   const out = withPublicOrigin(OWNERS_FILE, "https://races.example.com");
   assert.ok(out.includes("RA_SESSION_SECRET=dev-secret-not-for-production"));
   assert.ok(out.includes("RA_CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173"));
+});
+
+// ── INSTALL-SECRETS-1: the two secrets are GENERATED, not hand-copied ───────────────────────────
+
+test("a generated secret is long, url-safe, and different every time", () => {
+  const a = generateSecret();
+  const b = generateSecret();
+  assert.match(a, /^[A-Za-z0-9_-]{40,}$/, "url-safe and long enough to be a secret");
+  assert.notEqual(a, b, "★ two installs must not share a secret");
+});
+
+test("withKeptEnv ADDS a key the file does not have", () => {
+  const out = withKeptEnv(OWNERS_FILE, "RA_BOOTSTRAP_TOKEN", "generated-value");
+  assert.equal(out.added, true);
+  assert.ok(out.text.includes("      - RA_BOOTSTRAP_TOKEN=generated-value"));
+  // and it disturbs nothing else
+  for (const line of OWNERS_FILE.split("\n")) assert.ok(out.text.includes(line), `lost: ${line}`);
+});
+
+test("★ withKeptEnv NEVER rolls a secret the install already has", () => {
+  // Re-running `configure` on a live install must not sign every user out, which is what replacing
+  // RA_SESSION_SECRET would do. The existing value wins and the caller is told it was kept.
+  const out = withKeptEnv(OWNERS_FILE, "RA_SESSION_SECRET", "a-brand-new-value");
+  assert.equal(out.added, false);
+  assert.equal(out.text, OWNERS_FILE, "the file is returned untouched");
+  assert.ok(!out.text.includes("a-brand-new-value"));
+});
+
+test("withKeptEnv refuses rather than guessing when there is no `environment:` block", () => {
+  assert.equal(withKeptEnv("services:\n  server:\n    image: x\n", "RA_X", "y"), null);
+});
+
+test("run twice, a generated key appears exactly ONCE", () => {
+  const once = withKeptEnv(OWNERS_FILE, "RA_BOOTSTRAP_TOKEN", generateSecret()).text;
+  const twice = withKeptEnv(once, "RA_BOOTSTRAP_TOKEN", generateSecret()).text;
+  const n = twice.split("\n").filter((l) => l.includes("RA_BOOTSTRAP_TOKEN=")).length;
+  assert.equal(n, 1);
+  assert.equal(twice, once, "the second run changed nothing");
 });

@@ -444,6 +444,38 @@ export function commandFor(g) {
   // or wrong, so that is the half verify asks about.
   if (g.id === "ceremony-counts")
     return { cmd: ["node", g.source, "--check-counts"] };
+  // ── GUARD-CONTEXT-RACE-1: `check-client-build` RUNS ALONE, AND IT IS AN ORDERING FIX ──────────
+  //
+  // THE RACE, reproduced rather than reasoned about. `check-image-starts` builds the server image
+  // passing `--build-context client=./client` (`check-image-starts.mjs`), because
+  // `server/Dockerfile:68` is `COPY --from=client dist/`. BuildKit INGESTS that named context at
+  // the START of the build, holding `client/dist` open. `check-client-build` runs the vite build,
+  // whose first act is `emptyDir(client/dist)`. Two guards, one directory, and this scheduler runs
+  // up to 14 at once with nothing between them: launched simultaneously against a cold image build,
+  // the build guard fails `EPERM ... \client\distssets` 2 times out of 2.
+  //
+  // ★ IT LOOKED INTERMITTENT FOR A REASON, and the reason is why one green run was enough to
+  // produce a wrong diagnosis: the window is only as long as the context ingest. Against a WARM
+  // Docker cache the whole image build is ~5 s and the ingest is over before vite starts, so both
+  // guards pass and the tree looks fine. It bites on a COLD build, which is what CI and a first run
+  // of the day have.
+  //
+  // WHY THE DECLARATION FIX ALONE WAS NOT ENOUGH, tried first and measured: a guard's `dirs` feed
+  // ROUTING — which guards are SELECTED — and this scheduler reads only `exclusive`. Declaring the
+  // context (done, and correct on its own terms) left the race untouched at 2 failures out of 2.
+  //
+  // WHY THIS GUARD AND NOT `check-image-starts`. Two reasons, and the second is the better one.
+  // COST: serialising the cheaper one is cheaper — this guard is 16-33 s against the image guard's
+  // 84-174 s cold. ORDERING: exclusive tasks run to completion BEFORE the parallel queue starts, so
+  // putting the guard that WRITES `client/dist` in that phase also guarantees it finishes before
+  // the guard that READS it begins. That fixes the OTHER half of the same defect for free — with
+  // `client/dist` absent, `check-image-starts` fails `"/dist": not found`, which is how a well-meant
+  // "just delete dist" makes the opposite guard red. The producer now always precedes the consumer.
+  //
+  // NEITHER GUARD IS WEAKENED: both still build, the image guard still starts a real container with
+  // no bind mounts, and both still fail on their own subject. Only WHEN they run changes.
+  if (g.id === "check-client-build")
+    return { cmd: ["node", g.source], exclusive: true };
   // FP-COMPARE-1: the world fingerprint must COMPARE against the record, not print and pass. It
   // measured-and-did-not-check until 2026-08-14, when a renamed column moved the hash, verify
   // printed the new value and reported PASS, and the defect reached master green. `--check` is
@@ -545,7 +577,7 @@ export function plan(
     forcedIds = derived.ids;
   }
 
-  return gs.map((g) => {
+  const tasks = gs.map((g) => {
     let hits = files.filter((f) => g.matches(f));
     if (g.id === "world-fingerprint")
       hits = hits.filter((f) => !inertSet.has(f));
@@ -588,6 +620,31 @@ export function plan(
       everything: g.everything === true,
     };
   });
+
+  // ── GUARD-CONTEXT-RACE-1: THE PRODUCER IS PULLED IN BY THE CONSUMER ───────────────────────────
+  //
+  // `check-image-starts` builds the server image from a named `client` build context, and
+  // `server/Dockerfile:68` copies `dist/` out of it. If `client/dist` does not exist the image
+  // build fails `"/dist": not found` — through no fault of the diff, and with a message that names
+  // Docker rather than the missing build. That is a PRE-EXISTING dependency (it predates this
+  // block), but routing could select the consumer without the producer, so it surfaced as a red
+  // that no change caused and no re-run fixed.
+  //
+  // `check-client-build` is the guard that MAKES `client/dist`. It is `exclusive`, and exclusive
+  // tasks run to completion before the parallel queue, so pulling it in also puts it in front of
+  // the guard that consumes its output — the ordering is a consequence of the edge, not a second
+  // mechanism.
+  //
+  // NEVER SILENT, per the constraint at the head of this file: the pull-in states itself in the
+  // guard's own reason line, the same way a skip and a --premerge force do.
+  const img = tasks.find((t) => t.id === "check-image-starts");
+  const bld = tasks.find((t) => t.id === "check-client-build");
+  if (img?.run && bld && !bld.run) {
+    bld.run = true;
+    bld.reason +=
+      "  ·  PULLED IN: check-image-starts consumes `client/dist`, which this guard produces";
+  }
+  return tasks;
 }
 
 function scriptTestFiles() {

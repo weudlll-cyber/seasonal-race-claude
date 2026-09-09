@@ -1,3 +1,6 @@
+// @vitest-environment node
+// SUITE-ENV-SPLIT: no DOM and no browser global, here or in anything this file imports — see the
+// note in vitest.config.js. Verified by running it in BOTH environments: same tests, same count.
 import { describe, it, expect } from 'vitest';
 import {
   lerp,

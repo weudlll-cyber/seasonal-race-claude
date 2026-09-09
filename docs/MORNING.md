@@ -112,8 +112,8 @@ inherited from the driver. ★ **What the different rule hides:** the browser ca
 of 172,013 frames against the fallback's 53,184, and **24,344 frames (14.2%, in 40 of 40 races) open
 only for the browser** — with a live comeback candidate on 18,932 of them. ★ **Yet no camera state
 occurs that did not, on zero frames** — the corpus re-runs byte-identical, and the arm was proven
-live first. ★ **THE CAMERA FINGERPRINT DOES MOVE — to `75aef5cd474c54e5`, on 4 of 10 tracks** (city-circuit, dirt-oval, ice-track, space-sprint). The recorded value is where it always is,
-in `docs/fingerprints.json`. **The new one is reported and NOT minted.** **76 files** run on that driver — named, not repaired — including the **ship gate**, the
+live first. ★ **THE CAMERA FINGERPRINT DOES MOVE, on 4 of 10 tracks** (city-circuit, dirt-oval, ice-track, space-sprint). The recorded value is where it always is,
+in `docs/fingerprints.json`. **It was reported and not minted here; the owner minted it on 2026-09-08 (MINT-CAMERA-1).** **76 files** run on that driver — named, not repaired — including the **ship gate**, the
 `check-runin-frame` guard, and the two measurements stamped into CAMERA_DIRECTOR.md and
 ENDING-PHASES.md.
 
@@ -140,7 +140,8 @@ Nothing is running. **The chain is finished** — six pieces, two branches, no m
 - **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
   costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
 - **★ THE CAMERA FINGERPRINT WOULD MOVE IF THE HARNESS MEASURED THE WINDOW THE WAY THE BROWSER
-  DOES**, to `75aef5cd474c54e5`. Nothing was minted and nothing was changed. Adopting the browser's
+  DOES**. Nothing was minted and nothing was changed *in this chain*; the owner minted it on
+  2026-09-08 (MINT-CAMERA-1) and the value lives in `docs/fingerprints.json`. Adopting the browser's
   value is four lines, but it re-bases every figure the 76 consumers have produced — the ship gate
   and two stamped documents among them — so it is a decision, not a repair.
 - **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing

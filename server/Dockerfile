@@ -106,4 +106,23 @@ USER node
 
 EXPOSE 4000
 
+# ── INSTALL-SECRETS-1: NOTHING NOTICED A SERVER THAT STARTED AND THEN DIED ──────────────────────
+#
+# Neither this file nor docker-compose.yml declared a HEALTHCHECK or a restart policy, so a
+# container whose server exited after boot reported "Up" for as long as anyone cared to look, and
+# nothing brought it back. `docker compose ps` showed a healthy-looking installation serving
+# nothing.
+#
+# IT ASKS THE ENDPOINT THAT ALREADY EXISTS rather than inventing a probe: `/api/health` is the same
+# route `scripts/check-image-starts.mjs` uses to decide the image booted, so the container and that
+# check agree about what "alive" means by construction.
+#
+# `node -e` rather than curl or wget, because this is a `node:20-alpine` image and neither is
+# installed — a HEALTHCHECK that cannot run reports unhealthy forever, which is worse than none.
+# The port is read from the environment so it follows PORT rather than repeating 4000.
+#
+# start-period 15s covers boot (npm install is already done; this is process start plus seed
+# delivery). interval 30s, timeout 5s, 3 retries: a dead server is reported within ~1.5 min.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["node", "src/index.js"]
