@@ -25,6 +25,19 @@ directions.
   dist/assets/racers/*` — BuildKit rejecting a just-written file under parallel load, an adjacency this
   fix created.
 
+- [AUDIT-ADVISORIES-1.md](AUDIT-ADVISORIES-1.md) — **the main line goes green again** (2026-09-08,
+  `fix/audit-advisories-1` off master `c5e0cb8b`, **MERGED as `b42ce114`** — the owner asked for it;
+  nothing minted). ★ **RE-ESTABLISHED AT SOURCE**: `multer` is a DIRECT PRODUCTION dependency of the
+  server with four advisories; `js-yaml` is HIGH but **dev-only**, proven by the chain
+  `eslint@9.39.4 -> @eslint/eslintrc@3.3.5 -> js-yaml@4.3.1` with eslint a devDependency. ★ **BOTH BUMPS
+  ARE THE SMALLEST THAT CLEAR THE ADVISORY** — multer `^2.2.0 -> ^2.3.0` (MINOR inside major 2; the 2.x
+  line ends there and the only later release is a pre-release major) and js-yaml `4.3.1 -> 4.3.2` (PATCH,
+  via a client `overrides` entry). Neither is a major, so the brief's stop condition did not fire, and no
+  ALLOWLIST entry was added. ★ **THE PRODUCT WAS PROVEN, NOT JUST THE AUDIT**: the upload paths multer
+  serves were run specifically — 32 real multipart uploads across tracks/racers/brands, 274 tests — plus
+  `verify --premerge` 24/0, both suites, golden races, and **all four fingerprints matching their
+  records, run BY HAND because routing skipped all five as "nothing changed"**.
+
 - [COMEBACK-SHAPE-1.md](COMEBACK-SHAPE-1.md) — **what the plan writes and what the camera shows,
   side by side** (2026-09-07, `night/2026-09-06`, unmerged; MEASUREMENT ONLY, comeback key OFF
   throughout, nothing minted). ★ **CARRIES A CORRECTION TO [OUTCOME-WINDOW-1](OUTCOME-WINDOW-1.md):**
