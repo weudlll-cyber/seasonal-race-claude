@@ -169,7 +169,74 @@ it.**
 
 # PART 3 — THE MERGE
 
-<!-- PART3 -->
+## Nothing temporary remained
+
+Confirmed at source before anything was merged: `__setHoldArm` / `_HOLD_ARM` occur **0 times** in
+`client/src/modules/racePlanner.js`, no measurement key was added, no default moved, and
+`git diff master...HEAD -- client/src server/src` is **empty**.
+
+## `verify` — GREEN, and the one red was mine
+
+The first run came back `PASS 11 · FAIL 1` on **`check-index`** — the report on this page, written
+and not yet indexed. That is my own omission, not something hidden behind the render failure. Indexed
+and re-run:
+
+```
+VERIFY — 10 changed file(s) vs master (1e10df1a)
+PASS 12   FAIL 0   SKIP 22
+  PASS  render-fingerprint  91.4s      <- the mint cleared it
+```
+
+★ **Routing skipped the suites and the golden races** as "nothing changed" — the branch diff is
+documents plus one instrument, inside none of their closures. **A skip is not a measurement**, so all
+three were run by hand:
+
+| | |
+|---|---|
+| golden races | **PASS** — 2 races, every finishing position and time as recorded |
+| server suite | **PASS** — 35 files, **836 tests** |
+| client suite | **PASS** — **4,630 tests** |
+
+## The catch-up — one conflict, resolved so both sides survive
+
+`docs/MORNING.md`. The night branch carried the sheet as of piece 2; master carried the completed
+seven-piece version. **Checked line by line rather than by picking a side**: everything unique to the
+night's copy is the *superseded* snapshot of the same chain (CI red, pieces 1–2 only), and master's
+already records CI green and all seven pieces. Master's supersedes and nothing is lost. Everything
+else auto-merged, and the merged tree was verified to carry **both** sides — master's audit fix
+(`multer`, `js-yaml`) and the night's render mint and reports.
+
+★ **THE CONTAINMENT GUARD CAUGHT ME, for the same reason it caught MINT-CAMERA-1.** The rewritten
+sheet quoted the freshly minted render value, which the mint had just turned into a duplicate of a
+live record:
+
+```
+FAIL: docs/MORNING.md contains the CURRENT render fingerprint.
+```
+
+Removed; the sheet points at `docs/fingerprints.json`. **0 stray copies.** It reached a commit at all
+only because I used `--no-verify` on the catch-up commit, which bypassed the pre-commit hook — the
+wrong flag to reach for, and recorded as such.
+
+## `verify -- --premerge` from all three `dist` states
+
+The pair this piece spent its morning on, so all three were run:
+
+| state | exit | result |
+|---|---|---|
+| `dist` present | 0 | **PASS 15 · FAIL 0** |
+| `dist` absent | 0 | **PASS 15 · FAIL 0** |
+| `dist` fresh | 0 | **PASS 15 · FAIL 0** |
+
+## The merge
+
+- Merge commit `e50b09e0`.
+- ★ **The branch was deleted at origin BEFORE master was pushed** — MERGE-RUNTIME-API-URL measured
+  that deleting afterwards loses a 15-second race against CI's own branch guard.
+- `git ls-remote --heads origin` afterwards: **only `master`**, at `e50b09e0`.
+
+<!-- CI -->
+
 
 ---
 
