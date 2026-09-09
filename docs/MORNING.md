@@ -4,148 +4,89 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-07, after PIECE 5 — the chain is finished of 2026-09-06.
+**Last rewritten:** 2026-09-09, after PIECE 2 of the 2026-09-08 chain. Pieces 3-6 follow.
 
-**Where the code is.** Master is `554f348e` and CI is green on it. `feat/team-races-1` carries the
-catch-up and pieces 1-3 and is pushed and **NOT MERGED** — it waits for your eye. `night/2026-09-06` is branched off master `554f348e` and carries pieces 4, 6 and 5; also **NOT MERGED**.
+**Where the code is.** Master is `c5e0cb8b` and carries the merged night of 2026-09-07.
+`night/2026-09-08` is branched off it and pushed; it will NOT be merged — pieces 3 to 6 are
+measurements and the decisions are yours. `night/2026-09-07` is merged and **deleted at origin**.
 
-**★ THE ONE THING TO KNOW FIRST — the packaged server could not start, and now it cannot fail
-silently again.** `contentAddress.js` imported the canonical serialiser from `client/src/…`, which
-the root `.dockerignore` deliberately keeps out of the server image, so the import could not resolve
-in a container. Searching found **two more of the same shape**. All three are fixed by moving the
-shared rules into `shared/`, above both packages. **Then the new check found a fourth**: those files
-were allowed into the build context but never COPYed, so the container still died — the build
-reported success either way. **Nothing about a race changed** anywhere in this: golden races pass,
-all four fingerprints unmoved, nothing minted.
+**★ THE ONE THING TO KNOW FIRST — CI IS RED ON MASTER, AND THE MERGE DID NOT CAUSE IT.**
+The `c5e0cb8b` push run fails on the **security audit gate** in both trees: three HIGH
+**production** advisories against `multer` (GHSA-wc9g-mqfw-jrwm, GHSA-qfvm-cv95-jqjf,
+GHSA-535w-7cp7-47q4) and one HIGH dev-only against `js-yaml` (GHSA-2883-xcg3-v3hh). `fe4e111c` was
+green earlier the same day and the scheduled audit passed on it, so these advisories were published
+in between. **No code change can turn this green** — it is the known class where the per-push gate
+reddens master on its own. Everything else in that run passed; "Living-doc guards + script tests"
+is green. **Left for you**: bumping a production dependency is a shipped change, not a night task.
 
 ---
 
-## TONIGHT'S CHAIN — 2026-09-06, six pieces on two branches
+## TONIGHT'S CHAIN — 2026-09-08
 
 ### DONE
 
-**Catch-up · the team topic is up to date with master.** 14 files touched by both sides, 7
-conflicted, 31 hunks — every code hunk the same shape: the topic changed the SEMANTICS, master had
-only re-FORMATTED those lines. Both sides survive by construction: the topic's side inside each
-conflict, then master's formatter over the result. One of master's lint fixes fell inside a conflict
-region and was lost by that rule — **found by re-running eslint rather than by remembering** — and
-re-applied. **Golden races PASS after the catch-up.**
+**PIECE 1 · The camera record now describes the product's picture, and the two guards that raced** —
+merge `c5e0cb8b`.
 
-**PIECE 1 · The shared rules belong to neither side** — `ba9801a1`.
-★ **The search found FIVE crossings from server code into `client/src`, not the one that was known.**
-Three ship and break the image and are fixed; four cannot reach a container and are **named and
-left** (two contract tests, a dynamic import in a test, the server's eslint config — the contract
-tests SHOULD read the client's copy, which is their point). `canonicalJson` moved **alone** (of eight
-exports, only that one is read by the server); `raceShortKey.js` moved **whole**, because splitting
-it would put the alphabet in one file and a function that tests against it in another. One version,
-no copy, no shim. ★ **Output proven identical**, 18 exact strings captured from the pre-move
-implementation recovered out of git — including a pinned quirk: integer-like keys serialise in
-numeric order, not the lexicographic order the sort asks for. Two headers that argued FOR the
-crossing are corrected: the "established pattern" they cited was this defect propagating.
+*The mint* (`8ace43ec`, your decision of 2026-09-08). The camera fingerprint moved. **An instrument
+correction, not a camera change**: `CameraDirector.js` is untouched by the branch, established by
+diff. The harness handed the director a hard-coded "the outcome window is shut", so every camera
+hash ever taken was measured with the race plan's OUTCOME window permanently closed. The browser
+derives it from the plan, and that derivation was checked **at source** before the mint — same
+signature, thresholds from one `plan._phases`, and the identical predicate the plan itself steers by.
+**Four tracks move; six show ZERO differing frames.** On dirt-oval, ice-track and space-sprint the
+game takes an **8.0 s COMEBACK_ZOOM** the instrument could not see. On city-circuit no comeback shot
+is taken in either arm — a losing candidate in the pool re-rolls the closing stretch, which is a
+different finding and is recorded as one. World, world-off and render were run in the same pass and
+are **unmoved**. Values live in `docs/fingerprints.json`, which is their one home.
+★ **Every camera figure older than that mint is not comparable across it on those four tracks.**
 
-**PIECE 2 · A check that the packaged image actually starts** — `de463da0`,
-`scripts/check-image-starts.mjs`. ★ **It found a real defect on its first run** — piece 1's, one
-commit earlier: `.dockerignore` decides only what enters the build CONTEXT; the Dockerfile COPYs
-`shared/` **per file**, and the two new lines were missing, so the container died with
-`Cannot find module '/shared/raceShortKey.mjs'` from a build that reported success. Both COPY lines
-added. ★ **The container is not the image**: compose binds `./server/src` over the image's own copy,
-so a container started that way proves nothing — this one runs `docker run` with **no bind mounts**.
-★ **Its path declaration is derived from the Dockerfile's COPY lines**, not hand-written, and picked
-up the two new modules by itself; `docs/` cannot select it. Sabotage went red as required.
-**Cost, stated plainly: 121 s cold, 7.4 s warm, 55-67 s under verify's load.** Not wired into CI —
-`ci.yml` untouched — but verify does select it, so **verify now needs a Docker daemon** when a
-declared path changes, and says so loudly rather than passing.
+*The guard race* (`a0ee9585`). `check-image-starts` builds the image from a named `client` build
+context while `check-client-build` runs vite, whose first act is to empty `client/dist` — and
+`verify` ran up to 14 guards at once with nothing between them. **The root was a declaration that
+did not describe what the guard reads**: the parser skips every `COPY --from=` line, so the one path
+read outside the repo context was the one path never declared. **The window is ~0.3 s** — BuildKit
+ingests the context at build START — which is why it read as flake and why one green run produced a
+wrong diagnosis first time round. Fixed in three parts (declaration, `check-client-build` made
+exclusive, and the consumer pulling in its producer). All three `--premerge` runs green from
+`dist` present / absent / fresh.
+★ **THE SABOTAGE DID NOT REPRODUCE — 4 of 4 passed with the fix reverted.** The mechanism is proven
+on demand, but the exclusivity is **not** demonstrated to be what repaired the original 3-in-5
+failure rate, and that rate stays unexplained. The fix is kept because it closes a real mechanism at
+a cost of 2 seconds. **Reported, not claimed.**
+★ **A SECOND DEFECT IS NAMED AND NOT FIXED**: `invalid file request dist/assets/racers/*` — BuildKit
+rejecting a just-written file under parallel load, an adjacency this fix created. It passes in
+isolation. Yours to decide.
 
-**PIECE 3 · A repeat is recomputed first — ★ STOPPED, no code changed** — `2c938327`, report
-`reports/evolution/REPEAT-RECOMPUTE-6.md`. ★ **That report is on `feat/team-races-1`, not on this
-branch**, which is why it is named here rather than linked: piece 3 belongs to the team topic and
-this sheet also has to be readable from the night branch. Everything it was asked to
-establish, it established. ★ **The named stop condition PASSES**: the engine loads in a worker with
-no engine change — of the 64 files in its closure only three touch the DOM, all at call time. The
-comparison needs **no tolerance** (`finishTimeMs` is a strict FIXED_DT multiple, already stored), and
-★ **the three doors already converge on one function**, `startRaceFromIdentifier`. ★ **What blocks it
-is the params.** `createRaceFromIdentity` takes a ~60-line derivation that lives inside
-`RaceScreen/index.jsx` — drawing code this piece may not change — which reads this machine's
-overrides live and whose `physicalSpriteSize` drives `rowGapPx`/`rowCount`, i.e. physics. **It has
-been mirrored twice already, knowingly**, both in `scripts/` and neither importable from the client.
-A third mirror drifts, and a drifting recompute refuses races that still run identically — the exact
-outcome REPEAT-REFUSE-5 established as wrong. **RACE-HISTORY-4's warn-and-run is deliberately left
-running**: it is replaced, not layered over, and removing it first would leave you with neither.
-
-**PIECE 4 · The plan's beats reach the camera — ★ BUILT, AND THE KEY IS OFF** — `918423c8`,
-[COMEBACK-CONNECT-1](../reports/night/COMEBACK-CONNECT-1.md). `comebackUseBeats` ships **false**, so
-nothing changes until you turn it on; there is a Dev Screen control for it. ★ **THE TWO COLUMNS over
-40 races / 74 written comebackers: shots 11 → 0**, races with a comebacker and no shot 29/40 → 40/40,
-COMEBACK_ZOOM frame share 3.07% → 0.00% with two thirds going to LEADER_ZOOM. The arms are **proven
-to have run identical races** — 0 differences in every camera-independent field. ★ **Why it is zero
-IS the finding:** candidate frames inside the offer window fall **7,510 (35 of 40 races) → 45 (2 of
-40)**. The authored landing and the camera's admissible window barely overlap, because by the time
-the climb lands the racer is near the front and the detector's own gate stops calling it a comeback.
-★ **The other end is measured too:** gating on the PEAK beat changes NOTHING — every authored peak
-(0.18–0.676) is behind the camera before the outcome phase opens at 0.75. ★ **Two defects in my own
-instrument, both caught by disbelieving a zero**: the key was never carried into the timing config,
-and the harness's gate read omitted the new argument. **No value is recommended.** Four fingerprints
-unmoved, golden races pass, nothing minted.
-
-**PIECE 6 · The identifier carries only what differs — ★ BUILT** — `dd6bea53`,
-[IDENTIFIER-DIFF-1](../reports/night/IDENTIFIER-DIFF-1.md). `effectiveRacerTypes` was written in
-full — all twenty types, every race — while the config block beside it was already a diff. Same
-`diffFromDefaults`/`applyDiff` pair now, against `CONFIG_SNAPSHOT`, the registry's own frozen copy of
-its code defaults: **no engine change and no new mechanism.** ★ **Re-measured here: 2,547 → 230 at 4
-racers, 2,775 → 458 at 20, 3,068 → 751 at 40 — a CONSTANT 2,317 characters saved** (91% / 83.5% /
-75.5%), reproducing Option A's predicted 739 independently. ★ **Old identifiers still work** — `ed`
-means a diff, `e` means the old full form, and which key is present decides; **no version bump, no
-migration**, because a bump would refuse every string you have already copied out. ★ **The cost,
-stated and not solved: a diff means whatever the DECODING build's defaults say it means** — if a
-shipped racer-type value moves, an old identifier silently describes a different race. Demonstrated
-by a test, not argued. ★ **The existing reproduction test was green for the wrong reason** (it passed
-no base, so the diff came out as the full object); fixed before the sabotage, which then went 2 of 13
-red — but only once the catcher pinned an omitted value to a LITERAL, because a same-build round trip
-is blind to a moved default by construction.
-
-**PIECE 5 · The harness camera is not the browser camera — ★ MEASURED** — `28e2f8d1`,
-[OUTCOME-WINDOW-1](../reports/night/OUTCOME-WINDOW-1.md). Measurement only; both temporary arms
-reverted. ★ **Two corrections to the premise:** the window is not CLOSED — the consumer is an OR, so
-a hard-coded `false` falls back to `leaderProgress > 0.75` and the window opens by a *different rule*
-— and `camera-fingerprint.mjs` hard-codes its own `false` in its own loop, so its exposure is not
-inherited from the driver. ★ **What the different rule hides:** the browser calls OUTCOME on 77,488
-of 172,013 frames against the fallback's 53,184, and **24,344 frames (14.2%, in 40 of 40 races) open
-only for the browser** — with a live comeback candidate on 18,932 of them. ★ **Yet no camera state
-occurs that did not, on zero frames** — the corpus re-runs byte-identical, and the arm was proven
-live first. ★ **THE CAMERA FINGERPRINT DOES MOVE, on 4 of 10 tracks** (city-circuit, dirt-oval, ice-track, space-sprint). The recorded value is where it always is,
-in `docs/fingerprints.json`. **It was reported and not minted here; the owner minted it on 2026-09-08 (MINT-CAMERA-1).** **76 files** run on that driver — named, not repaired — including the **ship gate**, the
-`check-runin-frame` guard, and the two measurements stamped into CAMERA_DIRECTOR.md and
-ENDING-PHASES.md.
+**PIECE 2 · Branch for the night.** `night/2026-09-08` off `c5e0cb8b`, pushed.
 
 ### RUNNING
 
-Nothing is running. **The chain is finished** — six pieces, two branches, no merges.
+**PIECE 3 · Which release point.** Ten tracks, five release points (0.50-0.70), N=30 per cell as the
+screen, with the corrected hold arm — held deep at rank 18, drawn for place 3. Smoke-checked before
+launch: rank at release 16-19 and places 1,1,3,3,5, so the hold genuinely holds and these are not
+races he led all along. **N is derived, not picked**: from the within-cell spread of the previous
+run (sigma about 1.9 places), 57 races per cell resolve a one-place difference at 80% power, and
+that is stage two — run only where the columns are too close to call.
+
+### OPEN — pieces not yet started
+
+**PIECE 4** the camera at the chosen release point · **PIECE 5** how wide the engine hull really is
+· **PIECE 6** the render instrument's own outcome window, prepared and stopped at the fork.
 
 ### NEEDS HIS WORD
 
-- **★ THE TEAM TOPIC MERGES ONCE, WHEN YOU HAVE LOOKED AT IT.** `feat/team-races-1` is pushed and
-  nothing on it is merged. That is the standing instruction, not a blocker anyone hit.
-- **★ THE ONE DECISION THAT UNBLOCKS PIECE 3, and it is worth taking on its own merits.** Extract
-  the race-init derivation out of `RaceScreen/index.jsx` into a shared module — one function from
-  (stored inputs, geometry, racer type, config world) to `createRaceFromIdentity` params. It would
-  **DELETE the two existing mirrors** rather than add a third, and it is what a recompute needs. It
-  is a piece of its own: it touches drawing code, it moves the path every race in the product runs
-  through, and its proof is the parity suite plus the golden races plus your eye. **Not started.**
-- **★ PIECE 4's KEY IS OFF BY DEFAULT AND THE POINT IS THAT YOU TRY IT BOTH WAYS.** The camera
-  knowing when a comeback happens is contested behaviour and you have not seen it. The dev server is
-  left on `night/2026-09-06` for exactly this — the switch is in Dev Screen → Camera (advanced),
-  *"Let the race plan say WHEN a comeback is shown"*. ★ **Read the two columns before you flick it:**
-  ON, the measurement says every comeback shot disappears. That is a real result, not a bug, and it
-  is why nothing is recommended.
-- **Wiring the image check into CI is a decision, not an oversight.** It needs a Docker daemon and
-  costs ~2 minutes cold. IMAGE-STARTS-1 built and verified it and stopped there, as instructed.
-- **★ THE CAMERA FINGERPRINT WOULD MOVE IF THE HARNESS MEASURED THE WINDOW THE WAY THE BROWSER
-  DOES**. Nothing was minted and nothing was changed *in this chain*; the owner minted it on
-  2026-09-08 (MINT-CAMERA-1) and the value lives in `docs/fingerprints.json`. Adopting the browser's
-  value is four lines, but it re-bases every figure the 76 consumers have produced — the ship gate
-  and two stamped documents among them — so it is a decision, not a repair.
-- **Carried over, still true:** re-recording a golden race needs your word, per occurrence. Nothing
-  in this chain has asked for it.
+1. ★ **The `multer` advisories on master.** Three HIGH, production, and CI stays red until a
+   dependency moves. Not a night task.
+2. ★ **The release point** piece 3 chooses. It is chosen by your stated rule — when the numbers are
+   similar, take the latest point — not recommended. Overrule it freely.
+3. **The comeback camera key** (`comebackUseBeats`). Piece 4 turns it on **inside the measurement
+   only**; its shipped default stays off.
+4. **The render mint.** Piece 6 builds and measures the fix and stops. No minting permission given.
+5. **The hull.** Piece 5 reports how far `engine-reach` under- or over-reports. Not fixed — a wrong
+   widening costs every future run.
+6. **`check-image-starts` still is not wired into CI**, and its own blind list says so.
+
 <!-- END CHAIN STATUS -->
 
 
