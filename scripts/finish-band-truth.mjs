@@ -53,6 +53,8 @@ const { normalSpeedFrom } = await import(u("client/src/modules/durationModel.js"
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u("client/src/modules/rowLayout.js")
 );
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 const { renderRaceFrame } = await import(u("client/src/screens/RaceScreen/renderRaceFrame.js"));
 const { attachRenderState, attachRacerRenderState } = await import(
   u("client/src/screens/RaceScreen/renderState.js")
@@ -229,7 +231,7 @@ function buildRace(geo) {
   const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * bc.startSpreadRange;
   const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+  const br = computeBodyNarrowRef(Math.min(W_REF_MAX, effW), N, ds, bfN, W.autoScaleConfig);
   const bodyRef = ds * (br.bodyNarrow / ds);
   const built = createRaceFromIdentity({
     shape, isOpenTrack: shape.isOpen, pathLengthPx: geo.pathLengthPx ?? 0, trackWidthPx: TW,

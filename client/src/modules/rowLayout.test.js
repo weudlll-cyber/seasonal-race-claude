@@ -580,7 +580,11 @@ describe('computeMaxRacersDefault', () => {
 // ── computeBodyNarrowRef — Stage 6 body-basis proofs ─────────────────────
 
 const AUTOCONFIG = { minScale: 0.65, maxScale: 2.5, referenceValue: 23 };
-const W_REF = 285; // fixed reference effective width matching open tracks (300×0.95)
+// W-REF-ONE-HOME-1: READ, not re-typed. This is the same fact as the cap — its old comment said
+// "matching open tracks (300×0.95)", which is word for word why `W_REF_MAX` is 285. The pinned
+// expectations below (28.5, 22.8) stay as numbers on purpose: if the home ever moves, they FAIL,
+// which is the loud outcome a shared constant should produce.
+const W_REF = W_REF_MAX; // fixed reference effective width matching open tracks (300×0.95)
 
 describe('computeBodyNarrowRef — body-basis proof (giraffe vs. duck)', () => {
   // Giraffe: ds=48, bodyFillNarrow=0.271 → maxBodyNarrow=32.5px, uncapped at N≥18 in 1-row
@@ -623,11 +627,17 @@ describe('computeBodyNarrowRef — body-basis proof (giraffe vs. duck)', () => {
 
 // CAMERA-PROJECTION-1 (Part E — DIAGNOSED, NOT SHIPPED): the camera reference body must SCALE with
 // the track for the OVERVIEW zoom rule to stay resolution-invariant. Its callers pass
-// `Math.min(285, effectiveWidth)`, and that absolute ceiling freezes the reference above a ~300 px
-// track (CAMERA-REFACTOR-1 B2). The fix was NOT made in this block: the same expression lives in
-// RaceScreen, headlessRaceSimulator.js AND sim-fairness.mjs, the value reaches raceBehavior's
-// separation physics, and changing it in one place alone would break sim/browser parity. It needs
-// its own block with the engine ceremony. These tests pin the behaviour so that block has a target.
+// `Math.min(W_REF_MAX, effectiveWidth)`, and that absolute ceiling freezes the reference above a
+// ~300 px track (CAMERA-REFACTOR-1 B2). The fix was NOT made in this block: the value reaches
+// raceBehavior's separation physics, so it needs its own block with the engine ceremony. These
+// tests pin the behaviour so that block has a target.
+//
+// ★ THE REASON THIS BLOCK GAVE FOR NOT FIXING IT IS NO LONGER THE REASON. It read "the same
+// expression lives in RaceScreen, headlessRaceSimulator.js AND sim-fairness.mjs … changing it in
+// one place alone would break sim/browser parity". That was true when written and is not now:
+// W-REF-ONE-HOME-1 (2026-09-10) made every caller read `W_REF_MAX` from `raceParams.js`, so there
+// IS only one place to change. What remains is the engine ceremony, which is a decision and not a
+// search-and-replace.
 describe('computeBodyNarrowRef — how the reference scales with the track (CAMERA-PROJECTION-1 Part E)', () => {
   // A racer whose own size ceiling (displaySize × bodyFillNarrow × maxScale = 36 × 0.875 × 2.5
   // = 78.75) is far away, so the track-width term is the one that decides.
@@ -640,10 +650,12 @@ describe('computeBodyNarrowRef — how the reference scales with the track (CAME
     expect(at(570) / at(285)).toBeCloseTo(2, 6);
   });
 
-  it('FAILURE PROOF: the min(285, …) the callers actually pass flattens exactly that scaling', () => {
+  it('FAILURE PROOF: the cap the callers actually pass flattens exactly that scaling', () => {
+    // W_REF_MAX, not a re-typed 285: this test reproduces what the callers DO, so it must read
+    // the same home they read or it stops being a proof about them.
     const capped = (w) =>
-      computeBodyNarrowRef(Math.min(285, w), 20, 36, 0.875, AUTOCONFIG).bodyNarrow;
-    expect(capped(570) / capped(285)).toBeCloseTo(1, 6); // frozen — the live defect
+      computeBodyNarrowRef(Math.min(W_REF_MAX, w), 20, 36, 0.875, AUTOCONFIG).bodyNarrow;
+    expect(capped(2 * W_REF_MAX) / capped(W_REF_MAX)).toBeCloseTo(1, 6); // frozen — the live defect
   });
 
   it('HONEST LIMIT: a SECOND absolute ceiling remains — the racer type is still not world-relative', () => {

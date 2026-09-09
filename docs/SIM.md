@@ -119,20 +119,55 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 <!-- BEGIN GENERATED: engine reach — gen-engine-reach-doc.mjs -->
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
-closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the
-**79 files that can change the race**: touch one and the world fingerprint is owed, which
-is exactly what the pre-commit tripwire and `npm run verify` route on.
+RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
+the **197 files that can change the race** — the engine's own imports AND the imports of every
+file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
+fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
+can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
 
 A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
 repository rather than a guess — give the FILE a header line and this table improves by itself.
 
 | File | What it is, in its own words |
 |---|---|
+| `contexts/TransitionContext.jsx` | Screen-transition fade-to-black. |
 | `modules/autoSpriteScale.js` | Auto-sprite-scaling formula and config storage (D10). |
+| `modules/baseSpeedConfig.js` | Tunable BASE_SPEED min/max range for the race engine. |
+| `modules/branding/useActiveBrandProfile.js` | Hook and pure resolver for the currently-active branding profile. |
+| `modules/buildInfo.js` | BUILD-TRUTH-1 |
+| `modules/camera/CameraDirector.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/CameraDirectorDiag.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/Minimap.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/battleGroup.js` | CAMERA-HYGIENE-2 |
+| `modules/camera/cameraMarker.js` | CAMERA-REPRO-1 — the MARKER: one copyable line that names a single moment of a single race precisely enough to stand in it again. |
+| `modules/camera/cameraSeed.js` | CAMERA-SEED-AND-LINE-1 |
+| `modules/camera/cameraTimingComputation.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/comebackDetector.js` | CAMERA-HYGIENE-2 |
+| `modules/camera/detourRecorder.js` | CAMERA-DETOUR-1 / CAMERA-HYGIENE-2 |
+| `modules/camera/finishPhase.js` | FINISH-SEAM-1 |
+| `modules/camera/frameGeometry.js` | Frame geometry the camera needs in DIRECTIONS, not on axes (CAMERA-PICTURE-FIXES-1). |
+| `modules/camera/framingConfig.js` | CAMERA-HYGIENE-2 |
+| `modules/camera/framingRule.js` | THE framing rule (CAMERA-FRAMING-1) — the second half of the owner's camera design. |
 | `modules/camera/lapUtils.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/openTrackCamera.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/panTarget.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/projection.js` | THE single world<->screen mapping for the camera (CAMERA-PROJECTION-1). |
+| `modules/camera/resolveCamera.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/startCeremony.js` | START-CEREMONY-CAMERA-1 |
+| `modules/camera/transitionDecision.js` | CAMERA-ANCHOR-TRUTH-1 |
+| `modules/camera/zoomUnit.js` | THE camera's zoom unit (CAMERA-REFERENCE-WIDTH-1): STANDARD CORRIDORS. |
+| `modules/cameraConfig.js` | Storage CRUD for camera tuning config. |
 | `modules/durationModel.js` | THE canonical speed/duration derivation — ONE model, used verbatim by the browser (RaceScreen/SetupScreen) and by the headless sims. |
+| `modules/exportRaceConfig.js` | Stage 0 (browser side): assemble the "world" blob for `Export race config`. |
+| `modules/frameTimingConfig.js` | Storage CRUD for frame-timing config (EMA smoothing alpha). |
 | `modules/heroChoreography.js` | Pure hero position-curve helper for the choreo choreographed director (Step 1). |
 | `modules/heroCurveGenerator.js` | choreo Step 2 — PURE hero-curve GENERATOR. |
+| `modules/parity/configFingerprint.js` | The count logic behind the HUD config-fingerprint badge (fix-plan step 4). |
+| `modules/parity/hashing.js` | RENDER-FINGERPRINT-1 |
+| `modules/parity/raceIdentity.js` | The RACE IDENTITY and RACE OUTCOME hashes used by the golden equality test (fix-plan step 6). |
+| `modules/parity/recordingContext.js` | RENDER-FINGERPRINT-1 |
+| `modules/rAFProbe.js` | Minimal prod-safe rAF frame-timing probe. |
+| `modules/raceActionStage.js` | RACE-ACTION-CONTROL-1 — the host's three-stage "Race Action" selector: normalise a stored stage id, and apply the stage a race was started with to the dynamics config the engine… |
 | `modules/raceBaseSpeed.js` | Duration-driven base speed for the race engine (PR-A2). |
 | `modules/raceBehavior.js` | Pure racer-behavior logic for D7b: lane-free avoidance and drafting on continuous physicalY in normalized track-width space. |
 | `modules/raceBehaviorConfig.js` | Storage CRUD for race-behavior tuning config (D7b). |
@@ -141,6 +176,8 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config. |
 | `modules/raceGovernor.js` | The PULK-phase contest director. |
 | `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
+| `modules/raceNumbers.js` | RACE-NUMBERS-1 |
+| `modules/raceParams.js` | ONE-HOME-RACE-PARAMS-1 — the sprite geometry every `createRaceFromIdentity` caller has to derive before it can call. |
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
 | `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
 | `modules/racer-types/BeetleRacerType.js` | VW Beetle racer — SpriteRacerType configuration. |
@@ -166,6 +203,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/racer-types/TurtleRacerType.js` | Turtle racer — SpriteRacerType with dual-mask shell rendering. |
 | `modules/racer-types/beetleCoats.js` | 1970s-era VW Beetle color palette. |
 | `modules/racer-types/boarderCoats.js` | Street/skate culture color palette for the boarder racer. |
+| `modules/racer-types/coatAssignment.js` | Deterministic coat and pattern assignment. |
 | `modules/racer-types/dolphinCoats.js` | 18 dolphin coats using the body+mask system. |
 | `modules/racer-types/genericDustTrail.js` | Generic dust-particle trail factory for new racer types. |
 | `modules/racer-types/index.js` | Factory + registry for all racer-type modules. |
@@ -179,20 +217,102 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/racer-types/standardCoats.js` | Standard 20-coat palette for vehicle racer types. |
 | `modules/racer-types/trailStyles.js` | Named trail style registry for user-created racer types. |
 | `modules/racer-types/turtleCoats.js` | 18 turtle shell coats using the dual-mask system. |
+| `modules/racerNames.js` | THE quick-test roster. |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
+| `modules/rowLayoutConfig.js` | Storage CRUD for D7c row-start layout config. |
+| `modules/sim-fairness.test.js` | Sanity-check tests for scripts/sim-fairness.mjs. |
+| `modules/stateOverlayTemplates.js` | Template pools and selection logic for per-state narrative overlay text. |
 | `modules/storage/configDiff.js` | CONFIG-DIFF-2 |
 | `modules/storage/configReport.js` | Tells the operator which stored config key was rejected, what was stored, and what is being used instead — one line per key per store. |
 | `modules/storage/configValidate.js` | What happens when a STORED config value fails its loader's validation: the key is rejected ALONE and falls back to its own default, and every other key survives. |
 | `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
 | `modules/storage/storage.js` | localStorage key registry and low-level read/write helpers |
+| `modules/storage/surfaceClassLoader.js` | Fetches backend surface classes and caches them in localStorage. |
+| `modules/storage/useStorage.js` | React hook that syncs component state with localStorage. |
+| `modules/surface-effects/defaults.js` | Default Surface Class definitions — single source of truth. |
+| `modules/surface-effects/generators/cloud.js` | Surface-effect generator — soft, growing, fading blobs. |
+| `modules/surface-effects/generators/line.js` | Surface-effect generator — persistent ground-level line segments. |
+| `modules/surface-effects/generators/particle.js` | Surface-effect generator — individual point/circle particles. |
+| `modules/surface-effects/generators/splash.js` | Surface-effect generator — fast particles with gravity. |
+| `modules/surface-effects/generators/spriteHelpers.js` | Shared cheap-draw helpers for surface-particle generators. |
+| `modules/surface-effects/registry.js` | Surface-class registry. |
+| `modules/surface-effects/trailResolver.js` | Resolves the active surface-class trail emitter for a racer. |
 | `modules/track-editor/EditorShape.js` | Race-engine shape adapter for track-editor geometry; wraps inner/outer Catmull-Rom splines. |
 | `modules/track-editor/catmullRom.js` | Pure Catmull-Rom spline math — no DOM, no React. |
+| `modules/track-editor/trackStorage.js` | localStorage CRUD for editor-created track geometries. |
+| `modules/track-effects/bgImageCache.js` | Module-level cache for background images, keyed by path. |
+| `modules/track-effects/index.js` | Track-effects registry — auto-loads all effect modules and exposes listEffects / getEffect / getDefaultConfig |
+| `modules/trackLights.js` | Track boundary light system — sampling, animation, rendering. |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
+| `modules/viewerProbe.js` | VIEWER-INVARIANTS-1 |
+| `screens/RaceScreen/BattleDiagHUD.jsx` | BATTLE diagnostics overlay for the DevPanel. |
+| `screens/RaceScreen/BrandLogoOverlay.jsx` | Bottom-right corner logo overlay — shows the active branding profile's logo image during a race. |
+| `screens/RaceScreen/CameraDiagnosticsHUD.jsx` | Live camera diagnostics overlay (Tier-2 toggle in Dev Panel). |
+| `screens/RaceScreen/CameraFrameLogHUD.jsx` | Frame-log overlay — active only when enableFrameLog is ON. |
+| `screens/RaceScreen/CameraMarkerHUD.jsx` | CAMERA-REPRO-1 (Part A) — the MARKER, owner side. |
+| `screens/RaceScreen/CameraStateHUD.jsx` | Camera-state indicator overlay for the Race Screen. |
+| `screens/RaceScreen/CeremonyBrandCard.jsx` | CEREMONY-OPENING-1 |
+| `screens/RaceScreen/ComebackDiagHUD.jsx` | COMEBACK diagnostics overlay for the DevPanel. |
+| `screens/RaceScreen/GovernorDiagHUD.jsx` | Director diagnostics overlay for the DevPanel (PULK lead-rotation). |
+| `screens/RaceScreen/LeadChangeDiagHUD.jsx` | LEAD_CHANGE diagnostics overlay for the DevPanel. |
+| `screens/RaceScreen/PerfLogHUD.jsx` | Per-frame timing overlay — active only when enablePerfLog is ON. |
+| `screens/RaceScreen/RacePlanHUD.jsx` | Race-Plan debug overlays: winner-list panel and top-10 speed monitor. |
+| `screens/RaceScreen/Scoreboard.jsx` | STANDINGS-RULE |
+| `screens/RaceScreen/ScoreboardCard.jsx` | SCOREBOARD-SLOT-LAYER |
+| `screens/RaceScreen/ScoreboardSlots.jsx` | SCOREBOARD-SLOT-LAYER |
+| `screens/RaceScreen/ScoreboardViewport.jsx` | SHIP-THE-STANDINGS |
+| `screens/RaceScreen/StateOverlay.jsx` | Narrative text overlay shown during the first few seconds of an OVERVIEW / BATTLE / COMEBACK camera state. |
+| `screens/RaceScreen/WinnerCard.jsx` | WINNER-CARD-1 |
+| `screens/RaceScreen/drawing/battleDiagRendering.js` | Canvas renderer for battle-diagnostics markers; draws world-space overlays and records a 20-frame snapshot during BATTLE_ZOOM state. |
+| `screens/RaceScreen/drawing/overlayRendering.js` | Canvas renderer for race overlays — event title, lap counter, position results panel, and camera-debug info. |
+| `screens/RaceScreen/drawing/particleRendering.js` | Canvas renderer for burst and trail particles — pure draw/emit functions, no game state. |
+| `screens/RaceScreen/drawing/racerRendering.js` | Canvas renderer for racers, name tags, and dust trails in world coordinates. |
+| `screens/RaceScreen/drawing/startBoardRendering.js` | START-BOARD-1, rebuilt by -2, corrected by -3 and -4 after two eye tests |
+| `screens/RaceScreen/drawing/trackRendering.js` | Canvas renderer for track geometry, background image (pre-darkened cache), and track lighting. |
+| `screens/RaceScreen/endingSchedule.js` | ENDING-HOLD-1 |
+| `screens/RaceScreen/frameCameraInputs.js` | FRAME-INPUTS-1 |
+| `screens/RaceScreen/hudLayout.js` | CAMERA-COMPANY-ONLY-2 §1 |
+| `screens/RaceScreen/index.jsx` | Live race canvas with scrolling camera (open tracks), TV camera director (closed tracks), multi-lap support, fullscreen toggle, and fade-to-black navigation. |
+| `screens/RaceScreen/labelFormHold.js` | LABEL-OCCLUSION-1, narrowed by -2 |
+| `screens/RaceScreen/nameTagLayout.js` | WHICH name tags are drawn this frame, decided in SCREEN space (CAMERA-TAGS-1). |
+| `screens/RaceScreen/perfLog.js` | Per-frame timing ring buffer for stutter diagnosis. |
+| `screens/RaceScreen/racePhase.js` | RENDER-FINGERPRINT-1 |
+| `screens/RaceScreen/raceSession.js` | Pure helpers for sessionStorage-based race handoff. |
+| `screens/RaceScreen/renderRaceFrame.js` | RENDER-FINGERPRINT-1 |
+| `screens/RaceScreen/renderState.js` | RENDER-FINGERPRINT-1 |
+| `screens/RaceScreen/scoreboardLayout.js` | SCOREBOARD-SLOT-LAYER |
+| `screens/RaceScreen/scoreboardPositions.js` | SCOREBOARD-SLOT-LAYER |
+| `screens/TrackEditor/trackEditorSave.js` | Track export logic — validates editor state, builds the server-ready track object, extracts effects and track lights. |
 | `services/api.js` | THE ONE HOME for the address of the API. |
 | `services/apiClient.js` | Shared fetch boilerplate for API service modules. |
 | `services/racerApi.js` | Frontend API client for racer CRUD + sprite operations (D5/D6a). |
+| `services/surfaceClassApi.js` | Frontend API client for surface-class CRUD operations. |
+| `utils/formatRaceTime.js` | Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
+| `utils/withTimeout.js` | Shared promise timeout utility for storage loaders. |
+| `scripts/camera-fingerprint.mjs` | CAMERA-HYGIENE-1 |
+| `scripts/camera-replay.mjs` | CAMERA-REPRO-1 (Part B): stand in a marked moment. |
+| `scripts/check-ending-frame.mjs` | ENDING-PICTURE-1 |
+| `scripts/diag/acceptance-orders.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/diag/gp-repro.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/diag/micro-divergence.mjs` | parity diagnostic (report-only, no shipped-code change) |
+| `scripts/diag/outcome-parity.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/diag/start-formation.mjs` | START-FORMATION-1 |
+| `scripts/exp-anchor-truth-ab.mjs` | ANCHOR-TRUTH-EYE-1 (read-only measurement) |
+| `scripts/finish-band-truth.mjs` | FINISH-READABLE-2 |
+| `scripts/golden/goldenRace.mjs` | GOLDEN-RACES-1 |
+| `scripts/lib/ceremonySamples.mjs` | RENDER-SAMPLER-CEREMONY |
+| `scripts/lib/cheapMode.mjs` | VERIFY-COST-2 |
+| `scripts/lib/fingerprintCheck.mjs` | FP-COMPARE-2 |
+| `scripts/lib/pngFrame.mjs` | CAMERA-REPRO-1 — the smallest thing that can turn a camera frame into a picture. |
+| `scripts/lib/raceDriver.mjs` | ONE-DRIVER-1 |
 | `scripts/lib/racerFacts.mjs` | REGISTRY-LITERALS-1 |
+| `scripts/outcome-phase-window.mjs` | OUTCOME-PHASE-75 |
+| `scripts/pair-reach-census.mjs` | PAIR-REACH-ANALYSIS |
+| `scripts/parity/goldenRunner.mjs` | golden equality harness (fix-plan step 6) |
+| `scripts/phys-bench.mjs` | PHYS-BENCH-1 |
+| `scripts/render-fingerprint.mjs` | RENDER-FINGERPRINT-1 |
+| `scripts/sim-fairness.characterisation.test.mjs` | SIM-PINNED-1 |
 | `scripts/sim-fairness.mjs` | Headless fairness simulation — tests whether start-row position affects win probability across all tracks and racer types, with speedBonusMult (catch-up) fully active. |
 | `scripts/sim/observers/comeback-reality.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `scripts/sim/observers/escape-episodes.mjs` | **UNKNOWN** — the file's header states no purpose |
@@ -208,7 +328,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-79 files, 14 of them UNKNOWN.
+197 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

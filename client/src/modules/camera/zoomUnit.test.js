@@ -23,6 +23,9 @@ import {
   resolveZoomForCorridors,
 } from './zoomUnit.js';
 import { CameraDirector, CAM_STATE } from './CameraDirector.js';
+// W-REF-ONE-HOME-1: the body-narrow reference below is `2 × W_REF / racersPerRow`, the auto-scale's
+// own formula at the ceiling. Read from its one home rather than re-typed as 285.
+import { W_REF_MAX } from '../raceParams.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
 
 const CW = 1280;
@@ -344,7 +347,7 @@ describe('5. the guarantee still reads the REAL corridor, not the reference', ()
 describe('the racer count is gone from the zoom', () => {
   it('the same setting resolves identically for 6, 20, 40 and 60 racers', () => {
     const mk = (n) =>
-      new CameraDirector(3072, 2048, false, DEFAULT_CAMERA_CONFIG, 2 * (285 / n), null, 131);
+      new CameraDirector(3072, 2048, false, DEFAULT_CAMERA_CONFIG, 2 * (W_REF_MAX / n), null, 131);
     const z = [6, 20, 40, 60].map((n) => mk(n)._overviewStateZoom);
     for (const v of z) expect(v).toBeCloseTo(z[0], 12);
   });

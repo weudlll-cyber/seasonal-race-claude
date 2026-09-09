@@ -52,6 +52,8 @@ const { normalSpeedFrom } = await import(
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u("client/src/modules/rowLayout.js")
 );
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } =
   await import(u("client/src/modules/autoSpriteScale.js"));
 const { tagFontScreenPx } = await import(
@@ -193,7 +195,7 @@ function measure(geo, nRequested) {
   const layout = computeRacerLayout(effW, N, ds, W.autoScaleConfig);
   const pss = layout.spriteSize;
   const br = computeBodyNarrowRef(
-    Math.min(285, effW),
+    Math.min(W_REF_MAX, effW),
     N,
     ds,
     bfN,

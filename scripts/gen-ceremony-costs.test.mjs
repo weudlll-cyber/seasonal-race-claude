@@ -59,9 +59,14 @@ test("the counts are DERIVED, and the third is not the difference of the first t
     c.closure > 0,
     "an empty closure means engine-reach returned nothing",
   );
+  // ★ THIS USED TO ASSERT `folder > closure` — that the computed set was SMALLER than the blunt
+  // folder rule, which was the trigger's original selling point. HULL-FIX-1 made it false and it
+  // is not restored: the hull is 197 against the folder rule's 117, because the folder rule never
+  // looked at `screens/` or `scripts/` at all. The two sets OVERLAP, neither contains the other,
+  // and that — not which is bigger — is the property the third count depends on.
   assert.ok(
-    c.folder > c.closure,
-    "the folder rule fired on more files than the closure holds",
+    c.folder > c.unreachable,
+    "every folder file is unreachable — the hull has stopped reaching into client/src/modules/",
   );
   // THE WHOLE POINT of computing rather than subtracting: the closure is not a subset of the folder,
   // so `folder - closure` is wrong by however many closure members sit outside it. If this ever

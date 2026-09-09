@@ -64,6 +64,8 @@ const { labelBoxWidth, tagFontScreenPx, labelOffsetAbove, labelBoxHeight } = awa
   u("client/src/screens/RaceScreen/nameTagLayout.js")
 );
 const { computeBodyNarrowRef } = await import(u("client/src/modules/rowLayout.js"));
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
 
 // ── THE ROSTER, AND IT IS NOT COSMETIC ──────────────────────────────────────────────────────────
@@ -160,7 +162,7 @@ function run(cfg, label) {
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
   const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * behaviorConfig.startSpreadRange;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+  const br = computeBodyNarrowRef(Math.min(W_REF_MAX, effW), N, ds, bfN, W.autoScaleConfig);
   const displaySizeScale = br.bodyNarrow / ds;
 
   const { outer: eo, inner: ei } = shape.getEdgePoints(800);

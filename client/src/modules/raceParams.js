@@ -21,6 +21,13 @@
 // `client/` and thirteen under `scripts/`. A recompute that had to agree with all fourteen is the
 // drift the recompute piece stopped for, and it was a bigger number than anybody had written down.
 //
+// ★ THAT COUNT IS OF 2026-09-07 AND IS NOT THE COUNT TODAY. Re-run whole-tree and uncapped on
+// 2026-09-10 (W-REF-ONE-HOME-1), the literal `285` in the cap role stood at ELEVEN live sites:
+// eight callers had been converted to `deriveSpriteGeometry` and eleven had not, including
+// `scripts/sim-fairness.mjs`, which DRIVES THE WORLD FINGERPRINT — so the project's primary
+// detector for the race was structurally blind to the number below. All eleven now read
+// `W_REF_MAX`; `scripts/w-ref-one-home.test.mjs` fails if a twelfth appears.
+//
 // ── ★ THE TWO GUARDS ARE THE PART THAT WAS NOT MIRRORED, AND THEY ARE WHY THIS IS A FUNCTION ────
 //
 // `RaceScreen/index.jsx` and `camera-replay.mjs` derive only when auto-scale is ENABLED and the

@@ -64,6 +64,21 @@ export const GUARD = {
   files: ["scripts/golden/fixtures/races.json", "scripts/golden/fixtures/expected.json"],
   // DERIVED, not listed — see the header. The closure of the engine's own entry point.
   reach: ["client/src/modules/raceCore.js"],
+  // ── ★ HULL-WIRED-1: AND EVERYTHING ELSE THAT CAN CHANGE A RACE ────────────────────────────
+  //
+  // `reach` above expands what the engine IMPORTS. It does not reach what PRODUCES the engine's
+  // arguments, and this guard was measurably the poorer for it: `raceParams.js` and
+  // `raceActionStage.js` each move BOTH of these races when broken (HULL-FIX-1, by sabotage),
+  // and both were selected only by accident — through `scripts/golden/goldenRace.mjs`, which
+  // this file's own closure happens to contain. Nothing guaranteed that, and nothing would have
+  // noticed if the fixture driver had stopped importing one.
+  //
+  // ★ THE COST OF SAYING YES HERE IS 0.4 SECONDS, and that is why this guard says it first. Of
+  // the 197 files in the hull it previously selected on 27. It now selects on all of them —
+  // including 16 that no race detector reached at all, every one an instrument under
+  // `scripts/`. A wrong inclusion here costs less than reading this comment; a wrong exclusion
+  // ships a changed race.
+  hull: true,
 };
 
 // ★ DECLARED BEFORE ANY WORK. `routing.declarationOf` RUNS this file with `--declare` and reads

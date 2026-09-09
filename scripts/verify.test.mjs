@@ -24,7 +24,7 @@ import {
   premergeDecision,
   EXIT_REFUSED,
 } from "./verify.mjs";
-import { collect } from "./lib/routing.mjs";
+import { collect, resolveGuard } from "./lib/routing.mjs";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -72,12 +72,26 @@ test("THE ENGINE GATE: a client file inside the closure selects the world finger
   );
 });
 
-test("...and a client file OUTSIDE the closure does not — the saving, and its L203 pair", () => {
-  // A camera file cannot be read by the race, so the world fingerprint has no question to answer.
-  const files = ["client/src/modules/camera/finishPhase.js"];
-  assert.equal(runs(files, "world-fingerprint"), false);
-  // The pair: the SAME kind of path inside the closure does select it, so this is not just "the
-  // world fingerprint never runs".
+// ── ★ REWRITTEN BY HULL-WIRED-1, AND WHAT IT USED TO SAY MATTERS ───────────────────────────────
+//
+// This test asserted that `client/src/modules/camera/finishPhase.js` does NOT select the world
+// fingerprint, on the reasoning that "a camera file cannot be read by the race". That reasoning was
+// never established — it was the IMPORT CLOSURE's answer, and the import closure cannot see the
+// modules that produce the engine's arguments. The camera files are reached by the product's own
+// race setup, `RaceScreen/index.jsx`, which is where the race gets `raceParams.js`'s sprite
+// geometry and `raceActionStage.js`'s brake; both of those move a race when broken.
+//
+// So the saving this test was named for is smaller than it claimed, and it is now stated the way it
+// can actually be defended: the guard is narrow against the REST OF THE APPLICATION, not against
+// the camera. `SetupScreen.jsx` is the honest negative — outside the hull, and it stays outside.
+test("...and a file outside the hull does not — the saving, restated where it holds", () => {
+  assert.equal(
+    runs(["client/src/screens/SetupScreen/SetupScreen.jsx"], "world-fingerprint"),
+    false,
+    "the world fingerprint has started selecting on the whole application",
+  );
+  // The pair: a path INSIDE the hull does select it, so this is not just "the world fingerprint
+  // never runs".
   assert.equal(
     runs(["client/src/modules/raceStep.js"], "world-fingerprint"),
     true,
@@ -168,14 +182,23 @@ test("CAMERA: a camera file selects camera AND render — and a storage file sel
   assert.equal(runs(outside, "render-fingerprint"), false);
 });
 
-test("ENGINE: a file in the reach hull selects the world fingerprint — a camera file does not", () => {
+test("ENGINE: the hull selects the world fingerprint — and a camera file IS in the hull", () => {
   assert.equal(
     runs(["client/src/modules/raceStep.js"], "world-fingerprint"),
     true,
   );
+  // ★ THIS ASSERTION IS INVERTED FROM WHAT IT WAS, deliberately (HULL-WIRED-1). A camera file is
+  // reached by `RaceScreen/index.jsx`, the product's own race setup, and a static walker cannot
+  // tell an argument-producer from a bystander there. It is included because a wrong exclusion
+  // ships a changed race and a wrong inclusion costs 107 seconds.
+  //
+  // ★ AND THE GUARD SAYS SO ITSELF: `fingerprint-default.mjs`'s `blind` list records, measured,
+  // that its own run loads 80 repository modules against the hull's 197 — so a green here is NOT a
+  // clearance for a camera file. Selecting is not seeing, and the declaration is where that is
+  // written down.
   assert.equal(
     runs(["client/src/modules/camera/finishPhase.js"], "world-fingerprint"),
-    false,
+    true,
   );
 });
 
@@ -626,6 +649,61 @@ test("THE SUITES keep their containment, including the two misses that produced 
     "notDirs",
   );
   assert.equal(runs(["scripts/lib/routing.mjs"], "script-suite"), true);
+});
+
+// ── ★ HULL-WIRED-1: `hull: true` — the declaration that says "my subject is the race" ───────────
+//
+// WHAT BREAKS IF THIS IS DELETED. `resolveGuard` goes back to expanding only `reach`, which walks
+// what a file IMPORTS. A race is produced by the engine reading its ARGUMENTS, so the modules that
+// PRODUCE those arguments are on the caller's side of the arrow and no `reach` entry reaches them.
+// Five were proven by sabotage to change a race while every guard that measures one routed past
+// them (HULL-FIX-1). The two tests below are that finding, held as a property.
+test("★ hull:true selects a file that NO reach entry can reach", () => {
+  // `baseSpeedConfig.js` is the sharpest case: sabotaging its loader moves the shipped-path race
+  // (HULL-FIX-1 §3, by outcome hash), and it is imported by the engine's CALLERS, never by the
+  // engine. It is in the hull and in no `reach` closure.
+  const ARG_PRODUCER = "client/src/modules/baseSpeedConfig.js";
+  const declaration = {
+    id: "hull-probe",
+    covers: "a fixture",
+    blind: ["everything"],
+    reach: ["client/src/modules/raceCore.js"],
+    hull: true,
+  };
+  const withHull = resolveGuard(declaration);
+  const withoutHull = resolveGuard({ ...declaration, hull: false });
+
+  assert.equal(
+    withoutHull.matches(ARG_PRODUCER),
+    false,
+    "the control is broken: reach alone already reached the argument producer, so the test below " +
+      "would pass whatever `hull` did",
+  );
+  assert.equal(
+    withHull.matches(ARG_PRODUCER),
+    true,
+    "hull:true no longer reaches the modules that produce the engine's arguments",
+  );
+  assert.ok(
+    withHull.files.length > withoutHull.files.length + 50,
+    `hull:true widened by only ${withHull.files.length - withoutHull.files.length} files`,
+  );
+});
+
+test("★ the two guards whose subject IS the race declare it, and select on the whole hull", () => {
+  // Named, because this is the wiring itself and a silent revert would look exactly like a
+  // narrower hull. Both are cheap to check and neither can be inferred from the other.
+  const { guards } = collect();
+  for (const id of ["golden-races", "world-fingerprint"]) {
+    const g = guards.find((x) => x.id === id);
+    assert.ok(g, `${id} is not declared at all`);
+    assert.equal(g.hull, true, `${id} stopped declaring hull:true`);
+    assert.equal(
+      g.matches("client/src/modules/baseSpeedConfig.js"),
+      true,
+      `${id} no longer selects on a proven race-changer`,
+    );
+  }
 });
 
 test("AN UNDECLARED GUARD IS REPORTED, never given an invented route", () => {

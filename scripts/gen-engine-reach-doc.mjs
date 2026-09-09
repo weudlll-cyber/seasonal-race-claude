@@ -5,11 +5,17 @@
 // GENERATES THE ENGINE-REACH FILE LIST IN SIM.md, so the list of files that can change the race is
 // never typed by a person.
 //
-// WHY: the closure is already computed — `scripts/engine-reach.mjs` walks `raceCore.js`'s imports
-// and is what the mint tripwire and `verify` both route on. But no DOCUMENT listed it, so a reader
-// asking "which files can move the world fingerprint?" had to run a script or guess. A hand-typed
-// copy would have been the eleventh fingerprint problem: correct on the day it was written and
-// wrong the first time an import changed.
+// WHY: the hull is already computed — `scripts/engine-reach.mjs` walks the engine's imports AND the
+// imports of every file that DRIVES the engine, and it is what the mint tripwire prints. But no
+// DOCUMENT listed it, so a reader asking "which files can change a race?" had to run a script or
+// guess. A hand-typed copy would have been the eleventh fingerprint problem: correct on the day it
+// was written and wrong the first time an import changed.
+//
+// ★ WHAT THIS LIST IS NOT (HULL-FIX-1). It is not the world fingerprint's trigger set, and the
+// sentence that said so was wrong. `npm run verify` routes each guard on ITS OWN declaration, and
+// the world fingerprint declares `reach: [raceCore.js, sim-fairness.mjs]` — a narrower set than
+// this. A file can be listed here, change a race, and move no fingerprint at all; that gap is
+// reports/evolution/HULL-FIX-1.md's subject and is the owner's to close.
 //
 // WHERE THE ONE-LINE PURPOSES COME FROM — the FILES THEMSELVES, never this script. Three header
 // styles exist in this repository and all three are read:
@@ -25,11 +31,11 @@
 // by itself. Do not "fill in" an UNKNOWN here.
 //
 // WHAT THIS DOES **NOT** DO:
-//   - It does not judge whether the closure is RIGHT. `scripts/engine-reach.mjs` owns that, has its
+//   - It does not judge whether the hull is RIGHT. `scripts/engine-reach.mjs` owns that, has its
 //     own test, and is never modified by this block.
 //   - It does not describe what a file does BEYOND its own header's first line. A one-line summary
 //     of a 900-line module is a signpost, not documentation.
-//   - It does not sort by importance. Alphabetical, the same order the closure prints.
+//   - It does not sort by importance. Alphabetical, the same order the hull prints.
 //
 // Usage:
 //   node scripts/gen-engine-reach-doc.mjs           # rewrite the block in docs/SIM.md
@@ -87,7 +93,7 @@ import { readFileSync } from "node:fs";
 import { writeVerified } from "./lib/write-verified.mjs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { engineReach } from "./engine-reach.mjs";
+import { raceHull } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_OVERRIDE = process.argv
@@ -185,7 +191,7 @@ const RUN_DIRECTLY =
 if (RUN_DIRECTLY) main();
 
 function main() {
-  const rows = engineReach().files.map((f) => {
+  const rows = raceHull().files.map((f) => {
     let purpose = null;
     try {
       purpose = purposeOf(readFileSync(join(ROOT, f), "utf8"));
@@ -201,9 +207,11 @@ function main() {
     BEGIN,
     "",
     `**This list is GENERATED, never typed** — \`node scripts/gen-engine-reach-doc.mjs\` reads the`,
-    "closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the",
-    `**${rows.length} files that can change the race**: touch one and the world fingerprint is owed, which`,
-    "is exactly what the pre-commit tripwire and `npm run verify` route on.",
+    "RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are",
+    `the **${rows.length} files that can change the race** — the engine's own imports AND the imports of every`,
+    "file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world",
+    "fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here",
+    "can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.",
     "",
     "A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the",
     "repository rather than a guess — give the FILE a header line and this table improves by itself.",

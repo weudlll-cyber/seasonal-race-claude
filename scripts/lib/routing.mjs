@@ -93,7 +93,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { engineReach } from "../engine-reach.mjs";
+import { engineReach, raceHull } from "../engine-reach.mjs";
 import { dataReach } from "./dataReach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -421,7 +421,28 @@ export function resolveGuard(d) {
   // SELF IS NOT DECLARED AND CANNOT BE FORGOTTEN — the closure of the file the declaration lives in.
   const self = d.source ? closureOf(d.source) : [];
   const reached = (d.reach ?? []).flatMap(closureOf);
-  const files = new Set([...self, ...reached, ...(d.files ?? [])]);
+
+  // ── ★ `hull: true` — "I DEPEND ON ANYTHING THAT CAN CHANGE A RACE" (HULL-WIRED-1) ────────────
+  //
+  // `reach` expands ONE ENTRY POINT's import closure, which answers "what does this file read". A
+  // race is produced by the engine reading its ARGUMENTS, so the modules that PRODUCE those
+  // arguments are on the caller's side of the arrow and no `reach` entry can reach them:
+  // `raceParams.js`, `raceActionStage.js`, `baseSpeedConfig.js`, `rowLayoutConfig.js` and
+  // `racerNames.js` were each proven by sabotage to move a race while every guard that measures a
+  // race routed past them (HULL-FIX-1). `raceHull()` is the set that does include them, computed
+  // from source on every run — the engine's entry points, plus every tracked file that IMPORTS one
+  // and therefore constructs a race, plus everything those drivers import.
+  //
+  // A BOOLEAN AND NOT A PATH LIST, deliberately. The hull is derived; a guard that had to enumerate
+  // it would be a second home for it, going stale the first time a module moved. What a guard
+  // declares here is a RELATIONSHIP — "my subject is the race" — and the tool answers what that
+  // means today.
+  //
+  // WHY IT IS OPT-IN. Most guards are not about the race: the docs guards, the lint guards and the
+  // container guards would only get slower. Two declare it, and the header of each says why.
+  const hull = d.hull ? raceHull().files : [];
+
+  const files = new Set([...self, ...reached, ...hull, ...(d.files ?? [])]);
   const dirs = d.dirs ?? [];
   const notDirs = d.notDirs ?? [];
 
@@ -439,7 +460,8 @@ export function resolveGuard(d) {
   // records which file named each path, so a selection can be justified rather than asserted.
   const suiteEntries = d.suite ? testFilesUnder(dirs) : [];
   const named =
-    d.everything || (!self.length && !reached.length && !suiteEntries.length)
+    d.everything ||
+    (!self.length && !reached.length && !suiteEntries.length && !hull.length)
       ? { paths: [], from: {} }
       : dataReach([...self, ...reached, ...suiteEntries]);
   // Only paths the guard does not ALREADY match are worth carrying — the rest change nothing and

@@ -50,31 +50,52 @@ is inside them is arithmetic and nothing else. Regenerate with
 
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
-| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 79 |
+| files in the RACE HULL — `node scripts/engine-reach.mjs` | 197 |
 | tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 117 |
-| of those, files that CANNOT reach the engine | 58 |
-| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/services/api.js`, `client/src/services/apiClient.js`, `client/src/services/racerApi.js`, `client/src/utils/mathUtils.js`, `scripts/lib/racerFacts.mjs`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs`, `shared/canonicalJson.mjs` |
+| of those, files that CANNOT reach the engine | 25 |
+| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 105 |
 
 <!-- END GENERATED: engine-reach counts -->
 
 **The third count is NOT the difference of the first two, and typing it as one is how this document
-came to claim 86.** The closure and the folder are two sets, neither containing the other: the last
-row names the closure members the folder rule never covered — one inside `camera/`, which the rule
-excluded, and one outside `modules/` entirely — so the subtraction that looks obvious is short by
-exactly those. The generator takes the intersection, which is why the number moved the first time it
-was computed rather than typed. **The list itself, in [SIM.md](SIM.md), IS generated and is not
-affected.**
+came to claim 86.** The hull and the folder are two sets, **neither containing the other**: the last
+row counts the hull members the folder rule never covered — everything under `camera/`, which the
+rule excluded, and everything outside `modules/` entirely, which it never looked at — so the
+subtraction that looks obvious is short by exactly those. The generator takes the intersection, which
+is why the number moved the first time it was computed rather than typed. **The list itself, in
+[SIM.md](SIM.md), IS generated and is not affected** — and it is the ONE home for those names, which
+is why the row above counts them rather than repeating them.
+
+**★ THE HULL IS NO LONGER SMALLER THAN THE BLUNT RULE, and that is the honest cost of HULL-FIX-1.**
+The trigger's original argument was 19 files against the folder rule's 103. It is now 197 against
+117. The point was never the number: the folder rule fires on files that cannot change a race and
+stays silent on files that can, in both directions at once, and it never looked at `screens/` or
+`scripts/` at all. **What was bought is accuracy, and what it costs is written down in
+[HULL-FIX-1](../reports/evolution/HULL-FIX-1.md) rather than guessed at here.**
 
 **WHAT THE NEW TRIGGER DOES NOT CATCH, stated so nobody over-trusts it:**
 
-- **Anything reaching the engine other than through `raceCore.js`'s import graph** — a value passed
-  in as an ARGUMENT by a caller. `drawnBodyWidthRefPx` is exactly that: computed in a screen file and
-  handed to the engine. The closure contains the file that _consumes_ it (`raceBehavior.js`) but not
-  the screen that _computes_ it. **If your diff changes a number that is passed into the race, mint —
-  the tripwire will not tell you to.**
-- **Dynamic imports.** A static walk cannot follow `import()`. There are none in the closure today and
+- ~~**Anything reaching the engine other than through `raceCore.js`'s import graph** — a value
+  passed in as an ARGUMENT by a caller.~~ **CLOSED 2026-09-09 by
+  [HULL-FIX-1](../reports/evolution/HULL-FIX-1.md).** This bullet was right, and it was the tool's
+  largest hole: the trigger walked DOWN from `raceCore.js` only, so every module that PRODUCES the
+  engine's arguments sat on the caller's side of the arrow and was invisible. Five were proven by
+  sabotage to move a race while the trigger said they could not — `raceParams.js`,
+  `raceActionStage.js`, `baseSpeedConfig.js`, `rowLayoutConfig.js`, `racerNames.js`. The trigger now
+  also walks UP, to every file that imports an entry point, and down again through what those
+  DRIVERS import. **It will now tell you.**
+- **Which fingerprint, if any, can actually SEE the change.** The tripwire answers "can this change a
+  race", and that is not the same question as "will a hash move". A hull file can change a race and
+  move no fingerprint: `scripts/sim-fairness.mjs:1120` carries its own `Math.min(285, …)` copy of
+  `raceParams.js`'s `W_REF_MAX`, so the world fingerprint is blind to the file that decides every
+  start position. **A green fingerprint is not a clearance for a hull file the instrument does not
+  read.** See HULL-FIX-1 for which ones those are.
+- **Dynamic imports whose specifier is not a literal.** A static walk follows
+  `import(u("client/src/modules/raceCore.js"))` — that is how every instrument reaches the engine —
+  but it cannot follow `import(someVariable)`. There are none of those in the hull today and
   `scripts/engine-reach.test.mjs` fails if one appears, at which point this rule needs revisiting.
-- **The seeds and track JSON**, which are data rather than modules.
+- **The seeds and track JSON**, which are data rather than modules — answered separately by
+  `scripts/lib/dataReach.mjs`, which the tripwire consults.
 
 `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` remains, and remains guarded — it is the DIRECT-import
 list, and it stays useful as the "did a new engine input appear" alarm. It is deliberately **not** the

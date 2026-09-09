@@ -73,6 +73,8 @@ const { getEffectiveMaxTargetScreenPx } = await import(u("client/src/modules/aut
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u("client/src/modules/rowLayout.js")
 );
+// W-REF-ONE-HOME-1: the body-narrow ceiling, READ from its one home rather than re-typed.
+const { W_REF_MAX } = await import(u("client/src/modules/raceParams.js"));
 
 const CW = 1280;
 const CH = 720;
@@ -131,7 +133,7 @@ const W = DEFAULT_CONFIG_WORLD;
 const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
 const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
 const effW = TW * behaviorConfig.startSpreadRange;
-const brCapped = computeBodyNarrowRef(Math.min(285, effW), IDENTITY.racers, ds, bfN, W.autoScaleConfig);
+const brCapped = computeBodyNarrowRef(Math.min(W_REF_MAX, effW), IDENTITY.racers, ds, bfN, W.autoScaleConfig);
 const brUncapped = computeBodyNarrowRef(effW, IDENTITY.racers, ds, bfN, W.autoScaleConfig);
 const displaySizeScale = brCapped.bodyNarrow / ds;
 const physicalSpriteSize = computeRacerLayout(effW, IDENTITY.racers, ds, W.autoScaleConfig).spriteSize;
@@ -403,7 +405,7 @@ if (JSON_OUT) {
   console.log(`  FLOOR minDrawnFrameFrac ${DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac} x ${CH} = ${floorPx.toFixed(1)} screen px`);
   console.log(`  CEILING maxTargetScreenPx ${ceilPx} screen px`);
   console.log(
-    `  THE 285 CAP           effW ${effW.toFixed(1)} px -> reference ${Math.min(285, effW).toFixed(1)} px; ` +
+    `  THE CAP (${W_REF_MAX})         effW ${effW.toFixed(1)} px -> reference ${Math.min(W_REF_MAX, effW).toFixed(1)} px; ` +
       `bodyNarrow capped ${brCapped.bodyNarrow.toFixed(4)} vs uncapped ${brUncapped.bodyNarrow.toFixed(4)} -> ` +
       `${brCapped.bodyNarrow === brUncapped.bodyNarrow ? "DOES NOT BIND" : "BINDS"}`
   );

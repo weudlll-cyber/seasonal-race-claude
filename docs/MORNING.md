@@ -4,61 +4,66 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-09, after BUILD-RACE-CLOSED-1 — the night of 2026-09-08 is merged.
+**Last rewritten:** 2026-09-10, night chain 2026-09-09 — after PIECE 1.
 
-**Where the code is.** Master carries everything: the night of 2026-09-07, the security-audit fix,
-and now the night of 2026-09-08. **Nothing is unmerged.** `night/2026-09-08` is deleted at origin.
+---
 
-**★ THE ONE THING TO KNOW FIRST — THE EPERM THAT WOULD NOT REPRODUCE, REPRODUCED.** GUARD-CONTEXT-RACE-1
-fixed a proven mechanism but its sabotage never reproduced the failure that actually fired, so nobody
-had shown the fix closed the right thing. It does. With all three parts reverted, 9 runs gave **2
-failures**, both with the original signature, and **both in one cell: a cold Docker cache with
-`client/dist` already present — 2 of 3 there, 0 of 6 elsewhere.** That cell is why the earlier
-sabotage looked clean; four runs never landed in it.
-★ **And the strength is stated rather than inflated.** After the fix that cell is 3 of 3 clean, which
-alone is only a 1-in-27 fluke. What carries it is structural: `check-client-build` now runs at
-**2.2–3.7 s "ran alone"** against 16–38 s in the shared queue, so its `emptyDir` can no longer land
-inside BuildKit's ingest window. Eight clean runs would have taken the doubt to 0.015 %; **stopping at
-three was your call on time, not a claim about the evidence.** It is still a race — unlikely to
-recur, not impossible — and the report records the cell to reproduce in and the evidence that would
-identify it if it fires again.
+## THE NIGHT OF 2026-09-09 — SIX PIECES
+
+| # | piece | state |
+|---|---|---|
+| 1 | The world fingerprint's blindness to `W_REF_MAX` | ★ **DONE** — on `fix/hull-1`, pushed |
+| 2 | Wire the hull, then merge it to master | **NEXT** |
+| 3 | Branch `night/2026-09-09` | not started |
+| 4 | Why the comebacker loses the contest (sweep, runs alone) | not started |
+| 5 | The package build's invalid file request | not started |
+| 6 | The e2e geometry flake | not started |
+
+**Where the code is.** Master is still `678ce9be`. `fix/hull-1` carries HULL-FIX-1 **and** piece 1,
+and is **not merged** — piece 2 merges it. Ports 4000 / 4173 / 5173 are down.
+
+---
+
+## ★ PIECE 1 — DONE. THE DETECTOR WAS BLIND, AND IT IS PROVEN RATHER THAN ARGUED
+
+`scripts/sim-fairness.mjs:1120` — the file that DRIVES the world fingerprint — carried its own
+`Math.min(285, effectiveWidth)` copy of `raceParams.js`'s `W_REF_MAX`, the number that decides where
+every racer starts. It now reads the one home.
+
+★ **THE CONTROL IS THE PIECE.** Sabotage `W_REF_MAX` 285 → 200, one change at the one home:
+
+| arm | golden races | world fingerprint |
+|---|---|---|
+| the OLD `sim-fairness.mjs` | **RED** | ★ **matches its record in [fingerprints.json](fingerprints.json) exactly** |
+| the NEW `sim-fairness.mjs` | **RED** | **FAILS** |
+
+The top row is the detector saying "unchanged" about a changed race, on demand. That is what has been
+closed.
+
+★ **THE BRIEFED COUNT WAS WRONG AGAIN — third time this week.** `raceParams.js`'s own header claimed
+FOURTEEN sites as of 2026-09-07. A five-form uncapped whole-tree census found **ELEVEN still re-typing
+the literal**, two of which no report had ever named: `headlessRaceSimulator.js:175` — whose own note
+three lines above says *"fallbacks in this file READ the default instead of copying it"* — and
+`camera/zoomUnit.test.js:347`. All eleven now read `W_REF_MAX`.
+
+**NOTHING MINTED, NOTHING RETUNED.** All four fingerprints were measured and every one matches its
+record in [fingerprints.json](fingerprints.json) — world, world-off, camera and render. Golden races
+green. `npm run verify` **PASS 24 / FAIL 0**, which selected and ran
+three of the four itself.
+
+`scripts/w-ref-one-home.test.mjs` keeps it closed: a zero-hit grep that is proved able to fire, and a
+self-exclusion made load-bearing by a test that requires its own fixtures to still exist.
+
+Report: [W-REF-ONE-HOME-1](../reports/evolution/W-REF-ONE-HOME-1.md).
 
 ---
 
 ## WHAT IS ON MASTER NOW
 
-**The render record is minted** — re-measured on the tree rather than carried; the value lives in
-[docs/fingerprints.json](fingerprints.json), which is its one home.
-An instrument correction, not a drawing change: four lines in `render-fingerprint.mjs`, nothing under
-`client/src/` or `server/`. World, world-off and camera unmoved, camera against its own new record.
-★ **Every render figure older than this mint describes the old, blind picture on dirt-oval,
-garden-path, ice-track, luger-hill, searound and seatrack, and is not comparable across it.**
-★ **Six tracks moved, not the camera mint's four, and the two lists are NOT comparable** — the two
-instruments do not run the same window.
+Master is unchanged from yesterday at `678ce9be` — the night of 2026-09-08 and everything before it.
+The two branches in flight are described above.
 
-**The night of 2026-09-08's six measurement pieces** are now on master: the release point (0.70), the
-comeback camera key, the hull, the render instrument, and the two guards that raced.
-
-### NEEDS HIS WORD
-
-1. **The release point.** 0.70, chosen by your own rule — when the numbers are similar, take the
-   latest — and it did not need the tie-break: it is also the best top-5 rate, the best mean place and
-   the deepest rank at release. Not recommended, chosen. Overrule freely.
-2. **The comeback key** (`comebackUseBeats`). Turning it on makes things **worse** — shots 30 → 7 —
-   because the beats gate opens at the resolve beat (median 0.7800) while `comebackMaxCurrentRankPct`
-   withdraws eligibility at rank ≤ 8 (median 0.7522). **The window is empty in 30 of 42 races.**
-   Moving either number is yours; neither was touched, and the shipped default stays OFF.
-3. **The hull.** `engine-reach` under-reports (2 of 2 sampled outsiders change a race) and
-   over-reports (3 of its 79 files are never loaded). The narrow repair is named and **not built** —
-   a wrong widening costs every future run, and you have said this is a separate order.
-4. **Ice-track's render change** — 848 differing frames but no new camera state. A reordering, so it
-   needs your eye rather than a hash.
-5. **The BuildKit `invalid file request dist/assets/racers/*` defect**, named in
-   GUARD-CONTEXT-RACE-1 and still not fixed.
-6. **Defender and the VS Code watcher** remain formally unexcluded as EPERM causes. Both are unlikely
-   given how cleanly the failure tracked one cell, and **no speculative fix was invented** for either.
-7. `check-image-starts` is still not wired into CI, and its own blind list says so.
-
+<!-- END CHAIN STATUS -->
 <!-- END CHAIN STATUS -->
 
 

@@ -361,6 +361,69 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HULL-WIRED-1.md](HULL-WIRED-1.md) - **the hull stops being advice and starts selecting the
+  guards** (2026-09-10, night chain 2026-09-09 piece 2, on `fix/hull-1`). HULL-FIX-1 left the hull
+  unwired because the world fingerprint was blind to what would newly select it; piece 1 attacked
+  that reason. ★ **ESTABLISHED BY MODULE-RESOLUTION PROBE RATHER THAN ASSUMED, and the answer is ONE
+  FILE OF FIVE**: the sim's graph went 79 -> 80 modules, gaining exactly `raceParams.js`;
+  `raceActionStage.js`, `baseSpeedConfig.js`, `rowLayoutConfig.js` and `racerNames.js` are still not
+  loaded by it. ★ **THE GAP WAS SIZED BEFORE IT WAS FILLED**: of 197 hull files, **181 already
+  selected a race detector** - the 16 that did not were all `scripts/` instruments - so what this
+  piece replaces is not an absence of coverage but an **accident** of it (`golden-races` reached
+  `raceParams.js` only because its own closure happens to contain `goldenRace.mjs`). The mechanism is
+  `hull: true`, a declared RELATIONSHIP and not a path list, honoured by `resolveGuard`; declared by
+  `golden-races` (0.4 s, trivially) and `world-fingerprint` (107 s, with its eyes open **and a new
+  measured `blind` entry saying its run loads 80 modules against the hull's 197 - selecting is not
+  seeing**). **COST, measured on 411 real merges with a control that first reported +0 and was
+  WRONG** (`collect()` returns resolved guards, so the control still carried the hull): world
+  fingerprint 18%->29% of merges, golden races 12%->28%, **+85 guard-seconds per day** over 8 weeks
+  and **+123/day** over the last 3 - about two extra minutes of waiting a day, essentially all of it
+  the world fingerprint. Two existing tests that asserted "a camera file does not select the world
+  fingerprint" were **replaced, not deleted**. **NAMED AND LEFT**: `goldenRealArm.test.js` imports
+  `scripts/parity/goldenRunner.mjs` but `client-suite` routes on `client/`, so a change to the runner
+  still does not select the suite that runs it.
+
+- [W-REF-ONE-HOME-1.md](W-REF-ONE-HOME-1.md) - **the world fingerprint stops being blind to the
+  number that sets every start position** (2026-09-10, night chain 2026-09-09 piece 1, on
+  `fix/hull-1`). `scripts/sim-fairness.mjs:1120` - the file that DRIVES the world fingerprint -
+  carried its own `Math.min(285, effectiveWidth)` copy of `raceParams.js`'s `W_REF_MAX`, under a
+  comment saying it "matches the game's cap". ★ **PROVEN IN BOTH DIRECTIONS BY CONTROL**: with the
+  OLD sim, sabotaging `W_REF_MAX` 285->200 left the world hash **byte-identical to its record**
+  (`8a1977187e9c99b4`) while both golden races went RED - the detector saying "unchanged" about a
+  changed race, on demand; with the new sim the same sabotage FAILS it. ★ **THE BRIEFED COUNT WAS
+  WRONG AGAIN**: `raceParams.js`'s header claimed FOURTEEN sites as of 2026-09-07; today's five-form
+  uncapped census found **ELEVEN still re-typing the literal**, two of them never named by any report
+  - `headlessRaceSimulator.js:175`, whose own L207 note three lines above says fallbacks in this file
+  READ the default, and `camera/zoomUnit.test.js:347`. All eleven now read the one home.
+  **NOTHING MINTED, NOTHING RETUNED**: all four fingerprints run and matching - world
+  `8a1977187e9c99b4`, world-off `aa09ed97a3a32689`, camera `75aef5cd474c54e5`, render
+  `40b2de6fcc5bafd8`; golden races green. `scripts/w-ref-one-home.test.mjs` keeps it closed with a
+  zero-hit grep that proves it can still fire and a self-exclusion that is load-bearing. Also
+  corrected: a `rowLayout.test.js` comment that justified NOT fixing the cap's design flaw by naming
+  three files that no longer carry the expression. **LEFT AND NAMED**: the cap still freezes the
+  camera's body reference above a ~300 px track (CAMERA-PROJECTION-1 Part E) - a decision, and his.
+
+- [HULL-FIX-1.md](HULL-FIX-1.md) - **the tool that decides whether a change can reach a race starts
+  telling the truth** (2026-09-09, `fix/hull-1` off master `678ce9be`, **NOT MERGED - the owner reads
+  what the hull costs first**). `engine-reach` walked DOWN from `raceCore.js` only, so every module
+  that PRODUCES the engine's arguments was invisible **by construction** - the hole
+  `SHIP-CEREMONY.md` had been carrying as a standing warning. It now also walks UP, to every file that
+  constructs a race, and down again: **hull 79 -> 197, a strict superset, nothing left it.** The two
+  proven outsiders re-sabotaged RED; ★ **all three of HULL-REACH-1's "argued, not proven" are now
+  PROVEN** against the shipped-path arm (`realArm`), which HULL-REACH-1 had missed as a probe. ★ **The
+  names sabotage nearly produced a false green twice**: `stablePairBit`'s bit is a PARITY of odd
+  character codes, so `Rocket`->`Rokket` and a uniform prefix are inert by construction - a mutation
+  can be loaded, reachable AND at a live call site and still be inert. ★ **Sabotaging the tool found a
+  real defect**: the floor checks sat below the `--check` branch, so the one branch a caller acts on
+  answered exit 1 - "cannot reach the engine at all" - about `raceCore.js` itself; fixed. **COST,
+  measured over 411 merges: the tripwire fires on 28% instead of 15%**, +52 merges in 8 weeks,
+  dominated by `scripts/` instruments and `camera/`; two historical merges touched a proven
+  race-changing file and were cleared. **`verify`'s selection is UNCHANGED** and that is a finding, not
+  a relief. ★ **THREE THINGS LEFT FOR THE OWNER**: `sim-fairness.mjs:1120` carries its own `285` copy
+  of `W_REF_MAX`, so **the world fingerprint is blind to the file that decides every start position**;
+  nothing routes on the hull; and the over-report's honest fix is splitting `racer-types/index.js`,
+  which is product code. Nothing minted, no race changed.
+
 - [BUILD-RACE-CLOSED-1.md](BUILD-RACE-CLOSED-1.md) — **the failure reproduces, the render record is
   minted, the night merges** (2026-09-09, `night/2026-09-08` off master `1e10df1a`, the owner's
   decision). ★ **THE EPERM THAT WOULD NOT REPRODUCE, REPRODUCED**: with all three parts of

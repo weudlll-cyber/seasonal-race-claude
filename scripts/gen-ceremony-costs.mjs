@@ -28,9 +28,9 @@
 //
 // ── CEREMONY-COUNTS-GENERATED: THE SECOND BLOCK, AND WHY IT IS IN THIS FILE ──────────────────────
 //
-// The mint-tripwire paragraph above the cost table carried THREE TYPED NUMBERS — the size of
-// `raceCore.js`'s import closure, the size of the folder the old rule fired on, and how many of that
-// folder cannot reach the engine. They had already gone stale once (19 / 103 / 84 until 2026-08-10),
+// The mint-tripwire paragraph above the cost table carried THREE TYPED NUMBERS — the size of the
+// RACE HULL (`raceCore.js`'s import closure until HULL-FIX-1 widened it to the drivers too), the
+// size of the folder the old rule fired on, and how many of that folder cannot reach the engine. They had already gone stale once (19 / 103 / 84 until 2026-08-10),
 // and the document said so about itself while continuing to type them.
 //
 // THE BLOCKER WAS NEVER THE NUMBER, IT WAS THE SENTENCE. A generator that owned the paragraph would
@@ -60,10 +60,10 @@
 export const GUARD = {
   id: "ceremony-counts",
   covers:
-    "the three engine-reach counts in docs/SHIP-CEREMONY.md going stale — a file entering or leaving raceCore.js's import closure, or a file appearing under or leaving client/src/modules/ outside camera/",
+    "the three engine-reach counts in docs/SHIP-CEREMONY.md going stale — a file entering or leaving the RACE HULL (raceCore.js's import closure, its declared drivers', and every driver of an entry point — see engine-reach.mjs), or a file appearing under or leaving client/src/modules/ outside camera/",
   blind: [
     "the guard COST table in the same document — a cost cannot be recomputed without paying it, so --check can only ask how old it is and never fails a build over one",
-    "whether the closure is RIGHT — scripts/engine-reach.mjs owns that and has its own test",
+    "whether the hull is RIGHT — scripts/engine-reach.mjs owns that and has its own test",
     "the prose around the block, which is the argument and is deliberately not generated",
   ],
   dirs: ["client/src/modules/"],
@@ -81,7 +81,7 @@ import { writeVerified } from "./lib/write-verified.mjs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hostname } from "node:os";
-import { engineReach } from "./engine-reach.mjs";
+import { raceHull } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_OVERRIDE = process.argv
@@ -163,7 +163,12 @@ const git = (args) => {
  * other: the closure reaches `camera/lapUtils.js` (inside `camera/`, which the folder rule excluded)
  * and `client/src/utils/mathUtils.js` (outside `modules/` entirely). So the unreachable count is
  * `folder − |closure ∩ folder|`, and the members responsible for the gap are returned with it so
- * the document can name them instead of asserting a subtraction.
+ * the caller can say HOW MANY there are instead of asserting a subtraction.
+ *
+ * ★ THE MEMBERS ARE COUNTED IN THE DOCUMENT, NOT NAMED (HULL-FIX-1). They were named while there
+ * were twenty of them. The hull's up-step took that to 105, and 105 file names inside one table
+ * cell is both unreadable and a SECOND HOME for a list whose home is the generated block in
+ * SIM.md. `outside` still carries the names, because the test asserts on them.
  *
  * THE FOLDER SET IS `git ls-files`, NOT A DIRECTORY WALK: the old rule fired on tracked files, and a
  * walk would also count build output, editor droppings and anything ignored.
@@ -171,7 +176,7 @@ const git = (args) => {
  * @returns {{closure:number, folder:number, unreachable:number, outside:string[]}}
  */
 export function ceremonyCounts() {
-  const closure = engineReach().files;
+  const closure = raceHull().files;
   const folder = git(["ls-files", "client/src/modules"])
     .split("\n")
     .filter(Boolean)
@@ -194,10 +199,10 @@ export function countsBlock(c = ceremonyCounts()) {
     "",
     "| count | value |",
     "| ---------------------------------------------------------------------------------------------- | ----- |",
-    `| files in \`raceCore.js\`'s import closure — \`node scripts/engine-reach.mjs\` | ${c.closure} |`,
+    `| files in the RACE HULL — \`node scripts/engine-reach.mjs\` | ${c.closure} |`,
     `| tracked non-test files under \`client/src/modules/\` outside \`camera/\` — what the old folder rule fired on | ${c.folder} |`,
     `| of those, files that CANNOT reach the engine | ${c.unreachable} |`,
-    `| closure files the folder rule never covered | ${c.outside.map((f) => "`" + f + "`").join(", ") || "none"} |`,
+    `| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | ${c.outside.length} |`,
     "",
     COUNTS_END,
   ].join("\n");
