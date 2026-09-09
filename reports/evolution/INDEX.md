@@ -361,6 +361,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [W-REF-ONE-HOME-1.md](W-REF-ONE-HOME-1.md) - **the world fingerprint stops being blind to the
+  number that sets every start position** (2026-09-10, night chain 2026-09-09 piece 1, on
+  `fix/hull-1`). `scripts/sim-fairness.mjs:1120` - the file that DRIVES the world fingerprint -
+  carried its own `Math.min(285, effectiveWidth)` copy of `raceParams.js`'s `W_REF_MAX`, under a
+  comment saying it "matches the game's cap". ★ **PROVEN IN BOTH DIRECTIONS BY CONTROL**: with the
+  OLD sim, sabotaging `W_REF_MAX` 285->200 left the world hash **byte-identical to its record**
+  (`8a1977187e9c99b4`) while both golden races went RED - the detector saying "unchanged" about a
+  changed race, on demand; with the new sim the same sabotage FAILS it. ★ **THE BRIEFED COUNT WAS
+  WRONG AGAIN**: `raceParams.js`'s header claimed FOURTEEN sites as of 2026-09-07; today's five-form
+  uncapped census found **ELEVEN still re-typing the literal**, two of them never named by any report
+  - `headlessRaceSimulator.js:175`, whose own L207 note three lines above says fallbacks in this file
+  READ the default, and `camera/zoomUnit.test.js:347`. All eleven now read the one home.
+  **NOTHING MINTED, NOTHING RETUNED**: all four fingerprints run and matching - world
+  `8a1977187e9c99b4`, world-off `aa09ed97a3a32689`, camera `75aef5cd474c54e5`, render
+  `40b2de6fcc5bafd8`; golden races green. `scripts/w-ref-one-home.test.mjs` keeps it closed with a
+  zero-hit grep that proves it can still fire and a self-exclusion that is load-bearing. Also
+  corrected: a `rowLayout.test.js` comment that justified NOT fixing the cap's design flaw by naming
+  three files that no longer carry the expression. **LEFT AND NAMED**: the cap still freezes the
+  camera's body reference above a ~300 px track (CAMERA-PROJECTION-1 Part E) - a decision, and his.
+
 - [HULL-FIX-1.md](HULL-FIX-1.md) - **the tool that decides whether a change can reach a race starts
   telling the truth** (2026-09-09, `fix/hull-1` off master `678ce9be`, **NOT MERGED - the owner reads
   what the hull costs first**). `engine-reach` walked DOWN from `raceCore.js` only, so every module

@@ -44,6 +44,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const HOME = "client/src/modules/raceParams.js";
+const SELF = "scripts/w-ref-one-home.test.mjs";
 
 /** The re-typed-ceiling patterns, each with the sentence a failure should print. */
 const PATTERNS = [
@@ -100,6 +101,11 @@ test("★ NO FILE RE-TYPES THE CEILING — one home, and only one", () => {
   const offenders = [];
   for (const f of trackedCode()) {
     if (f === HOME) continue; // the home is allowed to state its own number
+    // ...and THIS file carries every pattern on purpose, as the fixtures that prove the scanner can
+    // fire. It is the one file that MUST contain the defect, so it is the one file not scanned for
+    // it — and the test below fails if those fixtures ever stop being here, which is what keeps
+    // this from being an exception rather than a definition.
+    if (f === SELF) continue;
     let src;
     try {
       src = readFileSync(join(ROOT, f), "utf8");
@@ -114,6 +120,19 @@ test("★ NO FILE RE-TYPES THE CEILING — one home, and only one", () => {
     "the body-narrow ceiling has grown a second home:\n  " +
       offenders.join("\n  ") +
       "\n  Import { W_REF_MAX } from raceParams.js instead of writing the number.",
+  );
+});
+
+test("★ the self-exclusion is LOAD-BEARING — the fixtures must still be here", () => {
+  // The census skips this file. If its fixtures were deleted, that skip would silently become a
+  // hole in the scan rather than a definition of it, and "the scanner can fire" would be a test of
+  // nothing. So the file is required to carry the very lines it is excused from.
+  const self = readFileSync(join(ROOT, SELF), "utf8");
+  const mine = offencesIn(self);
+  assert.ok(
+    mine.length >= 3,
+    `this file carries only ${mine.length} fixture(s) of the defect — the scanner's proof is gone, ` +
+      "and the skip above is now an unexamined exception",
   );
 });
 
