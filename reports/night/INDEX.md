@@ -8,6 +8,27 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-CEILING-1.md](COMEBACK-CEILING-1.md) - **how often the camera even looks, and the
+  ceiling that bounds everything else** (2026-09-10, day chain, piece 2; measurement only, the arm
+  REMOVED and the removal proved by byte-identity). Numbers **re-established, not carried**: 429,563
+  frames / 13,876 in window / 136 contests / 13 shots / 6.36% - identical to last night. ★ **THE
+  DECISION GAP IS TWO DISTRIBUTIONS, NOT ONE, AND A MEAN WOULD HAVE LIED**: **95.4% of gaps are ONE
+  FRAME** and only **1.6% are the ~8 s gate**, because a same-state repeat sets
+  `_activeStateMinHoldMs = 0` (`CameraDirector.js:1825`) and the gate with it. So "re-decides every
+  8 s" is true of 1.6% of its decisions - the camera looks CONSTANTLY while repeating itself and once
+  every 8 s after it moves. ★ **`maxStateDuration` IS THE FLOOR IN 5 OF 6 STATES**: `PHOTO_FINISH`
+  and `LEAD_CHANGE` each declare a 1,500 ms minimum and are held **8,000 ms - 5.3x what they asked
+  for**; `OVERVIEW` is the only state whose own minimum binds, and only because its max is BELOW its
+  min. ★ **THE CEILING IS LOWER THAN THE BRIEF EXPECTED**: 136 decision points -> at most 1.36
+  shots/race (~10x today) - **and the harder bound, the held racer was in the plan's cast in 0 OF 10
+  RACES**, so the ceiling on shots OF HIM is ZERO by construction (`comebackDetector.js:157` iterates
+  the cast; `:131` keeps rank history for B1 only). **The hold arm and the camera are aimed at two
+  different racers**, which reframes COMEBACK-CAMERA-1's "14 held / 16 someone else". ★ **THE
+  ADDENDUM'S TIMING QUESTION IS ANSWERED AT SOURCE**: the director already has a mid-state interrupt
+  (`transitionDecision.js:89-95`, evaluated BEFORE the hold gate), so a precedence needs no new
+  mechanism - but `_transition` re-runs `_pickNextState`, so an arm must FORCE the state, not re-ask.
+  **Arms B/C/D NOT BUILT** (chain time), and the report's section 3 changes what they should measure.
+
 - [IMAGE-CONTEXT-NARROW-1.md](IMAGE-CONTEXT-NARROW-1.md) - **the two leftovers: the build's
   fourteen-thousand-file request, and an e2e premise that was stale on both halves** (2026-09-10, day
   chain, `night/2026-09-09`, piece 1). ★ **(a) FIXED.** `--build-context client=./client` made
