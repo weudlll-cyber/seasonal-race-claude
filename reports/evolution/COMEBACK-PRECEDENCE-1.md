@@ -339,3 +339,53 @@ cannot name a commit that does not exist yet.
   it is not made here.**
 - **Nothing is minted.** The camera fingerprint did not move, so no guard is red — but §6 says why
   that is not the reassurance it looks like.
+
+
+---
+
+## APPENDIX, 2026-09-10 (appended, nothing above rewritten) — THE WALKTHROUGH WAS SERVED WRONG
+
+§9 said "serve the production build on **4173**". **That sentence is incomplete and it cost him the
+eye test.** What he got was the page on 4173 and **"The server is not answering"**.
+
+**Established by asking the services, not by looking at processes:**
+
+| port | `GET /` | `GET /api/health` | |
+|---|---|---|---|
+| **4000** | NO ANSWER | NO ANSWER | ★ **nothing was running** |
+| 4173 | 200 | 200 **`text/html`** | ★ the SPA fallback, **not an API answer** |
+| 5173 | NO ANSWER | NO ANSWER | not needed for a production judgement |
+
+★ **THE DEFECT CLASS, CONFIRMED AT SOURCE.** Since RUNTIME-API-URL-1 the API address is resolved in
+three steps in `client/src/services/api.js`: the runtime global injected by the server, then
+`VITE_API_URL`, then `DEFAULT_API_BASE_URL` at `:84` — **`http://localhost:4000`**. The served
+`index.html` was read back from the wire and carries **no `__RA_RUNTIME_CONFIG__`**, because
+`server/src/runtimeConfig.js:104` returns null when `RA_PUBLIC_ORIGIN` is unset. **So the page falls
+back to 4000, and 4000 was empty.** Confirmed live in the browser afterwards: the page on
+`http://localhost:4173` issues its calls to `http://localhost:4000/api/...`.
+
+★ **AND THE PROBE THAT WOULD HAVE HIDDEN IT.** 4173 answers **200 on every path**, `/api/health`
+included, because the static server has an SPA fallback. Only the content type separates them —
+`text/html` from the preview, `application/json` from the API. A "does it answer?" check reads green
+on a stack that cannot work.
+
+★ **A SECOND RULE WAS BROKEN AND IT MATTERED FOR THE JUDGEMENT ITSELF.** The first attempt served
+`client/dist` **from inside OneDrive** via the server's own static handler. `docs/VERIFY-RULES.md`
+**R10** exists precisely to stop that: `scripts/serve-production.mjs` copies the bundle to
+`%LOCALAPPDATA%acearena-preview` because serving the synced tree produced a measured **1016 ms
+frame**. An eye test taken on the first setup would have been unusable even with the API up.
+
+★ **R10 ALREADY SAID ALL OF THIS.** It was not read. What R10 did NOT do was say it FIRST: it opened
+*"One command, from the repo root:"* above a single code block, with the API and its `RA_CLIENT_ORIGIN`
+paragraph below. That opening is amended in the same commit as this appendix to name **both**
+services in a table before any command — the durable fix, in the rule's one home rather than here.
+
+**The corrected environment, confirmed by asking:**
+
+| what | answer |
+|---|---|
+| client build badge, from the served bundle | `[RA CAMERA LIVE TRUTH] commit=e7425f28 branch=night/2026-09-09` |
+| `/api/health` on 4000 | `{"commit":"e7425f28","branch":"night/2026-09-09","dirty":false}` |
+| signed-in page load | `{"username":"Weudl","role":"admin","team":"Seasonal Entertainment"}` on a page served by 4173 |
+| CORS from the 4173 origin | `access-control-allow-origin: http://localhost:4173`, credentials `true` |
+| stored camera config shadowing defaults | `hadStoredConfig=false` — he sees the shipped behaviour |

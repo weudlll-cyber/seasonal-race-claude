@@ -291,11 +291,34 @@ small — and it is exactly the situation R8's second exception exists for.
 ## R10 — The owner judges a PRODUCTION build; the dev server is for developing
 
 **Rule.** An eye test or a perf log the owner takes is served from a **production build**, on port
-**4173**, and nothing else touches that port while the judgement is pending. One command, from the
-repo root:
+**4173**, and nothing else touches that port while the judgement is pending.
+
+★ **IT IS TWO SERVICES, NOT ONE, AND THE PAGE IS THE ONE THAT MATTERS LESS.** A walkthrough on this
+project needs BOTH of the following running, and neither is optional:
+
+| service | port | what it is | what breaks without it |
+|---|---|---|---|
+| **the API** | **4000** | `server/` — the real backend, his data, his session | the page loads and then **nothing works**: "The server is not answering" |
+| **the production preview** | **4173** | `scripts/serve-production.mjs` — a **static file server** | there is no page to open |
+
+★ **THE PREVIEW SERVES FILES AND ANSWERS NO API CALL.** It is not a backend and never was. Worse, it
+has an SPA fallback, so **every** unknown path — `/api/health` included — comes back **200 with
+`index.html`**. A probe that only asks "does 4173 answer?" therefore reads GREEN on a stack that
+cannot work. Ask for the **content type**: the API answers `application/json`, the preview answers
+`text/html`.
+
+★ **AND THE PAGE TALKS TO 4000 EVEN THOUGH IT WAS SERVED BY 4173.** Since RUNTIME-API-URL-1 the
+address is resolved in three steps (`client/src/services/api.js`): the runtime global
+`window.__RA_RUNTIME_CONFIG__.apiBaseUrl` injected by the SERVER into `index.html`, then the
+build-time `VITE_API_URL`, then the fallback `DEFAULT_API_BASE_URL`. **`serve-production.mjs` injects
+nothing and the ordinary build sets nothing, so the fallback is what he gets** — and the fallback is
+`http://localhost:4000`. That is why the API belongs on 4000 specifically and not on whichever port
+was free. Confirm it by reading the served `index.html` for the global rather than assuming it.
+
+Both commands, from the repo root:
 
 ```
-cd client && npm run build && node ../scripts/serve-production.mjs
+cd client && npm run build && node ../scripts/serve-production.mjs        # the page, on 4173
 ```
 
 That script copies `client/dist` **out of the OneDrive-synced tree** (to `%LOCALAPPDATA%\racearena-preview`,
