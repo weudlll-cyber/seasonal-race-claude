@@ -140,8 +140,19 @@ export const GUARD = {
   //
   // WHAT IT COSTS, stated rather than discovered later: routing now selects this guard on any
   // change under `client/`, so a client edit buys an image build — about 7 s warm and up to 174 s
-  // cold. That is a real cost and it is the honest one: BuildKit ingests the whole named context,
-  // so `client/` IS what this guard reads.
+  // cold.
+  //
+  // ★ THE REASON GIVEN HERE IS NO LONGER TRUE, AND THE DECLARATION IS KEPT ANYWAY
+  // (IMAGE-CONTEXT-NARROW-1, 2026-09-10). It read: "BuildKit ingests the whole named context, so
+  // `client/` IS what this guard reads." It did, and it does not now — `client/.dockerignore`
+  // narrows the named context to `dist/` alone, 52 files instead of 14,194. So this declaration is
+  // WIDER than what the build actually reads: a change to `client/src/` selects an image build that
+  // cannot be affected by it.
+  //
+  // That is a wrong INCLUSION, which costs a build nobody needed and never costs correctness, and it
+  // is kept deliberately. Narrowing it to `client/dist/` is what `verify` REFUSES (see above — the
+  // path is gitignored and absent whenever nobody has built), and tying a guard's routing to an
+  // ignore file would be a second place to get one fact wrong.
   dirs: [...derived.dirs.map((d) => `${d}/`), `${CLIENT_CONTEXT_DIR}/`],
   // `client/e2e/` is EXCLUDED for the same reason `check-client-build` excludes it: Playwright
   // specs are never bundled, so they cannot reach `client/dist` and cannot change what this image

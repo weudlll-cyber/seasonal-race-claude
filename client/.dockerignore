@@ -1,0 +1,55 @@
+# ============================================================
+# File:        client/.dockerignore
+# Project:     RaceArena — IMAGE-CONTEXT-NARROW-1
+#
+# WHAT THIS OWNS: what the NAMED BUILD CONTEXT `client` sends to the Docker daemon.
+# `server/Dockerfile:68` is `COPY --from=client dist/ ./client-dist/`, and the context is supplied as
+# `--build-context client=./client` (scripts/check-image-starts.mjs:206-215, and
+# `additional_contexts` in docker-compose.yml). A named local context honours the `.dockerignore` in
+# its OWN root, which is this file.
+#
+# ── ★ WHY IT EXISTS, MEASURED RATHER THAN ASSUMED ───────────────────────────────────────────────
+#
+# Counted on 2026-09-10, before this file was written:
+#
+#     files under client/ that the context had to scan     14,194
+#     files server/Dockerfile actually COPYs (client/dist)      52
+#     of the remainder, client/node_modules alone          13,421
+#
+# The build was asking for fourteen thousand files to use fifty-two. That is a cost on every image
+# build, and it is also a WINDOW: BuildKit scans the whole context before the COPY runs, and
+# `client/dist` is rewritten by `check-client-build` (`emptyDir` then a fresh vite build). While the
+# scan was fourteen thousand files wide, a rewrite landing inside it produced
+#
+#     #5 ERROR: invalid file request dist/assets/racers/beetle.png
+#
+# — BuildKit refusing a file it had listed and could no longer read. GUARD-CONTEXT-RACE-1 named that
+# failure, characterised it as "BuildKit rejects a file inside client/dist written seconds earlier",
+# and left it: *"the remedy touches the image guard's docker invocation, which is past the smallest
+# fix"*. It does not have to. The remedy is here, in the context's own ignore file, and it touches no
+# guard and no Dockerfile.
+#
+# ── ★ WHAT THIS DOES NOT DO, AND IT IS THE WHOLE SAFETY OF IT ───────────────────────────────────
+#
+# **It cannot change what ships.** Only a COPY puts a file in an image, and the one COPY from this
+# context takes `dist/` — which is re-included below. Being allowed into a context is not the same as
+# being in the image, and the root `.dockerignore` makes the same point in its own words. That was
+# not left as an argument: the image's complete file list was recorded before and after
+# (`find /app /shared -type f`) and compared. See IMAGE-CONTEXT-NARROW-1.
+#
+# It does not narrow the guard's ROUTING. `check-image-starts` still declares `client/` and still
+# selects on any change under it. That declaration is now WIDER than what the context ingests, which
+# is a wrong inclusion — it costs an image build nobody needed and it never costs correctness. The
+# alternative would tie the guard's routing to this file, and a routing that depends on an ignore
+# file is a second place to get it wrong.
+#
+# It does not touch `server/`. The primary build context is the repository root and the root
+# `.dockerignore` owns it; this file is honoured only for the `client` named context.
+# ============================================================
+
+# DENY BY DEFAULT, the same shape as the root file: an allow-list cannot leak something nobody
+# thought about, and a deny-list must be updated every time the tree grows a directory.
+**
+
+# The built client, and the only thing `server/Dockerfile` copies from here.
+!dist/**

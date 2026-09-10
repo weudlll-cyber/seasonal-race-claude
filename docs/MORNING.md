@@ -4,81 +4,85 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-10, night chain 2026-09-09 — after PIECE 3.
+**Last rewritten:** 2026-09-10, DAY chain 2026-09-10 — after PIECE 1 (and carrying the night's
+piece 4, which this sheet owed).
+
+**Where the code is.** Master is `f0debe20` and carries the night's pieces 1 and 2 — CI green on that
+SHA, all three jobs. `night/2026-09-09` carries everything since and is **NOT merged**: it waits for
+your eye. Ports 4000 / 4173 / 5173 are down.
 
 ---
 
-## THE NIGHT OF 2026-09-09 — SIX PIECES
+## THE TWO CHAINS
 
-| # | piece | state |
+| | piece | state |
 |---|---|---|
-| 1 | The world fingerprint's blindness to `W_REF_MAX` | ★ **DONE — on master** |
-| 2 | Wire the hull, then merge it | ★ **DONE — MERGED to master `f0debe20`** |
-| 3 | Branch `night/2026-09-09` | ★ **DONE — pushed** |
-| 4 | Why the comebacker loses the contest (sweep, runs alone) | **RUNNING** |
-| 5 | The package build's invalid file request | not started |
-| 6 | The e2e geometry flake | not started |
-
-**Where the code is.** ★ **Master is `f0debe20`** and carries pieces 1 and 2. `fix/hull-1` is
-**deleted at origin** — origin holds `master` alone plus the new `night/2026-09-09`, which carries
-pieces 4 to 6 and **will not be merged**: they wait for your eye. Ports 4000 / 4173 / 5173 are down.
-
----
-
-## ★ WHAT LANDED ON MASTER, AND THE ONE THING TO KNOW FIRST
-
-**The tool that decides whether a change can reach a race was lying, and three of the last four
-weeks' mint decisions rested on it.** It answered *"what does the engine import"*, which cannot see
-the modules that PRODUCE the engine's arguments — they sit on the caller's side of the arrow. Five
-files were proven by sabotage to change a race while the tool called them outside. It now walks up to
-every file that constructs a race and down again: **hull 79 → 197 files, a strict superset.**
-
-★ **AND THE WORLD FINGERPRINT WAS BLIND TO THE NUMBER THAT SETS EVERY START POSITION.**
-`sim-fairness.mjs`, which drives that hash, carried its own copy of `raceParams.js`'s `W_REF_MAX`.
-Proven by control, not argued:
-
-| arm | golden races | world fingerprint |
-|---|---|---|
-| the OLD `sim-fairness.mjs` | **RED** | ★ **matches its record in [fingerprints.json](fingerprints.json) exactly** |
-| the NEW `sim-fairness.mjs` | **RED** | **FAILS** |
-
-The top row is the detector saying "unchanged" about a changed race, on demand. **Eleven re-typings of
-that constant were found by a five-form uncapped census — the file's own header claimed fourteen sites
-three days ago, and two of the eleven had never been named by any report.**
-
-**Sabotaging the reach tool itself found a third defect:** `--check`, the one branch a caller acts on,
-had no floor under it and answered *"cannot reach the engine at all"* — exit 1 — about `raceCore.js`
-itself. Exit 1 is what the pre-commit tripwire reads as "say nothing".
-
-**NOTHING WAS MINTED and no race changed.** All four fingerprints were measured repeatedly and every
-one matches its record in [fingerprints.json](fingerprints.json). The pre-merge gate ran three of them
-again: **PASS 28 / FAIL 0**.
-
-### What it costs you, measured on 411 real merges rather than guessed
-
-`golden-races` and `world-fingerprint` now select on anything that can change a race. That is
-**+85 guard-seconds per day** over the last eight weeks and **+123 per day** over the busier last
-three — about **two extra minutes of waiting spread across a working day**, essentially all of it the
-world fingerprint. The pre-commit tripwire fires on 28% of merges instead of 15%.
-
-★ **What you must NOT read into a green world fingerprint.** It now SELECTS on the whole hull, but a
-module-resolution probe over its own run shows it LOADS 80 of the hull's 197 files. Of the five proven
-race-changers exactly one is among them. **Selecting is not seeing**, and the guard's own `blind` list
-now says so in as many words.
-
-Reports: [HULL-FIX-1](../reports/evolution/HULL-FIX-1.md) ·
-[W-REF-ONE-HOME-1](../reports/evolution/W-REF-ONE-HOME-1.md) ·
-[HULL-WIRED-1](../reports/evolution/HULL-WIRED-1.md).
+| **night 09-09** 1-2 | the hull tells the truth, and now selects the guards | ★ **ON MASTER** |
+| **night 09-09** 3 | branch `night/2026-09-09` | ★ done |
+| **night 09-09** 4 | why the comebacker loses the contest | ★ **DONE — and it INVERTED its own brief** |
+| **day 09-10** 1 | the package build's file request · the e2e geometry flake | **see below** |
+| **day 09-10** 2 | how often the camera even looks (sweep) | not started |
+| **day 09-10** 3 | sixteen of thirty shots show the wrong racer | not started |
+| **day 09-10** 4 | split `racer-types/index.js` | not started |
+| **day 09-10** 5 | `check-image-starts` into CI | not started |
+| **day 09-10** 6 | the unconsumed exports | not started |
 
 ---
 
-## NEEDS HIS WORD — from this chain so far
+## ★ THE ONE THING TO KNOW FIRST — THE COMEBACK BRIEF WAS ASKING THE WRONG QUESTION
 
-- **Splitting `client/src/modules/racer-types/index.js`.** The registry the engine needs and the HTTP
-  layer for editing racer types live in one module, which drags three `services/` files into the hull.
-  It is product code and a separate decision; the tool was NOT taught to special-case three filenames.
+Three reports in a row said the comebacker **loses the director's weighted contest**. He does not.
+
+Over 100 races, of **13,876** frames on which a comeback candidate was available inside the window,
+the weighted contest **ran on 136 of them — 0.98%**. Of those he was chosen **13 times, 10%**. The
+draw and the second weight roll together account for **27 frames of 13,876 — 0.19%**.
+
+★ **He is not losing the contest. The contest almost never happens.** The mechanism, at its address:
+`holdGate = Math.max(minHold, stateCap)` (`CameraDirector.js:960`) — a state is held for the **longer**
+of its minimum hold and its **maximum** duration, so with the shipped 5 000 / 8 000 ms the director
+re-decides **about every eight seconds**. The contest runs on 6.36% of all frames but only 0.98% of
+his: six times rarer than chance, and anti-correlated by construction.
+
+**73.2% of the frames earlier reports counted as "available" he could not have won under any weight.**
+
+★ **Raising the weight to its ceiling (0.6 → 1.0) buys 13 → 19 shots, and it fights itself**: "contest
+asked with a candidate" FALLS from 136 to 34, because more shots mean more time inside
+`COMEBACK_ZOOM`'s own hold gate. COMEBACK-WEIGHT-1's thirteen-fold-weight finding is **explained, not
+contradicted**.
+
+**What was NOT done, recorded as a decision:** the hold arm at release 0.70 is gone from the tree, so
+COMEBACK-CAMERA-1's **27 543 / 30 were not re-established** and no substitute is passed off as them.
+The day chain's piece 2 rebuilds that arm.
+
+Report: [COMEBACK-CONTEST-1](../reports/night/COMEBACK-CONTEST-1.md).
+
+---
+
+## WHAT LANDED ON MASTER
+
+**The tool that decides whether a change can reach a race was lying**, and recent mint decisions
+rested on it. It now walks up to every file that constructs a race: **hull 79 → 197**, a strict
+superset. **The world fingerprint was blind to the number that sets every start position** — proven by
+control: with the old `sim-fairness.mjs`, sabotaging `W_REF_MAX` left the world hash byte-identical to
+its record while both golden races went RED. **Sabotaging the reach tool itself** found a third
+defect: `--check` had no floor and answered *"cannot reach the engine at all"* about `raceCore.js`.
+
+Cost of the wiring, measured on 411 real merges: **+85 guard-seconds per day** — about two extra
+minutes of waiting spread across a working day.
+
+★ **What you must NOT read into a green world fingerprint.** It now SELECTS on the whole hull, but it
+LOADS 80 of the hull's 197 files. **Selecting is not seeing**, and the guard's own `blind` list says
+so.
+
+---
+
+## NEEDS HIS WORD
+
+- **`holdGate = Math.max(minHold, stateCap)`** — the state's **maximum** duration acting as a **floor**
+  on how long it is held. Whether that is intended is a picture decision. The day chain's piece 2
+  measures what shortening it would cost on both sides; it picks nothing.
 - **The cap that freezes the camera's body reference above a ~300 px track** (CAMERA-PROJECTION-1 Part
-  E). Diagnosed long ago, never shipped. What changed is only that there is now one place to change it.
+  E). Diagnosed long ago, never shipped; there is now one place to change it.
 <!-- END CHAIN STATUS -->
 <!-- END CHAIN STATUS -->
 

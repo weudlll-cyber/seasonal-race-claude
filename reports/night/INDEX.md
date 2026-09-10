@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [IMAGE-CONTEXT-NARROW-1.md](IMAGE-CONTEXT-NARROW-1.md) - **the two leftovers: the build's
+  fourteen-thousand-file request, and an e2e premise that was stale on both halves** (2026-09-10, day
+  chain, `night/2026-09-09`, piece 1). ★ **(a) FIXED.** `--build-context client=./client` made
+  BuildKit scan **14,194 files to COPY 52** (`client/dist`); 13,421 were `node_modules`. A
+  `client/.dockerignore` narrows it, **proved honoured** by an inline out-of-repo Dockerfile (probe
+  present -> `"not found"`, absent -> builds). ★ **STOP CONDITION CHECKED AT BYTE LEVEL: 6,013 files
+  in the image, every md5 identical** before and after - being allowed into a context is not being in
+  the image. Guard build **7.0 s -> 3.8 s**. **The original `invalid file request` was NOT
+  reproduced** and this is not claimed as a demonstrated repair - it removes the window and 14,142
+  files of waste. ★ **(b) REPRODUCED AND NOT FIXED.** The brief's "7 of 10" then "10 of 10" appeared
+  exactly - but **all 12 warnings share ONE timestamp in an 11.8-minute run**, and the error is
+  `Failed to fetch`, **not** the 3 s timeout. **Two inherited premises are stale**: a missing geometry
+  no longer races as a laps race (QUIET-FAILURES-1 wired `selectedGeometryReady` to the refusal at
+  `SetupScreen.jsx:263/265/720/899/1786`), and the suite is `workers: 1`, not seven. **Has a spec ever
+  failed because of it? YES** - four, 1-in-5, on 2026-08-16, before the guard. **Passed for the wrong
+  reason? NO spec is exposed** - of 3 that skip the guard, all 3 write their own geometry. **NOT
+  FIXED, deliberately**: a listening API refusing ten connections in one instant is not obviously a
+  harness fault, and a harness "fix" would MASK a serving defect. What would settle it is named.
+
 - [COMEBACK-CONTEST-1.md](COMEBACK-CONTEST-1.md) - **he does not lose the contest; he is almost
   never IN it** (2026-09-10, `night/2026-09-09`, piece 4; measurement only, **no weight changed, no
   product file touched, nothing minted, nothing recommended**). ★ **THE BRIEF'S PREMISE IS INVERTED

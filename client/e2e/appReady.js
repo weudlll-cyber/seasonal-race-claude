@@ -35,6 +35,27 @@
 // fetches per page load, seven workers doing it at once against ONE API server, three seconds each.
 // That is why it looked like load, and why it looked like ordering.
 //
+// ── ★ BOTH HALVES OF THAT PARAGRAPH HAVE SINCE BEEN CLOSED ELSEWHERE (E2E-GEOMETRY-STALE-1) ────
+//
+// Re-established at source on 2026-09-10 rather than carried, because this file is the place a
+// reader comes to understand the flake and it was describing a tree that no longer exists:
+//
+//   · **"an open track ... runs as a laps race" is NO LONGER TRUE.** QUIET-FAILURES-1 gave
+//     `SetupScreen` a readiness flag and wired it to the refusal: `selectedGeometryReady`
+//     (`SetupScreen.jsx:263`) gates `canStartBase` (`:265`) and both start paths (`:720`, `:899`),
+//     and `quickGeometryReady` (`:588`) disables the Quick Test button (`:1786`). A missing geometry
+//     now REFUSES the race instead of guessing at it, and `trackLoader.js:59-64` says so out loud
+//     with a `console.warn` — which is where the "could not be cached" line in the logs comes from.
+//     The `geom ? !geom.closed : false` expressions are still there and still answer `false`, but
+//     nothing can reach a race through them any more.
+//   · **"seven workers doing it at once" is NO LONGER TRUE.** E2E-ONE-WORKER-1 set
+//     `playwright.config.js:63` to `workers: 1`, and `:64` to `retries: 0`.
+//
+// ★ THE HELPERS BELOW ARE KEPT ANYWAY, and not because nobody dared delete them. The dependency they
+// remove is a spec depending on WINNING a race, and that is the defect whether the race is seven
+// workers wide or one — a 3 s fetch can still lose on a cold machine. What has changed is the
+// CONSEQUENCE of losing: a refused race a spec can see, rather than a different race it cannot.
+//
 // AND NOTE THE TIMING, because it rules out "the spec clicked too early": the track buttons render
 // from state that is set only after the loader has settled, so by the time anything is clickable
 // the fetches are over. The missing data is data that FAILED, not data still in flight — which is
