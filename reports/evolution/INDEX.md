@@ -361,6 +361,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HOLD-GRID-1.md](HOLD-GRID-1.md) — **the grid: field size × hold position, and the servo's
+  authority falls as 1/N** (2026-09-10, night chain 2026-09-10 piece 1, on `night/2026-09-10`,
+  **measurement only, arm removed and the removal proved, nothing minted**). 1 238 races over
+  6 field sizes × 5 hold fractions × 10 tracks, release 0.70, the held racer one the plan HAS CAST.
+  ★ **TWO FINDINGS BEFORE ANY TABLE.** (1) `racePlanner.js:910` divides the servo's rank error by the
+  FIELD SIZE — `clamp(1.0 + gain * (error / nActive) …)` — so saturating the 0.85 brake needs under
+  one rank at N=10 but **7.5 ranks at N=100**, and the arm's engagement decays monotonically:
+  `|err|≤2` runs **100% at N=20 and 10–41% at N=100**, always landing SHALLOWER than asked. No speed
+  limit was relaxed to hide it. (2) **A shallow hold is a FALL, not a comeback** — the arm props him
+  above where the race would have put him (N=40 at 0.25: release rank 8, finish 19, **−11 places**).
+  ★ **THE GRID ANSWERS HIS AMBIGUITY WITHOUT GUESSING**: the third band (0.33–0.50) delivers only at
+  large fields (+24 at N=100/0.40) and yields **−8 to +12 at N=20–40 and +1 to +3 at N=10**, where
+  rank 3 of 10 is already inside the top 5 and there is nothing to come back from. Five places needs
+  **0.50 or deeper**, and only from N=20 up. ★ **AND THE TWO GOALS COME APART ABOVE N≈40**: the
+  deepest holds give the biggest climbs (+35, +45) and the WORST top-5 reach (9 and 6 of 29). Pinned
+  and blocked reported open/closed apart — closed pins and blocks about twice as often at every size.
+
 - [MERGE-NIGHT-0909.md](MERGE-NIGHT-0909.md) — **the second hull path closed, the skip ships on, and
   the morning sheet loses a ghost list** (2026-09-10, the merge of `night/2026-09-09`). ★ **HULL
   196 → 192 and NO `services/` FILE IS IN IT ANY MORE**: `surfaceClassLoader.js` carried the cache
