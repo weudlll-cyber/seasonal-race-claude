@@ -129,6 +129,9 @@ const WEIGHT = ARG("comeback-weight", null);
 // field this script records (`comebackers` and their beats, `crossedAt`, `b1Size`, `raceMs`) must
 // be equal between the arms, and COMEBACK-CONNECT-1 compares them.
 const USE_BEATS = ARG("use-beats", null);
+// COMEBACK-CONTEST-1: wrap the director's pick and offer to record WHY a candidate lost.
+// Default ON; `--contest=0` is the control that proves the wrapping changes nothing.
+const CONTEST = ARG("contest", "1") !== "0";
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -184,6 +187,73 @@ for (const geo of tracks) {
           dt,
         );
     }
+
+    // ── ★ COMEBACK-CONTEST-1: WHY THE CANDIDATE LOSES, NOT JUST THAT HE DOES ───────────────────
+    //
+    // COMEBACK-CAMERA-1 established that a candidate is AVAILABLE for tens of thousands of frames
+    // and becomes a shot about thirty times. It could not say what beat him, because the contest's
+    // pool is a local inside `_pickNextState` and nothing survives the call.
+    //
+    // ★ NO PRODUCT FILE IS TOUCHED TO GET IT. Two of the director's own methods are wrapped ON THIS
+    // ONE INSTANCE, the same idiom the outcome-arm wrapper above already uses: each records its
+    // arguments and result and then DELEGATES. Same calls, same order, same random draws, same
+    // return values — so the race and the camera are bit-identical to an unwrapped run. That is
+    // checkable rather than asserted: `--contest=0` skips the wrapping entirely and every
+    // camera-dependent field must come out equal.
+    //
+    // WHAT EACH ONE ANSWERS:
+    //   `_weightedRandomPick` (CameraDirector.js:730) — WHO WAS IN THE POOL and who won the draw.
+    //     If it was not called at all on a frame, the pool was never built, which is a different
+    //     class of loss entirely and is classified below.
+    //   `_acceptsOffer` (CameraDirector.js:724) — THE SECOND GATE. The winner still faces a roll
+    //     against its own weight and a decline falls through to LEADER_ZOOM, so a comeback can win
+    //     the draw and still not be shown.
+    let frameDecided = false; // did `_pickNextState` run at all this frame?
+    let frameDecision = null; // ...and the reason string it returned, which names its own branch
+    let framePool = null; // [{state, weight}] for the frame, or null if the pool was never built
+    let framePick = null; // the winning candidate, or null
+    const frameOffers = []; // [[weight, accepted]] in call order
+    if (CONTEST) {
+      const origPick = cd._weightedRandomPick.bind(cd);
+      cd._weightedRandomPick = (cands) => {
+        framePool = (cands ?? []).map((c) => ({ state: c.state, weight: c.weight }));
+        const picked = origPick(cands);
+        framePick = picked ? { state: picked.state, weight: picked.weight } : null;
+        return picked;
+      };
+      const origAccept = cd._acceptsOffer.bind(cd);
+      cd._acceptsOffer = (w) => {
+        const a = origAccept(w);
+        frameOffers.push([w, a]);
+        return a;
+      };
+      // `_pickNextState` (CameraDirector.js:1548) is the decision itself. Wrapping it separates
+      // "the director never asked the question this frame" — the hold gate at :960 did not open —
+      // from "it asked and returned before the candidate pool was ever built", which is what its
+      // start-window and endgame branches do. Without this the two collapse into one unreadable
+      // bucket, and they are different findings with different addresses.
+      const origPickNext = cd._pickNextState.bind(cd);
+      cd._pickNextState = (racers, ts2, rs) => {
+        frameDecided = true;
+        const out = origPickNext(racers, ts2, rs);
+        frameDecision = out?.reason ?? null;
+        return out;
+      };
+    }
+    // Every frame on which a comeback candidate existed INSIDE the window, by why it was not shown.
+    const lossClass = new Map();
+    // Of the frames the contest actually ran and the comeback lost the draw: who won instead.
+    const beatenBy = new Map();
+    // The pool's own composition on those frames, so "he was alone and still lost" is separable.
+    const poolSize = new Map();
+    // ★ HOW OFTEN THE QUESTION IS ASKED AT ALL. The contest is not run per frame: `holdGate` at
+    // CameraDirector.js:960 is `max(minStateHold, maxStateDuration)`, so a state is held for the
+    // LONGER of the two and `_pickNextState` runs only when `stateAge >= holdGate`
+    // (transitionDecision.js:97). A candidate can be available for thousands of frames and be
+    // offered a handful of times — which is the shape COMEBACK-CAMERA-1 measured from the outside.
+    let decisionsTotal = 0; // frames on which `_pickNextState` ran
+    let decisionsWithCandidate = 0; // ...of those, frames on which a candidate was in the window
+    let framesTotal = 0;
 
     let planDelivered = false;
     let deliveredAt = null; // progress at which the plan reached the detector
@@ -282,7 +352,19 @@ for (const geo of tracks) {
           rankAtBeat.set(k, rankOf(state, bw.index));
       }
       const s = dir.state;
+      framesTotal++;
+      if (frameDecided) decisionsTotal++;
       stateFrames.set(s, (stateFrames.get(s) ?? 0) + 1);
+      // The wrappers fill these during `cd.update`, which has already run for this frame; they are
+      // cleared at the end of the frame body so `framePool == null` means "the pool was not built
+      // THIS frame" rather than "not built since the race began".
+      const clearFrame = () => {
+        framePool = null;
+        framePick = null;
+        frameDecided = false;
+        frameDecision = null;
+        frameOffers.length = 0;
+      };
       // A PURE READ of the detector, to separate the two gates. Mutates nothing, rolls nothing.
       //
       // ★ THE PROGRESS ARGUMENT IS NOT OPTIONAL HERE (COMEBACK-CONNECT-1). `best()` gained a third
@@ -301,6 +383,61 @@ for (const geo of tracks) {
         if (inWindow || (state.raceProgress ?? 0) > OUTCOME_THRESHOLD) {
           candidateOutcomeFrames++;
           overlapStates.set(s, (overlapStates.get(s) ?? 0) + 1);
+          if (CONTEST) {
+            if (frameDecided) decisionsWithCandidate++;
+            const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
+            // THE DIRECTOR'S OWN LEADER RATIO, not the plan's progress — `CameraDirector.js:1551`
+            // computes `leader.t / finishT` over ALL racers, uncapped, and that is the number its
+            // endgame branch compares. Using `raceProgress` here would misclassify the frames
+            // between the first finisher and the last.
+            const lt = Math.max(...state.racers.map((r) => r.t));
+            const leaderRatio = state.finishT > 0 ? lt / state.finishT : 0;
+            // The hold gate, reconstructed from the director's own fields rather than patched in:
+            // `CameraDirector.js:916-920` reads exactly these three.
+            const minHold =
+              dir._activeStateMinHoldMs != null
+                ? dir._activeStateMinHoldMs
+                : (dir._minStateHoldByState?.[dir.state] ?? dir._minStateHoldMs);
+            const heldFor = ts - dir.stateEnteredAt;
+            if (s === "COMEBACK_ZOOM") {
+              bump(lossClass, "SHOWN — the shot is on screen");
+            } else if (framePool == null) {
+              // The contest never ran this frame. Several ways that happens, and they are different
+              // findings with different addresses, so they are not merged.
+              if (!frameDecided) {
+                bump(
+                  lossClass,
+                  heldFor < minHold
+                    ? "NOT ASKED — an earlier shot is still inside its minStateHold (CameraDirector.js:960)"
+                    : "NOT ASKED — update() returned before the decision (CameraDirector.js:916-975)",
+                );
+              } else if (leaderRatio > dir._endgameThreshold) {
+                bump(lossClass, "ASKED, POOL NEVER BUILT — the endgame branch returns first (CameraDirector.js:1664)");
+              } else {
+                // The reason string names the branch, so it is reported rather than guessed at.
+                const head = String(frameDecision ?? "?").split(":")[0];
+                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1548+)`);
+              }
+            } else {
+              poolSize.set(framePool.length, (poolSize.get(framePool.length) ?? 0) + 1);
+              const inPool = framePool.some((c) => c.state === "COMEBACK_ZOOM");
+              if (!inPool) {
+                bump(lossClass, "NOT IN THE POOL — outcome gate / comeback cooldown / detector said no (CameraDirector.js:1713-1731)");
+              } else if (framePick && framePick.state === "COMEBACK_ZOOM") {
+                const declined = frameOffers.some(([w, a]) => w === framePick.weight && !a);
+                bump(
+                  lossClass,
+                  declined
+                    ? "WON THE DRAW, THEN DECLINED — the second weight roll (CameraDirector.js:724)"
+                    : "WON AND ACCEPTED — entering this frame",
+                );
+              } else {
+                bump(lossClass, "LOST THE WEIGHTED DRAW (CameraDirector.js:730)");
+                if (framePick) bump(beatenBy, framePick.state);
+                else bump(beatenBy, "(no pick — every candidate had weight 0)");
+              }
+            }
+          }
         }
       }
       if (s === "COMEBACK_ZOOM" && prevState !== "COMEBACK_ZOOM") {
@@ -334,6 +471,7 @@ for (const geo of tracks) {
         last.rankAtEnd = last.racer == null ? null : rankOf(state, last.racer);
       }
       prevState = s;
+      clearFrame();
       return true;
     });
 
@@ -367,6 +505,14 @@ for (const geo of tracks) {
       rankAtBeat: Object.fromEntries(rankAtBeat),
       outcomeOpensAt,
       raceMs: st.physicsTs ?? null,
+      // COMEBACK-CONTEST-1 — of the candidate-in-window frames, WHY each was not a shot, and on
+      // the frames the contest actually ran, WHO won instead.
+      framesTotal,
+      decisionsTotal,
+      decisionsWithCandidate,
+      lossClass: Object.fromEntries([...lossClass].sort((x, y) => y[1] - x[1])),
+      beatenBy: Object.fromEntries([...beatenBy].sort((x, y) => y[1] - x[1])),
+      poolSize: Object.fromEntries([...poolSize].sort((x, y) => x[0] - y[0])),
     });
     process.stderr.write(
       `  ${geo.id.padEnd(15)} seed ${String(seed).padStart(2)}  ` +

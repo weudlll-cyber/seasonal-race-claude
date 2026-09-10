@@ -8,6 +8,28 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-CONTEST-1.md](COMEBACK-CONTEST-1.md) - **he does not lose the contest; he is almost
+  never IN it** (2026-09-10, `night/2026-09-09`, piece 4; measurement only, **no weight changed, no
+  product file touched, nothing minted, nothing recommended**). ★ **THE BRIEF'S PREMISE IS INVERTED
+  BY THE MEASUREMENT.** Over 100 races, of **13,876** frames with a comeback candidate available
+  inside the window, the weighted contest ran on **136 - 0.98%**; of those he was chosen **13 times,
+  10%**. The draw and the second roll together account for **27 frames of 13,876 - 0.19%**. ★ **THE
+  MECHANISM, WITH ITS ADDRESS**: `holdGate = Math.max(minHold, stateCap)` (`CameraDirector.js:960`)
+  - a state is held for the LONGER of its minimum hold and its **maximum** duration, so with the
+  shipped 5,000/8,000 the director re-decides **every 8 seconds**. The contest runs on 6.36% of all
+  frames but only 0.98% of his frames: **six times rarer than chance**, and anti-correlated by
+  construction. **73.2% of the frames earlier reports counted as "available" he could not have won
+  under any weight.** Who beats him when it IS a contest, n=18: BATTLE_ZOOM 9, LEAD_CHANGE 5,
+  OVERVIEW 4 - reported with that N in front of it. **On 74.8% of the frames the pool was built it
+  was EMPTY.** ★ **THE WEIGHT AT ITS CEILING (0.6 -> 1.0) BUYS 13 -> 19 SHOTS AND IS SELF-LIMITING**
+  - "contest asked with a candidate" FALLS 136 -> 34, because more shots mean more time inside
+  COMEBACK_ZOOM's own hold gate. COMEBACK-WEIGHT-1's 13x-weight finding is **explained, not
+  contradicted**. ★ **WHAT WAS NOT DONE**: the hold arm at release 0.70 is GONE from the tree
+  (`grep` for `_holdArm` returns nothing; COMEBACK-DEF-1 says it was removed), so **27,543 / 30 were
+  NOT re-established and no substitute is passed off as them** - the shipped arm gives 13,876 / 13.
+  The anatomy does not depend on it. Instrument reused; three director methods wrapped ON THE
+  INSTANCE, **proved inert by `--contest=0`: 10 of 10 races byte-identical**.
+
 - [RENDER-OUTCOME-1.md](RENDER-OUTCOME-1.md) — **the second instrument, built and stopped at the
   fork** (2026-09-08, `night/2026-09-08`, piece 6; ★ **NOT MINTED — no minting permission was given**).
   `render-fingerprint.mjs:584` carried the same `isOutcomePhase: false` the camera instrument carried.
