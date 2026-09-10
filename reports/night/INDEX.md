@@ -8,6 +8,28 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
+  brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
+  nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It
+  casts the assigned winner (final rank 1) and accounts for **67 of 179 cast comebackers, 37.4%**. The
+  other **112 (62.6%)** come from **`:447`**, the B1-band pool, whose gate is `finalRanks <= BAND_EDGES[0]`
+  = final rank **<= 5**, not **= 1**. Measured: final rank 1 x67, 2 x29, 3 x42, 4 x21, 5 x20, **>5 x0**.
+  So a median drawn place of 27 is NOT in contradiction with the source - the reading that stopped at
+  the first site was. `framingRule.js:112`'s `anchor: 'comebacker'` is a framing ANCHOR name in a
+  different namespace, not a role. ★ **THE MEASUREMENT COUNTED THE RIGHT POPULATION**:
+  `comeback-beats.mjs:242` filters `h.role === 'comebacker'` on `getCameraPlan().heroes` - byte-for-byte
+  the predicate `comebackDetector.js:86` uses to build `_cast`, which `:157` offers. Not `getHeroRoles()`,
+  not the whole B1 cast. ★★ **BUT TWO SENTENCES OF COMEBACK-SAME-RACER-1 DO NOT SURVIVE**: (a) **the
+  MECHANISM given for the collision is WRONG** - neither site reads the drawn place, both gate on
+  POST-CHAOS rank (`:411`, `:447` over `postChaos`), so "the plan casts comebackers from racers who START
+  DEEP" was asserted, not established, and "structurally opposed" overstates it; the 1.1% stands as a
+  measurement with its mechanism unexplained. (b) ★ **"reached the top 5 in 95 of 96" is
+  NEAR-TAUTOLOGICAL** - every cast comebacker has an authored final rank <= 5 BY CONSTRUCTION (179 of
+  179 measured), so that number restates the rule that selected him rather than showing what the hold
+  arm did; **the no-hold control on the same cast racer was never run**. Unaffected: the 96/96 overlap,
+  the 35 shots (81%), and all four arms. Also named: in the **4 of 100** races that cast no comebacker
+  the detector falls back to `_b1`, a WIDER population, and those races are outside every figure.
+
 - [COMEBACK-SAME-RACER-1.md](COMEBACK-SAME-RACER-1.md) - **the held racer and the plan's comebacker
   become the same racer** (2026-09-10, `night/2026-09-09`; measurement only, all arms REMOVED, all
   four fingerprints UNMOVED, nothing recommended). ★ **THE OVERLAP IS FIXED: 96 of 96**, against 0 of
