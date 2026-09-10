@@ -8,6 +8,132 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
+  brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
+  nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It
+  casts the assigned winner (final rank 1) and accounts for **67 of 179 cast comebackers, 37.4%**. The
+  other **112 (62.6%)** come from **`:447`**, the B1-band pool, whose gate is `finalRanks <= BAND_EDGES[0]`
+  = final rank **<= 5**, not **= 1**. Measured: final rank 1 x67, 2 x29, 3 x42, 4 x21, 5 x20, **>5 x0**.
+  So a median drawn place of 27 is NOT in contradiction with the source - the reading that stopped at
+  the first site was. `framingRule.js:112`'s `anchor: 'comebacker'` is a framing ANCHOR name in a
+  different namespace, not a role. ★ **THE MEASUREMENT COUNTED THE RIGHT POPULATION**:
+  `comeback-beats.mjs:242` filters `h.role === 'comebacker'` on `getCameraPlan().heroes` - byte-for-byte
+  the predicate `comebackDetector.js:86` uses to build `_cast`, which `:157` offers. Not `getHeroRoles()`,
+  not the whole B1 cast. ★★ **BUT TWO SENTENCES OF COMEBACK-SAME-RACER-1 DO NOT SURVIVE**: (a) **the
+  MECHANISM given for the collision is WRONG** - neither site reads the drawn place, both gate on
+  POST-CHAOS rank (`:411`, `:447` over `postChaos`), so "the plan casts comebackers from racers who START
+  DEEP" was asserted, not established, and "structurally opposed" overstates it; the 1.1% stands as a
+  measurement with its mechanism unexplained. (b) ★ **"reached the top 5 in 95 of 96" is
+  NEAR-TAUTOLOGICAL** - every cast comebacker has an authored final rank <= 5 BY CONSTRUCTION (179 of
+  179 measured), so that number restates the rule that selected him rather than showing what the hold
+  arm did; **the no-hold control on the same cast racer was never run**. Unaffected: the 96/96 overlap,
+  the 35 shots (81%), and all four arms. Also named: in the **4 of 100** races that cast no comebacker
+  the detector falls back to `_b1`, a WIDER population, and those races are outside every figure.
+
+- [COMEBACK-SAME-RACER-1.md](COMEBACK-SAME-RACER-1.md) - **the held racer and the plan's comebacker
+  become the same racer** (2026-09-10, `night/2026-09-09`; measurement only, all arms REMOVED, all
+  four fingerprints UNMOVED, nothing recommended). ★ **THE OVERLAP IS FIXED: 96 of 96**, against 0 of
+  10 at drawn place 3. It is a MEASUREMENT and not an assumption because `racePlanner.js:684` runs the
+  hero generator ONE FRAME AFTER THE CHOREO BOUNDARY on live post-chaos ranks - the cast is not known
+  at the start line, and the arm steers before the boundary, so each race runs TWICE (discovery, then
+  measured) and `heldStillCast` asks the question in the run that counts. ★ **THE COLLISION, AND IT IS
+  STRUCTURAL**: of 179 cast comebackers, **2 (1.1%) are drawn inside the top 5**; the median drawn
+  place is **27**, with 78% drawn 21st or worse. The plan casts comebackers from racers who START
+  DEEP - that is what makes a comeback - so the owner's top-5 rule and the plan's casting select from
+  nearly disjoint populations. **Neither is overruled.** ★ **AND THIS ACCOUNTS FOR THE 42-of-100
+  NOBODY HAD EXPLAINED**: at 1.1% a drawn-place-3 arm should coincide almost never, so the 42 cannot
+  have come from a top-5 selection. **STEP 2**: he reaches the top 5 in **95 of 96** (best rank median
+  1); **35 comeback shots on him**, 81% of all comeback shots, clustered just after the 0.70 release
+  (median progress 0.727). Also named: **4 of 100 races cast NO comebacker**, against COMEBACK-DEF-1's
+  0 of 200. ★ **STEP 3 - HIS PRECEDENCE QUESTION, FOUR ARMS AT N=30 THEN N=100.** The director already
+  had the mechanism (`transitionDecision.js:89-95`, before the hold gate) but an interrupt alone only
+  re-opens the weighted draw, so C and D FORCE the state. **Firings 1.70/race (C) and 1.15/race (D) -
+  one or two, not restless.** ★ **THE SHORTER HOLD CUTS THE PICTURE FAR MORE THAN EITHER PRECEDENCE**:
+  switches/min today **11.3**, mild **11.7**, hard **11.9**, shorter hold ★ **14.6** - and B buys FEWER
+  shots than C (73 vs 136). The precedence is the calmer lever and the hold length is the wild one,
+  which is the opposite of how the two changes look. ★ **THE TRADE IS ARM C's ALONE: it cuts a
+  LEAD_CHANGE short 30 times in 96 races; arm D never does (0)**, at a cost of 52 of C's 136 shots.
+
+- [RACER-TYPES-SPLIT-1.md](RACER-TYPES-SPLIT-1.md) - **the registry the engine reads stops carrying
+  the network** (2026-09-10, day chain, piece 4). HULL-FIX-1 named the over-report and stopped,
+  because the fix was product code; this is the separation. `serverRacerTypes.js` takes every caller
+  of `services/racerApi.js` and every use of `API_BASE_URL`; the registry keeps a three-function seam
+  and **the sprite URL is built by the CALLER**, because building it in the registry would import
+  `services/api.js` straight back. It is **NOT re-exported** - every importer names the half it needs.
+  ★ **STOP CONDITION NOT TRIPPED: all four fingerprints measured and UNMOVED**, golden races pass,
+  1,075 client tests pass. ★ **HULL 197 -> 196, AND ONLY ONE FILE LEFT, NOT THREE** - HULL-FIX-1's
+  attribution was incomplete: `services/api.js` and `apiClient.js` have a SECOND path through
+  `storage/surfaceClassLoader.js -> services/surfaceClassApi.js`, which `RaceScreen` imports. Same
+  shape, different module, **named and left**. ★ **THE FIRST SABOTAGE WAS A FALSE GREEN**: pointing an
+  importer at the wrong half left its test green because the test **mocked the very module the
+  sabotage pointed at** - and chasing that down exposed a real consequence, the mock was still aimed
+  at `index.js` while the component now imports the server half. The second sabotage, the same change
+  against the client BUILD, is **RED**: `[MISSING_EXPORT] "loadServerRacerTypes" is not exported by
+  "src/modules/racer-types/index.js"`. Also recorded: the first cut **overshot**, taking
+  `_setLoadedRacerTypeForTesting` with it, and 13 tests caught it.
+
+- [COMEBACK-CEILING-1.md](COMEBACK-CEILING-1.md) - **how often the camera even looks, and the
+  ceiling that bounds everything else** (2026-09-10, day chain, piece 2; measurement only, the arm
+  REMOVED and the removal proved by byte-identity). Numbers **re-established, not carried**: 429,563
+  frames / 13,876 in window / 136 contests / 13 shots / 6.36% - identical to last night. ★ **THE
+  DECISION GAP IS TWO DISTRIBUTIONS, NOT ONE, AND A MEAN WOULD HAVE LIED**: **95.4% of gaps are ONE
+  FRAME** and only **1.6% are the ~8 s gate**, because a same-state repeat sets
+  `_activeStateMinHoldMs = 0` (`CameraDirector.js:1825`) and the gate with it. So "re-decides every
+  8 s" is true of 1.6% of its decisions - the camera looks CONSTANTLY while repeating itself and once
+  every 8 s after it moves. ★ **`maxStateDuration` IS THE FLOOR IN 5 OF 6 STATES**: `PHOTO_FINISH`
+  and `LEAD_CHANGE` each declare a 1,500 ms minimum and are held **8,000 ms - 5.3x what they asked
+  for**; `OVERVIEW` is the only state whose own minimum binds, and only because its max is BELOW its
+  min. ★ **THE CEILING IS LOWER THAN THE BRIEF EXPECTED**: 136 decision points -> at most 1.36
+  shots/race (~10x today) - **and the harder bound, the held racer was in the plan's cast in 0 OF 10
+  RACES**, so the ceiling on shots OF HIM is ZERO by construction (`comebackDetector.js:157` iterates
+  the cast; `:131` keeps rank history for B1 only). **The hold arm and the camera are aimed at two
+  different racers**, which reframes COMEBACK-CAMERA-1's "14 held / 16 someone else". ★ **THE
+  ADDENDUM'S TIMING QUESTION IS ANSWERED AT SOURCE**: the director already has a mid-state interrupt
+  (`transitionDecision.js:89-95`, evaluated BEFORE the hold gate), so a precedence needs no new
+  mechanism - but `_transition` re-runs `_pickNextState`, so an arm must FORCE the state, not re-ask.
+  **Arms B/C/D NOT BUILT** (chain time), and the report's section 3 changes what they should measure.
+
+- [IMAGE-CONTEXT-NARROW-1.md](IMAGE-CONTEXT-NARROW-1.md) - **the two leftovers: the build's
+  fourteen-thousand-file request, and an e2e premise that was stale on both halves** (2026-09-10, day
+  chain, `night/2026-09-09`, piece 1). ★ **(a) FIXED.** `--build-context client=./client` made
+  BuildKit scan **14,194 files to COPY 52** (`client/dist`); 13,421 were `node_modules`. A
+  `client/.dockerignore` narrows it, **proved honoured** by an inline out-of-repo Dockerfile (probe
+  present -> `"not found"`, absent -> builds). ★ **STOP CONDITION CHECKED AT BYTE LEVEL: 6,013 files
+  in the image, every md5 identical** before and after - being allowed into a context is not being in
+  the image. Guard build **7.0 s -> 3.8 s**. **The original `invalid file request` was NOT
+  reproduced** and this is not claimed as a demonstrated repair - it removes the window and 14,142
+  files of waste. ★ **(b) REPRODUCED AND NOT FIXED.** The brief's "7 of 10" then "10 of 10" appeared
+  exactly - but **all 12 warnings share ONE timestamp in an 11.8-minute run**, and the error is
+  `Failed to fetch`, **not** the 3 s timeout. **Two inherited premises are stale**: a missing geometry
+  no longer races as a laps race (QUIET-FAILURES-1 wired `selectedGeometryReady` to the refusal at
+  `SetupScreen.jsx:263/265/720/899/1786`), and the suite is `workers: 1`, not seven. **Has a spec ever
+  failed because of it? YES** - four, 1-in-5, on 2026-08-16, before the guard. **Passed for the wrong
+  reason? NO spec is exposed** - of 3 that skip the guard, all 3 write their own geometry. **NOT
+  FIXED, deliberately**: a listening API refusing ten connections in one instant is not obviously a
+  harness fault, and a harness "fix" would MASK a serving defect. What would settle it is named.
+
+- [COMEBACK-CONTEST-1.md](COMEBACK-CONTEST-1.md) - **he does not lose the contest; he is almost
+  never IN it** (2026-09-10, `night/2026-09-09`, piece 4; measurement only, **no weight changed, no
+  product file touched, nothing minted, nothing recommended**). ★ **THE BRIEF'S PREMISE IS INVERTED
+  BY THE MEASUREMENT.** Over 100 races, of **13,876** frames with a comeback candidate available
+  inside the window, the weighted contest ran on **136 - 0.98%**; of those he was chosen **13 times,
+  10%**. The draw and the second roll together account for **27 frames of 13,876 - 0.19%**. ★ **THE
+  MECHANISM, WITH ITS ADDRESS**: `holdGate = Math.max(minHold, stateCap)` (`CameraDirector.js:960`)
+  - a state is held for the LONGER of its minimum hold and its **maximum** duration, so with the
+  shipped 5,000/8,000 the director re-decides **every 8 seconds**. The contest runs on 6.36% of all
+  frames but only 0.98% of his frames: **six times rarer than chance**, and anti-correlated by
+  construction. **73.2% of the frames earlier reports counted as "available" he could not have won
+  under any weight.** Who beats him when it IS a contest, n=18: BATTLE_ZOOM 9, LEAD_CHANGE 5,
+  OVERVIEW 4 - reported with that N in front of it. **On 74.8% of the frames the pool was built it
+  was EMPTY.** ★ **THE WEIGHT AT ITS CEILING (0.6 -> 1.0) BUYS 13 -> 19 SHOTS AND IS SELF-LIMITING**
+  - "contest asked with a candidate" FALLS 136 -> 34, because more shots mean more time inside
+  COMEBACK_ZOOM's own hold gate. COMEBACK-WEIGHT-1's 13x-weight finding is **explained, not
+  contradicted**. ★ **WHAT WAS NOT DONE**: the hold arm at release 0.70 is GONE from the tree
+  (`grep` for `_holdArm` returns nothing; COMEBACK-DEF-1 says it was removed), so **27,543 / 30 were
+  NOT re-established and no substitute is passed off as them** - the shipped arm gives 13,876 / 13.
+  The anatomy does not depend on it. Instrument reused; three director methods wrapped ON THE
+  INSTANCE, **proved inert by `--contest=0`: 10 of 10 races byte-identical**.
+
 - [RENDER-OUTCOME-1.md](RENDER-OUTCOME-1.md) — **the second instrument, built and stopped at the
   fork** (2026-09-08, `night/2026-09-08`, piece 6; ★ **NOT MINTED — no minting permission was given**).
   `render-fingerprint.mjs:584` carried the same `isOutcomePhase: false` the camera instrument carried.

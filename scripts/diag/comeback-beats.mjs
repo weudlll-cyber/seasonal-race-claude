@@ -97,6 +97,7 @@ const { DEFAULT_CAMERA_CONFIG } = await import(
   u("client/src/modules/storage/defaults.js")
 );
 
+
 const ARG = (k, d) => {
   const a = process.argv.find((x) => x.startsWith(`--${k}=`));
   return a ? a.slice(k.length + 3) : d;
@@ -129,6 +130,63 @@ const WEIGHT = ARG("comeback-weight", null);
 // field this script records (`comebackers` and their beats, `crossedAt`, `b1Size`, `raceMs`) must
 // be equal between the arms, and COMEBACK-CONNECT-1 compares them.
 const USE_BEATS = ARG("use-beats", null);
+// COMEBACK-CONTEST-1: wrap the director's pick and offer to record WHY a candidate lost.
+// Default ON; `--contest=0` is the control that proves the wrapping changes nothing.
+const CONTEST = ARG("contest", "1") !== "0";
+
+// ── ★★ TEMPORARY MEASUREMENT ARM — COMEBACK-SAME-RACER-1 ★★ ────────────────────────────────
+//
+// `--hold=cast` holds a racer THE PLAN HAS CAST AS A COMEBACKER, instead of one picked by drawn
+// place. That distinction is the whole piece: `comebackDetector.js:157` offers only the plan's
+// cast, so a climb by anyone else is invisible to the camera however well it is held.
+//
+// ★ IT COSTS TWO RUNS PER RACE, AND THE SECOND IS THE MEASURED ONE. The cast is not known at the
+// start line: `racePlanner.js:684` runs the hero generator ONE FRAME AFTER THE CHOREO BOUNDARY,
+// on the live post-chaos ranks and rank-velocities. So a DISCOVERY pass runs first with no arm
+// and stops the moment the plan is delivered; the measured pass then re-runs the same seed with
+// the arm set on one of the racers that pass named.
+//
+// ★ AND THAT IS WHY THE OVERLAP IS MEASURED RATHER THAN ASSUMED. The arm steers before the
+// boundary, so it can change the very input the casting reads. Whether the held racer is still
+// cast in the MEASURED pass is a question the discovery pass cannot answer, and this script
+// answers it per race (`heldStillCast`).
+//
+// Default OFF. Nothing here ships; the arm lives in `racePlanner.js` and is removed with it.
+const HOLD = ARG("hold", "off");
+const HOLD_RANK = Number(ARG("hold-rank", "18"));
+const HOLD_UNTIL = Number(ARG("release", "0.70"));
+
+// ── ★ THE FOUR ARMS (COMEBACK-SAME-RACER-1 step 3) ────────────────────────────────────────
+//
+//   --arm=A  today, the baseline everything is read against
+//   --arm=B  SHORTER HOLD. `maxStateDuration` was the binding floor in 5 of 6 states, so this
+//            shortens it for the states that actually hold the screen during a climb.
+//            ★ IT NEEDS NO PRODUCT CHANGE AT ALL: the value is overridden on a COPY of the
+//            camera config for one run, the same mechanism `--comeback-weight` already uses.
+//            `defaults.js` is never written and nothing persists.
+//   --arm=C  PRECEDENCE, HARD — switch at once, whatever is running. His question as asked.
+//   --arm=D  PRECEDENCE, MILD — at most once per comebacker, never cutting a LEAD_CHANGE.
+//
+// ★ ARMS C AND D NO LONGER EXIST HERE, and neither does `--hold`'s racePlanner arm. Both were
+// TEMPORARY product edits, removed at the end of COMEBACK-SAME-RACER-1 and never committed. Arm D
+// SHIPPED as the product's own behaviour in COMEBACK-PRECEDENCE-1, so the way to measure it now is
+// `--precedence`, below. `--arm=B` still works: it needs no product change at all.
+const ARM = ARG("arm", "A").toUpperCase();
+const SHORT_HOLD_MS = Number(ARG("short-hold", "2000"));
+
+// ── ★ COMEBACK-PRECEDENCE-1 — THE SHIPPED ARM, AND ITS CONTROL ──────────────────────────────────
+//
+// `--precedence=1` (default) measures the tree as it ships. `--precedence=0` is THE CONTROL: the
+// same races with the precedence and nothing else removed, so its effect is measured rather than
+// assumed. COMEBACK-SAME-RACER-1's own correction was that a number restating its selection rule is
+// not evidence; a control is what turns "84 shots" into "84 against 13".
+//
+// ★ NO PRODUCT FILE IS TOUCHED TO GET THE CONTROL. `_comebackPrecedenceOffer` is overridden ON THIS
+// ONE DIRECTOR INSTANCE to return null — the same wrapping idiom `--contest` and the outcome arm
+// already use. Returning null is exactly what the shipped method returns on every frame where the
+// precedence does not apply, so the control is the shipped code walking its own untaken branch.
+const PRECEDENCE = ARG("precedence", "1") !== "0";
+
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -139,8 +197,27 @@ if (SEEDS.length === 0) {
 }
 
 // The config this sweep actually runs, which is the shipped one unless a weight was asked for.
+// ARM B: the states a climb actually finds on screen, from COMEBACK-CEILING-1's own table —
+// LEADER_ZOOM, BATTLE_ZOOM, OVERVIEW and LEAD_CHANGE were what held it. Their `maxStateDuration`
+// is the binding floor, so that is the number this arm shortens. Nothing else is touched, and it is
+// a COPY: `defaults.js` is never written.
+const _shortHoldProfiles = (base) =>
+  Object.fromEntries(
+    Object.entries(base ?? {}).map(([k, v]) => [
+      k,
+      v && typeof v === "object" && "maxStateDuration" in v
+        ? { ...v, maxStateDuration: Math.min(v.maxStateDuration, SHORT_HOLD_MS) }
+        : v,
+    ]),
+  );
+
 const CAMERA_CONFIG = {
   ...DEFAULT_CAMERA_CONFIG,
+  ...(ARM === "B"
+    ? {
+        cameraStateProfiles: _shortHoldProfiles(DEFAULT_CAMERA_CONFIG.cameraStateProfiles),
+      }
+    : {}),
   ...(WEIGHT == null ? {} : { comebackWeight: Number(WEIGHT) }),
   ...(USE_BEATS == null ? {} : { comebackUseBeats: USE_BEATS === "1" || USE_BEATS === "true" }),
 };
@@ -163,6 +240,41 @@ const rows = [];
 for (const geo of tracks) {
   for (const seed of SEEDS) {
     const identity = resolveIdentity({ raceSeed: seed, racers: 40 });
+
+    // ── ★ PASS 1 — DISCOVERY. No arm. Stops the moment the plan names its heroes. ───────────────
+    let castIndices = null; // the plan's comebackers, as the UNPERTURBED race casts them
+    let drawnPlaceOf = null; // racerIndex -> place on the start line, 1 = pole
+    let heldIndex = null;
+    if (HOLD === "cast") {
+      const probe = buildRace(geo, identity, CAMERA_CONFIG);
+      // The start line, read once: `t` after `computePositions()` IS the drawn order.
+      drawnPlaceOf = new Map(
+        [...probe.st.racers].sort((a, b) => b.t - a.t).map((r, i) => [r.index, i + 1]),
+      );
+      runRace(probe, identity, CAMERA_CONFIG, ({ cd: d2 }) => {
+        const cp = probe.meta.racePlanController?.getCameraPlan?.();
+        if (!cp) return true;
+        castIndices = (cp.heroes ?? [])
+          .filter((h) => h.role === "comebacker" && Number.isInteger(h.index))
+          .map((h) => h.index);
+        void d2;
+        return false; // the plan is delivered; nothing past this frame is needed
+      });
+      // ★ WHOSE CLIMB IS HELD, when the plan cast more than one: the one drawn FURTHEST FORWARD.
+      // The owner's rule is that the held racer's drawn place is inside the top 5, and this gives
+      // that rule its best chance without overruling the plan — which is the collision this piece
+      // was told to report rather than resolve.
+      if (castIndices && castIndices.length) {
+        heldIndex = [...castIndices].sort(
+          (a, b) => (drawnPlaceOf.get(a) ?? 99) - (drawnPlaceOf.get(b) ?? 99),
+        )[0];
+      }
+    }
+
+    // ★★ TEMPORARY: arm the precedence for the MEASURED pass only — the discovery pass above must
+    // see the shipped camera, or the cast it reports would be the arm's and not the plan's.
+
+    // ── PASS 2 — THE MEASURED RUN ───────────────────────────────────────────────────────────────
     const race = buildRace(geo, identity, CAMERA_CONFIG);
     const { st, meta, cd } = race;
 
@@ -184,6 +296,98 @@ for (const geo of tracks) {
           dt,
         );
     }
+
+    // ★ THE CONTROL. One instance, one method, no product file. See `--precedence` above.
+    if (!PRECEDENCE) cd._comebackPrecedenceOffer = () => null;
+
+    // ── ★ COMEBACK-CONTEST-1: WHY THE CANDIDATE LOSES, NOT JUST THAT HE DOES ───────────────────
+    //
+    // COMEBACK-CAMERA-1 established that a candidate is AVAILABLE for tens of thousands of frames
+    // and becomes a shot about thirty times. It could not say what beat him, because the contest's
+    // pool is a local inside `_pickNextState` and nothing survives the call.
+    //
+    // ★ NO PRODUCT FILE IS TOUCHED TO GET IT. Two of the director's own methods are wrapped ON THIS
+    // ONE INSTANCE, the same idiom the outcome-arm wrapper above already uses: each records its
+    // arguments and result and then DELEGATES. Same calls, same order, same random draws, same
+    // return values — so the race and the camera are bit-identical to an unwrapped run. That is
+    // checkable rather than asserted: `--contest=0` skips the wrapping entirely and every
+    // camera-dependent field must come out equal.
+    //
+    // WHAT EACH ONE ANSWERS:
+    //   `_weightedRandomPick` (CameraDirector.js:730) — WHO WAS IN THE POOL and who won the draw.
+    //     If it was not called at all on a frame, the pool was never built, which is a different
+    //     class of loss entirely and is classified below.
+    //   `_acceptsOffer` (CameraDirector.js:724) — THE SECOND GATE. The winner still faces a roll
+    //     against its own weight and a decline falls through to LEADER_ZOOM, so a comeback can win
+    //     the draw and still not be shown.
+    // ★ COMEBACK-SAME-RACER-1 — the held racer's own story in the MEASURED pass.
+    let heldBestRank = 99; // the best (lowest) rank he reached after the release
+    let heldFinalRank = null;
+    let heldCandidateFrames = 0; // frames the detector would have offered HIM
+    let decisionsHeldCandidate = 0; // ...of those, frames the contest was actually asked
+    const heldShots = []; // COMEBACK_ZOOM entries locked onto HIM
+    // ★ STEP 3's numbers. A SWITCH is a frame on which the state actually changed — "how often the
+    // picture cuts" is that, per minute, and it is the number a shot count cannot show.
+    let switches = 0;
+    let precedenceFirings = 0; // COMEBACK entries the precedence forced
+    // ★ THE COST THE MILD RULE EXISTS TO AVOID: a LEAD_CHANGE on screen replaced by a comeback shot.
+    // The hard arm did this 30 times in 96 races; the mild rule must do it zero times.
+    let leadChangesCutShort = 0;
+    const displacedFrames = {}; // state -> frames it had been on screen when it was cut
+    let stateEnteredFrame = 0;
+    let frameNo = 0;
+    // ★ THE DECISION SERIES (COMEBACK-CEILING-1). Not a mean: every decision's timestamp is kept so
+    // the GAPS can be reported as a DISTRIBUTION. That matters — the mean is meaningless here,
+    // because 95% of the gaps are one frame (a same-state repeat, where `_activeStateMinHoldMs` is
+    // set to 0 at CameraDirector.js:1824 and the gate is therefore 0) and the rest are the ~8 s
+    // gate. Two populations, not one.
+    const decisionTs = [];
+    let frameDecided = false; // did `_pickNextState` run at all this frame?
+    let frameDecision = null; // ...and the reason string it returned, which names its own branch
+    let framePool = null; // [{state, weight}] for the frame, or null if the pool was never built
+    let framePick = null; // the winning candidate, or null
+    const frameOffers = []; // [[weight, accepted]] in call order
+    if (CONTEST) {
+      const origPick = cd._weightedRandomPick.bind(cd);
+      cd._weightedRandomPick = (cands) => {
+        framePool = (cands ?? []).map((c) => ({ state: c.state, weight: c.weight }));
+        const picked = origPick(cands);
+        framePick = picked ? { state: picked.state, weight: picked.weight } : null;
+        return picked;
+      };
+      const origAccept = cd._acceptsOffer.bind(cd);
+      cd._acceptsOffer = (w) => {
+        const a = origAccept(w);
+        frameOffers.push([w, a]);
+        return a;
+      };
+      // `_pickNextState` (CameraDirector.js:1548) is the decision itself. Wrapping it separates
+      // "the director never asked the question this frame" — the hold gate at :960 did not open —
+      // from "it asked and returned before the candidate pool was ever built", which is what its
+      // start-window and endgame branches do. Without this the two collapse into one unreadable
+      // bucket, and they are different findings with different addresses.
+      const origPickNext = cd._pickNextState.bind(cd);
+      cd._pickNextState = (racers, ts2, rs) => {
+        frameDecided = true;
+        const out = origPickNext(racers, ts2, rs);
+        frameDecision = out?.reason ?? null;
+        return out;
+      };
+    }
+    // Every frame on which a comeback candidate existed INSIDE the window, by why it was not shown.
+    const lossClass = new Map();
+    // Of the frames the contest actually ran and the comeback lost the draw: who won instead.
+    const beatenBy = new Map();
+    // The pool's own composition on those frames, so "he was alone and still lost" is separable.
+    const poolSize = new Map();
+    // ★ HOW OFTEN THE QUESTION IS ASKED AT ALL. The contest is not run per frame: `holdGate` at
+    // CameraDirector.js:960 is `max(minStateHold, maxStateDuration)`, so a state is held for the
+    // LONGER of the two and `_pickNextState` runs only when `stateAge >= holdGate`
+    // (transitionDecision.js:97). A candidate can be available for thousands of frames and be
+    // offered a handful of times — which is the shape COMEBACK-CAMERA-1 measured from the outside.
+    let decisionsTotal = 0; // frames on which `_pickNextState` ran
+    let decisionsWithCandidate = 0; // ...of those, frames on which a candidate was in the window
+    let framesTotal = 0;
 
     let planDelivered = false;
     let deliveredAt = null; // progress at which the plan reached the detector
@@ -282,7 +486,35 @@ for (const geo of tracks) {
           rankAtBeat.set(k, rankOf(state, bw.index));
       }
       const s = dir.state;
+      framesTotal++;
+      frameNo++;
+      if (prevState !== null && s !== prevState) {
+        switches++;
+        displacedFrames[prevState] = (displacedFrames[prevState] ?? 0) + (frameNo - stateEnteredFrame);
+        stateEnteredFrame = frameNo;
+        // `_pickNextState` returns this reason ONLY from the precedence's own forced branch
+        // (`CameraDirector.js`, the `comeback-precedence:` return), so this counts commits of the
+        // precedence and not interrupts that landed elsewhere.
+        if (s === "COMEBACK_ZOOM" && /^comeback-precedence/.test(frameDecision ?? "")) {
+          precedenceFirings++;
+          if (prevState === "LEAD_CHANGE") leadChangesCutShort++;
+        }
+      }
+      if (frameDecided) {
+        decisionsTotal++;
+        decisionTs.push(ts - raceStart);
+      }
       stateFrames.set(s, (stateFrames.get(s) ?? 0) + 1);
+      // The wrappers fill these during `cd.update`, which has already run for this frame; they are
+      // cleared at the end of the frame body so `framePool == null` means "the pool was not built
+      // THIS frame" rather than "not built since the race began".
+      const clearFrame = () => {
+        framePool = null;
+        framePick = null;
+        frameDecided = false;
+        frameDecision = null;
+        frameOffers.length = 0;
+      };
       // A PURE READ of the detector, to separate the two gates. Mutates nothing, rolls nothing.
       //
       // ★ THE PROGRESS ARGUMENT IS NOT OPTIONAL HERE (COMEBACK-CONNECT-1). `best()` gained a third
@@ -290,7 +522,19 @@ for (const geo of tracks) {
       // omitted it in the first draft, so GATE 1 and GATE 2a below came back BYTE-IDENTICAL in both
       // arms — they were measuring a detector the run was not using. Passing the same progress the
       // director passes makes this row describe the arm that is actually running.
+      // ★ THE HELD RACER'S CLIMB, measured in the pass that counts.
+      if (heldIndex != null) {
+        const rk = rankOf(state, heldIndex);
+        if (rk != null) {
+          heldFinalRank = rk;
+          if ((state.raceProgress ?? 0) >= HOLD_UNTIL && rk < heldBestRank) heldBestRank = rk;
+        }
+      }
       const cand = dir._comeback?.best?.(state.racers, ts, state.raceProgress ?? null) ?? null;
+      if (heldIndex != null && cand && cand.index === heldIndex) {
+        heldCandidateFrames++;
+        if (frameDecided) decisionsHeldCandidate++;
+      }
       if (cand) {
         candidateFrames++;
         candidateRacers.add(cand.index);
@@ -301,7 +545,74 @@ for (const geo of tracks) {
         if (inWindow || (state.raceProgress ?? 0) > OUTCOME_THRESHOLD) {
           candidateOutcomeFrames++;
           overlapStates.set(s, (overlapStates.get(s) ?? 0) + 1);
+          if (CONTEST) {
+            if (frameDecided) decisionsWithCandidate++;
+            const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
+            // THE DIRECTOR'S OWN LEADER RATIO, not the plan's progress — `CameraDirector.js:1551`
+            // computes `leader.t / finishT` over ALL racers, uncapped, and that is the number its
+            // endgame branch compares. Using `raceProgress` here would misclassify the frames
+            // between the first finisher and the last.
+            const lt = Math.max(...state.racers.map((r) => r.t));
+            const leaderRatio = state.finishT > 0 ? lt / state.finishT : 0;
+            // The hold gate, reconstructed from the director's own fields rather than patched in:
+            // `CameraDirector.js:916-920` reads exactly these three.
+            const minHold =
+              dir._activeStateMinHoldMs != null
+                ? dir._activeStateMinHoldMs
+                : (dir._minStateHoldByState?.[dir.state] ?? dir._minStateHoldMs);
+            const heldFor = ts - dir.stateEnteredAt;
+            if (s === "COMEBACK_ZOOM") {
+              bump(lossClass, "SHOWN — the shot is on screen");
+            } else if (framePool == null) {
+              // The contest never ran this frame. Several ways that happens, and they are different
+              // findings with different addresses, so they are not merged.
+              if (!frameDecided) {
+                bump(
+                  lossClass,
+                  heldFor < minHold
+                    ? "NOT ASKED — an earlier shot is still inside its minStateHold (CameraDirector.js:960)"
+                    : "NOT ASKED — update() returned before the decision (CameraDirector.js:916-975)",
+                );
+              } else if (leaderRatio > dir._endgameThreshold) {
+                bump(lossClass, "ASKED, POOL NEVER BUILT — the endgame branch returns first (CameraDirector.js:1664)");
+              } else {
+                // The reason string names the branch, so it is reported rather than guessed at.
+                const head = String(frameDecision ?? "?").split(":")[0];
+                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1548+)`);
+              }
+            } else {
+              poolSize.set(framePool.length, (poolSize.get(framePool.length) ?? 0) + 1);
+              const inPool = framePool.some((c) => c.state === "COMEBACK_ZOOM");
+              if (!inPool) {
+                bump(lossClass, "NOT IN THE POOL — outcome gate / comeback cooldown / detector said no (CameraDirector.js:1713-1731)");
+              } else if (framePick && framePick.state === "COMEBACK_ZOOM") {
+                const declined = frameOffers.some(([w, a]) => w === framePick.weight && !a);
+                bump(
+                  lossClass,
+                  declined
+                    ? "WON THE DRAW, THEN DECLINED — the second weight roll (CameraDirector.js:724)"
+                    : "WON AND ACCEPTED — entering this frame",
+                );
+              } else {
+                bump(lossClass, "LOST THE WEIGHTED DRAW (CameraDirector.js:730)");
+                if (framePick) bump(beatenBy, framePick.state);
+                else bump(beatenBy, "(no pick — every candidate had weight 0)");
+              }
+            }
+          }
         }
+      }
+      if (
+        s === "COMEBACK_ZOOM" &&
+        prevState !== "COMEBACK_ZOOM" &&
+        heldIndex != null &&
+        (dir.comebackLockedRacerIndex ?? null) === heldIndex
+      ) {
+        heldShots.push({
+          progress: +(state.raceProgress ?? 0).toFixed(4),
+          rankAtStart: rankOf(state, heldIndex),
+          displaced: prevState,
+        });
       }
       if (s === "COMEBACK_ZOOM" && prevState !== "COMEBACK_ZOOM") {
         const who = dir.comebackLockedRacerIndex ?? null;
@@ -324,6 +635,9 @@ for (const geo of tracks) {
           })(),
           endProgress: null,
           rankAtEnd: null,
+          // ★ COMEBACK-PRECEDENCE-1 — the two facts the four numbers are counted from.
+          displaced: prevState,
+          precedence: /^comeback-precedence/.test(frameDecision ?? ""),
         });
       }
       // COMEBACK-SHAPE-1 — and where he was when it ended. The shot is not the climb, so its own
@@ -334,6 +648,7 @@ for (const geo of tracks) {
         last.rankAtEnd = last.racer == null ? null : rankOf(state, last.racer);
       }
       prevState = s;
+      clearFrame();
       return true;
     });
 
@@ -367,6 +682,36 @@ for (const geo of tracks) {
       rankAtBeat: Object.fromEntries(rankAtBeat),
       outcomeOpensAt,
       raceMs: st.physicsTs ?? null,
+      // COMEBACK-CONTEST-1 — of the candidate-in-window frames, WHY each was not a shot, and on
+      // the frames the contest actually ran, WHO won instead.
+      framesTotal,
+      // ★ COMEBACK-SAME-RACER-1 — the overlap this piece exists to fix, per race.
+      castIndices,
+      heldIndex,
+      heldDrawnPlace: heldIndex == null ? null : (drawnPlaceOf?.get(heldIndex) ?? null),
+      castDrawnPlaces:
+        castIndices == null ? null : castIndices.map((i) => drawnPlaceOf?.get(i) ?? null),
+      // Is the racer we HELD still one the MEASURED race cast? The arm steers before the casting
+      // boundary, so this cannot be assumed from the discovery pass.
+      heldStillCast:
+        heldIndex == null
+          ? null
+          : (beats ?? []).some((h) => h.role === "comebacker" && h.index === heldIndex),
+      heldBestRank: heldBestRank === 99 ? null : heldBestRank,
+      heldFinalRank,
+      heldCandidateFrames,
+      decisionsHeldCandidate,
+      heldShots,
+      switches,
+      precedenceFirings,
+      leadChangesCutShort,
+      displacedFrames,
+      decisionGapsMs: decisionTs.slice(1).map((t, i) => Math.round(t - decisionTs[i])),
+      decisionsTotal,
+      decisionsWithCandidate,
+      lossClass: Object.fromEntries([...lossClass].sort((x, y) => y[1] - x[1])),
+      beatenBy: Object.fromEntries([...beatenBy].sort((x, y) => y[1] - x[1])),
+      poolSize: Object.fromEntries([...poolSize].sort((x, y) => x[0] - y[0])),
     });
     process.stderr.write(
       `  ${geo.id.padEnd(15)} seed ${String(seed).padStart(2)}  ` +
@@ -379,7 +724,7 @@ if (JSON_OUT)
   writeFileSync(
     JSON_OUT,
     JSON.stringify(
-      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, rows },
+      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, precedence: PRECEDENCE, rows },
       null,
       1,
     ),

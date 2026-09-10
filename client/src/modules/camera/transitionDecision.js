@@ -27,6 +27,12 @@
 // That order is reproduced exactly below, so this function is a restatement and not a redesign:
 //   1. battle group dispersed      2. battle group P2 drift      3. lead-change interrupt
 //   4. hold elapsed / finish-drama expired / finish-drama forced / photo-finish gate / photo-finish end
+//
+// COMEBACK-PRECEDENCE-1 added ONE slot, 3.5: the cast comebacker's interrupt, BELOW the lead change
+// and ABOVE the hold gate, so a confirmed lead change still outranks it. That ordering is NOT the
+// mild rule's "never cut a LEAD_CHANGE already on screen" — this slot only decides who wins when
+// both want the same frame; the on-screen limit is enforced by the caller's pendency test, which
+// never reports pending while LEAD_CHANGE is the state. Nothing else moved.
 // ============================================================
 
 /** What the call site should do. */
@@ -42,6 +48,7 @@ export const TRANSITION_REASON = {
   BATTLE_GROUP_DISPERSED: 'battle-group-dispersed',
   BATTLE_GROUP_P2_DRIFT: 'battle-group-p2-drift',
   LEAD_CHANGE_INTERRUPT: 'lead-change-interrupt',
+  COMEBACK_PRECEDENCE: 'comeback-precedence',
   HOLD_ELAPSED: 'hold-elapsed',
   FINISH_DRAMA_EXPIRED: 'finish-drama-expired',
   FINISH_DRAMA_FORCED: 'finish-drama-forced',
@@ -67,6 +74,7 @@ export function decideTransition({
   originalGroupStillValid,
   battleGroupP2Drifted,
   leadChangePending,
+  comebackPrecedencePending,
   finishDramaExpired,
   forceFinishDrama,
   photoFinishGateReady,
@@ -91,6 +99,18 @@ export function decideTransition({
     return {
       action: TRANSITION_ACTION.TRANSITION,
       reason: TRANSITION_REASON.LEAD_CHANGE_INTERRUPT,
+    };
+  }
+  // 3.5. THE CAST COMEBACKER'S PRECEDENCE (COMEBACK-PRECEDENCE-1). The director has decided that a
+  // racer the PLAN cast as a comebacker is climbing and has not been shown yet; the camera goes to
+  // him now rather than at the end of a hold that can run eight seconds. Reaching this line does not
+  // by itself produce the shot — `_pickNextState` still has to offer it, and the caller's own
+  // pendency test is deliberately a subset of what it will accept, so this interrupt cannot cut a
+  // hold short and then land somewhere else.
+  if (comebackPrecedencePending) {
+    return {
+      action: TRANSITION_ACTION.TRANSITION,
+      reason: TRANSITION_REASON.COMEBACK_PRECEDENCE,
     };
   }
   // 4. The hold gate and its four bypasses, in the order they were OR-ed.

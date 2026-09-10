@@ -18,11 +18,13 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import {
   RACER_TYPES,
   listAllRacerTypes,
-  removeRacerType,
   getRacerTypeLabel,
   TUNABLE_FIELDS,
   normalizeOverrideMap,
 } from '../../../modules/racer-types/index.js';
+// RACER-TYPES-SPLIT-1: deleting a racer type is a SERVER conversation and lives apart from
+// the registry the race engine reads.
+import { removeRacerType } from '../../../modules/racer-types/serverRacerTypes.js';
 import { RacerEditModal } from './RacerEditModal.jsx';
 import s from '../DevScreen.module.css';
 

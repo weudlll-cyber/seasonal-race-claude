@@ -379,6 +379,18 @@ export class CameraDirector {
     // camera has committed to for this episode is a question about the shot.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
+    // ── COMEBACK-PRECEDENCE-1: the two limits, held as state because they ARE the behaviour ──────
+    //
+    // `_comebackPrecedenceRacer` is this frame's answer to "does the cast comebacker take the screen
+    // now" — the live racer object, or null. Written once per frame in `update()`, read by
+    // `_pickNextState`. It is not a second detector: it is the SAME `_comeback.best()` the pool
+    // already asks, with the precedence's own limits applied.
+    //
+    // `_comebackPrecedenceShown` is "at most once per comebacker". Indices go in when the shot
+    // actually COMMITS, never when it is merely offered, so a fire that the finish sequence or the
+    // endgame overrules does not burn the racer's one turn.
+    this._comebackPrecedenceRacer = null;
+    this._comebackPrecedenceShown = new Set();
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -780,6 +792,10 @@ export class CameraDirector {
     this._comeback.setRoster(b1Indices, cameraPlan);
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
+    // "Once per comebacker" is once per comebacker PER RACE. The roster call is where the detector
+    // throws away the previous race's rank history, so it is where this belongs too.
+    this._comebackPrecedenceRacer = null;
+    this._comebackPrecedenceShown = new Set();
   }
 
   /**
@@ -823,6 +839,57 @@ export class CameraDirector {
   /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
   _detectComebackRacer(racers, ts, progress = null) {
     return this._comeback.best(racers, ts, progress);
+  }
+
+  /**
+   * ── COMEBACK-PRECEDENCE-1 — THE WHOLE PRECEDENCE, IN ONE PLACE ─────────────────────────────────
+   *
+   * WHAT IT DECIDES: whether the racer the PLAN cast as a comebacker takes the screen right now,
+   * instead of waiting out a hold that runs up to eight seconds and then winning a weighted draw
+   * about a quarter of the time. Returns the live racer to cut to, or null.
+   *
+   * WHAT IT IS NOT: a second detector. Who is climbing is `_comeback.best()` and nothing else — the
+   * same call, the same gates, the same answer the candidate pool gets one line further down. This
+   * method adds only the two limits and the population test.
+   *
+   * ★ THE TWO LIMITS ARE BEHAVIOUR, NOT SETTINGS. There is no key, no default and no number to
+   * tune here; every threshold read below already exists and is read, never restated:
+   *   · AT MOST ONCE PER COMEBACKER — `_comebackPrecedenceShown`, burned on commit;
+   *   · NEVER INTO A LEAD_CHANGE ALREADY ON SCREEN — the state test, first line of the body.
+   *
+   * ★ THE CAST ONLY. `comebackDetector.js:157` falls back to the wider `_b1` pool in the ~4% of
+   * races where the plan casts no comebacker. In those races nothing is forced and today's
+   * behaviour stands, because the precedence is the STORY's claim on the camera and there is no
+   * story to honour when nobody was cast.
+   *
+   * ★ WHY THE GATES BELOW ARE A SUBSET OF `_pickNextState`'s. This answer becomes an interrupt that
+   * cuts a hold short. A hold cut for a shot that then does not happen is the restless camera the
+   * mild rule exists to avoid, so the finish sequence, the start window and the endgame — each of
+   * which owns the screen ABOVE the candidate pool — are excluded here as well. They are reads of
+   * latches and thresholds that already exist; none is new, and `_pickNextState` remains the
+   * authority that actually produces the shot.
+   */
+  _comebackPrecedenceOffer(racers, ts, raceState) {
+    // LIMIT 2: a lead change already on screen is never cut into.
+    if (this.state === CAM_STATE.LEAD_CHANGE) return null;
+    // Already looking at him — there is nothing to switch to.
+    if (this.state === CAM_STATE.COMEBACK_ZOOM) return null;
+    // The finish sequence, the start window and the endgame own the picture outright.
+    if (this._inPhotoFinish || this._inFinishDrama || this._inFinishMode) return null;
+    if (!raceState || raceState.raceElapsed < this._startWindowMs) return null;
+    const progress = this._diagLeaderProgress;
+    if (progress > this._endgameThreshold) return null;
+    // The pool's own three gates for a comeback candidate, read in the same order it reads them.
+    if (!(raceState.isOutcomePhase || progress > this._outcomePhaseThreshold)) return null;
+    if (!(this._comebackWeight > 0)) return null;
+    if (ts - this._lastComebackExitTs < this._comebackCooldownMs) return null;
+    const racer = this._detectComebackRacer(racers, ts, progress);
+    if (!racer) return null;
+    // The population: the plan's cast, and only it.
+    if (!this._comeback.isCast(racer.index)) return null;
+    // LIMIT 1: at most once per comebacker.
+    if (this._comebackPrecedenceShown.has(racer.index)) return null;
+    return racer;
   }
 
   /**
@@ -953,6 +1020,11 @@ export class CameraDirector {
       this._photoFinishEnterPending = true; // consumed by _pickNextState to enter PHOTO_FINISH
     }
     const photoFinishGateReady = photoFinishGate.close; // bypass holdGate so the entry is frame-exact
+    // COMEBACK-PRECEDENCE-1: evaluated ONCE per frame, here in update() where the other
+    // hold-gate bypasses are evaluated and where `_diagLeaderProgress` has just been written. The
+    // answer is stored rather than recomputed, so `_pickNextState` and `decideTransition` are
+    // looking at the same frame's answer and cannot disagree about it.
+    this._comebackPrecedenceRacer = this._comebackPrecedenceOffer(racers, ts, raceState);
     const prevState = this.state;
     const inBattleZoom = this.state === CAM_STATE.BATTLE_ZOOM;
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
@@ -973,6 +1045,7 @@ export class CameraDirector {
       originalGroupStillValid: battleExitEligible ? this._isOriginalGroupStillValid(racers) : true,
       battleGroupP2Drifted: battleExitEligible ? this._isBattleGroupP2Drifted(racers) : false,
       leadChangePending: this._leadChangePending,
+      comebackPrecedencePending: this._comebackPrecedenceRacer != null,
       finishDramaExpired,
       forceFinishDrama,
       photoFinishGateReady,
@@ -1723,6 +1796,27 @@ export class CameraDirector {
         // are written in race progress, not in wall-clock ms.
         _comebackRacer = this._detectComebackRacer(racers, ts, leaderProgress);
         if (_comebackRacer) {
+          // ── ★ COMEBACK-PRECEDENCE-1 — THE FORCE ──────────────────────────────────────────────
+          //
+          // COMEBACK-SAME-RACER-1 §4 established that an interrupt ALONE is not a precedence:
+          // `_transition` calls this method and commits whatever comes back, so interrupting the
+          // hold merely re-opens the weighted draw, which the comebacker wins about a quarter of
+          // the time. This return IS the precedence — it lands above `_weightedRandomPick` and
+          // above `_acceptsOffer`, so the draw is not re-opened and the offer cannot be declined.
+          //
+          // ★ WHY HERE AND NOT AT THE `_transition` CALL SITE. Forcing there would override the
+          // finish sequence, the start window and the endgame, each of which returns above this
+          // branch and owns the screen outright. Placed here, the force inherits every one of
+          // those gates instead of restating them, and the identity test keeps it the SAME racer
+          // `_comebackPrecedenceOffer` cleared this frame — one notion of who is climbing, one
+          // decision about him.
+          if (this._comebackPrecedenceRacer?.index === _comebackRacer.index) {
+            return {
+              nextState: CAM_STATE.COMEBACK_ZOOM,
+              reason: `comeback-precedence: ${_comebackRacer.name ?? _comebackRacer.index} (cast comebacker, first shot)`,
+              data: { comebackRacer: _comebackRacer, comebackPrecedence: true },
+            };
+          }
           candidates.push({
             state: CAM_STATE.COMEBACK_ZOOM,
             weight: this._comebackWeight,
@@ -1801,6 +1895,12 @@ export class CameraDirector {
     if (nextState === CAM_STATE.COMEBACK_ZOOM && data.comebackRacer) {
       this._comebackLockedRacer = data.comebackRacer;
       this._comebackLockedRacerIndex = data.comebackRacer.index ?? null;
+      // COMEBACK-PRECEDENCE-1, LIMIT 1: the racer's one forced shot is spent HERE, on the commit,
+      // and not where it was offered — so an offer the frame did not turn into a shot leaves him
+      // his turn.
+      if (data.comebackPrecedence && data.comebackRacer.index != null) {
+        this._comebackPrecedenceShown.add(data.comebackRacer.index);
+      }
     }
 
     // CEREMONY-HOLD-TARGET-1 — THE BACKSTOP RELEASE. Since START-ONE-WINDOW-1 the hold normally

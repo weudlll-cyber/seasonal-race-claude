@@ -2,26 +2,29 @@
 // File:        surfaceClassLoader.js
 // Path:        client/src/modules/storage/surfaceClassLoader.js
 // Project:     RaceArena
-// Description: Fetches backend surface classes and caches them in localStorage.
-//              Analogous to trackLoader.js. Falls back to an empty cache
-//              (= code defaults only) when the backend is unreachable.
+// Description: Fetches backend surface classes and fills the localStorage cache.
+//              Analogous to trackLoader.js. Falls back to the cache
+//              (= code defaults only when it is empty) when the backend is unreachable.
+//
+// ★ HULL-SURFACE-SPLIT-1 — THIS IS THE NETWORK HALF, AND IT IS OUTSIDE THE RACE HULL.
+// The cache READ moved to `surfaceClassCache.js`, which is what `RaceScreen` imports. Everything
+// here reaches `services/surfaceClassApi.js` and so, transitively, `services/api.js` and
+// `services/apiClient.js` — none of which can change a race. Keeping the read here put all three
+// inside the hull, because a module-level import comes along whether the importer calls it or not.
+//
+// ★ DO NOT RE-EXPORT `getCachedServerSurfaceClasses` FROM HERE. It would read as a convenience and
+// would put the network back into the closure of anything that used it.
 // ============================================================
 
 import { fetchSurfaceClasses } from '../../services/surfaceClassApi.js';
-import { storageGet, storageSet, KEYS } from './storage.js';
+import {
+  getCachedServerSurfaceClasses,
+  setCachedServerSurfaceClasses,
+} from './surfaceClassCache.js';
 import { loadServerClasses } from '../surface-effects/registry.js';
 import { withTimeout } from '../../utils/withTimeout.js';
 
 const FETCH_TIMEOUT_MS = 3000;
-
-/**
- * Returns the last successfully fetched server classes from localStorage cache.
- * Returns an empty array when no cache exists (= show code defaults only).
- * @returns {object[]}
- */
-export function getCachedServerSurfaceClasses() {
-  return storageGet(KEYS.SURFACE_CLASSES_CACHE, []);
-}
 
 /**
  * Fetch fresh surface classes from the backend, persist to localStorage cache,
@@ -33,7 +36,7 @@ export function getCachedServerSurfaceClasses() {
 export async function fetchServerSurfaceClasses() {
   try {
     const classes = await withTimeout(fetchSurfaceClasses(), FETCH_TIMEOUT_MS);
-    storageSet(KEYS.SURFACE_CLASSES_CACHE, classes);
+    setCachedServerSurfaceClasses(classes);
     loadServerClasses(classes);
     return classes;
   } catch (err) {

@@ -101,6 +101,19 @@ export class ComebackDetector {
     return this._resolveByIndex?.get(index) ?? null;
   }
 
+  /**
+   * Is this racer one the PLAN cast as a comebacker?
+   *
+   * COMEBACK-PRECEDENCE-1 needs to tell a cast comebacker from a `_b1` fallback candidate, because
+   * the precedence applies to the cast ONLY: in a race where the plan cast nobody, `_cast` is null,
+   * `best()` falls back to the wider `_b1` pool at `:157`, and forcing a shot on a racer the story
+   * never named would be the camera inventing the very thing the cast exists to author. This reads
+   * the set `:86` already builds and adds no second notion of who is cast.
+   */
+  isCast(index) {
+    return !!this._cast && this._cast.has(index);
+  }
+
   /** True when detection is switched on at all (a roster exists). */
   get active() {
     return !!this._b1 && this._b1.size > 0;

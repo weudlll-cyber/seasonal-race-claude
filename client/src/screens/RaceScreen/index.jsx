@@ -88,7 +88,7 @@ import {
   sampleBoundaryAtInterval,
 } from '../../modules/trackLights.js';
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
-import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
+import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassCache.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';

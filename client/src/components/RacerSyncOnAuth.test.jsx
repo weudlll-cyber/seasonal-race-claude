@@ -12,11 +12,14 @@ import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../contexts/AuthContext.jsx', () => ({ useAuth: vi.fn() }));
-vi.mock('../modules/racer-types/index.js', () => ({ loadServerRacerTypes: vi.fn() }));
+// RACER-TYPES-SPLIT-1: the SERVER half is what this component imports, so it is what must be
+// mocked. Mocking the REGISTRY here left it loading for real, boot side effects and all, while
+// the thing under test came from elsewhere — and a wrong-import sabotage passed because of it.
+vi.mock('../modules/racer-types/serverRacerTypes.js', () => ({ loadServerRacerTypes: vi.fn() }));
 
 import RacerSyncOnAuth from './RacerSyncOnAuth.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { loadServerRacerTypes } from '../modules/racer-types/index.js';
+import { loadServerRacerTypes } from '../modules/racer-types/serverRacerTypes.js';
 
 const MOCK_USER = { id: 'u1', username: 'testoperator', role: 'operator' };
 

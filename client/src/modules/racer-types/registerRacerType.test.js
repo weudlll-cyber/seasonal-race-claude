@@ -92,7 +92,8 @@ vi.mock('../../services/racerApi.js', () => ({
 
 vi.mock('../../services/api.js', () => ({ API_BASE_URL: 'http://test' }));
 
-import { registerRacerType, _resetLoadedRacerTypesForTesting } from './index.js';
+import { _resetLoadedRacerTypesForTesting } from './index.js';
+import { registerRacerType } from './serverRacerTypes.js';
 
 const BASE_CONFIG = {
   id: 'test-custom',

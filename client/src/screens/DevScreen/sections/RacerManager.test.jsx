@@ -36,14 +36,19 @@ vi.mock('../../../modules/storage/storage.js', () => ({
   STORAGE_CHANGE_EVENT: 'racearena:storage-change',
 }));
 
+// RACER-TYPES-SPLIT-1: the server half moved out of the registry, so the names that talk to
+// the server are imported (and mocked) from `serverRacerTypes.js`. The registry import below
+// keeps only what it still owns.
 vi.mock('../../../modules/racer-types/index.js', () => ({
   RACER_TYPES: { horse: {}, rocket: {} },
   listAllRacerTypes: mockListAllRacerTypes,
-  removeRacerType: mockRemoveRacerType,
   getRacerTypeLabel: (id) =>
     ({ horse: 'Horse', rocket: 'Rocket', 'test-cat': 'Test Cat' })[id] ?? id,
   TUNABLE_FIELDS: ['speedMultiplier'],
   normalizeOverrideMap: vi.fn((v) => v ?? {}),
+}));
+vi.mock('../../../modules/racer-types/serverRacerTypes.js', () => ({
+  removeRacerType: mockRemoveRacerType,
 }));
 
 vi.mock('./RacerEditModal.jsx', () => ({

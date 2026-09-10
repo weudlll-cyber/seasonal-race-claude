@@ -14,7 +14,10 @@
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchServerSurfaceClasses, getCachedServerSurfaceClasses } from './surfaceClassLoader.js';
+import { fetchServerSurfaceClasses } from './surfaceClassLoader.js';
+// HULL-SURFACE-SPLIT-1: the cache read lives in its own module now, and this test names it there
+// rather than through a re-export — the re-export is the thing the split forbids.
+import { getCachedServerSurfaceClasses } from './surfaceClassCache.js';
 import { storageSet, KEYS } from './storage.js';
 
 const CUSTOM = [{ id: 'lava', name: 'Lava', isOverride: false, isDefault: false }];

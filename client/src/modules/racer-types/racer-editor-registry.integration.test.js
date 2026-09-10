@@ -59,12 +59,11 @@ import {
   getCoatsByType,
   getRacerTypeLabel,
   RACER_TYPE_IDS,
-  removeRacerType,
-  registerRacerType,
   _resetLoadedRacerTypesForTesting,
   _resetRacersReadyForTesting,
   _setLoadedRacerTypeForTesting,
 } from './index.js';
+import { removeRacerType, registerRacerType } from './serverRacerTypes.js';
 
 const TEST_COAT = { id: 'default', name: 'Default', tint: null };
 
