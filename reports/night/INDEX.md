@@ -8,6 +8,30 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-SAME-RACER-1.md](COMEBACK-SAME-RACER-1.md) - **the held racer and the plan's comebacker
+  become the same racer** (2026-09-10, `night/2026-09-09`; measurement only, all arms REMOVED, all
+  four fingerprints UNMOVED, nothing recommended). ★ **THE OVERLAP IS FIXED: 96 of 96**, against 0 of
+  10 at drawn place 3. It is a MEASUREMENT and not an assumption because `racePlanner.js:684` runs the
+  hero generator ONE FRAME AFTER THE CHOREO BOUNDARY on live post-chaos ranks - the cast is not known
+  at the start line, and the arm steers before the boundary, so each race runs TWICE (discovery, then
+  measured) and `heldStillCast` asks the question in the run that counts. ★ **THE COLLISION, AND IT IS
+  STRUCTURAL**: of 179 cast comebackers, **2 (1.1%) are drawn inside the top 5**; the median drawn
+  place is **27**, with 78% drawn 21st or worse. The plan casts comebackers from racers who START
+  DEEP - that is what makes a comeback - so the owner's top-5 rule and the plan's casting select from
+  nearly disjoint populations. **Neither is overruled.** ★ **AND THIS ACCOUNTS FOR THE 42-of-100
+  NOBODY HAD EXPLAINED**: at 1.1% a drawn-place-3 arm should coincide almost never, so the 42 cannot
+  have come from a top-5 selection. **STEP 2**: he reaches the top 5 in **95 of 96** (best rank median
+  1); **35 comeback shots on him**, 81% of all comeback shots, clustered just after the 0.70 release
+  (median progress 0.727). Also named: **4 of 100 races cast NO comebacker**, against COMEBACK-DEF-1's
+  0 of 200. ★ **STEP 3 - HIS PRECEDENCE QUESTION, FOUR ARMS AT N=30 THEN N=100.** The director already
+  had the mechanism (`transitionDecision.js:89-95`, before the hold gate) but an interrupt alone only
+  re-opens the weighted draw, so C and D FORCE the state. **Firings 1.70/race (C) and 1.15/race (D) -
+  one or two, not restless.** ★ **THE SHORTER HOLD CUTS THE PICTURE FAR MORE THAN EITHER PRECEDENCE**:
+  switches/min today **11.3**, mild **11.7**, hard **11.9**, shorter hold ★ **14.6** - and B buys FEWER
+  shots than C (73 vs 136). The precedence is the calmer lever and the hold length is the wild one,
+  which is the opposite of how the two changes look. ★ **THE TRADE IS ARM C's ALONE: it cuts a
+  LEAD_CHANGE short 30 times in 96 races; arm D never does (0)**, at a cost of 52 of C's 136 shots.
+
 - [RACER-TYPES-SPLIT-1.md](RACER-TYPES-SPLIT-1.md) - **the registry the engine reads stops carrying
   the network** (2026-09-10, day chain, piece 4). HULL-FIX-1 named the over-report and stopped,
   because the fix was product code; this is the separation. `serverRacerTypes.js` takes every caller

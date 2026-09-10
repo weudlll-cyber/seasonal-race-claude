@@ -134,6 +134,43 @@ const USE_BEATS = ARG("use-beats", null);
 // Default ON; `--contest=0` is the control that proves the wrapping changes nothing.
 const CONTEST = ARG("contest", "1") !== "0";
 
+// ── ★★ TEMPORARY MEASUREMENT ARM — COMEBACK-SAME-RACER-1 ★★ ────────────────────────────────
+//
+// `--hold=cast` holds a racer THE PLAN HAS CAST AS A COMEBACKER, instead of one picked by drawn
+// place. That distinction is the whole piece: `comebackDetector.js:157` offers only the plan's
+// cast, so a climb by anyone else is invisible to the camera however well it is held.
+//
+// ★ IT COSTS TWO RUNS PER RACE, AND THE SECOND IS THE MEASURED ONE. The cast is not known at the
+// start line: `racePlanner.js:684` runs the hero generator ONE FRAME AFTER THE CHOREO BOUNDARY,
+// on the live post-chaos ranks and rank-velocities. So a DISCOVERY pass runs first with no arm
+// and stops the moment the plan is delivered; the measured pass then re-runs the same seed with
+// the arm set on one of the racers that pass named.
+//
+// ★ AND THAT IS WHY THE OVERLAP IS MEASURED RATHER THAN ASSUMED. The arm steers before the
+// boundary, so it can change the very input the casting reads. Whether the held racer is still
+// cast in the MEASURED pass is a question the discovery pass cannot answer, and this script
+// answers it per race (`heldStillCast`).
+//
+// Default OFF. Nothing here ships; the arm lives in `racePlanner.js` and is removed with it.
+const HOLD = ARG("hold", "off");
+const HOLD_RANK = Number(ARG("hold-rank", "18"));
+const HOLD_UNTIL = Number(ARG("release", "0.70"));
+
+// ── ★ THE FOUR ARMS (COMEBACK-SAME-RACER-1 step 3) ────────────────────────────────────────
+//
+//   --arm=A  today, the baseline everything is read against
+//   --arm=B  SHORTER HOLD. `maxStateDuration` was the binding floor in 5 of 6 states, so this
+//            shortens it for the states that actually hold the screen during a climb.
+//            ★ IT NEEDS NO PRODUCT CHANGE AT ALL: the value is overridden on a COPY of the
+//            camera config for one run, the same mechanism `--comeback-weight` already uses.
+//            `defaults.js` is never written and nothing persists.
+//   --arm=C  PRECEDENCE, HARD — switch at once, whatever is running. His question as asked.
+//   --arm=D  PRECEDENCE, MILD — at most once per comebacker, never cutting a LEAD_CHANGE.
+//
+// C and D are the only ones that touch shipped files, and that arm is temporary and removed.
+const ARM = ARG("arm", "A").toUpperCase();
+const SHORT_HOLD_MS = Number(ARG("short-hold", "2000"));
+
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -144,8 +181,27 @@ if (SEEDS.length === 0) {
 }
 
 // The config this sweep actually runs, which is the shipped one unless a weight was asked for.
+// ARM B: the states a climb actually finds on screen, from COMEBACK-CEILING-1's own table —
+// LEADER_ZOOM, BATTLE_ZOOM, OVERVIEW and LEAD_CHANGE were what held it. Their `maxStateDuration`
+// is the binding floor, so that is the number this arm shortens. Nothing else is touched, and it is
+// a COPY: `defaults.js` is never written.
+const _shortHoldProfiles = (base) =>
+  Object.fromEntries(
+    Object.entries(base ?? {}).map(([k, v]) => [
+      k,
+      v && typeof v === "object" && "maxStateDuration" in v
+        ? { ...v, maxStateDuration: Math.min(v.maxStateDuration, SHORT_HOLD_MS) }
+        : v,
+    ]),
+  );
+
 const CAMERA_CONFIG = {
   ...DEFAULT_CAMERA_CONFIG,
+  ...(ARM === "B"
+    ? {
+        cameraStateProfiles: _shortHoldProfiles(DEFAULT_CAMERA_CONFIG.cameraStateProfiles),
+      }
+    : {}),
   ...(WEIGHT == null ? {} : { comebackWeight: Number(WEIGHT) }),
   ...(USE_BEATS == null ? {} : { comebackUseBeats: USE_BEATS === "1" || USE_BEATS === "true" }),
 };
@@ -168,6 +224,41 @@ const rows = [];
 for (const geo of tracks) {
   for (const seed of SEEDS) {
     const identity = resolveIdentity({ raceSeed: seed, racers: 40 });
+
+    // ── ★ PASS 1 — DISCOVERY. No arm. Stops the moment the plan names its heroes. ───────────────
+    let castIndices = null; // the plan's comebackers, as the UNPERTURBED race casts them
+    let drawnPlaceOf = null; // racerIndex -> place on the start line, 1 = pole
+    let heldIndex = null;
+    if (HOLD === "cast") {
+      const probe = buildRace(geo, identity, CAMERA_CONFIG);
+      // The start line, read once: `t` after `computePositions()` IS the drawn order.
+      drawnPlaceOf = new Map(
+        [...probe.st.racers].sort((a, b) => b.t - a.t).map((r, i) => [r.index, i + 1]),
+      );
+      runRace(probe, identity, CAMERA_CONFIG, ({ cd: d2 }) => {
+        const cp = probe.meta.racePlanController?.getCameraPlan?.();
+        if (!cp) return true;
+        castIndices = (cp.heroes ?? [])
+          .filter((h) => h.role === "comebacker" && Number.isInteger(h.index))
+          .map((h) => h.index);
+        void d2;
+        return false; // the plan is delivered; nothing past this frame is needed
+      });
+      // ★ WHOSE CLIMB IS HELD, when the plan cast more than one: the one drawn FURTHEST FORWARD.
+      // The owner's rule is that the held racer's drawn place is inside the top 5, and this gives
+      // that rule its best chance without overruling the plan — which is the collision this piece
+      // was told to report rather than resolve.
+      if (castIndices && castIndices.length) {
+        heldIndex = [...castIndices].sort(
+          (a, b) => (drawnPlaceOf.get(a) ?? 99) - (drawnPlaceOf.get(b) ?? 99),
+        )[0];
+      }
+    }
+
+    // ★★ TEMPORARY: arm the precedence for the MEASURED pass only — the discovery pass above must
+    // see the shipped camera, or the cast it reports would be the arm's and not the plan's.
+
+    // ── PASS 2 — THE MEASURED RUN ───────────────────────────────────────────────────────────────
     const race = buildRace(geo, identity, CAMERA_CONFIG);
     const { st, meta, cd } = race;
 
@@ -210,6 +301,19 @@ for (const geo of tracks) {
     //   `_acceptsOffer` (CameraDirector.js:724) — THE SECOND GATE. The winner still faces a roll
     //     against its own weight and a decline falls through to LEADER_ZOOM, so a comeback can win
     //     the draw and still not be shown.
+    // ★ COMEBACK-SAME-RACER-1 — the held racer's own story in the MEASURED pass.
+    let heldBestRank = 99; // the best (lowest) rank he reached after the release
+    let heldFinalRank = null;
+    let heldCandidateFrames = 0; // frames the detector would have offered HIM
+    let decisionsHeldCandidate = 0; // ...of those, frames the contest was actually asked
+    const heldShots = []; // COMEBACK_ZOOM entries locked onto HIM
+    // ★ STEP 3's numbers. A SWITCH is a frame on which the state actually changed — "how often the
+    // picture cuts" is that, per minute, and it is the number a shot count cannot show.
+    let switches = 0;
+    let precedenceFirings = 0; // COMEBACK entries whose reason names the arm
+    const displacedFrames = {}; // state -> frames it had been on screen when it was cut
+    let stateEnteredFrame = 0;
+    let frameNo = 0;
     // ★ THE DECISION SERIES (COMEBACK-CEILING-1). Not a mean: every decision's timestamp is kept so
     // the GAPS can be reported as a DISTRIBUTION. That matters — the mean is meaningless here,
     // because 95% of the gaps are one frame (a same-state repeat, where `_activeStateMinHoldMs` is
@@ -361,6 +465,15 @@ for (const geo of tracks) {
       }
       const s = dir.state;
       framesTotal++;
+      frameNo++;
+      if (prevState !== null && s !== prevState) {
+        switches++;
+        displacedFrames[prevState] = (displacedFrames[prevState] ?? 0) + (frameNo - stateEnteredFrame);
+        stateEnteredFrame = frameNo;
+        if (s === "COMEBACK_ZOOM" && /PRECEDENCE ARM/.test(frameDecision ?? "")) {
+          precedenceFirings++;
+        }
+      }
       if (frameDecided) {
         decisionsTotal++;
         decisionTs.push(ts - raceStart);
@@ -383,7 +496,19 @@ for (const geo of tracks) {
       // omitted it in the first draft, so GATE 1 and GATE 2a below came back BYTE-IDENTICAL in both
       // arms — they were measuring a detector the run was not using. Passing the same progress the
       // director passes makes this row describe the arm that is actually running.
+      // ★ THE HELD RACER'S CLIMB, measured in the pass that counts.
+      if (heldIndex != null) {
+        const rk = rankOf(state, heldIndex);
+        if (rk != null) {
+          heldFinalRank = rk;
+          if ((state.raceProgress ?? 0) >= HOLD_UNTIL && rk < heldBestRank) heldBestRank = rk;
+        }
+      }
       const cand = dir._comeback?.best?.(state.racers, ts, state.raceProgress ?? null) ?? null;
+      if (heldIndex != null && cand && cand.index === heldIndex) {
+        heldCandidateFrames++;
+        if (frameDecided) decisionsHeldCandidate++;
+      }
       if (cand) {
         candidateFrames++;
         candidateRacers.add(cand.index);
@@ -450,6 +575,18 @@ for (const geo of tracks) {
             }
           }
         }
+      }
+      if (
+        s === "COMEBACK_ZOOM" &&
+        prevState !== "COMEBACK_ZOOM" &&
+        heldIndex != null &&
+        (dir.comebackLockedRacerIndex ?? null) === heldIndex
+      ) {
+        heldShots.push({
+          progress: +(state.raceProgress ?? 0).toFixed(4),
+          rankAtStart: rankOf(state, heldIndex),
+          displaced: prevState,
+        });
       }
       if (s === "COMEBACK_ZOOM" && prevState !== "COMEBACK_ZOOM") {
         const who = dir.comebackLockedRacerIndex ?? null;
@@ -519,6 +656,26 @@ for (const geo of tracks) {
       // COMEBACK-CONTEST-1 — of the candidate-in-window frames, WHY each was not a shot, and on
       // the frames the contest actually ran, WHO won instead.
       framesTotal,
+      // ★ COMEBACK-SAME-RACER-1 — the overlap this piece exists to fix, per race.
+      castIndices,
+      heldIndex,
+      heldDrawnPlace: heldIndex == null ? null : (drawnPlaceOf?.get(heldIndex) ?? null),
+      castDrawnPlaces:
+        castIndices == null ? null : castIndices.map((i) => drawnPlaceOf?.get(i) ?? null),
+      // Is the racer we HELD still one the MEASURED race cast? The arm steers before the casting
+      // boundary, so this cannot be assumed from the discovery pass.
+      heldStillCast:
+        heldIndex == null
+          ? null
+          : (beats ?? []).some((h) => h.role === "comebacker" && h.index === heldIndex),
+      heldBestRank: heldBestRank === 99 ? null : heldBestRank,
+      heldFinalRank,
+      heldCandidateFrames,
+      decisionsHeldCandidate,
+      heldShots,
+      switches,
+      precedenceFirings,
+      displacedFrames,
       decisionGapsMs: decisionTs.slice(1).map((t, i) => Math.round(t - decisionTs[i])),
       decisionsTotal,
       decisionsWithCandidate,
