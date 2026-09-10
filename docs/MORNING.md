@@ -4,89 +4,84 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-10, DAY chain 2026-09-10 — after PIECE 4.
+**Last rewritten:** 2026-09-10, after COMEBACK-SAME-RACER-1.
 
-**Where the code is.** Master is `f0debe20` (CI green, all three jobs). `night/2026-09-09` carries
-everything since and is **NOT merged** — it waits for your eye. Ports 4000 / 4173 / 5173 are down.
-
----
-
-## THE DAY OF 2026-09-10 — SIX PIECES, FOUR DONE, THREE FELL
-
-| # | piece | state |
-|---|---|---|
-| 1 | the build's file request · the e2e geometry flake | ★ **DONE** |
-| 2 | how often the camera even looks | ★ **DONE** (arms B/C/D not built — below) |
-| 3 | sixteen of thirty shots show the wrong racer | **FELL** (fall order: third) |
-| 4 | split `racer-types/index.js` | ★ **DONE** |
-| 5 | `check-image-starts` into CI | **FELL** (fall order: second) |
-| 6 | the unconsumed exports | **FELL** (fall order: first) |
-
-The three that fell are the three the chain nominated to fall, in that order. Nothing was left
-half-done: each piece that ran is committed, pushed, verified and reported.
+**Where the code is.** Master is `f0debe20` (CI green). `night/2026-09-09` carries everything since
+and is **NOT merged** — it waits for your eye. Ports 4000 / 4173 / 5173 are down.
 
 ---
 
-## ★ THE ONE THING TO KNOW FIRST — YOUR COMEBACK QUESTION HAS AN ANSWER, AND IT IS NOT THE WEIGHT
+## ★ YOUR PRECEDENCE QUESTION HAS AN ANSWER, AND IT SPLITS CLEANLY IN TWO
 
-You asked what would happen if the camera simply **switched** to the comebacker. Before building
-that, two things were measured that change what the arms should even ask.
+You asked what would happen if the camera simply **switched** to the comebacker whenever the race
+director names one. Four arms, 100 races each, same seeds, nothing shipped and nothing recommended.
 
-★ **The camera is not losing the contest; the contest almost never happens.** Of 13 876 frames with a
-comeback candidate available, the weighted contest ran on **136 — 0.98%**, and he won **13 of those,
-10%**. The draw and its second weight roll together account for **27 frames of 13 876 — 0.19%.**
+| arm | comeback shots on him | ★ fires per race | ★ **switches per minute** | cuts a LEAD_CHANGE short |
+|---|---|---|---|---|
+| **today** | 35 | — | **11.3** | 2 |
+| **shorter hold** | 73 | — | ★ **14.6** | 3 |
+| **precedence, HARD** — your question as asked | ★ **136** | **1.70** | **11.9** | ★ **30** |
+| **precedence, MILD** — mine: once each, never over a lead change | 84 | **1.15** | **11.7** | ★ **0** |
 
-★ **And the gap between decisions is TWO distributions, not one.** **95.4% of gaps are one frame**;
-only **1.6% are the ~8 s gate**. A same-state repeat sets the gate to zero, so the camera looks
-*constantly* while it is repeating itself and once every eight seconds after it moves.
+★ **It does not make the camera restless.** It fires **1.7 times a race** (hard) or **1.15** (mild).
+A race carries one to two comebackers; the arm acts about once on each.
 
-★ **`maxStateDuration` is doing the opposite of its name in five of six states.** It is the FLOOR on
-how long a shot is held, because the gate takes the *longer* of the minimum and the maximum.
-`PHOTO_FINISH` and `LEAD_CHANGE` each declare a 1 500 ms minimum and are held **8 000 ms — 5.3× what
-they asked for.** `OVERVIEW` is the only state its own minimum binds, and only because its maximum is
-*below* its minimum. **Nothing was changed. This is yours to judge.**
+★ **THE SHORTER HOLD CUTS THE PICTURE FAR MORE THAN EITHER PRECEDENCE DOES** — +3.3 cuts a minute
+against +0.4 to +0.6 — **and buys fewer shots than the hard precedence** (73 against 136). If the
+worry is a camera that jumps, **the precedence is the calmer lever and the hold length is the wild
+one.** That is the opposite of how the two changes look from their descriptions.
 
-★ **The ceiling: at most 1.36 shots per race** (~10× today) if every decision point went to him —
-**and a harder bound found on the way.** The held racer was in the plan's cast in **0 of 10 races**,
-and the detector only ever offers the plan's cast. **The hold arm and the camera are aimed at two
-different racers**, which reframes the old "14 on the held racer, 16 on someone else".
-
-★ **Your question's timing half is already answered by the tree**: the director *already* has a
-mid-state interrupt (a lead change while in LEADER_ZOOM), evaluated **before** the hold gate. A
-precedence needs no new mechanism — but it must FORCE the state, not merely re-open the draw.
-
-**Arms B, C and D were not built** — chain time — and the report says what they should measure
-instead, because "shots on the HELD racer" would have come out zero in every arm by construction.
+★ **The trade you were right to worry about is the HARD arm's alone: it cuts a lead change short
+30 times in 96 races — about once every three races.** The mild arm never does, and still more than
+doubles today's shots. **That one constraint is the whole difference between them, and it costs 52 of
+the 136 shots.** Whether a comeback is worth interrupting a lead change is a picture judgement and it
+is not made here.
 
 ---
 
-## WHAT ELSE LANDED
+## ★ AND EVERY CAMERA NUMBER BEFORE THIS MEASURED SOMETHING IMPOSSIBLE
 
-**The image build was asking for 14 194 files to use 52.** A `client/.dockerignore` narrows the named
-build context to `dist/` alone. ★ **What ships is unchanged at byte level — 6 013 files, every md5
-identical** — and the guard's build went **7.0 s → 3.8 s**.
+The hold arm held a racer chosen for his **drawn place**; the plan casts its comebackers by its own
+rules; the detector offers **only the plan's cast**. At drawn place 3 the two coincided in **0 of 10
+races** — so the ceiling on shots of the held racer was **zero by construction, not small**.
 
-**The registry the race engine reads no longer carries the network.** `racer-types/index.js` held both
-the racer-type registry and the HTTP editing layer; the server half is now its own module. **All four
-fingerprints measured and unmoved**; hull 197 → 196.
+**Fixed: the arm now holds a racer the plan has cast. Overlap 96 of 96.**
 
-**The e2e geometry flake was reproduced and deliberately NOT fixed.** Two premises it inherited are
-stale — a missing geometry no longer races as a laps race, and the suite is one worker, not seven —
-and no spec is exposed today. But the failures are `Failed to fetch` against a *listening* API, all in
-one instant at startup, and a harness "fix" would mask it if the API is at fault. **What would settle
-it is named in the report.**
+★ **And the reason the two never met is structural, not bad luck.** Of 179 cast comebackers, **2 —
+1.1% — are drawn inside the top 5**. The median drawn place is **27**; 78% start 21st or worse. **The
+plan casts comebackers from racers who start deep, because that is what makes a comeback.** Your rule
+that the held racer starts inside the top 5 and the plan's own casting select from nearly disjoint
+populations. **Neither was overruled** — the arm picks, among the cast, the one drawn furthest forward.
+
+This also accounts for a **42 of 100** in an older report that nobody had explained: at 1.1%, it
+cannot have come from a top-5 selection.
+
+**With the right racer held, he reaches the top 5 in 95 of 96 races** (best rank median **1**), and
+**81% of all comeback shots are now on him.**
+
+---
+
+## WHAT ELSE IS ON THE BRANCH
+
+- **The image build** was asking for 14 194 files to use 52. Narrowed; **what ships is byte-identical**
+  (6 013 files, every md5) and the guard's build went 7.0 s → 3.8 s.
+- **The registry the race engine reads no longer carries the network.** All four fingerprints unmoved;
+  hull 197 → 196.
+- **The e2e geometry flake** was reproduced and **deliberately not fixed** — `Failed to fetch` against
+  a *listening* API, all in one instant at startup. A harness fix would mask it if the API is at
+  fault. What would settle it is named.
 
 ---
 
 ## NEEDS HIS WORD
 
-- ★ **`holdGate = Math.max(minHold, stateCap)`** — a maximum acting as a floor, in five of six states.
-  This is the lever behind every comeback number above.
-- ★ **Whether to build the precedence arms**, and on which racer — the plan's comebacker, not a held
-  one.
-- **`services/api.js` and `apiClient.js` are still in the hull** by a second path,
-  `storage/surfaceClassLoader.js → services/surfaceClassApi.js`. Same shape as the split just done, a
-  different module, a separate decision.
+- ★ **Which precedence, if any** — hard, mild, or none. The numbers are above; the judgement is yours.
+- ★ **`holdGate = Math.max(minHold, stateCap)`** — a *maximum* acting as a floor in five of six states.
+  It is the lever behind every comeback number, and arm B shows shortening it is the noisiest option.
+- ★ **Your top-5 rule versus the plan's casting** — they are structurally opposed (1.1% overlap). Which
+  gives way is a design decision nobody should take for you.
+- **`services/api.js` and `apiClient.js`** are still in the hull by a second path
+  (`storage/surfaceClassLoader.js → services/surfaceClassApi.js`). Same shape, different module.
 - **The e2e `Failed to fetch`** — harness or serving defect, unresolved on purpose.
 <!-- END CHAIN STATUS -->
 <!-- END CHAIN STATUS -->
