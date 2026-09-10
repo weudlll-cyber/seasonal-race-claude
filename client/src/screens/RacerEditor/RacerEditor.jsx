@@ -13,11 +13,13 @@
 import { useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  registerRacerType,
   RACER_TYPE_IDS,
   listAllRacerTypes,
   getRacerType,
 } from '../../modules/racer-types/index.js';
+// RACER-TYPES-SPLIT-1: saving a racer type is a SERVER conversation and lives apart from
+// the registry the race engine reads.
+import { registerRacerType } from '../../modules/racer-types/serverRacerTypes.js';
 import { STANDARD_COAT_PALETTE } from '../../modules/racer-types/standardCoats.js';
 import { slugify, uniqueSlug } from '../../utils/slugify.js';
 import { SpriteGeneratorPanel } from './SpriteGeneratorPanel.jsx';

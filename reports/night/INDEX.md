@@ -8,6 +8,24 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RACER-TYPES-SPLIT-1.md](RACER-TYPES-SPLIT-1.md) - **the registry the engine reads stops carrying
+  the network** (2026-09-10, day chain, piece 4). HULL-FIX-1 named the over-report and stopped,
+  because the fix was product code; this is the separation. `serverRacerTypes.js` takes every caller
+  of `services/racerApi.js` and every use of `API_BASE_URL`; the registry keeps a three-function seam
+  and **the sprite URL is built by the CALLER**, because building it in the registry would import
+  `services/api.js` straight back. It is **NOT re-exported** - every importer names the half it needs.
+  ★ **STOP CONDITION NOT TRIPPED: all four fingerprints measured and UNMOVED**, golden races pass,
+  1,075 client tests pass. ★ **HULL 197 -> 196, AND ONLY ONE FILE LEFT, NOT THREE** - HULL-FIX-1's
+  attribution was incomplete: `services/api.js` and `apiClient.js` have a SECOND path through
+  `storage/surfaceClassLoader.js -> services/surfaceClassApi.js`, which `RaceScreen` imports. Same
+  shape, different module, **named and left**. ★ **THE FIRST SABOTAGE WAS A FALSE GREEN**: pointing an
+  importer at the wrong half left its test green because the test **mocked the very module the
+  sabotage pointed at** - and chasing that down exposed a real consequence, the mock was still aimed
+  at `index.js` while the component now imports the server half. The second sabotage, the same change
+  against the client BUILD, is **RED**: `[MISSING_EXPORT] "loadServerRacerTypes" is not exported by
+  "src/modules/racer-types/index.js"`. Also recorded: the first cut **overshot**, taking
+  `_setLoadedRacerTypeForTesting` with it, and 13 tests caught it.
+
 - [COMEBACK-CEILING-1.md](COMEBACK-CEILING-1.md) - **how often the camera even looks, and the
   ceiling that bounds everything else** (2026-09-10, day chain, piece 2; measurement only, the arm
   REMOVED and the removal proved by byte-identity). Numbers **re-established, not carried**: 429,563

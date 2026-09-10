@@ -72,14 +72,18 @@ import { SpriteRacerType } from './SpriteRacerType.js';
 import { ensureRacerTypeWarm } from './racerWarmup.js';
 import { storageGet, storageSet, KEYS } from '../storage/storage.js';
 import { getTrailFactory } from './trailStyles.js';
-import {
-  fetchRacers,
-  createRacer,
-  updateRacer,
-  deleteRacer,
-  uploadRacerSprite,
-} from '../../services/racerApi.js';
-import { API_BASE_URL } from '../../services/api.js';
+// ── ★ NO HTTP HERE, AND THAT IS THE POINT (RACER-TYPES-SPLIT-1) ────────────────────────────────
+//
+// This file used to import `fetchRacers`, `createRacer`, `updateRacer`, `deleteRacer`,
+// `uploadRacerSprite` and `API_BASE_URL`. The RACE ENGINE reads this module — it needs racer speeds
+// and sizes — so those imports dragged `services/racerApi.js`, `services/api.js` and
+// `services/apiClient.js` into the race hull, where HULL-FIX-1 measured them: loaded on the shipped
+// path, and INERT for the outcome. Three files every fingerprint decision had to account for and
+// that no race can reach.
+//
+// The server conversation lives in `serverRacerTypes.js`, which imports THIS file. The dependency
+// runs one way — editing needs the registry, the registry does not need the network — and nothing
+// was copied to achieve it.
 
 // All 20 racer types are SpriteRacerType instances.
 export const RACER_TYPES = {
@@ -420,57 +424,30 @@ export function _setLoadedRacerTypeForTesting(id, instance) {
   _loadedRacerTypes[id] = instance;
 }
 
-// ── User-created type management ─────────────────────────────────────────────
-
-function _dataUrlToFile(dataUrl, filename) {
-  const [header, data] = dataUrl.split(',');
-  const mime = header.match(/:(.*?);/)[1];
-  const bytes = atob(data);
-  const arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  return new File([arr], filename, { type: mime });
-}
-
 /**
- * Fetch user-created racer configs from the server and register them as
- * SpriteRacerType instances. Called once after auth by RacerSyncOnAuth.
+ * ── ★ THE SEAM (RACER-TYPES-SPLIT-1) ──────────────────────────────────────────────────────────
  *
- * Single-flight: concurrent calls (e.g. React StrictMode double-mount) share
- * the same in-flight Promise and issue only one fetchRacers(). The guard is
- * cleared after completion so a later re-auth can trigger a fresh load.
+ * Take the server's racer configs and make them live types. `serverRacerTypes.js` fetches them and
+ * calls this; nothing else may.
  *
- * Per-racer errors are logged loudly but never abort the batch.
- * On server/auth failure the ready signal is still set so the app is never
- * permanently blocked — user racers are simply absent in that session.
+ * ★ THE SPRITE URL ARRIVES ALREADY BUILT, deliberately. It is `API_BASE_URL/api/racers/<id>/sprite`,
+ * and building it here would import `services/api.js` back into the registry — exactly the coupling
+ * this split removes. The caller owns the network's address; this file owns what a racer type IS.
+ *
+ * Stale entries are cleared only on a SUCCESSFUL fetch (stale-on-error), which is why the clearing
+ * lives here rather than at the fetch site: the caller decides there was an answer, this decides
+ * what the answer means.
+ *
+ * @param {Array<object>} configs  server configs, each already carrying `spriteUrl`
  */
-export function loadServerRacerTypes() {
-  if (_inFlightLoad) return _inFlightLoad;
-  _inFlightLoad = _runLoad().finally(() => {
-    _inFlightLoad = null;
-  });
-  return _inFlightLoad;
-}
-
-async function _runLoad() {
-  let configs;
-  try {
-    configs = await fetchRacers();
-  } catch (err) {
-    console.error('[RaceArena] loadServerRacerTypes: failed to fetch from server —', err.message);
-    _markRacersReady();
-    return;
-  }
-
-  // Clear stale entries only after a successful fetch (stale-on-error).
+export function _ingestServerRacerConfigs(configs) {
   for (const id of Object.keys(_loadedRacerTypes)) {
     delete _loadedRacerTypes[id];
   }
-
   for (const cfg of configs) {
     try {
       const instance = new SpriteRacerType({
         ...cfg,
-        spriteUrl: `${API_BASE_URL}/api/racers/${cfg.id}/sprite`,
         trailFactory: getTrailFactory(cfg.trailStyle),
       });
       _loadedRacerTypes[cfg.id] = instance;
@@ -484,53 +461,14 @@ async function _runLoad() {
   _markRacersReady();
 }
 
-/**
- * Create or update a user-created racer type on the server and reload the live registry.
- * New id → createRacer; existing id in _loadedRacerTypes → updateRacer.
- * spriteDataUrl (base64 data URL) is converted to a File and uploaded separately;
- * if spriteDataUrl is already a server URL (edit mode, sprite unchanged), upload is skipped.
- *
- * @param {object} config  Config including optional spriteDataUrl (base64 data URL).
- * @throws {Error} If id collides with a built-in type or the server rejects the request.
- */
-export async function registerRacerType(config) {
-  if (RACER_TYPE_IDS.includes(config.id)) {
-    throw new Error(
-      `registerRacerType: "${config.id}" is a built-in type and cannot be overridden`
-    );
-  }
-
-  const isUpdate = config.id in _loadedRacerTypes;
-  const { spriteDataUrl, ...serverRecord } = config;
-
-  if (isUpdate) {
-    await updateRacer(config.id, serverRecord);
-  } else {
-    await createRacer(serverRecord);
-  }
-
-  if (spriteDataUrl && spriteDataUrl.startsWith('data:')) {
-    const ext = spriteDataUrl.match(/data:image\/(\w+);/)?.[1] ?? 'png';
-    const file = _dataUrlToFile(spriteDataUrl, `${config.id}.${ext}`);
-    await uploadRacerSprite(config.id, file);
-  }
-
-  await loadServerRacerTypes();
+/** The ready signal, for the loader's failure path — the app must never block on a dead server. */
+export function _markRacersReadyFromLoader() {
+  _markRacersReady();
 }
 
-/**
- * Delete a user-created racer type from the server and reload the live registry.
- * Rejects built-in type IDs — those cannot be removed.
- *
- * @param {string} id  The type id to remove.
- * @throws {Error} If id is a built-in type or the server rejects the request.
- */
-export async function removeRacerType(id) {
-  if (RACER_TYPE_IDS.includes(id)) {
-    throw new Error(`removeRacerType: "${id}" is a built-in type and cannot be removed`);
-  }
-  await deleteRacer(id);
-  await loadServerRacerTypes();
+/** Whether a server-loaded type with this id exists — `registerRacerType`'s create-vs-update test. */
+export function _hasLoadedRacerType(id) {
+  return id in _loadedRacerTypes;
 }
 
 // ── Boot sequence ────────────────────────────────────────────────────────────

@@ -149,19 +149,17 @@ vi.mock('./SpriteRacerType.js', () => ({
 // ── Imports (after mocks) ──────────────────────────────────────────────────────
 
 import {
-  loadServerRacerTypes,
   areRacersReady,
   waitForRacersReady,
   getRacerType,
   getRacerTypeById,
-  registerRacerType,
-  removeRacerType,
   warmUpAllRacerTypes,
   _resetRacersReadyForTesting,
   _resetLoadedRacerTypesForTesting,
   _resetWarmUpForTesting,
   HorseRacerType,
 } from './index.js';
+import { loadServerRacerTypes, registerRacerType, removeRacerType } from './serverRacerTypes.js';
 import {
   fetchRacers,
   createRacer,
