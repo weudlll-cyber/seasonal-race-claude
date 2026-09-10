@@ -231,6 +231,59 @@ The gate has real ordering logic around who **produces** `client/dist` (`check-c
 |---|---|---|
 | 1 | **FRESH** — bundle stamped at HEAD | ★ **PASS 29 · FAIL 0** (538 s) |
 | 2 | **ABSENT** — `rm -rf client/dist` | ★ **PASS 29 · FAIL 0** (609 s) |
-| 3 | **STALE** — bundle stamped at the previous commit | *(recorded below)* |
+| 3 | **STALE** — bundle stamped `373571b3` while HEAD was `d0c17b84` | ★ **PASS 29 · FAIL 0** (805 s) |
 
-<!-- MERGE-RESULT -->
+★ **Green from all three, and the fingerprints matched the record in every one of them.**
+
+### The merge
+
+`master` `f0debe20` + `night/2026-09-09` `d0c17b84` → **`ed1f7d7f`**, a merge commit (squash and
+rebase are disabled on this repository).
+
+★ **THE BRANCH WAS DELETED AT ORIGIN BEFORE MASTER WAS PUSHED**, in that order and deliberately:
+`check-tags` Rule B reads origin about fifteen seconds after the push, and doing it the other way
+round loses that race.
+
+```
+git push origin --delete night/2026-09-09    →   - [deleted]   night/2026-09-09
+git ls-remote --heads origin                 →   (only master)
+git push origin master                       →   f0debe20..ed1f7d7f
+git ls-remote --heads origin                 →   ed1f7d7f…  refs/heads/master
+```
+
+★ **Only `master` remains at origin**, at `ed1f7d7f`. The local branch was deleted too.
+
+### CI
+
+| | |
+|---|---|
+| run | `34528667758`, workflow **CI** |
+| event | ★ **`push`** — the run for the merge SHA itself, not a pull-request run |
+| head SHA | `ed1f7d7f540957e764e43691d2a690cde9872f2e` |
+| ★ conclusion | ★ **`success`** |
+
+---
+
+## THE WALKTHROUGH — BOTH SERVICES, ON MASTER
+
+Per `docs/VERIFY-RULES.md` **R10** as amended earlier today: **two services, and the page is the one
+that matters less.** Confirmed by asking them, not by looking at processes.
+
+```
+STATUS  4000 /api/health: 200 [application/json]  |  4173 /: 200 [text/html]  |  5173 /: NO ANSWER
+```
+
+| | |
+|---|---|
+| ★ **build badge**, read from the served bundle | `commit=ed1f7d7f branch=master dirty=false` |
+| ★ **`/api/health` build line** (4000) | `{"commit":"ed1f7d7f","branch":"master","dirty":false}` |
+| CORS from the 4173 origin | `access-control-allow-origin: http://localhost:4173` |
+| runtime config in the served page | **not injected** — so the page falls back to `http://localhost:4000`, which is exactly where the API is |
+
+The preview is `scripts/serve-production.mjs`, so the bundle is served from
+`%LOCALAPPDATA%acearena-preview`, **outside the OneDrive-synced tree**, as R10 requires.
+
+### ★ THE ONE URL
+
+**http://localhost:4173/**
+
