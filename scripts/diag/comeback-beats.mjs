@@ -167,9 +167,25 @@ const HOLD_UNTIL = Number(ARG("release", "0.70"));
 //   --arm=C  PRECEDENCE, HARD — switch at once, whatever is running. His question as asked.
 //   --arm=D  PRECEDENCE, MILD — at most once per comebacker, never cutting a LEAD_CHANGE.
 //
-// C and D are the only ones that touch shipped files, and that arm is temporary and removed.
+// ★ ARMS C AND D NO LONGER EXIST HERE, and neither does `--hold`'s racePlanner arm. Both were
+// TEMPORARY product edits, removed at the end of COMEBACK-SAME-RACER-1 and never committed. Arm D
+// SHIPPED as the product's own behaviour in COMEBACK-PRECEDENCE-1, so the way to measure it now is
+// `--precedence`, below. `--arm=B` still works: it needs no product change at all.
 const ARM = ARG("arm", "A").toUpperCase();
 const SHORT_HOLD_MS = Number(ARG("short-hold", "2000"));
+
+// ── ★ COMEBACK-PRECEDENCE-1 — THE SHIPPED ARM, AND ITS CONTROL ──────────────────────────────────
+//
+// `--precedence=1` (default) measures the tree as it ships. `--precedence=0` is THE CONTROL: the
+// same races with the precedence and nothing else removed, so its effect is measured rather than
+// assumed. COMEBACK-SAME-RACER-1's own correction was that a number restating its selection rule is
+// not evidence; a control is what turns "84 shots" into "84 against 13".
+//
+// ★ NO PRODUCT FILE IS TOUCHED TO GET THE CONTROL. `_comebackPrecedenceOffer` is overridden ON THIS
+// ONE DIRECTOR INSTANCE to return null — the same wrapping idiom `--contest` and the outcome arm
+// already use. Returning null is exactly what the shipped method returns on every frame where the
+// precedence does not apply, so the control is the shipped code walking its own untaken branch.
+const PRECEDENCE = ARG("precedence", "1") !== "0";
 
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
@@ -281,6 +297,9 @@ for (const geo of tracks) {
         );
     }
 
+    // ★ THE CONTROL. One instance, one method, no product file. See `--precedence` above.
+    if (!PRECEDENCE) cd._comebackPrecedenceOffer = () => null;
+
     // ── ★ COMEBACK-CONTEST-1: WHY THE CANDIDATE LOSES, NOT JUST THAT HE DOES ───────────────────
     //
     // COMEBACK-CAMERA-1 established that a candidate is AVAILABLE for tens of thousands of frames
@@ -310,7 +329,10 @@ for (const geo of tracks) {
     // ★ STEP 3's numbers. A SWITCH is a frame on which the state actually changed — "how often the
     // picture cuts" is that, per minute, and it is the number a shot count cannot show.
     let switches = 0;
-    let precedenceFirings = 0; // COMEBACK entries whose reason names the arm
+    let precedenceFirings = 0; // COMEBACK entries the precedence forced
+    // ★ THE COST THE MILD RULE EXISTS TO AVOID: a LEAD_CHANGE on screen replaced by a comeback shot.
+    // The hard arm did this 30 times in 96 races; the mild rule must do it zero times.
+    let leadChangesCutShort = 0;
     const displacedFrames = {}; // state -> frames it had been on screen when it was cut
     let stateEnteredFrame = 0;
     let frameNo = 0;
@@ -470,8 +492,12 @@ for (const geo of tracks) {
         switches++;
         displacedFrames[prevState] = (displacedFrames[prevState] ?? 0) + (frameNo - stateEnteredFrame);
         stateEnteredFrame = frameNo;
-        if (s === "COMEBACK_ZOOM" && /PRECEDENCE ARM/.test(frameDecision ?? "")) {
+        // `_pickNextState` returns this reason ONLY from the precedence's own forced branch
+        // (`CameraDirector.js`, the `comeback-precedence:` return), so this counts commits of the
+        // precedence and not interrupts that landed elsewhere.
+        if (s === "COMEBACK_ZOOM" && /^comeback-precedence/.test(frameDecision ?? "")) {
           precedenceFirings++;
+          if (prevState === "LEAD_CHANGE") leadChangesCutShort++;
         }
       }
       if (frameDecided) {
@@ -609,6 +635,9 @@ for (const geo of tracks) {
           })(),
           endProgress: null,
           rankAtEnd: null,
+          // ★ COMEBACK-PRECEDENCE-1 — the two facts the four numbers are counted from.
+          displaced: prevState,
+          precedence: /^comeback-precedence/.test(frameDecision ?? ""),
         });
       }
       // COMEBACK-SHAPE-1 — and where he was when it ended. The shot is not the climb, so its own
@@ -675,6 +704,7 @@ for (const geo of tracks) {
       heldShots,
       switches,
       precedenceFirings,
+      leadChangesCutShort,
       displacedFrames,
       decisionGapsMs: decisionTs.slice(1).map((t, i) => Math.round(t - decisionTs[i])),
       decisionsTotal,
@@ -694,7 +724,7 @@ if (JSON_OUT)
   writeFileSync(
     JSON_OUT,
     JSON.stringify(
-      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, rows },
+      { seeds: SEEDS, useBeats: !!CAMERA_CONFIG.comebackUseBeats, precedence: PRECEDENCE, rows },
       null,
       1,
     ),
