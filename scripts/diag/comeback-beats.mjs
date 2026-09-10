@@ -97,6 +97,7 @@ const { DEFAULT_CAMERA_CONFIG } = await import(
   u("client/src/modules/storage/defaults.js")
 );
 
+
 const ARG = (k, d) => {
   const a = process.argv.find((x) => x.startsWith(`--${k}=`));
   return a ? a.slice(k.length + 3) : d;
@@ -132,6 +133,7 @@ const USE_BEATS = ARG("use-beats", null);
 // COMEBACK-CONTEST-1: wrap the director's pick and offer to record WHY a candidate lost.
 // Default ON; `--contest=0` is the control that proves the wrapping changes nothing.
 const CONTEST = ARG("contest", "1") !== "0";
+
 if (OUTCOME_ARM !== "browser" && OUTCOME_ARM !== "driver") {
   console.error(`comeback-beats: --outcome must be "browser" or "driver", got "${OUTCOME_ARM}".`);
   process.exit(2);
@@ -208,6 +210,12 @@ for (const geo of tracks) {
     //   `_acceptsOffer` (CameraDirector.js:724) — THE SECOND GATE. The winner still faces a roll
     //     against its own weight and a decline falls through to LEADER_ZOOM, so a comeback can win
     //     the draw and still not be shown.
+    // ★ THE DECISION SERIES (COMEBACK-CEILING-1). Not a mean: every decision's timestamp is kept so
+    // the GAPS can be reported as a DISTRIBUTION. That matters — the mean is meaningless here,
+    // because 95% of the gaps are one frame (a same-state repeat, where `_activeStateMinHoldMs` is
+    // set to 0 at CameraDirector.js:1824 and the gate is therefore 0) and the rest are the ~8 s
+    // gate. Two populations, not one.
+    const decisionTs = [];
     let frameDecided = false; // did `_pickNextState` run at all this frame?
     let frameDecision = null; // ...and the reason string it returned, which names its own branch
     let framePool = null; // [{state, weight}] for the frame, or null if the pool was never built
@@ -353,7 +361,10 @@ for (const geo of tracks) {
       }
       const s = dir.state;
       framesTotal++;
-      if (frameDecided) decisionsTotal++;
+      if (frameDecided) {
+        decisionsTotal++;
+        decisionTs.push(ts - raceStart);
+      }
       stateFrames.set(s, (stateFrames.get(s) ?? 0) + 1);
       // The wrappers fill these during `cd.update`, which has already run for this frame; they are
       // cleared at the end of the frame body so `framePool == null` means "the pool was not built
@@ -508,6 +519,7 @@ for (const geo of tracks) {
       // COMEBACK-CONTEST-1 — of the candidate-in-window frames, WHY each was not a shot, and on
       // the frames the contest actually ran, WHO won instead.
       framesTotal,
+      decisionGapsMs: decisionTs.slice(1).map((t, i) => Math.round(t - decisionTs[i])),
       decisionsTotal,
       decisionsWithCandidate,
       lossClass: Object.fromEntries([...lossClass].sort((x, y) => y[1] - x[1])),
