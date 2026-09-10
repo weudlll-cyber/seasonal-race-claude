@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 629eb4f7 2026-09-10 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/CameraDirector.js -->
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. `scripts/straggler-truth.mjs` drives `raceDriver`, which delivers no cameraPlan, so no comebacker is ever cast and the precedence cannot fire here — and phase 6 begins after the winner is home, past the finish latches the precedence refuses to act through in any case.
 

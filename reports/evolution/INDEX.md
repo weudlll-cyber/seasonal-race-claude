@@ -361,6 +361,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-PRECEDENCE-1.md](COMEBACK-PRECEDENCE-1.md) — **the camera switches to the plan's cast
+  comebacker, and two of the arm's four numbers do not reproduce** (2026-09-10, commit `a57fc04b` on
+  `night/2026-09-09`, **SHIPPED as behaviour — no config key, no default, no slider; NOT merged, his
+  eye first**). The mild precedence: when the plan has CAST a comebacker and he is climbing the camera
+  cuts to him, **at most once per comebacker** and **never into a LEAD_CHANGE already on screen**; in
+  the ~4% of races that cast nobody the wider `_b1` fallback is left alone and today's behaviour
+  stands. ★ **THE STOP CONDITION FIRED AND IS REPORTED RATHER THAN TUNED AWAY**: against arm D's
+  84 / 1.15 / 11.7 / 0 the shipped path measures **50 / 0.49 / 11.44 / 0** — switches per minute and
+  lead changes cut short reproduce, shots and firings do not, **because all four of
+  [COMEBACK-SAME-RACER-1](../night/COMEBACK-SAME-RACER-1.md)'s arms ran with a temporary HOLD ARM in
+  `racePlanner.js` that manufactured a climb in every race and was never committed** — its baseline
+  and its mild arm both describe a race that no longer exists. ★ **THE CONTROL THAT WAS MISSING WAS
+  RUN**: the same 100 races with the precedence removed give **11 shots against 50**, switches per
+  minute **11.34 → 11.44 (+0.10)**, lead changes cut short **0 → 0**, and the control is *proven* to be
+  today's behaviour by re-running HEAD's own camera files (all 10 races identical, down to per-state
+  frame counts). On **four of ten tracks** the control never cuts to a comebacker at all. ★ **THE
+  CAMERA FINGERPRINT DID NOT MOVE, AND THAT IS A HOLE, NOT A CLEARANCE**: `raceDriver.mjs:373` and
+  `camera-fingerprint.mjs:201` deliver **no cameraPlan** and never call `setCameraPlan`, so `_cast`
+  stays null and the precedence *cannot fire* on that harness — blind by construction, the same class
+  as CAMERA-SEED-AND-LINE-1 at a new address. All four fingerprints unmoved, golden races PASS,
+  **nothing minted**. Both sabotages watched red (`expected 3 to be 2`; `expected 'COMEBACK_ZOOM' to
+  be 'LEAD_CHANGE'`), and a **browser spec** catches the cut in real Chromium **3289 ms into an
+  8000 ms hold** while its own control produces **no comeback entry at all**. Two measured stamps
+  re-measured in full and identical to the digit.
+
 - [HULL-WIRED-1.md](HULL-WIRED-1.md) - **the hull stops being advice and starts selecting the
   guards** (2026-09-10, night chain 2026-09-09 piece 2, on `fix/hull-1`). HULL-FIX-1 left the hull
   unwired because the world fingerprint was blind to what would newly select it; piece 1 attacked

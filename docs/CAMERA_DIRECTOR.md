@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 629eb4f7 2026-09-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** — all six frame counts (8415, 1509, 13133, 7573, 4005, 2089) and both percentiles on every state. It was RUN rather than argued, and then run a SECOND time on HEAD's own camera files with the change lifted out, so the two runs could be compared directly instead of against a table written on an older tree: **the two agree exactly**. The structural reason is worth recording because it also explains why the CAMERA fingerprint did not move — `scripts/lib/raceDriver.mjs:373` calls `updateRacePlan(b1Indices)` with NO cameraPlan and never calls `setCameraPlan`, so `_cast` stays null for the whole run, `isCast()` is false for every racer, and the precedence can never fire on this harness. It is blind to the change by construction, not inertly passing it.
 
