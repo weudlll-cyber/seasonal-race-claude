@@ -4,7 +4,8 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-10, after COMEBACK-SAME-RACER-1.
+**Last rewritten:** 2026-09-10, after COMEBACKER-ROLE-TRUTH-1 — which CORRECTED two sentences
+this sheet carried yesterday. See the marked block below.
 
 **Where the code is.** Master is `f0debe20` (CI green). `night/2026-09-09` carries everything since
 and is **NOT merged** — it waits for your eye. Ports 4000 / 4173 / 5173 are down.
@@ -47,17 +48,30 @@ races** — so the ceiling on shots of the held racer was **zero by construction
 
 **Fixed: the arm now holds a racer the plan has cast. Overlap 96 of 96.**
 
-★ **And the reason the two never met is structural, not bad luck.** Of 179 cast comebackers, **2 —
-1.1% — are drawn inside the top 5**. The median drawn place is **27**; 78% start 21st or worse. **The
-plan casts comebackers from racers who start deep, because that is what makes a comeback.** Your rule
-that the held racer starts inside the top 5 and the plan's own casting select from nearly disjoint
-populations. **Neither was overruled** — the arm picks, among the cast, the one drawn furthest forward.
+Of 179 cast comebackers, **2 — 1.1% — are drawn inside the top 5**. The median drawn place is **27**;
+78% start 21st or worse. The arm picks, among the cast, the one drawn furthest forward; **neither your
+rule nor the plan's casting was overruled.** This also accounts for a **42 of 100** in an older report
+that nobody had explained: at 1.1%, it cannot have come from a top-5 selection.
 
-This also accounts for a **42 of 100** in an older report that nobody had explained: at 1.1%, it
-cannot have come from a top-5 selection.
+★★ **TWO SENTENCES I WROTE HERE YESTERDAY WERE WRONG, and a check of the source against my own
+measurement found them** ([COMEBACKER-ROLE-TRUTH-1](../reports/night/COMEBACKER-ROLE-TRUTH-1.md)):
 
-**With the right racer held, he reaches the top 5 in 95 of 96 races** (best rank median **1**), and
-**81% of all comeback shots are now on him.**
+- I wrote that *"the plan casts comebackers from racers who start deep, because that is what makes a
+  comeback"*, and called the collision **structural**. ★ **Neither assignment site reads the drawn
+  place.** Both gate on rank at the CHOREO BOUNDARY, a different axis. **The 1.1% stands as a
+  measurement; the explanation I attached to it does not**, and post-chaos rank was never recorded, so
+  this is now an open question rather than a finding.
+- I offered *"he reaches the top 5 in 95 of 96"* as evidence the hold produced a climb. ★ **Every cast
+  comebacker is ASSIGNED a final rank of 5 or better — 179 of 179 measured.** The plan steers him
+  there. So that number restates the rule that picked him and says nothing about the arm. **The
+  control that would have made it evidence — the same racer, no hold — was never run.**
+
+**What is unaffected: the 96/96 overlap, the 35 shots (81% of all comeback shots), and every number in
+the four-arm table above.** None of them depends on the role's definition or on the drawn place.
+
+★ **And the role itself is not what the brief and I both assumed.** `heroCurveGenerator` casts
+`comebacker` at **two** sites, not one: the assigned winner (final rank 1) accounts for **37.4%**, and
+the other **62.6%** are B1-band finishers assigned 2nd to 5th.
 
 ---
 
