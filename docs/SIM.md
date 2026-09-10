@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **196 files that can change the race** — the engine's own imports AND the imports of every
+the **192 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -227,7 +227,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/storage/configValidate.js` | What happens when a STORED config value fails its loader's validation: the key is rejected ALONE and falls back to its own default, and every other key survives. |
 | `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
 | `modules/storage/storage.js` | localStorage key registry and low-level read/write helpers |
-| `modules/storage/surfaceClassLoader.js` | Fetches backend surface classes and caches them in localStorage. |
+| `modules/storage/surfaceClassCache.js` | HULL-SURFACE-SPLIT-1 |
 | `modules/storage/useStorage.js` | React hook that syncs component state with localStorage. |
 | `modules/surface-effects/defaults.js` | Default Surface Class definitions — single source of truth. |
 | `modules/surface-effects/generators/cloud.js` | Surface-effect generator — soft, growing, fading blobs. |
@@ -283,12 +283,8 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/scoreboardLayout.js` | SCOREBOARD-SLOT-LAYER |
 | `screens/RaceScreen/scoreboardPositions.js` | SCOREBOARD-SLOT-LAYER |
 | `screens/TrackEditor/trackEditorSave.js` | Track export logic — validates editor state, builds the server-ready track object, extracts effects and track lights. |
-| `services/api.js` | THE ONE HOME for the address of the API. |
-| `services/apiClient.js` | Shared fetch boilerplate for API service modules. |
-| `services/surfaceClassApi.js` | Frontend API client for surface-class CRUD operations. |
 | `utils/formatRaceTime.js` | Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
-| `utils/withTimeout.js` | Shared promise timeout utility for storage loaders. |
 | `scripts/camera-fingerprint.mjs` | CAMERA-HYGIENE-1 |
 | `scripts/camera-replay.mjs` | CAMERA-REPRO-1 (Part B): stand in a marked moment. |
 | `scripts/check-ending-frame.mjs` | ENDING-PICTURE-1 |
@@ -327,7 +323,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-196 files, 24 of them UNKNOWN.
+192 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

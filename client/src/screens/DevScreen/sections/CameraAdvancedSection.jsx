@@ -419,7 +419,7 @@ function CameraAdvancedSection() {
             onChange={(e) => set('ceremonySkipOnClick', e.target.checked)}
           />
           <span style={{ fontWeight: 600 }}>Click to end the current start beat</span>
-          <InfoTooltip text="A TEST AID, off by default. With this on, a left click anywhere on the race picture during the start sequence ends the beat you are watching and opens the next one — and on the last click the gun fires. It moves the ceremony's single clock backwards by the remainder of the current beat, so nothing is cancelled and every part of the opening follows by itself. It changes no ceremony length: with it off, or on and unclicked, the opening is exactly what it is today." />
+          <InfoTooltip text="A left click anywhere on the race picture during the start sequence ends the beat you are watching and opens the next one — and on the last click the gun fires. It moves the ceremony's single clock backwards by the remainder of the current beat, so nothing is cancelled and every part of the opening follows by itself. It changes no ceremony length: unclicked, the opening runs exactly as it always has. Turn it off to make the picture ignore clicks during the opening." />
         </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>

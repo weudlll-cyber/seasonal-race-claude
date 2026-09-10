@@ -294,9 +294,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   // no per-beat state. The boundary maths is `nextBeatStart` in `camera/startCeremony.js`, beside
   // `ceremonyAt`, reading the same schedule fields.
   //
-  // OFF IS TODAY'S BEHAVIOUR EXACTLY: with this false, or true and unclicked, every drawn frame is
-  // what it is now. The ceremony's lengths, schedule and defaults are untouched by this key.
-  ceremonySkipOnClick: false,
+  // SHIPS ON since the owner's decision of 2026-09-10 (MERGE-NIGHT-0909). A CLICK NOBODY MAKES
+  // CHANGES NOTHING: with this true and unclicked, every drawn frame is what it was when it was
+  // false — measured, all four fingerprints unmoved on the flip. The ceremony's lengths, schedule
+  // and defaults are untouched by this key; it only lets a click move the single clock forward.
+  ceremonySkipOnClick: true,
   enablePerfLog: false, // per-frame phase timing (physics/camera/render) for stutter diagnosis (default OFF)
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
