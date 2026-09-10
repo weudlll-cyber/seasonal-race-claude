@@ -361,6 +361,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MERGE-NIGHT-0909.md](MERGE-NIGHT-0909.md) — **the second hull path closed, the skip ships on, and
+  the morning sheet loses a ghost list** (2026-09-10, the merge of `night/2026-09-09`). ★ **HULL
+  196 → 192 and NO `services/` FILE IS IN IT ANY MORE**: `surfaceClassLoader.js` carried the cache
+  READ that `RaceScreen` wanted and the FETCH that dragged `services/surfaceClassApi.js` →
+  `api.js` + `apiClient.js` in with it, so the cache moved to `storage/surfaceClassCache.js` and every
+  importer names its half — the same separation RACER-TYPES-SPLIT-1 made, at the second address it
+  named and left. Five files left the hull (`utils/withTimeout.js` unasked-for, reachable only through
+  the loader), one entered, measured by DIFFING the hull with the change lifted out; **no third path
+  appeared**. Sabotage from both directions, and the mocks checked FIRST because the last split's
+  first sabotage was a false green: the wrong half of the cache seam turns the happy path red, and the
+  engine-side importer reading the network half puts the hull back to 197. ★ **`ceremonySkipOnClick`
+  SHIPS ON** (his decision) with the tooltip's "A TEST AID, off by default" framing removed —
+  **all four fingerprints UNMOVED**, so a click nobody makes changes nothing. ★ **`docs/MORNING.md`
+  341 → 108**: the claim COMEBACKER-ROLE-TRUTH-1 withdrew is out of NEEDS HIS WORD (the 1.1%
+  measurement stays where it is reported, with its correction), and the 2026-09-05 section is **cut,
+  not refreshed** — it carried a SECOND "NEEDS HIS WORD" list whose claims git disproves. ★ **Four
+  guards went red as CONSEQUENCES and all four were regenerations**, including RULE F catching a
+  `FORCE-MAP.md` line citation that part 2's two-line comment invalidated. verify plain **PASS 26**,
+  server suite **836**, `verify -- --premerge` green from **all three `dist` states**.
+
 - [COMEBACK-PRECEDENCE-1.md](COMEBACK-PRECEDENCE-1.md) — **the camera switches to the plan's cast
   comebacker, and two of the arm's four numbers do not reproduce** (2026-09-10, commit `a57fc04b` on
   `night/2026-09-09`, **SHIPPED as behaviour — no config key, no default, no slider; NOT merged, his
