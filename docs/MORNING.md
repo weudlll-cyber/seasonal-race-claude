@@ -4,7 +4,7 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-10, night chain 2026-09-09 — after PIECE 1.
+**Last rewritten:** 2026-09-10, night chain 2026-09-09 — after PIECE 3.
 
 ---
 
@@ -12,57 +12,73 @@ single report to know where the project is.
 
 | # | piece | state |
 |---|---|---|
-| 1 | The world fingerprint's blindness to `W_REF_MAX` | ★ **DONE** — on `fix/hull-1`, pushed |
-| 2 | Wire the hull, then merge it to master | **NEXT** |
-| 3 | Branch `night/2026-09-09` | not started |
-| 4 | Why the comebacker loses the contest (sweep, runs alone) | not started |
+| 1 | The world fingerprint's blindness to `W_REF_MAX` | ★ **DONE — on master** |
+| 2 | Wire the hull, then merge it | ★ **DONE — MERGED to master `f0debe20`** |
+| 3 | Branch `night/2026-09-09` | ★ **DONE — pushed** |
+| 4 | Why the comebacker loses the contest (sweep, runs alone) | **RUNNING** |
 | 5 | The package build's invalid file request | not started |
 | 6 | The e2e geometry flake | not started |
 
-**Where the code is.** Master is still `678ce9be`. `fix/hull-1` carries HULL-FIX-1 **and** piece 1,
-and is **not merged** — piece 2 merges it. Ports 4000 / 4173 / 5173 are down.
+**Where the code is.** ★ **Master is `f0debe20`** and carries pieces 1 and 2. `fix/hull-1` is
+**deleted at origin** — origin holds `master` alone plus the new `night/2026-09-09`, which carries
+pieces 4 to 6 and **will not be merged**: they wait for your eye. Ports 4000 / 4173 / 5173 are down.
 
 ---
 
-## ★ PIECE 1 — DONE. THE DETECTOR WAS BLIND, AND IT IS PROVEN RATHER THAN ARGUED
+## ★ WHAT LANDED ON MASTER, AND THE ONE THING TO KNOW FIRST
 
-`scripts/sim-fairness.mjs:1120` — the file that DRIVES the world fingerprint — carried its own
-`Math.min(285, effectiveWidth)` copy of `raceParams.js`'s `W_REF_MAX`, the number that decides where
-every racer starts. It now reads the one home.
+**The tool that decides whether a change can reach a race was lying, and three of the last four
+weeks' mint decisions rested on it.** It answered *"what does the engine import"*, which cannot see
+the modules that PRODUCE the engine's arguments — they sit on the caller's side of the arrow. Five
+files were proven by sabotage to change a race while the tool called them outside. It now walks up to
+every file that constructs a race and down again: **hull 79 → 197 files, a strict superset.**
 
-★ **THE CONTROL IS THE PIECE.** Sabotage `W_REF_MAX` 285 → 200, one change at the one home:
+★ **AND THE WORLD FINGERPRINT WAS BLIND TO THE NUMBER THAT SETS EVERY START POSITION.**
+`sim-fairness.mjs`, which drives that hash, carried its own copy of `raceParams.js`'s `W_REF_MAX`.
+Proven by control, not argued:
 
 | arm | golden races | world fingerprint |
 |---|---|---|
 | the OLD `sim-fairness.mjs` | **RED** | ★ **matches its record in [fingerprints.json](fingerprints.json) exactly** |
 | the NEW `sim-fairness.mjs` | **RED** | **FAILS** |
 
-The top row is the detector saying "unchanged" about a changed race, on demand. That is what has been
-closed.
+The top row is the detector saying "unchanged" about a changed race, on demand. **Eleven re-typings of
+that constant were found by a five-form uncapped census — the file's own header claimed fourteen sites
+three days ago, and two of the eleven had never been named by any report.**
 
-★ **THE BRIEFED COUNT WAS WRONG AGAIN — third time this week.** `raceParams.js`'s own header claimed
-FOURTEEN sites as of 2026-09-07. A five-form uncapped whole-tree census found **ELEVEN still re-typing
-the literal**, two of which no report had ever named: `headlessRaceSimulator.js:175` — whose own note
-three lines above says *"fallbacks in this file READ the default instead of copying it"* — and
-`camera/zoomUnit.test.js:347`. All eleven now read `W_REF_MAX`.
+**Sabotaging the reach tool itself found a third defect:** `--check`, the one branch a caller acts on,
+had no floor under it and answered *"cannot reach the engine at all"* — exit 1 — about `raceCore.js`
+itself. Exit 1 is what the pre-commit tripwire reads as "say nothing".
 
-**NOTHING MINTED, NOTHING RETUNED.** All four fingerprints were measured and every one matches its
-record in [fingerprints.json](fingerprints.json) — world, world-off, camera and render. Golden races
-green. `npm run verify` **PASS 24 / FAIL 0**, which selected and ran
-three of the four itself.
+**NOTHING WAS MINTED and no race changed.** All four fingerprints were measured repeatedly and every
+one matches its record in [fingerprints.json](fingerprints.json). The pre-merge gate ran three of them
+again: **PASS 28 / FAIL 0**.
 
-`scripts/w-ref-one-home.test.mjs` keeps it closed: a zero-hit grep that is proved able to fire, and a
-self-exclusion made load-bearing by a test that requires its own fixtures to still exist.
+### What it costs you, measured on 411 real merges rather than guessed
 
-Report: [W-REF-ONE-HOME-1](../reports/evolution/W-REF-ONE-HOME-1.md).
+`golden-races` and `world-fingerprint` now select on anything that can change a race. That is
+**+85 guard-seconds per day** over the last eight weeks and **+123 per day** over the busier last
+three — about **two extra minutes of waiting spread across a working day**, essentially all of it the
+world fingerprint. The pre-commit tripwire fires on 28% of merges instead of 15%.
+
+★ **What you must NOT read into a green world fingerprint.** It now SELECTS on the whole hull, but a
+module-resolution probe over its own run shows it LOADS 80 of the hull's 197 files. Of the five proven
+race-changers exactly one is among them. **Selecting is not seeing**, and the guard's own `blind` list
+now says so in as many words.
+
+Reports: [HULL-FIX-1](../reports/evolution/HULL-FIX-1.md) ·
+[W-REF-ONE-HOME-1](../reports/evolution/W-REF-ONE-HOME-1.md) ·
+[HULL-WIRED-1](../reports/evolution/HULL-WIRED-1.md).
 
 ---
 
-## WHAT IS ON MASTER NOW
+## NEEDS HIS WORD — from this chain so far
 
-Master is unchanged from yesterday at `678ce9be` — the night of 2026-09-08 and everything before it.
-The two branches in flight are described above.
-
+- **Splitting `client/src/modules/racer-types/index.js`.** The registry the engine needs and the HTTP
+  layer for editing racer types live in one module, which drags three `services/` files into the hull.
+  It is product code and a separate decision; the tool was NOT taught to special-case three filenames.
+- **The cap that freezes the camera's body reference above a ~300 px track** (CAMERA-PROJECTION-1 Part
+  E). Diagnosed long ago, never shipped. What changed is only that there is now one place to change it.
 <!-- END CHAIN STATUS -->
 <!-- END CHAIN STATUS -->
 
