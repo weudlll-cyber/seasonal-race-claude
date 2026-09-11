@@ -361,6 +361,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-STAGED-1.md](COMEBACK-STAGED-1.md) — **the staging is built, and the plan's own
+  feasibility budget refuses it** (2026-09-11, night chain 2026-09-11 piece 1, on `night/2026-09-11`,
+  **NOT merged, NOTHING minted, and the arm is INERT**). The owner's correction was that the director
+  should DEFINE the comebacker and stage him rather than select whoever happens to be deep; the
+  premise is re-measured here (median post-chaos rank **5 of 30, 9 of 40**, and today's comebacker
+  LOSES places after 0.70 at every size from N=30: **−9, −17, −16**). ★ **THE STAGING MECHANISM
+  ALREADY EXISTED** — a comebacker's curve peak IS his deepest point, and the pool site already
+  computed a synthetic deep peak for a front racer under the `sovereign-lead` label — so no hold arm
+  was rebuilt. ★ **AND IT NEVER FIRES: 8 of 8 candidates refused at every field size, 0 of 180
+  races.** `feasibleTiming` (`heroCurveGenerator.js:189-214`) charges the DOWN leg at the same
+  `maxRankRate` as the UP leg, so the round trip needs **1.63–1.88 of a race against a budget of
+  0.97**. ★ **THE SCISSORS**: the deepest FEASIBLE staging is a near-constant **0.27–0.30** of the
+  field — exactly the depth HOLD-GRID-1 measured as producing **no comeback at all** — while a
+  comeback needs 0.50–0.60. The same depth is affordable ONE WAY and refused as a ROUND TRIP, and
+  that asymmetry is isolated in a test. **World fingerprint unmoved and golden races PASS**, which is
+  the proof of inertness; a fall-back keeps a refused staging byte-identical to today. ★ **The first
+  fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
+  by the winner and the B2 attackers alone, both cast outside the pool loop.
+
 - [CAMERA-PLAN-BLIND-1.md](CAMERA-PLAN-BLIND-1.md) — **the camera instruments ran a camera the browser
   cannot produce** (2026-09-11, night chain 2026-09-11 piece 4, on `night/2026-09-11`, **fix built,
   NOTHING MINTED, the camera and render guards RED on purpose**). `raceDriver.mjs:373` and

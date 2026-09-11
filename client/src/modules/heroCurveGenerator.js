@@ -372,6 +372,59 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
   return mulberry32((seed >>> 0) ^ 0x7a11e5)() < 1 / config.fallerEveryNRaces;
 }
 
+// ── ★ COMEBACK-STAGED-1 — THE DIRECTOR STAGES THE COMEBACKER ───────────────────────────────────
+//
+// THE OWNER'S CORRECTION, 2026-09-11: the race director should DEFINE the comebacker, hold him at
+// the rank he is meant to start from, and then lead him into the top 5.
+//
+// ★ WHY THE OLD SHAPE COULD NOT DO THAT, and it is a selection-versus-staging difference rather
+// than a tuning one. The B1 pool below is the racers the plan has ASSIGNED a top-5 finish; the old
+// rule then asked which of them HAPPENED to be deep after the chaos phase (`p.rank > cr`). A racer
+// drawn for the front is steered toward the front, so after chaos he sits at median rank 5 of 30 and
+// 9 of 40 (measured, 180 races) — the two conditions almost never coincide, and what did get cast
+// was the 6th-to-3rd move the owner rejected. **The director was SELECTING from what existed.**
+//
+// ★ WHAT STAGES HIM, AND IT IS NOT A NEW MECHANISM. A hero's curve is `anchor → peak → resolve`,
+// and for a comebacker the PEAK is his deepest point. So staging is just choosing that peak: the
+// curve steers him BACK to the staging rank and then forward to his drawn place, and the servo
+// tracks it at strictness 1.0. The else-branch below ALREADY computed a synthetic deep peak for a
+// front racer (`cr + peakDepthFrac * (n - 1)`) — it was simply labelled `sovereign-lead`.
+//
+// ★ NO HOLD ARM IS BUILT, DELIBERATELY, and this is a departure from the brief worth stating. The
+// measurement arms needed one because the racer they held was NOT a hero and `racePlanner.js:805`
+// pins a non-hero to 1.0 before OUTCOME. A CAST hero is already exempt from that pin and already
+// tracks its curve through the pulk phase. Rebuilding the arm would be a second mechanism doing the
+// job the curve already does, and the chain rule is that nothing is built twice.
+//
+// ★ WHERE THE NUMBERS COME FROM — HOLD-GRID-1, read for TOP-5 REACH because that is his
+// requirement, not for places gained:
+//
+//   N=20  0.50 → 41/80 (51%)   0.60 → 46/80 (58%)     → 0.60
+//   N=30  0.50 → 23/79 (29%)   0.60 → 15/29 (52%)     → 0.60
+//   N=40  0.50 → 12/30 (40%)   0.60 → 14/30 (47%)     → 0.60
+//   N=60  0.50 →  9/30 (30%)   0.60 → 15/30 (50%)     → 0.60
+//   N=100 0.40 →  8/29 (28%)   0.50 →  9/29 (31%)   0.60 → 6/29 (21%)   → 0.50
+//
+// ★ AND THE GRID DOES NOT SUPPORT THE SMOOTH CURVE HE SKETCHED. Read for top-5 reach it is FLAT at
+// 0.60 up to N=60 and only shallower at N=100 — so this is a two-step, not a band that slides with
+// the field, and it is reported that way rather than dressed as a curve.
+//
+// ★ BELOW `MIN_FIELD` NOBODY IS STAGED. At N=10 the first third ends around rank 3, already inside
+// the top 5: there is nothing to come back from, and a 6th-to-3rd move is what he rejected.
+const STAGED_COMEBACK = { MIN_FIELD: 20, WIDE_FIELD: 100, NARROW_FRAC: 0.6, WIDE_FRAC: 0.5 };
+
+/**
+ * The rank the director stages its comebacker at, or null when the field is too small to climb.
+ * @param {number} n  field size
+ * @returns {number|null}
+ */
+export function stagedComebackRank(n) {
+  if (!Number.isFinite(n) || n < STAGED_COMEBACK.MIN_FIELD) return null;
+  const frac =
+    n >= STAGED_COMEBACK.WIDE_FIELD ? STAGED_COMEBACK.WIDE_FRAC : STAGED_COMEBACK.NARROW_FRAC;
+  return Math.max(1, Math.min(n, Math.round(frac * n)));
+}
+
 // ── Casting (A6/A7): assign 2–4 heroes + a feasible story to each. Seeded, jittered (anti-repetition). ─
 function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = GENERATOR_CONFIG) {
   const n = postChaos.length;
@@ -439,9 +492,30 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
     .filter((p) => !used.has(p.index) && finalRanks.get(p.index) <= BAND_EDGES[0])
     .map((p) => ({ ...p, key: rng() }))
     .sort((a, b) => a.key - b.key);
+  // ★ COMEBACK-STAGED-1: ONE staged comebacker per race, chosen from the pool the plan already
+  // shuffled (seeded, so the choice is deterministic). If his curve turns out infeasible `addSolo`
+  // refuses him and the next pool member is tried instead — the flag is set only on success.
+  const stagingRank = stagedComebackRank(n);
+  let staged = false;
   for (const p of b1Pool) {
     if (cast.length >= drama.nHeroes) break;
     const cr = nextCluster(); // tight front cluster, not the exact assigned rank (A3)
+    const wantStaged = stagingRank != null && !staged && p.index !== winnerIdx;
+    // The STAGED case steers him BACK to `stagingRank` and then forward to the front cluster `cr`,
+    // which is inside the top 5 — a fixed number, not a fraction, and not P1.
+    if (wantStaged && addSolo(p.index, 'comebacker', cr, stagingRank)) {
+      b1Cluster++;
+      staged = true;
+      continue;
+    }
+    // ★ AND IF THE STAGED CURVE IS REFUSED, TODAY'S CASTING RUNS FOR HIM UNCHANGED.
+    //
+    // This fall-back is load-bearing, not tidiness. `addSolo` refuses without marking the racer
+    // used, so an attempt that simply `continue`d would consume every pool member on a failed
+    // staging and cast NOBODY — fewer heroes, a different race, and a silent regression wearing the
+    // shape of a new feature. With the fall-back, a race in which staging is infeasible is
+    // byte-identical to today, which is what makes the change safe to leave in the tree while the
+    // feasibility question below is his to answer.
     const peakRank =
       p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
     if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
