@@ -634,6 +634,27 @@ the other way.
   (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
   function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
 
+### NIGHT-2026-09-10 — the hold grid, archived because shipped source cites it (2026-09-12)
+
+**A branch is a poor archive**, and this one had become load-bearing: `heroCurveGenerator.js` on
+master carries the staging rank's numbers under the heading "WHERE THE NUMBERS COME FROM —
+HOLD-GRID-1", and `reports/evolution/INDEX.md` links it twice — but **the report itself existed only
+on the branch**. Deleting the branch without this tag would have orphaned a citation inside shipped
+code. Checked before deleting: `HOLD-GRID-1.md` and `COMEBACK-BAND-1.md` are on this branch and on no
+other ref. The instrument both reports used, `scripts/diag/comeback-band.mjs`, was already brought
+across to master by COMEBACK-STAGED-1 and is NOT part of what this tag preserves.
+
+- `archive/night-2026-09-10` (`5fe5af78`, 2026-09-12) — the night of 2026-09-10, five commits,
+  **superseded and never merged**. It holds two reports and one build. **HOLD-GRID-1** is the grid of
+  field size × hold position, and the finding that the servo's holding authority falls as 1/N —
+  **the source of the staging ranks the shipped `stagedComebackRank` uses**. **COMEBACK-BAND-1**
+  repaired the casting so the plan casts its comebacker from a band worth climbing, and then reported
+  that the plan cannot deliver a deep racer to the top 5: it **fired in 0–2 of 30 races**, and its own
+  §5 declares the fairness gate's start-row half RED with the control showing half of that was not its
+  doing. Superseded by COMEBACK-STAGED-1 and COMEBACK-CONSTANT-DEFICIT-1, which located the refusal in
+  `feasibleTiming` pricing the descent at the CLIMB authority. **The head commit's build was never
+  minted and the golden races were deliberately not re-recorded.**
+
 ### FINISH-BAND — the finish line is a line, not a hair (2026-08-13)
 
 **The owner judged it on a production build on 2026-08-13, on dirt-oval and garden-path — the two
