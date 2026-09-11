@@ -361,6 +361,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [STEER-BY-FIELD-SIZE-1.md](STEER-BY-FIELD-SIZE-1.md) — **the divisor is real, its consequence is not
+  the one expected, and the BAND TABLE is the N=40 artefact** (2026-09-11, night chain 2026-09-11
+  piece 3, **REPORT ONLY — the divisor was not changed and `gain` was not touched**).
+  `racePlanner.js:891` divides the servo's rank error by the field size (**and that address corrects
+  HOLD-GRID-1's `:910`, which was taken while a temporary arm lengthened the file**). ★ **BUT
+  MEASURED OVER 46 000 RACER-ROWS THE DIRECTOR IS EQUALLY ACCURATE AT EVERY SIZE**: median landing
+  error is a **constant 5% of the field** at N=20/40/60/100 (1, 2, 3, 5 ranks). "Steers weaker the
+  bigger the field" is true per RANK and false per FIELD. ★ **WHAT DEGRADES IS `BAND_EDGES`, a fixed
+  `[5,15,25,40]` 40-racer table**: band-reach against it falls monotonically **95.8 → 90.8 → 86.7 →
+  81.2 → 70.5%**, and at N=100 the tightest zone is **70.5% against the 70% gate line** — half a
+  point of margin — while B5 (ranks 41–100, 60% of the field in ONE band) reads a meaningless 97.3%.
+  Scaled fairly to the field the curve is not even monotone, and that disagreement is the finding:
+  band-reach at N=100 is undefined today. ★ **AND THE FIGURE READ AS GENERAL IS IN A LIVING DOC**:
+  `docs/FAIRNESS.md` uses "N" for RACE COUNT throughout (`N=100 record`, `N=300 races/track`) and
+  **never states the field size** — so its 70% gate and 85–90% headline are 40-racer facts. Nothing
+  in it was edited; the correction is his. The transient (how long a correction takes) is named as
+  NOT measured.
+
 - [STAGING-START-ROWS-1.md](STAGING-START-ROWS-1.md) — **the staging costs the start rows nothing,
   because it never fires; and luger-hill was already unfair** (2026-09-11, night chain 2026-09-11
   piece 2, **measurement only, nothing tuned**). The staged-vs-control comparison is **zero by
