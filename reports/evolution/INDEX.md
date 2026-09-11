@@ -361,6 +361,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [STAGING-START-ROWS-1.md](STAGING-START-ROWS-1.md) — **the staging costs the start rows nothing,
+  because it never fires; and luger-hill was already unfair** (2026-09-11, night chain 2026-09-11
+  piece 2, **measurement only, nothing tuned**). The staged-vs-control comparison is **zero by
+  construction** — the arm is inert, world fingerprint unmoved and golden races PASS, so the races are
+  byte-identical and 3 000 more races would have proved an identity. The sweep was spent instead on
+  the baseline the brief actually needs. ★ **START-ROW BIAS: 1 Holm-unfair track of 10 — luger-hill,
+  χ² 23.100, p 1.562e-4 — on master, with nothing from this chain in it**, and it reproduces an
+  independent run on another branch **digit for digit**. ★ **That settles last night's attribution:**
+  dirt-oval sits at its baseline χ² 6.133 (fair) here, so `night/2026-09-10`'s 6.133 → 12.933 was
+  genuinely its own doing, and its luger-hill column was not. ★ **Band-reach POOLED 87.3 / 87.9 /
+  86.2 / 94.7 over 120 000 rows — tightest zone 86.2% against the 70% line, every track ≥ 83.8%**, and
+  the comebacker's own reach is the B1 column at 87.3%. **luger-hill is the BEST track on band-reach
+  and the only start-row-unfair one**, which is why both measures are reported and not collapsed.
+
 - [COMEBACK-STAGED-1.md](COMEBACK-STAGED-1.md) — **the staging is built, and the plan's own
   feasibility budget refuses it** (2026-09-11, night chain 2026-09-11 piece 1, on `night/2026-09-11`,
   **NOT merged, NOTHING minted, and the arm is INERT**). The owner's correction was that the director
