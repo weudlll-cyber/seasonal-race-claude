@@ -412,6 +412,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [COMEBACK-CONSTANT-DEFICIT-1.md](COMEBACK-CONSTANT-DEFICIT-1.md) — **a hold and an excursion CAN be
+  told apart, and the premium is still not the wall** (2026-09-12, on `night/2026-09-12`, **NO PRODUCT
+  SOURCE CHANGED, nothing minted, nothing shipped**). ★ **THE BRIEF'S PREMISE IS MEASURED AND DOES NOT
+  HOLD**: waiving the min-jerk premium on the descent — the briefed repair, exactly — moves the staged
+  comebacker from **9 of 200 races to 8 of 200**, and waiving it on BOTH legs casts **0 of 200**.
+  ★ **THE SHIPPED CONSTANT IS AN UNDER-CHARGE** — the realized rest-to-rest figure is **1.875**, so it
+  sits 9% BELOW the case its own comment names. ★ **A HOLD IS TELLABLE FROM AN EXCURSION** from the
+  three ranks the gate already has: the two legs' SIGNS decide it, because `computeTangents` makes an
+  opposite-sign peak a rest-bounded turning point (premium 1.875) and a same-sign peak a pass-through
+  (premium falling to **exactly 1.000** at constant rate) — measured, and pinned in
+  `stagedComeback.test.js`. ★ **THE ONE REAL MOVEMENT, AND WHY IT IS STILL NOT A REPAIR**: a symmetric
+  premium of **1.5** roughly doubles the staged casting rate (**7 of 160 → 16 of 160**, reproduced on
+  independent seeds) at almost no cost to the cast — but it fires **only at N=60 and N=100**, it is
+  BELOW the physically realized figure, and one step down at **1.4 it casts ZERO**. ★ **WHY A CHEAPER
+  PREMIUM CANNOT SIMPLY BUY CASTINGS**: `feasibleTiming` only ALLOCATES time and `checkFeasible`
+  re-measures the realized curve, so the refusal moves one gate later — at premium 1.0 the cast falls
+  from **5.68 heroes per race to 2.22**. ★ **THE GATE IS ALREADY BINDING**: the depth today's
+  comebacker reaches (9/16/16/31 by field size) equals the deepest the gate accepts (8/14/17/30).
+  ★ **CONTROL RE-ESTABLISHED — 355 comebackers over 200 races, median places gained −9, and 266 of 355
+  LOSE places after the release; top 5 in 91 of 355 (26%)**, worsening from −3 at N=20 to −25 at N=100.
+  ★ **THE LEVER IS THE ONE COMEBACK-STAGED-1 HANDED HIM**: the descent is priced at the CLIMB authority
+  though the clamp's drop authority is half again larger. **That is a relaxed rate, which this brief
+  forbids, so it is reported and not built.** Three sabotages, all RED; ★ **and a hold-depth BOOLEAN
+  this piece built was measured, found to flag 339 of 355, and REMOVED rather than tuned.** **No engine
+  file touched, so no fingerprint can move.**
+
 - [PACE-DEFICIT-1.md](PACE-DEFICIT-1.md) — **six to eight percent for thirty-four seconds, and the
   gate is pricing the wrong shape** (2026-09-12, answering ADDENDUM 2 to COMEBACK-BUDGET-1, on
   `night/2026-09-12`, **measurement only, arm removed and the removal proved, nothing minted**).
