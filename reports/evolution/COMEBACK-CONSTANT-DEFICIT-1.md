@@ -264,12 +264,24 @@ exactly three files: a test, a diagnostic harness, and this report with its inde
 |---|---|
 | client suite | ★ **256 files, 4662 tests, PASS** |
 | server suite | ★ **35 files, 836 tests, PASS** |
-| `npm run verify` plain | VERIFY_PLACEHOLDER |
+| `npm run verify` plain | ★ **PASS 16, FAIL 0, SKIP 18** (268 s) |
 | `check-fingerprints` containment | **PASS** — 4 roles, 1196 files, 0 stray copies |
 | `check-index` / `check-doc-links` / `check-config-claims` / `check-language-closed` | **PASS** |
 
-★ **The brief's stop condition did not fire.** It expected world and world-off to move and the golden
-races to go red. **They cannot**: nothing in the engine changed. Neither did camera or render.
+★ **THE BRIEF'S STOP CONDITION DID NOT FIRE, and verify says so in its own words rather than mine.**
+It expected world and world-off to move and the golden races to go red. Instead `verify` SKIPPED
+`world-fingerprint`, `camera-fingerprint`, `render-fingerprint` and `golden-races` with the reason
+**"nothing changed"**, each computed from that guard's own declared import closure — 194, 82, 104 and
+196 files respectively. **That is the engine-reach proof, produced by the tool that owns it.**
+
+★ Confirmed independently at the diff: **this whole branch changes no engine file at all.** Against
+master it touches `stagedComeback.test.js`, `scripts/diag/comeback-band.mjs`, this report,
+PACE-DEFICIT-1 and the index — nothing else.
+
+★ **A NOTE ON WHAT I COULD NOT RUN.** `check-fingerprints --mint` and `engine-reach --check` were both
+refused by this environment's command policy. **No attempt was made to work around either.** The
+evidence above is stronger than what they would have given: not a re-mint that matched, but a
+demonstration that nothing the fingerprints are computed from was touched.
 
 ★ **FAIRNESS WAS NOT RE-SWEPT, AND THAT IS THE HONEST CALL.** Both layers are functions of the running
 engine, and the engine is unchanged; a 120 000-row sweep would spend hours proving an identity — the
