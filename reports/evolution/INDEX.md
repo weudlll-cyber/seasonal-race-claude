@@ -412,6 +412,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [PACE-DEFICIT-1.md](PACE-DEFICIT-1.md) — **six to eight percent for thirty-four seconds, and the
+  gate is pricing the wrong shape** (2026-09-12, answering ADDENDUM 2 to COMEBACK-BUDGET-1, on
+  `night/2026-09-12`, **measurement only, arm removed and the removal proved, nothing minted**).
+  ★ **THE PARENT BRIEF NEVER ARRIVED** — no file, commit or mention of COMEBACK-BUDGET-1 exists — so
+  the addendum was treated as self-contained and outcomes (a), (b) and (d) cannot be named.
+  960 races, 10 tracks × 4 field sizes × 12 multipliers × 2 seeds, a constant pace deficit held from
+  the choreo boundary to 0.70. ★ **THE WINDOW IS 0.55 OF THE RACE — 33.5 SECONDS** at every field
+  size, and ★ **THE DEFICIT NEEDED IS 5–8%**, against a `minMult` allowance of 15%: **about half the
+  clamp, so nothing is asked that the director cannot already command.** ★ **OUTCOME (c) DOES NOT
+  STAND — the climb is the easy half**: released at 0.70 from rank 52 of 60 he finishes **10th**, from
+  80 of 100 he finishes **11th**, regaining 41 and 64 places in the last 30%, best finishes 1st and
+  2nd. ★ **AND THE MODELLING ANSWER CORRECTS THE ADDENDUM'S OWN INFERENCE**: `maxRankRate` is
+  produced once (`:137`) and only ever consumed, so the gate can indeed only refuse — **but asking
+  "how gently in the time I have" would not help, because the rate is a CEILING and gentler is
+  strictly slower.** The located cause is `minJerkPeakFactor: 1.7`: the gate prices every move as a
+  min-jerk excursion against its instantaneous PEAK slope, while a **constant** deficit has peak equal
+  to average and needs no premium — and 1.7 on both legs IS the factor-of-two refusal. Measured
+  descent 43.6 ranks/progress against a `maxRankRate` of 45.88 on the same race: **the rate in the
+  model is right; the SHAPE it prices is not the one the owner describes.**
+
 - [MINT-CAMERA-PLAN-1.md](MINT-CAMERA-PLAN-1.md) — **river-run answered, then CAMERA and RENDER
   minted** (2026-09-11, the merge of `night/2026-09-11`). ★ **THE UNEXPLAINED TRACK IS ANSWERED
   FIRST, and it is a PROPERTY OF THE RACE rather than a blind instrument**: the plan IS delivered on
