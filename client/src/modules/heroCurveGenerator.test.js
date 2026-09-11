@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   GENERATOR_CONFIG,
+  comebackerMinRank,
   bandOfRank,
   bandBounds,
   bandMultiset,
@@ -430,11 +431,25 @@ describe('orchestrator — determinism, cast size, all-emitted-feasible', () => 
   //
   // The test is narrowed to the cast it was actually about — the standard heroes — and the finding
   // is on the owner's sheet rather than buried here.
+  //
+  // ── COMEBACK-BAND-1 GAVE THIS TEST ITS SECOND CURVE BACK, and it is a fixture change, not a
+  // weakening. The shared fixture puts the winner at post-chaos rank 8 and its other B1 finishers
+  // near the front, and a comebacker may no longer be cast from there — at n=40 the band starts at
+  // rank 20. So the cast dropped to ONE standard hero and the test failed on its own PRECONDITION
+  // (`expected 1 to be greater than 1`), never reaching the separation it exists to check.
+  //
+  // A DEEP B1 finisher is pinned here so there are two standard curves to separate. The property
+  // asserted is unchanged; what changed is that the case now exists in the fixture.
   it('emitted STANDARD hero curves are mutually separated (attackers are exempt by design)', () => {
+    const deepIdx = indexAtRank(postChaos, comebackerMinRank(postChaos.length) + 2);
+    const swapPartner = [...finalRanks.entries()].find(([, r]) => r === 3)[0];
+    const deepFinal = new Map(finalRanks);
+    deepFinal.set(swapPartner, deepFinal.get(deepIdx));
+    deepFinal.set(deepIdx, 3); // a valid permutation: rank 3 moves onto a racer deep enough to climb
     const { curves } = generateHeroCurves({
       seed: 8,
       postChaos,
-      finalRanks,
+      finalRanks: deepFinal,
       intensity: 0.9,
       finishT,
     });

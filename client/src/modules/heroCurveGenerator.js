@@ -372,6 +372,55 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
   return mulberry32((seed >>> 0) ^ 0x7a11e5)() < 1 / config.fallerEveryNRaces;
 }
 
+// ── ★ COMEBACK-BAND-1 — WHERE A COMEBACKER MAY BE CAST FROM ────────────────────────────────────
+//
+// WHAT WAS WRONG. `nextCluster()` below caps the front cluster at `BAND_EDGES[0]` (rank 5), and the
+// two casting sites gave the role to anyone whose post-chaos rank merely EXCEEDED it. So the shipped
+// meaning of "comebacker" was *behind the front group* — a racer going 6th to 3rd. The owner watched
+// five races, saw four such shots, and said those are not comebacks.
+//
+// ★ THE CURVE IS READ OFF HOLD-GRID-1's TABLE, not invented here. That grid measured, over 1 238
+// races, how many places a racer actually gains when he is held at a given fraction of the field and
+// released at 0.70 — his own yardstick, since he judges by places gained:
+//
+//   · N=10, every fraction ....... +1 to +4 places, and the third band is rank 3, already inside the
+//     top 5. ★ There is nothing to come back from, so BELOW `MIN_FIELD` nobody is cast.
+//   · N=20 / 0.50 ... +4    N=30 / 0.50 ... +7    N=40 / 0.50 ... +12
+//     — and the shallower fractions at those sizes give −11 to +1. So 0.50 is the shallowest
+//     fraction that buys a real climb up to N=40.
+//   · N=60 / 0.40 ... +9    N=100 / 0.40 ... +24
+//     — while 0.33 gives only +3 and +6. So from N=60 the band may move up to 0.40, which is the
+//     "approaching the end of the first third" his rule describes, and 0.40 is as far as the numbers
+//     support it going.
+//
+// ★ WHAT THIS RULE DOES NOT CLAIM. HOLD-GRID-1 measured a HOLD POSITION at the 0.70 release; this
+// gates the post-chaos rank a racer is cast FROM, which is earlier and is where his curve starts.
+// The two are different points in the race, so the grid fixes WHERE to put the threshold and does
+// not predict the outcome — that is measured on the built thing, in COMEBACK-BAND-1's own tables.
+//
+// ★ AND IT IS NOT A SLIDER. No config key: these are the values the table supports, in the one place
+// the casting decision is made.
+const COMEBACK_BAND = {
+  /** Below this field size no comebacker is cast at all — the answer, not a gap. */
+  MIN_FIELD: 20,
+  /** Field size at or above which the band may move up to the third band. */
+  WIDE_FIELD: 60,
+  NARROW_FRAC: 0.5,
+  WIDE_FRAC: 0.4,
+};
+
+/**
+ * The shallowest post-chaos rank a racer may be cast as a `comebacker` from, or null when the field
+ * is too small for a climb to mean anything.
+ * @param {number} n  field size
+ * @returns {number|null}
+ */
+export function comebackerMinRank(n) {
+  if (!Number.isFinite(n) || n < COMEBACK_BAND.MIN_FIELD) return null;
+  const frac = n >= COMEBACK_BAND.WIDE_FIELD ? COMEBACK_BAND.WIDE_FRAC : COMEBACK_BAND.NARROW_FRAC;
+  return Math.ceil(frac * n);
+}
+
 // ── Casting (A6/A7): assign 2–4 heroes + a feasible story to each. Seeded, jittered (anti-repetition). ─
 function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = GENERATOR_CONFIG) {
   const n = postChaos.length;
@@ -405,11 +454,24 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
   let b1Cluster = 2;
   const nextCluster = () => Math.min(b1Cluster, BAND_EDGES[0]);
 
+  // ★ COMEBACK-BAND-1: the deepest post-chaos rank that still counts as the front group, and the
+  // shallowest that counts as a comeback. `minCome` is null when the field is too small for either.
+  const minCome = comebackerMinRank(n);
+
   // Role 1 — the assigned winner (final rank 1): sovereign lead if already front, else comeback-to-win.
+  //
+  // ★ COMEBACK-BAND-1 CHANGES THE LABEL HERE AND NOTHING ELSE. The winner's CURVE is untouched — the
+  // same target cluster and the same peak as before — because the assigned winner must still be
+  // steered to rank 1 and re-deciding that is a different feature. What changes is that a winner who
+  // is merely behind the front group is no longer ANNOUNCED as a comeback: the role string is what
+  // `comebackDetector.js:86` reads to build the camera's cast, and a 6th-to-1st move is exactly the
+  // shot the owner rejected. He is cast `sovereign-lead`, which is what the existing front branch
+  // already gives a winner the camera should simply follow.
   if (winnerIdx != null) {
     const wr = stateOf.get(winnerIdx)?.rank ?? 1;
     const cr = nextCluster();
-    const role = wr <= cr ? 'sovereign-lead' : 'comebacker';
+    const deepEnough = minCome != null && wr >= minCome;
+    const role = wr <= cr || !deepEnough ? 'sovereign-lead' : 'comebacker';
     if (addSolo(winnerIdx, role, cr, wr <= cr ? Math.max(1, wr) : wr)) b1Cluster++;
   }
 
@@ -442,6 +504,20 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
   for (const p of b1Pool) {
     if (cast.length >= drama.nHeroes) break;
     const cr = nextCluster(); // tight front cluster, not the exact assigned rank (A3)
+    // ★ COMEBACK-BAND-1 — THE SITE THAT CHANGES WHO IS CAST, AND THEREFORE THE RACE.
+    //
+    // Three cases now, where there used to be two:
+    //   · at or inside the front cluster ...... `sovereign-lead`, exactly as before;
+    //   · at or beyond the band ............... `comebacker`, steered to the front cluster `cr`,
+    //                                           which is inside the TOP 5 — a fixed number, not a
+    //                                           fraction, and not P1;
+    //   · ★ BETWEEN THE TWO .................... NOT CAST AT ALL. He is skipped and the loop goes on
+    //     to the next candidate, so a genuinely deep racer can take the slot instead. This is the
+    //     whole repair: a racer who is merely behind the front group is no longer given the role,
+    //     and when nobody in the pool is deep enough the plan casts NO comebacker — which is the
+    //     answer rather than a gap.
+    const deepEnough = minCome != null && p.rank >= minCome;
+    if (p.rank > cr && !deepEnough) continue;
     const peakRank =
       p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
     if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;

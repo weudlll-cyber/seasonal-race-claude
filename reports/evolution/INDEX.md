@@ -361,6 +361,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-BAND-1.md](COMEBACK-BAND-1.md) — **the casting is repaired, and it exposes that the plan
+  cannot deliver a deep racer to the top 5** (2026-09-11, night chain 2026-09-10 piece 2, on
+  `night/2026-09-10`, **NOT merged, NOTHING minted, golden races deliberately NOT re-recorded**).
+  ★ **WHAT WAS WRONG, MEASURED OVER 180 RACES**: `heroCurveGenerator.js:406` caps the front cluster at
+  rank 5 and the casting sites gave `comebacker` to anyone merely behind it, so today's cast
+  comebacker comes from **median post-chaos rank 5 of 30 and 9 of 40** — the 6th→3rd shape he
+  rejected, in essentially every race. The new `comebackerMinRank(n)` casts nobody below N=20, from
+  0.50 of the field to N=60 and from 0.40 above it, each value read off a named cell of
+  [HOLD-GRID-1](HOLD-GRID-1.md); no config key. ★ **IT WORKS AND IT BARELY FIRES**: cast comebackers
+  now start at rank 10/20, 20/40, 49/100 — but the role is cast in **0–2 of 30 races at N=20–40**,
+  because a racer the plan assigned a top-5 finish is almost never also deep after chaos. ★ **AND THE
+  CONTROL SHOWS THE PLAN NEVER DELIVERED A DEEP RACER TO THE TOP 5 ANYWAY** — today's comebacker
+  LOSES places after 0.70 at every size from N=30 (−9, −17, −19) and reaches the top 5 in 12/53 and
+  7/55. The delivery failure is pre-existing; this exposes it. ★ **FAIRNESS: band-reach PASSES
+  (86.7% pooled against the 70% line) and the start-row half is RED — 2 Holm-unfair tracks against
+  the control's 1**: luger-hill is **already unfair on master** (χ² 23.100 vs 23.033) and dirt-oval
+  is this change's (χ² 6.133 → 12.933). **Stopped and reported, not tuned.** All four fingerprints
+  moved; camera and render because the race moved, proven by no camera or drawing file being touched.
+  Sabotage watched red; a browser race runs to a winner with no page error.
+
 - [HOLD-GRID-1.md](HOLD-GRID-1.md) — **the grid: field size × hold position, and the servo's
   authority falls as 1/N** (2026-09-10, night chain 2026-09-10 piece 1, on `night/2026-09-10`,
   **measurement only, arm removed and the removal proved, nothing minted**). 1 238 races over
