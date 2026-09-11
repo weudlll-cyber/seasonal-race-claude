@@ -130,6 +130,7 @@ import { checkAgainstRecord } from "./lib/fingerprintCheck.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -507,6 +508,7 @@ function trackHash(geo, wantOps) {
 
   const RAW = 1000 / 60;
   let ts = 0;
+  const deliverCameraPlan = makeCameraPlanDelivery(cd, raceCfg.racePlanController);
   let accum = 0;
   // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
   // ceremony beats, one of which scales with the field. The director is asked, so this harness
@@ -573,6 +575,10 @@ function trackHash(geo, wantOps) {
       stepRacePhysics(st, raceCfg);
       accum -= FIXED_DT;
     }
+    // ★ CAMERA-PLAN-BLIND-1 — deliver the plan the PRODUCT delivers, on the frame it appears.
+    // Without this the director's comeback detector never receives a cast, so anything gated on a
+    // racer being CAST as a comebacker cannot fire here and this instrument is blind to it.
+    deliverCameraPlan();
     const cam = cd.update(
       st.racers,
       ts,

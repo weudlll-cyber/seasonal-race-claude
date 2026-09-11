@@ -361,6 +361,92 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [STEER-BY-FIELD-SIZE-1.md](STEER-BY-FIELD-SIZE-1.md) — **the divisor is real, its consequence is not
+  the one expected, and the BAND TABLE is the N=40 artefact** (2026-09-11, night chain 2026-09-11
+  piece 3, **REPORT ONLY — the divisor was not changed and `gain` was not touched**).
+  `racePlanner.js:891` divides the servo's rank error by the field size (**and that address corrects
+  HOLD-GRID-1's `:910`, which was taken while a temporary arm lengthened the file**). ★ **BUT
+  MEASURED OVER 46 000 RACER-ROWS THE DIRECTOR IS EQUALLY ACCURATE AT EVERY SIZE**: median landing
+  error is a **constant 5% of the field** at N=20/40/60/100 (1, 2, 3, 5 ranks). "Steers weaker the
+  bigger the field" is true per RANK and false per FIELD. ★ **WHAT DEGRADES IS `BAND_EDGES`, a fixed
+  `[5,15,25,40]` 40-racer table**: band-reach against it falls monotonically **95.8 → 90.8 → 86.7 →
+  81.2 → 70.5%**, and at N=100 the tightest zone is **70.5% against the 70% gate line** — half a
+  point of margin — while B5 (ranks 41–100, 60% of the field in ONE band) reads a meaningless 97.3%.
+  Scaled fairly to the field the curve is not even monotone, and that disagreement is the finding:
+  band-reach at N=100 is undefined today. ★ **AND THE FIGURE READ AS GENERAL IS IN A LIVING DOC**:
+  `docs/FAIRNESS.md` uses "N" for RACE COUNT throughout (`N=100 record`, `N=300 races/track`) and
+  **never states the field size** — so its 70% gate and 85–90% headline are 40-racer facts. Nothing
+  in it was edited; the correction is his. The transient (how long a correction takes) is named as
+  NOT measured.
+
+- [STAGING-START-ROWS-1.md](STAGING-START-ROWS-1.md) — **the staging costs the start rows nothing,
+  because it never fires; and luger-hill was already unfair** (2026-09-11, night chain 2026-09-11
+  piece 2, **measurement only, nothing tuned**). The staged-vs-control comparison is **zero by
+  construction** — the arm is inert, world fingerprint unmoved and golden races PASS, so the races are
+  byte-identical and 3 000 more races would have proved an identity. The sweep was spent instead on
+  the baseline the brief actually needs. ★ **START-ROW BIAS: 1 Holm-unfair track of 10 — luger-hill,
+  χ² 23.100, p 1.562e-4 — on master, with nothing from this chain in it**, and it reproduces an
+  independent run on another branch **digit for digit**. ★ **That settles last night's attribution:**
+  dirt-oval sits at its baseline χ² 6.133 (fair) here, so `night/2026-09-10`'s 6.133 → 12.933 was
+  genuinely its own doing, and its luger-hill column was not. ★ **Band-reach POOLED 87.3 / 87.9 /
+  86.2 / 94.7 over 120 000 rows — tightest zone 86.2% against the 70% line, every track ≥ 83.8%**, and
+  the comebacker's own reach is the B1 column at 87.3%. **luger-hill is the BEST track on band-reach
+  and the only start-row-unfair one**, which is why both measures are reported and not collapsed.
+
+- [COMEBACK-STAGED-1.md](COMEBACK-STAGED-1.md) — **the staging is built, and the plan's own
+  feasibility budget refuses it** (2026-09-11, night chain 2026-09-11 piece 1, on `night/2026-09-11`,
+  **NOT merged, NOTHING minted, and the arm is INERT**). The owner's correction was that the director
+  should DEFINE the comebacker and stage him rather than select whoever happens to be deep; the
+  premise is re-measured here (median post-chaos rank **5 of 30, 9 of 40**, and today's comebacker
+  LOSES places after 0.70 at every size from N=30: **−9, −17, −16**). ★ **THE STAGING MECHANISM
+  ALREADY EXISTED** — a comebacker's curve peak IS his deepest point, and the pool site already
+  computed a synthetic deep peak for a front racer under the `sovereign-lead` label — so no hold arm
+  was rebuilt. ★ **AND IT NEVER FIRES: 8 of 8 candidates refused at every field size, 0 of 180
+  races.** `feasibleTiming` (`heroCurveGenerator.js:189-214`) charges the DOWN leg at the same
+  `maxRankRate` as the UP leg, so the round trip needs **1.63–1.88 of a race against a budget of
+  0.97**. ★ **THE SCISSORS**: the deepest FEASIBLE staging is a near-constant **0.27–0.30** of the
+  field — exactly the depth HOLD-GRID-1 measured as producing **no comeback at all** — while a
+  comeback needs 0.50–0.60. The same depth is affordable ONE WAY and refused as a ROUND TRIP, and
+  that asymmetry is isolated in a test. **World fingerprint unmoved and golden races PASS**, which is
+  the proof of inertness; a fall-back keeps a refused staging byte-identical to today. ★ **The first
+  fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
+  by the winner and the B2 attackers alone, both cast outside the pool loop.
+
+- [MINT-CAMERA-PLAN-1.md](MINT-CAMERA-PLAN-1.md) — **river-run answered, then CAMERA and RENDER
+  minted** (2026-09-11, the merge of `night/2026-09-11`). ★ **THE UNEXPLAINED TRACK IS ANSWERED
+  FIRST, and it is a PROPERTY OF THE RACE rather than a blind instrument**: the plan IS delivered on
+  river-run (cast of 2, at progress 0.1504), but on **all 118 frames where `_pickNextState` actually
+  runs the detector offers NOBODY — with the plan and without it alike** — so the pool is identical,
+  the draw is identical, and the precedence has no cast racer to act on. ★ **The finer point that
+  corrects CAMERA-PLAN-BLIND-1's checked-and-false hypothesis: the populations do not coincide, BOTH
+  ARE EMPTY at every decision**, and over all frames the detector *does* offer somebody (768 of 3 862)
+  — none of those is a decision frame. ★ **The three verdicts partition the ten tracks exactly: 6
+  precedence-fires + 3 pool-differs + 1 nothing-differs**, so the nine that moved are exactly the nine
+  with a cause. **CAMERA `75aef5cd474c54e5` → `92ab7120a80af8ed` and RENDER `40b2de6fcc5bafd8` →
+  `5e5fdc3fb6656d68`, minted from what was re-measured on this tree**; world and world-off measured
+  UNMOVED and NOT minted, golden races PASS and NOT re-recorded, `--mint` agrees on 4 of 4 roles, 0
+  stray copies. ★ **The mint note names the SIX instruments still blind** and records that every
+  camera figure before it, and every render figure, describes the blind picture on the nine moved
+  tracks. verify **PASS 25 · FAIL 0** — nothing was hidden behind the fingerprint reds.
+
+- [CAMERA-PLAN-BLIND-1.md](CAMERA-PLAN-BLIND-1.md) — **the camera instruments ran a camera the browser
+  cannot produce** (2026-09-11, night chain 2026-09-11 piece 4, on `night/2026-09-11`, **fix built,
+  NOTHING MINTED, the camera and render guards RED on purpose**). `raceDriver.mjs:373` and
+  `camera-fingerprint.mjs:201` pass `b1Indices` only and **never call `setCameraPlan`**, while the
+  product delivers the plan once mid-race at `RaceScreen/index.jsx:1072-1078` — so `_cast` stayed null,
+  `isCast()` was false for every racer, and **COMEBACK-PRECEDENCE-1 shipped a change that alters the
+  camera in 47 of 96 races while the camera fingerprint went green.** ★ **TEN INSTRUMENTS BUILD A
+  DIRECTOR AND NINE WERE BLIND**; each has its own frame loop, so fixing the driver fixes none of the
+  others by inheritance — three are fixed here and **six are named and left with their addresses**.
+  One shared `cameraPlanDelivery.mjs` mirrors the product rather than nine copies, and **the delivery
+  is PROVED to engage before any number is taken**: the cast arrives at race progress **0.1503**, at
+  the choreo boundary, size 2. ★ **CAMERA `75aef5cd474c54e5` → `92ab7120a80af8ed` on 9 of 10 tracks,
+  RENDER `40b2de6fcc5bafd8` → `5e5fdc3fb6656d68` on 7 of 10**, with the cause named per track — the
+  precedence actually FIRES on five, and four more move because the candidate population switches from
+  `_b1` to `_cast`. **river-run is unmoved and UNEXPLAINED**: the obvious hypothesis (the detector
+  offers nobody) was checked and is false — it offers on 768 of 3 862 frames. **World fingerprint
+  unmoved, golden races PASS and every per-track frame count is identical, so the race is untouched.**
+
 - [MERGE-NIGHT-0909.md](MERGE-NIGHT-0909.md) — **the second hull path closed, the skip ships on, and
   the morning sheet loses a ghost list** (2026-09-10, the merge of `night/2026-09-09`). ★ **HULL
   196 → 192 and NO `services/` FILE IS IN IT ANY MORE**: `surfaceClassLoader.js` carried the cache

@@ -34,6 +34,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { makeCameraPlanDelivery } from "./cameraPlanDelivery.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -425,6 +426,7 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   // `hooks.frameMs(frameIndex)` returns this frame's duration. Omitted, it is 1000/60 on every
   // frame and every existing caller is byte-identical — which is why no fingerprint moves.
   const frameMsOf = hooks.frameMs ?? (() => 1000 / 60);
+  const deliverCameraPlan = makeCameraPlanDelivery(cd, raceCfg.racePlanController);
   const RAW0 = 1000 / 60;
   let ts = 0;
   let accum = 0;
@@ -489,6 +491,10 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
       accum -= FIXED_DT;
       physicsSteps++;
     }
+    // ★ CAMERA-PLAN-BLIND-1 — deliver the plan the PRODUCT delivers, on the frame it appears.
+    // Without this the director's comeback detector never receives a cast, so anything gated on a
+    // racer being CAST as a comebacker cannot fire here and the instrument is blind to it.
+    deliverCameraPlan();
     cd.update(
       st.racers,
       ts,
