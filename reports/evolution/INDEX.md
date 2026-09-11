@@ -412,6 +412,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [MINT-CAMERA-PLAN-1.md](MINT-CAMERA-PLAN-1.md) — **river-run answered, then CAMERA and RENDER
+  minted** (2026-09-11, the merge of `night/2026-09-11`). ★ **THE UNEXPLAINED TRACK IS ANSWERED
+  FIRST, and it is a PROPERTY OF THE RACE rather than a blind instrument**: the plan IS delivered on
+  river-run (cast of 2, at progress 0.1504), but on **all 118 frames where `_pickNextState` actually
+  runs the detector offers NOBODY — with the plan and without it alike** — so the pool is identical,
+  the draw is identical, and the precedence has no cast racer to act on. ★ **The finer point that
+  corrects CAMERA-PLAN-BLIND-1's checked-and-false hypothesis: the populations do not coincide, BOTH
+  ARE EMPTY at every decision**, and over all frames the detector *does* offer somebody (768 of 3 862)
+  — none of those is a decision frame. ★ **The three verdicts partition the ten tracks exactly: 6
+  precedence-fires + 3 pool-differs + 1 nothing-differs**, so the nine that moved are exactly the nine
+  with a cause. **CAMERA `75aef5cd474c54e5` → `92ab7120a80af8ed` and RENDER `40b2de6fcc5bafd8` →
+  `5e5fdc3fb6656d68`, minted from what was re-measured on this tree**; world and world-off measured
+  UNMOVED and NOT minted, golden races PASS and NOT re-recorded, `--mint` agrees on 4 of 4 roles, 0
+  stray copies. ★ **The mint note names the SIX instruments still blind** and records that every
+  camera figure before it, and every render figure, describes the blind picture on the nine moved
+  tracks. verify **PASS 25 · FAIL 0** — nothing was hidden behind the fingerprint reds.
+
 - [CAMERA-PLAN-BLIND-1.md](CAMERA-PLAN-BLIND-1.md) — **the camera instruments ran a camera the browser
   cannot produce** (2026-09-11, night chain 2026-09-11 piece 4, on `night/2026-09-11`, **fix built,
   NOTHING MINTED, the camera and render guards RED on purpose**). `raceDriver.mjs:373` and
