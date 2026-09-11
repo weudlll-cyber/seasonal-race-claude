@@ -93,7 +93,11 @@ const DEFAULT_CORRIDOR_CONFIG = {
   bottomMarginFraction: 1.5,
 };
 
-const DEFAULT_CONTROLLER_PARAMS = {
+// EXPORTED since DIRECTION-AUTHORITY-1 (2026-09-12): `heroCurveGenerator.js` derives the hero
+// feasibility model's DROP budget from `minMult` rather than carrying a second copy of it. The live
+// per-race value is threaded into the generator config below; this export is what a direct or test
+// call to the generator falls back to, so the fallback reads the one home instead of a literal.
+export const DEFAULT_CONTROLLER_PARAMS = {
   gain: 2.0,
   maxMult: 1.1,
   minMult: 0.85,
@@ -344,6 +348,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
       config.choreoResolveB5 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5,
     ],
     _heroCurves: null, // Map index → anchored curve, once generated
+    _heldRelease: null, // Map index → release progress, for HELD heroes only
     _choreoGenerated: false,
     _choreoPrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
     _choreoPrevProgress: null,
@@ -707,6 +712,11 @@ export function createTrajectoryController(racePlan) {
           config: {
             ...GENERATOR_CONFIG,
             anchorProgress: pulkStartFrac,
+            // DIRECTION-AUTHORITY-1: the hero feasibility model prices a DESCENT at the clamp's drop
+            // authority and a CLIMB at its climb authority. Threaded from the LIVE resolved
+            // controllerParams -- the same reason anchorProgress is threaded -- so a tuned clamp
+            // moves the gate with it and no second copy of either number exists.
+            dropBudgetFrac: 1 - minMult,
             releaseProgress: plan._choreoReleaseProgress,
             bandResolve: plan._choreoBandResolve,
             // B2-attacker "Attack & Fall" params (SHIPPED ON at 3; 0 → no attackers → pre-feature game).
@@ -718,6 +728,12 @@ export function createTrajectoryController(racePlan) {
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+        // HOLD-AND-RELEASE: index -> the progress at which a HELD hero's curve ends and he is handed
+        // back to his drawn rank. Only held curves carry `releaseAt`, so this map is empty for every
+        // plan that casts none and the servo below is then byte-identical to before.
+        plan._heldRelease = new Map(
+          gen.curves.filter((c) => c.releaseAt != null).map((c) => [c.index, c.releaseAt])
+        );
         // B2-attacker runtime params (peakRank + finalRank), for the servo's Track-to-FinalRank-then-Free
         // logic. Only attacker-b2 curves carry them; empty map when the feature is OFF.
         plan._attackerParams = new Map(
@@ -816,9 +832,15 @@ export function createTrajectoryController(racePlan) {
         (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
       // choreo heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
       // target (unchanged endpoint). The curve ends in the hero's assigned band.
+      // A HELD hero is released at his curve's end: from there he is steered to his DRAWN rank like
+      // any other racer, which is the climb the owner asked to watch rather than one more authored
+      // leg. Before that he tracks his curve exactly, as every hero does.
+      const heldReleaseAt =
+        isHero && plan._heldRelease ? plan._heldRelease.get(r.index) : undefined;
+      const heldFree = heldReleaseAt != null && phaseProgress >= heldReleaseAt;
       const targetRank = released
         ? currentRank
-        : isHero
+        : isHero && !heldFree
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // positive rankError = racer currently ranked worse than target → boost
@@ -1276,6 +1298,10 @@ export function createTrajectoryController(racePlan) {
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
     getHeroRoles: () => plan._heroRoles ?? null,
+    // Diagnostics-only: index → release progress for HELD heroes (null until heroes are cast, empty
+    // when none was cast). The role label alone cannot tell a HELD comebacker from the fall-back
+    // one — both are 'comebacker' — and an instrument that guessed from the race would be guessing.
+    getHeldRelease: () => plan._heldRelease ?? null,
     // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector,
     // which passes it to comebackDetector.setPlan — where the ROLES are consumed and the BEATS are
     // DISCARDED. See the note at the assignment of `_cameraPlan` above; the open point is

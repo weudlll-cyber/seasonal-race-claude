@@ -1104,6 +1104,30 @@ export default function RaceScreen() {
             };
           }
 
+          // ── HOLD-PROBE (DIRECTION-AUTHORITY-1): what the HELD comebacker is doing, for a browser
+          // test. INERT UNLESS SWITCHED ON, exactly like the race-inputs probe above and for the
+          // same reason: the hold-and-release shape changes what the owner SEES, and this project
+          // has twice shipped a defect that hid between the logic and the picture. Without an
+          // observable a browser test could only re-derive the rank it is supposed to be checking.
+          //
+          // It records the plan's OWN idea of who is held (`getHeldRelease`) and his LIVE rank off
+          // the same sorted field the scoreboard uses — never a recomputation of either.
+          try {
+            if (localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
+              const heldMap = racePlanController.getHeldRelease?.() ?? null;
+              if (heldMap && heldMap.size) {
+                const order = [...st.racers].sort((a, b) => b.t - a.t);
+                const w = (window.__raHoldTrace ||= []);
+                for (const [idx, releaseAt] of heldMap) {
+                  const rank = order.findIndex((r) => r.index === idx) + 1;
+                  if (rank > 0) w.push({ i: idx, rank, p: st.raceProgress, releaseAt });
+                }
+              }
+            }
+          } catch {
+            /* storage unavailable — a diagnostic must never take a race down */
+          }
+
           // Scoreboard: update when physicsTs crosses a bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
           // (ascending), then still-racing by r.t (descending). Pure b.t-a.t

@@ -17,6 +17,13 @@
 //   · IT PREDICTS NOTHING. No reachability arithmetic — that model assumed a passive field and was
 //     wrong by 7-14 places.
 //
+// ★ ADDED BY DIRECTION-AUTHORITY-1 (2026-09-12): whether each comebacker is the HELD one, and the
+// PACE DEFICIT he runs while held. `held` is read from the PLAN (`getHeldRelease`), never guessed
+// from the race — the role label is 'comebacker' for both the held comebacker and the fall-back one,
+// and the previous attempt to separate them by watching the race flagged 339 of 355. The deficit is
+// his distance travelled over the hold window against the FIELD MEDIAN over the same window, which
+// is a ratio of two measured distances and needs no model of either.
+//
 // ★ ADDED BY COMEBACK-CONSTANT-DEFICIT-1: the HOLD DEPTH — the deepest rank the comebacker reaches
 // between the choreo anchor and the release mark. Reported as a RANK, against which a reader
 // compares the director's staging rank for that field size. Measured on the race, not read from the
@@ -78,6 +85,10 @@ for (const geo of tracks) {
       const ctl = race.meta.racePlanController;
 
       let heroes = null;
+      let heldRelease = null; // index -> release progress, from the PLAN
+      let holdStartT = null; // index -> t at the choreo anchor (hold window start)
+      let fieldStartT = null; // every racer's t at that same moment
+      const holdPace = new Map(); // index -> his distance / the field's median distance, over the hold
       let postChaosRank = new Map(); // index -> rank on the frame the plan arrived
       const atMark = new Map(); // index -> rank at the release mark
       const deepest = new Map(); // index -> deepest (largest) rank seen anchor..mark
@@ -93,6 +104,11 @@ for (const geo of tracks) {
               finalRank: h.finalRank ?? null,
             }));
             for (const h of heroes) postChaosRank.set(h.index, rankOf(st.racers, h.index));
+            heldRelease = ctl?.getHeldRelease?.() ?? null;
+            // the hold window opens here: record everyone's distance so the deficit is a ratio of
+            // two distances measured over the SAME interval.
+            holdStartT = new Map(st.racers.map((r) => [r.index, r.t]));
+            fieldStartT = holdStartT;
           }
         }
         const p = st.raceProgress ?? 0;
@@ -105,6 +121,22 @@ for (const geo of tracks) {
         if (!marked && p >= MARK) {
           marked = true;
           for (const h of heroes ?? []) atMark.set(h.index, rankOf(st.racers, h.index));
+          // close the hold window and price the deficit
+          if (fieldStartT) {
+            const moved = st.racers
+              .map((r) => r.t - (fieldStartT.get(r.index) ?? r.t))
+              .filter((d) => Number.isFinite(d))
+              .sort((a, b) => a - b);
+            const fieldMedian = moved.length ? moved[Math.floor(moved.length / 2)] : null;
+            if (fieldMedian > 0) {
+              for (const h of heroes ?? []) {
+                const r = st.racers.find((x) => x.index === h.index);
+                if (!r) continue;
+                const mine = r.t - (fieldStartT.get(h.index) ?? r.t);
+                holdPace.set(h.index, mine / fieldMedian);
+              }
+            }
+          }
         }
         return true;
       });
@@ -122,10 +154,16 @@ for (const geo of tracks) {
           const finish = rankOf(race.st.racers, h.index);
           const pc = postChaosRank.get(h.index) ?? null;
           const deep = deepest.get(h.index) ?? null;
+          const pace = holdPace.get(h.index) ?? null;
           return {
             index: h.index,
             postChaosRank: pc,
             deepestRank: deep,
+            // read from the plan, not inferred from the race
+            held: heldRelease ? heldRelease.has(h.index) : false,
+            releaseAt: heldRelease ? (heldRelease.get(h.index) ?? null) : null,
+            // 1.0 = exactly the field's pace over the hold; 0.94 = six percent slower
+            holdPaceRatio: pace,
             rankAtMark,
             finishRank: finish,
             placesGained:
@@ -145,7 +183,8 @@ for (const geo of tracks) {
             .map((h) => {
               const m = atMark.get(h.index);
               const f = rankOf(race.st.racers, h.index);
-              return `#${h.index} pc${postChaosRank.get(h.index)}→r${m}→${f}`;
+              const hh = heldRelease && heldRelease.has(h.index) ? "HELD " : "";
+              return `${hh}#${h.index} pc${postChaosRank.get(h.index)}→r${m}→${f}`;
             })
             .join(" ") +
           "\n",
