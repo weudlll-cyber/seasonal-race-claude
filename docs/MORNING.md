@@ -4,8 +4,7 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-11, after COMEBACK-STAGED-1 (chain 2026-09-11, pieces 4 and 1 done).
-Pieces 2 and 3 are still running as this is written.
+**Last rewritten:** 2026-09-11, after the whole chain — all four pieces are done and pushed.
 
 **Where the code is.** Master is `04f40f17`, CI green. `night/2026-09-11` is branched off master and
 is **NOT merged**. `night/2026-09-10` stays unmerged as a **record of its measurements** — its piece 2
@@ -83,8 +82,44 @@ races pass, a refused staging falls back to today byte for byte.
 
 ---
 
+## ★ AND TWO MEASUREMENTS THAT ARE BIGGER THAN THE COMEBACK TOPIC
+
+### 1 · luger-hill's start rows are unfair on master — and nothing of ours did it
+
+3 000 races, 10 tracks, the canonical method. **One track of ten is Holm-unfair: luger-hill, χ²
+23.100.** It reproduces an independent run on another branch **digit for digit**, which is what makes
+"already unfair" a fact rather than a memory. **Band-reach is comfortable — 86.2% tightest against
+the 70% line, every track ≥ 83.8%.**
+
+★ **It also settles last night's attribution**: dirt-oval sits at its clean baseline here, so that
+branch's dirt-oval result was genuinely its own doing and its luger-hill column was not.
+
+### 2 · ★ THE FAIRNESS GATE IS A 40-RACER FACT, AND AT 100 RACERS IT IS HALF A POINT FROM FAILING
+
+You asked whether the director steers weaker as the field grows. It does per RANK — but **measured
+over 46 000 racer-rows it does not per FIELD**: the median racer lands a constant **5% of the field**
+from his drawn place at 20, 40, 60 and 100 racers. **The controller is fine.**
+
+★ **What is not fine is the band table.** `BAND_EDGES` is a fixed `[5, 15, 25, 40]` — a 40-racer
+table used at every size. Band-reach against it:
+
+| racers | 10 | 20 | 40 | 60 | **100** |
+|---|---|---|---|---|---|
+| tightest zone | 95.8% | 90.8% | 86.7% | 81.2% | ★ **70.5%** |
+
+★ **The gate line is 70%.** At 100 racers you have half a point of margin, and the fifth band there
+holds 60% of the field in one bucket and reads a meaningless 97.3%.
+
+★ **AND `docs/FAIRNESS.md` NEVER SAYS WHICH FIELD SIZE IT DESCRIBES.** Every "N" in it counts RACES,
+not racers. Its 70% gate and its 85–90% headline are 40-racer facts written as facts about the game.
+**Nothing in it was edited — it is canonical and the correction is yours.**
+
+---
+
 ## NEEDS HIS WORD
 
+- ★ **Should `BAND_EDGES` scale with the field?** It is the reason band-reach falls while the
+  director's accuracy does not, and it is why the gate nearly fails at 100 racers.
 - ★ **Should the DOWN leg be priced differently from the UP leg?** That is the one change that makes
   your staging possible, and it is a design decision — nothing was touched.
 - ★ **Or should the staging be shallower than a comeback needs?** 0.27–0.30 of the field is what the
