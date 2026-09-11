@@ -4,11 +4,13 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-11, after HOLD-GRID-1 (night chain 2026-09-10, piece 1 of 2).
+**Last rewritten:** 2026-09-11, after COMEBACK-BAND-1 — the chain's last piece. Both pieces are on
+`night/2026-09-10`, pushed, **not merged**.
 
 **Where the code is.** Master is `04f40f17` (CI green) and carries everything from the 2026-09-09
-night — the comeback precedence, the hull split, the start-sequence skip. `night/2026-09-10` is the
-current branch, **NOT merged**, and piece 2 is still running as this is written.
+night — the comeback precedence, the hull split, the start-sequence skip. `night/2026-09-10` carries both
+pieces of the night and is **NOT merged** — it waits for your eye, and piece 2 needs a decision from
+you before it goes anywhere.
 
 **Your services.** 4000 (API) and 4173 (production build) — see the last line of this sheet for the
 URL and the build badge.
@@ -69,8 +71,49 @@ just on comebacks.
 
 ---
 
+---
+
+## ★ AND THE SECOND PIECE BUILT YOUR DEFINITION — IT WORKS, AND IT BARELY FIRES
+
+The plan now casts its comebacker from a band worth climbing: **nobody below 20 racers, half the
+field up to 60, the third band above it.** Every number read off the grid above.
+
+### First, what you suspected is confirmed with a number
+
+Today's "comebacker" is cast from **median post-chaos rank 5 of 30, and 9 of 40** — in essentially
+every race. **That is the 6th→3rd shape you rejected, and it was the shipped meaning of the role.**
+
+### ★ THREE THINGS TO WEIGH, AND ALL THREE ARE YOURS
+
+**1 · The repair works — and the role nearly disappears at your common sizes.** Cast comebackers now
+start at rank 10 of 20, 20 of 40, 49 of 100. But the role is cast in **0 to 2 races out of 30 at
+N=20–40**, because a racer the plan has assigned a top-5 finish is almost never also deep after the
+chaos phase. ★ **And the camera cut that shipped yesterday follows the CAST comebacker — so it would
+go nearly silent at those sizes.** The comeback SHOT does not vanish with it; the camera falls back
+to a wider pool. What changes is that the shot stops being the story's choice.
+
+**2 · ★ NOTHING DELIVERS A DEEP RACER TO THE TOP 5 — AND IT NEVER DID.** Measured on the tree BEFORE
+this change: today's comebacker *loses* places after the release at every size from 30 up (**−9,
+−17, −19**) and reaches the top 5 in **12 of 53** and **7 of 55**. The new deep racers do no better.
+**This change exposes that; it did not cause it.** It is the next real problem and it is bigger than
+a casting rule.
+
+**3 · ★ FAIRNESS — one half passes, one half is red, and half the red is not new.** Band-reach is
+**86.7%** against the 70% line, comfortably. The start-row test gives **2 unfair tracks against the
+control's 1**: **luger-hill is already unfair on master today** (χ² 23.100 against 23.033 — nothing
+to do with this change), and **dirt-oval is this change's** (6.133 → 12.933). Nothing was tuned to
+recover it.
+
+**Nothing is minted, the golden races are left red on purpose, and the branch is not merged.**
+
+---
+
 ## NEEDS HIS WORD
 
+- ★ **Ship the honest band, or keep the frequent fake?** The band is right and it fires in 0–2 of 30
+  races at N=20–40. That is the whole decision on piece 2.
+- ★ **dirt-oval became start-row unfair**, and **luger-hill already is on master.** Your call whether
+  one more is worth the repair.
 - ★ **The grid's choice above N≈40**: a big climb, or an arrival in the top 5. Holding alone cannot
   give both.
 - ★ **Your eye on the MILD precedence**, now on master and unwatched
