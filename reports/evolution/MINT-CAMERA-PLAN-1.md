@@ -184,4 +184,34 @@ record of its grid, which this chain reused as data.
 
 ## 4 · THE WALKTHROUGH — BOTH SERVICES, ON MASTER
 
-<!-- SERVICES -->
+Per `docs/VERIFY-RULES.md` **R10**: two services, and the page is the one that matters less.
+Confirmed by asking them, not by looking at processes.
+
+```
+STATUS  4000 /api/health: 200 [application/json]  |  4173 /: 200 [text/html]  |  5173 /: NO ANSWER
+```
+
+| | |
+|---|---|
+| ★ **build badge**, read from the served bundle | `commit=c0de4cd2 branch=master dirty=false` |
+| ★ **`/api/health` build line** (4000) | `{"commit":"c0de4cd2","branch":"master","dirty":false}` |
+| CORS from the 4173 origin | `access-control-allow-origin: http://localhost:4173` |
+
+The preview is `scripts/serve-production.mjs`, so the bundle is served from
+`%LOCALAPPDATA%acearena-preview`, **outside the OneDrive-synced tree**, as R10 requires.
+
+### ★ THE ONE URL
+
+**http://localhost:4173/**
+
+---
+
+## 5 · WHAT IS OPEN
+
+- ★ **Six instruments still build a director without a plan** — named in §2 and in the mint note. They
+  are a separate piece.
+- The three findings the branch carried in report-only form are on his sheet:
+  [COMEBACK-STAGED-1](COMEBACK-STAGED-1.md)'s scissors,
+  [STAGING-START-ROWS-1](STAGING-START-ROWS-1.md)'s luger-hill, and
+  [STEER-BY-FIELD-SIZE-1](STEER-BY-FIELD-SIZE-1.md)'s 40-racer band table.
+
