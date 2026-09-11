@@ -130,4 +130,58 @@ run a director without a plan is honest only if it says so, which the mint note 
 racing guards were hidden behind the camera one last week — and with the record corrected the run is
 green on all 25.
 
-<!-- MERGE -->
+### The catch-up
+
+```
+git rev-list --count night/2026-09-11..origin/master   ->   0
+```
+
+★ **Master had nothing the branch did not already have**, so the catch-up is a no-op: no merge commit,
+no hunks, none that could fail to keep both sides. **The trees do not differ**, so the
+"re-measure all four fingerprints" branch of the brief does not apply — though all four were measured
+on this tree anyway, above.
+
+### `verify -- --premerge`, from all three `dist` states
+
+| run | starting `client/dist` | result |
+|---|---|---|
+| 1 | **STALE** — bundle stamped `f1f7b2a4` while HEAD was `80f3d1b9` | ★ **PASS 27 · FAIL 0** (472 s) |
+| 2 | **ABSENT** — `rm -rf client/dist` | ★ **PASS 27 · FAIL 0** (484 s) |
+| 3 | **FRESH** — rebuilt at HEAD by the previous run | ★ **PASS 27 · FAIL 0** (446 s) |
+
+### The merge
+
+`master` `04f40f17` + `night/2026-09-11` `80f3d1b9` → **`1fefc13d`**, a merge commit.
+
+★ **THE BRANCH WAS DELETED AT ORIGIN BEFORE MASTER WAS PUSHED**, in that order and deliberately —
+`check-tags` Rule B reads origin about fifteen seconds after the push, and the other order loses that
+race.
+
+```
+git push origin --delete night/2026-09-11   ->   - [deleted]   night/2026-09-11
+git ls-remote --heads origin                ->   master (04f40f17), night/2026-09-10
+git push origin master                      ->   04f40f17..1fefc13d
+git ls-remote --heads origin                ->   master (1fefc13d), night/2026-09-10
+```
+
+★ **`night/2026-09-10` IS DELIBERATELY LEFT — not merged and not deleted.** Its piece 2 cast from a
+new band and fired in 0–2 of 30 races, and the owner replaced that approach; the branch stays as the
+record of its grid, which this chain reused as data.
+
+### CI
+
+| | |
+|---|---|
+| run | `34647849721`, workflow **CI** |
+| event | ★ **`push`** — the run for the merge SHA itself |
+| head SHA | `1fefc13de4bcac28cc7377eda7f45e3433039fd4` |
+| ★ conclusion | ★ **`success`** |
+
+★ **THE SHIP ORDER step 11 was then carried out**: `mintedOn` on both roles was corrected from
+`PROVISIONAL` to the merge commit **`1fefc13d`**, and `check-fingerprints` re-run — 0 stray copies.
+
+---
+
+## 4 · THE WALKTHROUGH — BOTH SERVICES, ON MASTER
+
+<!-- SERVICES -->
