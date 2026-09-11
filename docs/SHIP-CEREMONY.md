@@ -50,10 +50,10 @@ is inside them is arithmetic and nothing else. Regenerate with
 
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
-| files in the RACE HULL — `node scripts/engine-reach.mjs` | 192 |
+| files in the RACE HULL — `node scripts/engine-reach.mjs` | 193 |
 | tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 119 |
 | of those, files that CANNOT reach the engine | 27 |
-| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 100 |
+| hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 101 |
 
 <!-- END GENERATED: engine-reach counts -->
 
@@ -206,16 +206,16 @@ decision, not a documentation fix, and it is on the owner's list.
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
 
-**Costs below are GENERATED, never typed** — measured on commit `fc6180e7`, 2026-09-10 20:03 UTC, on `Testrechner`,
+**Costs below are GENERATED, never typed** — measured on commit `04f40f17`, 2026-09-11 04:44 UTC, on `Testrechner`,
 by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[ra-elapsed-ms N]`;
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
 | guard | cost |
 |---|---|
-| `scripts/fingerprint-default.mjs` — **world** | 42 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 23 s |
-| `scripts/render-fingerprint.mjs` — **render** | 24 s |
+| `scripts/fingerprint-default.mjs` — **world** | 49 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 41 s |
+| `scripts/render-fingerprint.mjs` — **render** | 23 s |
 | `scripts/check-doc-links.mjs` | 0 s |
 | `scripts/check-index.mjs` | 0 s |
 | `scripts/check-tags.mjs` | 1 s |

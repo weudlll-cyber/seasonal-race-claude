@@ -69,6 +69,7 @@ import {
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -205,6 +206,7 @@ function trackHash(geo) {
 
   const h = createHash("sha256");
   const RAW = 1000 / 60;
+  const deliverCameraPlan = makeCameraPlanDelivery(cd, raceCfg.racePlanController);
   let ts = 0;
   let accum = 0;
   // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
@@ -263,6 +265,10 @@ function trackHash(geo) {
       accum = 0;
       endingFrames++;
     }
+    // ★ CAMERA-PLAN-BLIND-1 — deliver the plan the PRODUCT delivers, on the frame it appears.
+    // Without this the director's comeback detector never receives a cast, so anything gated on a
+    // racer being CAST as a comebacker cannot fire here and this instrument is blind to it.
+    deliverCameraPlan();
     cd.update(
       st.racers,
       ts,

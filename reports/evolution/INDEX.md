@@ -361,6 +361,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CAMERA-PLAN-BLIND-1.md](CAMERA-PLAN-BLIND-1.md) — **the camera instruments ran a camera the browser
+  cannot produce** (2026-09-11, night chain 2026-09-11 piece 4, on `night/2026-09-11`, **fix built,
+  NOTHING MINTED, the camera and render guards RED on purpose**). `raceDriver.mjs:373` and
+  `camera-fingerprint.mjs:201` pass `b1Indices` only and **never call `setCameraPlan`**, while the
+  product delivers the plan once mid-race at `RaceScreen/index.jsx:1072-1078` — so `_cast` stayed null,
+  `isCast()` was false for every racer, and **COMEBACK-PRECEDENCE-1 shipped a change that alters the
+  camera in 47 of 96 races while the camera fingerprint went green.** ★ **TEN INSTRUMENTS BUILD A
+  DIRECTOR AND NINE WERE BLIND**; each has its own frame loop, so fixing the driver fixes none of the
+  others by inheritance — three are fixed here and **six are named and left with their addresses**.
+  One shared `cameraPlanDelivery.mjs` mirrors the product rather than nine copies, and **the delivery
+  is PROVED to engage before any number is taken**: the cast arrives at race progress **0.1503**, at
+  the choreo boundary, size 2. ★ **CAMERA `75aef5cd474c54e5` → `92ab7120a80af8ed` on 9 of 10 tracks,
+  RENDER `40b2de6fcc5bafd8` → `5e5fdc3fb6656d68` on 7 of 10**, with the cause named per track — the
+  precedence actually FIRES on five, and four more move because the candidate population switches from
+  `_b1` to `_cast`. **river-run is unmoved and UNEXPLAINED**: the obvious hypothesis (the detector
+  offers nobody) was checked and is false — it offers on 768 of 3 862 frames. **World fingerprint
+  unmoved, golden races PASS and every per-track frame count is identical, so the race is untouched.**
+
 - [MERGE-NIGHT-0909.md](MERGE-NIGHT-0909.md) — **the second hull path closed, the skip ships on, and
   the morning sheet loses a ghost list** (2026-09-10, the merge of `night/2026-09-09`). ★ **HULL
   196 → 192 and NO `services/` FILE IS IN IT ANY MORE**: `surfaceClassLoader.js` carried the cache
