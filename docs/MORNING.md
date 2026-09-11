@@ -71,8 +71,6 @@ just on comebacks.
 
 ---
 
----
-
 ## ★ AND THE SECOND PIECE BUILT YOUR DEFINITION — IT WORKS, AND IT BARELY FIRES
 
 The plan now casts its comebacker from a band worth climbing: **nobody below 20 racers, half the
