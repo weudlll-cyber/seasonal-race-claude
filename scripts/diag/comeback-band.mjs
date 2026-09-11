@@ -17,6 +17,17 @@
 //   · IT PREDICTS NOTHING. No reachability arithmetic — that model assumed a passive field and was
 //     wrong by 7-14 places.
 //
+// ★ ADDED BY COMEBACK-CONSTANT-DEFICIT-1: the HOLD DEPTH — the deepest rank the comebacker reaches
+// between the choreo anchor and the release mark. Reported as a RANK, against which a reader
+// compares the director's staging rank for that field size. Measured on the race, not read from the
+// plan, because the plan does not publish a peak rank.
+//
+// ★ AND A BOOLEAN "was he STAGED?" IS DELIBERATELY NOT DERIVED HERE. One was written and MEASURED:
+// `deepestRank >= postChaosRank + 2` flagged 339 of 355 comebackers, because every racer dips two
+// places somewhere in a window half a race long. It was reporting ordinary jostling under the name
+// of staging, so it was removed rather than tuned — the threshold that would separate them is the
+// authored peak rank, and that is a PLAN fact this harness cannot see.
+//
 // ★ WHY "CAST AT ALL" IS A REPORTED NUMBER AND NOT A FOOTNOTE. Below a field size the rule casts
 // NOBODY on purpose, because at N=10 the first third ends around rank 3, already inside the top 5.
 // A run that shows fewer comebackers is therefore not a regression, and the only way to tell that
@@ -69,6 +80,7 @@ for (const geo of tracks) {
       let heroes = null;
       let postChaosRank = new Map(); // index -> rank on the frame the plan arrived
       const atMark = new Map(); // index -> rank at the release mark
+      const deepest = new Map(); // index -> deepest (largest) rank seen anchor..mark
       let marked = false;
 
       runRace(race, identity, CAMERA_CONFIG, ({ st }) => {
@@ -84,6 +96,12 @@ for (const geo of tracks) {
           }
         }
         const p = st.raceProgress ?? 0;
+        if (heroes && !marked) {
+          for (const h of heroes) {
+            const rk = rankOf(st.racers, h.index);
+            if (rk != null && rk > (deepest.get(h.index) ?? 0)) deepest.set(h.index, rk);
+          }
+        }
         if (!marked && p >= MARK) {
           marked = true;
           for (const h of heroes ?? []) atMark.set(h.index, rankOf(st.racers, h.index));
@@ -102,9 +120,12 @@ for (const geo of tracks) {
         comebackers: comebackers.map((h) => {
           const rankAtMark = atMark.get(h.index) ?? null;
           const finish = rankOf(race.st.racers, h.index);
+          const pc = postChaosRank.get(h.index) ?? null;
+          const deep = deepest.get(h.index) ?? null;
           return {
             index: h.index,
-            postChaosRank: postChaosRank.get(h.index) ?? null,
+            postChaosRank: pc,
+            deepestRank: deep,
             rankAtMark,
             finishRank: finish,
             placesGained:

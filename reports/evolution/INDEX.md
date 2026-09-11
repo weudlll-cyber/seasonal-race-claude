@@ -412,6 +412,52 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [COMEBACK-CONSTANT-DEFICIT-1.md](COMEBACK-CONSTANT-DEFICIT-1.md) — **a hold and an excursion CAN be
+  told apart, and the premium is still not the wall** (2026-09-12, on `night/2026-09-12`, **NO PRODUCT
+  SOURCE CHANGED, nothing minted, nothing shipped**). ★ **THE BRIEF'S PREMISE IS MEASURED AND DOES NOT
+  HOLD**: waiving the min-jerk premium on the descent — the briefed repair, exactly — moves the staged
+  comebacker from **9 of 200 races to 8 of 200**, and waiving it on BOTH legs casts **0 of 200**.
+  ★ **THE SHIPPED CONSTANT IS AN UNDER-CHARGE** — the realized rest-to-rest figure is **1.875**, so it
+  sits 9% BELOW the case its own comment names. ★ **A HOLD IS TELLABLE FROM AN EXCURSION** from the
+  three ranks the gate already has: the two legs' SIGNS decide it, because `computeTangents` makes an
+  opposite-sign peak a rest-bounded turning point (premium 1.875) and a same-sign peak a pass-through
+  (premium falling to **exactly 1.000** at constant rate) — measured, and pinned in
+  `stagedComeback.test.js`. ★ **THE ONE REAL MOVEMENT, AND WHY IT IS STILL NOT A REPAIR**: a symmetric
+  premium of **1.5** roughly doubles the staged casting rate (**7 of 160 → 16 of 160**, reproduced on
+  independent seeds) at almost no cost to the cast — but it fires **only at N=60 and N=100**, it is
+  BELOW the physically realized figure, and one step down at **1.4 it casts ZERO**. ★ **WHY A CHEAPER
+  PREMIUM CANNOT SIMPLY BUY CASTINGS**: `feasibleTiming` only ALLOCATES time and `checkFeasible`
+  re-measures the realized curve, so the refusal moves one gate later — at premium 1.0 the cast falls
+  from **5.68 heroes per race to 2.22**. ★ **THE GATE IS ALREADY BINDING**: the depth today's
+  comebacker reaches (9/16/16/31 by field size) equals the deepest the gate accepts (8/14/17/30).
+  ★ **CONTROL RE-ESTABLISHED — 355 comebackers over 200 races, median places gained −9, and 266 of 355
+  LOSE places after the release; top 5 in 91 of 355 (26%)**, worsening from −3 at N=20 to −25 at N=100.
+  ★ **THE LEVER IS THE ONE COMEBACK-STAGED-1 HANDED HIM**: the descent is priced at the CLIMB authority
+  though the clamp's drop authority is half again larger. **That is a relaxed rate, which this brief
+  forbids, so it is reported and not built.** Three sabotages, all RED; ★ **and a hold-depth BOOLEAN
+  this piece built was measured, found to flag 339 of 355, and REMOVED rather than tuned.** **No engine
+  file touched, so no fingerprint can move.**
+
+- [PACE-DEFICIT-1.md](PACE-DEFICIT-1.md) — **six to eight percent for thirty-four seconds, and the
+  gate is pricing the wrong shape** (2026-09-12, answering ADDENDUM 2 to COMEBACK-BUDGET-1, on
+  `night/2026-09-12`, **measurement only, arm removed and the removal proved, nothing minted**).
+  ★ **THE PARENT BRIEF NEVER ARRIVED** — no file, commit or mention of COMEBACK-BUDGET-1 exists — so
+  the addendum was treated as self-contained and outcomes (a), (b) and (d) cannot be named.
+  960 races, 10 tracks × 4 field sizes × 12 multipliers × 2 seeds, a constant pace deficit held from
+  the choreo boundary to 0.70. ★ **THE WINDOW IS 0.55 OF THE RACE — 33.5 SECONDS** at every field
+  size, and ★ **THE DEFICIT NEEDED IS 5–8%**, against a `minMult` allowance of 15%: **about half the
+  clamp, so nothing is asked that the director cannot already command.** ★ **OUTCOME (c) DOES NOT
+  STAND — the climb is the easy half**: released at 0.70 from rank 52 of 60 he finishes **10th**, from
+  80 of 100 he finishes **11th**, regaining 41 and 64 places in the last 30%, best finishes 1st and
+  2nd. ★ **AND THE MODELLING ANSWER CORRECTS THE ADDENDUM'S OWN INFERENCE**: `maxRankRate` is
+  produced once (`:137`) and only ever consumed, so the gate can indeed only refuse — **but asking
+  "how gently in the time I have" would not help, because the rate is a CEILING and gentler is
+  strictly slower.** The located cause is `minJerkPeakFactor: 1.7`: the gate prices every move as a
+  min-jerk excursion against its instantaneous PEAK slope, while a **constant** deficit has peak equal
+  to average and needs no premium — and 1.7 on both legs IS the factor-of-two refusal. Measured
+  descent 43.6 ranks/progress against a `maxRankRate` of 45.88 on the same race: **the rate in the
+  model is right; the SHAPE it prices is not the one the owner describes.**
+
 - [MINT-CAMERA-PLAN-1.md](MINT-CAMERA-PLAN-1.md) — **river-run answered, then CAMERA and RENDER
   minted** (2026-09-11, the merge of `night/2026-09-11`). ★ **THE UNEXPLAINED TRACK IS ANSWERED
   FIRST, and it is a PROPERTY OF THE RACE rather than a blind instrument**: the plan IS delivered on
