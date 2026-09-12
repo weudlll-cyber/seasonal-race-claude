@@ -433,6 +433,17 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  *      drawn rank ONLY while he is more than `RUNAWAY_LEAD_RANKS` clear of it, so it cannot pin him
  *      to an exact place: at one or two ranks ahead he stays free, which the owner's fairness
  *      correction says is fair.
+ *   E  ★ THE OWNER'S OWN SHAPE, described 2026-09-13, selected as `E2` / `E1` / `E0` (the digit is
+ *      how many ranks before his drawn place the drive begins to ease off; plain `E` means `E2`).
+ *      Three parts, each a property of the shape:
+ *        (a) THE TAPER. `approachDrive` scales the drive down over the last `D` ranks of the
+ *            approach and reaches EXACTLY ZERO one rank short of his place (D ≥ 2), so the
+ *            commanded multiplier is 1.0 BEFORE he arrives rather than at the moment he arrives.
+ *            That last clause is the whole difference from C — see `approachDrive` for why C does
+ *            not have it.
+ *        (b) FREE. Once he has arrived he is UNSTEERED: no brake for leading, no push.
+ *        (c) THE NET IS BAND STEERING, WHICH ALREADY EXISTS — see the `heldFree` block in the servo.
+ *            Nothing new is built for it.
  *
  * ★ NEITHER CLAMP NUMBER, THE GAIN NOR THE EASE DURATION IS TOUCHED BY ANY VARIANT, and no other
  * role is reached: every branch is inside the `heldFree` test.
@@ -465,6 +476,57 @@ export const RUNAWAY_LEAD_RANKS = 2;
 export function arrivalTaper(rankError, spanRanks) {
   if (!(rankError > 0) || !(spanRanks > 0) || rankError >= spanRanks) return rankError;
   return rankError * (rankError / spanRanks);
+}
+
+/** E only: true when the variant string selects the owner's shape (`E`, `E0`, `E1`, `E2`, …). */
+export const ARRIVAL_IS_E = ARRIVAL_VARIANT.startsWith('E');
+/**
+ * E only: how many ranks before his drawn place the drive begins to ease off. Read from the variant
+ * string's digit so ONE key selects the whole arm — `E2` (the owner's first choice), `E1` and `E0`
+ * are his own fallback order, and a bare `E` means `E2`.
+ */
+export const ARRIVAL_TAPER_START_RANKS = ARRIVAL_IS_E
+  ? (() => {
+      const d = Number.parseInt(ARRIVAL_VARIANT.slice(1), 10);
+      return Number.isFinite(d) && d >= 0 ? d : 2;
+    })()
+  : 2;
+
+/**
+ * ── ★ THE TAPER (E part a) — WHY IT IS NOT `arrivalTaper` ────────────────────────────────────────
+ *
+ * Returns the fraction of the drive still commanded at `rankError` ranks short of the drawn place,
+ * for a taper that begins `startRanks` out. The servo multiplies the POSITIVE error by it, so 1
+ * means "full drive, untouched" and 0 means "no drive at all — exactly 1.0, natural speed".
+ *
+ * ★ IT REACHES ZERO BEFORE HE ARRIVES, WHICH IS THE POINT. `rankError` is an INTEGER rank gap: it
+ * steps 2 → 1 → 0, and 0 means he is already there. C's `arrivalTaper` scales by `e/span`, so it is
+ * zero only AT `e == 0` — at `e == 1`, one rank short, it still commands 1.02 at twenty racers, and
+ * `_setTarget` slews, so the multiplier he actually carries across his place is still above 1.0.
+ * This taper is zero from `e == 1` down (for startRanks ≥ 2), so the drive has been off for a whole
+ * rank of racing before the rank flips — the owner's "is AT 1.0 before he arrives", literally.
+ *
+ * The ease is `smoothstep` (3u²−2u³), not a step and not a straight line: the drive leaves full
+ * power and reaches zero with zero slope at both ends, so nothing in the trace is a corner.
+ *
+ * His own fallback order falls out of the one parameter, which is why there is no second knob:
+ *   startRanks 2 — eases across e ∈ [1,2]; zero for the last rank. His first choice.
+ *   startRanks 1 — eases across e ∈ [0,1]; zero only at arrival. "If that is too early."
+ *   startRanks 0 — no taper at all; full drive until he arrives, then free. "Start it when he
+ *                  reaches his place." (Identical to B by construction — nothing is built twice.)
+ *
+ * It deliberately does NOT touch a braking error (he is past his place — that is (b)'s business,
+ * not the taper's) and never returns outside [0,1], so the drive is never reversed or amplified.
+ */
+export function approachDrive(rankError, startRanks) {
+  if (!(startRanks > 0)) return 1; // startRanks 0 → no taper
+  if (!(rankError > 0)) return 0; // at or past his place → no drive left to command
+  // Where the drive reaches zero: one rank short when there is room for it, else at arrival.
+  const zeroAt = startRanks >= 2 ? 1 : 0;
+  if (rankError >= startRanks) return 1; // still outside the taper → untouched
+  const u = (rankError - zeroAt) / (startRanks - zeroAt);
+  if (u <= 0) return 0;
+  return u * u * (3 - 2 * u); // smoothstep
 }
 
 /**
@@ -571,6 +633,15 @@ export function createTrajectoryController(racePlan) {
   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
   let _attackerFreeEvents = 0;
+  // ── ★ E (ARRIVAL-VARIANTS-1, the owner's shape) telemetry. All zero for every other variant,
+  // because every increment sits behind `heldFree && ARRIVAL_IS_E`. `_eArrivalMults` holds one entry
+  // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
+  // — the direct test of whether the taper finished before he got there (it should read 1.0).
+  let _eTaperFrames = 0; // frames the taper reduced the drive at all
+  let _eTaperAtPaceFrames = 0; // frames of those where it had reduced it to ZERO (already at pace)
+  let _eFreeFrames = 0; // frames he ran on band steering after arriving
+  let _eNetFrames = 0; // frames of those where the net actually corrected him (bandError != 0)
+  const _eArrivalMults = [];
   // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
   // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
   // ("leashed racer's live rank ≥ 3") is meaningful — it tracks that specific racer, not whoever is
@@ -908,7 +979,23 @@ export function createTrajectoryController(racePlan) {
       // ── ★ ARRIVAL-VARIANTS-1 — see the block above createTrajectoryController ─────────────────
       // Everything here is inside `heldFree`, so no other role is reached, and variant A leaves the
       // two lines below exactly as they were.
-      if (heldFree && ARRIVAL_VARIANT !== 'A') {
+      // ── ★ E — THE OWNER'S SHAPE, 2026-09-13. Parts (a) and (b) here, (c) below with `bandError` ──
+      // (b) FREE means UNSTEERED, and under E that is expressed as band steering rather than as a
+      // hard 1.0: inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the
+      // block's edge the SAME expression is already the net. One mechanism, two jobs.
+      let eFreeOnBand = false;
+      if (heldFree && ARRIVAL_IS_E) {
+        const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
+        if (currentRank <= drawnPlace) {
+          if (!_arrivedAtDrawn.has(r.index)) {
+            // The pace he is actually carrying the moment he first reaches his place. THE test of
+            // whether the taper finished in time; recorded once per racer, never overwritten.
+            _eArrivalMults.push(r.trajectoryMult ?? 1.0);
+          }
+          _arrivedAtDrawn.add(r.index);
+        }
+        eFreeOnBand = _arrivedAtDrawn.has(r.index);
+      } else if (heldFree && ARRIVAL_VARIANT !== 'A') {
         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
         if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
         if (_arrivedAtDrawn.has(r.index)) {
@@ -927,6 +1014,13 @@ export function createTrajectoryController(racePlan) {
       let rankError = currentRank - targetRank;
       if (heldFree && (ARRIVAL_VARIANT === 'C' || ARRIVAL_VARIANT === 'D')) {
         rankError = arrivalTaper(rankError, ARRIVAL_TAPER_RANKS);
+      }
+      // (a) THE TAPER — only on the APPROACH (he has not arrived yet) and only on a DRIVE error.
+      if (eFreeOnBand === false && heldFree && ARRIVAL_IS_E && rankError > 0) {
+        const f = approachDrive(rankError, ARRIVAL_TAPER_START_RANKS);
+        if (f < 1) _eTaperFrames++;
+        if (f === 0) _eTaperAtPaceFrames++;
+        rankError *= f;
       }
       // Band bounds computed once — used for both steering blend and corridor telemetry.
       const [areaLo, areaHi] = getAreaBounds(targetRank);
@@ -989,6 +1083,30 @@ export function createTrajectoryController(racePlan) {
           else _packSteerFrames++;
         }
         // not-yet-freed → strictness remains 1.0 (curve tracking); nothing else to do.
+      }
+      // ── ★ (c) THE NET IS BAND STEERING, AND IT WAS ALREADY IN THE TREE ──────────────────────────
+      // The owner guessed on 2026-09-13 that "unsteered until he falls out of his block" is a rule
+      // the project already has. He was right about the EXPRESSION and wrong about who gets it:
+      // `bandError` (a dozen lines up) is exactly zero while a racer is inside his band and is the
+      // signed distance OUTSIDE it otherwise — so at strictness 0 the servo commands 1.0 inside the
+      // band and corrects only at its edge. That IS the net. What did not exist is any comebacker
+      // reaching it: heroes are pinned to `strictness = 1.0` above, so a comebacker comfortably
+      // inside the top-5 block is steered to his EXACT drawn rank today, block or no block.
+      //
+      // So E builds no new mechanism. It puts him on band steering after the taper, which is one
+      // assignment. WHAT RELEASES THE NET: nothing has to. `bandError` returns to 0 by itself the
+      // instant he is back inside his block, so the correction stops where it started — there is no
+      // latch to clear and no hysteresis to tune, which is why the attacker's release/re-steer pair
+      // is NOT reused here (it exists to switch strictness between 0 and 1; E never leaves 0).
+      //
+      // ★ IT CANNOT FIRE WHILE HE IS AHEAD OF HIS BLOCK, structurally rather than by a test: his
+      // drawn place is in B1, so `getAreaBounds` gives [1, 5] and the `currentRank < areaLo` arm
+      // needs a rank better than 1. A racer drawn 2nd who is leading the race has bandError 0 and is
+      // not touched — the owner's fairness correction, enforced by the shape of the expression.
+      if (eFreeOnBand) {
+        strictness = 0;
+        _eFreeFrames++;
+        if (bandError !== 0) _eNetFrames++;
       }
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
@@ -1276,6 +1394,14 @@ export function createTrajectoryController(racePlan) {
       attackerCast: _atkCast,
       attackerPeakReached: _atkPeak,
       attackerFreed: _attackerFreeEvents,
+      // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
+      // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
+      eTaperFrames: _eTaperFrames,
+      eTaperAtPaceFrames: _eTaperAtPaceFrames,
+      eFreeFrames: _eFreeFrames,
+      eNetFrames: _eNetFrames,
+      eNetFrameFraction: _eFreeFrames > 0 ? _eNetFrames / _eFreeFrames : 0,
+      eArrivalMults: _eArrivalMults.slice(),
       // Front-leash diagnostic (0 when OFF / never engaged): frames the leader brake was applied.
       leashFrames: _leashFrames,
       // Gap-cap re-roll diagnostics (0 when OFF): total biased rolls this race + the leader duty-cycle
@@ -1329,6 +1455,16 @@ export function createTrajectoryController(racePlan) {
     _attackerMinRank.clear();
     _attackerFreed.clear();
     _attackerFreeEvents = 0;
+    // The arrival latch is per-RACE state, not telemetry, but this block is the only per-race reset
+    // the controller has ("call once per race"), so it belongs here. A controller that outlived a
+    // race would otherwise carry "he has already arrived" into the next one and free him at the
+    // start. No-op while every race builds its own controller; correct if one ever does not.
+    _arrivedAtDrawn.clear();
+    _eTaperFrames = 0;
+    _eTaperAtPaceFrames = 0;
+    _eFreeFrames = 0;
+    _eNetFrames = 0;
+    _eArrivalMults.length = 0;
     _leashFrames = 0;
     _leashEngaged = false;
     _leashTargetIdx = -1;
