@@ -412,6 +412,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [COMEBACK-LEAD-WINDOW-1.md](COMEBACK-LEAD-WINDOW-1.md) — **he pulls away for about three seconds,
+  and the delay is the slew** (2026-09-12, on `night/2026-09-12b`, **REPORT ONLY — nothing built,
+  nothing changed, no proposal**). Answers the question COMEBACK-LEAD-GAP-1 got wrong by measuring the
+  wrong window: not the last 30% and the gap at the line, but **the window that begins the moment he
+  takes the lead**. 56 races in which the held comebacker reached the front. ★ **HE TAKES THE LEAD
+  LATE** — median progress 0.762 at 20 racers rising to 0.987 at 100, always after the 0.70 release.
+  ★ **THE GAP OPENS FOR 2.5-6 s, PEAKS AT A MEDIAN 0.270% OF RACE DISTANCE — 0.06 OF A CANVAS WIDTH —
+  AND IS BACK UNDER HALF THAT WITHIN 0.6-2.2 s**, in 53 of 55 races; p90 0.801% / 0.30 widths, max
+  1.338% / **0.65 widths**. ★ **THE BRAKE TAKES HOLD SLOWLY AND THE EARLIER 0.977 HID IT**: split, the
+  first second is **0.9967** (58% of frames below 1.0) against **0.9753** at 3-6 s. ★★ **THE DELAY IS
+  THE SERVO'S SLEW, NAMED**: within the first second the servo already asks for **0.921** while the
+  racer runs **0.997** — a shortfall of **0.076** that collapses to 0.024 by the second second.
+  `raceCore.js:552-559` eases `trajectoryMult` with `easeInOutCubic` over
+  `trajectoryTransitionDuration` (`defaults.js:983`), and easeInOutCubic is slowest at the start. **It
+  is NOT the rank error building** (a step at `racePlanner.js:847` — the target proves it was already
+  there) **and not the 1/N authority** (`racePlanner.js:913` — ★ **the brief cites 891, which is inside
+  the B2-attacker block**). ★ **THE CAMERA IS ZOOMED HARD — median 4.67x, only ~225 world px in shot —
+  BUT THE PICTURE IS MOSTLY SMALL TOO**, so the finding is NOT about the camera; only the tail (p90
+  0.30, max 0.65 canvas widths) looks like a runaway. Screen numbers come from
+  `CameraDirector.visibleWorldPx`, the class's own falsifiable reading, not a hand-written projection.
+
 - [HISTORY-MISSING-2.md](HISTORY-MISSING-2.md) — **the race is in the history; the one that never
   finished is not, and nothing said so** (2026-09-12, on `night/2026-09-12b`, build `64ff55ae`,
   **walked in a real browser on the production build, one fix, inert to the race**). ★ **BOTH RACES HE
