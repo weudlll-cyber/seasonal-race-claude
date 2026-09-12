@@ -412,6 +412,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [RACE-NEVER-ENDS-1.md](RACE-NEVER-ENDS-1.md) — **no racer is stuck; the race clock cannot keep up
+  with the wall clock** (2026-09-12, on `night/2026-09-12b`, **STOP AND REPORT — nothing built,
+  nothing changed**). ★★ **THE PREMISE IS FALSE AND THAT IS THE FINDING**: asked which racers stall,
+  the answer is **none**. All ten tracks at 32 racers finish with **ZERO unfinished racers**, needing
+  **80-110 s of the race's own clock** — Ice Track 97.4 s, where his race recorded **1590 s of WALL
+  clock**, a factor of **16.3**. ★ **THE MECHANISM, WITH TWO ADDRESSES THAT COMPOUND**:
+  `RaceScreen/index.jsx:917` clamps a frame's contribution at **50 ms**, and `:1059` takes at most
+  **TWO** physics steps per frame at `FIXED_DT = 16` (`raceCore.js:51`) — so **one animation frame can
+  never advance the race by more than 32 ms**, and the race keeps pace only above **31.25 fps**. Below
+  that it falls behind with nothing bounding the shortfall: at 10 fps a 90 s race takes 280 s. ★ **The
+  arithmetic closes to one decimal**: 97.4 s in 1590 s is 61.3 ms of race time per wall second, which
+  at 32 ms a frame implies **1.9 fps**. ★ **So the race would have finished — the viewer gave up
+  before it did**, and HISTORY-MISSING-2's banner already says nothing is saved yet. ★ **NOTHING WAS
+  FIXED, BY THE BRIEF'S OWN RULE**: the obvious lever is the two-step cap, whose own comment says it
+  exists to stop a death spiral that crashed the tab at ~14 s under load — raising it trades a slow
+  race for a crashing one, which is a change to what a race IS. Four options are named and none
+  chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
+  probe (`?perfprobe=1`) exists and belongs to a production run.
+
 - [ARRIVAL-VARIANTS-1.md](ARRIVAL-VARIANTS-1.md) — **four arrivals measured side by side, and his
   proposal makes the runaway worse** (2026-09-12, on `night/2026-09-12b`, **four variants BUILT and
   measured on the same races, NOTHING shipped, default still today's race, not merged**). ★★ **HIS

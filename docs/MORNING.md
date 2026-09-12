@@ -4,7 +4,7 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-12, after piece 2 of the second 2026-09-12 chain.
+**Last rewritten:** 2026-09-12, after piece 3 of the second 2026-09-12 chain.
 
 **Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is branched off it and is **NOT
 merged**. **Nothing is minted and the shipped race is unchanged by default.**
@@ -52,12 +52,19 @@ peak gap in every arm.** You have not said whether it is acceptable; it is a num
 
 ## Where the night stopped
 
-Pieces **1** and **2** are done and pushed. **Pieces 3, 4 and 5 were not started** — piece 2's four
-arms and two fairness sweeps took the night. The fall order was 5, then 4, then 3:
+Pieces **1**, **2** and **3** are done and pushed. **Pieces 4 and 5 were not started** — piece 2's
+four arms and two fairness sweeps took the night. The fall order was 5, then 4, then 3, so what
+remains is what the brief itself ranked as most droppable:
 
-- **PIECE 3** — why a racer never finishes, and the browser race having no end. **Not started.**
-  Carried: `RaceScreen/index.jsx` ends only at `finishedCount >= nRacers`; `raceOverrunMs` and the
-  banner exist and end nothing.
+- **PIECE 3 — DONE, and the premise was wrong.** ★★ **No racer is stuck.** All ten tracks at 32
+  racers finish with **zero unfinished racers**, needing 80–110 s of the race's own clock. Your Ice
+  Track race needed **97.4 s** and took **1590 s of wall clock** — the race was running at about
+  **1.9 frames per second**. ★ One animation frame can never advance the race by more than **32 ms**
+  (`index.jsx:917` and `:1059`, `FIXED_DT=16`), so the race keeps pace only above **31.25 fps** and
+  below that falls behind without bound. **It would have finished; you gave up before it did.**
+  ★ **Nothing was fixed**: the obvious lever is a cap whose own comment says it prevents a crash under
+  load. Four options are named in [RACE-NEVER-ENDS-1](../reports/evolution/RACE-NEVER-ENDS-1.md) and
+  none is chosen. **Why two frames a second is the next question, and needs the perf probe.**
 - **PIECE 4** — `BAND_EDGES` is a 40-racer table. **Not started.**
 - **PIECE 5** — `/api/health`'s unknown build, `check-runin-frame` on luger-hill at 100 racers,
   `check-image-starts` in CI. **Not started.**
