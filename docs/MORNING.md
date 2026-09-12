@@ -4,79 +4,63 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-12, after piece 3 of the 2026-09-12 chain.
+**Last rewritten:** 2026-09-12, after piece 2 of the second 2026-09-12 chain.
 
-**Where the code is.** Master is `b6d77637`, **CI green**. `night/2026-09-12b` is branched off it and
-is **NOT merged** — it carries the new comebacker. Both older night branches are gone from origin:
-`night/2026-09-12` was merged into master, and `night/2026-09-10` is preserved as the annotated tag
-**`archive/night-2026-09-10`** because shipped source cites its HOLD-GRID-1 report by name.
+**Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is branched off it and is **NOT
+merged**. **Nothing is minted and the shipped race is unchanged by default.**
 
 ---
 
-## ★ THE COMEBACKER NOW WORKS — AND THERE IS ONE REASON NOT TO MERGE IT
+## ★★ THE ARRIVAL: FOUR VARIANTS ARE IN THE TREE AND THE CHOICE IS YOURS
 
-He asked for a racer who is held back through the first half and then races to the front. It had
-never once happened: the curve was authored as a **round trip** — down to a staging rank and back up
-— and that needs **1.66× the runway that exists**. It fired in 0 of 180 races, then 9 of 200.
+You asked for the best arrival to be FOUND. It was measured four ways on the same 80 races, ten
+tracks, four field sizes.
 
-**The shape changed, not the limits.** He is now held on ONE authored leg down to a staging rank
-ending at **0.70**, where the curve simply **ends** and he climbs back by racing the last 30%.
+★★ **YOUR PROPOSAL WORKS AS DESCRIBED — AND MAKES THE ONE FAULT YOU NAMED WORSE.** Free on arrival
+gives exactly the feel you wanted: the multiplier sits at **1.0000** while he leads, braked in **1%**
+of frames instead of today's **72%**. But the gap on screen becomes **2.7× bigger** (0.179 canvas
+widths against 0.066). **Today's brake is what has been containing the runaway.**
 
-| | before | after |
+| | buys | costs |
 |---|---|---|
-| cast at all | 0 of 180 | ★ **52–70% of races** |
-| places gained (N=20/40/60/100) | −3 / −9 / −15 / −25 | ★ **+1 / +6 / +10 / +25** |
-| reaches the top 5 at N=100 | 10% | ★ **30%** |
-| other heroes (attacker / faller / sovereign) | 578 / 61 / 68 | ★ **unchanged, to the race** |
+| **A — today** | the smallest gap: 0.066 widths median, 0.597 worst | **braked in 72%** of the frames he leads |
+| **B — free on arrival** | **your feel exactly** (1.0000, 1% braked), best block fairness 82% | **gap 2.7× bigger** on screen |
+| **C — free + stop pushing early** | the feel, arrives at pace, a third of B's extra gap gone | **four points of block fairness** |
+| **D — C + runaway guard** | ★ **the feel AND most of the containment** (0.089 widths) | the same four points |
 
-★ **A browser test watched one**: held from 6th back to 11th, released at 0.70 in 8th, **second by
-the end**, in a real Chromium.
+★ **D's fairness gates hold**: zero Holm-unfair tracks, band-reach 83–96%. The four points are a
+comebacker-specific cost, not a field-wide one.
 
-★★ **BUT `check-runin-frame` FAILS on luger-hill at 100 racers** — the camera loses the finish line
-off the top of the canvas near the end. It is green on master (verified in a worktree), so it is this
-change's doing: the camera is reacting to a race that now runs differently. **That is the reason not
-to merge tonight, even if the comeback pleases you.**
+★ **WATCH ANY OF THEM WITHOUT A REBUILD**: set `localStorage['racearena:arrivalVariant']` to `'B'`,
+`'C'` or `'D'` and run a race. Remove the key for today's behaviour. **The default is still A**, and
+the world fingerprint proves it: unset, it is `bdf4a3c8ce6e0316`, bit for bit what it was.
 
-**Nothing was minted. No golden race was re-recorded.** All four fingerprints moved, as designed —
-world `bdf4a3c8ce6e0316`, world-off `cadd1d4b2391a2a6`, camera `3df640a42e934312`,
-render `6a84085e79535dd6`.
-
-**The sim-browser parity rule held.** The client suite's three reds are all *recorded* outcomes; the
-live `real == sim` byte-identity passed in every one of them.
+★ **AND SOMETHING NOBODY HAD MEASURED: every racer DRIFTS back after arriving, in every variant,
+including today's** — a median 5 places today, 8 under B, worst case 54. **That is larger than the
+peak gap in every arm.** You have not said whether it is acceptable; it is a number, not a verdict.
 
 ---
 
-## What is waiting for you
+## What else happened
 
-1. ★ **Is this the picture you want?** Held to a third of the field, then racing back — at 100 racers
-   a median 33rd → 11th. Only you can answer it.
-2. ★ **The luger-hill camera red above.** Fix the camera, or accept it, or reject the shape.
-3. **52–70% cast, not the large majority the brief asked for.** At the gate alone the shape fits in
-   83–100%; the rest is lost to slot competition with the other roles. Raising it means giving the
-   comebacker precedence over another role — a design decision.
-4. **At 20 racers it gains only +1 place** and top-5 reach slips slightly. The floor for casting is
-   currently twenty; the measurement suggests thirty is the honest floor.
-5. **`holdReleaseProgress` is not on the Dev Screen yet.** Named as owed.
+- **Yesterday's lead-in is OUT.** It bought nothing measurable and cost arrival, so it was removed and
+  the removal proved: `racePlanner.js` is byte-identical to its pre-taper state and the before
+  fingerprints came back. Its findings are kept in the report — above all that **the drive sits at
+  `maxMult` right up to his drawn place**, which is what variants C and D act on.
 
 ---
 
 ## Where the night stopped
 
-Pieces **1**, **2** and **3** are done and pushed. **Pieces 4 and 5 were not started** — piece 2's
-build and its four sweeps took most of the night. The fall order in the brief was 5, then 4, then 3,
-so what remains is exactly what the brief itself ranked as most droppable:
+Pieces **1** and **2** are done and pushed. **Pieces 3, 4 and 5 were not started** — piece 2's four
+arms and two fairness sweeps took the night. The fall order was 5, then 4, then 3:
 
-- **PIECE 3 — DONE.** ★ Only **three** of the six could be fixed by the shared helper, and they were;
-  the other three are blind **structurally** — one runs the countdown only, one replays recorded
-  frames, one builds no race plan at all. ★ **`exp-anchor-truth-ab` moved on 3 of 10 tracks**, so any
-  anchor conclusion from city-circuit, garden-path or luger-hill predates the camera seeing the cast.
-  `check-ending-frame` (a verify guard) is byte-identical and still passes.
-  See [INSTRUMENT-PLAN-2](../reports/evolution/INSTRUMENT-PLAN-2.md).
-- **PIECE 4** — `BAND_EDGES` is a 40-racer table and `docs/FAIRNESS.md` never says so. **Not started.**
-  ★ Tonight's fairness run is consistent with the concern: band-reach is 83–95% at 40 racers.
-- **PIECE 5** — the `/api/health` build id, the e2e geometry flake, `check-image-starts` in CI.
-  **Not started.** ★ The geometry flake **reproduced tonight** during the browser test — six of ten
-  track geometries failed to cache with `Failed to fetch`, without failing the run.
+- **PIECE 3** — why a racer never finishes, and the browser race having no end. **Not started.**
+  Carried: `RaceScreen/index.jsx` ends only at `finishedCount >= nRacers`; `raceOverrunMs` and the
+  banner exist and end nothing.
+- **PIECE 4** — `BAND_EDGES` is a 40-racer table. **Not started.**
+- **PIECE 5** — `/api/health`'s unknown build, `check-runin-frame` on luger-hill at 100 racers,
+  `check-image-starts` in CI. **Not started.**
 
 <!-- END CHAIN STATUS -->
 

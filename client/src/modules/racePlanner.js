@@ -410,6 +410,64 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 // ── createTrajectoryController ────────────────────────────────────────────────
 
 /**
+ * ── ★ ARRIVAL-VARIANTS-1 — WHAT A HELD COMEBACKER DOES ONCE HE GETS THERE ───────────────────────
+ *
+ * ★ A MEASUREMENT SCAFFOLD, NOT A FEATURE. The owner asked for the best arrival to be FOUND, not
+ * chosen for him, so the alternatives live behind one switch and are measured on the same races.
+ * ★ THE DEFAULT IS `A`, WHICH IS TODAY'S SHIPPED BEHAVIOUR — with the variable unset nothing about
+ * the race changes, and that is asserted by the world fingerprint in the report.
+ *
+ *   A  TODAY. After the release his target is his drawn rank for the rest of the race. Being AHEAD
+ *      of that rank is a negative error, so the servo BRAKES him for leading — measured at a median
+ *      0.977 while in front, below 1.0 in 71% of frames.
+ *   B  HIS PROPOSAL — FREE ON ARRIVAL. The first time he reaches his drawn place he stops being
+ *      steered at all: the target multiplier becomes 1.0, neither braked nor pushed, an ordinary
+ *      racer from then on. It goes through `_setTarget`, so it is slew-smoothed rather than snapped.
+ *   C  FREE ON ARRIVAL, AND STOP PUSHING AS HE CLOSES. As B, plus the drive is tapered over the last
+ *      ranks of the approach so he is not still on the `maxMult` ceiling when he crosses — measured,
+ *      at twenty racers the servo commands the full 1.100 one rank out. B alone leaves that
+ *      untouched, so he arrives fast and coasts; C arrives already at pace.
+ *   D  AS C, PLUS A RUNAWAY GUARD. Built only because the owner's one stated fault is "never break
+ *      away too far", and B and C both remove every brake once he is free — nothing else in the
+ *      variant set can answer a gap that keeps growing. It re-engages ordinary steering toward his
+ *      drawn rank ONLY while he is more than `RUNAWAY_LEAD_RANKS` clear of it, so it cannot pin him
+ *      to an exact place: at one or two ranks ahead he stays free, which the owner's fairness
+ *      correction says is fair.
+ *
+ * ★ NEITHER CLAMP NUMBER, THE GAIN NOR THE EASE DURATION IS TOUCHED BY ANY VARIANT, and no other
+ * role is reached: every branch is inside the `heldFree` test.
+ */
+export const ARRIVAL_VARIANT = (() => {
+  // ONE HOME, TWO DOORS, because the two arms that have to run it are different processes: the
+  // sweeps are node and read an env var, and the OWNER watches in a browser, which has neither an
+  // env nor a rebuild. A localStorage key lets him switch variant between races without a build.
+  // ★ THE DEFAULT IS 'A' — today's shipped behaviour — so an unset key and an unset env var both
+  // leave the race exactly as it was, which the world fingerprint asserts.
+  try {
+    const v = globalThis.localStorage?.getItem('racearena:arrivalVariant');
+    if (v) return String(v).toUpperCase();
+  } catch {
+    /* storage unavailable (node, a private window, a blocked store) — fall through to the env */
+  }
+  return (globalThis.process?.env?.RA_ARRIVAL_VARIANT || 'A').toUpperCase();
+})();
+
+/** C and D: how many ranks of the approach the drive is tapered over. */
+export const ARRIVAL_TAPER_RANKS = 5;
+/** D only: how far clear of his drawn rank he may get before ordinary steering resumes. */
+export const RUNAWAY_LEAD_RANKS = 2;
+
+/**
+ * The drive taper used by C and D. Scales a POSITIVE error by the fraction of the taper span still
+ * remaining, so the push falls off the ceiling before he arrives. A braking error and a racer still
+ * far out are both returned untouched, and the factor is in [0,1] so the drive is never reversed.
+ */
+export function arrivalTaper(rankError, spanRanks) {
+  if (!(rankError > 0) || !(spanRanks > 0) || rankError >= spanRanks) return rankError;
+  return rankError * (rankError / spanRanks);
+}
+
+/**
  * Create a stateful Trajectory Controller from a Race Plan.
  *
  * M2v2: bidirectional P-controller for ALL racers in OUTCOME phase.
@@ -428,6 +486,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 export function createTrajectoryController(racePlan) {
   const plan = racePlan;
   const { gain, maxMult, minMult, bandStrictness } = plan.controllerParams;
+  // ARRIVAL-VARIANTS-1: indices that have reached their drawn place at least once since the release.
+  // A latch, not a live test — once he has arrived he stays arrived, so a variant cannot flicker in
+  // and out of being steered as he crosses back and forth.
+  const _arrivedAtDrawn = new Set();
   const { pulkStart, pulkEnd, transEnd, corrStart, corrEnd } = plan._phases;
 
   // Phase-boundary FRACTIONS [0,1] for the leader-progress phase clock.
@@ -843,8 +905,29 @@ export function createTrajectoryController(racePlan) {
         : isHero && !heldFree
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      // ── ★ ARRIVAL-VARIANTS-1 — see the block above createTrajectoryController ─────────────────
+      // Everything here is inside `heldFree`, so no other role is reached, and variant A leaves the
+      // two lines below exactly as they were.
+      if (heldFree && ARRIVAL_VARIANT !== 'A') {
+        const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
+        if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
+        if (_arrivedAtDrawn.has(r.index)) {
+          const clear = drawnPlace - currentRank; // ranks BETTER than his drawn place
+          const runaway = ARRIVAL_VARIANT === 'D' && clear > RUNAWAY_LEAD_RANKS;
+          if (!runaway) {
+            // FREE: neither braked nor pushed. Slew-smoothed by _setTarget like any other target.
+            _setTarget(r, 1.0, elapsedMs);
+            _racerStepCount++;
+            continue;
+          }
+          // D only: he is further clear than the guard allows, so ordinary steering resumes.
+        }
+      }
       // positive rankError = racer currently ranked worse than target → boost
-      const rankError = currentRank - targetRank;
+      let rankError = currentRank - targetRank;
+      if (heldFree && (ARRIVAL_VARIANT === 'C' || ARRIVAL_VARIANT === 'D')) {
+        rankError = arrivalTaper(rankError, ARRIVAL_TAPER_RANKS);
+      }
       // Band bounds computed once — used for both steering blend and corridor telemetry.
       const [areaLo, areaHi] = getAreaBounds(targetRank);
       // bandError: signed distance outside the target band (0 when already inside).

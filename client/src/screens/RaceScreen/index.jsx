@@ -1124,7 +1124,18 @@ export default function RaceScreen() {
                 const w = (window.__raHoldTrace ||= []);
                 for (const [idx, releaseAt] of heldMap) {
                   const rank = order.findIndex((r) => r.index === idx) + 1;
-                  if (rank > 0) w.push({ i: idx, rank, p: st.raceProgress, releaseAt });
+                  // ARRIVAL-VARIANTS-1 added `m`: the multiplier the servo is actually applying, so
+                  // a browser test can see whether he is being braked, pushed or left alone. Read off
+                  // the same racer object, never recomputed.
+                  const me = st.racers.find((r) => r.index === idx);
+                  if (rank > 0)
+                    w.push({
+                      i: idx,
+                      rank,
+                      p: st.raceProgress,
+                      releaseAt,
+                      m: me?.trajectoryMult ?? null,
+                    });
                 }
               }
             }

@@ -412,6 +412,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [ARRIVAL-VARIANTS-1.md](ARRIVAL-VARIANTS-1.md) — **four arrivals measured side by side, and his
+  proposal makes the runaway worse** (2026-09-12, on `night/2026-09-12b`, **four variants BUILT and
+  measured on the same races, NOTHING shipped, default still today's race, not merged**). ★★ **HIS
+  PROPOSAL DELIVERS THE FEEL EXACTLY — 1.0000 while leading, braked in 1% of frames against today's
+  72% — BUT MAKES THE GAP 2.7x BIGGER ON SCREEN** (median 0.179 canvas widths against 0.066).
+  **Today's brake is what has been containing the gap**, which is awkward because the braking is the
+  thing he objected to. ★ **A wins every peak column** (median 0.307% / 0.066 widths, max 0.597);
+  B is worst (0.500% / 0.179 / 0.837); **C — free plus stop pushing early — halves B's extra gap
+  (0.120)** and **D — C plus a two-rank runaway guard — recovers most of it (0.089)** while staying
+  unsteered. ★ **C and D cost four points of BLOCK fairness** (76% against 80/82%), which is the
+  price of the smaller gap. ★ **D's fairness gates hold: zero Holm-unfair tracks, band-reach 83-96%**,
+  so the block cost is comebacker-specific, not field-wide. ★ **DRIFT, measured for the first time:
+  EVERY racer drifts back in EVERY variant including today's** — median 5 places today, 8 under B,
+  worst case 54 — **larger than the peak gap in every arm**. ★ **The scaffold is INERT BY DEFAULT**:
+  unset, the world fingerprint is `bdf4a3c8ce6e0316`, bit for bit what it was, and each variant moves
+  it (B `1ce5295139cc233c`, C `a8414e0a25562d7e`, D `d3dcc274b6cae555`) — which is also the
+  per-variant sabotage. ★ **All four are switchable FROM THE BROWSER** via
+  `localStorage['racearena:arrivalVariant']`, so he can watch any of them without a rebuild; a browser
+  test proves D runs there (released 8th, climbs to 1st, median multiplier 1.0000, braked in 18%).
+  **No recommendation is made — the cost/buy table is the answer.**
+
 - [COMEBACK-BRAKE-EARLY-1.md](COMEBACK-BRAKE-EARLY-1.md) — **the brake started sooner, bought less
   than it cost, and was REMOVED** ★ **the code is OUT since 2026-09-12** — `racePlanner.js` is
   byte-identical to its pre-taper state and world `bdf4a3c8ce6e0316` / world-off `cadd1d4b2391a2a6`
