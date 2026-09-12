@@ -412,6 +412,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [COMEBACK-LEAD-GAP-1.md](COMEBACK-LEAD-GAP-1.md) — **how the lead is produced, and the picture I
+  could not reproduce** (2026-09-12, on `night/2026-09-12b`, **ESTABLISH ONLY — nothing built, nothing
+  changed, the repository byte-identical, no proposal**). ★★ **IT OPENS BY RETRACTING NUMBERS FROM
+  DIRECTION-AUTHORITY-1**: the "finish", "places gained" and "top 5" columns are computed from a
+  post-race sort by `t`, and `raceCore.js:632` stops advancing a finished racer, so that `t` is
+  OVERSHOOT past the line, not order — `raceCore.js:671` holds the real `finishRank`. Measured on 154
+  comebackers, **the t-sort disagrees with the finish order in 139 of 154 (90%), median error 9 places,
+  worst 71**. The mid-race reads (`postChaosRank`, `deepestRank`, `rankAtMark`) stand; everything
+  derived from the finishing position does not, in BOTH arms. **The "sign flips at every field size"
+  headline is therefore NOT established.** The defect came in with COMEBACK-BAND-1 and
+  `comeback-band.mjs:81-85,172` is left untouched rather than quietly edited. ★ **THE HERO CURVE ENDS
+  FLAT** (`heroChoreography.js:149`) and for a held racer is not consulted at all after the release
+  (`racePlanner.js:838-845`) — his target becomes his DRAWN rank, so `rankError` (`:847`) is NEGATIVE
+  whenever he is ahead of it and ★ **the servo BRAKES him for leading**. Measured: over 24 616 frames
+  in front, **median multiplier 0.9771, below 1.0 in 71%, at the ceiling in 0.02%** — against 1.0474
+  and 32%-at-ceiling when not leading. ★ **Second place is ALSO mostly braked (median 0.9963, below
+  1.0 in 60%)** — the gap has two ends and neither is being driven. ★ **THE GAP DOES NOT GROW: the
+  P1-P2 gap SHRANK in 55 of 55 races** over the last 30%, median −0.273% of race distance; the gap at
+  the winner's crossing is median 0.278%, max 1.310%. ★ **The described runaway was not reproduced in
+  120 races**, and ★ **the race the owner watched CANNOT BE IDENTIFIED — no screenshot reached the
+  session — so no substitute race is presented as his**; the browser roster differs from the harness's
+  and a racer's NAME is physics, so the seed alone would not be enough either.
+
 - [INSTRUMENT-PLAN-2.md](INSTRUMENT-PLAN-2.md) — **three of the six were fixable, and three are blind
   for a different reason** (2026-09-12, night chain 2026-09-12 piece 3, on `night/2026-09-12b`,
   **instruments only, no product source touched, nothing minted**). CAMERA-PLAN-BLIND-1 named six
