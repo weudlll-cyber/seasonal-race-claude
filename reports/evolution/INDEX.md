@@ -412,6 +412,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [DIRECTION-AUTHORITY-1.md](DIRECTION-AUTHORITY-1.md) — **the comebacker is HELD and then RELEASED,
+  and the sign flips at every field size** (2026-09-12, night chain 2026-09-12 piece 2, on
+  `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES, NOT merged, NOTHING minted, no golden
+  race re-recorded**). The staged comebacker was authored as a ROUND TRIP and never fired — 0 of 180,
+  then 9 of 200, because the round trip needs 1.66x the runway that exists. ★ **THE SHAPE CHANGED, NOT
+  THE LIMITS**: he is now ONE authored leg down to a staging rank, ending at `holdReleaseProgress`
+  0.70, after which the curve is OVER and he climbs back by racing — which is what the owner
+  described and what PACE-DEFICIT-1 measured as worth +18 to +64 places. ★ **CAST IN 52-70% OF
+  RACES** (200 races) and ★ **THE PLACES GAINED FLIP SIGN AT EVERY FIELD SIZE: -3/-9/-15/-25 becomes
+  +1/+6/+10/+25**, top-5 reach rising 33→46%, 14→27%, 10→30%. ★ **NO HERO HE DID NOT ASK FOR**:
+  attackers, fallers and sovereign-leads are cast EXACTLY as often as before (578/61/68 unchanged) and
+  the race gets marginally FEWER heroes, 5.31→5.21. ★ **THE HOLD IS NEARLY FREE** — his distance over
+  the hold is 0.998-1.005 of the field median, because at the release a racer a third back is only
+  0.5-4.1% behind the leader; the servo's deepest command is 8.8% against a 15% allowance, so no limit
+  is strained. ★ **NEITHER CLAMP NUMBER MOVED** — the drop budget is DERIVED from `minMult`; and
+  measured on 4400 racers the climb and drop rates are IDENTICAL in 100% of cases, so **the direction
+  split is correctness, not leverage — the shape change did the work**. ★ **A BROWSER TEST PASSES**:
+  held 6th→11th, released at 0.70 in 8th, **second by the end**, in real Chromium. Fairness: zero
+  Holm-unfair tracks and band-reach 83-95% across every band (300 races, each track at its own default
+  racer — SMALLER than the 300-per-track methodology, and luger-hill is NOT claimed as fixed).
+  Both sabotages RED. ★★ **THE ONE RED THIS PIECE OWNS: `check-runin-frame` FAILS on luger-hill at
+  100 racers** — the camera loses the finish line off canvas at progress 0.950, verified green on
+  master in a worktree. **That is the reason not to merge tonight.** ★ **The client-suite red is three
+  RECORDED outcomes; the live real==sim byte-identity HELD.** New values: world `bdf4a3c8ce6e0316`,
+  world-off `cadd1d4b2391a2a6`, camera `3df640a42e934312`, render `6a84085e79535dd6`.
+
 - [COMEBACK-CONSTANT-DEFICIT-1.md](COMEBACK-CONSTANT-DEFICIT-1.md) — **a hold and an excursion CAN be
   told apart, and the premium is still not the wall** (2026-09-12, on `night/2026-09-12`, **NO PRODUCT
   SOURCE CHANGED, nothing minted, nothing shipped**). ★ **THE BRIEF'S PREMISE IS MEASURED AND DOES NOT

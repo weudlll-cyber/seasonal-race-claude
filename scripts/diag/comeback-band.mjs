@@ -18,11 +18,20 @@
 //     wrong by 7-14 places.
 //
 // ★ ADDED BY DIRECTION-AUTHORITY-1 (2026-09-12): whether each comebacker is the HELD one, and the
-// PACE DEFICIT he runs while held. `held` is read from the PLAN (`getHeldRelease`), never guessed
-// from the race — the role label is 'comebacker' for both the held comebacker and the fall-back one,
-// and the previous attempt to separate them by watching the race flagged 339 of 355. The deficit is
-// his distance travelled over the hold window against the FIELD MEDIAN over the same window, which
-// is a ratio of two measured distances and needs no model of either.
+// PACE he runs while held. `held` is read from the PLAN (`getHeldRelease`), never guessed from the
+// race — the role label is 'comebacker' for both the held comebacker and the fall-back one, and the
+// previous attempt to separate them by watching the race flagged 339 of 355.
+//
+// ★ TWO PACE NUMBERS, AND THEY ANSWER DIFFERENT QUESTIONS. `holdMeanMult` is the mean
+// `trajectoryMult` the SERVO actually commanded over the hold — the same quantity PACE-DEFICIT-1
+// swept as a constant multiplier, so the two are directly comparable, and it is the honest answer to
+// "how much slower does he run". `holdDistanceVsFieldMedian` is his distance over the window against
+// the field's median distance over the same window.
+//
+// ★ THEY DISAGREE ON PURPOSE and the disagreement is the point: a racer can be AT or above the
+// field's median distance and still lose twenty ranks, because rank is decided by the racers near
+// him and the field is not evenly spread. Reporting only the distance ratio would have said the hold
+// costs nothing, which is false. Both are kept so neither can be mistaken for the other.
 //
 // ★ ADDED BY COMEBACK-CONSTANT-DEFICIT-1: the HOLD DEPTH — the deepest rank the comebacker reaches
 // between the choreo anchor and the release mark. Reported as a RANK, against which a reader
@@ -89,6 +98,8 @@ for (const geo of tracks) {
       let holdStartT = null; // index -> t at the choreo anchor (hold window start)
       let fieldStartT = null; // every racer's t at that same moment
       const holdPace = new Map(); // index -> his distance / the field's median distance, over the hold
+      const multSum = new Map(); // index -> summed trajectoryMult over the hold
+      const multN = new Map(); // index -> frames counted
       let postChaosRank = new Map(); // index -> rank on the frame the plan arrived
       const atMark = new Map(); // index -> rank at the release mark
       const deepest = new Map(); // index -> deepest (largest) rank seen anchor..mark
@@ -116,6 +127,13 @@ for (const geo of tracks) {
           for (const h of heroes) {
             const rk = rankOf(st.racers, h.index);
             if (rk != null && rk > (deepest.get(h.index) ?? 0)) deepest.set(h.index, rk);
+            // what the SERVO commanded this frame — 1.0 is the field's pace
+            const r = st.racers.find((x) => x.index === h.index);
+            const m = r?.trajectoryMult;
+            if (Number.isFinite(m)) {
+              multSum.set(h.index, (multSum.get(h.index) ?? 0) + m);
+              multN.set(h.index, (multN.get(h.index) ?? 0) + 1);
+            }
           }
         }
         if (!marked && p >= MARK) {
@@ -162,8 +180,10 @@ for (const geo of tracks) {
             // read from the plan, not inferred from the race
             held: heldRelease ? heldRelease.has(h.index) : false,
             releaseAt: heldRelease ? (heldRelease.get(h.index) ?? null) : null,
-            // 1.0 = exactly the field's pace over the hold; 0.94 = six percent slower
-            holdPaceRatio: pace,
+            // 1.0 = exactly the field's pace; 0.94 = six percent slower. THIS is the deficit he runs.
+            holdMeanMult: multN.get(h.index) ? multSum.get(h.index) / multN.get(h.index) : null,
+            // a SECOND, different question — see the header note on why both are kept
+            holdDistanceVsFieldMedian: pace,
             rankAtMark,
             finishRank: finish,
             placesGained:
