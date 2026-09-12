@@ -412,6 +412,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [HISTORY-MISSING-2.md](HISTORY-MISSING-2.md) — **the race is in the history; the one that never
+  finished is not, and nothing said so** (2026-09-12, on `night/2026-09-12b`, build `64ff55ae`,
+  **walked in a real browser on the production build, one fix, inert to the race**). ★ **BOTH RACES HE
+  RAN TODAY ARE RECORDED** — on the server and in the list, newest first, with keys **V788BZ** and
+  **RNWRY8**, on BOTH origins (4173 and the API's own 4000). The sort is right, the key-hiding guard
+  works, and the console carried **0 errors and 0 warnings**. ★ **THE RECORDING PATH IS SOUND, PROVED
+  END TO END**: `e2e/race-save.spec.js` runs a REAL race to the finish and asserts the local entry —
+  5 specs pass on the PRODUCTION arm. ★★ **WHAT IS WRONG IS THAT THE BROWSER HAS NO UPPER BOUND ON A
+  RACE**: `RaceScreen/index.jsx:1175` ends a race only at `finishedCount >= nRacers`, and that is the
+  one place the results payload — and with it the history entry — is written. **No ceiling, no DNF, no
+  message**, while `raceCore.js`'s headless runner caps at `max(duration x 3, 600s)` AND ranks DNFs and
+  `raceDriver.mjs:417` refuses loudly at its own 200 s ceiling. ★ **IT BITES, MEASURED**: his own Ice
+  Track race recorded **elapsedSec 1590** — 2.6x the overrun line, 8x the harness ceiling — and the walk
+  reproduced it, a Quick Test running past ten minutes without finishing. ★ **IT WAS ALWAYS SO**:
+  master carries the identical untouched exit condition, and the SAME track and field took the SAME
+  1590 s on the pre-branch build `e7425f28`. **FIX**: `raceOverrunMs` exported as the one home and a
+  red on-screen banner saying the race is not saved yet — **it ends nothing, ranks nobody, and the
+  world fingerprint is unmoved at `bdf4a3c8ce6e0316`**. ★ **The banner has NO browser test and the
+  sabotage that proves it was run and NOT caught** — triggering it needs a ten-minute race; the gap is
+  stated rather than dressed up. Whether the browser should cap and rank DNFs is left to the owner.
+
 - [COMEBACK-LEAD-GAP-1.md](COMEBACK-LEAD-GAP-1.md) — **how the lead is produced, and the picture I
   could not reproduce** (2026-09-12, on `night/2026-09-12b`, **ESTABLISH ONLY — nothing built, nothing
   changed, the repository byte-identical, no proposal**). ★★ **IT OPENS BY RETRACTING NUMBERS FROM

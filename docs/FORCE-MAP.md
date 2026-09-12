@@ -67,7 +67,7 @@ A racer's motion has **two independent axes**, computed in **two different files
 Per physics step the order is:
 
 1. **Re-roll / trajectory / PulkLeadRotation** update the longitudinal multipliers (`index.jsx` re-roll ~1063–1097; the trajectory controller ~990–1003; `applyPulkLeadRotation` ~1018–1035). **There is no rubber-band step** — the `applyRubberBand` speed force and its `raceRubberBand.js` module were removed (do not confuse with the still-live CameraDirector `endgameThreshold` gate, a camera-only mechanism). The PulkLeadRotation call runs **unconditionally whenever a race plan is active** (`racePlanEnabled`, on by default for races ≥ 30 s); it writes `governorMult` for every racer in the PULK window and slews it back to **exactly 1.0** everywhere else.
-2. **Longitudinal integration** — the ONE shared t-update `advanceRacerT()` in [`raceStep.js`](../client/src/modules/raceStep.js) (imported by both browser and sim): `r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult × governorMult × dt`, finish-clamped ([`raceStep.js` → `computeRowEnvSmoothed`](../client/src/modules/raceStep.js#L72-L86); browser call [`index.jsx` → `holdMs`](../client/src/screens/RaceScreen/index.jsx#L1222-L1234)). `dt` = 1.0 (fixed timestep) both sides. **There is no `pulkSurgeMult` and no `zoneMult` in the shared step** — surge was removed and zoneMult is not part of `advanceRacerT`. `governorMult` is **1.0 outside PULK** but **actively written inside PULK** (not "default OFF").
+2. **Longitudinal integration** — the ONE shared t-update `advanceRacerT()` in [`raceStep.js`](../client/src/modules/raceStep.js) (imported by both browser and sim): `r.t += baseSpeed × boost × brake × rowEnvMult × trajectoryMult × areaBonusMult × governorMult × dt`, finish-clamped ([`raceStep.js` → `computeRowEnvSmoothed`](../client/src/modules/raceStep.js#L72-L86); browser call [`index.jsx` → `holdMs`](../client/src/screens/RaceScreen/index.jsx#L1247-L1259)). `dt` = 1.0 (fixed timestep) both sides. **There is no `pulkSurgeMult` and no `zoneMult` in the shared step** — surge was removed and zoneMult is not part of `advanceRacerT`. `governorMult` is **1.0 outside PULK** but **actively written inside PULK** (not "default OFF").
 3. `computePositions()` projects `(t, physicalY)` → world `(x, y, angle)`.
 4. **`applyRacerBehavior()`** computes the _next_ frame's lateral move and the brake/draft **flags** used by step 2 next frame (one-frame lag is intentional).
 
@@ -81,7 +81,7 @@ The lateral flags (`avoidanceActive`, `brakeMatchFactor`, `draftingBoostActive`)
 
 Master equation — the ONE shared per-frame t-update, `advanceRacerT()` in
 [`raceStep.js` → `computeRowEnvSmoothed`](../client/src/modules/raceStep.js#L72-L86), imported by both the browser
-loop ([`index.jsx` → `holdMs`](../client/src/screens/RaceScreen/index.jsx#L1222-L1234)) and the
+loop ([`index.jsx` → `holdMs`](../client/src/screens/RaceScreen/index.jsx#L1247-L1259)) and the
 fairness sim (Sim-Browser Parity):
 
 ```
@@ -95,7 +95,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A0. Base speed (duration anchor)
 
-- **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js` → `computeRaceBaseSpeed`](../client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx` → `bodyFillNarrow`](../client/src/screens/RaceScreen/index.jsx#L567).
+- **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js` → `computeRaceBaseSpeed`](../client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx` → `bodyFillNarrow`](../client/src/screens/RaceScreen/index.jsx#L571).
 - **What**: the per-frame `t`-rate that makes a neutral racer (all multipliers = 1.0) reach the finish in exactly the operator-chosen duration.
 - **When**: always.
 - **Magnitude**: the reference. Everything else is a dimensionless multiplier around 1.0.

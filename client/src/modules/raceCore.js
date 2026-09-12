@@ -54,6 +54,26 @@ export const FIXED_DT = 16;
 const tPos = (t) => ((t % 1) + 1) % 1;
 
 /**
+ * HISTORY-MISSING-2 (2026-09-12): the ONE definition of "this race has overrun". It was a literal
+ * inside the headless runner and nowhere else, so the BROWSER had no notion of an overrun at all —
+ * `RaceScreen` ends a race only at `finishedCount >= nRacers`, with no ceiling and no DNF, and a race
+ * whose last racer never arrives therefore never reaches the result screen and is never recorded.
+ * The headless runner capped and ranked the stragglers; the harness refuses at its own 200 s ceiling
+ * (`scripts/lib/raceDriver.mjs`). Exported so the screen can SAY SO rather than carry a second copy
+ * of the number.
+ *
+ * ★ IT DOES NOT END ANYTHING BY ITSELF. Reading it is how a caller learns a race is past the point
+ * the rest of the project treats as impossible; what to do about that is the caller's, and the screen
+ * deliberately only tells the viewer.
+ *
+ * @param {number} realizedDurationSec the race's own realized duration
+ * @returns {number} milliseconds after which the race counts as overrun
+ */
+export function raceOverrunMs(realizedDurationSec) {
+  return Math.max((realizedDurationSec ?? 0) * 3, 600) * 1000;
+}
+
+/**
  * Build a race from its resolved inputs — the REAL RaceScreen init, DOM-free.
  *
  * Every physics draw site (row shuffle, per-racer spreadFactor + roll jitter) is threaded through
@@ -698,7 +718,7 @@ export function runRaceHeadless(params, opts = {}) {
   let nextCp = checkpointIntervalMs;
 
   // Safety cap mirrors the sim's: 3× the realized duration or 10 min, whichever is larger.
-  const maxTime = Math.max(meta.realizedDurationSec * 3, 600) * 1000;
+  const maxTime = raceOverrunMs(meta.realizedDurationSec);
 
   while (state.finishedCount < nRacers && state.physicsTs < maxTime) {
     stepRacePhysics(state, config);

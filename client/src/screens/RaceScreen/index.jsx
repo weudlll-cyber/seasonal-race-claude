@@ -33,7 +33,7 @@ import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
-import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
+import { createRaceFromIdentity, stepRacePhysics, raceOverrunMs } from '../../modules/raceCore.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { deriveSpriteGeometry } from '../../modules/raceParams.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
@@ -185,6 +185,10 @@ export default function RaceScreen() {
     []
   );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
+  // HISTORY-MISSING-2: true once the race is past the point the rest of the project treats as
+  // impossible. It only drives the banner below — no physics, no phase, no navigation reads it.
+  const [overrun, setOverrun] = useState(false);
+  const overrunRef = useRef(false);
   const [countdown, setCountdown] = useState(3);
   // SCOREBOARD-SLOT-LAYER: React state now holds only what a card SAYS — its identity and its finish.
   // It no longer holds the RANKING, which changes constantly and would re-render the list four times
@@ -1172,6 +1176,27 @@ export default function RaceScreen() {
             }
           }
 
+          // ── ★ HISTORY-MISSING-2: A RACE THAT CANNOT BE RECORDED MUST SAY SO ────────────────
+          //
+          // The line below is the ONLY exit from a running race: the results payload, and with it
+          // the history entry, is written when EVERY racer has finished and at no other time. There
+          // is no ceiling here and no DNF — the headless runner has both (`raceOverrunMs`, and it
+          // ranks the stragglers) and the harness refuses at its own 200 s ceiling. So a race whose
+          // last racer never arrives simply never ends, and vanishes without a word. That is the one
+          // failure the local-first rule exists to prevent, and this makes it visible.
+          //
+          // ★ IT CHANGES NOTHING ABOUT THE RACE. It does not end it, rank anyone, or navigate; the
+          // race goes on exactly as before and a finished race is bit-for-bit what it was. Whether
+          // the browser should ALSO cap and rank DNFs the way the headless runner does is a change
+          // to what a race IS, and it is not made here.
+          if (
+            !overrunRef.current &&
+            ts - st.raceStart > raceOverrunMs(raceMeta.realizedDurationSec)
+          ) {
+            overrunRef.current = true;
+            setOverrun(true);
+          }
+
           if (st.finishedCount >= nRacers) {
             st.phase = PHASE.FINISHED;
             setPhase(PHASE.FINISHED);
@@ -1973,6 +1998,12 @@ export default function RaceScreen() {
 
   return (
     <div ref={screenRef} className="screen screen--race">
+      {overrun && (
+        <div className="race-overrun-banner" data-testid="race-overrun-banner" role="alert">
+          This race has run far longer than it should and has not finished. It is NOT saved yet — a
+          race is recorded only once every racer has crossed the line.
+        </div>
+      )}
       <div className="race-layout">
         <div
           className="race-canvas-wrapper"
