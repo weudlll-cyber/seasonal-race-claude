@@ -412,6 +412,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [COMEBACK-BRAKE-EARLY-1.md](COMEBACK-BRAKE-EARLY-1.md) — **the brake now starts sooner, and it buys
+  less than it costs** (2026-09-12, on `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES,
+  NOT merged, NOTHING minted**). ★★ **THE STOP CONDITION FIRED — READ IT BEFORE KEEPING THE CHANGE.**
+  ★ **STEP 1, SETTLED ONCE**: a cast comebacker is **NEVER drawn 1st — 0 of 82** — and draws anywhere
+  from 2nd to 5th, the median moving with the field (2nd at forty racers, 4th at a hundred);
+  `heroCurveGenerator.js:642-643` takes the pool from ranks <= 5 and `:654` excludes the drawn winner.
+  **So the trigger had to be his drawn place, not a fixed "3rd".** ★ **AND THE LEAD-IN IS A TIME
+  ARGUMENT**: the ease needs 0.60 s for three quarters, while the last TWO ranks take only **0.38 s at
+  p10** — buying nothing in a dense field — three ranks give exactly 0.60 s with no margin, and five
+  give **1.17 s**. The span is five. ★ **THE CAUSE WAS SHARPER THAN "THE BRAKE IS LATE"**: the drive is
+  clamped at `maxMult` and **at twenty racers the servo commanded the ceiling 1.100 at ONE rank out**,
+  so he crossed his drawn place still asked for ten percent fast. `approachTaper` scales the positive
+  error by the fraction of the lead-in remaining; it never reverses the drive and never touches a
+  braking error. ★★ **BUT THE RESULT IS A COIN FLIP: the peak is smaller in 29 of 48 paired races
+  (binomial p≈0.19)** — median −17% and worst-case-on-screen −31% (0.655→0.455 canvas widths), yet
+  **p90 on screen ROSE 22%**, and he still arrives at **+7.4%**. ★★ **AND HE REACHES HIS DRAWN PLACE
+  LESS OFTEN: 94% → 89%**, 5 lost against 1 gained (McNemar p≈0.22) — **four of the five losses are
+  racers drawn 2nd**, exactly the case step 1 flagged. ★ **THE LEVER IS BOUNDED BY `maxMult`**: the
+  ceiling exit moves only as the SQUARE ROOT of the span, so going further means weakening the drive.
+  Cast rate (68%) and top-5 reach (84%) unchanged; zero Holm-unfair tracks; band-reach 82-95%, the
+  floor down one point. Both sabotages RED. World `22a592f45470ac55`, world-off `a42141464070326f`;
+  ★ **camera and render UNMOVED**.
+
 - [COMEBACK-LEAD-WINDOW-1.md](COMEBACK-LEAD-WINDOW-1.md) — **he pulls away for about three seconds,
   and the delay is the slew** (2026-09-12, on `night/2026-09-12b`, **REPORT ONLY — nothing built,
   nothing changed, no proposal**). Answers the question COMEBACK-LEAD-GAP-1 got wrong by measuring the
