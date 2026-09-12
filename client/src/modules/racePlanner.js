@@ -410,51 +410,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 // ── createTrajectoryController ────────────────────────────────────────────────
 
 /**
- * ── ★ COMEBACK-BRAKE-EARLY-1 — THE APPROACH TAPER ───────────────────────────────────────────────
- *
- * ★ THE PROPERTY, IN ONE PARAGRAPH A READER CAN CHECK. A racer being steered toward a place BELOW
- * him is DRIVEN: `rankError` is positive and `rawTarget` is `1 + gain * (error / nActive)`, clamped
- * at `maxMult`. Measured on the shipped build, that clamp BINDS for the whole approach at ordinary
- * field sizes — at 20 racers the servo commands the ceiling 1.100 at five ranks out and still 1.100
- * at ONE rank out, and at 40 racers it is 1.100 until two ranks out. So the racer crosses his drawn
- * place still commanded ten percent fast, and only THEN does a braking target appear. The brake is
- * not weak; it is eased in with `easeInOutCubic` over `trajectoryTransitionDuration`
- * (`raceCore.js:552-559`), a curve that is slowest at its start, so a further 0.6 s passes before
- * three quarters of it has arrived. That is the overshoot.
- *
- * ★ WHAT THIS CHANGES: WHEN the deceleration starts, and nothing else. Inside the last
- * `leadInRanks` the positive error is multiplied by the FRACTION OF THE LEAD-IN STILL REMAINING —
- * so the factor falls linearly from 1 to 0 and the error itself falls quadratically — and the drive
- * leaves the ceiling before he arrives instead of after. At five ranks out nothing changes at all;
- * at one rank out a five-rank lead-in leaves a fifth of the error. ★ IT NEVER REVERSES THE DRIVE — the factor is in [0,1], so a
- * racer short of his drawn place is never pushed backwards, which is the failure mode that would
- * leave him short of a place he was drawn for. ★ AND IT DOES NOT TOUCH THE BRAKE: past his drawn
- * place the error is negative, this returns it untouched, and `minMult`, the gain and the ease
- * duration are all exactly what they were.
- *
- * ★ WHY FIVE RANKS, AND IT IS A TIME ARGUMENT NOT A RANK ONE. The ease needs 0.60 s to deliver three
- * quarters of a change and 0.71 s for ninety percent. Measured over 82 cast comebackers, the last
- * TWO ranks of a climb take a median 1.43 s but only 0.38 s at the tenth percentile — less than the
- * ease needs, so two ranks buys nothing in a fast field. Three ranks gives 0.60 s at the tenth
- * percentile, exactly the ease's own figure and no margin. FIVE ranks gives 1.17 s at the tenth
- * percentile and 3.48 s at the median, which clears the ease at every field size measured.
- *
- * ★ IT NAMES NO ROLE. Any racer whose target is a place below him is tapered the same way.
- *
- * @param {number} rankError   currentRank - targetRank; positive means he is behind his target
- * @param {number} leadInRanks how many ranks of the approach the taper spans
- * @returns {number} the error the controller should act on
- */
-export function approachTaper(rankError, leadInRanks) {
-  if (!(rankError > 0) || !(leadInRanks > 0)) return rankError; // braking, or arrived: untouched
-  if (rankError >= leadInRanks) return rankError; // still far out: the drive is unchanged
-  return rankError * (rankError / leadInRanks);
-}
-
-/** The approach taper's span, in ranks. See approachTaper for why it is five. */
-export const APPROACH_TAPER_RANKS = 5;
-
-/**
  * Create a stateful Trajectory Controller from a Race Plan.
  *
  * M2v2: bidirectional P-controller for ALL racers in OUTCOME phase.
@@ -889,14 +844,7 @@ export function createTrajectoryController(racePlan) {
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // positive rankError = racer currently ranked worse than target → boost
-      // ★ COMEBACK-BRAKE-EARLY-1: a HELD racer past his release is closing on his DRAWN place, and
-      // the drive sits on the maxMult ceiling until he is almost on it. Taper it across the last
-      // few ranks so the deceleration starts BEFORE he arrives rather than after. The taper only
-      // ever reduces a POSITIVE error, so it cannot push him backwards or leave him short, and it
-      // returns a braking error untouched. See approachTaper.
-      const rankError = heldFree
-        ? approachTaper(currentRank - targetRank, APPROACH_TAPER_RANKS)
-        : currentRank - targetRank;
+      const rankError = currentRank - targetRank;
       // Band bounds computed once — used for both steering blend and corridor telemetry.
       const [areaLo, areaHi] = getAreaBounds(targetRank);
       // bandError: signed distance outside the target band (0 when already inside).

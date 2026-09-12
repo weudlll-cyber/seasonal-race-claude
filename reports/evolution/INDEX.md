@@ -412,8 +412,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
-- [COMEBACK-BRAKE-EARLY-1.md](COMEBACK-BRAKE-EARLY-1.md) — **the brake now starts sooner, and it buys
-  less than it costs** (2026-09-12, on `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES,
+- [COMEBACK-BRAKE-EARLY-1.md](COMEBACK-BRAKE-EARLY-1.md) — **the brake started sooner, bought less
+  than it cost, and was REMOVED** ★ **the code is OUT since 2026-09-12** — `racePlanner.js` is
+  byte-identical to its pre-taper state and world `bdf4a3c8ce6e0316` / world-off `cadd1d4b2391a2a6`
+  both came back; **the findings are kept as the record**, above all that the drive sits at `maxMult`
+  one rank out, which is the cause the next piece works on. (2026-09-12, on `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES,
   NOT merged, NOTHING minted**). ★★ **THE STOP CONDITION FIRED — READ IT BEFORE KEEPING THE CHANGE.**
   ★ **STEP 1, SETTLED ONCE**: a cast comebacker is **NEVER drawn 1st — 0 of 82** — and draws anywhere
   from 2nd to 5th, the median moving with the field (2nd at forty racers, 4th at a hundred);

@@ -1,7 +1,34 @@
-# COMEBACK-BRAKE-EARLY-1 — the brake now starts sooner, and it buys less than it costs
+# COMEBACK-BRAKE-EARLY-1 — the brake started sooner, bought less than it cost, and was REMOVED
 
 2026-09-12 · branch `night/2026-09-12b` · **BUILT AND MEASURED. The race CHANGES. Nothing minted, no
 golden race re-recorded, not merged.**
+
+---
+
+## ★★ 0 · THE CODE WAS TAKEN BACK OUT, 2026-09-12 — THE FINDINGS BELOW STAND
+
+**The owner's decision on reading this report: remove it.** `approachTaper` and its use site are gone
+from `racePlanner.js`, and `approachTaper.test.js` is deleted — nothing dead is left behind.
+
+**Proved two ways, not asserted:**
+
+- `git diff 331d997a -- client/src/modules/racePlanner.js` is **empty** — the file is byte-identical
+  to its state before the taper existed;
+- and the fingerprints came back: **world `bdf4a3c8ce6e0316`** and **world-off `cadd1d4b2391a2a6`**,
+  exactly the values DIRECTION-AUTHORITY-1 measured. **The before-numbers returned.**
+
+★ **EVERYTHING BELOW IS KEPT AS THE RECORD**, because three of its measurements are load-bearing for
+what comes next and must not be re-derived:
+
+1. ★ **The comebacker is NEVER drawn first** — 0 of 82 — because `heroCurveGenerator.js:654` excludes
+   the drawn winner from the pool. He draws 2nd–5th, and the median MOVES with the field: 2nd at forty
+   racers, 4th at a hundred.
+2. ★ **The drive sits at `maxMult` right up to his drawn place** — at twenty racers the servo commands
+   the full 1.100 one rank out. **That is the cause the next piece works on.**
+3. ★ **The lead-in is a time argument**: the ease needs 0.60 s for three quarters, the last two ranks
+   take only 0.38 s at p10.
+
+---
 
 ★★ **THE STOP CONDITION YOU NAMED HAS FIRED, SO READ THIS FIRST.** The lead-in works — the
 deceleration starts before he arrives and the gap settles faster — but **he now falls short of his
