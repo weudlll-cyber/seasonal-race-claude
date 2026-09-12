@@ -412,6 +412,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
 
+- [INSTRUMENT-PLAN-2.md](INSTRUMENT-PLAN-2.md) — **three of the six were fixable, and three are blind
+  for a different reason** (2026-09-12, night chain 2026-09-12 piece 3, on `night/2026-09-12b`,
+  **instruments only, no product source touched, nothing minted**). CAMERA-PLAN-BLIND-1 named six
+  instruments still building a camera the product does not run. ★ **ONLY THREE CAN BE FIXED BY THE
+  SHARED HELPER** — `check-ending-frame`, `finish-band-truth` and `exp-anchor-truth-ab`, all three now
+  delivering the plan through `cameraPlanDelivery.mjs`. ★ **THE OTHER THREE ARE BLIND STRUCTURALLY,
+  not by oversight**, and listing all six together hid it: `diag/start-formation.mjs` runs the
+  COUNTDOWN ONLY, so no plan exists at any frame it runs; `exp-camera-bisect.mjs` REPLAYS RECORDED
+  FRAMES with no live controller to ask; `sim-race-visual.mjs` builds NO RACE PLAN AT ALL. ★ **WHAT
+  MOVED**: `check-ending-frame` byte-identical and still PASS (it is a verify guard, so it mattered
+  most), `finish-band-truth` byte-identical, and ★ **`exp-anchor-truth-ab` MOVED on 3 of 10 tracks** —
+  dumpHash `714d1cc1491c2ea4` → `ae72523ffb80e39c`, on city-circuit, garden-path and luger-hill, so
+  **any anchor conclusion from those three predates the camera seeing the cast**. No permission was
+  needed: the hash appears in no record anywhere in the tree, searched before deciding. ★ **The report
+  records that its own engine-reach line was written before being run and the guard corrected it.**
+
 - [DIRECTION-AUTHORITY-1.md](DIRECTION-AUTHORITY-1.md) — **the comebacker is HELD and then RELEASED,
   and the sign flips at every field size** (2026-09-12, night chain 2026-09-12 piece 2, on
   `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES, NOT merged, NOTHING minted, no golden

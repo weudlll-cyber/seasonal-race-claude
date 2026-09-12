@@ -4,7 +4,7 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-12, after piece 2 of the 2026-09-12 chain.
+**Last rewritten:** 2026-09-12, after piece 3 of the 2026-09-12 chain.
 
 **Where the code is.** Master is `b6d77637`, **CI green**. `night/2026-09-12b` is branched off it and
 is **NOT merged** — it carries the new comebacker. Both older night branches are gone from origin:
@@ -62,12 +62,16 @@ live `real == sim` byte-identity passed in every one of them.
 
 ## Where the night stopped
 
-Pieces **1** and **2** are done and pushed. **Pieces 3, 4 and 5 were not started** — piece 2's build
-and its four sweeps took the night. The fall order in the brief was 5, then 4, then 3, so what
-remains is what the brief itself ranked as most droppable, plus piece 3:
+Pieces **1**, **2** and **3** are done and pushed. **Pieces 4 and 5 were not started** — piece 2's
+build and its four sweeps took most of the night. The fall order in the brief was 5, then 4, then 3,
+so what remains is exactly what the brief itself ranked as most droppable:
 
-- **PIECE 3** — six camera instruments still build a camera the product does not run, named with
-  addresses in INSTRUMENT-PLAN-1. **Not started.**
+- **PIECE 3 — DONE.** ★ Only **three** of the six could be fixed by the shared helper, and they were;
+  the other three are blind **structurally** — one runs the countdown only, one replays recorded
+  frames, one builds no race plan at all. ★ **`exp-anchor-truth-ab` moved on 3 of 10 tracks**, so any
+  anchor conclusion from city-circuit, garden-path or luger-hill predates the camera seeing the cast.
+  `check-ending-frame` (a verify guard) is byte-identical and still passes.
+  See [INSTRUMENT-PLAN-2](../reports/evolution/INSTRUMENT-PLAN-2.md).
 - **PIECE 4** — `BAND_EDGES` is a 40-racer table and `docs/FAIRNESS.md` never says so. **Not started.**
   ★ Tonight's fairness run is consistent with the concern: band-reach is 83–95% at 40 racers.
 - **PIECE 5** — the `/api/health` build id, the e2e geometry flake, `check-image-starts` in CI.

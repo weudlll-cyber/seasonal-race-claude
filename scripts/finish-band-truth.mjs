@@ -31,6 +31,7 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
@@ -306,7 +307,11 @@ const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor
 const rows = [];
 for (const geo of loadGeos()) {
   const race = buildRace(geo);
-  const { st, cd, raceCfg } = race;
+  const { st, cd, raceCfg, meta } = race;
+  // INSTRUMENT-PLAN-2 (2026-09-12): deliver the authored cameraPlan the way the PRODUCT does, through
+  // the ONE shared helper. Without it `comebackDetector._cast` stays null for the whole run and
+  // anything gated on a racer being CAST cannot fire here — blind by construction, not inert.
+  const deliverCameraPlan = makeCameraPlanDelivery(cd, meta?.racePlanController);
   const RAW = 1000 / 60;
   let ts = 0, accum = 0;
   let cam = { zoom: 1, offsetX: 0, offsetY: 0 };
@@ -316,6 +321,7 @@ for (const geo of loadGeos()) {
     accum += RAW;
     let steps = 0;
     while (accum >= FIXED_DT && steps++ < 2) { stepRacePhysics(st, raceCfg); accum -= FIXED_DT; }
+    deliverCameraPlan();
     cam = cd.update(st.racers, ts, {
       raceElapsed: ts, finishedCount: st.finishedCount,
       winner: st.racers.find((r) => r.finishRank === 1) ?? null, finishT: st.finishT,
