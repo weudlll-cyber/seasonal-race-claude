@@ -431,6 +431,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [DRAWN-PLACE-TRUTH-1.md](DRAWN-PLACE-TRUTH-1.md) — **the 0-of-82 holds; "first place IS his drawn
+  place" was wrong** (2026-09-13, build `72ff4e7f`, **report only, nothing built or changed**). The
+  owner caught the planner asserting both that a comebacker is never drawn first AND that a leading
+  comebacker is unbraked because first place IS his drawn place. ★★ **0 OF 717 CAST COMEBACKERS ARE
+  DRAWN FIRST** on the current tree — the old 0-of-82 holds on nearly nine times the sample, so the
+  second claim is FALSE. ★ His race reproduces exactly: City Circuit seed 3, `Breeze`, **DRAWN 2nd**,
+  finishing 3rd — and he sits AT rank 2 with a rank error of exactly 0 for the whole endgame, so
+  there is nothing for a brake to do; **the growing gap is him falling behind the leader `Flare`, not
+  pulling away.** ★★ **THE REAL MECHANISM, WITH ITS ADDRESS**: over 100 races, of the frames he spends
+  ABOVE his drawn place, **84.4% are braked at a commanded 0.9498 (−5%)** and **15.6% are past
+  `choreoReleaseProgress` 0.97**, where `released` targets a top-5 hero at his CURRENT rank, the error
+  becomes zero and the brake commands **1.0001**. So candidates 1 and 2 are BOTH true, in different
+  windows — the brake works all race and **stops existing for the final 3%**, which is the endgame he
+  watches. ★ One quoted figure corrected: the median drawn place at N=40 is **4th**, not the 2nd
+  COMEBACK-SAME-RACER-1 reported.
 - [ARRIVAL-STEERED-AGAIN-1.md](ARRIVAL-STEERED-AGAIN-1.md) — **clause 2 comes back, and his reasoning
   holds** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted, no golden race
   re-recorded**). ★ **NOTHING WAS BUILT — it is a deletion.** Master carries `strictness = isHero ?
