@@ -641,7 +641,9 @@ export function createTrajectoryController(racePlan) {
   let _eTaperAtPaceFrames = 0; // frames of those where it had reduced it to ZERO (already at pace)
   let _eFreeFrames = 0; // frames he ran on band steering after arriving
   let _eNetFrames = 0; // frames of those where the net actually corrected him (bandError != 0)
-  const _eArrivalMults = [];
+  // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
+  // for EVERY variant — see the block in `update`. One entry per held comebacker per race.
+  const _arrivalObs = new Map();
   // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
   // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
   // ("leashed racer's live rank ≥ 3") is meaningful — it tracks that specific racer, not whoever is
@@ -971,6 +973,61 @@ export function createTrajectoryController(racePlan) {
       const heldReleaseAt =
         isHero && plan._heldRelease ? plan._heldRelease.get(r.index) : undefined;
       const heldFree = heldReleaseAt != null && phaseProgress >= heldReleaseAt;
+      // ── ★ ARRIVAL OBSERVATION (ARRIVAL-SHAPE-E-1) — READ-ONLY, AND THE SAME FOR EVERY VARIANT ──
+      // The instrument that answers "which distance works". It is deliberately OUTSIDE the variant
+      // branches below, so variant A's baseline is measured by the SAME code as E's arm and the two
+      // columns are comparable; it touches no RNG and calls no `_setTarget`, so it cannot move a
+      // race. `active` is already sorted by t descending, so the leader gap costs one subtraction.
+      if (heldFree) {
+        const drawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        let o = _arrivalObs.get(r.index);
+        if (!o) {
+          o = {
+            index: r.index,
+            drawn,
+            arrivalMult: null, // ★ his pace the frame he first reached his place — should be 1.0
+            arrivalProgress: null,
+            arrivalMs: null,
+            twoOutMs: null, // when he was last two ranks short, for "how long two ranks take"
+            twoRankMs: null,
+            maxLeadGapFrac: 0, // ★ peak gap to 2nd while he leads, as a fraction of the race
+            maxLeadGapProgress: 0,
+            worstRankAfter: null, // ★ the drift the net is there to bound
+            bestRankAfter: null,
+            releaseRank: currentRank, // his rank the frame he was handed back — what a viewer sees
+            taperStartRank: null, // ★ the rank he was at when the drive first eased off
+            taperStartMs: null,
+            // ★ One entry per RANK CHANGE during the approach, so "where was he one second before he
+            // arrived" can be answered exactly rather than extrapolated from an average rate. Capped
+            // so a pathological race cannot grow it without bound; the approach is short.
+            trail: [],
+          };
+          _arrivalObs.set(r.index, o);
+        }
+        if (o.arrivalMs == null && currentRank === drawn + 2) o.twoOutMs = elapsedMs;
+        if (o.trail.length < 400) {
+          const last = o.trail[o.trail.length - 1];
+          if (!last || last.rank !== currentRank)
+            o.trail.push({ ms: elapsedMs, rank: currentRank });
+        }
+        if (o.arrivalMs == null && currentRank <= drawn) {
+          o.arrivalMult = r.trajectoryMult ?? 1.0;
+          o.arrivalProgress = phaseProgress;
+          o.arrivalMs = elapsedMs;
+          if (o.twoOutMs != null) o.twoRankMs = elapsedMs - o.twoOutMs;
+        }
+        if (o.arrivalMs != null) {
+          o.worstRankAfter = Math.max(o.worstRankAfter ?? currentRank, currentRank);
+          o.bestRankAfter = Math.min(o.bestRankAfter ?? currentRank, currentRank);
+        }
+        if (rankIdx === 0 && nActive > 1 && plan._finishT > 0) {
+          const g = (r.t - active[1].t) / plan._finishT;
+          if (g > o.maxLeadGapFrac) {
+            o.maxLeadGapFrac = g;
+            o.maxLeadGapProgress = phaseProgress ?? 0;
+          }
+        }
+      }
       const targetRank = released
         ? currentRank
         : isHero && !heldFree
@@ -986,14 +1043,7 @@ export function createTrajectoryController(racePlan) {
       let eFreeOnBand = false;
       if (heldFree && ARRIVAL_IS_E) {
         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
-        if (currentRank <= drawnPlace) {
-          if (!_arrivedAtDrawn.has(r.index)) {
-            // The pace he is actually carrying the moment he first reaches his place. THE test of
-            // whether the taper finished in time; recorded once per racer, never overwritten.
-            _eArrivalMults.push(r.trajectoryMult ?? 1.0);
-          }
-          _arrivedAtDrawn.add(r.index);
-        }
+        if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
         eFreeOnBand = _arrivedAtDrawn.has(r.index);
       } else if (heldFree && ARRIVAL_VARIANT !== 'A') {
         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
@@ -1018,7 +1068,17 @@ export function createTrajectoryController(racePlan) {
       // (a) THE TAPER — only on the APPROACH (he has not arrived yet) and only on a DRIVE error.
       if (eFreeOnBand === false && heldFree && ARRIVAL_IS_E && rankError > 0) {
         const f = approachDrive(rankError, ARRIVAL_TAPER_START_RANKS);
-        if (f < 1) _eTaperFrames++;
+        if (f < 1) {
+          _eTaperFrames++;
+          // ★ WHERE THE TAPER ACTUALLY BEGINS, recorded rather than assumed. It is NOT always
+          // `drawn + startRanks`: ranks jump, and a racer already inside the taper span when he is
+          // handed back never passes through its start at all.
+          const o = _arrivalObs.get(r.index);
+          if (o && o.taperStartRank == null) {
+            o.taperStartRank = currentRank;
+            o.taperStartMs = elapsedMs;
+          }
+        }
         if (f === 0) _eTaperAtPaceFrames++;
         rankError *= f;
       }
@@ -1401,7 +1461,11 @@ export function createTrajectoryController(racePlan) {
       eFreeFrames: _eFreeFrames,
       eNetFrames: _eNetFrames,
       eNetFrameFraction: _eFreeFrames > 0 ? _eNetFrames / _eFreeFrames : 0,
-      eArrivalMults: _eArrivalMults.slice(),
+      // ★ One row per held comebacker: his drawn place, the pace he carried across it, the peak gap
+      // he opened while leading, and how far he drifted afterwards. The arm-vs-arm table is built
+      // from these; they are recorded identically under every variant.
+      arrivalObs: [..._arrivalObs.values()].map((o) => ({ ...o })),
+      eArrivalMults: [..._arrivalObs.values()].map((o) => o.arrivalMult).filter((m) => m != null),
       // Front-leash diagnostic (0 when OFF / never engaged): frames the leader brake was applied.
       leashFrames: _leashFrames,
       // Gap-cap re-roll diagnostics (0 when OFF): total biased rolls this race + the leader duty-cycle
@@ -1464,7 +1528,7 @@ export function createTrajectoryController(racePlan) {
     _eTaperAtPaceFrames = 0;
     _eFreeFrames = 0;
     _eNetFrames = 0;
-    _eArrivalMults.length = 0;
+    _arrivalObs.clear();
     _leashFrames = 0;
     _leashEngaged = false;
     _leashTargetIdx = -1;
@@ -1521,6 +1585,9 @@ export function createTrajectoryController(racePlan) {
     // when none was cast). The role label alone cannot tell a HELD comebacker from the fall-back
     // one — both are 'comebacker' — and an instrument that guessed from the race would be guessing.
     getHeldRelease: () => plan._heldRelease ?? null,
+    // The DRAWN place for one racer. Read-only, for the browser hold probe, which otherwise has no
+    // way to say "two ranks before his place" without recomputing the thing it is observing.
+    getTargetRank: (index) => plan._racerTargetRank?.get(index) ?? null,
     // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector,
     // which passes it to comebackDetector.setPlan — where the ROLES are consumed and the BEATS are
     // DISCARDED. See the note at the assignment of `_cameraPlan` above; the open point is

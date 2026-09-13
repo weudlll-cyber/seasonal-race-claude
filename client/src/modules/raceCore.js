@@ -63,8 +63,22 @@ const tPos = (t) => ((t % 1) + 1) % 1;
  * of the number.
  *
  * ★ IT DOES NOT END ANYTHING BY ITSELF. Reading it is how a caller learns a race is past the point
- * the rest of the project treats as impossible; what to do about that is the caller's, and the screen
- * deliberately only tells the viewer.
+ * the rest of the project treats as impossible; what to do about that is the caller's.
+ *
+ * ★ THE BROWSER DELIBERATELY DOES NOT READ IT (2026-09-13), and this is the note that stops it being
+ * wired back in. `RaceScreen` showed an "this race has overrun and is not saved" banner from this
+ * number; the banner was removed because it measured the WRONG CLOCK and therefore fired in the one
+ * case the owner has ruled CORRECT. `st.raceStart` is set from the rAF timestamp, so the screen was
+ * comparing WALL time against a threshold derived from RACE duration — and the two diverge without
+ * limit, because the physics accumulator advances by at most 50 ms per frame (`Math.min(dt, 50)`).
+ * A backgrounded tab that the browser throttles to roughly one frame a second therefore advances the
+ * race 50 ms per second of wall clock: a 60 s race trips the 600 s threshold with about 30 s of
+ * racing done, and the viewer is told a perfectly healthy race is lost. That is exactly the case the
+ * owner left the tab for and has decided is correct behaviour (RACE-NEVER-ENDS-1).
+ *
+ * A version reading `st.physicsTs` — RACE time against a race-time threshold — would not fire when a
+ * tab is throttled and WOULD fire for a genuinely stuck race. It is not built here: whether the
+ * browser should warn at all is his call, and the measurement above is what he needs to make it.
  *
  * @param {number} realizedDurationSec the race's own realized duration
  * @returns {number} milliseconds after which the race counts as overrun

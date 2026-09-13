@@ -230,6 +230,27 @@ describe('variant E in the servo', () => {
     expect(commanded(racers)).toBeGreaterThan(mod.DEFAULT_CONTROLLER_PARAMS.maxMult - 0.002);
   });
 
+  it('★ the observation records WHERE the taper began and the approach it measured', async () => {
+    // The report's headline numbers are read off these fields, so they are pinned rather than
+    // trusted: the taper-start rank, the approach trail, and the arrival time they are measured
+    // against. Without this, a silently-null field would read as "the taper never fired".
+    const { ctrl } = await heldComebackController('E4');
+    // Walk him in from outside the taper span to his place, one rank per frame.
+    for (const [i, rank] of [9, 8, 7, 6, 5, 4, 3, 2].entries()) {
+      ctrl.update(fieldWithHeroAt(rank), 50_000 + i * 100, AFTER_HELD_RELEASE);
+    }
+    const o = ctrl.collectTelemetry().arrivalObs[0];
+    // E4 + drawn 2 ⇒ the drive first eases at rank 6 (a rank error of 4 is the span's edge, where
+    // the factor is still 1; the first REDUCED frame is rank 5). Recorded, not assumed.
+    expect(o.taperStartRank).toBe(5);
+    expect(o.taperStartMs).toBe(50_400);
+    expect(o.arrivalMs).toBe(50_700); // the frame he first reached rank 2
+    // The trail carries one entry per rank change, oldest first, so "where was he one second before
+    // he arrived" is answerable exactly.
+    expect(o.trail.map((t) => t.rank)).toEqual([9, 8, 7, 6, 5, 4, 3, 2]);
+    expect(o.trail[0].ms).toBe(50_000);
+  });
+
   it('telemetry counts the taper and the net, and stays silent under A', async () => {
     const e = await heldComebackController('E2');
     let racers = fieldWithHeroAt(DRAWN + 1);
@@ -244,12 +265,22 @@ describe('variant E in the servo', () => {
     expect(tel.eNetFrames).toBe(1);
     expect(tel.eArrivalMults).toHaveLength(1);
     expect(tel.eArrivalMults[0]).toBe(1.0); // ★ the pace he carried across his place
+    // The observation row is what the arm-vs-arm table is built from.
+    expect(tel.arrivalObs).toHaveLength(1);
+    expect(tel.arrivalObs[0].arrivalMult).toBe(1.0);
+    expect(tel.arrivalObs[0].worstRankAfter).toBe(9); // the drift the net is there to bound
 
+    // Under A the E-specific counters stay zero — but the ARRIVAL OBSERVATION does not, and that is
+    // deliberate: A is the baseline the arms are compared against, so it has to be measured by the
+    // same instrument. A telemetry block that went quiet under A would have no baseline to offer.
     const a = await heldComebackController('A');
     a.ctrl.update(fieldWithHeroAt(DRAWN), 50_000, AFTER_HELD_RELEASE);
     const telA = a.ctrl.collectTelemetry();
     expect(telA.eTaperFrames).toBe(0);
     expect(telA.eFreeFrames).toBe(0);
-    expect(telA.eArrivalMults).toEqual([]);
+    expect(telA.eNetFrames).toBe(0);
+    expect(telA.arrivalObs).toHaveLength(1);
+    expect(telA.arrivalObs[0].drawn).toBe(DRAWN);
+    expect(telA.eArrivalMults).toHaveLength(1);
   });
 });

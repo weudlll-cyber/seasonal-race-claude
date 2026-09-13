@@ -753,6 +753,13 @@ const RUNAWAY_LEADER = argv.includes("--runaway-leader");
 // does zero extra work and is byte-identical. Measurement tooling only; nothing here mutates state.
 const HERO_MAP = argv.includes("--hero-map");
 const heroMapRaces = []; // per-race hero observations (filled only when HERO_MAP)
+// ARRIVAL-SHAPE (read-only, --arrival-shape): ARRIVAL-SHAPE-E-1. Carries the controller's own
+// per-held-comebacker arrival observation out to a file, plus the two facts the controller cannot
+// see (his FINISH rank, and the field size). The controller records the observation identically
+// under every arrival variant, so A's baseline and E's arm come from the same instrument; this flag
+// only decides whether the rows are WRITTEN. Requires --race-plan=true (no plan, no comebacker).
+const ARRIVAL_SHAPE = argv.includes("--arrival-shape");
+const arrivalShapeRaces = []; // per-race arrival observations (filled only when ARRIVAL_SHAPE)
 // GAP-METRICS (read-only, --gap-metrics): INFRA 5C. Samples the race in TIME behind the leader
 // (secondsBehindLeader, leader→P2 gap, top-5 spread, field p10–p90) at progress 0.50/0.75/0.90 and
 // at the line, plus visibleComeback / deadRaceFlag. Every RANK-space metric the project owns is
@@ -4598,6 +4605,31 @@ if (isMain) {
               heroObs: result.heroObs,
             });
           }
+          // ARRIVAL-SHAPE (--arrival-shape): one row per held comebacker, joined to his FINISH rank
+          // (raceCore's `finishRank`, i.e. crossing order — never a post-race sort by t).
+          if (ARRIVAL_SHAPE && result.naturalness?.arrivalObs?.length) {
+            // `result` IS the per-racer array (runSingleRace attaches its summary fields onto it),
+            // so the finish ranks are read from it directly rather than from a `.results` property.
+            const rankOf = new Map(
+              result.map((r) => [r.racerIndex, r.finalRank]),
+            );
+            arrivalShapeRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              nRacers: result.length,
+              obs: result.naturalness.arrivalObs.map((o) => ({
+                ...o,
+                finishRank: rankOf.get(o.index) ?? null,
+              })),
+              eTaperFrames: result.naturalness.eTaperFrames ?? 0,
+              eFreeFrames: result.naturalness.eFreeFrames ?? 0,
+              eNetFrames: result.naturalness.eNetFrames ?? 0,
+            });
+          }
           // GAP-METRICS (--gap-metrics): stash this race's gap-space observations, tagged with combo meta.
           if (GAP_METRICS && result.gapMetrics) {
             gmRaces.push({
@@ -5616,6 +5648,32 @@ if (isMain) {
   // Writes <out>/hero-map.json: the fairness control column (band-reach + start-row Holm flag,
   // computed with the same definitions the report uses / the in-file validated functions) plus the
   // aggregated per-hero climb-feasibility signals. Self-contained; only runs when the flag is on.
+  // ARRIVAL-SHAPE (--arrival-shape): its own file, independent of --hero-map.
+  if (ARRIVAL_SHAPE) {
+    writeFileSync(
+      join(OUT_DIR, "arrival-shape.json"),
+      JSON.stringify(
+        {
+          meta: {
+            world: WORLD_STAMP,
+            track: TRACK_FILTER,
+            racer: RACER_FILTER,
+            races: N_RACES,
+            seed: GLOBAL_SEED,
+            // The arm this run measured. Read from the env the controller itself reads, so the file
+            // can never claim an arm the race did not run.
+            arrivalVariant: (process.env.RA_ARRIVAL_VARIANT || "A").toUpperCase(),
+          },
+          races: arrivalShapeRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `arrival-shape: ${arrivalShapeRaces.length} race(s) with a held comebacker -> ${join(OUT_DIR, "arrival-shape.json")}`,
+    );
+  }
   if (HERO_MAP) {
     // Band-reach OVERALL — identical definition to the report's OVERALL row (rawData, sollBereich).
     const zoneIdxOf = (rank) => {

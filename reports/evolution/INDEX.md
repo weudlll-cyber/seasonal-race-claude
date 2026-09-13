@@ -431,6 +431,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [ARRIVAL-SHAPE-E-1.md](ARRIVAL-SHAPE-E-1.md) — **his arrival shape built, and the distance turns
+  out not to be the lever** (2026-09-13, on `night/2026-09-12b`, **built and measured, NOTHING
+  shipped, default still today's race, not merged**). The shape he described on 2026-09-13 — ease
+  off before he arrives, then unsteered inside his block — is variant **E**, four taper distances
+  behind the same one key. ★ **HE WAS RIGHT THAT THE SAFETY NET ALREADY EXISTED**: `bandError` is
+  zero inside a racer's band, so band steering already means "left alone inside, corrected at the
+  edge"; what did not exist is any comebacker reaching it, because heroes are pinned to
+  `strictness = 1.0`. **A racer sitting comfortably inside his top-5 block is steered to his exact
+  drawn rank today.** ★★ **NO RANK DISTANCE DELIVERS 1.0 AT ARRIVAL** (2 000 races, 228 comebackers
+  per arm): 1.084 today → 1.030 at five ranks, at best 24% of comebackers at pace, and every arm's
+  MEDIAN peak gap is worse than today's. ★★ **THE CAUSE IS THE SERVO, NOT THE TAPER**: the drive
+  saturates at `0.05·n` ranks of error, so at twenty racers ONE rank is already the ceiling and
+  there is no gradation near the target at all — baseline arrival pace tracks that saturation
+  distance with no exception (N=20 → 1.100, N=100 → 1.050). Four seconds of taper arrives at pace,
+  half a second arrives at the ceiling. ★ Block rate is NOT the casualty (83.3% → 87.3%), so his
+  original 2→1→0 fallback ran the wrong way and he corrected it to 2→3→4→5 on the evidence.
+  **Next change is to the servo response, not to the comebacker.**
 - [ARRIVAL-VARIANTS-1.md](ARRIVAL-VARIANTS-1.md) — **four arrivals measured side by side, and his
   proposal makes the runaway worse** (2026-09-12, on `night/2026-09-12b`, **four variants BUILT and
   measured on the same races, NOTHING shipped, default still today's race, not merged**). ★★ **HIS

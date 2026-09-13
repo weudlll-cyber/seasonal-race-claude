@@ -15,10 +15,14 @@
 // before this it did that silently. The headless runner has both a cap and a DNF ranking; the
 // harness refuses at its own 200 s ceiling. The browser had neither.
 //
+// ★ THE BROWSER HALF IS GONE AGAIN, ON PURPOSE (2026-09-13). HISTORY-MISSING-2 added a banner in
+// `RaceScreen` reading this number; it was removed because it compared WALL time against a
+// RACE-time threshold and therefore fired for a throttled background tab — the one case the owner
+// has ruled correct behaviour. The full account is in `raceCore.js` above `raceOverrunMs`. The
+// function itself is unchanged and still used by the headless runner, which is why this file stays.
+//
 // WHAT IT DELIBERATELY DOES NOT PIN:
-//   · That the banner appears. Triggering it needs a race that runs past TEN MINUTES, which no
-//     browser test in this suite can afford; the gap is stated in HISTORY-MISSING-2 rather than
-//     covered by a test that does not really exercise it.
+//   · Anything about a banner. There is no longer one to pin.
 //   · That a race ENDS on overrun. It does not — nothing about the race changes. Whether the browser
 //     should cap and rank DNFs the way the headless runner does is a change to what a race IS and is
 //     not made here.
