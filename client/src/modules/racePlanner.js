@@ -418,10 +418,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  * are GONE -- measured, then deleted, because a switchable set of experiments is not a product. The
  * evidence is ARRIVAL-SHAPE-E-1 and SERVO-RANKS-1.
  *
- *   (a) THE TAPER. Over the last `ARRIVAL_TAPER_START_RANKS` ranks of his approach the drive eases
- *       off, reaching exactly zero one rank short of his place, so the pace he carries ACROSS his
- *       place is 1.0 and not the ceiling. `approachDrive` below says why that is not simply
- *       "scale the error down".
+ *   (a) THE CEILING. Over the last `ARRIVAL_CEILING_RANKS` ranks of his approach HIS OWN drive
+ *       ceiling eases down to `ARRIVAL_CEILING_AT_PLACE`, so the pace he carries ACROSS his place is
+ *       a settling one rather than the shipped clamp. `arrivalCeiling` says why this moves the
+ *       CEILING and not the error -- a taper that scaled the error was measured and deleted, because
+ *       the clamp discarded its reduction wherever the error still saturated (TAPER-INVISIBLE-1).
  *   (b) FREE. Once he has arrived he is UNSTEERED: no brake for leading, no push.
  *   (c) THE NET IS BAND STEERING, WHICH ALREADY EXISTED -- see the `heldFree` block in the servo.
  *       Nothing new was built for it.
@@ -431,49 +432,64 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  */
 
 /**
- * How many ranks before his drawn place the drive begins to ease off. FOUR, measured: at two ranks
- * the taper gets a median of 864 ms and he still arrives at 1.070; at four it gets 2 480 ms and the
- * race reaches 1.019. Four seconds of taper arrives at pace and half a second arrives at the
- * ceiling, and four ranks is about where four seconds lives at the field sizes he races -- 3 ranks
- * at N=20, 4 at N=40, 6 at N=60, 5 at N=100 (ARRIVAL-SHAPE-E-1).
+ * -- THE ARRIVAL CEILING (ARRIVAL-SOLVE-1, 2026-09-13) -----------------------------------------
+ *
+ * THE PARAGRAPH A READER CAN CHECK. The servo commands
+ * `clamp(1.0 + gain * error / nActive + noise, minMult, maxMult)`. It SATURATES whenever the error
+ * exceeds `(maxMult - 1) * nActive / gain` -- 2.0 ranks at forty racers. TAPER-INVISIBLE-1 measured
+ * what that costs: a taper that scales the ERROR has its reduction thrown away by the clamp for
+ * every rank above that threshold, so a four-rank taper had two ranks of authority at N=40 and
+ * arrived at 1.077, which is three quarters of the untapered rush and invisible on screen.
+ *
+ * THIS LEVER MOVES THE CEILING INSTEAD OF THE ERROR. While a held comebacker is closing on his drawn
+ * place, HIS OWN `maxMult` eases down from the shipped clamp to `ARRIVAL_CEILING_AT_PLACE`. Because
+ * the ceiling IS the commanded value wherever the raw drive saturates, it reaches its target
+ * EXACTLY and at EVERY field size -- there is no `nActive` in it to make it field-size dependent,
+ * which is the defect that made a rank-counted taper mean four different things at four field sizes.
+ *
+ * -- IT TOUCHES ONE RACER. Every line is inside `heldFree`, so no other racer's steering, no other
+ * role, and no shared clamp is reached. `minMult` is untouched: this bounds the DRIVE, never the
+ * brake. The owner's constraint of 2026-09-13 is that the problem is one racer and the rest of the
+ * field must be left alone, and that is why this lever was preferred over the response curve, which
+ * measured better and changed everyone.
+ *
+ * -- IT ALSO GIVES THE EASE SOMETHING TO FOLLOW. The old shape left the command pinned at 1.100 and
+ * then dropped it in the last rank, which a 1 s ease cannot track. The ceiling falls across the
+ * whole approach -- a nominal 2.4-3.4 s -- so the multiplier has a gradient rather than a cliff.
  */
-export const ARRIVAL_TAPER_START_RANKS = 4;
+export const ARRIVAL_CEILING_RANKS = 4;
 
 /**
- * -- THE TAPER: WHY IT IS NOT SIMPLY "SCALE THE ERROR DOWN" ------------------------------------
- *
- * Returns the fraction of the drive still commanded at `rankError` ranks short of the drawn place,
- * for a taper that begins `startRanks` out. The servo multiplies the POSITIVE error by it, so 1
- * means "full drive, untouched" and 0 means "no drive at all -- exactly 1.0, natural speed".
- *
- * -- IT REACHES ZERO BEFORE HE ARRIVES, WHICH IS THE POINT. `rankError` is an INTEGER rank gap: it
- * steps 2 -> 1 -> 0, and 0 means he is already there. The obvious taper -- scaling the error by
- * `e/span` -- is zero only AT `e == 0`, so one rank short it still commands 1.02 at twenty racers,
- * and `_setTarget` slews, so the multiplier he actually carries across his place is still above
- * 1.0. That version was built and measured (variant C, ARRIVAL-SHAPE-E-1) and it is why this one
- * is shaped differently. This taper is zero from `e == 1` down, so the drive has been off for a
- * whole rank of racing before the rank flips -- "at 1.0 BEFORE he arrives", literally.
- *
- * The ease is `smoothstep` (3u^2 - 2u^3), not a step and not a straight line: the drive leaves full
- * power and reaches zero with zero slope at both ends, so nothing in the trace is a corner.
- *
- * `startRanks` is a parameter rather than a literal because the distance was SWEPT -- 2, 3, 4 and 5
- * ranks over 2 000 races -- and the sweep is what chose `ARRIVAL_TAPER_START_RANKS`. It still
- * degrades sensibly either side: 0 means no taper at all, and 1 means the drive reaches zero only
- * at arrival.
- *
- * It deliberately does NOT touch a braking error (he is past his place -- that is (b)'s business,
- * not the taper's) and never returns outside [0,1], so the drive is never reversed or amplified.
+ * What his personal ceiling is worth the moment he reaches his place. Read in on-screen terms: at
+ * the ~5.7x magnification the camera uses during an approach, 1.100 eats 85 canvas px/s of the gap
+ * ahead, 1.05 eats 44, and 1.02 eats 17 -- which is what "settling" rather than "closing" looks
+ * like (TAPER-INVISIBLE-1 SS3).
  */
-export function approachDrive(rankError, startRanks) {
-  if (!(startRanks > 0)) return 1; // startRanks 0 → no taper
-  if (!(rankError > 0)) return 0; // at or past his place → no drive left to command
-  // Where the drive reaches zero: one rank short when there is room for it, else at arrival.
-  const zeroAt = startRanks >= 2 ? 1 : 0;
-  if (rankError >= startRanks) return 1; // still outside the taper → untouched
-  const u = (rankError - zeroAt) / (startRanks - zeroAt);
-  if (u <= 0) return 0;
-  return u * u * (3 - 2 * u); // smoothstep
+export const ARRIVAL_CEILING_AT_PLACE = (() => {
+  const v = Number.parseFloat(globalThis.process?.env?.RA_ARRIVAL_CEIL ?? '');
+  return Number.isFinite(v) && v >= 1 ? v : 1.02;
+})();
+
+/**
+ * His personal drive ceiling at `rankError` ranks short of his place. `maxMult` far out, easing to
+ * `ARRIVAL_CEILING_AT_PLACE` at the place itself. smoothstep, so it leaves the shipped clamp and
+ * arrives at its floor with zero slope and there is no corner in the trace.
+ *
+ * It NEVER returns above `maxMult`: this lever can only ever tighten a racer's ceiling, never raise
+ * it, so it cannot make anybody faster than the shipped clamp already allows.
+ */
+export function arrivalCeiling(
+  rankError,
+  maxMult,
+  ranks = ARRIVAL_CEILING_RANKS,
+  atPlace = ARRIVAL_CEILING_AT_PLACE
+) {
+  const floor = Math.min(atPlace, maxMult);
+  if (!(ranks > 0)) return maxMult;
+  if (!(rankError > 0)) return floor;
+  if (rankError >= ranks) return maxMult;
+  const u = rankError / ranks;
+  return floor + (maxMult - floor) * (u * u * (3 - 2 * u));
 }
 
 /**
@@ -584,8 +600,6 @@ export function createTrajectoryController(racePlan) {
   // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
   // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
   // — the direct test of whether the taper finished before he got there (it should read 1.0).
-  let _eTaperFrames = 0; // frames the taper reduced the drive at all
-  let _eTaperAtPaceFrames = 0; // frames of those where it had reduced it to ZERO (already at pace)
   let _eFreeFrames = 0; // frames he ran on band steering after arriving
   let _eNetFrames = 0; // frames of those where the net actually corrected him (bandError != 0)
   // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
@@ -942,8 +956,9 @@ export function createTrajectoryController(racePlan) {
             worstRankAfter: null, // ★ the drift the net is there to bound
             bestRankAfter: null,
             releaseRank: currentRank, // his rank the frame he was handed back — what a viewer sees
-            taperStartRank: null, // ★ the rank he was at when the drive first eased off
-            taperStartMs: null,
+            ceilStartRank: null, // ★ the rank he was at when HIS ceiling first bound
+            ceilStartMs: null,
+            ceilAtArrival: null, // ★ what his ceiling was worth the frame he reached his place
             // ★ One entry per RANK CHANGE during the approach, so "where was he one second before he
             // arrived" can be answered exactly rather than extrapolated from an average rate. Capped
             // so a pathological race cannot grow it without bound; the approach is short.
@@ -959,6 +974,7 @@ export function createTrajectoryController(racePlan) {
         }
         if (o.arrivalMs == null && currentRank <= drawn) {
           o.arrivalMult = r.trajectoryMult ?? 1.0;
+          o.ceilAtArrival = arrivalCeiling(0, maxMult);
           o.arrivalProgress = phaseProgress;
           o.arrivalMs = elapsedMs;
           if (o.twoOutMs != null) o.twoRankMs = elapsedMs - o.twoOutMs;
@@ -993,23 +1009,6 @@ export function createTrajectoryController(racePlan) {
       }
       // positive rankError = racer currently ranked worse than target → boost
       let rankError = currentRank - targetRank;
-      // (a) THE TAPER — only on the APPROACH (he has not arrived yet) and only on a DRIVE error.
-      if (!arrived && heldFree && rankError > 0) {
-        const f = approachDrive(rankError, ARRIVAL_TAPER_START_RANKS);
-        if (f < 1) {
-          _eTaperFrames++;
-          // ★ WHERE THE TAPER ACTUALLY BEGINS, recorded rather than assumed. It is NOT always
-          // `drawn + startRanks`: ranks jump, and a racer already inside the taper span when he is
-          // handed back never passes through its start at all.
-          const o = _arrivalObs.get(r.index);
-          if (o && o.taperStartRank == null) {
-            o.taperStartRank = currentRank;
-            o.taperStartMs = elapsedMs;
-          }
-        }
-        if (f === 0) _eTaperAtPaceFrames++;
-        rankError *= f;
-      }
       // Band bounds computed once — used for both steering blend and corridor telemetry.
       const [areaLo, areaHi] = getAreaBounds(targetRank);
       // bandError: signed distance outside the target band (0 when already inside).
@@ -1099,7 +1098,18 @@ export function createTrajectoryController(racePlan) {
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
+      // -- HIS OWN CEILING, and nobody else's. `heldFree` is the whole gate: every other racer
+      // clamps against the shipped `maxMult` exactly as before.
+      let ceilFor = maxMult;
+      if (heldFree && !arrived) {
+        ceilFor = arrivalCeiling(rankError, maxMult);
+        const o = _arrivalObs.get(r.index);
+        if (o && ceilFor < maxMult && o.ceilStartRank == null) {
+          o.ceilStartRank = currentRank;
+          o.ceilStartMs = elapsedMs;
+        }
+      }
+      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, ceilFor);
       _setTarget(r, rawTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
@@ -1384,8 +1394,6 @@ export function createTrajectoryController(racePlan) {
       attackerFreed: _attackerFreeEvents,
       // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
       // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
-      eTaperFrames: _eTaperFrames,
-      eTaperAtPaceFrames: _eTaperAtPaceFrames,
       eFreeFrames: _eFreeFrames,
       eNetFrames: _eNetFrames,
       eNetFrameFraction: _eFreeFrames > 0 ? _eNetFrames / _eFreeFrames : 0,
@@ -1452,8 +1460,6 @@ export function createTrajectoryController(racePlan) {
     // race would otherwise carry "he has already arrived" into the next one and free him at the
     // start. No-op while every race builds its own controller; correct if one ever does not.
     _arrivedAtDrawn.clear();
-    _eTaperFrames = 0;
-    _eTaperAtPaceFrames = 0;
     _eFreeFrames = 0;
     _eNetFrames = 0;
     _arrivalObs.clear();

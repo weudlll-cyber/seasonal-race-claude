@@ -18,72 +18,63 @@
 // ============================================================
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { approachDrive, ARRIVAL_TAPER_START_RANKS } from './racePlanner.js';
+import {
+  arrivalCeiling,
+  ARRIVAL_CEILING_RANKS,
+  ARRIVAL_CEILING_AT_PLACE,
+  DEFAULT_CONTROLLER_PARAMS,
+} from './racePlanner.js';
 
-// ── (a) THE TAPER ─────────────────────────────────────────────────────────────
-// `approachDrive(rankError, startRanks)` → the fraction of the drive still commanded.
+// ── (a) THE CEILING ──────────────────────────────────────────────────────────
+// `arrivalCeiling(rankError, maxMult)` → HIS OWN drive ceiling that many ranks short of his place.
 
-describe('approachDrive — the taper reaches natural speed before he arrives', () => {
-  it('is untouched outside the taper and full drive at the moment it starts', () => {
-    expect(approachDrive(9, 2)).toBe(1);
-    expect(approachDrive(3, 2)).toBe(1);
-    expect(approachDrive(2, 2)).toBe(1); // two ranks out: he BEGINS to slow here, not before
+const { maxMult } = DEFAULT_CONTROLLER_PARAMS;
+
+describe('arrivalCeiling — the lever that binds where the clamp did', () => {
+  it('is the shipped clamp far out, and his settling ceiling at his place', () => {
+    expect(arrivalCeiling(ARRIVAL_CEILING_RANKS, maxMult)).toBe(maxMult);
+    expect(arrivalCeiling(99, maxMult)).toBe(maxMult);
+    expect(arrivalCeiling(0, maxMult)).toBe(ARRIVAL_CEILING_AT_PLACE);
+    expect(arrivalCeiling(-3, maxMult)).toBe(ARRIVAL_CEILING_AT_PLACE);
   });
 
-  it('★ is exactly zero a whole rank BEFORE his place, at the distance the owner named', () => {
-    // This is the property the shape exists for: the drive is off while he still has a rank to
-    // cover, so the multiplier he carries across his place is 1.0 and he is not still accelerating.
-    expect(approachDrive(1, 2)).toBe(0);
-    expect(approachDrive(0.5, 2)).toBe(0);
-    expect(approachDrive(0, 2)).toBe(0);
-  });
-
-  it('★ the shipped distance is the one the sweep chose, and it eases over its whole span', () => {
-    // The distance is not a free parameter any more: 2 000 races chose it. Pinned so a later edit
-    // to the constant is a deliberate act with a number to beat, not a quiet drift.
-    expect(ARRIVAL_TAPER_START_RANKS).toBe(4);
-    // full drive at the span's edge, no drive one rank short — the span, end to end
-    expect(approachDrive(ARRIVAL_TAPER_START_RANKS, ARRIVAL_TAPER_START_RANKS)).toBe(1);
-    expect(approachDrive(1, ARRIVAL_TAPER_START_RANKS)).toBe(0);
-  });
-
-  it('eases — neither a step nor a straight line — and never leaves [0,1]', () => {
-    const xs = Array.from({ length: 401 }, (_, i) => i / 100); // 0 … 4
-    const ys = xs.map((e) => approachDrive(e, 2));
-    for (const y of ys) {
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(1);
+  it('★ is the SAME at every field size — there is no nActive in it', () => {
+    // This is the whole reason the ceiling replaced the taper. A rank-counted taper meant four
+    // different things at four field sizes because the clamp discarded its reduction wherever the
+    // error still saturated; a ceiling IS the commanded value wherever the raw drive saturates.
+    // The function takes no field size, so this is a property of its signature, pinned.
+    expect(arrivalCeiling.length).toBeLessThanOrEqual(4);
+    for (const e of [0, 1, 2, 3, 4]) {
+      const once = arrivalCeiling(e, maxMult);
+      expect(arrivalCeiling(e, maxMult)).toBe(once); // no hidden per-call state
     }
-    // Monotone non-decreasing: closing the gap never hands him MORE drive.
+  });
+
+  it('★ falls monotonically as he closes, with no corner at either end', () => {
+    const xs = Array.from({ length: 401 }, (_, i) => (i / 400) * ARRIVAL_CEILING_RANKS);
+    const ys = xs.map((e) => arrivalCeiling(e, maxMult));
     for (let i = 1; i < ys.length; i++) expect(ys[i]).toBeGreaterThanOrEqual(ys[i - 1] - 1e-12);
-    // smoothstep, not linear — at the span's midpoint a straight line would read 0.5 as well, so
-    // the shape is pinned at the ends instead: zero slope at both, i.e. no corner in the trace.
-    expect(approachDrive(1.01, 2)).toBeLessThan(0.001);
-    expect(approachDrive(1.99, 2)).toBeGreaterThan(0.999);
-    expect(approachDrive(1.5, 2)).toBeCloseTo(0.5, 6);
+    // smoothstep: zero slope at both ends, so the trace has no kink where it leaves or lands
+    expect(arrivalCeiling(0.01 * ARRIVAL_CEILING_RANKS, maxMult)).toBeCloseTo(
+      ARRIVAL_CEILING_AT_PLACE,
+      4
+    );
+    expect(arrivalCeiling(0.99 * ARRIVAL_CEILING_RANKS, maxMult)).toBeCloseTo(maxMult, 4);
   });
 
-  it('his own fallback order falls out of the one parameter', () => {
-    // ONE rank: the drive reaches zero only AT his place ("if two ranks is too early").
-    expect(approachDrive(1, 1)).toBe(1);
-    expect(approachDrive(0.5, 1)).toBeCloseTo(0.5, 6);
-    expect(approachDrive(0, 1)).toBe(0);
-    // ZERO ranks: no taper at all — full drive until he arrives. Identical to B by construction.
-    expect(approachDrive(5, 0)).toBe(1);
-    expect(approachDrive(1, 0)).toBe(1);
-    expect(approachDrive(0.001, 0)).toBe(1);
-  });
-
-  it('never reverses a drive and never amplifies one', () => {
-    // A negative error means he is PAST his place — that is (b)'s business, not the taper's, and the
-    // servo only ever calls this with a positive error. Whatever it is asked, it returns a factor.
-    for (const d of [0, 1, 2, 3]) {
-      for (const e of [-5, -1, -0.1, 0, 0.1, 1, 2, 7]) {
-        const f = approachDrive(e, d);
-        expect(f).toBeGreaterThanOrEqual(0);
-        expect(f).toBeLessThanOrEqual(1);
-      }
+  it('★ can only ever TIGHTEN a ceiling, never raise one', () => {
+    // It bounds the DRIVE. Nothing here may make any racer faster than the shipped clamp allows.
+    for (const e of [-5, 0, 0.5, 1, 2, 3, 4, 10, 100]) {
+      expect(arrivalCeiling(e, maxMult)).toBeLessThanOrEqual(maxMult);
+      expect(arrivalCeiling(e, maxMult)).toBeGreaterThanOrEqual(
+        Math.min(ARRIVAL_CEILING_AT_PLACE, maxMult)
+      );
     }
+  });
+
+  it('never returns above the clamp it is given, even if asked for a looser floor', () => {
+    // A caller passing a floor above the clamp must not widen it.
+    expect(arrivalCeiling(0, 1.1, 4, 1.5)).toBe(1.1);
   });
 });
 
@@ -203,42 +194,42 @@ describe('the arrival shape in the servo', () => {
     expect(commanded(racers)).toBeLessThan(maxMult - 0.01);
   });
 
-  it('★ (a) he is at natural speed by the time he reaches his place', async () => {
-    const { ctrl } = await heldComebackController();
+  it('★ (a) his ceiling binds on the approach, and it is HIS ceiling alone', async () => {
+    const { mod, ctrl } = await heldComebackController();
     const racers = fieldWithHeroAt(DRAWN + 1); // one rank short, still closing
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBe(1.0);
+    const ceil = mod.arrivalCeiling(1, mod.DEFAULT_CONTROLLER_PARAMS.maxMult);
+    expect(ceil).toBeLessThan(mod.DEFAULT_CONTROLLER_PARAMS.maxMult);
+    expect(commanded(racers)).toBeLessThanOrEqual(ceil + 1e-9);
   });
 
-  it('★ (a) two ranks out he is still driving — it is a taper, not an off-switch', async () => {
-    const { ctrl } = await heldComebackController();
-    const racers = fieldWithHeroAt(DRAWN + 2);
+  it('★ (a) further out his ceiling is looser, so it is a schedule and not an off-switch', async () => {
+    const { mod, ctrl } = await heldComebackController();
+    const near = mod.arrivalCeiling(1, mod.DEFAULT_CONTROLLER_PARAMS.maxMult);
+    const far = mod.arrivalCeiling(3, mod.DEFAULT_CONTROLLER_PARAMS.maxMult);
+    expect(far).toBeGreaterThan(near);
+    const racers = fieldWithHeroAt(DRAWN + 3);
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     expect(commanded(racers)).toBeGreaterThan(1.0);
   });
 
-  it('★ the observation records WHERE the taper began and the approach it measured', async () => {
+  it('★ the observation records WHERE his ceiling began to bind', async () => {
     // The report's headline numbers are read off these fields, so they are pinned rather than
-    // trusted: the taper-start rank, the approach trail, and the arrival time they are measured
-    // against. Without this, a silently-null field would read as "the taper never fired".
+    // trusted: a silently-null field would read as "the ceiling never bound".
     const { ctrl } = await heldComebackController();
-    // Walk him in from outside the taper span to his place, one rank per frame.
     for (const [i, rank] of [9, 8, 7, 6, 5, 4, 3, 2].entries()) {
       ctrl.update(fieldWithHeroAt(rank), 50_000 + i * 100, AFTER_HELD_RELEASE);
     }
     const o = ctrl.collectTelemetry().arrivalObs[0];
-    // 4 ranks + drawn 2 ⇒ the drive first eases at rank 6 (a rank error of 4 is the span's edge, where
-    // the factor is still 1; the first REDUCED frame is rank 5). Recorded, not assumed.
-    expect(o.taperStartRank).toBe(5);
-    expect(o.taperStartMs).toBe(50_400);
-    expect(o.arrivalMs).toBe(50_700); // the frame he first reached rank 2
-    // The trail carries one entry per rank change, oldest first, so "where was he one second before
-    // he arrived" is answerable exactly.
+    // drawn 2, span 4 ⇒ the ceiling first bites below rank 6, i.e. the first frame at rank 5.
+    expect(o.ceilStartRank).toBe(5);
+    expect(o.ceilStartMs).toBe(50_400);
+    expect(o.ceilAtArrival).toBe(1.02);
+    expect(o.arrivalMs).toBe(50_700);
     expect(o.trail.map((t) => t.rank)).toEqual([9, 8, 7, 6, 5, 4, 3, 2]);
-    expect(o.trail[0].ms).toBe(50_000);
   });
 
-  it('telemetry counts the taper and the net, and stays silent under A', async () => {
+  it('telemetry records the arrival and the net', async () => {
     const e = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN + 1);
     e.ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
@@ -247,18 +238,10 @@ describe('the arrival shape in the servo', () => {
     racers = fieldWithHeroAt(9);
     e.ctrl.update(racers, 50_200, AFTER_HELD_RELEASE);
     const tel = e.ctrl.collectTelemetry();
-    expect(tel.eTaperFrames).toBeGreaterThan(0);
     expect(tel.eFreeFrames).toBeGreaterThan(0);
     expect(tel.eNetFrames).toBe(1);
-    expect(tel.eArrivalMults).toHaveLength(1);
-    expect(tel.eArrivalMults[0]).toBe(1.0); // ★ the pace he carried across his place
-    // The observation row is what the arm-vs-arm table is built from.
     expect(tel.arrivalObs).toHaveLength(1);
-    expect(tel.arrivalObs[0].arrivalMult).toBe(1.0);
-    expect(tel.arrivalObs[0].worstRankAfter).toBe(9); // the drift the net is there to bound
-
-    // The observation is recorded for every held comebacker — there is no arm to be silent under
-    // any more, and a telemetry block with nothing to say would have no baseline to offer.
     expect(tel.arrivalObs[0].drawn).toBe(DRAWN);
+    expect(tel.arrivalObs[0].worstRankAfter).toBe(9);
   });
 });

@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from "../client/src/modules/storage/defaults.js";
-import { ARRIVAL_TAPER_START_RANKS } from "../client/src/modules/racePlanner.js";
+import { ARRIVAL_CEILING_RANKS } from "../client/src/modules/racePlanner.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -140,8 +140,8 @@ const BLOCK = 5; // the top-5 block — BAND_EDGES[0], and the owner's "his bloc
 // [held release, this]. Read from the one home, never a literal.
 const FRONT_RELEASE = DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress;
 
-/** The shipped taper distance, read from its one home rather than parsed out of a label. */
-const taperRanksOf = () => ARRIVAL_TAPER_START_RANKS;
+/** The shipped arrival-ceiling span, read from its one home rather than parsed out of a label. */
+const taperRanksOf = () => ARRIVAL_CEILING_RANKS;
 
 /**
  * How many ranks he covered in the LAST SECOND before reaching his drawn place - i.e. how far ahead
@@ -203,8 +203,8 @@ for (const v of VARIANTS) {
       // ★ WHERE THE TAPER BEGINS, and how often it cannot begin at all. A racer handed back ALREADY
       // inside the taper span never passes through its start, so there is no full drive for it to
       // ease off FROM - the distance is simply unreachable for him. A property of the distance.
-      taperStartRankMed: med(obs.filter((o) => o.taperStartRank != null).map((o) => o.taperStartRank)),
-      taperNeverBegan: obs.length ? obs.filter((o) => o.taperStartRank == null).length / obs.length : null,
+      ceilStartRankMed: med(obs.filter((o) => o.ceilStartRank != null).map((o) => o.ceilStartRank)),
+      taperNeverBegan: obs.length ? obs.filter((o) => o.ceilStartRank == null).length / obs.length : null,
       unreachable: obs.length
         ? obs.filter((o) => o.releaseRank <= o.drawn + taperRanksOf(v)).length / obs.length
         : null,
@@ -252,7 +252,7 @@ console.log(
 console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
 for (const r of rows) {
   console.log(
-    `| ${r.v} | ${r.n} | ${r.comebackers} | ${r.drawnMed ?? "—"} | ${f3(r.arrMultMed)} | ${f1(r.atPace)} | ${f1(r.blockRate)} | ${r.taperStartRankMed ?? "—"} | ${f1(r.taperNeverBegan)} | ${f1(r.unreachable)} | ${r.ranksPerSecondMed ?? "—"} | ${f3(r.arrProgMed)} | ${f1(r.lateArrivals)} |`,
+    `| ${r.v} | ${r.n} | ${r.comebackers} | ${r.drawnMed ?? "—"} | ${f3(r.arrMultMed)} | ${f1(r.atPace)} | ${f1(r.blockRate)} | ${r.ceilStartRankMed ?? "—"} | ${f1(r.taperNeverBegan)} | ${f1(r.unreachable)} | ${r.ranksPerSecondMed ?? "—"} | ${f3(r.arrProgMed)} | ${f1(r.lateArrivals)} |`,
   );
 }
 
