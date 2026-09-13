@@ -6,8 +6,8 @@
 //   SERVO-RANKS-1 the only one in the tree. Three properties, one per part of the shape:
 //     (a) the taper reaches natural speed BEFORE he arrives, which is the whole difference from C;
 //     (b) once he has arrived he is neither pushed nor braked inside his block;
-//     (c) the net is band steering, it corrects him only OUTSIDE the block, and it NEVER fires while
-//         he is ahead of it — a racer drawn 2nd who is leading the race is fair and is left alone.
+//     (c) once he has arrived he is STEERED to his drawn place like any other racer — the
+//         "unsteered inside his block" half was measured, costed at 3.3x the pre-shape gap, deleted.
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO. It does not measure whether the shape is GOOD — which distance
 //   works, what the peak gap becomes, whether he still lands in his block — those are population
@@ -146,52 +146,17 @@ describe('the arrival shape in the servo', () => {
     vi.resetModules();
   });
 
-  it('★ (b) arrived and leading, he is not braked — drawn 2nd, winning, left alone', async () => {
+  it('★ (b) arrived and leading, he IS braked back toward his drawn place', async () => {
+    // The inverse of what this file asserted until 2026-09-13. He was left unsteered inside his
+    // block so he would not FEEL braked; that cost 3.3x the pre-shape gap at twenty racers and is
+    // deleted. With the eased ceiling he no longer arrives fighting the brake, which is the owner's
+    // reason for putting it back.
     const { ctrl } = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN); // one frame at his place latches the arrival
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    racers = fieldWithHeroAt(1); // now he takes the lead. The owner: that is FAIR.
+    racers = fieldWithHeroAt(1); // now he leads, i.e. he is AHEAD of his drawn place
     ctrl.update(racers, 50_100, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBe(1.0);
-  });
-
-  it('★ (c) the net does nothing anywhere inside his block', async () => {
-    const { ctrl } = await heldComebackController();
-    let racers = fieldWithHeroAt(DRAWN);
-    ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    for (const rank of [1, 2, 3, 4, 5]) {
-      racers = fieldWithHeroAt(rank);
-      ctrl.update(racers, 50_000 + rank, AFTER_HELD_RELEASE);
-      expect(commanded(racers)).toBe(1.0);
-    }
-  });
-
-  it('★ (c) it catches him once he falls OUT of his block, and lets go again by itself', async () => {
-    const { ctrl } = await heldComebackController();
-    let racers = fieldWithHeroAt(DRAWN);
-    ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    racers = fieldWithHeroAt(9); // past the B1 edge of 5 → pushed forward
-    ctrl.update(racers, 50_100, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBeGreaterThan(1.0);
-    racers = fieldWithHeroAt(4); // back inside → the correction stops; nothing has to release it
-    ctrl.update(racers, 50_200, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBe(1.0);
-  });
-
-  it('★ (c) the correction aims at the block EDGE, not at his drawn rank', async () => {
-    // At rank 9, drawn 2nd: steering to the exact rank would be an error of 7; band steering is an
-    // error of 4 (9 − the edge at 5). That distinction IS "unsteered inside the block".
-    // A HUNDRED racers, deliberately: at twenty, both errors saturate `maxMult` and the two rules
-    // are indistinguishable at the output — the clamp would hide exactly what is under test.
-    const { mod, ctrl } = await heldComebackController(N_LARGE);
-    let racers = fieldWithHeroAt(DRAWN, N_LARGE);
-    ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    racers = fieldWithHeroAt(9, N_LARGE);
-    ctrl.update(racers, 50_100, AFTER_HELD_RELEASE);
-    const { gain, maxMult } = mod.DEFAULT_CONTROLLER_PARAMS;
-    expect(commanded(racers)).toBeCloseTo(1.0 + (gain * 4) / N_LARGE, 2);
-    // ...and it is NOT exact-rank steering, which at an error of 7 would have hit the ceiling.
-    expect(commanded(racers)).toBeLessThan(maxMult - 0.01);
+    expect(commanded(racers)).toBeLessThan(1.0);
   });
 
   it('★ (a) his ceiling binds on the approach, and it is HIS ceiling alone', async () => {
@@ -229,7 +194,7 @@ describe('the arrival shape in the servo', () => {
     expect(o.trail.map((t) => t.rank)).toEqual([9, 8, 7, 6, 5, 4, 3, 2]);
   });
 
-  it('telemetry records the arrival and the net', async () => {
+  it('telemetry records the arrival', async () => {
     const e = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN + 1);
     e.ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
@@ -238,8 +203,6 @@ describe('the arrival shape in the servo', () => {
     racers = fieldWithHeroAt(9);
     e.ctrl.update(racers, 50_200, AFTER_HELD_RELEASE);
     const tel = e.ctrl.collectTelemetry();
-    expect(tel.eFreeFrames).toBeGreaterThan(0);
-    expect(tel.eNetFrames).toBe(1);
     expect(tel.arrivalObs).toHaveLength(1);
     expect(tel.arrivalObs[0].drawn).toBe(DRAWN);
     expect(tel.arrivalObs[0].worstRankAfter).toBe(9);

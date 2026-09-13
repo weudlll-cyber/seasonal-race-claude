@@ -423,9 +423,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  *       a settling one rather than the shipped clamp. `arrivalCeiling` says why this moves the
  *       CEILING and not the error -- a taper that scaled the error was measured and deleted, because
  *       the clamp discarded its reduction wherever the error still saturated (TAPER-INVISIBLE-1).
- *   (b) FREE. Once he has arrived he is UNSTEERED: no brake for leading, no push.
- *   (c) THE NET IS BAND STEERING, WHICH ALREADY EXISTED -- see the `heldFree` block in the servo.
- *       Nothing new was built for it.
+ *   (b) THEN HE IS STEERED, exactly as any other racer is: to his drawn place, at the hero's
+ *       strictness 1.0. The "unsteered inside his block" half was built so he would not feel braked
+ *       on arrival, measured, and DELETED -- it cost 3.3x the pre-shape gap at twenty racers, and
+ *       the ceiling above removes the reason it existed.
  *
  * -- NEITHER CLAMP NUMBER NOR THE EASE DURATION IS TOUCHED, and no other role is reached: every
  * branch is inside the `heldFree` test.
@@ -600,8 +601,6 @@ export function createTrajectoryController(racePlan) {
   // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
   // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
   // — the direct test of whether the taper finished before he got there (it should read 1.0).
-  let _eFreeFrames = 0; // frames he ran on band steering after arriving
-  let _eNetFrames = 0; // frames of those where the net actually corrected him (bandError != 0)
   // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
   // for EVERY variant — see the block in `update`. One entry per held comebacker per race.
   const _arrivalObs = new Map();
@@ -1071,30 +1070,14 @@ export function createTrajectoryController(racePlan) {
         }
         // not-yet-freed → strictness remains 1.0 (curve tracking); nothing else to do.
       }
-      // ── ★ (c) THE NET IS BAND STEERING, AND IT WAS ALREADY IN THE TREE ──────────────────────────
-      // The owner guessed on 2026-09-13 that "unsteered until he falls out of his block" is a rule
-      // the project already has. He was right about the EXPRESSION and wrong about who gets it:
-      // `bandError` (a dozen lines up) is exactly zero while a racer is inside his band and is the
-      // signed distance OUTSIDE it otherwise — so at strictness 0 the servo commands 1.0 inside the
-      // band and corrects only at its edge. That IS the net. What did not exist is any comebacker
-      // reaching it: heroes are pinned to `strictness = 1.0` above, so a comebacker comfortably
-      // inside the top-5 block is steered to his EXACT drawn rank today, block or no block.
-      //
-      // So E builds no new mechanism. It puts him on band steering after the taper, which is one
-      // assignment. WHAT RELEASES THE NET: nothing has to. `bandError` returns to 0 by itself the
-      // instant he is back inside his block, so the correction stops where it started — there is no
-      // latch to clear and no hysteresis to tune, which is why the attacker's release/re-steer pair
-      // is NOT reused here (it exists to switch strictness between 0 and 1; E never leaves 0).
-      //
-      // ★ IT CANNOT FIRE WHILE HE IS AHEAD OF HIS BLOCK, structurally rather than by a test: his
-      // drawn place is in B1, so `getAreaBounds` gives [1, 5] and the `currentRank < areaLo` arm
-      // needs a rank better than 1. A racer drawn 2nd who is leading the race has bandError 0 and is
-      // not touched — the owner's fairness correction, enforced by the shape of the expression.
-      if (arrived) {
-        strictness = 0;
-        _eFreeFrames++;
-        if (bandError !== 0) _eNetFrames++;
-      }
+      // ★ AFTER HE ARRIVES HE IS STEERED, like any other racer (ARRIVAL-STEERED-AGAIN-1,
+      // 2026-09-13). He used to be put on band steering here -- `strictness = 0`, which commands 1.0
+      // anywhere inside his block -- so that he would not FEEL braked on arrival. That reason is
+      // gone: with the eased ceiling above he no longer arrives fighting the brake, and the owner's
+      // argument is that the brake now takes hold FASTER because there is half as much to shed (the
+      // ease costs the same second either way, but 1.05 -> 1.0 is half the distance of 1.10 -> 1.0).
+      // What it cost was clause 2: unsteered, he opened 3.3x the pre-shape gap at twenty racers.
+      // `strictness` therefore stays at the hero's 1.0 and the blend below is exact-rank steering.
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
@@ -1394,9 +1377,6 @@ export function createTrajectoryController(racePlan) {
       attackerFreed: _attackerFreeEvents,
       // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
       // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
-      eFreeFrames: _eFreeFrames,
-      eNetFrames: _eNetFrames,
-      eNetFrameFraction: _eFreeFrames > 0 ? _eNetFrames / _eFreeFrames : 0,
       // ★ One row per held comebacker: his drawn place, the pace he carried across it, the peak gap
       // he opened while leading, and how far he drifted afterwards. The arm-vs-arm table is built
       // from these; they are recorded identically under every variant.
@@ -1460,8 +1440,6 @@ export function createTrajectoryController(racePlan) {
     // race would otherwise carry "he has already arrived" into the next one and free him at the
     // start. No-op while every race builds its own controller; correct if one ever does not.
     _arrivedAtDrawn.clear();
-    _eFreeFrames = 0;
-    _eNetFrames = 0;
     _arrivalObs.clear();
     _leashFrames = 0;
     _leashEngaged = false;
