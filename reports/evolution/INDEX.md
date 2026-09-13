@@ -431,6 +431,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [LEADER-GAP-1.md](LEADER-GAP-1.md) — **the leader's restraint really did halve, and the gap did
+  not grow** (2026-09-13, on `night/2026-09-12b`, **report only; nothing built, nothing changed,
+  `verify` unmoved**). The owner watched build `1180c8f1` and reported the LEADER pulling away to
+  finish alone. ★ **HIS RACE REPRODUCES** — City Circuit seed 3, 40 racers, `Flare` wins at all three
+  commits — **but the gap in his own race is the SMALLEST of the three** (0.607% against 0.747%
+  before and 1.058% on master). ★★ **HE IS RIGHT ABOUT THE MECHANISM**: the servo's hold on a leader
+  who has reached his place falls from **−5.04% to −1.96% at twenty racers** and −3.60% to −1.77% at
+  forty, barely moving at a hundred. ★ **BUT IT IS THE DEPTH, NOT THE FREQUENCY** — he is braked in
+  ~89% of late frames in BOTH arms; the brake simply pulls less hard, and the "72% of frames" figure
+  that prompted the question was a leading COMEBACKER, a different racer. ★★ **AND THE GAP DID NOT
+  GROW**: over 160 races the median moves both ways (+21% at N=20, −43% at N=60), the MAXIMUM is
+  smaller or equal in every cell, and **the leader is alone by more than a canvas width in 0 of 160
+  races in both arms**. ★ The traffic candidate is excluded by measurement: **the leader never avoids
+  anybody in any race in either arm**, so the +0.80%/−0.77% parity never applied to him — his whole
+  restraint was always the servo. ★ His race IS an outlier (leader braked 20.1% against an ~89%
+  aggregate), so he saw something real that is not the normal picture. Trade for reverting `ec7130a0`
+  stated, not chosen.
 - [NIGHT-2026-09-13.md](NIGHT-2026-09-13.md) — **the camera loses the finish line, the band table is
   a 40-racer table, and what an install still needs** (2026-09-13, on `night/2026-09-12b`, **report
   only; no camera code, no `BAND_EDGES`, no `FAIRNESS.md` touched**). ★ **THE RUN-IN DEFECT IS
