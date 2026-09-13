@@ -61,9 +61,13 @@ BREAKAWAY-FREQUENCY-1 reports your photographed lead as **0.349 canvas widths**.
 tonight it is **0.698** — **exactly 2×**, and the 2 is the lap count. That report's canvas-width
 figures divide the gap by `finishT` once too often.
 
-★ **The rest of that report is unaffected**: its "1.538% of the race" agrees with tonight to three
+★ **The rest of that report is not withdrawn**: its "1.538% of the race" agrees with tonight to three
 decimals, and the holder (Breeze), the progress (0.837) and the 7th-place finish all reproduce
-exactly. **It is the canvas-width column only**, and every share in it that is keyed to 0.349.
+exactly. **It is the canvas-width column only**, and every share keyed to 0.349.
+
+★ **How far the error spreads is NOT claimed**, because it was not measured: `finishT` is 2 on a
+closed track and below 1 on an open one, so a sweep that pools both scales them differently. Tonight
+corrected **his race only**, on one closed track.
 
 ★ **The harness is verified against your own race**: replaying `QN3HDP` on the tree it was raced on
 reproduces **40 of 40 finishing positions**.
