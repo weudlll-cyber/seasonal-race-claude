@@ -431,6 +431,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [GAP-IN-SERVO-FEASIBILITY-1.md](GAP-IN-SERVO-FEASIBILITY-1.md) — **the servo can carry it, but the
+  form that exists was already rejected** (2026-09-13, branch `night/2026-09-12b`, **ESTABLISH ONLY —
+  nothing built, nothing minted**). ★★ **THE GAP BRAKE IS ALREADY WRITTEN INSIDE THE SERVO** —
+  `racePlanner.js:1116-1161`, the front distance leash, guarded and never wired to the browser —
+  ★★ **and it is unwired because it was TRIED AND REJECTED**: `docs/DEAD-ENDS.md:75-78`, *made runaway
+  WORSE*, ★ *"Do not re-propose continuous leader braking"*, because braking "the leader" brakes the
+  2nd-place racer too and so brakes the whole front. ★ **(1)** The servo does not get the gap on the
+  shipped path (`raceCore.js:562` passes three arguments, `leaderGapLen` null) **but the data is in
+  scope and it already computes one** — `racePlanner.js:986`, one subtraction; lengths would need
+  `lenScale` (already computed 36 lines later at `raceCore.js:598`) and `isOpen`. ★ **(2)** The steered
+  set **SHIFTS**: chaos = all, pre-OUTCOME = **heroes only** (`racePlanner.js:916`), **OUTCOME (from
+  0.6) = every racer** — and his gap runs 0.742–0.921, entirely inside OUTCOME, so the constraint
+  narrows nothing. ★ **(3)** The two corrections **MULTIPLY** — different factors of one product
+  (`raceStep.js:106`) in the same window — to about **18% below natural pace** against a 20% floor;
+  removing the overlap means giving up the gap-reroll's 23.5% → 8.3% runaway result whole. ★ **(4)**
+  The clamp is **NOT** an obstacle: `_setTarget` overrides instead of adding, and measured on his race
+  the leader is **strictly inside the clamp in 100% of the frames that matter** (0.0997 of headroom) —
+  saturation is the PURSUER's condition, not the leader's. ★ **(5)** Two files, **two new shipped
+  defaults** (ship ceremony + mint), **a mechanism, not a tuning**. ★ Also reports a **stale claim in
+  the code**: `racePlanner.js:383` still says the gap-reroll is SIM-ONLY and the browser never sets it,
+  but `defaults.js:1115-1116` ship it enabled.
 - [GAP-CEILING-BASELINE-1.md](GAP-CEILING-BASELINE-1.md) — **a gap ceiling already exists, it fired
   in his race, and it is not a brake** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**,
   read-only on his store). ★ **Written because an ADDENDUM to GAP-CEILING-1 arrived but that brief
