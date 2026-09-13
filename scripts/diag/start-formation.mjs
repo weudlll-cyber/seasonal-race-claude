@@ -26,6 +26,10 @@
 //   node scripts/diag/start-formation.mjs              # the four tracks the owner watched
 //   node scripts/diag/start-formation.mjs --all        # all ten
 //   node scripts/diag/start-formation.mjs --racers=20  # override the per-track maximum
+// -- BLIND TO THE CAST, BY CONSTRUCTION (re-confirmed 2026-09-13). This runs the COUNTDOWN only. The
+// heroes are cast inside `racePlanController.update` well after the gun, so there is no cameraPlan to
+// deliver at any point this instrument observes. A green here is NOT a clearance for anything gated
+// on a racer being CAST. See scripts/lib/cameraPlanDelivery.mjs.
 // ============================================================
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";

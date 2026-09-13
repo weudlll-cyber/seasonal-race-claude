@@ -431,6 +431,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [NIGHT-2026-09-13.md](NIGHT-2026-09-13.md) — **the camera loses the finish line, the band table is
+  a 40-racer table, and what an install still needs** (2026-09-13, on `night/2026-09-12b`, **report
+  only; no camera code, no `BAND_EDGES`, no `FAIRNESS.md` touched**). ★ **THE RUN-IN DEFECT IS
+  BISECTED**: master PASSES, `983d9201` (the comebacker is held and released) fails luger-hill n=100,
+  and **tonight's race change added a SECOND case**, garden-path n=40. Both share one signature —
+  progress 0.950, LEADER_ZOOM, binding `state` — and the mechanism is that `_lineCeiling` returns
+  **Infinity when the line cannot be framed at all**, so it never binds and never gets named. ★ **FIX
+  STOPPED**: it would change the camera on every track, and he judges the picture. ★★ **THE FAIRNESS
+  PREMISE DOES NOT REPRODUCE** — band-reach at a hundred racers is **88.9%, nineteen points above the
+  gate**, not 70.5%. But the worry was right and lives elsewhere: `BAND_EDGES` exhausts the field at
+  exactly forty, so above it **B5 becomes an unbounded catch-all holding 60% of the field at 97%
+  easy**, and the four bands that constrain deliver **76.4%**. ★ Bands that SCALE with the field
+  recover it (82.1% vs 76.4%) and the N=40 control reproduces the shipped table exactly. ★ **AND
+  TODAY'S WORLD ALREADY FAILS THE GATE'S OTHER CLAUSE** — zero Holm-unfair is not met above forty
+  racers: seven of ten tracks at N=100. ★ Deployment: **four of seven items closed, three standing**,
+  plus three nobody had named (no backup ever restored, no production data location, no upgrade
+  path), with an ordered list and three one-sentence questions. ★ `check-image-starts` is **not**
+  wired into CI — decided by the number (4.1–4.75 min against a 3.8 min median whole run).
 - [SERVO-RANKS-1.md](SERVO-RANKS-1.md) — **the servo had no gradation near the target, and a racer
   now arrives at his place at pace** (2026-09-13, on `night/2026-09-12b`, **built and measured, not
   merged, nothing minted**). The shipped response divides the rank error by the FIELD SIZE, so it

@@ -19,6 +19,11 @@
 //
 // Engine untouched — the shipped fingerprint (ded0a126048e4cdb) is asserted separately. The camera work
 // is off the sim/physics path entirely.
+// -- BLIND TO THE CAST, BY CONSTRUCTION (re-confirmed 2026-09-13). This replays RECORDED frames into
+// five camera versions and builds no race-plan controller, so `comebackDetector` never receives a
+// cameraPlan and `isCast()` is false for every racer. ANY behaviour gated on a racer being CAST as a
+// comebacker cannot fire here. A green from this instrument is NOT a clearance for such behaviour.
+// See scripts/lib/cameraPlanDelivery.mjs for the hole this describes.
 // ============================================================
 import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
