@@ -431,6 +431,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [MERGE-HALTED-2026-09-14.md](MERGE-HALTED-2026-09-14.md) — **the branch is NOT merged: one failure
+  is a real defect** (2026-09-14). ★★ **`check-runin-frame` is GREEN on master (`b6d77637`, exit 0) and
+  RED on the branch (`8166c757`)** — `dirt-oval` n=40 goes from FINDABLE +99 px / 0 off canvas to
+  **LOST −353 px / 15 OFF CANVAS**, and `luger-hill` n=100 from +111 px / 0 to **−146 px / 5 OFF
+  CANVAS**. Measured on a clean worktree at master, not assumed. ★ That is class **(b)**, so the rule
+  fired: **not merged, nothing imprinted, no tag, branch not deleted, branch pushed**. ★ The other four
+  `verify` failures are class **(a)** with addresses — the three fingerprints against a record that
+  predates DIRECTION-AUTHORITY-1 (world `8a1977187e9c99b4` → `b35cf477c09a1116`, camera → 
+  `3df640a42e934312`, render → `6a84085e79535dd6`) and three client-suite RECORDED OUTCOME pins
+  (`parity/replay.test.js:85`, `parity/goldenRealArm.test.js:57`); `golden-races` PASSES and needed no
+  regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
+  all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
+  because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
