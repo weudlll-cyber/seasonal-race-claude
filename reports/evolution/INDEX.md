@@ -431,6 +431,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [STORED-RACE-PARITY-1.md](STORED-RACE-PARITY-1.md) — **they are NOT the same race, and the field
+  that differs is the ACTION STAGE** (2026-09-13, **report only, read-only access to his store**).
+  His finished race was found by its own key — ★ **`QN3HDP`** — carrying seed 3, build `72ff4e7f`,
+  40 racers, 2 laps, and ★ **`raceActionStage: "wild"`**. ★★ **10 OF 40 POSITIONS MATCH** the harness:
+  same forty names, same seed, same track, different order; `Breeze` finishes **7th** in his race and
+  3rd in the harness's. ★★ **THE FIRST FIELD THAT DIFFERS IS THE ACTION STAGE** — `wild` doubles
+  `pulkChallengerBoost` (0.06 → 0.12) and raises `pulkLeaderBrake` (0.10 → 0.15) — **and the harness
+  cannot read it**, because `raceDriver.mjs:289` hardcodes `DEFAULT_CONFIG_WORLD` and no harness calls
+  `applyRaceActionStage`. `raceActionStage.js` states the split itself. ★ **BROWSER-HARNESS-PARITY-1's
+  diagnosis is WITHDRAWN**: the stored race's roster IS `QUICK_TEST_NAMES`, so the roster was never the
+  difference. ★ **AND THE PANEL IS CORRECTED AT SOURCE**: the two numeric columns are **rank** (the
+  fixed slot, `ScoreboardSlots.jsx:45`) and **race number** (`ScoreboardCard.jsx:90`) — so `2|27|Blitz`
+  is rank 2, number 27, and the crown on `1 Breeze` means he really was leading. The earlier "not
+  rank-ordered" claim read DOM order for display order and was wrong. ★ From his own race: Breeze
+  finished 7th, **800 ms** behind, with places 1–8 inside 816 ms — not pulling away at the line.
+  ★★ **CONSEQUENCE: every harness and sim measurement this week ran `quiet`; he watches `wild`.**
 - [BROWSER-HARNESS-PARITY-1.md](BROWSER-HARNESS-PARITY-1.md) — **the harness reproduces the browser
   exactly; the roster was wrong** (2026-09-13, build `72ff4e7f`, **report only**). The owner's screen
   and the planner's reproduction were different races at the same seed. ★★ **THE HARNESS IS NOT
