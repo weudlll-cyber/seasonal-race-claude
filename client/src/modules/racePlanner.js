@@ -410,55 +410,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 // ── createTrajectoryController ────────────────────────────────────────────────
 
 /**
- * -- THE SERVO RESPONSE (SERVO-RANKS-1, 2026-09-13) -------------------------------------------
- *
- * THE PARAGRAPH A READER CAN CHECK. The shipped response is `1 + gain * (error / nActive)`,
- * clamped to [minMult, maxMult]. Because it divides by the FIELD SIZE, it reaches the clamp after
- * `(maxMult - 1) * nActive / gain` ranks of error -- ONE rank at twenty racers, five at a hundred.
- * At twenty racers that means there is NO gradation near the target at all: a racer one rank from
- * his place is driven exactly as hard as one ten ranks away, so his multiplier sits pinned at the
- * 1.100 ceiling for the whole approach and has to fall the entire 0.10 the instant he arrives. It
- * cannot -- `_setTarget` restarts a 1 s ease every frame the target moves -- so he crosses his
- * place still accelerating. MEASURED (ARRIVAL-SHAPE-E-1, 2 000 races): the arrival pace tracks that
- * saturation distance with no exception, N=20 -> 1.100, N=40 -> 1.092, N=60 -> 1.070, N=100 -> 1.050.
- *
- * THE NEW RESPONSE IS THE ONE A HUNDRED RACERS ALREADY HAS, EXTENDED TO EVERY FIELD SIZE:
- *
- *     drive = (maxMult - 1) * error / BAND_EDGES[0]
- *
- * The error is counted in RANKS rather than as a fraction of the field, and full drive is reached
- * at one BLOCK of error -- `BAND_EDGES[0]`, the same five ranks the fairness bands already call a
- * block. One rank from your place then means the same thing in a field of twenty and a field of a
- * hundred, which is what a viewer sees and what the old rule denied.
- *
- * WHY IT BEHAVES AT EVERY FIELD SIZE. The coefficient is `(1.1 - 1) / 5` = 0.02 per rank. The
- * shipped rule's coefficient is `gain / nActive`, which is the same 0.02 per rank when a hundred
- * racers are still running -- identical in both directions, drive and brake.
- *
- * -- BUT `nActive` IS THE UNFINISHED COUNT, NOT THE FIELD SIZE, AND THAT IS THE WHOLE CAVEAT.
- * `active` is `racers.filter(r => !r.finished)`, so the divisor SHRINKS as racers cross the line:
- * a hundred-racer field whose first fifty have finished is steering on `gain/50`, twice as steep as
- * it was at the gun, and it keeps steepening. The shipped response therefore grows sharper exactly
- * through the endgame, which is where a racer arrives at his place -- the same defect as the small
- * field, arriving late instead of always. The new response does NOT steepen: 0.02 per rank from the
- * gun to the line, whatever has finished.
- *
- * So this is NOT a no-op at a hundred racers; it matches today only while the whole field is still
- * racing and is gentler from the first finisher onward. The claim that it cannot move band-reach at
- * N=100 would be wrong, and the fairness gate is therefore MEASURED on this arm, not argued.
- *
- * IT STILL CONVERGES. At five or more ranks of error the drive is the full `maxMult`, at every
- * field size, exactly as today -- the easing is NEAR the target, not everywhere. A racer far from
- * his place is driven just as hard as he ever was.
- *
- * NEITHER CLAMP MOVES AND NO ROLE IS NAMED. This is the one servo every steered racer runs through
- * -- comebackers, attackers, fallers, sovereign-leads and the pack alike. The CHAOS-phase steer
- * (`plan._chaosSteer`, a separate mechanism with its own gain, active only before `pulkStart`) is
- * deliberately NOT touched: it is a different steering in a different phase, and changing it would
- * move the opening of every race for reasons that have nothing to do with arriving at a place.
- */
-
-/**
  * -- THE ARRIVAL, AND IT IS NOW THE ONLY ONE ---------------------------------------------------
  *
  * What a HELD comebacker does once he closes on his drawn place. The owner described this shape on
@@ -487,15 +438,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
  * at N=20, 4 at N=40, 6 at N=60, 5 at N=100 (ARRIVAL-SHAPE-E-1).
  */
 export const ARRIVAL_TAPER_START_RANKS = 4;
-
-/**
- * The commanded drive, BEFORE the clamp and before the noise. Exported so a test can hold the
- * arithmetic outright rather than infer it from a race. See the SERVO RESPONSE paragraph above
- * `servoDrive`'s caller for why the error is counted in ranks.
- */
-export function servoDrive(error, nActive, gain, maxMult) {
-  return ((maxMult - 1) * error) / BAND_EDGES[0];
-}
 
 /**
  * -- THE TAPER: WHY IT IS NOT SIMPLY "SCALE THE ERROR DOWN" ------------------------------------
@@ -1157,11 +1099,7 @@ export function createTrajectoryController(racePlan) {
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(
-        1.0 + servoDrive(error, nActive, gain, maxMult) + noise,
-        minMult,
-        maxMult
-      );
+      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
