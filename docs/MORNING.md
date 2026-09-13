@@ -4,136 +4,91 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-13, after ARRIVAL-TAPER-SHIP-1.
+**Last rewritten:** 2026-09-14, during BREAKAWAY-HISTORY-1 (the night chain, still running).
 
-**Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is **NOT merged**, **nothing is
-minted**, **no golden race is re-recorded**. The servo is reverted as you asked; the taper is what
-ships.
-
----
-
-## ★★ READ THIS BEFORE YOU APPROVE — THE TRADE IS NOT THE ONE YOU AGREED TO
-
-You chose the taper on **"1.042 at arrival for about 0.6 points of band-reach"**. That half is true
-and it is paid:
-
-| | before | now |
-|---|---|---|
-| arrival pace | 1.100 | **1.029–1.076** |
-| lands in his block | 84% baseline | **87.0%** (n=717) |
-| the leader | — | **untouched, identical to every decimal** |
-
-★★ **BUT THE COMEBACKER'S GAP ON SCREEN ROUGHLY TRIPLES AT SMALL FIELDS**, and that was never part of
-the trade:
-
-| racers | before | now |
-|---|---|---|
-| 20 | 0.107 widths | ★ **0.368** (3.4×) |
-| 40 | 0.126 | ★ **0.307** (2.4×) |
-| 60 | 0.172 | 0.139 (better) |
-| 100 | 0.163 | 0.204 |
-
-★ **AND IT IS NOT THE TAPER.** I split the races by whether the comebacker was ever in front. Where
-he never leads, the two arms are **identical to every decimal**. The whole difference is in races
-where he IS in front — because the shape leaves him **unsteered inside his block** once he arrives,
-instead of braking him back toward his exact drawn place. That is the brake whose removal was already
-costed at 2.7× the gap when it was variant B; I measure 3.4×.
-
-> ★ **So: the taper costs what you agreed. The tripled gap is the price of the OTHER half of the
-> shape — "free inside his block" — which was never put to you as a choice. It is also the half that
-> produces the feel you asked for. It is yours to accept or not.**
-
-★ One more thing, in your favour: the **0.066 widths baseline on record was never comparable.** It
-came from an instrument with a narrower definition of "leading". Measured properly, the before-figure
-is 0.107–0.172. So the picture is worse than it was, but not nearly as much worse as that number
-would have implied.
+**Where the code is.** Master is `b6d77637`, untouched. The night's branch is
+`night/2026-09-14-history` — **measurement only, nothing built, nothing minted, no merge.**
 
 ---
 
-## WHAT HAPPENS THE MOMENT YOU APPROVE
+## ★★ THE ANSWER, AS FAR AS IT IS RACED
 
-The branch merges in **one command**. `verify` plain is **PASS 24 · FAIL 6**:
+You said races used to have far fewer runaway leaders than today. **Tested against raced races, the
+race itself did not change at all.**
 
-| guard | why |
-|---|---|
-| world / camera / render fingerprints | ★ red **BY DESIGN** — the race changed |
-| `client-suite` | the golden parity pins inside it |
-| `check-runin-frame` | ★ **a real defect — see below** |
+The largest lead the leader holds at any moment of a race, at **five points of master from
+2026-08-04 to 2026-09-12**, same 30 seeds, same track, same field, same roster:
 
-★★ **THE GOLDEN RACES PASS AND NEED NO RE-RECORDING.** Their fields are 12 and 6 racers, below the
-staging minimum of 20, so no comebacker is cast and the shape never fires there. Both are
-byte-identical to master.
+| | −6 weeks | −4 weeks | −2 weeks | −1 week | today |
+|---|---|---|---|---|---|
+| **lead in world px** — median | **113.2** | **113.2** | **113.2** | **113.2** | **113.2** |
+| **lead in world px** — p90 | **223.5** | **223.5** | **223.5** | **223.5** | **223.5** |
 
-**So approving needs exactly:** mint the **world / camera / render** fingerprints, and decide the
-camera case below. **Nothing else.**
+★★ **Not "close". Every one of the 30 races is bit-identical at all five stands** — same winner, same
+duration, same peak lead to the last digit. **The engine-facing defaults are identical too: zero
+differences across the whole span** in `raceDynamicsConfig`, `raceBehaviorConfig`, `rowLayoutConfig`,
+`baseSpeedConfig`, `autoScaleConfig`.
 
-**New world fingerprint `defbce50092d965c`** (it was `bdf4a3c8ce6e0316` before this work).
-Per track: city-circuit `a6892177f475` · dirt-oval `ab94bd3b6d88` · garden-path `9f86a644c95c` ·
-ice-track `0246ecbe7a35` · luger-hill `41ba46864505` · mountainstreet `8a6bf377bcfe` · river-run
-`29742c451ffa` · searound `1fe4a8074974` · seatrack `8b3f023f86d0` · space-sprint `edc1069a4dda`.
+★ **This is not a blind instrument.** Forcing a different action stage through the product's own
+stage table moves the same numbers (median 113.2 → 99.3 at `medium`, → 118.5 at `wild`). The
+instrument sees a world change of that size; there was none to see.
 
----
+★★ **What DID move is the camera.** Every default that changed in six weeks is a camera key —
+39 of them between −6 weeks and today, and one frame-timing key. And the **screen-width** lead has a
+real step in it: p90 **1.142 → 1.350**, +18%, somewhere between 2026-08-17 and 2026-08-31. The
+bisect for exactly where is running now.
 
-## ★ THE ONE THING STILL BLOCKING A CLEAN MERGE
-
-**The camera loses the finish line at `luger-hill`, 100 racers.** The revert **halved** this — it was
-two cases, and `garden-path` at 40 was the servo change's doing and is gone with it. What remains
-came from `983d9201` (the comebacker is held and released); master is green.
-
-At progress 0.950 in a leader shot, `_lineCeiling` returns **Infinity when the line cannot be framed
-at all**, and an infinite ceiling never binds — so the shot zooms to its own preference and the line
-leaves the canvas. ★ **I did not fix it:** the fix changes the camera on every track and every race,
-and you judge the picture.
+> **So the reading, so far: the race did not get worse. The framing did.** The same gap occupies
+> about a fifth more of the screen than it did a month ago. **That is a real change and it is yours
+> to judge** — but it is not the racers running away more.
 
 ---
 
-## WATCH IT
+## ★ A PUBLISHED NUMBER IS WRONG, AND IT IS LAST NIGHT'S
 
-**http://localhost:4173** — the production build. API on 4000.
+BREAKAWAY-FREQUENCY-1 reports your photographed lead as **0.349 canvas widths**. Measured again
+tonight it is **0.698** — **exactly 2×**, and the 2 is the lap count. That report's canvas-width
+figures divide the gap by `finishT` once too often.
 
----
+★ **The rest of that report is unaffected**: its "1.538% of the race" agrees with tonight to three
+decimals, and the holder (Breeze), the progress (0.837) and the 7th-place finish all reproduce
+exactly. **It is the canvas-width column only**, and every share in it that is keyed to 0.349.
 
-## FOR YOUR DECISION
-
-1. ★ **The tripled on-screen gap at small fields** — accept it as the price of the feel, or put the
-   brake back on an arrived comebacker (that is the "free inside his block" half, not the taper).
-2. Whether to fix the camera's unframeable-line case, knowing it moves every shot.
-3. Still open from earlier: `docs/FAIRNESS.md`'s 85–90% headline, and its "zero Holm-unfair" clause
-   which **the shipped game already misses above forty racers** (seven of ten tracks at N=100).
-4. Deployment: what terminates TLS · where the data lives · how often a backup is taken.
-
-## ★★ ONE RACE IN YOUR HISTORY IS MINE — DELETE IT WHEN YOU LIKE
-
-★ **Race `SF8GEZ`** (2026-09-13 17:19, winner **Nova**, your "40 Racer Testgroup") **was created by a
-browser parity test of mine, not by you.** It was left in place rather than deleted, because deleting
-from your store is itself an alteration and that was not mine to make. **It is yours to delete.**
-Nothing else of yours was created, changed or removed; `QN3HDP` was read with a single `GET`.
+★ **The harness is verified against your own race**: replaying `QN3HDP` on the tree it was raced on
+reproduces **40 of 40 finishing positions**.
 
 ---
 
-## ★★ AND YOUR RACE NOW REPLAYS EXACTLY — 40 OF 40, TO THE MILLISECOND
+## Done / running / open
 
-The harness could not race any world but the shipped one, which is why it raced `quiet` while you
-race `wild` and agreed with your stored race on only 10 of 40 positions. That is closed. Your race
-`QN3HDP`, replayed from its own stored inputs, now matches your record on **every one of the forty
-positions and every one of the forty finishing times in milliseconds**. ★ **The shipped world at
-stage `wild` reproduces it too — so your sliders are the shipped defaults and the Race Action stage
-was the whole difference.** ★ **Nothing the product does was changed**, and the four fingerprints are
-unmoved against the branch tip before the piece. See
-[HARNESS-WORLD-1](../reports/evolution/HARNESS-WORLD-1.md), which also lists which of this week's
-conclusions describe `quiet` rather than the world you watch.
+**Done**
+- Piece 1 — the portable harness, built and proven against `QN3HDP` (40/40).
+- Piece 2 — the coarse ladder, 5 points × 30 races.
+- Controls — positive control (stage), adapter control (camera seed), noise floor.
 
-★ **The numbers higher up this sheet predate that piece** — the verify tally is now **PASS 25 ·
-FAIL 5** and `check-runin-frame` has been **two** cases (dirt-oval at 40 as well as luger-hill at
-100), not one. The report carries the current values.
+**Running**
+- Piece 3 — the bisect of the screen step, between 2026-08-17 and 2026-08-31.
+
+**Open**
+- Piece 4 — the 300-race proof.
+- Piece 5 — what changed there, read-only.
+
+**Needs your word**
+- Nothing yet. This chain changes nothing and proposes nothing.
 
 ---
 
-## NOTICED AND LEFT ALONE
+## The noise floor is ZERO, which is worth knowing on its own
 
-- `.claude/skills/dev-start/SKILL.md` is in German, against the language rule in `CLAUDE.md`.
-- `sollBereich` — a German identifier — in the sim's raw fairness rows.
-- `camera-replay.mjs` delivers the camera plan through its own inline copy of the shared rule.
-- The end-to-end install walk has still not been performed; the ordered list of what it needs is in
-  [NIGHT-2026-09-13](../reports/evolution/NIGHT-2026-09-13.md).
+Master raced twice with the same 30 seeds is **bit-identical**. So on this fixture any difference
+between two stands is a real difference, not scatter — which is why a flat world column can be read
+as flat rather than as "within noise".
+
+---
+
+## Where the numbers live
+
+`reports/evolution/BREAKAWAY-HISTORY-1.md` — written as the chain closes. The instruments are in
+`C:/tmp/hist` and are swept at the end of the night; the report carries the seeds, the stand SHAs and
+the fixture so any of it can be raced again.
 <!-- END CHAIN STATUS -->
