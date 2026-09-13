@@ -431,6 +431,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [BROWSER-HARNESS-PARITY-1.md](BROWSER-HARNESS-PARITY-1.md) — **the harness reproduces the browser
+  exactly; the roster was wrong** (2026-09-13, build `72ff4e7f`, **report only**). The owner's screen
+  and the planner's reproduction were different races at the same seed. ★★ **THE HARNESS IS NOT
+  BROKEN**: driven in a real browser on the shipped build and handed the same field, it reproduces
+  the finishing order **TEN PLACES DEEP, exactly** — 1 Nova, 2 Zephyr, 3 Arrow, 4 Comet, 5 Vortex, 6
+  Drift, 7 Thunder, 8 Flare, 9 Raven, 10 Titan. ★ **THE DIVERGENCE WAS THE ROSTER AND ONLY THE
+  ROSTER**: he had a saved 40-player group loaded; the harness used `QUICK_TEST_NAMES.slice(0,40)`.
+  Different SET (his has `Walter`, the harness `Sparrow`) and **all 40 names at a different index** —
+  and `stablePairBit` hashes the NAME. Racer type, laps, duration and `cfg 8aed1e` (a CAMERA id) are
+  all cleared with addresses. ★ `scripts/diag/outcome-parity.mjs` still runs but **cannot answer this**
+  — it compares the harness to `goldenRunner.mjs`, both node, neither a browser. ★★ **CONSEQUENCE**:
+  DRAWN-PLACE-TRUTH-1 §1 and LEADER-GAP-1 §1 claimed to be HIS race and are wrong on that point (in
+  his actual field Breeze finishes **27th**, not 3rd); the structural findings and the 700–1 200-race
+  distributional sweeps do not depend on his roster and stand. ★ Also established: the LIVE STANDINGS
+  panel is **not ordered by rank** — its leading integer is a bib number.
 - [DRAWN-PLACE-TRUTH-1.md](DRAWN-PLACE-TRUTH-1.md) — **the 0-of-82 holds; "first place IS his drawn
   place" was wrong** (2026-09-13, build `72ff4e7f`, **report only, nothing built or changed**). The
   owner caught the planner asserting both that a comebacker is never drawn first AND that a leading
