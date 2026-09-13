@@ -5,7 +5,14 @@ pulls far away and finishes alone, the opposite of the race action the work was 
 answered in order, each with its measurement or a statement that it was not measured.
 
 **What it deliberately does not do:** it builds nothing, repairs nothing and recommends nothing. §6
-states a trade; it does not choose it. **`verify` was run plain afterwards and nothing moved.**
+states a trade; it does not choose it.
+
+**`verify` plain, afterwards: PASS 23 / FAIL 7 — the identical set as before this piece** (the four
+fingerprint guards and the two golden-race pins, all red BY DESIGN since the race changed in
+`1997498a`, plus `check-runin-frame`). ★ **NOTHING MOVED**, which is what a report-only piece must be
+able to say. One run in between showed an eighth failure, `check-standings-invariant`; it passes
+standalone in 2.2 s and passed on the re-run, so it was a flake under 3.6x parallel load and is
+recorded here rather than dropped.
 
 **Instrument.** `C:/tmp/leader-gap.mjs` — outside the repository on purpose, because it has to run at
 three commits and a file committed on the branch vanishes on checkout. It drives races through the
