@@ -4,113 +4,155 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-13, after piece 1 of the second 2026-09-13 chain (its fairness gate was
-still running as this was written — see "what is still open").
+**Last rewritten:** 2026-09-13, after the whole chain.
 
-**Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is branched off it and is **NOT
-merged**. **Nothing is minted. With nothing switched on, the shipped race is unchanged** — the world
-fingerprint is `bdf4a3c8ce6e0316`, bit-identical to the instrument run on the commit before this
-work began.
+**Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is **NOT merged** and **nothing is
+minted**. ★ **The shipped race HAS CHANGED on this branch** — that is the point of the night, and it
+is why several guards are red on purpose.
 
-**I waited 19 minutes** for the previous block's arrival sweep to finish before starting this chain,
-as instructed. It ran 81.7 minutes in total.
+**I waited 19 minutes** for the previous block's arrival sweep before starting this chain, as
+instructed. It ran 81.7 minutes.
 
 ---
 
-## ★★ THE THING TO LOOK AT: A RACER NOW ARRIVES AT HIS PLACE AT PACE
+## ★★ WATCH THIS FIRST: A RACER NOW ARRIVES AT HIS PLACE AT PACE
 
-You asked why he crossed his drawn place still accelerating, and the answer turned out not to be the
-shape of the arrival at all. **It is the servo.**
+**http://localhost:4173** — the production build. The API is on 4000.
 
-`racePlanner.js` drives a racer by `1 + gain × (error / nActive)`. Because it divides by the FIELD
-SIZE, it reaches the +10% ceiling after `0.05 × n` ranks of error — **one rank at twenty racers**,
-five at a hundred. At twenty racers there is therefore **no gradation near the target at all**: a
-racer one rank from his place is driven exactly as hard as one ten ranks away. His multiplier sits
-pinned at the ceiling for the whole approach and has to fall the entire 0.10 the instant he arrives.
-It cannot, because the ease that moves it restarts every frame and takes about a second.
+You asked why he crossed his drawn place still accelerating. It was never the arrival shape. **It was
+the servo.** It drives a racer by `1 + gain × (error / nActive)`, dividing by the FIELD SIZE, so it
+hits the +10% ceiling after `0.05 × n` ranks — **one rank at twenty racers**. There was no gradation
+near the target at all: one rank out was driven exactly as hard as ten out, so the multiplier sat
+pinned at the ceiling all the way in and had to fall the whole 0.10 the instant he arrived. It
+cannot; the ease takes about a second.
 
-★ **THE PROOF IS THAT THE DEFECT TRACKS THE ARITHMETIC EXACTLY**, measured over 2 000 races:
+**The proof is that the defect tracked the arithmetic exactly** (2 000 races):
 
-| field | ranks of gradation the servo has | arrival pace today |
+| field | ranks of gradation | arrival pace before |
 |---|---|---|
 | 20 | **1.0** | **1.100** — the ceiling, exactly |
-| 40 | 2.0 | 1.092 |
-| 60 | 3.0 | 1.070 |
 | 100 | 5.0 | 1.050 |
 
-**The new response is one line:** `drive = (maxMult − 1) × error / BAND_EDGES[0]` — the error counted
-in RANKS, full drive at one BLOCK (five ranks). One rank from your place then means the same thing in
-a field of twenty and a field of a hundred. Neither clamp moves, no role is named, and it still
-converges: five ranks out is the same full drive it always was.
+**Now:** the drive is counted in RANKS and reaches full power at one BLOCK (five ranks).
 
-★ **WHAT IT BUYS**, 228 comebackers per arm, ten tracks, four field sizes:
+| | before | now |
+|---|---|---|
+| arrival pace | 1.084 | ★ **1.019** |
+| arrived at pace | 9% | ★ **30%** |
+| **at twenty racers** | **1.100 / 11%** | ★ **1.001 / 52%** |
+| worst gap | 2.549% | ★ **1.704%** |
+| lands in his block | 83% | 84% |
 
-| | today | servo | taper only | ★ servo + taper |
+---
+
+## ★ WHAT IT COST, AND THE ONE DECISION THAT IS YOURS
+
+★★ **FIELD-WIDE BAND-REACH FALLS AT SMALL FIELDS** (44 000 racers per arm):
+
+| N | before | now | change |
+|---|---|---|---|
+| 20 | 91.3% | **83.9%** | ★ **−7.4 pp** |
+| 40 | 89.7% | 85.5% | −4.2 pp |
+| 100 | 88.9% | 89.2% | +0.3 pp |
+
+★ **YOUR GATE HOLDS** — it asks for ≥ 70% on every track and the worst cell is 76.3%. Nothing is
+breached, so I did not stop. ★ **But `docs/FAIRNESS.md`'s own 85–90% HEADLINE does not hold at twenty
+and forty racers any more.** I did not edit that document.
+
+★ **AND THERE IS A CHEAPER VERSION ON THE TABLE**, which you should see before deciding:
+
+| | arrival | at pace | worst gap | band-reach cost |
 |---|---|---|---|---|
-| arrival pace | 1.084 | 1.040 | 1.042 | ★ **1.019** |
-| arrived at pace | 9% | 13% | 20% | ★ **30%** |
-| lands in his block | 83% | 81% | 87% | 84% |
-| **worst gap** | 2.549% | 1.892% | 2.033% | ★ **1.704%** |
+| the taper alone | 1.042 | 20% | 2.033% | **~0.6 pp** |
+| ★ what is in the tree now | **1.019** | **30%** | **1.704%** | **~7 pp at N=20** |
 
-★★ **AT TWENTY RACERS, WHERE IT WAS WORST, IT IS NOW SOLVED**: arrival pace **1.100 → 1.001**, and
-**11% → 52%** of comebackers arrive at pace.
-
-★ **AND THE WORST CASE — the one you said you actually look at — IS A THIRD SMALLER** (2.549% →
-1.704% of the race).
-
-★ **THE SERVO ALONE IS NOT ENOUGH, so the taper stays.** You asked to be told if it were, because
-then three days of arrival work would fall away. It is not: alone it reaches 1.040 and 13% at pace,
-against 1.019 and 30% together. **Both stay, and only ONE arrival shape will be left in the tree.**
-
-★ **THE COST, NOT AVERAGED AWAY.** At twenty racers the comebacker's block rate falls **93% → 81%**.
-It shows in both servo arms and not in either arm without it, so it is real rather than one noisy
-cell. Whether that trade is worth it is yours; **the field-wide fairness gate was still measuring
-when this was written** and it is the thing that can veto the change outright.
+The servo buys the last stretch and charges seven points of small-field fairness for it. **If you do
+not want to spend that, the change to undo is commit `ec7130a0` — the taper alone still delivers most
+of it.** The cost is the SERVO, not the taper: the taper touches one racer per race, worth −0.6 pp.
 
 ---
 
-## WHAT IS STILL OPEN TONIGHT
+## WHAT MERGES THE MOMENT YOU SAY YES
 
-- **The fairness gate on the new servo.** Band-reach and the start-row Holm flag, both arms, ten
-  tracks, four field sizes. ★ **If band-reach falls below 70% at any field size the change does not
-  ship** — that is your own rule and it is not mine to spend. Not yet known.
-- **Clearing the table** — deleting every arrival variant that lost, so one shape remains.
-- **The camera losing the finish line at `luger-hill`, 100 racers.** No camera file changed on this
-  branch, so the cause is the RACE changing, not the camera; `983d9201` (the comebacker is held and
-  released) is the only commit here that moves the world by default. Not yet established.
+The branch is **one command from mergeable**. `verify` was run plain: **PASS 23, FAIL 7**, and every
+failure is accounted for:
+
+| guard | why |
+|---|---|
+| world / golden / camera / render fingerprints | ★ **red BY DESIGN** — the race changed |
+| client-suite (3 of 4 694) | the golden parity pins |
+| script-suite | `check-golden-races` — a finishing time moved −1.664 s |
+| **check-runin-frame** | ★ **a real defect — see below** |
+
+**The new world fingerprint is `815b36cd5a9149ce`** (was `bdf4a3c8ce6e0316`). Per-track values are in
+commit `1997498a`. ★ **Nothing is minted and nothing is merged — you look first.**
+
+---
+
+## ★ THE ONE THING I STOPPED ON
+
+**The camera loses the finish line**, and tonight's change made it worse:
+
+| | check-runin-frame |
+|---|---|
+| master | **PASS** |
+| `983d9201` (the comebacker is held and released) | 1 failure — luger-hill at 100 |
+| now | ★ **2 failures** — and garden-path at 40 is the new one |
+
+Both are the same mechanism: at progress 0.950 in a leader shot, `_lineCeiling` returns **Infinity
+when the line cannot be framed at all**, and an infinite ceiling never binds — so the shot zooms to
+its own preference and the line leaves the canvas. **The guard's own ceiling goes quiet in exactly
+the case it exists to catch.**
+
+★ **I did not fix it.** The fix changes how the camera behaves on every track and every race, and you
+judge the picture.
 
 ---
 
-## THE SMALL THINGS, DONE
+## THE FAIRNESS TABLE IS A 40-RACER TABLE (report only, nothing changed)
 
-**The overrun banner is gone, and it was wrong the way you suspected.** It compared **wall-clock**
-time against a threshold derived from **race** duration, and the physics accumulator advances at most
-50 ms per frame — so a backgrounded tab throttled to about one frame a second advances the race 50 ms
-per second of wall clock. **A 60 s race would trip the 600 s banner with about 30 s raced.** It fired
-in exactly the case you have ruled correct behaviour. Removed, with the reason written where the
-number lives. ★ *Not built, your call:* the same warning reading the RACE clock would stay silent for
-a throttled tab and still catch a genuinely stuck race.
+★ **The premise did not reproduce** — band-reach at a hundred racers is **88.9%, nineteen points
+above your gate**, not 70.5%. ★ **But the worry was right and it lives in a different number.**
+`BAND_EDGES` exhausts the field at exactly forty, so above that B5 becomes an unbounded catch-all:
 
-**`/api/health` names the commit in development again.** It said `unknown` while the badge in the
-same browser named a real one. The dev launcher now reads the identity from **the same git reader the
-badge uses** — no second copy — and the dev-start skill uses `npm run dev:once` so it goes through
-that launcher.
+> **At a hundred racers, three fifths of your field is drawn into one band that is 97% easy, and the
+> four bands that mean anything deliver 76%.** The 88.9% headline is an average with a free band in
+> it.
+
+★ Bands that SCALE with the field **do** recover it (82.1% against 76.4%), and at forty racers the
+scaled table reproduces the shipped one exactly — the control that says the scaling is honest.
+
+★ **AND TODAY'S WORLD ALREADY FAILS THE GATE'S OTHER CLAUSE.** "Zero Holm-unfair start rows, every
+track" is not met above forty racers: **seven of ten tracks at a hundred**. That is the shipped game,
+not the new arm.
 
 ---
+
+## THE SMALL ONES, DONE
+
+- **The overrun banner is gone.** It compared WALL time against a RACE-duration threshold; a
+  throttled background tab advances the race 50 ms per wall second, so a 60 s race tripped the 600 s
+  banner with ~30 s raced — exactly the case you ruled correct. ★ *Your call, not built:* the same
+  warning on the RACE clock would stay quiet for a throttled tab and still catch a stuck race.
+- **`/api/health` names the commit in development again**, from the same git reader the badge uses.
+- **`check-image-starts` is NOT wired into CI** — 4.1–4.75 min against a 3.8 min median whole run.
+- **Three camera instruments are blind to the cast by construction** and now say so in their own
+  headers, so nobody reads a green from them as a clearance.
 
 ## FOR YOUR DECISION (named, not built)
 
-1. Whether the taper should be expressed in **time** rather than ranks. One second is a flat 2 ranks
-   at every field size, but four seconds is 3–6 ranks depending on it, so no single rank number is
-   right everywhere.
-2. Whether the **front-contest release at 0.97** stays where it is: at a hundred racers, **two
-   arrivals in five** happen past it, where no taper can reach them.
-3. Whether the twenty-racer block cost above is acceptable.
+1. **The seven points of band-reach at twenty racers** — spend it, or take the taper alone?
+2. Whether the camera's unframeable-line case should be fixed, knowing it moves every shot.
+3. Whether `docs/FAIRNESS.md` should be restated: its 85–90% headline, and its "zero Holm-unfair"
+   clause which the SHIPPED world already misses above forty racers.
+4. Deployment: what terminates TLS · where the data lives · how often a backup is taken.
 
-## NOTICED AND LEFT ALONE (outside what these pieces touch)
+## NOTICED AND LEFT ALONE
 
-- `.claude/skills/dev-start/SKILL.md` is written in German, against the language rule in `CLAUDE.md`.
-- `sollBereich` — a German identifier — is a field in the sim's `fairness-data.json` raw rows.
-- `camera-replay.mjs` delivers the camera plan through its own inline copy of the four-line rule
-  instead of the shared helper every other instrument uses.
+- `.claude/skills/dev-start/SKILL.md` is in German, against the language rule in `CLAUDE.md`.
+- `sollBereich` — a German identifier — is a field in the sim's raw fairness rows.
+- `camera-replay.mjs` delivers the camera plan through its own inline copy of the shared rule. A swap
+  broke the replay loop and was reverted — named, not fixed.
+- **The end-to-end install walk was not performed** and is not claimed; the ordered list of what an
+  install still needs is in [NIGHT-2026-09-13](../reports/evolution/NIGHT-2026-09-13.md).
 <!-- END CHAIN STATUS -->
