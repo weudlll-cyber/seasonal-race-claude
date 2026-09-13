@@ -6,6 +6,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-14 — [BREAKAWAY-FREQUENCY-1](BREAKAWAY-FREQUENCY-1.md)'s CANVAS-WIDTH COLUMN IS OFF BY THE
+  LAP COUNT.** It records the owner's photographed lead as **0.349 canvas widths**;
+  [BREAKAWAY-HISTORY-1](BREAKAWAY-HISTORY-1.md) re-measured the same race and gets **0.698 — exactly
+  2×**, because that instrument divided the gap by `finishT` (2 laps on city-circuit) once too often.
+  **The rest of that report is not withdrawn and was checked rather than assumed**: its "1.538 % of the
+  race" agrees to three decimals, and the holder (Breeze), the progress (0.837) and the 7th-place
+  finish all reproduce exactly. What moves is **the canvas-width column only**, and every share keyed
+  to the 0.349 threshold. ★ **The size of the error is not one constant**: `finishT` is the LAP COUNT
+  on a closed track (2 on all five) and a fraction below 1 on an open one, so a sweep that pools both
+  scales them differently. **How much that moves the pooled shares was not measured** — the correction
+  here was measured on his own race only, and is stated no wider than that.
+
 - **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
   `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
   and named them the owner's call: `index.js:17` (the startup banner) and `staticClient.js:82` (the
@@ -444,6 +456,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
   all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
   because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [BREAKAWAY-HISTORY-1.md](BREAKAWAY-HISTORY-1.md) — **the race did not get worse; the framing did**
+  (2026-09-14, branch `night/2026-09-14-history`, **MEASUREMENT ONLY**, read-only on his store, nothing
+  merged or minted). ★★ **THE ANSWER: the largest lead the leader ever holds is IDENTICAL at five
+  points of master from 2026-08-04 to 2026-09-12** — 113.2 world px median, 223.5 p90, and **all 30
+  races bit-identical at all five stands**, same winner and duration to the last digit. **Zero changes
+  to the engine-facing defaults across all 34 measurable days.** ★ **Not a blind instrument**: forcing
+  another action stage through the product's own table moves the median to 99.3 (`medium`) and 118.5
+  (`wild`). ★ **The noise floor is ZERO** — master raced twice is bit-identical. ★★ **WHAT MOVED IS THE
+  CAMERA**: the SCREEN p90 steps **1.172 → 1.350 (+15.2%) at `d4bad558`** (ENDGAME-LAND-CLEAN-1,
+  2026-08-22), and a smaller **1.142 → 1.172** at `884d0562` (START-ONE-WINDOW-1). ★★ **ATTRIBUTED TO
+  ONE KEY BY MEASUREMENT: `contentionWatch`** — off, the p90 returns to exactly A's 1.172; `bandFloor`
+  explains none of it and `runInSchedule` about a tenth. ★ **A revert is NOT safe**: the ship gate's
+  item 7 is built on it, and the camera and render fingerprints were minted three weeks after it
+  shipped. ★ **It is his own accepted picture** — `defaults.js:592-595` records the acceptance. ★ The
+  ladder spans **six weeks, not eight**: `7883d453` and `175a4751` are **not measurable** (no
+  `raceCore.js`; a Vite-only `import.meta.env`) and **no old code was patched** to reach them.
+  Harness verified by replaying `QN3HDP` — **40 of 40 finishing positions**.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
