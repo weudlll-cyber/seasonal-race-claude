@@ -42,6 +42,11 @@ const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const { DEFAULT_CONFIG_WORLD } = await import(
   u("client/src/modules/storage/defaults.js")
 );
+// HARNESS-WORLD-1: the ONE home of the Race Action stage, imported rather than re-applied. See
+// `worldForActionStage` below for why importing it is the whole point.
+const { applyRaceActionStage, normalizeRaceActionStage } = await import(
+  u("client/src/modules/raceActionStage.js")
+);
 const { EditorShape } = await import(
   u("client/src/modules/track-editor/EditorShape.js")
 );
@@ -76,6 +81,46 @@ export { RT, DEFAULT_CONFIG_WORLD };
 
 /** The racer-type sentinel meaning "whatever this track declares as its own default". */
 export const TRACK_DEFAULT_RACER = "track-default";
+
+/**
+ * The config world a race started at Race Action stage `stage` actually runs.
+ *
+ * ── THIS IS THE BROWSER'S OWN APPLICATION, NOT A SECOND ONE (HARNESS-WORLD-1) ───────────────────
+ *
+ * The browser applies the stage in exactly one place — `exportRaceConfig.js:buildWorldConfig`, one
+ * line: `raceDynamicsConfig: applyRaceActionStage(loadRaceDynamicsConfig(), stage)`. That function
+ * cannot be called from here: it reaches into `localStorage` through the config loaders, and there is
+ * no localStorage in node. So this reuses the thing UNDER it — `applyRaceActionStage` itself, in
+ * `client/src/modules/raceActionStage.js`, which is the single author of the two keys and carries
+ * the whole decision in its own header.
+ *
+ * ★ WHAT IS REUSED IS THE APPLICATION, AND WHAT DIFFERS IS ONLY WHERE THE BASE COMES FROM: the
+ * browser's base is the host's stored sliders, this one's is whatever world the caller hands in
+ * (the shipped defaults when it hands in nothing). The stage table itself, the normalisation of an
+ * unknown id, and the "the stage wins over the sliders for its two keys" rule are all read from that
+ * module and none of them are restated here. If a fourth stage is ever added, this function needs no
+ * edit — which is the test of whether a reuse is real.
+ *
+ * ★ WHEN NOT TO USE THIS. A race STORED by the browser already carries its stage baked into
+ * `worldConfigs.raceDynamicsConfig` (measured on `QN3HDP`: `pulkChallengerBoost` 0.12,
+ * `pulkLeaderBrake` 0.15, which are `wild`'s values, not the shipped sliders'). Replaying such a
+ * race means handing `buildRace` that stored world DIRECTLY — applying the stage again on top would
+ * be a second application of an idempotent function today and a silent divergence the day the stage
+ * stops being the last word. Use this when you have a STAGE and no world, not when you have a world.
+ *
+ * @param {unknown} stage - any stage id; unrecognised reads as the shipped default, per that module.
+ * @param {object} [base] - the world to apply it to; defaults to the shipped `DEFAULT_CONFIG_WORLD`.
+ * @returns {object} a new world; `base` is never mutated.
+ */
+export function worldForActionStage(stage, base = DEFAULT_CONFIG_WORLD) {
+  return {
+    ...base,
+    raceDynamicsConfig: applyRaceActionStage(base.raceDynamicsConfig, stage),
+  };
+}
+
+/** The stage id a value means, re-exported from its one home so a harness need not import twice. */
+export { normalizeRaceActionStage };
 
 /**
  * The RACE IDENTITY — everything that makes two runs comparable or not.
@@ -265,12 +310,44 @@ function lapsOfClosedTrack(geo) {
 }
 
 /**
- * Build one race + camera for a track under an identity and a camera config.
+ * Build one race + camera for a track under an identity, a camera config, and a CONFIG WORLD.
  *
+ * ── THE WORLD IS A PARAMETER, NOT A CONSTANT (HARNESS-WORLD-1) ──────────────────────────────────
+ *
+ * It was `const W = DEFAULT_CONFIG_WORLD` inside the body, and that one line meant no instrument in
+ * this repository could race any world but the shipped defaults. It is the same defect class as the
+ * lap literal below: a value nobody chose, believed because nothing could express the alternative.
+ * Measured 2026-09-13 (STORED-RACE-PARITY-1): the owner's stored race `QN3HDP` ran the `wild` action
+ * stage, the harness raced the effective `quiet`, and the two agreed on 10 of 40 finishing positions
+ * — same seed, same roster, same track, same build. A harness that cannot be told the world cannot
+ * reproduce a race the owner watched, and every number it takes describes a world he does not race.
+ *
+ * ★ THE DEFAULT IS UNCHANGED AND THAT IS DELIBERATE. `DEFAULT_CONFIG_WORLD` is what a caller that
+ * says nothing gets, so every existing call site races exactly the race it raced before — which the
+ * four fingerprints are the proof of, not the argument for.
+ *
+ * The world is the flat `{raceDynamicsConfig, raceBehaviorConfig, rowLayoutConfig, baseSpeedConfig,
+ * autoScaleConfig, ...}` map of `WORLD_CONFIG_KEYS` — the SAME shape the browser exports, the sim's
+ * `--config` honours, and a stored race carries in `worldConfigs`. So a stored race's own world can
+ * be handed here whole, with no field-by-field translation to get wrong.
+ *
+ * ★ `frameTimingConfig` AND `cameraConfig` ARE NOT READ HERE. The frame clock is `runRace`'s own
+ * fixed 60 Hz loop and the camera config arrives as its own parameter — so a world's copies of those
+ * two keys are ACCEPTED AND IGNORED rather than silently half-honoured. Named so a later reader does
+ * not conclude from a passing replay that this driver honours all seven.
+ *
+ * ★ KNOWN AND DELIBERATELY NOT FIXED HERE: `raceHash` hashes the identity and the CAMERA config, so
+ * two arms that differ only in their WORLD stamp the same hash and the identity line cannot tell
+ * them apart. Widening the hash would move the printed `race=` of every instrument in the tree, which
+ * is a change to what those lines mean and belongs to a piece of its own. Until then, a harness that
+ * runs two worlds must say so in its own output — `diag/replay-stored-race.mjs` prints its world.
+ *
+ * @param {object} [configWorld] - defaults to `DEFAULT_CONFIG_WORLD`; see `worldForActionStage`
+ *   when what you have is a stage rather than a world.
  * @returns everything a harness needs to drive and interpret the run, including `trackWidthPx`,
  *   the resolved racer type, and the drawn-body reference the camera was constructed with.
  */
-export function buildRace(geo, identity, cameraConfig) {
+export function buildRace(geo, identity, cameraConfig, configWorld = DEFAULT_CONFIG_WORLD) {
   // ★ STAMP THE RACE HASH AS THE CONFIG PASSES THROUGH. This is the ONE funnel every harness's
   // camera config goes through, so stamping here gives every instrument the hash with no edit at its
   // own call site — and, more importantly, no hand-maintained list of "instruments that print it"
@@ -286,7 +363,7 @@ export function buildRace(geo, identity, cameraConfig) {
   stampRaceHash(identity, cameraConfig);
   const shape = new EditorShape(geo);
   const trackWidthPx = geo.width ?? shape.getActualTrackWidth();
-  const W = DEFAULT_CONFIG_WORLD;
+  const W = configWorld ?? DEFAULT_CONFIG_WORLD;
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
   const racerTypeId =
     identity.racerType === TRACK_DEFAULT_RACER

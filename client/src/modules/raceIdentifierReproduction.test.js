@@ -10,7 +10,7 @@
 // Nothing here is judged by eye, and no new measure is invented for the occasion. Two existing
 // instruments are used, and neither is trusted past what it says about itself:
 //
-//   1. `raceHash(identity, cameraConfig)` — `scripts/lib/raceDriver.mjs:161`. This project's own
+//   1. `raceHash(identity, cameraConfig)` — `scripts/lib/raceDriver.mjs:207`. This project's own
 //      answer to "did these two numbers come from the same race?". Its header states what it covers:
 //      every field of the identity INCLUDING THE ROSTER'S ACTUAL NAMES — because `stablePairBit`
 //      hashes `r.name`, so two fields of forty different names are two different races — and the
