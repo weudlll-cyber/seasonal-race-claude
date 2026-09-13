@@ -4,8 +4,8 @@
 // ★ WHAT IT OWNS: the sweep that answers "which taper distance works" for variant E, the arrival
 //   shape the owner described on 2026-09-13. It fans `sim-fairness.mjs --arrival-shape` out over
 //   {variants} x {ten tracks, each at ITS OWN defaultRacerTypeId} x {field sizes}, then aggregates
-//   the per-comebacker rows into the two columns the decision rests on — did he land in his block,
-//   and did the peak gap shrink — plus the mechanical test (his pace the moment he arrived).
+//   the per-comebacker rows into the two columns that matter — did he land in his block, and how
+//   big was the peak gap — plus the mechanical test (his pace the moment he reached his place).
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO. It does not decide anything: it prints the table and leaves
 //   the variant selection to the report. It does not run the FAIRNESS gates (Holm / band-reach) —
@@ -17,7 +17,7 @@
 // Resumable: a job whose arrival-shape.json already exists is skipped, so an interrupted run
 // continues where it stopped. `--force` re-runs everything.
 //
-// Usage: node scripts/exp-arrival-shape.mjs [--variants=A,E0,E1,E2] [--races=20]
+// Usage: node scripts/exp-arrival-shape.mjs [--races=20]
 //                                           [--racers=20,40,60,100] [--jobs=12] [--force]
 // ============================================================
 import { readFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from "../client/src/modules/storage/defaults.js";
+import { ARRIVAL_TAPER_START_RANKS } from "../client/src/modules/racePlanner.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -33,7 +34,10 @@ const argVal = (k, d) => {
   const p = argv.find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
 };
-const VARIANTS = argVal("variants", "A,E0,E1,E2").split(",");
+// ONE shape. The `--variants` dimension this runner was built around is gone: the arrival variants
+// were measured (ARRIVAL-SHAPE-E-1) and then deleted, so there is nothing to select between and the
+// single label below is a directory name, not an arm.
+const VARIANTS = ["shipped"];
 const RACES = Number(argVal("races", "20"));
 const FIELDS = argVal("racers", "20,40,60,100").split(",").map(Number);
 const JOBS = Number(argVal("jobs", "12"));
@@ -92,7 +96,7 @@ function runOne(j) {
       ],
       {
         cwd: ROOT,
-        env: { ...process.env, RA_ARRIVAL_VARIANT: j.v },
+        env: { ...process.env },
         stdio: ["ignore", "ignore", "pipe"],
       },
     );
@@ -136,12 +140,8 @@ const BLOCK = 5; // the top-5 block — BAND_EDGES[0], and the owner's "his bloc
 // [held release, this]. Read from the one home, never a literal.
 const FRONT_RELEASE = DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress;
 
-/** The taper distance a variant name selects: `E4` -> 4, bare `E` -> 2, anything else -> 0. */
-function taperRanksOf(v) {
-  if (!v.startsWith("E")) return 0;
-  const d = Number.parseInt(v.slice(1), 10);
-  return Number.isFinite(d) && d >= 0 ? d : 2;
-}
+/** The shipped taper distance, read from its one home rather than parsed out of a label. */
+const taperRanksOf = () => ARRIVAL_TAPER_START_RANKS;
 
 /**
  * How many ranks he covered in the LAST SECOND before reaching his drawn place - i.e. how far ahead

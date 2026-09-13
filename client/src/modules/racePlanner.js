@@ -410,75 +410,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 // ── createTrajectoryController ────────────────────────────────────────────────
 
 /**
- * ── ★ ARRIVAL-VARIANTS-1 — WHAT A HELD COMEBACKER DOES ONCE HE GETS THERE ───────────────────────
- *
- * ★ A MEASUREMENT SCAFFOLD, NOT A FEATURE. The owner asked for the best arrival to be FOUND, not
- * chosen for him, so the alternatives live behind one switch and are measured on the same races.
- * ★ THE DEFAULT IS `A`, WHICH IS TODAY'S SHIPPED BEHAVIOUR — with the variable unset nothing about
- * the race changes, and that is asserted by the world fingerprint in the report.
- *
- *   A  TODAY. After the release his target is his drawn rank for the rest of the race. Being AHEAD
- *      of that rank is a negative error, so the servo BRAKES him for leading — measured at a median
- *      0.977 while in front, below 1.0 in 71% of frames.
- *   B  HIS PROPOSAL — FREE ON ARRIVAL. The first time he reaches his drawn place he stops being
- *      steered at all: the target multiplier becomes 1.0, neither braked nor pushed, an ordinary
- *      racer from then on. It goes through `_setTarget`, so it is slew-smoothed rather than snapped.
- *   C  FREE ON ARRIVAL, AND STOP PUSHING AS HE CLOSES. As B, plus the drive is tapered over the last
- *      ranks of the approach so he is not still on the `maxMult` ceiling when he crosses — measured,
- *      at twenty racers the servo commands the full 1.100 one rank out. B alone leaves that
- *      untouched, so he arrives fast and coasts; C arrives already at pace.
- *   D  AS C, PLUS A RUNAWAY GUARD. Built only because the owner's one stated fault is "never break
- *      away too far", and B and C both remove every brake once he is free — nothing else in the
- *      variant set can answer a gap that keeps growing. It re-engages ordinary steering toward his
- *      drawn rank ONLY while he is more than `RUNAWAY_LEAD_RANKS` clear of it, so it cannot pin him
- *      to an exact place: at one or two ranks ahead he stays free, which the owner's fairness
- *      correction says is fair.
- *   E  ★ THE OWNER'S OWN SHAPE, described 2026-09-13, selected as `E2` / `E1` / `E0` (the digit is
- *      how many ranks before his drawn place the drive begins to ease off; plain `E` means `E2`).
- *      Three parts, each a property of the shape:
- *        (a) THE TAPER. `approachDrive` scales the drive down over the last `D` ranks of the
- *            approach and reaches EXACTLY ZERO one rank short of his place (D ≥ 2), so the
- *            commanded multiplier is 1.0 BEFORE he arrives rather than at the moment he arrives.
- *            That last clause is the whole difference from C — see `approachDrive` for why C does
- *            not have it.
- *        (b) FREE. Once he has arrived he is UNSTEERED: no brake for leading, no push.
- *        (c) THE NET IS BAND STEERING, WHICH ALREADY EXISTS — see the `heldFree` block in the servo.
- *            Nothing new is built for it.
- *
- * ★ NEITHER CLAMP NUMBER, THE GAIN NOR THE EASE DURATION IS TOUCHED BY ANY VARIANT, and no other
- * role is reached: every branch is inside the `heldFree` test.
- */
-export const ARRIVAL_VARIANT = (() => {
-  // ONE HOME, TWO DOORS, because the two arms that have to run it are different processes: the
-  // sweeps are node and read an env var, and the OWNER watches in a browser, which has neither an
-  // env nor a rebuild. A localStorage key lets him switch variant between races without a build.
-  // ★ THE DEFAULT IS 'A' — today's shipped behaviour — so an unset key and an unset env var both
-  // leave the race exactly as it was, which the world fingerprint asserts.
-  try {
-    const v = globalThis.localStorage?.getItem('racearena:arrivalVariant');
-    if (v) return String(v).toUpperCase();
-  } catch {
-    /* storage unavailable (node, a private window, a blocked store) — fall through to the env */
-  }
-  return (globalThis.process?.env?.RA_ARRIVAL_VARIANT || 'A').toUpperCase();
-})();
-
-/** C and D: how many ranks of the approach the drive is tapered over. */
-export const ARRIVAL_TAPER_RANKS = 5;
-/** D only: how far clear of his drawn rank he may get before ordinary steering resumes. */
-export const RUNAWAY_LEAD_RANKS = 2;
-
-/**
- * The drive taper used by C and D. Scales a POSITIVE error by the fraction of the taper span still
- * remaining, so the push falls off the ceiling before he arrives. A braking error and a racer still
- * far out are both returned untouched, and the factor is in [0,1] so the drive is never reversed.
- */
-export function arrivalTaper(rankError, spanRanks) {
-  if (!(rankError > 0) || !(spanRanks > 0) || rankError >= spanRanks) return rankError;
-  return rankError * (rankError / spanRanks);
-}
-
-/**
  * -- THE SERVO RESPONSE (SERVO-RANKS-1, 2026-09-13) -------------------------------------------
  *
  * THE PARAGRAPH A READER CAN CHECK. The shipped response is `1 + gain * (error / nActive)`,
@@ -526,67 +457,70 @@ export function arrivalTaper(rankError, spanRanks) {
  * deliberately NOT touched: it is a different steering in a different phase, and changing it would
  * move the opening of every race for reasons that have nothing to do with arriving at a place.
  */
-export const SERVO_RESPONSE = (() => {
-  // ONE HOME, TWO DOORS -- the same mechanism the arrival variants use, for the same reason: the
-  // sweeps are node and read an env var, the OWNER watches in a browser, which has neither an env
-  // nor a rebuild. THE DEFAULT IS `field`, today's response, so an unset key and an unset env var
-  // both leave the race exactly as it was, which the world fingerprint asserts.
-  try {
-    const v = globalThis.localStorage?.getItem('racearena:servoResponse');
-    if (v) return String(v).toLowerCase();
-  } catch {
-    /* storage unavailable (node, a private window, a blocked store) -- fall through to the env */
-  }
-  return (globalThis.process?.env?.RA_SERVO_RESPONSE || 'field').toLowerCase();
-})();
 
 /**
- * The commanded drive, BEFORE the clamp and before the noise. `field` is the shipped response;
- * `ranks` is the one described above. Exported so a test can hold the arithmetic outright.
+ * -- THE ARRIVAL, AND IT IS NOW THE ONLY ONE ---------------------------------------------------
+ *
+ * What a HELD comebacker does once he closes on his drawn place. The owner described this shape on
+ * 2026-09-13 and it is what the race does. The four measurement variants it was chosen against
+ * (A today, B free-on-arrival, C B-plus-taper, D C-plus-runaway-guard) and the five taper distances
+ * are GONE -- measured, then deleted, because a switchable set of experiments is not a product. The
+ * evidence is ARRIVAL-SHAPE-E-1 and SERVO-RANKS-1.
+ *
+ *   (a) THE TAPER. Over the last `ARRIVAL_TAPER_START_RANKS` ranks of his approach the drive eases
+ *       off, reaching exactly zero one rank short of his place, so the pace he carries ACROSS his
+ *       place is 1.0 and not the ceiling. `approachDrive` below says why that is not simply
+ *       "scale the error down".
+ *   (b) FREE. Once he has arrived he is UNSTEERED: no brake for leading, no push.
+ *   (c) THE NET IS BAND STEERING, WHICH ALREADY EXISTED -- see the `heldFree` block in the servo.
+ *       Nothing new was built for it.
+ *
+ * -- NEITHER CLAMP NUMBER NOR THE EASE DURATION IS TOUCHED, and no other role is reached: every
+ * branch is inside the `heldFree` test.
+ */
+
+/**
+ * How many ranks before his drawn place the drive begins to ease off. FOUR, measured: at two ranks
+ * the taper gets a median of 864 ms and he still arrives at 1.070; at four it gets 2 480 ms and the
+ * race reaches 1.019. Four seconds of taper arrives at pace and half a second arrives at the
+ * ceiling, and four ranks is about where four seconds lives at the field sizes he races -- 3 ranks
+ * at N=20, 4 at N=40, 6 at N=60, 5 at N=100 (ARRIVAL-SHAPE-E-1).
+ */
+export const ARRIVAL_TAPER_START_RANKS = 4;
+
+/**
+ * The commanded drive, BEFORE the clamp and before the noise. Exported so a test can hold the
+ * arithmetic outright rather than infer it from a race. See the SERVO RESPONSE paragraph above
+ * `servoDrive`'s caller for why the error is counted in ranks.
  */
 export function servoDrive(error, nActive, gain, maxMult) {
-  if (SERVO_RESPONSE !== 'ranks') return gain * (error / nActive);
   return ((maxMult - 1) * error) / BAND_EDGES[0];
 }
 
-/** E only: true when the variant string selects the owner's shape (`E`, `E0`, `E1`, `E2`, …). */
-export const ARRIVAL_IS_E = ARRIVAL_VARIANT.startsWith('E');
 /**
- * E only: how many ranks before his drawn place the drive begins to ease off. Read from the variant
- * string's digit so ONE key selects the whole arm — `E2` (the owner's first choice), `E1` and `E0`
- * are his own fallback order, and a bare `E` means `E2`.
- */
-export const ARRIVAL_TAPER_START_RANKS = ARRIVAL_IS_E
-  ? (() => {
-      const d = Number.parseInt(ARRIVAL_VARIANT.slice(1), 10);
-      return Number.isFinite(d) && d >= 0 ? d : 2;
-    })()
-  : 2;
-
-/**
- * ── ★ THE TAPER (E part a) — WHY IT IS NOT `arrivalTaper` ────────────────────────────────────────
+ * -- THE TAPER: WHY IT IS NOT SIMPLY "SCALE THE ERROR DOWN" ------------------------------------
  *
  * Returns the fraction of the drive still commanded at `rankError` ranks short of the drawn place,
  * for a taper that begins `startRanks` out. The servo multiplies the POSITIVE error by it, so 1
- * means "full drive, untouched" and 0 means "no drive at all — exactly 1.0, natural speed".
+ * means "full drive, untouched" and 0 means "no drive at all -- exactly 1.0, natural speed".
  *
- * ★ IT REACHES ZERO BEFORE HE ARRIVES, WHICH IS THE POINT. `rankError` is an INTEGER rank gap: it
- * steps 2 → 1 → 0, and 0 means he is already there. C's `arrivalTaper` scales by `e/span`, so it is
- * zero only AT `e == 0` — at `e == 1`, one rank short, it still commands 1.02 at twenty racers, and
- * `_setTarget` slews, so the multiplier he actually carries across his place is still above 1.0.
- * This taper is zero from `e == 1` down (for startRanks ≥ 2), so the drive has been off for a whole
- * rank of racing before the rank flips — the owner's "is AT 1.0 before he arrives", literally.
+ * -- IT REACHES ZERO BEFORE HE ARRIVES, WHICH IS THE POINT. `rankError` is an INTEGER rank gap: it
+ * steps 2 -> 1 -> 0, and 0 means he is already there. The obvious taper -- scaling the error by
+ * `e/span` -- is zero only AT `e == 0`, so one rank short it still commands 1.02 at twenty racers,
+ * and `_setTarget` slews, so the multiplier he actually carries across his place is still above
+ * 1.0. That version was built and measured (variant C, ARRIVAL-SHAPE-E-1) and it is why this one
+ * is shaped differently. This taper is zero from `e == 1` down, so the drive has been off for a
+ * whole rank of racing before the rank flips -- "at 1.0 BEFORE he arrives", literally.
  *
- * The ease is `smoothstep` (3u²−2u³), not a step and not a straight line: the drive leaves full
+ * The ease is `smoothstep` (3u^2 - 2u^3), not a step and not a straight line: the drive leaves full
  * power and reaches zero with zero slope at both ends, so nothing in the trace is a corner.
  *
- * His own fallback order falls out of the one parameter, which is why there is no second knob:
- *   startRanks 2 — eases across e ∈ [1,2]; zero for the last rank. His first choice.
- *   startRanks 1 — eases across e ∈ [0,1]; zero only at arrival. "If that is too early."
- *   startRanks 0 — no taper at all; full drive until he arrives, then free. "Start it when he
- *                  reaches his place." (Identical to B by construction — nothing is built twice.)
+ * `startRanks` is a parameter rather than a literal because the distance was SWEPT -- 2, 3, 4 and 5
+ * ranks over 2 000 races -- and the sweep is what chose `ARRIVAL_TAPER_START_RANKS`. It still
+ * degrades sensibly either side: 0 means no taper at all, and 1 means the drive reaches zero only
+ * at arrival.
  *
- * It deliberately does NOT touch a braking error (he is past his place — that is (b)'s business,
+ * It deliberately does NOT touch a braking error (he is past his place -- that is (b)'s business,
  * not the taper's) and never returns outside [0,1], so the drive is never reversed or amplified.
  */
 export function approachDrive(rankError, startRanks) {
@@ -705,7 +639,7 @@ export function createTrajectoryController(racePlan) {
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
   let _attackerFreeEvents = 0;
   // ── ★ E (ARRIVAL-VARIANTS-1, the owner's shape) telemetry. All zero for every other variant,
-  // because every increment sits behind `heldFree && ARRIVAL_IS_E`. `_eArrivalMults` holds one entry
+  // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
   // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
   // — the direct test of whether the taper finished before he got there (it should read 1.0).
   let _eTaperFrames = 0; // frames the taper reduced the drive at all
@@ -1104,40 +1038,21 @@ export function createTrajectoryController(racePlan) {
         : isHero && !heldFree
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
-      // ── ★ ARRIVAL-VARIANTS-1 — see the block above createTrajectoryController ─────────────────
-      // Everything here is inside `heldFree`, so no other role is reached, and variant A leaves the
-      // two lines below exactly as they were.
-      // ── ★ E — THE OWNER'S SHAPE, 2026-09-13. Parts (a) and (b) here, (c) below with `bandError` ──
-      // (b) FREE means UNSTEERED, and under E that is expressed as band steering rather than as a
-      // hard 1.0: inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the
-      // block's edge the SAME expression is already the net. One mechanism, two jobs.
-      let eFreeOnBand = false;
-      if (heldFree && ARRIVAL_IS_E) {
+      // ── ★ THE ARRIVAL — see the block above createTrajectoryController ────────────────────────
+      // Everything here is inside `heldFree`, so no other role is reached.
+      // (b) FREE means UNSTEERED, and it is expressed as band steering rather than as a hard 1.0:
+      // inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the block's edge
+      // the SAME expression is already the net. One mechanism, two jobs.
+      let arrived = false;
+      if (heldFree) {
         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
         if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
-        eFreeOnBand = _arrivedAtDrawn.has(r.index);
-      } else if (heldFree && ARRIVAL_VARIANT !== 'A') {
-        const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
-        if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
-        if (_arrivedAtDrawn.has(r.index)) {
-          const clear = drawnPlace - currentRank; // ranks BETTER than his drawn place
-          const runaway = ARRIVAL_VARIANT === 'D' && clear > RUNAWAY_LEAD_RANKS;
-          if (!runaway) {
-            // FREE: neither braked nor pushed. Slew-smoothed by _setTarget like any other target.
-            _setTarget(r, 1.0, elapsedMs);
-            _racerStepCount++;
-            continue;
-          }
-          // D only: he is further clear than the guard allows, so ordinary steering resumes.
-        }
+        arrived = _arrivedAtDrawn.has(r.index);
       }
       // positive rankError = racer currently ranked worse than target → boost
       let rankError = currentRank - targetRank;
-      if (heldFree && (ARRIVAL_VARIANT === 'C' || ARRIVAL_VARIANT === 'D')) {
-        rankError = arrivalTaper(rankError, ARRIVAL_TAPER_RANKS);
-      }
       // (a) THE TAPER — only on the APPROACH (he has not arrived yet) and only on a DRIVE error.
-      if (eFreeOnBand === false && heldFree && ARRIVAL_IS_E && rankError > 0) {
+      if (!arrived && heldFree && rankError > 0) {
         const f = approachDrive(rankError, ARRIVAL_TAPER_START_RANKS);
         if (f < 1) {
           _eTaperFrames++;
@@ -1234,7 +1149,7 @@ export function createTrajectoryController(racePlan) {
       // drawn place is in B1, so `getAreaBounds` gives [1, 5] and the `currentRank < areaLo` arm
       // needs a rank better than 1. A racer drawn 2nd who is leading the race has bandError 0 and is
       // not touched — the owner's fairness correction, enforced by the shape of the expression.
-      if (eFreeOnBand) {
+      if (arrived) {
         strictness = 0;
         _eFreeFrames++;
         if (bandError !== 0) _eNetFrames++;

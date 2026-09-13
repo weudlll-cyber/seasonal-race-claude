@@ -5660,9 +5660,6 @@ if (isMain) {
             racer: RACER_FILTER,
             races: N_RACES,
             seed: GLOBAL_SEED,
-            // The arm this run measured. Read from the env the controller itself reads, so the file
-            // can never claim an arm the race did not run.
-            arrivalVariant: (process.env.RA_ARRIVAL_VARIANT || "A").toUpperCase(),
           },
           races: arrivalShapeRaces,
         },

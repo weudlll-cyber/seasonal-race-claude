@@ -6,17 +6,17 @@
 // starts, the pace he carries when he reaches his drawn place, whether he pulls away afterwards, and
 // whether he holds his block.
 //
-// ★ WHY IT IS A BROWSER TEST. Both halves are chosen in node by env vars; the owner watches in a
-// browser, which has neither an env nor a rebuild. `racearena:arrivalVariant` and
-// `racearena:servoResponse` are the doors he will actually use, and a door nobody has opened is a
-// door nobody knows works. The shipping candidate is BOTH together, so both are set here.
+// ★ WHY IT IS A BROWSER TEST. The shape and the servo response were selected by keys while they
+// were being measured; they are now simply what the race does, so this opens no door — it checks
+// that the shipped behaviour is what a person actually sees in real Chromium, which no node
+// harness can answer.
 //
 // ★ WHAT IT ASSERTS is only what ONE race can carry: the variant is live, he is released and climbs,
 // and he is not braked for leading once he is inside his block. The four numbers the decision rests
 // on are printed, not asserted — they are distributions, and a single race is one sample of each.
 //
 // WHAT IT DELIBERATELY DOES NOT ASSERT:
-//   · WHICH distance is best. That is the sweep's question, over ten tracks and four field sizes.
+//   · WHICH distance is best. That was the sweep's question and it is answered and shipped.
 //   · That he arrives at exactly 1.0. Whether any rank distance can deliver that is the measured
 //     question; asserting it here would turn an open finding into a false green.
 //   · A finishing place. A racer's NAME is physics here and Quick Test's roster is not the
@@ -25,33 +25,26 @@
 
 import { test, expect } from '@playwright/test';
 import { ensureTrackGeometriesCached } from './appReady.js';
+import { ARRIVAL_TAPER_START_RANKS } from '../src/modules/racePlanner.js';
 
 const TRACK = /Dirt Oval/;
 const SEED = '41003';
-// ★ THE SHIPPING CANDIDATE IS TWO KEYS, NOT ONE, and the browser has to prove BOTH doors work: the
-// servo response is what makes him arrive at pace, the taper is what finishes the job, and measured
-// together they reach 1.019 where the servo alone reaches 1.040. Testing one of them would be
-// testing something nobody is going to run.
-const VARIANT = 'E4';
-const SERVO = 'ranks';
+// The shipped taper distance, imported rather than restated, so this test cannot describe a race
+// the engine is not running.
+const TAPER_RANKS = ARRIVAL_TAPER_START_RANKS;
 
 test('the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block', async ({
   page,
 }) => {
   test.setTimeout(300_000);
 
-  await page.addInitScript(
-    ({ v, servo }) => {
-      try {
-        localStorage.setItem('racearena:holdProbe', '1');
-        localStorage.setItem('racearena:arrivalVariant', v);
-        localStorage.setItem('racearena:servoResponse', servo);
-      } catch {
-        /* a blocked store fails the assertions below, loudly, rather than here */
-      }
-    },
-    { v: VARIANT, servo: SERVO }
-  );
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('racearena:holdProbe', '1');
+    } catch {
+      /* a blocked store fails the assertions below, loudly, rather than here */
+    }
+  });
 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
@@ -78,7 +71,7 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
   expect(after.length, 'no samples after the release').toBeGreaterThan(5);
 
   // ── What a person would see, in the order they would see it ────────────────────────────────
-  const taperDist = Number(VARIANT.slice(1));
+  const taperDist = TAPER_RANKS;
   // The frame he first comes within the taper distance of his place — where the drive begins to ease.
   const taperStart = after.find((s) => s.rank <= drawn + taperDist && s.rank > drawn);
   // The frame he first reaches his drawn place, and the pace he is carrying when he does.
@@ -92,7 +85,7 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
   const worst = afterArrival.length ? Math.max(...afterArrival.map((s) => s.rank)) : null;
 
   console.log(
-    `[arrival-shape ${VARIANT} + servo ${SERVO}] racer ${idx}, drawn ${drawn}:\n` +
+    `[arrival-shape] racer ${idx}, drawn ${drawn}:\n` +
       `  rank when he is handed back: ${atRelease}\n` +
       `  rank when the taper starts:  ${taperStart ? taperStart.rank : 'never — he was already inside the taper span or arrived past the front release'}\n` +
       `  pace when he reaches his place: ${arrival?.m != null ? arrival.m.toFixed(4) : 'he never reached it'}` +

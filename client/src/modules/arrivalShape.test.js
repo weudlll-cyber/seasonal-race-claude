@@ -2,8 +2,8 @@
 // File:        client/src/modules/arrivalShape.test.js
 // Project:     RaceArena
 //
-// ★ WHAT THIS FILE OWNS: variant E of ARRIVAL-VARIANTS-1 — the arrival shape the owner described on
-//   2026-09-13 — and nothing else. Three properties, one per part of the shape:
+// ★ WHAT THIS FILE OWNS: THE arrival shape — the one the owner described on 2026-09-13, and since
+//   SERVO-RANKS-1 the only one in the tree. Three properties, one per part of the shape:
 //     (a) the taper reaches natural speed BEFORE he arrives, which is the whole difference from C;
 //     (b) once he has arrived he is neither pushed nor braked inside his block;
 //     (c) the net is band steering, it corrects him only OUTSIDE the block, and it NEVER fires while
@@ -11,13 +11,14 @@
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO. It does not measure whether the shape is GOOD — which distance
 //   works, what the peak gap becomes, whether he still lands in his block — those are population
-//   questions and they belong to the sweep, not to a unit test. It does not test variants A–D beyond
-//   the two comparisons that define E against them. It does not touch the gate, fairness, or the
-//   camera, and it does not assert anything about casting: the servo's arithmetic is the subject.
+//   questions and they belong to the sweep, not to a unit test. It no longer compares against the
+//   measurement variants A–D or the other taper distances — they were measured and deleted, and
+//   those numbers live in ARRIVAL-SHAPE-E-1. It does not touch the gate, fairness, or the camera,
+//   and it does not assert anything about casting: the servo's arithmetic is the subject.
 // ============================================================
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { approachDrive, arrivalTaper, ARRIVAL_TAPER_RANKS } from './racePlanner.js';
+import { approachDrive, ARRIVAL_TAPER_START_RANKS } from './racePlanner.js';
 
 // ── (a) THE TAPER ─────────────────────────────────────────────────────────────
 // `approachDrive(rankError, startRanks)` → the fraction of the drive still commanded.
@@ -37,9 +38,13 @@ describe('approachDrive — the taper reaches natural speed before he arrives', 
     expect(approachDrive(0, 2)).toBe(0);
   });
 
-  it('★ is what C is not: one rank out, C still commands drive and E commands none', () => {
-    expect(arrivalTaper(1, ARRIVAL_TAPER_RANKS)).toBeGreaterThan(0); // C: 1 × (1/5) = 0.2
-    expect(approachDrive(1, 2)).toBe(0); // E: nothing left to command
+  it('★ the shipped distance is the one the sweep chose, and it eases over its whole span', () => {
+    // The distance is not a free parameter any more: 2 000 races chose it. Pinned so a later edit
+    // to the constant is a deliberate act with a number to beat, not a quiet drift.
+    expect(ARRIVAL_TAPER_START_RANKS).toBe(4);
+    // full drive at the span's edge, no drive one rank short — the span, end to end
+    expect(approachDrive(ARRIVAL_TAPER_START_RANKS, ARRIVAL_TAPER_START_RANKS)).toBe(1);
+    expect(approachDrive(1, ARRIVAL_TAPER_START_RANKS)).toBe(0);
   });
 
   it('eases — neither a step nor a straight line — and never leaves [0,1]', () => {
@@ -98,7 +103,7 @@ const HERO = 0; // the staged comebacker
 const DRAWN = 2; // his drawn place: 2nd, inside the top-5 block
 // Past holdReleaseProgress (0.70, where his held curve ends and he is handed back) and before
 // choreoReleaseProgress (0.97, where the front-contest release stops steering the whole B1 cluster).
-// That window is where variant A steers him to his exact drawn rank, so it is where E differs.
+// That window is where a comebacker used to be steered to his exact drawn rank all the way in.
 const AFTER_HELD_RELEASE = 0.8;
 
 /** Builds the field with the hero placed at `heroRank`; t descending = rank ascending. */
@@ -126,10 +131,9 @@ function fieldWithHeroAt(heroRank, n = N_SMALL) {
   return racers;
 }
 
-/** A controller whose hero is a released HELD comebacker drawn at `DRAWN`, under `variant`. */
-async function heldComebackController(variant, n = N_SMALL) {
-  vi.resetModules();
-  vi.stubEnv('RA_ARRIVAL_VARIANT', variant);
+/** A controller whose hero is a released HELD comebacker drawn at `DRAWN`. */
+async function heldComebackController(n = N_SMALL) {
+  // There is ONE arrival shape now, so nothing is selected — the module is imported as any other.
   const mod = await import('./racePlanner.js');
   const plan = mod.createRacePlan(fieldWithHeroAt(5, n), FINISH_T, TARGET_DUR_MS, {}, 42);
   plan._choreoGenerated = true; // the casting already happened — do not regenerate
@@ -145,14 +149,14 @@ function commanded(racers) {
   return racers[HERO].trajectoryMultTarget;
 }
 
-describe('variant E in the servo', () => {
+describe('the arrival shape in the servo', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
 
   it('★ (b) arrived and leading, he is not braked — drawn 2nd, winning, left alone', async () => {
-    const { ctrl } = await heldComebackController('E2');
+    const { ctrl } = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN); // one frame at his place latches the arrival
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     racers = fieldWithHeroAt(1); // now he takes the lead. The owner: that is FAIR.
@@ -160,15 +164,8 @@ describe('variant E in the servo', () => {
     expect(commanded(racers)).toBe(1.0);
   });
 
-  it('★ (b) variant A brakes him in exactly that situation — the thing E removes', async () => {
-    const { ctrl } = await heldComebackController('A');
-    const racers = fieldWithHeroAt(1);
-    ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBeLessThan(1.0);
-  });
-
   it('★ (c) the net does nothing anywhere inside his block', async () => {
-    const { ctrl } = await heldComebackController('E2');
+    const { ctrl } = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN);
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     for (const rank of [1, 2, 3, 4, 5]) {
@@ -179,7 +176,7 @@ describe('variant E in the servo', () => {
   });
 
   it('★ (c) it catches him once he falls OUT of his block, and lets go again by itself', async () => {
-    const { ctrl } = await heldComebackController('E2');
+    const { ctrl } = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN);
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     racers = fieldWithHeroAt(9); // past the B1 edge of 5 → pushed forward
@@ -195,7 +192,7 @@ describe('variant E in the servo', () => {
     // error of 4 (9 − the edge at 5). That distinction IS "unsteered inside the block".
     // A HUNDRED racers, deliberately: at twenty, both errors saturate `maxMult` and the two rules
     // are indistinguishable at the output — the clamp would hide exactly what is under test.
-    const { mod, ctrl } = await heldComebackController('E2', N_LARGE);
+    const { mod, ctrl } = await heldComebackController(N_LARGE);
     let racers = fieldWithHeroAt(DRAWN, N_LARGE);
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     racers = fieldWithHeroAt(9, N_LARGE);
@@ -207,40 +204,30 @@ describe('variant E in the servo', () => {
   });
 
   it('★ (a) he is at natural speed by the time he reaches his place', async () => {
-    const { ctrl } = await heldComebackController('E2');
+    const { ctrl } = await heldComebackController();
     const racers = fieldWithHeroAt(DRAWN + 1); // one rank short, still closing
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     expect(commanded(racers)).toBe(1.0);
   });
 
   it('★ (a) two ranks out he is still driving — it is a taper, not an off-switch', async () => {
-    const { ctrl } = await heldComebackController('E2');
+    const { ctrl } = await heldComebackController();
     const racers = fieldWithHeroAt(DRAWN + 2);
     ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     expect(commanded(racers)).toBeGreaterThan(1.0);
-  });
-
-  it('★ (a) variant B is at the CEILING one rank out — the thing the taper removes', async () => {
-    // Twenty racers, which is the field size the ceiling claim was measured at: gain × 1 / 20 = 0.1
-    // is exactly the clamp's headroom, so one rank out saturates it. Compared against the clamp less
-    // the stochastic-noise amplitude, since the servo adds noise after the error.
-    const { mod, ctrl } = await heldComebackController('B', N_SMALL);
-    const racers = fieldWithHeroAt(DRAWN + 1, N_SMALL);
-    ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
-    expect(commanded(racers)).toBeGreaterThan(mod.DEFAULT_CONTROLLER_PARAMS.maxMult - 0.002);
   });
 
   it('★ the observation records WHERE the taper began and the approach it measured', async () => {
     // The report's headline numbers are read off these fields, so they are pinned rather than
     // trusted: the taper-start rank, the approach trail, and the arrival time they are measured
     // against. Without this, a silently-null field would read as "the taper never fired".
-    const { ctrl } = await heldComebackController('E4');
+    const { ctrl } = await heldComebackController();
     // Walk him in from outside the taper span to his place, one rank per frame.
     for (const [i, rank] of [9, 8, 7, 6, 5, 4, 3, 2].entries()) {
       ctrl.update(fieldWithHeroAt(rank), 50_000 + i * 100, AFTER_HELD_RELEASE);
     }
     const o = ctrl.collectTelemetry().arrivalObs[0];
-    // E4 + drawn 2 ⇒ the drive first eases at rank 6 (a rank error of 4 is the span's edge, where
+    // 4 ranks + drawn 2 ⇒ the drive first eases at rank 6 (a rank error of 4 is the span's edge, where
     // the factor is still 1; the first REDUCED frame is rank 5). Recorded, not assumed.
     expect(o.taperStartRank).toBe(5);
     expect(o.taperStartMs).toBe(50_400);
@@ -252,7 +239,7 @@ describe('variant E in the servo', () => {
   });
 
   it('telemetry counts the taper and the net, and stays silent under A', async () => {
-    const e = await heldComebackController('E2');
+    const e = await heldComebackController();
     let racers = fieldWithHeroAt(DRAWN + 1);
     e.ctrl.update(racers, 50_000, AFTER_HELD_RELEASE);
     racers = fieldWithHeroAt(DRAWN);
@@ -270,17 +257,8 @@ describe('variant E in the servo', () => {
     expect(tel.arrivalObs[0].arrivalMult).toBe(1.0);
     expect(tel.arrivalObs[0].worstRankAfter).toBe(9); // the drift the net is there to bound
 
-    // Under A the E-specific counters stay zero — but the ARRIVAL OBSERVATION does not, and that is
-    // deliberate: A is the baseline the arms are compared against, so it has to be measured by the
-    // same instrument. A telemetry block that went quiet under A would have no baseline to offer.
-    const a = await heldComebackController('A');
-    a.ctrl.update(fieldWithHeroAt(DRAWN), 50_000, AFTER_HELD_RELEASE);
-    const telA = a.ctrl.collectTelemetry();
-    expect(telA.eTaperFrames).toBe(0);
-    expect(telA.eFreeFrames).toBe(0);
-    expect(telA.eNetFrames).toBe(0);
-    expect(telA.arrivalObs).toHaveLength(1);
-    expect(telA.arrivalObs[0].drawn).toBe(DRAWN);
-    expect(telA.eArrivalMults).toHaveLength(1);
+    // The observation is recorded for every held comebacker — there is no arm to be silent under
+    // any more, and a telemetry block with nothing to say would have no baseline to offer.
+    expect(tel.arrivalObs[0].drawn).toBe(DRAWN);
   });
 });

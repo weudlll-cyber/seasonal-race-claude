@@ -16,52 +16,31 @@
 //   It does not assert a finishing order; a response curve does not own one.
 // ============================================================
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
-import { DEFAULT_CONTROLLER_PARAMS, BAND_EDGES, SERVO_RESPONSE } from './racePlanner.js';
+import { describe, it, expect } from 'vitest';
+import { DEFAULT_CONTROLLER_PARAMS, BAND_EDGES, servoDrive } from './racePlanner.js';
 
 const { gain, maxMult, minMult } = DEFAULT_CONTROLLER_PARAMS;
 const clamp = (v) => Math.max(minMult, Math.min(maxMult, v));
 /** The SHIPPED response, written out here so the comparison is against an independent expression. */
 const shipped = (e, n) => clamp(1 + gain * (e / n));
 
-async function withArm(arm) {
-  vi.resetModules();
-  vi.stubEnv('RA_SERVO_RESPONSE', arm);
-  return import('./racePlanner.js');
-}
+// The response is no longer switchable — it is THE response — so there is no arm to select and the
+// module is imported once, like any other. `shipped` above keeps an independent expression of the
+// OLD rule so the two can still be compared where that is the point.
+const m = { servoDrive };
 
 describe('the servo response', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
-  it('defaults to today s response, so an unset key changes no race', () => {
-    expect(SERVO_RESPONSE).toBe('field');
-  });
-
-  it('the `field` arm reproduces the shipped arithmetic exactly', async () => {
-    const m = await withArm('field');
-    for (const n of [20, 40, 60, 100]) {
-      for (const e of [-9, -5, -1, 0, 1, 3, 5, 9]) {
-        expect(clamp(1 + m.servoDrive(e, n, gain, maxMult))).toBeCloseTo(shipped(e, n), 12);
-      }
-    }
-  });
-
-  it('★ matches today s response while a hundred racers are still RUNNING, drive AND brake', async () => {
+  it('★ matches today s response while a hundred racers are still RUNNING, drive AND brake', () => {
     // ★ READ THE ARGUMENT NAME. `nActive` is the UNFINISHED count, not the field size — `active` is
     // `racers.filter(r => !r.finished)` — so the shipped divisor shrinks as racers cross the line
     // and its response STEEPENS through the endgame. This equality therefore holds at the gun and
     // not at the finish, which is why the fairness gate on this arm is measured and not argued.
-    const m = await withArm('ranks');
     for (const e of [-20, -9, -5, -3, -1, 0, 1, 3, 5, 9, 20]) {
       expect(clamp(1 + m.servoDrive(e, 100, gain, maxMult))).toBeCloseTo(shipped(e, 100), 12);
     }
   });
 
-  it('★ gives every field size the SAME response — one rank means one thing', async () => {
-    const m = await withArm('ranks');
+  it('★ gives every field size the SAME response — one rank means one thing', () => {
     for (const e of [-5, -3, -1, 1, 3, 5]) {
       const at100 = m.servoDrive(e, 100, gain, maxMult);
       for (const n of [20, 40, 60]) {
@@ -70,8 +49,7 @@ describe('the servo response', () => {
     }
   });
 
-  it('★ eases NEAR the target — at twenty racers one rank is no longer the ceiling', async () => {
-    const m = await withArm('ranks');
+  it('★ eases NEAR the target — at twenty racers one rank is no longer the ceiling', () => {
     // Today: one rank of error at twenty racers already commands the full +10%, which is why the
     // multiplier is pinned at the ceiling for the whole approach and cannot fall in time.
     expect(shipped(1, 20)).toBe(maxMult);
@@ -83,10 +61,9 @@ describe('the servo response', () => {
     for (let i = 1; i < ramp.length; i++) expect(ramp[i]).toBeGreaterThan(ramp[i - 1]);
   });
 
-  it('★ STILL CONVERGES: full drive at a block of error or more, at every field size', async () => {
+  it('★ STILL CONVERGES: full drive at a block of error or more, at every field size', () => {
     // ★ THIS IS THE SABOTAGE TARGET for "ease the drive far from the target too". A response that
     // eased everywhere instead of near the target would fail here, at every field size at once.
-    const m = await withArm('ranks');
     for (const n of [20, 40, 60, 100]) {
       for (const e of [BAND_EDGES[0], 7, 12, 40]) {
         expect(clamp(1 + m.servoDrive(e, n, gain, maxMult))).toBe(maxMult);
@@ -95,16 +72,14 @@ describe('the servo response', () => {
     }
   });
 
-  it('full drive is reached at exactly one BLOCK of error, which is where the name comes from', async () => {
-    const m = await withArm('ranks');
+  it('full drive is reached at exactly one BLOCK of error, which is where the name comes from', () => {
     const justInside = m.servoDrive(BAND_EDGES[0] - 0.001, 40, gain, maxMult);
     expect(1 + justInside).toBeLessThan(maxMult);
     expect(clamp(1 + m.servoDrive(BAND_EDGES[0], 40, gain, maxMult))).toBe(maxMult);
   });
 
-  it('neither clamp is exceeded, at any error or field size, in either arm', async () => {
-    for (const arm of ['field', 'ranks']) {
-      const m = await withArm(arm);
+  it('neither clamp is exceeded, at any error or field size', () => {
+    {
       for (const n of [5, 20, 40, 100, 250]) {
         for (const e of [-500, -40, -1, 0, 1, 40, 500]) {
           const v = clamp(1 + m.servoDrive(e, n, gain, maxMult));
@@ -115,10 +90,7 @@ describe('the servo response', () => {
     }
   });
 
-  it('zero error commands exactly 1.0 in both arms — an arrived racer is not driven', async () => {
-    for (const arm of ['field', 'ranks']) {
-      const m = await withArm(arm);
-      for (const n of [20, 100]) expect(m.servoDrive(0, n, gain, maxMult)).toBe(0);
-    }
+  it('zero error commands exactly 1.0 — an arrived racer is not driven', () => {
+    for (const n of [20, 100]) expect(servoDrive(0, n, gain, maxMult)).toBe(0);
   });
 });
