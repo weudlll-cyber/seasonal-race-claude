@@ -431,6 +431,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [PURSUER-BRAKE-1.md](PURSUER-BRAKE-1.md) — **the brake is serving his drawn place, and there is
+  nothing to repair** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
+  store). ★★ **`Blitz` is DRAWN 14th and running 1st**, so the servo pins him at `minMult`
+  (`racePlanner.js:100`) until he is back — he finishes **11th**. ★ **The target is 14 on EVERY frame**
+  and 14 is the fairness draw itself, a Fisher-Yates shuffle over ranks 1..n
+  (`racePlanner.js:206-215`) — not a curve parameter and not stale. The floor is reached **because the
+  error is twelve ranks** and the servo saturates at about two, so the clamp is arithmetic, not a
+  mechanism. ★ He IS a cast role — **`attacker-b2`**, "Attack & Fall" — and one number is named
+  without being called a defect: the authored fall target is **7** (`heroCurveGenerator.js:712`) while
+  the servo steers to **14**. ★★ **HIS RACE IS ORDINARY, NOT EXTREME**: over 120 races on `wild`
+  (N=40, ten tracks) **40% produce a pinned-pursuer gap at least as big as the one he photographed**,
+  and the worst is **1.484 canvas widths against his 0.349**. ★★ **AND IT IS NOT A LEADER PHENOMENON**
+  — **36 of 40 racers touch the floor in every race** (median 36, min 35, max 37 across the sweep),
+  the median racer spending **9.1 s, 10.9% of the race**, at maximum brake, cast and uncast alike.
+  ★ **The decision is the owner's and both costs are stated**: accept the gap, or accept a racer not
+  reaching his drawn place. ★ **Three days of work on the COMEBACKER could never have changed this
+  picture.**
 - [WILD-GAP-1.md](WILD-GAP-1.md) — **the gap is opened by the racer BEHIND him, and `wild` is what
   puts him in front** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
   store). The first measurement of the comebacker's gap **over the whole race** rather than at the
