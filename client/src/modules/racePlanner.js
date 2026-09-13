@@ -478,6 +478,68 @@ export function arrivalTaper(rankError, spanRanks) {
   return rankError * (rankError / spanRanks);
 }
 
+/**
+ * -- THE SERVO RESPONSE (SERVO-RANKS-1, 2026-09-13) -------------------------------------------
+ *
+ * THE PARAGRAPH A READER CAN CHECK. The shipped response is `1 + gain * (error / nActive)`,
+ * clamped to [minMult, maxMult]. Because it divides by the FIELD SIZE, it reaches the clamp after
+ * `(maxMult - 1) * nActive / gain` ranks of error -- ONE rank at twenty racers, five at a hundred.
+ * At twenty racers that means there is NO gradation near the target at all: a racer one rank from
+ * his place is driven exactly as hard as one ten ranks away, so his multiplier sits pinned at the
+ * 1.100 ceiling for the whole approach and has to fall the entire 0.10 the instant he arrives. It
+ * cannot -- `_setTarget` restarts a 1 s ease every frame the target moves -- so he crosses his
+ * place still accelerating. MEASURED (ARRIVAL-SHAPE-E-1, 2 000 races): the arrival pace tracks that
+ * saturation distance with no exception, N=20 -> 1.100, N=40 -> 1.092, N=60 -> 1.070, N=100 -> 1.050.
+ *
+ * THE NEW RESPONSE IS THE ONE A HUNDRED RACERS ALREADY HAS, EXTENDED TO EVERY FIELD SIZE:
+ *
+ *     drive = (maxMult - 1) * error / BAND_EDGES[0]
+ *
+ * The error is counted in RANKS rather than as a fraction of the field, and full drive is reached
+ * at one BLOCK of error -- `BAND_EDGES[0]`, the same five ranks the fairness bands already call a
+ * block. One rank from your place then means the same thing in a field of twenty and a field of a
+ * hundred, which is what a viewer sees and what the old rule denied.
+ *
+ * WHY IT BEHAVES AT EVERY FIELD SIZE, and the property that makes the risk one-sided. The
+ * coefficient is `(1.1 - 1) / 5` = 0.02 per rank. The shipped rule's coefficient is `gain/nActive`
+ * = `2/100` = 0.02 per rank at a hundred racers -- IDENTICAL, in both directions, drive and brake.
+ * So this is EXACTLY today's race at N=100 and progressively gentler below it. Band-reach at N=100
+ * has half a point of margin against its own 70% gate, and that is the one field size this cannot
+ * move; the smaller fields, where it does change, are the ones carrying 95%+ band-reach today.
+ *
+ * IT STILL CONVERGES. At five or more ranks of error the drive is the full `maxMult`, at every
+ * field size, exactly as today -- the easing is NEAR the target, not everywhere. A racer far from
+ * his place is driven just as hard as he ever was.
+ *
+ * NEITHER CLAMP MOVES AND NO ROLE IS NAMED. This is the one servo every steered racer runs through
+ * -- comebackers, attackers, fallers, sovereign-leads and the pack alike. The CHAOS-phase steer
+ * (`plan._chaosSteer`, a separate mechanism with its own gain, active only before `pulkStart`) is
+ * deliberately NOT touched: it is a different steering in a different phase, and changing it would
+ * move the opening of every race for reasons that have nothing to do with arriving at a place.
+ */
+export const SERVO_RESPONSE = (() => {
+  // ONE HOME, TWO DOORS -- the same mechanism the arrival variants use, for the same reason: the
+  // sweeps are node and read an env var, the OWNER watches in a browser, which has neither an env
+  // nor a rebuild. THE DEFAULT IS `field`, today's response, so an unset key and an unset env var
+  // both leave the race exactly as it was, which the world fingerprint asserts.
+  try {
+    const v = globalThis.localStorage?.getItem('racearena:servoResponse');
+    if (v) return String(v).toLowerCase();
+  } catch {
+    /* storage unavailable (node, a private window, a blocked store) -- fall through to the env */
+  }
+  return (globalThis.process?.env?.RA_SERVO_RESPONSE || 'field').toLowerCase();
+})();
+
+/**
+ * The commanded drive, BEFORE the clamp and before the noise. `field` is the shipped response;
+ * `ranks` is the one described above. Exported so a test can hold the arithmetic outright.
+ */
+export function servoDrive(error, nActive, gain, maxMult) {
+  if (SERVO_RESPONSE !== 'ranks') return gain * (error / nActive);
+  return ((maxMult - 1) * error) / BAND_EDGES[0];
+}
+
 /** E only: true when the variant string selects the owner's shape (`E`, `E0`, `E1`, `E2`, …). */
 export const ARRIVAL_IS_E = ARRIVAL_VARIANT.startsWith('E');
 /**
@@ -1171,7 +1233,11 @@ export function createTrajectoryController(racePlan) {
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
+      const rawTarget = clamp(
+        1.0 + servoDrive(error, nActive, gain, maxMult) + noise,
+        minMult,
+        maxMult
+      );
       _setTarget(r, rawTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
