@@ -431,6 +431,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [TAPER-INVISIBLE-1.md](TAPER-INVISIBLE-1.md) — **the clamp eats the taper's first two ranks, and
+  1.077 was never "at pace"** (2026-09-13, on `night/2026-09-12b`, **report only — nothing built, no
+  clamp touched, nothing recommended**). The owner watched `ed97f7fa` at forty racers and could not
+  see the taper; he was right. ★★ **THE CLAMP, NOT THE TAPER'S LENGTH, IS THE BINDING TERM.** The
+  drive saturates whenever the tapered error reaches `0.05 x nActive` — 2.0 ranks at N=40 — so at four
+  ranks the factor is exactly 1.000 at e=4 (the span's own edge, no effect) and the tapered error at
+  e=3 is still 2.222, which **still saturates**. ★ **The EFFECTIVE taper distance is 2 ranks at N=20
+  and N=40**, 3 at N=60, 4 at N=100 — at the field size he watches, a four-rank taper is a two-rank
+  taper, and two ranks is what the sweep had already called too short. ★★ **THE 2 480 ms THAT
+  JUSTIFIED FOUR RANKS WAS A NOMINAL WINDOW**: measured effectively it is **464 ms at N=40 (64 ms at
+  p10) against an ease needing ~1 000 ms**, and only about one taper frame in five changes the command
+  at all. ★ **STATED IN WHAT HE SEES** (camera's own `visibleWorldPx`, median 225 across a 1280
+  canvas — 5.7x magnification): 1.100 closes at **85 screen px/s**, 1.077 at **66**, 1.05 at 44, 1.02
+  at 17. **1.077 is three quarters of the untapered rush**, which is why it is invisible. ★ Lengthening
+  the taper cannot help — extra ranks land where the error is largest and the clamp already discards
+  the reduction. No alternative lever is measured and none is proposed.
 - [ARRIVAL-TAPER-SHIP-1.md](ARRIVAL-TAPER-SHIP-1.md) — **the servo is reverted, one shape remains,
   and the trade is not the one he agreed to** (2026-09-13, on `night/2026-09-12b`, **not merged,
   nothing minted, no golden race re-recorded**). ★ The servo (`ec7130a0`) is undone surgically —
