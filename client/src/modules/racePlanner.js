@@ -380,11 +380,19 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Read by update() together with the OPTIONAL leaderGapLen argument the sim (only) passes each frame.
     _frontLeashMaxLengths: config.frontLeashMaxLengths ?? null, // engage above this leader→P2 gap (lengths)
     _frontLeashGainPct: config.frontLeashGainPct ?? null, // brake per excess length (percent of natural speed)
-    // ── Gap-cap re-roll bias (SIM-ONLY; docs/CONCEPT-COHESION.md; supplied only via the sim harness) ──
+    // ── Gap-cap re-roll bias (SHIPPED; docs/CONCEPT-COHESION.md) ──────────────────────────────────
     // "Loaded dice within the honest range": when a racer has opened a hole (arc gap > G to the racer
     // behind) its re-roll draw is shifted toward the SLOWER band edge; in symmetric mode a dropped racer
-    // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op. The BROWSER never sets
-    // these → threshold null → computeGapBiasedTarget() early-returns rawSample → byte-identical.
+    // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op.
+    //
+    // ★ THIS RUNS IN THE BROWSER. It was sim-only when written and this comment said so; the feature
+    // SHIPPED, and `defaults.js` now carries `gapRerollEnabled: true` and
+    // `gapRerollThresholdLengths: 0.5`, so the threshold is NOT null on the shipped path and
+    // `computeGapBiasedTarget` really does bias draws in a browser race. Corrected 2026-09-13 after
+    // GAP-CEILING-BASELINE-1 measured it firing in the owner's own stored race — his leader's draw was
+    // cut 1.0813 → 0.9187 — while this comment still said the browser never set the keys. The
+    // `frontLeash*` comment two lines above is a DIFFERENT case and is still accurate: those keys
+    // appear nowhere in `defaults.js`, so that block really is sim-only.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
     // NOT unfireable, and it is the one entry on the 29 where the triage's UNFIREABLE verdict is

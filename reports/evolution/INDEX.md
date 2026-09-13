@@ -431,6 +431,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
+  action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
+  store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
+  as the one he photographed (0.349 canvas widths) — 47% reach 0.5 w, 14% reach 1.0, 6% reach 1.5, and
+  the worst of 400 races is **3.188 w, nine times his**. ★ It **re-establishes rather than carries**
+  GAP-CEILING-BASELINE-1's 40%, which counted a narrower thing (gaps held while the pursuer was
+  pinned). ★ **HIS OWN RACE IS LONGER THAN TYPICAL BUT NOT EXTREME**: half-peak hold 6.8 s against a
+  median 4.0 s, lead→turn 7.1 s against 5.6 s. ★★ **AND HE IS NOT ALWAYS PULLED BACK — 28 in 100 are
+  never closed** (checked: 37 of 37 such races were won by that racer), a picture he has never
+  described. ★★ **WHO: NOT ALWAYS THE COMEBACKER — one race in three (35%)**, against **44% uncast**
+  and **21% sovereign-lead**; per racer the comebacker is **8.4×** over-represented and the
+  sovereign-lead **22.8×**, while `attacker-b2` holds the largest gap in **0 of 71** despite three per
+  field. ★★ **AND THE STAGE DOES NOT CAUSE IT**: `quiet` 70.0%, `medium` 69.0%, `wild` 71.0% — the
+  occurrence is a property of the race, **the EXTREME is the price of the stage** (≥1.5 w: 2% → 3% →
+  6%; p90 0.825 → 1.342). ★ **CORRECTION: the 877-vs-0 leading-frames result does NOT generalise** —
+  the comebacker reaches the front in 80.4% (quiet) / 81.4% (wild) of races; that was a property of
+  THAT race, not of the stages. ★ Also corrects the stale `racePlanner.js:383` comment; world
+  fingerprint **unmoved** at `b35cf477c09a1116`.
 - [GAP-IN-SERVO-FEASIBILITY-1.md](GAP-IN-SERVO-FEASIBILITY-1.md) — **the servo can carry it, but the
   form that exists was already rejected** (2026-09-13, branch `night/2026-09-12b`, **ESTABLISH ONLY —
   nothing built, nothing minted**). ★★ **THE GAP BRAKE IS ALREADY WRITTEN INSIDE THE SERVO** —
