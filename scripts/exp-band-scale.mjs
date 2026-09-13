@@ -16,7 +16,10 @@
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO. It does not change `BAND_EDGES`, propose a replacement, or
 //   touch `docs/FAIRNESS.md`; the scaled table is an arm in a report, not a candidate. It does not
-//   run the Holm start-row test — that is the fairness gate's other half and has its own harness.
+//   COMPUTE the gate: band-reach and the start-row Holm flag are the sim's own numbers, produced by
+//   `--hero-map` and READ from it, because a harness that recomputes what it grades is the defect
+//   this project has paid for six times. The only thing scored here is the SCALED-edges arm, which
+//   nothing else can produce because it is not a table the engine has.
 //   It writes nothing into the repository.
 //
 // Usage: node scripts/exp-band-scale.mjs [--races=30] [--racers=20,40,60,100] [--jobs=12] [--force]
@@ -70,7 +73,7 @@ const jobs = [];
 for (const t of TRACKS)
   for (const n of FIELDS) jobs.push({ t, n, dir: join(OUT, `${t.id}-${n}`) });
 const pending = jobs.filter(
-  (j) => FORCE || !existsSync(join(j.dir, "fairness-data.json")),
+  (j) => FORCE || !existsSync(join(j.dir, "hero-map.json")),
 );
 console.log(
   `${TRACKS.length} tracks x ${FIELDS.length} field sizes = ${jobs.length} combos; ${pending.length} to run, ${JOBS} at a time, ${RACES} races each.`,
@@ -92,6 +95,11 @@ function runOne(j) {
         `--racers=${j.n}`,
         "--track-defaults",
         "--race-plan=true",
+        // --hero-map makes the sim write its OWN bandReach and startRowUnfair (the Holm flag) per
+        // combo. Those are the gate's numbers and this script READS them rather than recomputing a
+        // second opinion; the only thing computed here is the SCALED-edges arm, which nothing else
+        // can produce because it is not a table the engine has.
+        "--hero-map",
         `--out=${j.dir}`,
       ],
       { cwd: ROOT, stdio: ["ignore", "ignore", "pipe"] },
@@ -104,7 +112,7 @@ function runOne(j) {
     });
     child.on("close", (code) => {
       done++;
-      const ok = existsSync(join(j.dir, "fairness-data.json"));
+      const ok = existsSync(join(j.dir, "hero-map.json"));
       console.log(
         `  [${done}/${pending.length}] ${j.t.id} n=${j.n} ${ok ? "ok" : `NO OUTPUT (exit ${code}) ${err.slice(-200)}`} (${((Date.now() - t0) / 60000).toFixed(1)}m)`,
       );
@@ -127,6 +135,8 @@ const seS = (h, t) =>
 
 const perN = new Map();
 const perTrack = [];
+// The sim's OWN gate numbers, read not recomputed.
+const nativeRows = [];
 for (const n of FIELDS) {
   const acc = {
     n,
@@ -141,6 +151,19 @@ for (const n of FIELDS) {
     const f = join(OUT, `${t.id}-${n}`, "fairness-data.json");
     if (!existsSync(f)) continue;
     const raw = JSON.parse(readFileSync(f, "utf8")).rawData ?? [];
+    // The gate's own numbers, straight from the sim: band-reach and the start-row Holm flag.
+    const hmPath = join(OUT, `${t.id}-${n}`, "hero-map.json");
+    if (existsSync(hmPath)) {
+      const hm = JSON.parse(readFileSync(hmPath, "utf8"));
+      const fair = hm.fairness ?? {};
+      nativeRows.push({
+        track: t.id,
+        n,
+        bandReach: fair.bandReach ?? null,
+        startRowUnfair: fair.startRowUnfair ?? null,
+        minPHolm: fair.startRowMinPHolm ?? null,
+      });
+    }
     const se = shippedEdges();
     const sc = scaledEdges(n);
     let sh = 0,

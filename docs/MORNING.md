@@ -4,88 +4,113 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-13, after pieces 1 and 4b of the 2026-09-13 chain. **Piece 2 (the
-distance sweep) is still running as this is written** — this sheet will be rewritten when it lands.
+**Last rewritten:** 2026-09-13, after piece 1 of the second 2026-09-13 chain (its fairness gate was
+still running as this was written — see "what is still open").
 
 **Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is branched off it and is **NOT
-merged**. **Nothing is minted and the shipped race is unchanged by default** — the world fingerprint
-with no variant selected is `bdf4a3c8ce6e0316`, bit-identical to the same instrument run on the
-commit before tonight's work.
+merged**. **Nothing is minted. With nothing switched on, the shipped race is unchanged** — the world
+fingerprint is `bdf4a3c8ce6e0316`, bit-identical to the instrument run on the commit before this
+work began.
+
+**I waited 19 minutes** for the previous block's arrival sweep to finish before starting this chain,
+as instructed. It ran 81.7 minutes in total.
 
 ---
 
-## ★★ YOUR SHAPE IS BUILT, AND YOU WERE RIGHT THAT THE SAFETY NET ALREADY EXISTED
+## ★★ THE THING TO LOOK AT: A RACER NOW ARRIVES AT HIS PLACE AT PACE
 
-You described the arrival on 2026-09-13: two ranks out he begins to slow, he is at normal speed
-before he gets there, and from then on he is unsteered unless he falls out of his block. **That shape
-had never been tried.** It is now variant **E**, selected the same way A–D are:
+You asked why he crossed his drawn place still accelerating, and the answer turned out not to be the
+shape of the arrival at all. **It is the servo.**
 
-> `localStorage['racearena:arrivalVariant'] = 'E2'` in the browser, `RA_ARRIVAL_VARIANT=E2` in node.
-> The digit is the taper distance and it is **your own fallback order** — `E2`, `E1`, `E0`. Bare `E`
-> means `E2`.
+`racePlanner.js` drives a racer by `1 + gain × (error / nActive)`. Because it divides by the FIELD
+SIZE, it reaches the +10% ceiling after `0.05 × n` ranks of error — **one rank at twenty racers**,
+five at a hundred. At twenty racers there is therefore **no gradation near the target at all**: a
+racer one rank from his place is driven exactly as hard as one ten ranks away. His multiplier sits
+pinned at the ceiling for the whole approach and has to fall the entire 0.10 the instant he arrives.
+It cannot, because the ease that moves it restarts every frame and takes about a second.
 
-★★ **AND YOUR GUESS ABOUT THE NET WAS CORRECT, WITH ONE CORRECTION.** You thought "unsteered until he
-falls out of his block" was a rule the project already has. The *expression* exists exactly as you
-described — `bandError` is zero while a racer is inside his band and only speaks at its edge, so
-steering on it means "left alone inside, corrected at the edge". **What did not exist is any
-comebacker reaching it.** Heroes are pinned to exact-rank steering, so:
+★ **THE PROOF IS THAT THE DEFECT TRACKS THE ARITHMETIC EXACTLY**, measured over 2 000 races:
 
-> ★ **A racer sitting comfortably 3rd inside his own top-5 block is steered today — to his exact
-> drawn rank.** Being inside his block changes nothing. Nobody had asked this before.
+| field | ranks of gradation the servo has | arrival pace today |
+|---|---|---|
+| 20 | **1.0** | **1.100** — the ceiling, exactly |
+| 40 | 2.0 | 1.092 |
+| 60 | 3.0 | 1.070 |
+| 100 | 5.0 | 1.050 |
 
-So E builds **no new mechanism**. It puts the comebacker on band steering after the taper, which is
-one assignment. Nothing releases the net: `bandError` returns to zero by itself the moment he is back
-inside. And it **cannot** fire while he is ahead of his block — his band is [1,5] and the "ahead" arm
-would need a rank better than 1st. **A racer drawn 2nd who wins is fair, and is not touched.**
+**The new response is one line:** `drive = (maxMult − 1) × error / BAND_EDGES[0]` — the error counted
+in RANKS, full drive at one BLOCK (five ranks). One rank from your place then means the same thing in
+a field of twenty and a field of a hundred. Neither clamp moves, no role is named, and it still
+converges: five ranks out is the same full drive it always was.
 
-## ★ THE FIRST NUMBER, AND IT IS NOT THE ONE YOU WERE HOPING FOR
+★ **WHAT IT BUYS**, 228 comebackers per arm, ten tracks, four field sizes:
 
-A pilot on luger-hill says the taper **does not reach 1.0 before he arrives** — at any of the three
-distances. He crosses his drawn place at **1.0998–1.1000**, which is the ceiling, the same as today.
+| | today | servo | taper only | ★ servo + taper |
+|---|---|---|---|---|
+| arrival pace | 1.084 | 1.040 | 1.042 | ★ **1.019** |
+| arrived at pace | 9% | 13% | 20% | ★ **30%** |
+| lands in his block | 83% | 81% | 87% | 84% |
+| **worst gap** | 2.549% | 1.892% | 2.033% | ★ **1.704%** |
 
-**The cause is measured, not guessed: the last two ranks take 64–208 ms, and the ease that moves his
-multiplier is 1.0 s.** The servo commands "stop pushing" in time; the multiplier physically cannot
-get there. Your fallback order (2 → 1 → 0 ranks) makes the distance *shorter*, so it moves away from
-the fix rather than towards it. **The full sweep is running and will say whether this holds across
-all ten tracks and all four field sizes.** Nothing is being changed on the strength of one track.
+★★ **AT TWENTY RACERS, WHERE IT WAS WORST, IT IS NOW SOLVED**: arrival pace **1.100 → 1.001**, and
+**11% → 52%** of comebackers arrive at pace.
 
----
+★ **AND THE WORST CASE — the one you said you actually look at — IS A THIRD SMALLER** (2.549% →
+1.704% of the race).
 
-## THE SMALL ONES
+★ **THE SERVO ALONE IS NOT ENOUGH, so the taper stays.** You asked to be told if it were, because
+then three days of arrival work would fall away. It is not: alone it reaches 1.040 and 13% at pace,
+against 1.019 and 30% together. **Both stay, and only ONE arrival shape will be left in the tree.**
 
-**The overrun banner is gone, and it was wrong in exactly the way you suspected.** It compared
-**wall-clock** time against a threshold derived from **race** duration. Those two diverge without
-limit: the physics accumulator advances by at most 50 ms per frame, so a backgrounded tab throttled
-to roughly one frame a second advances the race 50 ms per second of wall clock. **A 60 s race would
-trip the 600 s threshold with about 30 s of racing done** — you would be told a perfectly healthy
-race was lost, in precisely the case you have ruled correct behaviour. Removed, with the reason
-written where the number lives so nobody wires it back in.
-
-★ **One thing for you, not built:** a version reading the RACE clock instead would stay quiet for a
-throttled tab and *would* still catch a genuinely stuck race. Whether the browser should warn at all
-is your call, so it is named rather than built.
-
-**`/api/health` now names the commit in development.** It said `commit: unknown` while the badge in
-the same browser named a real one. The dev launcher now reads the identity from **the same git reader
-the badge uses** — no second copy — and the dev-start skill uses `npm run dev:once` so it actually
-goes through that launcher. `npm start` bypassed it, which is why the variables were unset.
+★ **THE COST, NOT AVERAGED AWAY.** At twenty racers the comebacker's block rate falls **93% → 81%**.
+It shows in both servo arms and not in either arm without it, so it is real rather than one noisy
+cell. Whether that trade is worth it is yours; **the field-wide fairness gate was still measuring
+when this was written** and it is the thing that can veto the change outright.
 
 ---
 
 ## WHAT IS STILL OPEN TONIGHT
 
-- **Piece 2** — the distance sweep. Running.
-- **Piece 4a** — `check-runin-frame` fails on `luger-hill` at 100 racers. No camera file changed on
-  this branch, so the cause is the **race** changing, not the camera; `983d9201` (the comebacker is
-  held and released) is the candidate. Not yet established — it needs runs, and the sweep has the
-  machine.
-- **Piece 3** — whether the fairness guarantee is a 40-racer fact. Two of its claims are already
-  re-verified by reading: `docs/FAIRNESS.md` **never names a field size** (zero matches), and its
-  "N" means *races* throughout.
+- **The fairness gate on the new servo.** Band-reach and the start-row Holm flag, both arms, ten
+  tracks, four field sizes. ★ **If band-reach falls below 70% at any field size the change does not
+  ship** — that is your own rule and it is not mine to spend. Not yet known.
+- **Clearing the table** — deleting every arrival variant that lost, so one shape remains.
+- **The camera losing the finish line at `luger-hill`, 100 racers.** No camera file changed on this
+  branch, so the cause is the RACE changing, not the camera; `983d9201` (the comebacker is held and
+  released) is the only commit here that moves the world by default. Not yet established.
+
+---
+
+## THE SMALL THINGS, DONE
+
+**The overrun banner is gone, and it was wrong the way you suspected.** It compared **wall-clock**
+time against a threshold derived from **race** duration, and the physics accumulator advances at most
+50 ms per frame — so a backgrounded tab throttled to about one frame a second advances the race 50 ms
+per second of wall clock. **A 60 s race would trip the 600 s banner with about 30 s raced.** It fired
+in exactly the case you have ruled correct behaviour. Removed, with the reason written where the
+number lives. ★ *Not built, your call:* the same warning reading the RACE clock would stay silent for
+a throttled tab and still catch a genuinely stuck race.
+
+**`/api/health` names the commit in development again.** It said `unknown` while the badge in the
+same browser named a real one. The dev launcher now reads the identity from **the same git reader the
+badge uses** — no second copy — and the dev-start skill uses `npm run dev:once` so it goes through
+that launcher.
+
+---
+
+## FOR YOUR DECISION (named, not built)
+
+1. Whether the taper should be expressed in **time** rather than ranks. One second is a flat 2 ranks
+   at every field size, but four seconds is 3–6 ranks depending on it, so no single rank number is
+   right everywhere.
+2. Whether the **front-contest release at 0.97** stays where it is: at a hundred racers, **two
+   arrivals in five** happen past it, where no taper can reach them.
+3. Whether the twenty-racer block cost above is acceptable.
 
 ## NOTICED AND LEFT ALONE (outside what these pieces touch)
 
 - `.claude/skills/dev-start/SKILL.md` is written in German, against the language rule in `CLAUDE.md`.
-  Only the lines this chain added are English.
 - `sollBereich` — a German identifier — is a field in the sim's `fairness-data.json` raw rows.
+- `camera-replay.mjs` delivers the camera plan through its own inline copy of the four-line rule
+  instead of the shared helper every other instrument uses.
 <!-- END CHAIN STATUS -->
