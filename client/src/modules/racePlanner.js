@@ -500,12 +500,21 @@ export function arrivalTaper(rankError, spanRanks) {
  * block. One rank from your place then means the same thing in a field of twenty and a field of a
  * hundred, which is what a viewer sees and what the old rule denied.
  *
- * WHY IT BEHAVES AT EVERY FIELD SIZE, and the property that makes the risk one-sided. The
- * coefficient is `(1.1 - 1) / 5` = 0.02 per rank. The shipped rule's coefficient is `gain/nActive`
- * = `2/100` = 0.02 per rank at a hundred racers -- IDENTICAL, in both directions, drive and brake.
- * So this is EXACTLY today's race at N=100 and progressively gentler below it. Band-reach at N=100
- * has half a point of margin against its own 70% gate, and that is the one field size this cannot
- * move; the smaller fields, where it does change, are the ones carrying 95%+ band-reach today.
+ * WHY IT BEHAVES AT EVERY FIELD SIZE. The coefficient is `(1.1 - 1) / 5` = 0.02 per rank. The
+ * shipped rule's coefficient is `gain / nActive`, which is the same 0.02 per rank when a hundred
+ * racers are still running -- identical in both directions, drive and brake.
+ *
+ * -- BUT `nActive` IS THE UNFINISHED COUNT, NOT THE FIELD SIZE, AND THAT IS THE WHOLE CAVEAT.
+ * `active` is `racers.filter(r => !r.finished)`, so the divisor SHRINKS as racers cross the line:
+ * a hundred-racer field whose first fifty have finished is steering on `gain/50`, twice as steep as
+ * it was at the gun, and it keeps steepening. The shipped response therefore grows sharper exactly
+ * through the endgame, which is where a racer arrives at his place -- the same defect as the small
+ * field, arriving late instead of always. The new response does NOT steepen: 0.02 per rank from the
+ * gun to the line, whatever has finished.
+ *
+ * So this is NOT a no-op at a hundred racers; it matches today only while the whole field is still
+ * racing and is gentler from the first finisher onward. The claim that it cannot move band-reach at
+ * N=100 would be wrong, and the fairness gate is therefore MEASURED on this arm, not argued.
  *
  * IT STILL CONVERGES. At five or more ranks of error the drive is the full `maxMult`, at every
  * field size, exactly as today -- the easing is NEAR the target, not everywhere. A racer far from

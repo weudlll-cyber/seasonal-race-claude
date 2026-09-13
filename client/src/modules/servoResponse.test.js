@@ -4,7 +4,8 @@
 //
 // ★ WHAT THIS FILE OWNS: the trajectory servo's RESPONSE CURVE — how much drive a given rank error
 //   commands — and nothing else. Four properties, each one a claim the change is allowed to make:
-//     1. it is EXACTLY today's response at a hundred racers, in both directions;
+//     1. it matches today's response while a hundred racers are still RUNNING, in both directions
+//        — NOT for the whole race, because the shipped divisor is the unfinished count;
 //     2. it gives every field size the gradation near the target that only N=100 had;
 //     3. it STILL CONVERGES — full drive at a block of error or more, at every field size;
 //     4. neither clamp moves, and the default arm is today's race untouched.
@@ -48,9 +49,11 @@ describe('the servo response', () => {
     }
   });
 
-  it('★ is EXACTLY today s response at a hundred racers, drive AND brake', async () => {
-    // The property that makes the risk one-sided: the field size whose band-reach has half a point
-    // of margin against its own gate is the one this cannot move.
+  it('★ matches today s response while a hundred racers are still RUNNING, drive AND brake', async () => {
+    // ★ READ THE ARGUMENT NAME. `nActive` is the UNFINISHED count, not the field size — `active` is
+    // `racers.filter(r => !r.finished)` — so the shipped divisor shrinks as racers cross the line
+    // and its response STEEPENS through the endgame. This equality therefore holds at the gun and
+    // not at the finish, which is why the fairness gate on this arm is measured and not argued.
     const m = await withArm('ranks');
     for (const e of [-20, -9, -5, -3, -1, 0, 1, 3, 5, 9, 20]) {
       expect(clamp(1 + m.servoDrive(e, 100, gain, maxMult))).toBeCloseTo(shipped(e, 100), 12);
