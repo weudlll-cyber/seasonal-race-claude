@@ -18,9 +18,10 @@ created, altered or deleted, and no server was started.
 > duration, same peak lead to the last digit.
 >
 > ★★ **What did change is the camera.** Every shipped default that moved in those six weeks is a
-> camera key. The same gap now covers **18% more of the screen at p90** than it did on 2026-08-19,
-> and the step has one cause: **`contentionWatch`, shipped on 2026-08-22 in `d4bad558`** — which you
-> judged on a production build and accepted.
+> camera key. Across the one merge that carries the step, **the race is bit-identical in all 300
+> races** — and **84 of those 300 changed how big the gap LOOKS, 80 of them larger.** At p90 the same
+> gap covers **7.8% more of the screen** (N=300). The cause is one key: **`contentionWatch`, shipped
+> 2026-08-22 in `d4bad558`** — which you judged on a production build and accepted.
 
 **So the impression is not of the racers running further. It is of the same running looking bigger.**
 Whether that is a problem is your call; this chain does not propose touching it.
@@ -154,6 +155,11 @@ confound is measured rather than argued: pinning the seed on a stand that would 
 bisect below was run with the seed pinned at every point** — the harness identical, only the product
 changing.
 
+★★ **That precaution is not decorative here: `camera/cameraSeed.js` is added by merge `d4bad558`
+ITSELF** — the very merge the large step lands on. Unpinned, the A→B comparison would have changed
+the harness and the product in the same step, and nothing could have been attributed to either. **A
+and B, at both N=30 and N=300, are pinned.**
+
 ---
 
 ## 6 · WHERE THE SCREEN CURVE STEPS — two steps, both in August
@@ -165,7 +171,35 @@ Bisected on the screen p90, camera seed pinned at every point, 30 races per poin
 | small | `fe766a26` 08-18 | **`884d0562`** 08-19 | 1.142 → **1.172** (+2.6%) | START-ONE-WINDOW-1 |
 | ★★ **large** | `182fa3ac` 08-19 | **`d4bad558`** 08-22 | 1.172 → **1.350** (+15.2%) | ENDGAME-LAND-CLEAN-1 |
 
+★ **These are N=30 search figures.** The size is corrected to **+7.8%** by the 300-race proof below;
+they located the step, they do not measure it.
+
 ★ **The WORLD column is flat across both steps** — 113.2 / 223.5 on either side of each.
+
+### ★★ THE PROOF — the large step at 300 races
+
+**The 300 seeds are `1 … 300`** (the thirty, plus 270 more). Both stands, camera seed pinned on both.
+
+| | WORLD med | WORLD p90 | WORLD max | reach 188.6 px | never closed | SCREEN med | SCREEN p90 | SCREEN max | reach 0.698 w |
+|---|---|---|---|---|---|---|---|---|---|
+| **A** `182fa3ac` 08-19 | **117.5** | **209.7** | **327.3** | **13.7%** | **26.7%** | 0.673 | **1.198** | 1.724 | 48.0% |
+| **B** `d4bad558` 08-22 | **117.5** | **209.7** | **327.3** | **13.7%** | **26.7%** | 0.688 | **1.292** | 1.724 | 49.3% |
+
+★★ **THE RACE IS BIT-IDENTICAL ACROSS THE MERGE, IN ALL 300 RACES** — every max world lead, every
+40-position finishing order, every duration. **84 of the 300 races changed how big the gap LOOKS:
+80 larger on screen, 4 smaller.** Nothing changed how big it *is*.
+
+★ **The step is SMALLER than N=30 said, and the proof is what corrects it.** The screen p90 moves
+**+7.8%** at N=300, not the **+15.2%** the thirty-race bisect showed. **The direction and the cause
+survive; the size does not.** ★ Every figure above is N=300 and none of it may be compared with an
+N=30 figure elsewhere in this report.
+
+**CONTROL — the measuring track did not move.** Stand A's 30-seed set, re-raced at the **end** of the
+night, is **bit-identical** to its run during the bisect. ★ **The ladder is not void.**
+
+★ **THE READING RULE, applied plainly:** the world-unit lead is **flat** and only the screen-width
+lead grew. **So the race did not get worse. The framing did.** The two are not blended anywhere in
+this report, and the world column is the one that carries the verdict.
 
 ---
 
@@ -236,7 +270,7 @@ explains about a tenth of it; `bandFloor` explains none of it. There is no tie t
 
 **It says:** on his own track, field, roster and racer, at the shipped defaults, the race a viewer
 would see between 2026-08-04 and 2026-09-12 is **the same race, to the last digit** — and the picture
-of it got about a fifth tighter at the top end, on 2026-08-22, for a reason you accepted.
+of it got about **8% tighter at the top end** (N=300) on 2026-08-22, for a reason you accepted.
 
 **It does not say:**
 - anything about the race **before 2026-08-04** — two stands are not measurable and the reason is

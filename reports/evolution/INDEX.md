@@ -464,12 +464,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   to the engine-facing defaults across all 34 measurable days.** ★ **Not a blind instrument**: forcing
   another action stage through the product's own table moves the median to 99.3 (`medium`) and 118.5
   (`wild`). ★ **The noise floor is ZERO** — master raced twice is bit-identical. ★★ **WHAT MOVED IS THE
-  CAMERA**: the SCREEN p90 steps **1.172 → 1.350 (+15.2%) at `d4bad558`** (ENDGAME-LAND-CLEAN-1,
-  2026-08-22), and a smaller **1.142 → 1.172** at `884d0562` (START-ONE-WINDOW-1). ★★ **ATTRIBUTED TO
+  CAMERA**: the SCREEN p90 steps at **`d4bad558`** (ENDGAME-LAND-CLEAN-1, 2026-08-22), and a smaller
+  one at `884d0562` (START-ONE-WINDOW-1). ★★ **PROVED AT N=300 ON THE STEP MERGE: the race is
+  BIT-IDENTICAL in all 300 races** — every max lead, every 40-position order, every duration — while
+  **84 of the 300 changed how big the gap LOOKS (80 larger, 4 smaller)**, p90 **+7.8%**. ★ The
+  30-race bisect said +15.2%; **the proof corrects the size and keeps the cause**. ★★ **ATTRIBUTED TO
   ONE KEY BY MEASUREMENT: `contentionWatch`** — off, the p90 returns to exactly A's 1.172; `bandFloor`
   explains none of it and `runInSchedule` about a tenth. ★ **A revert is NOT safe**: the ship gate's
   item 7 is built on it, and the camera and render fingerprints were minted three weeks after it
-  shipped. ★ **It is his own accepted picture** — `defaults.js:592-595` records the acceptance. ★ The
+  shipped. ★ **It is his own accepted picture** — `defaults.js:592-595` records the acceptance.
+  ★ **CONTROL: stand A re-raced at the end of the night is bit-identical** — the measuring track did
+  not move and the ladder is not void. ★ The
   ladder spans **six weeks, not eight**: `7883d453` and `175a4751` are **not measurable** (no
   `raceCore.js`; a Vite-only `import.meta.env`) and **no old code was patched** to reach them.
   Harness verified by replaying `QN3HDP` — **40 of 40 finishing positions**.

@@ -4,7 +4,7 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-14, during BREAKAWAY-HISTORY-1 (the night chain, still running).
+**Last rewritten:** 2026-09-14, at the close of BREAKAWAY-HISTORY-1.
 
 **Where the code is.** Master is `b6d77637`, untouched. The night's branch is
 `night/2026-09-14-history` — **measurement only, nothing built, nothing minted, no merge.**
@@ -34,13 +34,24 @@ stage table moves the same numbers (median 113.2 → 99.3 at `medium`, → 118.5
 instrument sees a world change of that size; there was none to see.
 
 ★★ **What DID move is the camera.** Every default that changed in six weeks is a camera key —
-39 of them between −6 weeks and today, and one frame-timing key. And the **screen-width** lead has a
-real step in it: p90 **1.142 → 1.350**, +18%, somewhere between 2026-08-17 and 2026-08-31. The
-bisect for exactly where is running now.
+39 of them between −6 weeks and today, and one frame-timing key. The **screen-width** lead steps at
+**one merge: `d4bad558`, 2026-08-22 (ENDGAME-LAND-CLEAN-1)**.
 
-> **So the reading, so far: the race did not get worse. The framing did.** The same gap occupies
-> about a fifth more of the screen than it did a month ago. **That is a real change and it is yours
-> to judge** — but it is not the racers running away more.
+★★ **Proved at 300 races across that merge:** the race is **bit-identical in all 300** — every max
+lead, every 40-position finishing order, every duration — while **84 of the 300 changed how big the
+gap LOOKS: 80 larger, 4 smaller.** At p90 the same gap covers **7.8% more screen**.
+
+★★ **One key does all of it: `contentionWatch`.** Turned back off, the p90 returns to exactly the
+pre-merge value; `bandFloor` explains none of it and `runInSchedule` about a tenth. It drops racers
+who can no longer win out of the framing set, so the shot holds fewer racers and sits tighter.
+
+> **So: the race did not get worse. The framing did.** The same running looks bigger. **That is a
+> real change and it is yours to judge** — it is not the racers running away more.
+
+★ **And a revert is not free**, which is why nothing was touched: the ship gate's item 7 is built on
+that key, the camera and render fingerprints were minted three weeks after it shipped, and
+`defaults.js:592-595` records that **you judged a production build with it on and accepted the
+picture.**
 
 ---
 
@@ -61,20 +72,22 @@ reproduces **40 of 40 finishing positions**.
 
 ## Done / running / open
 
-**Done**
-- Piece 1 — the portable harness, built and proven against `QN3HDP` (40/40).
-- Piece 2 — the coarse ladder, 5 points × 30 races.
-- Controls — positive control (stage), adapter control (camera seed), noise floor.
-
-**Running**
-- Piece 3 — the bisect of the screen step, between 2026-08-17 and 2026-08-31.
+**Done — the chain is complete.**
+- Piece 1 — the portable harness, proven against `QN3HDP` (**40 of 40 finishing positions**).
+- Piece 2 — the coarse ladder, 5 points × 30 races. World column flat; two stands not measurable.
+- Piece 3 — the bisect: two steps, both in August, both camera.
+- Piece 4 — the 300-race proof, plus the control that the measuring track did not move.
+- Piece 5 — attributed to one key by measurement, with its reason and its revert cost.
+- Controls — positive (stage), adapter (camera seed), noise floor (**zero**).
 
 **Open**
-- Piece 4 — the 300-race proof.
-- Piece 5 — what changed there, read-only.
+- Nothing in this chain.
 
 **Needs your word**
-- Nothing yet. This chain changes nothing and proposes nothing.
+- **Nothing is required.** One thing is worth your eye if you want it: whether the tighter endgame
+  shot is what you want, now that its cost is measured. It was accepted on the picture; the
+  side-effect on how large a gap reads was not measured at the time and now is. **No proposal
+  attached** — a change there would move two fingerprints and the ship gate's item 7.
 
 ---
 
