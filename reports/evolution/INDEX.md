@@ -431,6 +431,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [ARRIVAL-SOLVE-1.md](ARRIVAL-SOLVE-1.md) — **his own drive ceiling: three clauses met, one not, and
+  the one not is not this lever's** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted,
+  no golden race re-recorded**). ★ **THREE OF FOUR NARROW LEVERS FELL TO ARITHMETIC** before any
+  measurement: capping his error at k ranks and easing his target asymptotically are the same
+  expression and are field-size dependent (k=1 gives 1.100 at N=20, 1.020 at N=100); the generator's
+  curve shape governs the leg BEFORE the held release and cannot touch the arrival at all. ★★ **THE
+  SURVIVOR MOVES THE CEILING, NOT THE ERROR** — his own `maxMult` eases 1.100 → 1.020 across the
+  approach, and because a ceiling IS the commanded value wherever the raw drive saturates it is
+  **identical at every field size**, which a rank-counted taper never was. ★ **IT TOUCHES ONE RACER**
+  (all inside `heldFree`) and can only tighten a ceiling, never raise one. ★ Arrival **1.033 / 1.051 /
+  1.037 / 1.048** = **28 / 44 / 32 / 41 on-screen px/s** against 85 untapered — at or below "halves the
+  apparent rush" everywhere, and 1.077 is gone. ★ **BAND-REACH COSTS NOTHING** (+0.4 / +0.1 / +0.1 /
+  0.0 pp, all ~19 pp above the gate) where the broad `servoDrive` cost 7.4 pp — that clause is what
+  chose narrow over broad. Holm **equal or better than today's world at every field size**; pooled
+  block 87.9% vs an 84% baseline. ★★ **BUT CLAUSE 2 IS NOT MET**: the comebacker still opens 3.3x the
+  unshaped gap at N=20 and 1.9x at N=40 — **caused by "unsteered inside his block", not by this
+  lever**, and the rest of the field is clean. The taper and the 1.05 ceiling are DELETED. New world
+  fingerprint `9f4a9b9392a8d46c`.
 - [TAPER-INVISIBLE-1.md](TAPER-INVISIBLE-1.md) — **the clamp eats the taper's first two ranks, and
   1.077 was never "at pace"** (2026-09-13, on `night/2026-09-12b`, **report only — nothing built, no
   clamp touched, nothing recommended**). The owner watched `ed97f7fa` at forty racers and could not
