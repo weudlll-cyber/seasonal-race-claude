@@ -431,6 +431,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [ARRIVAL-TAPER-SHIP-1.md](ARRIVAL-TAPER-SHIP-1.md) — **the servo is reverted, one shape remains,
+  and the trade is not the one he agreed to** (2026-09-13, on `night/2026-09-12b`, **not merged,
+  nothing minted, no golden race re-recorded**). ★ The servo (`ec7130a0`) is undone surgically —
+  a plain revert would have conflicted with the two commits that modified it since — and proven
+  complete two ways: the expression is byte-identical at source, and **an ordinary leader measures
+  identically to every decimal**. ★ ONE shape stays: the taper at FOUR ranks; A/B/C/D, the five
+  `E<digit>` distances and the switch are gone. Sabotage shows **at ONE rank the taper is a no-op**,
+  not merely short — `rankError` is an integer so the span is never entered. ★ Shipped shape, 1 200
+  races / 717 comebackers: arrival **1.029–1.076** against 1.100 with no taper, **pooled block 87.0%**
+  above the 84% baseline. ★★ **BUT THE ON-SCREEN GAP TRIPLES AT SMALL FIELDS** (0.107 → 0.368 widths
+  at N=20) — **and it is NOT the taper**: splitting on whether the comebacker led shows the arms
+  identical to every decimal when he does not, so the cause is the OTHER half of the shape, "unsteered
+  inside his block", which reproduces variant B's known 2.7× effect at 3.4×. **The trade he agreed to
+  was the taper's price; this is a different half's, and it was never put to him.** ★ The recorded
+  0.066-widths baseline was **never comparable** (correct baseline 0.107–0.172). ★ The revert clears
+  the camera case IT caused (2 failures → 1); luger-hill n=100 from `983d9201` stands and the fix is
+  STOPPED because it moves every shot. ★ Golden races **pass** — their fields are 12 and 6 racers,
+  below the staging minimum, so the shape never fires there.
 - [LEADER-GAP-1.md](LEADER-GAP-1.md) — **the leader's restraint really did halve, and the gap did
   not grow** (2026-09-13, on `night/2026-09-12b`, **report only; nothing built, nothing changed,
   `verify` unmoved**). The owner watched build `1180c8f1` and reported the LEADER pulling away to
