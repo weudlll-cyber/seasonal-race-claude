@@ -2,7 +2,7 @@
 // arrival-shape.spec.js — ARRIVAL-SHAPE-E-1
 //
 // WHAT THIS OWNS: proof that the owner's arrival shape (variant E) can be selected and actually runs
-// IN THE BROWSER, and a description of what a person watching would see — his rank when the taper
+// IN THE BROWSER, and a description of what a person watching would see — his rank when his ceiling
 // starts, the pace he carries when he reaches his drawn place, whether he pulls away afterwards, and
 // whether he holds his block.
 //
@@ -25,13 +25,17 @@
 
 import { test, expect } from '@playwright/test';
 import { ensureTrackGeometriesCached } from './appReady.js';
-import { ARRIVAL_TAPER_START_RANKS } from '../src/modules/racePlanner.js';
+import { ARRIVAL_CEILING_RANKS } from '../src/modules/racePlanner.js';
 
 const TRACK = /Dirt Oval/;
 const SEED = '41003';
-// The shipped taper distance, imported rather than restated, so this test cannot describe a race
-// the engine is not running.
-const TAPER_RANKS = ARRIVAL_TAPER_START_RANKS;
+// The shipped ceiling span, imported rather than restated, so this test cannot describe a race the
+// engine is not running.
+const CEIL_RANKS = ARRIVAL_CEILING_RANKS;
+// On-screen terms, so the log says what a PERSON would see rather than a multiplier nobody can read.
+// The camera runs at roughly 5.7x during an approach (visibleWorldPx median 225 across a 1280
+// canvas), and normal pace is 150 world px/s -- so (m-1)*150*1280/225 canvas px/s of closing speed.
+const screenPxPerSec = (m) => (m - 1) * 150 * (1280 / 225);
 
 test('the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block', async ({
   page,
@@ -71,8 +75,8 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
   expect(after.length, 'no samples after the release').toBeGreaterThan(5);
 
   // ── What a person would see, in the order they would see it ────────────────────────────────
-  const taperDist = TAPER_RANKS;
-  // The frame he first comes within the taper distance of his place — where the drive begins to ease.
+  const taperDist = CEIL_RANKS;
+  // The frame he first comes within the ceiling's span — where his own ceiling begins to tighten.
   const taperStart = after.find((s) => s.rank <= drawn + taperDist && s.rank > drawn);
   // The frame he first reaches his drawn place, and the pace he is carrying when he does.
   const arrival = after.find((s) => s.rank <= drawn);
@@ -89,6 +93,7 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
       `  rank when he is handed back: ${atRelease}\n` +
       `  rank when the taper starts:  ${taperStart ? taperStart.rank : 'never — he was already inside the taper span or arrived past the front release'}\n` +
       `  pace when he reaches his place: ${arrival?.m != null ? arrival.m.toFixed(4) : 'he never reached it'}` +
+      `${arrival?.m != null ? ` — ON SCREEN ${screenPxPerSec(arrival.m).toFixed(0)} px/s of closing speed (untapered 1.100 is 85)` : ''}` +
       `${arrival ? ` (at progress ${arrival.p.toFixed(3)})` : ''}\n` +
       `  after arriving: best rank ${best}, worst rank ${worst}` +
       `${worst != null ? `, so he ${worst > 5 ? 'FELL OUT of' : 'HELD'} his block` : ''}\n` +
