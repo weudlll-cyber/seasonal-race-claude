@@ -431,6 +431,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [ARRIVAL-STEERED-AGAIN-1.md](ARRIVAL-STEERED-AGAIN-1.md) — **clause 2 comes back, and his reasoning
+  holds** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted, no golden race
+  re-recorded**). ★ **NOTHING WAS BUILT — it is a deletion.** Master carries `strictness = isHero ?
+  1.0` and ZERO unsteered path; "unsteered inside his block" was an override the arrival work added,
+  and removing it (22 insertions, 81 deletions) returns him to master's steering. ★★ **CLAUSE 2 IS
+  LARGELY RESTORED**: the comebacker's peak gap goes 0.357 → **0.178** widths at N=20, 0.245 → **0.141**
+  at N=40, and **exactly back to the 0.163 baseline at N=100** — where it follows, because the ceiling
+  never binds there. The rest of the field stays clean (13/3/8/5% alone by >1 width vs a 12/7/15/5%
+  baseline). Not fully restored at twenty racers: 1.7×, down from 3.3×. ★★ **HIS REASONING MEASURED
+  AND HELD**, same code both arms: the overspeed is shed **29% faster** (992 ms vs 1 392) and **12% of
+  comebackers need no brake at all** vs 7% — though the overspeed gap is a THIRD not a half, and the
+  brake's DEPTH is nearly unchanged (−9.07% vs −9.97%) because depth is set by how far past his place
+  he drifts. ★ The arrival is **identical to four decimals** (1.033/1.051/1.037/1.048 = 28/44/32/41
+  px/s) and band-reach holds (+0.4/−0.1/−0.1/0.0 pp). ★★ **TWO FIGURES FROM ARRIVAL-SOLVE-1 DO NOT
+  SURVIVE AND ARE CORRECTED**: Holm is **0/2/3/7, exactly today's world, not better** — that
+  improvement came from the override — and the **block rate falls ~3 points to 85.0%** pooled, still
+  above the 84% baseline. New world fingerprint `b35cf477c09a1116`.
 - [ARRIVAL-SOLVE-1.md](ARRIVAL-SOLVE-1.md) — **his own drive ceiling: three clauses met, one not, and
   the one not is not this lever's** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted,
   no golden race re-recorded**). ★ **THREE OF FOUR NARROW LEVERS FELL TO ARITHMETIC** before any
