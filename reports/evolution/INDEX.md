@@ -431,6 +431,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [GAP-CEILING-BASELINE-1.md](GAP-CEILING-BASELINE-1.md) — **a gap ceiling already exists, it fired
+  in his race, and it is not a brake** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**,
+  read-only on his store). ★ **Written because an ADDENDUM to GAP-CEILING-1 arrived but that brief
+  never did** — nothing was built; this is the BEFORE baseline plus two findings that bear on the
+  design. ★★ **THE GAME ALREADY BRINGS A RUNAWAY LEADER BACK**: `computeGapBiasedTarget`
+  (`racePlanner.js:1259`) biases a leader's next natural-speed draw down, and in `QN3HDP` it fired at
+  64 368 ms — **1.0813 → 0.9187, a 15% cut** — proven with the shipped `gapRerollDevMarker`
+  (`raceCore.js:633`) on a COPY, verified inert (replay still 40/40). ★★ **THE SERVO ACCOUNTS FOR NONE
+  OF HIS DECELERATION**: `trajectoryMult` is **0.9499 → 0.9500** across the whole 15% fall, which is
+  entirely `spreadFactor`. ★ **He is NEVER at the floor**, and is **driven at 1.0999** on the way back
+  down. ★ **The fault is grain and latency, not absence**: the correction waits for the next re-roll
+  boundary (10–12 s intervals; a 4.9 s wait) then arrives as one step eased over 3 s — **7.1 s from
+  the lead being taken to the speed turning**, a **424 px/s** swing on screen. ★★ **AND THE
+  ADDENDUM'S SUCCESS TEST CANNOT BE MET**: over 2 376 lead spells on `wild`, **no racer who leads
+  after progress 0.70 is floored afterwards at any gap size, p90 included — it is already 0.0 s.**
+  Early leads go the OTHER way: the narrowest leads are braked most (4.2 s) and fall back fastest
+  (8 ranks in 5 s); the biggest are braked least (0.0 s) and fall slowest (4).
 - [PURSUER-BRAKE-1.md](PURSUER-BRAKE-1.md) — **the brake is serving his drawn place, and there is
   nothing to repair** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
   store). ★★ **`Blitz` is DRAWN 14th and running 1st**, so the servo pins him at `minMult`
