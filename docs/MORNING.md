@@ -103,6 +103,20 @@ as flat rather than as "within noise".
 
 ---
 
+## ★ ONE SLIP IN THE SWEEP, RECORDED RATHER THAN LEFT
+
+Clearing this chain's scratch from `C:/tmp` I matched on the prefix `probe-`, which also caught three
+files **an earlier night** had left there: `probe-drivers.mjs`, `probe-ext.mjs`, `probe-hull.mjs`.
+**They are gone and are not recoverable.**
+
+★ **Checked before saying so:** none of the three is referenced anywhere in `docs/`, `reports/` or
+`scripts/`, they were ad-hoc probes rather than instruments any report rests on, and everything this
+chain itself produced is reproducible from the report. **Nothing in the repository lost a source.**
+Everything else in `C:/tmp` is intact — 112 directories and 59 scripts, including `master-tree`,
+`wt-master` and `night0913d`.
+
+---
+
 ## Where the numbers live
 
 `reports/evolution/BREAKAWAY-HISTORY-1.md` — written as the chain closes. The instruments are in
