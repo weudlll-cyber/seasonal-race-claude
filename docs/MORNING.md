@@ -102,6 +102,33 @@ and you judge the picture.
    which **the shipped game already misses above forty racers** (seven of ten tracks at N=100).
 4. Deployment: what terminates TLS · where the data lives · how often a backup is taken.
 
+## ★★ ONE RACE IN YOUR HISTORY IS MINE — DELETE IT WHEN YOU LIKE
+
+★ **Race `SF8GEZ`** (2026-09-13 17:19, winner **Nova**, your "40 Racer Testgroup") **was created by a
+browser parity test of mine, not by you.** It was left in place rather than deleted, because deleting
+from your store is itself an alteration and that was not mine to make. **It is yours to delete.**
+Nothing else of yours was created, changed or removed; `QN3HDP` was read with a single `GET`.
+
+---
+
+## ★★ AND YOUR RACE NOW REPLAYS EXACTLY — 40 OF 40, TO THE MILLISECOND
+
+The harness could not race any world but the shipped one, which is why it raced `quiet` while you
+race `wild` and agreed with your stored race on only 10 of 40 positions. That is closed. Your race
+`QN3HDP`, replayed from its own stored inputs, now matches your record on **every one of the forty
+positions and every one of the forty finishing times in milliseconds**. ★ **The shipped world at
+stage `wild` reproduces it too — so your sliders are the shipped defaults and the Race Action stage
+was the whole difference.** ★ **Nothing the product does was changed**, and the four fingerprints are
+unmoved against the branch tip before the piece. See
+[HARNESS-WORLD-1](../reports/evolution/HARNESS-WORLD-1.md), which also lists which of this week's
+conclusions describe `quiet` rather than the world you watch.
+
+★ **The numbers higher up this sheet predate that piece** — the verify tally is now **PASS 25 ·
+FAIL 5** and `check-runin-frame` has been **two** cases (dirt-oval at 40 as well as luger-hill at
+100), not one. The report carries the current values.
+
+---
+
 ## NOTICED AND LEFT ALONE
 
 - `.claude/skills/dev-start/SKILL.md` is in German, against the language rule in `CLAUDE.md`.

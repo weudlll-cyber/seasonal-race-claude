@@ -431,6 +431,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [HARNESS-WORLD-1.md](HARNESS-WORLD-1.md) — **his race replays exactly: forty of forty, to the
+  millisecond** (2026-09-13, branch `night/2026-09-12b`, **not merged, nothing minted**, read-only on
+  his store). ★★ **`QN3HDP` REPLAYED FROM ITS OWN STORED INPUTS MATCHES THE RECORD 40/40 ON POSITION
+  AND 40/40 ON FINISHING TIME IN MILLISECONDS** — including the tie at 83 088 ms, in the record's
+  order. The defect STORED-RACE-PARITY-1 named is closed at one line: `buildRace` now takes a config
+  world (`raceDriver.mjs:344`, `const W = configWorld ?? DEFAULT_CONFIG_WORLD` at 360) and
+  `DEFAULT_CONFIG_WORLD` stays the default, so the 80 files that import the driver are untouched. ★ **THE
+  STAGE IS NOT RE-IMPLEMENTED**: `worldForActionStage` (line 115) calls `applyRaceActionStage`
+  (`raceActionStage.js:78`) exactly as `scripts/golden/goldenRace.mjs:91` already does, and the replay
+  takes a stored world WHOLE — the product's own rule, stated at `RaceScreen/index.jsx:526-528`.
+  ★★ **AND THE SHIPPED WORLD AT STAGE `wild` ALSO REPRODUCES HIS RACE 40/40** — so his sliders are the
+  shipped defaults and the action stage is the ENTIRE difference. Sabotages: re-hardcoding the world
+  at source, and the wrong stage, drop the replay to **10/40** and **7/40** (the old harness's figure,
+  reproduced exactly). ★ **ALL FOUR FINGERPRINTS UNMOVED** against a worktree at `85262b1b` — world
+  `b35cf477c09a1116`, world-off `19ccb497041a0dae`, camera `3df640a42e934312`, render
+  `6a84085e79535dd6` — and **golden races PASS**. New: `scripts/diag/replay-stored-race.mjs` and
+  `scripts/lib/raceDriverWorld.test.mjs`. ★ **The same defect is REPORTED, not fixed, in
+  `camera-fingerprint.mjs:148`, `render-fingerprint.mjs:308`, `sim-fairness.mjs` (world yes, stage no)
+  and `goldenRunner.mjs:580`.** ★★ **CONSEQUENCE: which of this week's conclusions describe `quiet` —
+  and that `wild` IS the `brake 0.15 + boost 0.12` pair WILD-STAGE-1 measured as breaching the 0.80
+  naturalness floor.**
 - [STORED-RACE-PARITY-1.md](STORED-RACE-PARITY-1.md) — **they are NOT the same race, and the field
   that differs is the ACTION STAGE** (2026-09-13, **report only, read-only access to his store**).
   His finished race was found by its own key — ★ **`QN3HDP`** — carrying seed 3, build `72ff4e7f`,
