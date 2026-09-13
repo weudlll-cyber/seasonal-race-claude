@@ -431,6 +431,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [WILD-GAP-1.md](WILD-GAP-1.md) — **the gap is opened by the racer BEHIND him, and `wild` is what
+  puts him in front** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
+  store). The first measurement of the comebacker's gap **over the whole race** rather than at the
+  crossing. ★★ **IT IS NOT HIM RUNNING AWAY.** While the gap opens he is **braked at −5%** every
+  frame; his pursuer sits at **0.8502 — `minMult` exactly** (`racePlanner.js:103`). Decomposed term by
+  term (`raceStep.js:106`): whole-speed ratio **1.1814**, of which the **servo is 1.1177**, traffic
+  **1.0000** and the governor — where the stage acts — **1.0000**. ★ **The gap OPENS at +0.049 canvas
+  widths/s while the pursuer is pinned and CLOSES at −0.047 w/s when he is not, with the comebacker's
+  own brake identical in both.** ★★ **`wild` does not change the gap; it changes whether anyone is in
+  front of him** — 877 leading frames (14.6 s) against **0** on `quiet`, same seed and roster, with
+  nearly the same gap behind (0.349 vs 0.304 w) at nearly the same zoom. ★ **His screenshot is
+  reproduced**: `assignRaceNumbers(40,3)` gives Breeze **1** and Blitz **27**, and Blitz is the racer
+  behind him for all 428 frames the gap opens — his panel read `1 · Breeze` / `2 | 27 | Blitz`.
+  ★ Median 0.018 w against a peak of **0.349** — **nineteen times** — which is why three reported
+  improvements were invisible. ★ On `wild` at N=40 over ten tracks (300 races/arm, 207 comebackers):
+  **arrival 1.0400 vs 1.0506, block rate 88.4% vs 86.5%, peak-gap median and p90 unchanged** — the
+  week's work SURVIVES his world — ★ **but the MAX peak gap is 32% bigger (2.025% vs 1.532%)**, which
+  is the thing he actually complains about. ★ Band-reach **not measured** (needs the 300-race gate).
 - [HARNESS-WORLD-1.md](HARNESS-WORLD-1.md) — **his race replays exactly: forty of forty, to the
   millisecond** (2026-09-13, branch `night/2026-09-12b`, **not merged, nothing minted**, read-only on
   his store). ★★ **`QN3HDP` REPLAYED FROM ITS OWN STORED INPUTS MATCHES THE RECORD 40/40 ON POSITION
