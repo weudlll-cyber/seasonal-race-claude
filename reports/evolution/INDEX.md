@@ -431,6 +431,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [SERVO-RANKS-1.md](SERVO-RANKS-1.md) — **the servo had no gradation near the target, and a racer
+  now arrives at his place at pace** (2026-09-13, on `night/2026-09-12b`, **built and measured, not
+  merged, nothing minted**). The shipped response divides the rank error by the FIELD SIZE, so it
+  saturates after `0.05 x nActive` ranks — ★ **ONE rank at twenty racers**, where there is therefore
+  no gradation near the target at all and the multiplier is pinned at the 1.100 ceiling for the whole
+  approach. The baseline arrival pace tracks that saturation distance with no exception (N=20 →
+  1.100, N=100 → 1.050). ★ The new response counts the error in RANKS and reaches full drive at one
+  BLOCK: `drive = (maxMult-1) * error / BAND_EDGES[0]`. ★★ **AT TWENTY RACERS IT IS SOLVED** — arrival
+  pace **1.100 → 1.001**, 11% → 52% at pace; pooled 1.084 → **1.019** with the taper, and the
+  **worst-case gap a third smaller** (2.549% → 1.704%). ★ The servo ALONE does not suffice (1.040 /
+  13%), so the taper stays. ★★ **THE COST, AND THE GATE HOLDS**: field-wide band-reach falls **−7.4 pp
+  at N=20** and −4.2 at N=40 (44 000 racers/arm), but the worst cell is 76.3% against a 70% gate, so
+  nothing is breached — **though `FAIRNESS.md`'s 85–90% HEADLINE is** (83.9% at N=20). Bounded to the
+  SERVO, not the taper: the taper touches one racer per race, worth −0.6 pp. ★ Also found: **today's
+  world already fails "zero Holm-unfair" at N ≥ 40** — seven of ten tracks at a hundred racers.
+  Sabotage bites twice, and the one that breaks under "ease everywhere" is CONVERGENCE.
 - [ARRIVAL-SHAPE-E-1.md](ARRIVAL-SHAPE-E-1.md) — **his arrival shape built, and the distance turns
   out not to be the lever** (2026-09-13, on `night/2026-09-12b`, **built and measured, NOTHING
   shipped, default still today's race, not merged**). The shape he described on 2026-09-13 — ease

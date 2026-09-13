@@ -6,9 +6,10 @@
 // starts, the pace he carries when he reaches his drawn place, whether he pulls away afterwards, and
 // whether he holds his block.
 //
-// ★ WHY IT IS A BROWSER TEST. The distance is chosen in node by an env var; the owner watches in a
-// browser, which has neither an env nor a rebuild. `racearena:arrivalVariant` is the door he will
-// actually use, and a door nobody has opened is a door nobody knows works.
+// ★ WHY IT IS A BROWSER TEST. Both halves are chosen in node by env vars; the owner watches in a
+// browser, which has neither an env nor a rebuild. `racearena:arrivalVariant` and
+// `racearena:servoResponse` are the doors he will actually use, and a door nobody has opened is a
+// door nobody knows works. The shipping candidate is BOTH together, so both are set here.
 //
 // ★ WHAT IT ASSERTS is only what ONE race can carry: the variant is live, he is released and climbs,
 // and he is not braked for leading once he is inside his block. The four numbers the decision rests
@@ -27,22 +28,30 @@ import { ensureTrackGeometriesCached } from './appReady.js';
 
 const TRACK = /Dirt Oval/;
 const SEED = '41003';
-// The distance under test. Kept as a constant so the report and the spec name the same arm.
+// ★ THE SHIPPING CANDIDATE IS TWO KEYS, NOT ONE, and the browser has to prove BOTH doors work: the
+// servo response is what makes him arrive at pace, the taper is what finishes the job, and measured
+// together they reach 1.019 where the servo alone reaches 1.040. Testing one of them would be
+// testing something nobody is going to run.
 const VARIANT = 'E4';
+const SERVO = 'ranks';
 
 test('the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block', async ({
   page,
 }) => {
   test.setTimeout(300_000);
 
-  await page.addInitScript((v) => {
-    try {
-      localStorage.setItem('racearena:holdProbe', '1');
-      localStorage.setItem('racearena:arrivalVariant', v);
-    } catch {
-      /* a blocked store fails the assertions below, loudly, rather than here */
-    }
-  }, VARIANT);
+  await page.addInitScript(
+    ({ v, servo }) => {
+      try {
+        localStorage.setItem('racearena:holdProbe', '1');
+        localStorage.setItem('racearena:arrivalVariant', v);
+        localStorage.setItem('racearena:servoResponse', servo);
+      } catch {
+        /* a blocked store fails the assertions below, loudly, rather than here */
+      }
+    },
+    { v: VARIANT, servo: SERVO }
+  );
 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
@@ -83,7 +92,7 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
   const worst = afterArrival.length ? Math.max(...afterArrival.map((s) => s.rank)) : null;
 
   console.log(
-    `[arrival-shape ${VARIANT}] racer ${idx}, drawn ${drawn}:\n` +
+    `[arrival-shape ${VARIANT} + servo ${SERVO}] racer ${idx}, drawn ${drawn}:\n` +
       `  rank when he is handed back: ${atRelease}\n` +
       `  rank when the taper starts:  ${taperStart ? taperStart.rank : 'never — he was already inside the taper span or arrived past the front release'}\n` +
       `  pace when he reaches his place: ${arrival?.m != null ? arrival.m.toFixed(4) : 'he never reached it'}` +
