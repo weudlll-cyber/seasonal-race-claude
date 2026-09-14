@@ -1,90 +1,111 @@
 # MORNING SHEET — night of 2026-09-14 → 15
 
-Branch `feat/gap-leader-brake`. **Nothing merged, nothing minted, no shipped source changed all
-night.** Every variant lives in an instrumented copy (`C:/tmp/srv`) that was proved byte-inert when
-switched off before any number was read from it.
+Branch `feat/gap-leader-brake`, pushed. **Nothing merged, nothing minted, no shipped source changed
+and no shipped default moved all night.** Every variant lived in an instrumented copy that was proved
+byte-inert when switched off before any number was read from it.
+
+**All six pieces are done.**
 
 ---
 
-## ★ NEEDS YOUR WORD
+## ★ THE THREE THINGS TO DECIDE
 
-1. **The servo CAN be fixed narrowly, and the narrow fix is invisible.** `V1` — the restart decision
-   ignores the noise, **no new number** — takes the leader's arrival from **55.8% to 79.7%**, small
-   corrections from 57.8% to 74.1%, halves the wrong-side share, cuts the overshoot, and improves the
-   in-window lead at **both** the median (81.4 → 70.9 px) **and** the maximum (244.4 → 239.3 px), at
-   **1.01×** the largest single-step multiplier move. For contrast the blunt "deliver everything" arm
-   sat at **21.3×**. **It is a full re-baseline** (0/300 byte-identical, 190/300 winner changes, all
-   four fingerprints). → [SERVO-NARROW-1](../reports/night/SERVO-NARROW-1.md)
-2. **Applied literally, V1 misses the bar by two hairs** — a rank-error point estimate +0.006 worse
-   with **t = 0.19** (indistinguishable from zero; its exact-place hits go *up*), and a largest
-   single-step move **0.8%** larger. Whether that is a fair price for +24 points of leader arrival is
-   a judgement, not a measurement, so it is left to you.
-3. **`feat/remove-prestaging-comebacker` is the other branch carrying product code** and removes a
-   mechanism. → [BRANCH-INVENTORY-1](../reports/night/BRANCH-INVENTORY-1.md)
-4. **Breakaways are rarer again on the third reading** — see below; this is the number you have now
-   been told three different values for.
+### 1. The brake's rate window should be 200 ms — and it costs nothing visible
+→ [BRAKE-WINDOW-1](../reports/night/BRAKE-WINDOW-1.md)
+
+At your settings, 200 ms gives the smallest worst race on **10 of 10 tracks** (monotone: shorter is
+better everywhere). Pooled in-window maximum **244.4 px → 208.3 px**, against 227.6 for the shipped
+derivation. The **largest single-step multiplier move is identical to six decimals on every arm
+including brake OFF** — the window changes what the brake asks for, never how fast the multiplier may
+move, so there is nothing abrupt in it.
+
+**The catch, stated plainly:** 1000 ms is *derived* (`trajectoryTransitionDuration`, the ease the
+command already rides). **200 ms is derived from nothing** — it is a measured jitter floor, not a
+quantity the engine holds. Adopting it means accepting a number with no home. **The cost named:** the
+worst single second in 300 races turns 43 times at 200 ms against 14 at 1000 ms; the *median* race
+turns 0 either way.
+
+### 2. The servo can be fixed narrowly, and the narrow fix is invisible
+→ [SERVO-NARROW-1](../reports/night/SERVO-NARROW-1.md)
+
+`V1` — the restart decision ignores the noise, **no new number** — takes the leader's arrival from
+**55.8% to 79.7%**, small corrections from 57.8% to 74.1%, halves the wrong-side share, cuts the
+overshoot, and improves the in-window lead at **both** the median (81.4 → 70.9 px) **and** the maximum
+(244.4 → 239.3), at **1.01×** the largest single-step move. The blunt "deliver everything" arm sat at
+**21.3×** — that one is dead.
+
+**Applied literally V1 misses the bar by two hairs**: a rank-error point estimate +0.006 worse with
+**t = 0.19** (indistinguishable from zero; its exact-place hits go *up*), and a largest single-step
+move 0.8% larger. **It is a full re-baseline** — 0/300 byte-identical, 190/300 winner changes, all
+four fingerprints. Whether that is a fair price for +24 points of leader arrival is your judgement,
+not a measurement, which is why I did not decide it.
+
+### 3. Breakaways are rarer again — the third reading
+→ [BREAKAWAY-RECOUNT-2](../reports/night/BREAKAWAY-RECOUNT-2.md)
+
+You have now been told **71 in 100**, then **44**, now **20**. The third stands: it is the only one
+whose denominator is a constant (the settled `LEADER_ZOOM` value) rather than a per-frame zoom that
+moves 3.75×. **And the previous recount's headline reversal does not survive** — it said the action
+stage causes breakaways and that `wild` was the worst; on a fixed divisor the three stages are
+**quiet 21 / medium 19 / wild 20, flat**. The apparent stage effect was the **camera** zooming in more
+on a wilder race, not the gaps growing.
 
 ---
 
-## THE STATE OF THE CHAIN
+## ★ THE HOLE IN THE RECORD
 
-| piece | what it is | state |
-|---|---|---|
-| 1 | SERVO-FAULT-1 — why the leader and the fine corrections fail; the blunt counterfactual's cost | **DONE**, pushed |
-| 2 | The narrow variants V1–V4 (the night's purpose) | **DONE**, pushed |
-| 3 | The brake's rate window, 200 / 400 / 1000 ms | **RUNNING** |
-| 4 | The big fairness run — **gated** on Piece 2 or 3 beating today | pending Piece 3 |
-| 5 | BREAKAWAY-FREQUENCY-1 recount on a fixed divisor | **measured**, write-up pending |
-| 6 | Branch inventory | **DONE**, pushed |
+**No fairness verdict exists for the brake candidate, and it cannot be produced with the existing
+instrument.** `scripts/sim-fairness.mjs` contains the string `gapBrake` **zero times** and passes no
+`pathLengthPx`, so `_computeGapLeaderBrake` returns at its guard before reading anything — both arms
+would be the same race. Running it would report a fact about the instrument, not the brake. I did not
+modify it and did not invent a fairness definition. **Wiring the sim to see the brake is its own
+piece of work.**
 
 ---
 
-## WHAT WAS FOUND
+## WHAT EACH PIECE FOUND
 
-**Piece 1 — the mechanism, settled.** The ±0.0008 noise alone could have caused **86.1%** of all
-target rewrites (**95.0%** for the leader); the command's own movement only 15.2%. The "small ask is
-near the threshold" idea is **refuted** — a 1–2-rank ask is 50× the threshold. The separating variable
-is **the clamp**: racers 16+ ranks off their place are **100% pinned**, which clips the noise away so
-their command stops moving and arrives (94.6%); racers 1–2 ranks off are **1.0% clamped** (56.8%). The
-leader is **0% clamped while leading** and his command has reversed sign, so he is on the wrong side
-of natural speed on 57.6% of those steps.
-→ [SERVO-FAULT-1](../reports/night/SERVO-FAULT-1.md)
-
-**Piece 1 — the blunt counterfactual is not a candidate.** It arrives (69.3% → 99.9%) but changes the
-winner in 198/300 races, moves all four fingerprints, reddens a golden race, makes the rank error the
-servo exists to reduce **worse** (2.595 → 2.881), and is visible at 21× on every race. Its four red
-parity tests are a **moved input, not a broken guarantee** — real and sim both change and both land on
-`fe3f4861`; what fails is the pinned winner.
-
-**Piece 1 — the brake would still have work.** With the servo arriving it fires in 89/300 races
-instead of 137/300, but takes **−81.5 px (−25.2%)** off the worst race against **−16.8 px (−6.9%)**
-today.
-
-**Piece 6 — two merge hazards.** `report/brake-census-1` adds a report with **no index line**, so
-merging it alone reddens `check-index` on master; `night/2026-09-14-history` is **13 commits behind**
-and carries its own `docs/MORNING.md`.
+| piece | result |
+|---|---|
+| 1 — [SERVO-FAULT-1](../reports/night/SERVO-FAULT-1.md) | The **noise** causes 86.1% of target rewrites (95.0% for the leader); the command's own movement 15.2%. The "small ask is near the threshold" idea is **refuted** — a 1–2-rank ask is 50× the threshold. The separator is **the clamp**: 16+-ranks-off racers are 100% pinned, so their noise is clipped and they arrive (94.6%); 1–2-ranks-off are 1.0% clamped (56.8%). The blunt counterfactual is **not a candidate** (21× visible, rank error worse, all four fingerprints, a golden race). Its four red parity tests are a **moved input, not a broken guarantee** — real and sim both land on `fe3f4861`; the pinned winner is what fails. |
+| 2 — [SERVO-NARROW-1](../reports/night/SERVO-NARROW-1.md) | Four variants, all inert when off (10/10). All take the leader to 79–81% at **1.00–1.04×** visibility. **V1 best.** None moves the rank error either way (all t < 1.4). |
+| 3 — [BRAKE-WINDOW-1](../reports/night/BRAKE-WINDOW-1.md) | 200 ms best on 10/10 tracks, zero visibility cost, engage gate holds at 90.001 px. |
+| 4 — [BRAKE-WINDOW-1](../reports/night/BRAKE-WINDOW-1.md) | **Gate OPENS** for the 200 ms window. Fairness **not producible** (above). Race shape **unchanged in any visible way** — lead changes 19.43 vs 19.44, clear-vs-contested moves by one race in 300. |
+| 5 — [BREAKAWAY-RECOUNT-2](../reports/night/BREAKAWAY-RECOUNT-2.md) | 20 in 100; the stage effect was the camera. |
+| 6 — [BRANCH-INVENTORY-1](../reports/night/BRANCH-INVENTORY-1.md) | Nine branches, two with product code. **Two merge hazards**: `report/brake-census-1` has no index line (would redden `check-index`); `night/2026-09-14-history` is 13 commits behind and carries its own `MORNING.md`. |
 
 ---
 
 ## DECISIONS I TOOK WITHOUT ASKING
 
 - **V2's cadence.** The plan carries the re-roll *transition duration*, not the re-roll *interval*
-  (which lives in `raceCore.js` and is never handed to the planner). I used the field the plan already
-  has, because it changes less than threading a new one through. V2 is therefore a faithful
-  "slow-varying noise" arm but not literally the re-roll cadence. Named in the report.
-- **The fairness instrument was killed, not shortened.** `scripts/sim-fairness.mjs` at
-  `--races=5 --racers=40 --track-defaults` burned **925 s of CPU with zero output** and was stopped so
-  the night's main work could run. It is reported as **not run** rather than presented as a short run.
-- **Piece 5's scope.** The whole-race maximum is taken only while the whole field is still racing
-  (`finishedCount === 0`), so a straggler pair after the leaders have finished cannot masquerade as a
-  lead. This is why my p90 differs slightly from the previous recount's while the median and the
-  maximum reproduce it exactly.
+  (which lives in `raceCore.js` and never reaches the planner). I used the field the plan already has,
+  because it changes less than threading a new one through. V2 is therefore a faithful "slow-varying
+  noise" arm but not literally the re-roll cadence.
+- **The fairness instrument was killed, not shortened.** It burned 925 s of CPU with zero output;
+  reported as **not run** rather than presented as a short run. Later found to be blind to the brake
+  anyway.
+- **Piece 5's scope.** The whole-race maximum counts only while the whole field is still racing, so a
+  straggler pair after the leaders finish cannot masquerade as a lead. This is why my p90 differs
+  slightly from the previous recount while the median and maximum reproduce it to the digit.
+- **Piece 4's race-shape metrics are my construction** from existing quantities (the 750 ms spell rule
+  is `pulkLeadRotationMinHoldMs`). There is no pinned project methodology for "does it look good".
 
 ---
 
-## HAZARD FOR ANY CLEANUP
+## STILL OWED FROM BEFORE THIS NIGHT
 
-`C:/tmp/srv` holds **junctions** to the main tree's `node_modules` (root, `client`, `server`). A
-recursive delete would delete **through** them and hollow out the real `node_modules`. Remove each
-junction with `rmdir` (no `/S`) first, confirm with `dir /AL` that none remain, and only then remove
-the worktree.
+- **Your eye on the served build** of the gap brake (the three services were left up: 4173 production,
+  5173 dev, 4000 API; build badge `7aa649f1 +dirty`). The uncommitted line that switches the brake on
+  for that eye-test is still the only working-tree change on the branch.
+- `feat/remove-prestaging-comebacker` needs your word — it removes a mechanism.
+
+---
+
+## CLEANUP DONE, AND THE HAZARD RESPECTED
+
+`C:/tmp/srv` held **junctions** to the real `node_modules` (root, `client`, `server`). They were
+removed one at a time with `rmdir` (never a recursive delete), verified absent with `dir /AL`, and
+only then was the worktree removed. The owner's `node_modules` is intact. Scratch output directories
+under the session temp area were removed; no test race or data record was created anywhere in
+`server/data`, and the owner's store was never opened.
