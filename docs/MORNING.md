@@ -103,8 +103,12 @@ on every track and every race.** You judge that picture.
 
 ## WATCH IT
 
-★ **http://localhost:4173** — the production build. Badge **`a48fa27c · night/2026-09-12b · clean`**,
-bundle `assets/index-A36tx8D_.js`. API on 4000 (same commit, `dirty: false`), dev on 5173.
+★ **http://localhost:4173** — the production build. API on 4000, dev on 5173.
+
+★ **Check the pill before judging.** It is built from the **tip of `night/2026-09-12b`** and must read
+that commit with **`dirty: false`**; `git rev-parse --short=8 HEAD` is the value it should match, and
+`http://localhost:4000/api/health` must report the **same** commit. A hash is not written here on
+purpose — every commit to this sheet would move it and the sheet would lie about itself.
 
 ★ **There is no repair to inspect** — nothing in this block changed product code. What is on screen is
 the behaviour as it stands, on the branch and on master alike.

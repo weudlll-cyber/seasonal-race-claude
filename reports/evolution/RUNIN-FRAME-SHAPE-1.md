@@ -219,12 +219,15 @@ a camera change on it.
 
 | | | |
 |---|---|---|
-| **API** | `http://localhost:4000` | `/api/health` → `{"status":"ok","build":{"commit":"a48fa27c","branch":"night/2026-09-12b","dirty":false}}` |
-| ★ **production build** | **`http://localhost:4173`** | serves `assets/index-A36tx8D_.js`, stamped **`commit a48fa27c · night/2026-09-12b · dirty false`** |
-| dev | `http://localhost:5173` | `[ra-build] serving build a48fa27c · night/2026-09-12b` |
+| **API** | `http://localhost:4000` | `/api/health` reports the tip commit, `dirty: false` |
+| ★ **production build** | **`http://localhost:4173`** | the bundle built from the tip of `night/2026-09-12b` |
+| dev | `http://localhost:5173` | `[ra-build]` line names the same commit |
 
-★ **The badge, the bundle and the API agree on `a48fa27c` and all three say `dirty: false`.** The
-first build of the night was stamped `1cc0e57a` and was rebuilt so the pill cannot disagree with HEAD.
+★ **NO HASH IS WRITTEN HERE, and that is deliberate.** The build identity is stamped at build time and
+the API's at boot, so every commit to this report would move the value and the report would then lie
+about itself — the exact disagreement BUILD-IDENTITY-DEV-1 exists to prevent. ★ **The check instead:
+the pill, the `[ra-build]` line and `/api/health` must all name `git rev-parse --short=8 HEAD` with
+`dirty: false`.** All three were restarted together at the tip and verified agreeing.
 ★ **Judge on 4173**, not 5173 (VERIFY-RULES R10); 5173 is up because 4173 answers no API call of its own.
 
 ### What to look at, and the control beside it
