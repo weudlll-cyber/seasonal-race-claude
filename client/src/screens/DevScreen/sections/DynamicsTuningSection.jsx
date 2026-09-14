@@ -179,6 +179,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
       gapBrakeAllowedGapPx: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
       gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+      gapBrakeMaxAuthority: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
     }));
   }
 
@@ -862,7 +863,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Allowed lead (canvas widths)
-              <InfoTooltip text="How big a lead the leader is ALLOWED to hold before anything slows him, measured leader to 2nd. Below it the brake does nothing whatsoever - a leader ten pixels clear is never touched, which is the whole difference from the rank-based brakes retired in July. 0.70 canvas widths = shipped default; the owner's own photographed breakaway was 0.698. Lower = the brake engages on smaller leads. Full strength is reached at twice the allowance." />
+              <InfoTooltip text="How big a lead the leader is ALLOWED to hold before anything slows him, measured leader to 2nd. Below it the brake does nothing whatsoever - a leader ten pixels clear is never touched, which is the whole difference from the rank-based brakes retired in July. Lower = the brake engages on smaller leads. The allowance decides only WHETHER the brake engages; how hard it then pulls follows the gap's CHANGE, not its size, up to the maximum authority below." />
             </label>
             {/* ★ THE UNIT HE JUDGES IN, AND WHY THE CONVERSION IS HERE AND NOT IN THE ENGINE.
                 The stored key is WORLD PX. A canvas width is canvasH / (camZoom * axisY)
@@ -910,7 +911,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Brake window end
-              <InfoTooltip text="Where the brake's window ENDS, as a fraction of the race. Its START is not settable here: it is bound to 'PULK ends / OUTCOME begins' above, the same boundary that ends the PULK leader brake, so the two can never leave an unbraked gap between them. 0.92 = shipped, which leaves the last 8% of the race - the run-out - uncorrected." />
+              <InfoTooltip text="Where the brake's window ENDS, as a fraction of the race. Its START is not settable here: it is bound to 'PULK ends / OUTCOME begins' above, the same boundary that ends the PULK leader brake, so the two can never leave an unbraked gap between them. Whatever is left past it - the run-out - is uncorrected." />
             </label>
             <input
               type="number"
@@ -933,6 +934,44 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 {dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd}
               </strong>{' '}
               — the start follows the PULK/OUTCOME seam and is not settable here.
+            </p>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Maximum authority (%)
+              <InfoTooltip text="The hardest this brake may ever pull, as a percentage of natural speed. It is a CEILING, not a setting the brake runs at: the strength climbs toward it only while the gap is still growing, and falls away again as the gap closes. Deliberately tighter than the steering's own floor of 15% - a brake that follows a rate holds its authority far longer than one that reads a size, so the same number would be a much bigger intervention." />
+            </label>
+            {/* Stored as a FRACTION, shown as a percent: the owner judges in percent and the
+                engine multiplies a speed. One conversion, here, the same as the allowance above. */}
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Maximum authority (%)"
+              min={1}
+              max={30}
+              step={1}
+              value={Math.round(
+                (dynamicsConfig.gapBrakeMaxAuthority ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority) * 100
+              )}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 1 && v <= 30) setDynamics('gapBrakeMaxAuthority', v / 100);
+              }}
+            />
+            <p className={s.hint}>
+              Speed floor{' '}
+              <strong>
+                {(
+                  1 -
+                  (dynamicsConfig.gapBrakeMaxAuthority ??
+                    DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority)
+                ).toFixed(2)}
+              </strong>{' '}
+              of natural speed — the slowest the leader can ever be asked to run because of a gap.
             </p>
           </div>
         </div>

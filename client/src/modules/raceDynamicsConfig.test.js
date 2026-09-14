@@ -111,8 +111,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       // GAP-BRAKE-1 — the gap-based leader brake. It ships OFF, so this snapshot is also the
       // assertion that a default install races exactly as it did before the brake existed.
       gapBrakeEnabled: false,
-      gapBrakeAllowedGapPx: 157,
-      gapBrakeWindowEnd: 0.92,
+      gapBrakeAllowedGapPx: 90,
+      gapBrakeWindowEnd: 0.95,
+      gapBrakeMaxAuthority: 0.1,
     });
   });
 
