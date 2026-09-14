@@ -1133,6 +1133,21 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // ★ IT ACTS ON THE GAP, NEVER ON RANK. A leader ten pixels clear is not braked and never will be:
   // below `gapBrakeAllowedGapPx` the mechanism does nothing at all. That is the whole difference
   // from the rank-based brakes retired in July (docs/DEAD-ENDS.md, "Governor family").
+  //
+  // ★★ GAP-BRAKE-RATE-1 (owner, 2026-09-14): SIZE DECIDES WHETHER, CHANGE DECIDES HOW STRONG.
+  // The first build made the STRENGTH a function of the gap's SIZE — full authority only at twice
+  // the allowance. The owner's objection, and it is correct: a brake that works prevents the gap
+  // from ever reaching the size that would earn it its own strength, so it can never get there;
+  // and where brake and drive balance, the gap simply PARKS. Measured in his own race — 169 px
+  // against a 124 px allowance, deepest command 0.9456 of an available 0.85, the gap held rather
+  // than closed. The structural cause is that the old law returned to zero authority exactly AT
+  // the allowance, so an equilibrium above the allowance was guaranteed.
+  //
+  // So the strength now follows the gap's CHANGE: while the gap grows it rises, while the gap
+  // shrinks it falls — and it does NOT switch off at the allowance. It stays engaged and follows
+  // the gap down, reaching zero only when the gap is closed, so the leader returns to normal speed
+  // gradually and never snaps back. The gate is untouched: below the allowance the brake never
+  // ENGAGES. The law itself is `racePlanner.js:_computeGapLeaderBrake`, which is its only home.
   gapBrakeEnabled: false, // master switch. FALSE = today's race, byte-identical.
   // The lead the leader is ALLOWED to hold, in WORLD px, measured leader->2nd.
   //
@@ -1152,14 +1167,29 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   //
   //     world px = canvas widths x 225
   //
-  // 157 px = his OWN photographed breakaway, 0.698 corrected canvas widths. The allowance is set
-  // AT the lead he objected to, so the brake engages on anything worse than that and on nothing
-  // better. For scale, on his fixture the race-max lead runs a median of 132 px and a p90 of 210.
-  gapBrakeAllowedGapPx: 157,
+  // The value below is the OWNER'S OWN, set by him on 2026-09-14. It is tighter than the 157 px the
+  // first build carried (his photographed breakaway, 0.698 corrected canvas widths): he wants the
+  // brake engaging before a lead has grown to the one he objected to, not at it. For scale, on his
+  // fixture the race-max lead runs a median of 132 px and a p90 of 210.
+  gapBrakeAllowedGapPx: 90,
   // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
   // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
-  // both move together and no gap can open between the two mechanisms. 0.92 protects the run-out.
-  gapBrakeWindowEnd: 0.92,
+  // both move together and no gap can open between the two mechanisms. The value below is the
+  // owner's own (2026-09-14); the run-out past it is left uncorrected.
+  gapBrakeWindowEnd: 0.95,
+  // ── The brake's MAXIMUM AUTHORITY, as a fraction of natural speed. Target floor = 1 - this. ──
+  //
+  // ★ THE ONE NUMBER IN THIS MECHANISM THE OWNER NAMED, and the ONLY free number it has: every
+  // other quantity the strength law uses is derived from something that already exists (the
+  // allowance above, and the trajectory transition duration that eases every target in the engine).
+  //
+  // ★ IT IS DELIBERATELY TIGHTER THAN THE ENGINE'S OWN FLOOR. `controllerParams.minMult` is 0.85,
+  // and the first build used `1 - minMult` as its authority on the argument that the brake should
+  // never command what the steering could not. The owner overruled that on 2026-09-14: a brake that
+  // integrates a rate can hold its authority far longer than one that reads a size, so the same
+  // ceiling would be a much bigger intervention. 10% is his number. The resulting floor (0.90) sits
+  // inside [minMult, maxMult], so the two clamps never argue.
+  gapBrakeMaxAuthority: 0.1,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

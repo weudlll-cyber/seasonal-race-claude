@@ -293,6 +293,12 @@ export function createRaceFromIdentity(p) {
           dynamicsConfig.gapBrakeAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
         gapBrakeWindowEnd:
           dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+        gapBrakeMaxAuthority:
+          dynamicsConfig.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+        // GAP-BRAKE-RATE-1: the brake smooths the gap over the SAME interval the engine already
+        // eases every trajectory target over, so it carries no smoothing constant of its own.
+        // Passed as seconds, exactly as the store holds it; the planner converts once.
+        trajectoryTransitionDuration: dynamicsConfig.trajectoryTransitionDuration,
         pathLengthPx,
         choreoIntensity:
           dynamicsConfig.choreoIntensity ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,

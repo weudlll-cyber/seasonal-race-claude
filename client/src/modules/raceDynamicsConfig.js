@@ -145,6 +145,20 @@ export const RACE_DYNAMICS_RULES = [
     why: 'it must be a number between 0 and 1',
   },
   {
+    // GAP-BRAKE-RATE-1. The brake's maximum authority, as a fraction of natural speed. Above 1 the
+    // implied target would be negative (a leader running backwards), and at or below 0 the
+    // mechanism would be a switch that is on and does nothing — both are values nobody can have
+    // meant, so both fall back to the default rather than reaching the physics.
+    keys: ['gapBrakeMaxAuthority'],
+    ok: (c) =>
+      !(
+        typeof c.gapBrakeMaxAuthority !== 'number' ||
+        !(c.gapBrakeMaxAuthority > 0) ||
+        c.gapBrakeMaxAuthority > 1
+      ),
+    why: 'it must be a number above 0 and at most 1',
+  },
+  {
     keys: ['pulkBoostHeadroom'],
     ok: (c) => !(typeof c.pulkBoostHeadroom !== 'number' || c.pulkBoostHeadroom < 0),
     why: 'it must be a number and not negative',
