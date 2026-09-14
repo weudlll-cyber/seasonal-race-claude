@@ -25,6 +25,9 @@ import {
   saveRaceDynamicsConfig,
   DEFAULT_RACE_DYNAMICS_CONFIG,
 } from '../../../modules/raceDynamicsConfig.js';
+// GAP-BRAKE-1: read `referenceCorridorPx` from the shipped camera defaults rather than copying
+// the number, so the canvas-width conversion follows the yardstick if the owner ever moves it.
+import { DEFAULT_CAMERA_CONFIG } from '../../../modules/storage/defaults.js';
 import {
   loadFrameTimingConfig,
   saveFrameTimingConfig,
@@ -36,6 +39,25 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
 import { SubCard, SubHeading } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
+
+// ── GAP-BRAKE-1: the owner's unit, and the one place that converts it ─────────────────────────
+//
+// He judges a lead in CANVAS WIDTHS (his photographed breakaway was 0.698 corrected). The engine
+// cannot use that unit: a canvas width is `canvasH / (camZoom * axisY)` (camera/zoomUnit.js:119),
+// so it follows the LIVE camera zoom, which is not deterministic from the race seed and must
+// never reach the physics. The stored key is therefore world px and the conversion lives HERE.
+//
+// The yardstick is `referenceCorridorPx` — the camera system's own definition of what one
+// standard corridor means in world px, read from the shipped camera defaults rather than restated
+// (MIRRORS-BY-REFERENCE, L207). `visibleWorldPx = corridors * referenceWidthPx` by construction
+// (zoomUnit.js:44, where the world size cancels), so one canvas width at one standard corridor is
+// exactly this many world px. Inside the brake's window the camera actually runs about 0.55–1.5
+// corridors, and the control says so underneath the field rather than implying an exactness the
+// picture does not have.
+const GAP_BRAKE_REFERENCE_PX = DEFAULT_CAMERA_CONFIG.referenceCorridorPx;
+const gapWidthsFromPx = (px) =>
+  Math.round(((Number(px) || 0) / GAP_BRAKE_REFERENCE_PX) * 100) / 100;
+const gapPxFromWidths = (w) => Math.round((Number(w) || 0) * GAP_BRAKE_REFERENCE_PX);
 
 const RACE_PLAN_TIMING_WARNING_STYLE = {
   fontSize: '0.75rem',
@@ -139,6 +161,17 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       gapRerollStrength: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength,
       gapRerollMode: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode,
       gapRerollDevMarker: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
+    }));
+  }
+
+  // Gap-based leader brake (GAP-BRAKE-1) — its own group: the switch, the allowance and the
+  // window end are one mechanism. Resetting returns it to SHIPPED, which is OFF.
+  function resetGapBrake() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+      gapBrakeAllowedGapPx: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+      gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
     }));
   }
 
@@ -781,6 +814,117 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               Gap-Reroll dev marker
               <InfoTooltip text="Rendering-only dev aid: flashes a cyan ring on a racer the instant its re-roll was biased, so you can SEE where the mechanism fires before judging naturalness with it off. Zero effect on the race itself. OFF = shipped." />
             </label>
+          </div>
+        </div>
+      </SubCard>
+      {/* ── Gap-based leader brake (GAP-BRAKE-1) — its own SubCard because it is not a re-roll
+          mechanism: it acts every frame through the trajectory controller, not on the periodic
+          dice. Placed straight after Gap-Cap Re-Roll because they are the two GAP mechanisms and
+          an operator comparing them should not have to hunt for the second one. ── */}
+      <SubCard
+        title="Gap Leader Brake"
+        subtitle="The outcome-phase brake on a runaway lead. Acts on the GAP, never on rank. SHIPPED OFF."
+      >
+        <SubHeading
+          label="Gap Leader Brake"
+          note="Once the PULK window closes, nothing in the engine slows a racer for leading — the outcome controller steers every racer toward his DRAWN rank and cannot see a gap at all. This is the fallback brake for that range. It engages only when the leader's lead exceeds the allowance below, ramps to full at twice it, and can never command a speed the steering could not already produce. OFF is the shipped state and is byte-identical to the race without it."
+          onReset={resetGapBrake}
+          resetTestId="reset-gap-brake"
+        />
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={
+                  dynamicsConfig.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled
+                }
+                onChange={(e) => setDynamics('gapBrakeEnabled', e.target.checked)}
+                data-testid="gap-brake-toggle"
+              />
+              Gap leader brake enabled
+              <InfoTooltip text="Master switch for the gap-based leader brake. OFF = shipped, and OFF is byte-identical to the race you have always had. ON adds the only mechanism in the engine that slows a racer for being too far AHEAD during the outcome phase; everything else there steers him toward his drawn rank and cannot see a gap at all." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Allowed lead (canvas widths)
+              <InfoTooltip text="How big a lead the leader is ALLOWED to hold before anything slows him, measured leader to 2nd. Below it the brake does nothing whatsoever - a leader ten pixels clear is never touched, which is the whole difference from the rank-based brakes retired in July. 0.70 canvas widths = shipped default; the owner's own photographed breakaway was 0.698. Lower = the brake engages on smaller leads. Full strength is reached at twice the allowance." />
+            </label>
+            {/* ★ THE UNIT HE JUDGES IN, AND WHY THE CONVERSION IS HERE AND NOT IN THE ENGINE.
+                The stored key is WORLD PX. A canvas width is canvasH / (camZoom * axisY)
+                (camera/zoomUnit.js:119) — it depends on the LIVE camera zoom, which is not
+                deterministic from the race seed and must never reach the physics. So the engine
+                compares world px and this control does the conversion, against the one fixed
+                yardstick the camera system is defined in: referenceCorridorPx. The world-px value
+                actually stored is printed underneath, so the knob hides nothing. */}
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Allowed lead (canvas widths)"
+              min={0.1}
+              max={3}
+              step={0.05}
+              value={gapWidthsFromPx(
+                dynamicsConfig.gapBrakeAllowedGapPx ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx
+              )}
+              onChange={(e) => {
+                const w = Number(e.target.value);
+                if (isFinite(w) && w >= 0.1 && w <= 3)
+                  setDynamics('gapBrakeAllowedGapPx', gapPxFromWidths(w));
+              }}
+            />
+            <p className={s.hint}>
+              stored as{' '}
+              <strong>
+                {Math.round(
+                  dynamicsConfig.gapBrakeAllowedGapPx ??
+                    DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx
+                )}{' '}
+                world px
+              </strong>{' '}
+              at {GAP_BRAKE_REFERENCE_PX} px per canvas width. The live shot runs roughly 0.55–1.5
+              of that yardstick inside this window, so the picture is tighter or wider than it at
+              any given moment — the distance actually braked is the world px.
+            </p>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Brake window end
+              <InfoTooltip text="Where the brake's window ENDS, as a fraction of the race. Its START is not settable here: it is bound to 'PULK ends / OUTCOME begins' above, the same boundary that ends the PULK leader brake, so the two can never leave an unbraked gap between them. 0.92 = shipped, which leaves the last 8% of the race - the run-out - uncorrected." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Brake window end"
+              min={0.6}
+              max={1}
+              step={0.01}
+              value={
+                dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0.6 && v <= 1) setDynamics('gapBrakeWindowEnd', v);
+              }}
+            />
+            <p className={s.hint}>
+              Window: <strong>where OUTCOME begins</strong> →{' '}
+              <strong>
+                {dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd}
+              </strong>{' '}
+              — the start follows the PULK/OUTCOME seam and is not settable here.
+            </p>
           </div>
         </div>
       </SubCard>

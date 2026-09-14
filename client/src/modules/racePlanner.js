@@ -670,8 +670,13 @@ export function createTrajectoryController(racePlan) {
    * @param {number} [phaseProgress] leader-progress fraction [0,1]; when set, drives phase selection
    *                                  and the area-bonus fade trigger. null = legacy elapsedMs path.
    */
+  // The smallest target change `_setTarget` will act on. It was already the literal below; naming
+  // it lets the gap brake ask the same question the setter does — "would this even be written?" —
+  // instead of carrying a second epsilon of its own.
+  const TARGET_EPSILON = 0.001;
+
   function _setTarget(r, newTarget, elapsedMs) {
-    if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > 0.001) {
+    if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > TARGET_EPSILON) {
       r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
       r.trajectoryMultTarget = newTarget;
       r.trajectoryMultTransStart = elapsedMs;
@@ -734,6 +739,12 @@ export function createTrajectoryController(racePlan) {
     // `minMult` is the controller's own floor, destructured from plan.controllerParams at the top of
     // this factory — read from there rather than re-stated, so a tuned clamp moves the brake with it.
     const target = 1 - (1 - minMult) * ramp;
+    // ★ A CORRECTION TOO SMALL TO BE WRITTEN IS NOT A CORRECTION. A hair over the allowance the
+    // ramp is ~0 and the command is ~1.0 — `_setTarget` would decline to move the target at all.
+    // Returning here keeps that no-op out of the telemetry, so `firedFrames` and `minFiringGapPx`
+    // mean what step 4 reads them as: the gaps at which the brake ACTUALLY pulled. This is not a
+    // second threshold — it is the setter's own, named above.
+    if (!(1 - target > TARGET_EPSILON)) return null;
     _gapBrakeFrames++;
     if (target < _gapBrakeMinMult) _gapBrakeMinMult = target;
     if (gapPx < _gapBrakeMinFiringGapPx) _gapBrakeMinFiringGapPx = gapPx;
