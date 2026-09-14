@@ -636,7 +636,7 @@ the other way.
 
 ### NIGHT-2026-09-12b — the held comebacker, MERGED, archived as the branch's own record (2026-09-14)
 
-- `archive/night-2026-09-12b` (`PROVISIONAL-SHA`, 2026-09-14) — the night of 2026-09-12b, **49 commits,
+- `archive/night-2026-09-12b` (`09e900ae`, 2026-09-14) — the night of 2026-09-12b, **49 commits,
   MERGED into master**, tagged at the branch tip so the branch can be deleted at origin without losing
   the shape of the work. Its product change is five files: **DIRECTION-AUTHORITY-1** (`983d9201`) makes
   a staged comebacker a **HELD-then-RELEASED** racer — one authored leg down to a staging rank,
@@ -647,8 +647,7 @@ the other way.
   on. It also carries the night's measurement reports — BREAKAWAY-FREQUENCY-1, PURSUER-BRAKE-1,
   GAP-CEILING-BASELINE-1, RUNIN-FRAME-SHAPE-1 and LAST-RACE-MATCH-1 — and **RUNIN-ACCEPTED-1**, which
   pins by name the two run-in cases whose picture was judged on a production build and accepted on
-  2026-09-14. **The SHA above is provisional and is corrected on master in the follow-up commit that
-  also corrects `mintedOn` (SHIP-CEREMONY step 11).**
+  2026-09-14. The SHA above is the commit the tag points at, corrected on master in the step-11 follow-up.
 
 ### NIGHT-2026-09-10 — the hold grid, archived because shipped source cites it (2026-09-12)
 
