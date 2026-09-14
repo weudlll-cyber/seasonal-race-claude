@@ -495,6 +495,25 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
   all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
   because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [SHAPE-CENSUS-1.md](SHAPE-CENSUS-1.md) — **a sovereign-lead is cast in 38 of 100 races, and the
+  contested fight is not the main case because it is never cast** (2026-09-14, branch
+  `read/shape-census-1`, **READ-ONLY**, nothing built or minted). First count of HOW OFTEN each role is
+  cast, on his own fixture (city-circuit, 40, his `QN3HDP` roster), N=300 at `wild`.
+  ★★ **`attacker-b2` 100% of races (2.91 per race), `comebacker` 98.3% (1.82), STAGED comebacker
+  72.3%, `sovereign-lead` 37.7%, `faller` 32.7% — and NOT ONE race in 300 has no role at all.** Mean
+  **5.43 roled racers of 40; 86.4% of every field is uncast.** ★★ **CONTRIBUTION, which the
+  over-representation hid: uncast produces 55.6% of all breakaways — more than every cast role
+  combined** — then comebacker 24.7%, sovereign-lead 19.1% (at **20.3x per racer**, the most
+  over-represented racer in the game and still under a fifth), `attacker-b2` 0.6%, `faller` **0.0%**.
+  ★ **N=30 would have inverted the sovereign/comebacker ranking**, which is why the main cell is 300.
+  ★★ **THE STAGE CHANGES NOTHING ABOUT CASTING — byte-identical cast seed by seed, 30 of 30, across
+  quiet/wild/medium**, while 18 of those 30 races change their breakaway verdict: the corrected
+  32/37/44 rise is the same casting behaving differently, and `heroCurveGenerator.js` contains zero
+  references to either stage key. ★★ **THE CONTESTED-FIGHT SHAPE EXISTS AND IS DEAD CODE**:
+  `relationalWaypoints` (`heroCurveGenerator.js:383`, "photo-finish / front-battle-then-collapse") is
+  called only by its own unit test — already catalogued as a dead export in SEPARATION-TO-TEST-1,
+  never as a missing feature. ★ The selection is **four ordered sites, not a weighted draw**; the
+  sequence is the priority, and casting depends on field size, track and seed but **not** on the stage.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
