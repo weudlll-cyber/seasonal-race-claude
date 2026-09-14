@@ -6,6 +6,25 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-14 — [BREAKAWAY-FREQUENCY-1](BREAKAWAY-FREQUENCY-1.md)'s CANVAS-WIDTH COLUMN IS RECOMPUTED,
+  AND ITS CENTRAL CONCLUSION REVERSES.** `C:/tmp/breakaway.mjs:87` divides the gap by `finishT` once
+  too often. ★ **The error is NOT a constant and the shares could not be rescaled**: `finishT` is
+  **2.000 on all five closed tracks** and **0.569-0.950 on the five open ones**, so the published
+  widths were HALF the truth on closed tracks and up to 1.76x too big on open ones — a factor of 3.5
+  between the least and most wrong track, running in both directions.
+  [BREAKAWAY-RECOUNT-1](BREAKAWAY-RECOUNT-1.md) re-raced the same fixture and seeds and **reproduced
+  every published figure digit for digit on the broken column** before correcting it. ★★ **The
+  headline falls from 71 of 100 to 44 of 100**; **never-closed rises from 28% to 43%** (over 51 spells,
+  not 139); the median race max rises 0.483 -> 0.593 while the p90 falls 1.342 -> 1.199 and **the
+  "worst in 400 races, 3.188 w, nine times his" becomes 1.814 w, 2.6x his corrected 0.698**.
+  ★★ **AND THE STAGE CONCLUSION REVERSES**: "it is not the action stage that puts it there"
+  (70/69/71) becomes **32/37/44 — a monotone rise, with his own `wild` the worst.** ★ **The roles are
+  affected through the SELECTION, not the arithmetic** — `breakaway.mjs:222` filters spells on the
+  broken column — so sovereign-lead goes 22.8x -> 29.5x and comebacker 8.4x -> 8.1x, while
+  **attacker-b2's 0% holds exactly**. ★ **The "% of the race" column and every DURATION are
+  unaffected and stand.** The original numbers are left visible beside the corrected ones in that
+  report, not overwritten.
+
 - **2026-09-14 — [MERGE-HALTED-2026-09-14](MERGE-HALTED-2026-09-14.md) ATTRIBUTED THE `check-runin-frame`
   FAILURE TO `983d9201`, AND THAT ATTRIBUTION IS WITHDRAWN.** It recorded the red check as class **(b),
   a real defect introduced on the branch**, with the cause traced to DIRECTION-AUTHORITY-1.
@@ -495,6 +514,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
   all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
   because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [BREAKAWAY-RECOUNT-1.md](BREAKAWAY-RECOUNT-1.md) — **breakaways are LESS common than he was told,
+  and the stage DOES cause them** (2026-09-14, branch `fix/breakaway-recount-1`, **READ-ONLY on the
+  record, no source changed, nothing minted**). Recomputes BREAKAWAY-FREQUENCY-1's canvas-width column
+  from a re-race of the same fixture and seeds — the raw data did not survive and **the report does
+  not name its seeds**, so `1..10` was reconstructed and then PROVEN by reproducing every published
+  figure digit for digit. ★★ **71 of 100 -> 44 of 100**; never-closed **28% -> 43%**; max of 400
+  **3.188 -> 1.814**; stage split **70/69/71 -> 32/37/44, reversing the report's conclusion**.
+  ★ `finishT` is 2.000 on every closed track and 0.569-0.950 on every open one, so **no single
+  rescaling was valid** — and the whole overstatement sits on the open tracks (closed 52% -> 52%,
+  open 90% -> 36%). ★ Roles affected through the selection at `breakaway.mjs:222`; attacker-b2's 0%
+  holds exactly. Every figure N=100 races per cell, 400 races on `wild`, 0 errored.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big

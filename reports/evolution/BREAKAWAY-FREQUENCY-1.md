@@ -9,16 +9,42 @@ copy was deleted after the runs.
 
 ---
 
+> ## ★★ CORRECTED 2026-09-14 — READ THIS BEFORE QUOTING ANY CANVAS-WIDTH FIGURE BELOW
+>
+> **Every canvas-width number in this report is wrong.** `C:/tmp/breakaway.mjs:87` divides the gap by
+> `finishT` once too often, so the published widths are `dt / finishT * pathLengthPx / visibleWorldPx`
+> where they should be `dt * pathLengthPx / visibleWorldPx`. **The error is NOT a constant**: it is
+> x2.000 on the five closed tracks and x0.569-x0.950 on the five open ones, so the pooled shares
+> cannot be rescaled — they had to be recomputed race by race.
+>
+> ★★ **THE HEADLINE FALLS FROM 71 OF 100 TO 44 OF 100**, and the report's central conclusion —
+> *"it is not the action stage that puts it there"* — **REVERSES**: quiet/medium/wild is not
+> 70/69/71 but **32/37/44**, a monotone rise with the stage.
+>
+> **The recount is [BREAKAWAY-RECOUNT-1](BREAKAWAY-RECOUNT-1.md)**, on the same fixture and seeds,
+> with this report's own numbers reproduced digit for digit as its control. ★ **The "% of the race"
+> column and every DURATION in this report are unaffected and still stand.**
+>
+> **The original numbers are left in place below, not overwritten**, so it stays visible that they
+> were published and quoted.
+
+---
+
 ## ★★ THE ONE LINE
 
 > **In about 71 races out of every 100 he would see a racer run at least as far ahead as the one he
 > photographed.** At his own settings — `wild`, 40 racers — that is 71 of 100. ★ **And it is not the
 > action stage that puts it there: `quiet` gives 70 of 100 and `medium` 69.** What the stage changes is
 > how far the worst ones go, not whether they happen.
+>
+> ★★ **CORRECTED 2026-09-14 — BOTH HALVES OF THAT PARAGRAPH ARE WRONG.** It is **44 of 100**, not
+> 71, and the stage **DOES** put it there: **quiet 32, medium 37, wild 44.** See
+> [BREAKAWAY-RECOUNT-1](BREAKAWAY-RECOUNT-1.md).
 
 ★ **Two figures that complete the sentence, because "how often" alone would mislead:** the gap is held
-above half its peak for a median of **4.0 s**, and in **28 of every 100 breakaways the racer is never
-reeled in at all** — he leads to the line and wins. **That second picture is one he has never
+above half its peak for a median of **4.0 s** (★ a DURATION — unaffected by the width error), and in
+~~28~~ ★★ **43 (corrected 2026-09-14)** of every 100 breakaways the racer is never
+reeled in at all — he leads to the line and wins. **That second picture is one he has never
 described, because in his own race it did not happen.**
 
 ---
@@ -30,7 +56,7 @@ Replayed from the store, his own world, his own camera:
 | | ★ `QN3HDP` |
 |---|---|
 | the breakaway | **Breeze**, the cast **comebacker**, drawn 2nd |
-| peak gap | ★ **0.349 canvas widths** (1.538% of the race) at progress **0.837** |
+| peak gap | ~~★ 0.349 canvas widths~~ → ★★ **CORRECTED 2026-09-14: 0.698 canvas widths** (1.538% of the race — this half is right) at progress **0.837** |
 | held above half-peak | ★ **6.8 s** |
 | from taking the lead to the speed turning | ★ **7.1 s** |
 | reeled in? | ★ **YES** — passed at progress 0.921, finished **7th** |
@@ -52,12 +78,14 @@ A LEAD SPELL is a contiguous run at rank 1 among active racers **with nobody yet
 
 | field | races | ★ **≥ 0.349 w (his)** | ≥ 0.5 w | ≥ 1.0 w | ≥ 1.5 w | median race max | p90 | MAX |
 |---|---|---|---|---|---|---|---|---|
-| ★ **40 — his** | 100 | ★ **71.0%** | 47.0% | 14.0% | 6.0% | 0.483 | 1.342 | **2.387** |
-| 20 | 100 | **57.0%** | 44.0% | 17.0% | 5.0% | 0.426 | 1.221 | **3.188** |
-| 60 | 100 | **79.0%** | 65.0% | 19.0% | 4.0% | 0.571 | 1.330 | 1.948 |
-| 100 | 100 | **76.0%** | 56.0% | 14.0% | 5.0% | 0.527 | 1.292 | 2.944 |
+| ★ **40 — his** | 100 | ~~71.0%~~ ★★ **44.0%** | 47.0% | 14.0% | 6.0% | ~~0.483~~ **0.593** | ~~1.342~~ **1.199** | ~~2.387~~ **1.472** |
+| 20 | 100 | ~~57.0%~~ **26.0%** | 44.0% | 17.0% | 5.0% | ~~0.426~~ **0.503** | ~~1.221~~ **1.074** | ~~3.188~~ **1.814** |
+| 60 | 100 | ~~79.0%~~ **47.0%** | 65.0% | 19.0% | 4.0% | ~~0.571~~ **0.681** | ~~1.330~~ **1.217** | ~~1.948~~ **1.688** |
+| 100 | 100 | ~~76.0%~~ **44.0%** | 56.0% | 14.0% | 5.0% | ~~0.527~~ **0.650** | ~~1.292~~ **1.227** | ~~2.944~~ **1.755** |
 
-★ **THE WORST IN 400 RACES IS 3.188 CANVAS WIDTHS — NINE TIMES HIS.**
+~~★ THE WORST IN 400 RACES IS 3.188 CANVAS WIDTHS — NINE TIMES HIS.~~
+
+★★ **CORRECTED 2026-09-14: the worst in 400 races is 1.814 canvas widths — 2.6x his corrected 0.698, not nine times.** The published extreme came from an OPEN track, where the error inflated the value.
 
 ★★ **THIS RE-ESTABLISHES, AND DOES NOT CARRY, GAP-CEILING-BASELINE-1's 40%.** That figure was a
 **narrower quantity**: gaps held *while the pursuer was pinned at the servo floor*. This one counts
@@ -72,7 +100,7 @@ Every spell at or above his 0.349 w, on `wild`:
 
 | field | breakaways | per race | half-peak hold med / p90 / MAX | lead→turn med / p90 / MAX | reeled in | ★ **NEVER reeled in** |
 |---|---|---|---|---|---|---|
-| ★ **40** | 139 | 1.39 | **4.0** / 7.4 / 13.7 s | **5.6** / 10.9 / 16.7 s | 71.9% | ★ **28.1%** |
+| ★ **40** | ~~139~~ **51** | 1.39 | **4.0** / 7.4 / 13.7 s | **5.6** / 10.9 / 16.7 s | ~~71.9%~~ **56.9%** | ★★ ~~28.1%~~ **43.1%** |
 | 20 | 122 | 1.22 | 4.3 / 7.6 / 12.0 s | 5.0 / 10.1 / **28.6 s** | 73.8% | 26.2% |
 | 60 | 160 | 1.60 | 4.0 / 7.3 / 12.4 s | 5.6 / 10.5 / 22.3 s | 70.0% | 30.0% |
 | 100 | 143 | 1.43 | 4.4 / 7.7 / **14.8 s** | 5.6 / 10.6 / 19.3 s | 69.2% | 30.8% |
@@ -142,9 +170,9 @@ padded out.**
 
 | stage | boost / brake | races | ★ **≥ 0.349 w** | ≥ 0.5 | ★ **≥ 1.0** | ★ **≥ 1.5** | median max | ★ **p90** | MAX |
 |---|---|---|---|---|---|---|---|---|---|
-| **quiet** | 0.06 / 0.10 | 100 | ★ **70.0%** | 55.0% | **6.0%** | **2.0%** | 0.554 | **0.825** | 2.368 |
-| **medium** | 0.12 / 0.10 | 100 | ★ **69.0%** | 48.0% | 10.0% | 3.0% | 0.489 | 1.076 | **3.181** |
-| ★ **wild — his** | 0.12 / 0.15 | 100 | ★ **71.0%** | 47.0% | ★ **14.0%** | ★ **6.0%** | 0.483 | ★ **1.342** | 2.387 |
+| **quiet** | 0.06 / 0.10 | 100 | ~~70.0%~~ ★★ **32.0%** | 55.0% | ~~6.0%~~ **19.0%** | ~~2.0%~~ **3.0%** | ~~0.554~~ **0.549** | ~~0.825~~ **1.240** | ~~2.368~~ **1.660** |
+| **medium** | 0.12 / 0.10 | 100 | ~~69.0%~~ ★★ **37.0%** | 48.0% | ~~10.0%~~ **14.0%** | ~~3.0%~~ **2.0%** | ~~0.489~~ **0.551** | ~~1.076~~ **1.193** | ~~3.181~~ **1.810** |
+| ★ **wild — his** | 0.12 / 0.15 | 100 | ~~71.0%~~ ★★ **44.0%** | 47.0% | ~~14.0%~~ **19.0%** | ~~6.0%~~ ★ **0.0%** | ~~0.483~~ **0.593** | ~~1.342~~ **1.199** | ~~2.387~~ **1.472** |
 
 | stage | breakaways | half-peak med | lead→turn med | reeled in | NEVER reeled in |
 |---|---|---|---|---|---|
