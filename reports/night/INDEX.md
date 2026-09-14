@@ -1470,6 +1470,24 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [SERVO-ARRIVAL-1.md](SERVO-ARRIVAL-1.md) — **the premise was wrong: the placement servo DOES
+  arrive**, on **69.3% of 19,464,218 commanded racer-steps** (300 races, brake OFF), median delivered
+  fraction **1.000**, and only **68 of 12,000 racer-slots** never served. The decision rule therefore
+  fired and **Steps 3 and 4 were not run** — no what-if was built. ★ THE RECONCILIATION with
+  GAP-BRAKE-HANDOVER-1's reading is the substance: same racer, same race, Flare on ice-track seed 3
+  delivers a median **0.997 over his whole race** and a median **−0.355 in the 925 steps he spends
+  leading inside the window** (3.7% arrival, 64.1% wrong side). Both true; the previous block's error
+  — this author's — was calling a 1-in-5 slice of one racer a property of the servo. ★ The fault is
+  real, small and LOCALISED: the **leader is the worst-served racer on the track** (55.8% against the
+  field's 69.3%), and the sharpest gradient is distance from the drawn place — **57.8% arrival at 1–2
+  ranks off against 93.3% at 16+ off**, i.e. the big corrections land and the fine dithering does not.
+  Comebackers and fallers run the wrong way on ~19%. Mechanism addressed: `_setTarget`'s restart beats
+  the ease — median **48 ms of a 1000 ms transition**, where `easeInOutCubic` has moved 0.04%; the
+  ±0.0008 noise against `TARGET_EPSILON` 0.001 predicts a 14.1% crossing rate for an unclamped racer
+  (measured 10.1%, restart rate 9.5%), though the instrument **cannot separate noise from
+  blended-error movement and does not choose**. Read-only; instrumented copy proved byte-inert on 10
+  cases first.
+
 - [GAP-BRAKE-START-1.md](GAP-BRAKE-START-1.md) — **does the lower allowance make the brake start
   earlier? Yes — by 0.29 s, not the 1.47 s it implies.** Three arms on ice-track Quick Test seed 3
   (reproduction proved first: 40/40 against `runRace`, OFF finish order identical to QUICKTEST-ICE-3,
