@@ -1470,6 +1470,19 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [BREAKAWAY-RECOUNT-2.md](BREAKAWAY-RECOUNT-2.md) — **the third reading of the breakaway shares:
+  20 in 100, and the stage effect was the CAMERA.** Recomputed against ONE fixed divisor — the SETTLED
+  `LEADER_ZOOM` value of 225 px per width — instead of the per-frame zoom, which per ZOOM-PER-STATE-1
+  moves 120/165/225/450, a **3.75x spread**. He has now been told **71 in 100**, then **44**, now
+  ★★ **20**. ★★ And BREAKAWAY-RECOUNT-1's headline reversal **does not survive**: it said the action
+  stage causes breakaways (quiet 32 / medium 37 / wild 44, his own setting the worst); on a fixed
+  divisor the three are **quiet 21 / medium 19 / wild 20 — flat**, because a wilder race puts the
+  CAMERA in its zoomed-in states more often, shrinking the divisor and inflating the width. The
+  underlying gaps barely move (median race-max 93.6 / 92.5 / 102.2 px). ★ Reproduction confirmed: the
+  previous recount's divisor-free WORLD-PX median (102.2) and MAX (242.9) are reproduced to the digit.
+  Reading 3 stands, being the only one whose denominator is a constant. City-circuit — his own track —
+  is the joint worst at 40%.
+
 - [SERVO-NARROW-1.md](SERVO-NARROW-1.md) — **the servo CAN be fixed narrowly, and the narrow fix is
   INVISIBLE.** Four variants, all aimed at the restart driver rather than the ease, none changing what
   the servo commands, all proved inert when switched off (10/10 identical). Every one takes the
