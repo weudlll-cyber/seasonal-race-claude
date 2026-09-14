@@ -496,7 +496,62 @@ file's header as a standing hazard with the two fixture roles named.
 
 ## STEP 6 — FOR HIS EYE
 
-<!--BUILD-->
+**Both services are up, and the brake is ON at his settings.**
+
+| | |
+|---|---|
+| **production build** | **http://localhost:4173** — `vite preview`, the arm to judge on (VERIFY-RULES R10) |
+| **dev server** | **http://localhost:5173** |
+| **API** | **http://localhost:4000** — CORS confirmed for BOTH client origins (4173 alone answers no API call; leaving 4173 out of `RA_CLIENT_ORIGIN` looks exactly like a dead backend) |
+
+**The build badge, read rather than assumed** — and the API and the client agree on it:
+
+```
+[ra-build] start-up: serving build 7aa649f1 · feat/gap-leader-brake +dirty
+/api/health  {"build":{"commit":"7aa649f1","branch":"feat/gap-leader-brake","dirty":true}}
+```
+
+**Bundle actually served on 4173:** `dist/assets/index-BpnZtvVa.js` (925.78 kB, gzip 276.46 kB) with
+`dist/assets/index-ucWHj0Wl.css` — both read out of the page the preview server returned, not out of
+the build log.
+
+**`+dirty` is expected and is the point.** The committed default is `gapBrakeEnabled: false`; the one
+uncommitted line in the tree turns it on for this eye test and says so in the source. The other three
+keys are the COMMITTED defaults, so they are his settings with nothing local about them. Verified in
+the shipped bundle itself rather than in the source:
+
+```
+gapBrakeEnabled:!0        gapBrakeAllowedGapPx:90
+gapBrakeWindowEnd:.95     gapBrakeMaxAuthority:.1
+```
+
+### How to switch it off
+
+**Dev Screen → Dynamics Tuning → the "Gap leader brake" card → untick "Gap leader brake enabled".**
+It takes effect on the next race; no reload. The card's **Reset** returns the whole group — switch,
+allowance, window end and maximum authority — to the shipped state, which is OFF. The same card now
+carries **"Maximum authority (%)"**, showing his 10% and printing the resulting speed floor (0.90)
+underneath.
+
+### What to watch
+
+| | race | why |
+|---|---|---|
+| **1** | **ice-track, Quick Test seed 3** | **his own race.** In-window lead **196.6 → 167.7 px (−14.7%)**; the brake pulls for **10.5 s** from p=0.82; Flare wins on both arms, so nothing about the result changed — only how the lead was held. ★ Watch the **window end**: the brake is still holding 5% authority when progress crosses 0.95 and is switched off there, and the ease spreads that over a second. That is the one release the fade did not choose. |
+| **2** | **searound seed 20 — the largest fall** | **216.4 → 182.2 px, −34.2 px, −15.8%**, the biggest single improvement in 300 races. Pulls 14.1 s. Winner unchanged, so it is a clean look at the mechanism doing its job. |
+| **3** | **ice-track seed 4 — the control** | **the brake never fires.** Same track, same field, byte-identical to the OFF arm — same finishing order and the same 40 finish times to the millisecond. If this one looks different from the brake-off build, the difference is not the brake. |
+
+*(An alternative for 2 if he wants to see a race the brake also re-ordered: **dirt-oval seed 7**,
+242.9 → 211.9 px (−12.8%), 17.0 s of pulling, and the winner does change.)*
+
+### The open question this hands him
+
+The build he is about to watch is the **1000 ms rate window**. Section 3c measures the **200 ms**
+one as better on all ten tracks with no oscillation and no change to the gate or the ceiling. **I
+have not shipped it**, because the ceiling is his number and the window is the one quantity I
+derived rather than received — and no existing quantity in the physics means 200 ms for this
+purpose. If the picture at 1000 ms is not enough brake, that is the lever, and it should become its
+own key with its own home rather than borrow one.
 
 ---
 
