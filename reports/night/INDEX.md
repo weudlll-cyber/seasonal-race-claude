@@ -1470,6 +1470,24 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [BRAKE-WINDOW-1.md](BRAKE-WINDOW-1.md) — **200 ms wins on all ten tracks for nothing, and the
+  fairness instrument cannot see the brake at all.** At his settings the 200 ms rate window gives the
+  smallest worst race on **10 of 10 tracks** (monotone in the window), taking the pooled in-window
+  maximum **244.4 → 208.3 px** against the shipped derivation's 227.6 — and the largest single-step
+  multiplier move is **identical to six decimals on every arm including brake OFF**, because the
+  window changes what the brake asks for, never how fast the multiplier may move. ★ The named cost is
+  oscillation in the tail: the worst second in 300 races turns **43 times at 200 ms against 14 at
+  1000 ms**, while the MEDIAN race turns 0 either way. The engage gate holds at 90.001 px on every
+  window. ★ **It carries a number with no home**: 1000 ms is derived from
+  `trajectoryTransitionDuration`; 200 ms is derived from nothing. ★★ The Piece-4 gate **OPENS** on
+  this candidate (in-window max −36.1 px; rank error t=0.06 with 245/300 races exactly equal;
+  visibility ratio 1.000) — but the fairness half **cannot be produced**: `scripts/sim-fairness.mjs`
+  contains the string `gapBrake` **zero times** and passes no `pathLengthPx`, so the brake returns at
+  its guard before reading anything and both arms would be the same race. **No fairness verdict
+  exists for this candidate.** ★ Race shape is unchanged in any visible way: lead changes 19.43 vs
+  19.44 (t=0.13), clear-vs-contested moves by one race in 300; three of six measures are
+  statistically distinguishable and all move 0.1–0.6%.
+
 - [BREAKAWAY-RECOUNT-2.md](BREAKAWAY-RECOUNT-2.md) — **the third reading of the breakaway shares:
   20 in 100, and the stage effect was the CAMERA.** Recomputed against ONE fixed divisor — the SETTLED
   `LEADER_ZOOM` value of 225 px per width — instead of the per-frame zoom, which per ZOOM-PER-STATE-1
