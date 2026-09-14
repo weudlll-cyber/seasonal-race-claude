@@ -630,6 +630,9 @@ export function createTrajectoryController(racePlan) {
   let _leashFrames = 0; // diagnostic: frames the brake was applied
   // ── GAP-BRAKE-1 telemetry. Read-only counters; they answer the two questions the owner asked —
   // how often does it fire, and does it ever fire on a gap it was told to allow.
+  // GAP-BRAKE-ARRIVAL-1: the racer the brake was the binding constraint on last step, or -1.
+  // Closure-scoped, so it resets per race like every other piece of controller state.
+  let _gapBrakeBindingIdx = -1;
   let _gapBrakeWindowFrames = 0; // leader-frames inside [corrStart, windowEnd]
   let _gapBrakeFrames = 0; // of those, frames the brake actually pulled
   let _gapBrakeMinMult = 1.0; // hardest correction commanded this race
@@ -675,6 +678,33 @@ export function createTrajectoryController(racePlan) {
   // instead of carrying a second epsilon of its own.
   const TARGET_EPSILON = 0.001;
 
+  /**
+   * GAP-BRAKE-ARRIVAL-1 — move a target that is ALREADY in flight, without restarting its ease.
+   *
+   * ★ WHY THIS EXISTS. `_setTarget` above resets `trajectoryMultPrev` to the value held RIGHT NOW
+   * and `trajectoryMultTransStart` to now, so every write begins the 1000 ms ease again from
+   * wherever the multiplier happens to be. For a target that settles, that is correct and is what
+   * every racer has always done. For a target that MOVES EVERY STEP it is fatal:
+   * `easeInOutCubic` is 4t^3 near zero (mathUtils.js:12), so a restart every few steps keeps the
+   * multiplier permanently in the flat part of the curve and it never travels. GAP-BRAKE-PARADOX-1
+   * measured the consequence on space-sprint seed 2 — a slowdown commanded on 592 of 592 braked
+   * steps, and a multiplier above 1.0 on 592 of 592, frozen at the 1.094 boost it happened to hold.
+   *
+   * So while the brake is the binding constraint on a racer, the target is moved and the CLOCK IS
+   * LEFT ALONE. The ease then runs to completion exactly as designed; once `elapsed` passes the
+   * transition duration, raceCore.js:565-574 returns the target itself and the held value tracks
+   * the command step for step.
+   *
+   * ★ THIS IS NOT A SECOND TRANSITION MECHANISM. It writes no multiplier and carries no rate of
+   * its own — it is the SAME ease, with the restart omitted. There is no new number here.
+   *
+   * ★ AND IT CANNOT CAUSE A JUMP. The held value is a continuous function of (prev, target,
+   * elapsed); moving the target by d changes it by d x ease(elapsed/dur) <= d, and d is the
+   * brake's per-step command change, which is a fraction of a thousandth.
+   */
+  function _retargetInFlight(r, newTarget) {
+    r.trajectoryMultTarget = newTarget;
+  }
   function _setTarget(r, newTarget, elapsedMs) {
     if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > TARGET_EPSILON) {
       r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
@@ -986,6 +1016,11 @@ export function createTrajectoryController(racePlan) {
     //
     // ★ ON THE GAP, NEVER ON RANK. Below the allowance this block sets nothing at all.
     const gapBrake = _computeGapLeaderBrake(active, nActive, phaseProgress);
+    // Which racer the brake was the binding constraint on LAST step. It is the whole state the
+    // arrival fix needs: the first step of a pull starts the ease normally (a smooth onset from
+    // wherever he is), and every step after that moves the target without restarting it.
+    const brakeHeldLast = _gapBrakeBindingIdx;
+    let brakeBindingNow = -1;
 
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
@@ -1212,7 +1247,19 @@ export function createTrajectoryController(racePlan) {
         gapBrake != null && r.index === gapBrake.index
           ? Math.min(rawTarget, gapBrake.target)
           : rawTarget;
-      _setTarget(r, steerTarget, elapsedMs);
+      // ★ IS THE BRAKE THE ONE BEING OBEYED THIS STEP? Only then does the arrival path apply, so
+      // the change stays on the brake's own path: a racer the brake is not acting on, and a racer
+      // whose own servo is already pulling harder than the gap warrants, both keep the shipped
+      // `_setTarget` behaviour untouched.
+      const brakeIsBinding =
+        gapBrake != null && r.index === gapBrake.index && gapBrake.target < rawTarget;
+      if (brakeIsBinding) brakeBindingNow = r.index;
+      if (brakeIsBinding && brakeHeldLast === r.index) {
+        // continuing pull: move the target, leave the ease running (GAP-BRAKE-ARRIVAL-1)
+        _retargetInFlight(r, steerTarget);
+      } else {
+        _setTarget(r, steerTarget, elapsedMs);
+      }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
@@ -1231,6 +1278,9 @@ export function createTrajectoryController(racePlan) {
         if (r.avoidanceActive) _winnerBlockedInOutcome++;
       }
     }
+
+    // GAP-BRAKE-ARRIVAL-1: remember who the brake was obeyed on, for the next step's decision.
+    _gapBrakeBindingIdx = brakeBindingNow;
 
     // ── Front distance leash (SIM-ONLY; gap-space brake on the runaway leader) ─────────────────────
     // Only ever runs when BOTH the plan carries leash config (sim-only) AND the caller passed the
