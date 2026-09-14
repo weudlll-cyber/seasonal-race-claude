@@ -1461,6 +1461,15 @@ and in that commit's message.
   more abrupt than the servo already is. ★ A false green was found and fixed in this block's own
   test, and `check-index` caught three earlier reports this author never indexed.
 
+- [GAP-BRAKE-HANDOVER-1.md](GAP-BRAKE-HANDOVER-1.md) — **why the new leader was not braked**: (B),
+  and only (B). Racer 18 led 165 steps inside the window and his gap never reached the allowance —
+  biggest reachable lead **95.8 px against 124**; it first crossed 124 at progress **0.966, past the
+  0.95 window end**, and he led 176 more steps out there up to 181.1 px. ★ NO LATCH: 0 of 326 firing
+  steps acted on a non-leader, and after the hand-over the brake selected 18 on **341 of 341** steps.
+  ★ It never pulled on him at all, so strength was never in question. The wider lead is racer 20
+  having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
+  the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
