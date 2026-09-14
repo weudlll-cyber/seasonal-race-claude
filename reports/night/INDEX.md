@@ -1480,6 +1480,18 @@ and in that commit's message.
   field at all; N=40 matches four details of his description. ★ The canvas-width conversion reverses
   the sign on BOTH rows.
 
+- [SCREENSHOT-VS-NUMBERS-1.md](SCREENSHOT-VS-NUMBERS-1.md) — **the screenshot was right and the
+  column was mine**: QUICKTEST-ICE-3's "leader→pack 518.5 px" measured the leader against the MEDIAN
+  of the live field, rank ~20 of 40, off screen. What a viewer calls the field begins at rank 3, and
+  rank 3 is **0.0 px behind Raven** — so Flare→Raven IS larger than Raven→field, exactly as the owner
+  said, on both arms. ★ The leader→2nd figure is NOT wrong (it is the engine's own expression at
+  `racePlanner.js:762`, validated 0 disagreements over 513 firing steps), and the lap/finishT error
+  the brief warned of did NOT recur — neither figure contains a lap term. ★ The previous report's
+  CONCLUSION is withdrawn: the brake acts on exactly the gap he photographed and cut it 196.6 → 169.0
+  px, but the camera zoomed in by almost the same factor (323.6 → 273.0 px per width), so the 14%
+  reduction is invisible on screen. The image itself was NOT readable from this machine — the search
+  is recorded and Step 1 is reported as missing, not worked around.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
