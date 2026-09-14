@@ -108,6 +108,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapRerollStrength: 1.0,
       gapRerollMode: 'symmetric',
       gapRerollDevMarker: false,
+      // GAP-BRAKE-1 — the gap-based leader brake. It ships OFF, so this snapshot is also the
+      // assertion that a default install races exactly as it did before the brake existed.
+      gapBrakeEnabled: false,
+      gapBrakeAllowedGapPx: 157,
+      gapBrakeWindowEnd: 0.92,
     });
   });
 

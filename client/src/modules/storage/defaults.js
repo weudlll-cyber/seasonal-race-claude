@@ -1139,14 +1139,23 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // ★ WHY WORLD PX AND NOT CANVAS WIDTHS, which is the unit the owner judges in. A canvas width is
   // `visibleWorldPx = canvasH / (camZoom * axisY)` (camera/zoomUnit.js:119) — it depends on the LIVE
   // camera zoom, which is not deterministic from the race seed and must never reach the physics.
-  // Measured inside this brake's own window on city-circuit, `visibleWorldPx` runs 165..450 px
-  // (median 225) — a 2.7x swing — so a canvas-width threshold is not a fixed distance at all.
-  // The physics therefore compares world px, and the DEV SCREEN presents the owner's unit and does
-  // the conversion (DynamicsTuningSection.jsx) against `referenceCorridorPx` (300, above):
-  //     world px = canvas widths x referenceCorridorPx
-  // 210 px = 0.70 canvas widths at that reference — the owner's own photographed breakaway was
-  // 0.698 corrected canvas widths, so the default allowance is set AT the case he objected to.
-  gapBrakeAllowedGapPx: 210,
+  // Measured inside this brake's own window on city-circuit, `visibleWorldPx` runs 165..450 px —
+  // a 2.7x swing — so a canvas-width threshold is not a fixed distance at all. The physics
+  // therefore compares world px and the DEV SCREEN presents the owner's unit, converting there
+  // (DynamicsTuningSection.jsx).
+  //
+  // ★★ THE YARDSTICK IS THE LEADER SHOT, NOT `referenceCorridorPx`. One canvas width as HE sees it
+  // is `cameraStateProfiles.LEADER_ZOOM.visibleCorridors x referenceCorridorPx` = 0.75 x 300 =
+  // 225 px, which line 131 above names in as many words: "the reference shot, the owner's own
+  // eye". Converting against the bare 300 instead makes every allowance 33% too permissive, which
+  // is exactly what the first draft of this key did — 210 px reads as 0.93 of his widths, not 0.70.
+  //
+  //     world px = canvas widths x 225
+  //
+  // 157 px = his OWN photographed breakaway, 0.698 corrected canvas widths. The allowance is set
+  // AT the lead he objected to, so the brake engages on anything worse than that and on nothing
+  // better. For scale, on his fixture the race-max lead runs a median of 132 px and a p90 of 210.
+  gapBrakeAllowedGapPx: 157,
   // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
   // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
   // both move together and no gap can open between the two mechanisms. 0.92 protects the run-out.

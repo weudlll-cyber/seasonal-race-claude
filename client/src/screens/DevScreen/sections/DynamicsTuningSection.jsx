@@ -47,14 +47,21 @@ import s from '../DevScreen.module.css';
 // so it follows the LIVE camera zoom, which is not deterministic from the race seed and must
 // never reach the physics. The stored key is therefore world px and the conversion lives HERE.
 //
-// The yardstick is `referenceCorridorPx` — the camera system's own definition of what one
-// standard corridor means in world px, read from the shipped camera defaults rather than restated
-// (MIRRORS-BY-REFERENCE, L207). `visibleWorldPx = corridors * referenceWidthPx` by construction
-// (zoomUnit.js:44, where the world size cancels), so one canvas width at one standard corridor is
-// exactly this many world px. Inside the brake's window the camera actually runs about 0.55–1.5
-// corridors, and the control says so underneath the field rather than implying an exactness the
-// picture does not have.
-const GAP_BRAKE_REFERENCE_PX = DEFAULT_CAMERA_CONFIG.referenceCorridorPx;
+// ★ THE YARDSTICK IS THE LEADER SHOT. `visibleWorldPx = corridors * referenceWidthPx` by
+// construction (zoomUnit.js:44, where the world size cancels), so a canvas width is only a fixed
+// distance once a shot is named. The one to name is LEADER_ZOOM, which defaults.js calls "the
+// reference shot, the owner's own eye" — 0.75 x 300 = 225 world px. Both halves are READ from the
+// shipped camera defaults rather than restated (MIRRORS-BY-REFERENCE, L207), so the conversion
+// follows the picture if either ever moves.
+//
+// Converting against the bare referenceCorridorPx (300) instead would make every allowance 33%
+// too permissive. Inside the brake's window the camera actually runs 0.4–1.5 corridors, and at
+// the moment a race reaches its biggest lead the measured median shot is 165 px, not 225 — so the
+// hint under the field says the yardstick is a yardstick and not a promise.
+const GAP_BRAKE_REFERENCE_PX = Math.round(
+  DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors *
+    DEFAULT_CAMERA_CONFIG.referenceCorridorPx
+);
 const gapWidthsFromPx = (px) =>
   Math.round(((Number(px) || 0) / GAP_BRAKE_REFERENCE_PX) * 100) / 100;
 const gapPxFromWidths = (w) => Math.round((Number(w) || 0) * GAP_BRAKE_REFERENCE_PX);
@@ -890,9 +897,11 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 )}{' '}
                 world px
               </strong>{' '}
-              at {GAP_BRAKE_REFERENCE_PX} px per canvas width. The live shot runs roughly 0.55–1.5
-              of that yardstick inside this window, so the picture is tighter or wider than it at
-              any given moment — the distance actually braked is the world px.
+              at {GAP_BRAKE_REFERENCE_PX} px per canvas width — the LEADER shot, the one the owner
+              judged against. The camera is not always in it: inside this window it runs 0.4–1.5
+              corridors, and at the moment a race reaches its biggest lead the measured median shot
+              is 165 px. So a race can LOOK like a bigger runaway than the braked distance says, or
+              the reverse — the distance actually braked is the world px.
             </p>
           </div>
           <div className={s.formGroup}>
