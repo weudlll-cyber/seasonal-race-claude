@@ -679,6 +679,33 @@ The pre-OUTCOME race is shaped by **exactly one steering path** with two uncondi
 
 Config keys (values live in `storage/defaults.js`): `choreoIntensity`, `choreoOutcomeStart`, `choreoReleaseProgress`, `choreoResolveB2` / `B3` / `B4` / `B5`, `choreoPackBandStrictness`, `choreoSuppressChaosBonusB1`.
 
+### (a.0) How the B1 pool casts the comebacker — ONE path since 2026-09-14
+
+`heroCurveGenerator.js castHeroes` has **three** sites that can cast a standard hero, and they run in
+this order, each taking from one `nHeroes` budget:
+
+1. **the drawn winner** (`:616`) — cast `sovereign-lead` if his post-chaos rank is already at the
+   front cluster, otherwise `comebacker`. Runs first and unconditionally.
+2. **the faller** (`:636`) — a seeded ~1-in-3 gate (`fallerEveryNRaces`).
+3. **the B1 pool** (`:650` onward) — ★ **the STAGED comebacker, and nothing else.** One per race,
+   held to `stagedComebackRank` and released at `holdReleaseProgress`; the drawn winner is excluded
+   here because he is cast at his own site above.
+
+★ **A SECOND BRANCH USED TO SIT UNDER (3) AND WAS REMOVED ON 2026-09-14** (REMOVE-PRESTAGING-1). It
+was the pre-staging casting path, unchanged since 2026-07-08, and it cast any pool member the staging
+did not take. Consequences, measured at N=300 on city-circuit at 40 racers and recorded in full in
+[DEAD-ENDS.md](DEAD-ENDS.md) section S: comebackers per race **1.82 → 1.32**, races with none at all
+**1.7% → 6.7%**, and the breakaway share **59.3% → 63.0%** — it went **up**, because a racer that was
+cast is now uncast and uncast racers produce most breakaways. ★ **The budget freed by the removal is
+deliberately left unused.**
+
+★ **AND THE POOL IS SILENT BELOW 20 RACERS.** `stagedComebackRank` returns `null` under
+`STAGED_COMEBACK.MIN_FIELD`, so with the staged path as the only one, site (3) casts nothing at all at
+a small field — 100% of races at n≤19, against 2–5% before. The removed path had no such floor. This
+is the deliberate consequence of the rule at `heroCurveGenerator.js:541-547`, not a separate decision;
+the per-size numbers are in [DEAD-ENDS.md](DEAD-ENDS.md) section S.
+
+
 ### (a.1) B2-attacker heroes — authored front-action (shipped 2026-07-20)
 
 The front-action feature (`v-b2-heroes-complete`, master `8bf54ca`). Beyond the base `nHeroes` cast, `heroCurveGenerator.js castHeroes` casts `b2AttackHeroes` EXTRA heroes from FRONT-post-chaos B2-finishers, role `attacker-b2`. Each is authored to **climb to ~`b2AttackPeakRank`** in a jittered `b2AttackProgress` window, then its curve steers it back **down** toward `b2AttackFinalRank` — bypassing the standard 0.80 B2 resolve checkpoint (hero-privilege, so the full climb-and-fall fits). Feasibility is enforced at cast time (`attackerTiming` + `racerFeasibility` + `checkFeasible`): an infeasible attacker is skipped, never cast unfair.

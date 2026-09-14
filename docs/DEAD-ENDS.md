@@ -543,6 +543,87 @@ makes these two materially worse — many more frames, or a band that never appe
 picture nobody has looked at, and `everOnCanvas` is required by the exception precisely so the
 "never appears" case cannot be swallowed by it.
 
+## S. The PRE-STAGING comebacker casting path — REMOVED 2026-09-14, and do not restore it
+
+**Removed on 2026-09-14** by the owner's decision: the second branch in the B1-pool loop of
+`castHeroes`, which cast `addSolo(… 'comebacker' : 'sovereign-lead')` for any pool member the staging
+did not take. The staged path is now the only way that pool casts the role. A test goes red if the
+branch is restored (`stagedComeback.test.js`, REMOVE-PRESTAGING-1).
+
+**What it was.** Not a fall-back added beside the staged path — **the ORIGINAL casting path**,
+unchanged since the generator was written on 2026-07-08. COMEBACK-STAGED-1 inserted the staged path
+in front of it on 2026-09-11 and kept it so a refused staging stayed byte-identical to the tree
+before. It never carried the `winnerIdx` exclusion the staged path has, because it predates it.
+
+★ **THE MEASURED FACTS, on the owner's own fixture (city-circuit, 40 racers, his roster, N=300),
+separated by CALL SITE with an instrumented build proven to race identically to the shipped one:**
+
+| | before | after |
+|---|---|---|
+| comebackers per race | **1.82** | **1.32** |
+| — from the drawn-winner site (kept) | 0.58 | 0.58 |
+| — from the staged path (kept) | 0.72 | 0.74 |
+| — ★ **from the removed path** | ★ **0.51** | ★ **0** |
+| races with no comebacker at all | 5 (1.7%) | ★ **20 (6.7%)** |
+| mean cast racers per race | 5.43 of 40 | **4.93 of 40** |
+| ★ **breakaway share** (≥0.698 corrected w) | 59.3% | ★ **63.0%** |
+| race-max lead, med / p90 / max (canvas w) | 0.789 / 1.338 / 1.902 | **0.808 / 1.346 / 2.551** |
+
+★★ **THE REMOVAL DID NOT REDUCE BREAKAWAYS — IT RAISED THEM**, 59.3% → 63.0%, and the worst lead of
+300 races grew from 1.902 to 2.551 corrected canvas widths (313.9 → 420.9 world px). The mechanism is
+visible in the same table: a racer that was cast is now uncast, and **uncast racers are the dominant
+breakaway producers** (55.6% of them before the removal, 60.0% after). **Removing a steered racer
+makes an unsteered one.**
+
+★ **A CORRECTION TO THE FACTS THE DECISION WAS TAKEN ON.** Three figures were cited for this removal —
+*1.09 of 1.82 comebackers per race, 18% of its racers held the biggest lead against 6% staged, 53.7%
+were the drawn rank-1 racer*. Measured per call site, **all three belong to the drawn-winner site at
+`heroCurveGenerator.js:616`, which stays**, not to the path removed:
+
+| cited | the removed path (`:672`) | the kept winner site (`:616`) |
+|---|---|---|
+| 1.09 of 1.82 per race | **0.51** | 0.58 |
+| 18% held the biggest lead | ★ **1.3% of races** | ★ **37.3% of races** |
+| 53.7% drawn rank-1 | ★ **0.7% — 1 racer in 153** | **100%, by definition** |
+
+**The removed path was the least consequential of the three sites.** The removal was carried out as
+decided and the figures are recorded here so the decision can be revisited against them.
+
+**What is NOT done, deliberately.** The hero budget freed by the removal is **left unused** — filling
+it with another role is a separate decision and was not taken. A race with no comebacker at all is
+the expected outcome of one staged path that can be refused, not a defect: it happens in **20 of 300**
+races, up from 5.
+
+★★ **AND BELOW 20 RACERS THE POOL NOW CASTS NOTHING AT ALL.** `stagedComebackRank` returns `null`
+under `STAGED_COMEBACK.MIN_FIELD` (20) — a deliberate rule, because at a small field the staging rank
+already sits inside the top 5 and there is nothing to come back from. The removed path had no such
+floor, so it cast at every size. Making the staged path the only one therefore silences the whole B1
+pool at small fields. Measured per field size (city-circuit, wild, seeds 1..100, call sites separated
+by the same instrumented build):
+
+| n | pool casts NOTHING, before | pool casts NOTHING, after | non-b2 cast per race, before → after |
+|---|---|---|---|
+| 10 | 4% | ★ **100%** | 2.41 → **1.08** |
+| 12 | 5% | ★ **100%** | 2.42 → **1.10** |
+| 16 | 2% | ★ **100%** | 2.44 → **1.13** |
+| 19 | 2% | ★ **100%** | 2.49 → **1.19** |
+| 20 | 13% | 28% | 2.56 → 1.96 |
+| 24 | 9% | 25% | 2.48 → 2.00 |
+| 30 | 17% | 32% | 2.43 → 2.00 |
+| 40 | 9% | 27% | 2.54 → 2.02 |
+
+The kept sites are the control in that table and do not move: the drawn-winner site casts 0.90 / 0.91
+/ 0.96 / 0.96 / 0.98 / 0.98 / 0.95 / 0.94 per race before AND after, and the staged path 0.72 / 0.75 /
+0.68 / 0.73 at the sizes where it fires. **Only the removed column went to zero.**
+
+★ **This is what moved the golden race.** `closed-garden-path-12` is a 12-racer fixture: before, it
+cast three standard heroes — index 3 at the drawn-winner site, indices 7 and 6 at the removed path;
+after, it casts the drawn-winner one only. Its recorded winner moved from Flash to Nitro, 36.592 s →
+36.496 s. The six-racer golden race `open-river-run-6` casts nothing either way and is **unchanged**,
+which is the control on that pair. **A 12-racer field is not a size the owner races** — the shipped
+and measured fixture is 40 — but the regime change is named here rather than left to be discovered.
+
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
