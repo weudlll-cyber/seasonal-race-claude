@@ -40,6 +40,7 @@ import { readFileSync, readdirSync, existsSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
@@ -184,6 +185,12 @@ function runTrack(geo) {
   if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
     cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
   }
+  // INSTRUMENT-PLAN-2 (2026-09-12): deliver the authored cameraPlan the way the PRODUCT does, through
+  // the ONE shared helper. Without it `comebackDetector._cast` stays null for the whole run and
+  // anything gated on a racer being CAST cannot fire here — blind by construction, not inert. It is
+  // OUTSIDE the b1Indices guard on purpose: the two are different deliveries and the helper already
+  // does nothing when there is no plan.
+  const deliverCameraPlan = makeCameraPlanDelivery(cd, meta.racePlanController);
   raceCfg.computePositions();
   const proj = projectionForTrack(
     geo.worldWidth,
@@ -215,6 +222,7 @@ function runTrack(geo) {
       stepRacePhysics(st, raceCfg);
       accum -= FIXED_DT;
     }
+    deliverCameraPlan();
     cd.update(
       st.racers,
       ts,

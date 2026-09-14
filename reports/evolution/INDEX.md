@@ -6,6 +6,29 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-14 — [MERGE-HALTED-2026-09-14](MERGE-HALTED-2026-09-14.md) ATTRIBUTED THE `check-runin-frame`
+  FAILURE TO `983d9201`, AND THAT ATTRIBUTION IS WITHDRAWN.** It recorded the red check as class **(b),
+  a real defect introduced on the branch**, with the cause traced to DIRECTION-AUTHORITY-1.
+  [RUNIN-FRAME-SHAPE-1](RUNIN-FRAME-SHAPE-1.md) measured it: the camera module, `defaults.js` and the
+  guard are **byte-identical to master**, that commit's only camera-adjacent change is a probe its own
+  comment marks INERT, and the **same 12-seed sweep loses the line on 1 seed of 12 on BOTH trees** —
+  master on seed 11 (15 frames, −210 px, p=0.9502), the branch on seed 9 (15 frames, −289 px,
+  p=0.9500), with the identical mechanism. **The defect is pre-existing; the branch moved which seed
+  the guard's single sample lands on.** ★ **Not symmetric on the second track and that is stated:**
+  on `luger-hill` n=100 master is clean over 10 seeds while the branch loses seed 9 by 82 px — one
+  seed at N=10, claimed as neither a rate nor a nothing. ★ **The halt itself is NOT withdrawn** — the check is red and a
+  red check is not merged — but its cause, and therefore what would have to change to clear it, is not
+  what that report said.
+
+- **2026-09-14 — the CAUSE written into `docs/MORNING.md` on `night/2026-09-12b` was WRONG ON EVERY
+  FAILING FRAME.** It read: *"`_lineCeiling` returns Infinity when the line cannot be framed at all,
+  and an infinite ceiling never binds"*. Measured by wrapping `_lineCeiling` on the live director,
+  **the demand is FINITE on 15 of 15 frames on `dirt-oval` and 5 of 5 on `luger-hill` — zero infinite**.
+  The real mechanism is that the schedule's widen completes when `zoom <= demand` while `demand` is
+  measured from the anchor the framing rule **intends** rather than the one the pan has reached, with
+  the opening glide still running at the deadline. **A repair aimed at the infinite case would have
+  changed code that never runs there.** Corrected in place on that branch.
+
 - **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
   `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
   and named them the owner's call: `index.js:17` (the startup banner) and `staticClient.js:82` (the
@@ -411,6 +434,515 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the proof of inertness; a fall-back keeps a refused staging byte-identical to today. ★ **The first
   fall-back test was a FALSE GREEN and the sabotage caught it** — `heroCast.length > 1` is satisfied
   by the winner and the B2 attackers alone, both cast outside the pool loop.
+
+- [RACE-NEVER-ENDS-1.md](RACE-NEVER-ENDS-1.md) — **no racer is stuck; the race clock cannot keep up
+  with the wall clock** (2026-09-12, on `night/2026-09-12b`, **STOP AND REPORT — nothing built,
+  nothing changed**). ★★ **THE PREMISE IS FALSE AND THAT IS THE FINDING**: asked which racers stall,
+  the answer is **none**. All ten tracks at 32 racers finish with **ZERO unfinished racers**, needing
+  **80-110 s of the race's own clock** — Ice Track 97.4 s, where his race recorded **1590 s of WALL
+  clock**, a factor of **16.3**. ★ **THE MECHANISM, WITH TWO ADDRESSES THAT COMPOUND**:
+  `RaceScreen/index.jsx:917` clamps a frame's contribution at **50 ms**, and `:1059` takes at most
+  **TWO** physics steps per frame at `FIXED_DT = 16` (`raceCore.js:51`) — so **one animation frame can
+  never advance the race by more than 32 ms**, and the race keeps pace only above **31.25 fps**. Below
+  that it falls behind with nothing bounding the shortfall: at 10 fps a 90 s race takes 280 s. ★ **The
+  arithmetic closes to one decimal**: 97.4 s in 1590 s is 61.3 ms of race time per wall second, which
+  at 32 ms a frame implies **1.9 fps**. ★ **So the race would have finished — the viewer gave up
+  before it did**, and HISTORY-MISSING-2's banner already says nothing is saved yet. ★ **NOTHING WAS
+  FIXED, BY THE BRIEF'S OWN RULE**: the obvious lever is the two-step cap, whose own comment says it
+  exists to stop a death spiral that crashed the tab at ~14 s under load — raising it trades a slow
+  race for a crashing one, which is a change to what a race IS. Four options are named and none
+  chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
+  probe (`?perfprobe=1`) exists and belongs to a production run.
+
+- [LAST-RACE-MATCH-1.md](LAST-RACE-MATCH-1.md) — **he raced the guard's track, field and seed, and it
+  is still a different race** (2026-09-14, branch `night/2026-09-12b`, **READ-ONLY on his store**,
+  nothing created or deleted, no frames produced). ★★ **VERDICT (b) DIFFERENT RACE.** His most recent
+  stored race `STNJ25` (2026-09-14 07:07 Z, `build_id 52be3ec4` — the tip that was being served, so he
+  DID watch this build) is `dirt-oval`, **40 racers, seed 9**: the guard's three decisive fields all
+  match. ★ **But the stage is `wild` against the guard's shipped `quiet`** — `pulkLeaderBrake`
+  0.15 vs 0.1 and `pulkChallengerBoost` 0.12 vs 0.06, measured from his stored world — **and his
+  stored `cameraConfig` differs from the shipped defaults on 15 keys**, including
+  `OVERVIEW.trackingTC` at 6× (0.25 → 1.5), the state all 15 flagged frames sit in. ★ **The roster is
+  a checked NON-difference**: the lists are 70 vs 40 names but `roster[i % len]` assigns the identical
+  40, verified element by element. ★ **Stopped at Step 4**: nothing re-run, no frames, no guess at what
+  he saw. Store proven untouched — same size, same mtime, same MD5, 13 races before and after.
+- [RUNIN-FRAME-SHAPE-1.md](RUNIN-FRAME-SHAPE-1.md) — **the run-in defect is not this branch's, and the
+  repair is an owner decision** (2026-09-14, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, nothing
+  built or minted). ★★ **THE DEFECT IS ON MASTER TOO**: the camera, `defaults.js` and the guard are
+  byte-identical on both trees, and the same 12-seed sweep on `dirt-oval` n=40 loses the line on
+  **1 seed of 12 on each** — master seed 11 (−210 px), branch seed 9 (−289 px), same frame count, same
+  progress, same mechanism; on `luger-hill` n=100 master is 0 of 10 and the branch 1 of 10 (−82 px),
+  stated rather than averaged in. ★ **UPPER BOUND FIRST: the line WAS showable** — 2.3786 delivered against
+  1.6384 needed (1.45× too tight) on `dirt-oval`, 0.9278 against 0.8226 on `luger-hill`. ★ **SHAPE**:
+  15 and 5 frames, all in the first 3% of the window; depth med/p90/max **144/259/289 screen px** and
+  **145/261/292 world px**; binding term `state` on every one. ★★ **MECHANISM**: `_scheduleClose`'s
+  line floor is **armed and wrong** — the widen completes at `zoom 2.379 <= demand 2.374`, and the
+  demand is measured from the anchor the framing rule INTENDS
+  (`CameraDirector.js:3482`) while the opening glide (`runInOpenMs` 1250 ms) is still running at the
+  0.95 deadline. ★ **Two written causes corrected** — see the CORRECTIONS block above. ★★ **BUILD
+  NOTHING**: all four repair options either re-open ENDGAME-REPAIR-1's singularity or break "the
+  schedule is the sole author", changing the endgame on every track and every race.
+- [MERGE-HALTED-2026-09-14.md](MERGE-HALTED-2026-09-14.md) — **the branch is NOT merged: one failure
+  is a real defect** (2026-09-14). ★★ **`check-runin-frame` is GREEN on master (`b6d77637`, exit 0) and
+  RED on the branch (`8166c757`)** — `dirt-oval` n=40 goes from FINDABLE +99 px / 0 off canvas to
+  **LOST −353 px / 15 OFF CANVAS**, and `luger-hill` n=100 from +111 px / 0 to **−146 px / 5 OFF
+  CANVAS**. Measured on a clean worktree at master, not assumed. ★ That is class **(b)**, so the rule
+  fired: **not merged, nothing imprinted, no tag, branch not deleted, branch pushed**. ★ The other four
+  `verify` failures are class **(a)** with addresses — the three fingerprints against a record that
+  predates DIRECTION-AUTHORITY-1 (world `8a1977187e9c99b4` → `b35cf477c09a1116`, camera → 
+  `3df640a42e934312`, render → `6a84085e79535dd6`) and three client-suite RECORDED OUTCOME pins
+  (`parity/replay.test.js:85`, `parity/goldenRealArm.test.js:57`); `golden-races` PASSES and needed no
+  regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
+  all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
+  because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
+  action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
+  store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
+  as the one he photographed (0.349 canvas widths) — 47% reach 0.5 w, 14% reach 1.0, 6% reach 1.5, and
+  the worst of 400 races is **3.188 w, nine times his**. ★ It **re-establishes rather than carries**
+  GAP-CEILING-BASELINE-1's 40%, which counted a narrower thing (gaps held while the pursuer was
+  pinned). ★ **HIS OWN RACE IS LONGER THAN TYPICAL BUT NOT EXTREME**: half-peak hold 6.8 s against a
+  median 4.0 s, lead→turn 7.1 s against 5.6 s. ★★ **AND HE IS NOT ALWAYS PULLED BACK — 28 in 100 are
+  never closed** (checked: 37 of 37 such races were won by that racer), a picture he has never
+  described. ★★ **WHO: NOT ALWAYS THE COMEBACKER — one race in three (35%)**, against **44% uncast**
+  and **21% sovereign-lead**; per racer the comebacker is **8.4×** over-represented and the
+  sovereign-lead **22.8×**, while `attacker-b2` holds the largest gap in **0 of 71** despite three per
+  field. ★★ **AND THE STAGE DOES NOT CAUSE IT**: `quiet` 70.0%, `medium` 69.0%, `wild` 71.0% — the
+  occurrence is a property of the race, **the EXTREME is the price of the stage** (≥1.5 w: 2% → 3% →
+  6%; p90 0.825 → 1.342). ★ **CORRECTION: the 877-vs-0 leading-frames result does NOT generalise** —
+  the comebacker reaches the front in 80.4% (quiet) / 81.4% (wild) of races; that was a property of
+  THAT race, not of the stages. ★ Also corrects the stale `racePlanner.js:383` comment; world
+  fingerprint **unmoved** at `b35cf477c09a1116`.
+- [GAP-IN-SERVO-FEASIBILITY-1.md](GAP-IN-SERVO-FEASIBILITY-1.md) — **the servo can carry it, but the
+  form that exists was already rejected** (2026-09-13, branch `night/2026-09-12b`, **ESTABLISH ONLY —
+  nothing built, nothing minted**). ★★ **THE GAP BRAKE IS ALREADY WRITTEN INSIDE THE SERVO** —
+  `racePlanner.js:1116-1161`, the front distance leash, guarded and never wired to the browser —
+  ★★ **and it is unwired because it was TRIED AND REJECTED**: `docs/DEAD-ENDS.md:75-78`, *made runaway
+  WORSE*, ★ *"Do not re-propose continuous leader braking"*, because braking "the leader" brakes the
+  2nd-place racer too and so brakes the whole front. ★ **(1)** The servo does not get the gap on the
+  shipped path (`raceCore.js:562` passes three arguments, `leaderGapLen` null) **but the data is in
+  scope and it already computes one** — `racePlanner.js:986`, one subtraction; lengths would need
+  `lenScale` (already computed 36 lines later at `raceCore.js:598`) and `isOpen`. ★ **(2)** The steered
+  set **SHIFTS**: chaos = all, pre-OUTCOME = **heroes only** (`racePlanner.js:916`), **OUTCOME (from
+  0.6) = every racer** — and his gap runs 0.742–0.921, entirely inside OUTCOME, so the constraint
+  narrows nothing. ★ **(3)** The two corrections **MULTIPLY** — different factors of one product
+  (`raceStep.js:106`) in the same window — to about **18% below natural pace** against a 20% floor;
+  removing the overlap means giving up the gap-reroll's 23.5% → 8.3% runaway result whole. ★ **(4)**
+  The clamp is **NOT** an obstacle: `_setTarget` overrides instead of adding, and measured on his race
+  the leader is **strictly inside the clamp in 100% of the frames that matter** (0.0997 of headroom) —
+  saturation is the PURSUER's condition, not the leader's. ★ **(5)** Two files, **two new shipped
+  defaults** (ship ceremony + mint), **a mechanism, not a tuning**. ★ Also reports a **stale claim in
+  the code**: `racePlanner.js:383` still says the gap-reroll is SIM-ONLY and the browser never sets it,
+  but `defaults.js:1115-1116` ship it enabled.
+- [GAP-CEILING-BASELINE-1.md](GAP-CEILING-BASELINE-1.md) — **a gap ceiling already exists, it fired
+  in his race, and it is not a brake** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**,
+  read-only on his store). ★ **Written because an ADDENDUM to GAP-CEILING-1 arrived but that brief
+  never did** — nothing was built; this is the BEFORE baseline plus two findings that bear on the
+  design. ★★ **THE GAME ALREADY BRINGS A RUNAWAY LEADER BACK**: `computeGapBiasedTarget`
+  (`racePlanner.js:1259`) biases a leader's next natural-speed draw down, and in `QN3HDP` it fired at
+  64 368 ms — **1.0813 → 0.9187, a 15% cut** — proven with the shipped `gapRerollDevMarker`
+  (`raceCore.js:633`) on a COPY, verified inert (replay still 40/40). ★★ **THE SERVO ACCOUNTS FOR NONE
+  OF HIS DECELERATION**: `trajectoryMult` is **0.9499 → 0.9500** across the whole 15% fall, which is
+  entirely `spreadFactor`. ★ **He is NEVER at the floor**, and is **driven at 1.0999** on the way back
+  down. ★ **The fault is grain and latency, not absence**: the correction waits for the next re-roll
+  boundary (10–12 s intervals; a 4.9 s wait) then arrives as one step eased over 3 s — **7.1 s from
+  the lead being taken to the speed turning**, a **424 px/s** swing on screen. ★★ **AND THE
+  ADDENDUM'S SUCCESS TEST CANNOT BE MET**: over 2 376 lead spells on `wild`, **no racer who leads
+  after progress 0.70 is floored afterwards at any gap size, p90 included — it is already 0.0 s.**
+  Early leads go the OTHER way: the narrowest leads are braked most (4.2 s) and fall back fastest
+  (8 ranks in 5 s); the biggest are braked least (0.0 s) and fall slowest (4).
+- [PURSUER-BRAKE-1.md](PURSUER-BRAKE-1.md) — **the brake is serving his drawn place, and there is
+  nothing to repair** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
+  store). ★★ **`Blitz` is DRAWN 14th and running 1st**, so the servo pins him at `minMult`
+  (`racePlanner.js:100`) until he is back — he finishes **11th**. ★ **The target is 14 on EVERY frame**
+  and 14 is the fairness draw itself, a Fisher-Yates shuffle over ranks 1..n
+  (`racePlanner.js:206-215`) — not a curve parameter and not stale. The floor is reached **because the
+  error is twelve ranks** and the servo saturates at about two, so the clamp is arithmetic, not a
+  mechanism. ★ He IS a cast role — **`attacker-b2`**, "Attack & Fall" — and one number is named
+  without being called a defect: the authored fall target is **7** (`heroCurveGenerator.js:712`) while
+  the servo steers to **14**. ★★ **HIS RACE IS ORDINARY, NOT EXTREME**: over 120 races on `wild`
+  (N=40, ten tracks) **40% produce a pinned-pursuer gap at least as big as the one he photographed**,
+  and the worst is **1.484 canvas widths against his 0.349**. ★★ **AND IT IS NOT A LEADER PHENOMENON**
+  — **36 of 40 racers touch the floor in every race** (median 36, min 35, max 37 across the sweep),
+  the median racer spending **9.1 s, 10.9% of the race**, at maximum brake, cast and uncast alike.
+  ★ **The decision is the owner's and both costs are stated**: accept the gap, or accept a racer not
+  reaching his drawn place. ★ **Three days of work on the COMEBACKER could never have changed this
+  picture.**
+- [WILD-GAP-1.md](WILD-GAP-1.md) — **the gap is opened by the racer BEHIND him, and `wild` is what
+  puts him in front** (2026-09-13, branch `night/2026-09-12b`, **REPORT ONLY**, read-only on his
+  store). The first measurement of the comebacker's gap **over the whole race** rather than at the
+  crossing. ★★ **IT IS NOT HIM RUNNING AWAY.** While the gap opens he is **braked at −5%** every
+  frame; his pursuer sits at **0.8502 — `minMult` exactly** (`racePlanner.js:103`). Decomposed term by
+  term (`raceStep.js:106`): whole-speed ratio **1.1814**, of which the **servo is 1.1177**, traffic
+  **1.0000** and the governor — where the stage acts — **1.0000**. ★ **The gap OPENS at +0.049 canvas
+  widths/s while the pursuer is pinned and CLOSES at −0.047 w/s when he is not, with the comebacker's
+  own brake identical in both.** ★★ **`wild` does not change the gap; it changes whether anyone is in
+  front of him** — 877 leading frames (14.6 s) against **0** on `quiet`, same seed and roster, with
+  nearly the same gap behind (0.349 vs 0.304 w) at nearly the same zoom. ★ **His screenshot is
+  reproduced**: `assignRaceNumbers(40,3)` gives Breeze **1** and Blitz **27**, and Blitz is the racer
+  behind him for all 428 frames the gap opens — his panel read `1 · Breeze` / `2 | 27 | Blitz`.
+  ★ Median 0.018 w against a peak of **0.349** — **nineteen times** — which is why three reported
+  improvements were invisible. ★ On `wild` at N=40 over ten tracks (300 races/arm, 207 comebackers):
+  **arrival 1.0400 vs 1.0506, block rate 88.4% vs 86.5%, peak-gap median and p90 unchanged** — the
+  week's work SURVIVES his world — ★ **but the MAX peak gap is 32% bigger (2.025% vs 1.532%)**, which
+  is the thing he actually complains about. ★ Band-reach **not measured** (needs the 300-race gate).
+- [HARNESS-WORLD-1.md](HARNESS-WORLD-1.md) — **his race replays exactly: forty of forty, to the
+  millisecond** (2026-09-13, branch `night/2026-09-12b`, **not merged, nothing minted**, read-only on
+  his store). ★★ **`QN3HDP` REPLAYED FROM ITS OWN STORED INPUTS MATCHES THE RECORD 40/40 ON POSITION
+  AND 40/40 ON FINISHING TIME IN MILLISECONDS** — including the tie at 83 088 ms, in the record's
+  order. The defect STORED-RACE-PARITY-1 named is closed at one line: `buildRace` now takes a config
+  world (`raceDriver.mjs:344`, `const W = configWorld ?? DEFAULT_CONFIG_WORLD` at 360) and
+  `DEFAULT_CONFIG_WORLD` stays the default, so the 80 files that import the driver are untouched. ★ **THE
+  STAGE IS NOT RE-IMPLEMENTED**: `worldForActionStage` (line 115) calls `applyRaceActionStage`
+  (`raceActionStage.js:78`) exactly as `scripts/golden/goldenRace.mjs:91` already does, and the replay
+  takes a stored world WHOLE — the product's own rule, stated at `RaceScreen/index.jsx:526-528`.
+  ★★ **AND THE SHIPPED WORLD AT STAGE `wild` ALSO REPRODUCES HIS RACE 40/40** — so his sliders are the
+  shipped defaults and the action stage is the ENTIRE difference. Sabotages: re-hardcoding the world
+  at source, and the wrong stage, drop the replay to **10/40** and **7/40** (the old harness's figure,
+  reproduced exactly). ★ **ALL FOUR FINGERPRINTS UNMOVED** against a worktree at `85262b1b` — world
+  `b35cf477c09a1116`, world-off `19ccb497041a0dae`, camera `3df640a42e934312`, render
+  `6a84085e79535dd6` — and **golden races PASS**. New: `scripts/diag/replay-stored-race.mjs` and
+  `scripts/lib/raceDriverWorld.test.mjs`. ★ **The same defect is REPORTED, not fixed, in
+  `camera-fingerprint.mjs:148`, `render-fingerprint.mjs:308`, `sim-fairness.mjs` (world yes, stage no)
+  and `goldenRunner.mjs:580`.** ★★ **CONSEQUENCE: which of this week's conclusions describe `quiet` —
+  and that `wild` IS the `brake 0.15 + boost 0.12` pair WILD-STAGE-1 measured as breaching the 0.80
+  naturalness floor.**
+- [STORED-RACE-PARITY-1.md](STORED-RACE-PARITY-1.md) — **they are NOT the same race, and the field
+  that differs is the ACTION STAGE** (2026-09-13, **report only, read-only access to his store**).
+  His finished race was found by its own key — ★ **`QN3HDP`** — carrying seed 3, build `72ff4e7f`,
+  40 racers, 2 laps, and ★ **`raceActionStage: "wild"`**. ★★ **10 OF 40 POSITIONS MATCH** the harness:
+  same forty names, same seed, same track, different order; `Breeze` finishes **7th** in his race and
+  3rd in the harness's. ★★ **THE FIRST FIELD THAT DIFFERS IS THE ACTION STAGE** — `wild` doubles
+  `pulkChallengerBoost` (0.06 → 0.12) and raises `pulkLeaderBrake` (0.10 → 0.15) — **and the harness
+  cannot read it**, because `raceDriver.mjs:289` hardcodes `DEFAULT_CONFIG_WORLD` and no harness calls
+  `applyRaceActionStage`. `raceActionStage.js` states the split itself. ★ **BROWSER-HARNESS-PARITY-1's
+  diagnosis is WITHDRAWN**: the stored race's roster IS `QUICK_TEST_NAMES`, so the roster was never the
+  difference. ★ **AND THE PANEL IS CORRECTED AT SOURCE**: the two numeric columns are **rank** (the
+  fixed slot, `ScoreboardSlots.jsx:45`) and **race number** (`ScoreboardCard.jsx:90`) — so `2|27|Blitz`
+  is rank 2, number 27, and the crown on `1 Breeze` means he really was leading. The earlier "not
+  rank-ordered" claim read DOM order for display order and was wrong. ★ From his own race: Breeze
+  finished 7th, **800 ms** behind, with places 1–8 inside 816 ms — not pulling away at the line.
+  ★★ **CONSEQUENCE: every harness and sim measurement this week ran `quiet`; he watches `wild`.**
+- [BROWSER-HARNESS-PARITY-1.md](BROWSER-HARNESS-PARITY-1.md) — **the harness reproduces the browser
+  exactly; the roster was wrong** (2026-09-13, build `72ff4e7f`, **report only**). The owner's screen
+  and the planner's reproduction were different races at the same seed. ★★ **THE HARNESS IS NOT
+  BROKEN**: driven in a real browser on the shipped build and handed the same field, it reproduces
+  the finishing order **TEN PLACES DEEP, exactly** — 1 Nova, 2 Zephyr, 3 Arrow, 4 Comet, 5 Vortex, 6
+  Drift, 7 Thunder, 8 Flare, 9 Raven, 10 Titan. ★ **THE DIVERGENCE WAS THE ROSTER AND ONLY THE
+  ROSTER**: he had a saved 40-player group loaded; the harness used `QUICK_TEST_NAMES.slice(0,40)`.
+  Different SET (his has `Walter`, the harness `Sparrow`) and **all 40 names at a different index** —
+  and `stablePairBit` hashes the NAME. Racer type, laps, duration and `cfg 8aed1e` (a CAMERA id) are
+  all cleared with addresses. ★ `scripts/diag/outcome-parity.mjs` still runs but **cannot answer this**
+  — it compares the harness to `goldenRunner.mjs`, both node, neither a browser. ★★ **CONSEQUENCE**:
+  DRAWN-PLACE-TRUTH-1 §1 and LEADER-GAP-1 §1 claimed to be HIS race and are wrong on that point (in
+  his actual field Breeze finishes **27th**, not 3rd); the structural findings and the 700–1 200-race
+  distributional sweeps do not depend on his roster and stand. ★ Also established: the LIVE STANDINGS
+  panel is **not ordered by rank** — its leading integer is a bib number.
+- [DRAWN-PLACE-TRUTH-1.md](DRAWN-PLACE-TRUTH-1.md) — **the 0-of-82 holds; "first place IS his drawn
+  place" was wrong** (2026-09-13, build `72ff4e7f`, **report only, nothing built or changed**). The
+  owner caught the planner asserting both that a comebacker is never drawn first AND that a leading
+  comebacker is unbraked because first place IS his drawn place. ★★ **0 OF 717 CAST COMEBACKERS ARE
+  DRAWN FIRST** on the current tree — the old 0-of-82 holds on nearly nine times the sample, so the
+  second claim is FALSE. ★ His race reproduces exactly: City Circuit seed 3, `Breeze`, **DRAWN 2nd**,
+  finishing 3rd — and he sits AT rank 2 with a rank error of exactly 0 for the whole endgame, so
+  there is nothing for a brake to do; **the growing gap is him falling behind the leader `Flare`, not
+  pulling away.** ★★ **THE REAL MECHANISM, WITH ITS ADDRESS**: over 100 races, of the frames he spends
+  ABOVE his drawn place, **84.4% are braked at a commanded 0.9498 (−5%)** and **15.6% are past
+  `choreoReleaseProgress` 0.97**, where `released` targets a top-5 hero at his CURRENT rank, the error
+  becomes zero and the brake commands **1.0001**. So candidates 1 and 2 are BOTH true, in different
+  windows — the brake works all race and **stops existing for the final 3%**, which is the endgame he
+  watches. ★ One quoted figure corrected: the median drawn place at N=40 is **4th**, not the 2nd
+  COMEBACK-SAME-RACER-1 reported.
+- [ARRIVAL-STEERED-AGAIN-1.md](ARRIVAL-STEERED-AGAIN-1.md) — **clause 2 comes back, and his reasoning
+  holds** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted, no golden race
+  re-recorded**). ★ **NOTHING WAS BUILT — it is a deletion.** Master carries `strictness = isHero ?
+  1.0` and ZERO unsteered path; "unsteered inside his block" was an override the arrival work added,
+  and removing it (22 insertions, 81 deletions) returns him to master's steering. ★★ **CLAUSE 2 IS
+  LARGELY RESTORED**: the comebacker's peak gap goes 0.357 → **0.178** widths at N=20, 0.245 → **0.141**
+  at N=40, and **exactly back to the 0.163 baseline at N=100** — where it follows, because the ceiling
+  never binds there. The rest of the field stays clean (13/3/8/5% alone by >1 width vs a 12/7/15/5%
+  baseline). Not fully restored at twenty racers: 1.7×, down from 3.3×. ★★ **HIS REASONING MEASURED
+  AND HELD**, same code both arms: the overspeed is shed **29% faster** (992 ms vs 1 392) and **12% of
+  comebackers need no brake at all** vs 7% — though the overspeed gap is a THIRD not a half, and the
+  brake's DEPTH is nearly unchanged (−9.07% vs −9.97%) because depth is set by how far past his place
+  he drifts. ★ The arrival is **identical to four decimals** (1.033/1.051/1.037/1.048 = 28/44/32/41
+  px/s) and band-reach holds (+0.4/−0.1/−0.1/0.0 pp). ★★ **TWO FIGURES FROM ARRIVAL-SOLVE-1 DO NOT
+  SURVIVE AND ARE CORRECTED**: Holm is **0/2/3/7, exactly today's world, not better** — that
+  improvement came from the override — and the **block rate falls ~3 points to 85.0%** pooled, still
+  above the 84% baseline. New world fingerprint `b35cf477c09a1116`.
+- [ARRIVAL-SOLVE-1.md](ARRIVAL-SOLVE-1.md) — **his own drive ceiling: three clauses met, one not, and
+  the one not is not this lever's** (2026-09-13, on `night/2026-09-12b`, **not merged, nothing minted,
+  no golden race re-recorded**). ★ **THREE OF FOUR NARROW LEVERS FELL TO ARITHMETIC** before any
+  measurement: capping his error at k ranks and easing his target asymptotically are the same
+  expression and are field-size dependent (k=1 gives 1.100 at N=20, 1.020 at N=100); the generator's
+  curve shape governs the leg BEFORE the held release and cannot touch the arrival at all. ★★ **THE
+  SURVIVOR MOVES THE CEILING, NOT THE ERROR** — his own `maxMult` eases 1.100 → 1.020 across the
+  approach, and because a ceiling IS the commanded value wherever the raw drive saturates it is
+  **identical at every field size**, which a rank-counted taper never was. ★ **IT TOUCHES ONE RACER**
+  (all inside `heldFree`) and can only tighten a ceiling, never raise one. ★ Arrival **1.033 / 1.051 /
+  1.037 / 1.048** = **28 / 44 / 32 / 41 on-screen px/s** against 85 untapered — at or below "halves the
+  apparent rush" everywhere, and 1.077 is gone. ★ **BAND-REACH COSTS NOTHING** (+0.4 / +0.1 / +0.1 /
+  0.0 pp, all ~19 pp above the gate) where the broad `servoDrive` cost 7.4 pp — that clause is what
+  chose narrow over broad. Holm **equal or better than today's world at every field size**; pooled
+  block 87.9% vs an 84% baseline. ★★ **BUT CLAUSE 2 IS NOT MET**: the comebacker still opens 3.3x the
+  unshaped gap at N=20 and 1.9x at N=40 — **caused by "unsteered inside his block", not by this
+  lever**, and the rest of the field is clean. The taper and the 1.05 ceiling are DELETED. New world
+  fingerprint `9f4a9b9392a8d46c`.
+- [TAPER-INVISIBLE-1.md](TAPER-INVISIBLE-1.md) — **the clamp eats the taper's first two ranks, and
+  1.077 was never "at pace"** (2026-09-13, on `night/2026-09-12b`, **report only — nothing built, no
+  clamp touched, nothing recommended**). The owner watched `ed97f7fa` at forty racers and could not
+  see the taper; he was right. ★★ **THE CLAMP, NOT THE TAPER'S LENGTH, IS THE BINDING TERM.** The
+  drive saturates whenever the tapered error reaches `0.05 x nActive` — 2.0 ranks at N=40 — so at four
+  ranks the factor is exactly 1.000 at e=4 (the span's own edge, no effect) and the tapered error at
+  e=3 is still 2.222, which **still saturates**. ★ **The EFFECTIVE taper distance is 2 ranks at N=20
+  and N=40**, 3 at N=60, 4 at N=100 — at the field size he watches, a four-rank taper is a two-rank
+  taper, and two ranks is what the sweep had already called too short. ★★ **THE 2 480 ms THAT
+  JUSTIFIED FOUR RANKS WAS A NOMINAL WINDOW**: measured effectively it is **464 ms at N=40 (64 ms at
+  p10) against an ease needing ~1 000 ms**, and only about one taper frame in five changes the command
+  at all. ★ **STATED IN WHAT HE SEES** (camera's own `visibleWorldPx`, median 225 across a 1280
+  canvas — 5.7x magnification): 1.100 closes at **85 screen px/s**, 1.077 at **66**, 1.05 at 44, 1.02
+  at 17. **1.077 is three quarters of the untapered rush**, which is why it is invisible. ★ Lengthening
+  the taper cannot help — extra ranks land where the error is largest and the clamp already discards
+  the reduction. No alternative lever is measured and none is proposed.
+- [ARRIVAL-TAPER-SHIP-1.md](ARRIVAL-TAPER-SHIP-1.md) — **the servo is reverted, one shape remains,
+  and the trade is not the one he agreed to** (2026-09-13, on `night/2026-09-12b`, **not merged,
+  nothing minted, no golden race re-recorded**). ★ The servo (`ec7130a0`) is undone surgically —
+  a plain revert would have conflicted with the two commits that modified it since — and proven
+  complete two ways: the expression is byte-identical at source, and **an ordinary leader measures
+  identically to every decimal**. ★ ONE shape stays: the taper at FOUR ranks; A/B/C/D, the five
+  `E<digit>` distances and the switch are gone. Sabotage shows **at ONE rank the taper is a no-op**,
+  not merely short — `rankError` is an integer so the span is never entered. ★ Shipped shape, 1 200
+  races / 717 comebackers: arrival **1.029–1.076** against 1.100 with no taper, **pooled block 87.0%**
+  above the 84% baseline. ★★ **BUT THE ON-SCREEN GAP TRIPLES AT SMALL FIELDS** (0.107 → 0.368 widths
+  at N=20) — **and it is NOT the taper**: splitting on whether the comebacker led shows the arms
+  identical to every decimal when he does not, so the cause is the OTHER half of the shape, "unsteered
+  inside his block", which reproduces variant B's known 2.7× effect at 3.4×. **The trade he agreed to
+  was the taper's price; this is a different half's, and it was never put to him.** ★ The recorded
+  0.066-widths baseline was **never comparable** (correct baseline 0.107–0.172). ★ The revert clears
+  the camera case IT caused (2 failures → 1); luger-hill n=100 from `983d9201` stands and the fix is
+  STOPPED because it moves every shot. ★ Golden races **pass** — their fields are 12 and 6 racers,
+  below the staging minimum, so the shape never fires there.
+- [LEADER-GAP-1.md](LEADER-GAP-1.md) — **the leader's restraint really did halve, and the gap did
+  not grow** (2026-09-13, on `night/2026-09-12b`, **report only; nothing built, nothing changed,
+  `verify` unmoved**). The owner watched build `1180c8f1` and reported the LEADER pulling away to
+  finish alone. ★ **HIS RACE REPRODUCES** — City Circuit seed 3, 40 racers, `Flare` wins at all three
+  commits — **but the gap in his own race is the SMALLEST of the three** (0.607% against 0.747%
+  before and 1.058% on master). ★★ **HE IS RIGHT ABOUT THE MECHANISM**: the servo's hold on a leader
+  who has reached his place falls from **−5.04% to −1.96% at twenty racers** and −3.60% to −1.77% at
+  forty, barely moving at a hundred. ★ **BUT IT IS THE DEPTH, NOT THE FREQUENCY** — he is braked in
+  ~89% of late frames in BOTH arms; the brake simply pulls less hard, and the "72% of frames" figure
+  that prompted the question was a leading COMEBACKER, a different racer. ★★ **AND THE GAP DID NOT
+  GROW**: over 160 races the median moves both ways (+21% at N=20, −43% at N=60), the MAXIMUM is
+  smaller or equal in every cell, and **the leader is alone by more than a canvas width in 0 of 160
+  races in both arms**. ★ The traffic candidate is excluded by measurement: **the leader never avoids
+  anybody in any race in either arm**, so the +0.80%/−0.77% parity never applied to him — his whole
+  restraint was always the servo. ★ His race IS an outlier (leader braked 20.1% against an ~89%
+  aggregate), so he saw something real that is not the normal picture. Trade for reverting `ec7130a0`
+  stated, not chosen.
+- [NIGHT-2026-09-13.md](NIGHT-2026-09-13.md) — **the camera loses the finish line, the band table is
+  a 40-racer table, and what an install still needs** (2026-09-13, on `night/2026-09-12b`, **report
+  only; no camera code, no `BAND_EDGES`, no `FAIRNESS.md` touched**). ★ **THE RUN-IN DEFECT IS
+  BISECTED**: master PASSES, `983d9201` (the comebacker is held and released) fails luger-hill n=100,
+  and **tonight's race change added a SECOND case**, garden-path n=40. Both share one signature —
+  progress 0.950, LEADER_ZOOM, binding `state` — and the mechanism is that `_lineCeiling` returns
+  **Infinity when the line cannot be framed at all**, so it never binds and never gets named. ★ **FIX
+  STOPPED**: it would change the camera on every track, and he judges the picture. ★★ **THE FAIRNESS
+  PREMISE DOES NOT REPRODUCE** — band-reach at a hundred racers is **88.9%, nineteen points above the
+  gate**, not 70.5%. But the worry was right and lives elsewhere: `BAND_EDGES` exhausts the field at
+  exactly forty, so above it **B5 becomes an unbounded catch-all holding 60% of the field at 97%
+  easy**, and the four bands that constrain deliver **76.4%**. ★ Bands that SCALE with the field
+  recover it (82.1% vs 76.4%) and the N=40 control reproduces the shipped table exactly. ★ **AND
+  TODAY'S WORLD ALREADY FAILS THE GATE'S OTHER CLAUSE** — zero Holm-unfair is not met above forty
+  racers: seven of ten tracks at N=100. ★ Deployment: **four of seven items closed, three standing**,
+  plus three nobody had named (no backup ever restored, no production data location, no upgrade
+  path), with an ordered list and three one-sentence questions. ★ `check-image-starts` is **not**
+  wired into CI — decided by the number (4.1–4.75 min against a 3.8 min median whole run).
+- [SERVO-RANKS-1.md](SERVO-RANKS-1.md) — **the servo had no gradation near the target, and a racer
+  now arrives at his place at pace** (2026-09-13, on `night/2026-09-12b`, **built and measured, not
+  merged, nothing minted**). The shipped response divides the rank error by the FIELD SIZE, so it
+  saturates after `0.05 x nActive` ranks — ★ **ONE rank at twenty racers**, where there is therefore
+  no gradation near the target at all and the multiplier is pinned at the 1.100 ceiling for the whole
+  approach. The baseline arrival pace tracks that saturation distance with no exception (N=20 →
+  1.100, N=100 → 1.050). ★ The new response counts the error in RANKS and reaches full drive at one
+  BLOCK: `drive = (maxMult-1) * error / BAND_EDGES[0]`. ★★ **AT TWENTY RACERS IT IS SOLVED** — arrival
+  pace **1.100 → 1.001**, 11% → 52% at pace; pooled 1.084 → **1.019** with the taper, and the
+  **worst-case gap a third smaller** (2.549% → 1.704%). ★ The servo ALONE does not suffice (1.040 /
+  13%), so the taper stays. ★★ **THE COST, AND THE GATE HOLDS**: field-wide band-reach falls **−7.4 pp
+  at N=20** and −4.2 at N=40 (44 000 racers/arm), but the worst cell is 76.3% against a 70% gate, so
+  nothing is breached — **though `FAIRNESS.md`'s 85–90% HEADLINE is** (83.9% at N=20). Bounded to the
+  SERVO, not the taper: the taper touches one racer per race, worth −0.6 pp. ★ Also found: **today's
+  world already fails "zero Holm-unfair" at N ≥ 40** — seven of ten tracks at a hundred racers.
+  Sabotage bites twice, and the one that breaks under "ease everywhere" is CONVERGENCE.
+- [ARRIVAL-SHAPE-E-1.md](ARRIVAL-SHAPE-E-1.md) — **his arrival shape built, and the distance turns
+  out not to be the lever** (2026-09-13, on `night/2026-09-12b`, **built and measured, NOTHING
+  shipped, default still today's race, not merged**). The shape he described on 2026-09-13 — ease
+  off before he arrives, then unsteered inside his block — is variant **E**, four taper distances
+  behind the same one key. ★ **HE WAS RIGHT THAT THE SAFETY NET ALREADY EXISTED**: `bandError` is
+  zero inside a racer's band, so band steering already means "left alone inside, corrected at the
+  edge"; what did not exist is any comebacker reaching it, because heroes are pinned to
+  `strictness = 1.0`. **A racer sitting comfortably inside his top-5 block is steered to his exact
+  drawn rank today.** ★★ **NO RANK DISTANCE DELIVERS 1.0 AT ARRIVAL** (2 000 races, 228 comebackers
+  per arm): 1.084 today → 1.030 at five ranks, at best 24% of comebackers at pace, and every arm's
+  MEDIAN peak gap is worse than today's. ★★ **THE CAUSE IS THE SERVO, NOT THE TAPER**: the drive
+  saturates at `0.05·n` ranks of error, so at twenty racers ONE rank is already the ceiling and
+  there is no gradation near the target at all — baseline arrival pace tracks that saturation
+  distance with no exception (N=20 → 1.100, N=100 → 1.050). Four seconds of taper arrives at pace,
+  half a second arrives at the ceiling. ★ Block rate is NOT the casualty (83.3% → 87.3%), so his
+  original 2→1→0 fallback ran the wrong way and he corrected it to 2→3→4→5 on the evidence.
+  **Next change is to the servo response, not to the comebacker.**
+- [ARRIVAL-VARIANTS-1.md](ARRIVAL-VARIANTS-1.md) — **four arrivals measured side by side, and his
+  proposal makes the runaway worse** (2026-09-12, on `night/2026-09-12b`, **four variants BUILT and
+  measured on the same races, NOTHING shipped, default still today's race, not merged**). ★★ **HIS
+  PROPOSAL DELIVERS THE FEEL EXACTLY — 1.0000 while leading, braked in 1% of frames against today's
+  72% — BUT MAKES THE GAP 2.7x BIGGER ON SCREEN** (median 0.179 canvas widths against 0.066).
+  **Today's brake is what has been containing the gap**, which is awkward because the braking is the
+  thing he objected to. ★ **A wins every peak column** (median 0.307% / 0.066 widths, max 0.597);
+  B is worst (0.500% / 0.179 / 0.837); **C — free plus stop pushing early — halves B's extra gap
+  (0.120)** and **D — C plus a two-rank runaway guard — recovers most of it (0.089)** while staying
+  unsteered. ★ **C and D cost four points of BLOCK fairness** (76% against 80/82%), which is the
+  price of the smaller gap. ★ **D's fairness gates hold: zero Holm-unfair tracks, band-reach 83-96%**,
+  so the block cost is comebacker-specific, not field-wide. ★ **DRIFT, measured for the first time:
+  EVERY racer drifts back in EVERY variant including today's** — median 5 places today, 8 under B,
+  worst case 54 — **larger than the peak gap in every arm**. ★ **The scaffold is INERT BY DEFAULT**:
+  unset, the world fingerprint is `bdf4a3c8ce6e0316`, bit for bit what it was, and each variant moves
+  it (B `1ce5295139cc233c`, C `a8414e0a25562d7e`, D `d3dcc274b6cae555`) — which is also the
+  per-variant sabotage. ★ **All four are switchable FROM THE BROWSER** via
+  `localStorage['racearena:arrivalVariant']`, so he can watch any of them without a rebuild; a browser
+  test proves D runs there (released 8th, climbs to 1st, median multiplier 1.0000, braked in 18%).
+  **No recommendation is made — the cost/buy table is the answer.**
+
+- [COMEBACK-BRAKE-EARLY-1.md](COMEBACK-BRAKE-EARLY-1.md) — **the brake started sooner, bought less
+  than it cost, and was REMOVED** ★ **the code is OUT since 2026-09-12** — `racePlanner.js` is
+  byte-identical to its pre-taper state and world `bdf4a3c8ce6e0316` / world-off `cadd1d4b2391a2a6`
+  both came back; **the findings are kept as the record**, above all that the drive sits at `maxMult`
+  one rank out, which is the cause the next piece works on. (2026-09-12, on `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES,
+  NOT merged, NOTHING minted**). ★★ **THE STOP CONDITION FIRED — READ IT BEFORE KEEPING THE CHANGE.**
+  ★ **STEP 1, SETTLED ONCE**: a cast comebacker is **NEVER drawn 1st — 0 of 82** — and draws anywhere
+  from 2nd to 5th, the median moving with the field (2nd at forty racers, 4th at a hundred);
+  `heroCurveGenerator.js:642-643` takes the pool from ranks <= 5 and `:654` excludes the drawn winner.
+  **So the trigger had to be his drawn place, not a fixed "3rd".** ★ **AND THE LEAD-IN IS A TIME
+  ARGUMENT**: the ease needs 0.60 s for three quarters, while the last TWO ranks take only **0.38 s at
+  p10** — buying nothing in a dense field — three ranks give exactly 0.60 s with no margin, and five
+  give **1.17 s**. The span is five. ★ **THE CAUSE WAS SHARPER THAN "THE BRAKE IS LATE"**: the drive is
+  clamped at `maxMult` and **at twenty racers the servo commanded the ceiling 1.100 at ONE rank out**,
+  so he crossed his drawn place still asked for ten percent fast. `approachTaper` scales the positive
+  error by the fraction of the lead-in remaining; it never reverses the drive and never touches a
+  braking error. ★★ **BUT THE RESULT IS A COIN FLIP: the peak is smaller in 29 of 48 paired races
+  (binomial p≈0.19)** — median −17% and worst-case-on-screen −31% (0.655→0.455 canvas widths), yet
+  **p90 on screen ROSE 22%**, and he still arrives at **+7.4%**. ★★ **AND HE REACHES HIS DRAWN PLACE
+  LESS OFTEN: 94% → 89%**, 5 lost against 1 gained (McNemar p≈0.22) — **four of the five losses are
+  racers drawn 2nd**, exactly the case step 1 flagged. ★ **THE LEVER IS BOUNDED BY `maxMult`**: the
+  ceiling exit moves only as the SQUARE ROOT of the span, so going further means weakening the drive.
+  Cast rate (68%) and top-5 reach (84%) unchanged; zero Holm-unfair tracks; band-reach 82-95%, the
+  floor down one point. Both sabotages RED. World `22a592f45470ac55`, world-off `a42141464070326f`;
+  ★ **camera and render UNMOVED**.
+
+- [COMEBACK-LEAD-WINDOW-1.md](COMEBACK-LEAD-WINDOW-1.md) — **he pulls away for about three seconds,
+  and the delay is the slew** (2026-09-12, on `night/2026-09-12b`, **REPORT ONLY — nothing built,
+  nothing changed, no proposal**). Answers the question COMEBACK-LEAD-GAP-1 got wrong by measuring the
+  wrong window: not the last 30% and the gap at the line, but **the window that begins the moment he
+  takes the lead**. 56 races in which the held comebacker reached the front. ★ **HE TAKES THE LEAD
+  LATE** — median progress 0.762 at 20 racers rising to 0.987 at 100, always after the 0.70 release.
+  ★ **THE GAP OPENS FOR 2.5-6 s, PEAKS AT A MEDIAN 0.270% OF RACE DISTANCE — 0.06 OF A CANVAS WIDTH —
+  AND IS BACK UNDER HALF THAT WITHIN 0.6-2.2 s**, in 53 of 55 races; p90 0.801% / 0.30 widths, max
+  1.338% / **0.65 widths**. ★ **THE BRAKE TAKES HOLD SLOWLY AND THE EARLIER 0.977 HID IT**: split, the
+  first second is **0.9967** (58% of frames below 1.0) against **0.9753** at 3-6 s. ★★ **THE DELAY IS
+  THE SERVO'S SLEW, NAMED**: within the first second the servo already asks for **0.921** while the
+  racer runs **0.997** — a shortfall of **0.076** that collapses to 0.024 by the second second.
+  `raceCore.js:552-559` eases `trajectoryMult` with `easeInOutCubic` over
+  `trajectoryTransitionDuration` (`defaults.js:983`), and easeInOutCubic is slowest at the start. **It
+  is NOT the rank error building** (a step at `racePlanner.js:847` — the target proves it was already
+  there) **and not the 1/N authority** (`racePlanner.js:913` — ★ **the brief cites 891, which is inside
+  the B2-attacker block**). ★ **THE CAMERA IS ZOOMED HARD — median 4.67x, only ~225 world px in shot —
+  BUT THE PICTURE IS MOSTLY SMALL TOO**, so the finding is NOT about the camera; only the tail (p90
+  0.30, max 0.65 canvas widths) looks like a runaway. Screen numbers come from
+  `CameraDirector.visibleWorldPx`, the class's own falsifiable reading, not a hand-written projection.
+
+- [HISTORY-MISSING-2.md](HISTORY-MISSING-2.md) — **the race is in the history; the one that never
+  finished is not, and nothing said so** (2026-09-12, on `night/2026-09-12b`, build `64ff55ae`,
+  **walked in a real browser on the production build, one fix, inert to the race**). ★ **BOTH RACES HE
+  RAN TODAY ARE RECORDED** — on the server and in the list, newest first, with keys **V788BZ** and
+  **RNWRY8**, on BOTH origins (4173 and the API's own 4000). The sort is right, the key-hiding guard
+  works, and the console carried **0 errors and 0 warnings**. ★ **THE RECORDING PATH IS SOUND, PROVED
+  END TO END**: `e2e/race-save.spec.js` runs a REAL race to the finish and asserts the local entry —
+  5 specs pass on the PRODUCTION arm. ★★ **WHAT IS WRONG IS THAT THE BROWSER HAS NO UPPER BOUND ON A
+  RACE**: `RaceScreen/index.jsx:1175` ends a race only at `finishedCount >= nRacers`, and that is the
+  one place the results payload — and with it the history entry — is written. **No ceiling, no DNF, no
+  message**, while `raceCore.js`'s headless runner caps at `max(duration x 3, 600s)` AND ranks DNFs and
+  `raceDriver.mjs:417` refuses loudly at its own 200 s ceiling. ★ **IT BITES, MEASURED**: his own Ice
+  Track race recorded **elapsedSec 1590** — 2.6x the overrun line, 8x the harness ceiling — and the walk
+  reproduced it, a Quick Test running past ten minutes without finishing. ★ **IT WAS ALWAYS SO**:
+  master carries the identical untouched exit condition, and the SAME track and field took the SAME
+  1590 s on the pre-branch build `e7425f28`. **FIX**: `raceOverrunMs` exported as the one home and a
+  red on-screen banner saying the race is not saved yet — **it ends nothing, ranks nobody, and the
+  world fingerprint is unmoved at `bdf4a3c8ce6e0316`**. ★ **The banner has NO browser test and the
+  sabotage that proves it was run and NOT caught** — triggering it needs a ten-minute race; the gap is
+  stated rather than dressed up. Whether the browser should cap and rank DNFs is left to the owner.
+
+- [COMEBACK-LEAD-GAP-1.md](COMEBACK-LEAD-GAP-1.md) — **how the lead is produced, and the picture I
+  could not reproduce** (2026-09-12, on `night/2026-09-12b`, **ESTABLISH ONLY — nothing built, nothing
+  changed, the repository byte-identical, no proposal**). ★★ **IT OPENS BY RETRACTING NUMBERS FROM
+  DIRECTION-AUTHORITY-1**: the "finish", "places gained" and "top 5" columns are computed from a
+  post-race sort by `t`, and `raceCore.js:632` stops advancing a finished racer, so that `t` is
+  OVERSHOOT past the line, not order — `raceCore.js:671` holds the real `finishRank`. Measured on 154
+  comebackers, **the t-sort disagrees with the finish order in 139 of 154 (90%), median error 9 places,
+  worst 71**. The mid-race reads (`postChaosRank`, `deepestRank`, `rankAtMark`) stand; everything
+  derived from the finishing position does not, in BOTH arms. **The "sign flips at every field size"
+  headline is therefore NOT established.** The defect came in with COMEBACK-BAND-1 and
+  `comeback-band.mjs:81-85,172` is left untouched rather than quietly edited. ★ **THE HERO CURVE ENDS
+  FLAT** (`heroChoreography.js:149`) and for a held racer is not consulted at all after the release
+  (`racePlanner.js:838-845`) — his target becomes his DRAWN rank, so `rankError` (`:847`) is NEGATIVE
+  whenever he is ahead of it and ★ **the servo BRAKES him for leading**. Measured: over 24 616 frames
+  in front, **median multiplier 0.9771, below 1.0 in 71%, at the ceiling in 0.02%** — against 1.0474
+  and 32%-at-ceiling when not leading. ★ **Second place is ALSO mostly braked (median 0.9963, below
+  1.0 in 60%)** — the gap has two ends and neither is being driven. ★ **THE GAP DOES NOT GROW: the
+  P1-P2 gap SHRANK in 55 of 55 races** over the last 30%, median −0.273% of race distance; the gap at
+  the winner's crossing is median 0.278%, max 1.310%. ★ **The described runaway was not reproduced in
+  120 races**, and ★ **the race the owner watched CANNOT BE IDENTIFIED — no screenshot reached the
+  session — so no substitute race is presented as his**; the browser roster differs from the harness's
+  and a racer's NAME is physics, so the seed alone would not be enough either.
+
+- [INSTRUMENT-PLAN-2.md](INSTRUMENT-PLAN-2.md) — **three of the six were fixable, and three are blind
+  for a different reason** (2026-09-12, night chain 2026-09-12 piece 3, on `night/2026-09-12b`,
+  **instruments only, no product source touched, nothing minted**). CAMERA-PLAN-BLIND-1 named six
+  instruments still building a camera the product does not run. ★ **ONLY THREE CAN BE FIXED BY THE
+  SHARED HELPER** — `check-ending-frame`, `finish-band-truth` and `exp-anchor-truth-ab`, all three now
+  delivering the plan through `cameraPlanDelivery.mjs`. ★ **THE OTHER THREE ARE BLIND STRUCTURALLY,
+  not by oversight**, and listing all six together hid it: `diag/start-formation.mjs` runs the
+  COUNTDOWN ONLY, so no plan exists at any frame it runs; `exp-camera-bisect.mjs` REPLAYS RECORDED
+  FRAMES with no live controller to ask; `sim-race-visual.mjs` builds NO RACE PLAN AT ALL. ★ **WHAT
+  MOVED**: `check-ending-frame` byte-identical and still PASS (it is a verify guard, so it mattered
+  most), `finish-band-truth` byte-identical, and ★ **`exp-anchor-truth-ab` MOVED on 3 of 10 tracks** —
+  dumpHash `714d1cc1491c2ea4` → `ae72523ffb80e39c`, on city-circuit, garden-path and luger-hill, so
+  **any anchor conclusion from those three predates the camera seeing the cast**. No permission was
+  needed: the hash appears in no record anywhere in the tree, searched before deciding. ★ **The report
+  records that its own engine-reach line was written before being run and the guard corrected it.**
+
+- [DIRECTION-AUTHORITY-1.md](DIRECTION-AUTHORITY-1.md) — **the comebacker is HELD and then RELEASED,
+  and the sign flips at every field size** (2026-09-12, night chain 2026-09-12 piece 2, on
+  `night/2026-09-12b`, **BUILT AND MEASURED, the race CHANGES, NOT merged, NOTHING minted, no golden
+  race re-recorded**). The staged comebacker was authored as a ROUND TRIP and never fired — 0 of 180,
+  then 9 of 200, because the round trip needs 1.66x the runway that exists. ★ **THE SHAPE CHANGED, NOT
+  THE LIMITS**: he is now ONE authored leg down to a staging rank, ending at `holdReleaseProgress`
+  0.70, after which the curve is OVER and he climbs back by racing — which is what the owner
+  described and what PACE-DEFICIT-1 measured as worth +18 to +64 places. ★ **CAST IN 52-70% OF
+  RACES** (200 races) and ★ **THE PLACES GAINED FLIP SIGN AT EVERY FIELD SIZE: -3/-9/-15/-25 becomes
+  +1/+6/+10/+25**, top-5 reach rising 33→46%, 14→27%, 10→30%. ★ **NO HERO HE DID NOT ASK FOR**:
+  attackers, fallers and sovereign-leads are cast EXACTLY as often as before (578/61/68 unchanged) and
+  the race gets marginally FEWER heroes, 5.31→5.21. ★ **THE HOLD IS NEARLY FREE** — his distance over
+  the hold is 0.998-1.005 of the field median, because at the release a racer a third back is only
+  0.5-4.1% behind the leader; the servo's deepest command is 8.8% against a 15% allowance, so no limit
+  is strained. ★ **NEITHER CLAMP NUMBER MOVED** — the drop budget is DERIVED from `minMult`; and
+  measured on 4400 racers the climb and drop rates are IDENTICAL in 100% of cases, so **the direction
+  split is correctness, not leverage — the shape change did the work**. ★ **A BROWSER TEST PASSES**:
+  held 6th→11th, released at 0.70 in 8th, **second by the end**, in real Chromium. Fairness: zero
+  Holm-unfair tracks and band-reach 83-95% across every band (300 races, each track at its own default
+  racer — SMALLER than the 300-per-track methodology, and luger-hill is NOT claimed as fixed).
+  Both sabotages RED. ★★ **THE ONE RED THIS PIECE OWNS: `check-runin-frame` FAILS on luger-hill at
+  100 racers** — the camera loses the finish line off canvas at progress 0.950, verified green on
+  master in a worktree. **That is the reason not to merge tonight.** ★ **The client-suite red is three
+  RECORDED outcomes; the live real==sim byte-identity HELD.** New values: world `bdf4a3c8ce6e0316`,
+  world-off `cadd1d4b2391a2a6`, camera `3df640a42e934312`, render `6a84085e79535dd6`.
 
 - [COMEBACK-CONSTANT-DEFICIT-1.md](COMEBACK-CONSTANT-DEFICIT-1.md) — **a hold and an excursion CAN be
   told apart, and the premium is still not the wall** (2026-09-12, on `night/2026-09-12`, **NO PRODUCT

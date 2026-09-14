@@ -19,6 +19,22 @@
 // that alters what the camera shows, in 47 of 96 races, and **the camera fingerprint went green** —
 // blind by construction, not inert. Same class as the `isOutcomePhase` defect that cost two mints.
 //
+// ── WHO USES THIS, AND WHO CANNOT (re-confirmed 2026-09-13) ────────────────────────────────────
+//
+// SIX instruments now see the cast, not three. FIVE deliver through THIS helper:
+// `camera-fingerprint`, `render-fingerprint`, `check-ending-frame`, `exp-anchor-truth-ab` and
+// `finish-band-truth`. The sixth, `camera-replay.mjs`, delivers the plan correctly but through its
+// OWN inline copy of the rule (at its `setCameraPlan` call) rather than through here -- which is the
+// duplication this file exists to prevent. Left as it is on 2026-09-13 rather than half-changed: a
+// swap was attempted, broke the replay loop's control flow, and was reverted. Named, not fixed.
+//
+// THREE CANNOT, and it is structural rather than an oversight, so nobody should wire them up:
+//   · `exp-camera-bisect.mjs`    — replays RECORDED frames; there is no controller to ask.
+//   · `sim-race-visual.mjs`      — builds no race plan at all.
+//   · `diag/start-formation.mjs` — runs the COUNTDOWN only, and the cast does not exist yet.
+// ★ A GREEN FROM ANY OF THOSE THREE IS NOT A CLEARANCE for behaviour gated on a racer being CAST.
+// Each of them says so in its own header, because that is where a reader will be standing.
+//
 // ── WHAT IT DELIBERATELY DOES NOT DO ───────────────────────────────────────────────────────────
 //
 //   · IT DOES NOT INVENT A PLAN. If the controller has none — race plan off, or a closed track with

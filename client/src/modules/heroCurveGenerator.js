@@ -24,7 +24,12 @@
 
 import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
-import { mulberry32, BAND_EDGES, DEFAULT_PHASE_FRACTIONS } from './racePlanner.js';
+import {
+  mulberry32,
+  BAND_EDGES,
+  DEFAULT_PHASE_FRACTIONS,
+  DEFAULT_CONTROLLER_PARAMS,
+} from './racePlanner.js';
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 // ── Config (single source of truth; documented, calibratable) ─────────────────────────────────
@@ -46,6 +51,31 @@ export const GENERATOR_CONFIG = {
   // hero a curve steeper than its servo can track. (Drops via −15% are a touch faster; 0.10 is the
   // conservative binding direction.)
   speedBudgetFrac: 0.1,
+  // ── ★ DIRECTION-AUTHORITY-1 (2026-09-12) — THE DROP BUDGET, AND WHY IT IS A SECOND NUMBER ──────
+  //
+  // ★ THE PROPERTY, IN ONE PARAGRAPH A READER CAN CHECK. The controller clamp is ASYMMETRIC: a racer
+  // may be commanded up to `maxMult` and down to `minMult`, and those two are not equidistant from
+  // 1.0 — the drop authority is half again the climb authority. `speedBudgetFrac` above is the CLIMB
+  // half, calibrated to the servo's ≈+10%, and until this change it priced BOTH directions. That is
+  // wrong for the same reason it would be wrong to price a descent as an overtake: a racer climbs by
+  // out-accelerating the field and falls back by NOT accelerating, and the shipped clamp already
+  // says the second is cheaper. So feasibility is now DIRECTIONAL — a leg is priced by the authority
+  // that governs ITS OWN direction of travel.
+  //
+  // ★ THIS RELAXES NOTHING. Both numbers already ship, in `DEFAULT_CONTROLLER_PARAMS`, and neither
+  // moves. What changes is only WHICH of the two the gate reads for a given leg. The value below is
+  // DERIVED from that one home rather than copied, and the live per-race `controllerParams` are
+  // threaded in by `racePlanner.js` so a tuned clamp moves this with it.
+  //
+  // ★ IT IS A PROPERTY OF THE SHAPE, NOT OF A ROLE. Nothing here names a hero. A faller's drop and a
+  // comebacker's descent are priced by the same rule because they travel the same way; an attacker's
+  // climb keeps paying the climb rate exactly as before.
+  //
+  // A getter, not a value, for the same reason `anchorProgress` is one — the racePlanner import is
+  // circular at module-init and always resolved by call time.
+  get dropBudgetFrac() {
+    return 1 - DEFAULT_CONTROLLER_PARAMS.minMult;
+  },
   // STAGGERED PER-BAND RESOLVE (Step 4): each hero must resolve INTO its final band by its band's
   // resolveProgress — deeper bands earlier (they fall back sooner and hold), the front (B1) latest.
   // B1 is held to releaseProgress, then the follower RELEASES it to natural speed for a real finish
@@ -54,6 +84,13 @@ export const GENERATOR_CONFIG = {
   // releaseProgress. DevScreen-adjustable — mirrored in DEFAULT_RACE_DYNAMICS_CONFIG (single source
   // for the tunable values), passed in via the generator config.
   releaseProgress: 0.97,
+  // ── HOLD-AND-RELEASE (DIRECTION-AUTHORITY-1, 2026-09-12) ────────────────────────────────────────
+  //
+  // The progress at which a HELD hero stops tracking his curve and is handed back to his drawn
+  // final rank. It is NOT `releaseProgress` above: that one frees the B1 cluster to a natural
+  // run-out at the very end of the race, whereas this one ENDS a curve with most of a race left, on
+  // purpose, so the climb that follows is raced rather than authored.
+  holdReleaseProgress: 0.7,
   bandResolve: [0.97, 0.8, 0.7, 0.65, 0.6],
   // Hole guard: reject a hero set that leaves a rank gap wider than this fraction of the field at
   // any sampled time (a backstop; the loose pack is the primary field-continuity mechanism).
@@ -123,19 +160,55 @@ const lerp = (range, t) => range.at0 + (range.at1 - range.at0) * t;
 export function racerFeasibility(racer, postChaos, finishT, config = GENERATOR_CONFIG) {
   const n = postChaos.length;
   const remaining = 1 - config.anchorProgress;
-  const shift = config.speedBudgetFrac * remaining * finishT; // max relative position shift (t-space)
-  let ahead = 0;
-  let behind = 0;
+  // TWO budgets, because the clamp is asymmetric (see `dropBudgetFrac` above). The CLIMB budget
+  // reaches forward past the racers ahead; the DROP budget reaches back past the racers behind.
+  const climbShift = config.speedBudgetFrac * remaining * finishT;
+  const dropFrac = config.dropBudgetFrac ?? 1 - DEFAULT_CONTROLLER_PARAMS.minMult;
+  const dropShift = dropFrac * remaining * finishT;
+  // The SAME density count, evaluated at each direction's own budget. `*C` is the window the climb
+  // authority reaches; `*D` is the wider window the drop authority reaches.
+  let aheadC = 0;
+  let behindC = 0;
+  let aheadD = 0;
+  let behindD = 0;
   for (const p of postChaos) {
     if (p.index === racer.index) continue;
-    if (p.t > racer.t && p.t <= racer.t + shift) ahead++;
-    else if (p.t < racer.t && p.t >= racer.t - shift) behind++;
+    if (p.t > racer.t) {
+      if (p.t <= racer.t + climbShift) aheadC++;
+      if (p.t <= racer.t + dropShift) aheadD++;
+    } else if (p.t < racer.t) {
+      if (p.t >= racer.t - climbShift) behindC++;
+      if (p.t >= racer.t - dropShift) behindD++;
+    }
   }
   return {
-    bestRank: Math.max(1, racer.rank - ahead), // climb past `ahead` racers
-    worstRank: Math.min(n, racer.rank + behind), // drop behind `behind` racers
-    maxRankRate: remaining > 0 ? (ahead + behind) / remaining : 0, // density-derived rank/progress
+    bestRank: Math.max(1, racer.rank - aheadC), // climb past `aheadC`, at the CLIMB authority
+    worstRank: Math.min(n, racer.rank + behindD), // drop behind `behindD`, at the DROP authority
+    // ── THE RATE PAIR, AND WHY THE FORMULA IS UNTOUCHED ──────────────────────────────────────────
+    //
+    // `climb` is the density rate this generator has always used, computed from exactly the same
+    // count over exactly the same window, so EVERY CLIMB IS PRICED AS IT WAS AND NO ROLE THAT
+    // CLIMBS CHANGES. `drop` is that same expression evaluated at the drop budget, which is the
+    // whole of the change: the wider window reaches more of the field, so a descent is allowed the
+    // authority the clamp already grants it.
+    //
+    // ★ NAMED AND DELIBERATELY LEFT: `(ahead + behind)` counts BOTH directions and is then used as
+    // a ONE-directional rate, which over-states it. Splitting the count per direction was tried
+    // first and is the more defensible model, but it roughly HALVES the rate and collapses the cast
+    // to nothing, because `speedBudgetFrac` was calibrated against this expression. Re-calibrating
+    // it is a separate change with its own measurement, and this piece does not make it.
+    rankRates: {
+      climb: remaining > 0 ? (aheadC + behindC) / remaining : 0,
+      drop: remaining > 0 ? (aheadD + behindD) / remaining : 0,
+    },
   };
+}
+
+// The rate that governs travel from `fromRank` to `toRank`: a SMALLER rank number is further
+// forward, so a decrease is a climb and an increase is a drop. A leg that goes nowhere costs no
+// time, and its rate is never consulted.
+export function rateForLeg(fromRank, toRank, rankRates) {
+  return toRank < fromRank ? rankRates.climb : rankRates.drop;
 }
 
 // ── Same-band ENDPOINT swap (A4): swap two finals ONLY within a band → band multiset preserved. ──
@@ -190,20 +263,25 @@ export function feasibleTiming(
   anchorRank,
   peakRank,
   finalRank,
-  maxRankRate,
+  rankRates,
   drama,
   config = GENERATOR_CONFIG
 ) {
   const ap = config.anchorProgress;
   // Resolve by the FINAL band's checkpoint (A4): deep bands earlier, B1 held to the release.
   const bc = resolveForBand(bandOfRank(finalRank), config);
-  if (maxRankRate <= 0)
-    return anchorRank === peakRank && peakRank === finalRank
-      ? { peakProgress: ap + 0.1, resolveProgress: Math.min(bc, ap + 0.2) }
-      : null;
+  // EACH LEG IS PRICED BY THE AUTHORITY THAT GOVERNS ITS OWN DIRECTION (see `dropBudgetFrac`).
+  // A leg of zero length costs no time whatever its rate, so only a MOVING leg needs a live rate.
+  const rate1 = rateForLeg(anchorRank, peakRank, rankRates);
+  const rate2 = rateForLeg(peakRank, finalRank, rankRates);
+  const moves1 = anchorRank !== peakRank;
+  const moves2 = peakRank !== finalRank;
+  if (!moves1 && !moves2)
+    return { peakProgress: ap + 0.1, resolveProgress: Math.min(bc, ap + 0.2) };
+  if ((moves1 && rate1 <= 0) || (moves2 && rate2 <= 0)) return null;
   // Allocate time against the PEAK (not average) min-jerk slope so the instantaneous rate stays feasible.
-  const span1 = (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / maxRankRate;
-  const span2 = (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / maxRankRate;
+  const span1 = moves1 ? (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / rate1 : 0;
+  const span2 = moves2 ? (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / rate2 : 0;
   if (ap + span1 + span2 + 0.06 > bc) return null; // cannot fit with positive budget
   const resolveProgress = clamp(drama.resolveProgress, ap + span1 + span2 + 0.06, bc);
   const peakProgress = clamp(
@@ -214,17 +292,59 @@ export function feasibleTiming(
   return { peakProgress, resolveProgress };
 }
 
+// ── ★ HOLD-AND-RELEASE TIMING — the shape the owner describes, and why it is not a round trip ─────
+//
+// ★ THE SHAPE, IN ONE PARAGRAPH A READER CAN CHECK. A held hero has ONE authored leg: from where the
+// chaos phase left him DOWN to a staging rank, arriving by `holdReleaseProgress`. There he is
+// released — the curve is over — and he climbs back to his drawn place by ordinary steering, which
+// is what the remaining 30% of the race is for. That is why this fits when a round trip does not:
+// `feasibleTiming` has to buy BOTH legs out of one budget, and measured on 200 races the round trip
+// needs about 1.66x the runway that exists. The descent ALONE needs roughly half of its window.
+//
+// ★ AND IT IS A PROPERTY, NOT A ROLE. Nothing here asks who the racer is. Any hero whose curve ends
+// before its band's resolve checkpoint is a held hero: the curve's own last point IS the release,
+// and every gate below reads that rather than a name.
+//
+// Returns null when even the descent cannot fit. The descent is priced at the DROP authority,
+// because that is the direction it travels.
+export function heldTiming(anchorRank, stagingRank, rankRates, config = GENERATOR_CONFIG) {
+  const ap = config.anchorProgress;
+  const release = config.holdReleaseProgress;
+  if (!(release > ap)) return null;
+  if (stagingRank <= anchorRank) return null; // a HOLD goes backwards; nothing to hold otherwise
+  const rate = rateForLeg(anchorRank, stagingRank, rankRates);
+  if (rate <= 0) return null;
+  const span = (config.minJerkPeakFactor * (stagingRank - anchorRank)) / rate;
+  if (ap + span > release) return null; // the descent alone does not fit its window
+  return { releaseProgress: release, stagingRank };
+}
+
+// The authored waypoints for a held hero: a single descent to the staging rank, ending AT the
+// release. The placeholder first point is replaced by the runtime anchor, exactly as in soloWaypoints.
+export function holdWaypoints({ stagingRank, releaseProgress }, config = GENERATOR_CONFIG) {
+  return [
+    { progress: config.anchorProgress, rank: 1 },
+    { progress: releaseProgress, rank: stagingRank },
+  ];
+}
+
 // ── B2-attacker timing: place the mandatory climb (anchor→peak) + the orchestrated fall (peak→finalRank)
 // so both stay within the density rank-rate AND complete by b2AttackResolveProgress — the BYPASSED, later
 // checkpoint (hero-privilege; the standard B2 0.80 resolve does not apply). Peak timing is drawn from the
 // config window, clamped feasible. `idx` varies the jitter per attacker so two attackers don't peak in
 // lockstep. null = infeasible (climb+fall can't fit the runway). ─────────────────────────────────────
-function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, config, seed, idx) {
+function attackerTiming(anchorRank, peakRank, finalRank, rankRates, config, seed, idx) {
   const ap = config.anchorProgress;
   const bc = config.b2AttackResolveProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress;
-  if (maxRankRate <= 0) return null;
-  const span1 = (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / maxRankRate;
-  const span2 = (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / maxRankRate;
+  // Same directional rule as `feasibleTiming`: the mandatory climb pays the climb authority and the
+  // orchestrated fall pays the drop authority.
+  const rate1 = rateForLeg(anchorRank, peakRank, rankRates);
+  const rate2 = rateForLeg(peakRank, finalRank, rankRates);
+  const moves1 = anchorRank !== peakRank;
+  const moves2 = peakRank !== finalRank;
+  if ((moves1 && rate1 <= 0) || (moves2 && rate2 <= 0)) return null;
+  const span1 = moves1 ? (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / rate1 : 0;
+  const span2 = moves2 ? (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / rate2 : 0;
   if (ap + span1 + span2 + 0.06 > bc) return null; // climb + orchestrated fall can't fit before checkpoint
   const win = config.b2AttackProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress;
   const j = mulberry32((((seed >>> 0) ^ 0xa77ac4) + idx * 0x9e3779b9) >>> 0)();
@@ -310,13 +430,18 @@ export function relationalWaypoints(
 
 // ── Generation-time checks ───────────────────────────────────────────────────────────────────────
 // FEASIBILITY: no sampled segment demands a faster rank change than the racer's density rank-rate.
-export function checkFeasible(curve, maxRankRate) {
+export function checkFeasible(curve, rankRates) {
   const pts = curve.points;
   const dp = 0.02;
   let prev = sampleHeroCurve(curve, pts[0].progress);
   for (let p = pts[0].progress + dp; p <= 1.0 + 1e-9; p += dp) {
     const cur = sampleHeroCurve(curve, Math.min(p, 1));
-    if (Math.abs(cur - prev) / dp > maxRankRate + 1e-6) return false;
+    // THE SECOND GATE MOVES WITH THE FIRST, DELIBERATELY. `feasibleTiming` only ALLOCATES time;
+    // this re-measures the curve that was actually built. If this one kept a single rate it would
+    // refuse, one gate later, everything the directional allocation just allowed -- which is how a
+    // repair comes to look as though it landed while nothing is cast.
+    const rate = rateForLeg(prev, cur, rankRates);
+    if (Math.abs(cur - prev) / dp > rate + 1e-6) return false;
     prev = cur;
   }
   return true;
@@ -324,13 +449,15 @@ export function checkFeasible(curve, maxRankRate) {
 // POSITIVE HANDOFF BUDGET (per-band, A4): the curve must be IN its final band by that band's
 // resolveProgress, and the remaining change after fits the leftover budget — so deep bands leave the
 // OUTCOME backstop room, and B1 is settled in its front cluster before the natural-speed release.
-export function checkPositiveBudget(curve, maxRankRate, config = GENERATOR_CONFIG) {
+export function checkPositiveBudget(curve, rankRates, config = GENERATOR_CONFIG) {
   const endRank = sampleHeroCurve(curve, 1.0);
   const finalBand = bandOfRank(Math.round(endRank));
   const rp = resolveForBand(finalBand, config);
   const atResolve = sampleHeroCurve(curve, rp);
   if (bandOfRank(Math.round(atResolve)) !== finalBand) return false;
-  return Math.abs(endRank - atResolve) <= Math.max(1, maxRankRate) * (1 - rp) + 1e-6;
+  // The leftover run-out is travel like any other, so it is priced by its own direction too.
+  const rate = rateForLeg(atResolve, endRank, rankRates);
+  return Math.abs(endRank - atResolve) <= Math.max(1, rate) * (1 - rp) + 1e-6;
 }
 // SEPARATION MOVED TO THE TEST FILE (SEPARATION-TO-TEST-1, the owner's decision 2026-08-19).
 // `checkSeparation` lived here and was called by nothing but `heroCurveGenerator.test.js` — it never
@@ -411,7 +538,11 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
 //
 // ★ BELOW `MIN_FIELD` NOBODY IS STAGED. At N=10 the first third ends around rank 3, already inside
 // the top 5: there is nothing to come back from, and a 6th-to-3rd move is what he rejected.
-const STAGED_COMEBACK = { MIN_FIELD: 20, WIDE_FIELD: 100, NARROW_FRAC: 0.6, WIDE_FRAC: 0.5 };
+// ★ RESTATED BY THE OWNER, 2026-09-12: the staging rank sits "around the end of the first third to
+// the start of the second" of the field — at 40 racers roughly rank 13 to 20. That is SHALLOWER than
+// the 0.60 the grid was read for, and the midpoint of his range is what ships here. The grid's 0.60
+// was chosen for top-5 reach under a mechanism that never fired; his range is the requirement.
+const STAGED_COMEBACK = { MIN_FIELD: 20, FRAC: 0.4 };
 
 /**
  * The rank the director stages its comebacker at, or null when the field is too small to climb.
@@ -420,9 +551,8 @@ const STAGED_COMEBACK = { MIN_FIELD: 20, WIDE_FIELD: 100, NARROW_FRAC: 0.6, WIDE
  */
 export function stagedComebackRank(n) {
   if (!Number.isFinite(n) || n < STAGED_COMEBACK.MIN_FIELD) return null;
-  const frac =
-    n >= STAGED_COMEBACK.WIDE_FIELD ? STAGED_COMEBACK.WIDE_FRAC : STAGED_COMEBACK.NARROW_FRAC;
-  return Math.max(1, Math.min(n, Math.round(frac * n)));
+  // Always outside the top 5 it must climb back to, or there is no comeback to watch.
+  return Math.max(BAND_EDGES[0] + 1, Math.min(n, Math.round(STAGED_COMEBACK.FRAC * n)));
 }
 
 // ── Casting (A6/A7): assign 2–4 heroes + a feasible story to each. Seeded, jittered (anti-repetition). ─
@@ -438,14 +568,35 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
     if (!state || used.has(index)) return false;
     const feas = racerFeasibility(state, postChaos, finishT, config);
     if (finalRank < feas.bestRank || finalRank > feas.worstRank) return false; // endpoint unreachable
-    const timing = feasibleTiming(state.rank, peakRank, finalRank, feas.maxRankRate, drama, config);
+    const timing = feasibleTiming(state.rank, peakRank, finalRank, feas.rankRates, drama, config);
     if (!timing) return false;
     cast.push({
       index,
       role,
       finalRank,
       params: { peakRank, finalRank, ...timing },
-      maxRankRate: feas.maxRankRate,
+      rankRates: feas.rankRates,
+    });
+    used.add(index);
+    return true;
+  };
+
+  // A HELD hero: one descent to the staging rank, then released to his drawn place. `finalRank` is
+  // still recorded because it is what he is released TOWARD and what the band bookkeeping uses.
+  const addHeld = (index, role, finalRank, stagingRank) => {
+    const state = stateOf.get(index);
+    if (!state || used.has(index)) return false;
+    const feas = racerFeasibility(state, postChaos, finishT, config);
+    if (finalRank < feas.bestRank) return false; // he must be able to climb back once released
+    const timing = heldTiming(state.rank, stagingRank, feas.rankRates, config);
+    if (!timing) return false;
+    cast.push({
+      index,
+      role,
+      finalRank,
+      held: true,
+      params: { ...timing, finalRank },
+      rankRates: feas.rankRates,
     });
     used.add(index);
     return true;
@@ -501,9 +652,9 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
     if (cast.length >= drama.nHeroes) break;
     const cr = nextCluster(); // tight front cluster, not the exact assigned rank (A3)
     const wantStaged = stagingRank != null && !staged && p.index !== winnerIdx;
-    // The STAGED case steers him BACK to `stagingRank` and then forward to the front cluster `cr`,
-    // which is inside the top 5 — a fixed number, not a fraction, and not P1.
-    if (wantStaged && addSolo(p.index, 'comebacker', cr, stagingRank)) {
+    // The STAGED case holds him at `stagingRank` and RELEASES him there; his drawn top-5 place is
+    // reached by racing, not by a second authored leg. See heldTiming.
+    if (wantStaged && addHeld(p.index, 'comebacker', cr, stagingRank)) {
       b1Cluster++;
       staged = true;
       continue;
@@ -553,7 +704,7 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
         p.rank,
         peakRank,
         finalRank,
-        feas.maxRankRate,
+        feas.rankRates,
         config,
         seed,
         nCast
@@ -565,7 +716,7 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
         finalRank,
         peakRank,
         params: { peakRank, finalRank, ...timing },
-        maxRankRate: feas.maxRankRate,
+        rankRates: feas.rankRates,
       });
       used.add(p.index);
       nCast++;
@@ -620,17 +771,28 @@ export function generateHeroCurves({
     const state = postChaos.find((p) => p.index === member.index);
     if (!state) continue;
     const anchored = anchorHeroCurve(
-      makeHeroCurve(soloWaypoints(member.params, config)),
+      makeHeroCurve(
+        member.held ? holdWaypoints(member.params, config) : soloWaypoints(member.params, config)
+      ),
       config.anchorProgress,
       state.rank,
       state.vel ?? 0
     );
     // Never emit a curve that violates a generation-time constraint (feasibility / positive budget).
-    if (!checkFeasible(anchored, member.maxRankRate)) continue;
+    if (!checkFeasible(anchored, member.rankRates)) continue;
     // Positive-budget (in-band by the band's resolve checkpoint) applies to standard heroes. B2-attackers
     // BYPASS it by design (hero-privilege: their orchestrated fall resolves later, at b2AttackResolveProgress,
     // and the servo re-steer — not the checkpoint — keeps the endpoint in B2). So skip it for that role.
-    if (member.role !== 'attacker-b2' && !checkPositiveBudget(anchored, member.maxRankRate, config))
+    // POSITIVE BUDGET applies to a curve that is supposed to DELIVER its racer into his band. A HELD
+    // curve is not: it ends at the release with most of a race still to run, and the band is reached
+    // by racing afterwards. Asking it to be in-band at its own last point would be asking it not to
+    // be a hold at all. Read from the curve (`held`), not from the role name — the B2 attacker's
+    // long-standing bypass is the same idea and keeps its own spelling.
+    if (
+      member.role !== 'attacker-b2' &&
+      !member.held &&
+      !checkPositiveBudget(anchored, member.rankRates, config)
+    )
       continue;
     // HOLE GUARD (A5): reject a curve that would open a field gap the projected pack can't fill.
     // Gradual falls + the loose pack are the primary continuity; this drops the offending hero.
@@ -649,6 +811,9 @@ export function generateHeroCurves({
       index: member.index,
       role: member.role,
       curve: anchored,
+      // The release the planner hands back to ordinary steering at. Present ONLY on held curves, so
+      // nothing else changes behaviour.
+      ...(member.held ? { releaseAt: member.params.releaseProgress } : {}),
       // B2-attacker servo needs these at runtime (peak-reached tracking + release-at-finalRank latch).
       ...(member.role === 'attacker-b2'
         ? { peakRank: member.peakRank, finalRank: member.finalRank }

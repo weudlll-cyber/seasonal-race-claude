@@ -80,10 +80,12 @@ describe('replay — the emit → replay round-trip', () => {
       expect(r.equal).toBe(true);
       expect(r.realHash).toBe(r.simHash);
       // shipped-default order for seed 7 — real core == sim (the equal/hash checks above are the
-      // guarantee). Moved again at the RACER-MOTION-2 acceleration-cap engine change: the winner stays
-      // Breeze but 3rd place is now Surge. real == sim still byte-identical (the equal/hash checks above prove it).
-      expect(r.order[0]).toBe('Breeze');
-      expect(r.order[2]).toBe('Surge'); // 3rd place after the motion-cap change
+      // guarantee). Moved at the RACER-MOTION-2 acceleration-cap change, and again at the
+      // night/2026-09-12b merge (2026-09-14): DIRECTION-AUTHORITY-1's hold-and-release shape changes
+      // who arrives where, so Surge now wins and Breeze is 2nd. real == sim is still byte-identical —
+      // the three checks above prove it, which is what makes this a re-pin and not a parity failure.
+      expect(r.order[0]).toBe('Surge');
+      expect(r.order[2]).toBe('Phantom');
     },
     RACE_TIMEOUT_MS
   );

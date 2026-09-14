@@ -4,129 +4,179 @@
 **Owns:** where things stand, right now. Whoever reads this at 7 a.m. should not have to open a
 single report to know where the project is.
 
-**Last rewritten:** 2026-09-11, after the whole chain — all four pieces are done and pushed.
+**Last rewritten:** 2026-09-13, after ARRIVAL-TAPER-SHIP-1.
 
-**Where the code is.** Master is `04f40f17`, CI green. `night/2026-09-11` is branched off master and
-is **NOT merged**. `night/2026-09-10` stays unmerged as a **record of its measurements** — its piece 2
-cast from a new band and fired in 0–2 of 30 races, and you have replaced that approach.
-
----
-
-## ★ THE CAMERA INSTRUMENTS WERE RUNNING A CAMERA THE BROWSER CANNOT PRODUCE
-
-Every instrument handed the director `b1Indices` and **never the plan**. The product hands it over
-once, mid-race, the moment the heroes are cast. So the detector's cast stayed empty, and **anything
-that depends on a racer being CAST as a comebacker could not happen inside an instrument at all.**
-
-★ **That is why the camera fingerprint stayed green through the precedence you shipped on Tuesday** —
-a change that alters the picture in 47 of 96 races.
-
-**Ten instruments build a camera. Nine were blind.** Three are fixed; six are named in the report
-with their addresses and deliberately left for a separate piece.
-
-### What it costs to see properly
-
-★ **The CAMERA fingerprint moved on 9 of 10 tracks and the RENDER fingerprint on 7 of 10.** Both
-old and new values, per track, are in
-[CAMERA-PLAN-BLIND-1](../reports/evolution/CAMERA-PLAN-BLIND-1.md) — this sheet does not carry
-fingerprint values, because they have one home and it is
-[docs/fingerprints.json](fingerprints.json).
-
-★ **THE RACE IS UNTOUCHED** — world fingerprint unmoved, golden races pass, and every per-track frame
-count is identical. Only what the instruments *see* changed.
-
-★ **NOTHING IS MINTED.** The two guards are red on purpose and wait for your word.
-
-**Why each track moved, named rather than guessed:** the precedence genuinely fires on five tracks;
-four more move because the candidate population switches from the wide fallback to the plan's cast.
-**river-run did not move and I cannot explain it** — the obvious reason was checked and is false.
+**Where the code is.** Master is `b6d77637`. `night/2026-09-12b` is **NOT merged**, **nothing is
+minted**, **no golden race is re-recorded**. The servo is reverted as you asked; the taper is what
+ships.
 
 ---
 
-## ★ YOUR STAGING IDEA IS RIGHT, AND THE PLAN'S OWN BUDGET REFUSES IT
+## ★★ READ THIS BEFORE YOU APPROVE — THE TRADE IS NOT THE ONE YOU AGREED TO
 
-You said the director should **define** the comebacker and **hold him at the rank he should start
-from**, then lead him into the top 5. First: your diagnosis of today is confirmed with numbers —
-re-measured, not quoted. A racer drawn for the front is steered toward the front, so when the
-director looks he is at **median rank 5 of 30 and 9 of 40**, and **today's comebacker LOSES places
-after the release at every size from 30 up (−9, −17, −16)**.
+You chose the taper on **"1.042 at arrival for about 0.6 points of band-reach"**. That half is true
+and it is paid:
 
-### The staging mechanism already existed
+| | before | now |
+|---|---|---|
+| arrival pace | 1.100 | **1.029–1.076** |
+| lands in his block | 84% baseline | **87.0%** (n=717) |
+| the leader | — | **untouched, identical to every decimal** |
 
-A comebacker's curve is *anchor → peak → resolve*, and the **peak is his deepest point**. The code
-already computed a deep peak for a front racer — it just called him a `sovereign-lead`. So staging is
-choosing that peak. **No hold arm was rebuilt**; a cast hero already steers through the pulk phase.
+★★ **BUT THE COMEBACKER'S GAP ON SCREEN ROUGHLY TRIPLES AT SMALL FIELDS**, and that was never part of
+the trade:
 
-### ★ AND IT IS REFUSED IN 8 OF 8 CANDIDATES, AT EVERY FIELD SIZE
+| racers | before | now |
+|---|---|---|
+| 20 | 0.107 widths | ★ **0.368** (3.4×) |
+| 40 | 0.126 | ★ **0.307** (2.4×) |
+| 60 | 0.172 | 0.139 (better) |
+| 100 | 0.163 | 0.204 |
 
-`feasibleTiming` charges the **down leg at the same rate as the up leg**. A staged round trip needs
-**1.63–1.88 of a race against a budget of 0.97** — refused by about a factor of two.
+★ **AND IT IS NOT THE TAPER.** I split the races by whether the comebacker was ever in front. Where
+he never leads, the two arms are **identical to every decimal**. The whole difference is in races
+where he IS in front — because the shape leaves him **unsteered inside his block** once he arrives,
+instead of braking him back toward his exact drawn place. That is the brake whose removal was already
+costed at 2.7× the gap when it was variant B; I measure 3.4×.
 
-★ **THE SCISSORS, and this is the whole answer:**
+> ★ **So: the taper costs what you agreed. The tripled gap is the price of the OTHER half of the
+> shape — "free inside his block" — which was never put to you as a choice. It is also the half that
+> produces the feel you asked for. It is yours to accept or not.**
 
-| | |
+★ One more thing, in your favour: the **0.066 widths baseline on record was never comparable.** It
+came from an instrument with a narrower definition of "leading". Measured properly, the before-figure
+is 0.107–0.172. So the picture is worse than it was, but not nearly as much worse as that number
+would have implied.
+
+---
+
+## WHAT HAPPENS THE MOMENT YOU APPROVE
+
+The branch merges in **one command**. `verify` plain is **PASS 24 · FAIL 6**:
+
+| guard | why |
 |---|---|
-| deepest staging the budget ALLOWS | **0.27–0.30 of the field** — near-constant at every size |
-| what the grid measured at that depth | **−11 to +6 places** — no comeback at all |
-| depth a real comeback needs | **0.50–0.60 of the field** — refused |
+| world / camera / render fingerprints | ★ red **BY DESIGN** — the race changed |
+| `client-suite` | the golden parity pins inside it |
+| `check-runin-frame` | ★ **a real defect — see below** |
 
-**The depth that would work is not allowed, and the depth that is allowed does nothing.**
+★★ **THE GOLDEN RACES PASS AND NEED NO RE-RECORDING.** Their fields are 12 and 6 racers, below the
+staging minimum of 20, so no comebacker is cast and the shape never fires there. Both are
+byte-identical to master.
 
-★ **The same depth is affordable ONE WAY and refused as a ROUND TRIP.** A racer already at rank 20
-may climb to the top 5; a front racer may not be sent to rank 20 and brought back — though the climb
-he would then make is identical. **Falling back is not rate-limited the way overtaking is, but the
-budget charges it as if it were.**
+**So approving needs exactly:** mint the **world / camera / render** fingerprints, and decide the
+camera case below. **Nothing else.**
 
-**Nothing was relaxed.** The build is in the tree and **inert** — world fingerprint unmoved, golden
-races pass, a refused staging falls back to today byte for byte.
-
----
-
-## ★ AND TWO MEASUREMENTS THAT ARE BIGGER THAN THE COMEBACK TOPIC
-
-### 1 · luger-hill's start rows are unfair on master — and nothing of ours did it
-
-3 000 races, 10 tracks, the canonical method. **One track of ten is Holm-unfair: luger-hill, χ²
-23.100.** It reproduces an independent run on another branch **digit for digit**, which is what makes
-"already unfair" a fact rather than a memory. **Band-reach is comfortable — 86.2% tightest against
-the 70% line, every track ≥ 83.8%.**
-
-★ **It also settles last night's attribution**: dirt-oval sits at its clean baseline here, so that
-branch's dirt-oval result was genuinely its own doing and its luger-hill column was not.
-
-### 2 · ★ THE FAIRNESS GATE IS A 40-RACER FACT, AND AT 100 RACERS IT IS HALF A POINT FROM FAILING
-
-You asked whether the director steers weaker as the field grows. It does per RANK — but **measured
-over 46 000 racer-rows it does not per FIELD**: the median racer lands a constant **5% of the field**
-from his drawn place at 20, 40, 60 and 100 racers. **The controller is fine.**
-
-★ **What is not fine is the band table.** `BAND_EDGES` is a fixed `[5, 15, 25, 40]` — a 40-racer
-table used at every size. Band-reach against it:
-
-| racers | 10 | 20 | 40 | 60 | **100** |
-|---|---|---|---|---|---|
-| tightest zone | 95.8% | 90.8% | 86.7% | 81.2% | ★ **70.5%** |
-
-★ **The gate line is 70%.** At 100 racers you have half a point of margin, and the fifth band there
-holds 60% of the field in one bucket and reads a meaningless 97.3%.
-
-★ **AND `docs/FAIRNESS.md` NEVER SAYS WHICH FIELD SIZE IT DESCRIBES.** Every "N" in it counts RACES,
-not racers. Its 70% gate and its 85–90% headline are 40-racer facts written as facts about the game.
-**Nothing in it was edited — it is canonical and the correction is yours.**
+**New world fingerprint `defbce50092d965c`** (it was `bdf4a3c8ce6e0316` before this work).
+Per track: city-circuit `a6892177f475` · dirt-oval `ab94bd3b6d88` · garden-path `9f86a644c95c` ·
+ice-track `0246ecbe7a35` · luger-hill `41ba46864505` · mountainstreet `8a6bf377bcfe` · river-run
+`29742c451ffa` · searound `1fe4a8074974` · seatrack `8b3f023f86d0` · space-sprint `edc1069a4dda`.
 
 ---
 
-## NEEDS HIS WORD
+## ★ THE ONE THING STILL BLOCKING A CLEAN MERGE — AND IT IS NOT THIS BRANCH'S
 
-- ★ **Should `BAND_EDGES` scale with the field?** It is the reason band-reach falls while the
-  director's accuracy does not, and it is why the gate nearly fails at 100 racers.
-- ★ **Should the DOWN leg be priced differently from the UP leg?** That is the one change that makes
-  your staging possible, and it is a design decision — nothing was touched.
-- ★ **Or should the staging be shallower than a comeback needs?** 0.27–0.30 of the field is what the
-  budget allows today.
-- ★ **May the camera and render fingerprints be re-minted?** They moved because the instrument stopped
-  being blind, not because the picture got worse. Until you say so, `verify` stays red on both.
-- ★ **Your eye on the MILD precedence**, on master and still unwatched
-  ([COMEBACK-PRECEDENCE-1](../reports/evolution/COMEBACK-PRECEDENCE-1.md)).
-- **The e2e `Failed to fetch`** — harness or serving defect, unresolved on purpose.
+**The camera loses the finish line** on `dirt-oval` at 40 racers (15 frames) and `luger-hill` at 100
+(5 frames), at progress 0.950.
+
+★★ **RE-MEASURED 2026-09-14 (RUNIN-FRAME-SHAPE-1), AND BOTH SENTENCES THAT STOOD HERE WERE WRONG.**
+
+★ **It did not come from `983d9201`.** The camera module, `defaults.js` and the guard are
+**byte-identical to master**, and that commit's only camera-adjacent change is a probe its own
+comment marks INERT. Its reach is through the RACE alone. **The same 12-seed sweep on `dirt-oval`
+n=40 loses the line on 1 seed of 12 on BOTH trees** — master on seed 11 (−210 px), the branch on
+seed 9 (−289 px), same frame count, same progress, same mechanism. **The guard samples one seed per
+track and says so in its own blind list. Green on master was the draw, not a property of master.**
+
+★ **And the stated cause was wrong.** `_lineCeiling` returning Infinity is **not** what happens:
+the demand is **FINITE on 15 of 15 and 5 of 5** failing frames. What actually happens is that the
+schedule's widen completes at 0.9498 because `zoom 2.379 <= demand 2.374`, and the demand is measured
+from where the framing rule **intends** the anchor rather than where the pan **is** — and the opening
+glide (`runInOpenMs` 1250 ms) is still running at the deadline. **The floor reports satisfied while
+the band is 289 px off the canvas.**
+
+★★ **I did not fix it, and the rule says not to:** every available repair re-opens a closed decision
+(ENDGAME-REPAIR-1's singularity) or breaks "the schedule is the sole author" — **changing the endgame
+on every track and every race.** You judge that picture.
+
+---
+
+## WATCH IT
+
+★ **http://localhost:4173** — the production build. API on 4000, dev on 5173.
+
+★ **Check the pill before judging.** It is built from the **tip of `night/2026-09-12b`** and must read
+that commit with **`dirty: false`**; `git rev-parse --short=8 HEAD` is the value it should match, and
+`http://localhost:4000/api/health` must report the **same** commit. A hash is not written here on
+purpose — every commit to this sheet would move it and the sheet would lie about itself.
+
+★ **There is no repair to inspect** — nothing in this block changed product code. What is on screen is
+the behaviour as it stands, on the branch and on master alike.
+
+★★ **YOU ALREADY RACED ONE — AND IT IS NOT THE FAILING CASE.** `STNJ25` (07:07, on this build) is
+`dirt-oval`, **40 racers, seed 9** — track, field and seed all correct. But it ran at **`wild`** where
+the guard grades the shipped **`quiet`** (`pulkLeaderBrake` 0.15 vs 0.1, `pulkChallengerBoost` 0.12 vs
+0.06), and **your stored camera config differs from the shipped defaults on 15 keys** — including
+`OVERVIEW.trackingTC` at **1.5 against 0.25**, and OVERVIEW is the state every flagged frame sits in.
+★ **So the 15 frames were not in that race.** Full comparison:
+[LAST-RACE-MATCH-1](../reports/evolution/LAST-RACE-MATCH-1.md). ★ **To see the guard's race, the stage
+has to be `quiet` and the stored camera config cleared** — both are settings, not code. **I changed
+neither.**
+
+**Look at, in this order:**
+1. ★★ `dirt-oval`, **40 racers, seed 9** — the failing case, your own field size. At about **95%** of
+   the race the shot finishes its widen and turns into the close **while the line is still off the
+   right edge** — 15 frames, about a quarter of a second, then it comes back on its own.
+2. `dirt-oval`, 40 racers, **seed 1** — the control on the same track. Nothing should look different.
+3. `luger-hill`, 100 racers, **seed 9** — the shallower case (82 px, 5 frames, 0.08 s). ★ **If you
+   cannot see it, say so** — that is the cheaper half of the decision.
+4. `luger-hill`, 100 racers, **seed 1** — the control there.
+
+---
+
+## FOR YOUR DECISION
+
+1. ★ **The tripled on-screen gap at small fields** — accept it as the price of the feel, or put the
+   brake back on an arrived comebacker (that is the "free inside his block" half, not the taper).
+2. Whether the endgame's opening is repaired at all — **on master, where the defect actually lives** —
+   knowing every option moves every shot. The four options and what each costs are in
+   [RUNIN-FRAME-SHAPE-1](../reports/evolution/RUNIN-FRAME-SHAPE-1.md) §5.
+3. Still open from earlier: `docs/FAIRNESS.md`'s 85–90% headline, and its "zero Holm-unfair" clause
+   which **the shipped game already misses above forty racers** (seven of ten tracks at N=100).
+4. Deployment: what terminates TLS · where the data lives · how often a backup is taken.
+
+## ★★ ONE RACE IN YOUR HISTORY IS MINE — DELETE IT WHEN YOU LIKE
+
+★ **Race `SF8GEZ`** (2026-09-13 17:19, winner **Nova**, your "40 Racer Testgroup") **was created by a
+browser parity test of mine, not by you.** It was left in place rather than deleted, because deleting
+from your store is itself an alteration and that was not mine to make. **It is yours to delete.**
+Nothing else of yours was created, changed or removed; `QN3HDP` was read with a single `GET`.
+
+---
+
+## ★★ AND YOUR RACE NOW REPLAYS EXACTLY — 40 OF 40, TO THE MILLISECOND
+
+The harness could not race any world but the shipped one, which is why it raced `quiet` while you
+race `wild` and agreed with your stored race on only 10 of 40 positions. That is closed. Your race
+`QN3HDP`, replayed from its own stored inputs, now matches your record on **every one of the forty
+positions and every one of the forty finishing times in milliseconds**. ★ **The shipped world at
+stage `wild` reproduces it too — so your sliders are the shipped defaults and the Race Action stage
+was the whole difference.** ★ **Nothing the product does was changed**, and the four fingerprints are
+unmoved against the branch tip before the piece. See
+[HARNESS-WORLD-1](../reports/evolution/HARNESS-WORLD-1.md), which also lists which of this week's
+conclusions describe `quiet` rather than the world you watch.
+
+★ **The numbers higher up this sheet predate that piece** — the verify tally is now **PASS 25 ·
+FAIL 5** and `check-runin-frame` has been **two** cases (dirt-oval at 40 as well as luger-hill at
+100), not one. The report carries the current values.
+
+---
+
+## NOTICED AND LEFT ALONE
+
+- `.claude/skills/dev-start/SKILL.md` is in German, against the language rule in `CLAUDE.md`.
+- `sollBereich` — a German identifier — in the sim's raw fairness rows.
+- `camera-replay.mjs` delivers the camera plan through its own inline copy of the shared rule.
+- The end-to-end install walk has still not been performed; the ordered list of what it needs is in
+  [NIGHT-2026-09-13](../reports/evolution/NIGHT-2026-09-13.md).
 <!-- END CHAIN STATUS -->

@@ -478,3 +478,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── HISTORY-MISSING-2: the overrun banner ─────────────────────────────────────────────────────
+   A race is recorded only once EVERY racer has crossed the line. If the last one never arrives the
+   race never ends and, before this, vanished without a word. The banner says so. It is deliberately
+   loud and deliberately does not offer an action: ending the race early would change what a race
+   IS, and that is not decided here. */

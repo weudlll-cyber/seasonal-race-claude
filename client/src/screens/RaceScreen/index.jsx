@@ -185,6 +185,8 @@ export default function RaceScreen() {
     []
   );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
+  // HISTORY-MISSING-2: true once the race is past the point the rest of the project treats as
+  // impossible. It only drives the banner below — no physics, no phase, no navigation reads it.
   const [countdown, setCountdown] = useState(3);
   // SCOREBOARD-SLOT-LAYER: React state now holds only what a card SAYS — its identity and its finish.
   // It no longer holds the RANKING, which changes constantly and would re-render the list four times
@@ -1102,6 +1104,45 @@ export default function RaceScreen() {
               isOpen: isOpenTrack,
               heroRoles: racePlanController.getHeroRoles?.() ?? null,
             };
+          }
+
+          // ── HOLD-PROBE (DIRECTION-AUTHORITY-1): what the HELD comebacker is doing, for a browser
+          // test. INERT UNLESS SWITCHED ON, exactly like the race-inputs probe above and for the
+          // same reason: the hold-and-release shape changes what the owner SEES, and this project
+          // has twice shipped a defect that hid between the logic and the picture. Without an
+          // observable a browser test could only re-derive the rank it is supposed to be checking.
+          //
+          // It records the plan's OWN idea of who is held (`getHeldRelease`) and his LIVE rank off
+          // the same sorted field the scoreboard uses — never a recomputation of either.
+          try {
+            if (localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
+              const heldMap = racePlanController.getHeldRelease?.() ?? null;
+              if (heldMap && heldMap.size) {
+                const order = [...st.racers].sort((a, b) => b.t - a.t);
+                const w = (window.__raHoldTrace ||= []);
+                for (const [idx, releaseAt] of heldMap) {
+                  const rank = order.findIndex((r) => r.index === idx) + 1;
+                  // ARRIVAL-VARIANTS-1 added `m`: the multiplier the servo is actually applying, so
+                  // a browser test can see whether he is being braked, pushed or left alone. Read off
+                  // the same racer object, never recomputed.
+                  const me = st.racers.find((r) => r.index === idx);
+                  if (rank > 0)
+                    w.push({
+                      i: idx,
+                      rank,
+                      p: st.raceProgress,
+                      releaseAt,
+                      m: me?.trajectoryMult ?? null,
+                      // ARRIVAL-SHAPE-E-1 added `d`: his DRAWN place, asked of the controller rather
+                      // than recomputed, so a browser test can say "two ranks before his place"
+                      // without re-deriving the thing it is there to observe.
+                      d: racePlanController.getTargetRank?.(idx) ?? null,
+                    });
+                }
+              }
+            }
+          } catch {
+            /* storage unavailable — a diagnostic must never take a race down */
           }
 
           // Scoreboard: update when physicsTs crosses a bucket boundary.

@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **193 files that can change the race** — the engine's own imports AND the imports of every
+the **194 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -177,6 +177,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceGovernor.js` | The PULK-phase contest director. |
 | `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
 | `modules/raceNumbers.js` | RACE-NUMBERS-1 |
+| `modules/raceOverrun.test.js` | HISTORY-MISSING-2 |
 | `modules/raceParams.js` | ONE-HOME-RACE-PARAMS-1 — the sprite geometry every `createRaceFromIdentity` caller has to derive before it can call. |
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
 | `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
@@ -324,7 +325,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-193 files, 24 of them UNKNOWN.
+194 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

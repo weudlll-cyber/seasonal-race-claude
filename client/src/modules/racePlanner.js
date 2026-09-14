@@ -93,7 +93,11 @@ const DEFAULT_CORRIDOR_CONFIG = {
   bottomMarginFraction: 1.5,
 };
 
-const DEFAULT_CONTROLLER_PARAMS = {
+// EXPORTED since DIRECTION-AUTHORITY-1 (2026-09-12): `heroCurveGenerator.js` derives the hero
+// feasibility model's DROP budget from `minMult` rather than carrying a second copy of it. The live
+// per-race value is threaded into the generator config below; this export is what a direct or test
+// call to the generator falls back to, so the fallback reads the one home instead of a literal.
+export const DEFAULT_CONTROLLER_PARAMS = {
   gain: 2.0,
   maxMult: 1.1,
   minMult: 0.85,
@@ -344,6 +348,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
       config.choreoResolveB5 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5,
     ],
     _heroCurves: null, // Map index → anchored curve, once generated
+    _heldRelease: null, // Map index → release progress, for HELD heroes only
     _choreoGenerated: false,
     _choreoPrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
     _choreoPrevProgress: null,
@@ -375,11 +380,19 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Read by update() together with the OPTIONAL leaderGapLen argument the sim (only) passes each frame.
     _frontLeashMaxLengths: config.frontLeashMaxLengths ?? null, // engage above this leader→P2 gap (lengths)
     _frontLeashGainPct: config.frontLeashGainPct ?? null, // brake per excess length (percent of natural speed)
-    // ── Gap-cap re-roll bias (SIM-ONLY; docs/CONCEPT-COHESION.md; supplied only via the sim harness) ──
+    // ── Gap-cap re-roll bias (SHIPPED; docs/CONCEPT-COHESION.md) ──────────────────────────────────
     // "Loaded dice within the honest range": when a racer has opened a hole (arc gap > G to the racer
     // behind) its re-roll draw is shifted toward the SLOWER band edge; in symmetric mode a dropped racer
-    // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op. The BROWSER never sets
-    // these → threshold null → computeGapBiasedTarget() early-returns rawSample → byte-identical.
+    // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op.
+    //
+    // ★ THIS RUNS IN THE BROWSER. It was sim-only when written and this comment said so; the feature
+    // SHIPPED, and `defaults.js` now carries `gapRerollEnabled: true` and
+    // `gapRerollThresholdLengths: 0.5`, so the threshold is NOT null on the shipped path and
+    // `computeGapBiasedTarget` really does bias draws in a browser race. Corrected 2026-09-13 after
+    // GAP-CEILING-BASELINE-1 measured it firing in the owner's own stored race — his leader's draw was
+    // cut 1.0813 → 0.9187 — while this comment still said the browser never set the keys. The
+    // `frontLeash*` comment two lines above is a DIFFERENT case and is still accurate: those keys
+    // appear nowhere in `defaults.js`, so that block really is sim-only.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
     // NOT unfireable, and it is the one entry on the 29 where the triage's UNFIREABLE verdict is
@@ -405,6 +418,90 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 // ── createTrajectoryController ────────────────────────────────────────────────
 
 /**
+ * -- THE ARRIVAL, AND IT IS NOW THE ONLY ONE ---------------------------------------------------
+ *
+ * What a HELD comebacker does once he closes on his drawn place. The owner described this shape on
+ * 2026-09-13 and it is what the race does. The four measurement variants it was chosen against
+ * (A today, B free-on-arrival, C B-plus-taper, D C-plus-runaway-guard) and the five taper distances
+ * are GONE -- measured, then deleted, because a switchable set of experiments is not a product. The
+ * evidence is ARRIVAL-SHAPE-E-1 and SERVO-RANKS-1.
+ *
+ *   (a) THE CEILING. Over the last `ARRIVAL_CEILING_RANKS` ranks of his approach HIS OWN drive
+ *       ceiling eases down to `ARRIVAL_CEILING_AT_PLACE`, so the pace he carries ACROSS his place is
+ *       a settling one rather than the shipped clamp. `arrivalCeiling` says why this moves the
+ *       CEILING and not the error -- a taper that scaled the error was measured and deleted, because
+ *       the clamp discarded its reduction wherever the error still saturated (TAPER-INVISIBLE-1).
+ *   (b) THEN HE IS STEERED, exactly as any other racer is: to his drawn place, at the hero's
+ *       strictness 1.0. The "unsteered inside his block" half was built so he would not feel braked
+ *       on arrival, measured, and DELETED -- it cost 3.3x the pre-shape gap at twenty racers, and
+ *       the ceiling above removes the reason it existed.
+ *
+ * -- NEITHER CLAMP NUMBER NOR THE EASE DURATION IS TOUCHED, and no other role is reached: every
+ * branch is inside the `heldFree` test.
+ */
+
+/**
+ * -- THE ARRIVAL CEILING (ARRIVAL-SOLVE-1, 2026-09-13) -----------------------------------------
+ *
+ * THE PARAGRAPH A READER CAN CHECK. The servo commands
+ * `clamp(1.0 + gain * error / nActive + noise, minMult, maxMult)`. It SATURATES whenever the error
+ * exceeds `(maxMult - 1) * nActive / gain` -- 2.0 ranks at forty racers. TAPER-INVISIBLE-1 measured
+ * what that costs: a taper that scales the ERROR has its reduction thrown away by the clamp for
+ * every rank above that threshold, so a four-rank taper had two ranks of authority at N=40 and
+ * arrived at 1.077, which is three quarters of the untapered rush and invisible on screen.
+ *
+ * THIS LEVER MOVES THE CEILING INSTEAD OF THE ERROR. While a held comebacker is closing on his drawn
+ * place, HIS OWN `maxMult` eases down from the shipped clamp to `ARRIVAL_CEILING_AT_PLACE`. Because
+ * the ceiling IS the commanded value wherever the raw drive saturates, it reaches its target
+ * EXACTLY and at EVERY field size -- there is no `nActive` in it to make it field-size dependent,
+ * which is the defect that made a rank-counted taper mean four different things at four field sizes.
+ *
+ * -- IT TOUCHES ONE RACER. Every line is inside `heldFree`, so no other racer's steering, no other
+ * role, and no shared clamp is reached. `minMult` is untouched: this bounds the DRIVE, never the
+ * brake. The owner's constraint of 2026-09-13 is that the problem is one racer and the rest of the
+ * field must be left alone, and that is why this lever was preferred over the response curve, which
+ * measured better and changed everyone.
+ *
+ * -- IT ALSO GIVES THE EASE SOMETHING TO FOLLOW. The old shape left the command pinned at 1.100 and
+ * then dropped it in the last rank, which a 1 s ease cannot track. The ceiling falls across the
+ * whole approach -- a nominal 2.4-3.4 s -- so the multiplier has a gradient rather than a cliff.
+ */
+export const ARRIVAL_CEILING_RANKS = 4;
+
+/**
+ * What his personal ceiling is worth the moment he reaches his place. Read in on-screen terms: at
+ * the ~5.7x magnification the camera uses during an approach, 1.100 eats 85 canvas px/s of the gap
+ * ahead, 1.05 eats 44, and 1.02 eats 17 -- which is what "settling" rather than "closing" looks
+ * like (TAPER-INVISIBLE-1 SS3).
+ */
+export const ARRIVAL_CEILING_AT_PLACE = (() => {
+  const v = Number.parseFloat(globalThis.process?.env?.RA_ARRIVAL_CEIL ?? '');
+  return Number.isFinite(v) && v >= 1 ? v : 1.02;
+})();
+
+/**
+ * His personal drive ceiling at `rankError` ranks short of his place. `maxMult` far out, easing to
+ * `ARRIVAL_CEILING_AT_PLACE` at the place itself. smoothstep, so it leaves the shipped clamp and
+ * arrives at its floor with zero slope and there is no corner in the trace.
+ *
+ * It NEVER returns above `maxMult`: this lever can only ever tighten a racer's ceiling, never raise
+ * it, so it cannot make anybody faster than the shipped clamp already allows.
+ */
+export function arrivalCeiling(
+  rankError,
+  maxMult,
+  ranks = ARRIVAL_CEILING_RANKS,
+  atPlace = ARRIVAL_CEILING_AT_PLACE
+) {
+  const floor = Math.min(atPlace, maxMult);
+  if (!(ranks > 0)) return maxMult;
+  if (!(rankError > 0)) return floor;
+  if (rankError >= ranks) return maxMult;
+  const u = rankError / ranks;
+  return floor + (maxMult - floor) * (u * u * (3 - 2 * u));
+}
+
+/**
  * Create a stateful Trajectory Controller from a Race Plan.
  *
  * M2v2: bidirectional P-controller for ALL racers in OUTCOME phase.
@@ -423,6 +520,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
 export function createTrajectoryController(racePlan) {
   const plan = racePlan;
   const { gain, maxMult, minMult, bandStrictness } = plan.controllerParams;
+  // ARRIVAL-VARIANTS-1: indices that have reached their drawn place at least once since the release.
+  // A latch, not a live test — once he has arrived he stays arrived, so a variant cannot flicker in
+  // and out of being steered as he crosses back and forth.
+  const _arrivedAtDrawn = new Set();
   const { pulkStart, pulkEnd, transEnd, corrStart, corrEnd } = plan._phases;
 
   // Phase-boundary FRACTIONS [0,1] for the leader-progress phase clock.
@@ -504,6 +605,13 @@ export function createTrajectoryController(racePlan) {
   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
   let _attackerFreeEvents = 0;
+  // ── ★ E (ARRIVAL-VARIANTS-1, the owner's shape) telemetry. All zero for every other variant,
+  // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
+  // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
+  // — the direct test of whether the taper finished before he got there (it should read 1.0).
+  // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
+  // for EVERY variant — see the block in `update`. One entry per held comebacker per race.
+  const _arrivalObs = new Map();
   // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
   // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
   // ("leashed racer's live rank ≥ 3") is meaningful — it tracks that specific racer, not whoever is
@@ -707,6 +815,11 @@ export function createTrajectoryController(racePlan) {
           config: {
             ...GENERATOR_CONFIG,
             anchorProgress: pulkStartFrac,
+            // DIRECTION-AUTHORITY-1: the hero feasibility model prices a DESCENT at the clamp's drop
+            // authority and a CLIMB at its climb authority. Threaded from the LIVE resolved
+            // controllerParams -- the same reason anchorProgress is threaded -- so a tuned clamp
+            // moves the gate with it and no second copy of either number exists.
+            dropBudgetFrac: 1 - minMult,
             releaseProgress: plan._choreoReleaseProgress,
             bandResolve: plan._choreoBandResolve,
             // B2-attacker "Attack & Fall" params (SHIPPED ON at 3; 0 → no attackers → pre-feature game).
@@ -718,6 +831,12 @@ export function createTrajectoryController(racePlan) {
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+        // HOLD-AND-RELEASE: index -> the progress at which a HELD hero's curve ends and he is handed
+        // back to his drawn rank. Only held curves carry `releaseAt`, so this map is empty for every
+        // plan that casts none and the servo below is then byte-identical to before.
+        plan._heldRelease = new Map(
+          gen.curves.filter((c) => c.releaseAt != null).map((c) => [c.index, c.releaseAt])
+        );
         // B2-attacker runtime params (peakRank + finalRank), for the servo's Track-to-FinalRank-then-Free
         // logic. Only attacker-b2 curves carry them; empty map when the feature is OFF.
         plan._attackerParams = new Map(
@@ -816,13 +935,87 @@ export function createTrajectoryController(racePlan) {
         (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
       // choreo heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
       // target (unchanged endpoint). The curve ends in the hero's assigned band.
+      // A HELD hero is released at his curve's end: from there he is steered to his DRAWN rank like
+      // any other racer, which is the climb the owner asked to watch rather than one more authored
+      // leg. Before that he tracks his curve exactly, as every hero does.
+      const heldReleaseAt =
+        isHero && plan._heldRelease ? plan._heldRelease.get(r.index) : undefined;
+      const heldFree = heldReleaseAt != null && phaseProgress >= heldReleaseAt;
+      // ── ★ ARRIVAL OBSERVATION (ARRIVAL-SHAPE-E-1) — READ-ONLY, AND THE SAME FOR EVERY VARIANT ──
+      // The instrument that answers "which distance works". It is deliberately OUTSIDE the variant
+      // branches below, so variant A's baseline is measured by the SAME code as E's arm and the two
+      // columns are comparable; it touches no RNG and calls no `_setTarget`, so it cannot move a
+      // race. `active` is already sorted by t descending, so the leader gap costs one subtraction.
+      if (heldFree) {
+        const drawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        let o = _arrivalObs.get(r.index);
+        if (!o) {
+          o = {
+            index: r.index,
+            drawn,
+            arrivalMult: null, // ★ his pace the frame he first reached his place — should be 1.0
+            arrivalProgress: null,
+            arrivalMs: null,
+            twoOutMs: null, // when he was last two ranks short, for "how long two ranks take"
+            twoRankMs: null,
+            maxLeadGapFrac: 0, // ★ peak gap to 2nd while he leads, as a fraction of the race
+            maxLeadGapProgress: 0,
+            worstRankAfter: null, // ★ the drift the net is there to bound
+            bestRankAfter: null,
+            releaseRank: currentRank, // his rank the frame he was handed back — what a viewer sees
+            ceilStartRank: null, // ★ the rank he was at when HIS ceiling first bound
+            ceilStartMs: null,
+            ceilAtArrival: null, // ★ what his ceiling was worth the frame he reached his place
+            // ★ One entry per RANK CHANGE during the approach, so "where was he one second before he
+            // arrived" can be answered exactly rather than extrapolated from an average rate. Capped
+            // so a pathological race cannot grow it without bound; the approach is short.
+            trail: [],
+          };
+          _arrivalObs.set(r.index, o);
+        }
+        if (o.arrivalMs == null && currentRank === drawn + 2) o.twoOutMs = elapsedMs;
+        if (o.trail.length < 400) {
+          const last = o.trail[o.trail.length - 1];
+          if (!last || last.rank !== currentRank)
+            o.trail.push({ ms: elapsedMs, rank: currentRank });
+        }
+        if (o.arrivalMs == null && currentRank <= drawn) {
+          o.arrivalMult = r.trajectoryMult ?? 1.0;
+          o.ceilAtArrival = arrivalCeiling(0, maxMult);
+          o.arrivalProgress = phaseProgress;
+          o.arrivalMs = elapsedMs;
+          if (o.twoOutMs != null) o.twoRankMs = elapsedMs - o.twoOutMs;
+        }
+        if (o.arrivalMs != null) {
+          o.worstRankAfter = Math.max(o.worstRankAfter ?? currentRank, currentRank);
+          o.bestRankAfter = Math.min(o.bestRankAfter ?? currentRank, currentRank);
+        }
+        if (rankIdx === 0 && nActive > 1 && plan._finishT > 0) {
+          const g = (r.t - active[1].t) / plan._finishT;
+          if (g > o.maxLeadGapFrac) {
+            o.maxLeadGapFrac = g;
+            o.maxLeadGapProgress = phaseProgress ?? 0;
+          }
+        }
+      }
       const targetRank = released
         ? currentRank
-        : isHero
+        : isHero && !heldFree
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      // ── ★ THE ARRIVAL — see the block above createTrajectoryController ────────────────────────
+      // Everything here is inside `heldFree`, so no other role is reached.
+      // (b) FREE means UNSTEERED, and it is expressed as band steering rather than as a hard 1.0:
+      // inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the block's edge
+      // the SAME expression is already the net. One mechanism, two jobs.
+      let arrived = false;
+      if (heldFree) {
+        const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
+        if (currentRank <= drawnPlace) _arrivedAtDrawn.add(r.index);
+        arrived = _arrivedAtDrawn.has(r.index);
+      }
       // positive rankError = racer currently ranked worse than target → boost
-      const rankError = currentRank - targetRank;
+      let rankError = currentRank - targetRank;
       // Band bounds computed once — used for both steering blend and corridor telemetry.
       const [areaLo, areaHi] = getAreaBounds(targetRank);
       // bandError: signed distance outside the target band (0 when already inside).
@@ -885,10 +1078,29 @@ export function createTrajectoryController(racePlan) {
         }
         // not-yet-freed → strictness remains 1.0 (curve tracking); nothing else to do.
       }
+      // ★ AFTER HE ARRIVES HE IS STEERED, like any other racer (ARRIVAL-STEERED-AGAIN-1,
+      // 2026-09-13). He used to be put on band steering here -- `strictness = 0`, which commands 1.0
+      // anywhere inside his block -- so that he would not FEEL braked on arrival. That reason is
+      // gone: with the eased ceiling above he no longer arrives fighting the brake, and the owner's
+      // argument is that the brake now takes hold FASTER because there is half as much to shed (the
+      // ease costs the same second either way, but 1.05 -> 1.0 is half the distance of 1.10 -> 1.0).
+      // What it cost was clause 2: unsteered, he opened 3.3x the pre-shape gap at twenty racers.
+      // `strictness` therefore stays at the hero's 1.0 and the blend below is exact-rank steering.
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
+      // -- HIS OWN CEILING, and nobody else's. `heldFree` is the whole gate: every other racer
+      // clamps against the shipped `maxMult` exactly as before.
+      let ceilFor = maxMult;
+      if (heldFree && !arrived) {
+        ceilFor = arrivalCeiling(rankError, maxMult);
+        const o = _arrivalObs.get(r.index);
+        if (o && ceilFor < maxMult && o.ceilStartRank == null) {
+          o.ceilStartRank = currentRank;
+          o.ceilStartMs = elapsedMs;
+        }
+      }
+      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, ceilFor);
       _setTarget(r, rawTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
@@ -1171,6 +1383,13 @@ export function createTrajectoryController(racePlan) {
       attackerCast: _atkCast,
       attackerPeakReached: _atkPeak,
       attackerFreed: _attackerFreeEvents,
+      // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
+      // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
+      // ★ One row per held comebacker: his drawn place, the pace he carried across it, the peak gap
+      // he opened while leading, and how far he drifted afterwards. The arm-vs-arm table is built
+      // from these; they are recorded identically under every variant.
+      arrivalObs: [..._arrivalObs.values()].map((o) => ({ ...o })),
+      eArrivalMults: [..._arrivalObs.values()].map((o) => o.arrivalMult).filter((m) => m != null),
       // Front-leash diagnostic (0 when OFF / never engaged): frames the leader brake was applied.
       leashFrames: _leashFrames,
       // Gap-cap re-roll diagnostics (0 when OFF): total biased rolls this race + the leader duty-cycle
@@ -1224,6 +1443,12 @@ export function createTrajectoryController(racePlan) {
     _attackerMinRank.clear();
     _attackerFreed.clear();
     _attackerFreeEvents = 0;
+    // The arrival latch is per-RACE state, not telemetry, but this block is the only per-race reset
+    // the controller has ("call once per race"), so it belongs here. A controller that outlived a
+    // race would otherwise carry "he has already arrived" into the next one and free him at the
+    // start. No-op while every race builds its own controller; correct if one ever does not.
+    _arrivedAtDrawn.clear();
+    _arrivalObs.clear();
     _leashFrames = 0;
     _leashEngaged = false;
     _leashTargetIdx = -1;
@@ -1276,6 +1501,13 @@ export function createTrajectoryController(racePlan) {
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
     getHeroRoles: () => plan._heroRoles ?? null,
+    // Diagnostics-only: index → release progress for HELD heroes (null until heroes are cast, empty
+    // when none was cast). The role label alone cannot tell a HELD comebacker from the fall-back
+    // one — both are 'comebacker' — and an instrument that guessed from the race would be guessing.
+    getHeldRelease: () => plan._heldRelease ?? null,
+    // The DRAWN place for one racer. Read-only, for the browser hold probe, which otherwise has no
+    // way to say "two ranks before his place" without recomputing the thing it is observing.
+    getTargetRank: (index) => plan._racerTargetRank?.get(index) ?? null,
     // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector,
     // which passes it to comebackDetector.setPlan — where the ROLES are consumed and the BEATS are
     // DISCARDED. See the note at the assignment of `_cameraPlan` above; the open point is

@@ -57,6 +57,7 @@ process.on("exit", () => {
   process.stderr.write(`[ra-elapsed-ms ${ms}] (${(ms / 1000).toFixed(1)}s)\n`);
 });
 
+import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const SABOTAGE = process.argv.includes("--sabotage");
@@ -273,6 +274,11 @@ const cd = new CameraDirector(
   TW,
 );
 cd.setRandomSeed(1439767152);
+// INSTRUMENT-PLAN-2 (2026-09-12): deliver the authored cameraPlan the way the PRODUCT does,
+// through the ONE shared helper. Without it `comebackDetector._cast` stays null for the whole
+// run and anything gated on a racer being CAST cannot fire here — blind by construction, not
+// inert. See scripts/lib/cameraPlanDelivery.mjs for why this is one place and not six copies.
+const deliverCameraPlan = makeCameraPlanDelivery(cd, built.meta.racePlanController);
 raceCfg.computePositions();
 
 // Run to the last crossing, then put the state in the phase the ending lives in.
@@ -287,6 +293,7 @@ while (st.finishedCount < N && ts < 600000) {
     stepRacePhysics(st, raceCfg);
     accum -= FIXED_DT;
   }
+  deliverCameraPlan();
   cam = cd.update(
     st.racers,
     ts,

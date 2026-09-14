@@ -36,9 +36,14 @@ export const REAL_ARM_SEEDS = [1, 7, 42];
 
 /**
  * The shipped-default winners for those seeds. `real == sim` is the actual guarantee; these are the
- * concrete anchor. They moved at the 2026-07-29 COMBO15 ship and again at RACER-FLAPPING-2.
+ * concrete anchor. They moved at the 2026-07-29 COMBO15 ship, again at RACER-FLAPPING-2, and again
+ * at the night/2026-09-12b merge (2026-09-14): DIRECTION-AUTHORITY-1 holds a staged comebacker to a
+ * staging rank and releases him at 0.70 to race the last 30% back, so the finishing order moves by
+ * design. Seeds 1 and 7 moved (13 -> 12 and 38 -> 17); seed 42 did not. Read from a measurement, not
+ * from the assertion message: `real == sim` was re-checked and holds byte-identically on all three,
+ * which is why this is a re-pin and not a parity failure.
  */
-export const REAL_ARM_WINNERS = { 1: 13, 7: 38, 42: 13 };
+export const REAL_ARM_WINNERS = { 1: 12, 7: 17, 42: 13 };
 
 /** The cross-topology cases: the plan gate, and the D-ROWCOUNT small-sprite case. */
 export const SPREAD_CASES = [

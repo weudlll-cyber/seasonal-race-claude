@@ -1,0 +1,280 @@
+# RUNIN-FRAME-SHAPE-1 — the run-in defect is NOT this branch's, and the repair is yours to decide
+
+**Branch** `night/2026-09-12b` · **MEASUREMENT ONLY — NOTHING BUILT, nothing minted, nothing merged.**
+The decision rule fired on its **second** branch: the repair would change the picture on tracks and
+races that are not failing, so this stops at the measurement and the options.
+
+---
+
+## ★★ THE ONE LINE
+
+> **`check-runin-frame` is red on this branch and green on master — and the defect is on master too.**
+> The camera is **byte-identical** on both trees. On `dirt-oval` at 40 racers — the deeper failure and
+> the field size he races — the line leaves the canvas on **1 seed in 12 on the branch (seed 9) and
+> 1 seed in 12 on master (seed 11)**, same frame count, same mechanism, same progress fraction.
+> **`983d9201` did not create it. It moved which seed lands on it — and the guard samples exactly
+> one seed.**
+>
+> ★ **The one thing NOT symmetric:** on `luger-hill` master is clean over ten seeds while the branch
+> loses seed 9 by 82 px. **One seed at N=10 is not a rate, and it is not claimed as one** — but it is
+> not hidden either.
+
+★ **The repair is a camera change**, and the camera's endgame is a picture you accepted. So: **stop.**
+
+---
+
+## 1 · THE UPPER-BOUND QUESTION, ANSWERED FIRST
+
+**Could the shot have shown the line at all in those frames?** ★ **YES on both cases. It was
+geometrically available and the shot did not take it.**
+
+| | delivered zoom | zoom that reaches the canvas edge | verdict |
+|---|---|---|---|
+| `dirt-oval` n=40 | **2.3786** | **1.6384** | the delivered shot is **1.45× TIGHTER** than it needed to be |
+| `luger-hill` n=100 | **0.9278** | **0.8226** | the delivered shot is **1.13× TIGHTER** than it needed to be |
+
+The projection scales about the camera centre, so a wider shot pulls an off-screen point toward the
+middle; the figure above is the zoom at which the best band point sits exactly on the canvas edge,
+derived from the delivered frame rather than from a model. **This is not an impossible frame.**
+
+---
+
+## 2 · THE SHAPE OF THE FAILING FRAMES
+
+| | `dirt-oval` n=40 | `luger-hill` n=100 |
+|---|---|---|
+| window frames | 395 | 256 |
+| **off canvas** | ★ **15** | ★ **5** |
+| progress | ★ **0.9500 – 0.9529** | ★ **0.9502 – 0.9514** |
+| depth, **screen px** — med / p90 / max | **144 / 259 / 289** | **46 / 74 / 82** |
+| depth, **world px** — med / p90 / max | **145 / 261 / 292** | **33 / 53 / 59** |
+| binding term | ★ **`state` on 15 of 15** | ★ **`state` on 5 of 5** |
+| camera state | OVERVIEW ×15 | LEADER_ZOOM ×5 |
+| schedule is sole author | ★ **15 of 15** | ★ **5 of 5** |
+
+★★ **EVERY FAILING FRAME IS IN THE FIRST 3% OF THE WINDOW.** The deciles the guard prints say the
+rest of the run-in is comfortable: `dirt-oval` reads **−353, then +120, +119, +119, +115, +114, +109,
++97, +86, +191**. **Only the opening is lost**, and the line comes back as the race advances rather
+than as the camera opens.
+
+★ **`binding: state` means the SCHEDULE placed the shot** — during the scheduled endgame
+`_ceilings.state` **is** the schedule's own ceiling
+([CameraDirector.js:4808](../../client/src/modules/camera/CameraDirector.js#L4808)), and the separate
+`line` term is retired to `Infinity` on the same line, by design.
+
+---
+
+## 3 · ★★ THE MECHANISM — THE LINE FLOOR IS ARMED, AND IT IS WRONG
+
+`_scheduleClose` already carries the protection this failure is about
+([CameraDirector.js:4078](../../client/src/modules/camera/CameraDirector.js#L4078)):
+`if (Number.isFinite(demand) && demand < z) return demand;` — the close may not go tighter than the
+width at which the line is framed. **It is not missing. It reports satisfied while the band is 289 px
+off the canvas.** Measured by wrapping `_lineCeiling` on the live director, changing no source:
+
+```
+ progress  hud          zoom   demand  floor?  engaged widenDone afterDL  canvas
+ 0.9496    OVERVIEW     2.382  2.366   ARMED   true    false     false     -332
+ 0.9498    OVERVIEW     2.379  2.374   ARMED   true    false     false     -310
+ 0.9500    OVERVIEW     2.379  2.384   slack   true    TRUE      TRUE      -289   <== OFF CANVAS
+ 0.9502    OVERVIEW     2.379  2.393   slack   true    true      true      -268   <== OFF CANVAS
+```
+
+★★ **The widen "completes" at 0.9498 because `zoom (2.379) <= demand (2.374)`** — the condition at
+[CameraDirector.js:3705](../../client/src/modules/camera/CameraDirector.js#L3705). From the next frame
+the floor is slack and the close runs free. **The demand says the line is framed. It is 289 px outside
+the canvas.**
+
+**WHY THE DEMAND IS WRONG.** `demand` is `_lineCeiling(…, COMPANY_FRAME_PCT)`
+([CameraDirector.js:3680](../../client/src/modules/camera/CameraDirector.js#L3680)), which measures the
+room from where the framing rule **intends** to put the anchor —
+[CameraDirector.js:3482](../../client/src/modules/camera/CameraDirector.js#L3482),
+`const at = atOverride ?? this._anchorScreen(...)` — **not from where the pan actually is.** At the
+deadline the opening glide is still running: the schedule engages at **p≈0.9418** and
+`_beginRunInGlide` runs for `runInOpenMs` = **1250 ms**
+([defaults.js:455](../../client/src/modules/storage/defaults.js#L455)), which on this race outlasts the
+0.0082 of the race between engagement and the **0.95** deadline
+([defaults.js:324](../../client/src/modules/storage/defaults.js#L324)). **The pan has not converged,
+so the shot is not where the demand assumed it would be.**
+
+★ **That gap is DELIBERATE and documented.** ENDGAME-REPAIR-1 moved the measurement off the observed
+anchor on purpose — from the observed anchor the demand was *undefined on 63–84% of frames on six
+tracks* and reached *2108 corridors on city-circuit*. Its own header names what it left behind:
+*"Keeping the line in frame DESPITE a displaced pan is a real requirement, and it is enforced where it
+belongs: as a term that widens when the line is actually near the edge."* ★★ **That term is
+`_ceilings.line` — and it is exactly the term set to `Infinity` while the schedule composes.**
+
+### ★ A SECOND CORRECTION: THE WRITTEN CAUSE IS NOT THE CAUSE
+
+`docs/MORNING.md` on this branch states it as: *"`_lineCeiling` returns **Infinity when the line
+cannot be framed at all**, and an infinite ceiling never binds — so the shot zooms to its own
+preference and the line leaves the canvas."*
+
+★★ **Measured, that is wrong on every failing frame. The demand is FINITE on 15 of 15 on `dirt-oval`
+and 5 of 5 on `luger-hill` — the count of infinite ones is ZERO.** The floor is not absent and the
+ceiling is not infinite: the demand is a real number that is **too small by the pan's unconverged
+displacement**. A repair aimed at the infinite case would have changed code that never runs here.
+
+---
+
+## 4 · ★★ IT IS NOT THIS BRANCH'S DEFECT — MEASURED, NOT ARGUED
+
+**The camera is byte-identical.** `git diff origin/master HEAD -- client/src/modules/camera/
+client/src/modules/storage/defaults.js scripts/check-runin-frame.mjs` returns **empty**. The guard did
+not get stricter and the camera did not change.
+
+**`983d9201` reaches these terms only through the RACE.** By path: `heroCurveGenerator.js` +
+`racePlanner.js` change who is cast and where he runs → racer positions at the threshold → the
+director's `subjects` and camera state → the anchor → both `demand` and the delivered pan. ★ Its one
+camera-adjacent file, `RaceScreen/index.jsx`, adds **an inert probe** — its own comment says *"INERT
+UNLESS SWITCHED ON"* — so **no camera-facing code changed at all.**
+
+**The same seed sweep on both trees, both tracks:**
+
+| track | master `b6d77637` | branch `8166c757` |
+|---|---|---|
+| ★ `dirt-oval` n=40, seeds 1–12 | ★ **1 of 12** — seed 11, 15 frames, **−210 px** at p=0.9502 | ★ **1 of 12** — seed 9, 15 frames, **−289 px** at p=0.9500 |
+| `luger-hill` n=100, seeds 1–10 | **0 of 10** | **1 of 10** — seed 9, 5 frames, **−82 px** at p=0.9502 |
+
+★★ **ON `dirt-oval` — the deeper failure, and the field size he actually races — THE RATE IS
+IDENTICAL**: one seed in twelve on each tree, the same frame count, the same progress fraction.
+
+★ **ON `luger-hill` IT IS NOT, AND THAT IS SAID PLAINLY RATHER THAN AVERAGED AWAY.** Master is clean
+over ten seeds there; the branch loses seed 9 by **82 px** — the shallowest of the four cases, five
+frames, 0.08 s. **At N=10 one seed is not a rate**, and I do not claim from it either that the branch
+made that track worse or that it did not. What it does show is the same mechanism on the same frames.
+
+And master's seed 11 shows the
+identical mechanism — `zoom 2.380, demand 2.382, slack, widenDone=true, 225 px off canvas`. ★ Master's
+seed 12 sits at **+7 px**: one seed away from failing on its own.
+
+> ★★ **THE GUARD SAMPLES ONE SEED PER TRACK, AND IT SAYS SO** — its own `blind` list carries *"one
+> seed per track; a line that leaves only on some other race is not covered."* Green on master was
+> **the luck of the draw**, not a property of master.
+
+---
+
+## 5 · THE DECISION RULE, APPLIED LITERALLY
+
+**Not the first branch.** The cause is not one term or a scoped miss in `983d9201`; it is the
+interaction of two accepted camera rules, on a tree where `983d9201` changed no camera code.
+
+**The second branch fires.** Every available repair changes the picture on races that are **not**
+failing:
+
+| option | what it costs |
+|---|---|
+| **A — measure the demand from the OBSERVED anchor** | re-introduces exactly what ENDGAME-REPAIR-1 removed: a singularity in the ramp's endpoint, undefined on 63–84% of frames on six tracks. **Re-opens a closed decision.** |
+| **B — un-retire `_ceilings.line` during the schedule** | breaks *"the schedule is the sole author"* (ENDGAME-SCHEDULE-2), whose measurement was that a clipped schedule produces the worst single-frame zoom steps of the race — the owner's *"the zoom visibly hops"*. **Changes every endgame on every track.** |
+| **B′ — the narrow form of B**: widen only on frames where the band is **actually off the canvas**, measured from the delivered pan | ★ **the most attractive-looking option, and it is still yours.** It IS available — at the failing frame the other ceilings permit it (`company` 4.635 against the 1.638 needed), which is the upper bound of §1 restated. But it is a **fifth width authority inside the phase whose design is that there is one**, and it fires as a **step** at the moment the band crosses the edge — mid-glide, the most motion-sensitive instant of the endgame, which is precisely the clip ENDGAME-SCHEDULE-2 measured as the worst single-frame zoom steps of the race. ★ **Its cost is visible and quantified: the shot at the opening becomes 1.45× wider on `dirt-oval` and 1.13× on `luger-hill`, for ~0.25 s and ~0.08 s.** It is a new camera behaviour on master, not a repair of anything this branch did. |
+| **C — start the widen earlier, or move the deadline** | changes when the endgame opens on **all ten tracks and every race**. |
+| **D — make the glide finish before the deadline** | same reach as C; `runInOpenMs` paces the opening everywhere. |
+
+**And the third branch fires too.** The failing frames sit inside a rule already accepted: the run-in
+that owns the framing (`runInShot`,
+[defaults.js:750](../../client/src/modules/storage/defaults.js#L750)) and the schedule as sole width
+author are the design of RUNIN-OWNS-1 and ENDGAME-SCHEDULE-1/2, whose picture the owner judged on a
+production build. **Re-tuning it is not a repair, it is a new decision.**
+
+> ★★ **SO: BUILD NOTHING. Not merged, not minted, not tagged, branch not deleted, branch pushed.**
+
+---
+
+## 6 · WHAT THIS DOES AND DOES NOT CHANGE ABOUT THE MERGE
+
+★ **It does NOT clear the branch to merge, and this report does not ask for that.** What it changes is
+the **classification**: MERGE-HALTED-2026-09-14 recorded the failure as class **(b), a real defect
+introduced here**, with the cause traced to `983d9201`. ★ **That attribution is wrong and is withdrawn:
+the defect is pre-existing, the camera is untouched, and master fails the same check on seed 11.**
+
+★ **What is still true** is that the branch's race walks into it on the seed the guard samples, so the
+check is red and a red check is not merged on my authority. **The decision that is actually open is
+whether the camera's endgame opening is repaired at all** — on master, where the defect lives — and
+that is a separate piece with your eye on the picture.
+
+---
+
+## 7 · REPRODUCING IT
+
+- Guard: `node scripts/check-runin-frame.mjs` (41 s, both failing cases in its requirement-5 block).
+- Instruments, **kept** in `C:/tmp/rif` rather than swept, because the decision below is open and you
+  may want them re-run: `shape.mjs` (binding term, depths, upper bound), `demand.mjs` (wraps
+  `_lineCeiling` on the live instance — **changes no source**), `seedsweep.mjs` (the seed
+  comparison), and `master/` (the extracted master tree they were compared against).
+- Master was raced from `git archive origin/master client/src scripts` with **`server/data/tracks`
+  copied in**, so both trees read the same track records — `server/data/**` is gitignored and an
+  extracted tree would otherwise silently fall back to `server/seeds/tracks`.
+- Case, copied from the guard rather than re-chosen: seed 9, 40 racers closed / 100 open, the default
+  roster, the browser's derived camera seed, `slowmo: true`.
+
+---
+
+## 8 · FOR HIS EYE — WHAT IS RUNNING AND WHAT TO LOOK AT
+
+★ **There is no repair to inspect. What is on screen is the behaviour as it stands**, on the branch
+and on master alike. What is being asked is whether the endgame's opening bothers you enough to spend
+a camera change on it.
+
+**Running now, all three verified answering:**
+
+| | | |
+|---|---|---|
+| **API** | `http://localhost:4000` | `/api/health` reports the tip commit, `dirty: false` |
+| ★ **production build** | **`http://localhost:4173`** | the bundle built from the tip of `night/2026-09-12b` |
+| dev | `http://localhost:5173` | `[ra-build]` line names the same commit |
+
+★ **NO HASH IS WRITTEN HERE, and that is deliberate.** The build identity is stamped at build time and
+the API's at boot, so every commit to this report would move the value and the report would then lie
+about itself — the exact disagreement BUILD-IDENTITY-DEV-1 exists to prevent. ★ **The check instead:
+the pill, the `[ra-build]` line and `/api/health` must all name `git rev-parse --short=8 HEAD` with
+`dirty: false`.** All three were restarted together at the tip and verified agreeing.
+★ **Judge on 4173**, not 5173 (VERIFY-RULES R10); 5173 is up because 4173 answers no API call of its own.
+
+### What to look at, and the control beside it
+
+1. ★★ **`dirt-oval`, 40 racers, seed 9** — the failing case, and your own field size. Watch the
+   **moment the endgame opens, at about 95% of the race**: the shot finishes its widen and turns into
+   the close while the finish line is still off the right-hand edge. It is **15 frames, about a
+   quarter of a second**, and the line then comes back on its own.
+2. **`dirt-oval`, 40 racers, seed 1** — the **control on the same track**. Same camera, same field,
+   nothing lost; it should look exactly as it does today.
+3. **`luger-hill`, 100 racers, seed 9** — the second, shallower case (82 px, 5 frames, 0.08 s). ★ If
+   it is invisible to you, that is a finding worth having: it is the cheaper half of the decision.
+4. **`luger-hill`, 100 racers, seed 1** — the control on that track.
+
+★ **A regression elsewhere would show on 2 and 4.** Nothing in this block changed product code, so
+nothing there should have moved — but they are the frames where it would show if it had.
+
+---
+
+## 9 · SOURCE HYGIENE
+
+★ **NO SOURCE FILE WAS TOUCHED. `git diff 2bcf6530..HEAD -- client/ server/ scripts/` returns
+0 files.** The decision rule stopped before Step 3, so there is nothing to report about reuse,
+dead code or helpers in a repair that does not exist.
+
+| file | before → after | what changed |
+|---|---|---|
+| `reports/evolution/RUNIN-FRAME-SHAPE-1.md` | 0 → 207 | new — this report |
+| `reports/evolution/INDEX.md` | 7695 → 7734 | two corrections registered + this report indexed |
+| `docs/MORNING.md` | 139 → 155 | the blocking section rewritten; both of its stated causes were wrong |
+
+**What was REUSED rather than written.** The diagnosis reconstructs nothing: `scripts/lib/raceDriver.mjs`
+(`resolveIdentity`, `loadTracks`, `buildRace`, `runRace`), the director's own `_finishLineWorldPoint`,
+`_proj.toScreen`, `_framingProbe` and `_lineCeiling`, the shape's own `getPosition`, and
+`COMPANY_FRAME_PCT` from `framingRule.js` — the same sources `check-runin-frame` itself reads. The
+case (seed 9, 40/100 racers, default roster, derived camera seed, `slowmo`) was **copied from the
+guard, not re-chosen.** `demand.mjs` reads `_lineCeiling` by **wrapping it on the live instance**, so
+no source was edited to observe it.
+
+**Removed:** nothing. **Moved out:** nothing.
+
+**Noticed and DELIBERATELY LEFT ALONE** — reported, not removed:
+
+- ★ `scripts/check-runin-frame.mjs`'s `--control` arm is **dead in this tree**. It flips
+  `finishLineFraming`, and that key **does not exist in `defaults.js`** — the arm's own comment says
+  so: *"INERT ON MASTER TODAY: the key does not exist here yet."* It is a guard I was not asked to
+  touch, and removing it is not this repair's business.
+- `.claude/skills/dev-start/SKILL.md` is entirely German. **This is already on the record**, not a new
+  finding: `check-language-closed` carries it as a frozen PRE-EXISTING allowance of 20 lines dated
+  2026-08-15, and the guard is green.

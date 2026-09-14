@@ -19,6 +19,10 @@
 //
 // Output:  <out>/<track-id>/seed_<S>__burst_<B>__frame_<F>__world.png
 //                           seed_<S>__burst_<B>__frame_<F>__camera.png
+// -- BLIND TO THE CAST, BY CONSTRUCTION (re-confirmed 2026-09-13). This runs a headless race and
+// captures PNGs; it builds no race plan, so no cameraPlan is ever delivered and `isCast()` is false
+// for every racer. ANY behaviour gated on a racer being CAST cannot fire here, and a green from this
+// instrument is NOT a clearance for it. See scripts/lib/cameraPlanDelivery.mjs.
 // ============================================================
 
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from "fs";

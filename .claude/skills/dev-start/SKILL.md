@@ -19,7 +19,13 @@ powershell -Command "Get-NetTCPConnection -LocalPort 4000,5173 -State Listen -Er
 
 ## 2) Backend starten (Hintergrund) — Port 4000, mit Dev-Secret + Origin
 cd "c:/Users/weudl/OneDrive/Dokumente/Seasonal race claude/server"
-RA_SESSION_SECRET=dev-secret-not-for-production RA_CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173 npm start
+RA_CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173 npm run dev:once
+# `dev:once` rather than `start` (2026-09-13): it runs `scripts/dev-start.js`, which is the ONE HOME
+#   for the dev environment. It supplies the dev session secret AND the build identity
+#   (RA_BUILD_COMMIT / RA_BUILD_BRANCH / RA_BUILD_DIRTY) from the same git reader the client badge
+#   uses, so `/api/health` and the badge in the browser can no longer disagree about which commit is
+#   running. With plain `npm start` the API reports `commit: unknown`. `dev:once` does NOT watch;
+#   `npm run dev` is the same launcher with `--watch`.
 # RA_SESSION_SECRET (fest, NUR Dev): Sessions überleben Backend-Neustarts → kein ständiges Neu-Einloggen.
 #   Das ist KEIN echtes Secret und gehört NICHT in Produktion. Prod setzt einen echten, zufälligen Wert via Umgebung.
 # RA_CLIENT_ORIGIN: allows the clients to write cross-origin (otherwise CSRF-403). BOTH ports are

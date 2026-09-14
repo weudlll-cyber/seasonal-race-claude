@@ -195,8 +195,10 @@ describe('positive handoff budget + feasibility checks', () => {
       8,
       0
     );
-    expect(checkFeasible(steep, 20)).toBe(false);
-    expect(checkFeasible(gentle, 20)).toBe(true);
+    // A SYMMETRIC pair reproduces the single rate these were written against, which is the
+    // point: nothing about the gate changes when the two authorities are equal.
+    expect(checkFeasible(steep, { climb: 20, drop: 20 })).toBe(false);
+    expect(checkFeasible(gentle, { climb: 20, drop: 20 })).toBe(true);
   });
   it('checkPositiveBudget rejects a line-only rescue, accepts resolving by the checkpoint', () => {
     const rescue = anchorHeroCurve(
@@ -219,12 +221,12 @@ describe('positive handoff budget + feasibility checks', () => {
       12,
       0
     );
-    expect(checkPositiveBudget(rescue, 20)).toBe(false);
-    expect(checkPositiveBudget(early, 20)).toBe(true);
+    expect(checkPositiveBudget(rescue, { climb: 20, drop: 20 })).toBe(false);
+    expect(checkPositiveBudget(early, { climb: 20, drop: 20 })).toBe(true);
   });
   it('feasibleTiming returns null when the moves cannot fit before the budget checkpoint', () => {
-    expect(feasibleTiming(1, 40, 1, 2, intensityToDrama(0.5))).toBeNull(); // rate 2 too slow for 39-rank moves
-    expect(feasibleTiming(8, 8, 3, 30, intensityToDrama(0.5))).not.toBeNull();
+    expect(feasibleTiming(1, 40, 1, { climb: 2, drop: 2 }, intensityToDrama(0.5))).toBeNull(); // rate 2 too slow for 39-rank moves
+    expect(feasibleTiming(8, 8, 3, { climb: 30, drop: 30 }, intensityToDrama(0.5))).not.toBeNull();
   });
 });
 
@@ -412,8 +414,8 @@ describe('orchestrator — determinism, cast size, all-emitted-feasible', () => 
       for (const { curve } of g.curves) {
         const st = postChaos.find((p) => p.index === g.curves.find((c) => c.curve === curve).index);
         const f = racerFeasibility(st, postChaos, finishT);
-        expect(checkFeasible(curve, f.maxRankRate)).toBe(true);
-        expect(checkPositiveBudget(curve, f.maxRankRate)).toBe(true);
+        expect(checkFeasible(curve, f.rankRates)).toBe(true);
+        expect(checkPositiveBudget(curve, f.rankRates)).toBe(true);
       }
     }
   });
@@ -496,7 +498,11 @@ describe('Step 4 — late release + staggered per-band resolve + hole guard', ()
       intensity: 1.0,
       finishT: ft,
     });
-    const b1 = curves.filter((c) => fr.get(c.index) <= 5);
+    // HELD heroes are excluded, and this is the ONE exception the hold-and-release shape creates.
+    // Their curve ENDS at the release with the racer still deep, on purpose — they are delivered to
+    // B1 by racing the last 30%, not by the curve — so asking them to be in-band here would be
+    // asking them not to be a hold. Every OTHER B1 hero still has to arrive on its own curve.
+    const b1 = curves.filter((c) => fr.get(c.index) <= 5 && c.releaseAt == null);
     expect(b1.length).toBeGreaterThan(0);
     for (const c of b1) {
       const atRelease = sampleHeroCurve(c.curve, GENERATOR_CONFIG.releaseProgress);
