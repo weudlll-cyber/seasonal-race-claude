@@ -1470,6 +1470,16 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [BRANCH-INVENTORY-1.md](BRANCH-INVENTORY-1.md) — **every branch at origin, with one recommendation
+  each.** Nine branches; **two carry product code** (`feat/gap-leader-brake`, which ships OFF with all
+  four fingerprints unmoved, and `feat/remove-prestaging-comebacker`, which removes a mechanism and
+  needs his word). The other seven are report-only and cannot move a race. ★ Two hazards found by
+  reading the diffs: `report/brake-census-1` adds a report with **no index line**, so merging it alone
+  reddens `check-index` on master; and `night/2026-09-14-history` is **13 commits behind** and carries
+  its own `docs/MORNING.md`. ★ Sequencing: `fix/breakaway-recount-1` edits the same published
+  breakaway shares that BREAKAWAY-RECOUNT-2 recounts, so take the recount first. Read-only — nothing
+  merged, tagged or deleted.
+
 - [SERVO-ARRIVAL-1.md](SERVO-ARRIVAL-1.md) — **the premise was wrong: the placement servo DOES
   arrive**, on **69.3% of 19,464,218 commanded racer-steps** (300 races, brake OFF), median delivered
   fraction **1.000**, and only **68 of 12,000 racer-slots** never served. The decision rule therefore
