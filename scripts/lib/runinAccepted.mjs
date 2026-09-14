@@ -17,6 +17,17 @@
 // On 2026-09-14 the owner looked at the run-in on a PRODUCTION BUILD and judged the picture
 // acceptable. The acceptance covers the two cases below and nothing else.
 //
+// ★ WHAT HE ACTUALLY RACED BEFORE ACCEPTING, from his own store rather than assumed. Two races on
+// 2026-09-14, both on the build that was served (`52be3ec4`), both dirt-oval / 40 racers / seed 9:
+//   07:07 `STNJ25` at the `wild` stage — the right track, field and seed, but NOT the guard's world.
+//   07:15 `BVGG8Z` at `quiet` — and all five engine-facing config groups (raceDynamics,
+//         raceBehavior, rowLayout, baseSpeed, autoScale) are BYTE-IDENTICAL to the shipped
+//         defaults, so this is the guard's race exactly.
+// ★ ONE DIFFERENCE REMAINS AND IS NOT GLOSSED: his stored `cameraConfig` differs from the shipped
+// defaults on 15 keys, so the SHOT he watched was framed by his own settings rather than by the ones
+// the guard grades. The RACE was the guard's; the framing was his. Both halves are stated because
+// only the first one is exact.
+//
 // ★ WHAT WAS MEASURED, so a later reader can see what was accepted rather than infer it
 // (reports/evolution/RUNIN-FRAME-SHAPE-1.md carries the full measurement):
 //

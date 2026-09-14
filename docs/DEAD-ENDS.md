@@ -514,6 +514,14 @@ In all 20 frames the binding term is **`state`** — the endgame schedule is the
 width, which is its design. All 20 sit in the **first 3% of the endgame window** and the band returns
 on its own.
 
+★ **WHAT HE RACED BEFORE ACCEPTING, from his own store rather than assumed.** Two races on
+2026-09-14, both on the served build, both `dirt-oval` / 40 racers / seed 9: **`STNJ25` at 07:07 on
+the `wild` stage** — right track, field and seed, wrong world — and **`BVGG8Z` at 07:15 at `quiet`,
+whose five engine-facing config groups are BYTE-IDENTICAL to the shipped defaults.** The second is
+the guard's race exactly. ★ **One difference remains and is not glossed:** his stored `cameraConfig`
+differs from the shipped defaults on 15 keys, so the RACE he watched was the guard's and the FRAMING
+was his own.
+
 ★★ **IT IS AN OLD BEHAVIOUR, NOT A NEW ONE, AND THAT IS WHY IT IS HERE RATHER THAN FIXED.** The camera
 module, `defaults.js` and the guard are byte-identical to the master that reported green. Over twelve
 seeds on `dirt-oval` at 40 racers, **master loses the line too — seed 11, 15 frames, 210 px, at
