@@ -1470,6 +1470,24 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [GAP-BRAKE-START-1.md](GAP-BRAKE-START-1.md) — **does the lower allowance make the brake start
+  earlier? Yes — by 0.29 s, not the 1.47 s it implies.** Three arms on ice-track Quick Test seed 3
+  (reproduction proved first: 40/40 against `runRace`, OFF finish order identical to QUICKTEST-ICE-3,
+  and 1st Flare / 2nd Raven at the widest in-window lead). ★ **THE ALLOWANCE HAS NEVER DECIDED THE
+  START, for either law.** The fold is `Math.min(rawTarget, gapBrake.target)`, so the brake is silent
+  until it undercuts the leader's own steering target — which stands at **0.94964, a 5.04% ask**,
+  exactly one rank at `gain/nActive` = 2.0/40. Effective bite thresholds are **166.3 px** (size law,
+  allowance 124) and **160.9 px** (rate law, allowance 90); across three tracks the size law's sits
+  in a **1.1 px band** (166.1–167.2) regardless. ★ **The premise "the servo already pulls harder" is
+  false of the race**: the servo asks for a slowdown on 925/925 steps while the leader runs ABOVE
+  natural speed on 593 — its ±0.0008 noise exceeds `TARGET_EPSILON` 0.001 peak-to-peak, so it
+  restarts its own ease every 4.8 steps and never delivers (the GAP-BRAKE-PARADOX-1 churn). ★ Of the
+  34 px the lower allowance bought, **25.7 px went to the 1000 ms rate window's lag** and 3.7 px to
+  the shallower ramp, leaving 4.6 px predicted / 5.4 px measured. But once it bites the rate law is
+  **deeper and faster** — 42.6 px off the leader in 5 s against the size law's 26.9 px, its gap
+  falling where the size law's parks. Read-only; also corrects GAP-BRAKE-RATE-1's "0.95→finish"
+  column (contaminated by finished racers).
+
 - [GAP-BRAKE-RATE-1.md](GAP-BRAKE-RATE-1.md) — **the brake rebuilt so SIZE decides whether and
   CHANGE decides how strong**, to his design of 14.9. The gate is untouched; only the strength term
   is replaced, by an integrator: growing `S += ceiling·dGap/allowance`, shrinking `S *= gap/gapBefore`
