@@ -495,6 +495,46 @@ subject was the hold and its release — `runin-close-rate.mjs` and `runin-pace-
 **THE PICTURE DID NOT MOVE.** All four fingerprints are byte-identical across the retirement, which
 is the proof that the arm was genuinely unreachable rather than merely believed to be.
 
+## R. Repairing the run-in's opening frames where the finish band leaves the canvas — ACCEPTED, NOT A BUG (2026-09-14)
+
+**Do not re-open this as a defect.** `check-runin-frame` measures the finish band leaving the canvas
+on two named races, and **that picture was judged on a production build on 2026-09-14 and accepted.**
+The exception is pinned by name in [`scripts/lib/runinAccepted.mjs`](../scripts/lib/runinAccepted.mjs)
+and guarded by its own test; every other track, field size and seed stays exactly as strict as before.
+
+**What is accepted, measured rather than described** (full measurement in
+[RUNIN-FRAME-SHAPE-1](../reports/evolution/RUNIN-FRAME-SHAPE-1.md)):
+
+| | frames off canvas | progress | depth med / p90 / max |
+|---|---|---|---|
+| `dirt-oval` n=40 seed 9 | **15** | **0.950 – 0.953** | 144 / 259 / **289** screen px |
+| `luger-hill` n=100 seed 9 | **5** | **0.950 – 0.951** | 46 / 74 / **82** screen px |
+
+In all 20 frames the binding term is **`state`** — the endgame schedule is the sole author of the
+width, which is its design. All 20 sit in the **first 3% of the endgame window** and the band returns
+on its own.
+
+★★ **IT IS AN OLD BEHAVIOUR, NOT A NEW ONE, AND THAT IS WHY IT IS HERE RATHER THAN FIXED.** The camera
+module, `defaults.js` and the guard are byte-identical to the master that reported green. Over twelve
+seeds on `dirt-oval` at 40 racers, **master loses the line too — seed 11, 15 frames, 210 px, at
+progress 0.9502, by the same mechanism.** The one-seed sample was hiding it; the guard's own `blind`
+list already said it would.
+
+**Why it was not repaired.** The mechanism is that `_scheduleClose`'s line floor
+(`CameraDirector.js:4078`) is armed but measured from the anchor the framing rule *intends*
+(`CameraDirector.js:3482`) while the opening glide is still running at the deadline — so the floor
+reports satisfied while the band is off canvas. **Every available repair changes races that are not
+failing**: measuring from the observed anchor re-opens ENDGAME-REPAIR-1's singularity (undefined on
+63–84% of frames on six tracks), and un-retiring the `line` ceiling during the schedule breaks "the
+schedule is the sole author" (ENDGAME-SCHEDULE-2), whose measurement was that a clipped schedule
+produces the worst single-frame zoom steps of the race.
+
+★ **What WOULD be a new question.** The acceptance covers **these two races at this magnitude**. A
+different track, field size or seed is still a failure and the guard still says so. If a later change
+makes these two materially worse — many more frames, or a band that never appears at all — that is a
+picture nobody has looked at, and `everOnCanvas` is required by the exception precisely so the
+"never appears" case cannot be swallowed by it.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of

@@ -109,6 +109,9 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
 } from "./lib/raceDriver.mjs";
+// RUNIN-ACCEPTED-1: the two named races whose picture was judged and accepted on 2026-09-14. The
+// list lives in its own file so it can be asserted on without running this guard — see its header.
+import { isAcceptedRunInCase } from "./lib/runinAccepted.mjs";
 
 export const GUARD = {
   id: "check-runin-frame",
@@ -126,6 +129,8 @@ export const GUARD = {
   files: [
     "client/src/modules/storage/defaults.js",
     "client/src/screens/RaceScreen/index.jsx",
+    // A change to the accepted list changes this guard's verdict, so it must select this guard.
+    "scripts/lib/runinAccepted.mjs",
   ],
   reach: [],
 };
@@ -542,7 +547,25 @@ for (const geo of loadTracks()) {
   // this build for spending a margin this file invented, and the requirement it is meant to guard
   // is met. Both numbers are on every row so the choice can be checked rather than trusted.
   const ok = offCanvas === 0;
-  if (!ok) failures++;
+  // ── THE ACCEPTED CASES (RUNIN-ACCEPTED-1, 2026-09-14) ───────────────────────────────────────
+  //
+  // Two named races — dirt-oval at 40 and luger-hill at 100, both at this block's own seed — whose
+  // picture the owner judged on a production build and accepted. They still MEASURE and still
+  // PRINT; what changes is only that they do not fail the run. Everything else is untouched: the
+  // condition is still `offCanvas === 0`, no threshold moved, and any other track, field size or
+  // seed fails exactly as it did before.
+  //
+  // `everOnCanvas` is part of the match, inside the helper: what was accepted is a band that leaves
+  // and comes back. A band that is never on the canvas is a different picture and still fails here.
+  const accepted =
+    !ok &&
+    isAcceptedRunInCase({
+      track: geo.id,
+      racers: LINE_RACERS,
+      seed: LINE_SEED,
+      everOnCanvas,
+    });
+  if (!ok && !accepted) failures++;
 
   const series = [];
   for (let k = 0; k < SERIES_STEPS; k++) {
@@ -555,7 +578,7 @@ for (const geo of loadTracks()) {
   }
 
   console.log(
-    `  ${geo.id.padEnd(15)} n=${String(LINE_RACERS).padStart(3)} ${ok ? "FINDABLE" : "LOST    "} ` +
+    `  ${geo.id.padEnd(15)} n=${String(LINE_RACERS).padStart(3)} ${ok ? "FINDABLE" : accepted ? "ACCEPTED" : "LOST    "} ` +
       `worst ${worst.margin.toFixed(0).padStart(6)} px at progress ${worst.progress.toFixed(3)} ` +
       `(${worst.hud}, binding ${worst.binding}, zoom ${worst.zoom.toFixed(3)})  ` +
       `${outFrames} of ${samples.length} outside the region, ${offCanvas} OFF CANVAS`
@@ -580,13 +603,21 @@ for (const geo of loadTracks()) {
     } else if (!ok) {
       const f = samples[firstOffI];
       console.log(
-        `      FAIL: the viewer loses the line at progress ${f.progress.toFixed(3)} (${f.ms} ms, ${f.hud}), ` +
-          `point at (${f.sx.toFixed(0)}, ${f.sy.toFixed(0)}) on a ${CW}x${CH} canvas — binding term ` +
-          `"${f.binding}", zoom ${f.zoom.toFixed(3)}.`
+        `      ${accepted ? "ACCEPTED" : "FAIL"}: the viewer loses the line at progress ${f.progress.toFixed(3)} ` +
+          `(${f.ms} ms, ${f.hud}), point at (${f.sx.toFixed(0)}, ${f.sy.toFixed(0)}) on a ${CW}x${CH} canvas — ` +
+          `binding term "${f.binding}", zoom ${f.zoom.toFixed(3)}.`
       );
+      if (accepted) {
+        console.log(
+          `      ACCEPTED 2026-09-14: the owner judged this picture on a production build. ` +
+            `${offCanvas} frame(s) off canvas; the band returns before the crossing. This is an OLD ` +
+            `behaviour the one-seed sample was hiding — master loses the line on dirt-oval seed 11 ` +
+            `by the same mechanism. See scripts/lib/runinAccepted.mjs and docs/DEAD-ENDS.md.`
+        );
+      }
     }
   }
-  lineRows.push({ id: geo.id, measured: true, ok, worst, outFrames, samples, margins });
+  lineRows.push({ id: geo.id, measured: true, ok, accepted, worst, outFrames, samples, margins });
 }
 
 if (VERBOSE) {
@@ -618,7 +649,12 @@ if (failures > 0) {
   );
   process.exit(1);
 }
+const acceptedRows = lineRows.filter((r) => r.accepted);
 console.log(
   "\ncheck-runin-frame: the camera is pointed at the race on both tracks, and the finish line is in\n" +
-    "frame from the endgame threshold to the crossing on every track measured. PASS",
+    "frame from the endgame threshold to the crossing on every track measured" +
+    (acceptedRows.length
+      ? `, EXCEPT the ${acceptedRows.length} named case(s) accepted on 2026-09-14 ` +
+        `(${acceptedRows.map((r) => r.id).join(", ")}) — see scripts/lib/runinAccepted.mjs. PASS`
+      : ". PASS"),
 );
