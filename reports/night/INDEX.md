@@ -1470,6 +1470,25 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [GAP-BRAKE-RATE-1.md](GAP-BRAKE-RATE-1.md) — **the brake rebuilt so SIZE decides whether and
+  CHANGE decides how strong**, to his design of 14.9. The gate is untouched; only the strength term
+  is replaced, by an integrator: growing `S += ceiling·dGap/allowance`, shrinking `S *= gap/gapBefore`
+  — no new number, the fall being the identity `dS/S = dGap/gap`, which is what makes it reach zero
+  with the GAP instead of at the allowance. Every property he named holds and is measured: 0
+  direction violations, 0 ceiling breaches, 0 speeds raised, smallest ENGAGE gap **90.001 px against
+  90**, still pulling at **58% of ceiling** when the gap comes back under the allowance (the old law
+  had exactly 0 there), **no oscillation** — one direction change per second. Noise floor clean: 163
+  of 300 never fired, all byte-identical, 0 leaked. In-window worst race **244.4 → 227.6 px
+  (−6.9%)**, 50 better / 2 worse. ★ **AND IT IS WEAKER THAN THE BRAKE IT REPLACED**: a control run
+  of the old size law at the SAME allowance beats it on **all ten tracks** (−25.7% vs −6.9%, 83
+  races to 3). Not the law — with the ceiling and the rate window matched the two land within 4 px.
+  The 23 px is his **10% ceiling** (≈9.5 px) plus the **1000 ms rate window's lag** (≈9.8 px). ★ The
+  window is the one lever left: at **200 ms** it is better on all ten tracks (worst race −**14.8%**,
+  63 races to 1) with no oscillation and the gate and ceiling untouched — reported, not taken, since
+  no existing quantity means 200 ms for this purpose. ★ Also records a test of mine that **passed
+  under its own sabotage** (the give-back fixture compared against the raw gap where the law reads
+  the smoothed one) and the correction.
+
 - [QUICKTEST-ICE-3.md](QUICKTEST-ICE-3.md) — **the owner's own Quick Test, ice-track seed 3**: the
   brake was NOT silent — 513 steps, p=0.839→0.941, all on Flare, cutting the gap it measures
   **196.6 → 169.0 px (−14%)**. ★ But his screenshot shows a DIFFERENT gap: leader-to-PACK is

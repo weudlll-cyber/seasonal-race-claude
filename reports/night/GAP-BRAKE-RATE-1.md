@@ -464,7 +464,20 @@ mutation is invisible).
 
 ### `npm run verify`
 
-<!--VERIFY-->
+**PASS 22, FAIL 1, SKIP 11** — 383.6 s, measured on the committed tree.
+
+| failure | address | classification |
+|---|---|---|
+| `check-index` — "1 report in reports/night not referenced from INDEX.md: GAP-BRAKE-RATE-1.md" | this report, newly written | **(a) a legitimately moved input.** A new report needs an index line; the guard exists to catch exactly the omission it caught. Line added, `check-index` re-run: **0 unindexed, 671 links, 0 dangling.** |
+
+**No (b) findings. Nothing unclassifiable. The hand-over is not blocked.**
+
+The run also re-measured three of the four fingerprints independently of my own run above, and they
+agree: world `b35cf477c09a1116`, camera `3df640a42e934312`, render `6a84085e79535dd6`. The client
+suite (185.7 s) and the script suite (155.6 s) both pass.
+
+*(GAP-BRAKE-ARRIVAL-1 recorded `check-index` catching the same omission from the same author. It is
+the second time; the guard is earning its place.)*
 
 ### ★ One of my own tests did not separate its own sabotage
 
