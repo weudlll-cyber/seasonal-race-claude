@@ -136,6 +136,7 @@ function driveGapProfile(ctrl, gapProfile, { progress = 0.8, role = 'drawnWinner
       engaged: st.engaged,
       strength: st.strength,
       dGapPx: st.dGapPx,
+      smoothedGapPx: st.smoothedGapPx,
       fired: st.firedFrames,
       target: lead.trajectoryMultTarget,
       transStart: lead.trajectoryMultTransStart,
@@ -273,27 +274,37 @@ describe('GAP-BRAKE-RATE-1 — the strength is a CHANGE, not a size', () => {
     //
     // and `gap > gap - allowance` always, so the new law surrenders strictly less of its strength
     // for every pixel it closes — which is why the gap no longer settles where brake and drive
-    // balance. Restore the size ramp and the measured give-back jumps to the old ratio: red.
+    // balance.
+    //
+    // ★ BOTH RATIOS ARE TAKEN ON THE SMOOTHED GAP, which is the signal the law actually reads. An
+    // earlier version of this test took the size-law reference on the RAW gap and was therefore
+    // GREEN under the very sabotage it exists to catch: the smoothed gap lags a shrinking raw gap,
+    // so the raw-gap reference was the larger number and the comparison passed for the wrong
+    // reason. Proven by sabotage after the correction.
     const { ctrl } = makeController();
     const { log } = driveGapProfile(
       ctrl,
       growThenShrink({ to: 240, steps: 240, end: 0, fall: 600 })
     );
     const peak = log.reduce((a, b) => (b.strength > a.strength ? b : a));
-    const shrinking = log.filter((e) => e.k > peak.k && e.engaged && e.dGapPx < 0);
-    expect(shrinking.length).toBeGreaterThan(200);
+    // Only well above the allowance, where the two ratios are far enough apart to be a real test.
+    const shrinking = log.filter(
+      (e) => e.k > peak.k && e.engaged && e.dGapPx < 0 && e.smoothedGapPx > ALLOWED_PX * 1.3
+    );
+    expect(shrinking.length).toBeGreaterThan(100);
 
-    // measured over the whole shrink, against what the size ramp would have surrendered
-    let worst = 0;
+    let tested = 0;
     for (let i = 1; i < shrinking.length; i++) {
       const a = shrinking[i - 1],
         b = shrinking[i];
-      if (!(a.strength > 0)) continue;
+      if (!(a.strength > 0) || b.k !== a.k + 1) continue;
       const measured = (a.strength - b.strength) / a.strength; // fraction of strength given back
-      const sizeLaw = -b.dGapPx / Math.max(1e-9, b.gapPx - ALLOWED_PX); // what the ramp would give back
-      if (b.gapPx > ALLOWED_PX * 1.1) worst = Math.max(worst, measured - sizeLaw);
+      const sizeLaw = -b.dGapPx / (b.smoothedGapPx - ALLOWED_PX); // what the old ramp would give back
+      // a wide margin: the two differ by a factor gap/(gap-allowance), at least 4.3x in this band
+      expect(measured * 1.05).toBeLessThan(sizeLaw);
+      tested++;
     }
-    expect(worst).toBeLessThanOrEqual(0); // never gives back more than the old law, anywhere
+    expect(tested).toBeGreaterThan(100); // the assertion above really ran
   });
 
   it('★ FADES on a shrinking gap instead of switching off at the allowance', () => {

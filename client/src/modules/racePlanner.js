@@ -1815,6 +1815,10 @@ export function createTrajectoryController(racePlan) {
       // The live state, so a harness can trace the mechanism step by step without a second copy
       // of the law. Read-only; this getter never resets or mutates.
       engaged: _gapBrakeEngaged,
+      // The racer the brake's command was the value actually OBEYED on last step, or -1. Engaged is
+      // not the same question: the brake can be engaged and silent, because the fold takes the
+      // SLOWER of the servo's target and the brake's and the servo often already asks for less.
+      bindingIdx: _gapBrakeBindingIdx,
       strength: _gapBrakeStrength,
       smoothedGapPx: _gapBrakeSmoothedGapPx,
       dGapPx: _gapBrakeLastDGapPx,
