@@ -168,3 +168,139 @@ describe('GAP-BRAKE-1 — the gap-based leader brake', () => {
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled).toBe(false);
   });
 });
+
+// ============================================================
+// GAP-BRAKE-ARRIVAL-1 — the two properties that make the command actually reach the speed.
+//
+// ★ WHY THESE ARE ASSERTED ON THE CLOCK AND THE TARGET, NOT ON trajectoryMult. The multiplier
+// itself is computed in raceCore.js:565-574 from three fields the controller writes; asserting on
+// it here would mean copying that formula into the test, which is a second home for it. What the
+// controller OWNS is those three fields, and arrival is exactly the property that the transition
+// clock is not restarted out from under the ease while the brake is pulling.
+// ============================================================
+
+/**
+ * Drive a controller with a leader who is steadily pulling away, one call per step, and record
+ * what the controller wrote for him each step.
+ */
+function driveWideningGap(
+  ctrl,
+  { steps = 60, startGapPx = 0, gapPerStep = 1.0, progress = 0.8 } = {}
+) {
+  const racers = makeRacers(40);
+  const packT = FINISH_T * progress;
+  // ★ THE LEADER MUST BE THE RACER THE PLAN DREW TO WIN. The brake only binds when its command is
+  // BELOW the servo's own (the Math.min at racePlanner.js:1211-1214). A leader far ahead of his
+  // drawn place saturates the servo at minMult, and then the brake is silent by design and this
+  // test would assert nothing. Drawn rank 1 gives rankError 0, so the servo asks for ~1.0 and the
+  // brake is the binding constraint -- which is the case under test.
+  const lead = racers.find((r) => ctrl.getTargetRank(r.index) === 1) ?? racers[0];
+  const rest = racers.filter((r) => r.index !== lead.index);
+  rest[0].t = packT;
+  for (let i = 1; i < rest.length; i++) rest[i].t = packT - i * 1e-6;
+  const log = [];
+  for (let k = 0; k < steps; k++) {
+    lead.t = packT + (startGapPx + gapPerStep * k) / PATH_LENGTH_PX;
+    ctrl.update(racers, 40_000 + k * 16, progress);
+    log.push({
+      k,
+      gapPx: (lead.t - rest[0].t) * PATH_LENGTH_PX,
+      target: lead.trajectoryMultTarget,
+      transStart: lead.trajectoryMultTransStart,
+      fired: ctrl.getGapBrakeStats().firedFrames,
+    });
+  }
+  return { racers, lead, log };
+}
+
+describe('GAP-BRAKE-ARRIVAL-1 — the command reaches the speed', () => {
+  it('★ does NOT restart the transition while the brake is pulling (remove the fix and this goes red)', () => {
+    const { ctrl } = makeController();
+    // a gap that grows by 1 px per step, from well past the allowance, so the command moves every
+    // step by roughly 0.15/allowance -- which is the size that used to restart the ease.
+    const { log } = driveWideningGap(ctrl, {
+      steps: 60,
+      startGapPx: ALLOWED_PX * 1.2,
+      gapPerStep: 1.0,
+    });
+    const pulling = log.filter((e, i) => i > 0 && e.fired > log[i - 1].fired);
+    expect(pulling.length).toBeGreaterThan(40); // it really did pull, most steps
+
+    // the target MOVED over the run -- otherwise the next assertion would be vacuous
+    const targets = pulling.map((e) => e.target);
+    expect(Math.max(...targets) - Math.min(...targets)).toBeGreaterThan(0.01);
+
+    // ...and the clock did not restart while it moved.
+    const starts = new Set(pulling.slice(1).map((e) => e.transStart));
+    expect(starts.size).toBe(1);
+  });
+
+  it('the target tracks the commanded value once the brake is the binding constraint', () => {
+    const { plan, ctrl } = makeController();
+    const { log } = driveWideningGap(ctrl, {
+      steps: 60,
+      startGapPx: ALLOWED_PX * 1.2,
+      gapPerStep: 1.0,
+    });
+    const last = log[log.length - 1];
+    const ramp = Math.min(1, Math.max(0, (last.gapPx - ALLOWED_PX) / ALLOWED_PX));
+    const commanded = 1 - (1 - plan.controllerParams.minMult) * ramp;
+    expect(last.target).toBeCloseTo(commanded, 9);
+  });
+
+  it('★ NEVER writes a target above the one the same controller writes with the brake OFF', () => {
+    // Two controllers, identical racer states, stepped in lockstep. The braked one may write a
+    // LOWER target; it must never write a higher one. That is the whole "only ever slows" claim,
+    // and it is the Math.min at racePlanner.js:1211-1214 that guarantees it.
+    const on = makeController({ on: true });
+    const off = makeController({ on: false });
+    const A = makeRacers(40),
+      B = makeRacers(40);
+    const progress = 0.8;
+    const packT = FINISH_T * progress;
+    // same reason as above: the leader is the racer drawn to win, so the servo is not saturated
+    const li = A.find((r) => on.ctrl.getTargetRank(r.index) === 1)?.index ?? 0;
+    for (const set of [A, B]) {
+      const rest = set.filter((r) => r.index !== li);
+      rest[0].t = packT;
+      for (let i = 1; i < rest.length; i++) rest[i].t = packT - i * 1e-6;
+    }
+    let higher = 0;
+    for (let k = 0; k < 120; k++) {
+      const gapPx = ALLOWED_PX * 0.5 + k * 2.0; // crosses the allowance part-way through
+      A[li].t = packT + gapPx / PATH_LENGTH_PX;
+      B[li].t = packT + gapPx / PATH_LENGTH_PX;
+      on.ctrl.update(A, 40_000 + k * 16, progress);
+      off.ctrl.update(B, 40_000 + k * 16, progress);
+      if (A[li].trajectoryMultTarget > B[li].trajectoryMultTarget + 1e-12) higher++;
+    }
+    expect(on.ctrl.getGapBrakeStats().firedFrames).toBeGreaterThan(50); // the brake really acted
+    expect(higher).toBe(0);
+  });
+
+  it('★ keeps the harder SERVO pull when the brake asks for less — the case that catches an override', () => {
+    // ★ WHY THIS CASE EXISTS, AND WHY THE TEST ABOVE IS NOT ENOUGH. Replacing the Math.min at
+    // racePlanner.js:1211-1214 with a plain override left the test above GREEN: its leader is the
+    // racer drawn to win, so the servo asks for ~1.0 and the brake's command is always the lower of
+    // the two -- min and override agree, and the mutation is invisible. The case that separates them
+    // is a leader FAR AHEAD of his drawn place: the servo saturates at minMult and asks for 0.85
+    // while a lead barely over the allowance asks for ~0.99. An override would hand him 0.99 and
+    // make him FASTER. Verified by sabotage: this assertion goes red when the min is removed.
+    const { plan, ctrl } = makeController();
+    const racers = makeRacers(40);
+    const progress = 0.8;
+    const packT = FINISH_T * progress;
+    // a racer the plan drew to finish deep in the field, put in front: rankError is hugely negative
+    const deep = racers.find((r) => (ctrl.getTargetRank(r.index) ?? 0) >= 20) ?? racers[39];
+    const rest = racers.filter((r) => r.index !== deep.index);
+    rest[0].t = packT;
+    for (let i = 1; i < rest.length; i++) rest[i].t = packT - i * 1e-6;
+    // a lead just over the allowance -> the brake asks for ~0.99, well ABOVE the servo's floor
+    deep.t = packT + (ALLOWED_PX * 1.05) / PATH_LENGTH_PX;
+    ctrl.update(racers, 40_000, progress);
+    expect(ctrl.getGapBrakeStats().firedFrames).toBe(1); // the brake did speak
+    // ...and what was written is the servo's floor, not the brake's gentler number.
+    expect(deep.trajectoryMultTarget).toBeCloseTo(plan.controllerParams.minMult, 9);
+    expect(deep.trajectoryMultTarget).toBeLessThan(0.95);
+  });
+});
