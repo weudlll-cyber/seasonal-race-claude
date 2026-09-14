@@ -283,6 +283,17 @@ export function createRaceFromIdentity(p) {
         corridorEnd:
           dynamicsConfig.racePlanCorridorEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
         pulkBiasGain: dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
+        // ── GAP-BRAKE-1 — the gap-based leader brake. Default OFF, so a store that has never heard
+        // of it produces today's race byte-identically. `pathLengthPx` is handed over with the keys
+        // because the brake measures a DISTANCE: `t` counts path lengths, and this turns the
+        // leader->2nd t-gap into world px without the physics ever reading the camera.
+        gapBrakeEnabled:
+          dynamicsConfig.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+        gapBrakeAllowedGapPx:
+          dynamicsConfig.gapBrakeAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+        gapBrakeWindowEnd:
+          dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+        pathLengthPx,
         choreoIntensity:
           dynamicsConfig.choreoIntensity ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
         choreoPackBandStrictness:

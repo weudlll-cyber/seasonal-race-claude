@@ -394,6 +394,15 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // `frontLeash*` comment two lines above is a DIFFERENT case and is still accurate: those keys
     // appear nowhere in `defaults.js`, so that block really is sim-only.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
+    // ── GAP-BRAKE-1: the gap-based leader brake (docs/DEAD-ENDS.md "Governor family" is why it is
+    // gap-based and not rank-based). OFF unless the caller passes the switch, so a config that does
+    // not mention it produces today's race byte-identically.
+    _gapBrakeEnabled: config.gapBrakeEnabled === true,
+    _gapBrakeAllowedGapPx: config.gapBrakeAllowedGapPx ?? null, // world px, leader->2nd; null = OFF
+    _gapBrakeWindowEnd: config.gapBrakeWindowEnd ?? null, // progress fraction; window START is corrStartFrac
+    // The track's path length, so a t-gap (t is in PATH LENGTHS, durationModel.js:22) can be read as
+    // world px without the physics ever touching the camera. Passed in by raceCore; null = brake off.
+    _pathLengthPx: config.pathLengthPx ?? null,
     _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
     // NOT unfireable, and it is the one entry on the 29 where the triage's UNFIREABLE verdict is
     // wrong: the sim passes `gapRerollStrength: undefined` on the world-OFF arm, so this fallback
@@ -619,6 +628,14 @@ export function createTrajectoryController(racePlan) {
   let _leashEngaged = false; // hysteresis state: currently braking?
   let _leashTargetIdx = -1; // index of the leashed racer while engaged
   let _leashFrames = 0; // diagnostic: frames the brake was applied
+  // ── GAP-BRAKE-1 telemetry. Read-only counters; they answer the two questions the owner asked —
+  // how often does it fire, and does it ever fire on a gap it was told to allow.
+  let _gapBrakeWindowFrames = 0; // leader-frames inside [corrStart, windowEnd]
+  let _gapBrakeFrames = 0; // of those, frames the brake actually pulled
+  let _gapBrakeMinMult = 1.0; // hardest correction commanded this race
+  let _gapBrakeMaxGapPx = 0; // biggest leader->2nd gap seen inside the window
+  let _gapBrakeMinFiringGapPx = Infinity; // ★ smallest gap that EVER fired — must exceed the allowance
+  const _gapBrakeGapsAtFire = []; // the gap at every firing frame (step 4's distribution)
   // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
   // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
   // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
@@ -659,6 +676,69 @@ export function createTrajectoryController(racePlan) {
       r.trajectoryMultTarget = newTarget;
       r.trajectoryMultTransStart = elapsedMs;
     }
+  }
+
+  /**
+   * GAP-BRAKE-1 — the gap-based leader brake. Returns `{ index, target }` for the racer who should
+   * be slowed this frame, or `null` when the brake is off, outside its window, or — the normal case
+   * — when the leader's lead is inside the allowance.
+   *
+   * ── THE WINDOW ──────────────────────────────────────────────────────────────────────────────
+   * START is `corrStartFrac`, NOT a constant: it is the resolved OUTCOME-phase boundary, which is
+   * the SAME quantity that ends the PULK brake (`phaseFractions.pulkEnd = corridorStart =
+   * choreoOutcomeStart`, above). Move that boundary and both mechanisms move with it, so no
+   * unbraked gap can open between them. END is the owner's own key, `gapBrakeWindowEnd`.
+   *
+   * ── THE TRIGGER, AND WHY IT IS A DISTANCE ───────────────────────────────────────────────────
+   * The gap is leader->2nd in WORLD px: `t` counts path lengths (durationModel.js:22), so the
+   * difference times `pathLengthPx` is the on-screen distance between them. At or below the
+   * allowance this returns null and nothing is written — a leader ten pixels clear is never braked.
+   *
+   * ── THE SHAPE, AND WHERE EVERY NUMBER IN IT CAME FROM ───────────────────────────────────────
+   * Recovered from the deleted `raceRubberBand.js` (removed in ec06b92e, 2026-07-07), whose
+   * TIP-FOCUS path was this same mechanism: `rubberBandTargetMult` at its :61-64 was
+   * `1 - maxBrake * clamp((gap - threshold) / gapScale, 0, 1)`, dead-zoned by `threshold`. Kept
+   * whole. Its two free numbers are NOT reintroduced as knobs — both are derived:
+   *   - `maxBrake` = `1 - minMult` (plan.controllerParams) = the servo's OWN existing floor, so the brake
+   *     can never command a multiplier the steering could not already produce. (The dead front
+   *     leash below independently fixed on the same value: `LEASH_MIN_MULT = 0.85 == minMult`.)
+   *   - `gapScale` = the allowance itself, i.e. the ramp spans ONE further allowance: no pull at the
+   *     allowance, full pull at twice it. One key, not two.
+   * The rate limit is not a new term either — the returned target goes through `_setTarget`, so it
+   * rides the existing `trajectoryTransitionDurationMs` ease that every other target already uses.
+   *
+   * @param {Array} active non-finished racers, already sorted by t descending (rank 1 first)
+   * @param {number} nActive `active.length`
+   * @param {number|null} phaseProgress leader-progress fraction
+   * @returns {{index:number, target:number}|null}
+   */
+  function _computeGapLeaderBrake(active, nActive, phaseProgress) {
+    if (!plan._gapBrakeEnabled) return null;
+    const allowedPx = plan._gapBrakeAllowedGapPx;
+    const windowEnd = plan._gapBrakeWindowEnd;
+    const pathPx = plan._pathLengthPx;
+    // Every input must be present and usable. A missing one means the caller did not wire the
+    // brake, and a brake that guessed a default here would be a mechanism nobody switched on.
+    if (!(allowedPx > 0) || windowEnd == null || !(pathPx > 0)) return null;
+    if (nActive < 2 || phaseProgress == null) return null;
+    if (phaseProgress < corrStartFrac || phaseProgress > windowEnd) return null;
+
+    const leader = active[0];
+    const gapPx = (leader.t - active[1].t) * pathPx;
+    _gapBrakeWindowFrames++;
+    if (gapPx > _gapBrakeMaxGapPx) _gapBrakeMaxGapPx = gapPx;
+    // ★ THE DEAD ZONE. Strictly greater — a lead exactly at the allowance is allowed.
+    if (!(gapPx > allowedPx)) return null;
+
+    const ramp = clamp((gapPx - allowedPx) / allowedPx, 0, 1);
+    // `minMult` is the controller's own floor, destructured from plan.controllerParams at the top of
+    // this factory — read from there rather than re-stated, so a tuned clamp moves the brake with it.
+    const target = 1 - (1 - minMult) * ramp;
+    _gapBrakeFrames++;
+    if (target < _gapBrakeMinMult) _gapBrakeMinMult = target;
+    if (gapPx < _gapBrakeMinFiringGapPx) _gapBrakeMinFiringGapPx = gapPx;
+    if (_gapBrakeGapsAtFire.length < 20000) _gapBrakeGapsAtFire.push(gapPx);
+    return { index: leader.index, target };
   }
 
   function update(racers, elapsedMs, phaseProgress = null, leaderGapLen = null) {
@@ -883,6 +963,19 @@ export function createTrajectoryController(racePlan) {
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;
 
+    // ── GAP-BRAKE-1 — the gap-based leader brake, computed ONCE per frame ─────────────────────
+    //
+    // ★ WHY IT IS COMPUTED HERE AND NOT APPLIED AFTER THE LOOP. `_setTarget` restarts the
+    // trajectoryMult ease every time the target moves by more than 0.001. A second `_setTarget` on
+    // the leader after the servo had already written him would re-trigger the ease twice per frame,
+    // every frame, pinning `elapsed` at 0 so the multiplier would freeze at its previous value and
+    // the brake would never actually take hold. (That is also why the dead front leash below, which
+    // does exactly that, could not have worked had its keys ever been set.) So the brake produces a
+    // TARGET here and the loop folds it into the leader's single write with Math.min.
+    //
+    // ★ ON THE GAP, NEVER ON RANK. Below the allowance this block sets nothing at all.
+    const gapBrake = _computeGapLeaderBrake(active, nActive, phaseProgress);
+
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
@@ -1101,7 +1194,14 @@ export function createTrajectoryController(racePlan) {
         }
       }
       const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, ceilFor);
-      _setTarget(r, rawTarget, elapsedMs);
+      // GAP-BRAKE-1: the leader's target is the SLOWER of the servo's and the brake's. Math.min, not
+      // an override, because a brake must never speed anyone up — if the servo is already pulling him
+      // back harder than the gap warrants, the servo wins and the brake is silent.
+      const steerTarget =
+        gapBrake != null && r.index === gapBrake.index
+          ? Math.min(rawTarget, gapBrake.target)
+          : rawTarget;
+      _setTarget(r, steerTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
@@ -1497,6 +1597,21 @@ export function createTrajectoryController(racePlan) {
     // meaningless. This getter neither resets nor mutates; the copy stops a consumer editing state.
     // Controllers are constructed per race, so the log cannot accumulate across races.
     getGapLeaderDownEvents: () => _gapLeaderDownEvents.map((e) => ({ ...e })),
+    // GAP-BRAKE-1 read-only telemetry. Deliberately NOT part of collectTelemetry(), which RESETS
+    // its counters — this getter neither resets nor mutates, so a caller can read it at any point.
+    // `minFiringGapPx` is the one that matters: it must never be <= the configured allowance.
+    getGapBrakeStats: () => ({
+      enabled: plan._gapBrakeEnabled,
+      allowedGapPx: plan._gapBrakeAllowedGapPx,
+      windowStart: corrStartFrac,
+      windowEnd: plan._gapBrakeWindowEnd,
+      windowFrames: _gapBrakeWindowFrames,
+      firedFrames: _gapBrakeFrames,
+      minMultCommanded: _gapBrakeMinMult,
+      maxGapPxInWindow: _gapBrakeMaxGapPx,
+      minFiringGapPx: _gapBrakeMinFiringGapPx,
+      gapsAtFire: _gapBrakeGapsAtFire.slice(),
+    }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

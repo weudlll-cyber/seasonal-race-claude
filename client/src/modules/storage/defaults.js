@@ -1119,6 +1119,38 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
   // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.
   gapRerollDevMarker: false,
+  // ── GAP-BRAKE-1 — the gap-based leader brake (OUTCOME phase). SHIPPED DEFAULT OFF. ────────────
+  //
+  // ★ WHY IT EXISTS. Every other leader-brake in this engine stops at `pulkEnd`: the PULK contest
+  // director's brake (raceGovernor.js) is slewed back to 1.0 outside [pulkStart, pulkEnd), and
+  // `pulkEnd` IS `choreoOutcomeStart`. Past that boundary the only thing acting on a leader is the
+  // OUTCOME servo, and the servo steers him toward HIS DRAWN RANK — it does not know what a gap is.
+  // BRAKE-CENSUS-1 measured the consequence: a leader sitting at the natural band maximum (1.0813)
+  // against a servo that can only ask for -5% still runs ABOVE the field mean for the whole
+  // breakaway. This brake is the missing term, and it is deliberately the LAST resort described in
+  // docs/CONCEPT-COHESION.md ("bounded brake -- fallback ONLY"), not a primary mechanism.
+  //
+  // ★ IT ACTS ON THE GAP, NEVER ON RANK. A leader ten pixels clear is not braked and never will be:
+  // below `gapBrakeAllowedGapPx` the mechanism does nothing at all. That is the whole difference
+  // from the rank-based brakes retired in July (docs/DEAD-ENDS.md, "Governor family").
+  gapBrakeEnabled: false, // master switch. FALSE = today's race, byte-identical.
+  // The lead the leader is ALLOWED to hold, in WORLD px, measured leader->2nd.
+  //
+  // ★ WHY WORLD PX AND NOT CANVAS WIDTHS, which is the unit the owner judges in. A canvas width is
+  // `visibleWorldPx = canvasH / (camZoom * axisY)` (camera/zoomUnit.js:119) — it depends on the LIVE
+  // camera zoom, which is not deterministic from the race seed and must never reach the physics.
+  // Measured inside this brake's own window on city-circuit, `visibleWorldPx` runs 165..450 px
+  // (median 225) — a 2.7x swing — so a canvas-width threshold is not a fixed distance at all.
+  // The physics therefore compares world px, and the DEV SCREEN presents the owner's unit and does
+  // the conversion (DynamicsTuningSection.jsx) against `referenceCorridorPx` (300, above):
+  //     world px = canvas widths x referenceCorridorPx
+  // 210 px = 0.70 canvas widths at that reference — the owner's own photographed breakaway was
+  // 0.698 corrected canvas widths, so the default allowance is set AT the case he objected to.
+  gapBrakeAllowedGapPx: 210,
+  // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
+  // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
+  // both move together and no gap can open between the two mechanisms. 0.92 protects the run-out.
+  gapBrakeWindowEnd: 0.92,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

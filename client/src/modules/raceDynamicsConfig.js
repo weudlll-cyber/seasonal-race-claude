@@ -116,6 +116,34 @@ export const RACE_DYNAMICS_RULES = [
     ok: (c) => !(typeof c.pulkCeilingCap !== 'boolean'),
     why: 'it must be true or false',
   },
+  // GAP-BRAKE-1 — the gap-based leader brake. Same one-rule-per-constraint shape as the keys above,
+  // so a bad value falls back to ITS OWN default and the rest of the store survives.
+  {
+    keys: ['gapBrakeEnabled'],
+    ok: (c) => !(typeof c.gapBrakeEnabled !== 'boolean'),
+    why: 'it must be true or false',
+  },
+  {
+    // Zero or negative would mean 'brake a leader who is level', which is the rank-based behaviour
+    // this mechanism exists to avoid — so the allowance must be a positive distance.
+    keys: ['gapBrakeAllowedGapPx'],
+    ok: (c) => !(typeof c.gapBrakeAllowedGapPx !== 'number' || !(c.gapBrakeAllowedGapPx > 0)),
+    why: 'it must be a number above 0',
+  },
+  {
+    // The window end is a progress fraction. It is NOT checked against the window START here: the
+    // start is `choreoOutcomeStart`, a different key, and a cross-key rule would make one key's
+    // rejection depend on another's value. An end at or below the start simply yields a zero-width
+    // window, which the brake reads as 'never fires' — degenerate, not invalid.
+    keys: ['gapBrakeWindowEnd'],
+    ok: (c) =>
+      !(
+        typeof c.gapBrakeWindowEnd !== 'number' ||
+        c.gapBrakeWindowEnd < 0 ||
+        c.gapBrakeWindowEnd > 1
+      ),
+    why: 'it must be a number between 0 and 1',
+  },
   {
     keys: ['pulkBoostHeadroom'],
     ok: (c) => !(typeof c.pulkBoostHeadroom !== 'number' || c.pulkBoostHeadroom < 0),
