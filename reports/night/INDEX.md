@@ -1492,6 +1492,18 @@ and in that commit's message.
   reduction is invisible on screen. The image itself was NOT readable from this machine — the search
   is recorded and Step 1 is reported as missing, not worked around.
 
+- [ZOOM-PER-STATE-1.md](ZOOM-PER-STATE-1.md) — **the owner is right about the zoom, and a claim I
+  gave him as fact is FALSE**. Three of six camera states are EXACTLY constant when settled (0.0%
+  spread) and **91.7% of all settled frames sit exactly on a state value**; nine tenths of the
+  apparent variation is the camera MOVING between shots, and genuine within-state loosening is 4.4%
+  of frames. The 120–1278 range is STATE (120→450, a 3.75x span) plus transitions — **track
+  contributes nothing**, all ten deliver 120/165/225/450. ★ The two frames behind "the camera
+  cancelled the improvement" were the SAME frame index in the SAME state and BOTH IN FLIGHT; at the
+  225 px the LEADER shot actually delivers, the gap reads **0.874 → 0.751 widths, the full −14%**.
+  ★ Every per-peak canvas-width column this week is affected, and the corrected
+  BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
+  px in an OVERVIEW one.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
