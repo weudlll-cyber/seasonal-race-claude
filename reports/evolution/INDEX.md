@@ -6,6 +6,19 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-14 — [DRAWN-PLACE-TRUTH-1](DRAWN-PLACE-TRUTH-1.md)'s "0 OF 717 CAST COMEBACKERS ARE DRAWN
+  FIRST" IS CORRECT ABOUT THE POPULATION IT MEASURED AND MIS-SCOPED IN ITS WORDING.** Its instrument
+  `scripts/exp-arrival-shape.mjs` reads `_arrivalObs` (`racePlanner.js:1391`), which is populated
+  **inside `if (heldFree)` at `racePlanner.js:948`** — and `heldFree` requires a non-null
+  `heldReleaseAt` (`:941-942`), which only HELD curves carry (`:837-838`). ★★ **So its 717 are 717
+  STAGED comebackers, not all cast comebackers.** [FALLBACK-COMEBACKER-1](FALLBACK-COMEBACKER-1.md)
+  counted both populations on the owner's own fixture (city-circuit, 40, his roster, N=300):
+  ★ **staged — 0 of 217 drawn first, 0.0%: the claim HOLDS exactly.** ★★ **All cast comebackers —
+  176 of 545 drawn first, 32.3%** (N=30 control: 18 of 50, 36.0%), **and every one of the 176 is
+  NON-staged**, cast by the older path at `heroCurveGenerator.js:672`, which has never carried the
+  `winnerIdx` exclusion the staged path added for itself at `:654`. **The original figure is left
+  standing below, not overwritten** — what is corrected is the population its wording names.
+
 - **2026-09-14 — [MERGE-HALTED-2026-09-14](MERGE-HALTED-2026-09-14.md) ATTRIBUTED THE `check-runin-frame`
   FAILURE TO `983d9201`, AND THAT ATTRIBUTION IS WITHDRAWN.** It recorded the red check as class **(b),
   a real defect introduced on the branch**, with the cause traced to DIRECTION-AUTHORITY-1.
@@ -495,6 +508,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
   all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
   because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [FALLBACK-COMEBACKER-1.md](FALLBACK-COMEBACKER-1.md) — **documented once, for one of its three
+  triggers — and it is the OLDER path, not a new one** (2026-09-14, branch
+  `read/fallback-comebacker-1`, **READ-ONLY**, nothing built or minted). ★★ **THE "FALL-BACK" AT
+  `heroCurveGenerator.js:672` IS THE ORIGINAL CASTING PATH**, unchanged since `2a90c4cc`
+  (2026-07-08); the staged path was inserted in FRONT of it by `4ef59d33` (2026-09-11). ★ **It never
+  had a `winnerIdx` exclusion to lose** — that string first appears at `4ef59d33`, born with the
+  staged path. ★ **Documented**: its own source comment (`:662-669`), COMEBACK-STAGED-1 and
+  `4ef59d33`'s message all describe **the refused-staging case only**. ★★ **Not documented**: that it
+  also runs for **every pool member after the first staged one** — which is **56.7%** of races, the
+  main trigger — and for the **drawn winner**. Search text, patterns and the 2 923-commit count are
+  in the report. ★ **COUNTED** (his fixture, city-circuit 40, N=300): **1.82 comebackers per race,
+  0.72 staged, 1.09 non-staged**; the non-staged path fires in **82.7%** of races. ★★ **The median
+  non-staged comebacker is DRAWN FIRST** (176 of 328, 53.7%) and holds the biggest gap of the race
+  **3x** as often as a staged one (18.0% vs 6.0%). ★★ **The published "0 of 717 cast comebackers are
+  drawn first" is CORRECT about staged comebackers (0 of 217 here) and mis-scoped in its wording** —
+  across all cast comebackers it is **176 of 545, 32.3%**; scope correction registered above.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
@@ -643,7 +672,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   owner caught the planner asserting both that a comebacker is never drawn first AND that a leading
   comebacker is unbraked because first place IS his drawn place. ★★ **0 OF 717 CAST COMEBACKERS ARE
   DRAWN FIRST** on the current tree — the old 0-of-82 holds on nearly nine times the sample, so the
-  second claim is FALSE. ★ His race reproduces exactly: City Circuit seed 3, `Breeze`, **DRAWN 2nd**,
+  second claim is FALSE. ★ **SCOPE CORRECTED 2026-09-14** (original figure unchanged above): those 717
+  are **STAGED** comebackers — `_arrivalObs` is populated only inside `if (heldFree)`
+  (`racePlanner.js:948`) — and on that population the 0 holds exactly (0 of 217, N=300). Across **all
+  cast** comebackers it is **176 of 545, 32.3%**, all of them non-staged. See
+  [FALLBACK-COMEBACKER-1](FALLBACK-COMEBACKER-1.md). ★ His race reproduces exactly: City Circuit seed 3, `Breeze`, **DRAWN 2nd**,
   finishing 3rd — and he sits AT rank 2 with a rank error of exactly 0 for the whole endgame, so
   there is nothing for a brake to do; **the growing gap is him falling behind the leader `Flare`, not
   pulling away.** ★★ **THE REAL MECHANISM, WITH ITS ADDRESS**: over 100 races, of the frames he spends
