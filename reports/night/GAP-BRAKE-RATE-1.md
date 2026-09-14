@@ -98,6 +98,12 @@ which is the thing he was objecting to. It is pinned by a test, and that test is
 Measured consequence: the new brake **pulls for nearly twice as long** per firing race — 8.84 s
 against the old law's 4.94 s — at two thirds of the peak authority.
 
+*(Precision note: the two figures come from slightly different counters — steps ENGAGED for the new
+law, steps a command was WRITTEN for the old, because the old build has no "engaged" state to
+report. The two are within 0.4% of each other where both can be measured: the same new-law
+mechanism counted the second way reads 8.87 s. The gap to 4.94 s is far larger than the difference
+between the counters. Both arms agree exactly on how MANY races the brake acted in — 137 of 300.)*
+
 ---
 
 ## STEP 2 — THE BEHAVIOUR, PER PHYSICS STEP
