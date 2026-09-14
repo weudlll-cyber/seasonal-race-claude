@@ -1470,6 +1470,16 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [QUICKTEST-ICE-3.md](QUICKTEST-ICE-3.md) — **the owner's own Quick Test, ice-track seed 3**: the
+  brake was NOT silent — 513 steps, p=0.839→0.941, all on Flare, cutting the gap it measures
+  **196.6 → 169.0 px (−14%)**. ★ But his screenshot shows a DIFFERENT gap: leader-to-PACK is
+  **518.5 px, 3.1x larger**, and the brake's trigger is the gap to SECOND place
+  (`racePlanner.js:762`), so that one moved only 529.1 → 518.5 (−2%). The Quick Test field could not
+  be read (its roster comes from browser storage, and the race was never stored — store mtime 15:42
+  against an 18:52 build), so N was RACED not assumed: N=20 is excluded because Raven is not in that
+  field at all; N=40 matches four details of his description. ★ The canvas-width conversion reverses
+  the sign on BOTH rows.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
