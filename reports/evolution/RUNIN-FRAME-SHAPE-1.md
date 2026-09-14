@@ -9,10 +9,15 @@ races that are not failing, so this stops at the measurement and the options.
 ## ★★ THE ONE LINE
 
 > **`check-runin-frame` is red on this branch and green on master — and the defect is on master too.**
-> The camera is **byte-identical** on both trees. On `dirt-oval` at 40 racers the line leaves the
-> canvas on **1 seed in 12 on the branch (seed 9) and 1 seed in 12 on master (seed 11)**, with the
-> same signature, the same mechanism and the same progress fraction. **`983d9201` did not create it.
-> It moved which seed lands on it — and the guard samples exactly one seed.**
+> The camera is **byte-identical** on both trees. On `dirt-oval` at 40 racers — the deeper failure and
+> the field size he races — the line leaves the canvas on **1 seed in 12 on the branch (seed 9) and
+> 1 seed in 12 on master (seed 11)**, same frame count, same mechanism, same progress fraction.
+> **`983d9201` did not create it. It moved which seed lands on it — and the guard samples exactly
+> one seed.**
+>
+> ★ **The one thing NOT symmetric:** on `luger-hill` master is clean over ten seeds while the branch
+> loses seed 9 by 82 px. **One seed at N=10 is not a rate, and it is not claimed as one** — but it is
+> not hidden either.
 
 ★ **The repair is a camera change**, and the camera's endgame is a picture you accepted. So: **stop.**
 
@@ -124,14 +129,22 @@ director's `subjects` and camera state → the anchor → both `demand` and the 
 camera-adjacent file, `RaceScreen/index.jsx`, adds **an inert probe** — its own comment says *"INERT
 UNLESS SWITCHED ON"* — so **no camera-facing code changed at all.**
 
-**The same seed sweep on both trees, `dirt-oval` n=40, seeds 1–12:**
+**The same seed sweep on both trees, both tracks:**
 
-| | seeds that lose the line | worst | at progress |
-|---|---|---|---|
-| **master** `b6d77637` | ★ **1 of 12 — seed 11**, 15 frames | **−210 px** | **0.9502** |
-| **branch** `8166c757` | ★ **1 of 12 — seed 9**, 15 frames | **−289 px** | **0.9500** |
+| track | master `b6d77637` | branch `8166c757` |
+|---|---|---|
+| ★ `dirt-oval` n=40, seeds 1–12 | ★ **1 of 12** — seed 11, 15 frames, **−210 px** at p=0.9502 | ★ **1 of 12** — seed 9, 15 frames, **−289 px** at p=0.9500 |
+| `luger-hill` n=100, seeds 1–10 | **0 of 10** | **1 of 10** — seed 9, 5 frames, **−82 px** at p=0.9502 |
 
-★★ **Identical rate, identical frame count, identical progress.** And master's seed 11 shows the
+★★ **ON `dirt-oval` — the deeper failure, and the field size he actually races — THE RATE IS
+IDENTICAL**: one seed in twelve on each tree, the same frame count, the same progress fraction.
+
+★ **ON `luger-hill` IT IS NOT, AND THAT IS SAID PLAINLY RATHER THAN AVERAGED AWAY.** Master is clean
+over ten seeds there; the branch loses seed 9 by **82 px** — the shallowest of the four cases, five
+frames, 0.08 s. **At N=10 one seed is not a rate**, and I do not claim from it either that the branch
+made that track worse or that it did not. What it does show is the same mechanism on the same frames.
+
+And master's seed 11 shows the
 identical mechanism — `zoom 2.380, demand 2.382, slack, widenDone=true, 225 px off canvas`. ★ Master's
 seed 12 sits at **+7 px**: one seed away from failing on its own.
 

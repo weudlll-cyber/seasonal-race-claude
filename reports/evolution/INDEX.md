@@ -14,7 +14,9 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   comment marks INERT, and the **same 12-seed sweep loses the line on 1 seed of 12 on BOTH trees** —
   master on seed 11 (15 frames, −210 px, p=0.9502), the branch on seed 9 (15 frames, −289 px,
   p=0.9500), with the identical mechanism. **The defect is pre-existing; the branch moved which seed
-  the guard's single sample lands on.** ★ **The halt itself is NOT withdrawn** — the check is red and a
+  the guard's single sample lands on.** ★ **Not symmetric on the second track and that is stated:**
+  on `luger-hill` n=100 master is clean over 10 seeds while the branch loses seed 9 by 82 px — one
+  seed at N=10, claimed as neither a rate nor a nothing. ★ **The halt itself is NOT withdrawn** — the check is red and a
   red check is not merged — but its cause, and therefore what would have to change to clear it, is not
   what that report said.
 
@@ -457,7 +459,8 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   built or minted). ★★ **THE DEFECT IS ON MASTER TOO**: the camera, `defaults.js` and the guard are
   byte-identical on both trees, and the same 12-seed sweep on `dirt-oval` n=40 loses the line on
   **1 seed of 12 on each** — master seed 11 (−210 px), branch seed 9 (−289 px), same frame count, same
-  progress, same mechanism. ★ **UPPER BOUND FIRST: the line WAS showable** — 2.3786 delivered against
+  progress, same mechanism; on `luger-hill` n=100 master is 0 of 10 and the branch 1 of 10 (−82 px),
+  stated rather than averaged in. ★ **UPPER BOUND FIRST: the line WAS showable** — 2.3786 delivered against
   1.6384 needed (1.45× too tight) on `dirt-oval`, 0.9278 against 0.8226 on `luger-hill`. ★ **SHAPE**:
   15 and 5 frames, all in the first 3% of the window; depth med/p90/max **144/259/289 screen px** and
   **145/261/292 world px**; binding term `state` on every one. ★★ **MECHANISM**: `_scheduleClose`'s
