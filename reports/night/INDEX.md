@@ -1470,6 +1470,26 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [SERVO-FAULT-1.md](SERVO-FAULT-1.md) — **the NOISE causes the restarts, the CLAMP saves the large
+  corrections, and delivering everything is not a fix.** The two restart drivers are now separated
+  exactly (the observer records the deterministic part and the noise apart): the **noise alone could
+  have caused 86.1%** of all target rewrites, **95.0% for the leader**; the command's own movement
+  15.2%. ★ The "small ask sits near the threshold" hypothesis is **REFUTED** — a 1–2-rank ask is
+  0.0495, **50x** `TARGET_EPSILON`. The separating variable is the **clamp**: the 16+-ranks-off group
+  is **100% pinned**, so its noise is clipped, its command stops moving (median delta exactly
+  0.000000) and it arrives (94.6%); the 1–2-rank group is **1.0% clamped** (56.8%). The leader is
+  **0.0% clamped while leading** and his command has REVERSED sign, so he is on the wrong side of
+  natural speed on 57.6% of those steps. ★ The overshoot is the COMMAND shrinking under a held value
+  still catching up (47.7%), not the ease, which is monotone and cannot overshoot. ★★ The blunt
+  counterfactual arrives (69.3% → 99.9%) and is **not a candidate**: 198/300 winner changes, 0/300
+  byte-identical, **all four fingerprints move**, a golden race moves, the rank error the servo exists
+  to reduce gets **WORSE** (2.595 → 2.881), and the largest single-step multiplier move goes
+  **0.0117 → 0.2506 — 21x, on 300/300 races**. ★ The four red parity tests are a **moved input, not a
+  broken guarantee**: real and sim both change and both land on `fe3f4861`; what fails is the pinned
+  winner. ★ The brake would still have work — it fires in 89/300 instead of 137/300 but takes
+  **−81.5 px (−25.2%)** off the worst race against −16.8 px (−6.9%) today. Fairness **not run** to a
+  usable N and reported as such.
+
 - [BRANCH-INVENTORY-1.md](BRANCH-INVENTORY-1.md) — **every branch at origin, with one recommendation
   each.** Nine branches; **two carry product code** (`feat/gap-leader-brake`, which ships OFF with all
   four fingerprints unmoved, and `feat/remove-prestaging-comebacker`, which removes a mechanism and
