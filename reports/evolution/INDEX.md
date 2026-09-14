@@ -6,6 +6,27 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-09-14 — [MERGE-HALTED-2026-09-14](MERGE-HALTED-2026-09-14.md) ATTRIBUTED THE `check-runin-frame`
+  FAILURE TO `983d9201`, AND THAT ATTRIBUTION IS WITHDRAWN.** It recorded the red check as class **(b),
+  a real defect introduced on the branch**, with the cause traced to DIRECTION-AUTHORITY-1.
+  [RUNIN-FRAME-SHAPE-1](RUNIN-FRAME-SHAPE-1.md) measured it: the camera module, `defaults.js` and the
+  guard are **byte-identical to master**, that commit's only camera-adjacent change is a probe its own
+  comment marks INERT, and the **same 12-seed sweep loses the line on 1 seed of 12 on BOTH trees** —
+  master on seed 11 (15 frames, −210 px, p=0.9502), the branch on seed 9 (15 frames, −289 px,
+  p=0.9500), with the identical mechanism. **The defect is pre-existing; the branch moved which seed
+  the guard's single sample lands on.** ★ **The halt itself is NOT withdrawn** — the check is red and a
+  red check is not merged — but its cause, and therefore what would have to change to clear it, is not
+  what that report said.
+
+- **2026-09-14 — the CAUSE written into `docs/MORNING.md` on `night/2026-09-12b` was WRONG ON EVERY
+  FAILING FRAME.** It read: *"`_lineCeiling` returns Infinity when the line cannot be framed at all,
+  and an infinite ceiling never binds"*. Measured by wrapping `_lineCeiling` on the live director,
+  **the demand is FINITE on 15 of 15 frames on `dirt-oval` and 5 of 5 on `luger-hill` — zero infinite**.
+  The real mechanism is that the schedule's widen completes when `zoom <= demand` while `demand` is
+  measured from the anchor the framing rule **intends** rather than the one the pan has reached, with
+  the opening glide still running at the deadline. **A repair aimed at the infinite case would have
+  changed code that never runs there.** Corrected in place on that branch.
+
 - **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
   `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
   and named them the owner's call: `index.js:17` (the startup banner) and `staticClient.js:82` (the
@@ -431,6 +452,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [RUNIN-FRAME-SHAPE-1.md](RUNIN-FRAME-SHAPE-1.md) — **the run-in defect is not this branch's, and the
+  repair is an owner decision** (2026-09-14, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, nothing
+  built or minted). ★★ **THE DEFECT IS ON MASTER TOO**: the camera, `defaults.js` and the guard are
+  byte-identical on both trees, and the same 12-seed sweep on `dirt-oval` n=40 loses the line on
+  **1 seed of 12 on each** — master seed 11 (−210 px), branch seed 9 (−289 px), same frame count, same
+  progress, same mechanism. ★ **UPPER BOUND FIRST: the line WAS showable** — 2.3786 delivered against
+  1.6384 needed (1.45× too tight) on `dirt-oval`, 0.9278 against 0.8226 on `luger-hill`. ★ **SHAPE**:
+  15 and 5 frames, all in the first 3% of the window; depth med/p90/max **144/259/289 screen px** and
+  **145/261/292 world px**; binding term `state` on every one. ★★ **MECHANISM**: `_scheduleClose`'s
+  line floor is **armed and wrong** — the widen completes at `zoom 2.379 <= demand 2.374`, and the
+  demand is measured from the anchor the framing rule INTENDS
+  (`CameraDirector.js:3482`) while the opening glide (`runInOpenMs` 1250 ms) is still running at the
+  0.95 deadline. ★ **Two written causes corrected** — see the CORRECTIONS block above. ★★ **BUILD
+  NOTHING**: all four repair options either re-open ENDGAME-REPAIR-1's singularity or break "the
+  schedule is the sole author", changing the endgame on every track and every race.
 - [MERGE-HALTED-2026-09-14.md](MERGE-HALTED-2026-09-14.md) — **the branch is NOT merged: one failure
   is a real defect** (2026-09-14). ★★ **`check-runin-frame` is GREEN on master (`b6d77637`, exit 0) and
   RED on the branch (`8166c757`)** — `dirt-oval` n=40 goes from FINDABLE +99 px / 0 off canvas to

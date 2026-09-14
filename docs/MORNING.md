@@ -74,16 +74,30 @@ ice-track `0246ecbe7a35` · luger-hill `41ba46864505` · mountainstreet `8a6bf37
 
 ---
 
-## ★ THE ONE THING STILL BLOCKING A CLEAN MERGE
+## ★ THE ONE THING STILL BLOCKING A CLEAN MERGE — AND IT IS NOT THIS BRANCH'S
 
-**The camera loses the finish line at `luger-hill`, 100 racers.** The revert **halved** this — it was
-two cases, and `garden-path` at 40 was the servo change's doing and is gone with it. What remains
-came from `983d9201` (the comebacker is held and released); master is green.
+**The camera loses the finish line** on `dirt-oval` at 40 racers (15 frames) and `luger-hill` at 100
+(5 frames), at progress 0.950.
 
-At progress 0.950 in a leader shot, `_lineCeiling` returns **Infinity when the line cannot be framed
-at all**, and an infinite ceiling never binds — so the shot zooms to its own preference and the line
-leaves the canvas. ★ **I did not fix it:** the fix changes the camera on every track and every race,
-and you judge the picture.
+★★ **RE-MEASURED 2026-09-14 (RUNIN-FRAME-SHAPE-1), AND BOTH SENTENCES THAT STOOD HERE WERE WRONG.**
+
+★ **It did not come from `983d9201`.** The camera module, `defaults.js` and the guard are
+**byte-identical to master**, and that commit's only camera-adjacent change is a probe its own
+comment marks INERT. Its reach is through the RACE alone. **The same 12-seed sweep on `dirt-oval`
+n=40 loses the line on 1 seed of 12 on BOTH trees** — master on seed 11 (−210 px), the branch on
+seed 9 (−289 px), same frame count, same progress, same mechanism. **The guard samples one seed per
+track and says so in its own blind list. Green on master was the draw, not a property of master.**
+
+★ **And the stated cause was wrong.** `_lineCeiling` returning Infinity is **not** what happens:
+the demand is **FINITE on 15 of 15 and 5 of 5** failing frames. What actually happens is that the
+schedule's widen completes at 0.9498 because `zoom 2.379 <= demand 2.374`, and the demand is measured
+from where the framing rule **intends** the anchor rather than where the pan **is** — and the opening
+glide (`runInOpenMs` 1250 ms) is still running at the deadline. **The floor reports satisfied while
+the band is 289 px off the canvas.**
+
+★★ **I did not fix it, and the rule says not to:** every available repair re-opens a closed decision
+(ENDGAME-REPAIR-1's singularity) or breaks "the schedule is the sole author" — **changing the endgame
+on every track and every race.** You judge that picture.
 
 ---
 
@@ -97,7 +111,9 @@ and you judge the picture.
 
 1. ★ **The tripled on-screen gap at small fields** — accept it as the price of the feel, or put the
    brake back on an arrived comebacker (that is the "free inside his block" half, not the taper).
-2. Whether to fix the camera's unframeable-line case, knowing it moves every shot.
+2. Whether the endgame's opening is repaired at all — **on master, where the defect actually lives** —
+   knowing every option moves every shot. The four options and what each costs are in
+   [RUNIN-FRAME-SHAPE-1](../reports/evolution/RUNIN-FRAME-SHAPE-1.md) §5.
 3. Still open from earlier: `docs/FAIRNESS.md`'s 85–90% headline, and its "zero Holm-unfair" clause
    which **the shipped game already misses above forty racers** (seven of ten tracks at N=100).
 4. Deployment: what terminates TLS · where the data lives · how often a backup is taken.

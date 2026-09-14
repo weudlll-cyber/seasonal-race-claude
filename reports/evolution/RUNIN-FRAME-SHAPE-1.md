@@ -99,6 +99,17 @@ tracks* and reached *2108 corridors on city-circuit*. Its own header names what 
 belongs: as a term that widens when the line is actually near the edge."* ★★ **That term is
 `_ceilings.line` — and it is exactly the term set to `Infinity` while the schedule composes.**
 
+### ★ A SECOND CORRECTION: THE WRITTEN CAUSE IS NOT THE CAUSE
+
+`docs/MORNING.md` on this branch states it as: *"`_lineCeiling` returns **Infinity when the line
+cannot be framed at all**, and an infinite ceiling never binds — so the shot zooms to its own
+preference and the line leaves the canvas."*
+
+★★ **Measured, that is wrong on every failing frame. The demand is FINITE on 15 of 15 on `dirt-oval`
+and 5 of 5 on `luger-hill` — the count of infinite ones is ZERO.** The floor is not absent and the
+ceiling is not infinite: the demand is a real number that is **too small by the pan's unconverged
+displacement**. A repair aimed at the infinite case would have changed code that never runs here.
+
 ---
 
 ## 4 · ★★ IT IS NOT THIS BRANCH'S DEFECT — MEASURED, NOT ARGUED
