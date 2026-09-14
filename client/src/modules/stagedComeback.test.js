@@ -163,18 +163,43 @@ describe('COMEBACK-STAGED-1 — ★ THE WALL: the staged curve is refused, and t
   });
 });
 
-describe('COMEBACK-STAGED-1 — ★ THE FALL-BACK, which is what keeps the tree safe', () => {
-  // ★ THE SABOTAGE THIS CATCHES: drop the fall-back in `heroCurveGenerator.js` — let a refused
-  // staging `continue` instead of trying today's casting for that racer — and this goes red. That
-  // is not cosmetic: `addSolo` refuses WITHOUT marking the racer used, so every pool member would be
-  // consumed by a failed staging and NO hero would be cast from the B1 pool at all.
-  // ★ THE FIRST VERSION OF THIS TEST WAS A FALSE GREEN AND THE SABOTAGE CAUGHT IT. It asserted
-  // `heroCast.length > 1`, which the WINNER and the three B2 attackers satisfy on their own — both
-  // are cast OUTSIDE the B1-pool loop, so the assertion passed with the fall-back removed and the
-  // pool casting nobody. The discriminating quantity is the number of STANDARD (non-attacker)
-  // heroes: 3 on the correct tree, 1 with the fall-back gone.
-  it('a race whose staging is refused still casts its B1-POOL heroes, exactly as before', () => {
-    const field = buildField({ n: 40, seed: 3 });
+// ── ★ THE FALL-BACK'S TWO TESTS WERE DELETED ON 2026-09-14 (REMOVE-PRESTAGING-1) ──────────────
+//
+// They are named here rather than removed silently, because a deleted assertion that leaves no trace
+// is indistinguishable from one that was quietly weakened.
+//
+//   1. 'a race whose staging is refused still casts its B1-POOL heroes, exactly as before'
+//      DELETED because the behaviour it pinned no longer exists. It asserted that a refused staging
+//      falls through to the pre-staging casting path and still fills the pool. That path is gone by
+//      the owner's decision of 2026-09-14, so the pool now casts NOBODY when the staging is refused
+//      and this test asserted the exact opposite. It is not rewritten onto the staged path: there is
+//      no staged-path statement it could become without asserting something it never tested.
+//
+//   2. '...and no comebacker is emitted from a staging that was refused'
+//      DELETED because it is now vacuously true. It walked every emitted comebacker and checked that
+//      none sat at the staging rank — a meaningful check while a SECOND path could emit one. With one
+//      path left, a comebacker can only come from the staging, so the loop has nothing to discriminate.
+//      A test that cannot fail is worse than no test, and this one could no longer fail.
+//
+// ★ WHAT REPLACES THEM is the assertion below: with the fall-back gone, a refused staging must leave
+// the B1 pool EMPTY. That is the new contract and it is the one worth pinning — it goes red if the
+// removed branch is ever restored.
+
+describe('REMOVE-PRESTAGING-1 — the staged path is the ONLY one that casts from the B1 pool', () => {
+  // ★ THE SABOTAGE THIS CATCHES: restore the removed `addSolo(… 'comebacker' : 'sovereign-lead')`
+  // branch under the staging attempt in `heroCurveGenerator.js` and this goes red — the pool starts
+  // contributing heroes again on a seed whose staging is refused.
+  //
+  // The discriminating quantity is the same one the deleted test finally settled on: the count of
+  // STANDARD (non-attacker) heroes. The winner and the B2 attackers are cast OUTSIDE this pool, so a
+  // weaker assertion would pass with the branch restored.
+  // ★ THE FIXTURE IS CHOSEN TO DISCRIMINATE, and that is not a detail. Field seed 3 — the one the
+  // deleted tests used — casts NOTHING from the pool even with the branch restored, so an assertion
+  // written on it passes either way. Measured over field seeds 1-8: with the branch present, seed 2
+  // casts TWO pool heroes at generator seed 9; seeds 3 and 8 cast none. A test on seed 3 would have
+  // been a second false green, which is the exact failure the deleted tests' own comment records.
+  it('a race whose staging is refused casts NO B1-pool hero at all', () => {
+    const field = buildField({ n: 40, seed: 2 });
     const { heroCast } = generateHeroCurves({
       seed: 9,
       postChaos: field.postChaos,
@@ -182,25 +207,14 @@ describe('COMEBACK-STAGED-1 — ★ THE FALL-BACK, which is what keeps the tree 
       intensity: 0.9,
       finishT: field.finishT,
     });
+    // `buildField` does not name the drawn winner, so it is read from the same map the generator
+    // reads it from — the racer whose FINAL rank is 1 (heroCurveGenerator.js:562).
+    const winnerIdx = [...field.finalRanks.entries()].find(([, r]) => r === 1)?.[0];
     const standard = heroCast.filter((h) => h.role !== 'attacker-b2');
-    // More than the winner alone — i.e. the pool loop actually contributed.
-    expect(standard.length).toBeGreaterThan(1);
-  });
-
-  it('...and no comebacker is emitted from a staging that was refused', () => {
-    const field = buildField({ n: 40, seed: 3 });
-    const { curves } = generateHeroCurves({
-      seed: 9,
-      postChaos: field.postChaos,
-      finalRanks: field.finalRanks,
-      intensity: 0.9,
-      finishT: field.finishT,
-    });
-    const staged = stagedComebackRank(40);
-    // Any comebacker present came through today's path (already deep), never through the staging.
-    const rankOf = new Map(field.postChaos.map((p) => [p.index, p.rank]));
-    for (const c of curves.filter((x) => x.role === 'comebacker')) {
-      expect(rankOf.get(c.index)).not.toBe(staged);
+    for (const h of standard) {
+      // Every standard hero is either HELD (the staging) or the drawn winner cast at his own site.
+      // A hero that is neither could only have come from the removed pool branch.
+      expect(h.held === true || h.index === winnerIdx).toBe(true);
     }
   });
 });

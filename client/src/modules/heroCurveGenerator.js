@@ -514,8 +514,10 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
 // ★ WHAT STAGES HIM, AND IT IS NOT A NEW MECHANISM. A hero's curve is `anchor → peak → resolve`,
 // and for a comebacker the PEAK is his deepest point. So staging is just choosing that peak: the
 // curve steers him BACK to the staging rank and then forward to his drawn place, and the servo
-// tracks it at strictness 1.0. The else-branch below ALREADY computed a synthetic deep peak for a
-// front racer (`cr + peakDepthFrac * (n - 1)`) — it was simply labelled `sovereign-lead`.
+// tracks it at strictness 1.0. The else-branch that used to sit below ALREADY computed a synthetic
+// deep peak for a front racer (`cr + peakDepthFrac * (n - 1)`) — it was simply labelled
+// `sovereign-lead`. ★ THAT BRANCH WAS REMOVED ON 2026-09-14 (REMOVE-PRESTAGING-1); this paragraph
+// is kept as the record of where the staging idea came from, and no longer describes live code.
 //
 // ★ NO HOLD ARM IS BUILT, DELIBERATELY, and this is a departure from the brief worth stating. The
 // measurement arms needed one because the racer they held was NOT a hero and `racePlanner.js:805`
@@ -648,28 +650,33 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
   // refuses him and the next pool member is tried instead — the flag is set only on success.
   const stagingRank = stagedComebackRank(n);
   let staged = false;
+  // ★★ THE STAGED PATH IS THE ONLY ONE THAT CASTS FROM THIS POOL (REMOVE-PRESTAGING-1, 2026-09-14).
+  //
+  // A second branch used to sit under this one and cast `addSolo(… 'comebacker' : 'sovereign-lead')`
+  // for any pool member the staging did not take. It was the PRE-STAGING casting path — unchanged
+  // since the generator was written — and COMEBACK-STAGED-1 left it in place so that a refused
+  // staging stayed byte-identical to the tree before it. It is gone; the owner's decision of
+  // 2026-09-14 is that the staged comebacker is the only way this pool casts the role.
+  //
+  // WHAT THAT MEANS HERE, and it is deliberate rather than an oversight: this loop now casts AT MOST
+  // ONE racer per race. When the staging is refused for every candidate, the pool casts NOBODY and
+  // the hero budget is left unused. Filling it with another role would be a different decision and
+  // is not taken — see docs/DEAD-ENDS.md section S.
+  //
+  // The loop still walks the pool rather than taking its first member, because `addHeld` refuses a
+  // candidate whose curve does not fit and the next one must then be tried. It stops as soon as one
+  // is staged, and also when there is no staging rank at this field size, because then no iteration
+  // of this loop can cast anything at all.
   for (const p of b1Pool) {
-    if (cast.length >= drama.nHeroes) break;
+    if (staged || stagingRank == null || cast.length >= drama.nHeroes) break;
+    if (p.index === winnerIdx) continue; // he is cast at his own site above, never staged
     const cr = nextCluster(); // tight front cluster, not the exact assigned rank (A3)
-    const wantStaged = stagingRank != null && !staged && p.index !== winnerIdx;
     // The STAGED case holds him at `stagingRank` and RELEASES him there; his drawn top-5 place is
     // reached by racing, not by a second authored leg. See heldTiming.
-    if (wantStaged && addHeld(p.index, 'comebacker', cr, stagingRank)) {
+    if (addHeld(p.index, 'comebacker', cr, stagingRank)) {
       b1Cluster++;
       staged = true;
-      continue;
     }
-    // ★ AND IF THE STAGED CURVE IS REFUSED, TODAY'S CASTING RUNS FOR HIM UNCHANGED.
-    //
-    // This fall-back is load-bearing, not tidiness. `addSolo` refuses without marking the racer
-    // used, so an attempt that simply `continue`d would consume every pool member on a failed
-    // staging and cast NOBODY — fewer heroes, a different race, and a silent regression wearing the
-    // shape of a new feature. With the fall-back, a race in which staging is infeasible is
-    // byte-identical to today, which is what makes the change safe to leave in the tree while the
-    // feasibility question below is his to answer.
-    const peakRank =
-      p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
-    if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
   }
 
   // ── B2-ATTACKER "Attack & Fall" (ADDITIONAL heroes, beyond the nHeroes budget; OFF via b2AttackHeroes 0) ──

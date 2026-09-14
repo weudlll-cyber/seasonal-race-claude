@@ -114,26 +114,21 @@ describe('DENSITY feasibility — the core correction (20→3 depends on bunchin
 });
 
 describe('generateHeroCurves — cross-band comeback generatable / refused', () => {
-  it('BUNCHED: a deep-post-chaos B1 racer is emitted as a feasible CROSS-BAND comeback curve', () => {
-    // put final rank 3 on the racer sitting at post-chaos rank 20 (deep) → a 20→3 comebacker.
-    const base = buildField({ density: 'bunched', seed: 3 });
-    const deepIdx = indexAtRank(base.postChaos, 20);
-    const field = buildField({ density: 'bunched', seed: 3, overrides: { [deepIdx]: 3 } });
-    const { curves } = generateHeroCurves({
-      seed: 9,
-      postChaos: field.postChaos,
-      finalRanks: field.finalRanks,
-      intensity: 0.9,
-      finishT: field.finishT,
-    });
-    const comeback = curves.find((c) => c.index === deepIdx);
-    expect(comeback).toBeTruthy();
-    // spans multiple bands: starts deep (band ≥2), ends B1
-    const startRank = comeback.curve.points[0].rank;
-    const endRank = comeback.curve.points[comeback.curve.points.length - 1].rank;
-    expect(bandOfRank(startRank)).toBeGreaterThanOrEqual(2);
-    expect(bandOfRank(endRank)).toBe(0);
-  });
+  // ── ★ THE 'BUNCHED' HALF OF THIS PAIR WAS DELETED ON 2026-09-14 (REMOVE-PRESTAGING-1) ─────────
+  //
+  // It asserted that a deep-post-chaos racer drawn for B1 is emitted with a CROSS-BAND curve that
+  // ENDS in B1. That curve came from the pre-staging casting path, which is removed: measured on its
+  // own fixture, the racer (index 19) is now not cast at all — the staging takes a different pool
+  // member and nothing else in the pool casts. The contract it pinned no longer exists, and it is
+  // deleted rather than weakened into something that would pass.
+  //
+  // ★★ AND ITS SURVIVING SIBLING BELOW IS NOW VACUOUS — SAID HERE RATHER THAN LEFT TO BE TRUSTED.
+  // 'SPREAD: the same deep→B1 comeback is REFUSED' asserts the racer gets NO curve. That is now true
+  // at BOTH densities, for the same reason (nothing casts him), so the pair no longer discriminates
+  // density and the SPREAD half can no longer fail. It is kept, because deleting it would remove the
+  // only statement left about that racer, but it must not be read as a density check any more.
+  // Density feasibility itself is still covered by the `racerFeasibility` tests above.
+
   it('SPREAD: the same deep→B1 comeback is REFUSED (no curve emitted for that racer)', () => {
     const base = buildField({ density: 'spread', seed: 3 });
     const deepIdx = indexAtRank(base.postChaos, 20);
@@ -432,13 +427,21 @@ describe('orchestrator — determinism, cast size, all-emitted-feasible', () => 
   //
   // The test is narrowed to the cast it was actually about — the standard heroes — and the finding
   // is on the owner's sheet rather than buried here.
+  // ★ THE FIXTURE MOVED ON 2026-09-14 (REMOVE-PRESTAGING-1), THE ASSERTION DID NOT.
+  // This describe's shared field (bunched seed 7) used to yield three standard heroes because the
+  // pre-staging path filled the pool; with that path removed it yields at most one, and a separation
+  // check over one curve tests nothing. The fixture is therefore swapped for one that still casts
+  // TWO standard heroes — the drawn winner and the staged comebacker — so `checkSeparation` still has
+  // a pair to judge. Measured over field seeds 1-10 at both densities: bunched seeds 2, 3, 4, 8 and 9
+  // all yield two. The `> 1` precondition is kept at full strength rather than lowered to `> 0`.
   it('emitted STANDARD hero curves are mutually separated (attackers are exempt by design)', () => {
+    const sep = buildField({ density: 'bunched', seed: 2 });
     const { curves } = generateHeroCurves({
       seed: 8,
-      postChaos,
-      finalRanks,
+      postChaos: sep.postChaos,
+      finalRanks: sep.finalRanks,
       intensity: 0.9,
-      finishT,
+      finishT: sep.finishT,
     });
     const standard = curves.filter((c) => c.role !== 'attacker-b2');
     expect(standard.length).toBeGreaterThan(1);
