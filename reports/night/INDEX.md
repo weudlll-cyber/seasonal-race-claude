@@ -1470,6 +1470,22 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [SERVO-NARROW-1.md](SERVO-NARROW-1.md) — **the servo CAN be fixed narrowly, and the narrow fix is
+  INVISIBLE.** Four variants, all aimed at the restart driver rather than the ease, none changing what
+  the servo commands, all proved inert when switched off (10/10 identical). Every one takes the
+  leader's arrival **55.8% → 79–81%**, small corrections **57.8% → ~74%**, halves the wrong-side share
+  (10.2% → ~5%) and cuts the overshoot (p90 delivered 1.340 → ~1.17). ★★ **And they cost almost
+  nothing in visibility: 1.00–1.04x the largest single-step multiplier move, against the blunt
+  counterfactual's 21.3x.** ★ **V1** (the restart decision ignores the noise; no new number) is the
+  only one that improves the in-window lead at BOTH ends — median 81.4 → 70.9 px and max 244.4 →
+  239.3 px — at 1.01x visibility. V3 (threshold at 2x the noise amplitude) has the best leader arrival
+  (80.5%) and exactly today's visibility but makes the worst race worse. ★ **None improves the rank
+  error against the drawn plan, and none worsens it either**: all four point estimates are a few
+  thousandths worse and **not one is distinguishable from zero** (V1 t=0.19, 143 races worse vs 138
+  better), while exact-place hits go UP on all four. Applied literally no variant clears the bar; V1
+  misses by a t=0.19 rank-error change and a 0.8% visibility increase. Every variant is a full
+  re-baseline (0/300 byte-identical, ~2/3 winner changes).
+
 - [SERVO-FAULT-1.md](SERVO-FAULT-1.md) — **the NOISE causes the restarts, the CLAMP saves the large
   corrections, and delivering everything is not a fix.** The two restart drivers are now separated
   exactly (the observer records the deterministic part and the noise apart): the **noise alone could
