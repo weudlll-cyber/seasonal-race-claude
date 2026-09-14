@@ -113,6 +113,16 @@ purpose — every commit to this sheet would move it and the sheet would lie abo
 ★ **There is no repair to inspect** — nothing in this block changed product code. What is on screen is
 the behaviour as it stands, on the branch and on master alike.
 
+★★ **YOU ALREADY RACED ONE — AND IT IS NOT THE FAILING CASE.** `STNJ25` (07:07, on this build) is
+`dirt-oval`, **40 racers, seed 9** — track, field and seed all correct. But it ran at **`wild`** where
+the guard grades the shipped **`quiet`** (`pulkLeaderBrake` 0.15 vs 0.1, `pulkChallengerBoost` 0.12 vs
+0.06), and **your stored camera config differs from the shipped defaults on 15 keys** — including
+`OVERVIEW.trackingTC` at **1.5 against 0.25**, and OVERVIEW is the state every flagged frame sits in.
+★ **So the 15 frames were not in that race.** Full comparison:
+[LAST-RACE-MATCH-1](../reports/evolution/LAST-RACE-MATCH-1.md). ★ **To see the guard's race, the stage
+has to be `quiet` and the stored camera config cleared** — both are settings, not code. **I changed
+neither.**
+
 **Look at, in this order:**
 1. ★★ `dirt-oval`, **40 racers, seed 9** — the failing case, your own field size. At about **95%** of
    the race the shot finishes its widen and turns into the close **while the line is still off the

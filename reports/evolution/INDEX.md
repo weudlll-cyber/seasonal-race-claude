@@ -454,6 +454,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [LAST-RACE-MATCH-1.md](LAST-RACE-MATCH-1.md) — **he raced the guard's track, field and seed, and it
+  is still a different race** (2026-09-14, branch `night/2026-09-12b`, **READ-ONLY on his store**,
+  nothing created or deleted, no frames produced). ★★ **VERDICT (b) DIFFERENT RACE.** His most recent
+  stored race `STNJ25` (2026-09-14 07:07 Z, `build_id 52be3ec4` — the tip that was being served, so he
+  DID watch this build) is `dirt-oval`, **40 racers, seed 9**: the guard's three decisive fields all
+  match. ★ **But the stage is `wild` against the guard's shipped `quiet`** — `pulkLeaderBrake`
+  0.15 vs 0.1 and `pulkChallengerBoost` 0.12 vs 0.06, measured from his stored world — **and his
+  stored `cameraConfig` differs from the shipped defaults on 15 keys**, including
+  `OVERVIEW.trackingTC` at 6× (0.25 → 1.5), the state all 15 flagged frames sit in. ★ **The roster is
+  a checked NON-difference**: the lists are 70 vs 40 names but `roster[i % len]` assigns the identical
+  40, verified element by element. ★ **Stopped at Step 4**: nothing re-run, no frames, no guess at what
+  he saw. Store proven untouched — same size, same mtime, same MD5, 13 races before and after.
 - [RUNIN-FRAME-SHAPE-1.md](RUNIN-FRAME-SHAPE-1.md) — **the run-in defect is not this branch's, and the
   repair is an owner decision** (2026-09-14, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, nothing
   built or minted). ★★ **THE DEFECT IS ON MASTER TOO**: the camera, `defaults.js` and the guard are
