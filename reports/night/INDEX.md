@@ -1437,6 +1437,30 @@ and in that commit's message.
   check exited 1. ★ Also named: `engine-reach` calls all ten paths "outside the hull", yet sabotaging
   this module moved both golden races — the hull is narrower than "can change how a race comes out".
 
+- [GAP-BRAKE-SWEEP-1.md](GAP-BRAKE-SWEEP-1.md) — **the gap brake at the owner's settings, ten tracks
+  x 30 races**: a fallback everywhere (0.69%–6.41% of in-window leader frames), and the OFF arm shows
+  it adds no abruptness the race did not already have. It barely moved the worst gaps, because 30–53%
+  of races per track peak outside its window.
+- [GAP-BRAKE-WINDOW-1.md](GAP-BRAKE-WINDOW-1.md) — **the largest lead from the window start to the
+  line**: RE-RACED, because the earlier sweep kept only whole-race maxima and its in-window figure
+  existed on the ON arm alone. At that point the owner's number had **not improved at all** — pooled
+  median and p90 unchanged, net +121.2 px in the wrong direction across the races the brake fired in.
+- [GAP-BRAKE-PARADOX-1.md](GAP-BRAKE-PARADOX-1.md) — **a braked leader cannot be faster, so which
+  premise is false**: P1. The command reached the TARGET and never reached the SPEED, because
+  `_setTarget` restarted the 1000 ms ease on every move above its epsilon and `easeInOutCubic` is
+  4t³ near zero. Commanded below 1.0 on 592 of 592 braked steps; held ABOVE 1.0 on 592 of 592.
+  ★ It also corrected this author: the first instrument sampled render frames, not physics steps.
+
+- [GAP-BRAKE-ARRIVAL-1.md](GAP-BRAKE-ARRIVAL-1.md) — **make the command arrive, then measure it**:
+  the fix is the OMISSION of a restart, not a new mechanism — while the brake is the binding
+  constraint the target moves and the ease's clock is left alone, so it runs to completion. `held −
+  target` 0.141085 → **0.000000**; the leader advanced MORE on 503 of 562 braked steps before, **0 of
+  513** after on ice-track. Across ten tracks the 0.600→finish maximum falls on **8 tracks, rises on
+  none**, pooled worst race 244.4 → **216.6 px**; 33 races better, 1 worse. ★ That one is the first
+  genuine HAND-OVER found — space-sprint seed 2, holder 20 → 18. Still not abrupt: 0 of 10 tracks
+  more abrupt than the servo already is. ★ A false green was found and fixed in this block's own
+  test, and `check-index` caught three earlier reports this author never indexed.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
