@@ -103,7 +103,20 @@ on every track and every race.** You judge that picture.
 
 ## WATCH IT
 
-**http://localhost:4173** — the production build. API on 4000.
+★ **http://localhost:4173** — the production build. Badge **`a48fa27c · night/2026-09-12b · clean`**,
+bundle `assets/index-A36tx8D_.js`. API on 4000 (same commit, `dirty: false`), dev on 5173.
+
+★ **There is no repair to inspect** — nothing in this block changed product code. What is on screen is
+the behaviour as it stands, on the branch and on master alike.
+
+**Look at, in this order:**
+1. ★★ `dirt-oval`, **40 racers, seed 9** — the failing case, your own field size. At about **95%** of
+   the race the shot finishes its widen and turns into the close **while the line is still off the
+   right edge** — 15 frames, about a quarter of a second, then it comes back on its own.
+2. `dirt-oval`, 40 racers, **seed 1** — the control on the same track. Nothing should look different.
+3. `luger-hill`, 100 racers, **seed 9** — the shallower case (82 px, 5 frames, 0.08 s). ★ **If you
+   cannot see it, say so** — that is the cheaper half of the decision.
+4. `luger-hill`, 100 racers, **seed 1** — the control there.
 
 ---
 

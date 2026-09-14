@@ -197,11 +197,81 @@ that is a separate piece with your eye on the picture.
 ## 7 · REPRODUCING IT
 
 - Guard: `node scripts/check-runin-frame.mjs` (41 s, both failing cases in its requirement-5 block).
-- Instruments, in `C:/tmp/rif`, swept at the end: `shape.mjs` (binding term, depths, upper bound),
-  `demand.mjs` (wraps `_lineCeiling` on the live instance — **changes no source**), `seedsweep.mjs`
-  (the 12-seed comparison).
+- Instruments, **kept** in `C:/tmp/rif` rather than swept, because the decision below is open and you
+  may want them re-run: `shape.mjs` (binding term, depths, upper bound), `demand.mjs` (wraps
+  `_lineCeiling` on the live instance — **changes no source**), `seedsweep.mjs` (the seed
+  comparison), and `master/` (the extracted master tree they were compared against).
 - Master was raced from `git archive origin/master client/src scripts` with **`server/data/tracks`
   copied in**, so both trees read the same track records — `server/data/**` is gitignored and an
   extracted tree would otherwise silently fall back to `server/seeds/tracks`.
 - Case, copied from the guard rather than re-chosen: seed 9, 40 racers closed / 100 open, the default
   roster, the browser's derived camera seed, `slowmo: true`.
+
+---
+
+## 8 · FOR HIS EYE — WHAT IS RUNNING AND WHAT TO LOOK AT
+
+★ **There is no repair to inspect. What is on screen is the behaviour as it stands**, on the branch
+and on master alike. What is being asked is whether the endgame's opening bothers you enough to spend
+a camera change on it.
+
+**Running now, all three verified answering:**
+
+| | | |
+|---|---|---|
+| **API** | `http://localhost:4000` | `/api/health` → `{"status":"ok","build":{"commit":"a48fa27c","branch":"night/2026-09-12b","dirty":false}}` |
+| ★ **production build** | **`http://localhost:4173`** | serves `assets/index-A36tx8D_.js`, stamped **`commit a48fa27c · night/2026-09-12b · dirty false`** |
+| dev | `http://localhost:5173` | `[ra-build] serving build a48fa27c · night/2026-09-12b` |
+
+★ **The badge, the bundle and the API agree on `a48fa27c` and all three say `dirty: false`.** The
+first build of the night was stamped `1cc0e57a` and was rebuilt so the pill cannot disagree with HEAD.
+★ **Judge on 4173**, not 5173 (VERIFY-RULES R10); 5173 is up because 4173 answers no API call of its own.
+
+### What to look at, and the control beside it
+
+1. ★★ **`dirt-oval`, 40 racers, seed 9** — the failing case, and your own field size. Watch the
+   **moment the endgame opens, at about 95% of the race**: the shot finishes its widen and turns into
+   the close while the finish line is still off the right-hand edge. It is **15 frames, about a
+   quarter of a second**, and the line then comes back on its own.
+2. **`dirt-oval`, 40 racers, seed 1** — the **control on the same track**. Same camera, same field,
+   nothing lost; it should look exactly as it does today.
+3. **`luger-hill`, 100 racers, seed 9** — the second, shallower case (82 px, 5 frames, 0.08 s). ★ If
+   it is invisible to you, that is a finding worth having: it is the cheaper half of the decision.
+4. **`luger-hill`, 100 racers, seed 1** — the control on that track.
+
+★ **A regression elsewhere would show on 2 and 4.** Nothing in this block changed product code, so
+nothing there should have moved — but they are the frames where it would show if it had.
+
+---
+
+## 9 · SOURCE HYGIENE
+
+★ **NO SOURCE FILE WAS TOUCHED. `git diff 2bcf6530..HEAD -- client/ server/ scripts/` returns
+0 files.** The decision rule stopped before Step 3, so there is nothing to report about reuse,
+dead code or helpers in a repair that does not exist.
+
+| file | before → after | what changed |
+|---|---|---|
+| `reports/evolution/RUNIN-FRAME-SHAPE-1.md` | 0 → 207 | new — this report |
+| `reports/evolution/INDEX.md` | 7695 → 7734 | two corrections registered + this report indexed |
+| `docs/MORNING.md` | 139 → 155 | the blocking section rewritten; both of its stated causes were wrong |
+
+**What was REUSED rather than written.** The diagnosis reconstructs nothing: `scripts/lib/raceDriver.mjs`
+(`resolveIdentity`, `loadTracks`, `buildRace`, `runRace`), the director's own `_finishLineWorldPoint`,
+`_proj.toScreen`, `_framingProbe` and `_lineCeiling`, the shape's own `getPosition`, and
+`COMPANY_FRAME_PCT` from `framingRule.js` — the same sources `check-runin-frame` itself reads. The
+case (seed 9, 40/100 racers, default roster, derived camera seed, `slowmo`) was **copied from the
+guard, not re-chosen.** `demand.mjs` reads `_lineCeiling` by **wrapping it on the live instance**, so
+no source was edited to observe it.
+
+**Removed:** nothing. **Moved out:** nothing.
+
+**Noticed and DELIBERATELY LEFT ALONE** — reported, not removed:
+
+- ★ `scripts/check-runin-frame.mjs`'s `--control` arm is **dead in this tree**. It flips
+  `finishLineFraming`, and that key **does not exist in `defaults.js`** — the arm's own comment says
+  so: *"INERT ON MASTER TODAY: the key does not exist here yet."* It is a guard I was not asked to
+  touch, and removing it is not this repair's business.
+- `.claude/skills/dev-start/SKILL.md` is entirely German. **This is already on the record**, not a new
+  finding: `check-language-closed` carries it as a frozen PRE-EXISTING allowance of 20 lines dated
+  2026-08-15, and the guard is green.
