@@ -634,6 +634,22 @@ the other way.
   (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
   function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
 
+### NIGHT-2026-09-12b — the held comebacker, MERGED, archived as the branch's own record (2026-09-14)
+
+- `archive/night-2026-09-12b` (`PROVISIONAL-SHA`, 2026-09-14) — the night of 2026-09-12b, **49 commits,
+  MERGED into master**, tagged at the branch tip so the branch can be deleted at origin without losing
+  the shape of the work. Its product change is five files: **DIRECTION-AUTHORITY-1** (`983d9201`) makes
+  a staged comebacker a **HELD-then-RELEASED** racer — one authored leg down to a staging rank,
+  released at 0.70 to race the last 30% back — replacing a round trip that fired in 0 of 180 races.
+  Casting goes to 63–90% depending on field size. The **world, world-off, camera and render**
+  fingerprints all moved with it and were minted on this branch; the camera and render moved through
+  `raceCore.js` alone, because `client/src/modules/camera/` is byte-identical to the master it lands
+  on. It also carries the night's measurement reports — BREAKAWAY-FREQUENCY-1, PURSUER-BRAKE-1,
+  GAP-CEILING-BASELINE-1, RUNIN-FRAME-SHAPE-1 and LAST-RACE-MATCH-1 — and **RUNIN-ACCEPTED-1**, which
+  pins by name the two run-in cases whose picture was judged on a production build and accepted on
+  2026-09-14. **The SHA above is provisional and is corrected on master in the follow-up commit that
+  also corrects `mintedOn` (SHIP-CEREMONY step 11).**
+
 ### NIGHT-2026-09-10 — the hold grid, archived because shipped source cites it (2026-09-12)
 
 **A branch is a poor archive**, and this one had become load-bearing: `heroCurveGenerator.js` on
