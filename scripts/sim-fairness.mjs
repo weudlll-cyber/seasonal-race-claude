@@ -4501,6 +4501,28 @@ if (isMain) {
                 // `gapBrakeEnabled` false the brake's first guard returns before this is read. Proven
                 // byte-identical on 300 races and all four fingerprints (PARITY-CLOSE-1).
                 pathLengthPx,
+                // ★ BLIND-SITE-1 — THE BRAKE'S OWN FOUR KEYS AND ITS RATE WINDOW. The path length
+                // above got the brake past its FIRST guard; without these it still never ran,
+                // because `plan._gapBrakeEnabled` is `config.gapBrakeEnabled === true` and this
+                // config carried no such key — measured as `enabled=0` on 8,499 calls
+                // (PARITY-CLOSE-1). The sim then reported fairness for a world the browser does not
+                // race the moment the owner switches the brake on, which is the whole defect.
+                // ★ NO NEW VALUE AND NO NEW FLAG. These read `DEFAULT_RACE_DYNAMICS_CONFIG`, which
+                // at :278 is already the OWNER'S world when `--config` supplied one and the shipped
+                // defaults otherwise — the same source every other dynamics key here uses, and the
+                // same `dynamicsConfig.X ?? default` shape raceCore.js:290-297 uses.
+                // ★ INERT TODAY: the shipped default is `gapBrakeEnabled: false`.
+                gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+                gapBrakeAllowedGapPx:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+                gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+                gapBrakeMaxAuthority:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+                // The brake's rate window is the trajectory ease's own duration, so it reuses the
+                // override already resolved at :582 — the same object `reRollTransitionDuration`
+                // above reads. Seconds, as the store holds it; racePlanner.js:414 converts once.
+                trajectoryTransitionDuration:
+                  DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
               },
               seed,
             );
