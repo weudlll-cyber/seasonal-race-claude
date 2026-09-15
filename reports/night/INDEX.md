@@ -1506,6 +1506,28 @@ and in that commit's message.
   asymmetry is as old as the brake (2026-09-14) and **has never reached master** (`gapBrake` 0 times
   there). The `0.001` literal dates to 2026-05-20 (`596a1b29`) with **no reason on record**.
 
+- [BLIND-SITE-1.md](BLIND-SITE-1.md) — **five harnesses were racing a world no player sees; all five
+  closed, and the browser/sim parity break with them.** ★ The blindness is entirely in the
+  PLAN-CONFIG layer: all 11 `createRaceFromIdentity` call sites already passed all 19 inputs, but
+  five plan-config builders omitted the gap brake's four keys and `trajectoryTransitionDuration`
+  (four also `pathLengthPx`), so `_computeGapLeaderBrake` returned at racePlanner.js:886 and the
+  mechanism could not run at all. ★★ **BOTH arms of the parity guard were blind** —
+  `browserPlanConfig` at goldenRunner.mjs:322 as well as `simPlanConfig` at :379 — which is why the
+  guard could not report it: the two agreed with each other and disagreed with the real browser core.
+  Corrects PARITY-CLOSE-1, which named `simPlanConfig` as the site. ★★ **The two diags under
+  scripts/diag/ ran a PRE-COMBO15 world** (chaosSteer/bandBias ship ON) — every order
+  acceptance-orders.mjs ever printed is from a race no player runs. ★ **Parity now CLOSED**: with the
+  brake on, real/sim/browser all return `1ba41a20` (seed 1) and `5ba78503` (seed 42), the real browser
+  core's values; before, sim and browser-twin returned their brake-OFF hashes unchanged, which is the
+  defect in one line. ★ Inert first: **300/300 races byte-identical**, 6/6 golden hashes, 4/4
+  fingerprints. ★ Guarded by `planConfigMirror.test.js`, **7 sabotages / 5 sites / 7 caught**, green
+  either side of each; its own "did the extractor find anything" assertion caught the extractor
+  reading a function body and returning an empty key set. ★★★ **THE SIXTH SITE: V1 HAD NO KEY.**
+  Added `servoNoiseBlindEnabled: false` rather than reverting, because reverting would answer the
+  owner's open question. **With it off all four fingerprints are BACK TO THE RECORD** (world
+  `b35cf477c09a1116`, world-off `19ccb497041a0dae`, camera `3df640a42e934312`, render
+  `6a84085e79535dd6`) — **there is nothing to mint.**
+
 - [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
   three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
   (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
