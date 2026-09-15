@@ -739,6 +739,54 @@ export function createTrajectoryController(racePlan) {
   }
 
   /**
+   * SERVO-NARROW-1 (V1) — THE RESTART DECISION IGNORES THE NOISE.
+   *
+   * ★ THE FAULT THIS FIXES, measured before it was built. `_setTarget` above restarts the ease
+   * whenever the target moves by more than `TARGET_EPSILON`, and the servo's target carries a
+   * stochastic noise term of `(rng() - 0.5) * 2 * plan._stochasticNoise` (below). Two independent
+   * draws from U(-a, +a) differ by up to 2a = 0.0016, which is LARGER than the 0.001 epsilon — so
+   * the noise ALONE re-triggers the ease. SERVO-FAULT-1 separated the two drivers exactly by
+   * recording the deterministic part and the noise apart: the noise alone could have caused
+   * **86.1%** of all target rewrites, and **95.0%** of the leader's. The consequence, measured over
+   * 19,464,218 commanded racer-steps: the ease reaches a median of 48 ms into its 1000 ms
+   * transition before being restarted, where `easeInOutCubic` is 4t^3 and has travelled 0.04% of
+   * the distance. The racer the servo serves worst is the LEADER — 55.8% arrival against the
+   * field's 69.3% — because while leading he is never at a clamp (a clamped command has its noise
+   * CLIPPED AWAY, stops moving, and therefore arrives: 94.6% for racers 16+ ranks off their place).
+   *
+   * ★ WHAT CHANGES, AND WHAT DOES NOT. The restart is decided on the DETERMINISTIC part of the
+   * command — the same expression without the noise term — compared against the deterministic part
+   * the setter last acted on. The noise STILL REACHES THE SPEED: the target itself is written every
+   * step, so the racer runs the noisy command exactly as before. **Only the decision to restart the
+   * ease changes.** Nothing about what the servo commands is touched, no threshold moves, and there
+   * is no new number here.
+   *
+   * ★ WHY NOT RAISE `TARGET_EPSILON` ABOVE THE NOISE BAND INSTEAD. That was measured too (V3): it
+   * reaches the same arrival, but it makes the worst in-window race WORSE (249.9 px against this
+   * one's 239.3), because it also suppresses small genuine movements of the command. This one
+   * suppresses only the noise. See reports/night/SERVO-NARROW-1.md.
+   *
+   * ★★ IT DOES NOT COMPOSE WITH A MECHANISM THAT MOVES THE TARGET DISCONTINUOUSLY. Once the
+   * transition clock is older than the transition duration, raceCore.js:584-591 returns the target
+   * itself, so the held multiplier tracks the written target step for step — which is what makes
+   * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
+   * the gap brake ON, its engage/release moves the target by its whole authority at once and the
+   * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
+   * against 1.008x for this change alone. **The brake ships OFF; if it is ever switched on, that
+   * interaction is the thing to fix first.**
+   */
+  function _setTargetNoiseBlind(r, newTarget, detTarget, elapsedMs) {
+    const prevDet = r._servoDetTarget ?? 1.0;
+    if (Math.abs(detTarget - prevDet) > TARGET_EPSILON) {
+      r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
+      r.trajectoryMultTransStart = elapsedMs;
+      r._servoDetTarget = detTarget;
+    }
+    // The noise still reaches the speed — the target is written every step either way.
+    r.trajectoryMultTarget = newTarget;
+  }
+
+  /**
    * GAP-BRAKE-RATE-1 — the gap-based leader brake. Returns `{ index, target }` for the racer who
    * should be slowed this frame, or `null` when the brake is off, outside its window, or — the
    * normal case — when no gap has ever opened past the allowance.
@@ -1388,7 +1436,16 @@ export function createTrajectoryController(racePlan) {
         // continuing pull: move the target, leave the ease running (GAP-BRAKE-ARRIVAL-1)
         _retargetInFlight(r, steerTarget);
       } else {
-        _setTarget(r, steerTarget, elapsedMs);
+        // SERVO-NARROW-1 (V1): the restart is decided on the command WITHOUT its noise term. The
+        // deterministic part is the same expression as `rawTarget` above with `noise` removed —
+        // written out here rather than hoisted, so the clamp and its two bounds stay visibly the
+        // same two bounds and no reader has to check whether a shared variable drifted.
+        _setTargetNoiseBlind(
+          r,
+          steerTarget,
+          clamp(1.0 + gain * (error / nActive), minMult, ceilFor),
+          elapsedMs
+        );
       }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
