@@ -137,9 +137,31 @@ the line, and races won clear drop from 39 to 24 in 300. **More contested at the
 The project's instrument is **`scripts/sim-fairness.mjs`** (start-row fairness via
 `scripts/sim/observers/fairness-stats.mjs`). Its pinned methodology is **300 races per track,
 pooled**. A run at that N does not fit the night — the instrument buffers all output and a previous
-attempt burned 925 s of CPU producing nothing. A **short** run was launched on both arms
-(searound, 20 races, `--track-defaults`) and its result is reported in the morning sheet if it
-completed. **It is short by a factor of 15 and must not be read as the pinned gate.**
+attempt burned 925 s of CPU producing nothing. A **short** run was completed on both arms:
+**searound, 20 races per racer type, `--track-defaults`. That is short by a factor of 15 and must NOT
+be read as the pinned gate.**
+
+The instrument's own start-row test is a χ² on finishing position against starting row; **p > 0.05 is
+its own "fair"**. Seven racer types completed on each arm before the night ended:
+
+| racer type | today, χ² / p | V1, χ² / p | band reach (B1 top-5) today → V1 |
+|---|---|---|---|
+| duck | 1.2 / **0.756** | 5.2 / **0.156** | 80% → 84% |
+| dragon | 2.7 / **0.850** | 4.7 / **0.589** | 91% → 86% |
+| rocket | 2.5 / **0.648** | 6.5 / **0.163** | 90% → 89% |
+| koi | 8.0 / **0.237** | 3.5 / **0.742** | 88% → 89% |
+| turtle | 5.1 / **0.528** | 7.0 / **0.320** | 90% → 90% |
+| manta | 10.7 / **0.098** | 6.4 / **0.380** | 84% → 88% |
+| dolphin | 7.7 / **0.257** | 8.5 / **0.201** | 84% → 87% |
+
+★ **The instrument's verdict is the same on both arms: fair.** All 14 rows sit at p > 0.05, so no
+start-row row is flagged on either arm, and **band reach stays well above the 70% the gate asks for
+on every row** (80–91% today, 84–90% under V1). The p-values move in both directions — up on four
+rows, down on three — which at N = 20 is what noise looks like; **nothing here says V1 helps or harms
+fairness, only that it does not break it on this evidence.**
+
+★★ **This is one track of ten and 20 races where the methodology pins 300.** It is reported as a
+short run at every mention and **must not be quoted as the fairness gate.**
 
 ★ Note it covers **the servo change only**. Had the winner included the gap brake it would cover
 nothing at all: `sim-fairness.mjs` contains the string `gapBrake` **zero times** and passes no
