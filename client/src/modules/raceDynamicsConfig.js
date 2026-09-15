@@ -123,6 +123,13 @@ export const RACE_DYNAMICS_RULES = [
     ok: (c) => !(typeof c.gapBrakeEnabled !== 'boolean'),
     why: 'it must be true or false',
   },
+  // SERVO-NARROW-1 (V1) — the placement servo's noise-blind restart decision. Its own switch, for
+  // the same reason the brake has one: the two must be settable apart. Default OFF.
+  {
+    keys: ['servoNoiseBlindEnabled'],
+    ok: (c) => !(typeof c.servoNoiseBlindEnabled !== 'boolean'),
+    why: 'it must be true or false',
+  },
   {
     // Zero or negative would mean 'brake a leader who is level', which is the rank-based behaviour
     // this mechanism exists to avoid — so the allowance must be a positive distance.

@@ -180,6 +180,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       gapBrakeAllowedGapPx: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
       gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
       gapBrakeMaxAuthority: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+      // V1 sits in this group's reset because the pair is what must not be on together: one press
+      // returns BOTH to shipped, which is both OFF.
+      servoNoiseBlindEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
     }));
   }
 
@@ -855,6 +858,24 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
               Gap leader brake enabled
               <InfoTooltip text="Master switch for the gap-based leader brake. OFF = shipped, and OFF is byte-identical to the race you have always had. ON adds the only mechanism in the engine that slows a racer for being too far AHEAD during the outcome phase; everything else there steers him toward his drawn rank and cannot see a gap at all." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={
+                  dynamicsConfig.servoNoiseBlindEnabled ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled
+                }
+                onChange={(e) => setDynamics('servoNoiseBlindEnabled', e.target.checked)}
+                data-testid="servo-noise-blind-toggle"
+              />
+              Servo ignores its own noise (V1)
+              <InfoTooltip text="The placement servo restarts its 1000 ms ease whenever its target moves, and its own random noise moves that target by more than the threshold - so the ease is restarted every 48 ms on average and the command never arrives. ON decides the restart on the command WITHOUT the noise term; the noise still reaches the speed. OFF is the shipped state and is byte-identical to the race you have always had. WARNING: do NOT switch this on together with the gap leader brake above. Apart they are both safe; together, the brake's release at the end of its window lands in a single frame instead of being eased, because this change makes the held value track the written target exactly." />
             </label>
           </div>
           <div className={s.formGroup}>

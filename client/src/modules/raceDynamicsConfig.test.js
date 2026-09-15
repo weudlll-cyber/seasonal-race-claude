@@ -114,6 +114,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapBrakeAllowedGapPx: 90,
       gapBrakeWindowEnd: 0.95,
       gapBrakeMaxAuthority: 0.1,
+      // SERVO-NARROW-1 (V1) — shipped OFF, and it must stay OFF while the gap brake above can be
+      // switched on: the two are unsafe together (BRAKE-JERK-1).
+      servoNoiseBlindEnabled: false,
     });
   });
 
