@@ -34,8 +34,46 @@ question you have left open** ("does V1 go in at all?"). The switch forecloses n
 | 2 — the fairness run | **RUNNING** — both arms, pinned N (300 races/track pooled) |
 | 3 — the rate window | **RUNNING** — 200 ms against 1000 ms, ten tracks, seeds 1–30 |
 | 4 — merge readiness | fingerprints ✓, `engine-reach` ✓. `verify` pending |
-| 5 — a build for your eye | open |
+| 5 — a build for your eye | **SERVED** — see below |
 | 6 — branch tidy | **DONE** — see below |
+
+---
+
+## PIECE 5 — THE BUILD FOR YOUR EYE
+
+**4173 production · 5173 dev · 4000 API**, all three restarted onto tonight's commit. CORS is set for
+both client origins.
+
+```
+[ra-build] start-up: serving build 4bdd8d0c · feat/gap-leader-brake
+/api/health  {"build":{"commit":"4bdd8d0c","branch":"feat/gap-leader-brake","dirty":false}}
+```
+
+Bundle **read off the served page**, not assumed: `dist/assets/index-h4JjUhM-.js` (927.41 kB, gzip
+276.92). `dirty: false` — the tree is clean.
+
+### ★★ THE EYE-TEST SWITCH CANNOT BE LOST THIS TIME
+
+Last night I reverted an uncommitted `gapBrakeEnabled: true` line and you lost the build you were
+going to judge. **There is no line to revert now.** Both switches are real dev-screen checkboxes:
+
+| what | where | shipped state |
+|---|---|---|
+| **Gap leader brake enabled** | Dev Screen → Dynamics Tuning | **OFF** — tick it to see the brake |
+| **Servo ignores its own noise (V1)** | the checkbox directly below it | **OFF — leave it off** |
+
+Ticking a box persists in your browser store and survives every rebuild. The group's **Reset** button
+returns **both** to shipped, because the pair is what must not be on together — and the V1 box's
+tooltip says so in plain words.
+
+**So the build serves the shipped race by default**, byte-identical to the record. You turn the brake
+on yourself, and you can turn it off mid-session to compare.
+
+### What to watch
+
+1. **ice-track, Quick Test seed 3** — your race, the one you have watched all week.
+2. **The largest improvement and a control race the brake never touches** — both named from tonight's
+   own brake-on/brake-off measurement, which is still running; they land in Piece 3's section below.
 
 ---
 
