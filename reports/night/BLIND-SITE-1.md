@@ -137,11 +137,17 @@ exit from a real `sim-fairness.mjs` run:
 
 | | calls | had `pathLengthPx` | **enabled** | **FIRED** |
 |---|---|---|---|---|
-| before this block (already carrying PARITY-CLOSE-1's path length) | 2,262,986 | 2,262,986 | **0** | **0** |
-| after | *(reported in the morning sheet — the run is long; see Piece 2's firing count, which answers the same question inside the fairness run itself)* | | | |
+| before this block (already carrying PARITY-CLOSE-1's path length) | 2,262,986 | 2,262,986 (100%) | **0** | **0** |
+| **after** | 2,263,157 | 2,263,157 (100%) | **2,263,157 (100%)** | **88,979** |
 
+★★ **0 firings to 88,979.** The fairness instrument can now exercise the brake; before, it could not
+fire it once in 2.26 million opportunities.
 ★ The "before" row is the defect in one line: **the path length arrived on 100% of 2.26 M calls and
-the brake still never ran**, because the config carried no `gapBrakeEnabled`.
+the brake still never ran**, because the config carried no `gapBrakeEnabled`. PARITY-CLOSE-1 removed
+one blocker of two; this block removed the second.
+★ The call totals differ by 171 (0.008%) because the brake changes the race and therefore its own
+step count. The figures that carry the finding are the shares, and they are categorical: 0% enabled
+against 100%.
 
 ### `verify` — 20 PASS / 6 FAIL, every failure addressed
 
