@@ -495,6 +495,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   regeneration. ★ **`engine-reach --check` selects 10 of 60 paths and the guards' own `reach` selects
   all four fingerprints** — noting that `docs/SHIP-CEREMONY.md:178-180` would have selected world only,
   because no `modules/camera/` or drawing-path file changed. ★ 41 commits, 60 files, 5 product files.
+- [RELATIONAL-HISTORY-1.md](RELATIONAL-HISTORY-1.md) — **it was never live: born unwired on
+  2026-07-08 and never touched since** (2026-09-14, branch `read/relational-history-1`, **READ-ONLY on
+  history**, nothing built or minted). ★★ **VERDICT (a) NEVER CONNECTED.** `relationalWaypoints`
+  (`heroCurveGenerator.js:383-429`, the photo-finish / front-battle shape the owner expects as the
+  main case) was introduced by **`2a90c4cc`** on 2026-07-08, whose own message says *"NOT wired into
+  the race path (Step 3)"*; its diff is the module plus its test and **no caller**. ★ **Its body has
+  never changed** — `git log -L` returns that one commit — and the file was **never renamed or moved**.
+  ★★ **Over 2 922 commits on every ref and the reflog, only THREE ever contained a diff line with the
+  name**, and none is a call site; an occurrence census at 14 points across its life is **1 definition
+  + 3 test lines + 0 production callers, every time**. ★ The module WAS wired the same day by
+  `ffd0470e`, but that imports `generateHeroCurves` alone (`racePlanner.js:16`). ★ **(b) and (c) are
+  inapplicable, not unlikely** — both need a live caller that never existed, so there is no removal
+  event and nothing for the record to distinguish. ★ **Why family B was left out is NOT DOCUMENTED**;
+  the one report that names it (SEPARATION-TO-TEST-1 §79) catalogues it among 19 dead exports and says
+  that list "should not be read as a to-do". ★ **Cost to reconnect, read-only**: it still fits
+  `soloWaypoints` (also unchanged), but it returns a **PAIR** where the curve loop
+  (`heroCurveGenerator.js:769-779`) builds one curve per member and there is no `addPair`; it bypasses
+  `feasibleTiming`; the guards would vet each half but never the pair's convergence; and a pair costs
+  **two** of `nHeroes`, which `clampIntensityToBudget` already cuts below 3 in 43% of races. All four
+  fingerprints would be selected and move.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
