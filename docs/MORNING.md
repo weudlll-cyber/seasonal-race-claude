@@ -30,11 +30,35 @@ question you have left open** ("does V1 go in at all?"). The switch forecloses n
 |---|---|
 | 1 — blind sites | **DONE**, pushed. → [BLIND-SITE-1](../reports/night/BLIND-SITE-1.md) |
 | 1b — V1's switch | **DONE**, pushed (not in the plan; see above) |
-| 2 — the fairness run | **RUNNING** — both arms, pinned N, 10 tracks in parallel |
-| 3 — the rate window | open |
-| 4 — merge readiness | partly done: all four fingerprints measured (above). `verify` + `engine-reach` pending |
+| 1c — V1's switch reaches the dev screen | **DONE**, pushed |
+| 2 — the fairness run | **RUNNING** — both arms, pinned N (300 races/track pooled) |
+| 3 — the rate window | **RUNNING** — 200 ms against 1000 ms, ten tracks, seeds 1–30 |
+| 4 — merge readiness | fingerprints ✓, `engine-reach` ✓. `verify` pending |
 | 5 — a build for your eye | open |
-| 6 — branch tidy | open |
+| 6 — branch tidy | **DONE** — see below |
+
+---
+
+## PIECE 6 — BRANCHES
+
+**`report/brake-census-1` is merged and gone.** Its index line was the only thing missing, so I wrote
+one and merged `--no-ff`; the branch was deleted at origin BEFORE master was pushed (the order
+`check-tags` Rule B needs). **Master CI is GREEN for the merge SHA `12fae1f3`** — checked with
+`gh run list --branch master`, 1m56s, not assumed from a local pass. `check-index`: 668 reports, 0
+unindexed, 0 dangling.
+
+**Nothing was deleted on containment grounds.** All three remaining branches were checked against
+origin with `git ls-remote`, not the local cache, and none is contained in master — by commit or by
+tree.
+
+| branch | left standing because |
+|---|---|
+| **feat/gap-leader-brake** | this branch — product code, your decision |
+| **feat/remove-prestaging-comebacker** | product code, removes a mechanism — your decision. 2 commits, touches `heroCurveGenerator.js` |
+| **night/2026-09-14-history** | report-only in substance, but it rewrites **174 lines of `docs/MORNING.md`**. Merging it means choosing between two status documents, which is not a mechanical merge and is not mine to decide. It needs one sentence from you: keep the current sheet and take only `BREAKAWAY-HISTORY-1.md` + its index line, or take its sheet. Everything else about it is clean. |
+
+**Nothing was tagged and nothing archived**, so no annotated tag was created and `TAGS.md` is
+untouched.
 
 ---
 
