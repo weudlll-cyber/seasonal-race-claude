@@ -4523,6 +4523,8 @@ if (isMain) {
                 // above reads. Seconds, as the store holds it; racePlanner.js:414 converts once.
                 trajectoryTransitionDuration:
                   DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
+                servoNoiseBlindEnabled:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
               },
               seed,
             );

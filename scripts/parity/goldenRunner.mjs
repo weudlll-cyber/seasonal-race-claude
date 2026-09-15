@@ -395,6 +395,9 @@ function browserPlanConfig(dynamicsConfig, pathLengthPx) {
       DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
     trajectoryTransitionDuration: dynamicsConfig.trajectoryTransitionDuration,
     pathLengthPx,
+    servoNoiseBlindEnabled:
+      dynamicsConfig.servoNoiseBlindEnabled ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
     // COMBO15 fair-arrival mechanism — mirror of raceCore's createRacePlan wiring (kept in sync per the
     // "written twice" note). chaosSteer/bandBias are shipped defaults; OFF ⇒ null in the plan ⇒ pre-combo15.
     chaosSteer: dynamicsConfig.chaosSteer ?? false,
@@ -453,6 +456,8 @@ function simPlanConfig(DYN, pathLengthPx) {
       DYN.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
     trajectoryTransitionDuration: DYN.trajectoryTransitionDuration,
     pathLengthPx,
+    servoNoiseBlindEnabled:
+      DYN.servoNoiseBlindEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
     // COMBO15 (MERGE-SHIP-1): the FAIR-ARRIVAL mechanism is a shipped default — thread it here too so the sim
     // arm matches the real browser arm (raceCore) under the new defaults. Mirrors browserPlanConfig.
     chaosSteer: DYN.chaosSteer ?? false,

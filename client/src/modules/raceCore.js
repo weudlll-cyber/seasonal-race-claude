@@ -295,6 +295,10 @@ export function createRaceFromIdentity(p) {
           dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
         gapBrakeMaxAuthority:
           dynamicsConfig.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+        // SERVO-NARROW-1 (V1), default OFF — it must be switchable apart from the brake above.
+        servoNoiseBlindEnabled:
+          dynamicsConfig.servoNoiseBlindEnabled ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
         // GAP-BRAKE-RATE-1: the brake smooths the gap over the SAME interval the engine already
         // eases every trajectory target over, so it carries no smoothing constant of its own.
         // Passed as seconds, exactly as the store holds it; the planner converts once.

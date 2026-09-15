@@ -39,7 +39,23 @@ function makeRacers(count = N) {
   }));
 }
 
+// ★ V1 IS BEHIND A SWITCH, DEFAULT OFF (defaults.js `servoNoiseBlindEnabled`), so this fixture has
+// to ask for it explicitly. That is not a weakening: the two tests below went RED the moment the
+// switch was added and before this line was, which is the proof that the switch really gates the
+// mechanism rather than leaving it always-on. `makeShippedController` below is the other side of it.
 function makeController(seed = 42) {
+  const plan = createRacePlan(
+    makeRacers(),
+    FINISH_T,
+    TARGET_DUR_MS,
+    { servoNoiseBlindEnabled: true },
+    seed
+  );
+  return { plan, ctrl: createTrajectoryController(plan) };
+}
+
+/** The same fixture with V1 at its SHIPPED default — the path a player runs today. */
+function makeShippedController(seed = 42) {
   const plan = createRacePlan(makeRacers(), FINISH_T, TARGET_DUR_MS, {}, seed);
   return { plan, ctrl: createTrajectoryController(plan) };
 }
@@ -144,6 +160,30 @@ describe('SERVO-NARROW-1 — the servo does not restart its own ease on its own 
     const last = log[log.length - 1][idx];
     const elapsed = 40_000 + (steps - 1) * STEP_MS - last.transStart;
     expect(elapsed).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('★ AT THE SHIPPED DEFAULT THE SWITCH IS OFF — the noise restarts the ease, as it always did', () => {
+    // ★ THE OTHER SIDE OF THE SWITCH, and the one the owner needs. V1 is a full re-baseline he has
+    // not accepted, and it must not be on together with the gap brake (BRAKE-JERK-1). "Default off"
+    // is worth nothing unless something fails when it stops being off, so this is the exact inverse
+    // of the test above, run through `makeShippedController` — the same fixture with no key set.
+    const { plan, ctrl } = makeShippedController();
+    const { racers, log } = driveStatic(ctrl, 80);
+    const idx = pickUnclamped(plan, log, racers);
+    expect(idx).toBeGreaterThanOrEqual(0);
+    expectUnclamped(plan, log, idx);
+
+    const starts = log.map((row) => row[idx].transStart);
+    const restarts = starts.filter((s, i) => i > 0 && s !== starts[i - 1]).length;
+    // The field is static, so the deterministic part cannot move — every restart here is the NOISE
+    // re-triggering the shipped `_setTarget`, which is precisely the behaviour V1 removes.
+    // ★ THE BAR IS SET FROM THE MEASUREMENT, NOT FROM A GUESS. This fixture restarts on 16 of its 79
+    // steps (~20%): `_setTarget` compares against the last ACCEPTED target, and two draws from
+    // U(-0.0008, +0.0008) clear the 0.001 epsilon only part of the time. The first version of this
+    // line asserted ">40" on an assumption that most steps restart, and went red for that reason
+    // rather than for a real one. What discriminates is 16 against V1's exactly 0, so the bar sits
+    // well above zero and well below 16 — it cannot pass with the switch on.
+    expect(restarts).toBeGreaterThan(5);
   });
 
   it('a rank change DOES still restart the ease — the deterministic part is still obeyed', () => {

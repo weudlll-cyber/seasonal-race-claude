@@ -160,6 +160,7 @@ const planConfig = () => ({
   gapBrakeMaxAuthority: DYN.gapBrakeMaxAuthority,
   trajectoryTransitionDuration: DYN.trajectoryTransitionDuration,
   pathLengthPx,
+  servoNoiseBlindEnabled: DYN.servoNoiseBlindEnabled,
 });
 
 console.log(

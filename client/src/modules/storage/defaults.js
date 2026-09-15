@@ -1190,6 +1190,15 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // ceiling would be a much bigger intervention. 10% is his number. The resulting floor (0.90) sits
   // inside [minMult, maxMult], so the two clamps never argue.
   gapBrakeMaxAuthority: 0.1,
+  // ── SERVO-NARROW-1 (V1) — the placement servo's restart decision ignores its own noise.
+  // ★ DEFAULT OFF, and the switch exists because the owner asked to judge the gap brake ALONE.
+  // V1 was built and shipped into this branch's source on 2026-09-14 (012fb90d) with NO key at all,
+  // so it could not be switched off in the dev screen and could not be kept apart from the brake —
+  // and the two together are unsafe (BRAKE-JERK-1: the brake's window-end release lands undamped,
+  // 0.089471 against the shipped maximum of 0.011762). OFF reproduces today's race byte-identically.
+  // ★ WHETHER V1 GOES IN AT ALL IS STILL THE OWNER'S OPEN QUESTION (docs/MORNING.md). This key does
+  // not answer it; it only makes the two mechanisms separable, which they were not before.
+  servoNoiseBlindEnabled: false,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

@@ -398,6 +398,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // gap-based and not rank-based). OFF unless the caller passes the switch, so a config that does
     // not mention it produces today's race byte-identically.
     _gapBrakeEnabled: config.gapBrakeEnabled === true,
+    // SERVO-NARROW-1 (V1) — see `_setTargetNoiseBlind`. `=== true` like the brake's own switch, so a
+    // config that has never heard of the key runs the shipped `_setTarget` path byte-identically.
+    _servoNoiseBlind: config.servoNoiseBlindEnabled === true,
     _gapBrakeAllowedGapPx: config.gapBrakeAllowedGapPx ?? null, // world px, leader->2nd; null = OFF
     _gapBrakeWindowEnd: config.gapBrakeWindowEnd ?? null, // progress fraction; window START is corrStartFrac
     // GAP-BRAKE-RATE-1: the brake's maximum authority, as a fraction of natural speed. The owner's
@@ -1435,17 +1438,23 @@ export function createTrajectoryController(racePlan) {
       if (brakeIsBinding && brakeHeldLast === r.index) {
         // continuing pull: move the target, leave the ease running (GAP-BRAKE-ARRIVAL-1)
         _retargetInFlight(r, steerTarget);
-      } else {
+      } else if (plan._servoNoiseBlind) {
         // SERVO-NARROW-1 (V1): the restart is decided on the command WITHOUT its noise term. The
         // deterministic part is the same expression as `rawTarget` above with `noise` removed —
         // written out here rather than hoisted, so the clamp and its two bounds stay visibly the
         // same two bounds and no reader has to check whether a shared variable drifted.
+        // ★ BEHIND ITS OWN SWITCH, DEFAULT OFF. It must be separable from the gap brake: together
+        // the brake's window-end release lands undamped in one 16 ms step (BRAKE-JERK-1).
         _setTargetNoiseBlind(
           r,
           steerTarget,
           clamp(1.0 + gain * (error / nActive), minMult, ceilFor),
           elapsedMs
         );
+      } else {
+        // The shipped path, unchanged since before V1: the gate tests the value it writes, which is
+        // what makes a jump impossible (0 violations in 378 brake transitions, BRAKE-JERK-1).
+        _setTarget(r, steerTarget, elapsedMs);
       }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
