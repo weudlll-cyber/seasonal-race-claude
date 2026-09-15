@@ -1470,7 +1470,8 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
-- [SERVO-NARROW-SHIP-1.md](SERVO-NARROW-SHIP-1.md) — **V1 is in the shipped source on this branch,
+- [SERVO-NARROW-SHIP-1.md](SERVO-NARROW-SHIP-1.md) — ★ **ITS PARITY FINDING IS RETRACTED by
+  [PARITY-AGE-1](PARITY-AGE-1.md); read that first.** — **V1 is in the shipped source on this branch,
   and it BREAKS BROWSER/SIM PARITY.** ★★ A real defect, not a moved input: the two arms genuinely
   disagree on 2 of 3 golden seeds (seed 1 `1ba41a20` vs `836a46e0`; seed 42 `5ba78503` vs
   `f4cce0cb`; seed 7 matches). First divergence at **physicsTs 55000, max |dt| 2.894e-3** — small,
@@ -1487,6 +1488,23 @@ and in that commit's message.
   16% and races won clear drop 39 → 24 of 300 — **more contested at the line**. ★ **V1 has no key
   and cannot be switched off in the dev screen**, and **no byte-identical control race exists**
   (0 of 300; 190 of 300 change winner).
+
+- [PARITY-AGE-1.md](PARITY-AGE-1.md) — **neither (A) nor (B): V1 alone keeps parity, and the crack is
+  the SIM's blindness to the gap brake.** ★★ **Retracts SERVO-NARROW-SHIP-1's (b) finding.** With the
+  shipped defaults (brake OFF) V1 keeps byte-parity exactly (both arms `836a46e0`); the three
+  `goldenRealArm.test.js` failures are all on **line 57, the pinned winner**, not the hash — category
+  (a). ★ **(A) excluded twice**: on the pre-V1 tree every traced quantity is bit-identical across
+  **81,529 / 79,270 / 81,992** servo-write records **including `rawTarget`, the command before the
+  epsilon** — there is nothing for a quantizer to hide; and driving `TARGET_EPSILON` to **0** keeps the
+  arms in exact agreement on all three seeds (the race moves, both arms move together). ★ The real
+  cause reproduces exactly (`1ba41a20` vs `836a46e0`) only with **brake ON + V1 ON**: the sim's
+  `createRacePlan` (sim-fairness.mjs:4436) passes **no `pathLengthPx`** and the file contains
+  `gapBrake` **zero times**, so the brake returns at racePlanner.js:886 before reading anything.
+  Pre-V1 the brake's command never arrived, so the asymmetry had no consequence; V1 makes it arrive.
+  ★ **The browser arm is right** — the sim silently omits a shipped mechanism. ★ The golden fixtures
+  are NOT compromised: they are recorded with the brake off, where the arms agree bit-for-bit. ★ The
+  asymmetry is as old as the brake (2026-09-14) and **has never reached master** (`gapBrake` 0 times
+  there). The `0.001` literal dates to 2026-05-20 (`596a1b29`) with **no reason on record**.
 
 - [PICK-WINNER-1.md](PICK-WINNER-1.md) — **the brake still contributes with the servo repaired, but
   V1 and the brake TOGETHER break the abruptness rule.** Four arms, N=300 each, all proved inert when

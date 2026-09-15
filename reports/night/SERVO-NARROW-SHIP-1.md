@@ -5,7 +5,26 @@ store was not opened.
 
 ---
 
-## ★★ THE FIRST LINE, BECAUSE IT IS A REAL DEFECT (b)
+## ★★ RETRACTED 2026-09-15 — THE (b) FINDING BELOW IS WRONG
+
+**[PARITY-AGE-1](PARITY-AGE-1.md) retracts the parity finding in this section.** With the shipped
+defaults — the gap brake OFF — **V1 keeps browser/sim byte-parity exactly** (both arms `836a46e0` on
+seed 1), and the hash and finish-order assertions pass on all three seeds. The three
+`goldenRealArm.test.js` failures are all on **line 57, the pinned winner** (`expected 38 to be 12`),
+which is a category **(a)** moved input like every other.
+
+**My error:** I measured the hashes while an uncommitted line had the gap brake switched on for the
+eye test, reverted that line, saw the same four test names still failing, and carried the conclusion
+forward **without re-running the hash check**. The divergence reproduces only with **brake ON *and*
+V1 ON together**, and its cause is that `sim-fairness.mjs` cannot see the gap brake at all — an
+asymmetry older than V1 and confined to this branch.
+
+**So `verify`'s six failures are SIX (a) MOVED INPUTS and no (b).** The section below is left
+unedited as the record of what was claimed.
+
+---
+
+## ★★ THE FIRST LINE, BECAUSE IT IS A REAL DEFECT (b) — ★ RETRACTED, SEE ABOVE
 
 **V1 breaks the browser/sim byte-parity guarantee on 2 of the 3 golden seeds.** This is *not* the
 "moved pinned winner" the previous counterfactual produced — the two arms now genuinely disagree:

@@ -5,26 +5,38 @@ not merged.** Master was touched only by five read-only report merges, both push
 
 ---
 
-## ★★ FIRST LINE — A REAL DEFECT (b)
+## ★★ FIRST LINE — I WAS WRONG LAST NIGHT, AND THIS CORRECTS IT
 
-**V1, now in the shipped source on this branch, BREAKS BROWSER/SIM BYTE-PARITY on 2 of the 3 golden
-seeds.** This is not the "pinned winner moved" of earlier nights — the two arms genuinely disagree:
+**The "V1 breaks browser/sim parity" finding is RETRACTED.** With the shipped defaults — the gap brake
+OFF — **V1 keeps byte-parity exactly** (both arms `836a46e0` on seed 1), and the three
+`goldenRealArm.test.js` failures are all on **line 57, the pinned winner** (`expected 38 to be 12`) —
+category **(a)**, a moved input, like every other. **So `verify`'s six failures are six (a) moved
+inputs and no (b).** → [PARITY-AGE-1](../reports/night/PARITY-AGE-1.md)
 
-| seed | real arm | sim arm | |
-|---|---|---|---|
-| 1 | `1ba41a20` | `836a46e0` | **DIFFER** |
-| 7 | `a9c70e65` | `a9c70e65` | match |
-| 42 | `5ba78503` | `f4cce0cb` | **DIFFER** |
+**My error:** I measured the hashes while an uncommitted line had the gap brake switched on for your
+eye test, reverted that line, saw the same four test names still failing, and carried the conclusion
+forward without re-running the hash check.
 
-First divergence at **physicsTs 55000, max &#124;Δt&#124; = 2.894 × 10⁻³** — small, late, growing: the
-signature of amplified round-off, not a structural difference. **Two causes, and the instrument
-cannot separate them, so I did not choose:** either the 0.001 epsilon was *quantizing away* a
-sub-epsilon difference that already existed between the arms (making the defect older than V1, merely
-exposed by it), or V1 introduces a new one. Both arms call the same `stepRacePhysics`, so there is no
-un-mirrored mechanics change to point at.
-→ [SERVO-NARROW-SHIP-1](../reports/night/SERVO-NARROW-SHIP-1.md)
+**What is actually true, settled by measurement rather than plausibility:**
 
-**This is why V1 is not a merge candidate as it stands.**
+- **The epsilon was never holding parity together.** On the pre-V1 tree every traced quantity is
+  bit-identical across **81,529 / 79,270 / 81,992** servo-write records per race — including
+  `rawTarget`, the command *before* the epsilon — so there was nothing for a quantizer to hide. And
+  driving `TARGET_EPSILON` to **0** leaves the arms in exact agreement on all three seeds.
+- **The real crack is that the sim cannot see the gap brake at all.** `sim-fairness.mjs` passes no
+  `pathLengthPx` and contains `gapBrake` zero times, so the brake returns at its guard before reading
+  anything. The divergence reproduces exactly (`1ba41a20` vs `836a46e0`) only with **brake ON *and*
+  V1 ON**. Pre-V1 the brake's command never arrived, so the asymmetry had no consequence; V1 makes it
+  arrive.
+- **The browser arm is the right one** — the sim silently omits a shipped mechanism.
+- **The golden fixtures are not compromised**: they are recorded with the brake off, where the arms
+  agree bit-for-bit.
+- **It has never reached master** (`gapBrake` appears 0 times there), so master's parity was never
+  resting on this.
+
+★ **One sentence on the fix, then I stopped:** the sim's `createRacePlan` call
+(`sim-fairness.mjs:4436`) should pass `pathLengthPx`, which would close the asymmetry *and* let the
+fairness instrument measure the brake at all. **Nothing was repaired.**
 
 ---
 
@@ -39,10 +51,10 @@ un-mirrored mechanics change to point at.
 | wrong-side share **10.2% → 5.1%** | all four fingerprints move |
 | median in-window lead **81.4 → 70.9 px** | one golden race moves (−0.256 s) |
 | winning margin **46.6 → 39.3 px**, field 83 px tighter at the line | **worse than today on four tracks**, mountainstreet by +45.8 px |
-| | **the parity break above** |
+| | *(the parity break reported here last night is retracted — see above)* |
 
-It **does not clear the bar** this chain set: its largest single-step multiplier move is **1.008×**
-the shipped maximum. It is the closest of three arms by a wide margin (the other two were 7×).
+**Parity is no longer a blocker.** It **does not clear the bar** this chain set: its largest
+single-step multiplier move is **1.008×** the shipped maximum. It is the closest of three arms by a wide margin (the other two were 7×).
 **It has no key and cannot be switched off in the dev screen** — to compare, check out `363543e3`.
 
 ### 2. The gap brake: keep it, even with the servo repaired
@@ -51,12 +63,13 @@ the shipped maximum. It is the closest of three arms by a wide margin (the other
 worse on 0** (t = −3.78 / −4.45). It fires in 105 of 300 races instead of 137 — less work, not no
 work. → [PICK-WINNER-1](../reports/night/PICK-WINNER-1.md)
 
-### 3. ★★ But V1 and the brake must not be switched on together
+### 3. ★★ But V1 and the brake must not be switched on together — now for TWO reasons
 **7.6× and 7.1× the largest single-step multiplier move**, where V1 alone costs 1.008× and the brake
 alone costs nothing. Mechanism: V1 makes the held value track the target exactly, so the brake's
 engage/release moves the multiplier by its whole 10% ceiling **in one 16 ms step**. **V1 removes the
 churn that was accidentally smoothing the brake's edges.** Safe apart, unsafe together — only a
-combined arm could have shown it.
+combined arm could have shown it. ★ **And the same pair is the only thing that breaks browser/sim
+parity** (PARITY-AGE-1). Two independent reasons, one conclusion.
 
 ---
 
@@ -89,7 +102,7 @@ every racer on every step: 12,000 racer-slots, all of them.
 | piece | result |
 |---|---|
 | 1–2 | Four arms, N=300 each, all inert when off (10/10, brake OFF and ON). **The brake still contributes**; **V1 + brake costs 7×**; **no arm clears the bar**, closest is ARM 1 (V1 alone). → [PICK-WINNER-1](../reports/night/PICK-WINNER-1.md) |
-| 3 | V1 shipped on the branch. `engine-reach --check` selects `racePlanner.js` (1 of 1). All four fingerprints measured and moved, **nothing minted**. `verify` 19 PASS / 6 FAIL — five **(a)** moved inputs, one **(b)**: the parity break. New test, three sabotages, each caught by its own named test. → [SERVO-NARROW-SHIP-1](../reports/night/SERVO-NARROW-SHIP-1.md) |
+| 3 | V1 shipped on the branch. `engine-reach --check` selects `racePlanner.js` (1 of 1). All four fingerprints measured and moved, **nothing minted**. `verify` 19 PASS / 6 FAIL — **all six (a) moved inputs** (the (b) reported here first is retracted, see the top). New test, three sabotages, each caught by its own named test. → [SERVO-NARROW-SHIP-1](../reports/night/SERVO-NARROW-SHIP-1.md), corrected by [PARITY-AGE-1](../reports/night/PARITY-AGE-1.md) |
 | 4 | The build above. |
 | 5 | **Five report-only branches merged to master, CI green on both pushes.** Two left standing on purpose (below). |
 
