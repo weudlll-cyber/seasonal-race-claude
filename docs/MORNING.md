@@ -33,9 +33,43 @@ question you have left open** ("does V1 go in at all?"). The switch forecloses n
 | 1c — V1's switch reaches the dev screen | **DONE**, pushed |
 | 2 — the fairness run | **RUNNING** — both arms, pinned N (300 races/track pooled) |
 | 3 — the rate window | **RUNNING** — 200 ms against 1000 ms, ten tracks, seeds 1–30 |
-| 4 — merge readiness | fingerprints ✓, `engine-reach` ✓. `verify` pending |
+| 4 — merge readiness | fingerprints ✓, `engine-reach` ✓, brake sabotage ✓. `verify` pending |
 | 5 — a build for your eye | **SERVED** — see below |
 | 6 — branch tidy | **DONE** — see below |
+
+---
+
+## PIECE 4 — WHAT A YES WOULD COST (prepared, not done)
+
+**Nothing minted, nothing merged, nothing tagged.**
+
+### What would be minted: **nothing**
+All four fingerprint roles measure exactly what the record holds (top of this sheet). The brake ships
+OFF and V1 now ships OFF, so the default race is the record's race. **If you switch the brake on and
+keep it on, that is when a mint is owed** — not for the merge.
+
+### `engine-reach --check`, with the changed paths passed EXPLICITLY
+(Without paths it reads the worktree and reports "none of 0 paths", which is not a clearance.)
+**8 of 37 changed paths can change the race:** `raceCore.js`, `raceDynamicsConfig.js`,
+`racePlanner.js`, `storage/defaults.js`, `diag/acceptance-orders.mjs`, `diag/micro-divergence.mjs`,
+`parity/goldenRunner.mjs`, `sim-fairness.mjs`. Every one of them is answered by the byte-identity
+proof and the four unmoved fingerprints.
+
+### ★ The brake's own tests — and one that did NOT hold
+Five sabotages on the brake's law. **Four were caught. One was not**, and that is a finding:
+replacing the whole shrinking-gap clause with "keep the strength" — a brake that never gives
+authority back, never fades and never releases — left **all 18 tests green**. The give-back
+assertion only checked that the new law surrenders LESS than the old size law did, and a law that
+surrenders *nothing* surrenders less than anything.
+
+Fixed by asserting the law's own identity, `dS/S = dGap/gap`, instead of a one-sided inequality.
+**Sabotage is now 5 of 5 caught**, green either side of each. Test-only change; no product source
+touched. This is the third time a test in this area has passed under its own sabotage, so I now run
+the sabotage rather than trusting a green suite.
+
+### Still to run
+`verify`, with every failure classified (a) or (b). It is queued behind the two measurement runs that
+are using the machine.
 
 ---
 
