@@ -1470,6 +1470,22 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [PICK-WINNER-1.md](PICK-WINNER-1.md) — **the brake still contributes with the servo repaired, but
+  V1 and the brake TOGETHER break the abruptness rule.** Four arms, N=300 each, all proved inert when
+  off (10/10, brake OFF and ON). ★ **The brake still does work the servo does not**: against V1 alone
+  it takes another **−17.1 px** (1000 ms) / **−23.5 px** (200 ms) off the worst in-window race,
+  better on 39/48 races and **worse on 0** (t = −3.78 / −4.45). It fires in 105/300 with the servo
+  repaired against 137/300 without — less work, not no work. ★★ **But the combined arms cost 7.6x and
+  7.1x the largest single-step multiplier move, where V1 alone costs 1.008x and the brake alone
+  costs nothing.** Mechanism named: V1 makes the held value track the target exactly, so the brake's
+  engage/release discontinuity (its whole 10% ceiling) lands **undamped in one 16 ms step** — V1
+  removes the churn that was accidentally smoothing the brake's edges. **The two are safe apart and
+  unsafe together; only a combined arm could have shown it.** ★ **No arm clears the bar**, all three
+  failing on visibility alone; the closest is **ARM 1 (V1, brake OFF) at 1.008x**, taken into Piece 3
+  labelled as not clearing. ★ The pooled maximum hides a mixed picture — ARM 1 is **worse than today
+  on four tracks**, mountainstreet by +45.8 px. Race shape: lead changes unchanged, but the winning
+  margin falls 16% and races won clear drop 39 → 24 of 300 — **more contested at the line**.
+
 - [BRAKE-WINDOW-1.md](BRAKE-WINDOW-1.md) — **200 ms wins on all ten tracks for nothing, and the
   fairness instrument cannot see the brake at all.** At his settings the 200 ms rate window gives the
   smallest worst race on **10 of 10 tracks** (monotone in the window), taking the pooled in-window
