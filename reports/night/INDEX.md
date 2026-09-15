@@ -776,6 +776,19 @@ directions.
 - [CONFIG-DIFF-1.md](CONFIG-DIFF-1.md) — store what he chose, not what happened to be true.
 - [PAIR-REACH-ANALYSIS.md](PAIR-REACH-ANALYSIS.md) — the bound exists and the Y axis is the strong one; the cheaper win is a duplicate.
 - [FALLBACK-42-TRIAGE.md](FALLBACK-42-TRIAGE.md) — 41 of the 42 cannot fire; the one that can fires every render.
+- [BRAKE-CENSUS-1.md](BRAKE-CENSUS-1.md) — **nothing in the shipped configuration brakes a racer FOR
+  LEADING after progress 0.60.** A read-only census of every mechanism that can slow a leader, cap a
+  gap, or pull a leader toward the field, over the whole master tree. The one that does — the PULK
+  contest director's leader brake at `raceGovernor.js:170` — is switched off at `pulkEnd`, which
+  resolves to 0.60; the leader's `governorMult` is exactly 1.0000 in 100% of frames after it
+  (N = 2579 / 2186 / 2206 leader frames across three races). ★ Two things still act on a leader
+  after 0.60 and neither is a leader brake: the OUTCOME servo steers him toward his DRAWN rank (a
+  flat −5% one rank ahead, not enough in either race), and the gap-cap re-roll bias can only cut his
+  next DRAW, at one of his own re-roll events. ★ A purpose-built brake for exactly the missing
+  window [0.60, 0.92] already sat in the tree at `racePlanner.js:1130-1169` and **could not fire in
+  the browser** — its two config keys appeared nowhere in `defaults.js`. Measured on master
+  `7eb65c82`; the branch replay ran on `feat/remove-prestaging-comebacker` `5c9e050e`.
+
 - [BUILD-PILL-TRUTH.md](BUILD-PILL-TRUTH.md) — the .git watch never fired once; Vite ignores .git, so it is polled now.
 - [SPREAD-FIELD-SWEEP.md](SPREAD-FIELD-SWEEP.md) — the company guarantee binds in the PACK, not on a spread field; the premise was wrong, the value is not.
 - [SMALL-DEBTS.md](SMALL-DEBTS.md) — a dead field that was keeping two imports alive, a constant whose name said the opposite of what it did, and a routing section pointing at a deleted table.
