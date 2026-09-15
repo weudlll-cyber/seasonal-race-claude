@@ -467,6 +467,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   chosen. ★ **Why two frames a second is NOT answered and deliberately not guessed at** — the perf
   probe (`?perfprobe=1`) exists and belongs to a production run.
 
+- [BVGG8Z-READ-1.md](BVGG8Z-READ-1.md) — **the steering did not make the gap; it was braking him while
+  the gap grew** (2026-09-14, branch `read/bvgg8z-1`, **READ-ONLY**, nothing built or minted). The
+  owner's own race `BVGG8Z` replayed **40/40 positions and 40/40 finish times to the millisecond**.
+  ★★ **THE WINNER Thunder IS a cast `comebacker`, and the STAGED one** (`releaseAt` 0.70), **drawn 2nd
+  and finished 1st** — he overshot his drawn place by racing after release, which the exclusion at
+  `heroCurveGenerator.js:654` neither does nor can prevent, because `winnerIdx` there is the DRAWN
+  rank-1 racer (`heroCurveGenerator.js:562`). ★★ **AND THE PUBLISHED "0 OF 717 CAST COMEBACKERS ARE
+  DRAWN FIRST" IS CONTRADICTED IN THIS RACE**: Blitz is cast `comebacker` AND drawn 1st, through the
+  fall-back path at `heroCurveGenerator.js:672`, which carries **no `winnerIdx` exclusion at all**.
+  ★★ **THE STEERING COST HIM DISTANCE: −296 world px, −2.22%** of his advance, and over the 1 335
+  frames he led it commanded a brake on **836** of them (min 0.9501, mean 0.9719) because rank 1 is
+  ABOVE his drawn 2 (`racePlanner.js:1017`) — **the gap grew from 9.8 px to 202.2 px anyway**, with
+  him pinned at `spreadFactor` 1.08134, which is `spreadMax` exactly. ★★ **NOTHING WAS ASKED TO
+  CHASE**: `pulkChallengerBoost`/`pulkLeaderBrake` were out of window (`raceGovernor.js:181-187`,
+  window ends 0.60, he led from 0.838), and of the 8 gap-reroll rolls the one that fired while he led
+  saw **9.8 px against a 19.16 px threshold** while the one that would have seen 177.5 px **settles
+  67 ms after he had already crossed**. ★ No `sovereign-lead` was cast; no other racer exceeded
+  69.5 px. ★ This tool does **not** carry the `finishT` division error.
 - [LAST-RACE-MATCH-1.md](LAST-RACE-MATCH-1.md) — **he raced the guard's track, field and seed, and it
   is still a different race** (2026-09-14, branch `night/2026-09-12b`, **READ-ONLY on his store**,
   nothing created or deleted, no frames produced). ★★ **VERDICT (b) DIFFERENT RACE.** His most recent
