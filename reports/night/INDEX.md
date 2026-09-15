@@ -1470,6 +1470,24 @@ and in that commit's message.
   having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
   the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
 
+- [SERVO-NARROW-SHIP-1.md](SERVO-NARROW-SHIP-1.md) — **V1 is in the shipped source on this branch,
+  and it BREAKS BROWSER/SIM PARITY.** ★★ A real defect, not a moved input: the two arms genuinely
+  disagree on 2 of 3 golden seeds (seed 1 `1ba41a20` vs `836a46e0`; seed 42 `5ba78503` vs
+  `f4cce0cb`; seed 7 matches). First divergence at **physicsTs 55000, max |dt| 2.894e-3** — small,
+  late and growing, the signature of amplified round-off. **Two causes it cannot separate and does
+  not choose between**: the 0.001 epsilon was QUANTIZING AWAY a pre-existing sub-epsilon difference
+  which V1 now exposes (latent and older than V1), or V1 introduces a new one. Both arms call the
+  same `stepRacePhysics`, so there is no un-mirrored mechanics change to repair. ★ `verify` 19
+  PASS / 6 FAIL, every failure addressed: four fingerprints, one golden race (`closed-garden-path-12`,
+  Flash −0.256 s) surfacing in two guards — all **(a)** moved inputs — and the parity break **(b)**.
+  Nothing minted, no golden race re-recorded. ★ The new test's fixture **failed to separate its own
+  sabotage on the way in** (it picked a racer pinned at 0.8503 against a 0.85 floor, the same clamp
+  hazard SERVO-FAULT-1 measured); corrected to a fifth-of-a-rank margin and all three sabotages now
+  turn their own named test red. ★ Race shape: lead changes unchanged, but the winning margin falls
+  16% and races won clear drop 39 → 24 of 300 — **more contested at the line**. ★ **V1 has no key
+  and cannot be switched off in the dev screen**, and **no byte-identical control race exists**
+  (0 of 300; 190 of 300 change winner).
+
 - [PICK-WINNER-1.md](PICK-WINNER-1.md) — **the brake still contributes with the servo repaired, but
   V1 and the brake TOGETHER break the abruptness rule.** Four arms, N=300 each, all proved inert when
   off (10/10, brake OFF and ON). ★ **The brake still does work the servo does not**: against V1 alone
