@@ -302,6 +302,19 @@ describe('GAP-BRAKE-RATE-1 — the strength is a CHANGE, not a size', () => {
       const sizeLaw = -b.dGapPx / (b.smoothedGapPx - ALLOWED_PX); // what the old ramp would give back
       // a wide margin: the two differ by a factor gap/(gap-allowance), at least 4.3x in this band
       expect(measured * 1.05).toBeLessThan(sizeLaw);
+      // ★ AND THE OTHER SIDE OF IT, added 2026-09-16 after a sabotage walked straight through.
+      // The line above is a ONE-SIDED inequality: replace the whole give-back clause with
+      // `_gapBrakeStrength = _gapBrakeStrength` — a brake that NEVER releases — and `measured` is 0,
+      // so `0 < sizeLaw` passes and all 18 tests stayed green. Less than the size law is only half
+      // the claim; the law must also give back the RIGHT amount. That is its identity,
+      //     dS/S = dGap / gap,
+      // read on the smoothed gap the law actually uses: `a.smoothedGapPx` IS the `gapBefore` of
+      // step b, so the expected give-back is exactly -b.dGapPx / a.smoothedGapPx. Asserting the
+      // identity rather than merely `measured > 0` is what makes this catch a WRONG give-back as
+      // well as a missing one.
+      const identity = -b.dGapPx / a.smoothedGapPx;
+      expect(measured).toBeGreaterThan(0);
+      expect(measured).toBeCloseTo(identity, 9);
       tested++;
     }
     expect(tested).toBeGreaterThan(100); // the assertion above really ran
