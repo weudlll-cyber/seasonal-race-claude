@@ -1506,6 +1506,29 @@ and in that commit's message.
   asymmetry is as old as the brake (2026-09-14) and **has never reached master** (`gapBrake` 0 times
   there). The `0.001` literal dates to 2026-05-20 (`596a1b29`) with **no reason on record**.
 
+- [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
+  three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
+  (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
+  0.011762 / max 0.011762, N=300), by an independently written instrument. ★ **RELEASE only, never
+  engage**: 0 of **333** engagements on either servo exceeds the shipped maximum, because the entry
+  seed is proportional to the gap's excess over the allowance (racePlanner.js:933) so engaging is
+  continuous by design. ★ **The cause is the restart DECISION, not the stale clock** — the clock was
+  already stale at 59.3% of brake transitions BEFORE V1 (N=378). ★★ **The invariant**: at every brake
+  transition the shipped setter either restarts the ease or moves the target by at most
+  TARGET_EPSILON — **0 violations in 378**, including releases whose target moved 0.0338 and still
+  moved the multiplier by exactly 0.00000000. **V1 breaks it: 17 of 288.** The owner is
+  `_setTargetNoiseBlind`, whose write at **racePlanner.js:786 is OUTSIDE the restart gate at :780**,
+  and the gate tests `detTarget` (racePlanner.js:1446) — the servo expression alone, **which does not
+  contain the brake**. `_retargetInFlight` is EXONERATED. ★ The trigger is the **0.95 window end**
+  (racePlanner.js:892-895), not the gap closing — the gap was still 166 px against a 90 px allowance.
+  ★★ **B4 corrects my own framing**: the 7.6x is a ratio of MULTIPLIER moves, and the multiplier is
+  one factor of a product (raceCore.js:698). In world px/s the jump is **+16.35 (+9.8%)**, which the
+  shipped game matches or beats on **1 racer-step in 139** (372,716 of **51,943,283** sustained
+  7-frame windows) — and on searound it is **below that track's own p99 (24.46)** and 9.3x smaller
+  than its max (151.53). The game already steps speed instantly by +4.0% (drafting, raceCore.js:669)
+  and −5.5% (avoidance, :676-678), **523,688 times in 300 races**. ★ NOT claimed: exposure (it lands
+  on the LEADER at 95%, where the camera looks) and that an eye agrees with a percentile.
+
 - [PARITY-CLOSE-1.md](PARITY-CLOSE-1.md) — **`pathLengthPx` now reaches the sim's plan and is provably
   inert, but it does NOT close the parity break, because there are TWO blind sites and this is not the
   one the guards use.** ★ **A2 passed completely**: 300/300 races byte-identical across 10 tracks x

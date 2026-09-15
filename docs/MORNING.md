@@ -72,7 +72,32 @@ single-step multiplier move is **1.008×** the shipped maximum. It is the closes
 worse on 0** (t = −3.78 / −4.45). It fires in 105 of 300 races instead of 137 — less work, not no
 work. → [PICK-WINNER-1](../reports/night/PICK-WINNER-1.md)
 
-### 3. ★★ But V1 and the brake must not be switched on together — now for TWO reasons
+### 3. ★★ V1 and the brake together — BOTH reasons have now been re-measured, and BOTH are weaker than I wrote
+
+**Read [BRAKE-JERK-1](../reports/night/BRAKE-JERK-1.md) before acting on the paragraph below.** The
+jerk is real and I have found the line that owns it, but **it is not visible**, and the parity reason
+is not what I said either.
+
+- **The jerk is RELEASE only, never engage** — 0 of **333** brake engagements on either servo exceeds
+  the shipped maximum. Engaging is continuous by design.
+- **It is owned by one line**: `_setTargetNoiseBlind` writes the target at **racePlanner.js:786,
+  OUTSIDE** its restart gate at **:780**, and that gate tests `detTarget` (**:1446**) — the servo
+  expression alone, **which does not contain the brake**. The shipped `_setTarget` puts the write
+  INSIDE the gate, which is why it cannot jump: **0 violations in 378 transitions**, against V1's
+  **17 of 288**.
+- **★★ It is NOT VISIBLE.** The 7.6x is a ratio of TRAJECTORY-MULTIPLIER moves, and the multiplier is
+  one factor of a product (raceCore.js:698). In world px/s the jump is **+16.35 (+9.8%)** — which the
+  shipped game itself matches or beats on **one racer-step in 139** (N = 51,943,283), and which on
+  searound sits **below that track's own 99th percentile**. The game already steps a racer's speed
+  instantly by **+4.0%** (drafting) and **−5.5%** (avoidance), **523,688 times in 300 races**.
+  **The visibility bar this chain used measured the multiplier, not anything a viewer sees.**
+- **And the parity reason was also incomplete** — see
+  [PARITY-CLOSE-1](../reports/night/PARITY-CLOSE-1.md).
+
+**What I did NOT establish:** that the jerk is harmless. It lands on the **leader at 95% progress**,
+where the camera is most likely pointed, and a percentile is not an eye. **Nothing was repaired.**
+
+### 3a. The original paragraph, kept so the change of mind is visible
 **7.6× and 7.1× the largest single-step multiplier move**, where V1 alone costs 1.008× and the brake
 alone costs nothing. Mechanism: V1 makes the held value track the target exactly, so the brake's
 engage/release moves the multiplier by its whole 10% ceiling **in one 16 ms step**. **V1 removes the
