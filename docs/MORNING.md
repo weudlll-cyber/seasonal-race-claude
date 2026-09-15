@@ -38,6 +38,15 @@ forward without re-running the hash check.
 (`sim-fairness.mjs:4436`) should pass `pathLengthPx`, which would close the asymmetry *and* let the
 fairness instrument measure the brake at all. **Nothing was repaired.**
 
+★★ **That sentence has since been MEASURED, and it was incomplete — see
+[PARITY-CLOSE-1](../reports/night/PARITY-CLOSE-1.md).** Passing `pathLengthPx` at that call site is
+correct and provably inert (**300/300 races byte-identical, 6/6 golden hashes and all four
+fingerprints unmoved**), and it provably works (**0 of 8,511 brake calls carried the path length
+before, 8,499 of 8,499 after**). **But it does not close the parity break**: there are **two** blind
+sites, and the guards use the other one — `simPlanConfig` at **goldenRunner.mjs:766**, which carries
+neither `pathLengthPx` nor any `gapBrake` key. With brake+V1 on the arms still differ exactly as
+before. **Nothing was repaired there either.**
+
 ---
 
 ## ★ WHAT YOU DECIDE

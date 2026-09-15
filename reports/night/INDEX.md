@@ -1506,6 +1506,24 @@ and in that commit's message.
   asymmetry is as old as the brake (2026-09-14) and **has never reached master** (`gapBrake` 0 times
   there). The `0.001` literal dates to 2026-05-20 (`596a1b29`) with **no reason on record**.
 
+- [PARITY-CLOSE-1.md](PARITY-CLOSE-1.md) — **`pathLengthPx` now reaches the sim's plan and is provably
+  inert, but it does NOT close the parity break, because there are TWO blind sites and this is not the
+  one the guards use.** ★ **A2 passed completely**: 300/300 races byte-identical across 10 tracks x
+  seeds 1-30 against a reference worktree, **6/6 golden hashes unmoved** both arms, and **all four
+  fingerprints unmoved** (world `0c83ed775f93f21f`, world-off `31339297edb48ede`, camera
+  `5aa59d7473823afe`, render `caa3fee8ad7f2280`) — the world fingerprint spawns `sim-fairness.mjs`, so
+  it exercises the changed line directly. **Nothing minted.** ★ **A1 provably works**: a tally inside
+  `_computeGapLeaderBrake` during a real sim run reads **0 of 8,511 calls carrying `pathLengthPx`
+  without the change and 8,499 of 8,499 with it** — 0% to 100%, exact. ★ **And the brake still never
+  fires there** (`enabled=0`, `FIRED=0`): the sim's plan config carries no `gapBrakeEnabled` either,
+  and adding one was out of scope. ★★ **The parity hashes do not move at all**: the guards' sim arm
+  builds its plan from `simPlanConfig` at **goldenRunner.mjs:766**, a SECOND site that carries neither
+  `pathLengthPx` nor any `gapBrake` key (`gapBrake` appears **0 times in the whole file**), so with
+  brake+V1 on the arms still read `1ba41a20` vs `836a46e0` (seed 1) and `5ba78503` vs `f4cce0cb`
+  (seed 42). **Corrects PARITY-AGE-1's one-sentence fix**, which named sim-fairness.mjs:4436 as *the*
+  site when it is one of two. ★ `verify` 20 PASS / 6 FAIL, **all six category (a)** and all six
+  already present before the change.
+
 - [PICK-WINNER-1.md](PICK-WINNER-1.md) — **the brake still contributes with the servo repaired, but
   V1 and the brake TOGETHER break the abruptness rule.** Four arms, N=300 each, all proved inert when
   off (10/10, brake OFF and ON). ★ **The brake still does work the servo does not**: against V1 alone

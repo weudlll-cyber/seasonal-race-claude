@@ -4490,6 +4490,17 @@ if (isMain) {
                   DYNAMICS_OVERRIDES.reRollTransitionDuration,
                 // Front act window (the sustained-P1-battle measurement window's own key).
                 contestWindowStart: CONTEST_WINDOW_START,
+                // ★ THE TRACK'S PATH LENGTH, AND WHY IT IS HERE. `_computeGapLeaderBrake` returns at
+                // its own guard (racePlanner.js:886, `!(pathPx > 0)`) before reading anything, so a
+                // plan built without this value cannot run the gap brake AT ALL. The browser hands it
+                // over at raceCore.js:177; the sim did not, which made the sim run a world the browser
+                // does not the moment that brake is switched on — measured in PARITY-AGE-1 as a
+                // browser/sim byte-parity break. It is NOT a new quantity: `pathLengthPx` is already
+                // resolved for this track at :4288 and already passed to `runSingleRace` below.
+                // ★ INERT WHILE THE BRAKE IS OFF, which is its shipped default: with
+                // `gapBrakeEnabled` false the brake's first guard returns before this is read. Proven
+                // byte-identical on 300 races and all four fingerprints (PARITY-CLOSE-1).
+                pathLengthPx,
               },
               seed,
             );
