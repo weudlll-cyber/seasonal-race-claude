@@ -1528,6 +1528,22 @@ and in that commit's message.
   `b35cf477c09a1116`, world-off `19ccb497041a0dae`, camera `3df640a42e934312`, render
   `6a84085e79535dd6`) — **there is nothing to mint.**
 
+- [BRAKE-WINDOW-2.md](BRAKE-WINDOW-2.md) — **200 ms is better on 10 of 10 tracks and costs nothing a
+  viewer can see; 1000 ms is still what I would put in front of him, because 200 is a number with no
+  home.** Three arms, 300 races each, his settings, **V1 OFF**. Pooled worst race **244.4 → 227.6
+  (1000 ms) → 208.3 px (200 ms)** — reproducing BRAKE-WINDOW-1's headline exactly from an
+  independently written harness. Per race against brake OFF: 1000 ms better on 40 / worse on 1;
+  **200 ms better on 56 / worse on 0.** ★★ **The median is unchanged on all three arms (81.4 px)** —
+  the brake does not touch the ordinary race, its whole effect is in the tail. ★★ **A viewer sees
+  nothing**: the largest single-step multiplier move (0.011762) and the largest one-frame speed change
+  (206.62 px/s) are **identical on all three arms and on all ten tracks** — the brake ALONE reaches
+  1.000x where the V1 pair reached 7.6x (BRAKE-JERK-1). **The danger was never the brake.** ★ It
+  COMMANDS in 137/300 races and is OBEYED in 59-66/300, because `Math.min` at racePlanner.js:1424
+  often finds the leader's own servo already pulling harder — a fallback, not a governor. ★ The cost
+  of the shorter window is direction changes 0.29 → 0.44 per second (+52%). ★ The window is DERIVED
+  from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
+  screen and shipping it would need a key, a control, a rule and a default.
+
 - [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
   three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
   (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
