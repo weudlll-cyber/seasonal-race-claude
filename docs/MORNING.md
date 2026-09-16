@@ -61,9 +61,11 @@ neither buys fairness nor costs it.**
 expect about 1.5 by chance, none clears the Holm bar, and the gate is Holm. They are named in the
 report so nobody later mistakes them for a finding.
 
-★ **The brake demonstrably acted**: all **30 of 30** combinations came out differently on the two
-arms. Before last night's fix they would have been identical, because the instrument could not see
-the brake at all.
+★ **The brake demonstrably acted**, counted rather than assumed: a tally inside the brake itself, in
+a repeat of one track at the identical settings, read **1,276,286 calls, enabled on 100%, and
+117,597 commands issued**. Before last night's fix the same tally read **enabled 0, fired 0** — the
+instrument could not fire the brake once in 2.26 million opportunities. And all **30 of 30**
+combinations came out differently on the two arms, where before they would have been identical.
 
 ★ The world is **ASSUMED-DEFAULTS**, as the instrument itself labels it — no `--config`, your store
 was not opened. And racer type cannot be separated from track here, because the methodology runs each
@@ -149,12 +151,12 @@ Nothing to mint, nothing failing, all four fingerprints on the record. The merge
 both client origins.
 
 ```
-[ra-build] start-up: serving build 4bdd8d0c · feat/gap-leader-brake
-/api/health  {"build":{"commit":"4bdd8d0c","branch":"feat/gap-leader-brake","dirty":false}}
+/api/health  {"build":{"commit":"edee568f","branch":"feat/gap-leader-brake","dirty":false}}
 ```
 
-Bundle **read off the served page**, not assumed: `dist/assets/index-h4JjUhM-.js` (927.41 kB, gzip
-276.92). `dirty: false` — the tree is clean.
+Bundle **read off the served page**, not assumed: `dist/assets/index-PUvWLe-u.js` (927.41 kB, gzip
+276.92). `dirty: false` — the tree is clean, and all three services were restarted onto the final
+commit after the last push.
 
 ### ★★ THE EYE-TEST SWITCH CANNOT BE LOST THIS TIME
 
@@ -270,9 +272,37 @@ viewer sees.
 
 ---
 
-## CLEANUP
+## ★ IF YOU SAY YES
 
-Worktrees created this chain: `C:/tmp/bs0`, `C:/tmp/bson`, `C:/tmp/bsoff`, `C:/tmp/fairon`. **None
-carries junctions** — checked with `dir /AL /S`, and none has a `node_modules` of its own. `bson` and
-`bsoff` carry an instrumented `racePlanner.js` (a call tally) and `fairon` carries the brake switched
-on — **all three are probe copies; the real tree was never patched.** Removed in the end sweep.
+Nothing is minted, nothing is merged, nothing is tagged — the branch is waiting for your word. What a
+yes costs:
+
+1. `verify` is already **26 PASS / 0 FAIL**.
+2. All four fingerprints already measure what the record holds, so **no mint is owed**.
+3. The merge is a `--no-ff` merge; delete the branch at origin BEFORE pushing master (the order
+   `check-tags` Rule B needs), then check `gh run list --branch master` for the **merge SHA**, because
+   green locally is not green in CI.
+4. Nothing would be archived, so **no tag and no `TAGS.md` entry**.
+
+**And if you say no to the brake, nothing has to be undone** — it ships OFF, and with it off this
+branch is the record's race byte for byte.
+
+---
+
+## CLEANUP — DONE
+
+Five worktrees were created this chain: `bs0`, `bson`, `bsoff`, `fairon`, `win200`. **Every one was
+checked with `dir /AL /S` before removal — 0 junctions, and none had a `node_modules` of its own**, so
+the hazard did not arise. All five are gone; `node_modules` is intact (client 328, server 186).
+
+`bson`/`bsoff` carried an instrumented `racePlanner.js` (a call tally), `fairon` the brake switched
+on, `win200` the 200 ms window — **all probe copies; the real tree was never patched.** One of them
+was held open by a stray `sim-fairness.mjs` process I had started hours earlier; it was stopped and
+the directory removed.
+
+Scratch output directories (`fair`, `p3`, `b`, `fairtally`) are deleted. **No test race and no data
+record was created, `server/data` is untouched, and your store was never opened.** The five stale
+`.git/worktrees/` stubs refuse deletion with EPERM — the known OneDrive behaviour; `git worktree
+list` already ignores them and they are harmless.
+
+The three services are left running for you.
