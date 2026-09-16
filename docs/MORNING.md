@@ -158,6 +158,21 @@ inside that spread.
 30" was also unseeded — **one draw, not a property.** A correction now sits at the top of that report.
 Band reach was stable across repeats and survives; the start-row chi-squared is the fragile number.
 
+### ★★ And with a seed, the comparison finally works — and clears the brake
+
+Both arms, ten tracks, fixed seed, **1,200 races each** (short of the pinned N, and labelled so):
+
+| | band reach | **Holm-flagged rows** | the flagged row |
+|---|---|---|---|
+| SHIPPED | 89.2% | **1 of 30** | luger-hill 30 s |
+| **56 px / 13%** | 88.9% | **1 of 30** | **luger-hill 30 s — the same one** |
+
+**Both arms flag exactly one row, and it is the same row. The brake causes no fairness failure.**
+
+★ **A separate thing you should know**: **your shipped game fails its own fairness gate on
+luger-hill 30 s** — a rear bias, back rows winning too often, front row too seldom, in every run I
+made of that combination. It is not caused by the brake and I did not chase it.
+
 → [FAIRNESS-SEED-1](../reports/night/FAIRNESS-SEED-1.md)
 
 ---
