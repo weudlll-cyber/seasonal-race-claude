@@ -1562,6 +1562,20 @@ and in that commit's message.
   methodology (each track runs only its own default type) and the report says that rather than
   implying otherwise.
 
+- [FAIRNESS-SEED-1.md](FAIRNESS-SEED-1.md) — **★★ the fairness instrument has been running UNSEEDED,
+  and its start-row verdict is a single draw.** `scripts/sim-fairness.mjs` defaults to `--seed=0`,
+  which its own header at :343 defines as `Math.random()`, "exploration only", and which it PRINTS on
+  every run at :4206 as `Seed: 0 (Math.random, Exploration)`. ★★★ **Three runs of the SAME SHIPPED
+  configuration, same track, nothing changed, produced 0, 0 and TWO Holm-flagged start-row rows** —
+  p-values swinging from 0.42 to 0.00002. **The shipped game both passes and fails the project's
+  fairness gate depending on the run.** ★ Two runs at `--seed=12345` are bit-identical in every field,
+  so a positive seed fixes it completely: one flag. ★ **RETRACTS this chain's own finding** that
+  56 px / 13% fails the gate on one Holm-flagged row — that row is inside what shipped produces by
+  itself — and **qualifies [BRAKE-FAIRNESS-1](BRAKE-FAIRNESS-1.md)'s "0 Holm-flagged on both arms"**,
+  which was also unseeded. Band reach was stable across repeats (89–90%) and survives; the start-row
+  chi-squared is the fragile statistic. ★ Named but not built: pass a seed to every gate run and
+  record it; a one-seed gate is still one draw; the unseeded default is the trap.
+
 - [BRAKE-GRID-1.md](BRAKE-GRID-1.md) — **twenty settings, and NOT ONE reduces the escape: the brake
   delays the runaway past its own window instead of preventing it.** 5 allowances (40/56/70/90/124 px)
   x 4 authorities (8/10/13/15%), 300 paired races per cell, 6,300 races; V1 OFF throughout.

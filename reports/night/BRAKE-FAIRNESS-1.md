@@ -5,6 +5,22 @@ nothing merged.** The owner's store was not opened.
 
 ---
 
+## ★★ CORRECTION, 2026-09-16 — READ THIS FIRST
+
+**This run was UNSEEDED, and its start-row verdict is therefore one draw rather than a property.**
+`scripts/sim-fairness.mjs` defaults to `--seed=0`, which the script itself defines as `Math.random()`
+— "exploration only" — and prints as `Seed: 0 (Math.random, Exploration)` on every run. I did not
+pass a seed and did not read that line.
+
+**What survives:** the band-reach figures, which were stable to within a point across repeated runs,
+and the firing count, which is a count and not a test.
+**What does not:** "0 Holm-flagged of 30 on both arms" below. Three repeats of one shipped
+configuration produced 0, 0 and **2** Holm-flagged rows with nothing changed between them.
+
+→ [FAIRNESS-SEED-1](FAIRNESS-SEED-1.md) has the measurement and the one-flag fix.
+
+---
+
 ## ★ THE SHORT ANSWER
 
 **The project's own fairness instrument returns the same verdict on both arms: FAIR.** At the pinned
