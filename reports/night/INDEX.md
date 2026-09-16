@@ -1544,6 +1544,24 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [BRAKE-FAIRNESS-1.md](BRAKE-FAIRNESS-1.md) — **the fairness run the gap brake had never had, at the
+  FULL PINNED N, and the instrument's own verdict is the same on both arms: FAIR.**
+  `scripts/sim-fairness.mjs` UNMODIFIED, 10 tracks x 100 races x 3 distance variants = **300 races per
+  track pooled, 3,000 races per arm, 6,000 in total**; each track its own `defaultRacerTypeId` read
+  from the seeds. Brake at his settings, **V1 OFF in both arms**, so this measures the brake ALONE.
+  ★★ **Both arms clear the project's gate and by the same margin**: band reach ≥ 70% on 10/10
+  (mean 89.3% shipped against 89.2% with the brake, worst track 86.0 vs 86.1), and **0 Holm-flagged
+  start-row rows of 30 on each**. Band reach moves by at most 0.9 points on any track, up on five and
+  down on five. ★ **The raw p<0.05 rows are not findings and the report says so**: 1 on the shipped
+  arm (luger-hill 60s, p=0.031) against 2 on the brake arm, where 30 comparisons at alpha 0.05 expect
+  about 1.5 — none clears the Holm bar of 0.00167, and the shipped arm has one too. ★ **The brake was
+  proven to have acted**, not assumed: all **30 of 30** combinations produced a different start-row
+  outcome between the arms, where before BLIND-SITE-1 they were identical because the instrument could
+  not see the brake at all. ★ World labelled ASSUMED-DEFAULTS / PROVISIONAL, as the instrument labels
+  it — no `--config`, the owner's store was not opened. ★ Racer type and track are confounded by the
+  methodology (each track runs only its own default type) and the report says that rather than
+  implying otherwise.
+
 - [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
   three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
   (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
