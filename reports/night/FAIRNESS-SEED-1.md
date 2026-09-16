@@ -96,6 +96,35 @@ direction.
 
 ---
 
+## ★★ THE COMPARISON DONE PROPERLY, AT A FIXED SEED
+
+Both arms, ten tracks, `--seed=12345`, `--races=40` per distance variant = **120 races per track
+pooled, 1,200 races per arm**. ★ **That is SHORT of the pinned 300 per track and must not be quoted as
+the gate** — but it is the first like-for-like fairness comparison either arm has had.
+
+| | band reach mean / worst | rows at raw p<0.05 | **Holm-flagged (the gate)** | smallest p |
+|---|---|---|---|---|
+| **SHIPPED** | 89.2% / 86.2% | 3 | **1 of 30** | 0.0007 |
+| **56 px / 13%** | 88.9% / 86.6% | 4 | **1 of 30** | 0.0002 |
+
+★★★ **Both arms have exactly one Holm-flagged row, and it is THE SAME ROW: luger-hill 30 s.**
+Shipped χ² = 19.50 (p = 0.0007), brake χ² = 23.00 (p = 0.0002).
+
+**So the brake does not cause a fairness failure. The shipped game has that row by itself**, which is
+what the unseeded run could not tell me and what the retraction above rests on.
+
+### ★ A separate finding, not about the brake
+
+**The shipped game fails its own fairness gate on luger-hill 30 s at this seed** — one Holm-flagged
+row, where the gate requires zero. The bias is a rear bias: the back rows win too often and the front
+row too seldom, with average rank falling monotonically from front to back. It appeared in every run
+of luger-hill 30 s I made tonight, seeded or not.
+
+**That is worth its own look and it is not this chain's business.** I did not pursue it, and I am not
+proposing a cause.
+
+---
+
 ## WHAT SHOULD CHANGE, NAMED BUT NOT BUILT
 
 1. **Pass `--seed=<n>` with n > 0 to every fairness run that is used as a gate**, and record the seed
