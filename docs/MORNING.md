@@ -1,11 +1,77 @@
-# MORNING SHEET — night of 2026-09-15 → 16
+# MORNING SHEET — night of 2026-09-16
 
 Branch `feat/gap-leader-brake`, pushed after every piece. **Nothing minted. Nothing merged. Nothing
-tagged. No golden race re-recorded. Your store was never opened.**
+tagged. No shipped default changed. Your store was never opened.** V1 (`servoNoiseBlindEnabled`) was
+OFF for every measurement in this chain.
 
 ---
 
-## ★★ THE ONE THING THAT CHANGED EVERYTHING TONIGHT
+## ★★ THE AUTHORITY CEILING — YOUR RECOLLECTION IS CORRECT
+
+You asked me to establish the engine's own maximum braking at the source before running anything,
+and not to use your recollection or mine.
+
+**The source says `minMult: 0.85`** — [racePlanner.js:103](../client/src/modules/racePlanner.js#L103),
+in `DEFAULT_CONTROLLER_PARAMS`, which is the floor the outcome controller clamps every target to
+([racePlanner.js:1423](../client/src/modules/racePlanner.js#L1423)). **So the engine's own maximum
+braking is 1 − 0.85 = 15%, exactly as you remembered.** There is no discrepancy to report.
+
+★ The grid therefore stops at 15% and **no value had to be dropped**. At 15% the brake would command
+exactly `minMult`, so even the top row can never ask for a speed the steering could not already
+produce — which is the argument already written at
+[defaults.js:1186-1191](../client/src/modules/storage/defaults.js#L1186-L1191).
+
+---
+
+## STATE OF THE NIGHT
+
+| piece | state |
+|---|---|
+| ceiling established | **DONE** — 15%, from the source |
+| 1 — the two failure modes | **DONE** — defined and instrumented, see below |
+| 2 — the grid (21 arms × 10 tracks × 30 seeds) | **RUNNING** |
+| 3 — read the grid | open |
+| 4 — visibility for the shortlist | open |
+| 5 — the deep test on the winner | open |
+| 6 — a build for your eye | open |
+
+---
+
+## ★ PIECE 1 — HOW I TURNED YOUR TWO SENTENCES INTO NUMBERS
+
+**This scoring is my construction, not your criterion.** You gave two goals in words; everything
+below is how this block measures them. **Every component is reported separately and never combined
+into one score** — you decide from the columns.
+
+### A — the escape ("a racer escapes and then wins without being challenged")
+Measured as the **unopposed run-in**: find the **last lead change** of the race; after it nobody ever
+took the lead again, so the leader through that stretch is the winner by construction. The race counts
+as an escape if his gap in that stretch ever exceeded a reference.
+
+★ The reference is **fixed at 90 px and 124 px for every cell**, not each cell's own allowance —
+otherwise "escaped" would mean something different in every row and the rows could not be compared.
+
+★ A first version asked for *no lead change after the gap first passed 90 px*. With about 38 lead
+changes per race that is almost never true and it scored every race zero — it measured the wrong
+thing rather than measuring nothing, which is worse. Corrected before any cell was run.
+
+### B — the monotony ("not so much braking that even small gaps are closed")
+Lead changes; distinct leaders; the share of the window the top leader holds; the field's spread as
+the winner crosses; how many races end **contested** (second racer within one body length at the
+line); and what the brake actually does — the share of in-window frames it is obeyed on, and how much
+of its work lands on gaps **below 90 px** and **below 124 px**, which is braking a lead no viewer
+would call a runaway.
+
+**SHIPPED (brake off) is the reference for every one of these**, and it is an arm in every table.
+
+---
+
+# ── STILL TRUE, FROM THE NIGHT OF 15→16 ──
+
+*Everything below this line is last night's sheet, kept because it is the standing state of the
+branch and none of it has changed. Tonight's work is above.*
+
+## ★★ THE BRANCH IS BACK ON THE RECORD
 
 **With the shipped defaults, this branch is back to the record — byte for byte.**
 
