@@ -254,6 +254,36 @@ lost** — there is no uncommitted source line anywhere in this.
 
 ---
 
+## ★ WHAT I NOTICED AND DELIBERATELY LEFT ALONE
+
+- **`gapBrakeWindowEnd`.** The grid says the runaway completes after it, and every other lever has now
+  been shown not to reach. **It is your value and you did not ask me to search it**, so I did not.
+- **The rear bias on luger-hill 30 s in the SHIPPED game.** Real, reproducible, and it fails your own
+  gate. Not caused by the brake, and not this chain's business.
+- **The unseeded default in `sim-fairness.mjs`.** I reported it and did not change it — it is a shipped
+  instrument and the fix is a methodology decision, not a patch.
+- **`report/brake-census-1` and the two branches left standing** from the night before: untouched, and
+  `night/2026-09-14-history` still needs the one sentence from you about which `docs/MORNING.md`
+  survives.
+
+---
+
+## CLEANUP — DONE, WITH ONE DELIBERATE EXCEPTION
+
+Everything this chain created is gone **except `C:/tmp/win5613`, which is kept ON PURPOSE: the build
+you are meant to judge is served from it.** Deleting it would kill the build — which is exactly how
+you lost the last one.
+
+★ It was checked with `dir /AL /S` before I relied on it: **0 junctions.** Its `node_modules` is a
+real 328-package install of its own, not a link to yours, so it can be removed safely with `rm -rf`
+whenever you are finished with the build. Your `node_modules` is intact (client 328, server 186).
+
+The scratch output directories (`grid`, `deep`, `fair5`, `fairseed`) are deleted — about 6,300 + 6,000
++ 8,400 races' worth of JSON. **No test race and no data record was created, `server/data` is
+untouched, and your store was never opened.** `git status` on the branch is clean.
+
+---
+
 # ── STILL TRUE, FROM THE NIGHT OF 15→16 ──
 
 *Everything below this line is last night's sheet, kept because it is the standing state of the
