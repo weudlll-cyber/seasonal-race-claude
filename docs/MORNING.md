@@ -32,7 +32,7 @@ produce — which is the argument already written at
 | 2 — the grid (21 arms × 300 races) | **DONE** — 6,300 races |
 | 3 — read the grid | **DONE**, pushed. → [BRAKE-GRID-1](../reports/night/BRAKE-GRID-1.md) |
 | 4 — visibility | **DONE** — collected on every cell, not just the shortlist |
-| 5 — the deep test (56 px / 13%) | **fairness DONE — ★ IT FAILS THE GATE.** N=300 race set running |
+| 5 — the deep test (56 px / 13%) | **DONE** → [BRAKE-DEEP-1](../reports/night/BRAKE-DEEP-1.md). Fairness → [FAIRNESS-SEED-1](../reports/night/FAIRNESS-SEED-1.md) |
 | 6 — a build for your eye | **SERVED** at 56 px / 13% — see below |
 
 ---
@@ -126,41 +126,66 @@ single-step move (1.039×).
 
 ---
 
-## ★★★ THE DEEP TEST FOUND SOMETHING THE GRID COULD NOT: 56 px / 13% FAILS THE FAIRNESS GATE
+## ★★★ I HAVE TO RETRACT SOMETHING I WROTE EARLIER TONIGHT — AND THE REASON MATTERS MORE
 
-Your own instrument, unmodified, at the full pinned N — 10 tracks × 100 races × 3 distance variants
-= **300 races per track pooled, 3,000 races**.
+Earlier in this sheet I told you 56 px / 13% **fails your fairness gate** on one Holm-flagged row.
+**That is withdrawn.** Before reporting it I ran a shipped control on the same track, and the control
+did not behave the way a deterministic instrument must.
 
-| | band reach | Holm-flagged start-row rows |
-|---|---|---|
-| SHIPPED, measured last night at the same N | mean 89.3% | **0 of 30** |
-| 90 px / 10%, measured last night at the same N | mean 89.2% | **0 of 30** |
-| **56 px / 13%, tonight** | mean 89.1% | **★ 1 of 30** |
+**`scripts/sim-fairness.mjs` has been running UNSEEDED.** It defaults to `--seed=0`, which its own
+header defines as `Math.random()`, "exploration only", and which it **prints on every single run**:
 
-**The gate is band reach plus ZERO Holm-flagged rows. One flagged row fails it.**
+```
+Seed                   : 0 (Math.random, Exploration)
+```
 
-The row is **luger-hill, 30 s**: χ² = 25.80, **p = 0.00005** against a Holm bar of 0.00167. It is not a
-borderline call and it is not one of the raw-p near-misses I have been telling you to ignore — it
-clears the corrected bar by a factor of thirty.
+I never read that line. Three runs of the **shipped** configuration, same track, nothing changed
+between them:
 
-**And it has a direction**, which is what makes it worth your attention rather than a curiosity:
-
-| start row | wins | expected | average rank |
+| run | 30 s | 60 s | 120 s |
 |---|---|---|---|
-| R0 (front) | 9% | 20% | 22.69 |
-| R1 | 20% | 20% | 20.64 |
-| R2 | 9% | 20% | 21.15 |
-| R3 | 27% | 20% | 19.58 |
-| **R4 (back)** | **35%** | 20% | **18.44** |
+| 1 | p = 0.00237 | p = 0.355 | p = 0.151 |
+| 2 | p = 0.00227 | p = 0.049 | p = 0.421 |
+| 3 | **p = 0.00013** | p = 0.276 | **p = 0.00002** |
 
-**The back rows win too often and the front row too seldom**, and the average rank falls monotonically
-from front to back. A plausible mechanism is that a front-row starter is more likely to be leading
-early, so he takes more of the braking — but **I am checking that against a shipped control on the
-same track before I assert it**, because the effect could belong to luger-hill rather than to the
-brake. That control is running; the result lands below.
+**Run 3 of your shipped game produces TWO Holm-flagged rows. Runs 1 and 2 produce none.** So the
+shipped game both passes and fails the gate depending on the run, and the row I found on the brake is
+inside that spread.
 
-★ Two other rows sit at raw p<0.05 (city-circuit 30 s, searound 60 s). Those are the ordinary kind —
-30 comparisons expect about 1.5 — and neither clears Holm.
+**Two runs at `--seed=12345` are bit-identical in every field**, so the fix is one flag.
+
+★★ **This reaches back past tonight.** Last night's "fairness is FAIR on both arms, 0 Holm-flagged of
+30" was also unseeded — **one draw, not a property.** A correction now sits at the top of that report.
+Band reach was stable across repeats and survives; the start-row chi-squared is the fragile number.
+
+→ [FAIRNESS-SEED-1](../reports/night/FAIRNESS-SEED-1.md)
+
+---
+
+## ★★ THE DEEP TEST: TEN TIMES THE SAMPLE CHANGED THE ANSWER
+
+**N = 3,000 paired races per arm.** → [BRAKE-DEEP-1](../reports/night/BRAKE-DEEP-1.md)
+
+★ **The control passed first**: the grid's own seeds, re-run inside the big set, came back
+**300/300 byte-identical**. The measuring track did not move, so the grid stands.
+
+| | SHIPPED | **56 px / 13%** |
+|---|---|---|
+| races won after an unopposed run-in | 317 / 3000 | 313 / 3000 |
+| fixed / **caused** | — | 43 / **39** |
+| net | — | **+4**, McNemar **p = 0.74** |
+| largest lead to the window end, MAX | 492.7 px | **258.5 px (−48%)** |
+| largest lead to the finish, MAX | 492.7 px | **306.2 px (−38%)** |
+| both abruptness measures | — | **1.000×, identical to six decimals** |
+
+★★★ **At ten times the sample the escape effect vanishes** — +6 at p = 0.146 on 300 races becomes
+**+4 at p = 0.74** on 3,000. **The bigger sample removed the effect rather than confirming it.**
+★★ **But the worst lead nearly halves**, and at this N the lead to the finish falls too — which the
+300-race grid did not show. That figure must be quoted from the deep run, not the grid.
+
+**So the honest summary of the whole night:** the brake does not stop the runaway winning. It does
+make the worst races visibly tighter at the front, for no measurable cost. Whether that is worth
+switching on is your call, and the build below is there for it.
 
 ---
 
