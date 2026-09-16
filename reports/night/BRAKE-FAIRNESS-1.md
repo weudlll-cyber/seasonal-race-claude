@@ -61,12 +61,17 @@ brake at all.
 **2. The firing count, from a tally inside `_computeGapLeaderBrake`.** In a repeat of one track
 (searound / manta / 40, `--races=100`, the identical settings) with the tally added to a probe copy:
 
-> *(the tally's numbers are filled in by the run in progress; the count is reported in
-> `docs/MORNING.md` and below once it lands)*
+| calls to the brake | carried `pathLengthPx` | **enabled** | **FIRED (issued a command)** |
+|---|---|---|---|
+| 1,276,286 | 1,276,286 (100%) | 1,276,286 (**100%**) | **117,597 (9.2%)** |
 
-★ For scale, the same tally over a full multi-racer-type sim run read
-**2,263,157 calls · enabled on 100% · FIRED 88,979** — against **0 enabled and 0 fired** before
-BLIND-SITE-1 (see [BLIND-SITE-1](BLIND-SITE-1.md)).
+★★ **The brake issued a command 117,597 times inside a fairness run at these exact settings.** The
+verdict above is therefore a verdict on a race the brake was actually acting in.
+
+★ **Before BLIND-SITE-1 the same tally read `enabled=0, FIRED=0`** — the instrument could not fire the
+brake once in 2.26 million opportunities, so any fairness verdict it gave about the brake was a
+verdict about a mechanism that was not running (see [BLIND-SITE-1](BLIND-SITE-1.md)). **That is why
+this run had never been possible before tonight.**
 
 ---
 
