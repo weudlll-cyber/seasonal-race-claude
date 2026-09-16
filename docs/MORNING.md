@@ -31,11 +31,43 @@ question you have left open** ("does V1 go in at all?"). The switch forecloses n
 | 1 — blind sites | **DONE**, pushed. → [BLIND-SITE-1](../reports/night/BLIND-SITE-1.md) |
 | 1b — V1's switch | **DONE**, pushed (not in the plan; see above) |
 | 1c — V1's switch reaches the dev screen | **DONE**, pushed |
-| 2 — the fairness run | **RUNNING** — both arms, pinned N (300 races/track pooled) |
+| 2 — the fairness run | **DONE**, pushed. → [BRAKE-FAIRNESS-1](../reports/night/BRAKE-FAIRNESS-1.md) |
 | 3 — the rate window | **DONE**, pushed. → [BRAKE-WINDOW-2](../reports/night/BRAKE-WINDOW-2.md) |
-| 4 — merge readiness | fingerprints ✓, `engine-reach` ✓, brake sabotage ✓. `verify` pending |
+| 4 — merge readiness | **DONE** — `verify` is **26 PASS / 0 FAIL** |
 | 5 — a build for your eye | **SERVED** — see below |
 | 6 — branch tidy | **DONE** — see below |
+
+---
+
+## ★★ PIECE 2 — THE FAIRNESS RUN THE BRAKE HAD NEVER HAD
+
+**Your own instrument, unmodified, at the full pinned N — and its verdict is the same on both arms:
+FAIR.** → [BRAKE-FAIRNESS-1](../reports/night/BRAKE-FAIRNESS-1.md)
+
+**3,000 races per arm, 6,000 in total** (10 tracks x 100 races x the three distance variants = the
+pinned 300 races per track pooled). Each track ran its own default racer type. **This is the full
+gate, not a short run.**
+
+| | shipped (brake OFF) | **brake ON** |
+|---|---|---|
+| band reach, mean / worst track | 89.3% / 86.0% | **89.2% / 86.1%** |
+| the gate: band reach (threshold in [FAIRNESS.md](FAIRNESS.md)) | passes 10/10 | **passes 10/10** |
+| the gate: Holm-flagged start-row rows | **0 of 30** | **0 of 30** |
+
+★ Band reach moves by at most **0.9 points** on any track, up on five and down on five. **The brake
+neither buys fairness nor costs it.**
+
+★ **Two rows sit at raw p<0.05 on the brake arm and one on the shipped arm** — in 30 comparisons you
+expect about 1.5 by chance, none clears the Holm bar, and the gate is Holm. They are named in the
+report so nobody later mistakes them for a finding.
+
+★ **The brake demonstrably acted**: all **30 of 30** combinations came out differently on the two
+arms. Before last night's fix they would have been identical, because the instrument could not see
+the brake at all.
+
+★ The world is **ASSUMED-DEFAULTS**, as the instrument itself labels it — no `--config`, your store
+was not opened. And racer type cannot be separated from track here, because the methodology runs each
+track's own type; the report says so rather than implying otherwise.
 
 ---
 
@@ -100,9 +132,14 @@ Fixed by asserting the law's own identity, `dS/S = dGap/gap`, instead of a one-s
 touched. This is the third time a test in this area has passed under its own sabotage, so I now run
 the sabotage rather than trusting a green suite.
 
-### Still to run
-`verify`, with every failure classified (a) or (b). It is queued behind the two measurement runs that
-are using the machine.
+### ★★ `verify`: **26 PASS / 0 FAIL**
+**There is nothing to classify, because nothing fails.** When this night began it was 20 PASS / 6
+FAIL — all six were V1's moved inputs, and switching V1 off returned every one of them: the three
+fingerprints, the golden race, the script suite and the four pinned-winner tests in the client suite.
+**The branch is completely green against master `12fae1f3`, with 39 changed files.**
+
+### So what a yes costs
+Nothing to mint, nothing failing, all four fingerprints on the record. The merge is a merge.
 
 ---
 
