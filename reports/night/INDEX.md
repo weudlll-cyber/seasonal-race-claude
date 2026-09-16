@@ -1562,6 +1562,28 @@ and in that commit's message.
   methodology (each track runs only its own default type) and the report says that rather than
   implying otherwise.
 
+- [BRAKE-GRID-1.md](BRAKE-GRID-1.md) — **twenty settings, and NOT ONE reduces the escape: the brake
+  delays the runaway past its own window instead of preventing it.** 5 allowances (40/56/70/90/124 px)
+  x 4 authorities (8/10/13/15%), 300 paired races per cell, 6,300 races; V1 OFF throughout.
+  ★ **The ceiling was established at the source first**: `minMult: 0.85` at racePlanner.js:103, so the
+  engine's own maximum braking is **15%, exactly as the owner recalled** — no value dropped.
+  ★★ **The noise floor is EXACTLY ZERO**: 2,275 of 2,275 quiet races reproduce SHIPPED to the
+  millisecond. ★★★ **McNemar on the paired escape counts: every one of the 20 cells is NOT
+  DISTINGUISHABLE from shipped, every p ≥ 0.077** — and the brake CAUSES escapes as well as fixing
+  them (up to 8 per cell), because slowing the leader reshuffles who leads. ★★ **THE MECHANISM,
+  measured**: the max lead to 0.95 falls up to 34% (244.4 → 160.2) while the max lead **to the finish
+  does not fall at all** (279.6 unchanged on 13 of 20 cells), and the gap between the two GROWS with
+  braking strength (35.2 → 114.0 px). **61.3% of shipped races already peak after 0.95; braking
+  raises that to 69–73%.** The lever that would reach it is `gapBrakeWindowEnd` — his value, and
+  deliberately not searched. ★ **Monotony is harmed by NO cell**: lead changes 40 and distinct leaders
+  37 on every cell including shipped; the leader's hold actually FALLS with braking. ★ But at 40 px
+  the brake commands in 289/300 races with **100% of its work on gaps below 90 px** — his first
+  failure mode in words, which the monotony metrics do not catch, and the report says so. ★ 19 of 20
+  cells move neither abruptness measure; **40 px / 15% is the sole exception at 1.039x**.
+  ★ Recommendation: **56 px / 13%** — his own eye's pair — as the best trade, **explicitly labelled as
+  NOT clearing goal A**, chosen by his own rule that indistinguishable cells go to the one that brakes
+  less.
+
 - [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
   three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
   (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
