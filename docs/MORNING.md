@@ -32,10 +32,43 @@ question you have left open** ("does V1 go in at all?"). The switch forecloses n
 | 1b — V1's switch | **DONE**, pushed (not in the plan; see above) |
 | 1c — V1's switch reaches the dev screen | **DONE**, pushed |
 | 2 — the fairness run | **RUNNING** — both arms, pinned N (300 races/track pooled) |
-| 3 — the rate window | **RUNNING** — 200 ms against 1000 ms, ten tracks, seeds 1–30 |
+| 3 — the rate window | **DONE**, pushed. → [BRAKE-WINDOW-2](../reports/night/BRAKE-WINDOW-2.md) |
 | 4 — merge readiness | fingerprints ✓, `engine-reach` ✓, brake sabotage ✓. `verify` pending |
 | 5 — a build for your eye | **SERVED** — see below |
 | 6 — branch tidy | **DONE** — see below |
+
+---
+
+## ★★ PIECE 3 — THE BRAKE ALONE IS INVISIBLE, AND THIS IS THE NUMBER THAT MATTERS
+
+Three arms, **300 races each**, your settings (90 px / 0.95 / 10%), **V1 OFF**.
+→ [BRAKE-WINDOW-2](../reports/night/BRAKE-WINDOW-2.md)
+
+| | worst race | largest single-step multiplier move | largest one-frame speed change |
+|---|---|---|---|
+| brake OFF (today) | 244.4 px | 0.011762 | 206.62 px/s |
+| **brake ON, 1000 ms** | **227.6 px** | **0.011762** | **206.62 px/s** |
+| **brake ON, 200 ms** | **208.3 px** | **0.011762** | **206.62 px/s** |
+
+★★ **The two abruptness numbers are IDENTICAL on all three arms and on all ten tracks.** The gap
+brake **alone** does not move either one. All week the worry has been "7.6x the shipped maximum" —
+**that was the V1 pair. The brake by itself reaches 1.000x.** The danger was never the brake.
+
+★ **The median race is untouched** (81.4 px on all three arms). The brake's whole effect is in the
+tail, which is what a fallback brake should do. It **commands in 137 of 300 races and is OBEYED in
+59–66** — the rest of the time your own servo is already pulling harder and `Math.min` keeps it
+silent. A fallback, not a governor.
+
+### Which window
+**I would put 1000 ms in front of you**, because it IS `trajectoryTransitionDuration` — a quantity
+the engine already holds — while **200 ms is a number with no home and no config key**: shipping it
+needs a key, a dev-screen control, a validation rule and a default, which is a second decision bolted
+onto the first.
+
+**The other side, plainly: on the evidence 200 ms is simply better.** It wins on **10 of 10 tracks**,
+is better on **56 races and worse on 0** (1000 ms: better on 40, worse on 1). The cost is the magic
+number plus direction changes rising 0.29 → 0.44 per second. **The shipped default is untouched —
+the value is yours.**
 
 ---
 
@@ -106,8 +139,12 @@ on yourself, and you can turn it off mid-session to compare.
 ### What to watch
 
 1. **ice-track, Quick Test seed 3** — your race, the one you have watched all week.
-2. **The largest improvement and a control race the brake never touches** — both named from tonight's
-   own brake-on/brake-off measurement, which is still running; they land in Piece 3's section below.
+2. **searound, seed 20 — the largest improvement in 300 races: 216.4 → 173.7 px.**
+3. **city-circuit, seed 4 — a control.** The brake never issues a command in it, so it must look
+   exactly as it does today. (163 of 300 races are like this.)
+
+★ Your own race, ice-track seed 3: **196.6 px today → 167.7 (1000 ms) → 157.9 (200 ms)**. At
+1000 ms the brake commands on 659 frames there and is obeyed for 7.7 s.
 
 ---
 
