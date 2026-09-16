@@ -29,10 +29,10 @@ produce — which is the argument already written at
 |---|---|
 | ceiling established | **DONE** — 15%, from the source |
 | 1 — the two failure modes | **DONE** — defined and instrumented, see below |
-| 2 — the grid (21 arms × 10 tracks × 30 seeds) | **RUNNING** |
-| 3 — read the grid | open |
-| 4 — visibility for the shortlist | open |
-| 5 — the deep test on the winner | open |
+| 2 — the grid (21 arms × 300 races) | **DONE** — 6,300 races |
+| 3 — read the grid | **DONE**, pushed. → [BRAKE-GRID-1](../reports/night/BRAKE-GRID-1.md) |
+| 4 — visibility | **DONE** — collected on every cell, not just the shortlist |
+| 5 — the deep test (56 px / 13%) | **RUNNING** — N=300/track + the pinned fairness run |
 | 6 — a build for your eye | open |
 
 ---
@@ -63,6 +63,66 @@ of its work lands on gaps **below 90 px** and **below 124 px**, which is braking
 would call a runaway.
 
 **SHIPPED (brake off) is the reference for every one of these**, and it is an arm in every table.
+
+---
+
+## ★★★ THE ANSWER, AND IT IS NOT THE ONE ANYONE EXPECTED
+
+**Recommended pair: 56 px / 13% — the one your own eye picked this morning.**
+
+**What it buys:** the largest lead inside the brake's window falls **244.4 → 187.5 px (−23%)**, p90
+**159.3 → 123.6 px**.
+**What it costs:** nothing measurable — lead changes, distinct leaders, field spread, margin at the
+line and both abruptness numbers are all unmoved.
+**★ What it does NOT do, and no setting does:** it does not reduce the races won unopposed.
+
+### The finding
+
+I ran all twenty settings — 5 allowances × 4 authorities, **300 paired races each, 6,300 in total**.
+The grid is paired, so I could test what each cell actually *changed* race by race rather than
+comparing totals.
+
+> **Not one of the twenty cells is distinguishable from SHIPPED on the escape count. Every p ≥ 0.077.**
+
+And the brake **causes** escapes as well as fixing them — up to 8 races per cell that shipped did not
+have, because slowing the leader reshuffles who leads and sometimes the racer who inherits it escapes
+instead.
+
+### ★★ Why — and this is the thing worth your attention
+
+| | max lead **to the window end** | max lead **to the finish** |
+|---|---|---|
+| SHIPPED | 244.4 px | 279.6 px |
+| 56 px / 13% | **187.5** (−23%) | **275.4** (−1.5%) |
+| 40 px / 13% | **170.2** (−30%) | **284.3** (**+1.7%**) |
+
+**The brake compresses the lead it can see, and the lead re-opens after it lets go.** The maximum to
+the finish is *unchanged at 279.6 px on 13 of the 20 cells*, and the harder the brake works the larger
+the gap between the two numbers becomes (35 px shipped → 114 px at 40 px / 13%).
+
+**61.3% of your races already have their biggest lead after that boundary. With the brake on, 69–73%.**
+
+**The runaway is completed after the brake's window end** (`gapBrakeWindowEnd`, whose value lives in
+`client/src/modules/storage/defaults.js`). That is your value and I did not search
+it — but it is the only lever in sight that could reach this, and every other lever in the grid has
+now been shown not to.
+
+### Two things the tables say that I want to say in words
+
+- **No cell makes races monotonous.** Lead changes (40) and distinct leaders (37) are identical on
+  every cell including shipped; the leader's hold actually *falls* with braking. On the numbers, your
+  second worry does not materialise anywhere in the grid.
+- **But at 40 px the brake commands in 289 of 300 races with 100% of its work on gaps below 90 px.**
+  That is "so much braking that even small gaps are closed" in your own words — and my monotony
+  metrics do not catch it. **A setting can breach your intent without my numbers noticing, and that is
+  the case here**, which is why I am not recommending 40 px even though it has the best point estimate.
+
+### Why 56 and not 40
+40 px / 13% has the better point estimate (+8 races against +6) but the two are indistinguishable
+from each other and from shipped, and your rule for that case is to prefer the one that brakes less.
+56 px commands in 238 races against 289 and puts 54% of its work below 90 px against 100%.
+**40 px / 15% is excluded outright**: it is the only cell in the grid that exceeds the shipped maximum
+single-step move (1.039×).
 
 ---
 
