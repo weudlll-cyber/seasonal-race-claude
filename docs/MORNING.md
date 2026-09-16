@@ -33,7 +33,7 @@ produce — which is the argument already written at
 | 3 — read the grid | **DONE**, pushed. → [BRAKE-GRID-1](../reports/night/BRAKE-GRID-1.md) |
 | 4 — visibility | **DONE** — collected on every cell, not just the shortlist |
 | 5 — the deep test (56 px / 13%) | **RUNNING** — N=300/track + the pinned fairness run |
-| 6 — a build for your eye | open |
+| 6 — a build for your eye | **SERVED** at 56 px / 13% — see below |
 
 ---
 
@@ -123,6 +123,56 @@ from each other and from shipped, and your rule for that case is to prefer the o
 56 px commands in 238 races against 289 and puts 54% of its work below 90 px against 100%.
 **40 px / 15% is excluded outright**: it is the only cell in the grid that exceeds the shipped maximum
 single-step move (1.039×).
+
+---
+
+## ★ YOUR OWN RACE — ice-track, Quick Test seed 3
+
+| | SHIPPED (brake off) | **56 px / 13%** |
+|---|---|---|
+| largest lead, to the window end | 196.6 px | **115.8 px** |
+| largest lead, to the finish | 213.1 px | **115.8 px** |
+| winner | **Flare** | **Bolt** |
+| where Flare finishes | 1st | **2nd — caught** |
+| margin to 2nd | 0.256 s | 0.528 s |
+
+**The brake engaged once**, at progress 0.8161, on Flare, at a gap of **90.1 px**; it was the obeyed
+value for **9.94 s (621 frames)** and reached a deepest strength of **0.1259** of its 0.13 ceiling.
+
+★★ **On this race it does exactly what you asked for**: Flare's escape is caught and the race is
+decided at the line instead of behind him. ★ **But this is one race**, and the grid above says it does
+not happen reliably — that is the whole tension in tonight's result. ★ **The winner changes**, which
+you should expect on any race the brake touches.
+
+---
+
+## PIECE 6 — THE BUILD, SERVING 56 px / 13%
+
+**4173 production · 5173 dev · 4000 API.** The client bundle actually served, read off the page:
+**`dist/assets/index-ogeemqcl.js`** (927.39 kB, gzip 276.92).
+
+```
+/api/health  {"build":{"commit":"a90bcfc4","branch":"feat/gap-leader-brake","dirty":false}}
+```
+
+★★ **HOW THIS BUILD CARRIES THE VALUES WITHOUT CHANGING A SHIPPED DEFAULT.** You told me never to
+change a shipped default, and the brake's values live in `defaults.js`. So the client on 4173/5173 is
+**built from a probe worktree** that carries the candidate pair, and **the repository's own defaults
+are untouched** — `git status` on the branch is clean. The API badge above is the main tree's commit,
+because the API serves data and not race config; the client bundle is the probe's.
+
+**The two values this build carries: allowed lead 56 px, maximum authority 13%, window end unchanged,
+and the brake switched ON.** V1 is OFF.
+
+**If you want to compare against today's race**, the dev screen has both switches and both numbers:
+untick **Gap leader brake enabled** to see the shipped race, or set the allowance and authority to
+anything else and it persists in your browser. **Nothing has to be reverted and no build can be
+lost** — there is no uncommitted source line anywhere in this.
+
+### What to watch
+1. **ice-track, Quick Test seed 3** — the table above. Flare is caught.
+2. **The largest reduction** and **a control race the brake never touches** — named from the deep run
+   below once it finishes.
 
 ---
 
