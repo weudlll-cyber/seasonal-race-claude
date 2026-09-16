@@ -1544,6 +1544,21 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [BRAKE-DEEP-1.md](BRAKE-DEEP-1.md) — **56 px / 13% at ten times the sample: it does NOT reduce the
+  escape, and it cuts the worst lead nearly in half.** N = **3,000 paired races per arm** (10 tracks x
+  seeds 1–300), V1 OFF. ★★ **The control passed first**: the N=30 grid seeds re-run inside the N=300
+  set are **300/300 byte-identical**, so the measuring track did not move and the grid stands.
+  ★★★ **The escape effect COLLAPSES at the larger N**: 317/3000 shipped against 313/3000, **43 fixed,
+  39 caused, net +4, McNemar p = 0.7407** — where the same cell showed +6 at p = 0.146 on 300 races.
+  **The larger sample removed the apparent effect rather than confirming it.** ★★ **What it does buy**:
+  largest lead to the window end **492.7 → 258.5 px (−48%)**, p90 170.8 → 130.4 (−24%), and at this N
+  the lead to the FINISH falls too, 492.7 → 306.2 (−38%) — which the N=300 grid did not show, so that
+  figure must not be quoted from the grid. The median race is barely touched (90.1 → 87.3 px).
+  ★ **Cost**: both abruptness measures identical to six decimals (1.000x); contested finishes −1.3
+  points; lead changes and distinct leaders unmoved. ★ **No trustworthy fairness verdict exists** for
+  this pair or for shipped — see [FAIRNESS-SEED-1](FAIRNESS-SEED-1.md). ★ Tonight changed **no source
+  file**; all four fingerprints measure the record with the key OFF.
+
 - [BRAKE-FAIRNESS-1.md](BRAKE-FAIRNESS-1.md) — **the fairness run the gap brake had never had, at the
   FULL PINNED N, and the instrument's own verdict is the same on both arms: FAIR.**
   `scripts/sim-fairness.mjs` UNMODIFIED, 10 tracks x 100 races x 3 distance variants = **300 races per
