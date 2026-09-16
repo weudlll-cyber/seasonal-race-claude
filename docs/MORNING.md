@@ -32,7 +32,7 @@ produce — which is the argument already written at
 | 2 — the grid (21 arms × 300 races) | **DONE** — 6,300 races |
 | 3 — read the grid | **DONE**, pushed. → [BRAKE-GRID-1](../reports/night/BRAKE-GRID-1.md) |
 | 4 — visibility | **DONE** — collected on every cell, not just the shortlist |
-| 5 — the deep test (56 px / 13%) | **RUNNING** — N=300/track + the pinned fairness run |
+| 5 — the deep test (56 px / 13%) | **fairness DONE — ★ IT FAILS THE GATE.** N=300 race set running |
 | 6 — a build for your eye | **SERVED** at 56 px / 13% — see below |
 
 ---
@@ -123,6 +123,44 @@ from each other and from shipped, and your rule for that case is to prefer the o
 56 px commands in 238 races against 289 and puts 54% of its work below 90 px against 100%.
 **40 px / 15% is excluded outright**: it is the only cell in the grid that exceeds the shipped maximum
 single-step move (1.039×).
+
+---
+
+## ★★★ THE DEEP TEST FOUND SOMETHING THE GRID COULD NOT: 56 px / 13% FAILS THE FAIRNESS GATE
+
+Your own instrument, unmodified, at the full pinned N — 10 tracks × 100 races × 3 distance variants
+= **300 races per track pooled, 3,000 races**.
+
+| | band reach | Holm-flagged start-row rows |
+|---|---|---|
+| SHIPPED, measured last night at the same N | mean 89.3% | **0 of 30** |
+| 90 px / 10%, measured last night at the same N | mean 89.2% | **0 of 30** |
+| **56 px / 13%, tonight** | mean 89.1% | **★ 1 of 30** |
+
+**The gate is band reach plus ZERO Holm-flagged rows. One flagged row fails it.**
+
+The row is **luger-hill, 30 s**: χ² = 25.80, **p = 0.00005** against a Holm bar of 0.00167. It is not a
+borderline call and it is not one of the raw-p near-misses I have been telling you to ignore — it
+clears the corrected bar by a factor of thirty.
+
+**And it has a direction**, which is what makes it worth your attention rather than a curiosity:
+
+| start row | wins | expected | average rank |
+|---|---|---|---|
+| R0 (front) | 9% | 20% | 22.69 |
+| R1 | 20% | 20% | 20.64 |
+| R2 | 9% | 20% | 21.15 |
+| R3 | 27% | 20% | 19.58 |
+| **R4 (back)** | **35%** | 20% | **18.44** |
+
+**The back rows win too often and the front row too seldom**, and the average rank falls monotonically
+from front to back. A plausible mechanism is that a front-row starter is more likely to be leading
+early, so he takes more of the braking — but **I am checking that against a shipped control on the
+same track before I assert it**, because the effect could belong to luger-hill rather than to the
+brake. That control is running; the result lands below.
+
+★ Two other rows sit at raw p<0.05 (city-circuit 30 s, searound 60 s). Those are the ordinary kind —
+30 comparisons expect about 1.5 — and neither clears Holm.
 
 ---
 
