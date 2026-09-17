@@ -10,9 +10,59 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 | **1 · settle the fairness verdict** | ★ **RUNNING** | Two further fixed seeds, **777** and **31337**, both arms, full pinned N. 8 workers of 14. ~3 h 45 m. |
 | **2 · re-race the comebacker branch** | ★ **RUNNING** | Ten tracks, seeds 1–30, on **braked** master. 4 workers. |
 | **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
-| **4 · the D25 sign error** | open | not started |
+| **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
 | **5 · the four verify-time points** | open | not started |
 | **6 · the six blind instruments** | open | not started |
+
+---
+
+### ★★★ PIECE 4 — THE DECISION SURVIVES; THE REASON IT READS AS COMFORTABLE DOES NOT
+
+→ [D25-SIGN-1](../reports/night/D25-SIGN-1.md) · **I changed nothing in `BACKLOG.md` or
+`FAIRNESS.md`. The correction is a proposal in the report.**
+
+**The sentence** (`BACKLOG.md:2421`, restated at `FAIRNESS.md:156`): *"luger-hill IS THE SINGLE
+EXCEPTION, AND ITS SIGN IS THE OPPOSITE OF THE WORRY … the **front** rows are slightly favoured, not
+the back. Anyone reopening this on the assumption that the rear rows are advantaged should read that
+sentence first."*
+
+**The four sources, all pointing the other way:**
+
+| source | address | what it says |
+|---|---|---|
+| the table D25 derives it from | `ROW-BONUS-TIMING-1.md:117` | luger-hill first row **58.211 s**, last row **57.924 s** — the rear finishes **sooner** |
+| the other report D25 cites | `ROW-ADVANTAGE-1.md:24` | *"THE ADVANTAGE RUNS BACKWARDS. The BACK rows are the favoured ones"* |
+| last night's measurement | `LUGER-BIAS-1.md:34` | front **13.0%**, back **25.0%**, even share 20.0% |
+| the gate | `PINNED-GATE-1.md:230` | rows rise to the rear, **17.7 → 22.7%** |
+
+Row 0 is the front row and **the one that gets no bonus**. A rear row that makes up its whole deficit
+and still finishes sooner was given **more** than it lost — over-compensation, rear favoured.
+
+### ★★ WHAT IT DOES TO D25 — AND THE ANSWER IS NOT "REVERSE IT"
+
+**Your verdict was ACCEPTABLE, and that is a judgement about SIZE. No magnitude moves**: the deviation
+is still 0.49% of a 58 s race, the worst start row still reaches its band far above the floor, the
+front row's win share was always the one below par. **So the decision stands.**
+
+**Three things in its reasoning change:**
+
+1. ★ **"Flat on nine, one harmless exception" becomes "all ten lean the same way."** The same table
+   says *"all ten differences are positive"* — which, read correctly, is a consistent hair of **rear**
+   advantage across every track, not of under-compensation.
+2. ★ **It stops disagreeing with the other report.** `ROW-ADVANTAGE-1` found *"all 10 tracks lean the
+   same way"* by a different measure. D25 records the two as pointing opposite ways; corrected, **two
+   independent measures over ten tracks agree.**
+3. ★★ **The open question you parked gets harder, not easier.** D25 left the tilt unresolved because
+   it appeared *"only in the one measure conditioned on band arrival"*. On luger-hill **both
+   unconditioned measures now agree with it** — mean finishing rank (4.32 places) and mean finishing
+   time (0.287 s). **A selection effect does not produce agreeing signals in two unconditioned
+   measures.**
+
+★ **So: re-affirm it on the magnitude, which holds — not on the sign, which does not.** The proposed
+fix is two **appended, dated** lines (never an edit of your sentences); the exact wording is in the
+report.
+
+---
 
 ---
 

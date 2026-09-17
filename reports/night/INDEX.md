@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [D25-SIGN-1.md](D25-SIGN-1.md) — **★★ the luger-hill sentence has the sign backwards, and
+  correcting it does not overturn the decision but does remove the reason it was comfortable**
+  (2026-09-18, `night/2026-09-18` piece 4; **nothing changed in `BACKLOG.md` or `FAIRNESS.md`** — the
+  correction is a proposal in the report). `BACKLOG.md:2421` and `FAIRNESS.md:156` say luger-hill's
+  **FRONT** rows are favoured and tell a dissenting reader to check themselves against that sentence.
+  ★ **Four sources say the rear is**: `ROW-BONUS-TIMING-1.md:117` (first row **58.211 s**, last
+  **57.924 s** — and row 0 is the row that gets no bonus, so the rear finishes sooner =
+  OVER-compensation), `ROW-ADVANTAGE-1.md:24` (*"THE ADVANTAGE RUNS BACKWARDS"*), `LUGER-BIAS-1.md:34`
+  (front 13.0%, back 25.0%), `PINNED-GATE-1.md:230` (17.7 → 22.7% across rows). ★★ **The new part is
+  what it does to the decision**: the verdict ACCEPTABLE is a judgement about SIZE and **no magnitude
+  moves (0.49% of a 58 s race), so D25 stands** — but *"flat on nine, one harmless exception"* becomes
+  **"all ten lean the same way"** (the same table's *"all ten differences are positive"*), it stops
+  disagreeing with the other report D25 cites, and ★ **the selection-effect question D25 parked gets
+  HARDER**: on luger-hill both UNCONDITIONED measures now agree with the conditioned tilt, and a
+  selection effect does not do that. **Re-affirm on the magnitude, not on the sign.** The proposed fix
+  is two appended dated lines, never an edit.
 - [DOC-DIFF-1.md](DOC-DIFF-1.md) — **what the 17.9. documentation pass changed, and why none of it
   was on master** (2026-09-18, `night/2026-09-18` piece 3; built from the actual diff, not from the
   report that summarised it). ★★ **Both commits (`fc4d4143`, `e29b428d`) are contained in
