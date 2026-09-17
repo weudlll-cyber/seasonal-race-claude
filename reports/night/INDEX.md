@@ -1544,6 +1544,22 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [BRAKE-FAIRNESS-2.md](BRAKE-FAIRNESS-2.md) — **the seeded fairness run at the new defaults: CLEAR,
+  at two seeds, with the one flagged row failing on BOTH arms.** `sim-fairness.mjs` unmodified, seeds
+  **12345 and 777** (both above zero, which is the point — see FAIRNESS-SEED-1), two arms differing
+  only in `gapBrakeEnabled`, both on the BRANCH code because master carries no brake keys at all.
+  ★★ **THE N IS SHORT AND SAID SO**: `--races=40` = 120 races/track pooled, 1,200 per arm-seed, 4,800
+  total, against a pinned 300/track — the pinned N projected to **nine hours, measured** (583 s per job
+  idle, ~5x worse under load). Power is lost, validity is not: both arms run at the same N and seed.
+  **Not the pinned gate.** ★★★ **Decision rule: no row fails on the new defaults alone at either
+  seed.** Seed 12345 flags luger-hill 30 s on BOTH arms (off p=0.000719, on p=0.000163) — pre-existing;
+  seed 777 flags nothing on either, and the new-defaults arm has FEWER raw p<0.05 rows than brake-off
+  (0 against 2). Band reach identical to within half a point. ★ **The flagged row shown side by side**:
+  average rank agrees to within 0.05 on every start row and exactly ONE race moves — the brake does not
+  create the luger-hill rear bias and barely touches it. ★ **The brake was exercised**: 63,579 commands
+  on 544,477 calls, 100% enabled, from a tally in a probe copy. ★ Racer type is confounded with track
+  by the methodology and the report says so rather than implying otherwise.
+
 - [BRAKE-SHIP-1.md](BRAKE-SHIP-1.md) — **the owner's four values are the shipped defaults, and the
   shipped path reproduces the measured arm exactly.** `gapBrakeEnabled` false→true, allowance 90→56 px,
   authority 0.1→0.13, window end 0.95→0.97; V1 stays false. ★★ **THE DECISION RULE PASSES: 300 of 300
