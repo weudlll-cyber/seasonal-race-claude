@@ -1863,6 +1863,20 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
 - `v-security-hardening-complete`
 - `v1-race-action-merged`
 
+### Ships since the gap-brake line (2026-09-17)
+
+- **`archive/gap-leader-brake-2026-09-17`** — the archive of `feat/gap-leader-brake`, merged to master
+  as **`be7e6872`**. The branch that gave the engine its only mechanism for slowing a racer who is too
+  far AHEAD: past the PULK window the outcome servo steers toward a DRAWN rank and cannot see a gap at
+  all, so a leader who broke away stayed away. It carries the brake and its RATE law (size decides
+  whether it engages, the gap's CHANGE decides how hard it pulls, and the strength fades with the gap
+  so the leader is never released with a snap), the arrival fix that moves a target already in flight
+  without restarting its ease, the closure of five blind sites where a plan builder ran a world no
+  player sees — both arms of the parity guard among them — and V1 put behind a key that ships OFF
+  because it must never be on together with the brake. **Shipped ON at the owner's values**; the four
+  numbers live in `client/src/modules/storage/defaults.js`. All four fingerprints minted at this ship
+  (`docs/fingerprints.json`); golden races were NOT re-recorded and did not move.
+
 ### Additions since 2026-07-25 (current origin total: 45 tags)
 
 Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
