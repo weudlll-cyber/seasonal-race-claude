@@ -11,8 +11,36 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 | **2 · re-race the comebacker branch** | ★ **DONE — nothing merged, tagged or deleted** | → [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) — **it still costs breakaways** |
 | **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
 | **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
-| **5 · the four verify-time points** | open | not started |
+| **5 · the four verify-time points** | **DONE — two were already done, two I hand back** | → [VERIFY-POINTS-1](../reports/night/VERIFY-POINTS-1.md) |
 | **6 · the six blind instruments** | open | not started |
+
+---
+
+### ★ PIECE 5 — TWO OF THE FOUR WERE ALREADY DONE; TWO I COULD NOT ACT ON
+
+→ [VERIFY-POINTS-1](../reports/night/VERIFY-POINTS-1.md) · **Nothing was built, and nothing needed
+to be.**
+
+| point | verdict |
+|---|---|
+| **1 · the client build inside the check run** | ★ **DONE, on master** as `cae917c8`. Before: **nothing built the client** — zero matches for `vite build` or `npm run build` in `verify` or `ci.yml`. Now `verify` builds it and audits the bundle as step 2 of the same guard. ★ **It no longer covers nothing — this point ADDED coverage.** |
+| **2 · separating the unit-suite environment** | ★ **DONE, on master** as `dd963859`. **232 s → 172 s**, 70 files of 261 carrying the opt-out at the tree tonight. Cost: those 70 no longer get a browser. |
+| **3 · replacing the nine warm-up races** | ★ **I could not identify what this names.** The searches are listed in the report. The only warm-up in the tree is `phys-bench.mjs:70` — **300 physics STEPS, not nine races.** |
+| **4 · the production arm for the check setup** | ★ **Two plausible readings, different work.** I did not pick one: acting on a guess changes what a gate covers. |
+
+★★ **The brief's numbers for point 2 are the PROPOSAL'S, not what shipped.** It says *"137 files with
+no browser, 176 → 86 s, one failed"*; what landed is **69 files and 232 → 172 s**. The larger set was
+the candidate list — membership was then established **per file in two passes that both had to
+agree**, the second requiring the **identical count of passing AND skipped** tests in both
+environments, *"because a file going green because a global quietly vanished is worse than a slow
+one"*. **Quoting the proposal's figures would overstate both the saving and the exposure.**
+
+★ **The default did not move**: `environment: 'jsdom'` is still the default, so a file gets a browser
+unless it has opted out by a deliberate line — a new test file is safe by construction.
+
+**Both open points need one sentence from you**, and each is short work once named.
+
+---
 
 ---
 

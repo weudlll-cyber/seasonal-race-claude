@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-POINTS-1.md](VERIFY-POINTS-1.md) — **two of the four are already done and on master; one I
+  could not identify and one I could not confirm** (2026-09-18, `night/2026-09-18` piece 5; **nothing
+  built**). ★ **Point 1, the client build inside the check run: DONE on master** as `cae917c8` —
+  before it, **nothing built the client** (zero matches for `vite build`/`npm run build` in `verify`
+  or `ci.yml`), and the bundle audit now runs as **step 2 of the same guard** so it cannot race the
+  artefact it judges. **It removed no coverage; it added some.** ★ **Point 2, the unit-suite
+  environment: DONE on master** as `dd963859` — **232 s → 172 s**, **70 of 261** test files carrying
+  `// @vitest-environment node` at the tree tonight, the jsdom default unchanged so a new file is safe
+  by construction. ★★ **The brief's figures for point 2 describe the PROPOSAL, not the change**
+  (*"137 files, 176 → 86 s"* against 69 files and 232 → 172 s) — the candidate set was cut by a
+  two-pass membership test whose second pass required the identical passing AND skipped counts in both
+  environments. ★ **Point 3, the nine warm-up races: NOT IDENTIFIED** — searches listed; the only
+  warm-up in the tree is `phys-bench.mjs:70`, **300 physics steps, not nine races**. ★ **Point 4, the
+  production arm: NOT CONFIRMED** — two plausible readings naming different work, and picking one
+  would change what a gate covers.
 - [COMEBACK-RERACE-1.md](COMEBACK-RERACE-1.md) — **★★ the comebacker branch re-raced on BRAKED
   master: it still costs breakaways, and the brake does not absorb it** (2026-09-18,
   `night/2026-09-18` piece 2; **nothing merged, tagged or deleted** — master was merged into a probe
