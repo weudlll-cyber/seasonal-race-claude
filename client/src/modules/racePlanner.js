@@ -1591,8 +1591,12 @@ export function createTrajectoryController(racePlan) {
 
   /**
    * Gap-cap re-roll bias (docs/CONCEPT-COHESION.md "loaded dice within the honest range").
-   * SIM-ONLY: activated only when the plan carries a gapReroll threshold (the browser never sets it,
-   * so this early-returns rawSample there → byte-identical). PURE: a deterministic function of the
+   * ★ THIS RUNS IN THE BROWSER. This block said "SIM-ONLY ... the browser never sets it, so this
+   * early-returns rawSample there → byte-identical" until 2026-09-17, and that stopped being true
+   * when the feature shipped: `defaults.js` carries `gapRerollEnabled: true` and a non-null
+   * `gapRerollThresholdLengths`, so the threshold IS set on the shipped path and this transform
+   * really does bias draws in a browser race. The corrected sibling comment at the call site said so
+   * from 2026-09-13; this one was missed. PURE: a deterministic function of the
    * already-drawn rawSample + live race state + config, using NO new RNG. computePulkBiasedTarget's
    * behavior is untouched; this is a separate, phase-disjoint transform (OUTCOME window vs PULK).
    *

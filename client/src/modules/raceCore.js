@@ -369,7 +369,10 @@ export function createRaceFromIdentity(p) {
     };
   }
 
-  // ── Pre-OUTCOME contest-injector "director" (PulkLeadRotation — default OFF) ──
+  // ── Pre-OUTCOME contest-injector "director" (PulkLeadRotation) ──
+  // ★ IT IS ON WHENEVER THE RACE PLAN IS, which is the shipped state. This read "default OFF"
+  // until 2026-09-17; the flag below is `racePlanEnabled`, and defaults.js calls this mechanism
+  // SHIPPED ON and UNCONDITIONAL in as many words.
   const pulkLeadRotationOn = racePlanEnabled;
   const pulkLeadRotCfg = {
     enabled: pulkLeadRotationOn,
@@ -595,7 +598,7 @@ export function stepRacePhysics(st, cfg) {
     }
   }
 
-  // PulkLeadRotation (default OFF → skipped).
+  // PulkLeadRotation — runs whenever the race plan is on, which is the shipped state.
   if (pulkLeadRotationOn && govFractions) {
     applyPulkLeadRotation(
       st.racers,
@@ -697,9 +700,21 @@ export function stepRacePhysics(st, cfg) {
       r.runoutDecay *= 0.97;
       r.t += r.baseSpeed * r.runoutDecay;
     }
+    // ★ THE REALIZED SPEED FACTOR, and it must carry EVERY term the step applies. `governorMult`
+    // was missing here until 2026-09-17 while `raceStep.js:131` multiplies by it, so this understated
+    // the speed of any racer the PULK contest director was acting on.
+    // ★ NOTHING READS `vt` TODAY — it is written here, at the constSpeed diagnostic below, and in
+    // scripts/sim-race-visual.mjs, and read nowhere in the tree. So this correction cannot move a
+    // race, and the field is a diagnostic waiting for a consumer rather than a live input.
     r.vt =
       race_baseSpeed > 0 && !r.finished
-        ? (r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult) /
+        ? (r.baseSpeed *
+            boost *
+            brake *
+            rowEnvMult *
+            r.trajectoryMult *
+            r.areaBonusMult *
+            (r.governorMult ?? 1.0)) /
           race_baseSpeed
         : 0;
   }
