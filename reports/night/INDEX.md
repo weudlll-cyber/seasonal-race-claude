@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACK-RERACE-1.md](COMEBACK-RERACE-1.md) — **★★ the comebacker branch re-raced on BRAKED
+  master: it still costs breakaways, and the brake does not absorb it** (2026-09-18,
+  `night/2026-09-18` piece 2; **nothing merged, tagged or deleted** — master was merged into a probe
+  copy and never pushed). Ten tracks, seeds 1–30, **300 races per arm**, shipped defaults, brake ON,
+  ★ **no instrumentation in either tree**: the cast split is read from `getHeroRoles()` /
+  `getHeldRelease()` / `getTargetRank()`, so the branch's own "instrumented build" was not needed.
+  ★ **The control reproduces the ship's mint to the digit** (8 of 300 over 124 px, worst lead 187.5 px).
+  ★ **The two KEPT cast sites do not move** (0.61→0.61, 0.70→0.72) and **only the removed column goes
+  to zero** (0.41→0.00); comebackers/race **1.72→1.32**, races with none **13→30 of 300**.
+  ★★ **THE COST: >124 px late gaps 8→15 (nearly double), worst lead 187.5→197.6 px, p90
+  127.7→133.0 px, median almost still (86.5→88.3)** — the brake's own signature running backwards.
+  Contested finishes unchanged (125→124); **176 of 300 byte-identical, 81 winner changes (27%)**.
+  ★★ **The brake is NOT absorbing it** — it fires **6% MORE** on the branch arm (160,864→170,881) and
+  the tail still grows. ★ But it IS working: the branch's own fixture showed the worst lead growing
+  **107 px**, here it grows **10.1**. **The reason it was not landed still holds.**
 - [D25-SIGN-1.md](D25-SIGN-1.md) — **★★ the luger-hill sentence has the sign backwards, and
   correcting it does not overturn the decision but does remove the reason it was comfortable**
   (2026-09-18, `night/2026-09-18` piece 4; **nothing changed in `BACKLOG.md` or `FAIRNESS.md`** — the

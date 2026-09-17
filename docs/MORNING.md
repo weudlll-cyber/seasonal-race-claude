@@ -8,11 +8,60 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 | piece | state | one line |
 |---|---|---|
 | **1 · settle the fairness verdict** | ★ **RUNNING** | Two further fixed seeds, **777** and **31337**, both arms, full pinned N. 8 workers of 14. ~3 h 45 m. |
-| **2 · re-race the comebacker branch** | ★ **RUNNING** | Ten tracks, seeds 1–30, on **braked** master. 4 workers. |
+| **2 · re-race the comebacker branch** | ★ **DONE — nothing merged, tagged or deleted** | → [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) — **it still costs breakaways** |
 | **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
 | **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
 | **5 · the four verify-time points** | open | not started |
 | **6 · the six blind instruments** | open | not started |
+
+---
+
+### ★★★ PIECE 2 — THE COMEBACKER BRANCH STILL COSTS BREAKAWAYS ON BRAKED MASTER
+
+→ [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) · **Nothing merged, tagged or deleted.**
+Master was merged into a **probe copy**; that merge was never pushed.
+
+**Ten tracks, seeds 1–30, 300 races per arm, 40 racers, your roster, `wild`, shipped defaults with the
+brake ON. No config override, and ★ no instrumentation in either tree** — the cast split is read from
+the race plan's own accessors, so both arms ran from unmodified checkouts.
+
+★ **The control reproduces the ship's own numbers to the digit** — 8 of 300 races over 124 px and a
+worst lead of 187.5 px are exactly what the brake's mint recorded. That is how we know the harness is
+honest before reading the branch column.
+
+| | MASTER | BRANCH |
+|---|---|---|
+| comebackers per race | 1.72 | **1.32** |
+|  from the drawn-winner site (**kept**) | 0.61 | 0.61 |
+|  from the staged path (**kept**) | 0.70 | 0.72 |
+|  ★ from the **removed** path | **0.41** | **0.00** |
+| races with **no comebacker at all** | 13 (4.3%) | ★ **30 (10.0%)** |
+| largest lead 0.6→line — median | 86.5 px | 88.3 px |
+|  p90 | 127.7 px | **133.0 px** |
+|  max | 187.5 px | **197.6 px** |
+| ★ races with a **>124 px gap after 0.95** | **8 (2.7%)** | ★ **15 (5.0%)** |
+| contested finishes | 125 | 124 |
+| byte-identical races | — | **176 of 300 (58.7%)** |
+| winner changes | — | **81 of 300 (27.0%)** |
+
+★★ **THE ANSWER, PLAINLY: the reason it was not landed still holds.** Escapes nearly double and the
+worst lead grows, by the brake's own signature running backwards — median untouched, tail up.
+
+★★ **And the brake is not absorbing it.** It **fires 6% MORE often on the branch arm** (160,864 →
+170,881 frames on the same window) and the tail still grows. It reaches its authority ceiling against
+a bigger problem rather than cancelling it — consistent with what was already known: the brake never
+reduced the escape *rate*, it cut the worst cases, so **more worst cases is the one thing it is least
+able to offset.**
+
+★ **In fairness to the branch, the brake IS doing real work against it.** Its own fixture showed the
+worst lead growing by **107 px**; re-raced on braked master over ten tracks it grows by **10.1**. The
+cost is far smaller than the branch's own numbers suggested — **it is just not zero, and not negative.**
+
+**What the branch BUYS is not in this table**, and this report does not weigh it: it removes a casting
+path you decided should go, and its `DEAD-ENDS.md` section S carries the correction to the three
+figures that decision was taken on. **This supplies the cost, measured on the tree as it stands.**
+
+---
 
 ---
 
