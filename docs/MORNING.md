@@ -254,6 +254,41 @@ lost** — there is no uncommitted source line anywhere in this.
 
 ---
 
+## ★★ ADDED 2026-09-17 — HOW MANY RACES OPEN A REAL GAP AFTER 0.95
+
+You asked how often a gap you would call too large actually opens after the window end — the grid
+only said where the peak sits, which counts a 40 px peak the same as a 300 px one.
+→ [LATE-GAP-1](../reports/night/LATE-GAP-1.md). N = 300 races per arm.
+
+| | SHIPPED | 56 px / 13% |
+|---|---|---|
+| a gap **> 56 px** (your allowance) opens after 0.95 | **38.0%** of races | 35.3% |
+| a gap **> 124 px** opens after 0.95 | **8.0%** (24 races) | **4.0% (12 races)** |
+| of those, the leader of that gap **wins** | **24 of 24** | **12 of 12** |
+
+★★★ **A late gap above 124 px is a guaranteed win — 36 of 36 across both arms, no exceptions — and
+the brake halves how often it happens.** That is the clearest thing the brake does anywhere in this
+week's work.
+
+★★ **But the ordinary case is untouched**: at 56 px and 90 px the counts barely move, and **the leader
+of a late gap wins 96–97% of the time in both arms.** The event you object to is common, and the
+brake reaches only its largest instances. It is also **worse on four tracks of ten**, and produces
+fewer contested finishes among these races (13.2% → 7.5%).
+
+### ★ And the "late" gap is mostly not late
+
+**Two thirds of these gaps (64%) are already above 56 px within 0.002 of the window end** — they are
+gaps the brake was holding at 0.95 and released, not gaps that opened afterwards. Only a third open
+genuinely later, at a median progress of 0.9786.
+
+**What a later window end would REACH** (a lookup, not a sweep — I did not run the brake at any other
+value): 0.96 → 70%, 0.97 → 75%, 0.98 → 83%, 0.99 → 93%. ★ **There is no knee in that curve**, so the
+data singles out no value. The cheapest fact in it is that **0.952 would already cover 64%**.
+★ Reach is not effect: this counts where the brake would still be *running*, not what it would close.
+**The value is yours and I am not proposing one.**
+
+---
+
 ## ★ WHAT I NOTICED AND DELIBERATELY LEFT ALONE
 
 - **`gapBrakeWindowEnd`.** The grid says the runaway completes after it, and every other lever has now

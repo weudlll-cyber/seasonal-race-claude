@@ -1544,6 +1544,24 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [LATE-GAP-1.md](LATE-GAP-1.md) — **38% of races open a gap past his allowance after 0.95, the leader
+  wins 96% of them, and two thirds of those gaps were already open when the brake let go.** The grid
+  counted WHERE the whole-race peak sits; this counts how BIG the gap is in the segment 0.95 → the
+  line, which is the owner's actual question. N = 300 races per arm, **re-raced** because the grid's
+  raw output was deleted in the previous chain's sweep (said plainly; no recomputed and re-raced
+  numbers are mixed, and a repeat cell is byte-identical). ★★★ **A late gap above 124 px is a
+  GUARANTEED win — 36 of 36 across both arms, no exceptions — and the brake HALVES how often it
+  happens, 24 races to 12.** ★ But at 56 px and 90 px it changes almost nothing (114→106, 48→47):
+  **the brake reaches the big late gaps and not the ordinary ones.** ★ Step 3 separates "a gap opens"
+  from "a racer escapes and wins": the leader of that gap wins **95.6% / 97.2%**, and the brake
+  slightly HURTS here — fewer contested finishes among these races (13.2% → 7.5%). ★ It is worse on
+  **four tracks of ten**, and on dirt-oval produces the brake arm's largest late gap (170.1 px against
+  shipped's 116.3). ★★ **Step 4, a lookup and not a sweep**: 64% of these gaps are already over 56 px
+  within 0.002 of the window end — **the "late gap" is mostly carry-over the brake was holding and
+  released**, so a window end of 0.952 would already cover two thirds. Reach at 0.96/0.97/0.98/0.99 is
+  70/75/83/93% and **has no knee**; no value is singled out and none is recommended. Late gap peaks at
+  progress ≈0.987; worst is 191.1 px = **0.849 canvas widths** at the settled LEADER_ZOOM of 225.
+
 - [BRAKE-DEEP-1.md](BRAKE-DEEP-1.md) — **56 px / 13% at ten times the sample: it does NOT reduce the
   escape, and it cuts the worst lead nearly in half.** N = **3,000 paired races per arm** (10 tracks x
   seeds 1–300), V1 OFF. ★★ **The control passed first**: the N=30 grid seeds re-run inside the N=300
