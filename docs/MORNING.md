@@ -9,8 +9,43 @@ Nothing merged, nothing minted, nothing tagged. The branch is pushed after every
 | **1 · the pinned fairness gate** | ★ **RUNNING** | Started first, as asked. One fixed seed (**12345**), both arms, **the pinned N** — `--races=100` × three distance variants = **300 races per track**. 8 workers, 20 jobs. On track for roughly **three hours**, not the nine that was projected under load. **Until it lands, the pinned gate is still owed.** |
 | **2 · the documentation** | **DONE** | Six factually wrong statements corrected against the tree, plus two omissions in files that claim completeness. Nothing rewritten for style. |
 | **3 · the luger-hill bias** | **DONE — investigated only, no repair** | → [LUGER-BIAS-1](../reports/night/LUGER-BIAS-1.md) |
-| **4 · the two open branches** | open | not started |
+| **4 · the two open branches** | **DONE — nothing merged, tagged or deleted** | → [BRANCH-DECISION-1](../reports/night/BRANCH-DECISION-1.md) |
 | **5 · what else is open** | open | not started |
+
+---
+
+### ★ PIECE 4 — THE TWO OPEN BRANCHES, AND ONE OF THEM NOW ARGUES WITH MASTER
+
+Neither was merged, tagged or deleted. → [BRANCH-DECISION-1](../reports/night/BRANCH-DECISION-1.md)
+
+**`feat/remove-prestaging-comebacker`** (`5c9e050e`, 2 ahead / 88 behind) — **it merges cleanly even
+now**, which I checked against tonight's master. But it is **engine code**, it **moves a golden race**,
+and **all four fingerprints would need minting, which needs your eye.**
+
+★★ **The thing worth your attention: its own measured effect works against the brake you shipped on
+Wednesday.** It removes a casting path, and its own table shows breakaway share **59.3% → 63.0%** and
+the worst lead of 300 races **313.9 → 420.9 world px** — *"removing a steered racer makes an unsteered
+one"*. The brake was merged to pull that same tail **down** (244.4 → 187.5 px). **Those are different
+fixtures and I am not claiming the numbers subtract** — but the directions are opposed, and **every
+number on that branch was measured before the brake existed.**
+
+**RECOMMENDATION: keep it, do not merge it yet.** Re-race its own N=300 fixture on braked master and
+read the two numbers again — a few hours, and it is the entire decision. Merging tonight would spend
+part of what the brake bought with nothing saying how much.
+
+**`night/2026-09-14-history`** (`cba9c774`, 5 ahead / 101 behind) — **documentation only.** No engine
+code, no default, nothing to mint. It conflicts in **two** files, `docs/MORNING.md` and
+`reports/evolution/INDEX.md`, and **neither conflict is semantic** — two nights wrote to the same
+append-style document.
+
+Its finding still stands **as history**: the race was bit-identical at five stands from 2026-08-04 to
+2026-09-12, and what changed was the **camera** (`contentionWatch`, `d4bad558`). ★ **But it has an end
+date now** — the brake is the first shipped change in that whole span that touches the quantity the
+report holds flat, so a sixth stand would not match, by design. **One dated line in its headline fixes
+that.**
+
+**RECOMMENDATION: merge it for the report alone**, resolving `MORNING.md` by keeping master's side
+wholesale — the branch's copy is a superseded night sheet. Low risk; the only cost is doc tidying.
 
 ---
 

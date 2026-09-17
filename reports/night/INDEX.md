@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BRANCH-DECISION-1.md](BRANCH-DECISION-1.md) — **the two open branches, prepared for his
+  decision** (2026-09-18, `night/2026-09-17` piece 4; **nothing merged, tagged or deleted**).
+  ★ **`feat/remove-prestaging-comebacker` (`5c9e050e`, 2 ahead / 88 behind) MERGES CLEANLY against
+  `5b60b615`** — but it is engine code (`heroCurveGenerator.js`), it **moves a golden race**
+  (`closed-garden-path-12`, Flash → Nitro), and **all four fingerprints would need minting**.
+  ★★ **Its own measurements pull AGAINST the brake that shipped three days ago**: breakaway share
+  **59.3% → 63.0%** and worst lead **313.9 → 420.9 world px**, because *"removing a steered racer makes
+  an unsteered one"* — while the brake was merged to cut exactly that tail. **Every one of those
+  numbers predates the brake**, so they no longer describe what merging would do. ★ Also: **below 20
+  racers the B1 pool would cast nothing at all** (100% of races at n=10..19). **RECOMMEND: keep, do
+  not merge, re-race its N=300 fixture on braked master first.** ★ **`night/2026-09-14-history`
+  (`cba9c774`, 5 ahead / 101 behind) is documentation only** — no engine code, nothing to mint — and
+  conflicts in **two** append-style files (`docs/MORNING.md`, `reports/evolution/INDEX.md`), neither
+  conflict semantic. Its finding (the race bit-identical at five stands 2026-08-04→2026-09-12; the
+  CAMERA moved, `contentionWatch` in `d4bad558`) **holds as history but has acquired an end date** —
+  the brake is the first shipped change in that span acting on the quantity it holds flat.
+  **RECOMMEND: merge for the report alone, keeping master's MORNING.md wholesale.**
 - [LUGER-BIAS-1.md](LUGER-BIAS-1.md) — **the rear bias belongs to luger-hill, the record has carried
   it since 2026-07-31, and what is new is that it is a DURATION effect on an OPEN track** (2026-09-18,
   `night/2026-09-17` piece 3; **INVESTIGATION ONLY, no repair, nothing tuned, nothing minted**).
