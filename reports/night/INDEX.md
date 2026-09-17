@@ -1544,6 +1544,26 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [WINDOW-END-1.md](WINDOW-END-1.md) — **a later window end DOES close the races that matter, and the
+  finish does not pay for it.** Five arms (brake off, end 0.95/0.96/0.97/0.98) at his 56 px / 13%,
+  V1 OFF, **300 races each, 1,500 total**; noise floor **exactly zero** (239 of 239 quiet races
+  byte-identical). ★★★ **The >124 px late-gap count — every one of which is a win for the racer
+  holding it — goes 24 (shipped) → 12 (0.95) → 10 → 8 → 7 (0.98), a 71% reduction**, and it is the
+  ONLY column that moves: >56 px is flat at 106 across all braked arms and >90 px moves by three races
+  in total. ★★ **The feared cost at the finish does not appear**: contested finishes go 129 shipped →
+  124 at 0.95 and back UP to 126 at 0.98, and the brake is still pulling at the line in **0 of 300
+  races at every value** — `raceProgress` is leaderT/finishT (raceCore.js:577) so the winner crosses
+  at 1.0 and every window end has already released. ★ **The real cost is of a different kind**: full
+  13%-authority releases inside the run-in rise 115 → 141, which is invisible today (**all arms
+  1.000x on both abruptness measures**, because `_setTarget` restarts the ease, racePlanner.js:733-739)
+  and is **exactly the 7.6x jump if V1 is ever switched on** — so a later window makes the brake MORE
+  dependent on V1 staying off. ★ **dirt-oval is worse with the brake at every window end** (shipped 0,
+  braked 2–3) and searound is barely helped. ★ On his own race, ice-track seed 3, **all four window
+  ends are identical** — the brake finishes at 0.9434. ★ The measurement points at **0.97** (12 → 8,
+  one contested finish BETTER than 0.95, 16 late releases against 0.98's 26) and the value is his.
+  ★ Four of four fingerprints on the record; `verify` has no failures to classify because the task
+  changed no source at all.
+
 - [LATE-GAP-1.md](LATE-GAP-1.md) — **38% of races open a gap past his allowance after 0.95, the leader
   wins 96% of them, and two thirds of those gaps were already open when the brake let go.** The grid
   counted WHERE the whole-race peak sits; this counts how BIG the gap is in the segment 0.95 → the

@@ -289,6 +289,45 @@ data singles out no value. The cheapest fact in it is that **0.952 would already
 
 ---
 
+## ★★ ADDED 2026-09-17 (2) — WHAT EACH WINDOW END ACTUALLY CLOSES
+
+Reach was not effect, so I measured the effect. Five arms at your 56 px / 13%, V1 off, 300 races each.
+→ [WINDOW-END-1](../reports/night/WINDOW-END-1.md). Noise floor **exactly zero**.
+
+| | shipped | **0.95** (yours) | 0.96 | 0.97 | 0.98 |
+|---|---|---|---|---|---|
+| **races with a >124 px gap after 0.95** | 24/300 | **12** | 10 | **8** | **7** |
+| contested finishes | 129/300 | 124 | 124 | **125** | **126** |
+| brake still pulling at the line | 0/300 | **0** | **0** | **0** | **0** |
+| both abruptness measures | — | **1.000×** | **1.000×** | **1.000×** | **1.000×** |
+
+★★★ **Yes, a later end closes the races that matter.** Every >124 px late gap is a win for the racer
+holding it, and the count falls from 24 (shipped) to 7 at 0.98 — a 71% reduction. **It is the only
+column that moves**: gaps over 56 px stay flat at 106 in every braked arm.
+
+★★ **And the finish does not pay for it.** I expected a later end to cost close finishes; it does the
+opposite — braking at all costs 5, and extending the window gives 2 back. **The brake is never still
+pulling when the winner crosses, at any value**, because the winner crosses at progress 1.0 and every
+end has already released.
+
+### ★ The real cost is a different one, and you should know it
+**Full-authority releases inside the run-in rise from 115 to 141.** Today that is invisible — every
+arm is 1.000× on both abruptness measures, because the shipped setter restarts the ease on a release.
+**But those releases are exactly what becomes the 7.6× jump if V1 is ever switched on.** A later
+window end makes the brake *more* dependent on V1 staying off, not less.
+
+### On your own race
+**ice-track seed 3 is identical at all four window ends** — the brake finishes its work at progress
+0.9434, before any of them matter. Flare is caught in all four; Bolt wins.
+
+★ **If the measurement points anywhere it points at 0.97**: 12 → 8 in the column that matters, one
+contested finish *better* than 0.95 rather than worse, and 16 late releases against 0.98's 26.
+**The value is yours.** ★ Two things against changing at all: **dirt-oval is worse with the brake at
+every window end** (shipped has zero >124 px late gaps there, braked arms have two or three), and
+0.95 is the incumbent.
+
+---
+
 ## ★ WHAT I NOTICED AND DELIBERATELY LEFT ALONE
 
 - **`gapBrakeWindowEnd`.** The grid says the runaway completes after it, and every other lever has now
