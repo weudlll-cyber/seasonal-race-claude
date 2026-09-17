@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [LUGER-BIAS-1.md](LUGER-BIAS-1.md) — **the rear bias belongs to luger-hill, the record has carried
+  it since 2026-07-31, and what is new is that it is a DURATION effect on an OPEN track** (2026-09-18,
+  `night/2026-09-17` piece 3; **INVESTIGATION ONLY, no repair, nothing tuned, nothing minted**).
+  ★ **It is luger-hill's alone, not the 30 s variant's**: same instrument, same seed, brake OFF, 100
+  races, 30 s only — nine of ten tracks unremarkable; luger-hill front row **13.0%** against an
+  expected **20.0%**, back row **25.0%**, χ² 9.4 p 0.051. ★★ **THE BIAS AND ITS MECHANISM WERE BOTH
+  ALREADY IN THE RECORD and an earlier draft of the report wrongly said they were not** — flagged
+  first in HOLM-300-COMBINED (2026-07-31, p 0.020), direction and mechanism established in
+  ROW-ADVANTAGE-1 (2026-08-24, which names `rowLayout.js:99 computeSpeedBonus` and whose P3 asks for
+  exactly this block), reproduced at χ² 23.100 in STAGING-START-ROWS-1 (2026-09-11). ★ **What is new
+  is the DURATION dependence**: luger-hill's back row carries a **7.91% permanent speed bonus at 30 s
+  against 3.80% at 60 s**, the largest in the set and 2.1× its own 60 s value, because it is the only
+  **OPEN** track with five rows and the open branch at **rowLayout.js:119** subtracts
+  `totalRows × tOffset` from an already-small `finishT` (0.478). On the five closed tracks the bonus
+  does not move with duration at all. ★ **Corrects ROW-ADVANTAGE-1 on one supporting point**: its
+  *"9 rows where the next-most has 7"* does not survive a check at the tree — searound carries 7 rows
+  at 40 racers and 14 at 80, more than luger-hill at either size; that report ran open tracks at 80
+  and closed at 40, so **row count is not the discriminator, openness × shortness is.** ★ **No repair
+  was made and none is proposed** — changing it changes the shipped race for every viewer.
+
 - [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
   brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
   nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It

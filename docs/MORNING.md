@@ -1,4 +1,55 @@
-# MORNING SHEET — 2026-09-17
+# MORNING SHEET — 2026-09-18
+
+## ★ TONIGHT'S CHAIN — `night/2026-09-17`, LIVE STATUS
+
+Nothing merged, nothing minted, nothing tagged. The branch is pushed after every piece.
+
+| piece | state | one line |
+|---|---|---|
+| **1 · the pinned fairness gate** | ★ **RUNNING** | Started first, as asked. One fixed seed (**12345**), both arms, **the pinned N** — `--races=100` × three distance variants = **300 races per track**. 8 workers, 20 jobs. On track for roughly **three hours**, not the nine that was projected under load. **Until it lands, the pinned gate is still owed.** |
+| **2 · the documentation** | **DONE** | Six factually wrong statements corrected against the tree, plus two omissions in files that claim completeness. Nothing rewritten for style. |
+| **3 · the luger-hill bias** | **DONE — investigated only, no repair** | → [LUGER-BIAS-1](../reports/night/LUGER-BIAS-1.md) |
+| **4 · the two open branches** | open | not started |
+| **5 · what else is open** | open | not started |
+
+---
+
+### ★ PIECE 3 — THE LUGER-HILL BIAS, AND A CORRECTION TO MY OWN FIRST DRAFT
+
+**It is luger-hill's, not the 30 s variant's.** Same instrument, same seed, brake OFF, 100 races,
+30 s only: nine of ten tracks are unremarkable. luger-hill's front row wins **13.0%** where an even
+share is **20.0%**, its back row **25.0%** — χ² 9.4, p 0.051.
+
+★★ **You do not have a new finding here, and my first draft claimed you did.** It said the record
+was silent on this. **It is not** — I wrote that sentence before running the searches and the
+searches contradict it:
+
+- **2026-07-31** — luger-hill first flagged Holm-unfair on start rows, p 0.020, at the ship.
+- **2026-08-24** — ROW-ADVANTAGE-1 established the **direction** (the back rows are favoured, on 10 of
+  10 tracks), measured luger-hill as the extreme, **named `rowLayout.js:99 computeSpeedBonus` as the
+  mechanism**, and its P3 asked for precisely the block I have just run.
+- **2026-09-11** — reproduced at χ² 23.100, p 1.562e-4, on master.
+
+**What IS new is narrow and worth having:** the size of the bonus depends on the race **duration**,
+and the earlier work only ever ran at 60 s. luger-hill's back row carries a **7.91% permanent speed
+bonus at 30 s against 3.80% at 60 s** — the largest in the set, and **2.1× its own 60 s value**. The
+reason is that it is the only **OPEN** track with five start rows, and the open branch at
+`rowLayout.js:119` subtracts `totalRows × tOffset` from an already-small `finishT`. On the five closed
+tracks the bonus does not move with duration at all. For scale: the natural speed spread the game
+draws from is about ±10%, so this is most of a full spread band, held for the whole race.
+
+★ **It also corrects one supporting sentence in ROW-ADVANTAGE-1** — its *"9 rows where the next-most
+has 7"*. Checked at the tree: searound carries **7 rows at 40 racers and 14 at 80**, more than
+luger-hill at either size. That block ran open tracks at 80 and closed at 40, which is what made
+luger-hill look like the most-rowed track. **Row count is not the discriminator; openness × shortness
+is.**
+
+**★ NEEDS YOUR WORD.** No repair was made and none is proposed — every candidate changes the shipped
+race for every viewer. The one experiment that would settle it, **varying `speedBonusFactor` and
+measuring the tilt, has never been run** by anyone, and ROW-ADVANTAGE-1 says the same of itself.
+
+---
+
 
 ## ★★★ IT IS ON MASTER
 
