@@ -1544,6 +1544,24 @@ and in that commit's message.
   from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
   screen and shipping it would need a key, a control, a rule and a default.
 
+- [BRAKE-SHIP-1.md](BRAKE-SHIP-1.md) — **the owner's four values are the shipped defaults, and the
+  shipped path reproduces the measured arm exactly.** `gapBrakeEnabled` false→true, allowance 90→56 px,
+  authority 0.1→0.13, window end 0.95→0.97; V1 stays false. ★★ **THE DECISION RULE PASSES: 300 of 300
+  races byte-identical between the shipped default and the 56/13/0.97 override arm** — the override
+  and the default are the same thing. Worst lead 244.4 → 187.5 px, >124 px late gaps **24 → 8 of 300**,
+  contested 129 → 125, winner changes 57, byte-identical 141. ★ **`verify` 22 PASS / 3 FAIL, all three
+  category (a)** — the world, camera and render fingerprints, which moved because the default
+  legitimately moved. **No (b).** All four fingerprint values reported against the record; **nothing
+  minted**. ★★ **Golden races PASS and nothing was re-recorded**, by design: the guard's own text at
+  check-golden-races.mjs:58 says every input is pinned in the fixture so a change to defaults.js
+  cannot move them. ★ Two dev-screen strings claimed "OFF is the shipped state" and one still
+  described the RETIRED size law ("ramps to full at twice it"); both corrected. ★ **Two test fixtures
+  failed for their own reason and were fixed rather than the assertions weakened**: the px→t→px round
+  trip landed 5e-13 OVER 56 px (under 90), firing the gate a test exists to prove closed; and the
+  growth profile stepped by an absolute 0.6 px where the law reads dGap/allowance, so a tighter
+  allowance saturated the integrator in 148 steps instead of 200. 19/19 green, **5 of 5 sabotages
+  caught**.
+
 - [WINDOW-END-1.md](WINDOW-END-1.md) — **a later window end DOES close the races that matter, and the
   finish does not pay for it.** Five arms (brake off, end 0.95/0.96/0.97/0.98) at his 56 px / 13%,
   V1 OFF, **300 races each, 1,500 total**; noise floor **exactly zero** (239 of 239 quiet races
