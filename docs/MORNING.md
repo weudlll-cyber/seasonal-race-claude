@@ -1,8 +1,99 @@
-# MORNING SHEET — night of 2026-09-16
+# MORNING SHEET — 2026-09-17
 
-Branch `feat/gap-leader-brake`, pushed after every piece. **Nothing minted. Nothing merged. Nothing
-tagged. No shipped default changed. Your store was never opened.** V1 (`servoNoiseBlindEnabled`) was
-OFF for every measurement in this chain.
+Branch `feat/gap-leader-brake`, pushed. **Nothing minted. Nothing merged. Nothing tagged.** The mint,
+the merge, the archive tag, the branch sweep and the CI check for the merge SHA all wait for your
+word. Your store was never opened.
+
+---
+
+## ★★★ YOUR FOUR VALUES ARE THE SHIPPED DEFAULTS
+
+| key | change |
+|---|---|
+| gap brake | **off → ON** |
+| allowed lead | **loosened to your value** (it was the wider one) |
+| maximum authority | **raised to your value**, still under the engine's own braking limit |
+| window end | **moved later, to your value** |
+| the servo change (V1) | **off — unchanged, and it must stay off** |
+
+The four numbers themselves live in `client/src/modules/storage/defaults.js` and in
+[BRAKE-SHIP-1](../reports/night/BRAKE-SHIP-1.md), each with the evidence for it; this sheet points at
+them rather than copying them.
+
+→ [BRAKE-SHIP-1](../reports/night/BRAKE-SHIP-1.md)
+
+**The shipped default reproduces the arm I measured for you, on 300 of 300 races byte-identically.**
+That was the one thing that could have gone wrong — every earlier measurement drove the brake through
+an override, and an override is not the same object as a default. It is here.
+
+### What the race does now, measured with no override at all
+
+| | before | **now** |
+|---|---|---|
+| largest lead (median / p90 / **worst**) | 87.9 / 162.0 / **244.4 px** | 86.3 / **127.7** / **187.5 px** |
+| **races where a >124 px gap opens after 0.95** | **24/300** | **8/300** |
+| contested finishes | 129/300 | 125/300 |
+| winner changes | — | 57/300 |
+| races completely unchanged | — | 141/300 |
+
+The worst lead falls by **23%** — in your unit, **1.086 → 0.833 canvas widths**. The **median barely
+moves**, which is the point: the brake works in the tail and leaves the ordinary race alone.
+
+---
+
+## THE BUILD, FOR YOUR EYE
+
+**4173 production · 5173 dev · 4000 API**, all three restarted onto this commit.
+
+```
+/api/health  {"build":{"commit":"176d502b","branch":"feat/gap-leader-brake","dirty":false}}
+```
+
+Bundle **read off the served page**: `dist/assets/index-bGK8b6H1.js` (927.67 kB, gzip 277.04).
+
+★ **And I read all five keys out of that bundle itself**, not out of the source — the master switch,
+the allowance, the window end, the authority and the servo switch. **Every one matches what
+`client/src/modules/storage/defaults.js` now carries** (the values live only there; this sheet does
+not copy them, and `check-doc-facts` enforces that). **The build carries what it should.**
+
+### ★ What to watch — three races where the brake decides the outcome
+
+| track / quick-test seed | largest lead | winner |
+|---|---|---|
+| **seatrack, seed 2** | 207.1 → **107.8 px** | Phoenix → **Dash** |
+| **dirt-oval, seed 7** | 242.9 → **153.9 px** | Turbo → **Gale** |
+| **searound, seed 20** | 216.4 → **127.7 px** | Nitro → **Orbit** |
+
+**And one control: city-circuit, seed 4.** The brake never engages there and the race is
+byte-identical to the one you have always had — 60 of 300 races are like that.
+
+### ★★ A correction to what you were told about ice-track seed 3
+
+**It does NOT look unchanged.** On your own race the brake catches Flare: the largest lead goes
+**196.6 → 115.8 px**, Flare finishes 2nd and **Bolt wins**. Watch it — it is a good demonstration.
+
+What is unchanged on that race is **the window-end choice**: 0.95, 0.96, 0.97 and 0.98 are all
+identical there, because the brake finishes its work at progress 0.9434, before any of them matter.
+**So seed 3 shows you the brake, but it cannot tell you anything about 0.97 in particular.** The three
+races above are the ones that can.
+
+---
+
+## THE CHECKS — THE REDS ARE EXPECTED, AND THERE ARE ONLY THREE
+
+**`verify`: 22 PASS / 3 FAIL.** The three are the world, camera and render fingerprints, and they
+fail because a race-changing default legitimately moved — **category (a), all of them. No (b).**
+The client suite, the script suite and the golden races all pass.
+
+**All four fingerprints moved and NOTHING WAS MINTED** — the values are in the report, the record in
+`docs/fingerprints.json` is untouched, and the mint is yours to call.
+
+★ **The golden races did not move and I did not re-record them.** That is by design, not luck: the
+guard pins every input in its own fixture, so a change to `defaults.js` cannot reach them.
+
+★ **Still owed before a merge:** a **seeded** fairness run at 56/13/0.97. FAIRNESS-SEED-1 showed the
+instrument must be given a seed above zero or its start-row verdict is one draw; that run has not been
+made for this configuration.
 
 ---
 
