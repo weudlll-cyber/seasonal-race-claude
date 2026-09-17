@@ -24,7 +24,11 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { createRacePlan, createTrajectoryController } from './racePlanner.js';
+import {
+  createRacePlan,
+  createTrajectoryController,
+  DEFAULT_CONTROLLER_PARAMS,
+} from './racePlanner.js';
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 const FINISH_T = 2.0;
@@ -92,6 +96,16 @@ function leaderTargetAt(ctrl, plan, { gapPx, progress, ms = 40_000 }) {
   racers[1].t = packT;
   for (const r of racers) if (r.index > 1) r.t = packT - r.index * 1e-6;
   racers[0].t = packT + gapPx / PATH_LENGTH_PX;
+  // ★ MAKE THE RECONSTRUCTED GAP EXACT. The mechanism reads `(leaderT - secondT) * pathPx`, and
+  // that round trip is not exactly `gapPx` in floating point once `packT` is large. At an allowance
+  // of 90 it landed a hair UNDER; at 56 it lands 5e-13 OVER, which turned "a gap exactly AT the
+  // allowance" into "a hair above it" and fired the gate the test exists to prove closed. Nudge the
+  // leader down until the value the mechanism will compute is no greater than the gap asked for, so
+  // the fixture delivers what it claims at any allowance.
+  for (let guard = 0; guard < 64; guard++) {
+    if ((racers[0].t - racers[1].t) * PATH_LENGTH_PX <= gapPx) break;
+    racers[0].t -= Math.max(Math.abs(racers[0].t), 1) * Number.EPSILON;
+  }
   ctrl.update(racers, ms, progress);
   return { leader: racers[0], racers, packT };
 }
@@ -215,7 +229,7 @@ describe('GAP-BRAKE-1 — the gate is a SIZE, and it is unchanged', () => {
     expect(ctrl.getGapBrakeStats().windowEnd).toBe(WINDOW_END);
   });
 
-  it('is completely inert when the switch is off — the shipped state', () => {
+  it('is completely inert when the switch is off — what a stored pre-2026-09-16 config still gets', () => {
     const { ctrl } = makeController({ on: false });
     leaderTargetAt(ctrl, null, { gapPx: ALLOWED_PX * 10, progress: 0.8 });
     const stats = ctrl.getGapBrakeStats();
@@ -224,8 +238,27 @@ describe('GAP-BRAKE-1 — the gate is a SIZE, and it is unchanged', () => {
     expect(stats.firedFrames).toBe(0);
   });
 
-  it('ships OFF, so a default config produces no brake at all', () => {
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled).toBe(false);
+  it('★ SHIPS ON, at the owner’s four values — and V1 ships OFF beside it', () => {
+    // ★ THE SHIPPED STATE, PINNED. The owner turned the brake on on 2026-09-16 and named every
+    // value; this is the assertion that notices if one of them drifts. The numbers are repeated here
+    // ON PURPOSE rather than read from the config: a test that reads the value it is checking cannot
+    // fail, which is the whole failure mode a pinned default is supposed to catch.
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled).toBe(true);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx).toBe(56);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority).toBe(0.13);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd).toBe(0.97);
+    // ★★ AND THE PAIR THAT MUST NEVER BE ON TOGETHER. With V1 on, the brake's release lands
+    // undamped in one 16 ms step — 0.089471 against a shipped maximum of 0.011762 (BRAKE-JERK-1).
+    // The brake shipping ON makes this the assertion that matters, not a formality.
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled).toBe(false);
+  });
+
+  it('the authority never exceeds the engine’s own maximum braking', () => {
+    // 1 - minMult is the floor the outcome controller clamps every target to (racePlanner.js:103),
+    // and the owner's instruction was that the brake may never ask for more than the steering could.
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority).toBeLessThanOrEqual(
+      1 - DEFAULT_CONTROLLER_PARAMS.minMult
+    );
   });
 });
 
@@ -242,7 +275,13 @@ describe('GAP-BRAKE-RATE-1 — the strength is a CHANGE, not a size', () => {
     // test below, on the give-back, is the one that does.
     const { ctrl } = makeController();
     const profile = [];
-    for (let k = 0; k < 400; k++) profile.push(ALLOWED_PX * 1.02 + k * 0.6);
+    // ★ THE STEP IS IN UNITS OF THE ALLOWANCE, not absolute px, because the law reads
+    // `dStrength = ceiling * dGap / allowance` — so how many steps the ramp takes is a property
+    // of the law only if the profile scales with the allowance too. `ALLOWED_PX / 150` is 0.6 at
+    // the 90 px this fixture was written against, so the old case is reproduced exactly; at the
+    // shipped 56 px an absolute 0.6 saturated the integrator in 148 steps instead of 200+ and the
+    // assertion below failed for the fixture's reason rather than the law's.
+    for (let k = 0; k < 400; k++) profile.push(ALLOWED_PX * 1.02 + (k * ALLOWED_PX) / 150);
     const { log } = driveGapProfile(ctrl, profile);
 
     const engaged = log.filter((e) => e.engaged);

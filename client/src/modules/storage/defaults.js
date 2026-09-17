@@ -1148,7 +1148,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // the gap down, reaching zero only when the gap is closed, so the leader returns to normal speed
   // gradually and never snaps back. The gate is untouched: below the allowance the brake never
   // ENGAGES. The law itself is `racePlanner.js:_computeGapLeaderBrake`, which is its only home.
-  gapBrakeEnabled: false, // master switch. FALSE = today's race, byte-identical.
+  // ★ SHIPPED ON since the owner's decision of 2026-09-16. It was false from the mechanism's
+  // first build until then, so a stored config written before that date carries `false` and keeps
+  // the pre-brake race until it is reset — the store beats this file per key.
+  gapBrakeEnabled: true,
   // The lead the leader is ALLOWED to hold, in WORLD px, measured leader->2nd.
   //
   // ★ WHY WORLD PX AND NOT CANVAS WIDTHS, which is the unit the owner judges in. A canvas width is
@@ -1171,12 +1174,25 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // first build carried (his photographed breakaway, 0.698 corrected canvas widths): he wants the
   // brake engaging before a lead has grown to the one he objected to, not at it. For scale, on his
   // fixture the race-max lead runs a median of 132 px and a p90 of 210.
-  gapBrakeAllowedGapPx: 90,
+  // ★ 56 px is the owner's value, 2026-09-15, chosen after BRAKE-GRID-1 measured five allowances
+  // x four authorities over 6,300 races: below 56 the brake works almost continuously on leads
+  // nobody would call a runaway (at 40 px it commands in 289 of 300 races with 100% of its work
+  // under 90 px), and above it the brake is too rarely obeyed to move anything. 56 is the last
+  // value at which it is still selective. In his unit that is 0.249 canvas widths.
+  gapBrakeAllowedGapPx: 56,
   // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
   // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
   // both move together and no gap can open between the two mechanisms. The value below is the
   // owner's own (2026-09-14); the run-out past it is left uncorrected.
-  gapBrakeWindowEnd: 0.95,
+  // ★ 0.97 is the owner's value, 2026-09-16, replacing the 0.95 this key carried until then.
+  // WINDOW-END-1 measured what moving it CLOSES rather than what it would reach: the count of
+  // races opening a >124 px gap after 0.95 — every one of which is a win for the racer holding it
+  // — runs 24 (brake off) / 12 (end 0.95) / 10 / 8 (end 0.97) / 7 (end 0.98) over 300 races, and
+  // it is the ONLY column that moves. The finish does not pay for it: contested finishes go 129
+  // -> 124 at 0.95 and back to 125 at 0.97, and the brake is still pulling as the winner crosses
+  // in 0 of 300 races at every value — `raceProgress` is the leader's own t/finishT
+  // (raceCore.js:577), so the winner crosses at 1.0 and the window has always released by then.
+  gapBrakeWindowEnd: 0.97,
   // ── The brake's MAXIMUM AUTHORITY, as a fraction of natural speed. Target floor = 1 - this. ──
   //
   // ★ THE ONE NUMBER IN THIS MECHANISM THE OWNER NAMED, and the ONLY free number it has: every
@@ -1189,7 +1205,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // integrates a rate can hold its authority far longer than one that reads a size, so the same
   // ceiling would be a much bigger intervention. 10% is his number. The resulting floor (0.90) sits
   // inside [minMult, maxMult], so the two clamps never argue.
-  gapBrakeMaxAuthority: 0.1,
+  // ★ 13% is the owner's value, 2026-09-15. It is still inside the engine's own maximum braking,
+  // which is `1 - controllerParams.minMult` = 15% (racePlanner.js:103) — the instruction was that
+  // the brake may never exceed it, and 13 does not.
+  gapBrakeMaxAuthority: 0.13,
   // ── SERVO-NARROW-1 (V1) — the placement servo's restart decision ignores its own noise.
   // ★ DEFAULT OFF, and the switch exists because the owner asked to judge the gap brake ALONE.
   // V1 was built and shipped into this branch's source on 2026-09-14 (012fb90d) with NO key at all,

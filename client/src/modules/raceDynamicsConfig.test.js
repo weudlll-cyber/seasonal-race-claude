@@ -110,10 +110,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapRerollDevMarker: false,
       // GAP-BRAKE-1 — the gap-based leader brake. It ships OFF, so this snapshot is also the
       // assertion that a default install races exactly as it did before the brake existed.
-      gapBrakeEnabled: false,
-      gapBrakeAllowedGapPx: 90,
-      gapBrakeWindowEnd: 0.95,
-      gapBrakeMaxAuthority: 0.1,
+      // ★ The gap brake SHIPS ON from 2026-09-16, at the owner's four values.
+      gapBrakeEnabled: true,
+      gapBrakeAllowedGapPx: 56,
+      gapBrakeWindowEnd: 0.97,
+      gapBrakeMaxAuthority: 0.13,
       // SERVO-NARROW-1 (V1) — shipped OFF, and it must stay OFF while the gap brake above can be
       // switched on: the two are unsafe together (BRAKE-JERK-1).
       servoNoiseBlindEnabled: false,

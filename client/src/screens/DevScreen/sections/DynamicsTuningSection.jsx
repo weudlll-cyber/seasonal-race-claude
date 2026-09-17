@@ -838,7 +838,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       >
         <SubHeading
           label="Gap Leader Brake"
-          note="Once the PULK window closes, nothing in the engine slows a racer for leading — the outcome controller steers every racer toward his DRAWN rank and cannot see a gap at all. This is the fallback brake for that range. It engages only when the leader's lead exceeds the allowance below, ramps to full at twice it, and can never command a speed the steering could not already produce. OFF is the shipped state and is byte-identical to the race without it."
+          note="Once the PULK window closes, nothing in the engine slows a racer for leading — the outcome controller steers every racer toward his DRAWN rank and cannot see a gap at all. This is the fallback brake for that range. It engages only when the leader's lead exceeds the allowance below; its strength then follows the gap's CHANGE, rising while the gap grows and fading with it as it closes, so the leader is never released with a snap. It can never command a speed the steering could not already produce. SHIPPED ON since 2026-09-16, at 56 px allowance and 13% authority. Turning it off reproduces the race as it was before that date."
           onReset={resetGapBrake}
           resetTestId="reset-gap-brake"
         />
@@ -857,7 +857,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 data-testid="gap-brake-toggle"
               />
               Gap leader brake enabled
-              <InfoTooltip text="Master switch for the gap-based leader brake. OFF = shipped, and OFF is byte-identical to the race you have always had. ON adds the only mechanism in the engine that slows a racer for being too far AHEAD during the outcome phase; everything else there steers him toward his drawn rank and cannot see a gap at all." />
+              <InfoTooltip text="Master switch for the gap-based leader brake. ON is the SHIPPED state since 2026-09-16; turning it OFF reproduces the race exactly as it was before that date. It is the only mechanism in the engine that slows a racer for being too far AHEAD during the outcome phase — everything else there steers him toward his drawn rank and cannot see a gap at all. Do NOT switch the servo change below on while this is on." />
             </label>
           </div>
           <div className={s.formGroup}>
@@ -875,7 +875,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 data-testid="servo-noise-blind-toggle"
               />
               Servo ignores its own noise (V1)
-              <InfoTooltip text="The placement servo restarts its 1000 ms ease whenever its target moves, and its own random noise moves that target by more than the threshold - so the ease is restarted every 48 ms on average and the command never arrives. ON decides the restart on the command WITHOUT the noise term; the noise still reaches the speed. OFF is the shipped state and is byte-identical to the race you have always had. WARNING: do NOT switch this on together with the gap leader brake above. Apart they are both safe; together, the brake's release at the end of its window lands in a single frame instead of being eased, because this change makes the held value track the written target exactly." />
+              <InfoTooltip text="The placement servo restarts its 1000 ms ease whenever its target moves, and its own random noise moves that target by more than the threshold - so the ease is restarted every 48 ms on average and the command never arrives. ON decides the restart on the command WITHOUT the noise term; the noise still reaches the speed. OFF is the shipped state and must stay off. WARNING: do NOT switch this on together with the gap leader brake above, which now ships ON. Apart they are both safe; together, the brake's release at the end of its window lands in a single frame instead of being eased, because this change makes the held value track the written target exactly." />
             </label>
           </div>
           <div className={s.formGroup}>
