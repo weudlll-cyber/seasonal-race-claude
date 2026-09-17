@@ -215,6 +215,36 @@ peak mid-race, released into OUTCOME.
 `packReSteerThreshold` is the release hysteresis for a FREED attacker: how far past its band edge it may
 drift before the servo re-engages at full pinning.
 
+### 6. OUTCOME phase — the GAP LEADER BRAKE, and the servo's noise-blind restart
+
+Added 2026-09-17. These controls were rendered from 2026-09-16 and this inventory did not list them,
+which made the completeness claim at the top of this file false while they were missing.
+
+The gap brake is the only mechanism in the engine that slows a racer for being too far AHEAD. Past the
+PULK window the outcome servo steers every racer toward his DRAWN rank and cannot see a gap at all;
+this is the fallback for that range. It acts on the GAP, never on rank — below its allowance it does
+nothing whatsoever — and its strength follows the gap's CHANGE rather than its size, fading with the
+gap so the leader is never released with a snap.
+
+**Card-level controls** — Reset `reset-gap-brake` (resets these five keys, V1 included, because the
+pair is what must not be on together):
+
+| Control                          | Config key                | testId                      |
+| -------------------------------- | ------------------------- | --------------------------- |
+| Gap leader brake enabled         | `gapBrakeEnabled`         | `gap-brake-toggle`          |
+| Allowed lead (canvas widths)     | `gapBrakeAllowedGapPx`    | —                           |
+| Window end                       | `gapBrakeWindowEnd`       | —                           |
+| Maximum authority                | `gapBrakeMaxAuthority`    | —                           |
+| Servo ignores its own noise (V1) | `servoNoiseBlindEnabled`  | `servo-noise-blind-toggle`  |
+
+★ **The shipped values are deliberately not repeated here** — they live in
+`client/src/modules/storage/defaults.js`, which this file names as its ground truth, and each carries
+the evidence for it in the comment above it.
+
+★ **V1 ships OFF and must stay off while the brake is on.** Together the brake's release at the end of
+its window lands in a single frame instead of being eased; apart they are both safe. The checkbox's
+own tooltip says so.
+
 ---
 
 ## PINNED — config keys that EXIST but have NO DevScreen control
