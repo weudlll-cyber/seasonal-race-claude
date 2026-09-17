@@ -159,8 +159,13 @@ const { cameraSeedForRace } = await import(
 const VERBOSE = process.argv.includes("--verbose");
 // THE CONTROL ARM. Runs the same two races with `finishLineFraming` off, so the threshold can be
 // shown to DISCRIMINATE rather than merely to be satisfied — a limit nobody has seen both fail and
-// pass is a guess. INERT ON MASTER TODAY: the key does not exist here yet, so this flag changes
-// nothing until `feat/finish-framed` lands, at which point it becomes the before/after lever.
+// pass is a guess. STILL INERT: `finishLineFraming` appears nowhere in `defaults.js`, so this flag
+// changes nothing.
+// ★ AND IT IS NO LONGER WAITING FOR ANYTHING. This said "until `feat/finish-framed` lands" until
+// 2026-09-17; that branch is not at origin and exists only as the archive tag
+// `archive/finish-framed`, so it did not land and will not. The arm is kept rather than deleted
+// because the threshold it would exercise is still here — but a reader must not expect it to wake
+// up on its own.
 const CONTROL = process.argv.includes("--control");
 const CW = 1280;
 const CH = 720;
