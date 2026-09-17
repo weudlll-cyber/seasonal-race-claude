@@ -59,6 +59,37 @@ Nothing merged, nothing minted, nothing tagged. The branch is pushed after every
 
 ---
 
+### ★ THE SWEEP, AND THE STATE YOU COME BACK TO
+
+| | |
+|---|---|
+| branch | **`night/2026-09-17`**, pushed after every piece, head **`62a8e115`** |
+| merged / tagged / minted | ★ **nothing** |
+| working tree | clean |
+| your race store | ★ **untouched** — `races.sqlite` still stamped **Sep 17 17:19**, before the chain began |
+| instrumentation in the real tree | ★ **none**, and none at any point |
+| probe worktree `C:/tmp/goff` | **removed** — junction-checked first (`dir /AL /S`: none), directory gone |
+| `node_modules` after that removal | ★ **intact** — client **328** with **81** `.bin` shims, server **186**, root unchanged |
+| temp run dirs | **removed** — `pinned` (99 MB) and `dur30` (17 MB), both junction-checked first |
+| services | ★ **all three back up** — **4000** API, **5173** dev, **4173** production preview |
+
+★ **One leftover I could not clear and am not hiding**: `git worktree remove` deleted the goff
+directory but failed on its registration in `.git/worktrees/goff` with **Permission denied**. That is
+the known EPERM on this tree — there are now **twelve** stale registrations there from weeks of
+probes, and `git worktree list` correctly shows only the real tree. **It is cosmetic and it is not
+new tonight.**
+
+★ **The 4173 build is yesterday's, deliberately.** `client/dist` is the ship build from **22:04 on
+2026-09-17** (`index-BNLl7vvS.js`, master `40f4b8f1`). **Nothing tonight changed product behaviour** —
+the only source edits were comment corrections — so it was not rebuilt and the badge will read the
+older commit.
+
+★ **The gate's evidence survived the sweep.** The 99 MB of raw races is gone, but the numbers the
+report cites are committed at `reports/night/pinned-gate-data/` — per track and per arm, so a
+second-seed run can be compared without re-racing this one.
+
+---
+
 ### ★★★ THE ONE THING TO READ FIRST — A SENTENCE IN YOUR OWN DECISION HAS THE SIGN BACKWARDS
 
 → [FAIRNESS-SIGN-1](../reports/night/FAIRNESS-SIGN-1.md) · **I changed nothing. It is inside a
