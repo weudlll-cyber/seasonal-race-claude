@@ -1,0 +1,45 @@
+
+=== ARM ON — 10/10 tracks complete ===
+track            races rows   chi2      raw p     Holm p   verdict   B3%   all%  rowMin%
+ice-track         300    4    19.200   3.136e-4   3.136e-3  UNFAIR    85.3  89.3    87.8
+searound          300    7    20.000   2.905e-3   2.615e-2  UNFAIR    85.6  89.8    87.8
+garden-path       300    3     6.462   3.851e-2   3.080e-1  fair      86.3  89.3    88.7
+city-circuit      300    4     7.440   5.806e-2   4.064e-1  fair      84.1  88.6    86.1
+river-run         300    2     1.920   1.619e-1   9.714e-1  fair      80.6  85.9    85.6
+dirt-oval         300    4     2.640   4.527e-1   1.000e+0  fair      86.1  89.4    88.6
+luger-hill        300    5     2.700   6.123e-1   1.000e+0  fair      85.1  89.9    88.3
+seatrack          300    3     0.679   7.169e-1   1.000e+0  fair      85.9  89.7    89.4
+mountainstreet    300    2     0.053   8.027e-1   1.000e+0  fair      84.9  88.6    88.0
+space-sprint      300    3     0.251   8.778e-1   1.000e+0  fair      85.7  89.9    89.7
+  Holm-flagged rows: ice-track, searound
+
+=== ARM OFF — 10/10 tracks complete ===
+track            races rows   chi2      raw p     Holm p   verdict   B3%   all%  rowMin%
+garden-path       300    3     8.486   1.426e-2   1.426e-1  fair      87.8  90.0    89.5
+ice-track         300    4    10.320   1.600e-2   1.440e-1  fair      84.9  89.4    88.0
+river-run         300    2     1.920   1.619e-1   1.000e+0  fair      80.7  86.2    86.2
+luger-hill        300    5     4.433   3.506e-1   1.000e+0  fair      85.4  90.0    88.3
+dirt-oval         300    4     2.880   4.120e-1   1.000e+0  fair      85.7  89.3    88.6
+searound          300    7     6.000   4.237e-1   1.000e+0  fair      85.3  89.6    89.2
+space-sprint      300    3     0.448   8.007e-1   1.000e+0  fair      85.3  89.6    89.3
+seatrack          300    3     0.310   8.544e-1   1.000e+0  fair      86.2  89.8    89.7
+city-circuit      300    4     0.480   9.203e-1   1.000e+0  fair      84.5  88.9    87.6
+mountainstreet    300    2     0.000   9.505e-1   1.000e+0  fair      85.0  88.9    88.1
+  Holm-flagged rows: NONE
+
+=== THE DECISION RULE ===
+  flagged on BOTH arms (pre-existing, does not block): none
+  flagged ONLY on the SHIPPED-DEFAULTS arm (REGRESSION ON MASTER): ice-track, searound
+  flagged only on the brake-OFF arm: none
+
+=== PER-ROW, ARM vs ARM (ON minus OFF) ===
+A row that gains on one track and loses on another is noise; a row that moves the
+SAME WAY on most tracks is the thing the question is asking about.
+row  tracks   mean d(win share)   mean d(avg rank)   gained/lost/level
+  0     10             +0.47 pp            +0.008   4/4/2
+  1     10             -0.67 pp            -0.014   3/6/1
+  2      8             -0.46 pp            +0.001   3/2/3
+  3      5             +2.00 pp            -0.025   3/1/1
+  4      2             +0.83 pp            +0.009   1/1/0
+  5      1             -4.00 pp            +0.174   0/1/0
+  6      1             -2.00 pp            +0.014   0/1/0

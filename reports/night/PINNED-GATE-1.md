@@ -234,6 +234,16 @@ was the draw.** Nothing else needs building to find out.
 
 ---
 
+## THE DATA
+
+The raw per-racer rows are **99 MB** and are not kept. What the report cites is committed beside it in
+`pinned-gate-data/`: **`pinned-gate-summary.json`** (per track, per arm: row sizes, χ²/df/p, band reach
+by zone, rowMin, and per-row wins / expected share / average rank) and **`pinned-gate-run.txt`** (the
+aggregation output as it was read). **A second-seed run can be compared against these without
+re-racing this one.**
+
+---
+
 ## WHAT THIS DOES NOT SETTLE
 
 - ★ **Whether the brake causes the two flags. One seed cannot say** (§6), and the direction evidence
