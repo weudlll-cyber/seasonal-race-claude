@@ -8,6 +8,37 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [STILL-OPEN-1.md](STILL-OPEN-1.md) — **the named open items, each checked against the tree**
+  (2026-09-18, `night/2026-09-17` piece 5; **verification only**). ★ **Six blind instruments: DONE**
+  — three call `makeCameraPlanDelivery`, three cannot and each names the helper in a header comment.
+  ★ **`BAND_EDGES`: OPEN, but not as stated** — it is NOT a 40-racer table; `rankToBandIndex` returns
+  an open-ended B5 for rank > 40 and the code is right at any field size. **What is wrong is that a
+  band means a different thing at a different field size** — at 40 racers B5 never occurs, at 80 it
+  spans ranks 41–80, 2.7× any other band — so band reach is not comparable across field sizes.
+  ★ **The start-row clause: OPEN, and it is the same hole** — `docs/FAIRNESS.md` **names no field size
+  anywhere in the document** (verified by search), while stating its gate in band terms. It bit twice
+  this week: luger-hill has 5 rows at 40 racers and 9 at 80, which is why ROW-ADVANTAGE-1's *"9 rows
+  where the next-most has 7"* is wrong. ★ **Race-param extraction: DONE, premise corrected** — landed
+  in `6df2994a` on master; the derivation was mirrored **13 times, not 2**; 8 deleted, **6 remain
+  named** and `sim-fairness.mjs` still mirrors the derivation while importing the cap from its one
+  home. ★ **The delivery thread: DONE** — one helper, seven importers, no second copy.
+  ★ **The four verify-time points: NOT IDENTIFIED** — the searches are listed rather than a verdict
+  guessed at.
+- [FAIRNESS-SIGN-1.md](FAIRNESS-SIGN-1.md) — **★★ the luger-hill sentence in D25 and FAIRNESS.md has
+  the sign backwards, and every measurement in the record disagrees with it** (2026-09-18,
+  `night/2026-09-17`, found while verifying piece 5; **NOTHING CHANGED — it is inside a decision
+  record**). `docs/BACKLOG.md` D25 and `docs/FAIRNESS.md:156` both say that on luger-hill the **FRONT**
+  rows are slightly favoured, calling the deviation *"UNDER-compensation"*, and both instruct a reader
+  who believes otherwise to read that sentence first. ★ **The table it is derived from says the
+  opposite**: ROW-BONUS-TIMING-1 §3 has luger-hill's first row at **58.211 s** and its last row at
+  **57.924 s** — the REAR row finishes **sooner**, which is OVER-compensation of the rear. The report
+  states the number correctly and labels it backwards, and **the label is what reached the decision**.
+  ★ D25's other cited report, ROW-ADVANTAGE-1, says in its headline *"THE ADVANTAGE RUNS BACKWARDS.
+  The BACK rows are the favoured ones"* — so **D25 cites two reports and adopts the sign of neither**.
+  Tonight's LUGER-BIAS-1 agrees with the reports: front row 13.0%, back row 25.0%, even share 20.0%.
+  ★ **Why it matters**: the sign is load-bearing in the argument for closing the line, and the
+  sentence is booby-trapped against its own correction. **Left for his word**; the suggested fix is a
+  dated correction line appended under each, not an edit of either.
 - [BRANCH-DECISION-1.md](BRANCH-DECISION-1.md) — **the two open branches, prepared for his
   decision** (2026-09-18, `night/2026-09-17` piece 4; **nothing merged, tagged or deleted**).
   ★ **`feat/remove-prestaging-comebacker` (`5c9e050e`, 2 ahead / 88 behind) MERGES CLEANLY against

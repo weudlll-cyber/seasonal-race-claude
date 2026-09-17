@@ -138,6 +138,19 @@ searches actually return:
 | 2026-09-11 | `reports/evolution/STAGING-START-ROWS-1.md` | ★ **χ² 23.100, p 1.562e-4, Holm-UNFAIR, 1 of 10 on master** — and it *"reproduces an independent run on another branch digit for digit"*. Title: *"luger-hill was already unfair"*. |
 | 2026-09-16/17 | `FAIRNESS-SEED-1.md`, `BRAKE-FAIRNESS-2.md` | This week's own runs, which is all my first draft's `rear.bias` search was returning. |
 
+★★ **AND THE OWNER HAS ALREADY RULED ON IT.** `docs/BACKLOG.md` decision **D25 (2026-08-24)** closed
+the start-row fairness line — *"the start-row advantage as it stands is acceptable. NOTHING IS
+CHANGED"* — citing ROW-ADVANTAGE-1 and ROW-BONUS-TIMING-1, and `docs/FAIRNESS.md` records the
+gradient as a documented, dated residual that does not weaken the Layer-1 criterion. **So this is not
+an open finding awaiting a verdict; it is a closed one.** What is new here — the duration dependence —
+was not in front of him when he closed it, because every measurement he closed it on ran at 60 s.
+
+★★★ **BUT D25's luger-hill sentence HAS THE SIGN BACKWARDS, and so does the `FAIRNESS.md` line that
+restates it.** Both tell a later reader that on luger-hill the **front** rows are favoured, and both
+instruct anyone who thinks otherwise to read that sentence first. Every measurement in this report
+says the **rear** is favoured, and so does the table D25's own cited evidence derives the claim from.
+**Nothing was changed** — it is a decision record. → [FAIRNESS-SIGN-1](FAIRNESS-SIGN-1.md)
+
 ★ **So it is dated: the flag first appears 2026-07-31 and has been reproduced on at least four
 separate branches since.** The 2026-07-20 measurement at χ²(6) = 11.93 n.s. is the one point that
 reads clean, and it ran a different protocol (7 rows there against 5 here), so **it is not evidence

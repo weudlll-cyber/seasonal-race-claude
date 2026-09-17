@@ -10,7 +10,75 @@ Nothing merged, nothing minted, nothing tagged. The branch is pushed after every
 | **2 · the documentation** | **DONE** | Six factually wrong statements corrected against the tree, plus two omissions in files that claim completeness. Nothing rewritten for style. |
 | **3 · the luger-hill bias** | **DONE — investigated only, no repair** | → [LUGER-BIAS-1](../reports/night/LUGER-BIAS-1.md) |
 | **4 · the two open branches** | **DONE — nothing merged, tagged or deleted** | → [BRANCH-DECISION-1](../reports/night/BRANCH-DECISION-1.md) |
-| **5 · what else is open** | open | not started |
+| **5 · what else is open** | **DONE** | → [STILL-OPEN-1](../reports/night/STILL-OPEN-1.md) — and it turned up [FAIRNESS-SIGN-1](../reports/night/FAIRNESS-SIGN-1.md), below |
+
+---
+
+### ★★★ THE ONE THING TO READ FIRST — A SENTENCE IN YOUR OWN DECISION HAS THE SIGN BACKWARDS
+
+→ [FAIRNESS-SIGN-1](../reports/night/FAIRNESS-SIGN-1.md) · **I changed nothing. It is inside a
+decision record and it is yours to correct.**
+
+`docs/BACKLOG.md` **D25**, which closed the start-row fairness line on 2026-08-24, says:
+
+> *"`luger-hill` IS THE SINGLE EXCEPTION, AND ITS SIGN IS THE OPPOSITE OF THE WORRY … its deviation is
+> UNDER-compensation — so on that track the **front** rows are slightly favoured, not the back.
+> Anyone reopening this on the assumption that the rear rows are advantaged should read that sentence
+> first."*
+
+`docs/FAIRNESS.md:156` repeats it. ★ **The table that sentence is derived from says the opposite.**
+ROW-BONUS-TIMING-1 §3 — one of the two reports D25 cites — measures luger-hill's **first row at
+58.211 s and its last row at 57.924 s.** Row 0 is the front row and it is the one that gets **no**
+bonus. **So the rear row finishes 0.287 s SOONER after making up its whole starting deficit** — it
+was given more than it lost, which is OVER-compensation, and the rear is the favoured end.
+
+The report states the number correctly and then attaches the wrong word to it. ★ **The word is what
+travelled** — into D25, and from D25 into the canonical fairness document.
+
+**Everything else agrees with the number, not the word:**
+
+| evidence | date | direction |
+|---|---|---|
+| ROW-ADVANTAGE-1, D25's other cited report | 2026-08-24 | **rear** — *"THE ADVANTAGE RUNS BACKWARDS"*; luger-hill's front row wins **2 of 100** against an even share of **11** |
+| ROW-BONUS-TIMING-1's own finishing-time table | 2026-08-24 | **rear** — front row finishes later on all ten tracks |
+| STAGING-START-ROWS-1 | 2026-09-11 | luger-hill Holm-unfair, χ² 23.100 |
+| tonight's LUGER-BIAS-1 | 2026-09-18 | **rear** — front 13.0%, back 25.0%, even share 20.0% |
+
+★ **D25 cites two reports and adopts the sign of neither.**
+
+**Why I am putting it first rather than filing it.** The sign is doing work in the argument for
+closing: a front-row advantage is the reassuring direction — it means the compensation is merely a
+little shy. **A rear advantage is the direction the line was opened about.** And both copies end by
+telling the reader who believes the rear is advantaged that they are the one who is mistaken, which is
+exactly the reader who is right — it has now caught two chains this week.
+
+★ **This does not necessarily reverse D25.** The magnitude is 0.49% of a 58 s race, and *"acceptable"*
+was a judgement about **size**, which the sign does not change. **But it is your judgement to re-make.**
+The suggested fix is three lines: a dated correction appended under D25 and under `FAIRNESS.md:156`
+— not an edit of either sentence — saying the sign is inverted, naming the table, and saying whether
+the acceptance stands.
+
+---
+
+### ★ PIECE 5 — THE OPEN ITEMS, CHECKED AT THE TREE
+
+→ [STILL-OPEN-1](../reports/night/STILL-OPEN-1.md)
+
+| item | verdict |
+|---|---|
+| the six blind instruments | ★ **done** — three fixed through the shared helper, three cannot be and each says so in its own header |
+| `BAND_EDGES` as a 40-racer table | ★ **open — but it is NOT a 40-racer table**; the code handles rank > 40 with an open-ended B5. **The real hole is that a band means a different thing at a different field size** |
+| the start-row clause above 40 racers | ★ **open, and it is the same hole** — `FAIRNESS.md` names **no field size anywhere** |
+| the four verify-time points | **I could not work out what this names.** The searches are listed; I am not guessing a verdict |
+| the race-param extraction | **done, premise corrected** — it was mirrored **13 times, not 2**; 8 deleted, **6 remain named**, guarded |
+| the delivery thread | ★ **done** — one helper, seven importers, no second copy |
+
+★ **The field-size gap is not hypothetical.** luger-hill carries **5 start rows at 40 racers and 9 at
+80**. ROW-ADVANTAGE-1 ran open tracks at 80 and closed at 40, which is why it concluded luger-hill had
+*"9 rows where the next-most has 7"* — searound actually carries 7 at 40 and **14** at 80. **Two runs
+of the same gate can disagree without either being wrong, and the document does not warn anyone.**
+The fix is a threshold number, and `FAIRNESS.md` is that number's one home — **so writing it is your
+decision, not my correction.** Left.
 
 ---
 
