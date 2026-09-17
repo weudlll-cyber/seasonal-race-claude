@@ -1,4 +1,63 @@
-# MORNING SHEET — 2026-09-17
+# MORNING SHEET — 2026-09-19
+
+## ★ TONIGHT'S CHAIN — `night/2026-09-18`, LIVE STATUS
+
+Branched from **master `5b60b615`**. Nothing merged, nothing minted, no shipped default changed.
+V1 (`servoNoiseBlindEnabled`) is off in every arm.
+
+| piece | state | one line |
+|---|---|---|
+| **1 · settle the fairness verdict** | ★ **RUNNING** | Two further fixed seeds, **777** and **31337**, both arms, full pinned N. 8 workers of 14. ~3 h 45 m. |
+| **2 · re-race the comebacker branch** | ★ **RUNNING** | Ten tracks, seeds 1–30, on **braked** master. 4 workers. |
+| **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
+| **4 · the D25 sign error** | open | not started |
+| **5 · the four verify-time points** | open | not started |
+| **6 · the six blind instruments** | open | not started |
+
+---
+
+### ★★ PIECE 3 — THE CORRECTIONS EXIST TWICE AND ON MASTER NOT AT ALL
+
+→ [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md)
+
+**The 17.9. pass wrote all of it. Neither commit is on master.** `fc4d4143` and `e29b428d` are
+contained in `origin/night/2026-09-17` and nowhere else — checked per commit. ★ **So every one of the
+named items was STILL WRONG on master tonight**, which is the answer to "re-check them": there was
+nothing to re-check, only the same errors in the same places.
+
+**I cherry-picked the two commits onto tonight's branch** rather than retyping corrections that were
+already written and already proven inert — the option that changes less. **They are now on two
+branches and still not on master.**
+
+**The six statements, each with the evidence that made it wrong:**
+
+| # | address | was | why wrong |
+|---|---|---|---|
+| 1 | `FORCE-MAP.md:459` | `OUTCOME 0.55–0.95` | **the upper bound is `corridorEnd`, and it is not 0.95** — `racePlanner.js:87` |
+| 2 | `FORCE-MAP.md:465` | `PULK [0.15,0.5)` | **the upper bound is `choreoOutcomeStart`, and it is not 0.5** — `defaults.js:1070`; `:1125` says *"`pulkEnd` IS `choreoOutcomeStart`"* |
+| 3 | `racePlanner.js:1594` | `SIM-ONLY … the browser never sets it` | `defaults.js` ships `gapRerollEnabled: true`; ★ **its own sibling at `:389-390` already said so** |
+| 4 | `raceCore.js:372` | `PulkLeadRotation — default OFF` | **the next line is `pulkLeadRotationOn = racePlanEnabled`** (`:376`); `defaults.js:1017` heads it **SHIPPED ON** |
+| 5 | `raceCore.js:598` | `(default OFF → skipped)` | same — **"skipped" described the opposite of the shipped build** |
+| 6 | `check-runin-frame.mjs:161` | `until \`feat/finish-framed\` lands` | **that branch is not at origin**; it survives only as tag `archive/finish-framed`, and `finishLineFraming` is 0 times in `defaults.js` |
+
+★ **A seventh change was CODE, and the summary did not say so.** `raceCore.js:700` — the diagnostic
+`vt` omitted `governorMult` while `raceStep.js:131` multiplies by it and `:106` documents the chain
+including it. **Proven inert at tonight's tree, not assumed from last night**: all four fingerprints
+re-measured against the engine and **all four match the record, nothing written.**
+
+★ **Two completeness gaps, which for a file claiming completeness are factual errors**: FORCE-MAP had
+**no row for the gap brake** (now A14) and DEVSCREEN-INVENTORY omitted **five rendered controls**
+while stating that every control appears in it.
+
+★ **Two corrections to the brief itself.** Its addresses (`racePlanner.js:1235`, `raceCore.js:578`,
+`:679-683`) are **stale** — the statements now sit at `:1594`, `:598` and `:700-704`. And FORCE-MAP's
+**"four stale windows" is two** (A7 and A13) plus one missing row; I re-read the additive table and
+found no others. **I am not going to invent a correction to reach a count.**
+
+**★ NEEDS YOUR WORD:** master carries none of this. Two branches now hold the same corrections.
+
+---
+
 
 ## ★★★ IT IS ON MASTER
 

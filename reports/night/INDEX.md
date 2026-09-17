@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [DOC-DIFF-1.md](DOC-DIFF-1.md) — **what the 17.9. documentation pass changed, and why none of it
+  was on master** (2026-09-18, `night/2026-09-18` piece 3; built from the actual diff, not from the
+  report that summarised it). ★★ **Both commits (`fc4d4143`, `e29b428d`) are contained in
+  `origin/night/2026-09-17` and nowhere else**, so every named item was **still wrong on master
+  tonight**; they were cherry-picked onto this branch rather than retyped. **The six statements with
+  their evidence**: `FORCE-MAP.md:459` `OUTCOME 0.55–0.95` (**`corridorEnd` is 1.0**,
+  `racePlanner.js:87`); `:465` `PULK [0.15,0.5)` (**upper bound is `choreoOutcomeStart` = 0.6**,
+  `defaults.js:1070`); `racePlanner.js:1594` "SIM-ONLY" (**contradicted by its own sibling at
+  `:389-390`**); `raceCore.js:372` and `:598` "default OFF" (**`pulkLeadRotationOn = racePlanEnabled`
+  at `:376`**, `defaults.js:1017` says SHIPPED ON); `check-runin-frame.mjs:161` "until
+  `feat/finish-framed` lands" (**not at origin — tag only**). ★ **A SEVENTH change was CODE and the
+  summary did not say so**: `raceCore.js:700`'s diagnostic `vt` omitted `governorMult` while
+  `raceStep.js:131` multiplies by it — **proven inert tonight, all four fingerprints matching the
+  record with nothing written.** ★ Two completeness gaps closed (FORCE-MAP row **A14**; five
+  DevScreen controls). ★ **Corrects the brief**: its line numbers are stale, and FORCE-MAP's "four
+  stale windows" is **two** plus one missing row.
 - [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
   brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
   nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It
