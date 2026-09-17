@@ -12,7 +12,67 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 | **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
 | **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
 | **5 · the four verify-time points** | **DONE — two were already done, two I hand back** | → [VERIFY-POINTS-1](../reports/night/VERIFY-POINTS-1.md) |
-| **6 · the six blind instruments** | open | not started |
+| **6 · the six blind instruments** | **DONE — proven by sabotage** | → [BLIND-SABOTAGE-1](../reports/night/BLIND-SABOTAGE-1.md) — only **one** of the three "fixed" ones can be proven |
+
+---
+
+### ★★ PIECE 6 — ONLY ONE OF THE THREE "FIXED" INSTRUMENTS GOES RED WHEN YOU BREAK IT
+
+→ [BLIND-SABOTAGE-1](../reports/night/BLIND-SABOTAGE-1.md) · **The real tree was never instrumented** —
+every sabotage ran in a detached probe worktree at master.
+
+**The six are in THREE states, not two:**
+
+| state | instruments | sabotage |
+|---|---|---|
+| ★ **was blind, now demonstrably sighted** | `exp-anchor-truth-ab.mjs` | ★ **CAUGHT** — `e1e833b69d656084` → `76aae5fde8a0fb3e` |
+| ★ **delivers the plan; the cast cannot reach what it measures** | `check-ending-frame.mjs`, `finish-band-truth.mjs` | **not caught** — output identical both ways |
+| **cannot deliver a plan at all** | `start-formation`, `exp-camera-bisect`, `sim-race-visual` | — |
+
+★★★ **The two null results are real findings, not lazy ones, because the mutation was proven
+REACHABLE.** Re-armed to throw instead of no-op, both scripts **die on the line** —
+`check-ending-frame.mjs:296`, `finish-band-truth.mjs:324`. So the delivery IS invoked and they return
+the same answer regardless. **And the one that DID move is the positive control**: if all three had
+come back identical I could not have told an inert fix from a broken sabotage.
+
+★★ **A correction of emphasis.** The record calls those two *"fixed, output byte-identical"*, which
+reads as reassurance. Sharper: **the fix buys nothing measurable there — they were never blind to
+anything THEY measure.** A green from either is exactly as trustworthy as before the fix, neither
+more nor less. **The fix should still stay**, so a future change that does depend on the cast is seen.
+
+★ **`exp-anchor-truth-ab`'s baseline has moved since the record** — `ae72523ffb80e39c` (2026-09-12,
+pre-brake) → **`e1e833b69d656084`** (tonight). **That is the brake, not a regression**, and it is
+reported side by side rather than quietly replaced. Nothing minted; it is not a recorded value.
+
+**The three structural ones were NOT fixed, and each would be a rebuild**: `start-formation` observes
+the countdown, **before casting exists** (nothing to fix); `exp-camera-bisect` replays recorded dumps
+and fixing it **invalidates every dump it exists to replay**; `sim-race-visual` **rolls its own
+physics loop** — checked at source, it imports neither `raceDriver` nor `createRaceFromIdentity` — so
+giving it the plan means running the product's race instead of its own and changes every PNG it has
+produced.
+
+---
+
+### ★ `verify` ON THIS BRANCH — 24 PASS, 1 FAIL, AND THE FAILURE IS MINE
+
+`PASS 24 · FAIL 1 · SKIP 9`, wall clock 790.4 s. **All four fingerprint guards PASS**
+(`world-fingerprint`, `camera-fingerprint`, `render-fingerprint`, `fingerprint-containment`), and so
+do `golden-races`, `check-runin-frame` and `check-ending-frame`.
+
+**The one failure is `client-suite`**, and it is not a defect in the branch:
+
+> `[vitest-pool]: Failed to start forks worker for test files … client/src/modules/parity/replay.test.js`
+> `Caused by: [vitest-pool-runner]: Timeout waiting for worker to respond`
+
+★ **The worker never started.** I ran `verify` while the fairness gate was holding **8 heavy node
+processes** on a 14-core machine — this is the starvation class the suite's own `maxWorkers: 4` bound
+exists to prevent, one level up: **the MACHINE was oversubscribed, not just the suite.**
+`replay.test.js` is one of the two heaviest files in the suite, so it is the expected casualty.
+
+★ **It is classified, not excused: `client-suite` has NOT passed on this branch yet.** It will be
+re-run alone once the gate finishes, and the result recorded here.
+
+---
 
 ---
 

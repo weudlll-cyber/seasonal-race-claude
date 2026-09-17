@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BLIND-SABOTAGE-1.md](BLIND-SABOTAGE-1.md) — **★★ the six blind instruments are in THREE states,
+  not two, and only one of the three "fixed" ones can be proven by sabotage** (2026-09-18,
+  `night/2026-09-18` piece 6; **the real tree was never instrumented** — every sabotage ran in a
+  detached probe worktree). Confirmed at the tree first by `grep -c 'makeCameraPlanDelivery'`: three
+  at **2** calls, three at **0** with one header comment each naming the helper and the reason.
+  ★ **`exp-anchor-truth-ab` CAUGHT the sabotage** — `e1e833b69d656084` → `76aae5fde8a0fb3e` when the
+  delivery is replaced by the pre-fix no-op. ★ **`check-ending-frame` and `finish-band-truth` did
+  NOT** — identical output both ways (17 fillRects and PASS; 33 lines byte-identical).
+  ★★★ **Those nulls are findings because the mutation was proven REACHABLE**: re-armed to throw, both
+  die on the line (`check-ending-frame.mjs:296`, `finish-band-truth.mjs:324`), and the one instrument
+  that moved is the positive control that licenses the other two. ★★ **Correction of emphasis**: the
+  record's *"fixed, byte-identical"* reads as reassurance; sharper, **the fix buys nothing measurable
+  there — they were never blind to anything THEY measure**, and a green from either is neither more
+  nor less trustworthy than before. The fix should stay anyway. ★ Its baseline moved since the record
+  (`ae72523ffb80e39c` → `e1e833b69d656084`) — **that is the brake shipping, not a regression**, shown
+  side by side. ★ The three structural ones were **not** fixed and each would be a rebuild, with what
+  it would take named per instrument.
 - [VERIFY-POINTS-1.md](VERIFY-POINTS-1.md) — **two of the four are already done and on master; one I
   could not identify and one I could not confirm** (2026-09-18, `night/2026-09-18` piece 5; **nothing
   built**). ★ **Point 1, the client build inside the check run: DONE on master** as `cae917c8` —
