@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PINNED-GATE-1.md](PINNED-GATE-1.md) — **★★★ the full pinned fairness gate: it FAILS on the
+  shipped arm and PASSES on the brake-off control** (2026-09-18, `night/2026-09-17` piece 1;
+  **measurement only — nothing reverted, tuned, minted or merged**). `scripts/sim-fairness.mjs`
+  UNMODIFIED at master `5b60b615`, control a probe copy at the **same commit** differing in **one file
+  and one key** (`gapBrakeEnabled` true→false, verified by `git diff`), **seed 12345 fixed on both
+  arms**. ★ **The full pinned N — `--races=100` × three distance variants pooled = 300 races/track,
+  6,000 races in all, 1 h 53 m** — so **the pinned gate is no longer owed**; the run that cleared the
+  ship was 120/track. ★★ **Shipped arm: TWO Holm-unfair start rows — `ice-track` (χ² 19.200, raw p
+  3.136e-4, Holm 3.136e-3) and `searound` (χ² 20.000, raw p 2.905e-3, Holm 2.615e-2). Control: ZERO.**
+  Band reach **passes everywhere on both arms** (B3 80.6–87.8%, arms agreeing within half a point).
+  **By the decision rule that is a regression on master; nothing was reverted.** ★ **The brake did
+  reach the run** — 1,636 of 3,000 races differ, 640 change winner — so this is not the old sim
+  blindness. ★★ **BUT: one seed, and the record has the same config giving 0, 0 and 2 flagged rows on
+  three draws; the two flagged tracks tilt in OPPOSITE directions (ice-track rear, searound front);
+  and no row gains or loses consistently across the ten.** Two more fixed seeds would settle it in one
+  night. ★ **`luger-hill` is FAIR on both arms pooled (p 0.612 / 0.351)** — the standing failure does
+  not survive pooling because it is **30 s-specific**, so the gate as pinned cannot see it. ★ Its rows
+  still rise toward the rear (17.7% → 22.7%), a fifth measurement against the D25 sentence. ★ Brake
+  firing count is **not** available from this instrument and is cited from BRAKE-FAIRNESS-2, not
+  re-measured; racer type is confounded with track by design and cast role is absent from the data.
 - [STILL-OPEN-1.md](STILL-OPEN-1.md) — **the named open items, each checked against the tree**
   (2026-09-18, `night/2026-09-17` piece 5; **verification only**). ★ **Six blind instruments: DONE**
   — three call `makeCameraPlanDelivery`, three cannot and each names the helper in a header comment.

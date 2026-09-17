@@ -1,12 +1,57 @@
 # MORNING SHEET — 2026-09-18
 
+## ★★★ FIRST LINE: THE PINNED GATE FAILS ON MASTER AND PASSES WITH THE BRAKE OFF
+
+→ [PINNED-GATE-1](../reports/night/PINNED-GATE-1.md) · **Nothing was reverted. The rule for this
+piece says report it, not repair it.**
+
+**At the full pinned N — 300 races per track, ten tracks, one fixed seed (12345), both arms — the
+shipped master carries TWO Holm-unfair start rows and the brake-off control carries NONE.**
+
+| | shipped defaults | brake OFF (control) |
+|---|---|---|
+| Holm-unfair start rows | ★ **2 — `ice-track`, `searound`** | ★ **0** |
+| band reach | **passes everywhere**, 84–88% | **passes everywhere**, 84–88% |
+
+★ **This is the first time the gate has run at the pinned N with a fixed seed on both arms.** The run
+that cleared the ship was 120 races per track and said so. **1 h 53 m, not the nine hours projected** —
+stopping the dev server is most of that.
+
+★ **The control is honest**: same commit `5b60b615`, **one file, one key** (`gapBrakeEnabled`
+true→false), verified by `git diff`. **The real tree was never instrumented.** And the brake genuinely
+reached the run — **1,636 of 3,000 races differ between the arms and 640 change winner**, so this is
+not the old blindness measuring nothing.
+
+### ★★ BUT READ THE STRENGTH BEFORE YOU ACT ON IT
+
+**I am reporting this as the rule requires, and I do not think it is settled.** Three reasons:
+
+1. ★ **It is ONE seed.** The record already has the same shipped config giving **0, 0 and TWO**
+   Holm-flagged rows on three draws. Two flags at one seed sits inside that known variance.
+2. ★★ **The two flagged tracks tilt in OPPOSITE directions** — ice-track to the **rear** (21/17/29/33
+   against a flat 25), searound to the **front** (20/12/20/16/14/7/11). **A mechanism that
+   systematically favoured a start row would not do that.**
+3. ★ **No start row gains or loses consistently** across the ten tracks — the front row gains on four
+   and loses on four — and every mean change in finishing rank is **under 0.03 of a place**.
+
+★ **What would settle it is cheap: two more fixed seeds, both arms, same N — one night.** If the same
+two tracks flag on the shipped arm at a fresh seed and stay clean on the control, it is real and the
+brake owns it. If they move, it was the draw. **Nothing needs building to find out.**
+
+★ **Also settled, and it cuts the other way:** `luger-hill` is **FAIR on both arms** at the pinned N
+(p 0.612 / 0.351). The standing luger-hill failure **does not reproduce when the three distance
+variants are pooled** — because the effect is specific to the **30 s** variant, which is tonight's
+piece 3. **So the gate as pinned cannot see the one start-row problem we know is there.**
+
+---
+
 ## ★ TONIGHT'S CHAIN — `night/2026-09-17`, LIVE STATUS
 
 Nothing merged, nothing minted, nothing tagged. The branch is pushed after every piece.
 
 | piece | state | one line |
 |---|---|---|
-| **1 · the pinned fairness gate** | ★ **RUNNING** | Started first, as asked. One fixed seed (**12345**), both arms, **the pinned N** — `--races=100` × three distance variants = **300 races per track**. 8 workers, 20 jobs. On track for roughly **three hours**, not the nine that was projected under load. **Until it lands, the pinned gate is still owed.** |
+| **1 · the pinned fairness gate** | ★ **DONE — AND IT FAILS ON THE SHIPPED ARM** | → [PINNED-GATE-1](../reports/night/PINNED-GATE-1.md) — full pinned N, one fixed seed, both arms. **The pinned gate is no longer owed.** |
 | **2 · the documentation** | **DONE** | Six factually wrong statements corrected against the tree, plus two omissions in files that claim completeness. Nothing rewritten for style. |
 | **3 · the luger-hill bias** | **DONE — investigated only, no repair** | → [LUGER-BIAS-1](../reports/night/LUGER-BIAS-1.md) |
 | **4 · the two open branches** | **DONE — nothing merged, tagged or deleted** | → [BRANCH-DECISION-1](../reports/night/BRANCH-DECISION-1.md) |
