@@ -1,8 +1,77 @@
 # MORNING SHEET — 2026-09-17
 
-Branch `feat/gap-leader-brake`, pushed. **Nothing minted. Nothing merged. Nothing tagged.** The mint,
-the merge, the archive tag, the branch sweep and the CI check for the merge SHA all wait for your
-word. Your store was never opened.
+## ★★★ IT IS ON MASTER
+
+The gap leader brake ships ON at your four values. **Merged, minted, tagged, branch deleted, CI
+green.**
+
+| | |
+|---|---|
+| merge commit | **`be7e6872`** — `--no-ff`, 72 commits |
+| master head | `40f4b8f1` |
+| archive tag | **`archive/gap-leader-brake-2026-09-17`**, pushed, registered in `docs/TAGS.md` |
+| branch at origin | **deleted** — `git ls-remote` shows only `master`, `feat/remove-prestaging-comebacker`, `night/2026-09-14-history` |
+| CI for the merge | **SUCCESS, 3m11s** — all three jobs (Server tests, Living-doc guards + script tests, Client checks) |
+| `verify` on merged master | **26 PASS / 0 FAIL** |
+| fingerprints | **all four minted and re-verified against the engine** |
+| golden races | **not re-recorded, and they did not move** |
+
+The values themselves are in `client/src/modules/storage/defaults.js`; this sheet points at them
+rather than copying them.
+
+---
+
+## THE FAIRNESS RUN THAT GATED IT
+
+→ [BRAKE-FAIRNESS-2](../reports/night/BRAKE-FAIRNESS-2.md)
+
+Your own instrument, unmodified, at **two fixed seeds** — which matters, because its default seed is
+`Math.random()` and every earlier verdict was one draw.
+
+| seed | brake OFF | **new defaults** | blocks? |
+|---|---|---|---|
+| 12345 | 1 Holm-flagged: luger-hill 30 s | 1 Holm-flagged: **the same row** | **no — pre-existing** |
+| 777 | 0 flagged (2 raw) | **0 flagged, 0 raw** | **no** |
+
+**No row fails on the new defaults alone, at either seed.** The one flagged row is the luger-hill
+rear bias you already have with the brake off: average rank agrees to within 0.05 on every start row
+between the arms, and exactly **one race** moves. Band reach is the same on both arms to within half
+a point.
+
+**The brake was actually exercised**: 63,579 commands on 544,477 calls inside the fairness run.
+
+★ **One honest limit: that run is SHORT of the pinned N.** It ran 120 races per track against the
+pinned 300. The pinned N projected to about nine hours — measured, not guessed. Both arms ran at the
+same N and the same seed, so the comparison that the decision rule needs is like for like; what is
+lost is power, not validity. **It should not be quoted as the pinned gate.**
+
+---
+
+## THE BUILD, ON MASTER
+
+**4173 production · 5173 dev · 4000 API.**
+
+```
+/api/health  {"build":{"commit":"40f4b8f1","branch":"master","dirty":false}}
+```
+
+Bundle read off the served page: **`dist/assets/index-BNLl7vvS.js`** (927.65 kB, gzip 277.03). All
+five keys were read **out of that bundle** and match what `defaults.js` carries.
+
+★ The dev server was stopped for several hours during the fairness run, at your suggestion — it
+helped, throughput roughly doubled.
+
+---
+
+## WHAT IS STILL OPEN
+
+- **Does V1 go in at all?** Still yours. It now has a switch and ships OFF; nothing in this line
+  answered the question.
+- **The luger-hill 30 s rear bias** fails your own fairness gate in the shipped game, at every seed I
+  ran. Not caused by the brake, not chased.
+- **Two branches left standing**, both carrying undecided product code: `feat/remove-prestaging-comebacker`
+  and `night/2026-09-14-history` (which also needs one sentence from you about which `MORNING.md`
+  survives).
 
 ---
 
