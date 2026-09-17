@@ -139,6 +139,28 @@ const planConfig = () => ({
   gapRerollStrength: DYN.gapRerollStrength,
   reRollTransitionDuration: DYN.reRollTransitionDuration,
   contestWindowStart: DYN.contestWindowStart,
+  // ★★ BLIND-SITE-1 (2026-09-15) — THE HEADER'S "canonical defaults" WAS NOT TRUE. This builder
+  // omitted eleven of the inputs raceCore.js:257-356 gives the plan, so the orders printed below
+  // were from a race no player runs. Two mechanisms were missing outright:
+  //   · COMBO15 fair-arrival (`chaosSteer`/`bandBias`, SHIPPED ON, defaults.js:1008-1012) — every
+  //     order printed by this file before today is therefore PRE-COMBO15 and must not be compared
+  //     against a current one;
+  //   · the gap brake (four keys + `trajectoryTransitionDuration` + `pathLengthPx`), which without
+  //     them returns at its guard (racePlanner.js:886) — inert today, its default is OFF.
+  // Every value below already existed at this site: `DYN` is the shipped dynamics config imported
+  // at :26, `pathLengthPx` is resolved at :79. Nothing was threaded and no value was invented.
+  chaosSteer: DYN.chaosSteer,
+  chaosSteerGain: DYN.chaosSteerGain,
+  bandBias: DYN.bandBias,
+  bandBiasR: DYN.bandBiasR,
+  bandBiasGain: DYN.bandBiasGain,
+  gapBrakeEnabled: DYN.gapBrakeEnabled,
+  gapBrakeAllowedGapPx: DYN.gapBrakeAllowedGapPx,
+  gapBrakeWindowEnd: DYN.gapBrakeWindowEnd,
+  gapBrakeMaxAuthority: DYN.gapBrakeMaxAuthority,
+  trajectoryTransitionDuration: DYN.trajectoryTransitionDuration,
+  pathLengthPx,
+  servoNoiseBlindEnabled: DYN.servoNoiseBlindEnabled,
 });
 
 console.log(

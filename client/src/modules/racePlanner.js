@@ -394,6 +394,32 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // `frontLeash*` comment two lines above is a DIFFERENT case and is still accurate: those keys
     // appear nowhere in `defaults.js`, so that block really is sim-only.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
+    // ── GAP-BRAKE-1: the gap-based leader brake (docs/DEAD-ENDS.md "Governor family" is why it is
+    // gap-based and not rank-based). OFF unless the caller passes the switch, so a config that does
+    // not mention it produces today's race byte-identically.
+    _gapBrakeEnabled: config.gapBrakeEnabled === true,
+    // SERVO-NARROW-1 (V1) — see `_setTargetNoiseBlind`. `=== true` like the brake's own switch, so a
+    // config that has never heard of the key runs the shipped `_setTarget` path byte-identically.
+    _servoNoiseBlind: config.servoNoiseBlindEnabled === true,
+    _gapBrakeAllowedGapPx: config.gapBrakeAllowedGapPx ?? null, // world px, leader->2nd; null = OFF
+    _gapBrakeWindowEnd: config.gapBrakeWindowEnd ?? null, // progress fraction; window START is corrStartFrac
+    // GAP-BRAKE-RATE-1: the brake's maximum authority, as a fraction of natural speed. The owner's
+    // own number and the ONLY free one the mechanism has; the default is read from its one home
+    // rather than restated, so a tuned key moves the brake with it.
+    _gapBrakeMaxAuthority:
+      config.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+    // GAP-BRAKE-RATE-1: the interval the gap's CHANGE is read over, and it is NOT a new number —
+    // it is `trajectoryTransitionDuration`, the ease every trajectory target in this engine already
+    // travels over, including this brake's own (see `_retargetInFlight`). Measuring the change over
+    // exactly the interval the command needs to be delivered is the one non-arbitrary choice
+    // available, and at 1000 ms it is five times the 200 ms the project measured physics jitter to
+    // dominate below (coefficient of variation 26.5% at 33 ms, 12.2% at 200 ms).
+    _gapBrakeRateWindowMs:
+      (config.trajectoryTransitionDuration ??
+        DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration) * 1000,
+    // The track's path length, so a t-gap (t is in PATH LENGTHS, durationModel.js:22) can be read as
+    // world px without the physics ever touching the camera. Passed in by raceCore; null = brake off.
+    _pathLengthPx: config.pathLengthPx ?? null,
     _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
     // NOT unfireable, and it is the one entry on the 29 where the triage's UNFIREABLE verdict is
     // wrong: the sim passes `gapRerollStrength: undefined` on the world-OFF arm, so this fallback
@@ -619,6 +645,28 @@ export function createTrajectoryController(racePlan) {
   let _leashEngaged = false; // hysteresis state: currently braking?
   let _leashTargetIdx = -1; // index of the leashed racer while engaged
   let _leashFrames = 0; // diagnostic: frames the brake was applied
+  // ── GAP-BRAKE-1 telemetry. Read-only counters; they answer the two questions the owner asked —
+  // how often does it fire, and does it ever fire on a gap it was told to allow.
+  // GAP-BRAKE-ARRIVAL-1: the racer the brake was the binding constraint on last step, or -1.
+  // Closure-scoped, so it resets per race like every other piece of controller state.
+  let _gapBrakeBindingIdx = -1;
+  let _gapBrakeWindowFrames = 0; // leader-frames inside [corrStart, windowEnd]
+  let _gapBrakeFrames = 0; // of those, frames the brake actually pulled
+  let _gapBrakeMinMult = 1.0; // hardest correction commanded this race
+  let _gapBrakeMaxGapPx = 0; // biggest leader->2nd gap seen inside the window
+  let _gapBrakeMinFiringGapPx = Infinity; // smallest gap at which anything was WRITTEN (fade included)
+  const _gapBrakeGapsAtFire = []; // the gap at every firing frame (step 4's distribution)
+  // ── GAP-BRAKE-RATE-1 state. The strength is now INTEGRATED, so it is state rather than a
+  // function of the frame — these five are the whole of it, and all five are closure-scoped, so
+  // they reset per race exactly like every other controller field.
+  let _gapBrakeEngaged = false; // has the SIZE gate let it in, and has it not yet faded out?
+  let _gapBrakeLeaderIdx = -1; // the racer the brake is latched to while engaged
+  let _gapBrakeStrength = 0; // current authority, [0, maxAuthority]; the commanded target is 1 - this
+  let _gapBrakeSmoothedGapPx = null; // the gap after the rate-window smoothing; null = not yet seeded
+  let _gapBrakeLastMs = null; // previous in-window frame's clock, for dt
+  let _gapBrakeMinEngageGapPx = Infinity; // ★ smallest gap at which it ever ENGAGED — must exceed the allowance
+  let _gapBrakeMaxStrength = 0; // deepest authority held this race
+  let _gapBrakeLastDGapPx = 0; // last smoothed-gap change, read-only (harness step trace)
   // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
   // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
   // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
@@ -653,12 +701,266 @@ export function createTrajectoryController(racePlan) {
    * @param {number} [phaseProgress] leader-progress fraction [0,1]; when set, drives phase selection
    *                                  and the area-bonus fade trigger. null = legacy elapsedMs path.
    */
+  // The smallest target change `_setTarget` will act on. It was already the literal below; naming
+  // it lets the gap brake ask the same question the setter does — "would this even be written?" —
+  // instead of carrying a second epsilon of its own.
+  const TARGET_EPSILON = 0.001;
+
+  /**
+   * GAP-BRAKE-ARRIVAL-1 — move a target that is ALREADY in flight, without restarting its ease.
+   *
+   * ★ WHY THIS EXISTS. `_setTarget` above resets `trajectoryMultPrev` to the value held RIGHT NOW
+   * and `trajectoryMultTransStart` to now, so every write begins the 1000 ms ease again from
+   * wherever the multiplier happens to be. For a target that settles, that is correct and is what
+   * every racer has always done. For a target that MOVES EVERY STEP it is fatal:
+   * `easeInOutCubic` is 4t^3 near zero (mathUtils.js:12), so a restart every few steps keeps the
+   * multiplier permanently in the flat part of the curve and it never travels. GAP-BRAKE-PARADOX-1
+   * measured the consequence on space-sprint seed 2 — a slowdown commanded on 592 of 592 braked
+   * steps, and a multiplier above 1.0 on 592 of 592, frozen at the 1.094 boost it happened to hold.
+   *
+   * So while the brake is the binding constraint on a racer, the target is moved and the CLOCK IS
+   * LEFT ALONE. The ease then runs to completion exactly as designed; once `elapsed` passes the
+   * transition duration, raceCore.js:565-574 returns the target itself and the held value tracks
+   * the command step for step.
+   *
+   * ★ THIS IS NOT A SECOND TRANSITION MECHANISM. It writes no multiplier and carries no rate of
+   * its own — it is the SAME ease, with the restart omitted. There is no new number here.
+   *
+   * ★ AND IT CANNOT CAUSE A JUMP. The held value is a continuous function of (prev, target,
+   * elapsed); moving the target by d changes it by d x ease(elapsed/dur) <= d, and d is the
+   * brake's per-step command change, which is a fraction of a thousandth.
+   */
+  function _retargetInFlight(r, newTarget) {
+    r.trajectoryMultTarget = newTarget;
+  }
   function _setTarget(r, newTarget, elapsedMs) {
-    if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > 0.001) {
+    if (Math.abs(newTarget - (r.trajectoryMultTarget ?? 1.0)) > TARGET_EPSILON) {
       r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
       r.trajectoryMultTarget = newTarget;
       r.trajectoryMultTransStart = elapsedMs;
     }
+  }
+
+  /**
+   * SERVO-NARROW-1 (V1) — THE RESTART DECISION IGNORES THE NOISE.
+   *
+   * ★ THE FAULT THIS FIXES, measured before it was built. `_setTarget` above restarts the ease
+   * whenever the target moves by more than `TARGET_EPSILON`, and the servo's target carries a
+   * stochastic noise term of `(rng() - 0.5) * 2 * plan._stochasticNoise` (below). Two independent
+   * draws from U(-a, +a) differ by up to 2a = 0.0016, which is LARGER than the 0.001 epsilon — so
+   * the noise ALONE re-triggers the ease. SERVO-FAULT-1 separated the two drivers exactly by
+   * recording the deterministic part and the noise apart: the noise alone could have caused
+   * **86.1%** of all target rewrites, and **95.0%** of the leader's. The consequence, measured over
+   * 19,464,218 commanded racer-steps: the ease reaches a median of 48 ms into its 1000 ms
+   * transition before being restarted, where `easeInOutCubic` is 4t^3 and has travelled 0.04% of
+   * the distance. The racer the servo serves worst is the LEADER — 55.8% arrival against the
+   * field's 69.3% — because while leading he is never at a clamp (a clamped command has its noise
+   * CLIPPED AWAY, stops moving, and therefore arrives: 94.6% for racers 16+ ranks off their place).
+   *
+   * ★ WHAT CHANGES, AND WHAT DOES NOT. The restart is decided on the DETERMINISTIC part of the
+   * command — the same expression without the noise term — compared against the deterministic part
+   * the setter last acted on. The noise STILL REACHES THE SPEED: the target itself is written every
+   * step, so the racer runs the noisy command exactly as before. **Only the decision to restart the
+   * ease changes.** Nothing about what the servo commands is touched, no threshold moves, and there
+   * is no new number here.
+   *
+   * ★ WHY NOT RAISE `TARGET_EPSILON` ABOVE THE NOISE BAND INSTEAD. That was measured too (V3): it
+   * reaches the same arrival, but it makes the worst in-window race WORSE (249.9 px against this
+   * one's 239.3), because it also suppresses small genuine movements of the command. This one
+   * suppresses only the noise. See reports/night/SERVO-NARROW-1.md.
+   *
+   * ★★ IT DOES NOT COMPOSE WITH A MECHANISM THAT MOVES THE TARGET DISCONTINUOUSLY. Once the
+   * transition clock is older than the transition duration, raceCore.js:584-591 returns the target
+   * itself, so the held multiplier tracks the written target step for step — which is what makes
+   * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
+   * the gap brake ON, its engage/release moves the target by its whole authority at once and the
+   * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
+   * against 1.008x for this change alone. **The brake ships OFF; if it is ever switched on, that
+   * interaction is the thing to fix first.**
+   */
+  function _setTargetNoiseBlind(r, newTarget, detTarget, elapsedMs) {
+    const prevDet = r._servoDetTarget ?? 1.0;
+    if (Math.abs(detTarget - prevDet) > TARGET_EPSILON) {
+      r.trajectoryMultPrev = r.trajectoryMult ?? 1.0;
+      r.trajectoryMultTransStart = elapsedMs;
+      r._servoDetTarget = detTarget;
+    }
+    // The noise still reaches the speed — the target is written every step either way.
+    r.trajectoryMultTarget = newTarget;
+  }
+
+  /**
+   * GAP-BRAKE-RATE-1 — the gap-based leader brake. Returns `{ index, target }` for the racer who
+   * should be slowed this frame, or `null` when the brake is off, outside its window, or — the
+   * normal case — when no gap has ever opened past the allowance.
+   *
+   * ── THE WINDOW ──────────────────────────────────────────────────────────────────────────────
+   * START is `corrStartFrac`, NOT a constant: it is the resolved OUTCOME-phase boundary, which is
+   * the SAME quantity that ends the PULK brake (`phaseFractions.pulkEnd = corridorStart =
+   * choreoOutcomeStart`, above). Move that boundary and both mechanisms move with it, so no
+   * unbraked gap can open between them. END is the owner's own key, `gapBrakeWindowEnd`.
+   *
+   * ── SIZE DECIDES WHETHER, CHANGE DECIDES HOW STRONG (the owner, 2026-09-14) ─────────────────
+   * The gap is leader->2nd in WORLD px: `t` counts path lengths (durationModel.js:22), so the
+   * difference times `pathLengthPx` is the on-screen distance between them.
+   *
+   * ★ THE GATE IS UNCHANGED AND IS STILL A SIZE. Until the gap has been strictly greater than the
+   * allowance the brake does not ENGAGE and nothing is written — a leader ten pixels clear is never
+   * braked, which is the whole reason this mechanism is gap-based rather than rank-based
+   * (docs/DEAD-ENDS.md, "Governor family").
+   *
+   * ★★ THE STRENGTH IS NO LONGER A SIZE. The first build read the gap's size through a ramp that
+   * reached full authority at twice the allowance, and the owner's objection to it is correct: a
+   * brake that works prevents the gap from ever reaching the size that would earn it its strength,
+   * so it cannot get there, and where brake and drive balance the gap PARKS. The structural cause
+   * is that the old law returned to ZERO authority exactly at the allowance — an equilibrium above
+   * the allowance was therefore guaranteed, whatever the numbers.
+   *
+   * So the strength is INTEGRATED from the gap's change:
+   *
+   *   growing   S := min(ceiling, S + ceiling * dGap / allowance)
+   *   shrinking S := S * (gap / gapBefore)
+   *
+   * and neither line carries a number of its own. The RISE gain is `ceiling / allowance`: one whole
+   * allowance of further growth buys the whole of the authority the owner named. The FALL is not a
+   * gain at all — it is the identity dS/S = dGap/gap, which makes the strength PROPORTIONAL TO THE
+   * GAP while it is closing and so reaches zero only when the gap does. That is the half of his
+   * design the old law could not express: it stays engaged past the allowance, follows the gap all
+   * the way down, and the leader returns to normal speed gradually instead of snapping back.
+   *
+   * ★★ AND THAT SHRINK LINE IS THE WHOLE OF THE FIX, stated as an inequality. On a gap that only
+   * ever GROWS the two laws agree by construction — both hand over the full authority one allowance
+   * past the allowance — so nothing about a widening gap distinguishes them. They part company the
+   * moment the brake starts WINNING:
+   *
+   *     old (size ramp)  dS/S = dGap / (gap - allowance)
+   *     new (this law)   dS/S = dGap /  gap
+   *
+   * and `gap > gap - allowance` always, so the new law surrenders STRICTLY LESS of its strength for
+   * every pixel it closes, and surrenders none of it at the allowance where the old law surrendered
+   * all of it. An equilibrium above the allowance is therefore no longer structurally guaranteed,
+   * which is the thing the owner was actually objecting to. Pinned by the give-back test in
+   * `gapLeaderBrake.test.js`.
+   *
+   * ★ THE ENTRY VALUE, and why the old ramp survives there and ONLY there. A gap can be past the
+   * allowance the moment the window opens, having done its growing where this mechanism was not
+   * watching. The seed credits exactly that growth at exactly the rise gain —
+   * `ceiling * clamp((gap - allowance) / allowance, 0, 1)` — so entry is continuous with the
+   * growth path: a gap that crosses the allowance from below seeds 0, which is what one step of
+   * growth from the allowance would have given it. One formula, one gain, used once.
+   *
+   * ── WHY THE GAP IS SMOOTHED FIRST ───────────────────────────────────────────────────────────
+   * An integrator on a per-step difference would chase physics jitter, and it would chase it
+   * ASYMMETRICALLY — the rise gain is constant while the fall gain is `S / gap`, so symmetric noise
+   * would ratchet the strength upward. The gap is therefore smoothed over `_gapBrakeRateWindowMs`
+   * before any change is read from it. That interval is the engine's own
+   * `trajectoryTransitionDuration` — see the plan field — not a constant introduced here.
+   *
+   * ── WHAT IS REUSED UNCHANGED ────────────────────────────────────────────────────────────────
+   * The rate limit is not a new term: the returned target goes through `_setTarget` /
+   * `_retargetInFlight`, so it rides the existing `trajectoryTransitionDurationMs` ease that every
+   * other target already uses (GAP-BRAKE-ARRIVAL-1). The fold at the call site is still
+   * `Math.min`, so the brake can never raise a speed. `TARGET_EPSILON` is still the setter's own
+   * "would this even be written" test, and it is also what ends the fade.
+   *
+   * @param {Array} active non-finished racers, already sorted by t descending (rank 1 first)
+   * @param {number} nActive `active.length`
+   * @param {number|null} phaseProgress leader-progress fraction
+   * @param {number} elapsedMs physics clock, for the smoothing interval's dt
+   * @returns {{index:number, target:number}|null}
+   */
+  function _gapBrakeRelease() {
+    _gapBrakeEngaged = false;
+    _gapBrakeStrength = 0;
+    _gapBrakeSmoothedGapPx = null;
+    _gapBrakeLastMs = null;
+    _gapBrakeLastDGapPx = 0;
+  }
+
+  function _computeGapLeaderBrake(active, nActive, phaseProgress, elapsedMs) {
+    if (!plan._gapBrakeEnabled) return null;
+    const allowedPx = plan._gapBrakeAllowedGapPx;
+    const windowEnd = plan._gapBrakeWindowEnd;
+    const ceiling = plan._gapBrakeMaxAuthority;
+    const rateWindowMs = plan._gapBrakeRateWindowMs;
+    const pathPx = plan._pathLengthPx;
+    // Every input must be present and usable. A missing one means the caller did not wire the
+    // brake, and a brake that guessed a default here would be a mechanism nobody switched on.
+    if (!(allowedPx > 0) || windowEnd == null || !(pathPx > 0)) return null;
+    if (!(ceiling > 0) || !(rateWindowMs > 0)) return null;
+    if (nActive < 2 || phaseProgress == null) {
+      _gapBrakeRelease();
+      return null;
+    }
+    if (phaseProgress < corrStartFrac || phaseProgress > windowEnd) {
+      _gapBrakeRelease();
+      return null;
+    }
+
+    const leader = active[0];
+    const gapPx = (leader.t - active[1].t) * pathPx;
+    _gapBrakeWindowFrames++;
+    if (gapPx > _gapBrakeMaxGapPx) _gapBrakeMaxGapPx = gapPx;
+
+    // ── THE SMOOTHED GAP. One exponential filter with the rate window as its time constant; the
+    // per-step coefficient is dt/window, so a paused or repeated clock cannot move it. The first
+    // in-window frame seeds it and reports no change, which is correct: one sample is not a rate.
+    const dtMs = _gapBrakeLastMs == null ? 0 : elapsedMs - _gapBrakeLastMs;
+    _gapBrakeLastMs = elapsedMs;
+    const gapBefore = _gapBrakeSmoothedGapPx;
+    if (gapBefore == null) {
+      _gapBrakeSmoothedGapPx = gapPx;
+    } else if (dtMs > 0) {
+      _gapBrakeSmoothedGapPx = gapBefore + (gapPx - gapBefore) * Math.min(1, dtMs / rateWindowMs);
+    }
+    const gapNow = _gapBrakeSmoothedGapPx;
+    const dGap = gapBefore == null ? 0 : gapNow - gapBefore;
+    _gapBrakeLastDGapPx = dGap;
+
+    // ★ THE BRAKE IS LATCHED TO ONE RACER. If somebody else has taken the lead the gap it was
+    // working on is closed by definition, so the accumulated authority goes with it rather than
+    // being handed to a racer who never earned it. The new leader must pass the gate on his own.
+    if (_gapBrakeEngaged && _gapBrakeLeaderIdx !== leader.index) {
+      _gapBrakeRelease();
+      // the release above cleared the filter; re-seed it so this frame still has a gap to read
+      _gapBrakeSmoothedGapPx = gapPx;
+      _gapBrakeLastMs = elapsedMs;
+    }
+
+    if (!_gapBrakeEngaged) {
+      // ★ THE GATE. Strictly greater — a lead exactly at the allowance is allowed. This is the one
+      // place the SIZE is read, and it decides only WHETHER.
+      if (!(gapPx > allowedPx)) return null;
+      _gapBrakeEngaged = true;
+      _gapBrakeLeaderIdx = leader.index;
+      _gapBrakeStrength = ceiling * clamp((_gapBrakeSmoothedGapPx - allowedPx) / allowedPx, 0, 1);
+      if (gapPx < _gapBrakeMinEngageGapPx) _gapBrakeMinEngageGapPx = gapPx;
+    } else if (dGap >= 0) {
+      // GROWING (or held): the authority rises by the same gain the entry seed used.
+      _gapBrakeStrength = Math.min(ceiling, _gapBrakeStrength + ceiling * (dGap / allowedPx));
+    } else {
+      // SHRINKING: the authority stays proportional to the gap, so it reaches zero with the gap and
+      // not at the allowance. `gapBefore > 0` is the only guard the ratio needs.
+      _gapBrakeStrength = gapBefore > 0 ? _gapBrakeStrength * (gapNow / gapBefore) : 0;
+      if (!(_gapBrakeStrength > 0)) _gapBrakeStrength = 0;
+    }
+
+    const target = 1 - _gapBrakeStrength;
+    // ★ A CORRECTION TOO SMALL TO BE WRITTEN IS NOT A CORRECTION, and it is also the END OF THE
+    // FADE. A hair over the allowance on entry, or a gap that has all but closed, both leave a
+    // command `_setTarget` would decline to move the target for. Releasing here is what lets the
+    // brake finish: the strength only ever reaches zero asymptotically, so without this it would
+    // stay nominally engaged for ever. It is not a second threshold — it is the setter's own.
+    if (!(1 - target > TARGET_EPSILON)) {
+      _gapBrakeRelease();
+      return null;
+    }
+    _gapBrakeFrames++;
+    if (_gapBrakeStrength > _gapBrakeMaxStrength) _gapBrakeMaxStrength = _gapBrakeStrength;
+    if (target < _gapBrakeMinMult) _gapBrakeMinMult = target;
+    if (gapPx < _gapBrakeMinFiringGapPx) _gapBrakeMinFiringGapPx = gapPx;
+    if (_gapBrakeGapsAtFire.length < 20000) _gapBrakeGapsAtFire.push(gapPx);
+    return { index: leader.index, target };
   }
 
   function update(racers, elapsedMs, phaseProgress = null, leaderGapLen = null) {
@@ -883,6 +1185,24 @@ export function createTrajectoryController(racePlan) {
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;
 
+    // ── GAP-BRAKE-1 — the gap-based leader brake, computed ONCE per frame ─────────────────────
+    //
+    // ★ WHY IT IS COMPUTED HERE AND NOT APPLIED AFTER THE LOOP. `_setTarget` restarts the
+    // trajectoryMult ease every time the target moves by more than 0.001. A second `_setTarget` on
+    // the leader after the servo had already written him would re-trigger the ease twice per frame,
+    // every frame, pinning `elapsed` at 0 so the multiplier would freeze at its previous value and
+    // the brake would never actually take hold. (That is also why the dead front leash below, which
+    // does exactly that, could not have worked had its keys ever been set.) So the brake produces a
+    // TARGET here and the loop folds it into the leader's single write with Math.min.
+    //
+    // ★ ON THE GAP, NEVER ON RANK. Below the allowance this block sets nothing at all.
+    const gapBrake = _computeGapLeaderBrake(active, nActive, phaseProgress, elapsedMs);
+    // Which racer the brake was the binding constraint on LAST step. It is the whole state the
+    // arrival fix needs: the first step of a pull starts the ease normally (a smooth onset from
+    // wherever he is), and every step after that moves the target without restarting it.
+    const brakeHeldLast = _gapBrakeBindingIdx;
+    let brakeBindingNow = -1;
+
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
@@ -1101,7 +1421,41 @@ export function createTrajectoryController(racePlan) {
         }
       }
       const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, ceilFor);
-      _setTarget(r, rawTarget, elapsedMs);
+      // GAP-BRAKE-1: the leader's target is the SLOWER of the servo's and the brake's. Math.min, not
+      // an override, because a brake must never speed anyone up — if the servo is already pulling him
+      // back harder than the gap warrants, the servo wins and the brake is silent.
+      const steerTarget =
+        gapBrake != null && r.index === gapBrake.index
+          ? Math.min(rawTarget, gapBrake.target)
+          : rawTarget;
+      // ★ IS THE BRAKE THE ONE BEING OBEYED THIS STEP? Only then does the arrival path apply, so
+      // the change stays on the brake's own path: a racer the brake is not acting on, and a racer
+      // whose own servo is already pulling harder than the gap warrants, both keep the shipped
+      // `_setTarget` behaviour untouched.
+      const brakeIsBinding =
+        gapBrake != null && r.index === gapBrake.index && gapBrake.target < rawTarget;
+      if (brakeIsBinding) brakeBindingNow = r.index;
+      if (brakeIsBinding && brakeHeldLast === r.index) {
+        // continuing pull: move the target, leave the ease running (GAP-BRAKE-ARRIVAL-1)
+        _retargetInFlight(r, steerTarget);
+      } else if (plan._servoNoiseBlind) {
+        // SERVO-NARROW-1 (V1): the restart is decided on the command WITHOUT its noise term. The
+        // deterministic part is the same expression as `rawTarget` above with `noise` removed —
+        // written out here rather than hoisted, so the clamp and its two bounds stay visibly the
+        // same two bounds and no reader has to check whether a shared variable drifted.
+        // ★ BEHIND ITS OWN SWITCH, DEFAULT OFF. It must be separable from the gap brake: together
+        // the brake's window-end release lands undamped in one 16 ms step (BRAKE-JERK-1).
+        _setTargetNoiseBlind(
+          r,
+          steerTarget,
+          clamp(1.0 + gain * (error / nActive), minMult, ceilFor),
+          elapsedMs
+        );
+      } else {
+        // The shipped path, unchanged since before V1: the gate tests the value it writes, which is
+        // what makes a jump impossible (0 violations in 378 brake transitions, BRAKE-JERK-1).
+        _setTarget(r, steerTarget, elapsedMs);
+      }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
@@ -1120,6 +1474,9 @@ export function createTrajectoryController(racePlan) {
         if (r.avoidanceActive) _winnerBlockedInOutcome++;
       }
     }
+
+    // GAP-BRAKE-ARRIVAL-1: remember who the brake was obeyed on, for the next step's decision.
+    _gapBrakeBindingIdx = brakeBindingNow;
 
     // ── Front distance leash (SIM-ONLY; gap-space brake on the runaway leader) ─────────────────────
     // Only ever runs when BOTH the plan carries leash config (sim-only) AND the caller passed the
@@ -1497,6 +1854,41 @@ export function createTrajectoryController(racePlan) {
     // meaningless. This getter neither resets nor mutates; the copy stops a consumer editing state.
     // Controllers are constructed per race, so the log cannot accumulate across races.
     getGapLeaderDownEvents: () => _gapLeaderDownEvents.map((e) => ({ ...e })),
+    // GAP-BRAKE-1 read-only telemetry. Deliberately NOT part of collectTelemetry(), which RESETS
+    // its counters — this getter neither resets nor mutates, so a caller can read it at any point.
+    // `minFiringGapPx` is the one that matters: it must never be <= the configured allowance.
+    getGapBrakeStats: () => ({
+      enabled: plan._gapBrakeEnabled,
+      allowedGapPx: plan._gapBrakeAllowedGapPx,
+      windowStart: corrStartFrac,
+      windowEnd: plan._gapBrakeWindowEnd,
+      windowFrames: _gapBrakeWindowFrames,
+      firedFrames: _gapBrakeFrames,
+      minMultCommanded: _gapBrakeMinMult,
+      maxGapPxInWindow: _gapBrakeMaxGapPx,
+      minFiringGapPx: _gapBrakeMinFiringGapPx,
+      gapsAtFire: _gapBrakeGapsAtFire.slice(),
+      // ── GAP-BRAKE-RATE-1 ──────────────────────────────────────────────────────────────────
+      // `minEngageGapPx` is the one that answers the owner's gate question: the smallest gap at
+      // which the brake ever ENGAGED, which must never be at or below the allowance.
+      // `minFiringGapPx` above is a DIFFERENT number now and is deliberately allowed to be
+      // smaller: once engaged the brake follows the gap down past the allowance as it fades, so
+      // the smallest gap it ever WROTE at is a fade-out value, not a gate breach.
+      maxAuthority: plan._gapBrakeMaxAuthority,
+      rateWindowMs: plan._gapBrakeRateWindowMs,
+      minEngageGapPx: _gapBrakeMinEngageGapPx,
+      maxStrength: _gapBrakeMaxStrength,
+      // The live state, so a harness can trace the mechanism step by step without a second copy
+      // of the law. Read-only; this getter never resets or mutates.
+      engaged: _gapBrakeEngaged,
+      // The racer the brake's command was the value actually OBEYED on last step, or -1. Engaged is
+      // not the same question: the brake can be engaged and silent, because the fold takes the
+      // SLOWER of the servo's target and the brake's and the servo often already asks for less.
+      bindingIdx: _gapBrakeBindingIdx,
+      strength: _gapBrakeStrength,
+      smoothedGapPx: _gapBrakeSmoothedGapPx,
+      dGapPx: _gapBrakeLastDGapPx,
+    }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

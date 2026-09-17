@@ -317,8 +317,21 @@ export function buildIdentity({
 // Written twice ON PURPOSE: the browser reads `dynamicsConfig.X ?? fallback` (RaceScreen
 // index.jsx), the sim reads its CLI vars which default to DEFAULT_RACE_DYNAMICS_CONFIG. If those
 // two mappings ever drift, the golden test must catch it — a shared helper here would hide it.
+//
+// ★★ THE COST OF WRITING IT TWICE, AND THE RULE THAT PAYS IT (BLIND-SITE-1, 2026-09-15). Deliberate
+// duplication only catches drift it can SEE. Both builders below silently omitted the same six
+// inputs raceCore.js:290-302 supplies — the four gap-brake keys, `trajectoryTransitionDuration` and
+// `pathLengthPx` — so with that brake switched on BOTH arms raced a world the browser does not, and
+// the guards could not report it because neither arm had the mechanism. Lesson 187 named this class
+// for plan FLAGS; it is the same trap for plan INPUTS.
+//
+// THE RULE: every key `createRacePlan` is given at raceCore.js:257 must appear in BOTH builders
+// below. `client/src/modules/parity/planConfigMirror.test.js` fails if one goes missing.
 
-function browserPlanConfig(dynamicsConfig) {
+// ★ BLIND-SITE-1: `pathLengthPx` is a second argument, not a key read off the dynamics config,
+// because it is track geometry rather than a setting — exactly how raceCore.js:302 supplies it.
+// Both callers already hold it as `ctx.pathLengthPx` (loadTrack, :220); nothing is threaded.
+function browserPlanConfig(dynamicsConfig, pathLengthPx) {
   return {
     bonusStrengthMultiplier:
       dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
@@ -365,6 +378,26 @@ function browserPlanConfig(dynamicsConfig) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? "symmetric",
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+    // ★ GAP-BRAKE-1 — mirror of raceCore.js:290-302. Without these six the plan cannot run the gap
+    // brake at all (`_computeGapLeaderBrake` returns at its guard, racePlanner.js:886), so this arm
+    // raced a world the browser does not. Shipped default is OFF, so forwarding them is inert today.
+    // `trajectoryTransitionDuration` is the brake's rate window — passed in SECONDS, as the store
+    // holds it and as raceCore.js:301 passes it; the planner converts once (racePlanner.js:414).
+    gapBrakeEnabled:
+      dynamicsConfig.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+    gapBrakeAllowedGapPx:
+      dynamicsConfig.gapBrakeAllowedGapPx ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+    gapBrakeWindowEnd:
+      dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+    gapBrakeMaxAuthority:
+      dynamicsConfig.gapBrakeMaxAuthority ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+    trajectoryTransitionDuration: dynamicsConfig.trajectoryTransitionDuration,
+    pathLengthPx,
+    servoNoiseBlindEnabled:
+      dynamicsConfig.servoNoiseBlindEnabled ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
     // COMBO15 fair-arrival mechanism — mirror of raceCore's createRacePlan wiring (kept in sync per the
     // "written twice" note). chaosSteer/bandBias are shipped defaults; OFF ⇒ null in the plan ⇒ pre-combo15.
     chaosSteer: dynamicsConfig.chaosSteer ?? false,
@@ -375,7 +408,9 @@ function browserPlanConfig(dynamicsConfig) {
   };
 }
 
-function simPlanConfig(DYN) {
+// ★ BLIND-SITE-1: same second argument as browserPlanConfig above, and for the same reason — this
+// is the builder the parity GUARDS exercise, so its blindness was the one with a consequence.
+function simPlanConfig(DYN, pathLengthPx) {
   return {
     bonusStrengthMultiplier: DYN.racePlanBonusStrengthMultiplier,
     phaseSplitBonusEnabled: DYN.phaseSplitBonusEnabled,
@@ -410,6 +445,19 @@ function simPlanConfig(DYN) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
+    // ★ GAP-BRAKE-1 — mirror of raceCore.js:290-302, same six inputs as browserPlanConfig. This arm
+    // is the one the parity guards run, and `gapBrake` appeared ZERO times in this file before, so
+    // with the brake switched on the two arms raced different worlds (PARITY-CLOSE-1). Default OFF.
+    gapBrakeEnabled: DYN.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+    gapBrakeAllowedGapPx:
+      DYN.gapBrakeAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+    gapBrakeWindowEnd: DYN.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+    gapBrakeMaxAuthority:
+      DYN.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+    trajectoryTransitionDuration: DYN.trajectoryTransitionDuration,
+    pathLengthPx,
+    servoNoiseBlindEnabled:
+      DYN.servoNoiseBlindEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
     // COMBO15 (MERGE-SHIP-1): the FAIR-ARRIVAL mechanism is a shipped default — thread it here too so the sim
     // arm matches the real browser arm (raceCore) under the new defaults. Mirrors browserPlanConfig.
     chaosSteer: DYN.chaosSteer ?? false,
@@ -612,7 +660,7 @@ export function browserArm(identity) {
     cfg,
     identity,
     model,
-    planConfig: browserPlanConfig(dynamicsConfig),
+    planConfig: browserPlanConfig(dynamicsConfig, ctx.pathLengthPx),
     behaviorConfig,
     laps: browserLaps,
     requestedSeconds: browserSeconds,
@@ -763,7 +811,7 @@ export function simArm(identity) {
     cfg,
     identity,
     model,
-    planConfig: simPlanConfig(DEFAULT_RACE_DYNAMICS_CONFIG),
+    planConfig: simPlanConfig(DEFAULT_RACE_DYNAMICS_CONFIG, ctx.pathLengthPx),
     behaviorConfig,
     laps: comboLaps,
     requestedSeconds: comboSeconds,

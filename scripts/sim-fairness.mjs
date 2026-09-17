@@ -4490,6 +4490,41 @@ if (isMain) {
                   DYNAMICS_OVERRIDES.reRollTransitionDuration,
                 // Front act window (the sustained-P1-battle measurement window's own key).
                 contestWindowStart: CONTEST_WINDOW_START,
+                // ★ THE TRACK'S PATH LENGTH, AND WHY IT IS HERE. `_computeGapLeaderBrake` returns at
+                // its own guard (racePlanner.js:886, `!(pathPx > 0)`) before reading anything, so a
+                // plan built without this value cannot run the gap brake AT ALL. The browser hands it
+                // over at raceCore.js:177; the sim did not, which made the sim run a world the browser
+                // does not the moment that brake is switched on — measured in PARITY-AGE-1 as a
+                // browser/sim byte-parity break. It is NOT a new quantity: `pathLengthPx` is already
+                // resolved for this track at :4288 and already passed to `runSingleRace` below.
+                // ★ INERT WHILE THE BRAKE IS OFF, which is its shipped default: with
+                // `gapBrakeEnabled` false the brake's first guard returns before this is read. Proven
+                // byte-identical on 300 races and all four fingerprints (PARITY-CLOSE-1).
+                pathLengthPx,
+                // ★ BLIND-SITE-1 — THE BRAKE'S OWN FOUR KEYS AND ITS RATE WINDOW. The path length
+                // above got the brake past its FIRST guard; without these it still never ran,
+                // because `plan._gapBrakeEnabled` is `config.gapBrakeEnabled === true` and this
+                // config carried no such key — measured as `enabled=0` on 8,499 calls
+                // (PARITY-CLOSE-1). The sim then reported fairness for a world the browser does not
+                // race the moment the owner switches the brake on, which is the whole defect.
+                // ★ NO NEW VALUE AND NO NEW FLAG. These read `DEFAULT_RACE_DYNAMICS_CONFIG`, which
+                // at :278 is already the OWNER'S world when `--config` supplied one and the shipped
+                // defaults otherwise — the same source every other dynamics key here uses, and the
+                // same `dynamicsConfig.X ?? default` shape raceCore.js:290-297 uses.
+                // ★ INERT TODAY: the shipped default is `gapBrakeEnabled: false`.
+                gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+                gapBrakeAllowedGapPx:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+                gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
+                gapBrakeMaxAuthority:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+                // The brake's rate window is the trajectory ease's own duration, so it reuses the
+                // override already resolved at :582 — the same object `reRollTransitionDuration`
+                // above reads. Seconds, as the store holds it; racePlanner.js:414 converts once.
+                trajectoryTransitionDuration:
+                  DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
+                servoNoiseBlindEnabled:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
               },
               seed,
             );

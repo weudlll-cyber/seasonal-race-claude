@@ -1450,6 +1450,477 @@ and in that commit's message.
   check exited 1. ★ Also named: `engine-reach` calls all ten paths "outside the hull", yet sabotaging
   this module moved both golden races — the hull is narrower than "can change how a race comes out".
 
+- [GAP-BRAKE-SWEEP-1.md](GAP-BRAKE-SWEEP-1.md) — **the gap brake at the owner's settings, ten tracks
+  x 30 races**: a fallback everywhere (0.69%–6.41% of in-window leader frames), and the OFF arm shows
+  it adds no abruptness the race did not already have. It barely moved the worst gaps, because 30–53%
+  of races per track peak outside its window.
+- [GAP-BRAKE-WINDOW-1.md](GAP-BRAKE-WINDOW-1.md) — **the largest lead from the window start to the
+  line**: RE-RACED, because the earlier sweep kept only whole-race maxima and its in-window figure
+  existed on the ON arm alone. At that point the owner's number had **not improved at all** — pooled
+  median and p90 unchanged, net +121.2 px in the wrong direction across the races the brake fired in.
+- [GAP-BRAKE-PARADOX-1.md](GAP-BRAKE-PARADOX-1.md) — **a braked leader cannot be faster, so which
+  premise is false**: P1. The command reached the TARGET and never reached the SPEED, because
+  `_setTarget` restarted the 1000 ms ease on every move above its epsilon and `easeInOutCubic` is
+  4t³ near zero. Commanded below 1.0 on 592 of 592 braked steps; held ABOVE 1.0 on 592 of 592.
+  ★ It also corrected this author: the first instrument sampled render frames, not physics steps.
+
+- [GAP-BRAKE-ARRIVAL-1.md](GAP-BRAKE-ARRIVAL-1.md) — **make the command arrive, then measure it**:
+  the fix is the OMISSION of a restart, not a new mechanism — while the brake is the binding
+  constraint the target moves and the ease's clock is left alone, so it runs to completion. `held −
+  target` 0.141085 → **0.000000**; the leader advanced MORE on 503 of 562 braked steps before, **0 of
+  513** after on ice-track. Across ten tracks the 0.600→finish maximum falls on **8 tracks, rises on
+  none**, pooled worst race 244.4 → **216.6 px**; 33 races better, 1 worse. ★ That one is the first
+  genuine HAND-OVER found — space-sprint seed 2, holder 20 → 18. Still not abrupt: 0 of 10 tracks
+  more abrupt than the servo already is. ★ A false green was found and fixed in this block's own
+  test, and `check-index` caught three earlier reports this author never indexed.
+
+- [GAP-BRAKE-HANDOVER-1.md](GAP-BRAKE-HANDOVER-1.md) — **why the new leader was not braked**: (B),
+  and only (B). Racer 18 led 165 steps inside the window and his gap never reached the allowance —
+  biggest reachable lead **95.8 px against 124**; it first crossed 124 at progress **0.966, past the
+  0.95 window end**, and he led 176 more steps out there up to 181.1 px. ★ NO LATCH: 0 of 326 firing
+  steps acted on a non-leader, and after the hand-over the brake selected 18 on **341 of 341** steps.
+  ★ It never pulled on him at all, so strength was never in question. The wider lead is racer 20
+  having been SLOWED (−21.6 px) rather than 18 having sped up (+0.9 px), and the same racer leads at
+  the end on both arms. Across 300 pairs this happens in **1 (0.3%)** — a single case, not a pattern.
+
+- [SERVO-NARROW-SHIP-1.md](SERVO-NARROW-SHIP-1.md) — ★ **ITS PARITY FINDING IS RETRACTED by
+  [PARITY-AGE-1](PARITY-AGE-1.md); read that first.** — **V1 is in the shipped source on this branch,
+  and it BREAKS BROWSER/SIM PARITY.** ★★ A real defect, not a moved input: the two arms genuinely
+  disagree on 2 of 3 golden seeds (seed 1 `1ba41a20` vs `836a46e0`; seed 42 `5ba78503` vs
+  `f4cce0cb`; seed 7 matches). First divergence at **physicsTs 55000, max |dt| 2.894e-3** — small,
+  late and growing, the signature of amplified round-off. **Two causes it cannot separate and does
+  not choose between**: the 0.001 epsilon was QUANTIZING AWAY a pre-existing sub-epsilon difference
+  which V1 now exposes (latent and older than V1), or V1 introduces a new one. Both arms call the
+  same `stepRacePhysics`, so there is no un-mirrored mechanics change to repair. ★ `verify` 19
+  PASS / 6 FAIL, every failure addressed: four fingerprints, one golden race (`closed-garden-path-12`,
+  Flash −0.256 s) surfacing in two guards — all **(a)** moved inputs — and the parity break **(b)**.
+  Nothing minted, no golden race re-recorded. ★ The new test's fixture **failed to separate its own
+  sabotage on the way in** (it picked a racer pinned at 0.8503 against a 0.85 floor, the same clamp
+  hazard SERVO-FAULT-1 measured); corrected to a fifth-of-a-rank margin and all three sabotages now
+  turn their own named test red. ★ Race shape: lead changes unchanged, but the winning margin falls
+  16% and races won clear drop 39 → 24 of 300 — **more contested at the line**. ★ **V1 has no key
+  and cannot be switched off in the dev screen**, and **no byte-identical control race exists**
+  (0 of 300; 190 of 300 change winner).
+
+- [PARITY-AGE-1.md](PARITY-AGE-1.md) — **neither (A) nor (B): V1 alone keeps parity, and the crack is
+  the SIM's blindness to the gap brake.** ★★ **Retracts SERVO-NARROW-SHIP-1's (b) finding.** With the
+  shipped defaults (brake OFF) V1 keeps byte-parity exactly (both arms `836a46e0`); the three
+  `goldenRealArm.test.js` failures are all on **line 57, the pinned winner**, not the hash — category
+  (a). ★ **(A) excluded twice**: on the pre-V1 tree every traced quantity is bit-identical across
+  **81,529 / 79,270 / 81,992** servo-write records **including `rawTarget`, the command before the
+  epsilon** — there is nothing for a quantizer to hide; and driving `TARGET_EPSILON` to **0** keeps the
+  arms in exact agreement on all three seeds (the race moves, both arms move together). ★ The real
+  cause reproduces exactly (`1ba41a20` vs `836a46e0`) only with **brake ON + V1 ON**: the sim's
+  `createRacePlan` (sim-fairness.mjs:4436) passes **no `pathLengthPx`** and the file contains
+  `gapBrake` **zero times**, so the brake returns at racePlanner.js:886 before reading anything.
+  Pre-V1 the brake's command never arrived, so the asymmetry had no consequence; V1 makes it arrive.
+  ★ **The browser arm is right** — the sim silently omits a shipped mechanism. ★ The golden fixtures
+  are NOT compromised: they are recorded with the brake off, where the arms agree bit-for-bit. ★ The
+  asymmetry is as old as the brake (2026-09-14) and **has never reached master** (`gapBrake` 0 times
+  there). The `0.001` literal dates to 2026-05-20 (`596a1b29`) with **no reason on record**.
+
+- [BLIND-SITE-1.md](BLIND-SITE-1.md) — **five harnesses were racing a world no player sees; all five
+  closed, and the browser/sim parity break with them.** ★ The blindness is entirely in the
+  PLAN-CONFIG layer: all 11 `createRaceFromIdentity` call sites already passed all 19 inputs, but
+  five plan-config builders omitted the gap brake's four keys and `trajectoryTransitionDuration`
+  (four also `pathLengthPx`), so `_computeGapLeaderBrake` returned at racePlanner.js:886 and the
+  mechanism could not run at all. ★★ **BOTH arms of the parity guard were blind** —
+  `browserPlanConfig` at goldenRunner.mjs:322 as well as `simPlanConfig` at :379 — which is why the
+  guard could not report it: the two agreed with each other and disagreed with the real browser core.
+  Corrects PARITY-CLOSE-1, which named `simPlanConfig` as the site. ★★ **The two diags under
+  scripts/diag/ ran a PRE-COMBO15 world** (chaosSteer/bandBias ship ON) — every order
+  acceptance-orders.mjs ever printed is from a race no player runs. ★ **Parity now CLOSED**: with the
+  brake on, real/sim/browser all return `1ba41a20` (seed 1) and `5ba78503` (seed 42), the real browser
+  core's values; before, sim and browser-twin returned their brake-OFF hashes unchanged, which is the
+  defect in one line. ★ Inert first: **300/300 races byte-identical**, 6/6 golden hashes, 4/4
+  fingerprints. ★ Guarded by `planConfigMirror.test.js`, **7 sabotages / 5 sites / 7 caught**, green
+  either side of each; its own "did the extractor find anything" assertion caught the extractor
+  reading a function body and returning an empty key set. ★★★ **THE SIXTH SITE: V1 HAD NO KEY.**
+  Added `servoNoiseBlindEnabled: false` rather than reverting, because reverting would answer the
+  owner's open question. **With it off all four fingerprints are BACK TO THE RECORD** (world
+  `b35cf477c09a1116`, world-off `19ccb497041a0dae`, camera `3df640a42e934312`, render
+  `6a84085e79535dd6`) — **there is nothing to mint.**
+
+- [BRAKE-WINDOW-2.md](BRAKE-WINDOW-2.md) — **200 ms is better on 10 of 10 tracks and costs nothing a
+  viewer can see; 1000 ms is still what I would put in front of him, because 200 is a number with no
+  home.** Three arms, 300 races each, his settings, **V1 OFF**. Pooled worst race **244.4 → 227.6
+  (1000 ms) → 208.3 px (200 ms)** — reproducing BRAKE-WINDOW-1's headline exactly from an
+  independently written harness. Per race against brake OFF: 1000 ms better on 40 / worse on 1;
+  **200 ms better on 56 / worse on 0.** ★★ **The median is unchanged on all three arms (81.4 px)** —
+  the brake does not touch the ordinary race, its whole effect is in the tail. ★★ **A viewer sees
+  nothing**: the largest single-step multiplier move (0.011762) and the largest one-frame speed change
+  (206.62 px/s) are **identical on all three arms and on all ten tracks** — the brake ALONE reaches
+  1.000x where the V1 pair reached 7.6x (BRAKE-JERK-1). **The danger was never the brake.** ★ It
+  COMMANDS in 137/300 races and is OBEYED in 59-66/300, because `Math.min` at racePlanner.js:1424
+  often finds the leader's own servo already pulling harder — a fallback, not a governor. ★ The cost
+  of the shorter window is direction changes 0.29 → 0.44 per second (+52%). ★ The window is DERIVED
+  from `trajectoryTransitionDuration` and has **no config key**, so 200 ms cannot be run from the dev
+  screen and shipping it would need a key, a control, a rule and a default.
+
+- [BRAKE-FAIRNESS-2.md](BRAKE-FAIRNESS-2.md) — **the seeded fairness run at the new defaults: CLEAR,
+  at two seeds, with the one flagged row failing on BOTH arms.** `sim-fairness.mjs` unmodified, seeds
+  **12345 and 777** (both above zero, which is the point — see FAIRNESS-SEED-1), two arms differing
+  only in `gapBrakeEnabled`, both on the BRANCH code because master carries no brake keys at all.
+  ★★ **THE N IS SHORT AND SAID SO**: `--races=40` = 120 races/track pooled, 1,200 per arm-seed, 4,800
+  total, against a pinned 300/track — the pinned N projected to **nine hours, measured** (583 s per job
+  idle, ~5x worse under load). Power is lost, validity is not: both arms run at the same N and seed.
+  **Not the pinned gate.** ★★★ **Decision rule: no row fails on the new defaults alone at either
+  seed.** Seed 12345 flags luger-hill 30 s on BOTH arms (off p=0.000719, on p=0.000163) — pre-existing;
+  seed 777 flags nothing on either, and the new-defaults arm has FEWER raw p<0.05 rows than brake-off
+  (0 against 2). Band reach identical to within half a point. ★ **The flagged row shown side by side**:
+  average rank agrees to within 0.05 on every start row and exactly ONE race moves — the brake does not
+  create the luger-hill rear bias and barely touches it. ★ **The brake was exercised**: 63,579 commands
+  on 544,477 calls, 100% enabled, from a tally in a probe copy. ★ Racer type is confounded with track
+  by the methodology and the report says so rather than implying otherwise.
+
+- [BRAKE-SHIP-1.md](BRAKE-SHIP-1.md) — **the owner's four values are the shipped defaults, and the
+  shipped path reproduces the measured arm exactly.** `gapBrakeEnabled` false→true, allowance 90→56 px,
+  authority 0.1→0.13, window end 0.95→0.97; V1 stays false. ★★ **THE DECISION RULE PASSES: 300 of 300
+  races byte-identical between the shipped default and the 56/13/0.97 override arm** — the override
+  and the default are the same thing. Worst lead 244.4 → 187.5 px, >124 px late gaps **24 → 8 of 300**,
+  contested 129 → 125, winner changes 57, byte-identical 141. ★ **`verify` 22 PASS / 3 FAIL, all three
+  category (a)** — the world, camera and render fingerprints, which moved because the default
+  legitimately moved. **No (b).** All four fingerprint values reported against the record; **nothing
+  minted**. ★★ **Golden races PASS and nothing was re-recorded**, by design: the guard's own text at
+  check-golden-races.mjs:58 says every input is pinned in the fixture so a change to defaults.js
+  cannot move them. ★ Two dev-screen strings claimed "OFF is the shipped state" and one still
+  described the RETIRED size law ("ramps to full at twice it"); both corrected. ★ **Two test fixtures
+  failed for their own reason and were fixed rather than the assertions weakened**: the px→t→px round
+  trip landed 5e-13 OVER 56 px (under 90), firing the gate a test exists to prove closed; and the
+  growth profile stepped by an absolute 0.6 px where the law reads dGap/allowance, so a tighter
+  allowance saturated the integrator in 148 steps instead of 200. 19/19 green, **5 of 5 sabotages
+  caught**.
+
+- [WINDOW-END-1.md](WINDOW-END-1.md) — **a later window end DOES close the races that matter, and the
+  finish does not pay for it.** Five arms (brake off, end 0.95/0.96/0.97/0.98) at his 56 px / 13%,
+  V1 OFF, **300 races each, 1,500 total**; noise floor **exactly zero** (239 of 239 quiet races
+  byte-identical). ★★★ **The >124 px late-gap count — every one of which is a win for the racer
+  holding it — goes 24 (shipped) → 12 (0.95) → 10 → 8 → 7 (0.98), a 71% reduction**, and it is the
+  ONLY column that moves: >56 px is flat at 106 across all braked arms and >90 px moves by three races
+  in total. ★★ **The feared cost at the finish does not appear**: contested finishes go 129 shipped →
+  124 at 0.95 and back UP to 126 at 0.98, and the brake is still pulling at the line in **0 of 300
+  races at every value** — `raceProgress` is leaderT/finishT (raceCore.js:577) so the winner crosses
+  at 1.0 and every window end has already released. ★ **The real cost is of a different kind**: full
+  13%-authority releases inside the run-in rise 115 → 141, which is invisible today (**all arms
+  1.000x on both abruptness measures**, because `_setTarget` restarts the ease, racePlanner.js:733-739)
+  and is **exactly the 7.6x jump if V1 is ever switched on** — so a later window makes the brake MORE
+  dependent on V1 staying off. ★ **dirt-oval is worse with the brake at every window end** (shipped 0,
+  braked 2–3) and searound is barely helped. ★ On his own race, ice-track seed 3, **all four window
+  ends are identical** — the brake finishes at 0.9434. ★ The measurement points at **0.97** (12 → 8,
+  one contested finish BETTER than 0.95, 16 late releases against 0.98's 26) and the value is his.
+  ★ Four of four fingerprints on the record; `verify` has no failures to classify because the task
+  changed no source at all.
+
+- [LATE-GAP-1.md](LATE-GAP-1.md) — **38% of races open a gap past his allowance after 0.95, the leader
+  wins 96% of them, and two thirds of those gaps were already open when the brake let go.** The grid
+  counted WHERE the whole-race peak sits; this counts how BIG the gap is in the segment 0.95 → the
+  line, which is the owner's actual question. N = 300 races per arm, **re-raced** because the grid's
+  raw output was deleted in the previous chain's sweep (said plainly; no recomputed and re-raced
+  numbers are mixed, and a repeat cell is byte-identical). ★★★ **A late gap above 124 px is a
+  GUARANTEED win — 36 of 36 across both arms, no exceptions — and the brake HALVES how often it
+  happens, 24 races to 12.** ★ But at 56 px and 90 px it changes almost nothing (114→106, 48→47):
+  **the brake reaches the big late gaps and not the ordinary ones.** ★ Step 3 separates "a gap opens"
+  from "a racer escapes and wins": the leader of that gap wins **95.6% / 97.2%**, and the brake
+  slightly HURTS here — fewer contested finishes among these races (13.2% → 7.5%). ★ It is worse on
+  **four tracks of ten**, and on dirt-oval produces the brake arm's largest late gap (170.1 px against
+  shipped's 116.3). ★★ **Step 4, a lookup and not a sweep**: 64% of these gaps are already over 56 px
+  within 0.002 of the window end — **the "late gap" is mostly carry-over the brake was holding and
+  released**, so a window end of 0.952 would already cover two thirds. Reach at 0.96/0.97/0.98/0.99 is
+  70/75/83/93% and **has no knee**; no value is singled out and none is recommended. Late gap peaks at
+  progress ≈0.987; worst is 191.1 px = **0.849 canvas widths** at the settled LEADER_ZOOM of 225.
+
+- [BRAKE-DEEP-1.md](BRAKE-DEEP-1.md) — **56 px / 13% at ten times the sample: it does NOT reduce the
+  escape, and it cuts the worst lead nearly in half.** N = **3,000 paired races per arm** (10 tracks x
+  seeds 1–300), V1 OFF. ★★ **The control passed first**: the N=30 grid seeds re-run inside the N=300
+  set are **300/300 byte-identical**, so the measuring track did not move and the grid stands.
+  ★★★ **The escape effect COLLAPSES at the larger N**: 317/3000 shipped against 313/3000, **43 fixed,
+  39 caused, net +4, McNemar p = 0.7407** — where the same cell showed +6 at p = 0.146 on 300 races.
+  **The larger sample removed the apparent effect rather than confirming it.** ★★ **What it does buy**:
+  largest lead to the window end **492.7 → 258.5 px (−48%)**, p90 170.8 → 130.4 (−24%), and at this N
+  the lead to the FINISH falls too, 492.7 → 306.2 (−38%) — which the N=300 grid did not show, so that
+  figure must not be quoted from the grid. The median race is barely touched (90.1 → 87.3 px).
+  ★ **Cost**: both abruptness measures identical to six decimals (1.000x); contested finishes −1.3
+  points; lead changes and distinct leaders unmoved. ★ **No trustworthy fairness verdict exists** for
+  this pair or for shipped — see [FAIRNESS-SEED-1](FAIRNESS-SEED-1.md). ★ Tonight changed **no source
+  file**; all four fingerprints measure the record with the key OFF.
+
+- [BRAKE-FAIRNESS-1.md](BRAKE-FAIRNESS-1.md) — **the fairness run the gap brake had never had, at the
+  FULL PINNED N, and the instrument's own verdict is the same on both arms: FAIR.**
+  `scripts/sim-fairness.mjs` UNMODIFIED, 10 tracks x 100 races x 3 distance variants = **300 races per
+  track pooled, 3,000 races per arm, 6,000 in total**; each track its own `defaultRacerTypeId` read
+  from the seeds. Brake at his settings, **V1 OFF in both arms**, so this measures the brake ALONE.
+  ★★ **Both arms clear the project's gate and by the same margin**: band reach ≥ 70% on 10/10
+  (mean 89.3% shipped against 89.2% with the brake, worst track 86.0 vs 86.1), and **0 Holm-flagged
+  start-row rows of 30 on each**. Band reach moves by at most 0.9 points on any track, up on five and
+  down on five. ★ **The raw p<0.05 rows are not findings and the report says so**: 1 on the shipped
+  arm (luger-hill 60s, p=0.031) against 2 on the brake arm, where 30 comparisons at alpha 0.05 expect
+  about 1.5 — none clears the Holm bar of 0.00167, and the shipped arm has one too. ★ **The brake was
+  proven to have acted**, not assumed: all **30 of 30** combinations produced a different start-row
+  outcome between the arms, where before BLIND-SITE-1 they were identical because the instrument could
+  not see the brake at all. ★ World labelled ASSUMED-DEFAULTS / PROVISIONAL, as the instrument labels
+  it — no `--config`, the owner's store was not opened. ★ Racer type and track are confounded by the
+  methodology (each track runs only its own default type) and the report says that rather than
+  implying otherwise.
+
+- [FAIRNESS-SEED-1.md](FAIRNESS-SEED-1.md) — **★★ the fairness instrument has been running UNSEEDED,
+  and its start-row verdict is a single draw.** `scripts/sim-fairness.mjs` defaults to `--seed=0`,
+  which its own header at :343 defines as `Math.random()`, "exploration only", and which it PRINTS on
+  every run at :4206 as `Seed: 0 (Math.random, Exploration)`. ★★★ **Three runs of the SAME SHIPPED
+  configuration, same track, nothing changed, produced 0, 0 and TWO Holm-flagged start-row rows** —
+  p-values swinging from 0.42 to 0.00002. **The shipped game both passes and fails the project's
+  fairness gate depending on the run.** ★ Two runs at `--seed=12345` are bit-identical in every field,
+  so a positive seed fixes it completely: one flag. ★ **RETRACTS this chain's own finding** that
+  56 px / 13% fails the gate on one Holm-flagged row — that row is inside what shipped produces by
+  itself — and **qualifies [BRAKE-FAIRNESS-1](BRAKE-FAIRNESS-1.md)'s "0 Holm-flagged on both arms"**,
+  which was also unseeded. Band reach was stable across repeats (89–90%) and survives; the start-row
+  chi-squared is the fragile statistic. ★ Named but not built: pass a seed to every gate run and
+  record it; a one-seed gate is still one draw; the unseeded default is the trap.
+
+- [BRAKE-GRID-1.md](BRAKE-GRID-1.md) — **twenty settings, and NOT ONE reduces the escape: the brake
+  delays the runaway past its own window instead of preventing it.** 5 allowances (40/56/70/90/124 px)
+  x 4 authorities (8/10/13/15%), 300 paired races per cell, 6,300 races; V1 OFF throughout.
+  ★ **The ceiling was established at the source first**: `minMult: 0.85` at racePlanner.js:103, so the
+  engine's own maximum braking is **15%, exactly as the owner recalled** — no value dropped.
+  ★★ **The noise floor is EXACTLY ZERO**: 2,275 of 2,275 quiet races reproduce SHIPPED to the
+  millisecond. ★★★ **McNemar on the paired escape counts: every one of the 20 cells is NOT
+  DISTINGUISHABLE from shipped, every p ≥ 0.077** — and the brake CAUSES escapes as well as fixing
+  them (up to 8 per cell), because slowing the leader reshuffles who leads. ★★ **THE MECHANISM,
+  measured**: the max lead to 0.95 falls up to 34% (244.4 → 160.2) while the max lead **to the finish
+  does not fall at all** (279.6 unchanged on 13 of 20 cells), and the gap between the two GROWS with
+  braking strength (35.2 → 114.0 px). **61.3% of shipped races already peak after 0.95; braking
+  raises that to 69–73%.** The lever that would reach it is `gapBrakeWindowEnd` — his value, and
+  deliberately not searched. ★ **Monotony is harmed by NO cell**: lead changes 40 and distinct leaders
+  37 on every cell including shipped; the leader's hold actually FALLS with braking. ★ But at 40 px
+  the brake commands in 289/300 races with **100% of its work on gaps below 90 px** — his first
+  failure mode in words, which the monotony metrics do not catch, and the report says so. ★ 19 of 20
+  cells move neither abruptness measure; **40 px / 15% is the sole exception at 1.039x**.
+  ★ Recommendation: **56 px / 13%** — his own eye's pair — as the best trade, **explicitly labelled as
+  NOT clearing goal A**, chosen by his own rule that indistinguishable cells go to the one that brakes
+  less.
+
+- [BRAKE-JERK-1.md](BRAKE-JERK-1.md) — **why V1 and the gap brake jerk together: ESTABLISHED, with
+  three corrections — and ★★ the jerk is NOT VISIBLE.** The largest move reproduces to the digit
+  (searound seed 26 step 3780, **0.089471**), as does the shipped baseline (med 0.011722 / p90
+  0.011762 / max 0.011762, N=300), by an independently written instrument. ★ **RELEASE only, never
+  engage**: 0 of **333** engagements on either servo exceeds the shipped maximum, because the entry
+  seed is proportional to the gap's excess over the allowance (racePlanner.js:933) so engaging is
+  continuous by design. ★ **The cause is the restart DECISION, not the stale clock** — the clock was
+  already stale at 59.3% of brake transitions BEFORE V1 (N=378). ★★ **The invariant**: at every brake
+  transition the shipped setter either restarts the ease or moves the target by at most
+  TARGET_EPSILON — **0 violations in 378**, including releases whose target moved 0.0338 and still
+  moved the multiplier by exactly 0.00000000. **V1 breaks it: 17 of 288.** The owner is
+  `_setTargetNoiseBlind`, whose write at **racePlanner.js:786 is OUTSIDE the restart gate at :780**,
+  and the gate tests `detTarget` (racePlanner.js:1446) — the servo expression alone, **which does not
+  contain the brake**. `_retargetInFlight` is EXONERATED. ★ The trigger is the **0.95 window end**
+  (racePlanner.js:892-895), not the gap closing — the gap was still 166 px against a 90 px allowance.
+  ★★ **B4 corrects my own framing**: the 7.6x is a ratio of MULTIPLIER moves, and the multiplier is
+  one factor of a product (raceCore.js:698). In world px/s the jump is **+16.35 (+9.8%)**, which the
+  shipped game matches or beats on **1 racer-step in 139** (372,716 of **51,943,283** sustained
+  7-frame windows) — and on searound it is **below that track's own p99 (24.46)** and 9.3x smaller
+  than its max (151.53). The game already steps speed instantly by +4.0% (drafting, raceCore.js:669)
+  and −5.5% (avoidance, :676-678), **523,688 times in 300 races**. ★ NOT claimed: exposure (it lands
+  on the LEADER at 95%, where the camera looks) and that an eye agrees with a percentile.
+
+- [PARITY-CLOSE-1.md](PARITY-CLOSE-1.md) — **`pathLengthPx` now reaches the sim's plan and is provably
+  inert, but it does NOT close the parity break, because there are TWO blind sites and this is not the
+  one the guards use.** ★ **A2 passed completely**: 300/300 races byte-identical across 10 tracks x
+  seeds 1-30 against a reference worktree, **6/6 golden hashes unmoved** both arms, and **all four
+  fingerprints unmoved** (world `0c83ed775f93f21f`, world-off `31339297edb48ede`, camera
+  `5aa59d7473823afe`, render `caa3fee8ad7f2280`) — the world fingerprint spawns `sim-fairness.mjs`, so
+  it exercises the changed line directly. **Nothing minted.** ★ **A1 provably works**: a tally inside
+  `_computeGapLeaderBrake` during a real sim run reads **0 of 8,511 calls carrying `pathLengthPx`
+  without the change and 8,499 of 8,499 with it** — 0% to 100%, exact. ★ **And the brake still never
+  fires there** (`enabled=0`, `FIRED=0`): the sim's plan config carries no `gapBrakeEnabled` either,
+  and adding one was out of scope. ★★ **The parity hashes do not move at all**: the guards' sim arm
+  builds its plan from `simPlanConfig` at **goldenRunner.mjs:766**, a SECOND site that carries neither
+  `pathLengthPx` nor any `gapBrake` key (`gapBrake` appears **0 times in the whole file**), so with
+  brake+V1 on the arms still read `1ba41a20` vs `836a46e0` (seed 1) and `5ba78503` vs `f4cce0cb`
+  (seed 42). **Corrects PARITY-AGE-1's one-sentence fix**, which named sim-fairness.mjs:4436 as *the*
+  site when it is one of two. ★ `verify` 20 PASS / 6 FAIL, **all six category (a)** and all six
+  already present before the change.
+
+- [PICK-WINNER-1.md](PICK-WINNER-1.md) — **the brake still contributes with the servo repaired, but
+  V1 and the brake TOGETHER break the abruptness rule.** Four arms, N=300 each, all proved inert when
+  off (10/10, brake OFF and ON). ★ **The brake still does work the servo does not**: against V1 alone
+  it takes another **−17.1 px** (1000 ms) / **−23.5 px** (200 ms) off the worst in-window race,
+  better on 39/48 races and **worse on 0** (t = −3.78 / −4.45). It fires in 105/300 with the servo
+  repaired against 137/300 without — less work, not no work. ★★ **But the combined arms cost 7.6x and
+  7.1x the largest single-step multiplier move, where V1 alone costs 1.008x and the brake alone
+  costs nothing.** Mechanism named: V1 makes the held value track the target exactly, so the brake's
+  engage/release discontinuity (its whole 10% ceiling) lands **undamped in one 16 ms step** — V1
+  removes the churn that was accidentally smoothing the brake's edges. **The two are safe apart and
+  unsafe together; only a combined arm could have shown it.** ★ **No arm clears the bar**, all three
+  failing on visibility alone; the closest is **ARM 1 (V1, brake OFF) at 1.008x**, taken into Piece 3
+  labelled as not clearing. ★ The pooled maximum hides a mixed picture — ARM 1 is **worse than today
+  on four tracks**, mountainstreet by +45.8 px. Race shape: lead changes unchanged, but the winning
+  margin falls 16% and races won clear drop 39 → 24 of 300 — **more contested at the line**.
+
+- [BRAKE-WINDOW-1.md](BRAKE-WINDOW-1.md) — **200 ms wins on all ten tracks for nothing, and the
+  fairness instrument cannot see the brake at all.** At his settings the 200 ms rate window gives the
+  smallest worst race on **10 of 10 tracks** (monotone in the window), taking the pooled in-window
+  maximum **244.4 → 208.3 px** against the shipped derivation's 227.6 — and the largest single-step
+  multiplier move is **identical to six decimals on every arm including brake OFF**, because the
+  window changes what the brake asks for, never how fast the multiplier may move. ★ The named cost is
+  oscillation in the tail: the worst second in 300 races turns **43 times at 200 ms against 14 at
+  1000 ms**, while the MEDIAN race turns 0 either way. The engage gate holds at 90.001 px on every
+  window. ★ **It carries a number with no home**: 1000 ms is derived from
+  `trajectoryTransitionDuration`; 200 ms is derived from nothing. ★★ The Piece-4 gate **OPENS** on
+  this candidate (in-window max −36.1 px; rank error t=0.06 with 245/300 races exactly equal;
+  visibility ratio 1.000) — but the fairness half **cannot be produced**: `scripts/sim-fairness.mjs`
+  contains the string `gapBrake` **zero times** and passes no `pathLengthPx`, so the brake returns at
+  its guard before reading anything and both arms would be the same race. **No fairness verdict
+  exists for this candidate.** ★ Race shape is unchanged in any visible way: lead changes 19.43 vs
+  19.44 (t=0.13), clear-vs-contested moves by one race in 300; three of six measures are
+  statistically distinguishable and all move 0.1–0.6%.
+
+- [BREAKAWAY-RECOUNT-2.md](BREAKAWAY-RECOUNT-2.md) — **the third reading of the breakaway shares:
+  20 in 100, and the stage effect was the CAMERA.** Recomputed against ONE fixed divisor — the SETTLED
+  `LEADER_ZOOM` value of 225 px per width — instead of the per-frame zoom, which per ZOOM-PER-STATE-1
+  moves 120/165/225/450, a **3.75x spread**. He has now been told **71 in 100**, then **44**, now
+  ★★ **20**. ★★ And BREAKAWAY-RECOUNT-1's headline reversal **does not survive**: it said the action
+  stage causes breakaways (quiet 32 / medium 37 / wild 44, his own setting the worst); on a fixed
+  divisor the three are **quiet 21 / medium 19 / wild 20 — flat**, because a wilder race puts the
+  CAMERA in its zoomed-in states more often, shrinking the divisor and inflating the width. The
+  underlying gaps barely move (median race-max 93.6 / 92.5 / 102.2 px). ★ Reproduction confirmed: the
+  previous recount's divisor-free WORLD-PX median (102.2) and MAX (242.9) are reproduced to the digit.
+  Reading 3 stands, being the only one whose denominator is a constant. City-circuit — his own track —
+  is the joint worst at 40%.
+
+- [SERVO-NARROW-1.md](SERVO-NARROW-1.md) — **the servo CAN be fixed narrowly, and the narrow fix is
+  INVISIBLE.** Four variants, all aimed at the restart driver rather than the ease, none changing what
+  the servo commands, all proved inert when switched off (10/10 identical). Every one takes the
+  leader's arrival **55.8% → 79–81%**, small corrections **57.8% → ~74%**, halves the wrong-side share
+  (10.2% → ~5%) and cuts the overshoot (p90 delivered 1.340 → ~1.17). ★★ **And they cost almost
+  nothing in visibility: 1.00–1.04x the largest single-step multiplier move, against the blunt
+  counterfactual's 21.3x.** ★ **V1** (the restart decision ignores the noise; no new number) is the
+  only one that improves the in-window lead at BOTH ends — median 81.4 → 70.9 px and max 244.4 →
+  239.3 px — at 1.01x visibility. V3 (threshold at 2x the noise amplitude) has the best leader arrival
+  (80.5%) and exactly today's visibility but makes the worst race worse. ★ **None improves the rank
+  error against the drawn plan, and none worsens it either**: all four point estimates are a few
+  thousandths worse and **not one is distinguishable from zero** (V1 t=0.19, 143 races worse vs 138
+  better), while exact-place hits go UP on all four. Applied literally no variant clears the bar; V1
+  misses by a t=0.19 rank-error change and a 0.8% visibility increase. Every variant is a full
+  re-baseline (0/300 byte-identical, ~2/3 winner changes).
+
+- [SERVO-FAULT-1.md](SERVO-FAULT-1.md) — **the NOISE causes the restarts, the CLAMP saves the large
+  corrections, and delivering everything is not a fix.** The two restart drivers are now separated
+  exactly (the observer records the deterministic part and the noise apart): the **noise alone could
+  have caused 86.1%** of all target rewrites, **95.0% for the leader**; the command's own movement
+  15.2%. ★ The "small ask sits near the threshold" hypothesis is **REFUTED** — a 1–2-rank ask is
+  0.0495, **50x** `TARGET_EPSILON`. The separating variable is the **clamp**: the 16+-ranks-off group
+  is **100% pinned**, so its noise is clipped, its command stops moving (median delta exactly
+  0.000000) and it arrives (94.6%); the 1–2-rank group is **1.0% clamped** (56.8%). The leader is
+  **0.0% clamped while leading** and his command has REVERSED sign, so he is on the wrong side of
+  natural speed on 57.6% of those steps. ★ The overshoot is the COMMAND shrinking under a held value
+  still catching up (47.7%), not the ease, which is monotone and cannot overshoot. ★★ The blunt
+  counterfactual arrives (69.3% → 99.9%) and is **not a candidate**: 198/300 winner changes, 0/300
+  byte-identical, **all four fingerprints move**, a golden race moves, the rank error the servo exists
+  to reduce gets **WORSE** (2.595 → 2.881), and the largest single-step multiplier move goes
+  **0.0117 → 0.2506 — 21x, on 300/300 races**. ★ The four red parity tests are a **moved input, not a
+  broken guarantee**: real and sim both change and both land on `fe3f4861`; what fails is the pinned
+  winner. ★ The brake would still have work — it fires in 89/300 instead of 137/300 but takes
+  **−81.5 px (−25.2%)** off the worst race against −16.8 px (−6.9%) today. Fairness **not run** to a
+  usable N and reported as such.
+
+- [BRANCH-INVENTORY-1.md](BRANCH-INVENTORY-1.md) — **every branch at origin, with one recommendation
+  each.** Nine branches; **two carry product code** (`feat/gap-leader-brake`, which ships OFF with all
+  four fingerprints unmoved, and `feat/remove-prestaging-comebacker`, which removes a mechanism and
+  needs his word). The other seven are report-only and cannot move a race. ★ Two hazards found by
+  reading the diffs: `report/brake-census-1` adds a report with **no index line**, so merging it alone
+  reddens `check-index` on master; and `night/2026-09-14-history` is **13 commits behind** and carries
+  its own `docs/MORNING.md`. ★ Sequencing: `fix/breakaway-recount-1` edits the same published
+  breakaway shares that BREAKAWAY-RECOUNT-2 recounts, so take the recount first. Read-only — nothing
+  merged, tagged or deleted.
+
+- [SERVO-ARRIVAL-1.md](SERVO-ARRIVAL-1.md) — **the premise was wrong: the placement servo DOES
+  arrive**, on **69.3% of 19,464,218 commanded racer-steps** (300 races, brake OFF), median delivered
+  fraction **1.000**, and only **68 of 12,000 racer-slots** never served. The decision rule therefore
+  fired and **Steps 3 and 4 were not run** — no what-if was built. ★ THE RECONCILIATION with
+  GAP-BRAKE-HANDOVER-1's reading is the substance: same racer, same race, Flare on ice-track seed 3
+  delivers a median **0.997 over his whole race** and a median **−0.355 in the 925 steps he spends
+  leading inside the window** (3.7% arrival, 64.1% wrong side). Both true; the previous block's error
+  — this author's — was calling a 1-in-5 slice of one racer a property of the servo. ★ The fault is
+  real, small and LOCALISED: the **leader is the worst-served racer on the track** (55.8% against the
+  field's 69.3%), and the sharpest gradient is distance from the drawn place — **57.8% arrival at 1–2
+  ranks off against 93.3% at 16+ off**, i.e. the big corrections land and the fine dithering does not.
+  Comebackers and fallers run the wrong way on ~19%. Mechanism addressed: `_setTarget`'s restart beats
+  the ease — median **48 ms of a 1000 ms transition**, where `easeInOutCubic` has moved 0.04%; the
+  ±0.0008 noise against `TARGET_EPSILON` 0.001 predicts a 14.1% crossing rate for an unclamped racer
+  (measured 10.1%, restart rate 9.5%), though the instrument **cannot separate noise from
+  blended-error movement and does not choose**. Read-only; instrumented copy proved byte-inert on 10
+  cases first.
+
+- [GAP-BRAKE-START-1.md](GAP-BRAKE-START-1.md) — **does the lower allowance make the brake start
+  earlier? Yes — by 0.29 s, not the 1.47 s it implies.** Three arms on ice-track Quick Test seed 3
+  (reproduction proved first: 40/40 against `runRace`, OFF finish order identical to QUICKTEST-ICE-3,
+  and 1st Flare / 2nd Raven at the widest in-window lead). ★ **THE ALLOWANCE HAS NEVER DECIDED THE
+  START, for either law.** The fold is `Math.min(rawTarget, gapBrake.target)`, so the brake is silent
+  until it undercuts the leader's own steering target — which stands at **0.94964, a 5.04% ask**,
+  exactly one rank at `gain/nActive` = 2.0/40. Effective bite thresholds are **166.3 px** (size law,
+  allowance 124) and **160.9 px** (rate law, allowance 90); across three tracks the size law's sits
+  in a **1.1 px band** (166.1–167.2) regardless. ★ **The premise "the servo already pulls harder" is
+  false of the race**: the servo asks for a slowdown on 925/925 steps while the leader runs ABOVE
+  natural speed on 593 — its ±0.0008 noise exceeds `TARGET_EPSILON` 0.001 peak-to-peak, so it
+  restarts its own ease every 4.8 steps and never delivers (the GAP-BRAKE-PARADOX-1 churn). ★ Of the
+  34 px the lower allowance bought, **25.7 px went to the 1000 ms rate window's lag** and 3.7 px to
+  the shallower ramp, leaving 4.6 px predicted / 5.4 px measured. But once it bites the rate law is
+  **deeper and faster** — 42.6 px off the leader in 5 s against the size law's 26.9 px, its gap
+  falling where the size law's parks. Read-only; also corrects GAP-BRAKE-RATE-1's "0.95→finish"
+  column (contaminated by finished racers).
+
+- [GAP-BRAKE-RATE-1.md](GAP-BRAKE-RATE-1.md) — **the brake rebuilt so SIZE decides whether and
+  CHANGE decides how strong**, to his design of 14.9. The gate is untouched; only the strength term
+  is replaced, by an integrator: growing `S += ceiling·dGap/allowance`, shrinking `S *= gap/gapBefore`
+  — no new number, the fall being the identity `dS/S = dGap/gap`, which is what makes it reach zero
+  with the GAP instead of at the allowance. Every property he named holds and is measured: 0
+  direction violations, 0 ceiling breaches, 0 speeds raised, smallest ENGAGE gap **90.001 px against
+  90**, still pulling at **58% of ceiling** when the gap comes back under the allowance (the old law
+  had exactly 0 there), **no oscillation** — one direction change per second. Noise floor clean: 163
+  of 300 never fired, all byte-identical, 0 leaked. In-window worst race **244.4 → 227.6 px
+  (−6.9%)**, 50 better / 2 worse. ★ **AND IT IS WEAKER THAN THE BRAKE IT REPLACED**: a control run
+  of the old size law at the SAME allowance beats it on **all ten tracks** (−25.7% vs −6.9%, 83
+  races to 3). Not the law — with the ceiling and the rate window matched the two land within 4 px.
+  The 23 px is his **10% ceiling** (≈9.5 px) plus the **1000 ms rate window's lag** (≈9.8 px). ★ The
+  window is the one lever left: at **200 ms** it is better on all ten tracks (worst race −**14.8%**,
+  63 races to 1) with no oscillation and the gate and ceiling untouched — reported, not taken, since
+  no existing quantity means 200 ms for this purpose. ★ Also records a test of mine that **passed
+  under its own sabotage** (the give-back fixture compared against the raw gap where the law reads
+  the smoothed one) and the correction.
+
+- [QUICKTEST-ICE-3.md](QUICKTEST-ICE-3.md) — **the owner's own Quick Test, ice-track seed 3**: the
+  brake was NOT silent — 513 steps, p=0.839→0.941, all on Flare, cutting the gap it measures
+  **196.6 → 169.0 px (−14%)**. ★ But his screenshot shows a DIFFERENT gap: leader-to-PACK is
+  **518.5 px, 3.1x larger**, and the brake's trigger is the gap to SECOND place
+  (`racePlanner.js:762`), so that one moved only 529.1 → 518.5 (−2%). The Quick Test field could not
+  be read (its roster comes from browser storage, and the race was never stored — store mtime 15:42
+  against an 18:52 build), so N was RACED not assumed: N=20 is excluded because Raven is not in that
+  field at all; N=40 matches four details of his description. ★ The canvas-width conversion reverses
+  the sign on BOTH rows.
+
+- [SCREENSHOT-VS-NUMBERS-1.md](SCREENSHOT-VS-NUMBERS-1.md) — **the screenshot was right and the
+  column was mine**: QUICKTEST-ICE-3's "leader→pack 518.5 px" measured the leader against the MEDIAN
+  of the live field, rank ~20 of 40, off screen. What a viewer calls the field begins at rank 3, and
+  rank 3 is **0.0 px behind Raven** — so Flare→Raven IS larger than Raven→field, exactly as the owner
+  said, on both arms. ★ The leader→2nd figure is NOT wrong (it is the engine's own expression at
+  `racePlanner.js:762`, validated 0 disagreements over 513 firing steps), and the lap/finishT error
+  the brief warned of did NOT recur — neither figure contains a lap term. ★ The previous report's
+  CONCLUSION is withdrawn: the brake acts on exactly the gap he photographed and cut it 196.6 → 169.0
+  px, but the camera zoomed in by almost the same factor (323.6 → 273.0 px per width), so the 14%
+  reduction is invisible on screen. The image itself was NOT readable from this machine — the search
+  is recorded and Step 1 is reported as missing, not worked around.
+
+- [ZOOM-PER-STATE-1.md](ZOOM-PER-STATE-1.md) — **the owner is right about the zoom, and a claim I
+  gave him as fact is FALSE**. Three of six camera states are EXACTLY constant when settled (0.0%
+  spread) and **91.7% of all settled frames sit exactly on a state value**; nine tenths of the
+  apparent variation is the camera MOVING between shots, and genuine within-state loosening is 4.4%
+  of frames. The 120–1278 range is STATE (120→450, a 3.75x span) plus transitions — **track
+  contributes nothing**, all ten deliver 120/165/225/450. ★ The two frames behind "the camera
+  cancelled the improvement" were the SAME frame index in the SAME state and BOTH IN FLIGHT; at the
+  225 px the LEADER shot actually delivers, the gap reads **0.874 → 0.751 widths, the full −14%**.
+  ★ Every per-peak canvas-width column this week is affected, and the corrected
+  BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
+  px in an OVERVIEW one.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
