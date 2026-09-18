@@ -1,0 +1,2024 @@
+{
+ "meta": {
+  "report": "GATE-THREE-SEEDS-1",
+  "date": "2026-09-18",
+  "branch": "night/2026-09-18",
+  "instrument": "scripts/sim-fairness.mjs (UNMODIFIED)",
+  "masterCommit": "5b60b615",
+  "seedsHere": [
+   777,
+   31337
+  ],
+  "seed12345": "last night's run; its summary is committed at reports/night/pinned-gate-data/ on night/2026-09-17 and is NOT duplicated here",
+  "arms": {
+   "on": "shipped defaults, real tree",
+   "off": "probe copy C:/tmp/gboff, same commit, gapBrakeEnabled=false only"
+  },
+  "pooledRacesPerTrack": 300,
+  "nRacers": 40,
+  "durationVariants": [
+   30,
+   60,
+   120
+  ],
+  "note": "Raw per-racer rows are NOT kept. Per-row win counts and the pooled test are here."
+ },
+ "seeds": {
+  "777": {
+   "on": {
+    "city-circuit": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 2.88,
+     "df": 3,
+     "pValue": 0.411959407744254,
+     "rowMin": 0.886,
+     "bandReach": {
+      "B1": 0.878,
+      "B2": 0.878,
+      "B3": 0.847,
+      "B4": 0.9373333333333334,
+      "B5": null
+     },
+     "overallReach": 0.8925,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.308
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.053
+      },
+      {
+       "row": 2,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.49
+      },
+      {
+       "row": 3,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.149
+      }
+     ]
+    },
+    "dirt-oval": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 1.92,
+     "df": 3,
+     "pValue": 0.5931709774572833,
+     "rowMin": 0.883,
+     "bandReach": {
+      "B1": 0.872,
+      "B2": 0.873,
+      "B3": 0.842,
+      "B4": 0.9366666666666666,
+      "B5": null
+     },
+     "overallReach": 0.889,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 81,
+       "winRate": 0.27,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.021
+      },
+      {
+       "row": 1,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.091
+      },
+      {
+       "row": 2,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.513
+      },
+      {
+       "row": 3,
+       "wins": 81,
+       "winRate": 0.27,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.375
+      }
+     ]
+    },
+    "garden-path": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 3.7384615384615385,
+     "df": 2,
+     "pValue": 0.1517743071969042,
+     "rowMin": 0.8838461538461538,
+     "bandReach": {
+      "B1": 0.876,
+      "B2": 0.875,
+      "B3": 0.852,
+      "B4": 0.944,
+      "B5": null
+     },
+     "overallReach": 0.89525,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 105,
+       "winRate": 0.35,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.157857142857143
+      },
+      {
+       "row": 1,
+       "wins": 84,
+       "winRate": 0.28,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.948461538461537
+      },
+      {
+       "row": 2,
+       "wins": 111,
+       "winRate": 0.37,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.42
+      }
+     ]
+    },
+    "ice-track": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 14.64,
+     "df": 3,
+     "pValue": 0.0023266385123416056,
+     "rowMin": 0.887,
+     "bandReach": {
+      "B1": 0.876,
+      "B2": 0.874,
+      "B3": 0.851,
+      "B4": 0.9426666666666667,
+      "B5": null
+     },
+     "overallReach": 0.89425,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.211
+      },
+      {
+       "row": 1,
+       "wins": 90,
+       "winRate": 0.3,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.058
+      },
+      {
+       "row": 2,
+       "wins": 48,
+       "winRate": 0.16,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.638
+      },
+      {
+       "row": 3,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.093
+      }
+     ]
+    },
+    "luger-hill": {
+     "races": 300,
+     "rows": 5,
+     "rowSizes": [
+      8,
+      8,
+      8,
+      8,
+      8
+     ],
+     "chiSq": 15.633333333333333,
+     "df": 4,
+     "pValue": 0.003725493627763532,
+     "rowMin": 0.8933333333333333,
+     "bandReach": {
+      "B1": 0.9013333333333333,
+      "B2": 0.8836666666666667,
+      "B3": 0.855,
+      "B4": 0.9475555555555556,
+      "B5": null
+     },
+     "overallReach": 0.9026666666666666,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 52,
+       "winRate": 0.17333333333333334,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.7825
+      },
+      {
+       "row": 1,
+       "wins": 49,
+       "winRate": 0.16333333333333333,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.457083333333333
+      },
+      {
+       "row": 2,
+       "wins": 46,
+       "winRate": 0.15333333333333332,
+       "expectedWinRate": 0.2,
+       "avgRank": 21.163333333333334
+      },
+      {
+       "row": 3,
+       "wins": 74,
+       "winRate": 0.24666666666666667,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.420416666666668
+      },
+      {
+       "row": 4,
+       "wins": 79,
+       "winRate": 0.2633333333333333,
+       "expectedWinRate": 0.2,
+       "avgRank": 19.676666666666666
+      }
+     ]
+    },
+    "mountainstreet": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 1.3333333333333333,
+     "df": 1,
+     "pValue": 0.24670365280691764,
+     "rowMin": 0.8933333333333333,
+     "bandReach": {
+      "B1": 0.8713333333333333,
+      "B2": 0.876,
+      "B3": 0.852,
+      "B4": 0.9413333333333334,
+      "B5": null
+     },
+     "overallReach": 0.8939166666666667,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 160,
+       "winRate": 0.5333333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.042333333333332
+      },
+      {
+       "row": 1,
+       "wins": 140,
+       "winRate": 0.4666666666666667,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.957666666666668
+      }
+     ]
+    },
+    "river-run": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 3.8533333333333335,
+     "df": 1,
+     "pValue": 0.04688867761410731,
+     "rowMin": 0.8486666666666667,
+     "bandReach": {
+      "B1": 0.8393333333333334,
+      "B2": 0.833,
+      "B3": 0.793,
+      "B4": 0.9144444444444444,
+      "B5": null
+     },
+     "overallReach": 0.8543333333333333,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 167,
+       "winRate": 0.5566666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.077166666666667
+      },
+      {
+       "row": 1,
+       "wins": 133,
+       "winRate": 0.44333333333333336,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.922833333333333
+      }
+     ]
+    },
+    "searound": {
+     "races": 300,
+     "rows": 7,
+     "rowSizes": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+     ],
+     "chiSq": 27.12,
+     "df": 6,
+     "pValue": 0.00016687602589959827,
+     "rowMin": 0.8633333333333333,
+     "bandReach": {
+      "B1": 0.844,
+      "B2": 0.852,
+      "B3": 0.846,
+      "B4": 0.9446666666666667,
+      "B5": null
+     },
+     "overallReach": 0.88425,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 36,
+       "winRate": 0.12,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.483333333333334
+      },
+      {
+       "row": 1,
+       "wins": 36,
+       "winRate": 0.12,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.30666666666667
+      },
+      {
+       "row": 2,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.503333333333334
+      },
+      {
+       "row": 3,
+       "wins": 30,
+       "winRate": 0.1,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.94
+      },
+      {
+       "row": 4,
+       "wins": 39,
+       "winRate": 0.13,
+       "expectedWinRate": 0.15,
+       "avgRank": 21.226666666666667
+      },
+      {
+       "row": 5,
+       "wins": 39,
+       "winRate": 0.13,
+       "expectedWinRate": 0.125,
+       "avgRank": 19.338
+      },
+      {
+       "row": 6,
+       "wins": 51,
+       "winRate": 0.17,
+       "expectedWinRate": 0.125,
+       "avgRank": 20.51
+      }
+     ]
+    },
+    "seatrack": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 2.804395604395604,
+     "df": 2,
+     "pValue": 0.24473386288304422,
+     "rowMin": 0.8883333333333333,
+     "bandReach": {
+      "B1": 0.8706666666666667,
+      "B2": 0.874,
+      "B3": 0.8523333333333334,
+      "B4": 0.9424444444444444,
+      "B5": null
+     },
+     "overallReach": 0.8938333333333334,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 118,
+       "winRate": 0.3933333333333333,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.33595238095238
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.903076923076924
+      },
+      {
+       "row": 2,
+       "wins": 95,
+       "winRate": 0.31666666666666665,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.273589743589742
+      }
+     ]
+    },
+    "space-sprint": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 1.4446886446886449,
+     "df": 2,
+     "pValue": 0.48999101647991283,
+     "rowMin": 0.8930769230769231,
+     "bandReach": {
+      "B1": 0.874,
+      "B2": 0.8716666666666667,
+      "B3": 0.8623333333333333,
+      "B4": 0.9508888888888889,
+      "B5": null
+     },
+     "overallReach": 0.8993333333333333,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 102,
+       "winRate": 0.34,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.302380952380954
+      },
+      {
+       "row": 1,
+       "wins": 91,
+       "winRate": 0.30333333333333334,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.969487179487178
+      },
+      {
+       "row": 2,
+       "wins": 107,
+       "winRate": 0.3566666666666667,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.243333333333332
+      }
+     ]
+    }
+   },
+   "off": {
+    "city-circuit": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 2.88,
+     "df": 3,
+     "pValue": 0.411959407744254,
+     "rowMin": 0.886,
+     "bandReach": {
+      "B1": 0.866,
+      "B2": 0.868,
+      "B3": 0.842,
+      "B4": 0.9366666666666666,
+      "B5": null
+     },
+     "overallReach": 0.887,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.291
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.078
+      },
+      {
+       "row": 2,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.518
+      },
+      {
+       "row": 3,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.113
+      }
+     ]
+    },
+    "dirt-oval": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 2.4000000000000004,
+     "df": 3,
+     "pValue": 0.49649404602377345,
+     "rowMin": 0.888,
+     "bandReach": {
+      "B1": 0.878,
+      "B2": 0.879,
+      "B3": 0.852,
+      "B4": 0.9413333333333334,
+      "B5": null
+     },
+     "overallReach": 0.8955,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 66,
+       "winRate": 0.22,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.073
+      },
+      {
+       "row": 1,
+       "wins": 72,
+       "winRate": 0.24,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.058
+      },
+      {
+       "row": 2,
+       "wins": 78,
+       "winRate": 0.26,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.537
+      },
+      {
+       "row": 3,
+       "wins": 84,
+       "winRate": 0.28,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.332
+      }
+     ]
+    },
+    "garden-path": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 2.2615384615384615,
+     "df": 2,
+     "pValue": 0.3231948292466167,
+     "rowMin": 0.8807692307692307,
+     "bandReach": {
+      "B1": 0.876,
+      "B2": 0.874,
+      "B3": 0.857,
+      "B4": 0.9473333333333334,
+      "B5": null
+     },
+     "overallReach": 0.8975,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 105,
+       "winRate": 0.35,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.17142857142857
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.931538461538462
+      },
+      {
+       "row": 2,
+       "wins": 108,
+       "winRate": 0.36,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.422307692307694
+      }
+     ]
+    },
+    "ice-track": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 9.36,
+     "df": 3,
+     "pValue": 0.02460144952362131,
+     "rowMin": 0.887,
+     "bandReach": {
+      "B1": 0.888,
+      "B2": 0.877,
+      "B3": 0.844,
+      "B4": 0.9393333333333334,
+      "B5": null
+     },
+     "overallReach": 0.8935,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 81,
+       "winRate": 0.27,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.199
+      },
+      {
+       "row": 1,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.052
+      },
+      {
+       "row": 2,
+       "wins": 54,
+       "winRate": 0.18,
+       "expectedWinRate": 0.25,
+       "avgRank": 21.602
+      },
+      {
+       "row": 3,
+       "wins": 90,
+       "winRate": 0.3,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.147
+      }
+     ]
+    },
+    "luger-hill": {
+     "races": 300,
+     "rows": 5,
+     "rowSizes": [
+      8,
+      8,
+      8,
+      8,
+      8
+     ],
+     "chiSq": 12.433333333333334,
+     "df": 4,
+     "pValue": 0.014451960239824757,
+     "rowMin": 0.89375,
+     "bandReach": {
+      "B1": 0.9033333333333333,
+      "B2": 0.884,
+      "B3": 0.857,
+      "B4": 0.9493333333333334,
+      "B5": null
+     },
+     "overallReach": 0.9041666666666667,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 49,
+       "winRate": 0.16333333333333333,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.79
+      },
+      {
+       "row": 1,
+       "wins": 52,
+       "winRate": 0.17333333333333334,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.442083333333333
+      },
+      {
+       "row": 2,
+       "wins": 50,
+       "winRate": 0.16666666666666666,
+       "expectedWinRate": 0.2,
+       "avgRank": 21.15
+      },
+      {
+       "row": 3,
+       "wins": 70,
+       "winRate": 0.23333333333333334,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.450833333333332
+      },
+      {
+       "row": 4,
+       "wins": 79,
+       "winRate": 0.2633333333333333,
+       "expectedWinRate": 0.2,
+       "avgRank": 19.667083333333334
+      }
+     ]
+    },
+    "mountainstreet": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 1.3333333333333333,
+     "df": 1,
+     "pValue": 0.24670365280691764,
+     "rowMin": 0.8931666666666667,
+     "bandReach": {
+      "B1": 0.8726666666666667,
+      "B2": 0.8793333333333333,
+      "B3": 0.853,
+      "B4": 0.9404444444444444,
+      "B5": null
+     },
+     "overallReach": 0.8948333333333334,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 160,
+       "winRate": 0.5333333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.0495
+      },
+      {
+       "row": 1,
+       "wins": 140,
+       "winRate": 0.4666666666666667,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.9505
+      }
+     ]
+    },
+    "river-run": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 3.8533333333333335,
+     "df": 1,
+     "pValue": 0.04688867761410731,
+     "rowMin": 0.8508333333333333,
+     "bandReach": {
+      "B1": 0.834,
+      "B2": 0.8323333333333334,
+      "B3": 0.799,
+      "B4": 0.9171111111111111,
+      "B5": null
+     },
+     "overallReach": 0.856,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 167,
+       "winRate": 0.5566666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.083333333333332
+      },
+      {
+       "row": 1,
+       "wins": 133,
+       "winRate": 0.44333333333333336,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.916666666666668
+      }
+     ]
+    },
+    "searound": {
+     "races": 300,
+     "rows": 7,
+     "rowSizes": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+     ],
+     "chiSq": 12.4,
+     "df": 6,
+     "pValue": 0.05315669827172409,
+     "rowMin": 0.864,
+     "bandReach": {
+      "B1": 0.832,
+      "B2": 0.846,
+      "B3": 0.843,
+      "B4": 0.9426666666666667,
+      "B5": null
+     },
+     "overallReach": 0.87975,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 30,
+       "winRate": 0.1,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.543333333333333
+      },
+      {
+       "row": 1,
+       "wins": 48,
+       "winRate": 0.16,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.196666666666665
+      },
+      {
+       "row": 2,
+       "wins": 57,
+       "winRate": 0.19,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.493333333333332
+      },
+      {
+       "row": 3,
+       "wins": 39,
+       "winRate": 0.13,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.93166666666667
+      },
+      {
+       "row": 4,
+       "wins": 42,
+       "winRate": 0.14,
+       "expectedWinRate": 0.15,
+       "avgRank": 21.243333333333332
+      },
+      {
+       "row": 5,
+       "wins": 36,
+       "winRate": 0.12,
+       "expectedWinRate": 0.125,
+       "avgRank": 19.256
+      },
+      {
+       "row": 6,
+       "wins": 48,
+       "winRate": 0.16,
+       "expectedWinRate": 0.125,
+       "avgRank": 20.654
+      }
+     ]
+    },
+    "seatrack": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 3.0857142857142854,
+     "df": 2,
+     "pValue": 0.21189138831907905,
+     "rowMin": 0.8883333333333333,
+     "bandReach": {
+      "B1": 0.8806666666666667,
+      "B2": 0.876,
+      "B3": 0.8486666666666667,
+      "B4": 0.942,
+      "B5": null
+     },
+     "overallReach": 0.8945,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 116,
+       "winRate": 0.38666666666666666,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.33142857142857
+      },
+      {
+       "row": 1,
+       "wins": 84,
+       "winRate": 0.28,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.902051282051282
+      },
+      {
+       "row": 2,
+       "wins": 100,
+       "winRate": 0.3333333333333333,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.27948717948718
+      }
+     ]
+    },
+    "space-sprint": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 3.7384615384615385,
+     "df": 2,
+     "pValue": 0.1517743071969042,
+     "rowMin": 0.8945238095238095,
+     "bandReach": {
+      "B1": 0.882,
+      "B2": 0.875,
+      "B3": 0.86,
+      "B4": 0.9497777777777778,
+      "B5": null
+     },
+     "overallReach": 0.9001666666666667,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 105,
+       "winRate": 0.35,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.276666666666667
+      },
+      {
+       "row": 1,
+       "wins": 84,
+       "winRate": 0.28,
+       "expectedWinRate": 0.325,
+       "avgRank": 21.00974358974359
+      },
+      {
+       "row": 2,
+       "wins": 111,
+       "winRate": 0.37,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.23076923076923
+      }
+     ]
+    }
+   }
+  },
+  "31337": {
+   "on": {
+    "city-circuit": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 6.720000000000001,
+     "df": 3,
+     "pValue": 0.0799516892875054,
+     "rowMin": 0.902,
+     "bandReach": {
+      "B1": 0.874,
+      "B2": 0.881,
+      "B3": 0.879,
+      "B4": 0.9566666666666667,
+      "B5": null
+     },
+     "overallReach": 0.908,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 63,
+       "winRate": 0.21,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.827
+      },
+      {
+       "row": 1,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.285
+      },
+      {
+       "row": 2,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.574
+      },
+      {
+       "row": 3,
+       "wins": 93,
+       "winRate": 0.31,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.314
+      }
+     ]
+    },
+    "dirt-oval": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 3.12,
+     "df": 3,
+     "pValue": 0.37428856620635176,
+     "rowMin": 0.885,
+     "bandReach": {
+      "B1": 0.866,
+      "B2": 0.861,
+      "B3": 0.843,
+      "B4": 0.9426666666666667,
+      "B5": null
+     },
+     "overallReach": 0.88775,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 78,
+       "winRate": 0.26,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.914
+      },
+      {
+       "row": 1,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.309
+      },
+      {
+       "row": 2,
+       "wins": 63,
+       "winRate": 0.21,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.466
+      },
+      {
+       "row": 3,
+       "wins": 84,
+       "winRate": 0.28,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.311
+      }
+     ]
+    },
+    "garden-path": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 0.13186813186813187,
+     "df": 2,
+     "pValue": 0.9271235885009195,
+     "rowMin": 0.8930769230769231,
+     "bandReach": {
+      "B1": 0.868,
+      "B2": 0.875,
+      "B3": 0.869,
+      "B4": 0.9513333333333334,
+      "B5": null
+     },
+     "overallReach": 0.90125,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 108,
+       "winRate": 0.36,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.38714285714286
+      },
+      {
+       "row": 1,
+       "wins": 96,
+       "winRate": 0.32,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.614615384615384
+      },
+      {
+       "row": 2,
+       "wins": 96,
+       "winRate": 0.32,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.506923076923076
+      }
+     ]
+    },
+    "ice-track": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 10.799999999999999,
+     "df": 3,
+     "pValue": 0.012902511843988385,
+     "rowMin": 0.875,
+     "bandReach": {
+      "B1": 0.864,
+      "B2": 0.854,
+      "B3": 0.839,
+      "B4": 0.944,
+      "B5": null
+     },
+     "overallReach": 0.88525,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 57,
+       "winRate": 0.19,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.836
+      },
+      {
+       "row": 1,
+       "wins": 96,
+       "winRate": 0.32,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.373
+      },
+      {
+       "row": 2,
+       "wins": 78,
+       "winRate": 0.26,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.589
+      },
+      {
+       "row": 3,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.202
+      }
+     ]
+    },
+    "luger-hill": {
+     "races": 300,
+     "rows": 5,
+     "rowSizes": [
+      8,
+      8,
+      8,
+      8,
+      8
+     ],
+     "chiSq": 23.43333333333333,
+     "df": 4,
+     "pValue": 0.000135671073854704,
+     "rowMin": 0.8920833333333333,
+     "bandReach": {
+      "B1": 0.912,
+      "B2": 0.89,
+      "B3": 0.8503333333333334,
+      "B4": 0.9442222222222222,
+      "B5": null
+     },
+     "overallReach": 0.9031666666666667,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 42,
+       "winRate": 0.14,
+       "expectedWinRate": 0.2,
+       "avgRank": 21.72125
+      },
+      {
+       "row": 1,
+       "wins": 51,
+       "winRate": 0.17,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.7225
+      },
+      {
+       "row": 2,
+       "wins": 54,
+       "winRate": 0.18,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.640416666666667
+      },
+      {
+       "row": 3,
+       "wins": 62,
+       "winRate": 0.20666666666666667,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.235
+      },
+      {
+       "row": 4,
+       "wins": 91,
+       "winRate": 0.30333333333333334,
+       "expectedWinRate": 0.2,
+       "avgRank": 19.180833333333332
+      }
+     ]
+    },
+    "mountainstreet": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 0.8533333333333334,
+     "df": 1,
+     "pValue": 0.358613722585013,
+     "rowMin": 0.8906666666666667,
+     "bandReach": {
+      "B1": 0.8733333333333333,
+      "B2": 0.8703333333333333,
+      "B3": 0.8473333333333334,
+      "B4": 0.9424444444444444,
+      "B5": null
+     },
+     "overallReach": 0.892,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 142,
+       "winRate": 0.47333333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.51033333333333
+      },
+      {
+       "row": 1,
+       "wins": 158,
+       "winRate": 0.5266666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.48966666666667
+      }
+     ]
+    },
+    "river-run": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 1.6133333333333333,
+     "df": 1,
+     "pValue": 0.20099608338271557,
+     "rowMin": 0.8573333333333333,
+     "bandReach": {
+      "B1": 0.8293333333333334,
+      "B2": 0.835,
+      "B3": 0.8106666666666666,
+      "B4": 0.9197777777777778,
+      "B5": null
+     },
+     "overallReach": 0.86,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 161,
+       "winRate": 0.5366666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.557666666666666
+      },
+      {
+       "row": 1,
+       "wins": 139,
+       "winRate": 0.4633333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.442333333333334
+      }
+     ]
+    },
+    "searound": {
+     "races": 300,
+     "rows": 7,
+     "rowSizes": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+     ],
+     "chiSq": 30.400000000000002,
+     "df": 6,
+     "pValue": 0.00004412592112523761,
+     "rowMin": 0.8666666666666667,
+     "bandReach": {
+      "B1": 0.86,
+      "B2": 0.86,
+      "B3": 0.847,
+      "B4": 0.942,
+      "B5": null
+     },
+     "overallReach": 0.8875,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 33,
+       "winRate": 0.11,
+       "expectedWinRate": 0.15,
+       "avgRank": 21.11
+      },
+      {
+       "row": 1,
+       "wins": 33,
+       "winRate": 0.11,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.166666666666668
+      },
+      {
+       "row": 2,
+       "wins": 66,
+       "winRate": 0.22,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.695
+      },
+      {
+       "row": 3,
+       "wins": 33,
+       "winRate": 0.11,
+       "expectedWinRate": 0.15,
+       "avgRank": 21.016666666666666
+      },
+      {
+       "row": 4,
+       "wins": 39,
+       "winRate": 0.13,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.49
+      },
+      {
+       "row": 5,
+       "wins": 39,
+       "winRate": 0.13,
+       "expectedWinRate": 0.125,
+       "avgRank": 20.19
+      },
+      {
+       "row": 6,
+       "wins": 57,
+       "winRate": 0.19,
+       "expectedWinRate": 0.125,
+       "avgRank": 19.636
+      }
+     ]
+    },
+    "seatrack": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 5.3479853479853485,
+     "df": 2,
+     "pValue": 0.0671567028154566,
+     "rowMin": 0.8938461538461538,
+     "bandReach": {
+      "B1": 0.8746666666666667,
+      "B2": 0.8746666666666667,
+      "B3": 0.8623333333333333,
+      "B4": 0.9497777777777778,
+      "B5": null
+     },
+     "overallReach": 0.89975,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 90,
+       "winRate": 0.3,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.58142857142857
+      },
+      {
+       "row": 1,
+       "wins": 95,
+       "winRate": 0.31666666666666665,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.552307692307693
+      },
+      {
+       "row": 2,
+       "wins": 115,
+       "winRate": 0.38333333333333336,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.36
+      }
+     ]
+    },
+    "space-sprint": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 4.386813186813187,
+     "df": 2,
+     "pValue": 0.1091229975727448,
+     "rowMin": 0.8953846153846153,
+     "bandReach": {
+      "B1": 0.8846666666666667,
+      "B2": 0.881,
+      "B3": 0.8563333333333333,
+      "B4": 0.9451111111111111,
+      "B5": null
+     },
+     "overallReach": 0.8993333333333333,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 100,
+       "winRate": 0.3333333333333333,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.499285714285715
+      },
+      {
+       "row": 1,
+       "wins": 86,
+       "winRate": 0.2866666666666667,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.592564102564104
+      },
+      {
+       "row": 2,
+       "wins": 114,
+       "winRate": 0.38,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.40820512820513
+      }
+     ]
+    }
+   },
+   "off": {
+    "city-circuit": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 8.64,
+     "df": 3,
+     "pValue": 0.0339646237843958,
+     "rowMin": 0.893,
+     "bandReach": {
+      "B1": 0.864,
+      "B2": 0.878,
+      "B3": 0.876,
+      "B4": 0.952,
+      "B5": null
+     },
+     "overallReach": 0.9035,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.878
+      },
+      {
+       "row": 1,
+       "wins": 75,
+       "winRate": 0.25,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.309
+      },
+      {
+       "row": 2,
+       "wins": 57,
+       "winRate": 0.19,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.63
+      },
+      {
+       "row": 3,
+       "wins": 93,
+       "winRate": 0.31,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.183
+      }
+     ]
+    },
+    "dirt-oval": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 2.64,
+     "df": 3,
+     "pValue": 0.45268079015919915,
+     "rowMin": 0.88,
+     "bandReach": {
+      "B1": 0.868,
+      "B2": 0.866,
+      "B3": 0.846,
+      "B4": 0.942,
+      "B5": null
+     },
+     "overallReach": 0.88975,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 63,
+       "winRate": 0.21,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.915
+      },
+      {
+       "row": 1,
+       "wins": 78,
+       "winRate": 0.26,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.292
+      },
+      {
+       "row": 2,
+       "wins": 81,
+       "winRate": 0.27,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.439
+      },
+      {
+       "row": 3,
+       "wins": 78,
+       "winRate": 0.26,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.354
+      }
+     ]
+    },
+    "garden-path": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 5.802197802197802,
+     "df": 2,
+     "pValue": 0.05348062892901462,
+     "rowMin": 0.88,
+     "bandReach": {
+      "B1": 0.86,
+      "B2": 0.873,
+      "B3": 0.871,
+      "B4": 0.952,
+      "B5": null
+     },
+     "overallReach": 0.9005,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 96,
+       "winRate": 0.32,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.388571428571428
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.59923076923077
+      },
+      {
+       "row": 2,
+       "wins": 117,
+       "winRate": 0.39,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.52076923076923
+      }
+     ]
+    },
+    "ice-track": {
+     "races": 300,
+     "rows": 4,
+     "rowSizes": [
+      10,
+      10,
+      10,
+      10
+     ],
+     "chiSq": 11.28,
+     "df": 3,
+     "pValue": 0.01040670792181042,
+     "rowMin": 0.883,
+     "bandReach": {
+      "B1": 0.858,
+      "B2": 0.856,
+      "B3": 0.856,
+      "B4": 0.9513333333333334,
+      "B5": null
+     },
+     "overallReach": 0.892,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 54,
+       "winRate": 0.18,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.8
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.382
+      },
+      {
+       "row": 2,
+       "wins": 69,
+       "winRate": 0.23,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.694
+      },
+      {
+       "row": 3,
+       "wins": 90,
+       "winRate": 0.3,
+       "expectedWinRate": 0.25,
+       "avgRank": 20.124
+      }
+     ]
+    },
+    "luger-hill": {
+     "races": 300,
+     "rows": 5,
+     "rowSizes": [
+      8,
+      8,
+      8,
+      8,
+      8
+     ],
+     "chiSq": 26.266666666666666,
+     "df": 4,
+     "pValue": 0.00004111787925109578,
+     "rowMin": 0.8929166666666667,
+     "bandReach": {
+      "B1": 0.9166666666666666,
+      "B2": 0.8903333333333333,
+      "B3": 0.8463333333333334,
+      "B4": 0.9428888888888889,
+      "B5": null
+     },
+     "overallReach": 0.9023333333333333,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 37,
+       "winRate": 0.12333333333333334,
+       "expectedWinRate": 0.2,
+       "avgRank": 21.722083333333334
+      },
+      {
+       "row": 1,
+       "wins": 53,
+       "winRate": 0.17666666666666667,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.734583333333333
+      },
+      {
+       "row": 2,
+       "wins": 53,
+       "winRate": 0.17666666666666667,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.691666666666666
+      },
+      {
+       "row": 3,
+       "wins": 67,
+       "winRate": 0.22333333333333333,
+       "expectedWinRate": 0.2,
+       "avgRank": 20.210833333333333
+      },
+      {
+       "row": 4,
+       "wins": 90,
+       "winRate": 0.3,
+       "expectedWinRate": 0.2,
+       "avgRank": 19.140833333333333
+      }
+     ]
+    },
+    "mountainstreet": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 0.8533333333333334,
+     "df": 1,
+     "pValue": 0.358613722585013,
+     "rowMin": 0.8931666666666667,
+     "bandReach": {
+      "B1": 0.876,
+      "B2": 0.874,
+      "B3": 0.8523333333333334,
+      "B4": 0.9442222222222222,
+      "B5": null
+     },
+     "overallReach": 0.8951666666666667,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 142,
+       "winRate": 0.47333333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.510833333333334
+      },
+      {
+       "row": 1,
+       "wins": 158,
+       "winRate": 0.5266666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.489166666666666
+      }
+     ]
+    },
+    "river-run": {
+     "races": 300,
+     "rows": 2,
+     "rowSizes": [
+      20,
+      20
+     ],
+     "chiSq": 3.4133333333333336,
+     "df": 1,
+     "pValue": 0.06128614173706903,
+     "rowMin": 0.8575,
+     "bandReach": {
+      "B1": 0.8293333333333334,
+      "B2": 0.8363333333333334,
+      "B3": 0.811,
+      "B4": 0.9191111111111111,
+      "B5": null
+     },
+     "overallReach": 0.8601666666666666,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 166,
+       "winRate": 0.5533333333333333,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.550833333333333
+      },
+      {
+       "row": 1,
+       "wins": 134,
+       "winRate": 0.44666666666666666,
+       "expectedWinRate": 0.5,
+       "avgRank": 20.449166666666667
+      }
+     ]
+    },
+    "searound": {
+     "races": 300,
+     "rows": 7,
+     "rowSizes": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      5,
+      5
+     ],
+     "chiSq": 35.04,
+     "df": 6,
+     "pValue": 0.000006699711200819358,
+     "rowMin": 0.8683333333333333,
+     "bandReach": {
+      "B1": 0.852,
+      "B2": 0.851,
+      "B3": 0.838,
+      "B4": 0.9406666666666667,
+      "B5": null
+     },
+     "overallReach": 0.8815,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 36,
+       "winRate": 0.12,
+       "expectedWinRate": 0.15,
+       "avgRank": 21.131666666666668
+      },
+      {
+       "row": 1,
+       "wins": 27,
+       "winRate": 0.09,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.23
+      },
+      {
+       "row": 2,
+       "wins": 63,
+       "winRate": 0.21,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.626666666666665
+      },
+      {
+       "row": 3,
+       "wins": 27,
+       "winRate": 0.09,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.998333333333335
+      },
+      {
+       "row": 4,
+       "wins": 45,
+       "winRate": 0.15,
+       "expectedWinRate": 0.15,
+       "avgRank": 20.45
+      },
+      {
+       "row": 5,
+       "wins": 45,
+       "winRate": 0.15,
+       "expectedWinRate": 0.125,
+       "avgRank": 20.142
+      },
+      {
+       "row": 6,
+       "wins": 57,
+       "winRate": 0.19,
+       "expectedWinRate": 0.125,
+       "avgRank": 19.734
+      }
+     ]
+    },
+    "seatrack": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 12.111355311355311,
+     "df": 2,
+     "pValue": 0.0025433000112237147,
+     "rowMin": 0.8953846153846153,
+     "bandReach": {
+      "B1": 0.8813333333333333,
+      "B2": 0.8766666666666667,
+      "B3": 0.8596666666666667,
+      "B4": 0.9488888888888889,
+      "B5": null
+     },
+     "overallReach": 0.9000833333333333,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 80,
+       "winRate": 0.26666666666666666,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.595238095238095
+      },
+      {
+       "row": 1,
+       "wins": 98,
+       "winRate": 0.32666666666666666,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.5374358974359
+      },
+      {
+       "row": 2,
+       "wins": 122,
+       "winRate": 0.4066666666666667,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.36
+      }
+     ]
+    },
+    "space-sprint": {
+     "races": 300,
+     "rows": 3,
+     "rowSizes": [
+      14,
+      13,
+      13
+     ],
+     "chiSq": 7.024175824175824,
+     "df": 2,
+     "pValue": 0.02914866149059403,
+     "rowMin": 0.8984615384615384,
+     "bandReach": {
+      "B1": 0.884,
+      "B2": 0.88,
+      "B3": 0.859,
+      "B4": 0.9473333333333334,
+      "B5": null
+     },
+     "overallReach": 0.9005,
+     "rowStats": [
+      {
+       "row": 0,
+       "wins": 94,
+       "winRate": 0.31333333333333335,
+       "expectedWinRate": 0.35,
+       "avgRank": 20.51642857142857
+      },
+      {
+       "row": 1,
+       "wins": 87,
+       "winRate": 0.29,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.61820512820513
+      },
+      {
+       "row": 2,
+       "wins": 119,
+       "winRate": 0.39666666666666667,
+       "expectedWinRate": 0.325,
+       "avgRank": 20.364102564102563
+      }
+     ]
+    }
+   }
+  }
+ }
+}

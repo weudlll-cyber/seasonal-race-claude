@@ -456,13 +456,14 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A4  | drafting boost                                                        | 1.04                                                                 | in wake cone                            | index.jsx:961       |
 | A5  | speed brake floor + warmup                                            | 0.945, ramp 3 s open                                                 | same-lane close                         | index.jsx:972       |
 | A6  | brake-to-match cap                                                    | targets leader speed                                                 | faster trailer                          | raceBehavior.js:549 |
-| A7  | trajectoryMult (controller)                                           | [0.85,1.10]                                                          | OUTCOME 0.55–0.95                       | racePlanner.js:362  |
+| A7  | trajectoryMult (controller)                                           | [0.85,1.10]                                                          | OUTCOME [choreoOutcomeStart, corridorEnd] | racePlanner.js:362  |
 | A8  | areaBonusMult (band)                                                  | +6%…−2% (×2.0)                                                       | until 0.75 then fade                    | racePlanner.js:312  |
 | A9  | rubberBandMult (cap-the-lead brake)                                   | **REMOVED** (raceRubberBand.js deleted)                              | —                                       | —                   |
 | A10 | zoneMult (race zone)                                                  | **REMOVED** (raceZones.js deleted)                                   | —                                       | —                   |
 | A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | index.jsx:995       |
 | A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:824       |
-| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [0.15,0.5), faded→1.0 at corrStart | raceGovernor.js:170 |
+| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:170 |
+| A14 | gapBrakeStrength — the GAP leader brake (**shipped ON 2026-09-17**)   | bounded by `gapBrakeMaxAuthority`; silent below `gapBrakeAllowedGapPx` | [choreoOutcomeStart, `gapBrakeWindowEnd`], leader only | racePlanner.js:_computeGapLeaderBrake |
 
 ### Lateral (current: Soft Steering spring → repulsion/clamp/damping → Hard Separation)
 

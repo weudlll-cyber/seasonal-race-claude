@@ -1,4 +1,331 @@
-# MORNING SHEET — 2026-09-17
+# MORNING SHEET — 2026-09-19
+
+## ★★★ FIRST LINE: LAST NIGHT'S REGRESSION DOES NOT REPRODUCE, AND THE BRAKE IS EXONERATED
+
+→ [GATE-THREE-SEEDS-1](../reports/night/GATE-THREE-SEEDS-1.md) · **Nothing reverted, nothing minted.**
+
+**Three fixed seeds — 12345, 777, 31337 — both arms, the pinned N, 18,000 races.**
+
+| seed | SHIPPED DEFAULTS | BRAKE OFF (control) |
+|---|---|---|
+| 12345 | 2 flagged | 0 |
+| 777 | 3 flagged | 0 |
+| ★ **31337** | 2 flagged | ★ **3 flagged** |
+
+★★★ **The control arm went 0, 0, 3.** Last night's *"the control is clean"* was **one draw**. At seed
+31337 the brake-OFF tree flags **more** tracks than the shipped tree does.
+
+★★ **And pooled over all three seeds — 900 races per track — the CONTROL is Holm-unfair on twice as
+many tracks as the shipped defaults: 4 against 2.** `ice-track`, which was half of last night's
+headline, **reverses**: pooled, it flags on the control and is fair on the shipped defaults. **Reading
+one seed as a regression would have been wrong about the direction.**
+
+### ★★ WHY IT IS NOT THE BRAKE — THE ROWS THEMSELVES
+
+`luger-hill`, pooled 900 races, expected 20.0% per row:
+
+| row | SHIPPED | CONTROL |
+|---|---|---|
+| 0 (front) | **16.3%** | **14.9%** |
+| 1 | 17.1% | 18.1% |
+| 2 | 18.0% | 18.0% |
+| 3 | 22.1% | 22.6% |
+| 4 (back) | ★ **26.4%** | ★ **26.4%** |
+
+★ **The two arms agree to within about one point on every row of every flagged track.** The brake
+changes **who wins** in a fifth of races and does **not** change **which start row** they come from.
+It reached every seed — ~50% of races differ, ~19% change winner.
+
+### ★ WHAT IS ACTUALLY WRONG, AND IT IS NOT NEW
+
+**`searound` and `luger-hill` carry a real start-row bias on BOTH arms**, Holm-unfair at 900 races
+either way. ★ **That is the standing problem the record has carried since 2026-07-31** — not the
+brake's doing, and now much better evidenced. **Nothing needs reverting and the brake stands.**
+
+★ **By the rule as written, `searound` is the first line** — flagged on the shipped arm in all three
+seeds. **But the same data says it is not a regression**: it fails with the brake switched off too.
+I am reporting both rather than letting the rule's letter stand as the conclusion.
+
+★ **One seed cannot support a fairness verdict, and now there is a clean demonstration of it.**
+
+---
+
+## ★ TONIGHT'S CHAIN — `night/2026-09-18`, LIVE STATUS
+
+Branched from **master `5b60b615`**. Nothing merged, nothing minted, no shipped default changed.
+V1 (`servoNoiseBlindEnabled`) is off in every arm.
+
+| piece | state | one line |
+|---|---|---|
+| **1 · settle the fairness verdict** | ★★ **DONE — THE BRAKE IS EXONERATED** | → [GATE-THREE-SEEDS-1](../reports/night/GATE-THREE-SEEDS-1.md) — seeds **777** and **31337** added; **last night's regression does not reproduce** |
+| **2 · re-race the comebacker branch** | ★ **DONE — nothing merged, tagged or deleted** | → [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) — **it still costs breakaways** |
+| **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
+| **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
+| **5 · the four verify-time points** | **DONE — two were already done, two I hand back** | → [VERIFY-POINTS-1](../reports/night/VERIFY-POINTS-1.md) |
+| **6 · the six blind instruments** | **DONE — proven by sabotage** | → [BLIND-SABOTAGE-1](../reports/night/BLIND-SABOTAGE-1.md) — only **one** of the three "fixed" ones can be proven |
+
+---
+
+### ★ THE SWEEP, AND THE STATE YOU COME BACK TO
+
+| | |
+|---|---|
+| branch | **`night/2026-09-18`**, pushed after every piece |
+| merged / tagged / minted | ★ **nothing**; no shipped default changed; V1 off in every arm |
+| working tree | clean |
+| your race store | ★ **untouched** — `races.sqlite` still stamped **Sep 17 17:19**, before the chain began |
+| instrumentation in the real tree | ★ **none, at any point** — all three probes were worktrees |
+| `verify` | **24 PASS / 1 FAIL**, and the one failure re-run alone **PASSES** (4,713 tests, 0 failures) |
+| fingerprints | ★ **all four match the record**; `--mint` wrote nothing |
+| probes removed | `C:/tmp/gboff`, `C:/tmp/cbprobe`, `C:/tmp/sabcam` — **junction-checked first**, all three clean |
+| `node_modules` after removal | ★ **intact** — client **328** with **81** `.bin` shims, server **186**, root unchanged |
+| temp run dirs | **removed** — `gate2` (198 MB) and `cb` (356 KB), junction-checked first |
+| services | ★ **all three up** — **4000** API, **5173** dev, **4173** production preview |
+
+★ **The leftover you told me to leave:** `git worktree remove` deletes the directory but fails on the
+registration under `.git/worktrees/` with **Permission denied** on this OneDrive tree. There are now
+**fifteen** stale registrations, three of them tonight's (`gboff`, `cbprobe`, `sabcam`).
+**`git worktree list` correctly shows only the real tree**, so it is cosmetic — left rather than
+fought, as instructed.
+
+★ **The evidence survived the sweep.** The 198 MB of raw races is gone, but what the reports cite is
+committed: `reports/night/gate-three-seeds-data/` (seeds 777 and 31337, per-row) and
+`reports/night/comeback-rerace-data/` (600 races, per race). ★ **Seed 12345 came back from last
+night's saved summary rather than being re-raced** — which is the whole reason it was kept.
+
+---
+
+### ★★ PIECE 6 — ONLY ONE OF THE THREE "FIXED" INSTRUMENTS GOES RED WHEN YOU BREAK IT
+
+→ [BLIND-SABOTAGE-1](../reports/night/BLIND-SABOTAGE-1.md) · **The real tree was never instrumented** —
+every sabotage ran in a detached probe worktree at master.
+
+**The six are in THREE states, not two:**
+
+| state | instruments | sabotage |
+|---|---|---|
+| ★ **was blind, now demonstrably sighted** | `exp-anchor-truth-ab.mjs` | ★ **CAUGHT** — `e1e833b69d656084` → `76aae5fde8a0fb3e` |
+| ★ **delivers the plan; the cast cannot reach what it measures** | `check-ending-frame.mjs`, `finish-band-truth.mjs` | **not caught** — output identical both ways |
+| **cannot deliver a plan at all** | `start-formation`, `exp-camera-bisect`, `sim-race-visual` | — |
+
+★★★ **The two null results are real findings, not lazy ones, because the mutation was proven
+REACHABLE.** Re-armed to throw instead of no-op, both scripts **die on the line** —
+`check-ending-frame.mjs:296`, `finish-band-truth.mjs:324`. So the delivery IS invoked and they return
+the same answer regardless. **And the one that DID move is the positive control**: if all three had
+come back identical I could not have told an inert fix from a broken sabotage.
+
+★★ **A correction of emphasis.** The record calls those two *"fixed, output byte-identical"*, which
+reads as reassurance. Sharper: **the fix buys nothing measurable there — they were never blind to
+anything THEY measure.** A green from either is exactly as trustworthy as before the fix, neither
+more nor less. **The fix should still stay**, so a future change that does depend on the cast is seen.
+
+★ **`exp-anchor-truth-ab`'s baseline has moved since the record** — `ae72523ffb80e39c` (2026-09-12,
+pre-brake) → **`e1e833b69d656084`** (tonight). **That is the brake, not a regression**, and it is
+reported side by side rather than quietly replaced. Nothing minted; it is not a recorded value.
+
+**The three structural ones were NOT fixed, and each would be a rebuild**: `start-formation` observes
+the countdown, **before casting exists** (nothing to fix); `exp-camera-bisect` replays recorded dumps
+and fixing it **invalidates every dump it exists to replay**; `sim-race-visual` **rolls its own
+physics loop** — checked at source, it imports neither `raceDriver` nor `createRaceFromIdentity` — so
+giving it the plan means running the product's race instead of its own and changes every PNG it has
+produced.
+
+---
+
+### ★ `verify` ON THIS BRANCH — 24 PASS, 1 FAIL, AND THE FAILURE IS MINE
+
+`PASS 24 · FAIL 1 · SKIP 9`, wall clock 790.4 s. **All four fingerprint guards PASS**
+(`world-fingerprint`, `camera-fingerprint`, `render-fingerprint`, `fingerprint-containment`), and so
+do `golden-races`, `check-runin-frame` and `check-ending-frame`.
+
+**The one failure is `client-suite`**, and it is not a defect in the branch:
+
+> `[vitest-pool]: Failed to start forks worker for test files … client/src/modules/parity/replay.test.js`
+> `Caused by: [vitest-pool-runner]: Timeout waiting for worker to respond`
+
+★ **The worker never started.** I ran `verify` while the fairness gate was holding **8 heavy node
+processes** on a 14-core machine — this is the starvation class the suite's own `maxWorkers: 4` bound
+exists to prevent, one level up: **the MACHINE was oversubscribed, not just the suite.**
+`replay.test.js` is one of the two heaviest files in the suite, so it is the expected casualty.
+
+★★ **RE-RUN ALONE AFTER THE GATE FINISHED, AND IT PASSES: `261` test files, `4713` tests, **0
+failures**, 230.1 s.** The retry ledger confirms `retry: 0`, so nothing was hidden by a second
+attempt. **The classification holds — it was my scheduling, not the branch.** With that,
+**every guard on this branch is green.**
+
+---
+
+---
+
+### ★ PIECE 5 — TWO OF THE FOUR WERE ALREADY DONE; TWO I COULD NOT ACT ON
+
+→ [VERIFY-POINTS-1](../reports/night/VERIFY-POINTS-1.md) · **Nothing was built, and nothing needed
+to be.**
+
+| point | verdict |
+|---|---|
+| **1 · the client build inside the check run** | ★ **DONE, on master** as `cae917c8`. Before: **nothing built the client** — zero matches for `vite build` or `npm run build` in `verify` or `ci.yml`. Now `verify` builds it and audits the bundle as step 2 of the same guard. ★ **It no longer covers nothing — this point ADDED coverage.** |
+| **2 · separating the unit-suite environment** | ★ **DONE, on master** as `dd963859`. **232 s → 172 s**, 70 files of 261 carrying the opt-out at the tree tonight. Cost: those 70 no longer get a browser. |
+| **3 · replacing the nine warm-up races** | ★ **I could not identify what this names.** The searches are listed in the report. The only warm-up in the tree is `phys-bench.mjs:70` — **300 physics STEPS, not nine races.** |
+| **4 · the production arm for the check setup** | ★ **Two plausible readings, different work.** I did not pick one: acting on a guess changes what a gate covers. |
+
+★★ **The brief's numbers for point 2 are the PROPOSAL'S, not what shipped.** It says *"137 files with
+no browser, 176 → 86 s, one failed"*; what landed is **69 files and 232 → 172 s**. The larger set was
+the candidate list — membership was then established **per file in two passes that both had to
+agree**, the second requiring the **identical count of passing AND skipped** tests in both
+environments, *"because a file going green because a global quietly vanished is worse than a slow
+one"*. **Quoting the proposal's figures would overstate both the saving and the exposure.**
+
+★ **The default did not move**: `environment: 'jsdom'` is still the default, so a file gets a browser
+unless it has opted out by a deliberate line — a new test file is safe by construction.
+
+**Both open points need one sentence from you**, and each is short work once named.
+
+---
+
+---
+
+### ★★★ PIECE 2 — THE COMEBACKER BRANCH STILL COSTS BREAKAWAYS ON BRAKED MASTER
+
+→ [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) · **Nothing merged, tagged or deleted.**
+Master was merged into a **probe copy**; that merge was never pushed.
+
+**Ten tracks, seeds 1–30, 300 races per arm, 40 racers, your roster, `wild`, shipped defaults with the
+brake ON. No config override, and ★ no instrumentation in either tree** — the cast split is read from
+the race plan's own accessors, so both arms ran from unmodified checkouts.
+
+★ **The control reproduces the ship's own numbers to the digit** — 8 of 300 races over 124 px and a
+worst lead of 187.5 px are exactly what the brake's mint recorded. That is how we know the harness is
+honest before reading the branch column.
+
+| | MASTER | BRANCH |
+|---|---|---|
+| comebackers per race | 1.72 | **1.32** |
+|  from the drawn-winner site (**kept**) | 0.61 | 0.61 |
+|  from the staged path (**kept**) | 0.70 | 0.72 |
+|  ★ from the **removed** path | **0.41** | **0.00** |
+| races with **no comebacker at all** | 13 (4.3%) | ★ **30 (10.0%)** |
+| largest lead 0.6→line — median | 86.5 px | 88.3 px |
+|  p90 | 127.7 px | **133.0 px** |
+|  max | 187.5 px | **197.6 px** |
+| ★ races with a **>124 px gap after 0.95** | **8 (2.7%)** | ★ **15 (5.0%)** |
+| contested finishes | 125 | 124 |
+| byte-identical races | — | **176 of 300 (58.7%)** |
+| winner changes | — | **81 of 300 (27.0%)** |
+
+★★ **THE ANSWER, PLAINLY: the reason it was not landed still holds.** Escapes nearly double and the
+worst lead grows, by the brake's own signature running backwards — median untouched, tail up.
+
+★★ **And the brake is not absorbing it.** It **fires 6% MORE often on the branch arm** (160,864 →
+170,881 frames on the same window) and the tail still grows. It reaches its authority ceiling against
+a bigger problem rather than cancelling it — consistent with what was already known: the brake never
+reduced the escape *rate*, it cut the worst cases, so **more worst cases is the one thing it is least
+able to offset.**
+
+★ **In fairness to the branch, the brake IS doing real work against it.** Its own fixture showed the
+worst lead growing by **107 px**; re-raced on braked master over ten tracks it grows by **10.1**. The
+cost is far smaller than the branch's own numbers suggested — **it is just not zero, and not negative.**
+
+**What the branch BUYS is not in this table**, and this report does not weigh it: it removes a casting
+path you decided should go, and its `DEAD-ENDS.md` section S carries the correction to the three
+figures that decision was taken on. **This supplies the cost, measured on the tree as it stands.**
+
+---
+
+---
+
+### ★★★ PIECE 4 — THE DECISION SURVIVES; THE REASON IT READS AS COMFORTABLE DOES NOT
+
+→ [D25-SIGN-1](../reports/night/D25-SIGN-1.md) · **I changed nothing in `BACKLOG.md` or
+`FAIRNESS.md`. The correction is a proposal in the report.**
+
+**The sentence** (`BACKLOG.md:2421`, restated at `FAIRNESS.md:156`): *"luger-hill IS THE SINGLE
+EXCEPTION, AND ITS SIGN IS THE OPPOSITE OF THE WORRY … the **front** rows are slightly favoured, not
+the back. Anyone reopening this on the assumption that the rear rows are advantaged should read that
+sentence first."*
+
+**The four sources, all pointing the other way:**
+
+| source | address | what it says |
+|---|---|---|
+| the table D25 derives it from | `ROW-BONUS-TIMING-1.md:117` | luger-hill first row **58.211 s**, last row **57.924 s** — the rear finishes **sooner** |
+| the other report D25 cites | `ROW-ADVANTAGE-1.md:24` | *"THE ADVANTAGE RUNS BACKWARDS. The BACK rows are the favoured ones"* |
+| last night's measurement | `LUGER-BIAS-1.md:34` | front **13.0%**, back **25.0%**, even share 20.0% |
+| the gate | `PINNED-GATE-1.md:230` | rows rise to the rear, **17.7 → 22.7%** |
+
+Row 0 is the front row and **the one that gets no bonus**. A rear row that makes up its whole deficit
+and still finishes sooner was given **more** than it lost — over-compensation, rear favoured.
+
+### ★★ WHAT IT DOES TO D25 — AND THE ANSWER IS NOT "REVERSE IT"
+
+**Your verdict was ACCEPTABLE, and that is a judgement about SIZE. No magnitude moves**: the deviation
+is still 0.49% of a 58 s race, the worst start row still reaches its band far above the floor, the
+front row's win share was always the one below par. **So the decision stands.**
+
+**Three things in its reasoning change:**
+
+1. ★ **"Flat on nine, one harmless exception" becomes "all ten lean the same way."** The same table
+   says *"all ten differences are positive"* — which, read correctly, is a consistent hair of **rear**
+   advantage across every track, not of under-compensation.
+2. ★ **It stops disagreeing with the other report.** `ROW-ADVANTAGE-1` found *"all 10 tracks lean the
+   same way"* by a different measure. D25 records the two as pointing opposite ways; corrected, **two
+   independent measures over ten tracks agree.**
+3. ★★ **The open question you parked gets harder, not easier.** D25 left the tilt unresolved because
+   it appeared *"only in the one measure conditioned on band arrival"*. On luger-hill **both
+   unconditioned measures now agree with it** — mean finishing rank (4.32 places) and mean finishing
+   time (0.287 s). **A selection effect does not produce agreeing signals in two unconditioned
+   measures.**
+
+★ **So: re-affirm it on the magnitude, which holds — not on the sign, which does not.** The proposed
+fix is two **appended, dated** lines (never an edit of your sentences); the exact wording is in the
+report.
+
+---
+
+---
+
+### ★★ PIECE 3 — THE CORRECTIONS EXIST TWICE AND ON MASTER NOT AT ALL
+
+→ [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md)
+
+**The 17.9. pass wrote all of it. Neither commit is on master.** `fc4d4143` and `e29b428d` are
+contained in `origin/night/2026-09-17` and nowhere else — checked per commit. ★ **So every one of the
+named items was STILL WRONG on master tonight**, which is the answer to "re-check them": there was
+nothing to re-check, only the same errors in the same places.
+
+**I cherry-picked the two commits onto tonight's branch** rather than retyping corrections that were
+already written and already proven inert — the option that changes less. **They are now on two
+branches and still not on master.**
+
+**The six statements, each with the evidence that made it wrong:**
+
+| # | address | was | why wrong |
+|---|---|---|---|
+| 1 | `FORCE-MAP.md:459` | `OUTCOME 0.55–0.95` | **the upper bound is `corridorEnd`, and it is not 0.95** — `racePlanner.js:87` |
+| 2 | `FORCE-MAP.md:465` | `PULK [0.15,0.5)` | **the upper bound is `choreoOutcomeStart`, and it is not 0.5** — `defaults.js:1070`; `:1125` says *"`pulkEnd` IS `choreoOutcomeStart`"* |
+| 3 | `racePlanner.js:1594` | `SIM-ONLY … the browser never sets it` | `defaults.js` ships `gapRerollEnabled: true`; ★ **its own sibling at `:389-390` already said so** |
+| 4 | `raceCore.js:372` | `PulkLeadRotation — default OFF` | **the next line is `pulkLeadRotationOn = racePlanEnabled`** (`:376`); `defaults.js:1017` heads it **SHIPPED ON** |
+| 5 | `raceCore.js:598` | `(default OFF → skipped)` | same — **"skipped" described the opposite of the shipped build** |
+| 6 | `check-runin-frame.mjs:161` | `until \`feat/finish-framed\` lands` | **that branch is not at origin**; it survives only as tag `archive/finish-framed`, and `finishLineFraming` is 0 times in `defaults.js` |
+
+★ **A seventh change was CODE, and the summary did not say so.** `raceCore.js:700` — the diagnostic
+`vt` omitted `governorMult` while `raceStep.js:131` multiplies by it and `:106` documents the chain
+including it. **Proven inert at tonight's tree, not assumed from last night**: all four fingerprints
+re-measured against the engine and **all four match the record, nothing written.**
+
+★ **Two completeness gaps, which for a file claiming completeness are factual errors**: FORCE-MAP had
+**no row for the gap brake** (now A14) and DEVSCREEN-INVENTORY omitted **five rendered controls**
+while stating that every control appears in it.
+
+★ **Two corrections to the brief itself.** Its addresses (`racePlanner.js:1235`, `raceCore.js:578`,
+`:679-683`) are **stale** — the statements now sit at `:1594`, `:598` and `:700-704`. And FORCE-MAP's
+**"four stale windows" is two** (A7 and A13) plus one missing row; I re-read the additive table and
+found no others. **I am not going to invent a correction to reach a count.**
+
+**★ NEEDS YOUR WORD:** master carries none of this. Two branches now hold the same corrections.
+
+---
+
 
 ## ★★★ IT IS ON MASTER
 

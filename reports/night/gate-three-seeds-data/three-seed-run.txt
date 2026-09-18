@@ -1,0 +1,125 @@
+
+=== SEED 12345 — ARM ON (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+ice-track           4   19.200   3.136e-4   3.136e-3  UNFAIR    85.3
+searound            7   20.000   2.905e-3   2.615e-2  UNFAIR    85.6
+garden-path         3    6.462   3.851e-2   3.080e-1  fair      86.3
+city-circuit        4    7.440   5.806e-2   4.064e-1  fair      84.1
+river-run           2    1.920   1.619e-1   9.714e-1  fair      80.6
+dirt-oval           4    2.640   4.527e-1   1.000e+0  fair      86.1
+luger-hill          5    2.700   6.123e-1   1.000e+0  fair      85.1
+seatrack            3    0.679   7.169e-1   1.000e+0  fair      85.9
+mountainstreet      2    0.053   8.027e-1   1.000e+0  fair      84.9
+space-sprint        3    0.251   8.778e-1   1.000e+0  fair      85.7
+  Holm-flagged: ice-track, searound
+
+=== SEED 12345 — ARM OFF (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+garden-path         3    8.486   1.426e-2   1.426e-1  fair      87.8
+ice-track           4   10.320   1.600e-2   1.440e-1  fair      84.9
+river-run           2    1.920   1.619e-1   1.000e+0  fair      80.7
+luger-hill          5    4.433   3.506e-1   1.000e+0  fair      85.4
+dirt-oval           4    2.880   4.120e-1   1.000e+0  fair      85.7
+searound            7    6.000   4.237e-1   1.000e+0  fair      85.3
+space-sprint        3    0.448   8.007e-1   1.000e+0  fair      85.3
+seatrack            3    0.310   8.544e-1   1.000e+0  fair      86.2
+city-circuit        4    0.480   9.203e-1   1.000e+0  fair      84.5
+mountainstreet      2    0.000   9.505e-1   1.000e+0  fair      85.0
+  Holm-flagged: NONE
+
+=== SEED 777 — ARM ON (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+searound            7   27.120   1.669e-4   1.669e-3  UNFAIR    84.6
+ice-track           4   14.640   2.327e-3   2.094e-2  UNFAIR    85.1
+luger-hill          5   15.633   3.725e-3   2.980e-2  UNFAIR    85.5
+river-run           2    3.853   4.689e-2   3.282e-1  fair      79.3
+garden-path         3    3.738   1.518e-1   9.106e-1  fair      85.2
+seatrack            3    2.804   2.447e-1   1.000e+0  fair      85.2
+mountainstreet      2    1.333   2.467e-1   1.000e+0  fair      85.2
+city-circuit        4    2.880   4.120e-1   1.000e+0  fair      84.7
+space-sprint        3    1.445   4.900e-1   1.000e+0  fair      86.2
+dirt-oval           4    1.920   5.932e-1   1.000e+0  fair      84.2
+  Holm-flagged: searound, ice-track, luger-hill
+
+=== SEED 777 — ARM OFF (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+luger-hill          5   12.433   1.445e-2   1.445e-1  fair      85.7
+ice-track           4    9.360   2.460e-2   2.214e-1  fair      84.4
+river-run           2    3.853   4.689e-2   3.751e-1  fair      79.9
+searound            7   12.400   5.316e-2   3.751e-1  fair      84.3
+space-sprint        3    3.738   1.518e-1   9.106e-1  fair      86.0
+seatrack            3    3.086   2.119e-1   1.000e+0  fair      84.9
+mountainstreet      2    1.333   2.467e-1   1.000e+0  fair      85.3
+garden-path         3    2.262   3.232e-1   1.000e+0  fair      85.7
+city-circuit        4    2.880   4.120e-1   1.000e+0  fair      84.2
+dirt-oval           4    2.400   4.965e-1   1.000e+0  fair      85.2
+  Holm-flagged: NONE
+
+=== SEED 31337 — ARM ON (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+searound            7   30.400   4.413e-5   4.413e-4  UNFAIR    84.7
+luger-hill          5   23.433   1.357e-4   1.221e-3  UNFAIR    85.0
+ice-track           4   10.800   1.290e-2   1.032e-1  fair      83.9
+seatrack            3    5.348   6.716e-2   4.701e-1  fair      86.2
+city-circuit        4    6.720   7.995e-2   4.797e-1  fair      87.9
+space-sprint        3    4.387   1.091e-1   5.456e-1  fair      85.6
+river-run           2    1.613   2.010e-1   8.040e-1  fair      81.1
+mountainstreet      2    0.853   3.586e-1   1.000e+0  fair      84.7
+dirt-oval           4    3.120   3.743e-1   1.000e+0  fair      84.3
+garden-path         3    0.132   9.271e-1   1.000e+0  fair      86.9
+  Holm-flagged: searound, luger-hill
+
+=== SEED 31337 — ARM OFF (10/10 tracks) ===
+track            rows     chi2      raw p     Holm p   verdict   B3%
+searound            7   35.040   6.700e-6   6.700e-5  UNFAIR    83.8
+luger-hill          5   26.267   4.112e-5   3.701e-4  UNFAIR    84.6
+seatrack            3   12.111   2.543e-3   2.035e-2  UNFAIR    86.0
+ice-track           4   11.280   1.041e-2   7.285e-2  fair      85.6
+space-sprint        3    7.024   2.915e-2   1.749e-1  fair      85.9
+city-circuit        4    8.640   3.396e-2   1.749e-1  fair      87.6
+garden-path         3    5.802   5.348e-2   2.139e-1  fair      87.1
+river-run           2    3.413   6.129e-2   2.139e-1  fair      81.1
+mountainstreet      2    0.853   3.586e-1   7.172e-1  fair      85.2
+dirt-oval           4    2.640   4.527e-1   7.172e-1  fair      84.6
+  Holm-flagged: searound, luger-hill, seatrack
+
+
+=== IS ANY ROW FLAGGED CONSISTENTLY ACROSS SEEDS? ===
+  arm ON (3 seed(s) complete: 12345, 777, 31337)
+    searound         flagged in 3 of 3 seed(s)   <<< ALL THREE — a real regression by the rule
+    ice-track        flagged in 2 of 3 seed(s)
+    luger-hill       flagged in 2 of 3 seed(s)
+  arm OFF (3 seed(s) complete: 12345, 777, 31337)
+    searound         flagged in 1 of 3 seed(s)   (one seed only — a DRAW, not a verdict)
+    luger-hill       flagged in 1 of 3 seed(s)   (one seed only — a DRAW, not a verdict)
+    seatrack         flagged in 1 of 3 seed(s)   (one seed only — a DRAW, not a verdict)
+
+=== POOLED ACROSS THE SEEDS AVAILABLE (win counts summed per row) ===
+
+  ARM ON — pooled
+  track            seeds  races     chi2      raw p     Holm p   verdict
+  searound            3    900   48.373   3.063e-8   3.063e-7  UNFAIR
+  luger-hill          3    900   32.300   3.325e-6   2.993e-5  UNFAIR
+  river-run           3    900    7.111   7.562e-3   6.050e-2  fair
+  ice-track           3    900    9.280   2.550e-2   1.785e-1  fair
+  city-circuit        3    900    7.440   5.806e-2   3.483e-1  fair
+  space-sprint        3    900    4.759   9.039e-2   4.519e-1  fair
+  dirt-oval           3    900    6.080   1.061e-1   4.519e-1  fair
+  garden-path         3    900    4.059   1.289e-1   4.519e-1  fair
+  seatrack            3    900    2.600   2.718e-1   5.435e-1  fair
+  mountainstreet      3    900    0.000   9.505e-1   9.505e-1  fair
+  Holm-flagged pooled: searound, luger-hill
+
+  ARM OFF — pooled
+  track            seeds  races     chi2      raw p     Holm p   verdict
+  luger-hill          3    900   36.789   5.255e-7   5.255e-6  UNFAIR
+  searound            3    900   33.307   1.355e-5   1.219e-4  UNFAIR
+  ice-track           3    900   14.880   2.092e-3   1.673e-2  UNFAIR
+  river-run           3    900    9.000   2.867e-3   2.007e-2  UNFAIR
+  space-sprint        3    900    8.035   1.776e-2   1.065e-1  fair
+  garden-path         3    900    6.084   4.647e-2   2.324e-1  fair
+  seatrack            3    900    4.479   1.041e-1   4.165e-1  fair
+  dirt-oval           3    900    3.280   3.508e-1   1.000e+0  fair
+  city-circuit        3    900    1.760   6.279e-1   1.000e+0  fair
+  mountainstreet      3    900    0.018   8.635e-1   1.000e+0  fair
+  Holm-flagged pooled: luger-hill, searound, ice-track, river-run

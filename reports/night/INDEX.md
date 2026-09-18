@@ -8,6 +8,102 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
+  regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
+  1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;
+  control a probe copy at the same commit differing in one key. ★★★ **The control arm flagged 0, 0
+  and 3 rows on the three draws** — so last night's *"control is clean"* was one draw, and at seed
+  31337 the brake-OFF tree flags MORE tracks than the shipped one. ★★ **Pooled over 900 races per
+  track the control is Holm-unfair on 4 tracks against the shipped arm's 2**; `ice-track`, half of
+  last night's headline, **reverses** — pooled it flags on the control and is fair shipped.
+  ★ **`searound` is flagged on the shipped arm in all three seeds**, which by the rule's letter is the
+  first line — **but it fails on the control too, so it is not brake-caused.** ★★ **The rows settle
+  it**: on every flagged track the two arms' per-row win shares agree to within about a point —
+  luger-hill pooled runs 16.3/17.1/18.0/22.1/**26.4**% shipped against 14.9/18.1/18.0/22.6/**26.4**%
+  on the control, expected 20.0. The brake changes who wins in a fifth of races and not which start
+  row they come from; it reached every seed (~50% of races differ, ~19% winner changes). ★ **What IS
+  wrong is `searound` and `luger-hill` on both arms** — the standing bias on record since
+  2026-07-31. **Nothing reverted; the brake stands.** ★ luger-hill's control-arm front row at
+  **14.9%** against 20.0% expected is a sixth measurement against the D25 sign sentence.
+- [BLIND-SABOTAGE-1.md](BLIND-SABOTAGE-1.md) — **★★ the six blind instruments are in THREE states,
+  not two, and only one of the three "fixed" ones can be proven by sabotage** (2026-09-18,
+  `night/2026-09-18` piece 6; **the real tree was never instrumented** — every sabotage ran in a
+  detached probe worktree). Confirmed at the tree first by `grep -c 'makeCameraPlanDelivery'`: three
+  at **2** calls, three at **0** with one header comment each naming the helper and the reason.
+  ★ **`exp-anchor-truth-ab` CAUGHT the sabotage** — `e1e833b69d656084` → `76aae5fde8a0fb3e` when the
+  delivery is replaced by the pre-fix no-op. ★ **`check-ending-frame` and `finish-band-truth` did
+  NOT** — identical output both ways (17 fillRects and PASS; 33 lines byte-identical).
+  ★★★ **Those nulls are findings because the mutation was proven REACHABLE**: re-armed to throw, both
+  die on the line (`check-ending-frame.mjs:296`, `finish-band-truth.mjs:324`), and the one instrument
+  that moved is the positive control that licenses the other two. ★★ **Correction of emphasis**: the
+  record's *"fixed, byte-identical"* reads as reassurance; sharper, **the fix buys nothing measurable
+  there — they were never blind to anything THEY measure**, and a green from either is neither more
+  nor less trustworthy than before. The fix should stay anyway. ★ Its baseline moved since the record
+  (`ae72523ffb80e39c` → `e1e833b69d656084`) — **that is the brake shipping, not a regression**, shown
+  side by side. ★ The three structural ones were **not** fixed and each would be a rebuild, with what
+  it would take named per instrument.
+- [VERIFY-POINTS-1.md](VERIFY-POINTS-1.md) — **two of the four are already done and on master; one I
+  could not identify and one I could not confirm** (2026-09-18, `night/2026-09-18` piece 5; **nothing
+  built**). ★ **Point 1, the client build inside the check run: DONE on master** as `cae917c8` —
+  before it, **nothing built the client** (zero matches for `vite build`/`npm run build` in `verify`
+  or `ci.yml`), and the bundle audit now runs as **step 2 of the same guard** so it cannot race the
+  artefact it judges. **It removed no coverage; it added some.** ★ **Point 2, the unit-suite
+  environment: DONE on master** as `dd963859` — **232 s → 172 s**, **70 of 261** test files carrying
+  `// @vitest-environment node` at the tree tonight, the jsdom default unchanged so a new file is safe
+  by construction. ★★ **The brief's figures for point 2 describe the PROPOSAL, not the change**
+  (*"137 files, 176 → 86 s"* against 69 files and 232 → 172 s) — the candidate set was cut by a
+  two-pass membership test whose second pass required the identical passing AND skipped counts in both
+  environments. ★ **Point 3, the nine warm-up races: NOT IDENTIFIED** — searches listed; the only
+  warm-up in the tree is `phys-bench.mjs:70`, **300 physics steps, not nine races**. ★ **Point 4, the
+  production arm: NOT CONFIRMED** — two plausible readings naming different work, and picking one
+  would change what a gate covers.
+- [COMEBACK-RERACE-1.md](COMEBACK-RERACE-1.md) — **★★ the comebacker branch re-raced on BRAKED
+  master: it still costs breakaways, and the brake does not absorb it** (2026-09-18,
+  `night/2026-09-18` piece 2; **nothing merged, tagged or deleted** — master was merged into a probe
+  copy and never pushed). Ten tracks, seeds 1–30, **300 races per arm**, shipped defaults, brake ON,
+  ★ **no instrumentation in either tree**: the cast split is read from `getHeroRoles()` /
+  `getHeldRelease()` / `getTargetRank()`, so the branch's own "instrumented build" was not needed.
+  ★ **The control reproduces the ship's mint to the digit** (8 of 300 over 124 px, worst lead 187.5 px).
+  ★ **The two KEPT cast sites do not move** (0.61→0.61, 0.70→0.72) and **only the removed column goes
+  to zero** (0.41→0.00); comebackers/race **1.72→1.32**, races with none **13→30 of 300**.
+  ★★ **THE COST: >124 px late gaps 8→15 (nearly double), worst lead 187.5→197.6 px, p90
+  127.7→133.0 px, median almost still (86.5→88.3)** — the brake's own signature running backwards.
+  Contested finishes unchanged (125→124); **176 of 300 byte-identical, 81 winner changes (27%)**.
+  ★★ **The brake is NOT absorbing it** — it fires **6% MORE** on the branch arm (160,864→170,881) and
+  the tail still grows. ★ But it IS working: the branch's own fixture showed the worst lead growing
+  **107 px**, here it grows **10.1**. **The reason it was not landed still holds.**
+- [D25-SIGN-1.md](D25-SIGN-1.md) — **★★ the luger-hill sentence has the sign backwards, and
+  correcting it does not overturn the decision but does remove the reason it was comfortable**
+  (2026-09-18, `night/2026-09-18` piece 4; **nothing changed in `BACKLOG.md` or `FAIRNESS.md`** — the
+  correction is a proposal in the report). `BACKLOG.md:2421` and `FAIRNESS.md:156` say luger-hill's
+  **FRONT** rows are favoured and tell a dissenting reader to check themselves against that sentence.
+  ★ **Four sources say the rear is**: `ROW-BONUS-TIMING-1.md:117` (first row **58.211 s**, last
+  **57.924 s** — and row 0 is the row that gets no bonus, so the rear finishes sooner =
+  OVER-compensation), `ROW-ADVANTAGE-1.md:24` (*"THE ADVANTAGE RUNS BACKWARDS"*), `LUGER-BIAS-1.md:34`
+  (front 13.0%, back 25.0%), `PINNED-GATE-1.md:230` (17.7 → 22.7% across rows). ★★ **The new part is
+  what it does to the decision**: the verdict ACCEPTABLE is a judgement about SIZE and **no magnitude
+  moves (0.49% of a 58 s race), so D25 stands** — but *"flat on nine, one harmless exception"* becomes
+  **"all ten lean the same way"** (the same table's *"all ten differences are positive"*), it stops
+  disagreeing with the other report D25 cites, and ★ **the selection-effect question D25 parked gets
+  HARDER**: on luger-hill both UNCONDITIONED measures now agree with the conditioned tilt, and a
+  selection effect does not do that. **Re-affirm on the magnitude, not on the sign.** The proposed fix
+  is two appended dated lines, never an edit.
+- [DOC-DIFF-1.md](DOC-DIFF-1.md) — **what the 17.9. documentation pass changed, and why none of it
+  was on master** (2026-09-18, `night/2026-09-18` piece 3; built from the actual diff, not from the
+  report that summarised it). ★★ **Both commits (`fc4d4143`, `e29b428d`) are contained in
+  `origin/night/2026-09-17` and nowhere else**, so every named item was **still wrong on master
+  tonight**; they were cherry-picked onto this branch rather than retyped. **The six statements with
+  their evidence**: `FORCE-MAP.md:459` `OUTCOME 0.55–0.95` (**`corridorEnd` is 1.0**,
+  `racePlanner.js:87`); `:465` `PULK [0.15,0.5)` (**upper bound is `choreoOutcomeStart` = 0.6**,
+  `defaults.js:1070`); `racePlanner.js:1594` "SIM-ONLY" (**contradicted by its own sibling at
+  `:389-390`**); `raceCore.js:372` and `:598` "default OFF" (**`pulkLeadRotationOn = racePlanEnabled`
+  at `:376`**, `defaults.js:1017` says SHIPPED ON); `check-runin-frame.mjs:161` "until
+  `feat/finish-framed` lands" (**not at origin — tag only**). ★ **A SEVENTH change was CODE and the
+  summary did not say so**: `raceCore.js:700`'s diagnostic `vt` omitted `governorMult` while
+  `raceStep.js:131` multiplies by it — **proven inert tonight, all four fingerprints matching the
+  record with nothing written.** ★ Two completeness gaps closed (FORCE-MAP row **A14**; five
+  DevScreen controls). ★ **Corrects the brief**: its line numbers are stale, and FORCE-MAP's "four
+  stale windows" is **two** plus one missing row.
 - [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
   brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
   nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It
