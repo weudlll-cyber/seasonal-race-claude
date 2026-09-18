@@ -66,6 +66,35 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 
 ---
 
+### ★ THE SWEEP, AND THE STATE YOU COME BACK TO
+
+| | |
+|---|---|
+| branch | **`night/2026-09-18`**, pushed after every piece |
+| merged / tagged / minted | ★ **nothing**; no shipped default changed; V1 off in every arm |
+| working tree | clean |
+| your race store | ★ **untouched** — `races.sqlite` still stamped **Sep 17 17:19**, before the chain began |
+| instrumentation in the real tree | ★ **none, at any point** — all three probes were worktrees |
+| `verify` | **24 PASS / 1 FAIL**, and the one failure re-run alone **PASSES** (4,713 tests, 0 failures) |
+| fingerprints | ★ **all four match the record**; `--mint` wrote nothing |
+| probes removed | `C:/tmp/gboff`, `C:/tmp/cbprobe`, `C:/tmp/sabcam` — **junction-checked first**, all three clean |
+| `node_modules` after removal | ★ **intact** — client **328** with **81** `.bin` shims, server **186**, root unchanged |
+| temp run dirs | **removed** — `gate2` (198 MB) and `cb` (356 KB), junction-checked first |
+| services | ★ **all three up** — **4000** API, **5173** dev, **4173** production preview |
+
+★ **The leftover you told me to leave:** `git worktree remove` deletes the directory but fails on the
+registration under `.git/worktrees/` with **Permission denied** on this OneDrive tree. There are now
+**fifteen** stale registrations, three of them tonight's (`gboff`, `cbprobe`, `sabcam`).
+**`git worktree list` correctly shows only the real tree**, so it is cosmetic — left rather than
+fought, as instructed.
+
+★ **The evidence survived the sweep.** The 198 MB of raw races is gone, but what the reports cite is
+committed: `reports/night/gate-three-seeds-data/` (seeds 777 and 31337, per-row) and
+`reports/night/comeback-rerace-data/` (600 races, per race). ★ **Seed 12345 came back from last
+night's saved summary rather than being re-raced** — which is the whole reason it was kept.
+
+---
+
 ### ★★ PIECE 6 — ONLY ONE OF THE THREE "FIXED" INSTRUMENTS GOES RED WHEN YOU BREAK IT
 
 → [BLIND-SABOTAGE-1](../reports/night/BLIND-SABOTAGE-1.md) · **The real tree was never instrumented** —
@@ -119,8 +148,10 @@ processes** on a 14-core machine — this is the starvation class the suite's ow
 exists to prevent, one level up: **the MACHINE was oversubscribed, not just the suite.**
 `replay.test.js` is one of the two heaviest files in the suite, so it is the expected casualty.
 
-★ **It is classified, not excused: `client-suite` has NOT passed on this branch yet.** It will be
-re-run alone once the gate finishes, and the result recorded here.
+★★ **RE-RUN ALONE AFTER THE GATE FINISHED, AND IT PASSES: `261` test files, `4713` tests, **0
+failures**, 230.1 s.** The retry ledger confirms `retry: 0`, so nothing was hidden by a second
+attempt. **The classification holds — it was my scheduling, not the branch.** With that,
+**every guard on this branch is green.**
 
 ---
 
