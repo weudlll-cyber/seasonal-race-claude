@@ -1053,7 +1053,38 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ fe12fa95 2026-09-18 depends=client/src/modules/camera/ -->
+
+★★ **RE-MEASURED 2026-09-18 (PURSUER-RENAME-1), AND THE NUMBERS MOVED — TWICE OVER.** `node
+scripts/tracking-lag.mjs`, the command this stamp names, run on the rename branch AND on master as a
+control:
+
+| state | stamped 2026-09-10 | **master today** | **this branch** |
+|---|---|---|---|
+| BATTLE_ZOOM | 8415 | **7399** | **8561** |
+| COMEBACK_ZOOM | 1509 | **2249** | 2249 |
+| LEADER_ZOOM | 13133 | 13210 | **13036** |
+| LEAD_CHANGE | 7573 | 8335 | **7510** |
+| OVERVIEW | 4005 | 3238 | **3127** |
+| PHOTO_FINISH | 2089 | 1973 | 1973 |
+
+★ **The stamp was ALREADY STALE on master before this branch existed** — five of the six frame counts
+differ from the 2026-09-10 figures with nothing of mine in them. The guard did not catch it because it
+checks FRESHNESS of the dependency, not accuracy of the digits, and no commit had touched
+`client/src/modules/camera/` since. **That is a finding about the stamp, not about this branch.**
+
+★ **And this branch moves it again**, which is why this is a re-measurement rather than a deliberate
+re-stamp: BATTLE_ZOOM 7399 → 8561, LEAD_CHANGE 8335 → 7510, LEADER_ZOOM 13210 → 13036, OVERVIEW
+3238 → 3127. **COMEBACK_ZOOM itself is unchanged at 2249** on this one pinned race (`raceSeed=5601`,
+`camSeed=1439767152`), so what moved is the rest of the state sequence downstream of a changed draw,
+not the comeback shot on this fixture. The medians and p95s move by hundredths and are listed in the
+run output rather than restated here.
+
+★ **My own edit under `client/src/modules/camera/` is comments only** (`comebackDetector.js`;
+`engine-reach --check` classifies it *"in the hull but INERT — same tokens, comments only"*). The
+behaviour that moves these counts arrives from `heroCurveGenerator.js`, outside this stamp's
+`depends=` path — so the guard fired for the right reason by the wrong route, and the honest answer
+was to re-run rather than to re-stamp as inert.
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** — all six frame counts (8415, 1509, 13133, 7573, 4005, 2089) and both percentiles on every state. It was RUN rather than argued, and then run a SECOND time on HEAD's own camera files with the change lifted out, so the two runs could be compared directly instead of against a table written on an older tree: **the two agree exactly**. The structural reason is worth recording because it also explains why the CAMERA fingerprint did not move — `scripts/lib/raceDriver.mjs:373` calls `updateRacePlan(b1Indices)` with NO cameraPlan and never calls `setCameraPlan`, so `_cast` stays null for the whole run, `isCast()` is false for every racer, and the precedence can never fire on this harness. It is blind to the change by construction, not inertly passing it.
 

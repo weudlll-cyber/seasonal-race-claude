@@ -47,6 +47,7 @@ Each is SIM-ONLY and read-only. "Flag" is the `sim-fairness.mjs` switch that tur
   observations (`heroObs`): did a hero resolve into its assigned final band (`reachedTargetBand`),
   `climbFrac` (share of frames still climbing), `reachedTargetProg`, peak depth. Also the ONE source of
   `heroRole` / `ROLE_MARGIN_RANKS` (a comebacker = cast behind its target by > margin). Flag: `--hero-map`.
+  ★ GEOMETRIC sense, not the cast role string: unaffected by the `pursuer` split of 2026-09-18.
 
 - **`comeback-reality.mjs`** — post-race, also over `--hero-map` `heroObs`: does a hero CAST as a
   comebacker actually climb close to its authored `finalRank`, and is that designation a reliable

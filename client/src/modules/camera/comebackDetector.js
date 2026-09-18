@@ -81,6 +81,19 @@ export class ComebackDetector {
     // byte-identical. `resolve` is where the authored climb LANDS, it sits just past the window
     // (0.78 in the sampled plans), and it is the beat COMEBACK-BEATS-1's own distance metric is
     // measured against. Keeping `anchor` and `peak` too would be storing values nothing reads.
+    // ★★ THE MATCH IS EXACT, AND THAT IS WHAT EXCLUDES THE `pursuer` — 2026-09-18.
+    //
+    // The generator casts three kinds of racer from the B1 pool: the drawn winner
+    // (`heroCurveGenerator.js:616`), the STAGED comebacker (`:657`) and the unstaged front-group
+    // pursuer (`:688`). The first two are `'comebacker'`; the third is `'pursuer'` and must NOT reach
+    // `_cast`, because the camera forcing a comeback shot on a racer who is merely chasing is the
+    // defect the rename exists to remove (COMEBACKER-READERS-1 measured him taking 19 of 157
+    // COMEBACK_ZOOM shots, 12%).
+    //
+    // ★ NO `!== 'pursuer'` GUARD IS ADDED HERE ON PURPOSE. An equality test already admits exactly one
+    // string, so a second check would be dead on the day it was written and would rot into a list
+    // every future role had to be added to. `comebackDetector.pursuer.test.js` goes red if this ever
+    // starts admitting the pursuer again.
     const resolves = new Map();
     for (const h of heroes) {
       if (h && h.role === 'comebacker' && Number.isInteger(h.index)) {

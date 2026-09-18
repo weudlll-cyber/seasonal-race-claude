@@ -1185,6 +1185,8 @@ zero per-frame work, so a run without the flag is byte-identical). A run writes 
 dir `results/comeback-reality-sweep-<date>/` (`report.md` + `detail.json` + one `comeback-<track>.json`
 per track; per-track files accumulate across per-track invocations and re-aggregate each run).
 
+★ **"comebacker" HERE IS THE GEOMETRIC SENSE, not the cast role string** — `heroRole` derives it from anchor-vs-target rank and never reads the role, so the `pursuer` split of 2026-09-18 does not change any number below. See `docs/GLOSSARY.md`.
+
 **Purpose.** Empirical check behind camera-foresight **B4**: does a hero cast as a **comebacker** actually
 climb close to its authored `finalRank`, and is the designation a reliable pointer to real climbing? A
 comebacker is a hero whose anchor rank is behind its target by more than `ROLE_MARGIN_RANKS` (reused from

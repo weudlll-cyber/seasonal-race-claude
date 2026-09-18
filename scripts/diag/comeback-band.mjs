@@ -19,8 +19,13 @@
 //
 // ★ ADDED BY DIRECTION-AUTHORITY-1 (2026-09-12): whether each comebacker is the HELD one, and the
 // PACE he runs while held. `held` is read from the PLAN (`getHeldRelease`), never guessed from the
-// race — the role label is 'comebacker' for both the held comebacker and the fall-back one, and the
-// previous attempt to separate them by watching the race flagged 339 of 355.
+// race — the previous attempt to separate them by watching the race flagged 339 of 355.
+//
+// ★ CORRECTED 2026-09-18. This said "the role label is 'comebacker' for both the held comebacker and
+// the fall-back one". That stopped being true when the unstaged one was renamed `pursuer`
+// (`heroCurveGenerator.js:688`). The filter below now takes BOTH roles ON PURPOSE: this block exists
+// to COMPARE held against unstaged, so narrowing it to `comebacker` would silently delete one of its
+// two arms. `held` remains the thing that separates them, exactly as before.
 //
 // ★ TWO PACE NUMBERS, AND THEY ANSWER DIFFERENT QUESTIONS. `holdMeanMult` is the mean
 // `trajectoryMult` the SERVO actually commanded over the hold — the same quantity PACE-DEFICIT-1
@@ -159,7 +164,11 @@ for (const geo of tracks) {
         return true;
       });
 
-      const comebackers = (heroes ?? []).filter((h) => h.role === "comebacker");
+      // BOTH roles: the staged `comebacker` and the unstaged `pursuer` are the two arms this block
+      // compares. See the header — narrowing to one would delete an arm rather than clean up.
+      const comebackers = (heroes ?? []).filter(
+        (h) => h.role === "comebacker" || h.role === "pursuer",
+      );
       rows.push({
         track: geo.id,
         N,

@@ -84,11 +84,24 @@ first arrives.
 **hero / choreographed hero** — a racer given an AUTHORED curve rather than being left to the servo,
 so that something dramatic happens on purpose. Cast at the CHAOS→PULK boundary. Roles:
 
-- **comebacker** — starts deep, climbs.
+- **comebacker** — starts deep, climbs. ★ Since 2026-09-18 this means the **STAGED** one only: held at
+  a staging rank and released to climb back. He is the one the camera may force a shot on.
+- **pursuer** — the **unstaged** front-group chaser. Same steering as a comebacker and the same
+  authored final rank (capped at the top of B1), but **never held and with nothing to come back
+  from**: measured over 300 races he leads in 66% of them, holds the race's peak gap in only 10%, and
+  finishes top-5 in 89%, a median of one place behind the racer holding the gap. ★ **The camera does
+  NOT force a comeback shot on him** — that is the difference the two names carry.
 - **sovereign** — leads.
 - **faller** — starts high, drops.
 - **attacker-B2** — climbs to near the front mid-race, then falls back and re-sorts inside B2. This is
   the "Attack & Fall" mechanic.
+
+★ **TWO SENSES OF "comebacker", AND THIS FILE EXISTS FOR EXACTLY THIS.** The four names above are the
+**cast role strings** the plan writes. The **sim observers** use the word for something else — a
+racer whose anchor rank is behind his target by more than `ROLE_MARGIN_RANKS`, *derived from the
+curve's geometry and never from the role string* (`scripts/sim/observers/hero-adherence.mjs`). A
+`pursuer` still counts as a "comebacker" in that second sense. **When a number is quoted, ask which
+sense it is in.**
 
 **release / band-arrival release** — the moment the servo lets go of a hero and lets it re-sort
 freely. "Band-arrival" release = the servo frees it as soon as it re-enters its band on the way down.
