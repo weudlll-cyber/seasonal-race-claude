@@ -16,7 +16,7 @@ down while this branch is checked out** and is put back on the rename branch at 
 |---|---|---|
 | **1 · where a breakaway's growth comes from** | ★ **DONE — on `feat/pursuer-rename`** | the racer BEHIND is held back; the leader's own acceleration is **−0.9%** of the growth |
 | **2 · the two instruments that do not discriminate** | ★★ **DONE — both now discriminate, proven by PRODUCT-side sabotage** | → [BLIND-WINDOW-1](../reports/night/BLIND-WINDOW-1.md) — and **the previous diagnosis was wrong**: it was never the cast |
-| **3 · the measured-stamp guard** | **open** | |
+| **3 · the measured-stamp guard** | ★★★ **DONE — 2 of the 3 stamps were stale IN THEIR DIGITS; the guard now sees it** | → [STAMP-CLOSURE-1](../reports/night/STAMP-CLOSURE-1.md) — **nothing re-stamped**; `check-measured-stamps` is RED on this branch on two true findings |
 | **4 · the production arm in the browser checks** | **open** | |
 | **5 · extract the race-parameter derivation** | **open** | |
 | **6 · what is missing for a real installation** | **open** | |

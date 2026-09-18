@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [STAMP-CLOSURE-1.md](STAMP-CLOSURE-1.md) — **★★★ two of the three measured-stamp stamps were stale
+  in their DIGITS and the guard reported zero** (2026-09-19, `night/2026-09-19` piece 3; **nothing
+  re-stamped, nothing minted**). All three measurements re-run: `tracking-lag` **six of six frame
+  counts moved** (8415/1509/13133/7573/4005/2089 → 7399/2249/13210/8335/3238/1973), `straggler-truth`
+  **eight of eight numbers moved**, `ENGINE_INPUT_MODULES` **holds at eleven**. ★★ **THE CAUSE: both
+  stale stamps declare `depends=client/src/modules/camera/…` while their measurements drive a WHOLE
+  RACE** — and what moved them is the gap leader brake in `defaults.js`, which neither names. The rule
+  was right and the hand-written set was too small. ★ **A `via=` field now names what produced the
+  stamp and the same question is asked over its REAL IMPORT CLOSURE** (`closureOf`, reused not
+  written): **3 of 3 verdicts match the re-measurement, for +0.7 s** against ~7 minutes to re-measure
+  one stamp. Proven both ways on a controlled fixture. ★ Also: a commit that re-stamps AND changes the
+  dependency **invalidates itself and `--staged` cannot see it**; and the guard's own test file could
+  only run while the guard PASSED — both named and the second fixed.
+
 - [BLIND-WINDOW-1.md](BLIND-WINDOW-1.md) — **★★ the two indifferent instruments, and it was never the
   cast** (2026-09-19, `night/2026-09-19` piece 2; **nothing minted, no shipped default touched**).
   ★★★ **BLIND-SABOTAGE-1's diagnosis was wrong**: the plan IS delivered, the roles ARE cast, and
