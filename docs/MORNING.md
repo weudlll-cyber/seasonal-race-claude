@@ -1,5 +1,27 @@
 # MORNING SHEET — 2026-09-19
 
+## ★ YOU ARE ON `feat/pursuer-rename`. THIS IS COMMIT 2, AND IT IS A REPORT.
+
+**Nothing merged, nothing minted, no shipped default touched, no source changed.** The rename itself
+is commit 1 (`d7ff2db9`) and is unchanged; this branch still waits on your word about the name and
+the camera treatment.
+
+| | |
+|---|---|
+| commit 2 | **a measurement report and its data** — [BREAKAWAY-GROWTH-1](../reports/night/BREAKAWAY-GROWTH-1.md) |
+| what it answers | where a breakaway's growth comes from: the leader accelerating, the field falling back, or a gap that was never closed |
+| ★★★ the answer | **the racer BEHIND is held back.** Pooled, the leader's own acceleration is **−0.9%** of the growth; the one behind slowing is **59.5%**; a difference already present is **41.4%** |
+| fixture | ten tracks, seeds 1–30, **300 races**, 40 racers, the Quick-Test roster, `wild`, brake ON at the shipped values |
+| services | **4000** API, **5173** dev, **4173** production preview — all three on THIS branch, for your eye. See the report's handover section for the build badge and the bundle name |
+
+★ **The rest of tonight is on a different branch.** Everything from piece 2 of the chain onward is on
+**`night/2026-09-19`**, cut from master, and its own morning sheet is there. Keeping the tooling off
+this branch is deliberate: **this branch has to be decidable on its own.**
+
+---
+
+# MORNING SHEET — 2026-09-18 (the night before; kept for the record)
+
 ## ★ IT IS ON MASTER
 
 `night/2026-09-18` is merged, archived and swept. **Nothing was minted** — nothing moved.

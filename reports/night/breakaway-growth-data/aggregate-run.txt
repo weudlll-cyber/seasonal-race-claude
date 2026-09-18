@@ -1,0 +1,136 @@
+races: 300
+stop reason: fewer-than-two-running=295, all-finished=5
+reconstruction mismatches: 13377 of 52024526 racer-steps
+breakaways (in-window max > 56 px): 242 of 300 (80.7%)
+peak disagrees with the brake's own counter: 0
+
+== PER TRACK ==
+track | races | breakaways | max gap px | max gap widths | median peak px
+city-circuit | 30 | 27 | 162.4 | 0.722 | 98.2
+dirt-oval | 30 | 28 | 153.9 | 0.684 | 101.0
+garden-path | 30 | 23 | 150.8 | 0.670 | 99.3
+ice-track | 30 | 25 | 142.7 | 0.634 | 90.3
+luger-hill | 30 | 27 | 187.5 | 0.834 | 94.3
+mountainstreet | 30 | 19 | 120.3 | 0.535 | 76.6
+river-run | 30 | 17 | 117.3 | 0.521 | 80.8
+searound | 30 | 26 | 146.6 | 0.651 | 102.5
+seatrack | 30 | 23 | 169.5 | 0.753 | 95.1
+space-sprint | 30 | 27 | 151.1 | 0.672 | 101.1
+
+== CATEGORY DISTRIBUTION ==
+never-closed | 88 | 36.4%
+field-decelerates | 78 | 32.2%
+unattributed | 38 | 15.7%
+leader-accelerates | 30 | 12.4%
+no-baseline | 8 | 3.3%
+
+attributable races (baseline + growth found): 234 of 242
+
+== THE THREE TERMS, POOLED ==
+total growth across growing frames: 9474.4 px
+leader speeds up | -83.9 px | -0.9%
+the one behind slows | 5635.8 px | 59.5%
+never closed | 3922.6 px | 41.4%
+
+== THE THREE TERMS, PER-RACE SHARE (median) ==
+leader   -0.249
+second   0.739
+pre      0.522
+
+== RELATIVE TO THE FIELD ==
+leader  rel-to-field  base 1.1041 -> growth 1.0823  (median delta -0.0243)
+second  rel-to-field  base 1.0500 -> growth 1.0242  (median delta -0.0225)
+field   px/step       base 2.4739 -> growth 2.4578
+leader  px/step       base 2.6986 -> growth 2.6411
+second  px/step       base 2.5667 -> growth 2.5039
+leader faster than his own baseline: 84 of 234
+second slower than his own baseline: 145 of 234
+field  slower than its own baseline: 132 of 234
+
+== WHICH MULTIPLIER DIFFERS (leader vs the racer behind, mean log-ratio over growing frames) ==
+total log(vL/vS) mean = 0.05769  (= 5.94% faster)
+baseSpeed       mean 0.03838  share   66.5%  median 0.02581  nonzero in 231/234 races
+boost           mean -0.01004  share  -17.4%  median -0.00211  nonzero in 146/234 races
+brake           mean 0.00727  share   12.6%  median 0.00000  nonzero in 102/234 races
+rowEnvMult      mean 0.00001  share    0.0%  median 0.00000  nonzero in 9/234 races
+trajectoryMult  mean 0.02208  share   38.3%  median 0.02531  nonzero in 231/234 races
+areaBonusMult   mean 0.00000  share    0.0%  median 0.00000  nonzero in 0/234 races
+governorMult    mean 0.00000  share    0.0%  median 0.00000  nonzero in 0/234 races
+
+== WHAT THE LEADER CHANGED ABOUT HIMSELF (growth vs his own baseline, mean log delta) ==
+baseSpeed       mean 0.01130  median 0.00000
+boost           mean -0.00636  median 0.00000
+brake           mean 0.02992  median 0.02206
+rowEnvMult      mean 0.00186  median 0.00000
+trajectoryMult  mean -0.06142  median -0.05396
+areaBonusMult   mean 0.00000  median 0.00000
+governorMult    mean 0.00777  median 0.00000
+
+== THE PLAN'S STEERING ==
+leader's DRAWN rank: 1 in 101 of 234; <=5 in 226; median 2
+second's DRAWN rank: 1 in 45 of 234; median 4
+leader's ROLE: sovereign-lead=36, (none)=109, comebacker=75, attacker-b2=6, pursuer=8
+second's ROLE: (none)=133, attacker-b2=18, faller=1, pursuer=24, comebacker=46, sovereign-lead=12
+
+== THE BRAKE AT THE GROWING FRAMES ==
+races where the brake was ENGAGED on every growing frame: 100 of 234
+races where it was engaged on NONE:                      1
+share of growing frames with the brake engaged: median 0.996, mean 0.896
+share of growing frames where the brake's command was the one OBEYED on the leader: median 0.173, mean 0.229
+mean brake strength on growing frames: 0.0279 (ceiling 0.13)
+leader's governorMult: baseline 1.0000 -> growing frames 1.0000
+brake fired in 240 of 242 breakaway races; min mult commanded (median) 0.9195
+
+== WINDOW / EPISODE GEOMETRY ==
+episode start progress: median 0.710
+peak progress:          median 0.784
+growing frames per race: median 195
+baseline frames per race: median 341
+leader already led at episode start: 181 of 234
+share of growing frames on which he was actually leading: median 1.000, mean 0.921
+second was already second:           105 of 234
+
+== CATEGORY x TRACK ==
+track | never-closed | field-decelerates | leader-accelerates | no-baseline | unattributed
+city-circuit | 11 | 5 | 8 | 1 | 2
+dirt-oval | 9 | 9 | 3 | 1 | 6
+garden-path | 9 | 9 | 2 | 1 | 2
+ice-track | 12 | 5 | 3 | 0 | 5
+luger-hill | 9 | 11 | 3 | 1 | 3
+mountainstreet | 6 | 5 | 1 | 0 | 7
+river-run | 9 | 7 | 0 | 0 | 1
+searound | 5 | 12 | 3 | 2 | 4
+seatrack | 11 | 6 | 1 | 2 | 3
+space-sprint | 7 | 9 | 6 | 0 | 5
+
+== CATEGORY x MULTIPLIER SPLIT ==
+never-closed (n=88) total=0.0667 | baseSpeed=0.0465 boost=-0.0119 brake=0.0047 rowEnvMult=0.0000 trajectoryMult=0.0275 areaBonusMult=0.0000 governorMult=0.0000
+field-decelerates (n=78) total=0.0835 | baseSpeed=0.0351 boost=-0.0112 brake=0.0009 rowEnvMult=0.0000 trajectoryMult=0.0587 areaBonusMult=0.0000 governorMult=0.0000
+leader-accelerates (n=30) total=0.0895 | baseSpeed=0.0508 boost=-0.0062 brake=0.0110 rowEnvMult=0.0000 trajectoryMult=0.0338 areaBonusMult=0.0000 governorMult=0.0000
+unattributed (n=38) total=-0.0414 | baseSpeed=0.0166 boost=-0.0065 brake=0.0235 rowEnvMult=0.0000 trajectoryMult=-0.0750 areaBonusMult=0.0000 governorMult=0.0000
+
+== WHAT THE ONE BEHIND CHANGED ABOUT HIMSELF (growth vs his own baseline, mean log delta) ==
+baseSpeed       mean -0.01491  median -0.00000
+boost           mean 0.00212  median 0.00000
+brake           mean 0.02329  median 0.01323
+rowEnvMult      mean 0.00245  median 0.00000
+trajectoryMult  mean -0.04312  median -0.03348
+areaBonusMult   mean 0.00000  median 0.00000
+governorMult    mean 0.00419  median 0.00000
+
+== THE EIGHTH TERM: THE NON-PENETRATION PUSH ==
+push share of the growth: median 0.00000, mean -0.00000, nonzero in 0/234 races
+largest |push share| in any race: 0.00000
+total push px across growing frames: 0.0 of 9474.4 px of growth
+  garden-path seed=8 pushShare=-0.00000 push=-0.000px growth=0.3px
+  mountainstreet seed=15 pushShare=-0.00000 push=0.000px growth=-0.2px
+  dirt-oval seed=30 pushShare=0.00000 push=-0.000px growth=-1.8px
+  city-circuit seed=23 pushShare=-0.00000 push=-0.000px growth=0.8px
+  dirt-oval seed=20 pushShare=0.00000 push=-0.000px growth=-0.8px
+
+== SHARE OF GROWING FRAMES ON WHICH HE WAS ACTUALLY LEADING ==
+median 1.000, mean 0.921
+
+== MISMATCHES BY TRACK (the push, as the reconstruction sees it) ==
+luger-hill | 8 of 4500265 racer-steps (0.0002%)
+searound | 13369 of 4957906 racer-steps (0.2697%)

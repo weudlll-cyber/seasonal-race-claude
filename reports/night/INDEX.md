@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BREAKAWAY-GROWTH-1.md](BREAKAWAY-GROWTH-1.md) — **★★★ where a breakaway's growth comes from: the
+  racer BEHIND is held back, the leader does not run away** (2026-09-19, `feat/pursuer-rename` commit
+  2; **read-only, nothing minted**). Ten tracks, seeds 1–30, **300 races**, 40 racers, the Quick-Test
+  roster, `wild`, brake ON at shipped values. **242 races open a lead above the brake's allowance.**
+  ★★★ **Pooled over the growing frames the leader's own acceleration is −0.9% of the growth; the
+  racer behind slowing is 59.5% and a difference already present is 41.4%** — the leader is faster
+  than his own pre-gap baseline in only **84 of 234** races. Distribution: never-closed **88**, field
+  decelerates **78**, leader accelerates **30**, unattributed **38**, no baseline **8**.
+  ★★ **The seven-factor split is exact and `governorMult` and `areaBonusMult` are identically inert
+  in this window**: `baseSpeed` **66.5%**, `trajectoryMult` (the plan's own channel, and the brake's)
+  **38.3%**, drafting **−17.4%**. ★ **The brake is engaged on ~90% of the growing frames and is the
+  binding command on 23%** — the servo is already asking for less. ★ An **eighth, additive term** —
+  the hard-separation push at `raceBehavior.js:1414` — is named, measured and contributes **exactly
+  zero** here (two independent probes agree to the unit). ★ **Part two is the branch handover**:
+  both arms run from unmodified checkouts, comeback shots on the renamed racer **30 → 1**, the one
+  survivor being exactly the `luger-hill` seed 19 the rename's own commit named — and two Quick-Test
+  seeds to look at (**city-circuit 10**, **seatrack 27**) plus a staged-comebacker control
+  (**city-circuit 3**). Data and harnesses in `breakaway-growth-data/`.
+
 - [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
   regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
   1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;
