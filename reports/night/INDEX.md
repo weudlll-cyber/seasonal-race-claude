@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [INSTALL-GAPS-1.md](INSTALL-GAPS-1.md) — **★★★ a fresh install cannot create its first admin by
+  following the documents** (2026-09-19, `night/2026-09-19` piece 6; **read-only — builds, configures
+  and registers nothing**). ★★ **`README.md:32-34,39` and `docs/SETUP.md:58-60,65` both say to copy
+  `RA_BOOTSTRAP_TOKEN` out of `docker-compose.yml`, and INSTALL-SECRETS-1 deleted it from there on
+  2026-09-08.** `npm run configure`, the only supported source, appears in no local-install document;
+  the override file is called "optional" and since that change is required; and the example file
+  copying is recommended still carries no token. ★ **Also blocking:** no document ever says
+  `cd server && npm install`, which both of SETUP's non-Docker paths need. ★ **Undocumented but
+  working:** no upgrade procedure anywhere, no backup procedure while `server/data/README.md` says
+  loudly that nothing backs it up, `npx playwright install chromium` named only inside the ship
+  ceremony, `scripts/migrate-teams.mjs` named in no document at all. ★★ **What breaks without his
+  data directory: NOTHING** — measured; the three unseeded directories are empty in his install too,
+  and his three extra backgrounds are referenced by no track.
+
 - [STAMP-CLOSURE-1.md](STAMP-CLOSURE-1.md) — **★★★ two of the three measured-stamp stamps were stale
   in their DIGITS and the guard reported zero** (2026-09-19, `night/2026-09-19` piece 3; **nothing
   re-stamped, nothing minted**). All three measurements re-run: `tracking-lag` **six of six frame
