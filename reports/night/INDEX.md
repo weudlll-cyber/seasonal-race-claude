@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
+  regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
+  1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;
+  control a probe copy at the same commit differing in one key. ★★★ **The control arm flagged 0, 0
+  and 3 rows on the three draws** — so last night's *"control is clean"* was one draw, and at seed
+  31337 the brake-OFF tree flags MORE tracks than the shipped one. ★★ **Pooled over 900 races per
+  track the control is Holm-unfair on 4 tracks against the shipped arm's 2**; `ice-track`, half of
+  last night's headline, **reverses** — pooled it flags on the control and is fair shipped.
+  ★ **`searound` is flagged on the shipped arm in all three seeds**, which by the rule's letter is the
+  first line — **but it fails on the control too, so it is not brake-caused.** ★★ **The rows settle
+  it**: on every flagged track the two arms' per-row win shares agree to within about a point —
+  luger-hill pooled runs 16.3/17.1/18.0/22.1/**26.4**% shipped against 14.9/18.1/18.0/22.6/**26.4**%
+  on the control, expected 20.0. The brake changes who wins in a fifth of races and not which start
+  row they come from; it reached every seed (~50% of races differ, ~19% winner changes). ★ **What IS
+  wrong is `searound` and `luger-hill` on both arms** — the standing bias on record since
+  2026-07-31. **Nothing reverted; the brake stands.** ★ luger-hill's control-arm front row at
+  **14.9%** against 20.0% expected is a sixth measurement against the D25 sign sentence.
 - [BLIND-SABOTAGE-1.md](BLIND-SABOTAGE-1.md) — **★★ the six blind instruments are in THREE states,
   not two, and only one of the three "fixed" ones can be proven by sabotage** (2026-09-18,
   `night/2026-09-18` piece 6; **the real tree was never instrumented** — every sabotage ran in a

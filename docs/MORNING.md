@@ -1,5 +1,55 @@
 # MORNING SHEET — 2026-09-19
 
+## ★★★ FIRST LINE: LAST NIGHT'S REGRESSION DOES NOT REPRODUCE, AND THE BRAKE IS EXONERATED
+
+→ [GATE-THREE-SEEDS-1](../reports/night/GATE-THREE-SEEDS-1.md) · **Nothing reverted, nothing minted.**
+
+**Three fixed seeds — 12345, 777, 31337 — both arms, the pinned N, 18,000 races.**
+
+| seed | SHIPPED DEFAULTS | BRAKE OFF (control) |
+|---|---|---|
+| 12345 | 2 flagged | 0 |
+| 777 | 3 flagged | 0 |
+| ★ **31337** | 2 flagged | ★ **3 flagged** |
+
+★★★ **The control arm went 0, 0, 3.** Last night's *"the control is clean"* was **one draw**. At seed
+31337 the brake-OFF tree flags **more** tracks than the shipped tree does.
+
+★★ **And pooled over all three seeds — 900 races per track — the CONTROL is Holm-unfair on twice as
+many tracks as the shipped defaults: 4 against 2.** `ice-track`, which was half of last night's
+headline, **reverses**: pooled, it flags on the control and is fair on the shipped defaults. **Reading
+one seed as a regression would have been wrong about the direction.**
+
+### ★★ WHY IT IS NOT THE BRAKE — THE ROWS THEMSELVES
+
+`luger-hill`, pooled 900 races, expected 20.0% per row:
+
+| row | SHIPPED | CONTROL |
+|---|---|---|
+| 0 (front) | **16.3%** | **14.9%** |
+| 1 | 17.1% | 18.1% |
+| 2 | 18.0% | 18.0% |
+| 3 | 22.1% | 22.6% |
+| 4 (back) | ★ **26.4%** | ★ **26.4%** |
+
+★ **The two arms agree to within about one point on every row of every flagged track.** The brake
+changes **who wins** in a fifth of races and does **not** change **which start row** they come from.
+It reached every seed — ~50% of races differ, ~19% change winner.
+
+### ★ WHAT IS ACTUALLY WRONG, AND IT IS NOT NEW
+
+**`searound` and `luger-hill` carry a real start-row bias on BOTH arms**, Holm-unfair at 900 races
+either way. ★ **That is the standing problem the record has carried since 2026-07-31** — not the
+brake's doing, and now much better evidenced. **Nothing needs reverting and the brake stands.**
+
+★ **By the rule as written, `searound` is the first line** — flagged on the shipped arm in all three
+seeds. **But the same data says it is not a regression**: it fails with the brake switched off too.
+I am reporting both rather than letting the rule's letter stand as the conclusion.
+
+★ **One seed cannot support a fairness verdict, and now there is a clean demonstration of it.**
+
+---
+
 ## ★ TONIGHT'S CHAIN — `night/2026-09-18`, LIVE STATUS
 
 Branched from **master `5b60b615`**. Nothing merged, nothing minted, no shipped default changed.
@@ -7,7 +57,7 @@ V1 (`servoNoiseBlindEnabled`) is off in every arm.
 
 | piece | state | one line |
 |---|---|---|
-| **1 · settle the fairness verdict** | ★ **RUNNING** | Two further fixed seeds, **777** and **31337**, both arms, full pinned N. 8 workers of 14. ~3 h 45 m. |
+| **1 · settle the fairness verdict** | ★★ **DONE — THE BRAKE IS EXONERATED** | → [GATE-THREE-SEEDS-1](../reports/night/GATE-THREE-SEEDS-1.md) — seeds **777** and **31337** added; **last night's regression does not reproduce** |
 | **2 · re-race the comebacker branch** | ★ **DONE — nothing merged, tagged or deleted** | → [COMEBACK-RERACE-1](../reports/night/COMEBACK-RERACE-1.md) — **it still costs breakaways** |
 | **3 · show the doc changes** | **DONE** | → [DOC-DIFF-1](../reports/night/DOC-DIFF-1.md) — and **none of it was on master** |
 | **4 · the D25 sign error** | **DONE — nothing changed in either document** | → [D25-SIGN-1](../reports/night/D25-SIGN-1.md) |
