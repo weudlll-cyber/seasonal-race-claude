@@ -442,3 +442,19 @@ seed 1.
 | ★ the production preview | **4173** | `node scripts/serve-production.mjs` — **a static file server. It answers NO API call**, and its SPA fallback returns 200 with the app's HTML for every unknown path, `/api/health` included (VERIFY-RULES R10) |
 
 **The judgement is taken on 4173**, and 4000 must be up beside it or the page loads and nothing works.
+
+### ★ What they were serving when this was written
+
+| | |
+|---|---|
+| the API's own `/api/health` | `{"commit":"c4bf5a75","branch":"feat/pursuer-rename","dirty":false}` |
+| the dev server's build badge (5173) | `c4bf5a75 · feat/pursuer-rename · clean` |
+| ★ the **production** bundle on 4173 | **`assets/index-ojTzkqPx.js`** (with `assets/index-ucWHj0Wl.css`), read off the served page |
+| the commit stamped INSIDE that bundle | ★ **`c4bf5a75` / `feat/pursuer-rename`**, verified by searching the built file — not taken from the build log |
+| `audit-bundle-address` on `client/dist` | **3 files, no deployment address** — the build carries no host, as RUNTIME-API-URL-1 requires |
+
+★ **The dev server had to be restarted, and it had been lying.** The one that was running reported
+`build unknown` with `git rev-parse --short HEAD: exit 3221225794` — the 0xC0000142 failure — so its
+badge named no commit at all. A file save does not clear it; the PROCESS has to go. It was restarted
+and now reports the commit above. **Any eye test taken on 5173 before this restart was taken on a
+build whose identity the badge could not state.**
