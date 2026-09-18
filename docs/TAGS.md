@@ -634,6 +634,40 @@ the other way.
   (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
   function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
 
+### NIGHT-2026-09-18 — the gate settled at three seeds, MERGED (2026-09-18)
+
+- `archive/night-2026-09-18` (`c3b9a275`, 2026-09-18) — the night of 2026-09-18, **nine commits,
+  MERGED into master as `6108d13f`**, tagged at the branch tip so the branch can be deleted at origin.
+  **It changes no shipped default and moves no behaviour**: the one line of engine code it touches
+  (`r.vt` at `raceCore.js:717`, now carrying `governorMult`) is provably inert — `.vt` occurs three
+  times in the tree and **all three are assignments**, so the field is written and never read. It
+  **settles the fairness verdict at THREE fixed seeds and exonerates the gap brake**: the brake-off
+  control flagged **0, 0 and 3** Holm-unfair start rows across the draws, and pooled over 900 races
+  per track the control is unfair on **more** tracks than the shipped arm, with the two arms' per-row
+  win shares agreeing to within about a point. It re-races `feat/remove-prestaging-comebacker` on
+  **braked** master and finds it still costs breakaways (>124 px late gaps **8 → 15**, worst lead
+  **187.5 → 197.6 px**); it lands the 2026-09-17 documentation corrections, which had never reached
+  master; it lays out the luger-hill sign error in **D25** for decision **while changing neither
+  document**; it finds two of the four verify-time points already done; and it proves by **sabotage**
+  that only one of the three "fixed" blind instruments actually sees the cast. **All four
+  fingerprints re-measured against the engine and UNMOVED; nothing minted**; `verify` on the tip,
+  run alone, **25 PASS / 0 FAIL**.
+
+### NIGHT-2026-09-17 — the brake's own night, NOT merged as commits, archived for what only it holds (2026-09-18)
+
+- `archive/night-2026-09-17` (`80281d48`, 2026-09-18) — the night of 2026-09-17. ★ **Its two
+  documentation commits were CHERRY-PICKED onto `night/2026-09-18` and are on master with different
+  SHAs**, so commit-containment does not hold and this tag is the only home for the rest. **What only
+  this tag holds**, established as a tree diff against master rather than as a commit question:
+  **five reports and one data directory** — `PINNED-GATE-1` (the first run of the gate at the pinned
+  N with a fixed seed on both arms, whose two-flagged-rows reading `GATE-THREE-SEEDS-1` then
+  **overturned** at three seeds), `LUGER-BIAS-1` (the rear bias is duration-sized through the
+  open-track denominator at `rowLayout.js:119`), `BRANCH-DECISION-1`, `STILL-OPEN-1`, and
+  `FAIRNESS-SIGN-1` (the first statement of the D25 sign error, superseded on master by
+  `D25-SIGN-1`). ★ **Its `reports/night/pinned-gate-data/pinned-gate-summary.json` is the SEED 12345
+  data that `GATE-THREE-SEEDS-1` on master reads and deliberately does not duplicate** — so that file
+  lives here and nowhere else. **No product code is unique to this tag.**
+
 ### NIGHT-2026-09-12b — the held comebacker, MERGED, archived as the branch's own record (2026-09-14)
 
 - `archive/night-2026-09-12b` (`09e900ae`, 2026-09-14) — the night of 2026-09-12b, **49 commits,
