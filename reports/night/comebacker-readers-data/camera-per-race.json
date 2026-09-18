@@ -1,0 +1,3116 @@
+{
+ "meta": {
+  "report": "COMEBACKER-READERS-1",
+  "date": "2026-09-18",
+  "tree": "master fe12fa95",
+  "fixture": "10 tracks, seeds 1-20, 40 racers, wild, shipped defaults, no override",
+  "camera": "the product's own CameraDirector via scripts/lib/raceDriver.mjs; camera seed DERIVED from the race seed (raceDriver.mjs:148), not the stale pinned constant",
+  "entry": "one record per COMEBACK_ZOOM ENTRY, with the racer the director locked (_comebackLockedRacerIndex, CameraDirector.js:1896)",
+  "siteCaveat": "the fall-back at heroCurveGenerator.js:672 carries no winnerIdx exclusion, so a racer classed 'winner-site' here could be fall-back cast; measured at about 1 race in 125"
+ },
+ "races": {
+  "city-circuit": [
+   {
+    "track": "city-circuit",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 20,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 4,
+    "entries": [],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 20,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 5,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "fallback": 1,
+     "sovereign-lead": 1,
+     "b2": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "b2": 3,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 31,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "staged": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 17,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 37,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 1
+    }
+   },
+   {
+    "track": "city-circuit",
+    "seed": 20,
+    "entries": [],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "faller": 1,
+     "b2": 1
+    }
+   }
+  ],
+  "dirt-oval": [
+   {
+    "track": "dirt-oval",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 9,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 4,
+    "entries": [],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 2,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 30,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 13,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "fallback": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 13,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 15,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 14,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "dirt-oval",
+    "seed": 20,
+    "entries": [],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "fallback": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "garden-path": [
+   {
+    "track": "garden-path",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 9,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 14,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 4,
+    "entries": [],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 2,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "faller": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 8,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 7,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 32,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 31,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 18,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 3,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "garden-path",
+    "seed": 20,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "ice-track": [
+   {
+    "track": "ice-track",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 9,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 16,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 4,
+    "entries": [
+     {
+      "idx": 36,
+      "site": "uncast"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 36,
+     "faller": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 25,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 5,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "fallback": 1,
+     "winner-site": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "fallback": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 8,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 37,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 12,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 3,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 34,
+     "winner-site": 1,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "ice-track",
+    "seed": 20,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "winner-site": 1,
+     "b2": 1,
+     "fallback": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "luger-hill": [
+   {
+    "track": "luger-hill",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 30,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 36,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 4,
+    "entries": [
+     {
+      "idx": 10,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 6,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "staged": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "uncast"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 10,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "b2": 3,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 8,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "fallback": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 7,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 14,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 17,
+    "entries": [],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 31,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "fallback": 1,
+     "b2": 3,
+     "staged": 1
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 39,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 2
+    }
+   },
+   {
+    "track": "luger-hill",
+    "seed": 20,
+    "entries": [
+     {
+      "idx": 5,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "mountainstreet": [
+   {
+    "track": "mountainstreet",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 20,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 4,
+    "entries": [
+     {
+      "idx": 10,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 5,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 30,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 5,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 10,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "b2": 3,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 25,
+      "site": "uncast"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 15,
+    "entries": [],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "b2": 3,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 39,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "mountainstreet",
+    "seed": 20,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "b2": 3,
+     "staged": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "river-run": [
+   {
+    "track": "river-run",
+    "seed": 1,
+    "entries": [
+     {
+      "idx": 12,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 20,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 16,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 4,
+    "entries": [
+     {
+      "idx": 10,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "faller": 1,
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 5,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 2,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 30,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 13,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "winner-site": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 15,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "b2": 3,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 14,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "b2": 3,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "river-run",
+    "seed": 20,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "sovereign-lead": 1,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   }
+  ],
+  "searound": [
+   {
+    "track": "searound",
+    "seed": 1,
+    "entries": [
+     {
+      "idx": 27,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 18,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 36,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 4,
+    "entries": [
+     {
+      "idx": 36,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 34,
+     "winner-site": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "faller": 1,
+     "b2": 3,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 7,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 30,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "fallback": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "fallback": 1,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 10,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 7,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 14,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "b2": 3,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "fallback": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 39,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 34,
+     "fallback": 2,
+     "staged": 1
+    }
+   },
+   {
+    "track": "searound",
+    "seed": 20,
+    "entries": [],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   }
+  ],
+  "seatrack": [
+   {
+    "track": "seatrack",
+    "seed": 1,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 9,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 36,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "faller": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 4,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 14,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 8,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "fallback": 1,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 10,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 8,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "fallback": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 13,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1,
+     "faller": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 31,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 6,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "b2": 3,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 17,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "b2": 3,
+     "staged": 1
+    }
+   },
+   {
+    "track": "seatrack",
+    "seed": 20,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "faller": 1
+    }
+   }
+  ],
+  "space-sprint": [
+   {
+    "track": "space-sprint",
+    "seed": 1,
+    "entries": [
+     {
+      "idx": 12,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "fallback": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 2,
+    "entries": [
+     {
+      "idx": 9,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "staged": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 3,
+    "entries": [
+     {
+      "idx": 38,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "faller": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 4,
+    "entries": [],
+    "population": {
+     "uncast": 36,
+     "winner-site": 1,
+     "b2": 2,
+     "faller": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 5,
+    "entries": [
+     {
+      "idx": 35,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "sovereign-lead": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 6,
+    "entries": [
+     {
+      "idx": 2,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "staged": 1,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 7,
+    "entries": [
+     {
+      "idx": 0,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "staged": 1,
+     "uncast": 34,
+     "faller": 1,
+     "b2": 3,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 8,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "fallback": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 9,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "staged": 1,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 10,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 11,
+    "entries": [
+     {
+      "idx": 8,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 12,
+    "entries": [
+     {
+      "idx": 34,
+      "site": "winner-site"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "b2": 3,
+     "faller": 1,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 13,
+    "entries": [],
+    "population": {
+     "uncast": 35,
+     "faller": 1,
+     "b2": 3,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 14,
+    "entries": [
+     {
+      "idx": 28,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "faller": 1,
+     "b2": 3,
+     "staged": 1,
+     "sovereign-lead": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 15,
+    "entries": [
+     {
+      "idx": 31,
+      "site": "fallback"
+     }
+    ],
+    "population": {
+     "uncast": 35,
+     "b2": 3,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 16,
+    "entries": [
+     {
+      "idx": 11,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 36,
+     "staged": 1,
+     "b2": 2,
+     "winner-site": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 17,
+    "entries": [
+     {
+      "idx": 15,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "fallback": 1,
+     "uncast": 34,
+     "winner-site": 1,
+     "staged": 1,
+     "b2": 3
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 18,
+    "entries": [
+     {
+      "idx": 24,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "uncast": 34,
+     "winner-site": 1,
+     "b2": 3,
+     "staged": 1,
+     "fallback": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 19,
+    "entries": [
+     {
+      "idx": 14,
+      "site": "staged"
+     }
+    ],
+    "population": {
+     "b2": 3,
+     "uncast": 35,
+     "winner-site": 1,
+     "staged": 1
+    }
+   },
+   {
+    "track": "space-sprint",
+    "seed": 20,
+    "entries": [],
+    "population": {
+     "uncast": 36,
+     "b2": 2,
+     "winner-site": 1,
+     "fallback": 1
+    }
+   }
+  ]
+ }
+}

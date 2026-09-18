@@ -8,6 +8,28 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [COMEBACKER-READERS-1.md](COMEBACKER-READERS-1.md) — **★★ one production reader of the role name,
+  and it is the camera; the assumption that the camera already ignores the fall-back racer is FALSE**
+  (2026-09-18, `read/comebacker-readers-1` off master `fe12fa95`; **read-only, no source changed,
+  nothing minted or merged**). ★ **`git grep -i comeback` over all tracked files: 2,493 hits in 311
+  files**; the literal-comparison pattern returns **13, of which ONE is production code** —
+  `comebackDetector.js:86`. ★ **The race never reads a role at all**: `git grep role` over
+  `raceCore.js`, `raceStep.js` and `raceBehavior.js` is **empty**, and the generator's only role tests
+  are against `'attacker-b2'` (`:792`, `:818`), its own comment at `:789` saying to read `held` from
+  the curve "not from the role name". ★★ **MEASURED, N=200 races / 157 COMEBACK_ZOOM entries**: the
+  camera shoots the **fall-back-cast** racer at **21.11 per 100 such racers** against an **uncast**
+  racer's **0.04** — about **500×** — taking **19 of 157 shots**, so the assumption is refuted. The
+  **staged** racer is favoured at **77.94**, but by the measured catch-up, not the name: all three
+  write sites (`:616`, `:657`, `:672`) emit the identical string, so all three enter `_cast`.
+  ★ **The role name selects the POOL** (`_cast` else `_b1`, `comebackDetector.js:170`; the forced shot
+  gated at `CameraDirector.js:889`) **and a measured catch-up selects the racer within it**.
+  ★★ **Under a rename the race stays byte-identical and `world`/`world-off` CANNOT move** —
+  `fingerprint-default.mjs` builds no director and delivers no plan — **but `camera` and `render`
+  DO**, since both build one and deliver a plan; in **14 of 200 races** the fall-back racer is the only
+  `'comebacker'`-roled racer, so `_cast` would empty and `best()` would fall to `_b1`. ★ Eight tests
+  pin the literal, five diagnostic counters would drop, ten living docs name it, and the **sim
+  observers are immune** because `hero-adherence.mjs:29-34` derives the role from geometry.
+  ★ **No name proposed, nothing built.**
 - [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
   regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
   1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;
