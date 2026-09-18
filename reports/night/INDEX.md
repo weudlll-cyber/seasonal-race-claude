@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BLIND-WINDOW-1.md](BLIND-WINDOW-1.md) — **★★ the two indifferent instruments, and it was never the
+  cast** (2026-09-19, `night/2026-09-19` piece 2; **nothing minted, no shipped default touched**).
+  ★★★ **BLIND-SABOTAGE-1's diagnosis was wrong**: the plan IS delivered, the roles ARE cast, and
+  **`COMEBACK_ZOOM` never fires on either fixture at all** — so the delivery could never have been the
+  blindness. Each instrument had its own. ★ **`check-ending-frame.mjs` claimed the ending WINDOW and
+  rendered ONE frame** at the last crossing; it now walks the whole `finishHoldAfterLastMs +
+  finishPauseMs` window — **20 frames over 5,000 ms, 0.5 s → 0.7 s**. ★ **`finish-band-truth.mjs`
+  claimed "the shots he actually watches" and pinned `CAM_SEED = 1439767152`**, a camera the product
+  cannot produce; it now derives it as the browser does, and the table moves on **2 of 10 tracks**.
+  ★★ **Both proven by PRODUCT-side sabotage in both directions** — a scrim from the second ending
+  frame (old guard PASSES, new one FAILS) and a broken `CAMERA_SEED_SALT` (old table identical, new
+  one differs). ★ Honest limit: the second detector moves **two rows of ten**. All four fingerprints
+  measured before and after and **unmoved**.
+
 - [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
   regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
   1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;

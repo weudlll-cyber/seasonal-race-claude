@@ -1,4 +1,29 @@
-# MORNING SHEET — 2026-09-19
+# MORNING SHEET — 2026-09-19 · `night/2026-09-19`
+
+**Branched from master `fe12fa95`. Nothing merged, nothing minted, no shipped default changed.**
+
+★ **PIECE 1 IS NOT ON THIS BRANCH.** The breakaway measurement is commit 2 of
+**`feat/pursuer-rename`** and has its own morning sheet there, because that branch has to stay
+decidable on its own. The report lives at `reports/night/BREAKAWAY-GROWTH-1.md` **on that branch**
+— not linked from here, because on this branch the file does not exist.
+
+★ **THE SERVICES ARE ON THE RENAME BRANCH, NOT THIS ONE.** 4000 API, 4173 production preview — both
+serving `c4bf5a75 · feat/pursuer-rename`, which is what you judge the rename on. The 4173 preview
+serves a COPY outside the tree, so a branch switch here cannot move it. **The 5173 dev server is
+down while this branch is checked out** and is put back on the rename branch at the end of the night.
+
+| piece | state | one line |
+|---|---|---|
+| **1 · where a breakaway's growth comes from** | ★ **DONE — on `feat/pursuer-rename`** | the racer BEHIND is held back; the leader's own acceleration is **−0.9%** of the growth |
+| **2 · the two instruments that do not discriminate** | ★★ **DONE — both now discriminate, proven by PRODUCT-side sabotage** | → [BLIND-WINDOW-1](../reports/night/BLIND-WINDOW-1.md) — and **the previous diagnosis was wrong**: it was never the cast |
+| **3 · the measured-stamp guard** | **open** | |
+| **4 · the production arm in the browser checks** | **open** | |
+| **5 · extract the race-parameter derivation** | **open** | |
+| **6 · what is missing for a real installation** | **open** | |
+
+---
+
+# MORNING SHEET — 2026-09-18 (the night before; kept for the record)
 
 ## ★ IT IS ON MASTER
 

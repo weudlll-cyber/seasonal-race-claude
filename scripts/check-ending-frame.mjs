@@ -11,9 +11,31 @@
 // FINISHED frame at all. The owner found it with his eyes.
 //
 // THE METRIC, and why it is this one. A cover-up is a fill that spans the whole canvas, so the
-// guard renders one real FINISHED frame through `renderRaceFrame` with a RECORDING context and
+// guard renders real FINISHED frames through `renderRaceFrame` with a RECORDING context and
 // asserts the draw list contains no `fillRect` covering the full 1280x720. That is the shape of the
 // defect rather than a name — a differently-worded splash, or a different colour, fails it too.
+//
+// ── ★ IT READS THE WHOLE ENDING WINDOW NOW, AND IT USED TO READ ONE FRAME (BLIND-WINDOW-1) ──────
+//
+// The sentence above this guard's own `covers` line says it watches "the window the ending's hold,
+// winner card and podium all run in". It did not. It rendered EXACTLY ONE frame, at the instant the
+// last racer crossed, with `st.phase` forced to FINISHED and the camera holding whatever it held on
+// the last racing frame. Everything the ending actually does happened AFTER that frame and was
+// unwatched: docs/ENDING-PHASES.md phases 7, 8 and 9 — the hold on the finish picture, the winner
+// card, and the pause before the result screen. A scrim that appeared one second into the ending
+// passed this guard, and the defect it was built for is precisely a scrim that is up for the whole
+// of it.
+//
+// So the camera is now driven ON past the last crossing for `finishHoldAfterLastMs + finishPauseMs`
+// — both read from the camera config rather than typed here — and a frame is rendered every
+// SAMPLE_MS across it. The two durations are the ending's own, so the window cannot drift from the
+// ending when somebody moves a slider.
+//
+// PROVEN BY SABOTAGE IN BOTH DIRECTIONS, and the second one is the point:
+//   --sabotage        the retired splash on EVERY frame     — red before this change and after
+//   --sabotage-late   the splash from the SECOND frame on   — ★ green before this change, red after
+// A guard that cannot fail is worse than no guard; a guard that can only fail on the first frame of
+// a nine-second sequence is the same thing wearing a number.
 //
 // WHAT IT DOES NOT COVER, stated so nobody over-trusts it: DOM overlays. The winner card and the
 // state pill are React, not canvas, and this guard records canvas calls only — `overlayGeometry`
@@ -32,11 +54,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const GUARD = {
   id: "check-ending-frame",
   covers:
-    "that no canvas draw covers the whole race picture while the phase is FINISHED — the window the ending's hold, winner card and podium all run in",
+    "that no canvas draw covers the whole race picture while the phase is FINISHED — SAMPLED ACROSS the whole ending window (finishHoldAfterLastMs + finishPauseMs), which is where the ending's hold and winner card run, not on one frame at the last crossing",
   blind: [
     "DOM overlays: the winner card and the state pill are React, not canvas calls",
     "WHAT is drawn — it asks only that the picture is not hidden",
     "every frame before the last crossing, which is the render fingerprint's question",
+    "the podium and the result screen: they are a different SCREEN, reached through the transition, and this guard renders RaceScreen's canvas only. The window sampled ends where finishPauseMs does",
+    "a cover-up that lasts less than one sample interval — the window is sampled, not continuous",
   ],
   dirs: ["client/src/screens/RaceScreen/drawing/"],
   files: [
@@ -61,6 +85,10 @@ import { makeCameraPlanDelivery } from "./lib/cameraPlanDelivery.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 const SABOTAGE = process.argv.includes("--sabotage");
+// ★ THE DISCRIMINATING SABOTAGE. A splash that only comes up AFTER the first sampled frame is
+// invisible to a one-frame guard and caught by a windowed one, so it is the proof that the
+// window is being read rather than merely computed.
+const SABOTAGE_LATE = process.argv.includes("--sabotage-late");
 
 const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
   u("client/src/modules/storage/defaults.js")
@@ -302,7 +330,16 @@ while (st.finishedCount < N && ts < 600000) {
       finishedCount: st.finishedCount,
       winner: st.racers.find((r) => r.finishRank === 1) ?? null,
       finishT: st.finishT,
-      isOutcomePhase: false,
+      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx:1533`), not a literal.
+      // `false` nails the outcome window shut, and the comeback shot's gate at
+      // `CameraDirector.js:883` reads it — so a literal here measures a camera the product never
+      // runs. Measured on this instrument: it moves nothing, because no COMEBACK_ZOOM fires on this
+      // fixture at all. Wired anyway, because "it happens not to matter today" is not a reason to
+      // keep a value nobody chose. ★ `render-fingerprint.mjs:584` carries the SAME literal and is
+      // deliberately NOT touched: docs/fingerprints.json records that fixing it moves the minted
+      // render value, which is a second decision and the owner's.
+      isOutcomePhase:
+        built.meta.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
       physicsRacers: st.racers,
     },
     CW,
@@ -313,74 +350,142 @@ while (st.finishedCount < N && ts < 600000) {
 }
 st.phase = PHASE.FINISHED;
 
-const rec = recorder();
-renderRaceFrame(rec, {
-  ts,
-  st,
-  cam,
-  shape,
-  raceData: { racers: st.racers },
-  isOpenTrack: shape.isOpen,
-  bsX: shape.isOpen ? 1.5 : CW / geo.worldWidth,
-  bsY: shape.isOpen ? 1.5 : CH / geo.worldHeight,
-  worldWidth: geo.worldWidth,
-  worldHeight: geo.worldHeight,
-  openTrackHW: shape.isOpen ? TW / 2 : 0,
-  bgImagePath: null,
-  bgCanvasReady: false,
-  ceremonyBrand: null,
-  effects: [],
-  // The lights are derived the same way the component derives them; `null` is not an accepted
-  // shape here (drawTrackLights reads `.outer` unguarded) and a guard that passes a shape the
-  // renderer cannot take would be testing its own stub.
-  cachedLightPts: (() => {
-    const { outer, inner } = shape.getEdgePoints(800);
-    return { outer, inner };
-  })(),
-  trackLightsConfig: geo.trackLights ?? {},
-  racerType: rt,
-  cameraConfig: DEFAULT_CAMERA_CONFIG,
-  camera: {
-    hudState: cd.hudState,
-    comebackLockedRacerIndex: null,
-    detectBattleGroup: () => [],
-  },
-  displaySize: ds,
-  displaySizeScale,
-  assignmentByRacer: built.meta.assignmentByRacer ?? new Map(),
-  showRpStartRow: false,
-  showRpMinimapBadges: false,
-  // THE KEY UNDER TEST. `--sabotage` turns the retired splash back on, which is exactly the
-  // behaviour this guard exists to refuse, so a green run proves the check can go red.
-  showFinishedSplash: SABOTAGE,
-  rpPlanInfo: null,
-  renderAlpha: 1,
-  interpolationEnabled: false,
-  tagIncumbents: null,
-  leaderDiag: null,
-  // The HUD pills read these unguarded; same fixed shapes `render-fingerprint.mjs` passes.
-  cfgBadge: { hashShort: "endingfp0", raceCount: 0, cosmeticCount: 0 },
-  buildBadge: { commit: "endingfp", branch: "endingfp", dirty: false },
-  racePlanActive: false,
-  racePlanSeed: 5601,
-  gapRerollDevMarker: false,
-  canvasW: CW,
-  canvasH: CH,
-});
+// ── THE ENDING WINDOW, taken from the ending's own durations ────────────────────────────────────
+// Phases 7 and 9 of docs/ENDING-PHASES.md. The winner card is a TENANT of phase 9 and cannot extend
+// it, so these two are the whole of what RaceScreen still draws after the last crossing.
+const HOLD_MS = DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs ?? 0;
+const PAUSE_MS = DEFAULT_CAMERA_CONFIG.finishPauseMs ?? 0;
+const WINDOW_MS = HOLD_MS + PAUSE_MS;
+// Every quarter second. Fine enough that no beat of the ending is skipped, coarse enough that the
+// guard stays a fraction of a second — it renders ~1 + WINDOW_MS/250 frames, not 60 per second.
+const SAMPLE_MS = 250;
+const endingStart = ts;
+
+/** One recorded FINISHED frame at the camera the director is holding right now. */
+function renderFinishedFrame(atTs, atCam, splash) {
+  const rec = recorder();
+  renderRaceFrame(rec, {
+    ts: atTs,
+    st,
+    cam: atCam,
+    shape,
+    raceData: { racers: st.racers },
+    isOpenTrack: shape.isOpen,
+    bsX: shape.isOpen ? 1.5 : CW / geo.worldWidth,
+    bsY: shape.isOpen ? 1.5 : CH / geo.worldHeight,
+    worldWidth: geo.worldWidth,
+    worldHeight: geo.worldHeight,
+    openTrackHW: shape.isOpen ? TW / 2 : 0,
+    bgImagePath: null,
+    bgCanvasReady: false,
+    ceremonyBrand: null,
+    effects: [],
+    // The lights are derived the same way the component derives them; `null` is not an accepted
+    // shape here (drawTrackLights reads `.outer` unguarded) and a guard that passes a shape the
+    // renderer cannot take would be testing its own stub.
+    cachedLightPts: (() => {
+      const { outer, inner } = shape.getEdgePoints(800);
+      return { outer, inner };
+    })(),
+    trackLightsConfig: geo.trackLights ?? {},
+    racerType: rt,
+    cameraConfig: DEFAULT_CAMERA_CONFIG,
+    camera: {
+      hudState: cd.hudState,
+      comebackLockedRacerIndex: null,
+      detectBattleGroup: () => [],
+    },
+    displaySize: ds,
+    displaySizeScale,
+    assignmentByRacer: built.meta.assignmentByRacer ?? new Map(),
+    showRpStartRow: false,
+    showRpMinimapBadges: false,
+    // THE KEY UNDER TEST. `--sabotage` turns the retired splash back on, which is exactly the
+    // behaviour this guard exists to refuse, so a green run proves the check can go red.
+    showFinishedSplash: splash,
+    rpPlanInfo: null,
+    renderAlpha: 1,
+    interpolationEnabled: false,
+    tagIncumbents: null,
+    leaderDiag: null,
+    // The HUD pills read these unguarded; same fixed shapes `render-fingerprint.mjs` passes.
+    cfgBadge: { hashShort: "endingfp0", raceCount: 0, cosmeticCount: 0 },
+    buildBadge: { commit: "endingfp", branch: "endingfp", dirty: false },
+    racePlanActive: false,
+    racePlanSeed: 5601,
+    gapRerollDevMarker: false,
+    canvasW: CW,
+    canvasH: CH,
+  });
+  return rec;
+}
 
 // A cover-up is a fill spanning the whole canvas AT THE IDENTITY TRANSFORM — screen space, after the
 // world has been drawn. Tolerance of 1 px so a rounded edge is not a miss.
-const covering = rec.fills.filter(
-  (f) => f.identity && f.x <= 1 && f.y <= 1 && f.w >= CW - 1 && f.h >= CH - 1,
-);
+const isCovering = (f) =>
+  f.identity && f.x <= 1 && f.y <= 1 && f.w >= CW - 1 && f.h >= CH - 1;
+
+// ── WALK THE ENDING, RENDERING AS IT GOES ───────────────────────────────────────────────────────
+// The director keeps running: `finishedCount` is the full field now, so it composes the ending it
+// composes in the product. The camera it hands back on each frame is the camera that frame is drawn
+// with — which is the half a single frame at the last crossing could never see.
+const covering = [];
+let framesChecked = 0;
+let fillsSeen = 0;
+let nextSample = 0;
+while (ts - endingStart <= WINDOW_MS) {
+  const elapsedInEnding = ts - endingStart;
+  if (elapsedInEnding >= nextSample) {
+    // `--sabotage` covers every frame; `--sabotage-late` covers every frame BUT the first, which is
+    // the only one the retired single-frame version of this guard ever looked at.
+    const splash = SABOTAGE || (SABOTAGE_LATE && framesChecked > 0);
+    const rec = renderFinishedFrame(ts, cam, splash);
+    fillsSeen += rec.fills.length;
+    for (const f of rec.fills) {
+      if (isCovering(f)) covering.push({ ...f, atMs: Math.round(elapsedInEnding) });
+    }
+    framesChecked++;
+    nextSample += SAMPLE_MS;
+  }
+  cam = cd.update(
+    st.racers,
+    ts,
+    {
+      raceElapsed: ts,
+      finishedCount: st.finishedCount,
+      winner: st.racers.find((r) => r.finishRank === 1) ?? null,
+      finishT: st.finishT,
+      isOutcomePhase:
+        built.meta.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
+      physicsRacers: st.racers,
+    },
+    CW,
+    CH,
+    RAW,
+  );
+  ts += RAW;
+}
+
+// LOUD-FAILURE RULE (Lesson 187): a window that sampled nothing is not a pass. If the ending's
+// durations ever go to zero this guard must say so rather than print a confident green about no
+// frames at all.
+if (framesChecked === 0) {
+  console.log(
+    `FAIL: the ending window is ${WINDOW_MS} ms and NO frame was sampled. This guard checked ` +
+      `nothing, which is not a pass.`,
+  );
+  process.exit(1);
+}
 
 console.log(
-  `check-ending-frame: ${geo.id}, one FINISHED frame, ${rec.fills.length} fillRect call(s) recorded.`,
+  `check-ending-frame: ${geo.id}, ${framesChecked} FINISHED frame(s) across a ${WINDOW_MS} ms ` +
+    `ending window (hold ${HOLD_MS} + pause ${PAUSE_MS}, sampled every ${SAMPLE_MS} ms), ` +
+    `${fillsSeen} fillRect call(s) recorded.`,
 );
 if (covering.length > 0) {
   for (const f of covering) {
     console.log(
-      `FAIL: a fill covers the whole picture while the ending is running — ` +
+      `FAIL: a fill covers the whole picture ${f.atMs} ms into the ending — ` +
         `fillRect(${f.x}, ${f.y}, ${f.w}, ${f.h}) style=${JSON.stringify(f.style)}`,
     );
   }
@@ -394,7 +499,7 @@ if (covering.length > 0) {
 console.log(
   "check-ending-frame: nothing covers the race picture during the ending. PASS",
 );
-if (SABOTAGE) {
+if (SABOTAGE || SABOTAGE_LATE) {
   console.log(
     "SABOTAGE RAN AND THE GUARD STILL PASSED — that is itself a failure: the check cannot go red.",
   );
