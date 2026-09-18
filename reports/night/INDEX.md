@@ -8,6 +8,27 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PRESTAGING-WHY-1.md](PRESTAGING-WHY-1.md) — **★★ the racer who loses his role is NOT the one who
+  breaks away; the front group loses a steered member and nobody replaces him** (2026-09-18, branch
+  `feat/remove-prestaging-comebacker`; **read-only, no source changed, nothing minted or merged**,
+  master merged into a probe copy that was never pushed, **no instrumentation in either tree**).
+  ★ **THE STANDING GUESS IS WRONG.** Of the 69 races where the branch's peak is larger and a cast was
+  removed, the extra gap is held by the racer who lost his role in **10** and by **someone else in
+  59 (86%)** — and on the **eight races that newly cross the >124 px escape threshold, seven of eight
+  are someone else**. The demoted racer is not even harmed: his finish **improves in 68 races and
+  worsens in 43**, top-5 **111→115 of 125**. ★★ **What he was**: `addSolo` at
+  `heroCurveGenerator.js:672` gives him a full curve whose final rank is `nextCluster()` =
+  `min(b1Cluster, BAND_EDGES[0])` (`:610`) — **capped at 5** — so he leads in **66%** of races, holds
+  the peak in only **10%**, and finishes **top-5 in 89%**, a **median one place behind** the peak-gap
+  holder and within three places in **77%**. **He is the pursuer.** ★★ **The cause is the empty slot**:
+  in the 123 races where the path fired, the branch ends with fewer cast racers in **118**, refilled
+  in only **5** — non-B2 cast **2.53 → 2.13** while B2 (outside the `nHeroes` cap, `:675`) is
+  **unchanged at 2.93**. ★ **Floor exactly zero**: 176 races with identical cast sets are **all 176
+  byte-identical**. ★ **The floor caught a classifier error and the fix is the method** — the removed
+  fall-back carries no `winnerIdx` exclusion (only the staged attempt does, `:654`), so a structural
+  site label hides the winner case; the attribution uses a **differential** cast instead, which is
+  exact. ★ Remedies named without building: refilling the slot is **new work with no existing
+  setting**; leaving master as it is needs **no work at all**.
 - [COMEBACKER-ROLE-TRUTH-1.md](COMEBACKER-ROLE-TRUTH-1.md) - **the contradiction resolves against the
   brief's premise, and against two of my own sentences** (2026-09-10, `night/2026-09-09`; REPORT ONLY,
   nothing changed, no races run). ★ **`heroCurveGenerator.js:412` IS ONE OF TWO ASSIGNMENT SITES.** It

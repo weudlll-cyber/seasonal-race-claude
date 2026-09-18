@@ -1,0 +1,72 @@
+=== STEP 1 — THE NOISE FLOOR, on the differential ===
+  races total                              : 300
+  races where the CAST SETS are identical  : 176
+    ...of those, byte-identical races      : 176
+    ...of those, DIFFERING                 : 0
+  races where the cast sets DIFFER         : 124
+    master-only cast (removed path fired)  : 123
+    branch-only cast (staging master missed): 6
+    both                                   : 5
+  => FLOOR IS EXACTLY ZERO: identical cast => byte-identical race. Any difference below that is not a difference.
+
+=== STEP 4 — IS IT THE CAST OR THE BUDGET ===
+                                                MASTER  BRANCH
+  non-B2 cast per race (inside the nHeroes budget)    2.53    2.13
+  B2 attackers per race (separate budget)         2.93    2.93
+  total cast per race                             5.46    5.07
+
+  In the 123 races where the removed path FIRED on master:
+    branch ends with FEWER cast racers : 118
+    branch ends with the SAME number   : 5   <= slot refilled
+    branch ends with MORE              : 0
+    of which refilled by a NEW staging : 5
+
+=== STEP 3 — WHAT THE REMOVED CAST DOES, ON THE MASTER ARM ===
+  removed-path casts (races) : 125
+  roles                      : comebacker
+  is the ASSIGNED WINNER     : 1 of 125
+  EVER leads on master       : 82 of 125
+  holds the race's PEAK gap  : 12 of 125
+  lead-share median 1.77%  p90 11.22%
+  finish on MASTER  median 3  top5 111/125
+  finish on BRANCH  median 3  top5 115/125
+  his finish moves (branch - master): median -1  worse in 43, better in 68, same 14
+
+=== STEP 2 — FOLLOW THE RACER ===
+  branch in-window peak LARGER : 70 of 300
+  branch late peak LARGER      : 65
+  master peak larger           : 54
+  equal                        : 176
+
+  ATTRIBUTION of the larger branch peak:
+    A -- held by the racer who LOST his role : 10
+    B -- held by SOMEONE ELSE                : 59
+    C -- not attributable (no removed cast)  : 1
+    => of the 69 attributable races, 86% are SOMEONE ELSE
+
+  What the branch's extra-gap holder WAS on master:
+    uncast         30
+    winner-site    19
+    removed-path   10
+    staged         6
+    b2             3
+    faller         1
+
+  The twelve largest increases:
+  track            seed    dLead  holder                branch/master site   removed cast   finish M->B
+  luger-hill         26   +120.2  36 Raven     winner-site/winner-site Blaze        5->5
+  ice-track          20    +97.9  29 Shadow    faller     /faller      Phantom      4->5
+  searound            3    +94.7  14 Apex      uncast     /uncast      Raven        4->3
+  mountainstreet     26    +93.2  28 Phantom   staged     /staged      Thunder      5->3
+  dirt-oval          20    +75.2   6 Nitro     winner-site/winner-site Phantom      3->1
+  mountainstreet     10    +66.6  28 Phantom   uncast     /removed-path Phantom      5->1
+  dirt-oval           8    +66.2  20 Mercury   winner-site/winner-site Comet        7->4
+  city-circuit        9    +62.9   5 Thunder   staged     /staged      Comet        5->3
+  garden-path         1    +62.9  13 Blitz     uncast     /uncast      Arrow        2->2
+  searound           24    +62.5   9 Zephyr    staged     /staged      Maverick     4->4
+  ice-track          15    +53.8  27 Maverick  winner-site/winner-site Titan        7->2
+  space-sprint       27    +52.6  38 Breeze    uncast     /uncast      Apex         1->2
+
+=== POOLED ===
+  worst lead  master 187.5 px (0.83 widths)   branch 197.6 px (0.88 widths)
+  >124 px late gaps  master 8  branch 15  of 300
