@@ -478,6 +478,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   ladder spans **six weeks, not eight**: `7883d453` and `175a4751` are **not measurable** (no
   `raceCore.js`; a Vite-only `import.meta.env`) and **no old code was patched** to reach them.
   Harness verified by replaying `QN3HDP` — **40 of 40 finishing positions**.
+  ★★ **DATED 2026-09-18 — ITS WINDOW CLOSED.** The finding stands for **2026-08-04 to 2026-09-12**
+  and is not withdrawn, but it is no longer a statement about the race today: the **gap leader brake
+  shipped ON on 2026-09-17** (merge **`be7e6872`**) and acts on the very quantity this report holds
+  flat, cutting the largest lead over 300 races **244.4 → 187.5 world px**. The report carries the
+  same banner.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big

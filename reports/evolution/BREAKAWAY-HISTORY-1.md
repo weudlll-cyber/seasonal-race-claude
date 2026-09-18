@@ -1,5 +1,17 @@
 # BREAKAWAY-HISTORY-1 — the race did not get worse; the framing did
 
+> ★★ **DATED 2026-09-18 — THIS REPORT'S WINDOW CLOSED, AND THE RACE HAS CHANGED SINCE.** Everything
+> below is measured over **2026-08-04 to 2026-09-12** and is unchanged and unwithdrawn: across that
+> window the race really was bit-identical and the camera really is what moved. ★ **It is no longer
+> true as a statement about the race TODAY.** The **gap leader brake shipped ON on 2026-09-17** in
+> merge **`be7e6872`**, with `gapBrakeEnabled` true, an allowance of **56** world px, a maximum
+> authority of **0.13** and a window end of **0.97** (`client/src/modules/storage/defaults.js`, which
+> owns those values). It acts on exactly the quantity this report holds flat — the leader's lead — and
+> was merged to cut its tail: the largest lead over 300 races falls **244.4 → 187.5 world px**. **A
+> sixth stand taken after that date would not match the other five, by design and not by defect.**
+> Read every present-tense sentence below as *"in that window"*.
+
+
 **Branch** `night/2026-09-14-history` · **MEASUREMENT ONLY — nothing built, nothing minted, nothing
 merged, no lever proposed.** The instruments live in `C:/tmp/hist` and are swept at the end of the
 night; every seed, stand SHA and fixture needed to race any of it again is written down below.
