@@ -59,6 +59,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   measured from the anchor the framing rule **intends** rather than the one the pan has reached, with
   the opening glide still running at the deadline. **A repair aimed at the infinite case would have
   changed code that never runs there.** Corrected in place on that branch.
+||||||| 2bcf6530
+- **2026-09-14 — [BREAKAWAY-FREQUENCY-1](BREAKAWAY-FREQUENCY-1.md)'s CANVAS-WIDTH COLUMN IS OFF BY THE
+  LAP COUNT.** It records the owner's photographed lead as **0.349 canvas widths**;
+  [BREAKAWAY-HISTORY-1](BREAKAWAY-HISTORY-1.md) re-measured the same race and gets **0.698 — exactly
+  2×**, because that instrument divided the gap by `finishT` (2 laps on city-circuit) once too often.
+  **The rest of that report is not withdrawn and was checked rather than assumed**: its "1.538 % of the
+  race" agrees to three decimals, and the holder (Breeze), the progress (0.837) and the 7th-place
+  finish all reproduce exactly. What moves is **the canvas-width column only**, and every share keyed
+  to the 0.349 threshold. ★ **The size of the error is not one constant**: `finishT` is the LAP COUNT
+  on a closed track (2 on all five) and a fraction below 1 on an open one, so a sweep that pools both
+  scales them differently. **How much that moves the pooled shares was not measured** — the correction
+  here was measured on his own race only, and is stated no wider than that.
 
 - **2026-09-06 — [NIGHT-MERGE-2026-09-05](NIGHT-MERGE-2026-09-05.md) RECORDED ITS TWO REMAINING
   `no-console` FINDINGS AS OPEN, AND THEY ARE CLOSED.** That report left them standing on purpose
@@ -610,6 +622,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   rescaling was valid** — and the whole overstatement sits on the open tracks (closed 52% -> 52%,
   open 90% -> 36%). ★ Roles affected through the selection at `breakaway.mjs:222`; attacker-b2's 0%
   holds exactly. Every figure N=100 races per cell, 400 races on `wild`, 0 errored.
+||||||| 2bcf6530
+- [BREAKAWAY-HISTORY-1.md](BREAKAWAY-HISTORY-1.md) — **the race did not get worse; the framing did**
+  (2026-09-14, branch `night/2026-09-14-history`, **MEASUREMENT ONLY**, read-only on his store, nothing
+  merged or minted). ★★ **THE ANSWER: the largest lead the leader ever holds is IDENTICAL at five
+  points of master from 2026-08-04 to 2026-09-12** — 113.2 world px median, 223.5 p90, and **all 30
+  races bit-identical at all five stands**, same winner and duration to the last digit. **Zero changes
+  to the engine-facing defaults across all 34 measurable days.** ★ **Not a blind instrument**: forcing
+  another action stage through the product's own table moves the median to 99.3 (`medium`) and 118.5
+  (`wild`). ★ **The noise floor is ZERO** — master raced twice is bit-identical. ★★ **WHAT MOVED IS THE
+  CAMERA**: the SCREEN p90 steps at **`d4bad558`** (ENDGAME-LAND-CLEAN-1, 2026-08-22), and a smaller
+  one at `884d0562` (START-ONE-WINDOW-1). ★★ **PROVED AT N=300 ON THE STEP MERGE: the race is
+  BIT-IDENTICAL in all 300 races** — every max lead, every 40-position order, every duration — while
+  **84 of the 300 changed how big the gap LOOKS (80 larger, 4 smaller)**, p90 **+7.8%**. ★ The
+  30-race bisect said +15.2%; **the proof corrects the size and keeps the cause**. ★★ **ATTRIBUTED TO
+  ONE KEY BY MEASUREMENT: `contentionWatch`** — off, the p90 returns to exactly A's 1.172; `bandFloor`
+  explains none of it and `runInSchedule` about a tenth. ★ **A revert is NOT safe**: the ship gate's
+  item 7 is built on it, and the camera and render fingerprints were minted three weeks after it
+  shipped. ★ **It is his own accepted picture** — `defaults.js:592-595` records the acceptance.
+  ★ **CONTROL: stand A re-raced at the end of the night is bit-identical** — the measuring track did
+  not move and the ladder is not void. ★ The
+  ladder spans **six weeks, not eight**: `7883d453` and `175a4751` are **not measurable** (no
+  `raceCore.js`; a Vite-only `import.meta.env`) and **no old code was patched** to reach them.
+  Harness verified by replaying `QN3HDP` — **40 of 40 finishing positions**.
+  ★★ **DATED 2026-09-18 — ITS WINDOW CLOSED.** The finding stands for **2026-08-04 to 2026-09-12**
+  and is not withdrawn, but it is no longer a statement about the race today: the **gap leader brake
+  shipped ON on 2026-09-17** (merge **`be7e6872`**) and acts on the very quantity this report holds
+  flat, cutting the largest lead over 300 races **244.4 → 187.5 world px**. The report carries the
+  same banner.
 - [BREAKAWAY-FREQUENCY-1.md](BREAKAWAY-FREQUENCY-1.md) — **about seventy races in a hundred, at every
   action setting** (2026-09-13, branch `night/2026-09-12b`, **MEASUREMENT ONLY**, read-only on his
   store). ★★ **THE ANSWER: 71 races in 100** at his own N=40 `wild` contain a lead gap at least as big
