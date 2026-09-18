@@ -1,5 +1,29 @@
 # MORNING SHEET — 2026-09-19
 
+## ★ IT IS ON MASTER
+
+`night/2026-09-18` is merged, archived and swept. **Nothing was minted** — nothing moved.
+
+| | |
+|---|---|
+| merge commit | **`6108d13f`** — `--no-ff`, nine commits |
+| master head | **`3bf9d99c`** (the merge plus its `TAGS.md` register) |
+| archive tags | **`archive/night-2026-09-18`**, **`archive/night-2026-09-17`** — both pushed and registered |
+| branches deleted at origin | `night/2026-09-18`, `night/2026-09-17` |
+| left at origin | `feat/remove-prestaging-comebacker` (**undecided product code, untouched**), `night/2026-09-14-history` |
+| `verify` on the tip, run alone | **25 PASS / 0 FAIL / 9 SKIP** |
+| fingerprints | ★ **all four re-measured against the engine and UNMOVED**; `--mint` wrote nothing |
+| CI | ★ **green** on `3bf9d99c` — all three jobs |
+
+★ **`archive/night-2026-09-17` exists because containment had to be judged as a TREE question, not a
+commit one**: its two documentation commits reached master by **cherry-pick**, so the SHAs differ. As a
+tree it still held five reports and `reports/night/pinned-gate-data/` — and that directory's
+`pinned-gate-summary.json` is the **seed 12345** data `GATE-THREE-SEEDS-1` reads and does not
+duplicate. **That file now lives in the tag and nowhere else.**
+
+---
+
+
 ## ★★★ FIRST LINE: LAST NIGHT'S REGRESSION DOES NOT REPRODUCE, AND THE BRAKE IS EXONERATED
 
 → [GATE-THREE-SEEDS-1](../reports/night/GATE-THREE-SEEDS-1.md) · **Nothing reverted, nothing minted.**
