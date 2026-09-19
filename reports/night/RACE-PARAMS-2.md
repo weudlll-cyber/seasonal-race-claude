@@ -145,3 +145,52 @@ backlog item.
 ★ **One `deriveSpriteGeometry` call stays in `goldenRunner.mjs`, at `:487`.** It belongs to a
 DIFFERENT arm (the sim arm), needs only `physicalSpriteSize`, and is not part of the browser
 assembly. Left on purpose and named here so it does not read as a miss.
+
+---
+
+## ★★ WHAT `verify` CAUGHT THAT THE GOLDEN RACES DID NOT — A DEFECT OF MINE, RECORDED
+
+The first `verify` run on this branch went **21 PASS / 4 FAIL**, and one of the four was **mine and
+real**:
+
+```
+FAIL  src/modules/parity/replay.test.js
+ReferenceError: deriveSpriteGeometry is not defined
+  ❯ execute ../scripts/parity/goldenRunner.mjs:487:34
+  ❯ simArm ../scripts/parity/goldenRunner.mjs:810:10
+```
+
+★ **I converted arm C and removed the `deriveSpriteGeometry` import — and the SIM arm at `:487` still
+used it.** §5 above names that call as deliberately left alone; what it did not do was keep its
+import. Fixed by importing both from the one module, with the reason at the import.
+
+★★ **`check-golden-races` had PASSED**, because it exercises arm C and never reaches the sim arm.
+**The golden races were the strongest check available for what I changed and they were not the whole
+check** — that is worth recording, because §4 above presents them as the direct evidence and they
+are, for arm C only.
+
+### A second finding of mine, caught by the same run
+
+`check-fallback-agreement` RULE F went red on **three symbol citations in `docs/FORCE-MAP.md`** that
+point into `RaceScreen/index.jsx` by line — my edit shifted them:
+
+| citation | was | now |
+|---|---|---|
+| A0 base speed | `index.jsx → bodyFillNarrow` at L569 | ★ **`index.jsx → baseSpeedConfig` at L581** — the old anchor symbol no longer exists in that file at all; this piece moved it into `raceParams.js` |
+| A2 row bonus | `index.jsx → rowLayout` at L642-L661 | `index.jsx → rowLayoutConfig` at L583 |
+| trajectory | `index.jsx → hudCapHit` at L935-L945 | `index.jsx → hudCapHit` at L934-L944 |
+
+★ **This is the guard doing exactly what its own header says a paired citation is for**: *"a line
+number cannot be wrong out loud, and this can."*
+
+### The final state
+
+```
+PASS 24   FAIL 1   SKIP 9
+VERIFY FAILED — 1 guard(s) failed: check-measured-stamps
+```
+
+★ **The one failure is piece 3's, on two true findings, and nothing was re-stamped.** ★ The other two
+first-run failures — `script-suite` and one `client-suite` entry — **passed on their own**
+(`484 pass / 0 fail` and `4713 pass / 0 fail`); both had reported an exit status of `null`, which is a
+killed process under the parallel load rather than an assertion.

@@ -48,7 +48,13 @@ import {
   computeStartRowCount,
 } from "../../client/src/modules/rowLayout.js";
 // ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the one module the browser uses.
-import { buildRaceCoreParams } from "../../client/src/modules/raceParams.js";
+// RACE-PARAMS-2: arm C calls `buildRaceCoreParams`, the function the browser calls. The SIM arm
+// at :487 still needs `deriveSpriteGeometry` alone — it wants `physicalSpriteSize` and nothing
+// else, and it is not assembling a `createRaceFromIdentity` call. Both come from the one module.
+import {
+  buildRaceCoreParams,
+  deriveSpriteGeometry,
+} from "../../client/src/modules/raceParams.js";
 import { loadRowLayoutConfig } from "../../client/src/modules/rowLayoutConfig.js";
 import {
   createRaceFromIdentity,
