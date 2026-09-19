@@ -634,6 +634,22 @@ the other way.
   (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
   function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
 
+### PLANNED-COMEBACK-ONLY-1 — only a planned comeback is shown, MERGED (2026-09-19)
+
+- `archive/remove-prestaging-comebacker` (`04c7c17`, 2026-09-19) — the whole
+  `feat/remove-prestaging-comebacker` branch, **three commits, NEVER MERGED**, tagged at its tip
+  `dcb5bd83` so the branch could be deleted at origin. ★ **It is SUPERSEDED, not abandoned**: it
+  removed the pre-staging path so that only the staged comebacker casts from the B1 pool, and the
+  reduction in comebackers per race it was for was reached instead by the **pursuer rename
+  (2026-09-18)** and **PLANNED-COMEBACK-ONLY-1 (2026-09-19)** — which reach it in the CAMERA, where
+  the owner's decision put it, and therefore **without its breakaway cost**: COMEBACK-RERACE-1
+  measured this branch still costing breakaways on braked master. ★ At deletion it stood **142
+  commits behind master and 3 ahead**, and its `defaults.js` carries **no gap-brake key at all**, so
+  nothing in it could be rebased onto the shipped world without being rewritten. It is kept as
+  EVIDENCE ONLY — `PRESTAGING-WHY-1` at its tip is the measurement that named the `pursuer`, and it
+  is quoted by `heroCurveGenerator.js` and `docs/GLOSSARY.md`. Read it with
+  `git show archive/remove-prestaging-comebacker`.
+
 ### NIGHT-2026-09-18 — the gate settled at three seeds, MERGED (2026-09-18)
 
 - `archive/pursuer-rename-2026-09-19` (`0179988c`, 2026-09-19) — the pursuer rename and
