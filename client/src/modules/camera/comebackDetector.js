@@ -16,13 +16,18 @@
 // four fields and five methods on CameraDirector, which is why this is a file — the state and the
 // arithmetic that reads it now live together.
 //
-// WHO IS A CANDIDATE, in priority order:
-//   1. the CAST comebackers — heroes the race plan gave role 'comebacker'. The race authored who
-//      comes back, so the camera should watch the racer the story named.
-//   2. failing that, the whole B1 pool (targetRank <= 5). Used when no plan arrived, or when the
-//      plan cast no comebacker at all — which happens whenever the assigned winner starts up front
-//      and the cast is 'sovereign-lead' instead.
-// Every cast comebacker is drawn from the B1 pool, so case 1 is always already rank-tracked.
+// ★★ WHO IS A CANDIDATE — THE CAST, AND NOBODY ELSE (owner's decision, 2026-09-19):
+//   the heroes the race plan gave role 'comebacker'. The race authors who comes back, so the camera
+//   watches the racer the story named and no other. **With no cast comebacker there is no comeback
+//   shot**, and whatever the camera shows instead is one of its other states.
+//
+//   Until 2026-09-19 there was a second case: failing a cast, the whole B1 pool (targetRank <= 5).
+//   It is GONE — `best()` returns null instead. It fired in the ~4% of races that cast nobody and in
+//   every race whose only 'comebacker' was the drawn winner, and what it produced was the camera
+//   claiming a comeback that no plan had authored. See the block at the refusal in `best()`.
+//
+// Every cast comebacker is drawn from the B1 pool, so the cast is always already rank-tracked — and
+// that is why `_b1` is still the RECORDING roster even though it is no longer a candidate pool.
 // ============================================================
 
 /** Rank history is kept this much longer than the window, so the window-start lookup never misses. */
@@ -84,11 +89,17 @@ export class ComebackDetector {
     // ★★ THE MATCH IS EXACT, AND THAT IS WHAT EXCLUDES THE `pursuer` — 2026-09-18.
     //
     // The generator casts three kinds of racer from the B1 pool: the drawn winner
-    // (`heroCurveGenerator.js:616`), the STAGED comebacker (`:657`) and the unstaged front-group
-    // pursuer (`:688`). The first two are `'comebacker'`; the third is `'pursuer'` and must NOT reach
-    // `_cast`, because the camera forcing a comeback shot on a racer who is merely chasing is the
-    // defect the rename exists to remove (COMEBACKER-READERS-1 measured him taking 19 of 157
-    // COMEBACK_ZOOM shots, 12%).
+    // (`heroCurveGenerator.js:648`), the STAGED comebacker (`:688`) and the unstaged front-group
+    // pursuer (`:722`). ★★ SINCE 2026-09-19 ONLY THE STAGED ONE IS `'comebacker'`; the other two are
+    // `'sovereign-lead'` and `'pursuer'` and neither reaches `_cast`.
+    //
+    // The pursuer was split out on 2026-09-18 because the camera forcing a comeback shot on a racer
+    // who is merely chasing is a defect (COMEBACKER-READERS-1 measured him taking 19 of 157
+    // COMEBACK_ZOOM shots, 12%). The drawn winner followed on 2026-09-19 on the owner's decision —
+    // a comeback is shown when one was PLANNED, not when one happens — and he was the larger share:
+    // 29 of 153 shots over 200 races (PLANNED-COMEBACK-ONLY-1 §3). He is named `sovereign-lead`
+    // because that is measurably what he is: he LEADS in 90.7% of races and holds the race's peak
+    // gap in 30.2%, against the pursuer's 64.2% and 8.9%.
     //
     // ★ NO `!== 'pursuer'` GUARD IS ADDED HERE ON PURPOSE. An equality test already admits exactly one
     // string, so a second check would be dead on the day it was written and would rot into a list
@@ -117,11 +128,14 @@ export class ComebackDetector {
   /**
    * Is this racer one the PLAN cast as a comebacker?
    *
-   * COMEBACK-PRECEDENCE-1 needs to tell a cast comebacker from a `_b1` fallback candidate, because
-   * the precedence applies to the cast ONLY: in a race where the plan cast nobody, `_cast` is null,
-   * `best()` falls back to the wider `_b1` pool at `:157`, and forcing a shot on a racer the story
-   * never named would be the camera inventing the very thing the cast exists to author. This reads
-   * the set `:86` already builds and adds no second notion of who is cast.
+   * COMEBACK-PRECEDENCE-1 needed this to tell a cast comebacker from a `_b1` fallback candidate,
+   * because the precedence applied to the cast ONLY. ★ SINCE 2026-09-19 THERE IS NO FALLBACK
+   * CANDIDATE: `best()` refuses outright when the cast is empty, so every racer it can return is
+   * already cast and this method can only answer `true` for them. It is KEPT rather than deleted
+   * because the director asks the question one line after `best()` returns
+   * (`CameraDirector.js:889`), and a population test that reads the set instead of trusting the
+   * caller is the thing that would go red if the refusal were ever removed again. It reads the set
+   * `setPlan` already builds and adds no second notion of who is cast.
    */
   isCast(index) {
     return !!this._cast && this._cast.has(index);
@@ -180,7 +194,26 @@ export class ComebackDetector {
     const sorted = [...racers].sort((a, b) => b.t - a.t);
     const rankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
     const normDivisor = Math.max(sorted.length - 1, 1);
-    const candidates = this._cast && this._cast.size > 0 ? this._cast : this._b1;
+    // ── ★★ THE CAST, AND ONLY THE CAST — the owner's decision of 2026-09-19 ──────────────────
+    //
+    // A COMEBACK IS SHOWN WHEN ONE WAS PLANNED, NOT WHEN ONE HAPPENS. This line used to read
+    //     `this._cast && this._cast.size > 0 ? this._cast : this._b1`
+    // so that in a race whose plan named no comebacker the camera chose a subject out of the whole
+    // B1 pool instead — the camera inventing the very thing the cast exists to author. Measured over
+    // 200 races on master (PLANNED-COMEBACK-ONLY-1 §3): 14 of 153 COMEBACK_ZOOM shots were chosen
+    // that way, 13 of them on a racer the plan had not cast in any role at all.
+    //
+    // ★ NOTHING WAS ADDED TO SAY IT. The refusal is the early-return idiom this method already opens
+    // with three lines above (`if (!this.active) return null`), and the set it refuses on is the one
+    // `setPlan` already builds at `:110`. There is NO config key: with no cast comebacker there is no
+    // comeback shot, full stop, which is a behaviour and not a setting.
+    //
+    // ★ `_b1` IS NOT DEAD and is deliberately left alone. It is the RECORDING roster — `recordRanks`
+    // tracks it, `active` is defined by it, and the diagnostics `roster` getter returns it. History
+    // must still be kept for every B1 racer, because the plan arrives MID-RACE (`setPlan`) and a
+    // racer cast then needs the window that was recorded before he was named.
+    if (!this._cast || this._cast.size === 0) return null;
+    const candidates = this._cast;
 
     let bestRacer = null;
     let bestGain = -1;
@@ -198,9 +231,10 @@ export class ComebackDetector {
       // moment it is about — the defect COMEBACK-BEATS-1 measured, where the shot was on the right
       // racer every time and early by a median 0.134 of the race.
       //
-      // ★ A CANDIDATE THE PLAN DID NOT NAME IS UNTOUCHED, deliberately. `_b1` fallback candidates
-      // and heroes with no peak beat have no authored moment, and inventing one for them would be
-      // this feature making up the very thing it exists to stop the camera making up.
+      // ★ A CANDIDATE THE PLAN DID NOT NAME IS UNTOUCHED, deliberately: a hero with no resolve beat
+      // has no authored moment, and inventing one for him would be this feature making up the very
+      // thing it exists to stop the camera making up. (Until 2026-09-19 this also covered `_b1`
+      // fallback candidates; there are none any more — the refusal above returns before this loop.)
       if (g.useBeats && progress != null) {
         const landing = this._resolveByIndex.get(idx);
         if (landing != null && progress < landing) continue;

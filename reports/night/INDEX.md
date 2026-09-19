@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PLANNED-COMEBACK-ONLY-1.md](PLANNED-COMEBACK-ONLY-1.md) — **★★★ only a planned comeback is shown,
+  and the drawn winner turns out not to be a `pursuer`** (2026-09-19, `feat/planned-comeback-only`
+  commit 1; **nothing merged, nothing minted, no shipped default touched**). ★★ **Two lines of
+  behaviour**: the drawn-winner cast site stops emitting `comebacker`, and `comebackDetector.best()`
+  refuses instead of falling back to the B1 pool. ★★★ **Measured over 200 races per arm**: every
+  unplanned COMEBACK_ZOOM is gone — **29 on the drawn winner, 13 on a racer cast in no role at all,
+  1 on a pursuer** — while the racer whose comeback WAS planned **gains 20 shots he was being crowded
+  out of**; net 153 → 130, races with no comeback shot 47 → 70, and **179.8 s of freed screen time
+  goes to four states that already existed** (BATTLE_ZOOM 41%, LEAD_CHANGE 32%, LEADER_ZOOM 14%,
+  OVERVIEW 12%) — **nothing was built to fill the gap**. ★★ **The race does not move: 300/300 races,
+  all 12,000 finishing times, worst delta 0 ms**; world and world-off unmoved, camera and render
+  moved and **NOT minted**. ★ **He is `sovereign-lead`, not a `pursuer`** — he leads in 90.7% of races
+  and holds the race's peak gap in 30.2%, against the pursuer's 64.2% and 8.9%, so the pair at that
+  site collapses to one existing name and no new concept enters the tree.
+
 - [ARRIVAL-BRAKE-1.md](ARRIVAL-BRAKE-1.md) — **★★★ the standing red browser test is not the gap brake;
   it is an assertion its own author replaced fifteen hours later** (2026-09-19,
   `chore/2026-09-19-clean` piece 5; **read-only, no assertion touched, no default moved**).

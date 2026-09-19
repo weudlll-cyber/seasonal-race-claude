@@ -609,12 +609,43 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
   let b1Cluster = 2;
   const nextCluster = () => Math.min(b1Cluster, BAND_EDGES[0]);
 
-  // Role 1 — the assigned winner (final rank 1): sovereign lead if already front, else comeback-to-win.
+  // Role 1 — the assigned winner (final rank 1). ★ ONE NAME SINCE 2026-09-19: `sovereign-lead`.
+  //
+  // ★★ THE OWNER'S DECISION, 2026-09-19: A COMEBACK IS SHOWN WHEN ONE WAS PLANNED, NOT WHEN ONE
+  // HAPPENS. This site used to emit `comebacker` whenever the drawn winner was not already inside
+  // the front cluster — `wr > cr`, and `cr` starts at 2, so a winner sitting THIRD after chaos was
+  // one. `comebackDetector.js:110` matches `'comebacker'` exactly, so that string was the entire
+  // reason the camera forced a comeback shot on a racer whose comeback nobody had authored: 29 of
+  // the 153 COMEBACK_ZOOM shots in a 200-race sweep were his (PLANNED-COMEBACK-ONLY-1 §3).
+  //
+  // ★ WHY AN EXISTING NAME, AND WHY THIS ONE — MEASURED BEFORE HE WAS NAMED, over the owner's
+  // fixture (ten tracks, seeds 1–30, 40 racers, his roster, `wild` — 300 races):
+  //
+  //   |                                          | rank@cast | leads | holds peak gap | top-5 | wins | rank@0.8 |
+  //   | this site, the old `comebacker` arm  n=182|     5     | 90.7% |     30.2%      | 90.7% | 34.1%|    2     |
+  //   | this site, the `sovereign-lead` arm  n=103|     1     |  100% |     40.8%      | 90.3% | 21.4%|    2     |
+  //   | the `:722` `pursuer`                 n=123|    10     | 64.2% |      8.9%      | 88.6% |  5.7%|    3     |
+  //   | the `:688` STAGED comebacker         n=209|     7     | 59.3% |      5.7%      | 86.6% | 16.7%|    7     |
+  //
+  // ★ HE IS NOT A `pursuer`, which is the name the brief expected to fit. On every metric
+  // PRESTAGING-WHY-1 chose that name by he is its opposite: he LEADS in 90.7% of races against
+  // 64.2%, HOLDS the race's peak gap in 30.2% against 8.9%, and wins 34.1% against 5.7%.
+  //
+  // ★ HE IS THE OTHER ARM OF HIS OWN SITE. The two arms are one racer either side of one threshold
+  // and they are indistinguishable where the camera looks: median rank 2 at progress 0.8, top-3
+  // there 83.0% against 81.6%, top-5 at the line 90.7% against 90.3%, the same median finish. So
+  // the pair collapses to one name, no new concept enters the tree, and one branch leaves it.
+  // The bottom row is the contrast that makes the decision legible: the STAGED comebacker is the
+  // only cast racer still OUTSIDE the front group when the outcome window opens (13.9% top-3 at
+  // 0.8, 62.7% by 0.9). He is the one coming back; this one is already there.
+  //
+  // ★★ THE CURVE DOES NOT MOVE. Only the role STRING is collapsed. The `peakRank` argument keeps
+  // its own ternary below, because that is the authored curve — `addSolo` reads the role only to
+  // store it, and the race is byte-identical over the fixture (PLANNED-COMEBACK-ONLY-1 §4).
   if (winnerIdx != null) {
     const wr = stateOf.get(winnerIdx)?.rank ?? 1;
     const cr = nextCluster();
-    const role = wr <= cr ? 'sovereign-lead' : 'comebacker';
-    if (addSolo(winnerIdx, role, cr, wr <= cr ? Math.max(1, wr) : wr)) b1Cluster++;
+    if (addSolo(winnerIdx, 'sovereign-lead', cr, wr <= cr ? Math.max(1, wr) : wr)) b1Cluster++;
   }
 
   // A7 — on average every N-th race, add ONE deep-band FALLER FIRST (reserve its slot before the B1
@@ -682,7 +713,10 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
     //
     // ★ WHAT THE NAME BUYS, and it is the point: `comebackDetector.js` matches `'comebacker'` exactly,
     // so a `pursuer` no longer enters `_cast` and the camera never forces a comeback shot on him.
-    // The staged site above and the drawn-winner site at :616 keep `comebacker` deliberately.
+    // ★ THE STAGED SITE ABOVE (`:688`) IS NOW THE ONLY ONE THAT EMITS `comebacker` — the
+    // drawn-winner site at `:648` stopped on 2026-09-19 (the owner: a comeback is shown when one
+    // was PLANNED). So `_cast` is the staged racer or it is empty, and an empty cast means no
+    // comeback shot at all; `comebackDetector.js` no longer falls back to the B1 pool.
     const peakRank =
       p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
     if (addSolo(p.index, p.rank > cr ? 'pursuer' : 'sovereign-lead', cr, peakRank)) b1Cluster++;

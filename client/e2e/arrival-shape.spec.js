@@ -12,8 +12,11 @@
 // harness can answer.
 //
 // ★ WHAT IT ASSERTS is only what ONE race can carry: the variant is live, he is released and climbs,
-// and he is not braked for leading once he is inside his block. The four numbers the decision rests
-// on are printed, not asserted — they are distributions, and a single race is one sample of each.
+// and — ★ CORRECTED 2026-09-19 — he IS steered inside his block, which is the shipped design since
+// `17193be6` deleted band steering after arrival on 2026-09-13. This header said the opposite for six
+// days, in step with the assertion at the foot of the file; see the block there for the whole
+// account. The four numbers the decision rests on are printed, not asserted — they are
+// distributions, and a single race is one sample of each.
 //
 // WHAT IT DELIBERATELY DOES NOT ASSERT:
 //   · WHICH distance is best. That was the sweep's question and it is answered and shipped.
@@ -37,7 +40,11 @@ const CEIL_RANKS = ARRIVAL_CEILING_RANKS;
 // canvas), and normal pace is 150 world px/s -- so (m-1)*150*1280/225 canvas px/s of closing speed.
 const screenPxPerSec = (m) => (m - 1) * 150 * (1280 / 225);
 
-test('the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block', async ({
+// ★ THE TITLE IS AN ASSERTION TOO, AND THIS ONE WAS FALSE. It said the shape "leaves him unsteered
+// in his block" — a test NAME is what gets quoted in reports and commit messages by people who never
+// open the file, so a name that states the opposite of the body is how a contradiction survives. It
+// now says what the body checks.
+test('the owner s arrival shape is selectable in the browser, and steers him back toward his drawn place inside his block', async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -104,15 +111,46 @@ test('the owner s arrival shape is selectable in the browser, and leaves him uns
   // ★ THE VARIANT IS LIVE: he is released and climbs, which is the shape running at all.
   expect(best, 'the held racer must climb after being released').toBeLessThan(atRelease);
 
-  // ★ AND HE IS LEFT ALONE INSIDE HIS BLOCK. Today's behaviour steers him to his exact drawn rank
-  // there — braking him for leading in about seven frames in ten. Band steering commands 1.0 for the
-  // whole block, so neither brake nor push should be common. The bar is deliberately loose: one race
-  // is one sample, and it is here to separate "unsteered" from "steered most of the time".
+  // ── ★★ AND HE IS STEERED INSIDE HIS BLOCK, LIKE ANY OTHER RACER ────────────────────────────
+  //
+  // ★ THIS ASSERTION WAS THE WRONG WAY ROUND FROM THE DAY IT WAS WRITTEN, AND IT IS THE SPEC THAT
+  // WAS WRONG, NOT THE ENGINE. It read `.toBeLessThan(0.5)` under the heading "AND HE IS LEFT ALONE
+  // INSIDE HIS BLOCK" — the behaviour of BAND steering, `strictness = 0`, which commands exactly 1.0
+  // anywhere inside the block. Band steering after arrival was deleted by `17193be6`
+  // ARRIVAL-STEERED-AGAIN-1 at 17:07 on 2026-09-13, FIFTEEN HOURS after this file was written. That
+  // commit turned `arrivalShape.test.js` around to assert the opposite and did not touch this spec,
+  // and the browser suite is night work, so nothing ran it for six days (ARRIVAL-BRAKE-1).
+  //
+  // ★★ THE SHIPPED DESIGN IS AT `racePlanner.js:1400-1409`, in the engine's own words: *"AFTER HE
+  // ARRIVES HE IS STEERED, like any other racer … `strictness` therefore stays at the hero's 1.0 and
+  // the blend below is exact-rank steering."* What band steering cost was clause 2 — unsteered, he
+  // opened 3.3x the pre-shape gap at twenty racers. So the multiplier inside his block is NOT 1.0:
+  // he is braked whenever he is better than his drawn place and pushed when he is not.
+  //
+  // ★★★ THE QUANTITY AND THE BAR ARE UNCHANGED — ONLY THE DIRECTION IS. It is the same
+  // `(braked + pushed) / mults.length` against the same 0.5, because the threshold was never the
+  // problem; the claim it was pointed at was. **Nothing is loosened.** A `< 0.9` bar would have
+  // turned a true statement about a real disagreement into a green line, and ARRIVAL-BRAKE-1
+  // refused to write one.
+  //
+  // ★ IT PASSES WITH MARGIN ON BOTH SETTINGS OF THE GAP BRAKE, which is what makes 0.5 the right
+  // side of this measurement rather than a number chosen to fit: ARRIVAL-BRAKE-1 measured this
+  // fixture at **0.890 with `gapBrakeEnabled` on and 0.812 with it off** — the brake is not what
+  // steers him, the servo is, and its command is never 1.0 while his live rank differs from his
+  // drawn place. The deleted claim needed the SAME number under 0.5, and it is nowhere near it on
+  // either arm, so this is one measurement deciding between the two readings rather than two bars.
+  //
+  // ★ WHY THIS IS THE RIGHT SHAPE OF CLAIM rather than a new one invented to be green: "the
+  // multiplier is not 1.0 on most in-block frames" is precisely "he is not on band steering", which
+  // is the one thing `17193be6` changed. The node test `arrivalShape.test.js` asserts the same
+  // design at the unit level — arrived and leading, the commanded multiplier is below 1.0 — and this
+  // is that statement in a real browser, over a real race, which no node harness can answer.
   expect(
     mults.length,
     'he never reached his block, so the shape was never exercised'
   ).toBeGreaterThan(5);
-  expect((braked + pushed) / mults.length, 'he must be left alone inside his block').toBeLessThan(
-    0.5
-  );
+  expect(
+    (braked + pushed) / mults.length,
+    'he must be STEERED inside his block — the multiplier is 1.0 only under band steering, which was deleted on 2026-09-13'
+  ).toBeGreaterThan(0.5);
 });

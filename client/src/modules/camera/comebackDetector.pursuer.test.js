@@ -9,10 +9,10 @@
 // WHAT THIS FILE OWNS: that the camera's cast admits the STAGED comebacker and refuses the unstaged
 // `pursuer` — the whole behavioural content of the 2026-09-18 rename.
 //
-// ★ WHY IT EXISTS. `heroCurveGenerator.js:688` casts the unstaged front-group racer as `pursuer`
+// ★ WHY IT EXISTS. `heroCurveGenerator.js:722` casts the unstaged front-group racer as `pursuer`
 // instead of `comebacker` so that `comebackDetector.setPlan` stops putting him in `_cast` and the
 // director stops forcing a comeback shot on him. Nothing in `comebackDetector.js` was ADDED to make
-// that true — the match at `:99` is an equality test and already admits exactly one string — so
+// that true — the match at `:110` is an equality test and already admits exactly one string — so
 // without this file the rename is protected by nothing at all, and a later hand widening the match
 // to `['comebacker', 'pursuer'].includes(h.role)` would put the shot back with every existing test
 // still green.
@@ -54,9 +54,12 @@ describe('the camera cast admits a comebacker and refuses a pursuer', () => {
   });
 
   it('2 — a pursuer is NOT cast, and leaves the cast EMPTY rather than small', () => {
-    // `_cast` null is what hands `best()` the wider `_b1` pool at comebackDetector.js:183 — the
-    // shot is then chosen the way it is in a race the plan cast nobody for, which is the intended
-    // effect of the rename and not merely "one racer fewer".
+    // ★ WHAT AN EMPTY CAST MEANS CHANGED ON 2026-09-19, AND THIS CASE GOT STRONGER FOR IT. It used
+    // to hand `best()` the wider `_b1` pool (the old fall-back), so the shot was merely chosen the
+    // way it is in a race that cast nobody. Now `best()` REFUSES on an empty cast
+    // (`comebackDetector.js:215`), so "leaves the cast empty" is the whole distance between a
+    // comeback shot and none at all — which is why this asserts emptiness and not "one racer fewer".
+    // `comebackDetector.plannedOnly.test.js` owns the refusal itself.
     const d = withHeroes([{ index: 7, role: 'pursuer', finalRank: 3, beats: [] }], [7]);
     expect(d.isCast(7)).toBe(false);
     expect(d._cast).toBeNull();

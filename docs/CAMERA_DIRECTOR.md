@@ -58,7 +58,7 @@ construction and must be argued another way.
 | `OVERVIEW`      | The establishing shot — the widest setting of the same rule every other state runs.                                                                                                            |
 | `LEADER_ZOOM`   | The current leader, framed forward so the pack behind him fills the frame.                                                                                                                     |
 | `BATTLE_ZOOM`   | A detected group fighting behind the lead.                                                                                                                                                     |
-| `COMEBACK_ZOOM` | A racer climbing through the field.                                                                                                                                                            |
+| `COMEBACK_ZOOM` | The racer the race PLAN cast as a comebacker, climbing through the field. ★ Since 2026-09-19 the cast is the whole population: with nobody cast as a comebacker this shot is not taken at all. |
 | `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
 | `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
 
@@ -1053,7 +1053,59 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 70a85ffb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ cef4241e 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★★ **RE-MEASURED IN FULL FOR PLANNED-COMEBACK-ONLY-1, 2026-09-19, AND `COMEBACK_ZOOM` IS GONE
+FROM THE TABLE.** `node scripts/tracking-lag.mjs`, the command this stamp names, on `cef4241e`:
+
+| state | frames | median pp | p95 pp |
+|---|---|---|---|
+| BATTLE_ZOOM | **8069** | 6.00 | 9.57 |
+| LEADER_ZOOM | **14351** | 4.78 | 9.49 |
+| LEAD_CHANGE | **8440** | 4.52 | 9.78 |
+| OVERVIEW | **3667** | 2.36 | 16.02 |
+| PHOTO_FINISH | **1973** | 2.94 | 7.84 |
+
+**OVERVIEW median 2.36 pp against every other state pooled 4.98 pp — ratio 0.47×.** ★ The document's
+standing claim survives the change: OVERVIEW is still the TIGHTEST state, not the loosest.
+
+★★★ **WHY THE ROW IS ABSENT, MEASURED RATHER THAN INFERRED.** `COMEBACK_ZOOM` is not missing from
+this table because the state was removed — it is still in the director and still shot. It is absent
+because **this instrument's fixture takes no comeback shot at all any more**, and the reason is
+specific to its fixture. Probed on that identity (raceSeed 5601, 40 racers, track-default racer, the
+DEFAULT world — `tracking-lag.mjs:45-52`), on the commit before this one:
+
+| track | cast comebackers | COMEBACK_ZOOM shots |
+|---|---|---|
+| city-circuit | `[9]` | **drawn winner** @ 0.722 |
+| ice-track | `[9]` | **drawn winner** @ 0.608 |
+| seatrack | `[9]` | **drawn winner** @ 0.645 |
+| luger-hill | `[]` | **uncast** @ 0.636 |
+| space-sprint | `[]` | **uncast** @ 0.705 |
+| dirt-oval, garden-path, mountainstreet, river-run, searound | `[9]` | none |
+
+★★ **Eight of the ten tracks cast exactly one comebacker and he was the DRAWN WINNER every time; not
+one track staged one.** So all five shots this instrument was recording were UNPLANNED — three on the
+drawn winner, two through the `_b1` fall-back on the two tracks that cast nobody. On `cef4241e` no
+track casts a comebacker and no shot is taken, which is the owner's decision of 2026-09-19 working
+rather than a state going missing.
+
+★ **The other five rows moved because the freed frames went to them**, which is the same
+redistribution [PLANNED-COMEBACK-ONLY-1](../reports/night/PLANNED-COMEBACK-ONLY-1.md) §3 measures over
+200 races: LEADER_ZOOM +1315 frames, LEAD_CHANGE +930, OVERVIEW +540, BATTLE_ZOOM −492.
+**PHOTO_FINISH is unchanged at 1973 frames**, which is the check that the ending was not touched.
+
+★ **It is stamped at `cef4241e`** — `git log -1` over `client/src/modules/camera/` and over the `via=`
+import closure both give that commit, so the two halves of the guard agree for once and there is no
+later-of-the-two to choose.
+
+★★ **AND IT COULD NOT HAVE BEEN RE-STAMPED ON AN ARGUMENT.** Three of the six counts moved by more
+than 500 frames and one row disappeared. The sibling stamp in `docs/ENDING-PHASES.md` was re-measured
+in the same pass and came back identical to the digit; this one did not, which is why both were run
+rather than reasoned about.
+
+★ **The previous reading is kept below rather than deleted**, for the same reason it kept the one
+before it.
 
 ★★★ **RE-MEASURED IN FULL ON MASTER, 2026-09-19 (STAMP-RESTAMP-1), AND THESE ARE THE NUMBERS.**
 `node scripts/tracking-lag.mjs`, the command this stamp names, on master with the pursuer rename in:

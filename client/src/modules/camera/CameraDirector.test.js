@@ -502,8 +502,15 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
       { t: 0.4, x: 400, y: 300, finished: false, index: 1 },
       { t: 0.15, x: 150, y: 300, finished: false, index: 2 }, // B1 racer, now rank 3
     ];
-    // Inject B1 set and seed rank history: racer 2 was rank 8 five seconds ago → gain = 5 ≥ 3
-    cd.updateRacePlan(new Set([2]));
+    // Inject B1 set and seed rank history: racer 2 was rank 8 five seconds ago → gain = 5 ≥ 3.
+    // ★ HE IS CAST AS WELL, SINCE 2026-09-19. This used to deliver the roster alone and let the
+    // `_b1` fall-back supply the candidate; `best()` now refuses when the cast is empty
+    // (`comebackDetector.js:215`, PLANNED-COMEBACK-ONLY-1), so a roster-only fixture would make this
+    // case assert the refusal instead of the rank-history gate it is about.
+    cd.updateRacePlan(new Set([2]), {
+      b1Indices: new Set([2]),
+      heroes: [{ index: 2, role: 'comebacker', finalRank: 3, beats: [] }],
+    });
     const nowTs = 9000;
     const windowMs = cd._comebackGates.windowSec * 1000;
     cd._comeback._history.set(2, [
@@ -583,25 +590,29 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
     expect(best.index).toBe(1);
   });
 
-  it('(b) plan WITHOUT a comebacker → b1 scan runs exactly as today (largest real gain wins)', () => {
+  // ★★ (b) AND (c) WERE TURNED AROUND ON 2026-09-19 (PLANNED-COMEBACK-ONLY-1). Both used to assert
+  // that with no cast comebacker "the b1 scan runs exactly as today (largest real gain wins)", and
+  // both returned racer 2 — a racer the plan had named `sovereign-lead` or not named at all. That
+  // fall-back is the behaviour the owner's decision removes: *a comeback is shown when one was
+  // PLANNED, not when one happens.* They now assert the refusal, and (a) above is the positive
+  // control that keeps the pair honest — it still returns the CAST racer over the bigger gainer, so
+  // a detector that had simply stopped answering would fail there rather than pass here.
+  it('★ (b) plan WITHOUT a comebacker → NOBODY is evaluated, not the biggest b1 gainer', () => {
     const cd = new CameraDirector();
     cd.updateRacePlan(new Set([1, 2]));
     cd.setCameraPlan(planWithoutComebacker);
     expect(cd._comeback._cast).toBeNull();
     seedHistory(cd);
-    const best = cd._detectComebackRacer(buildField(), nowTs);
-    expect(best).not.toBeNull();
-    expect(best.index).toBe(2); // b1 scan → largest gain
+    // Racer 2 has the larger gain and is in the B1 roster; before 2026-09-19 he was returned here.
+    expect(cd._detectComebackRacer(buildField(), nowTs)).toBeNull();
   });
 
-  it('(c) no plan → b1 scan runs exactly as today (largest real gain wins)', () => {
+  it('★ (c) no plan at all → the same refusal, so an undelivered plan is not a wider camera', () => {
     const cd = new CameraDirector();
     cd.updateRacePlan(new Set([1, 2])); // race plan on, but no cameraPlan delivered
     expect(cd._comeback._cast).toBeNull();
     seedHistory(cd);
-    const best = cd._detectComebackRacer(buildField(), nowTs);
-    expect(best).not.toBeNull();
-    expect(best.index).toBe(2); // b1 scan → largest gain
+    expect(cd._detectComebackRacer(buildField(), nowTs)).toBeNull();
   });
 
   // ── Reality filters unchanged in the plan-primary path ──────────────────────────────────────────

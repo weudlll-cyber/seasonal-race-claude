@@ -61,7 +61,7 @@ const FRONT_COUNT = 6;
 const ROLE_STYLE = {
   'sovereign-lead': { label: 'sovereign-lead', color: '#ff6ec7' }, // unbrakeable front hero
   comebacker: { label: 'comebacker', color: LIFT_COLOR },
-  // ★ THE UNSTAGED FRONT-GROUP PURSUER (heroCurveGenerator.js:688), split from `comebacker` on
+  // ★ THE UNSTAGED FRONT-GROUP PURSUER (heroCurveGenerator.js:722), split from `comebacker` on
   // 2026-09-18. He shares the comebacker's LIFT colour because he is steered the same way — what
   // differs is that the camera no longer forces a shot on him — and a distinct label is the whole
   // point: without it the HUD would show him as a hero with no role at all.

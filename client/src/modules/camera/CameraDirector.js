@@ -857,10 +857,13 @@ export class CameraDirector {
    *   · AT MOST ONCE PER COMEBACKER — `_comebackPrecedenceShown`, burned on commit;
    *   · NEVER INTO A LEAD_CHANGE ALREADY ON SCREEN — the state test, first line of the body.
    *
-   * ★ THE CAST ONLY. `comebackDetector.js:157` falls back to the wider `_b1` pool in the ~4% of
-   * races where the plan casts no comebacker. In those races nothing is forced and today's
-   * behaviour stands, because the precedence is the STORY's claim on the camera and there is no
-   * story to honour when nobody was cast.
+   * ★ THE CAST ONLY — AND SINCE 2026-09-19 THAT IS THE WHOLE POPULATION, NOT A NARROWING OF ONE.
+   * This paragraph used to say that `comebackDetector.js` falls back to the wider `_b1` pool when
+   * the plan casts no comebacker, so that in those races nothing was FORCED but a shot could still
+   * be taken. The fallback is gone (`comebackDetector.js:215`): with no cast comebacker there is no
+   * comeback shot at all. The `isCast` test below is therefore no longer what separates a forced
+   * shot from an ordinary one — it is a population test that cannot fail today, kept because it is
+   * what would go red if the refusal in `best()` were ever removed again.
    *
    * ★ WHY THE GATES BELOW ARE A SUBSET OF `_pickNextState`'s. This answer becomes an interrupt that
    * cuts a hold short. A hold cut for a shot that then does not happen is the restless camera the
