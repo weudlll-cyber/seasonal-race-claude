@@ -636,6 +636,18 @@ the other way.
 
 ### NIGHT-2026-09-18 — the gate settled at three seeds, MERGED (2026-09-18)
 
+- `archive/pursuer-rename-2026-09-19` (`0179988c`, 2026-09-19) — the pursuer rename and
+  BREAKAWAY-GROWTH-1, **eight commits, MERGED into master as `ffc6417b`**, tagged at the branch tip so
+  the branch can be deleted at origin. ★ **It moves the CAMERA and not the race**: the fall-back cast
+  at `heroCurveGenerator.js:688` emits `pursuer` instead of `comebacker`, and COMEBACK_ZOOM shots on
+  that racer fall **19 → 1** at N=200 and **30 → 1** over 300 races measured independently. The race
+  is byte-identical — **300 of 300 identical finishing orders and 300 of 300 identical finishing
+  times**, while 123 of 300 role maps change — so `world` and `world-off` are unmoved and only
+  **`camera` and `render` were minted** (`5d91f59b9ada16cc → 49d4358e47f202f9`,
+  `06671c1d13850cd7 → 6ccfeadb3a86335c`). It also carries BREAKAWAY-GROWTH-1's 300-race decomposition
+  and both its harnesses, the TRAP B repair of the tracking-lag stamp, and the regenerated
+  engine-reach documents.
+
 - `archive/night-2026-09-18` (`c3b9a275`, 2026-09-18) — the night of 2026-09-18, **nine commits,
   MERGED into master as `6108d13f`**, tagged at the branch tip so the branch can be deleted at origin.
   **It changes no shipped default and moves no behaviour**: the one line of engine code it touches
