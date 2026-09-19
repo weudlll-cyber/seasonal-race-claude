@@ -23,9 +23,12 @@ import {
   mkdtempSync,
   mkdirSync,
   rmSync,
+  cpSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { TEST_FILE_EXCLUDE } from "./check-measured-stamps.mjs";
+// From its own module, NOT from the guard: importing the guard EXECUTES it, so this test file
+// could only run while the guard passed. See scripts/lib/testFileExclude.mjs.
+import { TEST_FILE_EXCLUDE } from "./lib/testFileExclude.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,6 +44,22 @@ function onCopy(transform) {
   const dir = mkdtempSync(join(tmpdir(), "ra-stamp-"));
   const copy = join(dir, "DOC.md");
   try {
+    writeFileSync(copy, cleanVia(transform(readFileSync(DOC, "utf8"))));
+    const r = spawnSync(process.execPath, [GUARD, `--doc=${copy}`], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The same, with the document's REAL `via=` left standing — for the closure-half tests. */
+function onCopyRaw(transform) {
+  const dir = mkdtempSync(join(tmpdir(), "ra-stamp-raw-"));
+  const copy = join(dir, "DOC.md");
+  try {
     writeFileSync(copy, transform(readFileSync(DOC, "utf8")));
     const r = spawnSync(process.execPath, [GUARD, `--doc=${copy}`], {
       cwd: ROOT,
@@ -54,16 +73,37 @@ function onCopy(transform) {
 
 const unchanged = (t) => t;
 
-test("BASELINE: the repository's own stamp is fresh", () => {
-  const r = spawnSync(process.execPath, [GUARD], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /0 stale/);
+// ── ★ WHY THE FIXTURES REWRITE `via=` (STAMP-CLOSURE-1) ─────────────────────────────────────────
+//
+// The tests below are about the `depends=` half. The guard now asks the SAME question a second time
+// over the real import closure of `via=`, and `docs/CAMERA_DIRECTOR.md`'s via is a measurement script
+// that reads the whole race engine — so on any tree where the engine has moved since the stamp, that
+// half fails and every test here would fail with it, for a reason none of them is about.
+//
+// So the copy's `via=` is pointed at a module whose closure is small and whose last change IS the
+// stamped commit's ancestor. The closure half then stays quiet and each test measures the one thing
+// it names. `onCopyRaw` keeps the real via for the tests that are about the closure half.
+const CLEAN_VIA = "client/src/modules/raceConfigWorld.js";
+const cleanVia = (t) => t.replace(/via=[^\s]+/, `via=${CLEAN_VIA}`);
+
+test("BASELINE: the guard PARSES the repository's own stamps and says how many it checked", () => {
+  // ★ THIS TEST USED TO ASSERT THAT THE TREE'S STAMP WAS FRESH, and that is not a property of the
+  // guard — it is a property of whatever happens to be committed. It went red the day the guard
+  // started reading the right dependency set and found a stamp that had been stale for two weeks,
+  // which is the guard WORKING. A test that fails when its subject succeeds is worse than no test.
+  //
+  // What IS the guard's own property: it reads every living document, parses every stamp, and says
+  // so. Whether those stamps are fresh is the tree's business and the failure message's.
+  const r = spawnSync(process.execPath, [GUARD], { cwd: ROOT, encoding: "utf8" });
+  assert.match(r.stdout, /stamp\(s\) in \d+ of \d+ living document\(s\) scanned/);
+  assert.match(r.stdout, /Freshness only/);
+  assert.ok(
+    r.status === 0 || r.status === 1,
+    `the guard must reach a verdict, not crash: ${r.stderr}`,
+  );
 });
 
-test("BASELINE via --doc: an untransformed copy behaves identically to the original", () => {
+test("BASELINE via --doc: an untransformed copy is parsed, and reports exactly one stamp", () => {
   // Pins the override itself. Without this, every sabotage below could be passing because `--doc`
   // silently checks nothing rather than because the sabotage was detected.
   const r = onCopy(unchanged);
@@ -170,7 +210,14 @@ test("THE DEFAULT SET IS THE LIVING-DOC SET, not one named file", () => {
     cwd: ROOT,
     encoding: "utf8",
   });
-  assert.equal(r.status, 0);
+  // ★ NOT `assert.equal(r.status, 0)`. This test is about WHICH DOCUMENTS ARE OPENED, and the exit
+  // code is about whether the stamps in them are fresh — a property of the tree, not of the set.
+  // Tying the two together made this test go red the day the guard started finding a real stale
+  // stamp, which is the guard working. What must hold is that the run reached a verdict at all.
+  assert.ok(
+    r.status === 0 || r.status === 1,
+    `the guard must reach a verdict, not crash: ${r.stderr}`,
+  );
   assert.ok(
     r.stdout.includes(`of ${expected} living document`),
     `a bare run must open all ${expected} living docs, not a subset — got: ${r.stdout.trim()}`,
@@ -255,10 +302,15 @@ function fixture() {
     join(dir, "scripts", "check-measured-stamps.mjs"),
     readFileSync(GUARD, "utf8"),
   );
+  // ★ THE GUARD IS NO LONGER A SINGLE FILE (STAMP-CLOSURE-1): it imports the router's own import
+  // walk. Copying only the guard would make the fixture die on a missing module, which would look
+  // exactly like a guard defect. `scripts/` is copied WHOLE rather than a hand-listed subset — a
+  // hand-listed subset is the same maintenance debt the closure check exists to remove.
+  cpSync(join(ROOT, "scripts"), join(dir, "scripts"), { recursive: true });
   writeFileSync(join(dir, "src", "cam", "a.js"), "x\n");
   writeFileSync(
     join(dir, "docs", "D.md"),
-    "# Doc\n\n<!-- MEASURED: thing @ PLACE 2026-01-01 depends=src/cam/ -->\n\nbody\n",
+    "# Doc\n\n<!-- MEASURED: thing @ PLACE 2026-01-01 depends=src/cam/ via=src/cam/a.js -->\n\nbody\n",
   );
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
   g("config", "user.email", "t@example.invalid");
@@ -428,4 +480,111 @@ test("SABOTAGE: a MEASURED comment with no depends= at all is reported, not skip
   assert.equal(r.code, 1, "a stamp naming no dependency must fail");
   assert.match(r.err, /cannot parse/);
   assert.match(r.err, /DOC\.md:\d+/);
+});
+
+// ── ★ THE CLOSURE HALF (STAMP-CLOSURE-1) ────────────────────────────────────────────────────────
+//
+// `depends=` is hand-written and was too narrow on two of this repository's three stamps: both named
+// the camera directory while their measurements drive a whole race, so the gap leader brake moved
+// their digits and the guard said nothing. The guard now asks the same freshness question a second
+// time over the REAL IMPORT CLOSURE of `via=`.
+//
+// These two tests are the sabotage in both directions, on a throwaway repository rather than on this
+// one — the verdict must come from the rule, not from whatever happens to be committed here.
+
+/** A repo where `depends=` and the `via=` closure are DIFFERENT sets, so the two halves separate. */
+function closureFixture() {
+  const dir = mkdtempSync(join(tmpdir(), "ra-closure-"));
+  const g = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8" });
+  mkdirSync(join(dir, "docs"), { recursive: true });
+  mkdirSync(join(dir, "src", "cam"), { recursive: true });
+  mkdirSync(join(dir, "src", "engine"), { recursive: true });
+  cpSync(join(ROOT, "scripts"), join(dir, "scripts"), { recursive: true });
+  writeFileSync(
+    join(dir, "scripts", "check-measured-stamps.mjs"),
+    readFileSync(GUARD, "utf8"),
+  );
+  // The declared dependency.
+  writeFileSync(join(dir, "src", "cam", "a.js"), "export const a = 1;\n");
+  // The thing the measurement actually reads — and it reaches OUTSIDE the declared dependency.
+  writeFileSync(join(dir, "src", "engine", "b.js"), "export const b = 1;\n");
+  writeFileSync(
+    join(dir, "src", "tool.js"),
+    "import { a } from './cam/a.js';\nimport { b } from './engine/b.js';\nexport const t = a + b;\n",
+  );
+  writeFileSync(
+    join(dir, "docs", "D.md"),
+    "# Doc\n\n<!-- MEASURED: thing @ PLACE 2026-01-01 depends=src/cam/ via=src/tool.js -->\n\nbody\n",
+  );
+  execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
+  g("config", "user.email", "t@example.invalid");
+  g("config", "user.name", "T");
+  g("add", "-A");
+  g("commit", "-q", "-m", "first");
+  const head = g("rev-parse", "--short", "HEAD").trim();
+  const doc = join(dir, "docs", "D.md");
+  writeFileSync(doc, readFileSync(doc, "utf8").replace("PLACE", head));
+  g("add", "-A");
+  g("commit", "-q", "-m", "stamp");
+  return { dir, g };
+}
+
+const runClosure = (dir) =>
+  spawnSync(
+    process.execPath,
+    [join(dir, "scripts", "check-measured-stamps.mjs"), "--doc=docs/D.md"],
+    { cwd: dir, encoding: "utf8" },
+  );
+
+test("CLOSURE, GREEN: a stamp whose via= closure has not moved PASSES", () => {
+  const { dir } = closureFixture();
+  try {
+    const r = runClosure(dir);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 stale/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSURE, RED: a file the via= entry IMPORTS changed after the stamp — depends= clean — FAILS", () => {
+  // The exact shape of the two real stamps this check was built for: nothing under `depends=`
+  // moved, and the numbers are stale anyway because the measurement reads more than that.
+  const { dir, g } = closureFixture();
+  try {
+    writeFileSync(
+      join(dir, "src", "engine", "b.js"),
+      "export const b = 2; // moved\n",
+    );
+    g("add", "-A");
+    g("commit", "-q", "-m", "engine moves, camera does not");
+    const r = runClosure(dir);
+    assert.equal(
+      r.status,
+      1,
+      "a moved closure file must fail even when depends= is clean",
+    );
+    assert.match(r.stderr, /actually IMPORTS changed after it/);
+    assert.match(r.stderr, /src.engine.b\.js/);
+    assert.doesNotMatch(
+      r.stderr,
+      /changed AFTER/,
+      "the depends= half must stay quiet — that is what makes this the closure half's catch",
+    );
+    assert.match(r.stdout, /1 stale/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSURE: a via= that does not exist FAILS rather than checking an empty set", () => {
+  // REACH-CONTRACT-1, one document down: a declared path that resolves to nothing contributes
+  // nothing, and a check over an empty set is the most comfortable possible pass.
+  // onCopyRaw, not onCopy: onCopy rewrites `via=` to a clean entry for the depends= tests, which
+  // would overwrite the very thing this test is sabotaging.
+  const r = onCopyRaw((t) =>
+    t.replace(/via=[^\s]+/, "via=scripts/no-such-file.mjs"),
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.err, /which does not exist/);
 });

@@ -1,0 +1,49 @@
+
+Running 4 tests using 1 worker
+
+  ok 1 [setup] › e2e\auth.setup.js:50:1 › create an account and save the authenticated state (3.4s)
+[arrival-shape] racer 0, drawn 4:
+  rank when he is handed back: 8
+  rank when the taper starts:  8
+  pace when he reaches his place: 1.0324 — ON SCREEN 28 px/s of closing speed (untapered 1.100 is 85) (at progress 0.722)
+  after arriving: best rank 1, worst rank 4, so he HELD his block
+  while inside his block: 1871 frames, braked in 70%, pushed in 19%
+  x  2 [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block (2.3m)
+[comeback-precedence] trace: [{"state":"OVERVIEW","t":1916},{"state":"LEADER_ZOOM","t":19987},{"state":"BATTLE_ZOOM","t":29568},{"state":"LEADER_ZOOM","t":37548},{"state":"LEAD_CHANGE","t":41780},{"state":"LEADER_ZOOM","t":49797},{"state":"BATTLE_ZOOM","t":57892},{"state":"OVERVIEW","t":60940},{"state":"LEADER_ZOOM","t":65896},{"state":"BATTLE_ZOOM","t":71656},{"state":"LEADER_ZOOM","t":74710},{"state":"COMEBACK_ZOOM","t":75485},{"state":"BATTLE_ZOOM","t":83573},{"state":"LEAD_CHANGE","t":86554},{"state":"BATTLE_ZOOM","t":94536},{"state":"LEADER_ZOOM","t":97825},{"state":"PHOTO_FINISH","t":105399},{"state":"FINISH","t":108446},{"state":"FINISH_OVERVIEW","t":110030}]
+[comeback-precedence] comeback entries: [{"from":"LEADER_ZOOM","heldMs":775,"at":75485}]
+  ok 3 [chromium-production] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE (1.9m)
+[garden-path] field=20 FIRST CROSSING after 100.7 s of wall clock; 1 finish time(s) on the scoreboard at that moment
+  ok 4 [chromium-production] › e2e\garden-path-finishes.spec.js:28:1 › garden-path crosses the line in a browser (1.7m)
+
+
+  1) [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+
+    Error: he must be left alone inside his block
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 0.5
+    Received:   0.8898984500267236
+
+      113 |     'he never reached his block, so the shape was never exercised'
+      114 |   ).toBeGreaterThan(5);
+    > 115 |   expect((braked + pushed) / mults.length, 'he must be left alone inside his block').toBeLessThan(
+          |                                                                                      ^
+      116 |     0.5
+      117 |   );
+      118 | });
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\arrival-shape.spec.js:115:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\error-context.md
+
+  1 failed
+    [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+  3 passed (6.2m)

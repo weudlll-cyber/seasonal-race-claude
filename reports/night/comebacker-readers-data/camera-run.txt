@@ -1,0 +1,26 @@
+
+=== N: 200 races, 157 COMEBACK_ZOOM entries ===
+
+site            racers present   COMEBACK_ZOOM shots   shots per 100 racers
+staged                      136                   106                  77.94
+fallback                     90                    19                  21.11
+winner-site                 132                    29                  21.97
+sovereign-lead               54                     0                   0.00
+faller                       88                     0                   0.00
+b2                          587                     0                   0.00
+uncast                     6913                     3                   0.04
+
+=== per-race, by what the plan cast ===
+  races with a FALLBACK cast and no staged : 40  -> 22 shots
+  races with a STAGED cast and no fallback : 88  -> 84 shots
+  races with NEITHER                       : 24  -> 5 shots
+
+  of the 5 shots in races the plan cast NO comebacker for, the target was:
+    {"uncast":3,"winner-site":2}
+
+fallback shots in races that ALSO had a staged racer : 3
+fallback shots in races with NO staged racer         : 16
+
+races where the fallback is the ONLY 'comebacker'-roled racer
+(so a rename would empty _cast and hand best() to the _b1 pool) : 14 of 200
+  COMEBACK_ZOOM shots in those races                             : 5

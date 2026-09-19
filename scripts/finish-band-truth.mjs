@@ -22,6 +22,16 @@
 // 3. ORDER IS RECORDED. Every operation carries the index it was issued at, so "the band is under the
 //    racers" is a comparison between two integers rather than a claim about the source.
 //
+// ── ★ WHAT IT IS STILL BLIND TO, stated rather than discovered later ───────────────────────────
+//
+// THE FIELD SIZE. It races N = 20. The owner races 40, and the sprite scale — and therefore how much
+// of the corridor the racers occupy in the shot — follows the field size. Raising it would change
+// what every number in this table means, so it is NAMED here and NOT changed: that is a decision
+// about the fixture, not a repair to a blind instrument.
+//
+// ONE RACE PER TRACK. "The widest overview" is the widest of ONE seeded race's frames. With the
+// derived camera seed it is at least a draw the product can produce; it is still one draw.
+//
 // Usage:
 //   node scripts/finish-band-truth.mjs                      # ten tracks, the table
 //   node scripts/finish-band-truth.mjs --only=dirt-oval --dump
@@ -74,7 +84,20 @@ const CW = 1280;
 const CH = 720;
 const N = 20;
 const SEED = 5601;
-const CAM_SEED = 1439767152;
+
+// ── ★ THE CAMERA SEED IS DERIVED, AND IT USED TO BE A CONSTANT (BLIND-WINDOW-1) ─────────────────
+//
+// This file's own header says the three shots are the ones "he actually watches". They were not:
+// `const CAM_SEED = 1439767152` pinned a camera seed the PRODUCT CANNOT PRODUCE. The browser derives
+// the camera's seed from the race seed (`cameraSeedForRace`), which is the owner's decision of
+// 2026-08-23 and is already what `scripts/lib/raceDriver.mjs` does by default — so every shot this
+// instrument reported came from a camera no player has ever been shown.
+//
+// MEASURED, not assumed: with the derived seed the state sequence changes on most tracks and the
+// published table moves on TWO of the ten — `luger-hill`'s tightest endgame shot and
+// `space-sprint`'s mid-race shot. Small, and real, and it is now a number about the product.
+const { cameraSeedForRace } = await import(u("client/src/modules/camera/cameraSeed.js"));
+const CAM_SEED = cameraSeedForRace(SEED);
 
 /**
  * A recording context that tracks the TRANSFORM and computes SCREEN-SPACE polygon area.
@@ -325,7 +348,18 @@ for (const geo of loadGeos()) {
     cam = cd.update(st.racers, ts, {
       raceElapsed: ts, finishedCount: st.finishedCount,
       winner: st.racers.find((r) => r.finishRank === 1) ?? null, finishT: st.finishT,
-      isOutcomePhase: false, physicsRacers: st.racers,
+      // OUTCOME-WINDOW-1: the PRODUCT's own expression (`RaceScreen/index.jsx:1533`), not a literal.
+      // `false` nails the outcome window shut, and the comeback shot's gate at
+      // `CameraDirector.js:883` reads it — so a literal here measures a camera the product never
+      // runs. ★ Measured on this fixture: it moves nothing, because no COMEBACK_ZOOM fires here at
+      // all (the plan IS delivered and the roles ARE cast; no racer qualifies as a candidate). Wired
+      // anyway — "it happens not to matter today" is not a reason to keep a value nobody chose.
+      // ★ `render-fingerprint.mjs:584` carries the SAME literal and is deliberately NOT touched:
+      // docs/fingerprints.json records that fixing it moves the minted render value, which is a
+      // second decision and the owner's.
+      isOutcomePhase:
+        meta?.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",
+      physicsRacers: st.racers,
     }, CW, CH, RAW);
     let maxT = 0;
     for (const r of st.racers) if (r.t > maxT) maxT = r.t;

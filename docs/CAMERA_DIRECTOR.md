@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ fe12fa95 2026-09-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED 2026-09-18 (PURSUER-RENAME-1), AND THE NUMBERS MOVED — TWICE OVER.** `node
 scripts/tracking-lag.mjs`, the command this stamp names, run on the rename branch AND on master as a

@@ -115,7 +115,7 @@ re-counted. Re-counted on 2026-09-07 and STILL ELEVEN. SHARED-CANONICAL-1 touche
 `ENGINE_INPUT_MODULES`, which is why the stamp is renewed rather than the figure changed. Counted
 by importing the module and reading `.length`, not by eye.
 
-<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ ba9801a1 2026-09-07 depends=client/src/modules/raceConfigWorld.js -->
+<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ ba9801a1 2026-09-07 depends=client/src/modules/raceConfigWorld.js via=client/src/modules/raceConfigWorld.js -->
 
 **The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
 what carries the argument; the number is not load-bearing, so it is not stated at all rather than
@@ -562,6 +562,30 @@ happens to carry the document.
 ```
 git log -1 --format=%h -- <the stamp's depends= paths>
 ```
+
+### ★ AND THE STAMP MUST NAME WHAT PRODUCED IT — `via=` (STAMP-CLOSURE-1, 2026-09-19)
+
+**The full form is now:**
+
+```
+<!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,<path>...] via=<entry file> -->
+```
+
+`via=` names the file whose **import closure** is the measurement's real dependency set — the script
+that produced the numbers, or the module the claim is about where no script did. **It is required**;
+a stamp without one does not parse and fails loudly.
+
+★ **WHY IT EXISTS, and it is a measured failure rather than a tidiness rule.** Two of this
+repository's three stamps were stale **in their digits** while the guard reported them fresh, because
+`depends=` is hand-written and both of them named the camera directory while their measurements drive
+a whole race. What moved them was the gap leader brake, in `defaults.js`, which neither `depends=`
+names. **The rule was right; the set it was applied to was too small.** The guard now asks the same
+freshness question a second time over `closureOf(via)` — the router's own import walk, the same one
+`engine-reach` and `verify` select on — so the set is derived and cannot fall out of date.
+
+**It costs about 0.7 s** for all three stamps, against roughly seven minutes to re-run
+`tracking-lag` alone. It is still FRESHNESS, not accuracy: it says the numbers COULD have moved, and
+only re-running the measurement says whether they did.
 
 **THE GUARD WAS ALSO FIXED, because a rule in a document is not a guard (R13).**
 `check-measured-stamps.mjs` now scans a second time with a permissive opener, and anything that

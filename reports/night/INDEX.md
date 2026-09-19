@@ -8,6 +8,97 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PROD-BROWSER-1.md](PROD-BROWSER-1.md) — **★★★ the production browser arm already existed, and
+  running it whole for the first time found NO bundle defect** (2026-09-19, `night/2026-09-19` piece
+  4; **nothing wired, no source changed**). ★★ **`scripts/serve-production.mjs` is the wrong thing to
+  wire**, with three addresses: it injects no runtime config, so the page would resolve its API to
+  `http://localhost:4000` — the owner's — which is the exact isolation failure `e2e-env.js`'s header
+  records; and it REPLACES `%LOCALAPPDATA%\racearena-preview` on every run, the directory serving
+  4173. ★ **`client/playwright.prod.config.js` (PROD-ARM-1) already runs the same specs against the
+  built bundle in the shipping shape** — and nobody had ever run it whole: **115 passed, 10 failed,
+  35.0 min**. ★★★ **Every one of the ten classified by re-running it on BOTH arms: one pre-existing
+  (`arrival-shape`, fails on dev too), two flake, and SEVEN a single cascade** from the arm's server
+  becoming unreachable mid-run — failing in 2–7 s where the dev arm takes 2–4 min. ★ **The one real
+  arm difference is the SHAPE, not the bundle**: one process serves the API and the page, so when it
+  goes the page goes too. ★ Side finding: **103 leftover e2e data directories, 262 MB**, never cleaned
+  up and documented nowhere.
+
+- [RACE-PARAMS-2.md](RACE-PARAMS-2.md) — **★★ the knowingly-transcribed race-parameter derivation has
+  one home, and BOTH mirrors are gone** (2026-09-19, `night/2026-09-19` piece 5; **nothing minted, no
+  behaviour changed**). `RaceScreen/index.jsx:554-613` held the step between a track/world/racer-type
+  and the twenty fields `createRaceFromIdentity` takes; `scripts/camera-replay.mjs` called itself a
+  **transcription** in its own header and `scripts/parity/goldenRunner.mjs`'s arm C assembled the
+  arguments by hand while claiming to be "the REAL browser core". ★ **`buildRaceCoreParams` in the
+  module that already owned half of this** (`raceParams.js`, ONE-HOME-RACE-PARAMS-1) — nothing new
+  computes anything; `deriveSpriteGeometry`, `W_REF_MAX` and `normalSpeedFrom` are all reused.
+  ★★ **All four fingerprints unmoved and both golden races byte-identical**, which is the direct check
+  on the runner this piece rewrote. ★ Eight further hand-assembled call sites are listed with the
+  reason each was left — **the two fingerprint instruments are a RULE, not a backlog item**.
+
+- [INSTALL-GAPS-1.md](INSTALL-GAPS-1.md) — **★★★ a fresh install cannot create its first admin by
+  following the documents** (2026-09-19, `night/2026-09-19` piece 6; **read-only — builds, configures
+  and registers nothing**). ★★ **`README.md:32-34,39` and `docs/SETUP.md:58-60,65` both say to copy
+  `RA_BOOTSTRAP_TOKEN` out of `docker-compose.yml`, and INSTALL-SECRETS-1 deleted it from there on
+  2026-09-08.** `npm run configure`, the only supported source, appears in no local-install document;
+  the override file is called "optional" and since that change is required; and the example file
+  copying is recommended still carries no token. ★ **Also blocking:** no document ever says
+  `cd server && npm install`, which both of SETUP's non-Docker paths need. ★ **Undocumented but
+  working:** no upgrade procedure anywhere, no backup procedure while `server/data/README.md` says
+  loudly that nothing backs it up, `npx playwright install chromium` named only inside the ship
+  ceremony, `scripts/migrate-teams.mjs` named in no document at all. ★★ **What breaks without his
+  data directory: NOTHING** — measured; the three unseeded directories are empty in his install too,
+  and his three extra backgrounds are referenced by no track.
+
+- [STAMP-CLOSURE-1.md](STAMP-CLOSURE-1.md) — **★★★ two of the three measured-stamp stamps were stale
+  in their DIGITS and the guard reported zero** (2026-09-19, `night/2026-09-19` piece 3; **nothing
+  re-stamped, nothing minted**). All three measurements re-run: `tracking-lag` **six of six frame
+  counts moved** (8415/1509/13133/7573/4005/2089 → 7399/2249/13210/8335/3238/1973), `straggler-truth`
+  **eight of eight numbers moved**, `ENGINE_INPUT_MODULES` **holds at eleven**. ★★ **THE CAUSE: both
+  stale stamps declare `depends=client/src/modules/camera/…` while their measurements drive a WHOLE
+  RACE** — and what moved them is the gap leader brake in `defaults.js`, which neither names. The rule
+  was right and the hand-written set was too small. ★ **A `via=` field now names what produced the
+  stamp and the same question is asked over its REAL IMPORT CLOSURE** (`closureOf`, reused not
+  written): **3 of 3 verdicts match the re-measurement, for +0.7 s** against ~7 minutes to re-measure
+  one stamp. Proven both ways on a controlled fixture. ★ Also: a commit that re-stamps AND changes the
+  dependency **invalidates itself and `--staged` cannot see it**; and the guard's own test file could
+  only run while the guard PASSED — both named and the second fixed.
+
+- [BLIND-WINDOW-1.md](BLIND-WINDOW-1.md) — **★★ the two indifferent instruments, and it was never the
+  cast** (2026-09-19, `night/2026-09-19` piece 2; **nothing minted, no shipped default touched**).
+  ★★★ **BLIND-SABOTAGE-1's diagnosis was wrong**: the plan IS delivered, the roles ARE cast, and
+  **`COMEBACK_ZOOM` never fires on either fixture at all** — so the delivery could never have been the
+  blindness. Each instrument had its own. ★ **`check-ending-frame.mjs` claimed the ending WINDOW and
+  rendered ONE frame** at the last crossing; it now walks the whole `finishHoldAfterLastMs +
+  finishPauseMs` window — **20 frames over 5,000 ms, 0.5 s → 0.7 s**. ★ **`finish-band-truth.mjs`
+  claimed "the shots he actually watches" and pinned `CAM_SEED = 1439767152`**, a camera the product
+  cannot produce; it now derives it as the browser does, and the table moves on **2 of 10 tracks**.
+  ★★ **Both proven by PRODUCT-side sabotage in both directions** — a scrim from the second ending
+  frame (old guard PASSES, new one FAILS) and a broken `CAMERA_SEED_SALT` (old table identical, new
+  one differs). ★ Honest limit: the second detector moves **two rows of ten**. All four fingerprints
+  measured before and after and **unmoved**.
+
+- [COMEBACKER-READERS-1.md](COMEBACKER-READERS-1.md) — **★★ one production reader of the role name,
+  and it is the camera; the assumption that the camera already ignores the fall-back racer is FALSE**
+  (2026-09-18, `read/comebacker-readers-1` off master `fe12fa95`; **read-only, no source changed,
+  nothing minted or merged**). ★ **`git grep -i comeback` over all tracked files: 2,493 hits in 311
+  files**; the literal-comparison pattern returns **13, of which ONE is production code** —
+  `comebackDetector.js:86`. ★ **The race never reads a role at all**: `git grep role` over
+  `raceCore.js`, `raceStep.js` and `raceBehavior.js` is **empty**, and the generator's only role tests
+  are against `'attacker-b2'` (`:792`, `:818`), its own comment at `:789` saying to read `held` from
+  the curve "not from the role name". ★★ **MEASURED, N=200 races / 157 COMEBACK_ZOOM entries**: the
+  camera shoots the **fall-back-cast** racer at **21.11 per 100 such racers** against an **uncast**
+  racer's **0.04** — about **500×** — taking **19 of 157 shots**, so the assumption is refuted. The
+  **staged** racer is favoured at **77.94**, but by the measured catch-up, not the name: all three
+  write sites (`:616`, `:657`, `:672`) emit the identical string, so all three enter `_cast`.
+  ★ **The role name selects the POOL** (`_cast` else `_b1`, `comebackDetector.js:170`; the forced shot
+  gated at `CameraDirector.js:889`) **and a measured catch-up selects the racer within it**.
+  ★★ **Under a rename the race stays byte-identical and `world`/`world-off` CANNOT move** —
+  `fingerprint-default.mjs` builds no director and delivers no plan — **but `camera` and `render`
+  DO**, since both build one and deliver a plan; in **14 of 200 races** the fall-back racer is the only
+  `'comebacker'`-roled racer, so `_cast` would empty and `best()` would fall to `_b1`. ★ Eight tests
+  pin the literal, five diagnostic counters would drop, ten living docs name it, and the **sim
+  observers are immune** because `hero-adherence.mjs:29-34` derives the role from geometry.
+  ★ **No name proposed, nothing built.**
 - [BREAKAWAY-GROWTH-1.md](BREAKAWAY-GROWTH-1.md) — **★★★ where a breakaway's growth comes from: the
   racer BEHIND is held back, the leader does not run away** (2026-09-19, `feat/pursuer-rename` commit
   2; **read-only, nothing minted**). Ten tracks, seeds 1–30, **300 races**, 40 racers, the Quick-Test
@@ -26,7 +117,6 @@ directions.
   survivor being exactly the `luger-hill` seed 19 the rename's own commit named — and two Quick-Test
   seeds to look at (**city-circuit 10**, **seatrack 27**) plus a staged-comebacker control
   (**city-circuit 3**). Data and harnesses in `breakaway-growth-data/`.
-
 - [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
   regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
   1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;

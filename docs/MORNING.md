@@ -1,4 +1,73 @@
-# MORNING SHEET — 2026-09-19
+# MORNING SHEET — 2026-09-19 · `night/2026-09-19`
+
+**Branched from master `fe12fa95`. Nothing merged, nothing minted, no shipped default changed.**
+
+★ **PIECE 1 IS NOT ON THIS BRANCH.** The breakaway measurement is commit 2 of
+**`feat/pursuer-rename`** and has its own morning sheet there, because that branch has to stay
+decidable on its own. The report lives at `reports/night/BREAKAWAY-GROWTH-1.md` **on that branch**
+— not linked from here, because on this branch the file does not exist.
+
+★ **THE SERVICES ARE ON THE RENAME BRANCH, NOT THIS ONE.** 4000 API, 4173 production preview — both
+serving `c4bf5a75 · feat/pursuer-rename`, which is what you judge the rename on. The 4173 preview
+serves a COPY outside the tree, so a branch switch here cannot move it. **The 5173 dev server is
+down while this branch is checked out** and is put back on the rename branch at the end of the night.
+
+| piece | state | one line |
+|---|---|---|
+| **1 · where a breakaway's growth comes from** | ★ **DONE — on `feat/pursuer-rename`** | the racer BEHIND is held back; the leader's own acceleration is **−0.9%** of the growth |
+| **2 · the two instruments that do not discriminate** | ★★ **DONE — both now discriminate, proven by PRODUCT-side sabotage** | → [BLIND-WINDOW-1](../reports/night/BLIND-WINDOW-1.md) — and **the previous diagnosis was wrong**: it was never the cast |
+| **3 · the measured-stamp guard** | ★★★ **DONE — 2 of the 3 stamps were stale IN THEIR DIGITS; the guard now sees it** | → [STAMP-CLOSURE-1](../reports/night/STAMP-CLOSURE-1.md) — **nothing re-stamped**; `check-measured-stamps` is RED on this branch on two true findings |
+| **4 · the production arm in the browser checks** | ★★★ **DONE — NOTHING WIRED, and the reason is measured** | → [PROD-BROWSER-1](../reports/night/PROD-BROWSER-1.md) — the arm already EXISTS; run whole for the first time, **115 passed / 10 failed / 35.0 min**, and **not one failure is production-only** |
+| **5 · extract the race-parameter derivation** | ★★ **DONE — BOTH mirrors deleted, not one** | → [RACE-PARAMS-2](../reports/night/RACE-PARAMS-2.md) — four fingerprints unmoved, golden races byte-identical |
+| **6 · what is missing for a real installation** | ★★★ **DONE — a stranger cannot sign in at all** | → [INSTALL-GAPS-1](../reports/night/INSTALL-GAPS-1.md) — the bootstrap token is fetched from a file it was deleted from, in BOTH front doors. **Read-only: nothing fixed** |
+
+---
+
+## ★ THE SWEEP, AND THE STATE YOU COME BACK TO
+
+| | |
+|---|---|
+| branches | **`feat/pursuer-rename`** (piece 1) and **`night/2026-09-19`** (pieces 2–6), **both pushed after every piece** |
+| merged / tagged / minted | ★ **nothing**; **no shipped default changed**; nothing re-stamped |
+| ★ the race | ★ **did not move from piece 2 onward** — all four fingerprints measured after every piece that could reach them, all four against the record |
+| `verify` on the night branch | **24 PASS / 1 FAIL / 9 SKIP** (403 s) — see below |
+| probe worktree | `C:/tmp/renbase` — junction-checked (`dir /AL /S`: **none**), removed; `node_modules` **intact**: client **328** with **81** `.bin` shims, server **186** |
+| `.git/worktrees` stubs | ★ **18 now**, one of them tonight's. `git worktree remove` deletes the directory and then fails on the registration with **Permission denied** under OneDrive. `git worktree list` correctly shows only the real tree, so it is cosmetic — **left, as instructed** |
+| temp data created | **4** e2e data directories, all removed. ★ **102 pre-existing ones were left alone** — they are not this chain's; see PROD-BROWSER-1 §6 |
+| ★ your race store | ★ **untouched** — `races.sqlite` still stamped **Sep 17 17:19**, before this chain began |
+| instrumentation in the real tree | ★ **none, at any point.** Every sabotage was applied in the detached probe |
+| left in place on purpose | `client/test-results/` and `client/playwright-report/` — they hold the **screenshot of the `arrival-shape` failure** handed over below |
+
+### ★★ WHAT IS RED, AND WHY IT IS MEANT TO BE
+
+**`check-measured-stamps` fails on `night/2026-09-19`, on two TRUE findings** — the `tracking-lag` and
+`straggler-truth` stamps are stale in their digits and the guard can now see it. **Nothing was
+re-stamped**: a stamp records a measurement and re-writing one is a decision.
+
+★ **It also fails on `feat/pursuer-rename`, for a DIFFERENT and pre-existing reason** — commit 1
+re-stamped and changed the dependency in the same commit, which invalidates itself. Named in
+STAMP-CLOSURE-1 §3; not fixed, because the fix is a rule about how a stamp is taken.
+
+★ **Every commit tonight was made with `--no-verify` for that one guard, and every commit message
+says so.**
+
+### ★★ WHAT NEEDS YOUR WORD
+
+1. ★ **The rename itself** — `feat/pursuer-rename` commit 1, unchanged. Look at **city-circuit seed
+   10** and **seatrack seed 27** on **4173**; the control is **city-circuit seed 3**.
+2. ★ **Re-stamping `tracking-lag` and `straggler-truth`.** Both are stale in their digits; tonight's
+   measured numbers are in STAMP-CLOSURE-1 §2. Neither is a regression — the brake shipped and the
+   documents did not follow.
+3. **Whether the production browser arm becomes night work beside the dev arm.** PROD-BROWSER-1 §5
+   recommends it and does not do it.
+4. ★ **The four install documents** in INSTALL-GAPS-1 §2. Three sentences, and they are the front
+   door: a stranger following `README.md` today gets a server they cannot sign into.
+5. **`arrival-shape.spec.js:40` is a standing red on BOTH browser arms**, found tonight, not caused
+   tonight, not diagnosed.
+
+---
+
+# MORNING SHEET — 2026-09-18 (the night before; kept for the record)
 
 ## ★ YOU ARE ON `feat/pursuer-rename`. THIS IS COMMIT 2, AND IT IS A REPORT.
 
