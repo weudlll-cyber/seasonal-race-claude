@@ -3,11 +3,18 @@
 // Project:     RaceArena
 //
 // ★ WHAT THIS FILE OWNS: THE arrival shape — the one the owner described on 2026-09-13, and since
-//   SERVO-RANKS-1 the only one in the tree. Three properties, one per part of the shape:
+//   SERVO-RANKS-1 the only one in the tree. TWO properties, one per part of the shape:
 //     (a) the taper reaches natural speed BEFORE he arrives, which is the whole difference from C;
-//     (b) once he has arrived he is neither pushed nor braked inside his block;
-//     (c) once he has arrived he is STEERED to his drawn place like any other racer — the
+//     (b) once he has arrived he is STEERED to his drawn place like any other racer — the
 //         "unsteered inside his block" half was measured, costed at 3.3x the pre-shape gap, deleted.
+//
+// ★ CORRECTED 2026-09-19: THIS LIST SAID "THREE PROPERTIES" AND ITS (b) AND (c) SAID OPPOSITE THINGS.
+//   The old (b) read "once he has arrived he is neither pushed nor braked inside his block" — the
+//   pre-2026-09-13 shape — while (c) beneath it and this file's only (b)-labelled case, `★ (b)
+//   arrived and leading, he IS braked back toward his drawn place`, both say he IS steered.
+//   `17193be6` ARRIVAL-STEERED-AGAIN-1 turned the case around on 2026-09-13 and left the header's
+//   old clause standing beside its replacement. NOTHING A TEST ASSERTS CHANGED HERE: the stale
+//   clause was deleted and (c) renumbered to (b), so the labels now match the cases below.
 //
 // ★ WHAT IT DELIBERATELY DOES NOT DO. It does not measure whether the shape is GOOD — which distance
 //   works, what the peak gap becomes, whether he still lands in his block — those are population

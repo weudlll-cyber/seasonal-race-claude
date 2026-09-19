@@ -775,8 +775,17 @@ export function createTrajectoryController(racePlan) {
    * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
    * the gap brake ON, its engage/release moves the target by its whole authority at once and the
    * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
-   * against 1.008x for this change alone. **The brake ships OFF; if it is ever switched on, that
-   * interaction is the thing to fix first.**
+   * against 1.008x for this change alone.
+   *
+   * ★★ CORRECTED 2026-09-19: THE BRAKE SHIPS **ON**, AND THIS SENTENCE SAID THE OPPOSITE. It read
+   * "the brake ships OFF; if it is ever switched on, that interaction is the thing to fix first" —
+   * written when it did. `gapBrakeEnabled` has been `true` since the owner's decision of 2026-09-16,
+   * landed on master 2026-09-17 (`be7e6872`).
+   *
+   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (`defaults.js:1220`) is `false`, and
+   * the interaction above is no longer hypothetical — it is the REASON that key stays false.
+   * PICK-WINNER-1 measured V1 ALONE keeping parity; only V1 **and** the gap brake together break it,
+   * at the 7.6x cost named above. The two must never both be on.
    */
   function _setTargetNoiseBlind(r, newTarget, detTarget, elapsedMs) {
     const prevDet = r._servoDetTarget ?? 1.0;

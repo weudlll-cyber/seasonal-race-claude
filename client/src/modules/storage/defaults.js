@@ -1119,7 +1119,13 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
   // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.
   gapRerollDevMarker: false,
-  // ── GAP-BRAKE-1 — the gap-based leader brake (OUTCOME phase). SHIPPED DEFAULT OFF. ────────────
+  // ── GAP-BRAKE-1 — the gap-based leader brake (OUTCOME phase). ★ SHIPPED DEFAULT ON. ──────────
+  //
+  // ★ THIS HEADING SAID "SHIPPED DEFAULT OFF" UNTIL 2026-09-19, AND IT IS THE FIRST LINE ANYONE
+  // READS WHEN LOOKING THE BRAKE UP. `gapBrakeEnabled` is `true` below — the owner's decision of
+  // 2026-09-16, landed on master 2026-09-17 (`be7e6872`, the default itself flipped in
+  // `59aaafbf`). The rationale beneath is unchanged and still describes why the value is what it
+  // is; only the claim about what SHIPS was wrong.
   //
   // ★ WHY IT EXISTS. Every other leader-brake in this engine stops at `pulkEnd`: the PULK contest
   // director's brake (raceGovernor.js) is slewed back to 1.0 outside [pulkStart, pulkEnd), and
