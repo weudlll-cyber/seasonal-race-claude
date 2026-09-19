@@ -12,8 +12,16 @@ the camera treatment.
 | what it answers | where a breakaway's growth comes from: the leader accelerating, the field falling back, or a gap that was never closed |
 | ★★★ the answer | **the racer BEHIND is held back.** Pooled, the leader's own acceleration is **−0.9%** of the growth; the one behind slowing is **59.5%**; a difference already present is **41.4%** |
 | fixture | ten tracks, seeds 1–30, **300 races**, 40 racers, the Quick-Test roster, `wild`, brake ON at the shipped values |
-| services | ★ **all three up on THIS branch**, every one of them reporting **`c4bf5a75 · feat/pursuer-rename · clean`**: **4000** API, **5173** dev, **4173** production preview serving **`assets/index-ojTzkqPx.js`**. ★ **Judge on 4173** — 5173 is the dev bundle and is not the app (VERIFY-RULES R10) |
+| services | ★ **all three up on THIS branch**, every one of them reporting **`67288cc1 · feat/pursuer-rename · clean`**: **4000** API, **5173** dev, **4173** production preview serving **`assets/index-BXjM1W8w.js`**. ★ **Judge on 4173** — 5173 is the dev bundle and is not the app (VERIFY-RULES R10) |
 | ★ where to look | **city-circuit seed 10** and **seatrack seed 27** — a comeback shot used to fire on the renamed racer there and now does not. ★ **Control: city-circuit seed 3**, which must look the same as before |
+
+
+★ **The services were taken down and put back at the end of the night, so these are a REBUILD rather
+than the one commit 2 first reported.** The night's other five pieces ran on `night/2026-09-19`, which
+had to be checked out here — so `client/dist` was rebuilt on master's source in between. It has been
+rebuilt on this branch again and every one of the three now reports `67288cc1`, verified by searching
+the built file rather than trusting the build log. **The earlier bundle name in commit `67288cc1`'s
+own message, `assets/index-ojTzkqPx.js`, was the build at `c4bf5a75` and is superseded by this line.**
 
 ★ **The rest of tonight is on a different branch.** Everything from piece 2 of the chain onward is on
 **`night/2026-09-19`**, cut from master, and its own morning sheet is there. Keeping the tooling off

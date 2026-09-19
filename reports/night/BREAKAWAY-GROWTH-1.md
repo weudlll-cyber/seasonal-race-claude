@@ -458,3 +458,22 @@ seed 1.
 badge named no commit at all. A file save does not clear it; the PROCESS has to go. It was restarted
 and now reports the commit above. **Any eye test taken on 5173 before this restart was taken on a
 build whose identity the badge could not state.**
+
+### ★ SUPERSEDED BY THE END-OF-NIGHT RESTART — read this line, not the table above
+
+The table above records the services as they stood when this report was written, at **`c4bf5a75`**.
+The night's other five pieces ran on **`night/2026-09-19`**, which had to be checked out in this same
+tree, so `client/dist` was rebuilt on master's source in between. **All three services were taken
+down and put back on this branch at the end of the night**, and they now report:
+
+| | |
+|---|---|
+| the API's `/api/health` | `{"commit":"67288cc1","branch":"feat/pursuer-rename","dirty":false}` |
+| the dev server's badge (5173) | `67288cc1 · feat/pursuer-rename · clean` |
+| ★ the **production** bundle on 4173 | ★ **`assets/index-BXjM1W8w.js`** (with `assets/index-ucWHj0Wl.css`) |
+| the commit stamped INSIDE that bundle | ★ **`67288cc1` / `feat/pursuer-rename`**, verified by searching the built file |
+| `audit-bundle-address` | **3 files, no deployment address** |
+
+★ **`assets/index-ojTzkqPx.js` was the `c4bf5a75` build and is gone.** The two commits differ only in
+`docs/MORNING.md`, so the picture on screen is the same one — but the name on the page is not, and a
+report that left the old one standing would send him looking for a file that is not served.
