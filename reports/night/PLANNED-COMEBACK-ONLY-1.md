@@ -368,3 +368,81 @@ the measurement and the address inline. The new block in `heroCurveGenerator.js`
 comparison table from §1 in full, so the name can be checked against its evidence without leaving the
 file.
 
+---
+
+## 9 · COMMIT 2 — THE TEST THAT CONTRADICTED HIS OWN DECISION
+
+`client/e2e/arrival-shape.spec.js` asserted that a released hero is **left alone inside his block**.
+That is the behaviour of BAND steering (`strictness = 0`, which commands exactly 1.0 anywhere in the
+block), and band steering after arrival was deleted by **`17193be6` ARRIVAL-STEERED-AGAIN-1 at 17:07
+on 2026-09-13 — fifteen hours after this spec was written**. That commit turned the node test
+`arrivalShape.test.js` around to assert the opposite and did not touch the browser spec; the browser
+suite is night work, so nothing ran it for six days. ARRIVAL-BRAKE-1 established all of that and
+deliberately repaired nothing, because which of the two readings should stand was the owner's call.
+
+★ **His decision is recorded at `racePlanner.js:1400-1409`, in the engine's own words:** *"AFTER HE
+ARRIVES HE IS STEERED, like any other racer … `strictness` therefore stays at the hero's 1.0 and the
+blend below is exact-rank steering."* The spec now asserts that.
+
+### ★★ THE QUANTITY AND THE BAR ARE UNCHANGED — ONLY THE DIRECTION IS
+
+```js
+-  expect((braked + pushed) / mults.length, 'he must be left alone inside his block').toBeLessThan(0.5);
++  expect((braked + pushed) / mults.length, 'he must be STEERED inside his block …').toBeGreaterThan(0.5);
+```
+
+★ **NOTHING WAS LOOSENED, AND THAT WAS THE POINT.** The threshold was never the problem; the claim it
+was pointed at was. A `< 0.9` bar would have turned a true statement about a real disagreement into a
+green line, which is exactly what ARRIVAL-BRAKE-1 refused to write.
+
+★ **0.5 is on the right side of the measurement rather than chosen to fit it.** ARRIVAL-BRAKE-1
+measured this fixture at **0.890 with `gapBrakeEnabled` on and 0.812 with it off**. Both readings are
+far above the bar in the new direction and far above it in the old one, so a single measurement
+decides between the two claims — it is one bar, not two.
+
+### ★ NO NEW CLAIM WAS INVENTED, so the assertion did not have to be deleted
+
+"The multiplier is not 1.0 on most in-block frames" is precisely "he is not on band steering", which
+is the ONE thing `17193be6` changed. The node test asserts the same design at unit level — arrived
+and leading, the commanded multiplier is below 1.0 — and this is that statement in a real browser
+over a real race, which is what the file's header says it exists for.
+
+**What the spec still proves, kept untouched:** the variant is live and he is released and climbs
+(`expect(best).toBeLessThan(atRelease)`), and the shape was actually exercised
+(`expect(mults.length).toBeGreaterThan(5)`).
+
+### ★★ THE TWO PLACES THAT CARRIED THE SAME REVERSED CLAIM
+
+Correcting the assertion alone would have left the file arguing with itself in two more places:
+
+1. **The file header** said it asserts *"he is not braked for leading once he is inside his block"*.
+2. ★★ **The test's own TITLE** said the shape *"leaves him unsteered in his block"*. **A test name is
+   an assertion that travels** — it is what gets quoted in run transcripts, reports and commit
+   messages by people who never open the file, and `reports/night/prod-browser-data/*.txt` and
+   `PROD-BROWSER-1.md` both quote this one. That is how the contradiction survived six days. It now
+   reads *"…and steers him back toward his drawn place inside his block"*.
+
+★ **The quotations of the OLD name in `reports/` are left exactly as they are** — verbatim run
+transcripts and dated diagnosis, append-only by this directory's rule, and correct about the day they
+were written.
+
+### THE RUN
+
+`npx playwright test e2e/arrival-shape.spec.js`, the dev arm:
+
+```
+[arrival-shape] racer 0, drawn 4:
+  rank when he is handed back: 8
+  rank when the taper starts:  8
+  pace when he reaches his place: 1.0324 — ON SCREEN 28 px/s of closing speed (untapered 1.100 is 85) (at progress 0.722)
+  after arriving: best rank 1, worst rank 4, so he HELD his block
+  while inside his block: 1871 frames, braked in 70%, pushed in 19%
+
+  2 passed (2.5m)
+```
+
+★★ **1871 frames, 70% braked and 19% pushed — 0.89 against the 0.5 bar**, reproducing
+ARRIVAL-BRAKE-1's headless 0.890 on this fixture to the digit from inside a real browser. ★ And
+*"braked in 70%"* is the spec's own original comment — *"braking him for leading in about seven
+frames in ten"* — which was **current and correct all along**. The comment was never the problem. The
+assertion beneath it was.
