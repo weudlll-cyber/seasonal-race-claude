@@ -1,5 +1,13 @@
 // ============================================================
-// breakaway-growth.mjs — BREAKAWAY-GROWTH-1
+// File:        breakaway-growth.mjs
+// Path:        reports/night/breakaway-growth-data/breakaway-growth.mjs
+// Project:     RaceArena — BREAKAWAY-GROWTH-1
+// Description: The measurement harness behind BREAKAWAY-GROWTH-1: it drives seeded races through
+//              stepRacePhysics and decomposes the growth of a breakaway lead into the seven factors
+//              of the t-update. It is EVIDENCE for one report, not tooling — which is why it lives
+//              beside its data under reports/ rather than in scripts/. It imports raceCore, so
+//              `engine-reach` counts it inside the race hull; nothing in the product imports it,
+//              so it can no more change a race than a report can.
 //
 // WHAT IT ANSWERS: for the races that open a lead bigger than the brake's own allowance inside the
 // brake's own window, where does the GROWTH of that lead come from — the leader speeding up, the
