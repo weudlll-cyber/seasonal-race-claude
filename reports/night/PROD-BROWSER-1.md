@@ -192,9 +192,11 @@ fresh `${tmpdir}/racearena-e2e-<uuid>` and nothing ever deletes it. Counted toni
 
 | | |
 |---|---|
-| leftover `racearena-e2e-*` directories | ★ **103** |
+| `racearena-e2e-*` directories present when counted | **103** |
+| ★ of those, **pre-existing** — from runs before tonight | ★ **102** |
 | total size | ★ **262 MB** |
-| created by tonight's runs | **4** (removed in the sweep) |
+| created by tonight's four runs | **4** — all removed in the sweep |
+| after the sweep | ★ **102 remain**, none of them this chain's |
 
 Not documented anywhere — searched `docs/` and `reports/night/`. **Cosmetic, and it grows by one
 directory per run for ever.**
