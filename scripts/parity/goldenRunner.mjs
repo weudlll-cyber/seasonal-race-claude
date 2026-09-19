@@ -48,7 +48,13 @@ import {
   computeStartRowCount,
 } from "../../client/src/modules/rowLayout.js";
 // ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the one module the browser uses.
-import { deriveSpriteGeometry } from "../../client/src/modules/raceParams.js";
+// RACE-PARAMS-2: arm C calls `buildRaceCoreParams`, the function the browser calls. The SIM arm
+// at :487 still needs `deriveSpriteGeometry` alone — it wants `physicalSpriteSize` and nothing
+// else, and it is not assembling a `createRaceFromIdentity` call. Both come from the one module.
+import {
+  buildRaceCoreParams,
+  deriveSpriteGeometry,
+} from "../../client/src/modules/raceParams.js";
 import { loadRowLayoutConfig } from "../../client/src/modules/rowLayoutConfig.js";
 import {
   createRaceFromIdentity,
@@ -698,44 +704,45 @@ export function realArm(identity) {
       ))
     : 0;
 
-  // Auto-scale exactly as RaceScreen/the sim compute it (no D3.5.5 override in a headless run — the
-  // 600-identity soak already proved the browser and sim body dims agree on every identity).
-  const effectiveWidth =
-    ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
-  const { physicalSpriteSize, drawnBodyWidthRefPx, bodyFillNarrow, bodyFillLong } =
-    deriveSpriteGeometry({
-      displaySize: cfg.displaySize,
-      bodyFillX: cfg.bodyFillX,
-      bodyFillY: cfg.bodyFillY,
-      nRacers: identity.nRacers,
-      effectiveWidth,
-      autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
-    });
-
-  // Build the REAL browser race via the shared core, then AUGMENT each racer with the browser's roster
-  // name — exactly as RaceScreen does before rendering (the avoidance symmetry tiebreak keys on r.name).
-  // We step the core directly here (rather than via runRaceHeadless) so raceCore.js stays untouched.
-  const { state, config, meta } = createRaceFromIdentity({
+  // ── RACE-PARAMS-2: the browser's OWN derivation, called rather than mirrored ──────────────────
+  //
+  // This arm's whole claim is that it runs "the ACTUAL RaceScreen init" — and until now it assembled
+  // `createRaceFromIdentity`'s twenty arguments itself, which is a mirror of exactly the kind this
+  // arm exists to make unnecessary. `buildRaceCoreParams` is the function `RaceScreen/index.jsx`
+  // calls, so the assembly is now shared too and not only the call.
+  //
+  // No D3.5.5 override in a headless run — the 600-identity soak already proved the browser and sim
+  // body dims agree on every identity — so `hasDisplaySizeOverride` stays false, which is what the
+  // unconditional form here always was.
+  const { displaySizeScale: _displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
     shape: ctx.shape,
     isOpenTrack: ctx.isOpen,
     pathLengthPx: ctx.pathLengthPx,
     trackWidthPx: ctx.geometricTrackWidth,
-    speedMultiplier: cfg.speedMultiplier,
-    baseSpeedConfig,
-    behaviorConfig,
-    rowConfig,
-    dynamicsConfig,
-    normalSpeedPxPerSec: V,
+    world: {
+      baseSpeedConfig,
+      raceBehaviorConfig: behaviorConfig,
+      rowLayoutConfig: rowConfig,
+      raceDynamicsConfig: dynamicsConfig,
+      autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+    },
+    racerType: {
+      displaySize: cfg.displaySize,
+      bodyFillX: cfg.bodyFillX,
+      bodyFillY: cfg.bodyFillY,
+      speedMultiplier: cfg.speedMultiplier,
+    },
+    nRacers: identity.nRacers,
     laps: browserLaps,
     requestedSeconds: browserSeconds,
-    nRacers: identity.nRacers,
     racePlanSeed: identity.seed,
     racePlanEnabledFlag: true,
-    physicalSpriteSize,
-    drawnBodyWidthRefPx,
-    bodyFillNarrow,
-    bodyFillLong,
   });
+
+  // Build the REAL browser race via the shared core, then AUGMENT each racer with the browser's roster
+  // name — exactly as RaceScreen does before rendering (the avoidance symmetry tiebreak keys on r.name).
+  // We step the core directly here (rather than via runRaceHeadless) so raceCore.js stays untouched.
+  const { state, config, meta } = createRaceFromIdentity(raceCoreParams);
   const names = rosterOf(identity.nRacers).map((r) => r.name);
   for (let i = 0; i < state.racers.length; i++) state.racers[i].name = names[i];
 

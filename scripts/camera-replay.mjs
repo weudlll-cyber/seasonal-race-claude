@@ -70,11 +70,12 @@ const { EditorShape } = await import(
 const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
   u(join(ROOT, "client/src/modules/raceCore.js"))
 );
-const { normalSpeedFrom, MIN_LAPS } = await import(
+const { MIN_LAPS } = await import(
   u(join(ROOT, "client/src/modules/durationModel.js"))
 );
-// ONE-HOME-RACE-PARAMS-1: the sprite-geometry derivation, from the one module the browser uses.
-const { deriveSpriteGeometry } = await import(
+// RACE-PARAMS-2: the WHOLE derivation, from the one module the browser calls. `normalSpeedFrom` is
+// no longer imported here — it is derived inside, from the same home, once.
+const { buildRaceCoreParams } = await import(
   u(join(ROOT, "client/src/modules/raceParams.js"))
 );
 // racer-types warms sprite images at import time; headless there is no Image, and it says so 31
@@ -162,10 +163,12 @@ function resolveGeometry(geometryId) {
   );
 }
 
-// ── Race construction — RaceScreen's own derivation, transcribed ───────────────────────────────
-// Every line below mirrors client/src/screens/RaceScreen/index.jsx race-init. Where the browser
-// reads a loader (loadBaseSpeedConfig etc.) this reads the same block out of the reconstructed
-// config world, which is defaults + the marker's diff.
+// ── Race construction — the BROWSER'S OWN derivation, called rather than transcribed ────────────
+// ★ This block used to say "every line below mirrors RaceScreen's race-init", and it did. Since
+// RACE-PARAMS-2 the derivation is `buildRaceCoreParams` in client/src/modules/raceParams.js and
+// this file calls it, so there is nothing left to mirror. Where the browser reads a loader
+// (loadBaseSpeedConfig etc.) this reads the same block out of the reconstructed config world,
+// which is defaults + the marker's diff.
 function buildRace(marker, world, geometry) {
   const race = marker.race;
   const shape = new EditorShape(geometry);
@@ -190,47 +193,44 @@ function buildRace(marker, world, geometry) {
     }
   }
   const racerType = getRacerType(race.type ?? "horse");
-  const speedMultiplier = racerType.getSpeedMultiplier();
-  const displaySize = racerType.config.displaySize;
-  const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
   const nRacers = race.n;
 
-  // ONE-HOME-RACE-PARAMS-1: this was a transcription of RaceScreen's derivation. It is now the
-  // same function the browser calls, so the two cannot drift. The override question is answered
-  // from the MARKER's recorded config rather than from storage, which is this script's whole job.
-  const { physicalSpriteSize, drawnBodyWidthRefPx, bodyFillNarrow, bodyFillLong } =
-    deriveSpriteGeometry({
-      displaySize,
-      bodyFillX: racerType.config.bodyFillX,
-      bodyFillY: racerType.config.bodyFillY,
-      nRacers,
-      effectiveWidth,
-      autoScaleConfig,
-      hasDisplaySizeOverride: "displaySize" in (marker.cfg?.types?.[race.type] ?? {}),
-    });
-
-  const built = createRaceFromIdentity({
+  // ── RACE-PARAMS-2: THE TRANSCRIPTION IS GONE ───────────────────────────────────────────────────
+  //
+  // Everything between here and `createRaceFromIdentity` used to be this file's own copy of
+  // `RaceScreen/index.jsx`'s derivation, and the block above still says so — "RaceScreen's own
+  // derivation, transcribed". It is now the same function the browser calls, so the two cannot
+  // drift. The override question is answered from the MARKER's recorded config rather than from
+  // storage, which is this script's whole job and is why it is a parameter.
+  const { displaySizeScale: _displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
     shape,
     isOpenTrack,
     pathLengthPx,
     trackWidthPx,
-    speedMultiplier,
-    baseSpeedConfig,
-    behaviorConfig,
-    rowConfig,
-    dynamicsConfig,
-    normalSpeedPxPerSec: normalSpeedFrom(baseSpeedConfig),
+    world: {
+      baseSpeedConfig,
+      raceBehaviorConfig: behaviorConfig,
+      rowLayoutConfig: rowConfig,
+      raceDynamicsConfig: dynamicsConfig,
+      autoScaleConfig,
+    },
+    racerType: {
+      displaySize: racerType.config.displaySize,
+      bodyFillX: racerType.config.bodyFillX,
+      bodyFillY: racerType.config.bodyFillY,
+      speedMultiplier: racerType.getSpeedMultiplier(),
+    },
+    nRacers,
     laps: race.laps ?? MIN_LAPS,
     requestedSeconds: race.durSec ?? 60,
-    nRacers,
     racePlanSeed: race.seed ?? 0,
     racePlanEnabledFlag: !!race.plan,
-    physicalSpriteSize,
-    drawnBodyWidthRefPx,
-    bodyFillNarrow,
-    bodyFillLong,
+    hasDisplaySizeOverride: "displaySize" in (marker.cfg?.types?.[race.type] ?? {}),
     constSpeedActive: false,
   });
+  const { speedMultiplier, drawnBodyWidthRefPx } = raceCoreParams;
+
+  const built = createRaceFromIdentity(raceCoreParams);
 
   // Names are render-only in the browser (coats/labels hash the name; the physics stream never
   // reads it), so attaching them here changes nothing and makes the output readable.

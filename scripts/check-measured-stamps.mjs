@@ -24,9 +24,36 @@
 // stamped one. In plain terms: if the camera changed after these figures were taken, they are
 // suspect and it says so.
 //
+// ── ★ THE SECOND HALF, ADDED BY STAMP-CLOSURE-1: `depends=` WAS TOO NARROW ─────────────────────
+//
+// THE DEFECT, MEASURED RATHER THAN SUSPECTED. Two of the three stamps in this tree were stale IN
+// THEIR DIGITS while this guard reported them fresh. `tracking-lag`'s six frame counts were 8415,
+// 1509, 13133, 7573, 4005, 2089 and every one of them had moved; `straggler-truth`'s four durations
+// and four leads had all moved. The guard was silent because both stamps declare
+// `depends=client/src/modules/camera/...` — and what moved them was the GAP LEADER BRAKE, shipped in
+// `client/src/modules/storage/defaults.js` on 2026-09-17, which neither `depends=` names.
+//
+// Both measurements DRIVE A WHOLE RACE. Their real dependency is the race engine, not the camera
+// directory. The rule this guard applies was right; the SET it applied it to was hand-written and
+// too small — which is the defect class this repository has paid for repeatedly, and the answer is
+// the same one REACH-CONTRACT-1 gave: derive the set, never maintain it.
+//
+// SO A STAMP NOW NAMES THE THING THAT PRODUCED IT — `via=<entry file>` — and the same freshness
+// question is asked a second time over that file's REAL IMPORT CLOSURE (`closureOf`, the router's
+// own walk, the same one `engine-reach` and `verify` use). It costs one closure walk and one
+// `git log` per stamp: measured at well under a second for all three, against a re-measurement cost
+// of about seven minutes for `tracking-lag` alone.
+//
+// ★ IT IS STILL FRESHNESS, NOT ACCURACY, and the distinction is kept honest below. What changed is
+// that the freshness question is now asked about what the measurement ACTUALLY READS. On this tree
+// that is enough to separate the three stamps correctly: the two whose digits are stale go red and
+// the one whose digits are current stays green — 3 of 3, checked against a real re-measurement of
+// all three.
+//
 // WHAT THIS GUARD DOES **NOT** CHECK, stated here rather than discovered later:
 //   - **It does not verify the NUMBERS.** It never runs the measurement. A stamp taken on the right
-//     commit with wrong digits typed under it passes. This checks FRESHNESS, not accuracy.
+//     commit with wrong digits typed under it passes. This checks FRESHNESS, not accuracy — now
+//     over the right dependency set, which is a better proxy and still a proxy.
 //   - It does not cover any other number in a stamped document. In CAMERA_DIRECTOR.md that
 //     explicitly leaves unguarded: the test and file counts in the camera-check section, the
 //     command durations (~35 s, ~7 min), the frame counts and sample-point lists, the 2708 px
@@ -49,7 +76,12 @@
 // the stamps exist; silently checking nothing is the failure mode it is built against.
 //
 // THE STAMP FORMAT, one HTML comment on its own line:
-//   <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,<path>...] -->
+//   <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,<path>...] via=<entry file> -->
+//
+// `via=` is REQUIRED and names the file whose import closure IS the measurement's dependency set —
+// the script that produced the numbers, or (where no script did) the module the claim is about. It
+// is required rather than optional because an optional declaration is one nobody writes, and a
+// stamp without one would silently get the narrow check this guard was built to stop trusting.
 //
 // WHY IT READS GIT HISTORY AND NOT THE WORKING TREE — asked again at STAMP-COMPLETE-1, answered
 // UNCHANGED. The question a stamp raises is historical: "has the dependency changed since the commit
@@ -69,9 +101,11 @@
 export const GUARD = {
   id: "check-measured-stamps",
   covers:
-    "a stamped measured number whose source changed after the stamp was taken, across EVERY living document (docs/ + repo-root *.md), not one named file",
+    "a stamped measured number whose source changed after the stamp was taken, across EVERY living document (docs/ + repo-root *.md), not one named file — and, since STAMP-CLOSURE-1, over the REAL IMPORT CLOSURE of the thing that produced it (`via=`) as well as its hand-written `depends=`",
   blind: [
-    "the NUMBERS themselves — it never re-runs a measurement, only checks freshness",
+    "the NUMBERS themselves — it never re-runs a measurement, only checks freshness. The closure check is a better proxy for 'could the digits have moved', not an answer to 'did they'",
+    "a stamp that went stale with NO commit behind it — a measurement that is nondeterministic, or one taken wrongly in the first place. Nothing in git can see either",
+    "whether `via=` names the RIGHT entry file. It is checked to exist and its closure is walked; a stamp that names a file with a smaller closure than the truth narrows itself, exactly as a wrong `depends=` did",
     "any measured number that carries no stamp: it checks the stamps that exist, in any document",
     "reports/ — the lab journal is outside the scanned set and is allowed to go stale by rule",
     "a change that cannot have moved the figures: a comment-only edit trips it exactly like a behaviour change",
@@ -91,9 +125,13 @@ if (process.argv.includes("--declare")) {
 
 const started = Date.now();
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
+// THE ROUTER'S OWN import walk — the same one `engine-reach` and `verify` select on, so a
+// stamp's dependency set and the tree's idea of what a file reads cannot come apart.
+import { closureOf } from "./lib/routing.mjs";
+import { TEST_FILE_EXCLUDE } from "./lib/testFileExclude.mjs";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -148,22 +186,11 @@ function livingDocs() {
 
 const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : livingDocs();
 
-/**
- * The pathspec that keeps TEST FILES out of "what changed" — VERIFY-COST-3.
- *
- * EXPORTED so this guard's own tests can ask the same question the guard asks. They cannot pick
- * their fixture commits by a different rule and still be testing this guard, and CI caught exactly
- * that: on a run where the newest camera commit was a test-file commit, the sabotage stamped a
- * commit the guard no longer considers, so the guard correctly reported fresh while the test
- * demanded stale. The rule has ONE home and both ends read it.
- *
- * `:(exclude,glob)` rather than `:(exclude)`: with the `glob` magic `**` means what it reads as on
- * every git version instead of depending on the default pathspec dialect.
- */
-export const TEST_FILE_EXCLUDE = ":(exclude,glob)**/*.test.*";
+// The pathspec that keeps TEST FILES out of "what changed" (VERIFY-COST-3). ONE HOME, in a module
+// neither end executes — see scripts/lib/testFileExclude.mjs for why it is not declared here.
 
 const STAMP =
-  /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
+  /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s+via=([^\s]+)\s*-->/g;
 
 // ── A STAMP THAT CANNOT BE PARSED MUST FAIL LOUDLY (SHIP-CEREMONY-FIX-1) ────────────────────────
 //
@@ -260,14 +287,14 @@ for (const doc of DOCS) {
         ` to be dropped from the checked set without a word.${NL}` +
         `      THAT is the failure — not the formatting.${NL}` +
         `        found:    ${shown}${NL}` +
-        `        expected: <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,...] -->${NL}` +
+        `        expected: <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,...] via=<entry> -->${NL}` +
         `      <commit> must be a HEX SHA of 7-40 characters. A placeholder such as PENDING does${NL}` +
         `      not parse — stamp the commit that last changed the dependency, never a word.`,
     );
   }
 
   for (const m of text.matchAll(STAMP)) {
-    const [, what, stampCommit, date, depends] = m;
+    const [, what, stampCommit, date, depends, via] = m;
     found++;
     const paths = depends.split(",").filter(Boolean);
     STAMPS.push({ doc, what, paths });
@@ -347,6 +374,89 @@ for (const doc of DOCS) {
           `      numbers — re-stamp deliberately and say why in the commit. Do not just edit the date.`,
       );
     }
+
+    // ── ★ THE CLOSURE CHECK (STAMP-CLOSURE-1) ───────────────────────────────────────────────────
+    //
+    // The same freshness question, asked over the set the measurement ACTUALLY READS rather than the
+    // one somebody typed. See this file's header for the two stamps that were stale in their digits
+    // while the `depends=` half reported them fresh.
+    if (!existsSync(resolve(ROOT, via))) {
+      fail(
+        `${doc}: "${what}" declares via=${via}, which does not exist. A via that cannot be` +
+          ` resolved has an EMPTY closure, so this half of the check would pass vacuously — the` +
+          ` REACH-CONTRACT-1 failure, one document down.`,
+      );
+      continue;
+    }
+    const closure = closureOf(via);
+    if (closure.length === 0) {
+      fail(
+        `${doc}: "${what}" declares via=${via}, whose import closure is EMPTY. Nothing there could` +
+          ` ever trip this check. Name the script that produced the numbers, or the module the` +
+          ` claim is about.`,
+      );
+      continue;
+    }
+    let newestC = "";
+    try {
+      newestC = git("log", "-1", "--format=%H", "--", ...closure, TEST_FILE_EXCLUDE);
+    } catch {
+      newestC = "";
+    }
+    // Nothing tracked in the closure: the depends= half above has already had its say.
+    if (!newestC) continue;
+    let freshC = false;
+    try {
+      execFileSync("git", ["merge-base", "--is-ancestor", newestC, resolved], { cwd: ROOT });
+      freshC = true;
+    } catch {
+      freshC = false;
+    }
+    if (!freshC) {
+      // NAME THE FILES, not just the commit. "something in 82 files moved" sends the reader back to
+      // git; the list is what lets them judge whether the digits could plausibly have moved.
+      let movedFiles = [];
+      try {
+        movedFiles = [
+          ...new Set(
+            git(
+              "log",
+              "--format=",
+              "--name-only",
+              `${resolved}..HEAD`,
+              "--",
+              ...closure,
+              TEST_FILE_EXCLUDE,
+            )
+              .split(NL)
+              .map((x) => x.trim())
+              .filter(Boolean),
+          ),
+        ];
+      } catch {
+        movedFiles = [];
+      }
+      const whenC = (() => {
+        try {
+          return git("log", "-1", "--format=%h %ad %s", "--date=short", newestC);
+        } catch {
+          return newestC;
+        }
+      })();
+      const shown = movedFiles.slice(0, 8).join(", ");
+      const more = movedFiles.length > 8 ? ` (+${movedFiles.length - 8} more)` : "";
+      fail(
+        `${doc}: "${what}" was measured at ${stampCommit} (${date}) and its declared depends= is` +
+          ` clean — but ${movedFiles.length} file(s) that via=${via} actually IMPORTS changed after` +
+          ` it:${NL}        ${shown}${more}${NL}` +
+          `      newest: ${whenC}${NL}` +
+          `      The closure is ${closure.length} file(s). A hand-written depends= narrower than` +
+          ` what the measurement reads is how a stamp goes stale in its DIGITS while this guard` +
+          ` reports it fresh.${NL}` +
+          `      Re-run the measurement and re-stamp, or re-stamp deliberately and say in the commit` +
+          ` why those files cannot have moved the numbers.`,
+      );
+    }
   }
 }
 
@@ -354,7 +464,7 @@ if (found === 0) {
   console.error(
     "FAIL: found ZERO measured-number stamps. This guard's entire value is that they exist,\n" +
       "      so checking nothing must not read as a pass. Expected format:\n" +
-      "      <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path> -->",
+      "      <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path> via=<entry> -->",
   );
   process.exit(1);
 }

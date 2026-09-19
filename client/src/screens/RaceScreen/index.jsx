@@ -32,10 +32,12 @@ import {
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
-import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
+// RACE-PARAMS-2: `normalSpeedFrom` is no longer imported here — `buildRaceCoreParams` derives it
+// from the same one home, and a second caller is a second place for it to be derived differently.
+import { MIN_LAPS } from '../../modules/durationModel.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { deriveSpriteGeometry } from '../../modules/raceParams.js';
+import { buildRaceCoreParams } from '../../modules/raceParams.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { applyRaceActionStage, normalizeRaceActionStage } from '../../modules/raceActionStage.js';
@@ -552,66 +554,61 @@ export default function RaceScreen() {
     // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
     // a retuned SIZE moves the race exactly as a retuned speed does.
     const displaySize = typeField('displaySize');
-    const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
-    // ── ONE-HOME-RACE-PARAMS-1: this derivation lives in `modules/raceParams.js` now ────────────
-    // It used to be ~35 lines here, and the same arithmetic stood at thirteen other sites — every
-    // headless harness that has to call `createRaceFromIdentity` had transcribed it. The browser
-    // reading its own copy is what let the copies drift apart unnoticed.
+    // ── RACE-PARAMS-2: the whole derivation lives in `modules/raceParams.js` now ────────────────
     //
-    // The OVERRIDE LOOKUP stays here on purpose: it is a storage read, and the module deliberately
-    // reads no storage. It is handed the answer rather than going to find it.
+    // ONE-HOME-RACE-PARAMS-1 moved the SPRITE arithmetic there and left the rest standing here —
+    // the effective width, the isOpen-stamped behaviour config, the normal speed, and the twenty
+    // fields `createRaceFromIdentity` takes. Two harnesses had transcribed all of it and said so in
+    // their own headers (`scripts/camera-replay.mjs`, `scripts/parity/goldenRunner.mjs`), which is
+    // how transcriptions drift: the copies agree until one is edited, and the thing that would
+    // notice is one of the copies.
+    //
+    // THE OVERRIDE LOOKUP STAYS HERE, exactly as it did: it is a storage read, and the module
+    // deliberately reads no storage. It is handed the answer rather than going to find it.
     const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
     const typeOverride = rawOverrides[typeId];
-    const {
-      physicalSpriteSize,
-      displaySizeScale,
-      drawnBodyWidthRefPx,
-      bodyFillNarrow,
-      bodyFillLong,
-    } = deriveSpriteGeometry({
-      displaySize,
-      bodyFillX: typeField('bodyFillX'),
-      bodyFillY: typeField('bodyFillY'),
+    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    // `displaySizeScale` is NOT a `createRaceFromIdentity` field — it is the drawing scale, and the
+    // rest goes to the engine untouched. Separated here rather than in the module so the object the
+    // engine receives is exactly the object the module built.
+    const { displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
+      shape: shapeRef.current,
+      isOpenTrack,
+      pathLengthPx,
+      trackWidthPx,
+      world: {
+        baseSpeedConfig,
+        raceBehaviorConfig: behaviorConfig,
+        rowLayoutConfig: rowConfig,
+        raceDynamicsConfig: dynamicsConfig,
+        autoScaleConfig,
+      },
+      racerType: {
+        displaySize,
+        bodyFillX: typeField('bodyFillX'),
+        bodyFillY: typeField('bodyFillY'),
+        speedMultiplier,
+      },
       nRacers,
-      effectiveWidth,
-      autoScaleConfig,
+      laps: raceData.targetLaps ?? MIN_LAPS,
+      requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
+      racePlanSeed,
+      racePlanEnabledFlag: !!raceData.racePlanEnabled,
       hasDisplaySizeOverride:
         !!typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride,
+      constSpeedActive,
     });
+    // The camera's body-size reference, read from what the engine was actually built with.
+    const { drawnBodyWidthRefPx } = raceCoreParams;
 
     // ── The REAL race init, extracted to modules/raceCore.js (createRaceFromIdentity) ───────────
     // The canonical duration model, the seeded physics stream (raceRng), the row layout, the re-roll
     // schedule, every racer's physics fields, the Race Plan controller and the phase-split / director
     // config are all built there now — so the browser and the headless golden harness run the SAME
     // code. RaceScreen stays the renderer: it augments each physics racer with render-only fields
-    // below and drives stepRacePhysics() from its rAF accumulator. Byte-identical to the former inline
-    // init — the physics draw order (row shuffle → per-racer spreadFactor + roll jitter → re-rolls)
-    // and every scalar are unchanged; the code merely moved.
-    const normalSpeedPxPerSec = normalSpeedFrom(baseSpeedConfig);
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
-    const pathLengthPx = geometry.pathLengthPx ?? 0;
-    const race = createRaceFromIdentity({
-      shape: shapeRef.current,
-      isOpenTrack,
-      pathLengthPx,
-      trackWidthPx,
-      speedMultiplier,
-      baseSpeedConfig,
-      behaviorConfig,
-      rowConfig,
-      dynamicsConfig,
-      normalSpeedPxPerSec,
-      laps: raceData.targetLaps ?? MIN_LAPS,
-      requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
-      nRacers,
-      racePlanSeed,
-      racePlanEnabledFlag: !!raceData.racePlanEnabled,
-      physicalSpriteSize,
-      drawnBodyWidthRefPx,
-      bodyFillNarrow,
-      bodyFillLong,
-      constSpeedActive,
-    });
+    // below and drives stepRacePhysics() from its rAF accumulator.
+    const race = createRaceFromIdentity(raceCoreParams);
     // ── RACE-INPUTS-PROBE-1: what the race was ACTUALLY built with, for a browser test ───────────
     //
     // INERT UNLESS SWITCHED ON, the same shape as `?constSpeed=1` (:423) and the viewer probe: no
