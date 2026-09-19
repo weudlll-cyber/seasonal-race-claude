@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 70a85ffb 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ cef4241e 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. `scripts/straggler-truth.mjs` drives `raceDriver`, which delivers no cameraPlan, so no comebacker is ever cast and the precedence cannot fire here — and phase 6 begins after the winner is home, past the finish latches the precedence refuses to act through in any case.
 
@@ -193,6 +193,26 @@ the two do not overlap by a single frame.
 The two numbers this section used to carry were flagged as unverified on 2026-08-14, because nothing
 in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
 OPEN one, at 20 and at 40 racers, seed 9:**
+
+★★ **RE-MEASURED IN FULL FOR PLANNED-COMEBACK-ONLY-1 (2026-09-19) ON `cef4241e`, AND EVERY FIGURE IS
+IDENTICAL TO THE DIGIT** — 4.85/2.70 with 0 settled frames, 9.12/5.73 with 7 of 7 unfinished and 8 of
+40 in shot over 164 settled frames, 3.68/1.28 with 0, and 6.80/4.57 with 3 of 3 and 40 of 40 over 94.
+All four rows of the table below, unchanged.
+
+★★ **IT WAS RUN, NOT ARGUED, AND AN ARGUMENT WAS AVAILABLE.** That commit's edit to
+`CameraDirector.js` — this stamp's whole declared `depends=` — is comments only, and
+`scripts/engine-reach.mjs --check` says so in its own words: *"in the hull but INERT — same tokens,
+same line breaks between them — comments only"*. That would have been a stronger inertness case than
+several of the deliberate re-stamps recorded below. It was not used, because the `via=` closure also
+picks up `comebackDetector.js` and `heroCurveGenerator.js`, which this commit does change in earnest,
+and phase 6 is a camera window. ★ **The sibling stamp in `docs/CAMERA_DIRECTOR.md` was re-measured in
+the same pass and MOVED**, which is the reason to distrust the argument here: one of the two
+camera-dependent stamps did move on this commit.
+
+★ **Why it did not move, as a mechanism rather than a hope:** the change decides WHO the camera may
+take a COMEBACK_ZOOM shot on, and phase 6 begins after the winner is home — past the finish latches
+(`_inPhotoFinish`, `_inFinishDrama`, `_inFinishMode`) that the comeback path returns above in any
+case. These four numbers are answers about WHEN thresholds are crossed, and no threshold moved.
 
 ★★★ **RE-MEASURED ON MASTER, 2026-09-19 (STAMP-RESTAMP-1). EVERY NUMBER BELOW MOVED, AND SO DID
 TWO OF THE SENTENCES UNDER THEM.** `node scripts/straggler-truth.mjs`, seed 9, the command this stamp
