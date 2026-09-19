@@ -1,0 +1,104 @@
+
+Running 12 tests using 1 worker
+
+  ok  1 [setup] › e2e\auth.setup.js:50:1 › create an account and save the authenticated state (2.6s)
+[WebServer] 02:03:14 [vite] (client) [console.warn] [api] the server did not answer. If you are running this locally: `docker compose up` in the project root.
+[WebServer] 02:03:14 [vite] (client) [console.warn] [api] the server did not answer. If you are running this locally: `docker compose up` in the project root.
+[WebServer] 02:03:14 [vite] (client) [console.warn] [branding] syncBrandingMirror failed — keeping stale mirror: Server not reachable. Try again in a moment — the banner at the top of the screen says what still works without it.
+[WebServer] 02:03:14 [vite] (client) [console.error] [RaceArena] loadServerRacerTypes: failed to fetch from server — Server not reachable. Try again in a moment — the banner at the top of the screen says what still works without it.
+  ok  2 [chromium] › e2e\race-identifier.spec.js:101:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › copy, change the stage, paste — the identifier wins (12.3s)
+  ok  3 [chromium] › e2e\race-identifier.spec.js:162:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a retuned RACER TYPE does not leak into a pasted identifier race (8.4s)
+  ok  4 [chromium] › e2e\race-identifier.spec.js:208:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › run it again repeats the race that RAN, not the current settings (11.0s)
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:03:39 [vite] (client) [console.warn] [tracks] 6 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+  ok  5 [chromium] › e2e\race-identifier.spec.js:248:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a corrupted identifier is REFUSED, never silently run as a seed (6.7s)
+[WebServer] 02:03:45 [vite] (client) [console.warn] [bgImageCache] Background image failed to load: http://localhost:4399/api/tracks/city-circuit/background
+[WebServer] Hint: Backend server may be offline. Run `docker compose up` in project root to enable custom-track backgrounds.
+[WebServer] 02:05:40 [vite] (client) [console.warn] [api] the server did not answer. If you are running this locally: `docker compose up` in the project root.
+[WebServer] 02:05:40 [vite] (client) [console.warn] [races] a finished race could not be sent yet; it stays on this device: Server not reachable. Try again in a moment — the banner at the top of the screen says what still works without it.
+  ok  6 [chromium] › e2e\race-save.spec.js:39:1 › a race finishes with the server gone, is kept, and goes up when it returns (2.0m)
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "dirt-oval" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "garden-path" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "city-circuit" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] 7 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+[WebServer] 02:07:33 [vite] (client) [console.warn] [tracks] 10 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+  ok  7 [chromium] › e2e\seed-field-typing.spec.js:80:1 › ★ a short key TYPED character by character runs that race (3.8m)
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "dirt-oval" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "garden-path" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "city-circuit" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] 10 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+[WebServer] 02:11:20 [vite] (client) [console.warn] [tracks] 6 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+  ok  8 [chromium] › e2e\seed-field-typing.spec.js:104:1 › the same key PASTED still works (1.9m)
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "garden-path" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "dirt-oval" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "city-circuit" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] 10 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+[WebServer] 02:16:05 [vite] (client) [console.warn] [tracks] 7 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+  ok  9 [chromium] › e2e\seed-field-typing.spec.js:115:1 › a number TYPED is still a seed, and an identifier PASTED still works (4.8m)
+  ok 10 [chromium] › e2e\seed-field-typing.spec.js:146:1 › an unknown key TYPED is refused with a message, and starts nothing (3.0s)
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "seatrack" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [api] the server did not answer. If you are running this locally: `docker compose up` in the project root.
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "searound" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [api] the server did not answer. If you are running this locally: `docker compose up` in the project root.
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] the track list could not be fetched — Failed to fetch; showing 10 track(s) from the last successful load
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "river-run" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "mountainstreet" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "city-circuit" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "dirt-oval" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "luger-hill" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "garden-path" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] geometry for "ice-track" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[WebServer] 02:16:12 [vite] (client) [console.warn] [tracks] 10 of 10 track geometries could not be cached — those tracks cannot be raced until the server answers for them
+  ok 11 [chromium] › e2e\teams-session.spec.js:85:3 › TEAMS-1 — the admin assigns a team and the session carries it › an admin creates a user with a team; that user signs in and their session has it (6.2s)
+  ok 12 [chromium] › e2e\teams-session.spec.js:137:3 › TEAMS-1 — the admin assigns a team and the session carries it › the admin cannot create a user with no team at all (3.4s)
+
+  Slow test file: [chromium] › e2e\seed-field-typing.spec.js (10.5m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  12 passed (13.4m)

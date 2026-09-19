@@ -1,0 +1,78 @@
+
+Running 4 tests using 1 worker
+
+  ok 1 [setup] › e2e\auth.setup.js:50:1 › create an account and save the authenticated state (3.3s)
+[WebServer] 01:56:33 [vite] (client) [console.warn] [tracks] geometry for "space-sprint" could not be cached — Failed to fetch; this track will be REFUSED rather than raced on a guess
+[arrival-shape] racer 0, drawn 4:
+  rank when he is handed back: 8
+  rank when the taper starts:  8
+  pace when he reaches his place: 1.0324 — ON SCREEN 28 px/s of closing speed (untapered 1.100 is 85) (at progress 0.722)
+  after arriving: best rank 1, worst rank 4, so he HELD his block
+  while inside his block: 1871 frames, braked in 70%, pushed in 19%
+  x  2 [chromium] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block (2.3m)
+[comeback-precedence] trace: [{"state":"OVERVIEW","t":1500},{"state":"LEADER_ZOOM","t":19708},{"state":"BATTLE_ZOOM","t":29320},{"state":"LEADER_ZOOM","t":37358},{"state":"LEAD_CHANGE","t":40616},{"state":"LEADER_ZOOM","t":48618},{"state":"BATTLE_ZOOM","t":55521},{"state":"LEADER_ZOOM","t":58534},{"state":"LEAD_CHANGE","t":60774},{"state":"OVERVIEW","t":68942},{"state":"COMEBACK_ZOOM","t":69352},{"state":"LEADER_ZOOM","t":77378},{"state":"BATTLE_ZOOM","t":85442},{"state":"LEAD_CHANGE","t":88443},{"state":"PHOTO_FINISH","t":94849},{"state":"FINISH","t":99470},{"state":"FINISH_OVERVIEW","t":100977}]
+[comeback-precedence] comeback entries: [{"from":"OVERVIEW","heldMs":410,"at":69352}]
+  x  3 [chromium] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE (1.8m)
+[garden-path] field=20 FIRST CROSSING after 105.6 s of wall clock; 10 finish time(s) on the scoreboard at that moment
+  ok 4 [chromium] › e2e\garden-path-finishes.spec.js:28:1 › garden-path crosses the line in a browser (1.8m)
+
+
+  1) [chromium] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+
+    Error: he must be left alone inside his block
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 0.5
+    Received:   0.8898984500267236
+
+      113 |     'he never reached his block, so the shape was never exercised'
+      114 |   ).toBeGreaterThan(5);
+    > 115 |   expect((braked + pushed) / mults.length, 'he must be left alone inside his block').toBeLessThan(
+          |                                                                                      ^
+      116 |     0.5
+      117 |   );
+      118 | });
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\arrival-shape.spec.js:115:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium\error-context.md
+
+  2) [chromium] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE 
+
+    Error: no comeback cut happened inside the 7500 ms hold — entries: [{"from":"OVERVIEW","heldMs":410,"at":69352}]
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      109 |     forced.length,
+      110 |     `no comeback cut happened inside the ${INSIDE_THE_HOLD_MS} ms hold — entries: ${JSON.stringify(entries)}`,
+    > 111 |   ).toBeGreaterThan(0);
+          |     ^
+      112 | });
+      113 |
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\comeback-precedence.spec.js:111:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium\error-context.md
+
+  2 failed
+    [chromium] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+    [chromium] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE 
+  2 passed (6.1m)

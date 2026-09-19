@@ -1,0 +1,455 @@
+
+Running 125 tests using 1 worker
+
+  ok   1 [setup] › e2e\auth.setup.js:50:1 › create an account and save the authenticated state (3.3s)
+[arrival-shape] racer 0, drawn 4:
+  rank when he is handed back: 8
+  rank when the taper starts:  8
+  pace when he reaches his place: 1.0324 — ON SCREEN 28 px/s of closing speed (untapered 1.100 is 85) (at progress 0.722)
+  after arriving: best rank 1, worst rank 4, so he HELD his block
+  while inside his block: 1871 frames, braked in 70%, pushed in 19%
+  x    2 [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block (2.3m)
+  ok   3 [chromium-production] › e2e\b1617-smoke.spec.js:15:3 › B-16 — Camera adaptive zoom: UI not regressed › Race Defaults section loads without errors (1.4s)
+  ok   4 [chromium-production] › e2e\b1617-smoke.spec.js:29:3 › B-16 — Camera adaptive zoom: UI not regressed › Dev Screen loads without JS console errors (1.2s)
+  ok   5 [chromium-production] › e2e\b1617-smoke.spec.js:40:3 › B-16 — Camera adaptive zoom: UI not regressed › Track Editor loads without JS console errors (1.2s)
+  ok   6 [chromium-production] › e2e\b1617-smoke.spec.js:52:3 › B-17 — pathLengthPx is computed and stored on track save › saving a track in TrackEditor results in a geometry with pathLengthPx in localStorage (1.4s)
+  ok   7 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:181:3 › V1 — Adaptive Zoom 1280-Track backward compat › race on 1280px track renders without JS errors (2.7s)
+  ok   8 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:191:3 › V1 — Adaptive Zoom 1280-Track backward compat › zoom formula at worldW=1280: CANVAS_W²/(LEADER_VIEW_W×worldW) ≈ 1.40 (1.8s)
+  ok   9 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:205:3 › V2 — Adaptive Zoom 6000-Track › race on 6000px track renders without JS errors (2.8s)
+  ok  10 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:215:3 › V2 — Adaptive Zoom 6000-Track › zoom formula at worldW=6000: leaderZoom ≈ 0.30 (zoom-out) (1.4s)
+  ok  11 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:226:3 › V2 — Adaptive Zoom 6000-Track › MIN_ZOOM clamp: worldW=15000 (very large) gives MIN_ZOOM=0.15 (1.3s)
+  ok  12 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:247:3 › V3 — clampOffset math for zoom<1 and zoom>1 › zoom=0.3 (6000px track): camera can pan — negative target returns edge (1.2s)
+  ok  13 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:266:3 › V3 — clampOffset math for zoom<1 and zoom>1 › zoom=2.0 (small track): track fits in canvas — offset kept within bounds (1.4s)
+  ok  14 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:287:3 › V3 — clampOffset math for zoom<1 and zoom>1 › bboxMin=0 avoids -0: produces exact 0 not -0 (1.3s)
+  ok  15 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:308:3 › V4 — Top-3 focus: camera targets top-N racers by position › 6 racers → focusRacers returns the 3 with highest t values (1.3s)
+  ok  16 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:329:3 › V4 — Top-3 focus: camera targets top-N racers by position › COMEBACK_ZOOM targets 3rd-place (last of focusRacers), not last-place (1.2s)
+  ok  17 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:359:3 › V5 — Top-3 edge cases: 1/2/3 racers › 1 racer: focusRacers returns that single racer (1.7s)
+  ok  18 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:367:3 › V5 — Top-3 edge cases: 1/2/3 racers › 2 racers: focusRacers returns both (1.2s)
+  ok  19 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:378:3 › V5 — Top-3 edge cases: 1/2/3 racers › exactly 3 racers: all 3 are in focusRacers (1.3s)
+  ok  20 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:398:3 › V6 — cameraZoomFactor: on-screen size invariant › zoom=1.4 (reference): factor=1.0 → no change (1.2s)
+  ok  21 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:406:3 › V6 — cameraZoomFactor: on-screen size invariant › zoom=0.3 (6000px track): factor ≈ 4.667 (1.7s)
+  ok  22 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:411:3 › V6 — cameraZoomFactor: on-screen size invariant › zoom=0.45 (4000px track): factor ≈ 3.111 (1.7s)
+  ok  23 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:416:3 › V6 — cameraZoomFactor: on-screen size invariant › invariant: factor × zoom = 1.4 for all zoom values (1.7s)
+  ok  24 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:429:3 › V6 — cameraZoomFactor: on-screen size invariant › zoom=0 guard: returns 1 (no divide-by-zero) (1.3s)
+  ok  25 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:444:3 › V7 — Sprite-Scale: override hierarchy, race starts cleanly › race with D3.5.5 displaySize override active starts without errors (2.6s)
+  ok  26 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:485:3 › V7 — Sprite-Scale: override hierarchy, race starts cleanly › race without override: auto-scale active, still starts cleanly (2.9s)
+  ok  27 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:552:3 › V8 — Speed Range default values in Dev Screen › Min Speed shows the shipped default (2.2s)
+  ok  28 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:559:3 › V8 — Speed Range default values in Dev Screen › Max Speed shows the shipped default (1.7s)
+  ok  29 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:566:3 › V8 — Speed Range default values in Dev Screen › spread preview states the spread of the shipped defaults (1.3s)
+  ok  30 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:575:3 › V8 — Speed Range default values in Dev Screen › 2-lap gap estimate matches gap = 2 × (1 − min/max) for the defaults (1.3s)
+  ok  31 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:589:3 › V9 — Speed Range custom config persists in Dev Screen › custom config {min: 0.0008, max: 0.0013} shown in inputs (1.4s)
+  ok  32 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:601:3 › V9 — Speed Range custom config persists in Dev Screen › a spread past the warning threshold is coloured amber, not accent (1.4s)
+  ok  33 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:621:3 › V10 — Speed Range Reset Defaults › the Speed Range reset restores the shipped defaults after custom values (1.5s)
+  ok  34 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:649:3 › V11 — Open track: sprite scale unaffected by camera zoom › race on open track starts without JS errors (2.5s)
+  ok  35 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:659:3 › V11 — Open track: sprite scale unaffected by camera zoom › open-track race uses raceMode=open or duration-based finish, still loads (2.6s)
+  ok  36 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:704:3 › V12 — Speed-range spread preview matches the shipped defaults › the total range the preview states is twice the shipped spread (1.7s)
+  ok  37 [chromium-production] › e2e\camera-polish-ux-verification.spec.js:718:3 › V12 — Speed-range spread preview matches the shipped defaults › formula preview 2-lap gap < 0.5 laps — no lap-wrap confusion (1.8s)
+[comeback-precedence] trace: [{"state":"OVERVIEW","t":1134},{"state":"LEADER_ZOOM","t":19366},{"state":"BATTLE_ZOOM","t":28989},{"state":"LEADER_ZOOM","t":37008},{"state":"LEAD_CHANGE","t":40298},{"state":"LEADER_ZOOM","t":48312},{"state":"BATTLE_ZOOM","t":55563},{"state":"LEADER_ZOOM","t":58586},{"state":"LEAD_CHANGE","t":60476},{"state":"LEADER_ZOOM","t":68494},{"state":"OVERVIEW","t":68673},{"state":"COMEBACK_ZOOM","t":69055},{"state":"LEADER_ZOOM","t":77102},{"state":"BATTLE_ZOOM","t":85090},{"state":"LEAD_CHANGE","t":88105},{"state":"PHOTO_FINISH","t":94563},{"state":"FINISH","t":99128},{"state":"FINISH_OVERVIEW","t":100628}]
+[comeback-precedence] comeback entries: [{"from":"OVERVIEW","heldMs":382,"at":69055}]
+  x   38 [chromium-production] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE (1.7m)
+  ok  39 [chromium-production] › e2e\d11-ux-verification.spec.js:72:1 › V1 — default draftingBoost is 1.04 (1.6s)
+  ok  40 [chromium-production] › e2e\d11-ux-verification.spec.js:77:1 › V1 — default enabled is true (1.4s)
+  ok  41 [chromium-production] › e2e\d11-ux-verification.spec.js:83:1 › V2 — changed avoidanceWarmupMs persists across reload (2.2s)
+  ok  42 [chromium-production] › e2e\d11-ux-verification.spec.js:93:1 › V3 — Reset Defaults restores draftingBoost to 1.04 (1.5s)
+  ok  43 [chromium-production] › e2e\d11-ux-verification.spec.js:100:1 › V3 — Reset Defaults re-enables the toggle (1.4s)
+  ok  44 [chromium-production] › e2e\d11-ux-verification.spec.js:108:1 › V4 — unchecking Enabled persists across reload (2.1s)
+  ok  45 [chromium-production] › e2e\d11-ux-verification.spec.js:117:1 › V5 — avoidanceWarmupMs change is stored in localStorage immediately (1.5s)
+  ok  46 [chromium-production] › e2e\d11-ux-verification.spec.js:130:1 › V6 — race engine reads custom behavior config from localStorage (6.8s)
+  ok  47 [chromium-production] › e2e\d11-ux-verification.spec.js:155:1 › V7 — race works normally when behavior is disabled (7.1s)
+  ok  48 [chromium-production] › e2e\d11-ux-verification.spec.js:182:1 › V8 — race with 5 racers and behavior enabled produces no errors (10.3s)
+  ok  49 [chromium-production] › e2e\d11-ux-verification.spec.js:205:1 › V9 — draftingConeAngle can be changed (2.1s)
+  ok  50 [chromium-production] › e2e\d11-ux-verification.spec.js:212:1 › V10 — drafting summary reflects boost factor change (1.6s)
+  ok  51 [chromium-production] › e2e\d355-smoke.spec.js:36:3 › D3.5.5 — Edit-Modal opens › Edit button is visible for each racer type (1.3s)
+  ok  52 [chromium-production] › e2e\d355-smoke.spec.js:53:3 › D3.5.5 — Edit-Modal opens › clicking Edit opens a modal dialog (1.6s)
+  ok  53 [chromium-production] › e2e\d355-smoke.spec.js:58:3 › D3.5.5 — Edit-Modal opens › modal contains all 6 field labels (1.5s)
+  ok  54 [chromium-production] › e2e\d355-smoke.spec.js:69:3 › D3.5.5 — Edit-Modal opens › Done button closes the modal (1.6s)
+  ok  55 [chromium-production] › e2e\d355-smoke.spec.js:76:3 › D3.5.5 — Edit-Modal opens › ✕ button closes the modal (1.5s)
+  ok  56 [chromium-production] › e2e\d355-smoke.spec.js:82:3 › D3.5.5 — Edit-Modal opens › info icons appear in the modal (one per field) (1.4s)
+  ok  57 [chromium-production] › e2e\d355-smoke.spec.js:118:3 › D3.5.5 — Speed override localStorage › changing speedMultiplier writes override to localStorage (1.8s)
+  ok  58 [chromium-production] › e2e\d355-smoke.spec.js:136:3 › D3.5.5 — Speed override localStorage › resetting speedMultiplier removes override from localStorage (2.7s)
+  ok  59 [chromium-production] › e2e\d355-smoke.spec.js:169:3 › D3.5.5 — displaySize override localStorage › setting displaySize=80 is stored in racerTypeOverrides (1.8s)
+  ok  60 [chromium-production] › e2e\d355-smoke.spec.js:190:3 › D3.5.5 — leaderRingColor override localStorage › setting leaderRingColor is stored in racerTypeOverrides (1.9s)
+  ok  61 [chromium-production] › e2e\d355-smoke.spec.js:211:3 › D3.5.5 — localStorage state management › multiple overrides on the same type coexist in one entry (1.4s)
+  ok  62 [chromium-production] › e2e\d355-smoke.spec.js:227:3 › D3.5.5 — localStorage state management › Reset all to defaults clears all tunable overrides (1.8s)
+  ok  63 [chromium-production] › e2e\d355-smoke.spec.js:245:3 › D3.5.5 — localStorage state management › isActive override survives Reset all to defaults (1.8s)
+  ok  64 [chromium-production] › e2e\d355-smoke.spec.js:264:3 › D3.5.5 — localStorage state management › ✱ indicator shown in type row when tuning overrides exist (1.3s)
+  ok  65 [chromium-production] › e2e\d9-smoke.spec.js:105:3 › D9 — lap selector (closed track) › lap selector renders one button per lap choice after selecting a closed track (1.6s)
+  ok  66 [chromium-production] › e2e\d9-smoke.spec.js:115:3 › D9 — lap selector (closed track) › the track default lap count is marked with * and is what the start bar shows (2.7s)
+  ok  67 [chromium-production] › e2e\d9-smoke.spec.js:129:3 › D9 — lap selector (closed track) › estimated duration label is visible (2.7s)
+  ok  68 [chromium-production] › e2e\d9-smoke.spec.js:136:3 › D9 — lap selector (closed track) › start bar shows "2 laps" for default 60 s / horse (2.9s)
+  ok  69 [chromium-production] › e2e\d9-smoke.spec.js:140:3 › D9 — lap selector (closed track) › clicking lap 3 updates start bar to "3 laps" (2.8s)
+  ok  70 [chromium-production] › e2e\d9-smoke.spec.js:145:3 › D9 — lap selector (closed track) › clicking lap 1 updates start bar to "1 lap" (2.8s)
+  ok  71 [chromium-production] › e2e\d9-smoke.spec.js:162:3 › D9 — lap selector (closed track) › estimated duration is ~3× higher for Snail than for Horse (1.8s)
+  ok  72 [chromium-production] › e2e\d9-smoke.spec.js:172:3 › D9 — lap selector (closed track) › estimated duration is lower for a faster racer type than for Horse (1.7s)
+  ok  73 [chromium-production] › e2e\d9-smoke.spec.js:183:3 › D9 — lap selector (closed track) › switching tracks resets lap selection to auto (2.6s)
+  ok  74 [chromium-production] › e2e\d9-smoke.spec.js:214:3 › D9 — open track info row › no lap buttons shown for open track (2.6s)
+  ok  75 [chromium-production] › e2e\d9-smoke.spec.js:228:3 › D9 — open track info row › open track info row states the natural maximum and the estimated duration (2.9s)
+  ok  76 [chromium-production] › e2e\d9-smoke.spec.js:239:3 › D9 — open track info row › asking for more than the natural maximum warns that the whole field is slowed (2.0s)
+  ok  77 [chromium-production] › e2e\d9-smoke.spec.js:278:3 › D9 — session data (raceMode / targetLaps / targetDuration) › Quick Test on closed track writes raceMode=laps and targetLaps (2.7s)
+  ok  78 [chromium-production] › e2e\d9-smoke.spec.js:300:3 › D9 — session data (raceMode / targetLaps / targetDuration) › Quick Test on open track writes raceMode=time and targetDuration (3.4s)
+  ok  79 [chromium-production] › e2e\d9-smoke.spec.js:317:3 › D9 — session data (raceMode / targetLaps / targetDuration) › explicit 3-lap selection is stored in targetLaps (3.9s)
+  ok  80 [chromium-production] › e2e\d9-smoke.spec.js:378:3 › D9 — race screen startup › race screen loads without error for a 2-lap closed race (2.7s)
+  ok  81 [chromium-production] › e2e\d9-smoke.spec.js:387:3 › D9 — race screen startup › lap counter shows LAP 1 / 2 during racing phase (6.7s)
+  ok  82 [chromium-production] › e2e\d9-smoke.spec.js:398:3 › D9 — race screen startup › race screen loads cleanly for a horse race (speedMultiplier=1.0) (2.6s)
+  ok  83 [chromium-production] › e2e\d9-smoke.spec.js:408:3 › D9 — race screen startup › race screen loads cleanly for a snail race (speedMultiplier=0.30) (2.7s)
+  ok  84 [chromium-production] › e2e\d9-smoke.spec.js:418:3 › D9 — race screen startup › race screen loads cleanly for a rocket race (speedMultiplier=1.25) (2.4s)
+  ok  85 [chromium-production] › e2e\d9-smoke.spec.js:432:3 › D9 — race screen startup › Cancel Race ends the running race and returns to setup (2.3s)
+  ok  86 [chromium-production] › e2e\d9-smoke.spec.js:445:3 › D9 — race screen startup › scoreboard lists all racers (7.0s)
+  ok  87 [chromium-production] › e2e\fix-list-tracks-world-dimensions.spec.js:124:3 › fix — a track shows its linked geometry’s world dimensions › a large-world geometry shows its own dimensions, not 1280×720 (1.9s)
+  ok  88 [chromium-production] › e2e\fix-list-tracks-world-dimensions.spec.js:142:3 › fix — a track shows its linked geometry’s world dimensions › a standard 1280×720 geometry still shows 1280×720 (1.8s)
+  ok  89 [chromium-production] › e2e\fix-list-tracks-world-dimensions.spec.js:159:3 › fix — a track shows its linked geometry’s world dimensions › the Add-Track form offers no geometry selector and defers the dimensions (1.8s)
+[garden-path] field=20 FIRST CROSSING after 100.5 s of wall clock; 0 finish time(s) on the scoreboard at that moment
+  x   90 [chromium-production] › e2e\garden-path-finishes.spec.js:28:1 › garden-path crosses the line in a browser (1.7m)
+[held-comebacker] racer 0: hold starts at rank 6, deepest 11, at release 8, best after release 1 (release 0.7)
+  ok  91 [chromium-production] › e2e\held-comebacker.spec.js:42:1 › the comebacker is held back and then released, in a real browser race (2.2m)
+[quicktest] {"trackId":"river-run","geometryId":"custom-dea6b35a-40d6-442f-9225-76050df58eec","racerTypeId":"duck","raceMode":"time","targetLaps":null,"targetDurationSec":60,"realizedDurationSec":59.99999999999999,"paceScale":1,"racePlanEnabled":true,"racePlanSeed":13,"raceActionStage":"quiet","fieldSize":20,"firstEightNames":["Turbo","Blaze","Rocket","Flash","Speedy","Thunder","Nitro","Drift"],"eventName":"Quick Test","winners":3}
+  ok  92 [chromium-production] › e2e\quicktest-vs-harness.spec.js:14:1 › dump what Quick Test actually runs for river-run seed 13 (2.5s)
+  ok  93 [chromium-production] › e2e\race-history-never-vanishes.spec.js:42:1 › a race this device recorded is still listed when the server page does not carry it (1.9m)
+  ok  94 [chromium-production] › e2e\race-history-real-route.spec.js:44:1 › a stored race of this team is in the list — through the real route (1.8m)
+  ok  95 [chromium-production] › e2e\race-history-real-route.spec.js:62:1 › ★ a filter that hides a race says so, and the empty state does not lie (1.8m)
+  ok  96 [chromium-production] › e2e\race-history.spec.js:51:1 › the team sees its races, and the button repeats one exactly as it ran (4.2m)
+  ok  97 [chromium-production] › e2e\race-history.spec.js:131:1 › the short key typed into the seed field runs the same race, and an unknown one is refused (3.8m)
+  ok  98 [chromium-production] › e2e\race-history.spec.js:184:1 › a race that has not reached the server is listed, says so, has no key, and still repeats (3.6m)
+  ok  99 [chromium-production] › e2e\race-identifier.spec.js:101:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › copy, change the stage, paste — the identifier wins (11.3s)
+  ok 100 [chromium-production] › e2e\race-identifier.spec.js:162:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a retuned RACER TYPE does not leak into a pasted identifier race (8.4s)
+  x  101 [chromium-production] › e2e\race-identifier.spec.js:208:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › run it again repeats the race that RAN, not the current settings (7.2s)
+  x  102 [chromium-production] › e2e\race-identifier.spec.js:248:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a corrupted identifier is REFUSED, never silently run as a seed (2.9s)
+  x  103 [chromium-production] › e2e\race-save.spec.js:39:1 › a race finishes with the server gone, is kept, and goes up when it returns (2.9s)
+  x  104 [chromium-production] › e2e\seed-field-typing.spec.js:80:1 › ★ a short key TYPED character by character runs that race (2.4s)
+  x  105 [chromium-production] › e2e\seed-field-typing.spec.js:104:1 › the same key PASTED still works (1.7s)
+  ok 106 [chromium-production] › e2e\seed-field-typing.spec.js:115:1 › a number TYPED is still a seed, and an identifier PASTED still works (4.1m)
+  ok 107 [chromium-production] › e2e\seed-field-typing.spec.js:146:1 › an unknown key TYPED is refused with a message, and starts nothing (3.0s)
+  x  108 [chromium-production] › e2e\teams-session.spec.js:85:3 › TEAMS-1 — the admin assigns a team and the session carries it › an admin creates a user with a team; that user signs in and their session has it (18.7s)
+  x  109 [chromium-production] › e2e\teams-session.spec.js:137:3 › TEAMS-1 — the admin assigns a team and the session carries it › the admin cannot create a user with no team at all (19.3s)
+  ok 110 [chromium-production] › e2e\vre-2-ux-verification.spec.js:32:3 › V1 — Master-detail selection › selecting a class updates the editor label field (2.9s)
+  ok 111 [chromium-production] › e2e\vre-2-ux-verification.spec.js:41:3 › V1 — Master-detail selection › selecting a different class changes the generator dropdown value (2.7s)
+  ok 112 [chromium-production] › e2e\vre-2-ux-verification.spec.js:54:3 › V1 — Master-detail selection › selected class button has aria-pressed=true, others false (2.7s)
+  ok 113 [chromium-production] › e2e\vre-2-ux-verification.spec.js:67:3 › V2 — Badge indicators › all 9 code defaults show Default badge (2.3s)
+  ok 114 [chromium-production] › e2e\vre-2-ux-verification.spec.js:73:3 › V2 — Badge indicators › no Modified or Custom badges present when backend has no overrides/custom (2.3s)
+  ok 115 [chromium-production] › e2e\vre-2-ux-verification.spec.js:122:3 › V3 — Validation recovery › no ID control is offered; the ID is derived from the label on save (2.7s)
+  ok 116 [chromium-production] › e2e\vre-2-ux-verification.spec.js:139:3 › V3 — Validation recovery › empty label shows error on Save (2.6s)
+  ok 117 [chromium-production] › e2e\vre-2-ux-verification.spec.js:150:3 › V3 — Validation recovery › Save button exists and is not disabled when form is open (2.5s)
+  ok 118 [chromium-production] › e2e\vre-2-ux-verification.spec.js:161:3 › V4 — Generator switch › switching to cloud generator shows Start Size field (2.4s)
+  ok 119 [chromium-production] › e2e\vre-2-ux-verification.spec.js:167:3 › V4 — Generator switch › switching to line generator shows Thickness field (2.6s)
+  ok 120 [chromium-production] › e2e\vre-2-ux-verification.spec.js:173:3 › V4 — Generator switch › switching to particle generator shows Drift field (2.6s)
+  ok 121 [chromium-production] › e2e\vre-2-ux-verification.spec.js:179:3 › V4 — Generator switch › switching generator changes the live preview generator attribute (2.8s)
+  ok 122 [chromium-production] › e2e\vre-2-ux-verification.spec.js:201:3 › V5 — Default-Override lifecycle › saving a code-default class creates a Modified override and shows Modified badge (3.0s)
+  ok 123 [chromium-production] › e2e\vre-2-ux-verification.spec.js:228:3 › V5 — Default-Override lifecycle › Reset-to-Default removes the Modified badge (2.5s)
+  ok 124 [chromium-production] › e2e\vre-2-ux-verification.spec.js:298:3 › V6 — Live Preview stability › preview canvas remains visible while changing config sliders (2.7s)
+  ok 125 [chromium-production] › e2e\vre-2-ux-verification.spec.js:322:3 › V6 — Live Preview stability › preview remains visible after navigating between classes (2.7s)
+
+
+  1) [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+
+    Error: he must be left alone inside his block
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 0.5
+    Received:   0.8898984500267236
+
+      113 |     'he never reached his block, so the shape was never exercised'
+      114 |   ).toBeGreaterThan(5);
+    > 115 |   expect((braked + pushed) / mults.length, 'he must be left alone inside his block').toBeLessThan(
+          |                                                                                      ^
+      116 |     0.5
+      117 |   );
+      118 | });
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\arrival-shape.spec.js:115:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\arrival-shape-the-owner-s--d423b--him-unsteered-in-his-block-chromium-production\error-context.md
+
+  2) [chromium-production] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE 
+
+    Error: no comeback cut happened inside the 7500 ms hold — entries: [{"from":"OVERVIEW","heldMs":382,"at":69055}]
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      109 |     forced.length,
+      110 |     `no comeback cut happened inside the ${INSIDE_THE_HOLD_MS} ms hold — entries: ${JSON.stringify(entries)}`,
+    > 111 |   ).toBeGreaterThan(0);
+          |     ^
+      112 | });
+      113 |
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\comeback-precedence.spec.js:111:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\comeback-precedence-the-pr-8e917--never-out-of-a-LEAD-CHANGE-chromium-production\error-context.md
+
+  3) [chromium-production] › e2e\garden-path-finishes.spec.js:28:1 › garden-path crosses the line in a browser 
+
+    Error: a crossing must put a finish time on the board
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      62 |       `${finishers} finish time(s) on the scoreboard at that moment`
+      63 |   );
+    > 64 |   expect(finishers, 'a crossing must put a finish time on the board').toBeGreaterThan(0);
+         |                                                                       ^
+      65 | });
+      66 |
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\garden-path-finishes.spec.js:64:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\garden-path-finishes-garde-9d28b-osses-the-line-in-a-browser-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\garden-path-finishes-garde-9d28b-osses-the-line-in-a-browser-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\garden-path-finishes-garde-9d28b-osses-the-line-in-a-browser-chromium-production\error-context.md
+
+  4) [chromium-production] › e2e\race-identifier.spec.js:208:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › run it again repeats the race that RAN, not the current settings 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4599/dev
+    Call log:
+      - navigating to "http://localhost:4599/dev", waiting until "load"
+
+
+      74 | /** Put the machine on a known stage before anything is copied. */
+      75 | async function setStage(page, stage) {
+    > 76 |   await page.goto('/dev');
+         |              ^
+      77 |   await page.getByTestId(`race-action-${stage}`).click();
+      78 |   await expect(page.getByTestId(`race-action-${stage}`)).toHaveAttribute('aria-pressed', 'true');
+      79 | }
+        at setStage (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\race-identifier.spec.js:76:14)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\race-identifier.spec.js:224:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\race-identifier-RACE-IDENT-e9204-AN-not-the-current-settings-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\race-identifier-RACE-IDENT-e9204-AN-not-the-current-settings-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\race-identifier-RACE-IDENT-e9204-AN-not-the-current-settings-chromium-production\error-context.md
+
+  5) [chromium-production] › e2e\race-identifier.spec.js:248:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a corrupted identifier is REFUSED, never silently run as a seed 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4599/dev
+    Call log:
+      - navigating to "http://localhost:4599/dev", waiting until "load"
+
+
+      74 | /** Put the machine on a known stage before anything is copied. */
+      75 | async function setStage(page, stage) {
+    > 76 |   await page.goto('/dev');
+         |              ^
+      77 |   await page.getByTestId(`race-action-${stage}`).click();
+      78 |   await expect(page.getByTestId(`race-action-${stage}`)).toHaveAttribute('aria-pressed', 'true');
+      79 | }
+        at setStage (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\race-identifier.spec.js:76:14)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\race-identifier.spec.js:254:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\race-identifier-RACE-IDENT-4a81a-ever-silently-run-as-a-seed-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\race-identifier-RACE-IDENT-4a81a-ever-silently-run-as-a-seed-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\race-identifier-RACE-IDENT-4a81a-ever-silently-run-as-a-seed-chromium-production\error-context.md
+
+  6) [chromium-production] › e2e\race-save.spec.js:39:1 › a race finishes with the server gone, is kept, and goes up when it returns 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:4599/setup
+    Call log:
+      - navigating to "http://localhost:4599/setup", waiting until "load"
+
+
+      43 |
+      44 |   // ── 1. Set up while the server is still answering ────────────────────────────────────────────
+    > 45 |   await page.goto('/setup');
+         |              ^
+      46 |   await ensureTrackGeometriesCached(page);
+      47 |
+      48 |   // The smallest field that is still a race: `raceResults` is written when EVERY racer has
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\race-save.spec.js:45:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\race-save-a-race-finishes--bae95-and-goes-up-when-it-returns-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\race-save-a-race-finishes--bae95-and-goes-up-when-it-returns-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\race-save-a-race-finishes--bae95-and-goes-up-when-it-returns-chromium-production\error-context.md
+
+  7) [chromium-production] › e2e\seed-field-typing.spec.js:80:1 › ★ a short key TYPED character by character runs that race 
+
+    Error: GET /api/tracks → 401
+
+    expect(received).toBeTruthy()
+
+    Received: false
+
+       at appReady.js:81
+
+      79 | async function geometryKeys(page) {
+      80 |   const res = await page.request.get(`${E2E.apiUrl}/api/tracks`);
+    > 81 |   expect(res.ok(), `GET /api/tracks → ${res.status()}`).toBeTruthy();
+         |                                                         ^
+      82 |   const keys = (await res.json())
+      83 |     .map((t) => t.geometryId)
+      84 |     .filter(Boolean)
+        at geometryKeys (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\appReady.js:81:57)
+        at ensureTrackGeometriesCached (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\appReady.js:102:16)
+        at runARace (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:29:3)
+        at aStoredKey (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:64:3)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:82:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\seed-field-typing-★-a-shor-327b6-by-character-runs-that-race-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\seed-field-typing-★-a-shor-327b6-by-character-runs-that-race-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\seed-field-typing-★-a-shor-327b6-by-character-runs-that-race-chromium-production\error-context.md
+
+  8) [chromium-production] › e2e\seed-field-typing.spec.js:104:1 › the same key PASTED still works ─
+
+    Error: GET /api/tracks → 401
+
+    expect(received).toBeTruthy()
+
+    Received: false
+
+       at appReady.js:81
+
+      79 | async function geometryKeys(page) {
+      80 |   const res = await page.request.get(`${E2E.apiUrl}/api/tracks`);
+    > 81 |   expect(res.ok(), `GET /api/tracks → ${res.status()}`).toBeTruthy();
+         |                                                         ^
+      82 |   const keys = (await res.json())
+      83 |     .map((t) => t.geometryId)
+      84 |     .filter(Boolean)
+        at geometryKeys (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\appReady.js:81:57)
+        at ensureTrackGeometriesCached (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\appReady.js:102:16)
+        at runARace (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:29:3)
+        at aStoredKey (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:64:3)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\seed-field-typing.spec.js:106:19
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\seed-field-typing-the-same-key-PASTED-still-works-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\seed-field-typing-the-same-key-PASTED-still-works-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\seed-field-typing-the-same-key-PASTED-still-works-chromium-production\error-context.md
+
+  9) [chromium-production] › e2e\teams-session.spec.js:85:3 › TEAMS-1 — the admin assigns a team and the session carries it › an admin creates a user with a team; that user signs in and their session has it 
+
+    Error: sign-in as e2e-abf9bb01 did not leave /login
+
+    expect(page).not.toHaveURL(expected) failed
+
+    Expected pattern: not /\/login/
+    Received string: "http://localhost:4599/login"
+    Timeout: 15000ms
+
+    Call log:
+      - sign-in as e2e-abf9bb01 did not leave /login with timeout 15000ms
+        18 × unexpected value "http://localhost:4599/login"
+
+
+      59 |     page,
+      60 |     `sign-in as ${username} did not leave /login`
+    > 61 |   ).not.toHaveURL(/\/login/, { timeout: 15_000 });
+         |         ^
+      62 | }
+      63 |
+      64 | test.describe('TEAMS-1 — the admin assigns a team and the session carries it', () => {
+        at signIn (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:61:9)
+        at signInAsAdmin (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:82:5)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:90:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\teams-session-TEAMS-1-—-th-4b033-in-and-their-session-has-it-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\teams-session-TEAMS-1-—-th-4b033-in-and-their-session-has-it-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\teams-session-TEAMS-1-—-th-4b033-in-and-their-session-has-it-chromium-production\error-context.md
+
+  10) [chromium-production] › e2e\teams-session.spec.js:137:3 › TEAMS-1 — the admin assigns a team and the session carries it › the admin cannot create a user with no team at all 
+
+    Error: sign-in as e2e-abf9bb01 did not leave /login
+
+    expect(page).not.toHaveURL(expected) failed
+
+    Expected pattern: not /\/login/
+    Received string: "http://localhost:4599/login"
+    Timeout: 15000ms
+
+    Call log:
+      - sign-in as e2e-abf9bb01 did not leave /login with timeout 15000ms
+        18 × unexpected value "http://localhost:4599/login"
+
+
+      59 |     page,
+      60 |     `sign-in as ${username} did not leave /login`
+    > 61 |   ).not.toHaveURL(/\/login/, { timeout: 15_000 });
+         |         ^
+      62 | }
+      63 |
+      64 | test.describe('TEAMS-1 — the admin assigns a team and the session carries it', () => {
+        at signIn (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:61:9)
+        at signInAsAdmin (C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:82:5)
+        at C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\client\e2e\teams-session.spec.js:140:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\teams-session-TEAMS-1-—-th-f975d--a-user-with-no-team-at-all-chromium-production\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\teams-session-TEAMS-1-—-th-f975d--a-user-with-no-team-at-all-chromium-production\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\teams-session-TEAMS-1-—-th-f975d--a-user-with-no-team-at-all-chromium-production\error-context.md
+
+  Slow test file: [chromium-production] › e2e\race-history.spec.js (11.6m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  10 failed
+    [chromium-production] › e2e\arrival-shape.spec.js:40:1 › the owner s arrival shape is selectable in the browser, and leaves him unsteered in his block 
+    [chromium-production] › e2e\comeback-precedence.spec.js:41:1 › the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE 
+    [chromium-production] › e2e\garden-path-finishes.spec.js:28:1 › garden-path crosses the line in a browser 
+    [chromium-production] › e2e\race-identifier.spec.js:208:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › run it again repeats the race that RAN, not the current settings 
+    [chromium-production] › e2e\race-identifier.spec.js:248:3 › RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's › a corrupted identifier is REFUSED, never silently run as a seed 
+    [chromium-production] › e2e\race-save.spec.js:39:1 › a race finishes with the server gone, is kept, and goes up when it returns 
+    [chromium-production] › e2e\seed-field-typing.spec.js:80:1 › ★ a short key TYPED character by character runs that race 
+    [chromium-production] › e2e\seed-field-typing.spec.js:104:1 › the same key PASTED still works ──
+    [chromium-production] › e2e\teams-session.spec.js:85:3 › TEAMS-1 — the admin assigns a team and the session carries it › an admin creates a user with a team; that user signs in and their session has it 
+    [chromium-production] › e2e\teams-session.spec.js:137:3 › TEAMS-1 — the admin assigns a team and the session carries it › the admin cannot create a user with no team at all 
+  115 passed (35.0m)

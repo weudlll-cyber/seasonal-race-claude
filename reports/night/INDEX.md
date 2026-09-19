@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PROD-BROWSER-1.md](PROD-BROWSER-1.md) — **★★★ the production browser arm already existed, and
+  running it whole for the first time found NO bundle defect** (2026-09-19, `night/2026-09-19` piece
+  4; **nothing wired, no source changed**). ★★ **`scripts/serve-production.mjs` is the wrong thing to
+  wire**, with three addresses: it injects no runtime config, so the page would resolve its API to
+  `http://localhost:4000` — the owner's — which is the exact isolation failure `e2e-env.js`'s header
+  records; and it REPLACES `%LOCALAPPDATA%acearena-preview` on every run, the directory serving
+  4173. ★ **`client/playwright.prod.config.js` (PROD-ARM-1) already runs the same specs against the
+  built bundle in the shipping shape** — and nobody had ever run it whole: **115 passed, 10 failed,
+  35.0 min**. ★★★ **Every one of the ten classified by re-running it on BOTH arms: one pre-existing
+  (`arrival-shape`, fails on dev too), two flake, and SEVEN a single cascade** from the arm's server
+  becoming unreachable mid-run — failing in 2–7 s where the dev arm takes 2–4 min. ★ **The one real
+  arm difference is the SHAPE, not the bundle**: one process serves the API and the page, so when it
+  goes the page goes too. ★ Side finding: **103 leftover e2e data directories, 262 MB**, never cleaned
+  up and documented nowhere.
+
 - [RACE-PARAMS-2.md](RACE-PARAMS-2.md) — **★★ the knowingly-transcribed race-parameter derivation has
   one home, and BOTH mirrors are gone** (2026-09-19, `night/2026-09-19` piece 5; **nothing minted, no
   behaviour changed**). `RaceScreen/index.jsx:554-613` held the step between a track/world/racer-type
