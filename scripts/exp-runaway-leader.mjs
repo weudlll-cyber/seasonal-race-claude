@@ -2418,9 +2418,19 @@ if (argv.includes("--p1-criteria")) {
 // Question: computeGapBiasedTarget's gapBehind>G branch RETURNS before the gapAhead>G check. At a small
 // G the owner's slider setting (0.75) should make chasers that break from the pack open a >G hole BEHIND
 // themselves and get DOWN-tilted although they are far behind the leader — the chase is structurally
-// suppressed, so escapes could GROW vs OFF. The smoking gun is gapDownAheadGtBehind: DOWN-tilts applied
-// to a racer whose gapAhead already exceeded its gapBehind. Read-only measurement; the branch-fire
+// suppressed, so escapes could GROW vs OFF. gapDownAheadGtBehind counts the misdirected case: DOWN-tilts
+// applied to a racer whose gapAhead already exceeded its gapBehind. Read-only measurement; the branch-fire
 // counters are pure telemetry (fingerprint byte-identical).
+//
+// ★★ CORRECTED 2026-09-19: gapDownAheadGtBehind IS NOW 0 BY CONSTRUCTION, SO IT CANNOT BE THIS RUN'S
+// EVIDENCE. This block called it "the smoking gun", and it was one — the misdirection was real and this
+// counter is what measured it at 6.6x. The BRANCH PRIORITY fix (racePlanner.js, `45e774b8`, 2026-07-22)
+// then removed it: the branch is entered only when gapBehind >= gapAhead, so the increment is
+// unreachable and the column below reads 0 on EVERY arm including OFF. A 0 here says the fix is still
+// in place; it does not say a search was run and found nothing. The column is kept, with its number and
+// its name, because a field deleted from under a `?? 0` reads identically to a measurement that ran —
+// but the QUESTION this diagnostic asks now needs a different instrument, and that is a decision about
+// --smallg-diag rather than a number to read off this table.
 // ════════════════════════════════════════════════════════════════════════════════
 if (argv.includes("--smallg-diag")) {
   const OUT_D = join(OUT_ABS, "smallG-diag");
@@ -2669,7 +2679,10 @@ if (argv.includes("--smallg-diag")) {
     "*Mean escape gap@0.90 = leader→P2 distance in racer lengths at progress 0.90, averaged over races where P2 still exists (n per race set in `per-arm-track.csv`).*",
   );
   md.push("");
-  md.push("## The smoking gun — DOWN-tilts by live-rank group");
+  md.push("## DOWN-tilts by live-rank group");
+  md.push(
+    "★ **The `gapAhead>gapBehind` share below is 0 BY CONSTRUCTION on every arm, including OFF** — the branch priority fix (`45e774b8`, 2026-07-22) made that case unreachable inside the branch. It is reported because a missing column and a measured zero look the same; it is not this run's evidence.",
+  );
   md.push(
     "A DOWN-tilt shifts the draw toward the SLOW band edge. It is *intended* for a racer that has escaped forward. It is *suppression* when the racer is itself far behind the racer ahead.",
   );
@@ -2693,7 +2706,7 @@ if (argv.includes("--smallg-diag")) {
       g15 = store.G15[t.id].agg,
       g075 = store.G075[t.id].agg;
     verdict.push(
-      `- **${t.id}**: runaway OFF ${pctS(off.runawayRate)} → G15 ${pctS(g15.runawayRate)} → G075 ${pctS(g075.runawayRate)}; mean escape gap@0.90 ${off.gap090Mean.toFixed(2)} → ${g15.gap090Mean.toFixed(2)} → ${g075.gap090Mean.toFixed(2)}L; suppressed DOWN-tilts (gapAhead>gapBehind) ${off.smokingGun} → ${g15.smokingGun} → ${g075.smokingGun}.`,
+      `- **${t.id}**: runaway OFF ${pctS(off.runawayRate)} → G15 ${pctS(g15.runawayRate)} → G075 ${pctS(g075.runawayRate)}; mean escape gap@0.90 ${off.gap090Mean.toFixed(2)} → ${g15.gap090Mean.toFixed(2)} → ${g075.gap090Mean.toFixed(2)}L; suppressed DOWN-tilts (gapAhead>gapBehind, 0 by construction since 2026-07-22) ${off.smokingGun} → ${g15.smokingGun} → ${g075.smokingGun}.`,
     );
   }
   md.push(...verdict);

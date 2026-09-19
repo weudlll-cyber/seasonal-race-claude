@@ -606,7 +606,22 @@ export function createTrajectoryController(racePlan) {
   // measure how often that happens. TELEMETRY ONLY: never read back into a returned draw.
   let _gapDownTilts = 0; // gapBehind>G branch fired (toward SLOWER)
   let _gapUpTilts = 0; // gapAhead>G branch fired (toward FASTER; symmetric mode only)
-  let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
+  // ★★ THIS READS 0 BY CONSTRUCTION SINCE 2026-07-22, AND 0 IS THE CORRECT ANSWER.
+  //
+  // It counts a DOWN-tilt applied while `gapAhead > gapBehind` — a racer tilted SLOWER although it
+  // was itself further from the racer ahead than from the one behind. ★ That misdirection was REAL,
+  // and this counter is what measured it: it fired 6.6x more often at small G, which is the finding
+  // the BRANCH PRIORITY fix at `:1695` was written from (`45e774b8`, 2026-07-22).
+  //
+  // ★ SINCE THAT FIX THE INCREMENT IS UNREACHABLE. The branch is entered only when
+  // `gapBehind >= gapAhead`, so `gapAhead > gapBehind` cannot hold inside it. A zero here is
+  // therefore STRUCTURAL, not empirical — it says the fix is still in place, NOT that a search was
+  // run and found nothing. Read it that way and it is informative; read it as evidence and it is
+  // the opposite. It is deliberately NOT deleted: it is exported by `collectTelemetry()` below and
+  // read by `scripts/sim-fairness.mjs:5038` and `scripts/exp-runaway-leader.mjs:2517`
+  // (`--smallg-diag`), and a field removed from under a `?? 0` would leave both instruments
+  // printing the same 0 with nothing to say the measurement had gone.
+  let _gapDownAheadGtBehind = 0;
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
   // SCREEN-tier escape-latency telemetry (read-only). One entry per DOWN-tilt applied to the LIVE
   // LEADER, which is the event the eye sees as "the escapee gets braked". At that instant `gapBehind`
