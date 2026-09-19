@@ -1053,7 +1053,26 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 70a85ffb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **THE STAMP ABOVE IS TAKEN IN A COMMIT OF ITS OWN, AND THAT IS THE POINT (PURSUER-SHIP-1,
+2026-09-19).** Commit `d7ff2db9` re-stamped this line **and** edited
+`client/src/modules/camera/comebackDetector.js` in the same commit. A stamp names the commit that
+LAST CHANGED its dependency (`docs/SHIP-CEREMONY.md`, TRAP B), so a stamp written in the same commit
+that moves the dependency **is stale the instant it is written** — and it was: the branch has been
+red on `check-measured-stamps` from `d7ff2db9` onward. That is a defect in HOW the stamp was taken,
+not in the numbers under it.
+
+★ **It is stamped at `70a85ffb`**, the catch-up merge, because that is the commit that last changed
+this stamp's dependency — `git log -1` over `client/src/modules/camera/` gives `d7ff2db9`, and over
+the `via=` import closure gives `70a85ffb`, which already contains `d7ff2db9`. The stamp must satisfy
+both halves, so the later of the two is the only correct answer.
+
+★★★ **NOTHING WAS RE-MEASURED HERE, AND THE DIGITS BELOW ARE KNOWN TO BE STALE.** STAMP-CLOSURE-1
+measured all six frame counts as moved on master. Re-measuring inside the rename's ship would have
+mixed two questions; it is done immediately afterwards, on master's final behaviour, and **the
+paragraph that follows this one is replaced then**. This commit fixes the stamp's FORM and claims
+nothing about its numbers.
 
 ★★ **RE-MEASURED 2026-09-18 (PURSUER-RENAME-1), AND THE NUMBERS MOVED — TWICE OVER.** `node
 scripts/tracking-lag.mjs`, the command this stamp names, run on the rename branch AND on master as a
