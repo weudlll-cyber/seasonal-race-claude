@@ -667,9 +667,25 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
     // shape of a new feature. With the fall-back, a race in which staging is infeasible is
     // byte-identical to today, which is what makes the change safe to leave in the tree while the
     // feasibility question below is his to answer.
+    // ★★ HE IS A `pursuer`, NOT A `comebacker` — the owner's decision of 2026-09-18, and it is a
+    // RENAME plus the camera treatment, nothing else. His curve, his final rank and his place in the
+    // race are untouched: `addSolo` reads the role only to store it, so the string chosen here
+    // cannot reach the physics (`raceCore.js`/`raceStep.js` never read a role) and the finishing
+    // order is byte-identical to the pre-rename tree.
+    //
+    // ★ WHY THE NAME. Measured over 300 races (PRESTAGING-WHY-1): he leads in 66% of races but holds
+    // the race's peak gap in only 10%, finishes top-5 in 89%, and sits a median of ONE place behind
+    // the peak-gap holder — a front-group PURSUER, not a racer coming back from anywhere. `comebacker`
+    // described the staged racer, who is held at a staging rank and released to climb; this one is
+    // never held and has nothing to come back from. The two shared a label and the camera could not
+    // tell them apart (COMEBACKER-READERS-1).
+    //
+    // ★ WHAT THE NAME BUYS, and it is the point: `comebackDetector.js` matches `'comebacker'` exactly,
+    // so a `pursuer` no longer enters `_cast` and the camera never forces a comeback shot on him.
+    // The staged site above and the drawn-winner site at :616 keep `comebacker` deliberately.
     const peakRank =
       p.rank > cr ? p.rank : Math.min(n, cr + Math.round(drama.peakDepthFrac * (n - 1)));
-    if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
+    if (addSolo(p.index, p.rank > cr ? 'pursuer' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
   }
 
   // ── B2-ATTACKER "Attack & Fall" (ADDITIONAL heroes, beyond the nHeroes budget; OFF via b2AttackHeroes 0) ──

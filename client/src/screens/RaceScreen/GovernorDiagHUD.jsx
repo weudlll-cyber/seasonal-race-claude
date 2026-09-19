@@ -54,10 +54,18 @@ const pct = (v, d = 0) => `${(v * 100).toFixed(d)}%`;
 
 // How many front racers to list (leader + the next few).
 const FRONT_COUNT = 6;
-// Short role labels + colours (roles the generator produces: sovereign-lead / comebacker / faller).
+// Short role labels + colours. Roles the generator produces: sovereign-lead / comebacker / pursuer /
+// faller, plus `attacker-b2` which has never had an entry here and therefore renders with no label —
+// noticed 2026-09-18 and deliberately left as it was, because giving it one is a readout change
+// nobody asked for.
 const ROLE_STYLE = {
   'sovereign-lead': { label: 'sovereign-lead', color: '#ff6ec7' }, // unbrakeable front hero
   comebacker: { label: 'comebacker', color: LIFT_COLOR },
+  // ★ THE UNSTAGED FRONT-GROUP PURSUER (heroCurveGenerator.js:688), split from `comebacker` on
+  // 2026-09-18. He shares the comebacker's LIFT colour because he is steered the same way — what
+  // differs is that the camera no longer forces a shot on him — and a distinct label is the whole
+  // point: without it the HUD would show him as a hero with no role at all.
+  pursuer: { label: 'pursuer', color: LIFT_COLOR },
   faller: { label: 'faller', color: BRAKE_COLOR },
 };
 

@@ -254,6 +254,12 @@ for (const geo of tracks) {
       runRace(probe, identity, CAMERA_CONFIG, ({ cd: d2 }) => {
         const cp = probe.meta.racePlanController?.getCameraPlan?.();
         if (!cp) return true;
+        // ★ `comebacker` ONLY, and after 2026-09-18 that is load-bearing rather than incidental.
+        // This models the CAMERA's cast, and `comebackDetector.js` admits exactly `'comebacker'` —
+        // so the unstaged `pursuer` (`heroCurveGenerator.js:688`) is excluded here for the same
+        // reason the camera excludes him. Widening this to both roles would make the diagnostic
+        // disagree with the director it exists to model. The other three role filters in this file
+        // are the camera's population too and are left alone for the same reason.
         castIndices = (cp.heroes ?? [])
           .filter((h) => h.role === "comebacker" && Number.isInteger(h.index))
           .map((h) => h.index);
