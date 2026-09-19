@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ a57fc04b 2026-09-10 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 70a85ffb 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. `scripts/straggler-truth.mjs` drives `raceDriver`, which delivers no cameraPlan, so no comebacker is ever cast and the precedence cannot fire here — and phase 6 begins after the winner is home, past the finish latches the precedence refuses to act through in any case.
 
@@ -194,23 +194,37 @@ The two numbers this section used to carry were flagged as unverified on 2026-08
 in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
 OPEN one, at 20 and at 40 racers, seed 9:**
 
-| track | n | phase 6 lasts | zoom-out begins BEFORE the last crossing | still running then | of those, off canvas |
-| ----- | - | ------------- | ---------------------------------------- | ------------------ | -------------------- |
-| dirt-oval | 20 | **6.18 s** | **4.57 s** | 11 of 20 | **11** |
-| dirt-oval | 40 | **7.53 s** | **5.75 s** | 29 of 40 | **27** |
-| river-run | 20 | **4.45 s** | **2.30 s** | 7 of 20 | **6** |
-| river-run | 40 | **5.95 s** | **4.38 s** | 33 of 40 | **28** |
+★★★ **RE-MEASURED ON MASTER, 2026-09-19 (STAMP-RESTAMP-1). EVERY NUMBER BELOW MOVED, AND SO DID
+TWO OF THE SENTENCES UNDER THEM.** `node scripts/straggler-truth.mjs`, seed 9, the command this stamp
+names:
 
-**"~2.9 s at 20 racers" was wrong** — it is **4.45 s** on the open track and **6.18 s** on the closed
-one, and it grows with the field: 5.95 s and 7.53 s at 40.
+| track | n | kind | phase 6 lasts | zoom-out begins BEFORE the last crossing | unfinished in shot | any racer in shot | settled frames |
+| ----- | - | ---- | ------------- | ---------------------------------------- | ------------------ | ----------------- | -------------- |
+| dirt-oval | 20 | closed | **4.85 s** | **2.70 s** | — | — of 20 | **0** |
+| dirt-oval | 40 | closed | **9.12 s** | **5.73 s** | 7 of 7 | 8 of 40 | **164** |
+| river-run | 20 | open | **3.68 s** | **1.28 s** | — | — of 20 | **0** |
+| river-run | 40 | open | **6.80 s** | **4.57 s** | 3 of 3 | 40 of 40 | **94** |
 
-**"the zoom-out starts ~1.4 s before it ends" was wrong, and wrong in the direction the audit
-suspected.** It starts **2.30–5.75 s** before the last crossing. The separate measurement that
-recorded 4.4–5.9 s stands; 1.4 s does not.
+★ **THE LAST THREE COLUMNS ARE NOT THE OLD ONES.** The instrument reports `unfinMin` / `allMin` /
+`settled` now — the fewest unfinished racers in shot on any SETTLED frame, the fewest racers of any
+kind, and how many settled frames there were — where the table used to carry "still running then" and
+"of those, off canvas". They are different questions, so the old values are not comparable to these
+and are not shown beside them. **At 20 racers there are no settled frames at all, which is why those
+two rows have no counts to give.**
 
-**THE ENDING OVERLAPS THE RACE, AND IT SHOWS THE RACERS IT IS WAITING FOR.** The last two columns of
-the table are a snapshot of ONE frame — the first of the pull-back, when the shot is still at its
-tightest — and they must not be read as the state of the ending. **The camera then opens and
+**"~2.9 s at 20 racers" was wrong, and it still is** — it is **3.68 s** on the open track and
+**4.85 s** on the closed one, and it still grows with the field: **6.80 s** and **9.12 s** at 40.
+(It read 4.45 / 6.18 / 5.95 / 7.53 before this measurement.)
+
+★★ **"the zoom-out starts ~1.4 s before it ends" — THE DISMISSAL NO LONGER HOLDS, AND THIS IS THE
+CORRECTION THAT MATTERS.** The range is now **1.28–5.73 s** before the last crossing. This paragraph
+used to say the range was 2.30–5.75 s and that "the separate measurement that recorded 4.4–5.9 s
+stands; 1.4 s does not". **On river-run at 20 racers it is 1.28 s — below the figure this document
+dismissed** — and the 4.4–5.9 s claim is not supported by any row here either. What survives is only
+the weaker statement: the lead grows with the field, and at 40 racers it is 4.57–5.73 s.
+
+**THE ENDING OVERLAPS THE RACE, AND IT SHOWS THE RACERS IT IS WAITING FOR.** The in-shot columns are
+a snapshot of ONE frame and must not be read as the state of the ending. **The camera then opens and
 travels.**
 
 **Measured per frame in the SETTLED shot** — from the pull-back's own duration being up to the last
