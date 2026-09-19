@@ -59,7 +59,6 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
   measured from the anchor the framing rule **intends** rather than the one the pan has reached, with
   the opening glide still running at the deadline. **A repair aimed at the infinite case would have
   changed code that never runs there.** Corrected in place on that branch.
-||||||| 2bcf6530
 - **2026-09-14 — [BREAKAWAY-FREQUENCY-1](BREAKAWAY-FREQUENCY-1.md)'s CANVAS-WIDTH COLUMN IS OFF BY THE
   LAP COUNT.** It records the owner's photographed lead as **0.349 canvas widths**;
   [BREAKAWAY-HISTORY-1](BREAKAWAY-HISTORY-1.md) re-measured the same race and gets **0.698 — exactly
@@ -622,7 +621,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   rescaling was valid** — and the whole overstatement sits on the open tracks (closed 52% -> 52%,
   open 90% -> 36%). ★ Roles affected through the selection at `breakaway.mjs:222`; attacker-b2's 0%
   holds exactly. Every figure N=100 races per cell, 400 races on `wild`, 0 errored.
-||||||| 2bcf6530
 - [BREAKAWAY-HISTORY-1.md](BREAKAWAY-HISTORY-1.md) — **the race did not get worse; the framing did**
   (2026-09-14, branch `night/2026-09-14-history`, **MEASUREMENT ONLY**, read-only on his store, nothing
   merged or minted). ★★ **THE ANSWER: the largest lead the leader ever holds is IDENTICAL at five
@@ -1655,7 +1653,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   every spec shares one `storageState`. Sabotage reddened **5** tests across both layers, and the
   HTTP-layer test **did not exist until the sabotage showed it was missing**. `engine-reach` selects
   nothing; **nothing minted**.
-||||||| bcf41a9b
 
 - [PLAYABLE-FOUR-1.md](PLAYABLE-FOUR-1.md) — **four pieces, one branch, nothing merged and nothing
   minted** (2026-09-05, `feat/playable-four-1` off master `d407f090`). All four landed; the fall
@@ -2607,7 +2604,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   reshuffle in three callers at once; and the `sessionStorage` seam, where a stripped field only
   shows up once a race is running. ★ **The API can be down and a race still starts** — the failure
   says WHY and is never rendered as an empty list.
-||||||| a99a0938
 - [BOARD-PORTRAIT-FIT-1.md](BOARD-PORTRAIT-FIT-1.md) — **the beetle is SEVENTH. The board sized one
   axis of a two-axis picture, and 13 of 20 types spilled onto the number** (2026-09-04; **MERGED to master on `db1a1cc5`
   after the owner accepted it on the production build `5f5e8c27`, and the render fingerprint was
@@ -3511,7 +3507,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   moved in 3 of 6 states, `LEADER_ZOOM` better on both percentiles, `OVERVIEW`/`LEAD_CHANGE` p95
   worse). **World and world-off UNMOVED.** An instrument trap was caught on the way: the sweep's
   `off` arm silently became a second copy of the shipped arm the moment the default moved.
-||||||| e7e56372
 - [COMPANY-HEADCOUNT-1.md](COMPANY-HEADCOUNT-1.md) — **the guarantee asks whether its anchor is a
   racer instead of assuming it, and a promise of five delivers five** (2026-09-02, branch
   `fix/company-headcount-1` off master, **not merged, not minted**, handed back for his eye; ship
@@ -3652,7 +3647,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   "measured from the spritesheet" and **nothing in the repository can produce them**. Ten broken
   things named and deliberately left, including a **tautological test** that has been green and
   meaningless for 90 days and a comment claiming a guard that was proposed, held, and never built.
-||||||| ed627ae7
 - [AIM-LEVERS-1.md](AIM-LEVERS-1.md) — **two candidates for his eye, and the fault is smaller than
   the brief's numbers say** (2026-09-01, built + measured; **NOT merged, NOT minted**, branch
   `feat/aim-levers-1` @ `38b19379` served on 4173, **all four fingerprints byte-identical at the

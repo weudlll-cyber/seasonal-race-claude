@@ -97,6 +97,38 @@ with it, and an earlier draft of the deny list broke exactly that.
 
 ## The browser suite runs HERE, and nowhere else
 
+There are **three** commands, and they are all run from `client/`:
+
+| command | what it runs | cost | measured |
+|---|---|---|---|
+| `npm run test:e2e` | the whole suite against the **Vite dev server** | ~35 min | the dev arm, one worker |
+| `npm run test:e2e:prod` | the whole suite against the **BUILT bundle**, served by the Node server | ★ **35.0 min** | 2026-09-19, 125 tests |
+| ★ `npm run test:e2e:prod:fast` | the production arm on the specs that **never wait for a race** | ★ **3.1 min** | 2026-09-19, **82 tests, all passed** |
+
+★★ **`npm run test:e2e:prod:fast` is 66% of the suite for 9% of the time**, and it is the cheapest
+place a **bundle-only** defect would show — the class the dev arm cannot see at all, because the dev
+transform resolves a missing named export to `undefined` where a bundle refuses outright. **Both
+production commands need `npm run build` in `client/` first**; the arm serves a build, it never makes
+one, and it fails loudly if there is none.
+
+**What the fast subset is:** `quicktest-vs-harness`, `b1617-smoke`,
+`fix-list-tracks-world-dimensions`, `d355-smoke`, `d11-ux-verification`, `vre-2-ux-verification`,
+`camera-polish-ux-verification`. The list is in `client/package.json` and is hand-maintained — a new
+spec is NOT in it until somebody adds it.
+
+★ **What it does NOT cover, which is the reason the whole arm still exists:** every spec that waits
+for a real race — `race-history` (11.6 min alone), `seed-field-typing`, `race-history-real-route`,
+`held-comebacker`, `race-history-never-vanishes`, `race-identifier`, `race-save`, `teams-session`,
+`d9-smoke`, `arrival-shape`, `comeback-precedence`, `garden-path-finishes`. **43 of the 125 tests**,
+and they are where the race behaviour itself is asserted.
+
+★ **PROD-BROWSER-1 estimated this subset at "well under a minute". Measured, it is 3.1 minutes** —
+the estimate counted the specs and not their fixtures. Corrected here rather than left standing.
+
+**They must not run at the same time as each other or as `npm run test:e2e`**: all three write
+`client/e2e/.auth/state.json`. Separate commands; stated, not guarded.
+
+
 ```bash
 npm run test:e2e
 ```

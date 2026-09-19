@@ -50,6 +50,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:prod": "playwright test --config=playwright.prod.config.js",
+    "test:e2e:prod:fast": "playwright test --config=playwright.prod.config.js e2e/quicktest-vs-harness.spec.js e2e/b1617-smoke.spec.js e2e/fix-list-tracks-world-dimensions.spec.js e2e/d355-smoke.spec.js e2e/d11-ux-verification.spec.js e2e/vre-2-ux-verification.spec.js e2e/camera-polish-ux-verification.spec.js",
     "test:e2e:ui": "playwright test --ui",
     "fairness-sim": "node ../scripts/sim-fairness.mjs"
   },

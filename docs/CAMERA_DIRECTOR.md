@@ -1055,24 +1055,36 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 <!-- MEASURED: tracking-lag (median/p95 pp per state) @ 70a85ffb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
-★★ **THE STAMP ABOVE IS TAKEN IN A COMMIT OF ITS OWN, AND THAT IS THE POINT (PURSUER-SHIP-1,
-2026-09-19).** Commit `d7ff2db9` re-stamped this line **and** edited
-`client/src/modules/camera/comebackDetector.js` in the same commit. A stamp names the commit that
-LAST CHANGED its dependency (`docs/SHIP-CEREMONY.md`, TRAP B), so a stamp written in the same commit
-that moves the dependency **is stale the instant it is written** — and it was: the branch has been
-red on `check-measured-stamps` from `d7ff2db9` onward. That is a defect in HOW the stamp was taken,
-not in the numbers under it.
+★★★ **RE-MEASURED IN FULL ON MASTER, 2026-09-19 (STAMP-RESTAMP-1), AND THESE ARE THE NUMBERS.**
+`node scripts/tracking-lag.mjs`, the command this stamp names, on master with the pursuer rename in:
 
-★ **It is stamped at `70a85ffb`**, the catch-up merge, because that is the commit that last changed
-this stamp's dependency — `git log -1` over `client/src/modules/camera/` gives `d7ff2db9`, and over
-the `via=` import closure gives `70a85ffb`, which already contains `d7ff2db9`. The stamp must satisfy
-both halves, so the later of the two is the only correct answer.
+| state | frames | median pp | p95 pp |
+|---|---|---|---|
+| BATTLE_ZOOM | **8561** | 6.01 | 10.10 |
+| COMEBACK_ZOOM | **2249** | 8.04 | 11.88 |
+| LEADER_ZOOM | **13036** | 4.66 | 9.65 |
+| LEAD_CHANGE | **7510** | 4.54 | 10.85 |
+| OVERVIEW | **3127** | 2.27 | 18.37 |
+| PHOTO_FINISH | **1973** | 2.98 | 7.84 |
 
-★★★ **NOTHING WAS RE-MEASURED HERE, AND THE DIGITS BELOW ARE KNOWN TO BE STALE.** STAMP-CLOSURE-1
-measured all six frame counts as moved on master. Re-measuring inside the rename's ship would have
-mixed two questions; it is done immediately afterwards, on master's final behaviour, and **the
-paragraph that follows this one is replaced then**. This commit fixes the stamp's FORM and claims
-nothing about its numbers.
+**OVERVIEW median 2.27 pp against every other state pooled 5.14 pp — ratio 0.44×.** ★ OVERVIEW is the
+TIGHTEST state, not the loosest, and it is tighter now than at any reading this document has carried.
+
+★★ **WHY THE STAMP HAD TO BE RE-TAKEN, and it is two separate defects.** The first is the DIGITS:
+these six counts had been stale on master since the gap brake shipped on 2026-09-17, and the guard
+could not see it because the stamp declared `depends=client/src/modules/camera/` while the
+measurement drives a whole race (STAMP-CLOSURE-1). The second is HOW the stamp was taken: commit
+`d7ff2db9` re-stamped this line **and** edited `client/src/modules/camera/comebackDetector.js` in the
+same commit, which makes a stamp stale the instant it is written — `docs/SHIP-CEREMONY.md` TRAP B
+says a stamp names the commit that LAST CHANGED its dependency, so it belongs in a follow-up.
+
+★ **It is stamped at `70a85ffb`** because that is that commit: `git log -1` over
+`client/src/modules/camera/` gives `d7ff2db9`, and over the `via=` import closure gives `70a85ffb`,
+which already contains it. Both halves of the guard must be satisfied, so the later of the two is the
+only correct answer.
+
+★ **The previous reading is kept below rather than deleted**, because it is what said these numbers
+had moved and it is the reason this measurement was taken.
 
 ★★ **RE-MEASURED 2026-09-18 (PURSUER-RENAME-1), AND THE NUMBERS MOVED — TWICE OVER.** `node
 scripts/tracking-lag.mjs`, the command this stamp names, run on the rename branch AND on master as a

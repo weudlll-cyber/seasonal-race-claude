@@ -30,23 +30,41 @@ docker compose up -d                                 # serves the app AND the AP
 ```
 
 Open `http://localhost:4000`. **The first time, you have to create your admin account** — there is no
-default login, and the backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set. For local
-use `docker-compose.yml` already sets it; copy the value from there into the command below:
+default login, and the backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set.
+
+**Generate this install's own secrets first.** They are never printed — `npm run configure` writes
+them into `docker-compose.override.yml`, which is gitignored and is this install's own file:
 
 ```bash
+npm run configure -- --origin=http://localhost:4000
+docker compose up -d       # restart so the server picks them up
+```
+
+It asks for the address this install will be reached at, and **`http://localhost:4000` is a valid
+answer** — the `--origin=` above skips the question. The prompt's own examples are a domain and a
+public IP, which is what a deployment needs; a laptop does not.
+
+Then read the token out of that file and use it once:
+
+```bash
+grep RA_BOOTSTRAP_TOKEN docker-compose.override.yml
+
 curl -X POST http://localhost:4000/api/auth/setup \
   -H 'Content-Type: application/json' \
-  -H 'x-bootstrap-token: <the RA_BOOTSTRAP_TOKEN from docker-compose.yml>' \
+  -H 'x-bootstrap-token: <the RA_BOOTSTRAP_TOKEN from docker-compose.override.yml>' \
   -d '{"username":"me","password":"choose-a-real-password"}'
 ```
 
 Then sign in at `http://localhost:4000` and you are in, with all 10 built-in tracks and 20 racers.
 Setup runs **once** — a second attempt answers `409 setup already complete`.
 
-**One optional file, and the server tells you about it.** `docker-compose.override.yml` is gitignored,
-so a fresh clone has only the `.example`. Everything above works without it; the server just prints
-`[auth] Using ephemeral dev session secret — sessions will not survive restart`, and you sign in
-again after each restart. Copying the example and setting `RA_SESSION_SECRET` ends that.
+**`docker-compose.override.yml` is where this install's secrets live.** It is gitignored, so a fresh
+clone does not have it — `npm run configure` above creates it. **On a first install it is not
+optional**: it is the only home of `RA_BOOTSTRAP_TOKEN`, and without that token
+`POST /api/auth/setup` answers `403` and the install can never be signed into. It also holds
+`RA_SESSION_SECRET`; without one the server runs on a random secret and **every restart signs you
+out**. (`docker-compose.override.yml.example` exists, but it carries only `RA_SESSION_SECRET` and
+`RA_CLIENT_ORIGIN` — copying it alone still leaves you with no token.)
 [ENVIRONMENT.md](docs/ENVIRONMENT.md) owns what every variable does.
 
 **For development** run the two halves separately instead — `docker compose up -d` for the API and

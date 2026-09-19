@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ARRIVAL-BRAKE-1.md](ARRIVAL-BRAKE-1.md) — **★★★ the standing red browser test is not the gap brake;
+  it is an assertion its own author replaced fifteen hours later** (2026-09-19,
+  `chore/2026-09-19-clean` piece 5; **read-only, no assertion touched, no default moved**).
+  ★★ **Measured on both settings of the same fixture** (dirt-oval, seed 41003, 20 racers, `quiet`):
+  with `gapBrakeEnabled` **off** the test still fails, **0.812 against a 0.5 bar**; with it on, 0.890.
+  The brake's command is the one obeyed on the held racer in **0** of 1,303 braked frames — what it
+  changes is who is LEADING, not his multiplier. ★★★ **What it is instead:** his drawn place is 4 and
+  the block is rank ≤ 5, so nearly every sampled frame has him better than his drawn place and the
+  servo pulls him back — braked in 227/332 at rank 2, 893/1016 at rank 3. Band steering after arrival
+  was **deliberately removed by `17193be6` ARRIVAL-STEERED-AGAIN-1 at 17:07 on 2026-09-13**, fifteen
+  hours after the spec was written; that commit **turned the node test around and did not touch the
+  browser spec**, and the browser suite is night work so nothing ran it. ★ The spec's own comment two
+  lines above the assertion already says the shipped behaviour brakes him "about seven frames in ten"
+  — measured at **69.6%**. **NO REPAIR: which of the two is right is the owner's.**
+
 - [PROD-BROWSER-1.md](PROD-BROWSER-1.md) — **★★★ the production browser arm already existed, and
   running it whole for the first time found NO bundle defect** (2026-09-19, `night/2026-09-19` piece
   4; **nothing wired, no source changed**). ★★ **`scripts/serve-production.mjs` is the wrong thing to
