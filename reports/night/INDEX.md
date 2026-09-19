@@ -99,7 +99,6 @@ directions.
   pin the literal, five diagnostic counters would drop, ten living docs name it, and the **sim
   observers are immune** because `hero-adherence.mjs:29-34` derives the role from geometry.
   ★ **No name proposed, nothing built.**
-||||||| fe12fa95
 - [GATE-THREE-SEEDS-1.md](GATE-THREE-SEEDS-1.md) — **★★★ the gate at three fixed seeds: last night's
   regression does not reproduce, and the brake is exonerated** (2026-09-18, `night/2026-09-18` piece
   1; **measurement only**). Seeds **12345, 777, 31337**, both arms, the pinned N, **18,000 races**;
