@@ -199,9 +199,11 @@ describe('COMEBACK-STAGED-1 — ★ THE FALL-BACK, which is what keeps the tree 
     const staged = stagedComebackRank(40);
     // Any comebacker present came through today's path (already deep), never through the staging.
     // ★ BOTH ROLES, since 2026-09-18. The unstaged fall-back cast is `pursuer`
-    // (`heroCurveGenerator.js:688`) while the staged and drawn-winner sites stay `comebacker`.
-    // Filtering on `comebacker` alone would make this loop match NOTHING on a refused staging and the
-    // assertion would pass by being empty — a test that stops testing rather than one that goes red.
+    // (`heroCurveGenerator.js:722`) while the staged site (`:688`) stays `comebacker`. ★ SINCE
+    // 2026-09-19 the DRAWN-WINNER site (`:648`) is `sovereign-lead` and no longer lands in either
+    // bucket, which is why the vacuity guard below matters more than it did: filtering on
+    // `comebacker` alone would make this loop match NOTHING on a refused staging and the assertion
+    // would pass by being empty — a test that stops testing rather than one that goes red.
     const rankOf = new Map(field.postChaos.map((p) => [p.index, p.rank]));
     const fromPool = curves.filter((x) => x.role === 'comebacker' || x.role === 'pursuer');
     expect(fromPool.length).toBeGreaterThan(0); // the loop above must not be vacuous

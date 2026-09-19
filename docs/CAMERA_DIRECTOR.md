@@ -58,7 +58,7 @@ construction and must be argued another way.
 | `OVERVIEW`      | The establishing shot — the widest setting of the same rule every other state runs.                                                                                                            |
 | `LEADER_ZOOM`   | The current leader, framed forward so the pack behind him fills the frame.                                                                                                                     |
 | `BATTLE_ZOOM`   | A detected group fighting behind the lead.                                                                                                                                                     |
-| `COMEBACK_ZOOM` | A racer climbing through the field.                                                                                                                                                            |
+| `COMEBACK_ZOOM` | The racer the race PLAN cast as a comebacker, climbing through the field. ★ Since 2026-09-19 the cast is the whole population: with nobody cast as a comebacker this shot is not taken at all. |
 | `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
 | `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
 

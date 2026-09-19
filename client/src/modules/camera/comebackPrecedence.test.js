@@ -206,22 +206,55 @@ describe('COMEBACK-PRECEDENCE-1 — LIMIT 2: a LEAD_CHANGE on screen is never cu
   });
 });
 
-describe('COMEBACK-PRECEDENCE-1 — the population is the CAST, and a race with none behaves as today', () => {
-  it('a race whose plan cast nobody forces nothing, even though the fallback offers a climber', () => {
+// ★★ REWRITTEN 2026-09-19 (PLANNED-COMEBACK-ONLY-1), AND THE SUBJECT CHANGED UNDER IT.
+//
+// This block used to be called "…and a race with none behaves as today", and its two cases asserted
+// exactly that: with nothing cast, `best()` STILL offered a climber out of the `_b1` fall-back, the
+// precedence declined to force him, and the ordinary hold-elapsed path then took the shot anyway.
+//
+// ★ That is the behaviour the owner's decision of 2026-09-19 removes — *a comeback is shown when one
+// was PLANNED, not when one happens* — so both assertions were describing a camera the product no
+// longer runs. They are turned around rather than deleted: **what the block still owns is that a
+// plan casting nobody produces no comeback shot by ANY route**, which is a stronger statement than
+// the one it made before and is the reason the precedence's own limit is no longer load-bearing here.
+//
+// ★ WHAT IS KEPT UNCHANGED: that the director stays HELD mid-hold, that index 3 is not cast, and the
+// fixture itself — index 3 still carries the BIGGER rank gain, so a fall-back restored by any route
+// would visibly pick him and case 1 would go red rather than silently pass.
+describe('COMEBACK-PRECEDENCE-1 — the population is the CAST, and a race with none takes no shot at all', () => {
+  it('★ a race whose plan cast nobody offers NOBODY — the fall-back is gone, not merely declined', () => {
     const cd = heldDirector({ plan: noCastPlan() });
-    // The detector still has something to offer — `comebackDetector.js:157` falls back to `_b1`.
-    expect(cd._comeback.best(RACERS, NOW, 0.8)).toBeTruthy();
+    // Until 2026-09-19 this line read `.toBeTruthy()` and passed, because `best()` fell back to the
+    // whole `_b1` pool and returned index 3 — a racer the plan never named. It now refuses outright
+    // (`comebackDetector.js:215`).
+    expect(cd._comeback.best(RACERS, NOW, 0.8)).toBeNull();
     expect(cd._comeback.isCast(3)).toBe(false);
     cd.update(RACERS, NOW, raceState(), 1280, 720);
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
     expect(cd._lastTransitionReason).toBe(TRANSITION_REASON.HELD);
   });
 
-  it("...and today's ordinary path still produces the shot once the hold has elapsed", () => {
+  it('★ …and the hold elapsing does not produce one either, which is the whole change', () => {
     const cd = heldDirector({ plan: noCastPlan() });
     cd.stateEnteredAt = NOW - 30000; // hold elapsed → the ordinary weighted pool decides
     cd._overviewWeight = 0; // leave the comeback candidate alone in the pool: this is a gate test,
     // not a draw test, and OVERVIEW is otherwise eligible and wins it about half the time.
+    cd.update(RACERS, NOW, raceState(), 1280, 720);
+    expect(cd.state).not.toBe(CAM_STATE.COMEBACK_ZOOM);
+  });
+
+  it('★ POSITIVE CONTROL: the same setup WITH a cast comebacker does produce the shot', () => {
+    // Without this, the case above would be green on a fixture that had stopped reaching the shot
+    // for some reason of its own, and the block would be reporting success for the wrong reason.
+    // The two differ in exactly one argument: whether the plan casts anybody.
+    const cd = heldDirector({ plan: castPlan() });
+    cd.stateEnteredAt = NOW - 30000;
+    cd._overviewWeight = 0;
+    // The precedence is marked already spent on him, so it declines and the ORDINARY weighted pool
+    // is what produces the shot — the same route the case above takes, which is what makes the two
+    // comparable. Without this the precedence forces the cut and the control would be proving that
+    // a different mechanism works.
+    cd._comebackPrecedenceShown.add(2);
     cd.update(RACERS, NOW, raceState(), 1280, 720);
     expect(cd.state).toBe(CAM_STATE.COMEBACK_ZOOM);
     expect(cd._lastTransitionReason).toBe(TRANSITION_REASON.HOLD_ELAPSED);

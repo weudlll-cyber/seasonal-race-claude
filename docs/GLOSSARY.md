@@ -85,13 +85,22 @@ first arrives.
 so that something dramatic happens on purpose. Cast at the CHAOS→PULK boundary. Roles:
 
 - **comebacker** — starts deep, climbs. ★ Since 2026-09-18 this means the **STAGED** one only: held at
-  a staging rank and released to climb back. He is the one the camera may force a shot on.
-- **pursuer** — the **unstaged** front-group chaser. Same steering as a comebacker and the same
-  authored final rank (capped at the top of B1), but **never held and with nothing to come back
-  from**: measured over 300 races he leads in 66% of them, holds the race's peak gap in only 10%, and
-  finishes top-5 in 89%, a median of one place behind the racer holding the gap. ★ **The camera does
-  NOT force a comeback shot on him** — that is the difference the two names carry.
-- **sovereign** — leads.
+  a staging rank and released to climb back (`heroCurveGenerator.js:688`). ★★ **Since 2026-09-19 he is
+  the only cast role the camera will take a COMEBACK_ZOOM shot on, and with nobody cast as one there
+  is no comeback shot at all** — the owner's decision: *a comeback is shown when one was PLANNED, not
+  when one happens*. Measured over 300 races, he is the only cast racer still outside the front group
+  when the camera's outcome window opens (13.9% in the top three at progress 0.8, 62.7% by 0.9).
+- **pursuer** — the **unstaged** front-group chaser (`heroCurveGenerator.js:722`). Same steering as a
+  comebacker and the same authored final rank (capped at the top of B1), but **never held and with
+  nothing to come back from**: measured over 300 races he leads in 66% of them, holds the race's peak
+  gap in only 10%, and finishes top-5 in 89%, a median of one place behind the racer holding the gap.
+  ★ **The camera does NOT take a comeback shot on him** — that is the difference the two names carry.
+- **sovereign** — leads. ★ Since 2026-09-19 the **drawn winner is always `sovereign-lead`**
+  (`heroCurveGenerator.js:648`), whether or not he is already at the front when the cast is made. He
+  used to be `comebacker` when he was not, and that string was the reason the camera forced a comeback
+  shot on him. Re-measured over the same 300 races, the two arms are one racer either side of one
+  threshold: he **leads in 90.7%** of races and **holds the race's peak gap in 30.2%** — against the
+  pursuer's 64.2% and 8.9% — and sits at median rank 2 at progress 0.8 in both arms.
 - **faller** — starts high, drops.
 - **attacker-B2** — climbs to near the front mid-race, then falls back and re-sorts inside B2. This is
   the "Attack & Fall" mechanic.

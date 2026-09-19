@@ -37,27 +37,35 @@ const field = (orderByIndex) =>
 /**
  * Drive a racer from `startRank` to `endRank` over the window, so the rank-history gates below are
  * genuinely satisfied rather than stubbed. Returns the detector, ready for `best()`.
+ *
+ * ★ EVERY FIXTURE HERE IS CAST, AND SINCE 2026-09-19 IT HAS TO BE. `best()` refuses outright when
+ * the cast is empty (`comebackDetector.js:215` — a comeback is shown when one was PLANNED), so a
+ * fixture with `plan: null` would make every case in this file answer null for a reason that has
+ * nothing to do with what the case is about: the positive ones would go red and the negative ones
+ * would go green while asserting nothing. `resolveProgress == null` therefore still casts him, with
+ * no beats — which is what a plan that named him and authored no moment looks like.
  */
 function detectorWithGain({ useBeats = false, resolveProgress = null, index = 7 } = {}) {
   const d = new ComebackDetector({ ...GATES, useBeats });
   const roster = new Set([index]);
-  const plan =
-    resolveProgress == null
-      ? null
-      : {
-          heroes: [
-            {
-              index,
-              role: 'comebacker',
-              finalRank: 3,
+  const plan = {
+    heroes: [
+      {
+        index,
+        role: 'comebacker',
+        finalRank: 3,
+        ...(resolveProgress == null
+          ? {}
+          : {
               beats: [
                 { progress: 0.3, event: 'anchor' },
                 { progress: 0.5, event: 'peak' },
                 { progress: resolveProgress, event: 'resolve' },
               ],
-            },
-          ],
-        };
+            }),
+      },
+    ],
+  };
   d.setRoster(roster, plan);
 
   // Start at P9 of 10 (normalised start gap 0.888 — well past minStartGap 0.25).
@@ -76,8 +84,11 @@ describe('the rank-history gates still decide WHETHER (unchanged behaviour)', ()
   });
 
   it('offers nobody when the gain is too small', () => {
+    // ★ HE IS CAST HERE ON PURPOSE. Without the plan this would go green because the cast is empty
+    // rather than because the gain is too small, and the case would have stopped testing its own
+    // subject — the failure mode this file's header calls the reason it exists.
     const d = new ComebackDetector(GATES);
-    d.setRoster(new Set([7]));
+    d.setRoster(new Set([7]), { heroes: [{ index: 7, role: 'comebacker', finalRank: 3 }] });
     d.recordRanks(field([0, 1, 2, 3, 4, 7, 5, 6, 8, 9]), 1000); // P6
     d.recordRanks(field([0, 1, 2, 3, 4, 7, 5, 6, 8, 9]), 2000); // still P6 — gain 0
     expect(d.best(field([0, 1, 2, 3, 4, 7, 5, 6, 8, 9]), 2000)).toBeNull();
