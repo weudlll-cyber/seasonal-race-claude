@@ -1,4 +1,46 @@
-# MORNING SHEET — 2026-09-19 · `night/2026-09-19`
+# MORNING SHEET — 2026-09-19 · THE TREE IS CLEAN
+
+## ★★★ IT IS ALL ON MASTER, AND CI IS GREEN
+
+**Four merges, one tag, four branches deleted. `master` is `070bc2c3`, CI green on all three jobs.**
+
+| | |
+|---|---|
+| ★ heads at origin | exactly **two** — `master` and `feat/remove-prestaging-comebacker` (untouched, as instructed) |
+| ★ CI on the final merge | ★ **success** — `070bc2c3`, run `35436684645`, Client / Server / Living-doc all green |
+| `verify` on the last branch | **19 PASS / 0 FAIL / 15 SKIP** |
+| ★ the four fingerprints | `camera` and `render` **imprinted for the rename**; `world` and `world-off` **never moved** |
+| ★ the two stale stamps | **re-measured on master and re-stamped** — `check-measured-stamps` is green for the first time in this block |
+| services | **4000** API, **5173** dev, **4173** production preview — all on **`070bc2c3 · master · clean`** |
+
+### The merges, in order
+
+| merge | what landed | CI |
+|---|---|---|
+| `53ff8617` | `read/comebacker-readers-1` — one report, no product code | ★ **success** |
+| `d2caf812` | `night/2026-09-19` — six pieces of measurement and tooling | red, on the stamp guard only (below) |
+| `ffc6417b` | `feat/pursuer-rename` — the rename, the camera, BREAKAWAY-GROWTH-1 | red, on the stamp guard only |
+| ★ `070bc2c3` | `chore/2026-09-19-clean` — the re-stamps, the install fix, the diagnosis | ★ **success** |
+
+★ **Master carried one red between the second and fourth merges, and only one**: the
+`check-measured-stamps` step of the docs job (`ci.yml:343`), on the two stamps that were stale in
+their digits. It could not be cleared earlier — a re-stamp taken before the rename merge would have
+been invalidated by it, because both touch the same import closure (SHIP-CEREMONY TRAP B). It is
+green now.
+
+### ★ WHAT NEEDS YOUR WORD
+
+1. ★ **`arrival-shape.spec.js:115` — the test and the servo disagree, and it is a design question.**
+   After a held hero reaches his drawn place: steered to that exact rank, or free anywhere inside his
+   block? **The gap brake is exonerated by measurement.** → [ARRIVAL-BRAKE-1](../reports/night/ARRIVAL-BRAKE-1.md)
+2. **Whether `npm run test:e2e:prod:fast` becomes a habit.** 82 tests, 3.1 min, all passing — wired
+   on demand, in neither `verify` nor CI. → [PROD-FAST-1 in NIGHT-RUN.md](NIGHT-RUN.md)
+3. **Whether a guard should catch committed conflict markers.** Seven were found in two index files
+   and removed; no guard sees them, and what such a guard should cover is a decision, not a cleanup.
+
+---
+
+# MORNING SHEET — 2026-09-19 · `night/2026-09-19` (the night before this block; kept for the record)
 
 **Branched from master `fe12fa95`. Nothing merged, nothing minted, no shipped default changed.**
 
