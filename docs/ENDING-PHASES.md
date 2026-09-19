@@ -49,9 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ cef4241e 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
-**RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. `scripts/straggler-truth.mjs` drives `raceDriver`, which delivers no cameraPlan, so no comebacker is ever cast and the precedence cannot fire here — and phase 6 begins after the winner is home, past the finish latches the precedence refuses to act through in any case.
+**RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. ★ **CORRECTED 2026-09-19 — the second half of this reason stopped being true the day after it was written, and the numbers are unaffected.** It said `scripts/straggler-truth.mjs` drives `raceDriver`, *"which delivers no cameraPlan, so no comebacker is ever cast"*. That was true on 2026-09-10 and false from **2026-09-11**, when CAMERA-PLAN-BLIND-1 (`9288b1d4`) gave the instruments the plan the product gives them: `raceDriver` builds the delivery at `scripts/lib/raceDriver.mjs:506` and calls it once per frame at `:571`, so a comebacker IS cast here and the detector does receive him. **The entry's measured numbers stand** — they were re-measured in full again on 2026-09-19 for PLANNED-COMEBACK-ONLY-1 and came back identical to the digit — because the surviving half of the reason is the load-bearing one: **phase 6 begins after the winner is home, past the finish latches (`_inPhotoFinish`, `_inFinishDrama`, `_inFinishMode`) that the comeback path returns above in any case.** The dated claim is left visible rather than rewritten, because what it got wrong is a fact about the HARNESS and not about phase 6.
 
 **RE-STAMPED 2026-09-04 (ITEM7-MEMBERSHIP-1) WITHOUT RE-MEASURING, DELIBERATELY.** `CameraDirector.js` changed, so this stamp's `depends=` moved and the guard asked. **The change is a pure SPLIT and cannot move these numbers**: the geometric loop of `_abreastContenders` was lifted into `_abreastSurvivors`, which `_abreastContenders` now calls before applying its own two guards and its unchanged fallback. No framing decision, no default, no threshold and no ease was touched, and the only edit inside the moved code is a `pathLen > 0` test that is dead on the path `_abreastContenders` takes. **All four fingerprints were run against the record and all four match** — camera and render included, which are the two that would move if the shot or the draw sequence had. Nothing was re-run; the stamp records that the dependency moved inertly.
 
@@ -193,6 +193,23 @@ the two do not overlap by a single frame.
 The two numbers this section used to carry were flagged as unverified on 2026-08-14, because nothing
 in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
 OPEN one, at 20 and at 40 racers, seed 9:**
+
+★★ **RE-MEASURED IN FULL FOR CLEANUP-2026-09-19 (`eca8a6bb`), AND EVERY FIGURE IS IDENTICAL TO THE
+DIGIT** — 4.85/2.70 with 0 settled frames, 9.12/5.73 with 7 of 7 and 8 of 40 over 164, 3.68/1.28 with
+0, and 6.80/4.57 with 3 of 3 and 40 of 40 over 94. All four rows of the table below, unchanged. That
+is the **third** consecutive tree on which this window has not moved.
+
+★ **Run rather than argued, again, and the decision was taken in advance rather than after seeing the
+numbers.** Every edit in that branch is comments and report prose, and `engine-reach --check` reports
+*"none of N path(s) carry a change that can reach the race engine"*. ★ The reason to measure anyway is
+the SIBLING stamp: `docs/CAMERA_DIRECTOR.md`'s tracking-lag moved on the commit before this one, on a
+change that looked just as inert from here. One of the two camera-dependent stamps moving is worth
+more than an argument about the other.
+
+★ **Why the stamp moved to `eca8a6bb` when its `depends=` did not change.** `CameraDirector.js` is
+untouched and still last changed at `cef4241e`; what moved is the `via=` IMPORT CLOSURE —
+`scripts/straggler-truth.mjs` reaches `racePlanner.js`, which the branch edits. Both halves of the
+guard must hold, so the stamp takes the later of the two.
 
 ★★ **RE-MEASURED IN FULL FOR PLANNED-COMEBACK-ONLY-1 (2026-09-19) ON `cef4241e`, AND EVERY FIGURE IS
 IDENTICAL TO THE DIGIT** — 4.85/2.70 with 0 settled frames, 9.12/5.73 with 7 of 7 unfinished and 8 of

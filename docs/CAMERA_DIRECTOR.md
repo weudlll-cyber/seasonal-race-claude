@@ -1053,7 +1053,25 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ cef4241e 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR CLEANUP-2026-09-19 (`eca8a6bb`), AND EVERY FIGURE IS IDENTICAL TO THE
+DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
+same ratio 0.47×. The table below stands unchanged.
+
+★★ **IT WAS RUN RATHER THAN ARGUED, AND THE ARGUMENT WOULD HAVE BEEN A STRONG ONE.** Every edit in
+that branch is comments and report prose, and `scripts/engine-reach.mjs --check` with all changed
+paths passed explicitly says so in its own words — *"none of N path(s) carry a change that can reach
+the race engine"*, with `racePlanner.js` and `defaults.js` reported *"in the hull but INERT — same
+tokens, same line breaks between them — comments only"*. ★ **The reason it was measured anyway is
+recorded two paragraphs down**: on the commit before this one the same discipline caught this stamp
+ACTUALLY MOVING, while its sibling in `docs/ENDING-PHASES.md` did not. One of the two moved, so an
+inertness argument about either was worth less than eight minutes of machine time.
+
+★ **Why the stamp moved to `eca8a6bb` when its `depends=` did not change.** `client/src/modules/camera/`
+is untouched by that branch and still last changed at `cef4241e`; what moved is the `via=` IMPORT
+CLOSURE — `scripts/tracking-lag.mjs` reaches `racePlanner.js`, which the branch edits. Both halves of
+the guard must be satisfied, so the stamp takes the later of the two.
 
 ★★★ **RE-MEASURED IN FULL FOR PLANNED-COMEBACK-ONLY-1, 2026-09-19, AND `COMEBACK_ZOOM` IS GONE
 FROM THE TABLE.** `node scripts/tracking-lag.mjs`, the command this stamp names, on `cef4241e`:

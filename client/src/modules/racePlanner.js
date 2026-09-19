@@ -606,7 +606,22 @@ export function createTrajectoryController(racePlan) {
   // measure how often that happens. TELEMETRY ONLY: never read back into a returned draw.
   let _gapDownTilts = 0; // gapBehind>G branch fired (toward SLOWER)
   let _gapUpTilts = 0; // gapAhead>G branch fired (toward FASTER; symmetric mode only)
-  let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
+  // ★★ THIS READS 0 BY CONSTRUCTION SINCE 2026-07-22, AND 0 IS THE CORRECT ANSWER.
+  //
+  // It counts a DOWN-tilt applied while `gapAhead > gapBehind` — a racer tilted SLOWER although it
+  // was itself further from the racer ahead than from the one behind. ★ That misdirection was REAL,
+  // and this counter is what measured it: it fired 6.6x more often at small G, which is the finding
+  // the BRANCH PRIORITY fix at `:1695` was written from (`45e774b8`, 2026-07-22).
+  //
+  // ★ SINCE THAT FIX THE INCREMENT IS UNREACHABLE. The branch is entered only when
+  // `gapBehind >= gapAhead`, so `gapAhead > gapBehind` cannot hold inside it. A zero here is
+  // therefore STRUCTURAL, not empirical — it says the fix is still in place, NOT that a search was
+  // run and found nothing. Read it that way and it is informative; read it as evidence and it is
+  // the opposite. It is deliberately NOT deleted: it is exported by `collectTelemetry()` below and
+  // read by `scripts/sim-fairness.mjs:5038` and `scripts/exp-runaway-leader.mjs:2517`
+  // (`--smallg-diag`), and a field removed from under a `?? 0` would leave both instruments
+  // printing the same 0 with nothing to say the measurement had gone.
+  let _gapDownAheadGtBehind = 0;
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
   // SCREEN-tier escape-latency telemetry (read-only). One entry per DOWN-tilt applied to the LIVE
   // LEADER, which is the event the eye sees as "the escapee gets braked". At that instant `gapBehind`
@@ -775,8 +790,17 @@ export function createTrajectoryController(racePlan) {
    * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
    * the gap brake ON, its engage/release moves the target by its whole authority at once and the
    * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
-   * against 1.008x for this change alone. **The brake ships OFF; if it is ever switched on, that
-   * interaction is the thing to fix first.**
+   * against 1.008x for this change alone.
+   *
+   * ★★ CORRECTED 2026-09-19: THE BRAKE SHIPS **ON**, AND THIS SENTENCE SAID THE OPPOSITE. It read
+   * "the brake ships OFF; if it is ever switched on, that interaction is the thing to fix first" —
+   * written when it did. `gapBrakeEnabled` has been `true` since the owner's decision of 2026-09-16,
+   * landed on master 2026-09-17 (`be7e6872`).
+   *
+   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (`defaults.js:1220`) is `false`, and
+   * the interaction above is no longer hypothetical — it is the REASON that key stays false.
+   * PICK-WINNER-1 measured V1 ALONE keeping parity; only V1 **and** the gap brake together break it,
+   * at the 7.6x cost named above. The two must never both be on.
    */
   function _setTargetNoiseBlind(r, newTarget, detTarget, elapsedMs) {
     const prevDet = r._servoDetTarget ?? 1.0;
