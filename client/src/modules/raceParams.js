@@ -52,6 +52,8 @@
 // ============================================================
 
 import { computeRacerLayout, computeBodyNarrowRef } from './rowLayout.js';
+// RACE-PARAMS-2: the normal-speed derivation, from its own one home rather than re-typed.
+import { normalSpeedFrom } from './durationModel.js';
 
 /**
  * The absolute ceiling on the body-narrow reference width, in world px.
@@ -129,5 +131,122 @@ export function deriveSpriteGeometry({
     drawnBodyWidthRefPx: displaySize * displaySizeScale,
     bodyFillNarrow,
     bodyFillLong,
+  };
+}
+
+// ── ★ THE SECOND STEP: THE ARGUMENT OBJECT ITSELF (RACE-PARAMS-2) ───────────────────────────────
+//
+// `deriveSpriteGeometry` above removed the sprite arithmetic from every caller and left the REST
+// standing: `effectiveWidth`, the `isOpen`-stamped behaviour config, `normalSpeedPxPerSec`, and the
+// twenty-field object `createRaceFromIdentity` takes. Three sites still assembled that by hand and
+// two of them said so in their own comments —
+//
+//   · `client/src/screens/RaceScreen/index.jsx`   the product
+//   · `scripts/camera-replay.mjs`                 "RaceScreen's own derivation, TRANSCRIBED"
+//   · `scripts/parity/goldenRunner.mjs`           arm C, "the REAL browser core"
+//
+// A knowingly transcribed derivation is the shape this repository has paid for repeatedly: the
+// copies agree until one of them is edited, and the thing that would notice is one of the copies.
+//
+// ── WHAT THIS OWNS, AND WHAT IT REFUSES TO ──────────────────────────────────────────────────────
+//
+// It owns the ASSEMBLY and nothing else: given a track, a world, a racer type and the race's own
+// numbers, it returns exactly the object `createRaceFromIdentity` takes. It does NOT call it —
+// a builder that also built would make the two impossible to test apart, and `camera-replay` needs
+// the parts around the call as much as the call.
+//
+// It reads NO storage and NO configuration loader, for the same reason `deriveSpriteGeometry` does
+// not: the product answers the override question from `localStorage`, `camera-replay` answers it
+// from the marker it is replaying, and the golden runner has no override to answer. Each hands the
+// answer in. That split is why `hasDisplaySizeOverride` is a parameter here rather than a lookup.
+//
+// ★ IT CHANGES NO NUMBER. Every line below is the arithmetic that stood at the three sites, moved
+// rather than rewritten — which is what the four fingerprints are the check on, not the argument
+// for.
+
+/**
+ * The complete argument object for `createRaceFromIdentity`, plus the one extra number the browser
+ * needs for drawing (`displaySizeScale`).
+ *
+ * @param {object}  p
+ * @param {object}  p.shape            an EditorShape for the track
+ * @param {boolean} p.isOpenTrack      `shape.isOpen`, passed rather than re-read so a caller that
+ *                                     has already decided cannot be overruled here
+ * @param {number}  p.pathLengthPx     the track's own path length
+ * @param {number}  p.trackWidthPx     the track's own width
+ * @param {object}  p.world            `{baseSpeedConfig, raceBehaviorConfig, rowLayoutConfig,
+ *                                     raceDynamicsConfig, autoScaleConfig}` — the flat config world
+ * @param {object}  p.racerType        `{displaySize, bodyFillX, bodyFillY, speedMultiplier}`
+ * @param {number}  p.nRacers
+ * @param {number}  p.laps
+ * @param {number}  p.requestedSeconds
+ * @param {number}  p.racePlanSeed
+ * @param {boolean} p.racePlanEnabledFlag
+ * @param {boolean} [p.hasDisplaySizeOverride=false]  see the header — the caller answers it
+ * @param {boolean} [p.constSpeedActive=false]        the diagnostic equaliser; off everywhere real
+ * @returns {object} the `createRaceFromIdentity` params, with `displaySizeScale` alongside
+ */
+export function buildRaceCoreParams({
+  shape,
+  isOpenTrack,
+  pathLengthPx,
+  trackWidthPx,
+  world,
+  racerType,
+  nRacers,
+  laps,
+  requestedSeconds,
+  racePlanSeed,
+  racePlanEnabledFlag,
+  hasDisplaySizeOverride = false,
+  constSpeedActive = false,
+}) {
+  // The behaviour config the engine reads is the world's, stamped with the track's openness. Every
+  // one of the three sites did exactly this, and none of them could have done it differently:
+  // `isOpen` is a property of the track, not of the config.
+  const behaviorConfig = { ...world.raceBehaviorConfig, isOpen: isOpenTrack };
+  // The width the start grid is packed across. `startSpreadRange` is a fraction of the track width.
+  const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
+
+  const {
+    physicalSpriteSize,
+    displaySizeScale,
+    drawnBodyWidthRefPx,
+    bodyFillNarrow,
+    bodyFillLong,
+  } = deriveSpriteGeometry({
+    displaySize: racerType.displaySize,
+    bodyFillX: racerType.bodyFillX,
+    bodyFillY: racerType.bodyFillY,
+    nRacers,
+    effectiveWidth,
+    autoScaleConfig: world.autoScaleConfig,
+    hasDisplaySizeOverride,
+  });
+
+  return {
+    shape,
+    isOpenTrack,
+    pathLengthPx,
+    trackWidthPx,
+    speedMultiplier: racerType.speedMultiplier,
+    baseSpeedConfig: world.baseSpeedConfig,
+    behaviorConfig,
+    rowConfig: world.rowLayoutConfig,
+    dynamicsConfig: world.raceDynamicsConfig,
+    normalSpeedPxPerSec: normalSpeedFrom(world.baseSpeedConfig),
+    laps,
+    requestedSeconds,
+    nRacers,
+    racePlanSeed,
+    racePlanEnabledFlag,
+    physicalSpriteSize,
+    drawnBodyWidthRefPx,
+    bodyFillNarrow,
+    bodyFillLong,
+    constSpeedActive,
+    // NOT a `createRaceFromIdentity` field — it is the drawing scale, returned here because the
+    // browser needs it one line later and computing it twice is how the two come apart.
+    displaySizeScale,
   };
 }

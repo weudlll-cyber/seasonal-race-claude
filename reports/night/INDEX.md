@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RACE-PARAMS-2.md](RACE-PARAMS-2.md) — **★★ the knowingly-transcribed race-parameter derivation has
+  one home, and BOTH mirrors are gone** (2026-09-19, `night/2026-09-19` piece 5; **nothing minted, no
+  behaviour changed**). `RaceScreen/index.jsx:554-613` held the step between a track/world/racer-type
+  and the twenty fields `createRaceFromIdentity` takes; `scripts/camera-replay.mjs` called itself a
+  **transcription** in its own header and `scripts/parity/goldenRunner.mjs`'s arm C assembled the
+  arguments by hand while claiming to be "the REAL browser core". ★ **`buildRaceCoreParams` in the
+  module that already owned half of this** (`raceParams.js`, ONE-HOME-RACE-PARAMS-1) — nothing new
+  computes anything; `deriveSpriteGeometry`, `W_REF_MAX` and `normalSpeedFrom` are all reused.
+  ★★ **All four fingerprints unmoved and both golden races byte-identical**, which is the direct check
+  on the runner this piece rewrote. ★ Eight further hand-assembled call sites are listed with the
+  reason each was left — **the two fingerprint instruments are a RULE, not a backlog item**.
+
 - [INSTALL-GAPS-1.md](INSTALL-GAPS-1.md) — **★★★ a fresh install cannot create its first admin by
   following the documents** (2026-09-19, `night/2026-09-19` piece 6; **read-only — builds, configures
   and registers nothing**). ★★ **`README.md:32-34,39` and `docs/SETUP.md:58-60,65` both say to copy
