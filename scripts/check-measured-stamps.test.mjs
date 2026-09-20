@@ -51,7 +51,7 @@ function onCopy(transform) {
     });
     return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 }
 
@@ -67,7 +67,7 @@ function onCopyRaw(transform) {
     });
     return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 }
 
@@ -256,7 +256,7 @@ test("A STALE STAMP IN THE SECOND DOCUMENT IS CAUGHT — the set is scanned, not
     assert.match(r.stderr, /STALE\.md/, "it must name which document is stale");
     assert.ok(r.stdout.includes("of 2 living document"));
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -313,6 +313,8 @@ function fixture() {
     "# Doc\n\n<!-- MEASURED: thing @ PLACE 2026-01-01 depends=src/cam/ via=src/cam/a.js -->\n\nbody\n",
   );
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
+  // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+  execFileSync("git", ["config", "gc.auto", "0"], { cwd: dir });
   g("config", "user.email", "t@example.invalid");
   g("config", "user.name", "T");
   g("add", "-A");
@@ -344,7 +346,7 @@ test("--staged BASELINE: nothing staged under the dependency, nothing to say", (
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /0 would go stale/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -363,7 +365,7 @@ test("--staged: a staged dependency change with NO re-stamp FAILS — the trap t
     assert.match(r.stderr, /src[\/]cam[\/]a\.js/);
     assert.match(r.stdout, /1 would go stale/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -391,7 +393,7 @@ test("--staged: staging the dependency AND the re-stamp together PASSES", () => 
     assert.match(r.stdout, /re-stamped in the same commit/);
     assert.match(r.stdout, /0 would go stale/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -410,7 +412,7 @@ test("--staged is OPT-IN: the same fixture reports PENDING and PASSES without th
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /PENDING/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -517,6 +519,8 @@ function closureFixture() {
     "# Doc\n\n<!-- MEASURED: thing @ PLACE 2026-01-01 depends=src/cam/ via=src/tool.js -->\n\nbody\n",
   );
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir });
+  // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+  execFileSync("git", ["config", "gc.auto", "0"], { cwd: dir });
   g("config", "user.email", "t@example.invalid");
   g("config", "user.name", "T");
   g("add", "-A");
@@ -543,7 +547,7 @@ test("CLOSURE, GREEN: a stamp whose via= closure has not moved PASSES", () => {
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /0 stale/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -573,7 +577,7 @@ test("CLOSURE, RED: a file the via= entry IMPORTS changed after the stamp — de
     );
     assert.match(r.stdout, /1 stale/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 

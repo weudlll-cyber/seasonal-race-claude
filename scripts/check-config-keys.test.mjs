@@ -74,7 +74,7 @@ const withTree = (defaultKeys, files, fn, { bare = false } = {}) => {
     }
     return fn(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 

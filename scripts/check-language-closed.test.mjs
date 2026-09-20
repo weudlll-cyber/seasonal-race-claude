@@ -75,6 +75,8 @@ const withRepo = (files, fn) => {
     }
     for (const args of [
       ["init", "-q"],
+      // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+      ["config", "gc.auto", "0"],
       ["config", "user.email", "t@t"],
       ["config", "user.name", "t"],
       ["add", "-A"],
@@ -85,7 +87,7 @@ const withRepo = (files, fn) => {
     });
     return fn({ code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") });
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 

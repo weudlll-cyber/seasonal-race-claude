@@ -49,7 +49,7 @@ const withCopy = (fn) => {
   try {
     return fn(copy, readFileSync(copy, "utf8"));
   } finally {
-    rmSync(d, { recursive: true, force: true });
+    rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 

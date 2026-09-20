@@ -174,7 +174,7 @@ test("SABOTAGE: a new engine import makes the closure GROW", () => {
     );
     assert.ok(after.some((f) => f.endsWith("sub/added.js")));
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -193,7 +193,7 @@ test("SABOTAGE: a TRANSITIVE import is followed, not just the direct one", () =>
       "two hops must be followed",
     );
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 

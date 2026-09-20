@@ -75,6 +75,8 @@ function makeRepo({ record, doc, history, extra } = {}) {
   // The guard reads `git ls-files`, so the fixture must be a real repository.
   const git = (...a) => spawnSync("git", a, { cwd: root, encoding: "utf8" });
   git("init", "-q");
+  // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+  git("config", "gc.auto", "0");
   git("add", "-A");
   return root;
 }
@@ -91,7 +93,7 @@ function withRepo(opts, fn) {
   try {
     return fn(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 }
 

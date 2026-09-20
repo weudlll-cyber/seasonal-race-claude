@@ -34,7 +34,7 @@ const withDir = (fn) => {
   try {
     return fn(d);
   } finally {
-    rmSync(d, { recursive: true, force: true });
+    rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 

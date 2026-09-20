@@ -35,6 +35,8 @@ const withRepo = (fn) => {
     writeFileSync(join(root, "docs/B.md"), "# B\n");
     for (const args of [
       ["init", "-q"],
+      // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+      ["config", "gc.auto", "0"],
       ["config", "user.email", "t@t"],
       ["config", "user.name", "t"],
       ["add", "-A"],
@@ -42,7 +44,7 @@ const withRepo = (fn) => {
       spawnSync("git", args, { cwd: root });
     return fn(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 
@@ -162,6 +164,6 @@ test("ZERO TRACKED FILES is a FAILURE, not a clean tree", () => {
     assert.equal(status, 1);
     assert.match(out, /returned NOTHING/);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });

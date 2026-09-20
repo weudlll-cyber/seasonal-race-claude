@@ -32,6 +32,8 @@ const withRepo = ({ hooksPath, hookFile = true }, fn) => {
   const root = mkdtempSync(join(tmpdir(), "ra-hooks-"));
   try {
     spawnSync("git", ["init", "-q"], { cwd: root });
+    // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+    spawnSync("git", ["config", "gc.auto", "0"], { cwd: root });
     if (hookFile) {
       mkdirSync(join(root, ".githooks"), { recursive: true });
       writeFileSync(join(root, ".githooks/pre-commit"), "#!/usr/bin/env sh\nexit 0\n");
@@ -42,7 +44,7 @@ const withRepo = ({ hooksPath, hookFile = true }, fn) => {
     const r = spawnSync(process.execPath, [GUARD, `--root=${root}`], { encoding: "utf8", env });
     return fn({ code: r.status, out: (r.stdout ?? "") + (r.stderr ?? ""), root });
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 
@@ -99,7 +101,7 @@ test("not a git work tree FAILS rather than reporting the hooks are fine", () =>
     assert.match(r.stderr, /not a git work tree/);
     assert.match(r.stderr, /must not say it looked/);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -125,6 +127,8 @@ test("setup REFUSES to configure hooks that do not exist, and writes NOTHING", (
   const root = mkdtempSync(join(tmpdir(), "ra-hooks-empty-"));
   try {
     spawnSync("git", ["init", "-q"], { cwd: root });
+    // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+    spawnSync("git", ["config", "gc.auto", "0"], { cwd: root });
     const r = spawnSync(process.execPath, [SETUP, `--root=${root}`], { encoding: "utf8" });
     assert.equal(r.status, 1, "it must refuse, not configure");
     assert.match(r.stderr, /does not exist/);
@@ -133,7 +137,7 @@ test("setup REFUSES to configure hooks that do not exist, and writes NOTHING", (
     const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" });
     assert.notEqual(cfg.status, 0, "a refusal must leave core.hooksPath unset");
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 

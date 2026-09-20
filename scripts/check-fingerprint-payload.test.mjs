@@ -34,7 +34,7 @@ const onFixture = (source, extraArgs = []) => {
     });
     return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 
