@@ -8,6 +8,24 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SHAPE-UNCAST-2026-09-20.md](SHAPE-UNCAST-2026-09-20.md) — **the uncast share holds across ten
+  tracks, and the contested fight is unfinished work** (2026-09-20,
+  `diag/breakaway-action-2026-09-20` piece 3; **read-only, nothing changed**). ★ **52.0%** of
+  breakaways in the shipped world have an UNCAST leader across all ten tracks (N=25 breakaways over
+  300 races), against SHAPE-CENSUS-1's 55.6% on one — the headline holds. ★★ But it is **not
+  uniform** (river-run 6.3%, luger-hill 100%), and at the larger N=201 `sovereign-lead` ALONE (95)
+  exceeds uncast (85), so "more than every cast role combined" is true of the small sample and false
+  of the large one. ★★ `relationalWaypoints` (heroCurveGenerator.js:383) is never cast because
+  **nothing can call it**: it returns a PAIR while every seam is single-racer, and the five
+  parameters it needs are produced by **no function in the repository** — there is no
+  `relationalTiming` beside `feasibleTiming`/`heldTiming`/`attackerTiming`. **Unfinished work, not
+  config and not a cast site.**
+
+- [MORNING-2026-09-20.md](MORNING-2026-09-20.md) — the morning sheet for 2026-09-20: done / running /
+  open / needs his word, with the stage-1 grid and the three things that were not what the brief
+  assumed — `sim-fairness.mjs` at 176 s/race being infeasible, the two gate routes not demonstrably
+  agreeing, and the whole-race breakaway maximum falling in a phase no arm touches.
+
 - [BREAKAWAY-LEVER-1.md](BREAKAWAY-LEVER-1.md) — **★★★ the racer in second is braked to his drawn
   place, and the command arrives** (2026-09-19, `diag/breakaway-lever-1`; **measurement only — no
   engine source, no key, no default, nothing minted**). The follow-up to BREAKAWAY-GROWTH-1: while the
