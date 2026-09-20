@@ -20,6 +20,28 @@ owner's decision and contains no proposal.**
 
 ---
 
+## ★★ SUPERSEDED IN PART, 2026-09-20 — THE DENOMINATOR IN §a WAS WRONG
+
+**The per-track figures below rest on 2–3 races each, not 30, and the sentence "N=25 breakaways over
+300 races" is false.** The 25 came from `action-stage1.json` — the Q60 arm at **30 races**, three per
+track. The SHARE was always right (25/30 = 83.3% of races had a breakaway); the population label was
+not, and with it the implied firmness of every per-track row.
+
+**Recomputed over the correct N=300 population** in
+[BREAKAWAY-COUNT-2026-09-20.md](BREAKAWAY-COUNT-2026-09-20.md) §6: **49.2% pooled over 240
+breakaways**, and the per-track spread is 31.8% (garden-path) to 65.4% (searound) — where the figures
+below say 0.0% (river-run) to 100.0% (luger-hill) on two or three races.
+
+★ **One claim below is retracted outright.** "Uncast produces more breakaways than every cast role
+combined" is false on the correct population: uncast 118 against 122 for all cast roles together. It
+remains the **largest single category** — larger than `sovereign-lead` alone (103) — which is the
+weaker claim this report should have made.
+
+★ **Nothing below is deleted.** This directory is append-only, and the figures were published and
+quoted; they stay visible, marked.
+
+---
+
 ## a · DOES THE UNCAST SHARE HOLD BEYOND ONE TRACK?
 
 A **breakaway** here is the owner's window: a race whose largest lead inside **[0.70, finish]**
