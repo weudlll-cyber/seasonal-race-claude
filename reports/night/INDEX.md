@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BREAKAWAY-COUNT-2026-09-20.md](BREAKAWAY-COUNT-2026-09-20.md) — **★★★ 16 in 100, and every
+  previous count measured the wrong distance** (2026-09-20, `diag/breakaway-count-1`; **a count, no
+  engine source, nothing minted**). ★★ **In the last 30% of the race a breakaway by the OWNER'S
+  definition — back of the leading group to the FRONT of the field — happens in 16.0% of races
+  (48 of 300)**; the same 300 races measured leader-to-second, which is what every prior count in this
+  project used, give **2.7%**. A six-fold difference, and `BREAKAWAY-RECOUNT-1.md:25` shows the
+  original harness was `live[0].t - live[1].t` — leader minus second. ★ **It is usually a GROUP**:
+  only 16.7% of qualifying races have one racer alone in front; pairs (31.3%) and trios (29.2%)
+  dominate. ★ Held above half its peak for a median **11.10 s**, and **31.3% are never closed** before
+  the finish. ★★ **The gap brake did not reduce his number**: whole-race leader-to-second is 22.7%
+  with the brake on against 21.0% recorded two days before it shipped. ★ Strongly threshold-sensitive
+  — 48.0% at 0.5 canvas widths, 16.0% at his 0.698, 2.0% at 1.0. ★★ §6 resolves the contradiction
+  between two of today's reports: SHAPE-UNCAST's "N=25 over 300 races" was 30 races, its per-track
+  figures are superseded, and its "more than every cast role combined" claim is retracted.
+
 - [BREAKAWAY-ACTION-2026-09-20.md](BREAKAWAY-ACTION-2026-09-20.md) — **★★★ no arm wins, and stage 1
   would have said one did** (2026-09-20, `diag/breakaway-action-2026-09-20` pieces 1 and 2;
   **measurement only, nothing minted**). Eight arms — the 3×2 grid of `choreoOutcomeStart`
