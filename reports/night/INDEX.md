@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BREAKAWAY-LEVER-1.md](BREAKAWAY-LEVER-1.md) — **★★★ the racer in second is braked to his drawn
+  place, and the command arrives** (2026-09-19, `diag/breakaway-lever-1`; **measurement only — no
+  engine source, no key, no default, nothing minted**). The follow-up to BREAKAWAY-GROWTH-1: while the
+  gap grows, ★★ **the rank servo commands the second-place racer SLOWER on 86.5% of growing frames**
+  (N=300, 59,999 frames; 85.8% at N=30). ★★★ **The cause is upstream of the servo — he is almost never
+  the racer the plan drew to be second**: his drawn place is a median 4th, and on the 67.2% of frames
+  where it is 3rd or worse he is braked on **99.8%**. ★ **It is not a delivery fault**: commanded
+  0.92458 against 0.92368 in force, the ease restarted on 5.8% of frames having travelled a median
+  0.032 — which qualifies SERVO-FAULT-1 rather than confirming it here. Drafting reaches him on
+  **20.4%** at ×1.04; the gap re-roll tilt would push him **UP on 79.8%** and is swamped; nothing
+  tightens his ceiling. ★ **The `--smallg-diag` tie case never occurs — 0 of 6,150 and 0 of 59,999.**
+  ★★ And a guard finding: **`engine-reach --check` reports an UNTRACKED file as outside the hull**, so
+  a new file must be committed before the guard can speak about it.
+
 - [PLANNED-COMEBACK-ONLY-1.md](PLANNED-COMEBACK-ONLY-1.md) — **★★★ only a planned comeback is shown,
   and the drawn winner turns out not to be a `pursuer`** (2026-09-19, `feat/planned-comeback-only`
   commit 1; **nothing merged, nothing minted, no shipped default touched**). ★★ **Two lines of
