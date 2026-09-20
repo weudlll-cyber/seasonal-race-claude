@@ -162,6 +162,8 @@ import { execFileSync } from "node:child_process";
 function repoFixture(files) {
   const root = mkdtempSync(join(tmpdir(), "check-index-repo-"));
   execFileSync("git", ["init", "-q"], { cwd: root });
+  // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+  execFileSync("git", ["config", "gc.auto", "0"], { cwd: root });
   for (const [rel, content] of Object.entries(files)) {
     mkdirSync(join(root, dirname(rel)), { recursive: true });
     writeFileSync(join(root, rel), content);

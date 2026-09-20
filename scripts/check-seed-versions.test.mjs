@@ -98,12 +98,14 @@ writeFileSync(
 // exercised below; only the list of directories shrank.
 
 git("init", "-q");
+// ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+git("config", "gc.auto", "0");
 git("config", "user.email", "t@example.com");
 git("config", "user.name", "T");
 git("add", "-A");
 git("commit", "-qm", "base");
 
-after(() => rmSync(repo, { recursive: true, force: true }));
+after(() => rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
 
 // ── check-seed-versions ──
 test("passes on a clean tree", () => {

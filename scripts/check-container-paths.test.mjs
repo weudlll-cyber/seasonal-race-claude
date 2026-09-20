@@ -85,7 +85,7 @@ mkdirSync(join(repo, "scripts"), { recursive: true });
 mkdirSync(join(repo, "server"), { recursive: true });
 cpSync(GUARD, join(repo, "scripts", "check-container-paths.mjs"));
 
-after(() => rmSync(repo, { recursive: true, force: true }));
+after(() => rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
 
 function write(copies, mounts, composeFn = COMPOSE) {
   writeFileSync(join(repo, "server", "Dockerfile"), DOCKERFILE(copies));

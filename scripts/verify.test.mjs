@@ -539,6 +539,8 @@ test("END TO END: verify itself exits non-zero when its plan is empty", () => {
     const git = (...a) =>
       execFileSync("git", a, { cwd: tmp, encoding: "utf8" }).trim();
     git("init", "--quiet");
+    // ★ gc.auto 0 — git's own switch for the background `gc --auto` that races the teardown
+    git("config", "gc.auto", "0");
     git("config", "user.email", "t@example.invalid");
     git("config", "user.name", "t");
     writeFileSync(join(tmp, "seed.txt"), "one commit so HEAD resolves");
@@ -579,7 +581,7 @@ test("END TO END: verify itself exits non-zero when its plan is empty", () => {
       assert.match(out, /REFUSED/, "and it must say so, not merely fail");
     }
   } finally {
-    rmSync(tmp, { recursive: true, force: true });
+    rmSync(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 

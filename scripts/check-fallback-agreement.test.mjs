@@ -245,7 +245,7 @@ test("END TO END: an UNLISTED disagreement makes the guard exit non-zero", () =>
     assert.equal(code, 1, "an unlisted disagreement must fail the guard");
     assert.match(out, /minRacersVisible/, "and it must name the key");
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -389,7 +389,7 @@ test("RULE A GATES: a disagreeing registry literal makes the guard exit non-zero
       "must offer the rename as the escape, since the alternative is an exception list",
     );
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -414,7 +414,7 @@ test("RULE A: a RENAMED field is out of reach — the distinction, and its price
     assert.match(out, /0 disagree/);
     assert.doesNotMatch(out, /RULE A —/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -483,7 +483,7 @@ test("LOUD FAILURE: an EMPTY REGISTRY fails rather than reporting '0 disagree'",
       "and must NOT print its summary line on the way out — the refusal message quotes the words it is refusing to print, so the assertion is on the SUMMARY, not on the phrase",
     );
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -508,7 +508,7 @@ test("LOUD FAILURE: a scan that walks ZERO files fails too", () => {
     assert.equal(code, 1);
     assert.match(out, /walked ZERO files/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -529,7 +529,7 @@ test("…but finding ZERO LITERALS is the GOAL STATE and stays green", () => {
     assert.match(out, /RULE A: 0 registry literal\(s\)/);
     assert.match(out, /0 disagree/);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });
 
@@ -573,7 +573,7 @@ const withRegistry = (entries, fn) => {
     }
     return fn({ code, out });
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 
@@ -663,7 +663,7 @@ const withDocs = (files, fn) => {
     }
     return fn({ code, out });
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 };
 
@@ -714,7 +714,7 @@ test("RULE F: a file that does not exist at all is unresolved, and says where it
 
 test("RULE F LOUD FAILURE: zero documents scanned FAILS rather than reporting 0 disagree", () => {
   const dir = mkdtempSync(join(tmpdir(), "ra-rulef-empty-"));
-  rmSync(dir, { recursive: true, force: true }); // a root that is not there at all
+  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }); // a root that is not there at all
   let code = 0;
   let out = "";
   try {
