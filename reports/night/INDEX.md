@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [BREAKAWAY-ACTION-2026-09-20.md](BREAKAWAY-ACTION-2026-09-20.md) — **★★★ no arm wins, and stage 1
+  would have said one did** (2026-09-20, `diag/breakaway-action-2026-09-20` pieces 1 and 2;
+  **measurement only, nothing minted**). Eight arms — the 3×2 grid of `choreoOutcomeStart`
+  0.60/0.65/0.70 against stages `quiet` and `wild`, plus `medium` and a no-stage lever pair. ★★ At
+  N=300 the three `wild` arms sit within **1.4 px** on the fixed [0.70, finish] window — 80.8 / 82.2 /
+  81.0 — while **at N=30 the same arms read 100.0 → 83.7 → 71.0**, a 29% "improvement" that was
+  noise. ★ Lead changes rise slightly with the boundary (60 → 64 whole-race) but are **flat at 2.0
+  inside the headline window**. ★★ **The action STAGE moves both questions and the boundary moves
+  neither**: `wild` has a smaller last-30% gap than `quiet` (80.8 vs 88.8) and more lead changes (60
+  vs 55). ★★ **STANDING QUESTION ANSWERED — `searound` 88.3% and `luger-hill` 91.4% band arrival at
+  N=300, neither fails the gate**; `luger-hill` is the best of the ten. ★ Three conservative readings
+  are named at the top: `sim-fairness.mjs` at 176 s/race was infeasible, the two gate routes did not
+  demonstrably agree (so the band figures are labelled the author's), and **the start-row half of the
+  gate could not be measured at all** — the racer objects on this path carry no `startRowIndex`.
+
 - [SHAPE-UNCAST-2026-09-20.md](SHAPE-UNCAST-2026-09-20.md) — **the uncast share holds across ten
   tracks, and the contested fight is unfinished work** (2026-09-20,
   `diag/breakaway-action-2026-09-20` piece 3; **read-only, nothing changed**). ★ **52.0%** of
