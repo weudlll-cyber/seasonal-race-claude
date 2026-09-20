@@ -1,0 +1,16 @@
+{
+ "note": "BREAKAWAY-LEVER-1 STAGE 2. Row A only, at N=300 -- ten tracks, seeds 1-30, 40 racers, QUICK_TEST_NAMES, wild. The per-frame file is 24 MB and is NOT committed; this is its reduction. Reproduce: node breakaway-lever.mjs --seeds=30 --out=<dir>, then this reduction.",
+ "races": 300,
+ "episodes": 238,
+ "growingFrames": 59999,
+ "servoCommandsSlowerShare": 0.8651,
+ "servoCommandsSlowerMedian": 0.92458,
+ "servoCommandsForwardShare": 0.1349,
+ "servoCommandsForwardMedian": 1.00037,
+ "atMinMultFloorShare": 0.3004,
+ "inForceMedianWhenSlower": 0.92368,
+ "drawnPlaceMedian": 4,
+ "framesDrawnThirdOrWorseShare": 0.6724,
+ "ofThoseCommandedSlower": 0.998,
+ "tieFrames": 0
+}
