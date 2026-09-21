@@ -1158,6 +1158,29 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // first build until then, so a stored config written before that date carries `false` and keeps
   // the pre-brake race until it is reset — the store beats this file per key.
   gapBrakeEnabled: true,
+  // ── GROUP-GAP-BRAKE-1 — the brake reads the distance the OWNER sees. ★ DEFAULT = TODAY. ────────
+  //
+  // ★★ WHY. BREAKAWAY-COUNT-2 (2026-09-20, N=300, his own definition of the same date) measured a
+  // leading GROUP pulling clear in 16.0% of races inside the last 30% — and only 16.7% of those are
+  // a LONE leader; pairs (31.3%) and trios (29.2%) dominate. The brake reads
+  // `(leader.t - active[1].t)` (racePlanner.js:925), leader to SECOND. When two or three run clear
+  // together that distance is near zero, so the brake sees nothing. It acts on a quantity six times
+  // rarer (2.7%) than the thing he is describing.
+  //
+  // ON, the braking gap becomes the LARGEST of the consecutive gaps between live positions 1-2, 2-3,
+  // 3-4, 4-5 and 5-6, and every racer AHEAD of that gap is braked. The law, the authority ceiling,
+  // the window, the smoothing and the latch are untouched — only the INPUT and WHO changes.
+  //
+  // ★ FALSE IS TODAY'S RACE, BYTE-IDENTICAL. `=== true` like the brake's own switch, so a config
+  // that has never heard of the key runs the shipped path.
+  gapBrakeGroupEnabled: false,
+  // The lead a leading GROUP is allowed to hold, in WORLD px, measured back-of-group → front-of-field.
+  // ★ IT IS NOT `gapBrakeAllowedGapPx` AND MUST NOT BE. That one is 56 px and was calibrated on
+  // leader-to-second; this is a different distance and typically far larger — BREAKAWAY-COUNT-2's
+  // N=300 distribution puts its MINIMUM at 40.4 px and its median at 111.2, so 56 px here would
+  // engage almost permanently. The default below is that distribution's 65th percentile; it is INERT
+  // while `gapBrakeGroupEnabled` is false.
+  gapBrakeGroupAllowedGapPx: 124.9,
   // The lead the leader is ALLOWED to hold, in WORLD px, measured leader->2nd.
   //
   // ★ WHY WORLD PX AND NOT CANVAS WIDTHS, which is the unit the owner judges in. A canvas width is

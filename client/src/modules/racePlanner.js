@@ -402,6 +402,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // config that has never heard of the key runs the shipped `_setTarget` path byte-identically.
     _servoNoiseBlind: config.servoNoiseBlindEnabled === true,
     _gapBrakeAllowedGapPx: config.gapBrakeAllowedGapPx ?? null, // world px, leader->2nd; null = OFF
+    // GROUP-GAP-BRAKE-1. `=== true` like the brake's own switch: a config that has never heard of
+    // the key runs the shipped leader-to-second path byte-identically.
+    _gapBrakeGroup: config.gapBrakeGroupEnabled === true,
+    // The group allowance is a DIFFERENT distance from `_gapBrakeAllowedGapPx` and has its own key;
+    // see defaults.js. Inert while `_gapBrakeGroup` is false.
+    _gapBrakeGroupAllowedGapPx:
+      config.gapBrakeGroupAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
     _gapBrakeWindowEnd: config.gapBrakeWindowEnd ?? null, // progress fraction; window START is corrStartFrac
     // GAP-BRAKE-RATE-1: the brake's maximum authority, as a fraction of natural speed. The owner's
     // own number and the ONLY free one the mechanism has; the default is read from its one home
@@ -901,9 +908,51 @@ export function createTrajectoryController(racePlan) {
     _gapBrakeLastDGapPx = 0;
   }
 
+  // ── GROUP-GAP-BRAKE-1 · THE LEADING GROUP, AND THE OWNER'S LIMIT OF FOUR ──────────────────────
+  //
+  // ★ THE INPUT THE OWNER ACTUALLY SEES (his definition, 2026-09-20): the distance from the BACK of
+  // the leading group to the FRONT of the field. So the braking gap is the LARGEST of the
+  // consecutive gaps between live positions 1-2, 2-3, 3-4, 4-5 and 5-6, and the leading group is
+  // every racer AHEAD of that gap.
+  //
+  // ★★ FOUR IS HIS NUMBER, SET 2026-09-20, NOT A DERIVED ONE: a breakaway of MORE THAN FOUR racers
+  // is not braked at all, because he expects enough fighting for the lead inside a group that size.
+  // `BAND_EDGES[0]` is deliberately NOT used — it is 5 and no longer fits this question.
+  // The 5-6 gap is scanned precisely so a group of five can be RECOGNISED and then refused; without
+  // it the refusal would be silent and untestable.
+  //
+  // ★ NO MEAN, MEDIAN OR CENTROID of the field is computed here. He stated on 2026-09-20 that a
+  // figure against the field's middle is not what he sees.
+  //
+  // @returns {{gapPx:number, members:number[]}|null} null = no brakeable group (his limit, or too
+  //          few racers to have a gap at all)
+  const GROUP_BRAKE_MAX_MEMBERS = 4; // ★ the owner's limit, 2026-09-20
+  function _selectLeadingGroup(active, nActive, pathPx) {
+    if (nActive < 2) return null;
+    // Scan one gap PAST the limit, so a group of five is seen and refused rather than missed.
+    const maxCut = Math.min(GROUP_BRAKE_MAX_MEMBERS + 1, nActive - 1);
+    let bestGap = -Infinity;
+    let cut = -1;
+    for (let c = 1; c <= maxCut; c++) {
+      const g = (active[c - 1].t - active[c].t) * pathPx;
+      if (g > bestGap) {
+        bestGap = g;
+        cut = c;
+      }
+    }
+    if (cut < 1) return null;
+    // ★ HIS LIMIT. A leading group larger than four is left alone entirely.
+    if (cut > GROUP_BRAKE_MAX_MEMBERS) return null;
+    const members = [];
+    for (let i = 0; i < cut; i++) members.push(active[i].index);
+    return { gapPx: bestGap, members };
+  }
+
   function _computeGapLeaderBrake(active, nActive, phaseProgress, elapsedMs) {
     if (!plan._gapBrakeEnabled) return null;
-    const allowedPx = plan._gapBrakeAllowedGapPx;
+    const group = plan._gapBrakeGroup;
+    // ★ THE TWO ALLOWANCES ARE DIFFERENT DISTANCES AND HAVE THEIR OWN KEYS — see defaults.js.
+    const allowedPx = group ? plan._gapBrakeGroupAllowedGapPx : plan._gapBrakeAllowedGapPx;
     const windowEnd = plan._gapBrakeWindowEnd;
     const ceiling = plan._gapBrakeMaxAuthority;
     const rateWindowMs = plan._gapBrakeRateWindowMs;
@@ -922,7 +971,21 @@ export function createTrajectoryController(racePlan) {
     }
 
     const leader = active[0];
-    const gapPx = (leader.t - active[1].t) * pathPx;
+    // ★ THE INPUT. OFF: leader-to-second, exactly as shipped. ON: the owner's distance, and a
+    // refusal when his limit of four is exceeded.
+    let members = null;
+    let gapPx;
+    if (group) {
+      const sel = _selectLeadingGroup(active, nActive, pathPx);
+      if (sel == null) {
+        _gapBrakeRelease();
+        return null;
+      }
+      gapPx = sel.gapPx;
+      members = sel.members;
+    } else {
+      gapPx = (leader.t - active[1].t) * pathPx;
+    }
     _gapBrakeWindowFrames++;
     if (gapPx > _gapBrakeMaxGapPx) _gapBrakeMaxGapPx = gapPx;
 
@@ -984,7 +1047,9 @@ export function createTrajectoryController(racePlan) {
     if (target < _gapBrakeMinMult) _gapBrakeMinMult = target;
     if (gapPx < _gapBrakeMinFiringGapPx) _gapBrakeMinFiringGapPx = gapPx;
     if (_gapBrakeGapsAtFire.length < 20000) _gapBrakeGapsAtFire.push(gapPx);
-    return { index: leader.index, target };
+    // ★★ OFF: one racer, one ABSOLUTE target, folded with Math.min — the shipped shape, untouched.
+    // ON: the whole group, and a SCALE rather than a target. See the fold below for why.
+    return group ? { members, scale: target } : { index: leader.index, target };
   }
 
   function update(racers, elapsedMs, phaseProgress = null, leaderGapLen = null) {
@@ -1448,16 +1513,37 @@ export function createTrajectoryController(racePlan) {
       // GAP-BRAKE-1: the leader's target is the SLOWER of the servo's and the brake's. Math.min, not
       // an override, because a brake must never speed anyone up — if the servo is already pulling him
       // back harder than the gap warrants, the servo wins and the brake is silent.
-      const steerTarget =
-        gapBrake != null && r.index === gapBrake.index
+      // ── ★★ GROUP-GAP-BRAKE-1 · THE GROUP IS SCALED, NEVER CLAMPED TO A SHARED SPEED ──────────
+      //
+      // OWNER REQUIREMENT, 2026-09-20: braking a group must not EQUALISE it. If every member were
+      // commanded the same value, up to four racers ride side by side and nothing happens at the
+      // front — an outcome worse than the breakaway it fixes.
+      //
+      // So the group's members keep their OWN commanded speeds and have them reduced
+      // PROPORTIONALLY: `rawTarget * scale`, with `scale = 1 - strength`. A racer who was faster
+      // than his neighbour stays faster than his neighbour, in the same order, because multiplying
+      // two different positives by one positive preserves their order.
+      //
+      // ★ IT CAN ONLY EVER SLOW A RACER. `scale` is 1 - strength with strength in (0, 0.13], so it
+      // is strictly below 1 and strictly above 0 — the same safety property `Math.min` gave the
+      // single-leader path.
+      // ★ AND IT RESPECTS THE ENGINE'S OWN FLOOR. `minMult` (0.85) is the owner's standing 15%
+      // bound; the product is clamped up to it, never below. Two members both driven to the floor
+      // would be equal — that is the floor's doing, not the brake's, and the parade guard in
+      // `gapBrakeGroup.test.mjs` asserts the ordering above it.
+      const inGroup = gapBrake?.members != null && gapBrake.members.includes(r.index);
+      const steerTarget = inGroup
+        ? Math.max(minMult, rawTarget * gapBrake.scale)
+        : gapBrake != null && r.index === gapBrake.index
           ? Math.min(rawTarget, gapBrake.target)
           : rawTarget;
       // ★ IS THE BRAKE THE ONE BEING OBEYED THIS STEP? Only then does the arrival path apply, so
       // the change stays on the brake's own path: a racer the brake is not acting on, and a racer
       // whose own servo is already pulling harder than the gap warrants, both keep the shipped
       // `_setTarget` behaviour untouched.
-      const brakeIsBinding =
-        gapBrake != null && r.index === gapBrake.index && gapBrake.target < rawTarget;
+      const brakeIsBinding = inGroup
+        ? steerTarget < rawTarget
+        : gapBrake != null && r.index === gapBrake.index && gapBrake.target < rawTarget;
       if (brakeIsBinding) brakeBindingNow = r.index;
       if (brakeIsBinding && brakeHeldLast === r.index) {
         // continuing pull: move the target, leave the ease running (GAP-BRAKE-ARRIVAL-1)
