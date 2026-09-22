@@ -49,9 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 0c9a290f 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b4ec7ed4 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
-★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`0c9a290f`), AND EVERY ROW IS IDENTICAL TO THE
+★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`b4ec7ed4`), AND EVERY ROW IS IDENTICAL TO THE
 DIGIT** — 4.85/2.70/0f, 9.12/5.73/7of7/8of40/164f, 3.68/1.28/0f, 6.80/4.57/3of3/40of40/94f. ★ A real
 source change this time — `raceGovernor.js` — so the run was warranted rather than ceremonial. The
 numbers hold because the extension's three keys all default to today's race.
