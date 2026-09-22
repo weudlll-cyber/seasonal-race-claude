@@ -82,23 +82,49 @@ by a great deal:
 |---|---|---|---|---|
 | ★★ `comebacker` (unstaged) | 98.3% | **0.0%** | **−98.3 pp** | 545 → **0** |
 | ★★ `sovereign-lead` | 37.7% | **94.7%** | **+57.0 pp** | 113 → 284 |
-| ★ `faller` | 32.7% | **47.0%** | **+14.3 pp** | 98 → 141 |
 | `comebacker(staged)` | 72.3% | 69.7% | −2.6 pp | 217 → 209 |
 | `attacker-b2` | 100.0% | 100.0% | +0.0 pp | 873 → 880 |
 | ★ `pursuer` | **not a row at all** | **41.0%** | — | — → 125 |
 
 **The unstaged `comebacker` is extinct** — the rename made site 1 emit `sovereign-lead`
-unconditionally, and the solo fall-back is now `pursuer`. Three rows moved by more than 14 pp and a
-role SHAPE-CENSUS-1 never listed is now in 41% of races. **Its §2A role rows should not be quoted
-again.**
+unconditionally, and the solo fall-back is now `pursuer`.
 
-★ **The faller's +14.3 pp is recorded but NOT explained here.** Its gate is seed-derived
-(`mulberry32(seed ^ 0x7a11e5)() < 1/3`, [:498-500](../../client/src/modules/heroCurveGenerator.js#L498-L500)),
-so the set of seeds that fire cannot have changed — and indeed **26 of the 30 seeds are consistent
-across all ten tracks**, with 4 mixed (6: 9/10, 20: 9/10, 22: 4/10, 23: 9/10), which is slot
-availability (`cast.length < nHeroes`) varying by field, not the gate varying. What changed must
-therefore be how often a slot is free. **Attributing that to the rename would need a counterfactual
-this block does not have**, so it is left as a measured fact and a question.
+★ **EXACTLY THREE OF SHAPE-CENSUS-1 §2A's ROLE ROWS ARE SUPERSEDED, AND THE REST STAND.** Superseded:
+the unstaged **`comebacker`** (extinct), the **`sovereign-lead`** (the 2026-09-19 rename), and the
+**`pursuer`** row that report never had. Standing: **`attacker-b2`** (unchanged at 100%),
+**`comebacker(staged)`** (72.3% → 69.7%, within sampling), and ★ **`faller`, for the reason
+below.** Quote §2A's faller and staged rows freely; do not quote its comebacker or sovereign-lead
+rows.
+
+### ★★ CORRECTION (2026-09-22) — THE `faller` ROW WAS NEVER A SUPERSESSION
+
+**This report first put `faller` 32.7% → 47.0%, +14.3 pp in the table above. That was wrong, and it
+is an arithmetic point rather than a disagreement about the data.** The row has been removed.
+
+The faller gate is **seed-derived and nothing else**:
+`mulberry32(seed ^ 0x7a11e5)() < 1 / fallerEveryNRaces`
+([heroCurveGenerator.js:498-500](../../client/src/modules/heroCurveGenerator.js#L498-L500), with
+`fallerEveryNRaces: 3` at [:68](../../client/src/modules/heroCurveGenerator.js#L68)). **This
+fixture runs seeds 1–30 on ten tracks, so its 300 rows replicate 30 seeds ten times** — and this
+report had already measured that and failed to follow it through: **26 of the 30 seeds fire
+identically on all ten tracks**, the 4 that differ being 6: 9/10, 20: 9/10, 22: 4/10, 23: 9/10
+(slot availability, `cast.length < nHeroes`, varying by field — not the gate varying).
+
+**So 47.0% is not 141 of 300 independent races.** Against the gate's own 1/3 it is nothing:
+
+| reading of "how many seeds fire" | count | two-sided exact binomial vs 1/3 |
+|---|---|---|
+| seeds firing on **every** track | 11 of 30 | **p = 0.701** |
+| pooled rate expressed in seeds (141/10) | 14.1 of 30 | **p = 0.125** |
+| seeds firing on **any** track | 15 of 30 | **p = 0.079** |
+
+★ **Every reading is null, so the conclusion does not depend on which is taken.** ★ And
+SHAPE-CENSUS-1's **32.7% was measured over 300 DISTINCT seeds** — exact binomial against 1/3
+**p = 0.854**, matching the gate literal almost perfectly. **It is the better estimate of the gate
+and it stands.**
+
+★ This also retires the open question the earlier version left ("what changed must be how often a
+slot is free"). **Nothing measurable changed**; the premise the question rested on does not hold.
 
 ---
 
@@ -158,6 +184,12 @@ There are only three races in all 300 with `nRoled ≤ 3`, and they are the same
 (`city-circuit#19`, `ice-track#11`, `ice-track#24`). One race changing its mind moves that 66.7% to
 33.3%. The conservative reading, taken here: **the cast-quantity split has no usable contrast at
 all** — 282 of 300 races cast 5 or 6 roled racers, so "few roles" is a 1% corner of the fixture.
+
+★ **A SECOND, INDEPENDENT REASON TO DISCARD THAT CELL** (added 2026-09-22): the fixture replicates
+30 seeds over ten tracks, and the three `nRoled ≤ 3` races sit on just **two distinct seeds**
+(`ice-track#11`, `ice-track#24`, `city-circuit#19`). The Fisher test treats them as three
+independent observations; they are not. See the clustering note in §6 — the p = 0.024 is
+anti-conservative on top of resting on two races.
 
 ---
 
@@ -246,6 +278,27 @@ this data.
   (below), and there is no per-role disable. It would be a **source change, and it is NOT proposed
   here.**
 - The `nRoled` contrast is unusable at this fixture: 282 of 300 races cast 5 or 6.
+
+- ★★ **THE FIXTURE IS 30 SEEDS × 10 TRACKS, SO A QUANTITY DETERMINED BY THE SEED ALONE HAS AN
+  EFFECTIVE N OF 30, NOT 300.** Measured directly — seeds whose value is identical on all ten
+  tracks:
+
+  | quantity | seeds identical across all ten tracks |
+  |---|---|
+  | `attacker-b2` cast | **30 of 30** — wholly seed-determined |
+  | `faller` cast | 26 of 30 |
+  | `sovereign-lead` cast | 22 of 30 |
+  | `pursuer` cast | 17 of 30 |
+  | `comebacker(staged)` cast | 15 of 30 |
+  | ★ **`packBreakaway` (the OUTCOME)** | **5 of 30** |
+
+  ★ **AND THIS IS WHY THE SPLITS SURVIVE IT.** The outcome is strongly **track**-dependent — the
+  same seed gives the same breakaway verdict on all ten tracks in only **5 of 30** cases — so the
+  300 rows carry real information and are not ten copies of 30 answers. What the clustering does
+  affect is the **arithmetic of the p-values**: the Fisher tests in §3 treat all 300 rows as
+  independent, which makes every p **anti-conservative (too small)**. ★★ **Since every split is
+  already null, a properly clustered test would only make them MORE null. The conclusion of this
+  report is unchanged and, if anything, strengthened.**
 
 ---
 
