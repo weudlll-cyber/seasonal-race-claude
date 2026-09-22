@@ -295,6 +295,20 @@ export function createRaceFromIdentity(p) {
           dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
         gapBrakeMaxAuthority:
           dynamicsConfig.gapBrakeMaxAuthority ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+        // ★★ GROUP-GAP-BRAKE-1 — AND THESE TWO MUST BE HERE, which is not obvious and cost a whole
+        // 150-race sweep to learn. THIS LIST IS EXPLICIT, key by key: a key wired into defaults.js
+        // and read in racePlanner.js is STILL unreachable until it is copied here, because the plan
+        // only ever sees what this object carries. Without them every arm of the sweep silently ran
+        // the shipped path and returned byte-identical numbers. It is the same shape as BLIND-SITE-1
+        // and PARITY-CLOSE-1, which is why the comment is long: the next key added to the brake will
+        // hit it too.
+        // ★ The unit tests could not have caught it — they call createRacePlan DIRECTLY and never
+        // pass through this file.
+        gapBrakeGroupEnabled:
+          dynamicsConfig.gapBrakeGroupEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled,
+        gapBrakeGroupAllowedGapPx:
+          dynamicsConfig.gapBrakeGroupAllowedGapPx ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
         // SERVO-NARROW-1 (V1), default OFF — it must be switchable apart from the brake above.
         servoNoiseBlindEnabled:
           dynamicsConfig.servoNoiseBlindEnabled ??
