@@ -2218,6 +2218,17 @@ and in that commit's message.
   BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
   px in an OVERVIEW one.
 
+- [GROUP-BRAKE-SWEEP-1.md](GROUP-BRAKE-SWEEP-1.md) — **stage 1 of GROUP-GAP-BRAKE-1: no arm reduced
+  the owner's breakaway share, and the two arms that most quieten the leading group are the two that
+  most enlarge it.** Control 6/30, A50 4/30, A65 7/30, A80 8/30, ABL 7/30 — every Fisher p ≥ 0.73, so
+  all four are UNDECIDED at N=30 and three point the wrong way. ★ A80 and ABL drive in-group position
+  changes below the control's rate (3 vs 8.8 expected, P=0.024; 8 vs 14.8, P=0.041) and **fail the
+  owner's parade rule**; A65 keeps the fighting and changes nothing else. ★★ THE FLOOR FINDING,
+  measured: at `minMult` the four braked arms produced **0 position changes in 1219 frames against 5.2
+  expected (P=0.0056)** while the control still changes order there — the owner's 15% bound working as
+  specified, and the mechanism's sharpest limit. Also records the two defects that made earlier arms
+  read as measured when nothing reached the engine. Stage 2 carries CONTROL and A50 only.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
