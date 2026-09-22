@@ -2218,6 +2218,20 @@ and in that commit's message.
   BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
   px in an OVERVIEW one.
 
+- [BAND-SLACK-1.md](BAND-SLACK-1.md) — **(a) only: the owner's band-steering proposal is ALREADY
+  REFUTED, so the measurement was not run.** ★ His reading of the code is right — the band error is
+  computed every frame and discarded for exactly the cast racers (`racePlanner.js:1365-1371`, `:1374`,
+  `:1434`). What is refuted is TAKING that slack. At `:1434` "steer into the band" is arithmetically
+  `strictness = 0`, i.e. free-inside-the-band, so the proposal is the **hero half of "universal
+  band-arrival"** (Lesson 178, −6% action, the field settled, deleted 2026-07-23) — a SUBSET, and the
+  half refuted on ACTION rather than on fairness, which is the half that matters here. ★★ And it is
+  identical to a path removed NINE DAYS AGO in the same lines: ARRIVAL-STEERED-AGAIN-1 took out
+  `if (arrived) strictness = 0` because unsteered the cast racer opened **3.3x the pre-shape gap** at
+  20 racers. Two further confirmations (Lesson 181's assignment-follows-field; the free-band family at
+  DEAD-ENDS.md:146). Corrects the brief on one point: Lesson 178 holds TWO band-release failures, not
+  three — its first bullet is the AUTHORING success that shipped at +21% top-5 action. Names what the
+  evidence does not cover, without proposing anything.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
