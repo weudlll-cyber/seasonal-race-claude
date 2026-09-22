@@ -438,8 +438,10 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   over-represented in breakaway groups and leads 20 of 48, yet its presence changes nothing — being in
   the picture is not causing it. `faller` is in **0 of 131** group slots; `attacker-b2` is DEPLETED at
   0.21×. ★★ **SUPERSEDES SHAPE-CENSUS-1 §2A's role rows**, which predate the 2026-09-19 rename: unstaged
-  `comebacker` 98.3% → **0.0% (extinct)**, `sovereign-lead` 37.7% → **94.7%**, `faller` 32.7% → 47.0%,
-  and `pursuer` (41.0%) was never a row there at all. All three checks pass — reproduction is 300/300
+  `comebacker` 98.3% → **0.0% (extinct)**, `sovereign-lead` 37.7% → **94.7%**, and `pursuer` (41.0%)
+  was never a row there at all — ★ **three rows, not four: the `faller` row STANDS** (corrected
+  2026-09-22; its gate is seed-derived and the fixture replicates 30 seeds, so 47.0% is ~14 of 30
+  seeds, p = 0.125 against the gate's own 1/3 — no difference). All three checks pass — reproduction is 300/300
   against `count-v2n300.json` including `crossRole`. States plainly that this is an ASSOCIATION, that a
   counterfactual arm would need a source change, and that none is proposed.
 
