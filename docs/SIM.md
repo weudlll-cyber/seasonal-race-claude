@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **198 files that can change the race** — the engine's own imports AND the imports of every
+the **199 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -290,6 +290,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `reports/night/breakaway-count-data/breakaway-count.mjs` | A COUNT, at the OWNER'S threshold, in today's shipped world. |
 | `reports/night/breakaway-growth-data/breakaway-growth.mjs` | The measurement harness behind BREAKAWAY-GROWTH-1: it drives seeded races through stepRacePhysics and decomposes the growth of a breakaway lead into the seven factors of the t-u… |
 | `reports/night/breakaway-lever-data/breakaway-lever.mjs` | BREAKAWAY-GROWTH-1 established that a breakaway lead grows mostly because the racer in SECOND slows, not because the leader speeds up. |
+| `reports/night/group-brake-data/group-brake-sweep.mjs` | The control against three allowance candidates and one ablation, on the fixture BREAKAWAY-COUNT-2 used, so the numbers are comparable to its 16.0%. |
 | `scripts/camera-fingerprint.mjs` | CAMERA-HYGIENE-1 |
 | `scripts/camera-replay.mjs` | CAMERA-REPRO-1 (Part B): stand in a marked moment. |
 | `scripts/check-ending-frame.mjs` | ENDING-PICTURE-1 |
@@ -329,7 +330,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-198 files, 24 of them UNKNOWN.
+199 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
