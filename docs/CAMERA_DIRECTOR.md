@@ -1053,7 +1053,19 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5c88941c 2026-09-22 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR HERO-STRICTNESS-1 (`5c88941c`), AND EVERY FIGURE IS IDENTICAL TO THE
+DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
+same ratio 0.47×. The table below stands unchanged.
+
+**WHY IT MOVED.** That branch adds `choreoHeroStrictness` to `racePlanner.js`, `raceCore.js`,
+`raceDynamicsConfig.js` and `defaults.js`, all four inside this measurement's import closure. The
+key's **default is 1.0, the literal it replaced**, and all four fingerprints are unmoved at that
+default — so the shipped race is byte-identical and these numbers could not move. ★ It was measured
+anyway, for the reason recorded further down this file, and because on this line of work an
+inertness argument has been wrong twice: a mechanism that read as inert turned out to be
+unreachable, and five sweep arms came back identical as a result.
 
 ★★ **RE-MEASURED IN FULL FOR CLEANUP-2026-09-19 (`eca8a6bb`), AND EVERY FIGURE IS IDENTICAL TO THE
 DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
