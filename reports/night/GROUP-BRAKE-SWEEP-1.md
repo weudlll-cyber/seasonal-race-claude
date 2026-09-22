@@ -1,8 +1,12 @@
-# GROUP-BRAKE-SWEEP-1 — stage 1, N=30 per arm
+# GROUP-BRAKE-SWEEP-1 — stage 1 (N=30 × 5 arms) and stage 2 (N=300 × 2)
 
 **GROUP-GAP-BRAKE-1, §E. 2026-09-22. Branch `feat/group-gap-brake-1`. ★★ NOTHING MINTED, NOTHING
 MERGED — §G stands.** The mechanism is built and behind one key that defaults to today's behaviour;
-this is the first measurement of what it does when the key is on.
+this is the measurement of what it does when the key is on.
+
+★★ **READ THE STAGE-2 SECTION FIRST. IT OVERTURNS STAGE 1'S READING.** Stage 1 screened five arms
+at N=30 and carried one forward; at N=300 that arm's apparent gain was noise, and a different
+effect — invisible in the headline count — turned out to be the real one.
 
 Harness `reports/night/group-brake-data/group-brake-sweep.mjs`, data `sweep-n30.json` and
 `sweep-n30-abl.json`. **10 tracks × 3 seeds = 30 races per arm, 150 races in all.** Every number
@@ -12,7 +16,9 @@ to its 16.0%.
 
 ---
 
-## ★★ THE HEADLINE, AND THE PARADE ANSWER BESIDE IT — NOT BELOW IT
+## STAGE 1 — the screen, N=30 per arm
+
+### ★★ THE HEADLINE, AND THE PARADE ANSWER BESIDE IT — NOT BELOW IT
 
 **NO ARM REDUCED THE OWNER'S BREAKAWAY SHARE.** Control 6 of 30 (20.0%). A50 4 of 30 (13.3%), A65 7
 of 30 (23.3%), A80 8 of 30 (26.7%), ABL 7 of 30 (23.3%). **Every Fisher two-sided p against the
@@ -40,7 +46,7 @@ group are the two that most enlarge it.**
 
 ---
 
-## THE TABLE — control against three candidates and the ablation
+### THE TABLE — control against three candidates and the ablation
 
 All five arms, N=30 races each (10 tracks × 3 seeds, same seeds throughout).
 
@@ -79,7 +85,7 @@ group and it is present even on A65.
 
 ---
 
-## ★★ THE FLOOR FINDING — a product fact, and its consequence is MEASURED
+### ★★ THE FLOOR FINDING — a product fact, and its consequence is MEASURED
 
 The engine's 15% floor comes first. `minMult` is 0.85, it is the owner's standing bound, and the
 brake must not breach it: the fold is `Math.max(minMult, rawTarget * scale)`. A member the servo has
@@ -109,6 +115,93 @@ opening (each member keeps its own share of a reduced speed), so a braked trio t
 into a leader with the rest strung behind him, and the brake's own input then switches to a gap
 INSIDE the former group. Small N — 0 of 6 against 7 of 26 — and stated as an observation to be
 settled at stage 2, not as a result.
+
+---
+
+## ★★ STAGE 2 — CONTROL against A50 at N=300, and it answers a different question than expected
+
+600 races, `sweep-n300.json`, 10 tracks × 30 seeds per arm, same fixture and same definition.
+
+**FIRST, THE HARNESS VALIDATES ITSELF.** The control returns **48 of 300 = 16.0%**, which is
+BREAKAWAY-COUNT-2's 16.0% to the digit, reached through a different harness on the same definition.
+Whatever else follows, the baseline is the owner's own number.
+
+### 1. THE SHARE DOES NOT MOVE. A50's STAGE-1 GAIN WAS NOISE.
+
+| | CONTROL | A50 (111.2 px) |
+|---|---|---|
+| **his breakaway share** | **48/300 = 16.0%** (95% CI 12.3–20.6) | **46/300 = 15.3%** (95% CI 11.7–19.8) |
+| Fisher two-sided p | — | **0.911** |
+| median in-window peak gap | 111.3 px | **119.4 px** |
+| held above half its peak, median | 11.23 s (n=48) | 9.97 s (n=46) |
+| never closed by the finish | 15 of 48 | 14 of 46 |
+| races the brake fired in | 230 of 300 ‡ | 144 of 300 |
+| frames engaged | 69071 ‡ | 45976 |
+| — of those, a member at `minMult` | 10.3% | 3.9% |
+| median commanded multiplier while engaged | 0.9742 ‡ | 0.9531 |
+| band arrival (gate ≥ 70%) | 89.2% (10459/11721) | 89.5% (10488/11721) |
+| lead changes, whole race (median) | 54 | 54 |
+| lead changes in `[0.70, finish]` (median / total) | 2 / 760 | 2 / 729 |
+
+‡ The control's engagement columns are the SHIPPED leader-to-second brake, as in stage 1, and are
+not like for like.
+
+Stage 1 gave A50 4 of 30 against the control's 6 of 30. At ten times the N it is 46 against 48.
+★ **That is the standing rule paying for itself**: an N=30 arm inside its interval is UNDECIDED, and
+this one was reported that way rather than as a 33% improvement.
+
+### 2. ★ AND THE PARADE FEAR IS NOT REALISED EITHER — also noise at N=30
+
+In-group position changes above the floor: **142 observed against 143.3 expected at the control's own
+rate, Poisson P = 0.477.** Dead level. Stage 1's P = 0.078 lean was noise in the same way the share
+was. **A50 does not quieten the leading group**, and the in-window lead-change total (729 against
+760) says the same from outside it.
+
+**★★ AND THE FLOOR FINDING WEAKENS AT THIS N, WHICH IS STATED HERE RATHER THAN LEFT IN STAGE 1.**
+At the floor A50 produced 5 position changes in 1780 frames against 8.8 expected — **P = 0.130, not
+significant.** The direction survives (2.81 per 1k against the control's 4.93, a 43% reduction) but
+the stage-1 pooled result of P = 0.0056 was carried by four arms at N=30, and for A50 alone at N=300
+it does not reach significance. The floor's *arithmetic* is not in doubt — a member at `minMult`
+cannot be moved by a multiplier, and that is the owner's bound working as specified — but the claim
+that it measurably flattens the order does not replicate. **Treat the stage-1 floor section as the
+weaker of the two readings.**
+
+### 3. ★★★ WHAT THE BRAKE ACTUALLY DOES: IT DISSOLVES THE GROUP AND RELEASES THE LEADER ALONE
+
+This is the finding, and it is invisible in every count above because it nets to zero.
+
+| crossing was a… | CONTROL | A50 |
+|---|---|---|
+| lone leader | **8 of 48** | **23 of 46** |
+| group of 2–5 | 40 of 48 | 23 of 46 |
+
+**Fisher two-sided p = 0.0009.** Under the control one breakaway in six is a lone racer; under A50 it
+is one in two. Race by race the arms are not the same 48 races with different sizes — only 30 races
+break away in both arms, and only 1 of those changes from a group to a lone leader. The shift is
+made of two disjoint sets:
+
+- **A50 REMOVES 18 breakaways the control had** — sizes 1×1, 2×6, 3×6, 4×2, 5×3. The brake was
+  engaged in 16 of those 18. **This is the mechanism doing exactly what it was built to do.**
+- **A50 CREATES 16 breakaways the control did not have — and 15 of the 16 are a LONE LEADER** (the
+  sixteenth is a pair). The brake was engaged in 12 of those 16.
+
+So the count stays flat because the mechanism trades one kind of breakaway for another: **it breaks
+up the leading group, and what comes out the far side is a single racer clear of the field.** The
+median peak gap rises 111.3 → 119.4 px while it does so.
+
+**THE READING, offered as a reading and not as a measured chain.** The brake's own input is the
+largest gap inside the front band. When it succeeds in pulling a group apart, that gap collapses
+into a gap between two racers, falls back under the 111.2 px allowance, and the brake releases —
+leaving the racer it was holding alone with clear air ahead. The proportional fold is what makes the
+group come apart in the first place: every member keeps its own share of a reduced speed, so the
+internal gaps go on opening while the group as a whole slows. ★ What would settle it is per-frame
+engagement against the crossing time, which this harness does not record; it is named here so the
+next block does not have to rediscover the question.
+
+★★ **This matters beyond the brief.** A lone racer clear of the field in the last 30% is the
+RUNAWAY the project's runaway line exists to suppress — the baseline measured 23.5% runaway-winners,
+and the gap-reroll work took it to 8.3%. A mechanism that leaves the breakaway count unchanged while
+moving it from groups toward solos is pushing against that work, not with it.
 
 ---
 
@@ -142,16 +235,39 @@ real mechanism, differ from one another, and stand.
 
 ## THE RECOMMENDATION — a recommendation, not a decision
 
-**I would ship none of them as they stand, and if one must be carried forward it is A50 (111.2 px),
-because it is the only arm that moved the owner's share in the right direction and the only one that
-did so without a significant loss of fighting inside the group.** A65 and A80 and the ablation each
-either left the share alone or enlarged it, and A80 and ABL bought their quiet directly out of the
-in-group position changes, which is the failure the owner named in advance.
+**I would ship none of the four arms, and I would not ship the mechanism in its present shape: at
+N=300 it leaves the owner's breakaway share untouched (15.3% against 16.0%, p = 0.91), and what it
+does instead is convert group breakaways into solo ones — 8 of 48 lone leaders becoming 23 of 46,
+p = 0.0009.** If he wants it in front of his eye anyway — and the seeds below are chosen so he can
+judge that himself — the arm to look at is A50 (111.2 px), which removed 18 of the control's group
+breakaways and is the only arm ever carried past the screen.
 
-**Stage 2, per §E, runs only the arms that beat the control: CONTROL and A50 at N=300.** A65, A80
-and ABL are not carried forward — A65 changed nothing, and A80 and ABL fail the parade rule at N=30
-while making the share worse. Stage 2 is the one that can answer whether A50's 13.3% is real, since
-6 against 4 races out of 30 cannot be.
+The mechanism is not defective against its brief. It reads the distance he described, it brakes the
+group he described, it refuses groups of five, and it does not equalise them. **The brief's
+assumption is what did not hold: that slowing a leading group proportionally would keep it with the
+field.** Naming a remedy is outside this block.
+
+---
+
+## §F — FIVE SEEDS FOR HIS EYE
+
+Typed into the Quick-Test seed field with **40 racers, 60 s, the track's default racer**. The field
+takes 1–9999 and feeds `racePlanSeed` directly, so these are the same races the sweep measured.
+Four of the five are breakaways under the control; a group is braked under A50 in all five.
+
+| # | track | seed | what to watch |
+|---|---|---|---|
+| 1 | **ice-track** | `2` | the largest control breakaway of the set — 203.9 px, a group of 3. A50 brakes it hardest (671 frames, never at the floor) and **it does not break away** (148.7 px). The mechanism at its best. |
+| 2 | **seatrack** | `1` | a control breakaway with **5 at the crossing** (167.0 px); under A50 it closes to 128.2. |
+| 3 | **dirt-oval** | `3` | ★ **the floor on screen** — 231 of 497 engaged frames have a member at `minMult`, the hardest median command of the set (0.9169), and the breakaway happens anyway: 161.9 px against the control's 161.7, unmoved. |
+| 4 | **city-circuit** | `2` | light touch — 189 frames of braking takes a 187.3 px breakaway to 155.7, just under his line. |
+| 5 | **space-sprint** | `2` | ★ **the cost case** — no breakaway in either arm, yet A50 still brakes a group for 359 frames. Is the brake visible when it was not needed? |
+
+★★ **AND THE THING TO WATCH FOR ACROSS ALL FIVE IS THE STAGE-2 FINDING, NOT THE GAP.** The count of
+breakaways barely moves; what moves is whether the racer in front is alone. Under A50, 15 races that
+had no breakaway at all under the control produced one, and all but one of those was a **lone
+leader**. The question his eye can answer and the numbers cannot: is a single racer clear of the
+field better or worse to watch than the group of three that was there before?
 
 ---
 

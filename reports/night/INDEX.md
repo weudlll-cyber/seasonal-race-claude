@@ -2218,16 +2218,21 @@ and in that commit's message.
   BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
   px in an OVERVIEW one.
 
-- [GROUP-BRAKE-SWEEP-1.md](GROUP-BRAKE-SWEEP-1.md) — **stage 1 of GROUP-GAP-BRAKE-1: no arm reduced
-  the owner's breakaway share, and the two arms that most quieten the leading group are the two that
-  most enlarge it.** Control 6/30, A50 4/30, A65 7/30, A80 8/30, ABL 7/30 — every Fisher p ≥ 0.73, so
-  all four are UNDECIDED at N=30 and three point the wrong way. ★ A80 and ABL drive in-group position
-  changes below the control's rate (3 vs 8.8 expected, P=0.024; 8 vs 14.8, P=0.041) and **fail the
-  owner's parade rule**; A65 keeps the fighting and changes nothing else. ★★ THE FLOOR FINDING,
-  measured: at `minMult` the four braked arms produced **0 position changes in 1219 frames against 5.2
-  expected (P=0.0056)** while the control still changes order there — the owner's 15% bound working as
-  specified, and the mechanism's sharpest limit. Also records the two defects that made earlier arms
-  read as measured when nothing reached the engine. Stage 2 carries CONTROL and A50 only.
+- [GROUP-BRAKE-SWEEP-1.md](GROUP-BRAKE-SWEEP-1.md) — **the group gap brake does not change how
+  often the owner's breakaway happens. It changes who is in it.** Stage 2, N=300 per arm: his share
+  is 46/300 (15.3%) against the control's 48/300 (16.0%), **Fisher p = 0.91** — and the control
+  reproduces BREAKAWAY-COUNT-2's 16.0% to the digit, so the baseline is his own number.
+  ★★★ THE FINDING IS INVISIBLE IN THAT COUNT because it nets to zero: **lone-leader crossings go
+  8 of 48 → 23 of 46, p = 0.0009.** The arm REMOVES 18 group breakaways (engaged in 16 of them — the
+  mechanism working) and CREATES 16 new ones of which **15 are a single racer clear of the field**.
+  That is the RUNAWAY the runaway line exists to suppress, so this pushes against that work.
+  ★ Stage 1 (N=30 × 5 arms) is kept as the screen and **both of its readings were noise**: A50's
+  4/30 became 46/300, and the parade lean (P=0.078) became P=0.477 — the standing "an N=30 arm is
+  UNDECIDED" rule paying for itself. The floor finding weakens too (P=0.0056 pooled at N=30 →
+  P=0.130 for A50 at N=300) and the report says so rather than leaving the stronger claim standing.
+  Recommendation: ship none, and the mechanism is not defective against its brief — the brief's
+  assumption did not hold. Five Quick-Test seeds for his eye. Also records two reachability defects
+  that made earlier arms read as measured when nothing reached the engine.
 
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
