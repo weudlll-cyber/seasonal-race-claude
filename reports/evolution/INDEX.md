@@ -426,6 +426,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CHASE-REACH-1.md](CHASE-REACH-1.md) — **yes, the chase CAN reach; the boost is not what stops it**
+  (2026-09-22, read-only, N=300 per stage × quiet and wild). In **72.9%** of quiet breakaways and
+  **69.0%** of wild ones a racer behind the gap could close it before the finish — median best
+  needed/remaining ratio **0.35 / 0.27** — and a reachable chaser is present on **100% of breakaway
+  steps** in both stages. ★★ **THE BOOST KEY CANNOT FLIP A SINGLE RACE IN 600.** Every breakaway is
+  either already closable at **zero added boost** (35 of 48 quiet, 20 of 29 wild) or closable at **no
+  boost the ±12% envelope permits** (13 and 9); the count needing more than shipped but inside the
+  clamp is **0 in both stages**, and at wild the boost is already AT the clamp (0.12 = maxEffect).
+  The constraint is not the size of the boost — it is that the governor is switched off for the whole
+  of the owner's [0.70, finish] window. ★ Names THREE ENTANGLEMENTS a future build must decide (the
+  reachability test's leaderBrake argument — measured to cost ZERO at today's values; **brakeSet
+  membership outliving the brake, refusing 9.6%/12.5% of chaser-slots past 0.6 for a condition that
+  no longer applies**; and the phase weight hitting exactly 0 at the boundary, so a build faces TWO
+  switches, not one) without proposing any of them. ★ Corrects two addresses: `boostEligible` is at
+  raceGovernor.js:297-298, and the JSDoc at :169 calling the rotation "default OFF" is STALE —
+  raceCore.js:376 ties it to racePlanEnabled and it SHIPS ON. All three checks pass; Check C caught a
+  real defect in the instrument's model before any number was believed.
+
 - [BREAKAWAY-CAST-SPLIT-1.md](BREAKAWAY-CAST-SPLIT-1.md) — **the casting does NOT predict the owner's
   breakaway, and for the two roles that fill its groups the question cannot be asked at all**
   (2026-09-22, read-only, N=300 per stage × quiet and wild). ★★ Every testable split is NULL in both
