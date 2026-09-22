@@ -155,6 +155,11 @@ while making the share worse. Stage 2 is the one that can answer whether A50's 1
 
 ---
 
-**Fingerprints unmoved at the default** — `world b6cfd1daf1756f61`, `world-off 744bec11644978bb`,
-`camera 0102dd2eab95b71f`, `render ec817639269a8a4e`. **★★ DO NOT MERGE, DO NOT MINT — this ends at
-the owner's eye.**
+**ALL FOUR FINGERPRINTS RE-MEASURED ON THE BRANCH TIP AFTER THE SWEEP**, each by its own reproduce
+command out of `docs/fingerprints.json`, and all four match the record: `world b6cfd1daf1756f61`,
+`world-off 744bec11644978bb`, `camera 0102dd2eab95b71f`, `render ec817639269a8a4e`. ★ That is also
+an independent check on `abl-run.mjs`: the ablation patches `racePlanner.js` and restores it, and a
+tree that had not come back exactly would have moved `world` here. The runner's own byte comparison
+and `git status` both said clean, and this says it a third way, from the engine.
+
+**★★ DO NOT MERGE, DO NOT MINT — this ends at the owner's eye.**
