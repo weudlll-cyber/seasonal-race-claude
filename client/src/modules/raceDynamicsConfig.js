@@ -191,6 +191,21 @@ export const RACE_DYNAMICS_RULES = [
       ),
     why: 'it must be a number between 0 and 1',
   },
+  {
+    // HERO-STRICTNESS-1 — the CAST's own strictness. Same bounds as the pack's above because it is
+    // the same blend weight (racePlanner.js:1434); outside [0,1] the blend would invert one of its
+    // two error terms, which is a value nobody can have meant. ★ It has a rule because
+    // `applyKeyRules` only rejects a key that HAS one — a key without one reaches the physics
+    // unchecked, which is how the gap-brake group keys shipped unvalidated on 2026-09-22.
+    keys: ['choreoHeroStrictness'],
+    ok: (c) =>
+      !(
+        typeof c.choreoHeroStrictness !== 'number' ||
+        c.choreoHeroStrictness < 0 ||
+        c.choreoHeroStrictness > 1
+      ),
+    why: 'it must be a number between 0 and 1',
+  },
   ...[
     'choreoReleaseProgress',
     'choreoResolveB2',

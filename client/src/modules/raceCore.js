@@ -309,6 +309,11 @@ export function createRaceFromIdentity(p) {
         choreoPackBandStrictness:
           dynamicsConfig.choreoPackBandStrictness ??
           DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness,
+        // HERO-STRICTNESS-1. ★ THIS LIST IS THE REFERENCE the parity mirror checks the five harness
+        // sites against, and a key absent HERE is unreachable however correct the planner is — that
+        // gap cost a whole sweep on 2026-09-22.
+        choreoHeroStrictness:
+          dynamicsConfig.choreoHeroStrictness ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoHeroStrictness,
         choreoReleaseProgress:
           dynamicsConfig.choreoReleaseProgress ??
           DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress,

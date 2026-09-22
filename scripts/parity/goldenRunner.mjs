@@ -355,6 +355,9 @@ function browserPlanConfig(dynamicsConfig, pathLengthPx) {
     pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
     choreoIntensity: dynamicsConfig.choreoIntensity ?? 0.6,
     choreoPackBandStrictness: dynamicsConfig.choreoPackBandStrictness ?? 0.5,
+    // HERO-STRICTNESS-1 — from the same source as the pack's, default 1.0 = today.
+    choreoHeroStrictness:
+      dynamicsConfig.choreoHeroStrictness ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoHeroStrictness,
     choreoReleaseProgress: dynamicsConfig.choreoReleaseProgress ?? 0.97,
     choreoResolveB2: dynamicsConfig.choreoResolveB2 ?? 0.8,
     choreoResolveB3: dynamicsConfig.choreoResolveB3 ?? 0.7,
@@ -431,6 +434,8 @@ function simPlanConfig(DYN, pathLengthPx) {
     pulkBiasGain: DYN.pulkBiasGain,
     choreoIntensity: DYN.choreoIntensity,
     choreoPackBandStrictness: DYN.choreoPackBandStrictness,
+    // HERO-STRICTNESS-1 — and this is the arm the parity guards actually run (PARITY-CLOSE-1).
+    choreoHeroStrictness: DYN.choreoHeroStrictness,
     choreoReleaseProgress: DYN.choreoReleaseProgress,
     choreoResolveB2: DYN.choreoResolveB2,
     choreoResolveB3: DYN.choreoResolveB3,

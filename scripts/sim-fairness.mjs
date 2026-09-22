@@ -429,6 +429,14 @@ const CHOREO_PACK_BAND_STRICTNESS = Number(
     String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness),
   ),
 );
+// HERO-STRICTNESS-1 — the CAST's strictness, settable the same way as the pack's above so the
+// fairness instrument can be pointed at an arm. Default 1.0 = today.
+const CHOREO_HERO_STRICTNESS = Number(
+  argVal(
+    "choreoHeroStrictness",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoHeroStrictness),
+  ),
+);
 const CHOREO_RELEASE_PROGRESS = Number(
   argVal(
     "choreoReleaseProgress",
@@ -4460,6 +4468,7 @@ if (isMain) {
                 choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
                 choreoIntensity: CHOREO_INTENSITY,
                 choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+                choreoHeroStrictness: CHOREO_HERO_STRICTNESS, // HERO-STRICTNESS-1
                 choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
                 choreoResolveB2: CHOREO_RESOLVE_B2,
                 choreoResolveB3: CHOREO_RESOLVE_B3,
@@ -5845,6 +5854,7 @@ if (isMain) {
             choreoOutcomeStart: CHOREO_OUTCOME_START,
             choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
             choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+            choreoHeroStrictness: CHOREO_HERO_STRICTNESS, // HERO-STRICTNESS-1
             bonusMult: BONUS_MULT,
             pulkBiasGain: RP_PULK_BIAS_GAIN,
             baseSpeedMin: BASE_SPEED_MIN_OVR,

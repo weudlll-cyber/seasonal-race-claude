@@ -170,6 +170,7 @@ function planConfig() {
     pulkBiasGain: DYN.pulkBiasGain,
     choreoIntensity: DYN.choreoIntensity,
     choreoPackBandStrictness: DYN.choreoPackBandStrictness,
+    choreoHeroStrictness: DYN.choreoHeroStrictness, // HERO-STRICTNESS-1
     choreoReleaseProgress: DYN.choreoReleaseProgress,
     choreoResolveB2: DYN.choreoResolveB2,
     choreoResolveB3: DYN.choreoResolveB3,

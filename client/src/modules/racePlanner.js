@@ -331,6 +331,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _choreoIntensity: config.choreoIntensity ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
     _choreoPackBandStrictness:
       config.choreoPackBandStrictness ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness,
+    // HERO-STRICTNESS-1: the CAST's own strictness, default 1.0 = the literal it replaced. Read at
+    // the blend below; see defaults.js for what is known about each end of the range.
+    _choreoHeroStrictness:
+      config.choreoHeroStrictness ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoHeroStrictness,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
     // top-5 are not pulled forward before the race opens. A bonus switch, NOT a depth tool (depth is
     // authored via the establish-act fall-back). Read in update()'s choreo areaBonus block.
@@ -1369,10 +1373,24 @@ export function createTrajectoryController(racePlan) {
           : currentRank > areaHi
             ? currentRank - areaHi
             : 0;
-      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under choreo so heroes
-      // can weave through. choreo-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
+      // Heroes track their curve EXACTLY (strictness 1.0 by DEFAULT); the pack runs looser under choreo
+      // so heroes can weave through. choreo-off → strictness == the shipped bandStrictness (1.0) →
+      // byte-identical.
+      //
+      // ★★ HERO-STRICTNESS-1 — the cast's 1.0 is now `_choreoHeroStrictness`, and its DEFAULT IS 1.0,
+      // so this line is byte-identical to the literal it replaced unless somebody sets the key. It is a
+      // key because both ENDS of this range are known and nothing between them has ever been measured
+      // for the cast:
+      //   1.0  the racer lying second is braked on 86.5% of growing frames (BREAKAWAY-LEVER-1).
+      //   0.0  shipped once and REMOVED 2026-09-13 (`17193be6`) — unsteered, a cast racer opened 3.3x
+      //        the pre-shape gap at twenty racers (ARRIVAL-STEERED-AGAIN-1); BAND-SLACK-1 (2026-09-22)
+      //        confirms 0.0 refuted, and notes that at strictness 0 the blend below is `error =
+      //        bandError`, which is 0 inside the band — i.e. not steered at all.
+      // ★ THE PACK IS DELIBERATELY NOT TOUCHED. Its 0.5 is a different mechanism with a different
+      // purpose (letting heroes weave through) and Lesson 178 measured freeing it as a FAIRNESS loss,
+      // where freeing the cast was an ACTION loss. One key, one population.
       let strictness = isHero
-        ? 1.0
+        ? plan._choreoHeroStrictness
         : plan._choreoEnabled
           ? plan._choreoPackBandStrictness
           : bandStrictness;
@@ -1385,11 +1403,23 @@ export function createTrajectoryController(racePlan) {
       const atkParams =
         isHero && plan._attackerParams ? plan._attackerParams.get(r.index) : undefined;
       if (atkParams) {
+        // ★★ HERO-STRICTNESS-1 DELIBERATELY STOPS AT THE B2 ATTACKER, and this line is the stop.
+        // Replacing the cast's literal 1.0 with the key above would otherwise have reached this
+        // racer's ORCHESTRATED phase — the authored climb to peakRank and the steered fall to
+        // finalRank — which is a DIFFERENT, ALREADY-SHIPPED mechanism: Lesson 178 measured it as
+        // +21% top-5 action, and it is the AUTHORING success that lesson contrasts against the
+        // liberations that failed. Loosening it would also confound the sweep by moving two things
+        // at once. So the attacker starts from the shipped literal and the hysteresis below sets
+        // 0/1 exactly as before; this population's behaviour is byte-identical at every value of
+        // the key. (It is also the one cast role that ALREADY gets band treatment — the spatial
+        // release: free inside the band, re-steer outside it.)
+        strictness = 1.0;
         const mr = Math.min(_attackerMinRank.get(r.index) ?? Infinity, currentRank);
         _attackerMinRank.set(r.index, mr);
         let freed = _attackerFreed.get(r.index) ?? false;
         if (!freed) {
-          // Orchestrated phase: strictness stays 1.0 (already set above) → tracks the curve target exactly.
+          // Orchestrated phase: strictness stays 1.0 (pinned just above, NOT the cast key) → tracks
+          // the curve target exactly.
           const peakReached = mr <= atkParams.peakRank;
           // Release condition. Fixed-final (default): steer all the way to finalRank (1+ rank INSIDE the
           // band, with margin) before freeing. Band-arrival (_b2AttackBandArrival): free the MOMENT the

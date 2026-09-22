@@ -1040,6 +1040,22 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // that lets heroes weave through (the pack runs at this strictness; heroes track their curve exactly).
   choreoIntensity: 0.6,
   choreoPackBandStrictness: 0.5,
+  // ★★ HERO-STRICTNESS-1 (2026-09-22) — how tightly a CAST racer is held to his drawn PLACE, as
+  // opposed to his drawn BAND. It is the `strictness` of the blend at racePlanner.js:1434,
+  // `error = strictness*rankError + (1-strictness)*bandError`, for the cast only; the pack keeps
+  // `choreoPackBandStrictness` above and is not touched by this key.
+  //
+  // DEFAULT 1.0 IS TODAY'S BEHAVIOUR EXACTLY — the literal it replaces. At 1.0 the band error is
+  // weighted zero and the racer is steered to an exact place.
+  //
+  // ★ BOTH ENDS OF THE RANGE ARE ALREADY KNOWN, AND THE MIDDLE IS NOT:
+  //   1.0  the racer lying second is braked on 86.5% of growing frames (BREAKAWAY-LEVER-1).
+  //   0.0  shipped once and REMOVED 2026-09-13 (`17193be6`): unsteered, a cast racer opened 3.3x
+  //        the pre-shape gap at twenty racers (reports/evolution/ARRIVAL-STEERED-AGAIN-1.md), and
+  //        BAND-SLACK-1 (2026-09-22) records 0.0 as refuted from three further directions.
+  // Nothing between them has ever been measured for the cast. See
+  // reports/night/HERO-STRICTNESS-1.md.
+  choreoHeroStrictness: 1.0,
   // Stage 1 spoiler switch (default OFF): while choreography is active, suppress the B1-target pool's
   // CHAOS areaBonus so the future top-5 are not pulled forward before the race opens up. A bonus switch,
   // NOT a depth tool (depth is authored via the establish-act fall-back).

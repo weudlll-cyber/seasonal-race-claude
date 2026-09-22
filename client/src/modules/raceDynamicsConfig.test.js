@@ -65,6 +65,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoSuppressChaosBonusB1: false,
       choreoIntensity: 0.6,
       choreoPackBandStrictness: 0.5,
+      // HERO-STRICTNESS-1 — the CAST's strictness. ★ 1.0 IS TODAY: it is the literal it replaced at
+      // racePlanner.js:1374, so this snapshot is also the assertion that a default install races
+      // exactly as it did before the key existed.
+      choreoHeroStrictness: 1.0,
       choreoReleaseProgress: 0.97,
       choreoResolveB2: 0.8,
       choreoResolveB3: 0.7,

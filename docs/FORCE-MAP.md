@@ -170,7 +170,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **When**: full strength until `racePlanBonusTransitionEnd`, then fades over `racePlanBonusFadeDuration`.
 - **Magnitude**: base deltas × `bonusStrengthMultiplier` (default **2.0**): B1 +0.03, B2 +0.02, B3 +0.01, B4 0, B5 −0.01 → at ×2.0 that is roughly +6% (B1) to −2% (B5).
 - **Config**: `racePlanBonusStrengthMultiplier` **2.0**, `racePlanBonusTransitionEnd` **0.75**, `racePlanBonusFadeDuration` **1500**.
-- **History**: an earlier negative-`elapsedFade` bug blew this up to 5–556×; now lower-clamped at 0 ([`racePlanner.js` → `_choreoSuppressChaosBonusB1`](../client/src/modules/racePlanner.js#L335-L340)).
+- **History**: an earlier negative-`elapsedFade` bug blew this up to 5–556×; now lower-clamped at 0 ([`racePlanner.js` → `_choreoSuppressChaosBonusB1`](../client/src/modules/racePlanner.js#L336-L341)).
 
 ### A9. `rubberBandMult` — median-relative "cap the lead" brake — **REMOVED**
 
