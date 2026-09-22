@@ -392,6 +392,18 @@ export function createRaceFromIdentity(p) {
       dynamicsConfig.pulkLeadRotationMinHoldMs ??
       DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs,
     frontPool: dynamicsConfig.pulkFrontPool ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool,
+    // ★★★ CHASE-AFTER-OUTCOME. THIS LIST IS THE WIRING TRAP: a key declared in defaults.js and read
+    // in the governor is UNREACHABLE until it is copied HERE. That gap cost four blocks in two days
+    // (the gap-brake group keys, the ablation arm, the Dev Screen, the five plan sites), so
+    // `chaseWiring.test.js` fails if any of these three does not arrive at the governor at race time.
+    chaseAfterOutcomeEnabled:
+      dynamicsConfig.chaseAfterOutcomeEnabled ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeEnabled,
+    chaseAfterOutcomeSelection:
+      dynamicsConfig.chaseAfterOutcomeSelection ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSelection,
+    chaseAfterOutcomeSlots:
+      dynamicsConfig.chaseAfterOutcomeSlots ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSlots,
     leaderBrake: dynamicsConfig.pulkLeaderBrake ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
     challengerBoost:
       dynamicsConfig.pulkChallengerBoost ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,

@@ -1034,6 +1034,30 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
   pulkBoostHeadroom: 0.1,
+  // ── ★★ CHASE-AFTER-OUTCOME (NIGHT-2026-09-23) — the chase past the OUTCOME boundary ───────────
+  // The owner's question of 2026-09-23: how many racers to accelerate, and which, for a race with as
+  // many overtakes as possible and no breakaways. CHASE-REACH-1 measured that the BOOST SIZE is not
+  // the constraint — raising `pulkChallengerBoost` changes no race, and at wild it already sits AT
+  // `pulkEnvelopeMaxEffect`. The constraint is that the governor is OFF for the whole of his
+  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js:182-187),
+  // `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js:174), and `governorPhaseWeight` returns
+  // exactly 0.0 from that boundary on (raceGovernor.js:92-97).
+  //
+  // ★ THE OWNER'S SCOPE, 2026-09-22, and it bounds all three keys: extend ONLY the boost part past
+  // 0.6. The PULK end does not move, the OUTCOME start does not move, and THE LEADER BRAKE IS NEVER
+  // EXTENDED — past the boundary the brake and hero branches are pinned to zero, so nothing this
+  // feature does can ever slow a racer.
+  //
+  // ★★ ALL THREE DEFAULTS REPRODUCE TODAY'S RACE EXACTLY, and all four fingerprints are unmoved at
+  // them. See reports/evolution/CHASE-BUILD-1.md.
+  chaseAfterOutcomeEnabled: false, // the window extension. false = today.
+  // 'leader' = today's rule (the window is the first frontPool-1 non-heroes behind the LEADER);
+  // 'gap' = the same rule anchored on the largest consecutive gap inside the front band, so the
+  // window starts at the FRONT OF THE CHASING FIELD instead of inside the leading group.
+  chaseAfterOutcomeSelection: 'leader',
+  // Attacker slots INSIDE the extension only. The PULK phase keeps its own hard 1..2 clamp
+  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot.
+  chaseAfterOutcomeSlots: 2,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
   // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
   // Choreo drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness

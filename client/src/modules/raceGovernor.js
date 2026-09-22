@@ -20,6 +20,11 @@
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { arcT, lenScaleFrom, signedArcLengths } from './raceLengths.js';
+// ★ THE FRONT BAND, IMPORTED FROM ITS ONE HOME rather than restated as a literal. `BAND_EDGES[0]`
+// is 5 — the same number the breakaway instruments scan over. Imported rather than threaded through
+// the config on purpose: a config key can be forgotten in the copy list, an import cannot.
+// (No cycle: racePlanner.js does not import this module.)
+import { BAND_EDGES } from './racePlanner.js';
 
 // arcT now lives in raceLengths.js (the one racer-length source). Re-exported here so existing
 // importers (GovernorDiagHUD, sim-fairness, tests) keep the same import path, unchanged.
@@ -132,7 +137,11 @@ export function directorReachable(
 }
 
 /**
- * PulkLeadRotation (SWEEP/opt-in, flag-gated; default OFF → not called → byte-identical). It COMPLETES
+ * PulkLeadRotation. ★ CORRECTED 2026-09-23: this used to read "SWEEP/opt-in, flag-gated; default OFF
+ * → not called → byte-identical". That is PROVABLY WRONG — `raceCore.js` sets
+ * `pulkLeadRotationOn = racePlanEnabled`, so the mechanism SHIPS ON and the live cfg reads
+ * `enabled: true`. A reader trusting the old comment would take the whole file for dead code. It
+ * COMPLETES
  * lead changes instead of herding the front:
  *   • ATTACKER slots (1–2): boost the current live P2 (and P3) UNTIL it becomes live P1 — success is
  *     "took the lead", not "caught up" and not a fixed duration. When it succeeds it leaves the P2 slot,
@@ -165,7 +174,9 @@ export function directorReachable(
  *                          meanBodyLen, isOpen, currentMs, dirState}
  * @param {object} cfg  {enabled, attackerSlots, dropDepthLengths, outsiderMaxReachLengths,
  *                       deadlockTimeoutMs, minHoldMs, frontPool, leaderBrake, challengerBoost,
- *                       maxEffect, maxStepPerFrame, ceilingCap}  (no pullStrength — boost is flat)
+ *                       maxEffect, maxStepPerFrame, ceilingCap,
+ *                       chaseAfterOutcomeEnabled, chaseAfterOutcomeSelection,
+ *                       chaseAfterOutcomeSlots}  (no pullStrength — boost is flat)
  */
 export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   const on = !!(cfg && cfg.enabled);
@@ -179,22 +190,35 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     const prev = r.governorMult ?? 1.0;
     r.governorMult = prev + clamp(target - prev, -maxStep, maxStep);
   };
-  const inWindow =
+  const inPulk =
     on &&
     finishT > 0 &&
     progress != null &&
     progress >= (pulkStartFrac ?? Infinity) &&
     progress < (pulkEndFrac ?? -Infinity);
+  // ★★ CHASE-AFTER-OUTCOME — THE EXTENSION. Past the PULK end, and ONLY when the key is on. The
+  // boundary itself does not move: `pulkEndFrac` is untouched and so is the OUTCOME start. What
+  // changes is that the governor keeps running past it instead of slewing everyone to 1.0 — and, as
+  // the force loop below enforces, ONLY the boost branch may produce a non-zero director there.
+  const chaseOn = on && cfg?.chaseAfterOutcomeEnabled === true;
+  const inExt = chaseOn && finishT > 0 && progress != null && progress >= (pulkEndFrac ?? Infinity);
   const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen);
-  if (!inWindow || !dirState || !(lenScale > 0)) {
+  if ((!inPulk && !inExt) || !dirState || !(lenScale > 0)) {
     for (const r of racers) if (!r.finished) slewTo(r, 1.0);
     return;
   }
   // Phase-weight fade (EXACTLY 0 at corrStart; corrStart == pulkEnd under the reopened PULK). Every
   // force term below is w-scaled, so the ex-leader brake cannot outlive the phase (review Q6).
-  const w = governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
+  // ★ IN THE EXTENSION w = 1, and that is NOT an invented number: CHASE-REACH-1 measured the
+  // feasibility of the chase at exactly w = 1, and its whole result rests on that premise. Any other
+  // value here would be measuring something other than what was measured.
+  const w = inExt ? 1 : governorPhaseWeight(progress, pulkEndFrac, corrStartFrac);
 
-  const attackerSlots = Math.max(1, Math.min(2, Math.round(cfg.attackerSlots ?? 2)));
+  // ★ THE PULK CLAMP IS UNTOUCHED (1..2). Only the extension reads the slots key, so the PULK phase
+  // races exactly as before whatever the key says.
+  const attackerSlots = inExt
+    ? Math.max(1, Math.round(cfg.chaseAfterOutcomeSlots ?? 2))
+    : Math.max(1, Math.min(2, Math.round(cfg.attackerSlots ?? 2)));
   const dropDepthLengths = cfg.dropDepthLengths ?? 2;
   const outsiderMaxReach = cfg.outsiderMaxReachLengths ?? 15;
   const deadlockMs = cfg.deadlockTimeoutMs ?? 12000;
@@ -224,13 +248,18 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   const isHero = (r) => !!r.isHeroChoreographed;
   const behindLenOf = (r) =>
     Math.max(0, signedArcLengths(leader.t, r.t, pathLengthPx, meanBodyLen));
+  // ★ PAST THE BOUNDARY THE PREDICATE IS ASKED WITH leaderBrake = 0, because nothing brakes there.
+  // CHASE-REACH-1 measured this as making no difference at today's values (100% reachable either
+  // way) — it is done because it is correct, and because a future brake value would break the other
+  // way round.
+  const reachBrake = inExt ? 0 : leaderBrake;
   const reachable = (r) =>
     directorReachable(
       r.spreadFactor,
       leader.spreadFactor,
       challengerBoost,
       ceilingCap,
-      leaderBrake,
+      reachBrake,
       maxEffect // S2: admission test uses the same maxEffect-clamped boost as the applied force
     );
 
@@ -293,8 +322,12 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   // pick can never drift apart). A candidate must be a non-hero, NOT a settling brake-SET member (the
   // ping-pong lock), NOT cooled by a prior deadlock, and DRAW-REACHABLE — it can physically out-pace
   // the braked leader (using the same maxEffect-clamped boost the force applies, review S2).
+  // ★★ PAST THE BOUNDARY, brakeSet MEMBERSHIP DOES NOT BLOCK ELIGIBILITY. A fixed decision with a
+  // stated reason, not an arm: the membership describes a brake that is not running there, and
+  // CHASE-REACH-1 measured it refusing 9.6% (quiet) / 12.5% (wild) of chaser-slots during the
+  // owner's own breakaways for a condition that no longer applies.
   const boostEligible = (r) =>
-    !isHero(r) && !st.brakeSet.has(r.index) && !inCooldown(r.index) && reachable(r);
+    !isHero(r) && (inExt || !st.brakeSet.has(r.index)) && !inCooldown(r.index) && reachable(r);
 
   // ATTACKERS — the front group is the first (frontPool − 1) NON-HERO racers behind the leader; HEROES
   // do NOT consume a window slot (S1: a hero-clogged front no longer starves the attacker slots — the
@@ -304,9 +337,35 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   // REAL attacker, never a hopeless one parked in a 12 s deadlock. `frontWindow` doubles as the
   // front-group boundary for the outsider below, so the two selections stay provably DISJOINT (an
   // attacker is always in frontWindow; the outsider always skips frontWindow → never the same racer).
+  // ★★ WHERE THE WINDOW STARTS. 'leader' is today's rule and is byte-identical to it: scan from
+  // rank 2 down. 'gap' anchors the same scan on the FRONT OF THE CHASING FIELD instead — the first
+  // racer behind the largest consecutive gap inside the front band. Everything else about the window
+  // (the non-hero skip, the frontPool bound, the reachability gate, and disjointness from the
+  // outsider, which skips `frontWindow`) is UNCHANGED.
+  //
+  // ★ WHY 'gap' EXISTS: with 'leader', an attacker slot can land INSIDE the leading group, and the
+  // boost would then make the breakaway FASTER. Measured in reports/evolution/CHASE-BUILD-1.md.
+  //
+  // The scan is the same largest-consecutive-gap rule the breakaway instruments use, over the same
+  // front band — `BAND_EDGES[0]`, imported above, never a new literal. It is written here rather
+  // than imported from an instrument because a product module must not depend on a report harness.
+  let windowStart = 1;
+  if (inExt && cfg?.chaseAfterOutcomeSelection === 'gap') {
+    let bestGap = -Infinity;
+    let cut = -1;
+    const maxCut = Math.min(BAND_EDGES[0], n - 1);
+    for (let c = 1; c <= maxCut; c++) {
+      const g = live[c - 1].t - live[c].t;
+      if (g > bestGap) {
+        bestGap = g;
+        cut = c;
+      }
+    }
+    if (cut > 0) windowStart = cut; // live[cut] is the front of the chasing field
+  }
   const frontWindow = new Set();
   const elig = [];
-  for (let i = 1; i < n && frontWindow.size < frontPool - 1; i++) {
+  for (let i = windowStart; i < n && frontWindow.size < frontPool - 1; i++) {
     const r = live[i];
     if (isHero(r)) continue; // heroes don't consume the window
     frontWindow.add(r.index);
@@ -362,7 +421,11 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
     }
     let director = 0;
     let loBound = 1 - maxEffect;
-    if (braked.has(r.index)) {
+    // ★★ THE LEADER BRAKE IS NEVER EXTENDED — the owner's scope, 2026-09-22. Past the boundary the
+    // braked branch is skipped entirely and the hero branch is already 0, so the ONLY non-zero
+    // director there is the boost. Nothing this feature does can slow a racer: with director >= 0
+    // and w = 1 the target is >= 1, so the extension only ever raises a command relative to today.
+    if (!inExt && braked.has(r.index)) {
       // Brake-SET member past its hold — the live P1 (hero or not) AND every dethroned leader still
       // falling to its drop-depth target. One branch, many racers; heroes are brakeable here.
       director = -leaderBrake;
