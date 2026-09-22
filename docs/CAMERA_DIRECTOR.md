@@ -1053,9 +1053,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f2713fcb 2026-09-22 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 807c8c67 2026-09-22 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
-★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`), AND EVERY FIGURE IS IDENTICAL TO THE
+★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`, AND AGAIN AT `807c8c67`), AND EVERY FIGURE IS IDENTICAL TO THE
 DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
 same ratio 0.47×. The table below stands unchanged.
 

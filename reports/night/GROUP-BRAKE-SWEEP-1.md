@@ -228,6 +228,23 @@ line (`members = sel.members` → `members = [sel.members[0]]`, which is sabotag
 restoration byte-for-byte. The harness now THROWS on a leader-only arm unless that runner set the
 environment variable, so the flag can never again read as "ran".
 
+**3. THE MECHANISM WAS UNREACHABLE FROM THE RUNNING APP, TOO.** The two keys were in `defaults.js`
+and in the engine, but **not in the Dev Screen** — so the owner could not turn the mode on without
+editing source, which the project's standing rule forbids and which would have made §F's "put it in
+front of his eye" hollow. They also had **no validation rule** while their four siblings all do
+(`applyKeyRules` only rejects a key that HAS one, so they reached the physics unchecked), and **five
+plan-building sites omitted them** — `goldenRunner.mjs`'s browser AND sim arms, `sim-fairness.mjs`
+and the two diag harnesses. That last one is BLIND-SITE-1's guard speaking in its own words: *"that
+harness runs a world no player sees."* All three are fixed in `807c8c67`.
+
+**★★ AND THE WAY THAT WAS FOUND IS ITSELF THE FOURTH FAILURE, SO IT IS WRITTEN DOWN.** The guard
+that names those five sites is an ordinary client test. It had been **RED since this branch's first
+commit** — the defaults snapshot from `77b50b6e`, the parity guard from `f2713fcb` — and no push in
+this block ran it. Before each push I ran the scripts suite and the two brake files and reported
+them green, which they were; **`npx vitest run` in `client/` was never run at all.** The earlier
+"tests green" line in this report was true about what was run and misleading about what exists.
+The full suite is now **264 files / 4732 tests green**, alongside 598 script tests.
+
 Only the ABL column was ever void. The control and the three candidates in the table above ran the
 real mechanism, differ from one another, and stand.
 
@@ -251,7 +268,20 @@ field.** Naming a remedy is outside this block.
 
 ## §F — FIVE SEEDS FOR HIS EYE
 
-Typed into the Quick-Test seed field with **40 racers, 60 s, the track's default racer**. The field
+**THE SERVICES ARE ON THIS BRANCH.** Production build **`807c8c67 · feat/group-gap-brake-1 +dirty`**
+on **4173**, bundle `index-DI01Etp5.js`; dev on **5173**; API on **4000**. The `+dirty` is one
+uncommitted file, `.claude/settings.json`, which is this session's permission entries and was left
+out of every commit on his instruction — no source file is uncommitted.
+
+**TO TURN IT ON:** Dev Screen → Dynamics → Gap Leader Brake → **"Brake the leading GROUP, not just
+the leader"**, with **"Allowed GROUP lead"** at **0.49 canvas widths**, which stores **110 world px**. ★ That is
+the nearest the knob reaches to the measured arm's 111.2 px — the field rounds widths to two
+decimals against the 225 px LEADER shot — so what he sees is 110 px, not 111.2. The difference is
+well inside the spacing of the three candidates (111.2 / 124.9 / 146.7) and is named here rather
+than glossed. Nothing is stored for him: the default is OFF, which is today's race, and the group's own
+Reset returns it there. ★ Those two controls did not exist until this block — see the last section.
+
+Seeds go in the Quick-Test seed field with **40 racers, 60 s, the track's default racer**. The field
 takes 1–9999 and feeds `racePlanSeed` directly, so these are the same races the sweep measured.
 Four of the five are breakaways under the control; a group is braked under A50 in all five.
 
@@ -271,7 +301,7 @@ field better or worse to watch than the group of three that was there before?
 
 ---
 
-**ALL FOUR FINGERPRINTS RE-MEASURED ON THE BRANCH TIP AFTER THE SWEEP**, each by its own reproduce
+**ALL FOUR FINGERPRINTS RE-MEASURED AT `807c8c67`, THE FINAL COMMIT**, each by its own reproduce
 command out of `docs/fingerprints.json`, and all four match the record: `world b6cfd1daf1756f61`,
 `world-off 744bec11644978bb`, `camera 0102dd2eab95b71f`, `render ec817639269a8a4e`. ★ That is also
 an independent check on `abl-run.mjs`: the ablation patches `racePlanner.js` and restores it, and a

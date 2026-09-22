@@ -49,9 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ f2713fcb 2026-09-22 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 807c8c67 2026-09-22 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
-★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`), AND EVERY ROW IS IDENTICAL TO THE
+★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`, AND AGAIN AT `807c8c67`), AND EVERY ROW IS IDENTICAL TO THE
 DIGIT** — 4.85/2.70 with 0 settled frames, 9.12/5.73 with 7 of 7 and 8 of 40 over 164, 3.68/1.28
 with 0, and 6.80/4.57 with 3 of 3 and 40 of 40 over 94. All four rows of the table below, unchanged.
 The branch's new gap-brake mode is behind `gapBrakeGroupEnabled`, which **defaults to `false`** and
