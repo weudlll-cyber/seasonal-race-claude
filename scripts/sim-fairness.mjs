@@ -4515,6 +4515,12 @@ if (isMain) {
                 gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
                 gapBrakeAllowedGapPx:
                   DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+                // GROUP-GAP-BRAKE-1 — same source and equally INERT today: the shipped default
+                // is `gapBrakeGroupEnabled: false`, read with `=== true`.
+                gapBrakeGroupEnabled:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled,
+                gapBrakeGroupAllowedGapPx:
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
                 gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
                 gapBrakeMaxAuthority:
                   DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,

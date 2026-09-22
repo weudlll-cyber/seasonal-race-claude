@@ -165,6 +165,24 @@ export const RACE_DYNAMICS_RULES = [
       ),
     why: 'it must be a number above 0 and at most 1',
   },
+  // GROUP-GAP-BRAKE-1 — the group mode's two keys. They get rules for the same reason the four
+  // above have them: `applyKeyRules` only rejects a key that HAS a rule, so a key without one
+  // reaches the physics unchecked. These two reach it through `raceCore.js`'s explicit copy.
+  {
+    keys: ['gapBrakeGroupEnabled'],
+    ok: (c) => !(typeof c.gapBrakeGroupEnabled !== 'boolean'),
+    why: 'it must be true or false',
+  },
+  {
+    // Same constraint as `gapBrakeAllowedGapPx` and for the same reason — zero or negative would
+    // mean 'brake a group that is level with the field'. It is a SEPARATE key because it measures a
+    // different distance: the back of the leading group to the front of the field, whose measured
+    // median is 111 px against the leader-to-2nd allowance's 56.
+    keys: ['gapBrakeGroupAllowedGapPx'],
+    ok: (c) =>
+      !(typeof c.gapBrakeGroupAllowedGapPx !== 'number' || !(c.gapBrakeGroupAllowedGapPx > 0)),
+    why: 'it must be a number above 0',
+  },
   {
     keys: ['pulkBoostHeadroom'],
     ok: (c) => !(typeof c.pulkBoostHeadroom !== 'number' || c.pulkBoostHeadroom < 0),

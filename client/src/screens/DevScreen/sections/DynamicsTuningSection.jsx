@@ -180,6 +180,11 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       gapBrakeAllowedGapPx: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
       gapBrakeWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
       gapBrakeMaxAuthority: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
+      // GROUP-GAP-BRAKE-1: the group mode is part of THIS mechanism, not a second one — it swaps
+      // the brake's input and its population, and reuses the same strength law, ceiling and window.
+      // So it resets with the rest, and shipped is OFF.
+      gapBrakeGroupEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled,
+      gapBrakeGroupAllowedGapPx: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
       // V1 sits in this group's reset because the pair is what must not be on together: one press
       // returns BOTH to shipped, which is both OFF.
       servoNoiseBlindEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.servoNoiseBlindEnabled,
@@ -993,6 +998,68 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 ).toFixed(2)}
               </strong>{' '}
               of natural speed — the slowest the leader can ever be asked to run because of a gap.
+            </p>
+          </div>
+
+          {/* ★★ GROUP-GAP-BRAKE-1 — the brake reads the distance the owner actually sees.
+              MEASURED AND NOT RECOMMENDED: reports/night/GROUP-BRAKE-SWEEP-1.md, N=300 per arm.
+              It is here because a behaviour key that cannot be reached from the UI is not
+              configurable, and because his eye is what this mechanism is waiting for. */}
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={
+                  dynamicsConfig.gapBrakeGroupEnabled ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled
+                }
+                onChange={(e) => setDynamics('gapBrakeGroupEnabled', e.target.checked)}
+                data-testid="gap-brake-group-toggle"
+              />
+              Brake the leading GROUP, not just the leader
+              <InfoTooltip text="Changes WHAT the brake measures and WHO it slows. OFF (shipped) it reads leader-to-2nd and slows the leader. ON it reads the largest gap among the first six - the back of the leading group to the front of the field, the distance actually visible - and slows every member of that group, each by the same FRACTION of his own speed, so the group is never equalised and a faster member stays faster. A breakaway of MORE than four is not braked at all. MEASURED AT N=300 AND NOT RECOMMENDED: it does not change how often a breakaway happens (15.3% against 16.0%, p=0.91). What it changes is who is in one - lone-leader breakaways go from 8 of 48 to 23 of 46 (p=0.0009), because breaking the group up releases the leader alone. See reports/night/GROUP-BRAKE-SWEEP-1.md." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Allowed GROUP lead (canvas widths)
+              <InfoTooltip text="The allowance for the group mode above, and it needs its own because it measures a different distance. The leader-to-2nd allowance is 56 world px; the group distance is far larger - its measured median is 111 px and its minimum 40 px - so reusing 56 px here would leave the brake engaged almost permanently. Inert while the group mode is off. The default 124.9 px is the 65th percentile of the measured distribution; the arm actually measured at N=300 was 111.2 px, the median." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Allowed GROUP lead (canvas widths)"
+              min={0.1}
+              max={3}
+              step={0.05}
+              value={gapWidthsFromPx(
+                dynamicsConfig.gapBrakeGroupAllowedGapPx ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx
+              )}
+              onChange={(e) => {
+                const w = Number(e.target.value);
+                if (isFinite(w) && w >= 0.1 && w <= 3)
+                  setDynamics('gapBrakeGroupAllowedGapPx', gapPxFromWidths(w));
+              }}
+            />
+            <p className={s.hint}>
+              stored as{' '}
+              <strong>
+                {Math.round(
+                  dynamicsConfig.gapBrakeGroupAllowedGapPx ??
+                    DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx
+                )}{' '}
+                world px
+              </strong>{' '}
+              at {GAP_BRAKE_REFERENCE_PX} px per canvas width — the same yardstick as the allowance
+              above. The measured arm is <strong>111 px</strong>; his own breakaway threshold, for
+              comparison, is 157 px.
             </p>
           </div>
         </div>

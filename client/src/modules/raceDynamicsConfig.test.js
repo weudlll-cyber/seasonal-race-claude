@@ -115,6 +115,13 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapBrakeAllowedGapPx: 56,
       gapBrakeWindowEnd: 0.97,
       gapBrakeMaxAuthority: 0.13,
+      // GROUP-GAP-BRAKE-1 — the group mode ships OFF, so this snapshot is also the assertion that
+      // a default install races exactly as it did before the mode existed. The allowance is INERT
+      // while the switch is false and is a SEPARATE key from the 56 px above because it measures a
+      // different distance: the back of the leading group to the front of the field.
+      // ★ MEASURED AND NOT RECOMMENDED — reports/night/GROUP-BRAKE-SWEEP-1.md, N=300 per arm.
+      gapBrakeGroupEnabled: false,
+      gapBrakeGroupAllowedGapPx: 124.9,
       // SERVO-NARROW-1 (V1) — shipped OFF, and it must stay OFF while the gap brake above can be
       // switched on: the two are unsafe together (BRAKE-JERK-1).
       servoNoiseBlindEnabled: false,

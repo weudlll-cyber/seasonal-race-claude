@@ -156,6 +156,9 @@ const planConfig = () => ({
   bandBiasGain: DYN.bandBiasGain,
   gapBrakeEnabled: DYN.gapBrakeEnabled,
   gapBrakeAllowedGapPx: DYN.gapBrakeAllowedGapPx,
+  // GROUP-GAP-BRAKE-1 — from DYN, the same source as its siblings.
+  gapBrakeGroupEnabled: DYN.gapBrakeGroupEnabled,
+  gapBrakeGroupAllowedGapPx: DYN.gapBrakeGroupAllowedGapPx,
   gapBrakeWindowEnd: DYN.gapBrakeWindowEnd,
   gapBrakeMaxAuthority: DYN.gapBrakeMaxAuthority,
   trajectoryTransitionDuration: DYN.trajectoryTransitionDuration,

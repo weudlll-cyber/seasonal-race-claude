@@ -394,6 +394,14 @@ function browserPlanConfig(dynamicsConfig, pathLengthPx) {
     gapBrakeAllowedGapPx:
       dynamicsConfig.gapBrakeAllowedGapPx ??
       DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
+    // GROUP-GAP-BRAKE-1 — the group mode's two keys, from the SAME source as the four above.
+    // BLIND-SITE-1's guard is what asked for them: a plan builder that omits a key the browser
+    // passes is running a world no player sees.
+    gapBrakeGroupEnabled:
+      dynamicsConfig.gapBrakeGroupEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled,
+    gapBrakeGroupAllowedGapPx:
+      dynamicsConfig.gapBrakeGroupAllowedGapPx ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
     gapBrakeWindowEnd:
       dynamicsConfig.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
     gapBrakeMaxAuthority:
@@ -455,6 +463,12 @@ function simPlanConfig(DYN, pathLengthPx) {
     // is the one the parity guards run, and `gapBrake` appeared ZERO times in this file before, so
     // with the brake switched on the two arms raced different worlds (PARITY-CLOSE-1). Default OFF.
     gapBrakeEnabled: DYN.gapBrakeEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
+    // GROUP-GAP-BRAKE-1 — and this is the arm the parity guards actually run (PARITY-CLOSE-1),
+    // so an omission here is the one that would go unnoticed.
+    gapBrakeGroupEnabled:
+      DYN.gapBrakeGroupEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupEnabled,
+    gapBrakeGroupAllowedGapPx:
+      DYN.gapBrakeGroupAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeGroupAllowedGapPx,
     gapBrakeAllowedGapPx:
       DYN.gapBrakeAllowedGapPx ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
     gapBrakeWindowEnd: DYN.gapBrakeWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeWindowEnd,
