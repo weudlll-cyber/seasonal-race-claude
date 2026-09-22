@@ -135,6 +135,8 @@ const { DEFAULT_CAMERA_CONFIG } = await import(u("client/src/modules/storage/def
 // selector calls at raceGovernor.js:297.
 const { directorReachable } = await import(u("client/src/modules/raceGovernor.js"));
 const { BAND_EDGES } = await import(u("client/src/modules/racePlanner.js"));
+// ★ THE FAIRNESS GATE. `bandOfRank` is the project's own function — imported, not restated.
+const { bandOfRank } = await import(u("client/src/modules/heroCurveGenerator.js"));
 
 const arg = (k, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${k}=`));
@@ -394,19 +396,34 @@ function measureRace(geo, seed, world) {
   const castCounts = {};
   for (const c of cast) castCounts[c.role] = (castCounts[c.role] ?? 0) + 1;
 
+  // ★★ BAND ARRIVAL — THE FAIRNESS GATE, and the kill rule this sweep needs FIRST. A boost applied
+  // AFTER the dice is exactly the force that gate exists to catch, so an arm cannot be read without
+  // it. It was MISSING from the first stage-1 run: this harness's whole lineage
+  // (breakaway-count -> cast-split -> chase-reach) never emitted it and the aggregate printed NaN in
+  // the column the first kill rule reads. Added here rather than worked around.
+  let bandArrived = 0;
+  let bandCounted = 0;
+  for (const r of st.racers) {
+    const drawn = ctl.getTargetRank(r.index);
+    if (drawn == null || r.finishRank == null) continue;
+    bandCounted++;
+    if (bandOfRank(drawn) === bandOfRank(r.finishRank)) bandArrived++;
+  }
+
   return {
     track: geo.id, seed, steps: k, dtMs,
     // (A)
     cast, castCounts, nRoled: cast.length,
     // (C)
     winLeadChanges, winOvertakes, top5SpreadAt90Px,
-    // ★ THE RACE SIGNATURE — finishing order AND times. CHECK B compares this against a scratch copy
+  // ★ THE RACE SIGNATURE — finishing order AND times. CHECK B compares this against a scratch copy
     // with the chase block stripped out: if the two differ, the instrument is touching the race and
     // every number in this file is void.
     sig: createHash("sha256")
       .update(st.racers.map((x) => `${x.index}:${x.finishRank}:${Math.round(x.finishTimeMs ?? -1)}`).join("|"))
       .digest("hex")
       .slice(0, 16),
+    bandArrived, bandCounted,
     // ★★ CHASE-REACH-1
     gov: { boost: BOOST, ceilingCap: CEIL, maxEffect: MAXEFF, leaderBrake: CFG_BRAKE },
     chaseSteps, reachAny0, reachAnyCfg,
