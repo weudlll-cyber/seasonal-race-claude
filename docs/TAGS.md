@@ -1939,6 +1939,21 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
   numbers live in `client/src/modules/storage/defaults.js`. All four fingerprints minted at this ship
   (`docs/fingerprints.json`); golden races were NOT re-recorded and did not move.
 
+### NOT a ship — the group gap brake, refused (2026-09-22)
+
+- **`archive/group-gap-brake-1`** — the archive of `feat/group-gap-brake-1`, tip **`c2e8c54f`**,
+  **NOT merged and it must not be.** The owner refused it on 2026-09-22. It built a second mode for
+  the gap leader brake, behind one key defaulting to today's behaviour: the brake reads the distance
+  he actually sees — the largest gap among the first six live positions, the back of the leading
+  group to the front of the field — brakes **every member of that group proportionally** instead of
+  clamping them to one shared speed, and **refuses a breakaway of more than four** outright. Four
+  sabotages prove it does exactly that. ★ **It is archived rather than merged because it works and
+  still fails**: at N=300 the owner's breakaway share is untouched (15.3% against 16.0%, Fisher
+  p = 0.91) and what moves instead is who is IN the breakaway — lone-leader crossings 8 of 48 → 23 of
+  46, p = 0.0009. **The refuted assumption is the brief's, not the mechanism's.** Full reasoning in
+  [DEAD-ENDS.md](DEAD-ENDS.md) §S; measurement in `reports/night/GROUP-BRAKE-SWEEP-1.md`. All four
+  fingerprints are unmoved at the default across every commit on it, so **nothing was minted.**
+
 ### Additions since 2026-07-25 (current origin total: 45 tags)
 
 Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
