@@ -1954,6 +1954,20 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
   [DEAD-ENDS.md](DEAD-ENDS.md) §S; measurement in `reports/night/GROUP-BRAKE-SWEEP-1.md`. All four
   fingerprints are unmoved at the default across every commit on it, so **nothing was minted.**
 
+### NOT a ship — the cast's strictness range, measured and closed (2026-09-22)
+
+- **`archive/hero-strictness-1`** — the archive of `feat/hero-strictness-1`, tip **`daab471f`**,
+  **NOT merged and it must not be.** Refused under the owner's standing rule because **no arm
+  survived**. It added ONE key, `choreoHeroStrictness` (default 1.0 = the literal it replaced), to
+  the cast's half of the blend at `racePlanner.js:1434`, and measured the one part of that range
+  nobody had: **0.85, 0.70, 0.50, plus 0.00 as the refuted anchor.** ★ Every arm was proven distinct
+  before any number was read — all ten arm pairs differ on all 30 of 30 races at N=30, and 300 of
+  300 at N=300. ★★ It is archived rather than merged because the best arm **does nothing and costs
+  something**: at N=300 the owner's breakaway share is untouched (15.0% against 16.0%, p = 0.822)
+  while in-window lead changes fall 15.3% (sign test p = 0.0001). Full reasoning in
+  [DEAD-ENDS.md](DEAD-ENDS.md) §T; measurement in `reports/night/HERO-STRICTNESS-1.md`. All four
+  fingerprints unmoved at the default across every commit on it, so **nothing was minted.**
+
 ### Additions since 2026-07-25 (current origin total: 45 tags)
 
 Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
