@@ -49,7 +49,12 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 0c9a290f 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`0c9a290f`), AND EVERY ROW IS IDENTICAL TO THE
+DIGIT** — 4.85/2.70/0f, 9.12/5.73/7of7/8of40/164f, 3.68/1.28/0f, 6.80/4.57/3of3/40of40/94f. ★ A real
+source change this time — `raceGovernor.js` — so the run was warranted rather than ceremonial. The
+numbers hold because the extension's three keys all default to today's race.
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. ★ **CORRECTED 2026-09-19 — the second half of this reason stopped being true the day after it was written, and the numbers are unaffected.** It said `scripts/straggler-truth.mjs` drives `raceDriver`, *"which delivers no cameraPlan, so no comebacker is ever cast"*. That was true on 2026-09-10 and false from **2026-09-11**, when CAMERA-PLAN-BLIND-1 (`9288b1d4`) gave the instruments the plan the product gives them: `raceDriver` builds the delivery at `scripts/lib/raceDriver.mjs:506` and calls it once per frame at `:571`, so a comebacker IS cast here and the detector does receive him. **The entry's measured numbers stand** — they were re-measured in full again on 2026-09-19 for PLANNED-COMEBACK-ONLY-1 and came back identical to the digit — because the surviving half of the reason is the load-bearing one: **phase 6 begins after the winner is home, past the finish latches (`_inPhotoFinish`, `_inFinishDrama`, `_inFinishMode`) that the comeback path returns above in any case.** The dated claim is left visible rather than rewritten, because what it got wrong is a fact about the HARNESS and not about phase 6.
 

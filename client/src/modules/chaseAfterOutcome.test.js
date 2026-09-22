@@ -182,10 +182,12 @@ describe('CHASE-AFTER-OUTCOME — the extension', () => {
   });
 
   it('★★ SABOTAGE GUARD: with nobody selected, ON must equal OFF exactly', () => {
-    // If the extension moves the race through anything OTHER than the boost it selects, this fails.
-    // `frontPool: 2` leaves `frontPool - 1 = 1` window slot, and `outsiderMaxReachLengths: 0` keeps
-    // the outsider from ever qualifying — the nearest thing to "select nobody" the config allows.
-    // A residual difference here would mean something else in the extension is moving racers.
+    // If the extension moves the race through anything OTHER than the boost it applies, this fails.
+    // The boost is zeroed on BOTH arms, so the selection still runs and still fills its slots — it
+    // just has nothing to add. Everything else the extension changes (the window gate, w = 1, the
+    // brakeSet bypass, the reachability brake, the wider slot count) is still live. A residual
+    // difference here would therefore mean one of THOSE is moving racers on its own, which is the
+    // failure this guard exists to catch.
     const cfgOff = baseCfg({ chaseAfterOutcomeEnabled: false, challengerBoost: 0 });
     const cfgOn = baseCfg({ chaseAfterOutcomeEnabled: true, challengerBoost: 0 });
     const off = drive(makeField(), cfgOff, 0.8);

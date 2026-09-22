@@ -1053,7 +1053,13 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0c9a290f 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`0c9a290f`), AND EVERY FIGURE IS IDENTICAL TO THE
+DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, ratio
+0.47×. ★ Unlike the last few re-stamps this one was NOT a formality: that commit changes
+`raceGovernor.js` itself, so the measurement genuinely could have moved. It did not, because all
+three new keys default to today and the extension is gated behind the first of them.
 
 ★★ **RE-MEASURED IN FULL FOR CLEANUP-2026-09-19 (`eca8a6bb`), AND EVERY FIGURE IS IDENTICAL TO THE
 DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
