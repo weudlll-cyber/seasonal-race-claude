@@ -2218,6 +2218,22 @@ and in that commit's message.
   BREAKAWAY-FREQUENCY-1 shares need re-reading: 0.698 widths is 84 px in a PHOTO_FINISH shot and 314
   px in an OVERVIEW one.
 
+- [HERO-STRICTNESS-1.md](HERO-STRICTNESS-1.md) — **the unmeasured middle of the cast's strictness
+  range, measured at four points. NO ARM SURVIVES.** Both ends were known (1.0 shipped; 0.0 shipped
+  and removed 2026-09-13); nothing between them had ever been measured for the cast. ★★ The answer is
+  Lesson 178's, at a setting nobody had tried: loosening the pin by only 15% (S85) leaves his
+  breakaway share **untouched — 45/300 against 48/300, Fisher p = 0.82** — and **costs 15.3% of the
+  front's in-window lead changes, 760 → 644, paired sign test p = 0.0001**. Liberation reduces the
+  thing it feels like it should increase, again. ★ S85's N=30 gain (3/30 vs 6/30) was NOISE — the
+  second time this week the "an N=30 arm is UNDECIDED" rule has paid for itself. Band arrival rises
+  on all ten tracks (+1.26 pp, 0 of 10 below control) and the report says plainly why that does NOT
+  rescue the arm: the gate is a constraint, not the goal. S70 failed both hard rules (raised
+  lone-leader, dropped band arrival, largest peak gap in the sweep at 285 px); S00, the refuted
+  anchor, was the worst arm at 30.0% and calibrated as intended. ★ The control returns 16.0% for the
+  THIRD time across three harnesses. Records the reachability guard that THREW on a proven sabotage,
+  all six plan-building sites by line, the deliberate scoping away from the B2 attacker, and a
+  sabotage that failed because the test's witness clamped.
+
 **Not indexed, and deliberately:** `captures/` holds verbatim BEFORE snapshots taken so a tool's
 output could be compared after it changed. They are evidence, not reports, and `check-index` does
 not descend into subdirectories.
