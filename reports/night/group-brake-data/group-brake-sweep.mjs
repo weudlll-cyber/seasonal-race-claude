@@ -77,6 +77,10 @@ const ARMS = [
   { id: "A50", on: true, allowed: 111.2, leaderOnly: false, note: "p50" },
   { id: "A65", on: true, allowed: 124.9, leaderOnly: false, note: "p65" },
   { id: "A80", on: true, allowed: 146.7, leaderOnly: false, note: "p80" },
+  // ★★ ABL IS NOT RUNNABLE FROM THIS FILE ALONE, AND THE GUARD BELOW ENFORCES THAT. Braking only
+  // the leader off the GROUP input is not a config the product has or should have -- §D says ONE
+  // key -- so the ablation is a PATCHED-TREE measurement, driven by `abl-run.mjs`, which applies the
+  // one-line population change, runs this arm, and restores the tree. See that file for the patch.
   { id: "ABL", on: true, allowed: 124.9, leaderOnly: true, note: "ablation — leader only, p65" },
 ];
 
@@ -212,6 +216,17 @@ const geos = RD.loadTracks({ only: ONLY });
 const arms = ARM_FILTER ? ARMS.filter((a) => ARM_FILTER.split(",").includes(a.id)) : ARMS;
 const rows = [];
 for (const arm of arms) {
+  // ★★ A FLAG THAT REACHES NOTHING MUST FAIL LOUDLY, NOT READ AS "RAN". The first stage-1 sweep
+  // reported ABL and A65 byte-identical because `worldFor` never read `leaderOnly` -- the arm ran
+  // A65's config and the table showed it as a measured ablation. That is the same defect shape as
+  // the raceCore one this branch already fixed: something declared, nothing reaching the engine.
+  // The population change lives in the TREE, not in the config, so it can only come from the runner.
+  if (arm.leaderOnly === true && process.env.RA_GROUP_BRAKE_LEADER_ONLY !== "1") {
+    throw new Error(
+      `arm ${arm.id} is leader-only: it requires the patched tree applied by abl-run.mjs. ` +
+        `No config key expresses it, so running it from here would silently re-run the group arm.`,
+    );
+  }
   const world = worldFor(arm);
   for (const geo of geos) for (let seed = 1; seed <= SEEDS; seed++) rows.push(measureRace(geo, seed, arm, world));
   console.error(`  ${arm.id} done (${rows.length} races so far)`);

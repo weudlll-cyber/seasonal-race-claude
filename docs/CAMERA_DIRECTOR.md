@@ -1053,7 +1053,21 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f2713fcb 2026-09-22 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`), AND EVERY FIGURE IS IDENTICAL TO THE
+DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the
+same ratio 0.47×. The table below stands unchanged.
+
+**WHY IT MOVED, AND WHY THE ARGUMENT WOULD HAVE BEEN STRONGER THAN USUAL.** The branch adds a
+second gap-brake mode to `racePlanner.js`, which this measurement's closure reaches; its key
+`gapBrakeGroupEnabled` **defaults to `false`**, it is read with `=== true`, and all four
+fingerprints are unmoved at that default. So the shipped race is byte-identical and these numbers
+could not move. ★ **It was measured anyway**, for the reason recorded further down this file: the
+same discipline once caught this stamp ACTUALLY MOVING while its sibling in `docs/ENDING-PHASES.md`
+did not. ★★ And on THIS branch in particular the inertness argument had already failed once in the
+other direction — `f2713fcb` exists because a default read as inert when the mechanism was simply
+unreachable. Eight minutes of machine time is the cheaper of the two mistakes.
 
 ★★ **RE-MEASURED IN FULL FOR CLEANUP-2026-09-19 (`eca8a6bb`), AND EVERY FIGURE IS IDENTICAL TO THE
 DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, and the

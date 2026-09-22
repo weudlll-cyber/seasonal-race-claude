@@ -49,7 +49,15 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ eca8a6bb 2026-09-19 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ f2713fcb 2026-09-22 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED IN FULL FOR GROUP-GAP-BRAKE-1 (`f2713fcb`), AND EVERY ROW IS IDENTICAL TO THE
+DIGIT** — 4.85/2.70 with 0 settled frames, 9.12/5.73 with 7 of 7 and 8 of 40 over 164, 3.68/1.28
+with 0, and 6.80/4.57 with 3 of 3 and 40 of 40 over 94. All four rows of the table below, unchanged.
+The branch's new gap-brake mode is behind `gapBrakeGroupEnabled`, which **defaults to `false`** and
+is read with `=== true`, and all four fingerprints are unmoved at that default — but that argument
+is the reason to be suspicious of arguments on this branch, not a reason to skip the run: `f2713fcb`
+exists because the same mechanism read as inert when it was merely unreachable. Run, not argued.
 
 **RE-MEASURED IN FULL FOR COMEBACK-PRECEDENCE-1 (2026-09-10), AND EVERY ROW IS IDENTICAL TO THE DIGIT** — phase 6, lead, unfinished-in-shot, in-shot and settled frames on all four rows. Run rather than argued, and run a second time on HEAD's own `CameraDirector.js` with the change lifted out; the two runs agree exactly. ★ **CORRECTED 2026-09-19 — the second half of this reason stopped being true the day after it was written, and the numbers are unaffected.** It said `scripts/straggler-truth.mjs` drives `raceDriver`, *"which delivers no cameraPlan, so no comebacker is ever cast"*. That was true on 2026-09-10 and false from **2026-09-11**, when CAMERA-PLAN-BLIND-1 (`9288b1d4`) gave the instruments the plan the product gives them: `raceDriver` builds the delivery at `scripts/lib/raceDriver.mjs:506` and calls it once per frame at `:571`, so a comebacker IS cast here and the detector does receive him. **The entry's measured numbers stand** — they were re-measured in full again on 2026-09-19 for PLANNED-COMEBACK-ONLY-1 and came back identical to the digit — because the surviving half of the reason is the load-bearing one: **phase 6 begins after the winner is home, past the finish latches (`_inPhotoFinish`, `_inFinishDrama`, `_inFinishMode`) that the comeback path returns above in any case.** The dated claim is left visible rather than rewritten, because what it got wrong is a fact about the HARNESS and not about phase 6.
 
