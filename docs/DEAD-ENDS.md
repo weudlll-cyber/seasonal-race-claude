@@ -613,6 +613,80 @@ branch is deleted at the remote and **was never merged**. Measurement:
 way — the shape of failure on that branch was always *built, but not reaching the engine*. All four
 fingerprints are unmoved at the default throughout, so **nothing was minted**.
 
+## T. Loosening the CAST's pin — the middle of the strictness range, REFUTED BY MEASUREMENT (2026-09-22)
+
+**Do not re-propose "hold the cast less tightly to its drawn place". The range is now measured end
+to end. Lesson 178 holds at every point in it, including one only 15% off the shipped pin.**
+
+**WHAT WAS MEASURED.** `racePlanner.js:1434` blends `error = strictness·rankError +
+(1−strictness)·bandError`. For CAST racers the strictness was the literal **1.0** — steer to the
+exact drawn place, band weighted zero; the pack runs at 0.5. Both ENDS of that range were already
+known and **nothing in between had ever been measured for the cast**:
+
+- **1.0** — shipped. The racer lying second is braked on **86.5%** of growing frames
+  (BREAKAWAY-LEVER-1).
+- **0.0** — shipped once and **removed 2026-09-13** (`17193be6`): unsteered, a cast racer opened
+  **3.3× the pre-shape gap** at twenty racers (`reports/evolution/ARRIVAL-STEERED-AGAIN-1.md`).
+  `BAND-SLACK-1` (2026-09-22) records 0.0 as refuted from three further directions and shows that at
+  strictness 0 the blend is `error = bandError`, which is 0 inside the band — i.e. not steered at
+  all.
+
+One key (`choreoHeroStrictness`, default 1.0 = today) and one sweep over **0.85 / 0.70 / 0.50**,
+with **0.00** carried as the refuted anchor so the curve had both ends. The pack, the B2 attacker's
+orchestrated climb, the arrival ceiling and the `heldFree` path were all deliberately left alone —
+the attacker in particular is pinned out explicitly, because its authored climb is Lesson 178's
+**+21% top-5 action** success and loosening it would have moved two things at once.
+
+**★ EVERY ARM WAS PROVEN DISTINCT BEFORE ANY NUMBER WAS READ**, because two mechanisms in the two
+days before this one were measured as plausible numbers while being unreachable: smoke races first,
+then a harness that **throws** on two arms sharing a race hash and was itself proven to throw under
+sabotage. Stage 1: all **ten** arm pairs differ on all 30 of 30 races. Stage 2: 300 of 300.
+
+**★★ WHY NOTHING SHIPS.** S85 (0.85) was the only arm to pass the N=30 screen — and its N=30 gain
+was **noise**: 3 of 30 against the control's 6 of 30 became **45 of 300 against 48 of 300** at ten
+times the N.
+
+| at N=300 | CONTROL (1.0) | S85 (0.85) |
+|---|---|---|
+| **his breakaway share** | 48/300 = **16.0%** | 45/300 = **15.0%** — Fisher **p = 0.822** |
+| **in-window lead changes** | **760** | **644** — −15.3%, sign test **p = 0.0001** |
+| lone-leader crossings | 8 of 48 | 6 of 45 (p = 0.78) |
+| band arrival | 89.23% | **90.49%** (+1.26 pp, **0 of 10 tracks below**) |
+
+The arm **does nothing for the gap and costs front action.** Paired race by race, S85 has fewer
+in-window lead changes in 134 races and more in 76.
+
+**★★ THAT IS LESSON 178 HOLDING BETWEEN THE TWO MEASURED ENDS.** The lesson — *"AUTHOR scenarios,
+do not liberate constraints; liberation reduces the very thing it feels like it should increase"* —
+was built on two liberations **at** strictness 0 and on a universal band-arrival that cost −6%
+action. This arm loosens the pin by only **15%**, on the **cast alone**, and the effect is the same
+in sign and **larger in size**. The rule did not merely survive a re-test; it survived at a point
+nobody had tried, which is what makes the range closed rather than merely re-confirmed.
+
+**★ BAND ARRIVAL ROSE — ON ALL TEN TRACKS — AND IT DID NOT RESCUE THE ARM.** 89.23% → 90.49%
+pooled, none of the ten tracks below the control, the worst still +0.18 pp; the cast also finished
+**closer** to its drawn place on average (2.610 → 2.477) while the pack was untouched (2.303 →
+2.307). This was the metric expected to be most at risk, and it went the other way. **It changes
+nothing, because the fairness gate is a CONSTRAINT AND NOT THE GOAL**: an arm must hold it, and
+holding it more comfortably buys nothing when the arm does nothing for the breakaway and costs 15%
+of the front's lead changes. Trading action for band arrival is the wrong direction — it is what a
+scripted race looks like, and this project's difficulty is that the servo is already fair and
+already too scripted.
+
+**The other arms, dropped at N=30 by the block's own rules.** **0.70** failed twice over, either
+alone sufficient: it **raised** the lone-leader share (0 of 6 → 1 of 3) and **dropped** band arrival
+(−0.79 pp, the only arm that did), and it owns the largest peak gap in the sweep — **285.0 px**
+against the control's 203.9, the same direction as the 3.3× that removed strictness 0 in September.
+**0.50** never beat the control (23.3% against 20.0%). **0.00**, the refuted anchor, was the
+**worst arm at 30.0%** — it was never a competitor, and it calibrated exactly as
+ARRIVAL-STEERED-AGAIN-1 and BAND-SLACK-1 predicted.
+
+**THE CODE IS PRESERVED AND FINDABLE:** tag **`archive/hero-strictness-1`** (tip `daab471f`); the
+branch is deleted at the remote and **was never merged**. Measurement:
+`reports/night/HERO-STRICTNESS-1.md`. The control there returns **16.0% for the third time** across
+three independent harnesses (BREAKAWAY-COUNT-2, GROUP-BRAKE-SWEEP-1, this one), so the baseline is
+the owner's own number. All four fingerprints unmoved at the default throughout — **nothing minted**.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
