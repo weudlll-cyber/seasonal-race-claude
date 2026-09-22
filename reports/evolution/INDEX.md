@@ -426,6 +426,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BREAKAWAY-CAST-SPLIT-1.md](BREAKAWAY-CAST-SPLIT-1.md) — **the casting does NOT predict the owner's
+  breakaway, and for the two roles that fill its groups the question cannot be asked at all**
+  (2026-09-22, read-only, N=300 per stage × quiet and wild). ★★ Every testable split is NULL in both
+  stages, pooled and per track: `comebacker(staged)` p=0.236/1.000, `faller` p=0.753/0.175, `pursuer`
+  p=0.874/0.553, and `faller` and `pursuer` REVERSE their per-track sign between stages while the cast
+  is provably identical — the signature of noise. `attacker-b2` (100.0%) and `sovereign-lead` (94.7%)
+  have **no contrast**, so an observational split cannot test them; the 16 no-`sovereign-lead` races
+  are seed-clustered and not a random sample, and the −16.1 pp at p=0.150 must NOT be read as
+  "casting prevents breakaways". ★ Enrichment and prediction come apart: `sovereign-lead` is **13.2×**
+  over-represented in breakaway groups and leads 20 of 48, yet its presence changes nothing — being in
+  the picture is not causing it. `faller` is in **0 of 131** group slots; `attacker-b2` is DEPLETED at
+  0.21×. ★★ **SUPERSEDES SHAPE-CENSUS-1 §2A's role rows**, which predate the 2026-09-19 rename: unstaged
+  `comebacker` 98.3% → **0.0% (extinct)**, `sovereign-lead` 37.7% → **94.7%**, `faller` 32.7% → 47.0%,
+  and `pursuer` (41.0%) was never a row there at all. All three checks pass — reproduction is 300/300
+  against `count-v2n300.json` including `crossRole`. States plainly that this is an ASSOCIATION, that a
+  counterfactual arm would need a source change, and that none is proposed.
+
 - [STEER-BY-FIELD-SIZE-1.md](STEER-BY-FIELD-SIZE-1.md) — **the divisor is real, its consequence is not
   the one expected, and the BAND TABLE is the N=40 artefact** (2026-09-11, night chain 2026-09-11
   piece 3, **REPORT ONLY — the divisor was not changed and `gain` was not touched**).
