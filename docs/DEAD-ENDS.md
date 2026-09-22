@@ -543,6 +543,76 @@ makes these two materially worse — many more frames, or a band that never appe
 picture nobody has looked at, and `everOnCanvas` is required by the exception precisely so the
 "never appears" case cannot be swallowed by it.
 
+## S. Braking the leading GROUP rather than the leader — REFUTED BY MEASUREMENT (2026-09-22)
+
+**Do not re-propose "the brake should read the group, not the leader". It was built, it does exactly
+that, and doing it makes the picture worse in a way the headline count hides.**
+
+**WHAT WAS BUILT.** A second mode for the shipped gap leader brake, behind one key whose default is
+today's behaviour (`gapBrakeGroupEnabled: false`, read with `=== true`). Three changes, and nothing
+else — the strength law, the authority ceiling, the window, the smoothing and the latch are the
+shipped ones:
+
+1. **The input is the distance the owner actually sees.** Not `leader.t - active[1].t`, but the
+   largest of the consecutive gaps among the first six live positions — the back of the leading
+   group to the front of the field. This was built because BREAKAWAY-COUNT-2 measured his own
+   definition at **16.0% of races** against **2.7%** for leader-to-second: the shipped brake acts on
+   a quantity six times rarer than the thing he describes.
+2. **Every member of the group is braked, and the group is NOT equalised.** Members keep their own
+   commanded speeds and have them reduced by the same FRACTION (`rawTarget * scale`) rather than
+   clamped to one shared value (`Math.min(rawTarget, 1 - strength)`). Multiplying two different
+   positives by one positive preserves their order, so a faster member stays faster.
+3. **A breakaway of more than four is not braked at all** — the owner's limit, set 2026-09-20, on
+   the ground that a group that size contains enough fighting for the lead already.
+
+**IT DOES EXACTLY THAT, AND THAT IS PROVEN RATHER THAN CLAIMED.** Four sabotages, each landing where
+it should: restoring the leader-to-second input turns 3 tests red; braking only the leader turns 3
+red; removing the limit of four turns exactly 1 red (the group-of-five case); and clamping the group
+to a shared speed turns exactly 1 red — the parade guard, through a strict ordering assertion with
+no tolerance in it (*"the faster of 0,1 must still be the faster: expected +0 to be -1"*, the `+0`
+being the parade itself).
+
+**★★ WHY IT IS NOT SHIPPED.** At **N=300 per arm** (10 tracks × 30 seeds, the owner's fixture, his
+157.05 px threshold, the fixed `[0.70, finish]` window) it **does not change how often his breakaway
+happens**: 46 of 300 against the control's 48 of 300 — **15.3% against 16.0%, Fisher two-sided
+p = 0.91**. The control reproduces BREAKAWAY-COUNT-2's 16.0% to the digit through a different
+harness, so the baseline is his own number and the null is a real null.
+
+**What it changes instead is WHO IS IN THE BREAKAWAY, and that is strongly significant:**
+
+| crossing was a… | CONTROL | the group brake |
+|---|---|---|
+| lone leader | **8 of 48** | **23 of 46** |
+| group of 2–5 | 40 of 48 | 23 of 46 |
+
+**Fisher two-sided p = 0.0009.** Under the shipped race one breakaway in six is a single racer;
+under the group brake it is one in two. The two arms are not the same races with different sizes —
+only 30 races break away in both, and only 1 of those converts. The shift is two disjoint sets: the
+brake **removes 18 group breakaways** the control had (engaged in 16 of them — the mechanism working
+as specified) and **creates 16 the control did not have, of which 15 are a lone leader.** The median
+in-window peak gap rises 111.3 → 119.4 px while it does so.
+
+**Proportional braking strings a group out until one racer is clear of the field.** Every member
+keeps its own share of a reduced speed, so the internal gaps go on opening while the group as a
+whole slows; the brake's own input then collapses into a gap between two racers, falls under the
+allowance, and releases — leaving the racer it was holding alone with clear air. ★ **That is the
+picture this entire thread exists to remove**, and it is the runaway the runaway line has spent its
+life suppressing (baseline 23.5% runaway-winners, taken to 8.3% by the gap-reroll work).
+
+**★★ THE ASSUMPTION THAT FAILED IS THE BRIEF'S, NOT THE MECHANISM'S.** The brief assumed that a
+leading group slowed proportionally would stay with the field. **It does not — it comes apart.**
+This is not a tuning problem and must not be written up as one: three allowances were swept
+(111.2 / 124.9 / 146.7 px, the measured p50/p65/p80) and an ablation that brakes only the leader off
+the same input, and the arm carried to N=300 was the only one that ever beat the control at the
+screen. Any future proposal in this direction has to answer the group-comes-apart result first, not
+propose a different allowance.
+
+**THE CODE IS PRESERVED AND FINDABLE:** tag **`archive/group-gap-brake-1`** (tip `c2e8c54f`); the
+branch is deleted at the remote and **was never merged**. Measurement:
+`reports/night/GROUP-BRAKE-SWEEP-1.md`, which also records four reachability defects found on the
+way — the shape of failure on that branch was always *built, but not reaching the engine*. All four
+fingerprints are unmoved at the default throughout, so **nothing was minted**.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
