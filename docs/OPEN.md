@@ -97,6 +97,15 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
 | Pause and resume a running race | a block | — |
 | A helper that cleans up the `.git/worktrees` stubs | small | — |
+| ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
+
+★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
+migration script (`scripts/migrate-teams.mjs`), it is run by hand, and **no record exists of what an
+instance has already run.** The new upgrade procedure in [DEPLOYMENT.md](DEPLOYMENT.md) therefore has
+to say *"read the migrations section and decide"* at step 6 instead of naming a command. It is
+survivable today only because the one script is idempotent — running it twice is harmless. **A future
+migration that is not idempotent would not be survivable, and nothing would stop it being run twice.**
+A ledger is a second mechanism and was not ordered, so it is recorded here rather than built.
 
 ★ **Two size claims in the previous page were wrong and are corrected here.**
 **The racer-config move is 80 files, not 39** — it was counted. **And "System Settings is the only

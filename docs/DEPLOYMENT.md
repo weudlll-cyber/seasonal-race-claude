@@ -112,6 +112,89 @@ curl -X POST https://racearena.example.com/api/auth/setup \
   -d '{"username":"...","password":"..."}'
 ```
 
+## Backing up, and upgrading
+
+**Written for someone who has never seen this project, in the order they will actually do it.**
+
+### Where the data is
+
+**Everything this install owns lives under ONE directory**: `RA_DATA_DIR`, which defaults to
+`server/data`. Accounts, sessions, stored races, uploaded sprites and logos, tracks, brands and
+player groups are all under it. **Nothing outside it is yours** — the rest of the checkout is code
+and shipped defaults. **Deleting that directory to "get clean defaults" destroys every account on
+the install.**
+
+### Taking a backup
+
+```sh
+node scripts/backup.mjs --out /somewhere/outside/the/data/dir
+```
+
+**It works while the server is running** — you do not have to stop the service. It writes one
+`.tar` named `racearena-backup-<UTC timestamp>.tar`, prints every item and its size, and **refuses
+rather than writing a half-archive** if anything is wrong.
+
+★ **Check the archive afterwards.** It should be roughly the size of your data directory. A backup
+of a few kilobytes when the data directory is tens of megabytes means something went wrong, and the
+tool prints the totals so you can compare them.
+
+★ **Why you cannot simply copy the folder.** `sessions.sqlite` and `races.sqlite` are live
+databases. A file copy taken while the server is writing can capture a half-finished transaction,
+and the damaged file **looks perfectly normal** until the day you restore it. The tool copies those
+two through SQLite's own online backup instead. Copy the folder by hand and you may be keeping
+something that cannot be restored.
+
+### Restoring
+
+```sh
+node scripts/backup.mjs --restore /path/to/racearena-backup-<stamp>.tar --into /path/to/data
+```
+
+Stop the server first. The target must be empty, or pass `--force` to write into it anyway.
+
+### Upgrading to a new version
+
+**Do these in order. Step 1 is what makes step 8 possible.**
+
+1. **Take a backup**, as above, and **check the archive exists and is a sensible size**. Do not skip
+   this because the upgrade looks small.
+2. **Stop the service.** `docker compose down`, or stop the `node` process.
+3. **Fetch the new version** — `git pull`, or pull the new image.
+4. **Install dependencies in BOTH trees.** They are separate installs and skipping either leaves a
+   half-upgraded install:
+   ```sh
+   npm ci --prefix server
+   npm ci --prefix client
+   ```
+5. **Rebuild the client.** The server serves a built client; it does not build one.
+   ```sh
+   npm run build --prefix client
+   ```
+6. **Run any pending migrations** — ★ **read the limitation below before this step**, because today
+   it is a decision rather than a command.
+7. **Start, and check it worked.** Start the server, then **sign in**. That is the one check worth
+   making: it exercises the accounts file, the session database and the built client in one action.
+   If sign-in works, the upgrade landed.
+8. **★ IF IT DID NOT WORK, GO BACK.** Stop the service, restore the backup from step 1 into the data
+   directory, check out the previous version, reinstall and rebuild as in steps 4–5, and start it.
+   **An upgrade procedure without a way back is a one-way door**, which is why step 1 is not
+   optional.
+
+### ★★ THE MIGRATION SITUATION, STATED AS A LIMITATION RATHER THAN A FEATURE
+
+**There is exactly one migration script, it is run by hand, and NOTHING RECORDS WHICH MIGRATIONS AN
+INSTANCE HAS ALREADY APPLIED.** So step 6 today means *"read the migrations section and decide"*,
+not *"run a command"*.
+
+The one script is `node scripts/migrate-teams.mjs` (see [SETUP.md](SETUP.md) §10). It has a
+`--dry-run`, it is idempotent, and it should be run with the server stopped. Being idempotent is
+what makes the missing ledger survivable: running it twice is harmless. **A future migration that is
+not idempotent would not be**, and there is no mechanism that would stop you running it twice.
+
+**This is recorded as an open point in [OPEN.md](OPEN.md), not as a thing to fix here.**
+
+---
+
 ## Docker
 
 `docker compose build` supplies the client build to the image through a **named build context**. The
