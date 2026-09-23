@@ -16,6 +16,7 @@ import { drawStaticScene } from './trackEditorDraw.js';
 import { extractEffects, extractTrackLights } from './trackEditorSave.js';
 import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';
 import { useHistory } from './useHistory.js';
+import { saveDraft, loadDraft, clearDraft, draftPointCount } from './trackEditorDraft.js';
 import { useViewport } from './useViewport.js';
 import { useTrackIO } from './useTrackIO.js';
 import { API_BASE_URL } from '../../services/api.js';
@@ -129,6 +130,8 @@ export default function TrackEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  // ★ POLISH-4d: a non-error notice after a successful save (e.g. saved with no background).
+  const [saveHint, setSaveHint] = useState(null);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
   // backgroundFile — set when user picks a new local image; cleared after upload
@@ -287,6 +290,55 @@ export default function TrackEditor() {
       cancelled = true;
     };
   }, [backgroundImage]);
+
+  // ★ THE CRASH DRAFT (POLISH-2026-09-24B). Drawing a track is minutes of mouse work that lives
+  // only in React state until Save succeeds; a refresh used to lose all of it.
+  //
+  // OFFERED ONCE, ON MOUNT, AND ONLY WHEN THERE IS NOTHING TO OVERWRITE. Silently restoring would
+  // be its own way to lose work, so it ASKS — and it does not ask at all when the editor was opened
+  // on an existing track (`?load=`) or when anything has already been drawn, because in both cases
+  // accepting would destroy what is on screen.
+  const draftOfferedRef = useRef(false);
+  useEffect(() => {
+    if (draftOfferedRef.current) return;
+    draftOfferedRef.current = true;
+    if (searchParams.get('load')) return;
+    if (centerPoints.length || innerPoints.length || outerPoints.length) return;
+    const d = loadDraft();
+    if (!d) return;
+    const when = new Date(d.savedAt).toLocaleString();
+    const name = d.trackName ? ` “${d.trackName}”` : '';
+    const ok = window.confirm(
+      `An unsaved track${name} from ${when} was found (${draftPointCount(d)} points).\n\n` +
+        'Restore it? Cancel discards it.'
+    );
+    if (!ok) {
+      clearDraft();
+      return;
+    }
+    setCenterPoints(d.centerPoints);
+    setInnerPoints(d.innerPoints);
+    setOuterPoints(d.outerPoints);
+    setClosed(!!d.closed);
+    if (typeof d.centerWidth === 'number') setCenterWidth(d.centerWidth);
+    if (d.trackName) setTrackName(d.trackName);
+    setIsDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Write the draft whenever the geometry changes. `saveDraft` writes nothing for an empty drawing,
+  // so clearing the canvas does not overwrite a real draft with an empty one.
+  //
+  // ★★ NEW-TRACK MODE ONLY, AND THE WRITE IS GATED THE SAME WAY THE OFFER IS. Q-22 specifies a
+  // PER-TRACK key so that editing an existing track is drafted too; this is the single-key,
+  // new-track half of it. Writing a draft in load mode while never offering one there would store
+  // data nobody ever sees — worse than not storing it — so the write is gated identically. The
+  // load-mode half stays open in BACKLOG.md as Q-22b.
+  const inLoadMode = !!searchParams.get('load');
+  useEffect(() => {
+    if (inLoadMode) return;
+    saveDraft({ centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName });
+  }, [inLoadMode, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
   // Runs whenever server tracks or the geometry cache list become available.
@@ -810,7 +862,14 @@ export default function TrackEditor() {
       editorWorldH,
       setSaveAttempted,
       setSaveError,
-      setIsDirty,
+      setSaveHint,
+      setIsDirty: (dirty) => {
+        setIsDirty(dirty);
+        // ★ A SUCCESSFUL SAVE IS THE ONE THING THAT RETIRES A DRAFT. `useTrackIO` clears the dirty
+        // flag exactly when the save landed, so that is the signal — rather than a second success
+        // path here that could drift from it.
+        if (dirty === false) clearDraft();
+      },
       resetHistory,
       onBgUploaded: (url) => {
         setBackgroundImage(url);
@@ -1044,6 +1103,7 @@ export default function TrackEditor() {
         onBgUpload={handleBgUpload}
         onRemoveBg={handleRemoveBackground}
         onSave={handleSave}
+        saveHint={saveHint}
         onLoad={handleLoad}
         onDelete={handleDelete}
         onRetry={handleRetry}

@@ -9,6 +9,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react';
+import RangeRejectionNotice from './RangeRejectionNotice.jsx';
 import {
   loadAutoScaleConfig,
   saveAutoScaleConfig,
@@ -19,6 +20,8 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function AutoScaleSection() {
+  // ★ POLISH-3f: what was rejected, so a typed value that does nothing says why.
+  const [rejected, setRejected] = useState(null);
   const [config, setConfig] = useState(() => loadAutoScaleConfig());
   const [previewRacers, setPreviewRacers] = useState(6);
   const [previewWidth, setPreviewWidth] = useState(140);
@@ -115,7 +118,14 @@ function AutoScaleSection() {
               disabled={!config.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > 0 && v < config.maxScale) set('minScale', v);
+                if (v > 0 && v < config.maxScale) {
+                  set('minScale', v);
+                  setRejected(null);
+                } else {
+                  setRejected(
+                    `Minimum scale ${v} was not applied — it must be above 0 and below the maximum (${config.maxScale}).`
+                  );
+                }
               }}
             />
           </div>
@@ -162,11 +172,19 @@ function AutoScaleSection() {
               disabled={!config.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v > config.minScale) set('maxScale', v);
+                if (v > config.minScale) {
+                  set('maxScale', v);
+                  setRejected(null);
+                } else {
+                  setRejected(
+                    `Maximum scale ${v} was not applied — it must be above the minimum (${config.minScale}).`
+                  );
+                }
               }}
             />
           </div>
         </div>
+        <RangeRejectionNotice message={rejected} testId="autoscale-range-rejection" />
       </div>
 
       {/* Live preview */}

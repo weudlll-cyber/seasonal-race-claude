@@ -929,6 +929,38 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
+## Delivering to someone else — what still stands (2026-09-24)
+
+★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
+five delivery gaps and wrote every one of them ONLY to `OPEN.md`, the short readable page — the
+owning document was never told. That is backwards, and the owner's rule of 2026-09-23 (recorded in
+[SHIP-CEREMONY.md](SHIP-CEREMONY.md)) says so: work that closes or changes an open item updates the
+list in the same commit, and **this document owns the list**. The three that have since been closed
+are in PART TWO with what closed them; these are the ones still standing.
+
+- [ ] **There is no public address, and without one there is no HTTPS — and without HTTPS sign-in
+      does not merely become insecure, it STOPS WORKING.** `Secure` cookies are not sent over plain
+      HTTP at all, so the session cookie is issued and never returned. `racearena.example.com` is a
+      placeholder in documentation and in `deploy.yml.disabled`; it is nowhere as a real origin.
+      ★ **This is not a code task**: `npm run configure` (`scripts/configure.mjs:63`) already writes
+      the real value into a gitignored `docker-compose.override.yml`. What is missing is a domain, a
+      proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
+      **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
+
+- [ ] **Nothing records which migrations an instance has already applied.** There is one migration
+      script, `scripts/migrate-teams.mjs`, run by hand. `DEPLOYMENT.md`'s upgrade procedure therefore
+      has to say *"read the migrations section and decide"* at its migration step instead of naming a
+      command. **It is survivable today only because that one script is idempotent** — running it
+      twice is harmless. A future migration that is not idempotent would not be survivable, and
+      nothing would stop it being run twice. Raised by DELIVERY-BACKUP-1 (`616f6ea8`), which
+      deliberately did not build it: a ledger is a second mechanism and was not ordered there.
+
+- [ ] **The browser gate covers 7 of the 19 e2e specs, and does not run on pull requests.** The gate
+      itself shipped (PART TWO), so what remains is its SCOPE: the other 12 specs stay night work by
+      [VERIFY-RULES.md](VERIFY-RULES.md) R12a, and a browser regression is caught AT master rather
+      than before it arrives. Both are deliberate — recorded so the closure is not read as wider than
+      it is.
+
 ## Before the VPS migration
 
 - [ ] **`npm run data:export` is what carries his data to the VPS, and the same comparison tells the
@@ -1506,14 +1538,20 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
 
-- **Q-19 — TrackEditor.effects.test.jsx flaky** — **CANNOT ESTABLISH, 2026-08-23, and that is
-  about the evidence and not about effort.** The file passes **11/11 in isolation** and the full
-  client suite ran green **three times** on 2026-08-22/23. **Three green runs cannot settle an
-  intermittent failure.** *What would decide it:* repeated full-suite runs under the parallel
-  configuration, counting failures — a MEASUREMENT, so it is not a verdict item. — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** the file still exists and an intermittent failure is not decidable by a grep. Waiting on repeated full-suite runs under the parallel configuration, counting failures. *(The suite is now bounded at 4 workers, 2026-08-27, so any future count is against a different configuration than the one that produced the flake.)*
-
+- **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
+  parallel suite runs. NARROWED, NOT CLOSED.**
+  The measurement this item has been waiting on since 2026-08-23 has been taken: twenty full client
+  suite runs against an unchanged tree, counting, no retries. **20 GREEN, and the suspect file did
+  not fail once.**
+  ★★ **What that does and does not establish — the difference is why this stays open.** It BOUNDS the
+  rate: a one-in-five flake would almost certainly have shown (chance of missing it 0.8^20 = 1.2%); a
+  one-in-fifty very likely would not (0.98^20 = 67% chance of missing it). **A FREQUENT flake is
+  refuted; a RARE one is not.** The honest verdict is *not reproducible at this rate*, never *fixed*
+  — and nothing was changed to make it pass.
+  ★ The configuration has also moved since the flake was last seen (the suite is bounded at 4 workers
+  since 2026-08-27), so this counts against a different arrangement than the one that produced it.
+  **Close it only on a much larger N, or delete it when the file goes.**
+  Evidence: `reports/evolution/POLISH-2026-09-24B.md` §1.
 - **Q-8** — Watch list: TrackManager.jsx and BrandingProfiles.jsx. **THE LOC FIGURES ARE REMOVED
   RATHER THAN UPDATED.** Recorded as 535 and 330; measured 2026-08-23 as **654** and **559** — both
   now past the 400-line threshold this watch exists to enforce, having grown while the watch
@@ -1539,19 +1577,18 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `RacerEditModal.jsx` is **670** lines, still above 400.
 
-- **Q-27** — Background image weight. **THE ITEM'S PREMISE IS STALE AND THE NUMBER IS UNDERSTATED —
-  re-measured 2026-08-23 (BACKLOG-SORT-42).** It was written as *"~11.7 MB uncompressed PNGs"* and
-  named pngquant/tinypng. **There are ZERO PNG backgrounds:** `server/data/backgrounds/` holds 13
-  files, all `.jpg`. The five named tracks total **21.23 MB** as JPEGs — nearly double the recorded
-  figure — and the whole directory is **60.45 MB**. **So the fix as written cannot be executed** (there
-  is nothing to run pngquant over) **while the concern it was raised for is larger than recorded.**
-  Re-specifying it is the work; the old plan is not.
-  **verify:** `ls server/data/backgrounds/ | grep -c "\.png$"` returns 0 — **still open while the
-  directory weight is unaddressed and no re-spec exists.**
-  _(Priority: low. Audit 2026-05-04, deferred in PR-A2.9.)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — there are still **zero** `.png` backgrounds in either `server/data/backgrounds/` or `server/seeds/backgrounds/`, so the fix as written still cannot be executed. Waiting on a re-spec, which is the work.
-
+- **Q-27** — Background image weight. ★★ **MEASURED 2026-09-24, AND THE QUESTION HAD THE WRONG
+  SHAPE.** This item, and `OPEN.md` after it, asked what 51.6 MB of backgrounds costs **at first
+  paint**. The answer is **nothing**: there are **ZERO image bytes in the client bundle** (3.49 MB
+  across 52 files — 0.89 MB JS, 0.06 MB CSS, 2.54 MB fonts and sprites). Backgrounds are fetched at
+  runtime by URL (`trackLoader.js:53`) and cached per session (`bgImageCache.js`), so **no background
+  is ever on the first-paint path and all ten are never loaded together.**
+  **The real cost is per track, paid when one is chosen:** median **3.61 MB**, worst **9.69 MB**
+  (river-run); seatrack 9.53 and mountainstreet 9.32 are the only others above 5 MB.
+  ★ **Still open as a DECISION rather than a measurement**: the worst single track is nearly three
+  times the entire application bundle — roughly 8 s on a 10 Mbit link before it is drawable. Whether
+  to re-encode is a visible change and is the owner's. **No optimisation was attempted.**
+  Evidence: `reports/evolution/POLISH-2026-09-24B.md` §2.
 - **Q-20a** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no hint text exists; waiting on somebody adding it.
@@ -1575,20 +1612,6 @@ already-settled questions.
   integration tests this item asked for.
   _(Deep audit 2026-05-01, Severity: MEDIUM.)_
 
-- **Q-20b** — Server test backup cleanup not crash-resistant (TLH-1). **RENAMED FROM `Q-20`
-  2026-08-23 (BACKLOG-SORT-42): the id was used TWICE**, here and for the track-editor hint above
-  (now `Q-20a`). Two different items under one id is a lookup that silently returns the wrong one.
-  **verify:** `git grep -n "process.on" -- server/src/routes/tracks.test.js` — returns nothing, so
-  **still open**
-  `afterAll` in `tracks.test.js` cleans up backup files via `rmSync`, but only on normal
-  test run end. On Ctrl+C / crash before `afterAll`, all backup files remain in the real
-  `server/data/tracks-backups/` directory. During TLH-1 development ~41 orphan files
-  were created. Possible approach: `process.on('exit', cleanup)` + `process.on('SIGINT', cleanup)` as
-  guard, or switch tests to a temporary directory (DATA_DIR override via env var).
-  _(Discovered TLH-1 2026-05-01, Severity: LOW)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -n "process.on" -- server/src/routes/tracks.test.js` returns nothing, so there is still no crash-path cleanup.
-
 - **Q-21** — `.json.tmp` orphans on OneDrive EPERM fallback (TLH-1)
   `atomicWriteJson` writes `.tmp` first, then `renameSync`. If `renameSync` fails (OneDrive
   EPERM), fallback `writeFileSync` writes to the target file — after which `unlinkSync(tmp)` should delete the
@@ -1603,26 +1626,17 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — the only `json.tmp` hits in `server/src` are the two test assertions that a `.tmp` does NOT remain after a normal write; there is still no boot sweep and no `.json.tmp` branch in the server's own filter.
 
-- **Q-22** — TrackEditor frontend draft snapshot
-  localStorage snapshot of the drawn geometry (key: `racearena:trackEditor:draft:<serverId>` for
-  load mode, `racearena:trackEditor:draft:new` for new mode). Written on every point action or every
-  ~30s, deleted after successful server save. Protects against data loss on silent
-  server errors (F3 scenario from TLH-2 browser test) or browser crash. Effort: small (~50 LOC).
-  Small standalone PR.
-  **verify:** `git grep -l "trackEditor:draft" -- client/src` returns nothing (checked 2026-08-23),
-  so **still open**.
-  _(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "trackEditor:draft" -- client/src` still returns nothing.
-
-- **Q-24** — isDefault immutability via PUT explicitly tested
-  Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
-  **verify:** `git grep -n "isDefault" -- server/src/routes/tracks.test.js` — the hits cover DELETE
-  refusal and seed defaults; **no test PUTs `isDefault: false` at a default track**, so **still
-  open** (checked 2026-08-23).
-  _(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — `git grep -n "isDefault: false" -- server/src/routes/tracks.test.js` returns nothing, so no test PUTs `isDefault: false` at a default track.
+- **Q-22b** — TrackEditor draft snapshot, the LOAD-MODE half
+  ★ **Q-22's new-track half CLOSED 2026-09-24 (PART TWO); this is the remainder, split out rather
+  than left implied.** Editing an EXISTING track is not drafted: the draft is written and offered
+  only when the editor was opened without `?load=`. Closing this needs the per-track key Q-22
+  originally specified (`racearena:trackEditor:draft:<serverId>`) so two tracks cannot overwrite each
+  other's draft, and an offer on reopening that track.
+  **Why it was not simply finished in the same pass:** the new-track case loses ALL the work and the
+  load-mode case loses an edit to work that is already saved on the server, so they are not the same
+  severity; and a per-track key is a second storage shape, not a widening of the first.
+  **verify:** `git grep -n "inLoadMode" -- client/src/screens/TrackEditor/TrackEditor.jsx` shows the
+  gate that defines what is left.
 
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
@@ -2027,6 +2041,127 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+## Small fixes closed by POLISH-2026-09-24B
+
+- [x] **Q-22 (the new-track half) — a crash can no longer lose a hand-drawn track.** Closed
+      2026-09-24. `client/src/screens/TrackEditor/trackEditorDraft.js` keeps the drawn geometry in
+      `localStorage` and the editor OFFERS it on mount rather than restoring silently — restoring
+      over something already started would be its own way to lose work. Cleared on a successful save,
+      keyed off `useTrackIO.js:130`'s existing `setIsDirty(false)` rather than a second success path.
+      Nine tests cover the round trip, the refusal to write an empty draft over a real one, corrupt
+      JSON, an unknown version, points that are not points, the age limit, and storage that throws.
+      ★ **Scope, stated rather than implied:** this is the NEW-TRACK half. Q-22's per-track key for
+      load-mode editing is **Q-22b in PART ONE**.
+
+- [x] **Q-24 — `isDefault` immutability through PUT is now explicitly tested.** Closed 2026-09-24.
+      ★ **The behaviour was ALREADY CORRECT: this was a test gap, not a defect, and it is recorded as
+      such rather than dressed up as a fix.** `PUT /api/tracks/:id` spreads the client body and then
+      writes `isDefault: existing.isDefault` AFTER it (`tracks.js:542`), so a client-sent value is
+      discarded — but nothing asserted that, and restructuring the handler could have dropped the
+      line silently, which is exactly what the audit feared. Two tests now cover both directions: a
+      default track cannot be un-defaulted, and a non-default one cannot promote itself.
+      ★ **HONESTY PROOF, run rather than claimed:** deleting that line turns BOTH tests red; with it
+      present both pass. A test that would pass without the protection is not testing the protection.
+
+- [x] **Q-20b — the server test cleanup survives Ctrl+C.** Closed 2026-09-24. `afterAll` only runs
+      when a suite ENDS NORMALLY, so an interrupted run left every track and backup file the suite
+      created in the real data directory. A `SIGINT`/`SIGTERM` handler now removes them
+      synchronously. ★ **It does the FILE half only**, deliberately: on a signal the process is going
+      away and an awaited HTTP round-trip may never resolve, so what can be guaranteed is done and
+      what cannot is not attempted. ★ **And it re-raises the signal** rather than swallowing it — a
+      test harness that makes Ctrl+C stop working is worse than one that leaves files behind.
+
+- [x] **Q-20c — `.tmp` orphans from an interrupted atomic write are swept at boot.** Closed
+      2026-09-24, `server/utils/sweepOrphanTmp.js`. `atomicWriteJson` already cleans up after the one
+      failure it anticipates (a transient OneDrive `EPERM` on rename); what it cannot clean up is the
+      process dying between the write and the rename. ★ **They are inert but not harmless**: they
+      accumulate, and `scripts/backup.mjs` copies the data root whole, so an orphan from a crash in
+      March is still being archived in September. ★ **Boot is the only safe moment** — nothing is
+      mid-write — and it runs before `createApp()` so it cannot race a live write and delete a tmp
+      that was about to be renamed. Removes only `*.tmp`, never a directory, and is non-fatal in
+      every direction including the OneDrive `UNKNOWN(-4094)` this project has actually hit. 6 tests.
+
+- [x] **Q-25 — a track that saves while its background does not now SAYS which half failed.** Closed
+      2026-09-24. The save and the image upload are two server calls that fail for different reasons,
+      and one `catch` covered both, so a background failure reported the same *"Server unreachable"*
+      as a track that never saved — leaving the person unable to tell whether their geometry was
+      safe. It is: the track is already on the server by then. The upload now has its own `try`, and
+      the message says the track was SAVED, names why the image did not land, and tells them Save
+      retries just the image. ★ It deliberately does NOT show "Saved ✓" or mark the editor clean,
+      because something they asked for did not happen.
+
+- [x] **Q-26 — an out-of-range min/max in the Dev Screen is refused OUT LOUD.** Closed 2026-09-24.
+      `if (v > config.minScale) set('maxScale', v);` meant a typed value outside the range did
+      nothing at all — indistinguishable, on screen, from one that was accepted.
+      `RangeRejectionNotice.jsx` now says what was rejected and why, and clears when a valid value
+      lands. ★ **Reused rather than invented:** the amber treatment is the Dev Screen's existing
+      warning style (`DynamicsTuningSection.jsx:69-77`). 3 tests, and the one that matters asserts
+      the rejection is VISIBLE — the value was always rejected; only the silence was the defect.
+
+- [x] **Q-28 — a helper that clears the dead `.git/worktrees` registrations.** Closed 2026-09-24,
+      `scripts/worktree-stubs.mjs`. ★★ **It only ever touches `.git/worktrees/<name>`, and that is the
+      whole safety argument**: a scratch worktree's `node_modules` is a JUNCTION to the real one, and
+      deleting a CHECKOUT follows it and hollows the real one out — this repository has been bitten
+      by exactly that. Nothing here removes anything outside `.git/`. It exists because
+      `git worktree prune` fails with EPERM under OneDrive, and because `git worktree list` HIDES a
+      registration whose checkout is gone, which is why 18 of them had accumulated unnoticed. Listing
+      is the default; `--remove` is opt-in. **All 18 removed, `git worktree list` clean.** 6 tests,
+      one of which asserts the checkout survives.
+
+- [x] **Q-29 — saving a track with no background now says so.** Closed 2026-09-24. A NEW track
+      already refuses without one; an EXISTING track saved without one was allowed and silent, and
+      then raced on a blank backdrop with nobody told why. ★ It is rendered as a HINT and styled
+      apart from the error channel, because telling someone their work failed when it did not is its
+      own defect.
+
+## Delivering to someone else — what CLOSED (2026-09-23/24)
+
+**Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART
+ONE**, under the same heading, so the subject is in exactly one of the two parts as this document's
+contract requires.
+
+- [x] **A BACKUP PROCEDURE, AND A RESTORE THAT HAS BEEN PERFORMED** — closed by DELIVERY-BACKUP-1,
+      merge **`616f6ea8`**. `scripts/backup.mjs` archives the whole resolved data root as one tar
+      **while the server runs**, taking the two SQLite databases through the driver's own online
+      `.backup()` rather than a file copy — a copy of a live database can capture a torn page set and
+      the result looks perfectly normal until the day it is restored. **The acceptance criterion was
+      performed, not argued:** a scratch instance was built through the API, backed up live, its data
+      root DESTROYED, restored, and the server restarted against it — the account signed in and the
+      stored race was read back with its seed intact. Evidence:
+      [DELIVERY-BACKUP-1.md](../reports/evolution/DELIVERY-BACKUP-1.md).
+      ★ It also found a real bug while proving itself: backing up under write load crashed on
+      `races.sqlite-journal` vanishing between the directory listing and the read.
+
+- [x] **AN UPGRADE PATH, INCLUDING THE WAY BACK** — closed by the same merge **`616f6ea8`**.
+      [DEPLOYMENT.md](DEPLOYMENT.md) gained a *Backing up, and upgrading* section written for someone
+      who has never seen the project: where the data is, how to back it up and why copying the folder
+      is not equivalent, and an eight-step upgrade ending with **how to go back**. An upgrade
+      procedure without a way back is a one-way door.
+
+- [x] **`DEPLOYMENT.md` WAS NOT EXECUTABLE AS WRITTEN — ALL FOUR ASSUMPTIONS ARE NOW CLOSED**, and
+      they were checked one at a time rather than as a group. Fixed by NIGHT-2026-09-24, merge
+      **`842371e6`**: **(a)** it never said to install dependencies — `npm ci --prefix` now appears
+      four times; **(b)** it needed `openssl` without saying so — named at `:82` as absent from a
+      default Windows box; **(c)** it named no Node version — now *"Node 20 or newer"*, taken from
+      the declared `engines`; **(d)** ★ a real defect: `RA_BOOTSTRAP_TOKEN` was set as a per-command
+      prefix to `node` and then used in a fresh shell where it is empty, so the printed setup `curl`
+      sent an empty token — it is `export`ed now.
+
+- [x] **NO BROWSER TEST RAN AUTOMATICALLY, ANYWHERE** — closed by DELIVERY-BROWSER-GATE-1, merge
+      **`8efc426f`**. `playwright` appeared in `.github/` nowhere, so every automatic statement this
+      project made about itself was made without a browser.
+      `.github/workflows/browser-gate.yml` builds the production client and drives **82 tests**
+      through a real Chromium on every push to master, daily, and on demand. **It is its own
+      workflow** because the absence was a decision (`audit-schedule.yml:18`), and the scheduled path
+      files an issue rather than going red. **Proven stable before it was allowed to block**: five
+      runs on an unchanged tree, 5 of 5 green, no retries. ★ **Its SCOPE remains open in PART ONE.**
+
+- [x] **THE LINUX HALF OF THE CLEAN-MACHINE QUESTION** — closed by the same merge **`8efc426f`**, and
+      closed permanently rather than once. The gate compiles `bcrypt` and `better-sqlite3` on
+      `ubuntu-latest` every run and proves they **LOAD**, not merely install — a prebuilt binary that
+      does not match the runtime still installs. Observed: `OK bcrypt loaded on linux/x64`,
+      `OK better-sqlite3 loaded on linux/x64`. **ARM is still untested** and that is not claimed.
 
 ## DECISIONS — the owner's, recorded so they stop being re-proposed
 

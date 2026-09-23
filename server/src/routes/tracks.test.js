@@ -71,6 +71,46 @@ const VALID_TRACK = {
   effects: [],
 };
 
+// ★★ Q-20b (POLISH-2026-09-24B): THE CLEANUP SURVIVES Ctrl+C.
+// `afterAll` runs when the suite ENDS NORMALLY. Interrupt the run — Ctrl+C, an IDE stop button, a
+// killed terminal — and it never runs at all, so every track and every backup file this suite
+// created is left behind IN THE REAL DATA DIRECTORY. That is how a developer's `server/data` fills
+// up with test tracks, and each stray backup also slows the next run's `findBackupFiles` scan.
+//
+// ★ THE SIGNAL HANDLER DOES THE FILE HALF ONLY, AND THAT IS DELIBERATE. On a signal the process is
+// going away: an `await`ed HTTP round-trip through supertest may never resolve, so the API deletes
+// are not attempted. Removing the files synchronously is the part that can be guaranteed, and the
+// track JSON lives in the same directory, so it is removed the same way.
+//
+// ★ IT DOES NOT SWALLOW THE SIGNAL. After cleaning up it re-raises the default behaviour by removing
+// its own listener and re-sending the signal, so Ctrl+C still terminates the run and still reports
+// the conventional exit status. A test harness that makes Ctrl+C stop working is worse than one that
+// leaves files behind.
+function cleanupCreatedFilesSync() {
+  for (const id of createdIds) {
+    try {
+      rmSync(join(DATA_DIR, `${id}.json`), { force: true });
+    } catch {
+      /* the directory may already be gone; a cleanup must not throw on its way out */
+    }
+    for (const file of findBackupFiles(id)) {
+      try {
+        rmSync(file, { force: true });
+      } catch {
+        /* same */
+      }
+    }
+  }
+}
+
+const SIGNALS = ['SIGINT', 'SIGTERM'];
+const onSignal = (sig) => {
+  cleanupCreatedFilesSync();
+  for (const s of SIGNALS) process.removeListener(s, onSignal);
+  process.kill(process.pid, sig); // re-raise: Ctrl+C must still stop the run
+};
+for (const s of SIGNALS) process.on(s, onSignal);
+
 afterAll(async () => {
   for (const id of createdIds) {
     // Demote first in case the test promoted the track to isDefault:true.
@@ -82,6 +122,9 @@ afterAll(async () => {
       rmSync(file, { force: true });
     }
   }
+  // The handlers are removed on the normal path too, so a suite that finishes does not leave
+  // listeners attached to a process vitest may reuse for another file.
+  for (const s of SIGNALS) process.removeListener(s, onSignal);
 });
 
 // ── Read endpoints (pre-existing) ─────────────────────────────────────────────
@@ -1477,6 +1520,44 @@ describe('GET /api/tracks/:id/background — C4: X-Content-Type-Options', () => 
 // (route returns 404); GREEN when attached (200 + isDefault:true).
 // HONESTY PROOF (b): operator-403 test is RED when guards.js entry is absent
 // (operator gets 200); GREEN when the ROUTE_POLICY entry is present (403).
+
+// ★★ Q-24 (POLISH-2026-09-24B): A DEFAULT TRACK CANNOT BE UN-DEFAULTED THROUGH PUT.
+// The audit found the protection present but UNTESTED: `PUT /api/tracks/:id` spreads the client body
+// and then writes `isDefault: existing.isDefault` AFTER it (`tracks.js:542`), so a client-sent value
+// is discarded. Nothing asserted that, so restructuring the handler could drop the line silently.
+//
+// ★ THE BEHAVIOUR WAS ALREADY CORRECT — this is a test gap and not a defect, and it is recorded as
+// such rather than dressed up as a fix. HONESTY PROOF: deleting `isDefault: existing.isDefault` from
+// the handler turns both tests below RED (verified 2026-09-24); with the line present they pass.
+describe('Q-24 — isDefault is immutable through PUT', () => {
+  it('PUT with isDefault:false on a DEFAULT track leaves it default', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    await api.post(`/api/tracks/${id}/set-default`);
+
+    const put = await api.put(`/api/tracks/${id}`).send({ ...VALID_TRACK, isDefault: false });
+    expect(put.status).toBe(200);
+    expect(put.body.isDefault).toBe(true);
+
+    // and it is not merely the response — the stored record is unchanged
+    const get = await api.get(`/api/tracks/${id}`);
+    expect(get.body.isDefault).toBe(true);
+  });
+
+  it('PUT with isDefault:true on a NON-default track does not promote it', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const put = await api.put(`/api/tracks/${id}`).send({ ...VALID_TRACK, isDefault: true });
+    expect(put.status).toBe(200);
+    expect(put.body.isDefault).toBe(false);
+
+    const get = await api.get(`/api/tracks/${id}`);
+    expect(get.body.isDefault).toBe(false);
+  });
+});
 
 describe('Admin: POST /:id/set-default (D7)', () => {
   it('admin set-default → 200 + isDefault:true, persists on GET', async () => {

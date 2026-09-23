@@ -85,18 +85,18 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 
 | what it is | size | verified how |
 | --- | --- | --- |
-| Warn instead of silently ignoring an invalid min/max in two dev-screen sections | small | the warning exists elsewhere to copy |
-| Give the track editor a hint when a track is saved with no background | small | — |
-| Make the server's test cleanup survive a Ctrl+C | small | one signal handler |
-| Sweep `.json.tmp` orphans that survive a OneDrive write failure | small | — |
-| Keep a draft of the drawn track geometry so a browser crash cannot lose it | small | ~50 lines |
-| Protect "a default track cannot be un-defaulted" with a test | small | `server/src/routes/tracks.test.js` has set-default tests and **no un-default test** |
-| Say *which* half failed when a track saves but its background does not | small | an error path split in two |
+| ~~Warn instead of silently ignoring an invalid min/max~~ — ★ **DONE 2026-09-24 (Q-26)** | done | `RangeRejectionNotice.jsx`, reusing the Dev Screen's existing amber warning style; 3 tests |
+| ~~Give the track editor a hint when a track is saved with no background~~ — ★ **DONE 2026-09-24 (Q-29)** | done | a HINT, styled apart from the error channel |
+| ~~Make the server's test cleanup survive a Ctrl+C~~ — ★ **DONE 2026-09-24 (Q-20b)** | done | a SIGINT/SIGTERM handler that does the file half and **re-raises the signal** |
+| ~~Sweep `.json.tmp` orphans that survive a OneDrive write failure~~ — ★ **DONE 2026-09-24 (Q-20c)** | done | `server/utils/sweepOrphanTmp.js`, swept at boot before anything is served; 6 tests |
+| ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (new-track half; the load-mode half is **Q-22b** in BACKLOG PART ONE) | done | `trackEditorDraft.js`, 9 tests |
+| ~~Protect "a default track cannot be un-defaulted" with a test~~ — ★ **DONE 2026-09-24 (Q-24)** | done | 2 tests, both directions; **the behaviour was already correct — a test gap, not a defect**. Sabotaging `tracks.js:542` turns both red. |
+| ~~Say *which* half failed when a track saves but its background does not~~ — ★ **DONE 2026-09-24 (Q-25)** | done | the upload has its own `try`; the message says the track WAS saved and that Save retries just the image |
 | Share one slider component across three dev-screen sections | small | — |
 | Add tooltips to the fields that have none | small | **corrected below** |
 | Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
 | Pause and resume a running race | a block | — |
-| A helper that cleans up the `.git/worktrees` stubs | small | — |
+| ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
 | ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
 
 ★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
@@ -156,8 +156,8 @@ it.
 | --- | --- |
 | Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
 | "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
-| Is the flaky editor test really flaky? | a block — repeated full-suite runs, counting |
-| What the 51.6 MB of backgrounds actually costs at first paint | small — ~half an hour |
+| Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
+| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **MEASURED: it costs NOTHING at first paint** | **zero image bytes in the bundle** (3.49 MB total). The cost is per track: median 3.61 MB, **worst 9.69 MB**. Still open as a **decision** (re-encode?), not a measurement |
 | Why the remaining worst races are worse, now that the obvious cause is refuted | a night |
 
 ★ The last row is new tonight: CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races
@@ -190,9 +190,9 @@ untested**, and nothing here changes that.
 
 | gap | what is missing | how it was established | size |
 | --- | --- | --- | --- |
-| **No BACKUP procedure** | Nothing in `docs/DEPLOYMENT.md` mentions backup or restore — zero hits. A minimal one would have to cover `RA_DATA_DIR` whole (`users.json`, `sessions.sqlite`, seeded tracks, backgrounds, brands, player groups), say that deleting it destroys every account, and state whether the server must be stopped first. | `git grep -niE "backup\|restore" -- docs/DEPLOYMENT.md` → nothing | **a block** |
-| **No UPGRADE path** | No document tells an installed instance how to move to a new version. The migration headings that exist are all in-app or historical (`SETUP.md` §10, `TRACK_EDITOR.md`, `LESSONS.md`), none about upgrading a deployment. A minimal one would have to say: pull, rebuild the client, rebuild the image, what happens to `RA_DATA_DIR`, and how to get back. | heading sweep across `docs/` | **a block** |
-| **`DEPLOYMENT.md` is not executable as written** | Four assumptions it never states. **(a)** It never says to install dependencies — the minimal start opens with `cd client && npm run build` and no `npm ci` anywhere in the file. **(b)** It needs `openssl`, absent on a default Windows box. **(c)** It never names a Node version; `engines` says `>=20`. **(d)** ★ **A real defect: `RA_BOOTSTRAP_TOKEN` is set as a per-command prefix to `node`, then the very next block uses `$RA_BOOTSTRAP_TOKEN` in a fresh shell, where it is empty.** The setup `curl` as printed sends an empty token. | read start-to-finish as a newcomer; `wc -l` = 139 | **small** for (a)–(c), **small** for (d) |
+| ~~**No BACKUP procedure**~~ — ★★ **CLOSED** by DELIVERY-BACKUP-1, merge `616f6ea8` | `scripts/backup.mjs` archives the whole data root while the server runs, databases through SQLite's own online backup. **Proven by destroying a data root and bringing it back** — the account signed in and the stored race was readable. BACKLOG PART TWO holds the evidence. | `reports/evolution/DELIVERY-BACKUP-1.md` | **done** |
+| ~~**No UPGRADE path**~~ — ★★ **CLOSED** by the same merge `616f6ea8` | `DEPLOYMENT.md` gained *Backing up, and upgrading*: eight steps in the order they are done, **ending with how to go back**. An upgrade procedure without a way back is a one-way door. | `docs/DEPLOYMENT.md` | **done** |
+| ~~**`DEPLOYMENT.md` is not executable as written**~~ — ★★ **ALL FOUR CLOSED**, checked one at a time, by merge `842371e6` | **(a)** it never said to install dependencies — `npm ci --prefix` now appears four times; **(b)** `openssl` is named at `:82` as absent from a default Windows box; **(c)** *"Node 20 or newer"*, taken from the declared `engines`; **(d)** the `RA_BOOTSTRAP_TOKEN` prefix defect — it is `export`ed now, so the printed setup `curl` no longer sends an empty token. | `docs/DEPLOYMENT.md` | **done** |
 | ~~**No browser test runs in CI, dev or production**~~ — ★★ **CLOSED 2026-09-23 (DELIVERY-BROWSER-GATE-1), and NARROWED rather than deleted** | A browser now runs automatically: `.github/workflows/browser-gate.yml` builds the client and runs the PRODUCTION arm's curated fast set on every push to master, daily, and on demand — proven stable first (5 runs on an unchanged tree, 5 of 5 green, 82 tests, no retries) and therefore allowed to BLOCK a pushed commit. **WHAT REMAINS, stated so the closure is not read as wider than it is: the gate covers 7 specs of the full suite, not all of it**; the rest stay night work by R12a. It does not run on `pull_request` or on feature branches, so a browser regression is caught at master rather than before it. | run `35903843784`, attempts 1–5 | **narrowed to: the gate is a subset** |
 | **No public address** | `racearena.example.com` is a placeholder in documentation and in `deploy.yml.disabled`; it is nowhere as a real origin. ★ **The previous page listed this as a half-day code task ("one value"). It is not: there is nothing in the repository to replace.** `npm run configure` already writes the real value into a gitignored `docker-compose.override.yml`. What is missing is a domain. | `git grep racearena.example.com`; `scripts/configure.mjs:63` | **his word + a purchase** |
 | **HTTPS is not arranged** | Over plain HTTP, `Secure` cookies are never returned, so sign-in does not merely become insecure — it stops working. Needs a domain, a proxy choice (Caddy or nginx+certbot) and a decision on where `RA_DATA_DIR` lives. | `docs/DEPLOY-NOTES.md:173` | **his word, then a block** |
