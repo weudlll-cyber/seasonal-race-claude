@@ -426,6 +426,23 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DELIVERY-BROWSER-GATE-1.md](DELIVERY-BROWSER-GATE-1.md) — **★★ A BROWSER IN THE AUTOMATIC
+  JUDGEMENT AT LAST, AND IT WAS PROVEN STABLE BEFORE IT WAS ALLOWED TO BLOCK.** Until this block
+  `playwright` appeared in `.github/` NOWHERE, so every automatic statement this project made about
+  itself was made without a browser. `.github/workflows/browser-gate.yml` builds the production
+  client and drives **82 tests** through it on every push to master, daily, and on demand.
+  ★ **It is its own workflow because the absence was a DECISION**: `audit-schedule.yml:18` says a
+  scheduled job must not turn master red for something nobody triaged, and both of that file's
+  separations are kept — CI still means "the checks for a commit somebody pushed", and the scheduled
+  path files an issue instead of going red while only a PUSH may fail the run.
+  ★★ **Five runs on an unchanged tree, 5 of 5 green, no retries**, so by the pre-stated decision rule
+  it BLOCKS; a failure would have shipped it report-only with the spec named, never a narrower set.
+  About **4 minutes** per run, with the per-push path untouched. ★ **It also closes the LINUX half of
+  the clean-machine question permanently** — `bcrypt` and `better-sqlite3` compile AND are proven to
+  LOAD on `linux/x64` every run; ARM stays untested. ★ VERIFY-RULES R12a is QUALIFIED, not deleted
+  (its guard still passes 53/53), and `OPEN.md`'s blocker is NARROWED rather than struck: **the gate
+  covers 7 of 19 specs and does not run on pull requests.**
+
 - [DELIVERY-BACKUP-1.md](DELIVERY-BACKUP-1.md) — **★★ A BACKUP THAT SURVIVES A RESTORE, PROVEN BY
   DESTROYING A DATA ROOT AND BRINGING IT BACK.** `scripts/backup.mjs` archives the whole resolved data
   root **while the server runs**, taking the two SQLite databases through the driver's own online
