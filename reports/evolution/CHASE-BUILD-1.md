@@ -4,8 +4,18 @@
 > from behind the leader, and the owner's breakaway falls from 16.0% of races to 7.3% while overtakes
 > in the last 30% rise 5.5% on ten tracks out of ten.**
 
-**Branch `feat/chase-after-outcome`, off master `32afd356`. 2026-09-23. ★★ NOTHING MINTED, NOTHING
-MERGED — the owner looks at this with his own eyes first.**
+**Branch `feat/chase-after-outcome`, off master `32afd356`. 2026-09-23.**
+
+★★★ **THIS SHIPPED. 2026-09-23, CHASE-SHIP-1, after the owner's own eye-test** — the three keys
+below are the shipped defaults, the four fingerprints were re-minted, the golden races re-recorded
+and both winner pins re-measured. The header used to read *"NOTHING MINTED, NOTHING MERGED — the
+owner looks at this with his own eyes first"*, which was true of the block and is kept here so the
+sequence is legible: **measure, then his eye, then ship.**
+
+★★ **READ §3a BEFORE QUOTING ANY NUMBER IN THIS REPORT.** Everything below §3 is counted per TRACK.
+The race-level recount added at the ship shows the headline 48 → 22 is a NET of **36 repairs against
+10 races that GAINED a breakaway**, and that the per-track counts cannot see a breakaway doubling in
+size. The trade is still strongly favourable; it is a trade rather than a filter.
 
 ## THE RECOMMENDATION — one setting of three keys
 
@@ -109,6 +119,123 @@ Per track, breakaways (A0 → G5): city-circuit 6→4, dirt-oval 6→3, garden-p
 luger-hill 6→1, mountainstreet 5→0, river-run 0→0, searound 6→5, seatrack 3→1, space-sprint 5→2.
 **No track gets worse.**
 
+---
+
+## 3a · ★★★ THE SAME DATA AT RACE LEVEL — AND "NO TRACK GETS WORSE" IS NOT "NO RACE GETS WORSE"
+
+**ADDED AT CHASE-SHIP-1, 2026-09-23, after the owner asked for the recount.** Everything above is
+counted per TRACK and per ARM. The 300 races are PAIRED — arm A0 and arm G5 run the same
+(track, seed) identity — so each race can be asked individually whether the chase repaired it,
+created a breakaway in it, or left it alone. **The pairing changes what the headline means.**
+
+| | quiet (stage 2) | wild (stage 3) |
+|---|---|---|
+| **REPAIRED** — a breakaway in A0, none in G5 | **36** | **27** |
+| ★★ **CREATED** — none in A0, a breakaway in G5 | **10** | **3** |
+| **STAYED** — a breakaway in both | 12 | 2 |
+| neither arm | 242 | 268 |
+| net (the headline) | 48 → 22 | 29 → 5 |
+
+★★★ **TEN RACES AT QUIET GAINED A BREAKAWAY THEY DID NOT HAVE.** The headline 48 → 22 is a NET of
+36 repairs against 10 new ones, and nothing above this section says so. At wild it is 27 against 3.
+**The mechanism is not a filter that only removes breakaways; it is a re-roll that removes far more
+than it adds.** That is a good trade and it is still a trade.
+
+★★ **THE CLEANEST ILLUSTRATION IS SEAROUND AT QUIET.** Its track cell above reads **6 → 5**, which
+the line under that table counts as "not worse". At race level the same cell is **5 repaired and 4
+created**: four races on searound gained a breakaway, and the track still improved by one. A reader
+who takes "no track gets worse" to mean "no race gets worse" reads searound exactly backwards.
+
+**The ten created races at quiet**, with A0 → G5 maximum pack gap in px: searound|5 (109→244),
+ice-track|17 (97→182), city-circuit|18 (140→215), searound|24 (105→172), seatrack|27 (108→174),
+searound|28 (139→191), dirt-oval|4 (136→180), ice-track|10 (122→163), space-sprint|21 (148→167),
+searound|10 (155→157). **The three at wild:** garden-path|13 (119→202), dirt-oval|9 (139→208),
+dirt-oval|3 (149→166). ★ Two of the quiet ten (space-sprint|21 at 167 and searound|10 at 157) clear
+the 157.05 px threshold by under 11 px and would fall back out of the count on a slightly different
+bar; the other eight would not.
+
+### The max-gap distribution, per race
+
+Not a count of breakaways but the size of the biggest pack gap each race reaches, G5 minus A0:
+
+| | quiet | wild |
+|---|---|---|
+| races where the gap GREW | **101 / 300 (33.7%)** | **53 / 300 (17.7%)** |
+| median change | **−13.4 px** | **−34.7 px** |
+| p10 / p25 | −60.5 / −37.2 | −78.0 / −58.0 |
+| p75 / p90 | +8.5 / +34.1 | −9.0 / +17.7 |
+| best single race | −172.0 px | −189.8 px |
+| ★ **worst single race** | **+180.4 px** | **+82.9 px** |
+
+★★ **THE WORST SINGLE RACE AT QUIET IS `city-circuit` SEED 30: 168.9 → 349.3 px — THE GAP MORE
+THAN DOUBLED.** It was already a breakaway in A0 and it is still one in G5, so it appears nowhere in
+the 48 → 22 headline and nowhere in the per-track table: those counts are booleans and cannot see
+it. **A race that was bad got twice as bad, and every aggregate in this report is blind to it.** At
+wild the worst is `garden-path` seed 13, +82.9 px, and that one DID cross (119 → 202), so it is one
+of the three created.
+
+★ **The distribution is still strongly favourable** — two thirds of quiet races and five sixths of
+wild races have a smaller maximum gap, and the median race improves by 13 px at quiet and 35 at
+wild. The tail is the finding, not the centre.
+
+### Lead changes, per track
+
+In-window lead changes per race, mean over 30 seeds. The report above gives only the pooled +3.4%
+(quiet) and +11.4% (wild).
+
+| track | quiet A0 | quiet G5 | Δ | wild A0 | wild G5 | Δ |
+|---|---|---|---|---|---|---|
+| city-circuit | 2.40 | 2.97 | **+0.57** | 2.93 | 2.73 | **−0.20** |
+| dirt-oval | 2.77 | 2.97 | +0.20 | 2.87 | 3.20 | +0.33 |
+| garden-path | 2.33 | 2.53 | +0.20 | 2.00 | 2.60 | +0.60 |
+| ice-track | 2.53 | 3.03 | +0.50 | 2.23 | 3.33 | **+1.10** |
+| luger-hill | 2.23 | 2.70 | +0.47 | 2.07 | 2.10 | +0.03 |
+| mountainstreet | 3.33 | 2.60 | **−0.73** | 2.60 | 2.90 | +0.30 |
+| river-run | 1.93 | 2.23 | +0.30 | 2.43 | 2.50 | +0.07 |
+| searound | 2.50 | 2.37 | −0.13 | 1.83 | 1.97 | +0.13 |
+| seatrack | 2.80 | 2.33 | −0.47 | 2.57 | 2.67 | +0.10 |
+| space-sprint | 2.50 | 2.47 | −0.03 | 2.53 | 2.80 | +0.27 |
+
+**Quiet loses lead changes on 4 of 10 tracks**, which is why the sign test on this metric fails at
+quiet (6/10, p = 0.754) while the overtake sign test passes 10/10. ★ **The worst cell is
+`mountainstreet` at quiet, 3.33 → 2.60 — a track that loses nearly three quarters of a lead change
+per race while its breakaway count goes 5 → 0.** That is the trade this arm makes, visible in one
+cell: the breakaways on that track were themselves producing lead changes as the field reeled them
+back in. ★ **At wild only city-circuit loses any (−0.20)**, and ice-track gains a full +1.10.
+
+### Band arrival, per track
+
+The fairness gate. Pooled figures above are 89.23 → 86.86 (quiet) and 90.17 → 86.01 (wild).
+
+| track | quiet A0 | quiet G5 | Δ pp | wild A0 | wild G5 | Δ pp |
+|---|---|---|---|---|---|---|
+| city-circuit | 88.6 | 87.2 | −1.4 | 91.2 | 83.7 | **−7.5** |
+| dirt-oval | 87.1 | 88.1 | **+1.1** | 88.7 | 85.5 | −3.2 |
+| garden-path | 89.4 | 84.5 | −4.9 | 89.4 | 86.0 | −3.5 |
+| ice-track | 90.5 | 85.6 | **−5.0** | 88.6 | 85.3 | −3.2 |
+| luger-hill | 91.2 | 89.2 | −2.0 | 92.7 | 89.8 | −2.9 |
+| mountainstreet | 89.7 | 86.5 | −3.2 | 90.8 | 85.8 | −5.0 |
+| river-run | 87.9 | 85.6 | −2.3 | 88.7 | 85.6 | −3.1 |
+| searound | 88.1 | 85.6 | −2.5 | 90.2 | 82.8 | **−7.4** |
+| seatrack | 89.6 | 87.2 | −2.4 | 88.7 | 87.5 | −1.2 |
+| space-sprint | 90.3 | 89.2 | −1.1 | 92.8 | 88.2 | −4.7 |
+
+★ **The worst cell is `city-circuit` at wild, 91.2 → 83.7, −7.5 pp**, with `searound` at wild a
+close second (−7.4). ★★ **Every one of the twenty cells stays far above the 70% gate** — the
+lowest single figure anywhere in this table is 82.8% — so the gate is not threatened on any track
+in either stage, and `dirt-oval` at quiet is the one cell that IMPROVES. ★ The cost is consistent
+rather than concentrated: 19 of 20 cells are negative, which is the pattern of a real force being
+applied rather than noise being sampled.
+
+★ **How to reproduce every number in this section.** The per-race rows are already committed in
+`reports/evolution/chase-build-data/sweep-s2-*.json` and `sweep-s3-*.json`; pair A0 against G5 on
+`(track, seed)` and read `packBreakaway`, `packMaxPx`, `winLeadChanges`, `bandArrived` and
+`bandCounted`. ★★ **`packBreakaway` is the owner's definition and the one every headline in this
+report uses** — `chase-sweep.mjs:452` marks it as such. The file also carries `w70Breakaway` and
+`allBreakaway` at the same 157.05 px threshold over different subsets of the field; those give
+8 → 3 and 68 → 58 at quiet and answer a different question. Reading the wrong one makes this
+report look wrong.
+
 ### ★ Why G4 has the better headline and is NOT recommended
 
 G4's **solo share rises** — 24% against A0's 17% — and "solo share up" is the owner's own kill rule.
@@ -147,6 +274,12 @@ against +5.5%). Lead changes become consistent here too (9/10 tracks) where at q
 carries anywhere. And **dirt-oval is the one track that gets worse** (1 → 2 breakaways), the only
 regression in twenty track-arm cells across both stages.
 
+★★ **CORRECTED AT CHASE-SHIP-1, 2026-09-23 — "the only regression in twenty track-arm cells" is
+true of the CELLS and false of the RACES.** Counted per race, wild creates a breakaway in **three**
+races and quiet in **ten**, spread over five tracks that the cell counts record as unchanged or
+improved. The sentence above is left standing because it is accurate about what it measures; §3a is
+the recount, and it is the one to read before quoting either number.
+
 ★ **THE SOLO SHARE AT WILD IS NOMINALLY UP AND THE NUMBER IS NOT USABLE.** 1 of 5 against 4 of 29 —
 one race. The absolute count falls 4 → 1. The recommendation rests on the QUIET stage, where the
 solo rule was applied as written and G5 passed it outright (14% against 17%); wild is confirmation
@@ -184,6 +317,32 @@ block is a measurement, the owner had not yet decided, and flipping a shipped de
 ceremony (re-recorded winner pins and re-minted fingerprints), not a convenience for an eye-test.
 The owner turns the arm on from the **Dev Screen** — three controls were added for it.
 
+### ★★★ THE FINAL RESOLUTION, 2026-09-23 (CHASE-SHIP-1)
+
+**The paragraph above is now history: the owner decided, and the three keys ARE the shipped default
+as of this branch's ship commit.** What the parity thread ended up costing and what it ended up
+proving, in one place, so nobody re-opens it:
+
+| claim | status |
+|---|---|
+| "the parity runner does not carry the governor" | **REFUTED by measurement.** Disabling the governor in the sim arm alone moves every golden hash. |
+| "three of four cases diverge on finishing order" | **WRONG TWICE.** They do not diverge, and the failing assertion is about the WINNER; the finishing-order assertion passes. |
+| "the arms diverge with the chase on" | **FALSE.** `realArm().hash === simArm().hash` byte-identically on all three golden seeds, with the chase on. |
+| what actually failed | **A PINNED SHIPPED-OUTCOME WINNER** — `REAL_ARM_WINNERS` (`goldenCases.js:46`) and a second pin in `replay.test.js`. |
+
+**Both pins were re-measured and re-pinned at the ship**, the same procedure used at COMBO15,
+RACER-FLAPPING-2 and the 2026-09-14 merge: 1 → 27, 7 → 38, 42 → 7. **There was never a parity
+hole and there is nothing left to fix.** ★ The cost of not checking this before asserting it was a
+commissioned block (PARITY-GOVERNOR-1, void on its premise) and a day. Full diagnosis:
+`reports/evolution/CHASE-PARITY-DIAG-1.md`.
+
+★ **Also settled at the ship, against a misreading that stopped this block once:** the `world-off`
+fingerprint arm is **not** a race-plan-off arm. `off` is a LABEL naming the temp output directory and
+selecting the role (`fingerprint-default.mjs:348`); the script REFUSES a flag in that position
+(`:156-164`). The arm's actual difference is `--gapRerollEnabled=false`. The race plan is on in that
+arm, so the governor runs and so does the chase — which is why that role moved at this ship exactly
+as `world` did, and why its moving was correct rather than a leak past the chase's own gate.
+
 ## 6 · WHAT THIS DOES NOT ESTABLISH
 
 - ★ **The clustering caveat, and it cuts against the winner.** The fixture replicates 30 seeds over
@@ -191,6 +350,14 @@ The owner turns the arm on from the **Dev Screen** — three controls were added
   result that makes it more null; **for G5, which looks like a winner, it means the p is
   optimistic.** The honest statistic for the action half is the sign test across the ten tracks, and
   that is **10 of 10, p = 0.002**.
+- ★★★ **"NO TRACK GETS WORSE" IS NOT "NO RACE GETS WORSE", AND EVERY AGGREGATE HERE IS BLIND TO
+  THE TAIL.** Added at CHASE-SHIP-1 after the race-level recount (§3a). The per-track counts are
+  booleans summed over 30 seeds, so they cannot see a race that gained a breakaway on a track that
+  improved overall (ten such races at quiet, three at wild) and they cannot see a breakaway that was
+  already there getting **twice as large** (`city-circuit` seed 30, 168.9 → 349.3 px). ★ Both facts
+  point the same way — the trade is still strongly favourable, 36 repairs against 10 creations at
+  quiet and 27 against 3 at wild — but **anyone quoting "no track gets worse" as a safety property
+  is quoting it beyond what it measures.**
 - ★ **Band arrival is a GATE, not the goal.** Both arms sit ~2.4–2.7 pp below A0. They clear the 70%
   gate comfortably, but the cost is consistent across every arm in the grid and it is reported as a
   cost, not as a pass. A boost applied after the dice is exactly the force that gate exists to catch.
