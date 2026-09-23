@@ -157,11 +157,30 @@ it.
 | Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
 | "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
 | Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
-| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **MEASURED: it costs NOTHING at first paint** | **zero image bytes in the bundle** (3.49 MB total). The cost is per track: median 3.61 MB, **worst 9.69 MB**. Still open as a **decision** (re-encode?), not a measurement |
-| Why the remaining worst races are worse, now that the obvious cause is refuted | a night |
+| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **CLOSED: measured, then DECIDED by the owner 2026-09-23 — the backgrounds KEEP their quality** | zero image bytes in the bundle; per-track median 3.61 MB, worst 9.69 MB (`river-run`), which **stays**. No re-encoding. |
+| ★★ **NARROWED 2026-09-24, NOT closed — and the conditional in the brief FIRED.** The group-of-three part is superseded by the owner's ruling of 2026-09-23; what remains is **4 SOLO breakaways and 9 PAIRS** | see below |
 
-★ The last row is new tonight: CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races
-are chasers who overshot, and put nothing in its place.
+★★★ **THE "WHY ARE THE WORST RACES WORSE" ITEM WAS NOT CLOSED AS MOOT, BECAUSE IT IS NOT.** It was
+put up for closure on the grounds that the owner watched the worst race — `city-circuit` seed 30, a
+349 px gap held by THREE — and accepted it (2026-09-23, [GLOSSARY.md](GLOSSARY.md)). That disposes of
+the group-of-three population and nothing else. Re-counted at the tree over every crossing in
+`reports/evolution/chase-remainder-data/`:
+
+| | quiet (22 crossings) | wild (5) |
+|---|---|---|
+| group ≥ 3 — **accepted by his ruling** | 12 | 2 |
+| ★ **SOLO (group 1) — the picture he DOES object to** | **3** | **1** |
+| ★ **PAIR (group 2) — explicitly UNDEFINED, never ruled on** | **7** | **2** |
+
+★ **The four solos, named so they can be watched:** `dirt-oval` seed 20 @ 205 px (the worst),
+`ice-track` seed 10 @ 163, `ice-track` seed 23 @ 159, and at wild `dirt-oval` seed 3 @ 166.
+**A solo at 205 px is his own definition of the thing he does not want**, and it survives the ship at
+3 of 300 (1.0%) at quiet and 1 of 300 (0.3%) at wild.
+★ **The nine pairs are blocked on a ruling that does not exist** — the glossary says the pair case has
+never been decided and must not be interpolated, so nobody can say whether they are a problem.
+
+★ CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races are chasers who overshot,
+and put nothing in its place.
 
 ---
 

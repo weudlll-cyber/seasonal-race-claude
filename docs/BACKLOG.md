@@ -929,6 +929,29 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
+## The remaining breakaways, after the owner's ruling of 2026-09-23 (2026-09-24)
+
+- [ ] ★★ **FOUR SOLO BREAKAWAYS SURVIVE THE SHIP, AND A SOLO IS HIS OWN DEFINITION OF THE THING HE
+      DOES NOT WANT.** The question *"why are the remaining worst races worse"* was put up for
+      closure on 2026-09-24 as moot, because he watched the worst one — `city-circuit` seed 30, a
+      349 px gap held by THREE — and accepted it. **That disposes of the group-of-three population
+      and nothing else.** Re-counted at the tree over every crossing in
+      `reports/evolution/chase-remainder-data/`: at `quiet` 22 crossings split 12 accepted / **3
+      solo** / 7 pair; at `wild` 5 split 2 / **1 solo** / 2 pair.
+      **The four solos:** `dirt-oval` seed 20 @ 205 px (worst), `ice-track` seed 10 @ 163,
+      `ice-track` seed 23 @ 159, and at `wild` `dirt-oval` seed 3 @ 166. That is **1.0% of races at
+      quiet and 0.3% at wild.**
+      ★ **Needs his eye before it needs any work** — CHASE-REMAINDER-1 refuted the one causal
+      hypothesis anyone had and put nothing in its place, so measuring further without knowing
+      whether a 205 px solo actually bothers him would be guessing at the target.
+
+- [ ] ★ **NINE PAIR BREAKAWAYS ARE BLOCKED ON A RULING THAT DOES NOT EXIST.** Seven at `quiet`
+      (worst: `ice-track` seed 20 @ 214 px) and two at `wild` (`dirt-oval` seed 9 @ 208,
+      `garden-path` seed 13 @ 202). [GLOSSARY.md](GLOSSARY.md) records that **a group of TWO has
+      never been ruled on and must not be interpolated** from the solo / three / more-than-four
+      points. **Until he rules, nobody can say whether these are a problem at all**, so no work on
+      them is possible — this is an item waiting on a sentence, not on effort.
+
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
@@ -2114,6 +2137,28 @@ proposal arriving again in six months looking new.
       then raced on a blank backdrop with nobody told why. ★ It is rendered as a HINT and styled
       apart from the error channel, because telling someone their work failed when it did not is its
       own defect.
+
+## Closed by the owner's decisions of 2026-09-23
+
+- [x] **Q-27 — the track backgrounds keep their current quality. DECIDED BY THE OWNER, 2026-09-23.**
+      `river-run` at 9.69 MB stays. The measurement that informed it (POLISH-2026-09-24B §2): **zero
+      image bytes in the client bundle** — 3.49 MB across 52 files, none of them a background — so
+      first paint costs nothing, and the cost is per track when one is chosen: **median 3.61 MB,
+      worst 9.69 MB**, with seatrack 9.53 and mountainstreet 9.32 the only others above 5 MB.
+      ★ The re-spec/drop question that had been open since the item was written is answered: **no
+      re-encoding.** Nothing further is owed here.
+
+- [x] **The group-of-three part of "why are the remaining worst races worse" — SUPERSEDED by the
+      owner's ruling of 2026-09-23.** He watched `city-circuit` seed 30 on the shipped `quiet` stage
+      — the largest gap in 600 measured races, 349 px, held by three — and accepted it; a large gap
+      held by a group of THREE is not the picture he objects to
+      ([GLOSSARY.md](GLOSSARY.md), "breakaway"). **12 of the 22 quiet crossings and 2 of the 5 wild
+      ones are disposed of by that sentence.**
+      ★★ **The rest of the item is NOT closed and is in PART ONE**, because the same population
+      contains four SOLO breakaways — his own definition of the thing he does not want — and nine
+      pairs, which he has explicitly never ruled on. Closing the whole item on his acceptance of a
+      different case would have been exactly the error the last three nights were commissioned to
+      stop.
 
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 
