@@ -42,8 +42,19 @@ export const REAL_ARM_SEEDS = [1, 7, 42];
  * design. Seeds 1 and 7 moved (13 -> 12 and 38 -> 17); seed 42 did not. Read from a measurement, not
  * from the assertion message: `real == sim` was re-checked and holds byte-identically on all three,
  * which is why this is a re-pin and not a parity failure.
+ *
+ * ★ AND AGAIN AT THE CHASE SHIP (CHASE-SHIP-1, 2026-09-23). The chase now runs past the OUTCOME
+ * boundary — `chaseAfterOutcomeEnabled: true`, selection `'gap'`, 5 slots — so the last 30% is raced
+ * differently and the finishing order moves by design. ALL THREE seeds moved this time:
+ * 12 -> 27, 17 -> 38, 13 -> 7. Read from a measurement as the rule above requires: `realArm().hash`
+ * and `simArm().hash` are byte-identical on all three (a855001c / 5422c22c / beca4912) and the
+ * finish orders match, so this is a re-pin and not a parity failure.
+ * ★★ THAT MEASUREMENT IS THE LICENCE, AND IT MATTERS HERE MORE THAN USUAL: this pin failing was
+ * twice mis-read as a parity divergence (see reports/evolution/CHASE-PARITY-DIAG-1.md), which voided
+ * a whole block. The failing line is `goldenRealArm.test.js:57` — a pinned SHIPPED OUTCOME. The
+ * parity assertions sit ABOVE it and passed throughout.
  */
-export const REAL_ARM_WINNERS = { 1: 12, 7: 17, 42: 13 };
+export const REAL_ARM_WINNERS = { 1: 27, 7: 38, 42: 7 };
 
 /** The cross-topology cases: the plan gate, and the D-ROWCOUNT small-sprite case. */
 export const SPREAD_CASES = [

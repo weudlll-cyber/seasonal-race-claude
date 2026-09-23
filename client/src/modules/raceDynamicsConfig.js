@@ -165,6 +165,34 @@ export const RACE_DYNAMICS_RULES = [
       ),
     why: 'it must be a number above 0 and at most 1',
   },
+  // ── CHASE-AFTER-OUTCOME. ★ Rules because `applyKeyRules` only rejects a key that HAS one, so a
+  // key without one reaches the physics unchecked — which is how the gap-brake group keys shipped
+  // unvalidated on 2026-09-22.
+  {
+    keys: ['chaseAfterOutcomeEnabled'],
+    ok: (c) => !(typeof c.chaseAfterOutcomeEnabled !== 'boolean'),
+    why: 'it must be true or false',
+  },
+  {
+    // A closed set of two. An unknown string would silently fall through to the 'leader' branch and
+    // race as today while the config claimed otherwise — the quietest kind of wrong.
+    keys: ['chaseAfterOutcomeSelection'],
+    ok: (c) => c.chaseAfterOutcomeSelection === 'leader' || c.chaseAfterOutcomeSelection === 'gap',
+    why: "it must be 'leader' or 'gap'",
+  },
+  {
+    // At least 1, and bounded by the front pool it draws from: the window can never hand out more
+    // slots than it has non-hero racers to fill, so anything past that is a number nobody can mean.
+    keys: ['chaseAfterOutcomeSlots'],
+    ok: (c) =>
+      !(
+        typeof c.chaseAfterOutcomeSlots !== 'number' ||
+        !Number.isInteger(c.chaseAfterOutcomeSlots) ||
+        c.chaseAfterOutcomeSlots < 1 ||
+        c.chaseAfterOutcomeSlots > 10
+      ),
+    why: 'it must be a whole number between 1 and 10',
+  },
   {
     keys: ['pulkBoostHeadroom'],
     ok: (c) => !(typeof c.pulkBoostHeadroom !== 'number' || c.pulkBoostHeadroom < 0),

@@ -764,9 +764,12 @@ test("RULE F says in its OUTPUT that line citations are invisible to it", () => 
 //   far more weakly than they look.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
+// ★ THIS FIXTURE PINS A REAL SOURCE LINE RANGE and must move when that function moves. It did at
+// CHASE-SHIP-1 (2026-09-23): `governorPhaseWeight` slid from L92-L97 to L98-L103. The test asserts
+// that a CORRECT citation passes, so a stale range here would make it assert the opposite.
 test("RULE F PAIRED: a symbol genuinely at the linked lines passes", () => {
   withDocs(
-    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L92-L97).\n" },
+    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L98-L103).\n" },
     ({ code, out }) => {
       assert.equal(code, 0);
       assert.match(out, /1 PAIRED/);

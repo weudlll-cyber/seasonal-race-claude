@@ -120,7 +120,10 @@
       "rowBonusEarly": 1,
       "rowBonusPulk": 0,
       "rowBonusPost": 1,
-      "enableRowEnvSmooth": true
+      "enableRowEnvSmooth": true,
+      "chaseAfterOutcomeEnabled": false,
+      "chaseAfterOutcomeSelection": "leader",
+      "chaseAfterOutcomeSlots": 2
     },
     "autoScale": {
       "enabled": true,

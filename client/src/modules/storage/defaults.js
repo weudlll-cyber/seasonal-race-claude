@@ -1034,6 +1034,44 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
   pulkBoostHeadroom: 0.1,
+  // ── ★★ CHASE-AFTER-OUTCOME (NIGHT-2026-09-23) — the chase past the OUTCOME boundary ───────────
+  // The owner's question of 2026-09-23: how many racers to accelerate, and which, for a race with as
+  // many overtakes as possible and no breakaways. CHASE-REACH-1 measured that the BOOST SIZE is not
+  // the constraint — raising `pulkChallengerBoost` changes no race, and at wild it already sits AT
+  // `pulkEnvelopeMaxEffect`. The constraint is that the governor is OFF for the whole of his
+  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js:182-187),
+  // `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js:174), and `governorPhaseWeight` returns
+  // exactly 0.0 from that boundary on (raceGovernor.js:92-97).
+  //
+  // ★ THE OWNER'S SCOPE, 2026-09-22, and it bounds all three keys: extend ONLY the boost part past
+  // 0.6. The PULK end does not move, the OUTCOME start does not move, and THE LEADER BRAKE IS NEVER
+  // EXTENDED — past the boundary the brake and hero branches are pinned to zero, so nothing this
+  // feature does can ever slow a racer.
+  //
+  // ★★★ SHIPPED ON, BY THE OWNER'S DECISION OF 2026-09-23, after his own eye-test on the branch.
+  // MEASURED at N=300 per arm (reports/evolution/CHASE-BUILD-1.md): the owner-definition breakaway
+  // falls 16.0% -> 7.3% at quiet (Fisher p = 0.0013) and 9.7% -> 1.7% at wild (p < 0.0001), WHILE
+  // in-window overtakes rise on TEN TRACKS OF TEN in both stages (+5.5% quiet, +12.7% wild), and
+  // the solo share falls. It costs ~2.4 pp of band arrival at quiet and ~4.2 at wild — far above
+  // the 70% gate, but a real and consistent cost; the trade is written out in the report.
+  //
+  // ★ AN EARLIER NOTE HERE CLAIMED A PARITY BLOCKER. THAT CLAIM WAS REFUTED
+  // (reports/evolution/CHASE-PARITY-DIAG-1.md): the sim arm reaches the governor transitively, and
+  // `realArm().hash === simArm().hash` holds byte-identically with this arm on. What had failed was
+  // a PINNED SHIPPED-OUTCOME winner in parity/goldenCases.js — re-pinned at this ship with the
+  // measurement re-run, the same procedure used at COMBO15, RACER-FLAPPING-2 and the 2026-09-14
+  // merge. Switching this key back to `false` reproduces the race as it was before 2026-09-23.
+  chaseAfterOutcomeEnabled: true,
+  // ★ 'gap' SHIPPED 2026-09-23 — the window starts at the FRONT OF THE CHASING FIELD, the first
+  // racer behind the largest consecutive gap inside the front band.
+  // 'leader' is the LEGACY rule (the first frontPool-1 non-heroes behind the LEADER) and is kept
+  // switchable: it can put the boosted racer INSIDE the leading group, which makes a breakaway
+  // FASTER — every arm measured that way failed the solo-share rule, at +424% to +1461% front churn.
+  chaseAfterOutcomeSelection: 'gap',
+  // Attacker slots INSIDE the extension only. The PULK phase keeps its own hard 1..2 clamp
+  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot — so the
+  // shipped 5 accelerates SIX racers. 2 was the pre-ship value.
+  chaseAfterOutcomeSlots: 5,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
   // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
   // Choreo drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness

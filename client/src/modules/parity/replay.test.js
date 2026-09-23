@@ -82,10 +82,15 @@ describe('replay — the emit → replay round-trip', () => {
       // shipped-default order for seed 7 — real core == sim (the equal/hash checks above are the
       // guarantee). Moved at the RACER-MOTION-2 acceleration-cap change, and again at the
       // night/2026-09-12b merge (2026-09-14): DIRECTION-AUTHORITY-1's hold-and-release shape changes
-      // who arrives where, so Surge now wins and Breeze is 2nd. real == sim is still byte-identical —
+      // who arrives where, so Surge won and Breeze was 2nd. real == sim is still byte-identical —
       // the three checks above prove it, which is what makes this a re-pin and not a parity failure.
-      expect(r.order[0]).toBe('Surge');
-      expect(r.order[2]).toBe('Phantom');
+      // ★ AND AGAIN AT THE CHASE SHIP (CHASE-SHIP-1, 2026-09-23): the chase runs past the OUTCOME
+      // boundary, so the last 30% is raced differently and the order moves by design — Surge and
+      // Breeze swap (Breeze now wins) and 3rd goes Phantom -> Gale. Re-measured before re-pinning:
+      // `identityMatches`, `equal` and `realHash === simHash` all hold, so this is a re-pin, not a
+      // parity failure. The same pin at goldenCases.js moved at this ship for the same reason.
+      expect(r.order[0]).toBe('Breeze');
+      expect(r.order[2]).toBe('Gale');
     },
     RACE_TIMEOUT_MS
   );
