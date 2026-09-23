@@ -426,6 +426,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CHASE-BUILD-1.md](CHASE-BUILD-1.md) — **★★ THE FIRST ARM IN FOUR BLOCKS TO WIN BOTH HALVES:
+  accelerate FIVE racers picked from behind the GAP, and the owner's breakaway falls 16.0% → 7.3%
+  (N=300, Fisher p = 0.0013) while in-window overtakes rise 5.5% on TEN TRACKS OF TEN (sign test
+  p = 0.002).** ★ It holds at WILD, the stage he tests, and larger on both halves: 9.7% → 1.7%
+  (p < 0.0001), overtakes +12.7% (10/10), lead changes +11.4% (9/10). Three keys, all defaulting to
+  today, all four fingerprints unmoved at the defaults; the leader brake is never extended (the
+  braked branch is skipped past the boundary) and the PULK phase keeps its own 1–2 clamp.
+  ★ G4 (4 slots) posts a BETTER headline (5.7%) and is NOT recommended — its solo SHARE rises to 24%
+  against A0's 17%, the owner's own kill rule, though in absolute terms its solos fall 8 → 4 and it
+  is NOT repeating the group brake's failure (that one held the total and tripled solos). The
+  'leader' arms all die on the solo rule and produce +424% to +1461% front churn, which is the
+  boosted racer landing INSIDE the leading group — exactly what the 'gap' selection exists to avoid.
+  ★ Costs recorded rather than buried: band arrival −2.37 pp (quiet) and −4.16 pp (wild), above the
+  70% gate but consistent; dirt-oval is the one track that gets worse at wild. ★ Records a defect
+  caught mid-piece — band arrival, the FIRST kill rule, was never emitted by this harness lineage and
+  stage 1 was re-run in full — and states that the clustering caveat makes the winner's p OPTIMISTIC.
+  **Nothing minted, nothing merged.**
+
 - [CHASE-REACH-1.md](CHASE-REACH-1.md) — **yes, the chase CAN reach; the boost is not what stops it**
   (2026-09-22, read-only, N=300 per stage × quiet and wild). In **72.9%** of quiet breakaways and
   **69.0%** of wild ones a racer behind the gap could close it before the finish — median best
