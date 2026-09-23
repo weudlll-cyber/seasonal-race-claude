@@ -1364,7 +1364,9 @@ already-settled questions.
 
 ### Phase D (Racer Design Development)
 
-- **D3.6** — File reorganization: `racer-types/` → `racer-configs/` (39 files).
+- **D3.6** — File reorganization: `racer-types/` → `racer-configs/` (~~39 files~~ — ★ **80 tracked
+  files, counted 2026-09-24 with `git ls-files client/src/modules/racer-types/`**; the 39 is from an
+  earlier tree and understates the move by half).
   Separates configuration from engine code. Small standalone PR.
   **verify:** `git grep -l "racer-configs" -- client/src` returns nothing and
   `client/src/modules/racer-types/` still exists (checked 2026-08-23), so **still open**.

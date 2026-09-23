@@ -426,6 +426,12 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-24.md](MORNING-2026-09-24.md) — **the morning sheet for the open-truth night** —
+  what is actually open, re-established at the tree rather than copied from any list. ★ Two whole
+  candidate classes came back EMPTY (no TODO/FIXME/HACK/XXX marker in source; no skipped or focused
+  test anywhere), and the failure mode the night was commissioned for is real: three of the four
+  "unmerged camera branches, his eye owed" are already IN master.
+
 - [CHASE-REMAINDER-1.md](CHASE-REMAINDER-1.md) — **★★ WHAT IS LEFT AFTER THE CHASE SHIPPED, AND IT
   IS A WORST-CASE QUESTION ON TWO TRACKS, NOT A FREQUENCY ONE.** Read-only, N=300 per stage on the
   SHIPPED world (no key set anywhere — the chase is a default now, not an arm). ★ **At WILD, the

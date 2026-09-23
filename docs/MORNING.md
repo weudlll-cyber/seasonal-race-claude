@@ -152,7 +152,7 @@ this branch is deliberate: **this branch has to be decidable on its own.**
 | master head | **`3bf9d99c`** (the merge plus its `TAGS.md` register) |
 | archive tags | **`archive/night-2026-09-18`**, **`archive/night-2026-09-17`** — both pushed and registered |
 | branches deleted at origin | `night/2026-09-18`, `night/2026-09-17` |
-| left at origin | `feat/remove-prestaging-comebacker` (**undecided product code, untouched**), `night/2026-09-14-history` |
+| left at origin | ~~`feat/remove-prestaging-comebacker` (**undecided product code, untouched**), `night/2026-09-14-history`~~ — ★ **CORRECTED 2026-09-24 (NIGHT-2026-09-24): NEITHER IS AT ORIGIN.** `git ls-remote --heads origin` returns master alone. The first is preserved as the tag `archive/remove-prestaging-comebacker`; the second is at neither origin nor any archive tag. |
 | `verify` on the tip, run alone | **25 PASS / 0 FAIL / 9 SKIP** |
 | fingerprints | ★ **all four re-measured against the engine and UNMOVED**; `--mint` wrote nothing |
 | CI | ★ **green** on `3bf9d99c` — all three jobs |
@@ -562,6 +562,10 @@ helped, throughput roughly doubled.
   answered the question.
 - **The luger-hill 30 s rear bias** fails your own fairness gate in the shipped game, at every seed I
   ran. Not caused by the brake, not chased.
+- ★ **CORRECTED 2026-09-24 (NIGHT-2026-09-24): NEITHER BRANCH IS AT ORIGIN ANY MORE.** Origin
+  carries master alone; `feat/remove-prestaging-comebacker` survives as the tag
+  `archive/remove-prestaging-comebacker` and `night/2026-09-14-history` is under no tag at all. The
+  sentence below is left standing as the dated record of what was true when it was written.
 - **Two branches left standing**, both carrying undecided product code: `feat/remove-prestaging-comebacker`
   and `night/2026-09-14-history` (which also needs one sentence from you about which `MORNING.md`
   survives).
