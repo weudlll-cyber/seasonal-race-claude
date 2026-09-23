@@ -118,14 +118,37 @@ export function useTrackIO({ serverTracksCtl, saveTimerRef }) {
         setLoadedGeometryId(created.geometryId);
       }
 
+      // ★★ THE BACKGROUND UPLOAD GETS ITS OWN try/catch, AND THAT IS THE WHOLE POINT OF THIS SPLIT
+      // (POLISH-2026-09-24B, Q-25). These are TWO server calls and they fail for different reasons,
+      // but until now one `catch` covered both, so a background that failed after the track saved
+      // reported the same "Server unreachable" as a track that never saved at all — and the person
+      // was left unable to tell whether their geometry was safe. It is: the track is already on the
+      // server at this point. Say so, and name the half that did not land.
+      let bgFailed = null;
       if (backgroundFile) {
-        await uploadTrackBackground(savedServerId, backgroundFile);
-        onBgUploaded(`${API_BASE_URL}/api/tracks/${savedServerId}/background`);
+        try {
+          await uploadTrackBackground(savedServerId, backgroundFile);
+          onBgUploaded(`${API_BASE_URL}/api/tracks/${savedServerId}/background`);
+        } catch (err) {
+          bgFailed = err?.message || 'the upload failed';
+        }
       }
 
       await cacheTrackGeometry({ id: savedServerId, geometryId: savedGeometryId });
       await serverTracksCtl.refresh();
       setLocalTracks(listTracks());
+
+      if (bgFailed) {
+        // ★ The track is saved and the geometry is cached, so the work is not at risk — but
+        // something the person asked for did not happen, so this is NOT "Saved ✓" and the editor is
+        // NOT marked clean. `backgroundFile` is deliberately left in state so Save retries the
+        // upload alone; the track half will simply update again, which is idempotent.
+        setSaveError(
+          `The track was SAVED, but its background image did not upload (${bgFailed}). ` +
+            'Your geometry is safe on the server. Press Save again to retry just the image.'
+        );
+        return;
+      }
 
       setIsDirty(false);
       resetHistory();
@@ -133,6 +156,8 @@ export function useTrackIO({ serverTracksCtl, saveTimerRef }) {
       setSaveLabel('Saved ✓');
       saveTimerRef.current = setTimeout(() => setSaveLabel('Save'), 2000);
     } catch (err) {
+      // Reaching here means the TRACK did not save. Named as such, so it cannot be confused with
+      // the background-only failure above.
       setServerError(err.message || 'Server unreachable.');
     } finally {
       setIsSaving(false);

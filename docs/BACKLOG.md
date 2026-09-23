@@ -2077,6 +2077,23 @@ proposal arriving again in six months looking new.
       that was about to be renamed. Removes only `*.tmp`, never a directory, and is non-fatal in
       every direction including the OneDrive `UNKNOWN(-4094)` this project has actually hit. 6 tests.
 
+- [x] **Q-25 — a track that saves while its background does not now SAYS which half failed.** Closed
+      2026-09-24. The save and the image upload are two server calls that fail for different reasons,
+      and one `catch` covered both, so a background failure reported the same *"Server unreachable"*
+      as a track that never saved — leaving the person unable to tell whether their geometry was
+      safe. It is: the track is already on the server by then. The upload now has its own `try`, and
+      the message says the track was SAVED, names why the image did not land, and tells them Save
+      retries just the image. ★ It deliberately does NOT show "Saved ✓" or mark the editor clean,
+      because something they asked for did not happen.
+
+- [x] **Q-26 — an out-of-range min/max in the Dev Screen is refused OUT LOUD.** Closed 2026-09-24.
+      `if (v > config.minScale) set('maxScale', v);` meant a typed value outside the range did
+      nothing at all — indistinguishable, on screen, from one that was accepted.
+      `RangeRejectionNotice.jsx` now says what was rejected and why, and clears when a valid value
+      lands. ★ **Reused rather than invented:** the amber treatment is the Dev Screen's existing
+      warning style (`DynamicsTuningSection.jsx:69-77`). 3 tests, and the one that matters asserts
+      the rejection is VISIBLE — the value was always rejected; only the silence was the defect.
+
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 
 **Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART
