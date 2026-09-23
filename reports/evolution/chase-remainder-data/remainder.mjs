@@ -84,9 +84,13 @@ const ONLY = arg("track", null);
 const SEEDS = Number(arg("seeds", 3));
 const OUT = arg("out", HERE);
 const TAG = arg("tag", "n30");
-// ★ CHECK C's switch. Scratch use only — never passed in a committed run. It makes the boosted-set
-// reader return nothing, and every (B) number must collapse to zero/none.
-const BLIND = process.argv.includes("--sabotage-blind-boost");
+// ★★ CHECK C's SABOTAGE IS NOT HERE, DELIBERATELY. A first draft of this file carried a
+// `--sabotage-blind-boost` flag that made the boosted-set reader return nothing. It was removed
+// before the data was produced: the brief requires the sabotage to live in a SCRATCH COPY ONLY,
+// never committed, and the reason is sound — a committed switch that silently blinds an instrument
+// is a foot-gun, and anyone who passed it by accident would get a full, well-formed, empty-boost
+// data file. CHECK C is run by copying this file to a scratch directory and patching the reader
+// there; the report records the outcome.
 
 // ── the stage arg, REUSED from chase-sweep.mjs:151-154 rather than written a third time ─────────
 const STAGE = arg("stage", "quiet");
@@ -194,7 +198,7 @@ function measureRace(geo, seed) {
       for (let q = 0; q < SENS_PX.length; q++) if (packGap >= SENS_PX[q]) packSensCross[q] = true;
 
       // ★ the boosted set for THIS step, read from the governor's own slots (see the header).
-      const lr = BLIND ? null : raceCfg.dirState?.leadRot;
+      const lr = raceCfg.dirState?.leadRot;
       if (lr) {
         const hit = [];
         if (lr.attackers) for (const sl of lr.attackers) if (sl.idx >= 0) hit.push(sl.idx);
@@ -305,7 +309,6 @@ writeFileSync(
     stage: STAGE,
     racers: RACERS,
     seeds: SEEDS,
-    blind: BLIND,
     // ★ CHECK A's echo: the shipped keys are PRINTED, never set, so the data file records the world
     // it actually measured.
     shippedChase: {
@@ -316,4 +319,4 @@ writeFileSync(
     rows,
   })
 );
-console.error(`${rows.length} races (${STAGE}${BLIND ? ", BLIND" : ""}) -> ${join(OUT, name)}`);
+console.error(`${rows.length} races (${STAGE}) -> ${join(OUT, name)}`);
