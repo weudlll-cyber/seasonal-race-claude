@@ -130,6 +130,8 @@ export default function TrackEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [boundarySwitchConfirmed, setBoundarySwitchConfirmed] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  // ★ POLISH-4d: a non-error notice after a successful save (e.g. saved with no background).
+  const [saveHint, setSaveHint] = useState(null);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [saveError, setSaveError] = useState(null);
   // backgroundFile — set when user picks a new local image; cleared after upload
@@ -860,6 +862,7 @@ export default function TrackEditor() {
       editorWorldH,
       setSaveAttempted,
       setSaveError,
+      setSaveHint,
       setIsDirty: (dirty) => {
         setIsDirty(dirty);
         // ★ A SUCCESSFUL SAVE IS THE ONE THING THAT RETIRES A DRAFT. `useTrackIO` clears the dirty
@@ -1100,6 +1103,7 @@ export default function TrackEditor() {
         onBgUpload={handleBgUpload}
         onRemoveBg={handleRemoveBackground}
         onSave={handleSave}
+        saveHint={saveHint}
         onLoad={handleLoad}
         onDelete={handleDelete}
         onRetry={handleRetry}

@@ -22,6 +22,7 @@ export default function TrackEditorSaveBar({
   saveAttempted,
   bgUploadError,
   saveError,
+  saveHint,
   serverError,
   hasLoaded,
   fileInputRef,
@@ -104,6 +105,24 @@ export default function TrackEditorSaveBar({
       </div>
       {bgUploadError && <p className={s.saveError}>{bgUploadError}</p>}
       {saveError && <p className={s.saveError}>{saveError}</p>}
+      {/* ★ POLISH-4d: a HINT, not an error — the save succeeded. Styled apart from `saveError` on
+          purpose: telling someone their work failed when it did not is its own defect. */}
+      {saveHint && (
+        <p
+          data-testid="save-hint"
+          style={{
+            fontSize: '0.8rem',
+            color: '#f59e0b',
+            background: 'rgba(245,158,11,0.08)',
+            border: '1px solid rgba(245,158,11,0.28)',
+            borderRadius: '4px',
+            padding: '0.3rem 0.5rem',
+            marginTop: '0.35rem',
+          }}
+        >
+          ℹ️ {saveHint}
+        </p>
+      )}
       {serverError && (
         <div
           className={s.saveError}

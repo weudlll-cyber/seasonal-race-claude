@@ -2094,6 +2094,22 @@ proposal arriving again in six months looking new.
       warning style (`DynamicsTuningSection.jsx:69-77`). 3 tests, and the one that matters asserts
       the rejection is VISIBLE — the value was always rejected; only the silence was the defect.
 
+- [x] **Q-28 — a helper that clears the dead `.git/worktrees` registrations.** Closed 2026-09-24,
+      `scripts/worktree-stubs.mjs`. ★★ **It only ever touches `.git/worktrees/<name>`, and that is the
+      whole safety argument**: a scratch worktree's `node_modules` is a JUNCTION to the real one, and
+      deleting a CHECKOUT follows it and hollows the real one out — this repository has been bitten
+      by exactly that. Nothing here removes anything outside `.git/`. It exists because
+      `git worktree prune` fails with EPERM under OneDrive, and because `git worktree list` HIDES a
+      registration whose checkout is gone, which is why 18 of them had accumulated unnoticed. Listing
+      is the default; `--remove` is opt-in. **All 18 removed, `git worktree list` clean.** 6 tests,
+      one of which asserts the checkout survives.
+
+- [x] **Q-29 — saving a track with no background now says so.** Closed 2026-09-24. A NEW track
+      already refuses without one; an EXISTING track saved without one was allowed and silent, and
+      then raced on a blank backdrop with nobody told why. ★ It is rendered as a HINT and styled
+      apart from the error channel, because telling someone their work failed when it did not is its
+      own defect.
+
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 
 **Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART

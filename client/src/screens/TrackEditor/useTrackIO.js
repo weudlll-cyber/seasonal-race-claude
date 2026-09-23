@@ -59,6 +59,7 @@ export function useTrackIO({ serverTracksCtl, saveTimerRef }) {
     editorWorldH,
     setSaveAttempted,
     setSaveError,
+    setSaveHint,
     setIsDirty,
     resetHistory,
     onBgUploaded,
@@ -149,6 +150,15 @@ export function useTrackIO({ serverTracksCtl, saveTimerRef }) {
         );
         return;
       }
+
+      // ★ POLISH-4d: the track saved, and it has no background. A NEW track cannot reach here — one
+      // is required above — so this is an EXISTING track saved without one, which is allowed and
+      // which nothing used to mention. It races with a blank backdrop and nobody is told why.
+      setSaveHint?.(
+        !backgroundImage && !backgroundFile
+          ? 'Saved without a background image — this track will race on a blank backdrop. Upload one if that is not what you want.'
+          : null
+      );
 
       setIsDirty(false);
       resetHistory();

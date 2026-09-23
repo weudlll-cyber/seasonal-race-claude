@@ -86,7 +86,7 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | what it is | size | verified how |
 | --- | --- | --- |
 | ~~Warn instead of silently ignoring an invalid min/max~~ — ★ **DONE 2026-09-24 (Q-26)** | done | `RangeRejectionNotice.jsx`, reusing the Dev Screen's existing amber warning style; 3 tests |
-| Give the track editor a hint when a track is saved with no background | small | — |
+| ~~Give the track editor a hint when a track is saved with no background~~ — ★ **DONE 2026-09-24 (Q-29)** | done | a HINT, styled apart from the error channel |
 | ~~Make the server's test cleanup survive a Ctrl+C~~ — ★ **DONE 2026-09-24 (Q-20b)** | done | a SIGINT/SIGTERM handler that does the file half and **re-raises the signal** |
 | ~~Sweep `.json.tmp` orphans that survive a OneDrive write failure~~ — ★ **DONE 2026-09-24 (Q-20c)** | done | `server/utils/sweepOrphanTmp.js`, swept at boot before anything is served; 6 tests |
 | ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (new-track half; the load-mode half is **Q-22b** in BACKLOG PART ONE) | done | `trackEditorDraft.js`, 9 tests |
@@ -96,7 +96,7 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | Add tooltips to the fields that have none | small | **corrected below** |
 | Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
 | Pause and resume a running race | a block | — |
-| A helper that cleans up the `.git/worktrees` stubs | small | — |
+| ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
 | ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
 
 ★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
