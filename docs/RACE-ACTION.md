@@ -176,7 +176,27 @@ a floor that **EXPANDS as the brake grows**, so the realism envelope stops bindi
 point the brake becomes the larger number. A configuration may brake a racer far below the −20 percent line
 and nothing in the code objects.
 
-**This is not a live defect, and that is worth stating as plainly as the gap.** At the shipped leader brake
+★★ **CLOSED 2026-09-24 (NIGHT-2026-09-24C, the owner's decision of 2026-09-23): THE SLOW SIDE NOW
+HAS A LEITPLANKE.** `NATURALNESS_FLOOR = 0.8` in `raceGovernor.js`, the mirror of
+`NATURALNESS_CEILING = 1.2`, with `computeDirectorFloor()` and `assertNaturalnessFloor()` beside
+`computeDirectorCeiling()`.
+
+★★★ **IT BOUNDS A CONFIGURATION, NOT A RUNNING RACE, AND THE REASON IS THE SUBSECTION BELOW.** The
+obvious symmetric implementation — clamping the realised product up to 0.80 the way the ceiling
+clamps it down to 1.20 — **would change the shipped `wild` race**, whose breach of the slow side the
+owner ACCEPTED on 2026-08-24. A per-frame clamp would have silently undone that decision, which is
+the opposite of closing a gap. So what is guarded is what this section actually complains about:
+*"a configuration may brake a racer far below the −20 percent line and nothing in the code
+objects."* Now it objects — it refuses the configuration.
+
+★ **Nothing shipped is refused**: quiet and medium brake 0.10 (governor floor 0.88), wild brakes 0.15
+(0.85), all inside 0.80, and the three race fingerprints are unmoved. It refuses a configuration that
+has never existed. ★ **And the accepted `wild` breach is untouched and is a DIFFERENT quantity** — it
+is in the realised speed factor, which includes the spread factor and the area bonus; this floor
+bounds the governor's own multiplier. A test pins that distinction so nobody later reads a passing
+`wild` as evidence the breach went away.
+
+**This was not a live defect, and that is worth stating as plainly as the gap was.** At the shipped leader brake
 the floor is never reached — measured at zero racer-frames on both tracks tested, with no race dipping under
 the slow bound. **The gap is in what the code would PERMIT, not in what the shipped game does.** Whether the
 code should gain a floor or this document should keep describing an asymmetric guarantee is an open

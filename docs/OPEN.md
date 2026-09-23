@@ -57,10 +57,11 @@ self-contained at the cost of a slower image build.
 Proposed and not closed, because closing it as proposed would break his own port-4173 flow.
 → `reports/evolution/PUBLISH-STEPS-1.md` step 3
 
-**8 · The naturalness envelope is guarded on one side only — add a floor, or say so in the
-document?**
-Nothing shipped goes near the unguarded side, so nothing is broken today. The question is what a
-future dial may do.
+**8 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
+decision of 2026-09-23. `NATURALNESS_FLOOR = 0.8` mirrors the ceiling, and it **refuses a
+configuration** rather than clamping a running race — because clamping the product would have changed
+the shipped `wild` race, whose slow-side breach he ACCEPTED on 2026-08-24. Nothing shipped is
+refused; the three race fingerprints are unmoved.
 → [RACE-ACTION.md](RACE-ACTION.md) §6
 
 **9 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
