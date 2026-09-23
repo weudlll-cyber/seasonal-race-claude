@@ -62,11 +62,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       // governor* strengths + envelope were re-homed to the pulk* namespace (same values, same ranges) —
       // snapshot re-baselined to the new key names; stored old keys carry over via RENAMED_KEY_MIGRATION.
       pulkBoostHeadroom: 0.1,
-      // CHASE-AFTER-OUTCOME — ★ all three are TODAY, so this snapshot is also the assertion that a
-      // default install races exactly as it did before the extension existed.
-      chaseAfterOutcomeEnabled: false,
-      chaseAfterOutcomeSelection: 'leader',
-      chaseAfterOutcomeSlots: 2,
+      // CHASE-AFTER-OUTCOME — ★ SHIPPED ON 2026-09-23 (CHASE-SHIP-1). These three ARE the shipped
+      // race now; the four fingerprints were re-minted at this ship and the golden winners re-pinned.
+      chaseAfterOutcomeEnabled: true,
+      chaseAfterOutcomeSelection: 'gap',
+      chaseAfterOutcomeSlots: 5,
       choreoSuppressChaosBonusB1: false,
       choreoIntensity: 0.6,
       choreoPackBandStrictness: 0.5,

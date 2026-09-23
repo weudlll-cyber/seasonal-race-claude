@@ -1048,22 +1048,30 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // EXTENDED — past the boundary the brake and hero branches are pinned to zero, so nothing this
   // feature does can ever slow a racer.
   //
-  // ★★ ALL THREE DEFAULTS REPRODUCE TODAY'S RACE EXACTLY, and all four fingerprints are unmoved at
-  // them. See reports/evolution/CHASE-BUILD-1.md.
-  // ★★ THE RECOMMENDED ARM IS **NOT** PRE-SET HERE, DELIBERATELY — see CHASE-BUILD-1.md §6.
-  // Flipping this default turns the sim-vs-browser PARITY guards red: `realArm` runs the real
-  // browser loop (which runs the governor) and `simArm` does not carry the extension, so the two
-  // diverge the moment the key is on. That is a REAL prerequisite for any future ship, found only
-  // because the default was flipped, and it is reported rather than papered over. The owner turns
-  // the arm on from the Dev Screen instead; the default stays at today's race.
-  chaseAfterOutcomeEnabled: false,
-  // 'leader' = today's rule (the window is the first frontPool-1 non-heroes behind the LEADER);
-  // 'gap' = the same rule anchored on the largest consecutive gap inside the front band, so the
-  // window starts at the FRONT OF THE CHASING FIELD instead of inside the leading group.
-  chaseAfterOutcomeSelection: 'leader',
+  // ★★★ SHIPPED ON, BY THE OWNER'S DECISION OF 2026-09-23, after his own eye-test on the branch.
+  // MEASURED at N=300 per arm (reports/evolution/CHASE-BUILD-1.md): the owner-definition breakaway
+  // falls 16.0% -> 7.3% at quiet (Fisher p = 0.0013) and 9.7% -> 1.7% at wild (p < 0.0001), WHILE
+  // in-window overtakes rise on TEN TRACKS OF TEN in both stages (+5.5% quiet, +12.7% wild), and
+  // the solo share falls. It costs ~2.4 pp of band arrival at quiet and ~4.2 at wild — far above
+  // the 70% gate, but a real and consistent cost; the trade is written out in the report.
+  //
+  // ★ AN EARLIER NOTE HERE CLAIMED A PARITY BLOCKER. THAT CLAIM WAS REFUTED
+  // (reports/evolution/CHASE-PARITY-DIAG-1.md): the sim arm reaches the governor transitively, and
+  // `realArm().hash === simArm().hash` holds byte-identically with this arm on. What had failed was
+  // a PINNED SHIPPED-OUTCOME winner in parity/goldenCases.js — re-pinned at this ship with the
+  // measurement re-run, the same procedure used at COMBO15, RACER-FLAPPING-2 and the 2026-09-14
+  // merge. Switching this key back to `false` reproduces the race as it was before 2026-09-23.
+  chaseAfterOutcomeEnabled: true,
+  // ★ 'gap' SHIPPED 2026-09-23 — the window starts at the FRONT OF THE CHASING FIELD, the first
+  // racer behind the largest consecutive gap inside the front band.
+  // 'leader' is the LEGACY rule (the first frontPool-1 non-heroes behind the LEADER) and is kept
+  // switchable: it can put the boosted racer INSIDE the leading group, which makes a breakaway
+  // FASTER — every arm measured that way failed the solo-share rule, at +424% to +1461% front churn.
+  chaseAfterOutcomeSelection: 'gap',
   // Attacker slots INSIDE the extension only. The PULK phase keeps its own hard 1..2 clamp
-  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot.
-  chaseAfterOutcomeSlots: 2,
+  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot — so the
+  // shipped 5 accelerates SIX racers. 2 was the pre-ship value.
+  chaseAfterOutcomeSlots: 5,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
   // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
   // Choreo drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness

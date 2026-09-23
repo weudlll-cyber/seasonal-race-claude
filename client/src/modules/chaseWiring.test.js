@@ -32,10 +32,12 @@ const modPath = (f) => join(process.cwd(), 'src', 'modules', f);
 const KEYS = ['chaseAfterOutcomeEnabled', 'chaseAfterOutcomeSelection', 'chaseAfterOutcomeSlots'];
 
 describe('CHASE-AFTER-OUTCOME — the three keys reach the governor', () => {
-  it('★ all three exist in defaults.js, and the defaults are TODAY', () => {
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeEnabled).toBe(false);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSelection).toBe('leader');
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSlots).toBe(2);
+  it('★ all three exist in defaults.js, at the SHIPPED values', () => {
+    // ★ Shipped ON 2026-09-23 (CHASE-SHIP-1). This used to assert the pre-ship values and read
+    // "the defaults are TODAY"; today IS the chase.
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeEnabled).toBe(true);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSelection).toBe('gap');
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSlots).toBe(5);
   });
 
   it('★★ all three are COPIED THROUGH raceCore into the governor config', () => {

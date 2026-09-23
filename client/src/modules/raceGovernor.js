@@ -25,6 +25,11 @@ import { arcT, lenScaleFrom, signedArcLengths } from './raceLengths.js';
 // the config on purpose: a config key can be forgotten in the copy list, an import cannot.
 // (No cycle: racePlanner.js does not import this module.)
 import { BAND_EDGES } from './racePlanner.js';
+// ★ The chase slot fallback reads the default BY REFERENCE rather than mirroring it as a
+// literal. `check-fallback-agreement` caught a hardcoded `?? 2` here the moment the default
+// shipped at 5 — the same stale-"= shipped" class this ship had to sweep out of the tooltips.
+// 422 of the tree's 429 mirrored fallbacks already read by reference and so cannot disagree.
+import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 // arcT now lives in raceLengths.js (the one racer-length source). Re-exported here so existing
 // importers (GovernorDiagHUD, sim-fairness, tests) keep the same import path, unchanged.
@@ -217,7 +222,12 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
   // ★ THE PULK CLAMP IS UNTOUCHED (1..2). Only the extension reads the slots key, so the PULK phase
   // races exactly as before whatever the key says.
   const attackerSlots = inExt
-    ? Math.max(1, Math.round(cfg.chaseAfterOutcomeSlots ?? 2))
+    ? Math.max(
+        1,
+        Math.round(
+          cfg.chaseAfterOutcomeSlots ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSlots
+        )
+      )
     : Math.max(1, Math.min(2, Math.round(cfg.attackerSlots ?? 2)));
   const dropDepthLengths = cfg.dropDepthLengths ?? 2;
   const outsiderMaxReach = cfg.outsiderMaxReachLengths ?? 15;

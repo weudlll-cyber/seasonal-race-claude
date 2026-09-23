@@ -1514,7 +1514,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 1,
               max: 8,
               step: 1,
-              tip: 'How many racers the chase accelerates AFTER the outcome phase begins — inert unless the chase toggle below is on. Plus one outsider slot, so 5 here means six boosted. MEASURED: 5 with gap selection took the owner-definition breakaway from 16.0% to 7.3% at N=300 while in-window overtakes rose 5.5% on ten tracks of ten (wild: 9.7% to 1.7%, overtakes +12.7%). 2 = shipped. See reports/evolution/CHASE-BUILD-1.md.',
+              tip: 'How many racers the chase accelerates AFTER the outcome phase begins — inert unless the chase toggle below is on. Plus one outsider slot, so 5 here means six boosted. MEASURED: 5 with gap selection took the owner-definition breakaway from 16.0% to 7.3% at N=300 while in-window overtakes rose 5.5% on ten tracks of ten (wild: 9.7% to 1.7%, overtakes +12.7%). 5 = SHIPPED since 2026-09-23; 2 was the pre-ship value. See reports/evolution/CHASE-BUILD-1.md.',
             },
             {
               key: 'choreoIntensity',
@@ -1551,9 +1551,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           {/* ★★ CHASE-AFTER-OUTCOME — NIGHT-2026-09-23. The switch and the selection rule; the COUNT
               is the slider above. It lives in the PULK group because it IS the PULK governor, run
               past its own boundary — nothing else about the phase moves.
-              ★ The DEFAULT IS OFF and stays off: turning it on changes the race, and the sim-vs-
-              browser parity arms do not yet carry the extension (CHASE-BUILD-1.md §6), so this is
-              for the owner's eye and not a shipped state. */}
+              ★ SHIPPED ON since 2026-09-23. The parity claim that once stood here — that the sim
+              arm does not carry the extension — was REFUTED (CHASE-PARITY-DIAG-1.md); the arms are
+              byte-identical with this on. */}
           <div className={s.formGroup}>
             <label
               className={s.label}
@@ -1571,7 +1571,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 style={{ cursor: 'pointer' }}
               />
               Chase past the outcome start
-              <InfoTooltip text="Keeps the chase running AFTER the outcome phase begins (past 0.6) instead of releasing every racer to natural speed there. ONLY the boost runs past that line — the leader brake is never extended, so nothing here can slow a racer. The PULK phase itself is untouched. MEASURED at N=300 with 'from the gap' and 5 racers: the owner-definition breakaway falls 16.0% to 7.3% while in-window overtakes rise 5.5% on ten tracks of ten; at wild 9.7% to 1.7% with overtakes +12.7%. Costs about 2.4 pp of band arrival (4.2 at wild), well above the fairness gate. OFF = shipped. See reports/evolution/CHASE-BUILD-1.md." />
+              <InfoTooltip text="Keeps the chase running AFTER the outcome phase begins (past 0.6) instead of releasing every racer to natural speed there. ONLY the boost runs past that line — the leader brake is never extended, so nothing here can slow a racer. The PULK phase itself is untouched. MEASURED at N=300 with 'from the gap' and 5 racers: the owner-definition breakaway falls 16.0% to 7.3% while in-window overtakes rise 5.5% on ten tracks of ten; at wild 9.7% to 1.7% with overtakes +12.7%. Costs about 2.4 pp of band arrival (4.2 at wild), well above the fairness gate. ON = SHIPPED since 2026-09-23; switching it OFF reproduces the race as it was before that date. See reports/evolution/CHASE-BUILD-1.md." />
             </label>
           </div>
           <div className={s.formGroup}>
@@ -1580,7 +1580,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Chase: who is accelerated
-              <InfoTooltip text="WHERE the accelerated group is taken from, once the chase runs past 0.6. 'Behind the leader' is today's rule and can pick racers INSIDE a leading group — which makes a breakaway FASTER, and every arm measured that way failed. 'From the gap' starts at the front of the CHASING field, the first racer behind the largest gap in the front five. 'From the gap' is the measured recommendation." />
+              <InfoTooltip text="WHERE the accelerated group is taken from, once the chase runs past 0.6. 'From the gap' is SHIPPED since 2026-09-23: it starts at the front of the CHASING field, the first racer behind the largest gap in the front five. 'Behind the leader' is the LEGACY rule and can pick racers INSIDE a leading group — which makes a breakaway FASTER, and every arm measured that way failed." />
             </label>
             <select
               className={s.input}
@@ -1592,8 +1592,8 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }
               onChange={(e) => setDynamics('chaseAfterOutcomeSelection', e.target.value)}
             >
-              <option value="leader">Behind the leader (shipped)</option>
-              <option value="gap">From the gap — the front of the chasing field</option>
+              <option value="gap">From the gap — the front of the chasing field (shipped)</option>
+              <option value="leader">Behind the leader (legacy)</option>
             </select>
           </div>
         </div>
