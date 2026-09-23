@@ -1607,20 +1607,6 @@ already-settled questions.
   integration tests this item asked for.
   _(Deep audit 2026-05-01, Severity: MEDIUM.)_
 
-- **Q-20b** — Server test backup cleanup not crash-resistant (TLH-1). **RENAMED FROM `Q-20`
-  2026-08-23 (BACKLOG-SORT-42): the id was used TWICE**, here and for the track-editor hint above
-  (now `Q-20a`). Two different items under one id is a lookup that silently returns the wrong one.
-  **verify:** `git grep -n "process.on" -- server/src/routes/tracks.test.js` — returns nothing, so
-  **still open**
-  `afterAll` in `tracks.test.js` cleans up backup files via `rmSync`, but only on normal
-  test run end. On Ctrl+C / crash before `afterAll`, all backup files remain in the real
-  `server/data/tracks-backups/` directory. During TLH-1 development ~41 orphan files
-  were created. Possible approach: `process.on('exit', cleanup)` + `process.on('SIGINT', cleanup)` as
-  guard, or switch tests to a temporary directory (DATA_DIR override via env var).
-  _(Discovered TLH-1 2026-05-01, Severity: LOW)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -n "process.on" -- server/src/routes/tracks.test.js` returns nothing, so there is still no crash-path cleanup.
-
 - **Q-21** — `.json.tmp` orphans on OneDrive EPERM fallback (TLH-1)
   `atomicWriteJson` writes `.tmp` first, then `renameSync`. If `renameSync` fails (OneDrive
   EPERM), fallback `writeFileSync` writes to the target file — after which `unlinkSync(tmp)` should delete the
@@ -2072,6 +2058,24 @@ proposal arriving again in six months looking new.
       default track cannot be un-defaulted, and a non-default one cannot promote itself.
       ★ **HONESTY PROOF, run rather than claimed:** deleting that line turns BOTH tests red; with it
       present both pass. A test that would pass without the protection is not testing the protection.
+
+- [x] **Q-20b — the server test cleanup survives Ctrl+C.** Closed 2026-09-24. `afterAll` only runs
+      when a suite ENDS NORMALLY, so an interrupted run left every track and backup file the suite
+      created in the real data directory. A `SIGINT`/`SIGTERM` handler now removes them
+      synchronously. ★ **It does the FILE half only**, deliberately: on a signal the process is going
+      away and an awaited HTTP round-trip may never resolve, so what can be guaranteed is done and
+      what cannot is not attempted. ★ **And it re-raises the signal** rather than swallowing it — a
+      test harness that makes Ctrl+C stop working is worse than one that leaves files behind.
+
+- [x] **Q-20c — `.tmp` orphans from an interrupted atomic write are swept at boot.** Closed
+      2026-09-24, `server/utils/sweepOrphanTmp.js`. `atomicWriteJson` already cleans up after the one
+      failure it anticipates (a transient OneDrive `EPERM` on rename); what it cannot clean up is the
+      process dying between the write and the rename. ★ **They are inert but not harmless**: they
+      accumulate, and `scripts/backup.mjs` copies the data root whole, so an orphan from a crash in
+      March is still being archived in September. ★ **Boot is the only safe moment** — nothing is
+      mid-write — and it runs before `createApp()` so it cannot race a live write and delete a tmp
+      that was about to be renamed. Removes only `*.tmp`, never a directory, and is non-fatal in
+      every direction including the OneDrive `UNKNOWN(-4094)` this project has actually hit. 6 tests.
 
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 

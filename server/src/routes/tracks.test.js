@@ -71,6 +71,46 @@ const VALID_TRACK = {
   effects: [],
 };
 
+// ★★ Q-20b (POLISH-2026-09-24B): THE CLEANUP SURVIVES Ctrl+C.
+// `afterAll` runs when the suite ENDS NORMALLY. Interrupt the run — Ctrl+C, an IDE stop button, a
+// killed terminal — and it never runs at all, so every track and every backup file this suite
+// created is left behind IN THE REAL DATA DIRECTORY. That is how a developer's `server/data` fills
+// up with test tracks, and each stray backup also slows the next run's `findBackupFiles` scan.
+//
+// ★ THE SIGNAL HANDLER DOES THE FILE HALF ONLY, AND THAT IS DELIBERATE. On a signal the process is
+// going away: an `await`ed HTTP round-trip through supertest may never resolve, so the API deletes
+// are not attempted. Removing the files synchronously is the part that can be guaranteed, and the
+// track JSON lives in the same directory, so it is removed the same way.
+//
+// ★ IT DOES NOT SWALLOW THE SIGNAL. After cleaning up it re-raises the default behaviour by removing
+// its own listener and re-sending the signal, so Ctrl+C still terminates the run and still reports
+// the conventional exit status. A test harness that makes Ctrl+C stop working is worse than one that
+// leaves files behind.
+function cleanupCreatedFilesSync() {
+  for (const id of createdIds) {
+    try {
+      rmSync(join(DATA_DIR, `${id}.json`), { force: true });
+    } catch {
+      /* the directory may already be gone; a cleanup must not throw on its way out */
+    }
+    for (const file of findBackupFiles(id)) {
+      try {
+        rmSync(file, { force: true });
+      } catch {
+        /* same */
+      }
+    }
+  }
+}
+
+const SIGNALS = ['SIGINT', 'SIGTERM'];
+const onSignal = (sig) => {
+  cleanupCreatedFilesSync();
+  for (const s of SIGNALS) process.removeListener(s, onSignal);
+  process.kill(process.pid, sig); // re-raise: Ctrl+C must still stop the run
+};
+for (const s of SIGNALS) process.on(s, onSignal);
+
 afterAll(async () => {
   for (const id of createdIds) {
     // Demote first in case the test promoted the track to isDefault:true.
@@ -82,6 +122,9 @@ afterAll(async () => {
       rmSync(file, { force: true });
     }
   }
+  // The handlers are removed on the normal path too, so a suite that finishes does not leave
+  // listeners attached to a process vitest may reuse for another file.
+  for (const s of SIGNALS) process.removeListener(s, onSignal);
 });
 
 // ── Read endpoints (pre-existing) ─────────────────────────────────────────────

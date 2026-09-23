@@ -10,6 +10,8 @@ import { createApp } from './app.js';
 import { clientBuildExists } from './staticClient.js';
 import { reportStartupReadiness } from './startupReadiness.js';
 import { assertPublicOriginUsable } from './runtimeConfig.js';
+import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
+import { resolveDataRoot } from './dataPaths.js';
 
 // ── RUNTIME-API-URL-1: THE ADDRESS IS JUDGED BEFORE ANYTHING LISTENS ───────────────────────────
 //
@@ -33,6 +35,14 @@ try {
   console.error(`RaceArena cannot start: ${err.message}`);
   process.exit(1);
 }
+
+// ★ Q-20c (POLISH-2026-09-24B): clear `.tmp` files an interrupted atomic write left behind. Boot is
+// the only safe moment — nothing is mid-write — and it is deliberately BEFORE `createApp()` so no
+// request can be in flight. It never throws; see the util's header for why that matters.
+sweepOrphanTmp(resolveDataRoot(), (msg) => {
+  // eslint-disable-next-line no-console -- boot-time housekeeping belongs on the startup log
+  console.log(`[ra-sweep] ${msg}`);
+});
 
 const app = createApp();
 const PORT = process.env.PORT || 4000;
