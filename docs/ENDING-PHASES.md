@@ -49,7 +49,11 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ b4ec7ed4 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 5cbc72e5 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED AGAIN AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
+4.85/2.70/0f, 9.12/5.73/7of7/8of40/164f, 3.68/1.28/0f, 6.80/4.57/3of3/40of40/94f. Same reason:
+`defaults.js` sits in the closure and that commit touched it. Run, not argued.
 
 ★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`b4ec7ed4`), AND EVERY ROW IS IDENTICAL TO THE
 DIGIT** — 4.85/2.70/0f, 9.12/5.73/7of7/8of40/164f, 3.68/1.28/0f, 6.80/4.57/3of3/40of40/94f. ★ A real

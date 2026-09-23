@@ -154,28 +154,35 @@ of the headline, not a second application of the rule.
 
 ---
 
-## 5 · ★★ A BLOCKING PREREQUISITE, FOUND BY TRYING TO SET THE DEFAULT
+## 5 · ★★ WHY THE DEFAULT IS NOT PRE-SET — AND A CLAIM THIS SECTION GOT WRONG
 
-The last step of the night was to store the recommended arm in `defaults.js` so the owner could
-watch it. **That turned the sim-vs-browser parity guards red**, and the reason is not cosmetic:
+★★★ **CORRECTED 2026-09-23 (CHASE-PARITY-DIAG-1). THIS SECTION ORIGINALLY SAID THE PARITY RUNNER
+DOES NOT CARRY THE GOVERNOR. THAT IS REFUTED, AND THE ORIGINAL CLAIM IS RECORDED HERE RATHER THAN
+DELETED**, because it is what caused a whole block (PARITY-GOVERNOR-1) to be commissioned against a
+false premise.
 
-- `goldenRealArm` asserts **real browser core == sim, byte-identical**. `realArm` runs the real
-  browser loop, which runs the governor; the parity `simArm` does not carry the extension.
-- `scripts/sim-fairness.mjs` built its `pulkLeadRotCfg` **without the three chase keys** — the same
-  BLIND-SITE class this project has hit repeatedly. **That one is fixed in this branch**: the sim now
-  mirrors all three, per the standing Sim-Browser Parity Rule.
-- The remaining divergence is in the parity runner's own arms, and it is **not fixed here**.
+**What it said:** that `realArm` runs the governor while the parity `simArm` does not, so storing
+the recommended arm in `defaults.js` turned the parity guards red, and that this was a blocking
+prerequisite for any ship.
 
-★ **So the default was RESTORED to today's race and the arm is NOT pre-set.** The branch therefore
-keeps a fully green suite, all four fingerprints unmoved, and stays merge-safe — and the owner turns
-the arm on from the **Dev Screen** instead, which is also what the project's UI-configurable rule
-requires. Three controls were added for that: the switch, the selection, and the count.
+**What is true, measured:** the sim arm **does** reach the governor, transitively.
+`goldenRunner.mjs:538` calls `runSingleRace`; `sim-fairness.mjs` builds `pulkLeadRotCfg` (`:1501`)
+and a per-race `dirState` (`:1545`), passes both (`:1804-1808`), and calls **raceCore's own
+`stepRacePhysics`** (`:127`, called `:1833`) — which is the function that calls the governor
+(`raceCore.js:616`). Turning the governor off in the sim arm alone moves every golden hash, so the
+fixtures do expose it. The header of `goldenRealArm.test.js` already said so in its own words.
+**There was never a parity hole.**
 
-★★ **This is a prerequisite for any future ship of this feature, and it was only found because the
-default was flipped.** A mechanism the sim cannot reproduce cannot be swept, gated, or trusted by any
-instrument that runs on the sim path. Naming it is not fixing it, and it is not proposed here.
+**And the guards were never red on PARITY.** With the arm on, `a.hash === b.hash` passes on all
+three cases. What fails is `goldenRealArm.test.js:57` — the pinned **shipped-outcome winner**
+(`REAL_ARM_WINNERS = { 1: 12, 7: 17, 42: 13 }`, `goldenCases.js:46`), which becomes 27 / 38 / 7
+because the chase deliberately changes the race. That is a baseline to re-record at a ship, exactly
+like a fingerprint — not a defect. Full diagnosis: `reports/evolution/CHASE-PARITY-DIAG-1.md`.
 
----
+★ **The default is still not pre-set in this branch**, and the reason is now the honest one: this
+block is a measurement, the owner had not yet decided, and flipping a shipped default is a ship
+ceremony (re-recorded winner pins and re-minted fingerprints), not a convenience for an eye-test.
+The owner turns the arm on from the **Dev Screen** — three controls were added for it.
 
 ## 6 · WHAT THIS DOES NOT ESTABLISH
 

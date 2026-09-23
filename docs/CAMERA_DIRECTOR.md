@@ -1053,7 +1053,12 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b4ec7ed4 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5cbc72e5 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED AGAIN AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
+8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, ratio 0.47×.
+`defaults.js` is in this measurement's closure and that commit restored the three chase keys to
+their shipped values, so the guard asked again. Run, not argued.
 
 ★★ **RE-MEASURED IN FULL FOR CHASE-AFTER-OUTCOME (`b4ec7ed4`), AND EVERY FIGURE IS IDENTICAL TO THE
 DIGIT** — 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, ratio

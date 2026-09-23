@@ -444,6 +444,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   stage 1 was re-run in full — and states that the clustering caveat makes the winner's p OPTIMISTIC.
   **Nothing minted, nothing merged.**
 
+- [CHASE-PARITY-DIAG-1.md](CHASE-PARITY-DIAG-1.md) — **★★ THE PARITY ARMS NEVER DIVERGED. A PINNED
+  WINNER DID.** (2026-09-23, diagnosis only.) With the chase on, `a.hash === b.hash` PASSES on all
+  three golden cases and so does the finishing-order assertion; the failure is at
+  `goldenRealArm.test.js:57:69`, the pinned shipped-outcome winner (`REAL_ARM_WINNERS = {1:12, 7:17,
+  42:13}`, `goldenCases.js:46`), which becomes 27/38/7 because the chase deliberately changes the
+  race. That pin is re-recorded at a ship like a fingerprint — the file records it has already moved
+  twice, at COMBO15 and RACER-FLAPPING-2. ★ Confirmed independently of vitest by direct hash
+  comparison: ALL FIVE key combinations (including `true/'gap'/5`) are byte-identical across the
+  arms. ★ The config hypothesis was tested FIRST and DISPROVED — both routes
+  (`loadRaceDynamicsConfig` vs `DEFAULT_RACE_DYNAMICS_CONFIG`) see `true/'gap'/5` identically.
+  ★★ Corrects two of my own claims: that the parity runner does not carry the governor (refuted —
+  it reaches it via raceCore's `stepRacePhysics`; CHASE-BUILD-1 §5 and the morning sheet are
+  corrected in place rather than deleted) and that the cases "diverge on finishing order" (they do
+  not; the finishing-order assertion passes). Those two errors voided PARITY-GOVERNOR-1 on its
+  premise. NO FIX PROPOSED — what to do about a moved baseline is the owner's call.
+
 - [CHASE-REACH-1.md](CHASE-REACH-1.md) — **yes, the chase CAN reach; the boost is not what stops it**
   (2026-09-22, read-only, N=300 per stage × quiet and wild). In **72.9%** of quiet breakaways and
   **69.0%** of wild ones a racer behind the gap could close it before the finish — median best
