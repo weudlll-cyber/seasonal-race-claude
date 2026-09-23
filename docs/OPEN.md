@@ -35,10 +35,13 @@ His call, and it needs his eye afterwards. Re-verified: no code in `client/src/m
 a hero's beats.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · PART TWO decision D14
 
-**4 · The render fingerprint builds its frame camera by hand — order the repair?**
-`scripts/render-fingerprint.mjs` writes a three-member literal instead of using `frameCameraInputs`,
-which five client files do use. The repair moves the hash, so it is a mint and only he can order it.
-→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD
+**4 · ~~The render fingerprint builds its frame camera by hand~~ — ★★ ALREADY DONE, 2026-09-05.**
+The repair landed in `d2f10ab2` (RENDER-CAMERA-FIELDS-1) and is in master; all four fingerprints
+verify today. ★★★ **He ordered a re-mint for it on 2026-09-23 and there was nothing to re-mint** —
+NIGHT-2026-09-24C found the work already done and **minted nothing**, because a fingerprint minted
+with no change behind it would falsify the record. **What is left is the GUARD half** — nothing
+checks that callers build that object through `frameCameraInputs` — and it is in section 2 below.
+→ [BACKLOG.md](BACKLOG.md)
 
 **5 · A race identifier a person can type — short, long, or both?**
 The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
@@ -96,6 +99,7 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | Add tooltips to the fields that have none | small | **corrected below** |
 | Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
 | Pause and resume a running race | a block | — |
+| ★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand | small | the repair shipped 2026-09-05; nothing stops a third hand-written copy |
 | ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
 | ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
 
@@ -155,7 +159,7 @@ it.
 | what it is | size |
 | --- | --- |
 | Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
-| "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
+| ~~"Road edge out of frame" as a standing number~~ — ★★ **DONE 2026-09-24: it is 77.3%** | done | 195,135 of 252,428 corridor frames over 10 tracks x 10 seeds; searound 36.2% to mountainstreet 97.6%. The instrument is committed with its data. **Whether 77.3% is bad is his eye, not this number** |
 | Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
 | ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **CLOSED: measured, then DECIDED by the owner 2026-09-23 — the backgrounds KEEP their quality** | zero image bytes in the bundle; per-track median 3.61 MB, worst 9.69 MB (`river-run`), which **stays**. No re-encoding. |
 | ★★ **NARROWED 2026-09-24, NOT closed — and the conditional in the brief FIRED.** The group-of-three part is superseded by the owner's ruling of 2026-09-23; what remains is **4 SOLO breakaways and 9 PAIRS** | see below |

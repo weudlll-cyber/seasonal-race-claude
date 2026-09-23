@@ -769,12 +769,29 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
 
-- [ ] **"Road edge out of frame" should be a standing measurement.** The control number is the
-      argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
-      Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
-      happens, and this one was never measured that way — only its effect on zoom was.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no standing instrument exists — none of the eighteen `scripts/check-*.mjs` guards measures the road edge, and the only thing that ever has is the ad-hoc `scripts/his-shot-truth.mjs`. Waiting on somebody making it standing.
+- [x] ★★ **"Road edge out of frame" IS NOW A STANDING NUMBER — and it is 77.3%.** Closed 2026-09-24
+      by NIGHT-2026-09-24C piece 1. The instrument the item was waiting for exists:
+      `reports/evolution/road-edge-data/road-edge.mjs`, committed with its data, ten tracks x ten
+      seeds at the SHIPPED `quiet` stage.
+      **195,135 of 252,428 corridor-guarantee frames — 77.3% — have the road edge out of frame.**
+      Per track it runs from **searound 36.2%** to **mountainstreet 97.6%**; the median fraction of
+      the track width that fits is **0.444 on mountainstreet** and 0.482 on river-run, i.e. less than
+      half the road.
+      ★ **Against the control the item argues from** — 45.9% of Mountainstreet frames — today's
+      reading for that track is **97.6%**. ★★ **They are NOT directly comparable and this does not
+      claim a regression**: the control was measured with the corridor guarantee FULLY ACTIVE, this
+      is the shipped configuration, and the two are different worlds. What is now true is that a
+      standing number exists where only an impression did.
+      ★ **The denominator is corridor-guarantee frames only**, because that is the guarantee that
+      promises the road; counting LEADER_ZOOM frames would dilute the rate with frames nobody claimed
+      anything about.
+      ★ **Sabotage passed:** blinding the detector collapses every count to zero (0 corridor frames
+      against 5,298 in the control).
+      ★★ **What it does NOT establish, and why nothing was changed:** the item asked for a NUMBER, and
+      a number is what it got. **Whether 77.3% is bad is not a question this instrument can answer** —
+      the fraction is measured perpendicular to the heading from the anchor, and a viewer's sense of
+      "the road ran off the screen" is not the same quantity. **No camera change of any kind was
+      made.** Any remedy is his.
 
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
