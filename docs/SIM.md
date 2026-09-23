@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **201 files that can change the race** — the engine's own imports AND the imports of every
+the **202 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -289,6 +289,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `reports/evolution/breakaway-cast-split-data/cast-split.mjs` | Does a race that CASTS shape X break away more often than a race that does not? A read-only OBSERVATIONAL SPLIT. |
 | `reports/evolution/chase-build-data/chase-sweep.mjs` | In the races that actually break away under the owner's definition, is there a racer behind the gap who COULD close it before the finish, at the boost authority that ALREADY EXI… |
 | `reports/evolution/chase-reach-data/chase-reach.mjs` | In the races that actually break away under the owner's definition, is there a racer behind the gap who COULD close it before the finish, at the boost authority that ALREADY EXI… |
+| `reports/evolution/chase-remainder-data/remainder.mjs` | What is LEFT after the chase shipped. |
 | `reports/night/breakaway-action-data/action-arms.mjs` | Eight arms, one fixture, four groups of numbers per race: the LAST-30% breakaway, the lead changes, the fairness gate, and whether the racer who held that lead was cast. |
 | `reports/night/breakaway-count-data/breakaway-count.mjs` | A COUNT, at the OWNER'S threshold, in today's shipped world. |
 | `reports/night/breakaway-growth-data/breakaway-growth.mjs` | The measurement harness behind BREAKAWAY-GROWTH-1: it drives seeded races through stepRacePhysics and decomposes the growth of a breakaway lead into the seven factors of the t-u… |
@@ -332,7 +333,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-201 files, 24 of them UNKNOWN.
+202 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

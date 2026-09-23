@@ -426,6 +426,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CHASE-REMAINDER-1.md](CHASE-REMAINDER-1.md) — **★★ WHAT IS LEFT AFTER THE CHASE SHIPPED, AND IT
+  IS A WORST-CASE QUESTION ON TWO TRACKS, NOT A FREQUENCY ONE.** Read-only, N=300 per stage on the
+  SHIPPED world (no key set anywhere — the chase is a default now, not an arm). ★ **At WILD, the
+  stage he tests, nothing is left that is worse than before the ship on any measure** — frequency,
+  median (111.5 → 75.2 px), p90 (157.0 → 123.0) and worst case (300.8 → 207.6) all improved, and 247
+  of 300 individual races have a smaller maximum gap. ★★ **At QUIET the typical race improved and the
+  single WORST race got worse: 267.9 → 349.3 px**, which is `city-circuit` seed 30 going 168.9 →
+  349.3 — the largest gap in 600 races, peaking at progress 0.98, at the line. Only **four of twenty
+  track-stage cells** have a worse maximum and only one of them is also a large one.
+  ★★★ **A HYPOTHESIS OF MINE WAS TESTED AND REFUTED, AND THE EVIDENCE POINTS THE OTHER WAY**: I
+  expected the remaining ugly races to be chasers who closed the gap, overshot and formed a new
+  leading group. The racers ahead of the gap were boosted **LESS** than the field behind them
+  (0.91× quiet, 0.55× wild; the leading group was boosted more in only 6 of 21 decided races,
+  sign p = 0.078 in the opposite direction), **70% of them were already in the front band when the
+  window opened**, and in **9 of the 22** quiet crossings not one of the leading group had been
+  boosted at all — including all three of the worst races. So the remainder is NOT the chase's boost
+  landing on the wrong racers, and this block does not name what it is.
+  **CHECK A: the shipped world reproduces the approved G5 arm race for race, 600/600, zero
+  mismatches on `packBreakaway` and `packMaxPx` to 3 dp** — the world on master is the world he
+  looked at. **CHECK B caught a defect in the instrument rather than in the race**: the parent's
+  loop-break left the last racer unfinished, so the signature differed on 4 of 5 seeds while the race
+  was bit-identical; fixed, 5/5, no measured value moved. **CHECK C** sabotage collapsed every boost
+  number to zero on 6 of 6 while the race signature held. ★ It measures GAPS, not whether a race
+  LOOKS bad; the report ends with two shortlists of ten, ready to type into the Quick Test, and
+  **recommends nothing**.
+
 - [MORNING-2026-09-23.md](MORNING-2026-09-23.md) — **the morning sheet for the chase night** — the
   one-page read of NIGHT-2026-09-23's five pieces, which recommended the arm that became the ship.
   ★★★ **IT CARRIES A CORRECTED CLAIM AND THE CORRECTION IS THE POINT.** It originally reported a
