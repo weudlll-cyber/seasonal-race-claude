@@ -90,7 +90,7 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | Make the server's test cleanup survive a Ctrl+C | small | one signal handler |
 | Sweep `.json.tmp` orphans that survive a OneDrive write failure | small | — |
 | ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (new-track half; the load-mode half is **Q-22b** in BACKLOG PART ONE) | done | `trackEditorDraft.js`, 9 tests |
-| Protect "a default track cannot be un-defaulted" with a test | small | `server/src/routes/tracks.test.js` has set-default tests and **no un-default test** |
+| ~~Protect "a default track cannot be un-defaulted" with a test~~ — ★ **DONE 2026-09-24 (Q-24)** | done | 2 tests, both directions; **the behaviour was already correct — a test gap, not a defect**. Sabotaging `tracks.js:542` turns both red. |
 | Say *which* half failed when a track saves but its background does not | small | an error path split in two |
 | Share one slider component across three dev-screen sections | small | — |
 | Add tooltips to the fields that have none | small | **corrected below** |

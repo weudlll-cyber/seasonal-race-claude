@@ -1647,15 +1647,6 @@ already-settled questions.
   **verify:** `git grep -n "inLoadMode" -- client/src/screens/TrackEditor/TrackEditor.jsx` shows the
   gate that defines what is left.
 
-- **Q-24** — isDefault immutability via PUT explicitly tested
-  Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
-  **verify:** `git grep -n "isDefault" -- server/src/routes/tracks.test.js` — the hits cover DELETE
-  refusal and seed defaults; **no test PUTs `isDefault: false` at a default track**, so **still
-  open** (checked 2026-08-23).
-  _(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — `git grep -n "isDefault: false" -- server/src/routes/tracks.test.js` returns nothing, so no test PUTs `isDefault: false` at a default track.
-
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
   (image file). If step 1 succeeds and step 2 fails, the user sees a generic
@@ -2071,6 +2062,16 @@ proposal arriving again in six months looking new.
       JSON, an unknown version, points that are not points, the age limit, and storage that throws.
       ★ **Scope, stated rather than implied:** this is the NEW-TRACK half. Q-22's per-track key for
       load-mode editing is **Q-22b in PART ONE**.
+
+- [x] **Q-24 — `isDefault` immutability through PUT is now explicitly tested.** Closed 2026-09-24.
+      ★ **The behaviour was ALREADY CORRECT: this was a test gap, not a defect, and it is recorded as
+      such rather than dressed up as a fix.** `PUT /api/tracks/:id` spreads the client body and then
+      writes `isDefault: existing.isDefault` AFTER it (`tracks.js:542`), so a client-sent value is
+      discarded — but nothing asserted that, and restructuring the handler could have dropped the
+      line silently, which is exactly what the audit feared. Two tests now cover both directions: a
+      default track cannot be un-defaulted, and a non-default one cannot promote itself.
+      ★ **HONESTY PROOF, run rather than claimed:** deleting that line turns BOTH tests red; with it
+      present both pass. A test that would pass without the protection is not testing the protection.
 
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 

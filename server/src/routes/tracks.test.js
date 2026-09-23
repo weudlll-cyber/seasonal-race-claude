@@ -1478,6 +1478,44 @@ describe('GET /api/tracks/:id/background — C4: X-Content-Type-Options', () => 
 // HONESTY PROOF (b): operator-403 test is RED when guards.js entry is absent
 // (operator gets 200); GREEN when the ROUTE_POLICY entry is present (403).
 
+// ★★ Q-24 (POLISH-2026-09-24B): A DEFAULT TRACK CANNOT BE UN-DEFAULTED THROUGH PUT.
+// The audit found the protection present but UNTESTED: `PUT /api/tracks/:id` spreads the client body
+// and then writes `isDefault: existing.isDefault` AFTER it (`tracks.js:542`), so a client-sent value
+// is discarded. Nothing asserted that, so restructuring the handler could drop the line silently.
+//
+// ★ THE BEHAVIOUR WAS ALREADY CORRECT — this is a test gap and not a defect, and it is recorded as
+// such rather than dressed up as a fix. HONESTY PROOF: deleting `isDefault: existing.isDefault` from
+// the handler turns both tests below RED (verified 2026-09-24); with the line present they pass.
+describe('Q-24 — isDefault is immutable through PUT', () => {
+  it('PUT with isDefault:false on a DEFAULT track leaves it default', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+    await api.post(`/api/tracks/${id}/set-default`);
+
+    const put = await api.put(`/api/tracks/${id}`).send({ ...VALID_TRACK, isDefault: false });
+    expect(put.status).toBe(200);
+    expect(put.body.isDefault).toBe(true);
+
+    // and it is not merely the response — the stored record is unchanged
+    const get = await api.get(`/api/tracks/${id}`);
+    expect(get.body.isDefault).toBe(true);
+  });
+
+  it('PUT with isDefault:true on a NON-default track does not promote it', async () => {
+    const createRes = await api.post('/api/tracks').send(VALID_TRACK);
+    const id = createRes.body.id;
+    createdIds.push(id);
+
+    const put = await api.put(`/api/tracks/${id}`).send({ ...VALID_TRACK, isDefault: true });
+    expect(put.status).toBe(200);
+    expect(put.body.isDefault).toBe(false);
+
+    const get = await api.get(`/api/tracks/${id}`);
+    expect(get.body.isDefault).toBe(false);
+  });
+});
+
 describe('Admin: POST /:id/set-default (D7)', () => {
   it('admin set-default → 200 + isDefault:true, persists on GET', async () => {
     const createRes = await api.post('/api/tracks').send(VALID_TRACK);
