@@ -1520,6 +1520,14 @@ export function runSingleRace({
               dynamicsConfig.pulkBoostHeadroom ?? 0,
             )
           : 0,
+      // ★★ CHASE-AFTER-OUTCOME — THE SIM-BROWSER PARITY RULE. The browser passes these three at
+      // raceCore.js; without them here the sim races a DIFFERENT world the moment the key is on, and
+      // `goldenRealArm` (browser core == sim, byte-identical) goes red. That is exactly how this was
+      // found: the parity guard fired the instant the branch default was flipped to the recommended
+      // arm. The sim predicts the game, it is not a sandbox.
+      chaseAfterOutcomeEnabled: dynamicsConfig.chaseAfterOutcomeEnabled ?? false,
+      chaseAfterOutcomeSelection: dynamicsConfig.chaseAfterOutcomeSelection ?? 'leader',
+      chaseAfterOutcomeSlots: dynamicsConfig.chaseAfterOutcomeSlots ?? 2,
     };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.

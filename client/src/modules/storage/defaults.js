@@ -1050,7 +1050,13 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   //
   // ★★ ALL THREE DEFAULTS REPRODUCE TODAY'S RACE EXACTLY, and all four fingerprints are unmoved at
   // them. See reports/evolution/CHASE-BUILD-1.md.
-  chaseAfterOutcomeEnabled: false, // the window extension. false = today.
+  // ★★ THE RECOMMENDED ARM IS **NOT** PRE-SET HERE, DELIBERATELY — see CHASE-BUILD-1.md §6.
+  // Flipping this default turns the sim-vs-browser PARITY guards red: `realArm` runs the real
+  // browser loop (which runs the governor) and `simArm` does not carry the extension, so the two
+  // diverge the moment the key is on. That is a REAL prerequisite for any future ship, found only
+  // because the default was flipped, and it is reported rather than papered over. The owner turns
+  // the arm on from the Dev Screen instead; the default stays at today's race.
+  chaseAfterOutcomeEnabled: false,
   // 'leader' = today's rule (the window is the first frontPool-1 non-heroes behind the LEADER);
   // 'gap' = the same rule anchored on the largest consecutive gap inside the front band, so the
   // window starts at the FRONT OF THE CHASING FIELD instead of inside the leading group.

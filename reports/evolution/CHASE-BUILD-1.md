@@ -154,7 +154,30 @@ of the headline, not a second application of the rule.
 
 ---
 
-## 5 · WHAT THIS DOES NOT ESTABLISH
+## 5 · ★★ A BLOCKING PREREQUISITE, FOUND BY TRYING TO SET THE DEFAULT
+
+The last step of the night was to store the recommended arm in `defaults.js` so the owner could
+watch it. **That turned the sim-vs-browser parity guards red**, and the reason is not cosmetic:
+
+- `goldenRealArm` asserts **real browser core == sim, byte-identical**. `realArm` runs the real
+  browser loop, which runs the governor; the parity `simArm` does not carry the extension.
+- `scripts/sim-fairness.mjs` built its `pulkLeadRotCfg` **without the three chase keys** — the same
+  BLIND-SITE class this project has hit repeatedly. **That one is fixed in this branch**: the sim now
+  mirrors all three, per the standing Sim-Browser Parity Rule.
+- The remaining divergence is in the parity runner's own arms, and it is **not fixed here**.
+
+★ **So the default was RESTORED to today's race and the arm is NOT pre-set.** The branch therefore
+keeps a fully green suite, all four fingerprints unmoved, and stays merge-safe — and the owner turns
+the arm on from the **Dev Screen** instead, which is also what the project's UI-configurable rule
+requires. Three controls were added for that: the switch, the selection, and the count.
+
+★★ **This is a prerequisite for any future ship of this feature, and it was only found because the
+default was flipped.** A mechanism the sim cannot reproduce cannot be swept, gated, or trusted by any
+instrument that runs on the sim path. Naming it is not fixing it, and it is not proposed here.
+
+---
+
+## 6 · WHAT THIS DOES NOT ESTABLISH
 
 - ★ **The clustering caveat, and it cuts against the winner.** The fixture replicates 30 seeds over
   ten tracks, so a Fisher test treating 300 rows as independent is **anti-conservative**. For a null
