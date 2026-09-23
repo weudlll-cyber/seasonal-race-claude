@@ -68,7 +68,11 @@ name: Browser gate (production arm)
 
 on:
   push:
-    branches: [master]
+    # TEMPORARY-STABILITY-RUNS: the branch is here ONLY so the five stability runs of
+    # DELIVERY-BROWSER-GATE-1 can happen before this gate is allowed to block anything.
+    # workflow_dispatch cannot reach a workflow that is not yet on the default branch, so this is
+    # the only way to run it on the runner first. IT IS REMOVED BEFORE THE MERGE.
+    branches: [master, feat/delivery-browser-gate-1]
   schedule:
     - cron: '41 5 * * *'
   # The hand crank, for the same reason ci.yml has one: when the platform loses a run there has to
