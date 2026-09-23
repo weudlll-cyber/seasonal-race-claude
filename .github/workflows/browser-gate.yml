@@ -1,0 +1,264 @@
+# ============================================================
+# File:        browser-gate.yml
+# Path:        .github/workflows/browser-gate.yml
+# Project:     RaceArena — DELIVERY-BROWSER-GATE-1
+# Created:     2026-09-23
+# Description: A real browser, in the automatic judgement. Builds the client and runs the PRODUCTION
+#              e2e arm's curated fast set against it, on Linux, on every push to master and once a
+#              day — because until this file every automatic statement this project made about
+#              itself was made without a browser.
+#
+# ── WHY THIS EXISTS AT ALL ─────────────────────────────────────────────────────────────────────
+# NIGHT-2026-09-24 swept `.github/` and found `playwright` in it NOWHERE. `ci.yml` has three jobs —
+# client checks, server tests, living-doc guards — and not one of them opens a page. A regression
+# that only appears in a real browser (the served `index.html`, the runtime API address, a render
+# path) reached master green, and nothing would have said so.
+#
+# ── ★★ WHY IT IS ITS OWN WORKFLOW AND NOT A JOB IN ci.yml ──────────────────────────────────────
+# THE ABSENCE WAS A DECISION, NOT AN OVERSIGHT, and this file keeps that decision intact.
+# `audit-schedule.yml:18` states it: a scheduled or slow job must not be able to turn master red for
+# something nobody triaged, "the same reasoning that … keeps the ten-minute e2e suite out of the
+# per-push path". That sentence is still true and this workflow does not contradict it — it is the
+# precedent this file is modelled on, down to the two separations:
+#
+#   1. ITS OWN WORKFLOW. A browser job added to `ci.yml` would file every browser result under the
+#      CI workflow, so "CI failing" would mean two different things depending on what failed. Here,
+#      `CI` continues to mean exactly "the checks for a commit somebody pushed", and it stays as
+#      fast as it is today.
+#   2. THE SCHEDULED PATH CANNOT GO RED. A nightly failure that nobody caused is the fastest way to
+#      teach everyone to ignore red. On the schedule this job reports and files an issue; only a
+#      PUSH — which somebody caused — is allowed to fail the run. The `if:` on the two final steps
+#      is where that split lives.
+#
+# ── ★ AND WHY NOT `pull_request`, AND NOT EVERY BRANCH ─────────────────────────────────────────
+# The per-push path is the thing people wait on. Adding four minutes of browser to every pull
+# request buys very little: the specs here exercise the SERVED artefact, which is what master
+# produces, and a branch that has not been merged has not produced one. Master and the clock are
+# where a browser regression actually matters.
+#
+# ── WHAT IT RUNS, AND WHY THAT SET ─────────────────────────────────────────────────────────────
+# `npm run test:e2e:prod:fast` — the CURATED set that already existed in `client/package.json`,
+# reused rather than re-chosen. It runs against `playwright.prod.config.js`, the PRODUCTION arm
+# (PROD-ARM-1): one process, the server serving the built client and the API on one origin, which is
+# what a user actually gets. The dev arm is not run here — it tests a different artefact.
+#
+# ★ NO RETRIES, AND NONE ARE ADDED. `playwright.prod.config.js:78` already sets `retries: 0`, and
+# this workflow does not override it. A retry setting turns a flaky test into a slow green one and
+# hides exactly what a gate is for.
+#
+# ── ★★ IT ALSO COMPILES THE NATIVE MODULES ON LINUX, AND THAT IS NOT A SIDE EFFECT ─────────────
+# NIGHT-2026-09-24 proved a clean checkout builds on ONE machine — one Windows, one toolchain — and
+# named Linux and ARM as untested, which is exactly where `bcrypt` and `better-sqlite3` would bite.
+# `npm ci --prefix server` here builds both on Linux on every run. That closes the Linux half of
+# that open item permanently rather than once.
+#
+# ── HOW A FAILURE REACHES SOMEBODY ─────────────────────────────────────────────────────────────
+# The same way the audit's does, and by the same mechanism rather than a second one:
+#   • a failing PUSH run — the red build IS the signal. Somebody pushed it; they will see it.
+#   • a failing SCHEDULED run — an issue with a FIXED TITLE, so it is found again rather than
+#     re-filed daily while still open, and it closes itself when the gate goes green again.
+# The list-and-filter (not `--search`) and the CRLF-stripping dedup are lifted from
+# `audit-schedule.yml` because both were learned the hard way there.
+#
+# 05:41 UTC, not on the hour: GitHub queues cron workloads and on-the-hour schedules are the most
+# delayed. It is also an hour before the dependency audit, so two scheduled jobs do not contend.
+# ============================================================
+
+name: Browser gate (production arm)
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '41 5 * * *'
+  # The hand crank, for the same reason ci.yml has one: when the platform loses a run there has to
+  # be a way to ASK for one.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # The prod and dev arms share `e2e/.auth/state.json`, and two runs of THIS workflow would share a
+  # runner's worth of ports. One at a time; a superseded push run is not worth finishing.
+  group: browser-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Production browser arm (fast set)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      # ★ BOTH TREES. They are separate installs; the server's is where the native modules are.
+      - name: Install server dependencies (compiles bcrypt and better-sqlite3 on Linux)
+        id: server_install
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          npm ci --prefix server
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+
+      # The one thing the Windows clean-checkout test could not answer. Loading them is the proof;
+      # installing them is not, because a prebuilt binary that does not match the runtime still
+      # installs.
+      - name: Prove the native modules LOAD on Linux
+        run: |
+          set -euo pipefail
+          cd server
+          node -e "
+            for (const m of ['bcrypt', 'better-sqlite3']) {
+              const x = require(m);
+              if (!x) throw new Error(m + ' loaded as falsy');
+              console.log('OK   ' + m + ' loaded on ' + process.platform + '/' + process.arch);
+            }
+          "
+
+      - name: Install client dependencies
+        id: client_install
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          npm ci --prefix client
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+
+      # `--with-deps` installs the shared libraries a headless Chromium needs on a bare runner. Only
+      # chromium: the arm's config defines one project, so fetching the other engines is minutes of
+      # download for a browser nothing opens.
+      - name: Install the Playwright browser and its system dependencies
+        id: browser_install
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          npx --prefix client playwright install --with-deps chromium
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+
+      # ★ THE ARM DOES NOT BUILD FOR ITSELF, DELIBERATELY (`playwright.prod.config.js`): a harness
+      # that rebuilds silently can be measuring something other than the artefact you meant to test.
+      # So the build is a step here, and its absence would fail loudly rather than quietly.
+      - name: Build the client
+        id: build
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          npm run build --prefix client
+          test -f client/dist/index.html
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+
+      - name: Run the production browser arm (curated fast set)
+        id: e2e
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          START=$(date +%s)
+          npm run test:e2e:prod:fast --prefix client 2>&1 | tee e2e-output.txt
+          STATUS=${PIPESTATUS[0]}
+          echo "seconds=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Phase timings
+        if: always()
+        run: |
+          {
+            echo "### Browser gate — phase timings"
+            echo ""
+            echo "| phase | seconds |"
+            echo "| --- | --- |"
+            echo "| install server (native modules) | ${{ steps.server_install.outputs.seconds || '—' }} |"
+            echo "| install client | ${{ steps.client_install.outputs.seconds || '—' }} |"
+            echo "| install chromium + system deps | ${{ steps.browser_install.outputs.seconds || '—' }} |"
+            echo "| build client | ${{ steps.build.outputs.seconds || '—' }} |"
+            echo "| run the fast set | ${{ steps.e2e.outputs.seconds || '—' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The transcript and the Playwright report survive the run, so "what did it see" is answerable
+      # without re-running against a tree that has since moved.
+      - name: Keep the transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-gate-${{ github.run_id }}
+          path: |
+            e2e-output.txt
+            client/playwright-report/
+            client/test-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+      # ── the two paths, and the `if:` is where the precedent's rule lives ────────────────────────
+      # A SCHEDULED failure files an issue and leaves the run green: nobody caused it, so it must not
+      # turn the repository red for something untriaged. A PUSH failure fails the run: somebody
+      # caused it, and the red build is the signal they will actually see.
+      - name: File, update or close the browser-gate issue (scheduled runs only)
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          E2E_STATUS: ${{ steps.e2e.outputs.status }}
+        run: |
+          set -euo pipefail
+          TITLE='Browser gate: the production arm is failing'
+          # LISTED AND FILTERED, NOT SEARCHED — GitHub's issue search index lags writes by up to a
+          # minute, so `--search` can miss an issue this workflow itself opened. Lifted from
+          # audit-schedule.yml, where that was learned.
+          NUM=$(gh issue list --state open --limit 200 --json number,title \
+                  --jq "[.[] | select(.title == \"$TITLE\")][0].number // empty")
+
+          if [ "${E2E_STATUS:-1}" != "0" ]; then
+            {
+              echo "The scheduled production browser arm failed on \`${GITHUB_SHA}\`."
+              echo ""
+              echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+              echo ""
+              echo '```'
+              tail -c 8000 e2e-output.txt 2>/dev/null || echo '(no transcript)'
+              echo '```'
+            } > issue-body.md
+            if [ -z "$NUM" ]; then
+              gh issue create --title "$TITLE" --body-file issue-body.md
+              echo "opened a new browser-gate issue"
+              exit 0
+            fi
+            gh issue view "$NUM" --json body,comments \
+              --jq '(.comments | last | .body) // .body' > previous.md
+            # GitHub stores bodies with CRLF, so the carriage returns go or every day looks changed.
+            if diff -q <(tr -d '\r' < previous.md | sed 's/[[:space:]]*$//') \
+                       <(tr -d '\r' < issue-body.md | sed 's/[[:space:]]*$//') >/dev/null; then
+              echo "issue #$NUM already states this exact failure — not commenting again"
+            else
+              gh issue comment "$NUM" --body-file issue-body.md
+              echo "the failure changed — commented on issue #$NUM"
+            fi
+          elif [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body \
+              "The production browser arm is green again as of run \`${GITHUB_RUN_ID}\`. Closing — this issue reopens by itself if it fails again."
+            gh issue close "$NUM"
+            echo "closed issue #$NUM"
+          else
+            echo "green and nothing open — nothing to say"
+          fi
+
+      # ★ ONLY A PUSH MAY FAIL THE RUN. See the header: a scheduled red that nobody caused is how a
+      # repository learns to ignore red.
+      - name: Fail the run if a pushed commit broke the browser
+        if: always() && github.event_name != 'schedule'
+        env:
+          E2E_STATUS: ${{ steps.e2e.outputs.status }}
+        run: |
+          if [ "${E2E_STATUS:-1}" != "0" ]; then
+            echo "The production browser arm failed for this commit. Transcript is in the run artefacts."
+            exit 1
+          fi
+          echo "the production browser arm passed"
