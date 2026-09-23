@@ -41,6 +41,40 @@ chaseAfterOutcomeSlots: 5
 (p < 0.0001), overtakes **+12.7%** on 10 of 10 tracks, lead changes **+11.4%** on 9 of 10. The
 band-arrival cost is larger there (−4.16 pp) and one track, dirt-oval, gets worse. Details in §4.
 
+### ★★★ A WITNESS THAT WAS NOT BUILT FOR THIS QUESTION — the camera agrees
+
+**Added at CHASE-SHIP-1, 2026-09-23.** `scripts/tracking-lag.mjs` exists to measure how far behind
+its subject the camera sits. It is stamped in `docs/CAMERA_DIRECTOR.md`, it has been re-measured on
+every commit of this branch, and until this ship **every figure it produced was identical to the
+digit**. At the ship **every row moved**, and the frame counts say the same thing the sweep says:
+
+| state | frames before | frames after | Δ |
+|---|---|---|---|
+| **BATTLE_ZOOM** | 8069 | **8836** | **+767** |
+| **LEADER_ZOOM** | 14351 | **12395** | **−1956** |
+| LEAD_CHANGE | 8440 | 9247 | +807 |
+| OVERVIEW | 3667 | 4250 | +583 |
+| PHOTO_FINISH | 1973 | 1944 | −29 |
+
+★★ **The camera spends 1956 fewer frames on a lone leader and 767 more inside a battle.** The
+director does not know what a breakaway is and was never asked; it chooses a shot from the race it
+is given, and the shot it chooses changed in the direction this whole block argued for. **This is
+the only evidence in this report that does not come from the sweep that recommended the arm.**
+
+★ **THE CAVEAT, AND IT IS A REAL ONE: this is ONE FIXTURE** — a single identity (raceSeed 5601, 40
+racers, the track-default racer, the default world), not 300 races over ten tracks. It cannot carry
+a p-value and none is offered. It is a witness, not a measurement of the effect size. ★ Nothing was
+tuned to it and it was not consulted while choosing the arm; it was re-run because a stamp guard
+demanded it, and it happened to answer.
+
+★ **A companion instrument went the other way and is reported too.** `scripts/straggler-truth.mjs`
+also moved on every row, and in doing so it made a sentence in `docs/ENDING-PHASES.md` FALSE: that
+document said *"at 20 racers there are no settled frames at all"*, and after the ship both 20-racer
+rows settle (132 frames and 10). **It was corrected in place and named as false rather than quietly
+edited**, with the superseded table kept and labelled, because a reader who remembers the old
+sentence needs to know it was measured false rather than forgotten. That is the honest-instrument
+rule doing its job, and it is recorded here so the ship's cost and its evidence sit in one place.
+
 ---
 
 ## 1 · WHAT WAS BUILT, AND WHAT WAS NOT
