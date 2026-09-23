@@ -426,6 +426,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DELIVERY-BACKUP-1.md](DELIVERY-BACKUP-1.md) — **★★ A BACKUP THAT SURVIVES A RESTORE, PROVEN BY
+  DESTROYING A DATA ROOT AND BRINGING IT BACK.** `scripts/backup.mjs` archives the whole resolved data
+  root **while the server runs**, taking the two SQLite databases through the driver's own online
+  `.backup()` rather than a file copy — a copy of a live database can capture a torn page set and the
+  result **looks perfectly normal** until the day it is restored. ★ The acceptance criterion was
+  performed, not argued: scratch instance, admin and a race created through the API, backup taken
+  live, **the data root destroyed**, restored, server restarted — the account signs in and the
+  original race `MKP4HV` is readable with its seed intact. ★★ **The under-load proof found a real
+  bug**: backing up while 53 races were being written crashed on `races.sqlite-journal` vanishing
+  between the listing and the read, which the quiet test could never produce; side files are now never
+  archived (restoring a stale journal beside a consistent snapshot can roll it back to a state that
+  never existed) and any other file vanishing mid-run is a refusal rather than a silent skip.
+  ★ **The sabotage was run for real** — the sqlite step was patched to skip every database and the
+  round-trip test WENT RED, then the patch was reverted and the suite verified green. Also closes the
+  second delivery blocker: `docs/DEPLOYMENT.md` gains a backup and upgrade procedure written for
+  someone who has never seen the project, **including how to go back**. ★ The missing migration
+  ledger is recorded as a limitation in `OPEN.md`, deliberately not built.
+
 - [MORNING-2026-09-24.md](MORNING-2026-09-24.md) — **the morning sheet for the open-truth night** —
   what is actually open, re-established at the tree rather than copied from any list. ★ Two whole
   candidate classes came back EMPTY (no TODO/FIXME/HACK/XXX marker in source; no skipped or focused
