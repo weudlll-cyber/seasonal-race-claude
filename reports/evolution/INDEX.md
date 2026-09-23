@@ -426,6 +426,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-23.md](MORNING-2026-09-23.md) — **the morning sheet for the chase night** — the
+  one-page read of NIGHT-2026-09-23's five pieces, which recommended the arm that became the ship.
+  ★★★ **IT CARRIES A CORRECTED CLAIM AND THE CORRECTION IS THE POINT.** It originally reported a
+  BLOCKING PARITY PREREQUISITE — that the parity runner does not carry the governor — which is
+  **refuted**: the sim arm reaches it transitively through raceCore's own `stepRacePhysics`
+  (`goldenRunner.mjs:538` → `sim-fairness.mjs:1833`), and disabling the governor in the sim arm alone
+  moves every golden hash. The original wording is kept beside the correction rather than deleted,
+  because it cost a commissioned block (PARITY-GOVERNOR-1, void on its premise) and a day. Diagnosis:
+  [CHASE-PARITY-DIAG-1.md](CHASE-PARITY-DIAG-1.md); the ship it fed:
+  [CHASE-BUILD-1.md](CHASE-BUILD-1.md).
+
 - [CHASE-BUILD-1.md](CHASE-BUILD-1.md) — **★★ THE FIRST ARM IN FOUR BLOCKS TO WIN BOTH HALVES:
   accelerate FIVE racers picked from behind the GAP, and the owner's breakaway falls 16.0% → 7.3%
   (N=300, Fisher p = 0.0013) while in-window overtakes rise 5.5% on TEN TRACKS OF TEN (sign test
