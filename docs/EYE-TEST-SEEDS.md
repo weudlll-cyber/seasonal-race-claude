@@ -62,6 +62,25 @@ seed fixes:
    configuration is not a reference to anything — this is why an eye-test instruction always states the
    config.
 
+★★ **THE RACE ACTION STAGE IS PART OF THAT CONFIG, AND IT IS THE ONE PEOPLE FORGET.**
+**Eye-tests run on the SHIPPED stage unless the brief says otherwise.** Which stage that is lives in
+`raceActionStage` in `client/src/modules/storage/defaults.js` and nowhere else — read it there rather
+than from any document, this one included. *(As of 2026-09-23 it was `quiet`, and for weeks before
+that date eye-tests had been run on `wild` instead — a different race for the same seed, not a louder
+version of it.)*
+
+★ **The worked example, because it cost an hour on 2026-09-23.** `city-circuit`, quick-test seed 30,
+identical in every other respect:
+
+| stage | largest in-window gap | a breakaway? |
+|---|---|---|
+| **`quiet`** (the shipped stage on 2026-09-23) | **349 px** | **yes, held by three racers** |
+| `wild` | 87 px | **no** |
+
+Same track, same seed, same field: the stage is the difference between the worst breakaway in 600
+measured races and nothing to look at. Caveat 2 already covered this in principle — "any dynamics
+value" — and it was still missed, which is why it now has its own heading.
+
 Typed seeds accept any positive integer (the browser cap was lifted to `MAX_SAFE_INTEGER`; the old 9999
 ceiling now bounds only auto-drawn random seeds). A sweep `--seed=1 --races=100` uses per-race seeds
 `1..100`, so `--seed=S --races=1` reproduces browser seed `S`.
@@ -82,6 +101,9 @@ ceiling now bounds only auto-drawn random seeds). A sweep `--seed=1 --races=100`
   sample**: a verdict covers the track, the state AND the seed it was given on, and the same track with
   another seed can look entirely different.
 - **Always state the full config** alongside the seeds. Seeds are meaningless without it.
+- ★ **State the ACTION STAGE, and default it to the SHIPPED one** — read which that is from
+  `raceActionStage` in `defaults.js`, never from a document. A seed on a non-shipped stage is a
+  different race, not the same race with more of something — see caveat 2's worked example.
 - **You CAN cross-reference a browser observation with the sim CSV row for the same seed** — they are the
   same race now. "Seed 87 showed a duo escape, and the sim row for seed 87 has 5 lead changes" is a valid
   statement about one race.

@@ -565,6 +565,12 @@ shipped ones:
 3. **A breakaway of more than four is not braked at all** — the owner's limit, set 2026-09-20, on
    the ground that a group that size contains enough fighting for the lead already.
 
+★ **The owner's breakaway definition has moved on since this entry and its one home is now
+[GLOSSARY.md](GLOSSARY.md)** — he added on 2026-09-23 that a large gap held by a group of THREE is
+acceptable, and the pair case is explicitly undefined. Nothing above changes: this section is a dated
+record of what was built and why it was refused. Read the glossary before using any of these numbers
+in a new measurement.
+
 **IT DOES EXACTLY THAT, AND THAT IS PROVEN RATHER THAN CLAIMED.** Four sabotages, each landing where
 it should: restoring the leader-to-second input turns 3 tests red; braking only the leader turns 3
 red; removing the limit of four turns exactly 1 red (the group-of-five case); and clamping the group

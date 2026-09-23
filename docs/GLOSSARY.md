@@ -140,6 +140,41 @@ of layer 2 of the fairness definition.
 
 **escapee** — a racer that gets clear of the pack.
 
+**breakaway** — ★ **the owner's own word, and his definition is the one that counts.** Recorded here
+as dated facts because it has been refined twice and a measurement that uses the wrong version
+answers the wrong question.
+
+- **2026-09-20 — what it IS.** A racer alone at the front, OR a group leading together, FAR from the
+  **front of the chasing field**. The distance runs from the back of the leading group to the front
+  of the field — the beginning of the pack, never its middle, and no mean, median or centroid.
+  Window **`[0.70, finish]`**; threshold **157.05 world px**. The leading group is bounded by the
+  game's own front band (`BAND_EDGES[0]`), so a "group" is 1–5 racers.
+- **2026-09-20 — the upper bound.** More than four racers at the front are **not to be braked at
+  all**: a group that size already contains enough fighting for the lead.
+- ★ **2026-09-23 — NEW, and it narrows what he objects to.** A large gap held by a group of **THREE**
+  is **acceptable** to him and is not the picture he is complaining about. Established by his own
+  eye-test on the shipped `quiet` stage, `city-circuit` quick-test seed 30 — a 349 px gap, the
+  largest in 600 measured races, held by three racers.
+- ★★ **A group of TWO is UNDEFINED. It has never been ruled on, and nothing here implies a
+  threshold.** Three points (solo objectionable, three acceptable, more-than-four not to be braked)
+  do not interpolate, and guessing the fourth would put a number in his mouth. **Any measurement that
+  needs the pair case asks him first.**
+
+★ **What the 2026-09-23 refinement does to the numbers — and what it does NOT do.** The measured
+rates are **unchanged as measurements**: 7.3% of races at `quiet` and 1.7% at `wild` still cross his
+threshold (CHASE-REMAINDER-1, N=300 per stage). **What narrowed is the acceptance criterion, not the
+instrument.** Of the 22 remaining `quiet` breakaways, **12 are groups of three or more** — acceptable
+under the refinement — leaving **solo-plus-pairs at 10 of 300 (3.3%)** and **solo alone at 3 of 300
+(1.0%)**. At `wild`, 2 of the 5 are groups of three or more, leaving solo-plus-pairs at **3 of 300
+(1.0%)** and solo alone at **1 of 300 (0.3%)**. ★ A report quoting 7.3% and a report quoting 3.3% are
+not in conflict; they are counting different things, and both must say which.
+
+Owned by the measurements in [reports/evolution/CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md)
+(the remainder after the chase shipped) and `reports/night/BREAKAWAY-RECOUNT-2.md` (where 157.05 px
+comes from). ★ The threshold was calibrated on LEADER-TO-SECOND, which is not the quantity the
+definition above describes — it is his only anchor, and the sensitivity pair 112.5 / 225.0 px travels
+with every count for that reason.
+
 **P1 contest** — a sustained battle for the lead. Measured; rare.
 
 ---
