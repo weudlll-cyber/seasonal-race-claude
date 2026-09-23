@@ -652,6 +652,28 @@ checkout of one of those four tags shows the inconsistency.
 
 ---
 
+## ★★ THE LIST IS UPDATED BY THE WORK THAT CHANGES IT — the owner's rule of 2026-09-23
+
+**Work that closes or changes an open item updates the list IN THE SAME COMMIT as the work.** Not
+afterwards, not in a follow-up, and not only on the short page.
+
+- **[BACKLOG.md](BACKLOG.md) OWNS the list**, with the evidence, and has two parts: PART ONE is
+  everything still open, PART TWO everything closed **with what closed it**. Its own contract is that
+  **a subject appears in exactly one of them**.
+- **[OPEN.md](OPEN.md) is the short readable page over it.** Where the two disagree, **the backlog
+  wins and OPEN.md is corrected.**
+- So closing something means: **MOVE the subject from PART ONE to PART TWO, with what closed it, in
+  the same commit as the work** — then make OPEN.md agree.
+
+★ **Updating the short page and leaving the owning document stale is backwards**, and the rule was
+given because that is exactly what happened. NIGHT-2026-09-24 found five delivery gaps and wrote
+every one of them only to `OPEN.md`; DELIVERY-BACKUP-1 then closed two of them and updated neither
+document, so the short page still carried them as live blockers a day after it was built to end that.
+
+★ **Not guarded yet.** The "exactly one part" contract is mechanically checkable and a guard for it
+would be its own job; it has not been ordered. Until then this rule is kept by hand, which is why it
+is written where the ceremony lives rather than in a report.
+
 ## The checklist
 
 > **★ THIS IS THE SECOND OF THIS DOCUMENT'S TWO NUMBERED LISTS, and its numbers are its own.** A

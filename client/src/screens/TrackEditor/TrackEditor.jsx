@@ -326,9 +326,17 @@ export default function TrackEditor() {
 
   // Write the draft whenever the geometry changes. `saveDraft` writes nothing for an empty drawing,
   // so clearing the canvas does not overwrite a real draft with an empty one.
+  //
+  // ★★ NEW-TRACK MODE ONLY, AND THE WRITE IS GATED THE SAME WAY THE OFFER IS. Q-22 specifies a
+  // PER-TRACK key so that editing an existing track is drafted too; this is the single-key,
+  // new-track half of it. Writing a draft in load mode while never offering one there would store
+  // data nobody ever sees — worse than not storing it — so the write is gated identically. The
+  // load-mode half stays open in BACKLOG.md as Q-22b.
+  const inLoadMode = !!searchParams.get('load');
   useEffect(() => {
+    if (inLoadMode) return;
     saveDraft({ centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName });
-  }, [centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
+  }, [inLoadMode, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
   // Runs whenever server tracks or the geometry cache list become available.

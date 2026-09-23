@@ -929,6 +929,38 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
+## Delivering to someone else — what still stands (2026-09-24)
+
+★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
+five delivery gaps and wrote every one of them ONLY to `OPEN.md`, the short readable page — the
+owning document was never told. That is backwards, and the owner's rule of 2026-09-23 (recorded in
+[SHIP-CEREMONY.md](SHIP-CEREMONY.md)) says so: work that closes or changes an open item updates the
+list in the same commit, and **this document owns the list**. The three that have since been closed
+are in PART TWO with what closed them; these are the ones still standing.
+
+- [ ] **There is no public address, and without one there is no HTTPS — and without HTTPS sign-in
+      does not merely become insecure, it STOPS WORKING.** `Secure` cookies are not sent over plain
+      HTTP at all, so the session cookie is issued and never returned. `racearena.example.com` is a
+      placeholder in documentation and in `deploy.yml.disabled`; it is nowhere as a real origin.
+      ★ **This is not a code task**: `npm run configure` (`scripts/configure.mjs:63`) already writes
+      the real value into a gitignored `docker-compose.override.yml`. What is missing is a domain, a
+      proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
+      **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
+
+- [ ] **Nothing records which migrations an instance has already applied.** There is one migration
+      script, `scripts/migrate-teams.mjs`, run by hand. `DEPLOYMENT.md`'s upgrade procedure therefore
+      has to say *"read the migrations section and decide"* at its migration step instead of naming a
+      command. **It is survivable today only because that one script is idempotent** — running it
+      twice is harmless. A future migration that is not idempotent would not be survivable, and
+      nothing would stop it being run twice. Raised by DELIVERY-BACKUP-1 (`616f6ea8`), which
+      deliberately did not build it: a ledger is a second mechanism and was not ordered there.
+
+- [ ] **The browser gate covers 7 of the 19 e2e specs, and does not run on pull requests.** The gate
+      itself shipped (PART TWO), so what remains is its SCOPE: the other 12 specs stay night work by
+      [VERIFY-RULES.md](VERIFY-RULES.md) R12a, and a browser regression is caught AT master rather
+      than before it arrives. Both are deliberate — recorded so the closure is not read as wider than
+      it is.
+
 ## Before the VPS migration
 
 - [ ] **`npm run data:export` is what carries his data to the VPS, and the same comparison tells the
@@ -1603,17 +1635,17 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — the only `json.tmp` hits in `server/src` are the two test assertions that a `.tmp` does NOT remain after a normal write; there is still no boot sweep and no `.json.tmp` branch in the server's own filter.
 
-- **Q-22** — TrackEditor frontend draft snapshot
-  localStorage snapshot of the drawn geometry (key: `racearena:trackEditor:draft:<serverId>` for
-  load mode, `racearena:trackEditor:draft:new` for new mode). Written on every point action or every
-  ~30s, deleted after successful server save. Protects against data loss on silent
-  server errors (F3 scenario from TLH-2 browser test) or browser crash. Effort: small (~50 LOC).
-  Small standalone PR.
-  **verify:** `git grep -l "trackEditor:draft" -- client/src` returns nothing (checked 2026-08-23),
-  so **still open**.
-  _(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "trackEditor:draft" -- client/src` still returns nothing.
+- **Q-22b** — TrackEditor draft snapshot, the LOAD-MODE half
+  ★ **Q-22's new-track half CLOSED 2026-09-24 (PART TWO); this is the remainder, split out rather
+  than left implied.** Editing an EXISTING track is not drafted: the draft is written and offered
+  only when the editor was opened without `?load=`. Closing this needs the per-track key Q-22
+  originally specified (`racearena:trackEditor:draft:<serverId>`) so two tracks cannot overwrite each
+  other's draft, and an offer on reopening that track.
+  **Why it was not simply finished in the same pass:** the new-track case loses ALL the work and the
+  load-mode case loses an edit to work that is already saved on the server, so they are not the same
+  severity; and a per-track key is a second storage shape, not a widening of the first.
+  **verify:** `git grep -n "inLoadMode" -- client/src/screens/TrackEditor/TrackEditor.jsx` shows the
+  gate that defines what is left.
 
 - **Q-24** — isDefault immutability via PUT explicitly tested
   Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
@@ -2027,6 +2059,66 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+## Small fixes closed by POLISH-2026-09-24B
+
+- [x] **Q-22 (the new-track half) — a crash can no longer lose a hand-drawn track.** Closed
+      2026-09-24. `client/src/screens/TrackEditor/trackEditorDraft.js` keeps the drawn geometry in
+      `localStorage` and the editor OFFERS it on mount rather than restoring silently — restoring
+      over something already started would be its own way to lose work. Cleared on a successful save,
+      keyed off `useTrackIO.js:130`'s existing `setIsDirty(false)` rather than a second success path.
+      Nine tests cover the round trip, the refusal to write an empty draft over a real one, corrupt
+      JSON, an unknown version, points that are not points, the age limit, and storage that throws.
+      ★ **Scope, stated rather than implied:** this is the NEW-TRACK half. Q-22's per-track key for
+      load-mode editing is **Q-22b in PART ONE**.
+
+## Delivering to someone else — what CLOSED (2026-09-23/24)
+
+**Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART
+ONE**, under the same heading, so the subject is in exactly one of the two parts as this document's
+contract requires.
+
+- [x] **A BACKUP PROCEDURE, AND A RESTORE THAT HAS BEEN PERFORMED** — closed by DELIVERY-BACKUP-1,
+      merge **`616f6ea8`**. `scripts/backup.mjs` archives the whole resolved data root as one tar
+      **while the server runs**, taking the two SQLite databases through the driver's own online
+      `.backup()` rather than a file copy — a copy of a live database can capture a torn page set and
+      the result looks perfectly normal until the day it is restored. **The acceptance criterion was
+      performed, not argued:** a scratch instance was built through the API, backed up live, its data
+      root DESTROYED, restored, and the server restarted against it — the account signed in and the
+      stored race was read back with its seed intact. Evidence:
+      [DELIVERY-BACKUP-1.md](../reports/evolution/DELIVERY-BACKUP-1.md).
+      ★ It also found a real bug while proving itself: backing up under write load crashed on
+      `races.sqlite-journal` vanishing between the directory listing and the read.
+
+- [x] **AN UPGRADE PATH, INCLUDING THE WAY BACK** — closed by the same merge **`616f6ea8`**.
+      [DEPLOYMENT.md](DEPLOYMENT.md) gained a *Backing up, and upgrading* section written for someone
+      who has never seen the project: where the data is, how to back it up and why copying the folder
+      is not equivalent, and an eight-step upgrade ending with **how to go back**. An upgrade
+      procedure without a way back is a one-way door.
+
+- [x] **`DEPLOYMENT.md` WAS NOT EXECUTABLE AS WRITTEN — ALL FOUR ASSUMPTIONS ARE NOW CLOSED**, and
+      they were checked one at a time rather than as a group. Fixed by NIGHT-2026-09-24, merge
+      **`842371e6`**: **(a)** it never said to install dependencies — `npm ci --prefix` now appears
+      four times; **(b)** it needed `openssl` without saying so — named at `:82` as absent from a
+      default Windows box; **(c)** it named no Node version — now *"Node 20 or newer"*, taken from
+      the declared `engines`; **(d)** ★ a real defect: `RA_BOOTSTRAP_TOKEN` was set as a per-command
+      prefix to `node` and then used in a fresh shell where it is empty, so the printed setup `curl`
+      sent an empty token — it is `export`ed now.
+
+- [x] **NO BROWSER TEST RAN AUTOMATICALLY, ANYWHERE** — closed by DELIVERY-BROWSER-GATE-1, merge
+      **`8efc426f`**. `playwright` appeared in `.github/` nowhere, so every automatic statement this
+      project made about itself was made without a browser.
+      `.github/workflows/browser-gate.yml` builds the production client and drives **82 tests**
+      through a real Chromium on every push to master, daily, and on demand. **It is its own
+      workflow** because the absence was a decision (`audit-schedule.yml:18`), and the scheduled path
+      files an issue rather than going red. **Proven stable before it was allowed to block**: five
+      runs on an unchanged tree, 5 of 5 green, no retries. ★ **Its SCOPE remains open in PART ONE.**
+
+- [x] **THE LINUX HALF OF THE CLEAN-MACHINE QUESTION** — closed by the same merge **`8efc426f`**, and
+      closed permanently rather than once. The gate compiles `bcrypt` and `better-sqlite3` on
+      `ubuntu-latest` every run and proves they **LOAD**, not merely install — a prebuilt binary that
+      does not match the runtime still installs. Observed: `OK bcrypt loaded on linux/x64`,
+      `OK better-sqlite3 loaded on linux/x64`. **ARM is still untested** and that is not claimed.
 
 ## DECISIONS — the owner's, recorded so they stop being re-proposed
 
