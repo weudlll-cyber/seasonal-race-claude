@@ -49,9 +49,44 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 5cbc72e5 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 3aeb169f 2026-09-23 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
-★★ **RE-MEASURED AGAIN AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
+★★★ **RE-MEASURED AT `3aeb169f` (CHASE-SHIP-1, 2026-09-23) — EVERY ROW MOVED, AND ONE SENTENCE
+THIS SECTION CARRIED IS NOW FALSE.** `node scripts/straggler-truth.mjs`, seed 9, the command this
+stamp names:
+
+| track | n | kind | phase 6 lasts | zoom-out begins BEFORE the last crossing | unfinished in shot | any racer in shot | settled frames |
+| ----- | - | ---- | ------------- | ---------------------------------------- | ------------------ | ----------------- | -------------- |
+| dirt-oval | 20 | closed | **6.87 s** | **5.20 s** | 7 of 7 | 7 of 20 | **132** |
+| dirt-oval | 40 | closed | **8.65 s** | **6.12 s** | 11 of 11 | 13 of 40 | **187** |
+| river-run | 20 | open | **5.18 s** | **3.17 s** | 1 of 1 | 20 of 20 | **10** |
+| river-run | 40 | open | **6.97 s** | **4.67 s** | 6 of 6 | 40 of 40 | **100** |
+
+★ **This is the table that is CURRENT.** The one further down — 4.85/9.12/3.68/6.80 with two empty
+rows — is the PRE-CHASE record, kept as history because every entry between here and there says
+*"identical to the digit"* about it.
+
+★★★ **THE SENTENCE THAT IS NOW FALSE, NAMED RATHER THAN QUIETLY EDITED.** This section has said
+since STAMP-RESTAMP-1 that *"at 20 racers there are no settled frames at all, which is why those two
+rows have no counts to give."* **Both 20-racer rows now have settled frames** — 132 on dirt-oval and
+10 on river-run — so both rows now carry counts. The claim was a true observation about the ending
+as it then was, not a rule about 20-racer races, and the ship moved it. It is corrected in place
+below and left visible here because a reader who remembers the old sentence needs to know it was
+measured false rather than forgotten.
+
+★★ **WHY IT MOVED, AND WHY THAT IS NOT AN ENDING CHANGE.** Nothing in `CameraDirector.js` and no
+ending default is touched by this ship. Phase 6 is EVENT-DRIVEN — it ends when the last racer is
+home — so its duration is a property of the RACE, and CHASE-SHIP-1 changed the race
+(`chaseAfterOutcomeEnabled: true`, `'gap'`, `5`). The direction is what the chase was measured to
+do: the field arrives **more spread out at the back** on the closed track (phase 6 4.85 → 6.87 s at
+20 racers) and **less spread out at the front** on the 40-racer rows (9.12 → 8.65 s), and the ending
+therefore reaches its settled shot where it previously never got there at all.
+
+★ **The zoom-out still begins before the last crossing on all four rows**, which is this section's
+load-bearing claim, and the lead GREW on ALL FOUR (2.70 → 5.20, 5.73 → 6.12, 1.28 → 3.17,
+4.57 → 4.67). **The range is now 3.17–6.12 s**, where it was 1.28–5.73 s.
+
+★★ **RE-MEASURED AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
 4.85/2.70/0f, 9.12/5.73/7of7/8of40/164f, 3.68/1.28/0f, 6.80/4.57/3of3/40of40/94f. Same reason:
 `defaults.js` sits in the closure and that commit touched it. Run, not argued.
 
@@ -242,7 +277,8 @@ case. These four numbers are answers about WHEN thresholds are crossed, and no t
 
 ★★★ **RE-MEASURED ON MASTER, 2026-09-19 (STAMP-RESTAMP-1). EVERY NUMBER BELOW MOVED, AND SO DID
 TWO OF THE SENTENCES UNDER THEM.** `node scripts/straggler-truth.mjs`, seed 9, the command this stamp
-names:
+names. ★ **SUPERSEDED AT CHASE-SHIP-1 (2026-09-23) — these are the PRE-CHASE numbers**, and the
+current table is at the top of this section:
 
 | track | n | kind | phase 6 lasts | zoom-out begins BEFORE the last crossing | unfinished in shot | any racer in shot | settled frames |
 | ----- | - | ---- | ------------- | ---------------------------------------- | ------------------ | ----------------- | -------------- |
@@ -255,12 +291,19 @@ names:
 `settled` now — the fewest unfinished racers in shot on any SETTLED frame, the fewest racers of any
 kind, and how many settled frames there were — where the table used to carry "still running then" and
 "of those, off canvas". They are different questions, so the old values are not comparable to these
-and are not shown beside them. **At 20 racers there are no settled frames at all, which is why those
-two rows have no counts to give.**
+and are not shown beside them. ★★ **CORRECTED AT CHASE-SHIP-1 (2026-09-23).** This paragraph used
+to end *"At 20 racers there are no settled frames at all, which is why those two rows have no counts
+to give"* — true of the race as it then was, and **false since the chase shipped**: both 20-racer
+rows now settle (132 frames and 10) and both carry counts in the current table at the top of this
+section. The empty cells in the PRE-CHASE table above are therefore a fact about that race, not
+about 20-racer races.
 
 **"~2.9 s at 20 racers" was wrong, and it still is** — it is **3.68 s** on the open track and
 **4.85 s** on the closed one, and it still grows with the field: **6.80 s** and **9.12 s** at 40.
-(It read 4.45 / 6.18 / 5.95 / 7.53 before this measurement.)
+(It read 4.45 / 6.18 / 5.95 / 7.53 before this measurement.) ★ **UPDATED AT CHASE-SHIP-1
+(2026-09-23): 5.18 / 6.87 at 20 and 6.97 / 8.65 at 40.** The rejected "~2.9 s" is further from the
+truth than ever, and phase 6 still grows with the field — but by LESS than it did, because the
+chase's effect on this fixture is larger at 20 racers than at 40.
 
 ★★ **"the zoom-out starts ~1.4 s before it ends" — THE DISMISSAL NO LONGER HOLDS, AND THIS IS THE
 CORRECTION THAT MATTERS.** The range is now **1.28–5.73 s** before the last crossing. This paragraph
@@ -268,6 +311,14 @@ used to say the range was 2.30–5.75 s and that "the separate measurement that 
 stands; 1.4 s does not". **On river-run at 20 racers it is 1.28 s — below the figure this document
 dismissed** — and the 4.4–5.9 s claim is not supported by any row here either. What survives is only
 the weaker statement: the lead grows with the field, and at 40 racers it is 4.57–5.73 s.
+
+★★ **UPDATED AT CHASE-SHIP-1 (2026-09-23), AND THE PARAGRAPH ABOVE'S CONCLUSION SURVIVES ITS OWN
+NUMBERS MOVING.** The range is now **3.17–6.12 s** and at 40 racers **4.67–6.12 s**. The low end rose
+above 1.4 s, so that specific dismissal would now hold again — **but it is not reinstated**, because
+a claim that was measured false once is not made true by a later race changing under it; what this
+row shows is that the figure was never a property of the ending, only of whichever race was run.
+★ The 4.4–5.9 s claim is STILL not supported: two of the four rows sit outside it, one below and
+one above. The weaker surviving statement is unchanged and is the one to rely on.
 
 **THE ENDING OVERLAPS THE RACE, AND IT SHOWS THE RACERS IT IS WAITING FOR.** The in-shot columns are
 a snapshot of ONE frame and must not be read as the state of the ending. **The camera then opens and

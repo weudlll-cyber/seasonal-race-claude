@@ -1053,9 +1053,39 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5cbc72e5 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 3aeb169f 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
-★★ **RE-MEASURED AGAIN AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
+★★★ **RE-MEASURED AT `3aeb169f` (CHASE-SHIP-1, 2026-09-23) — AND FOR THE FIRST TIME IN THIS
+BRANCH'S LIFE EVERY ROW MOVED.** `node scripts/tracking-lag.mjs`, the command this stamp names:
+
+| state | frames | median pp | p95 pp |
+|---|---|---|---|
+| BATTLE_ZOOM | **8836** | 5.92 | 9.34 |
+| LEADER_ZOOM | **12395** | 4.62 | 8.80 |
+| LEAD_CHANGE | **9247** | 4.52 | 8.93 |
+| OVERVIEW | **4250** | 2.53 | 19.68 |
+| PHOTO_FINISH | **1944** | 3.08 | 8.22 |
+
+**OVERVIEW median 2.53 pp against every other state pooled 4.95 pp — ratio 0.51×** (was 0.47×).
+
+★ **This is the table that is CURRENT. The one further down, at 8069/14351/8440/3667/1973 and ratio
+0.47×, is the PRE-CHASE record and is kept as history, not as a live claim.**
+
+★★ **WHY IT MOVED, AND WHY THAT IS NOT A CAMERA CHANGE.** Nothing under
+`client/src/modules/camera/` is touched by this ship. What changed is the RACE the director is
+pointed at: CHASE-SHIP-1 made the chase the shipped default (`chaseAfterOutcomeEnabled: true`,
+`'gap'`, `5` in `defaults.js`), so the fixture identity now produces different gaps, a different
+leader and different lead changes — and the state machine therefore spends a different number of
+frames in each state. Read the frame counts, not just the lags: BATTLE_ZOOM gains 767 frames and
+LEADER_ZOOM loses 1956, which is the chase doing on this fixture exactly what it was measured to do
+on ten tracks — **less time alone out front, more time in a contest.**
+
+★ **The document's standing claim survives the move:** OVERVIEW is still the TIGHTEST state by a
+wide margin, and the ratio moved toward 1 only because the pooled comparison group got tighter too.
+★ OVERVIEW's p95 rose 16.02 → 19.68 pp; that is the loosest single figure in the table and it is
+worth an eye, but it is a p95 on the widest framing and nothing in this block sized a target for it.
+
+★★ **RE-MEASURED AT `5cbc72e5` (CHASE-PARITY-DIAG-1), IDENTICAL TO THE DIGIT** —
 8069/6.00/9.57, 14351/4.78/9.49, 8440/4.52/9.78, 3667/2.36/16.02, 1973/2.94/7.84, ratio 0.47×.
 `defaults.js` is in this measurement's closure and that commit restored the three chase keys to
 their shipped values, so the guard asked again. Run, not argued.
@@ -1085,7 +1115,10 @@ CLOSURE — `scripts/tracking-lag.mjs` reaches `racePlanner.js`, which the branc
 the guard must be satisfied, so the stamp takes the later of the two.
 
 ★★★ **RE-MEASURED IN FULL FOR PLANNED-COMEBACK-ONLY-1, 2026-09-19, AND `COMEBACK_ZOOM` IS GONE
-FROM THE TABLE.** `node scripts/tracking-lag.mjs`, the command this stamp names, on `cef4241e`:
+FROM THE TABLE.** `node scripts/tracking-lag.mjs`, the command this stamp names, on `cef4241e`.
+★ **SUPERSEDED AT CHASE-SHIP-1 (2026-09-23) — these are the PRE-CHASE numbers**; the current table
+is at the top of this section. They are kept because the entries between here and there all say
+*"identical to the digit"* about THIS table, and deleting it would make those records unreadable:
 
 | state | frames | median pp | p95 pp |
 |---|---|---|---|
