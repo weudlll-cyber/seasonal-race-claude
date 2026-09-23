@@ -515,10 +515,27 @@ can have; it skips there and says so in one line. What CI verifies instead is th
 through `scripts/check-hooks-installed.test.mjs` in the script suite, against fixture repositories in
 all three broken states.
 
-## R12a — The browser suite is NIGHT WORK, deliberately outside the ordinary path
+## R12a — The browser suite is NIGHT WORK, deliberately outside the ordinary path — and since
+2026-09-23 a CURATED SUBSET of it runs automatically, elsewhere
 
 **Rule.** The Playwright e2e suite is not in the per-push CI path and not in `npm run verify`'s
 ordinary routing. It is run deliberately, during night work.
+
+★★ **QUALIFIED 2026-09-23 (DELIVERY-BROWSER-GATE-1), AND THE RULE ABOVE IS UNCHANGED.** Everything
+this rule says about the per-push path and about `verify` is still exactly true, and the guard that
+asserts it is untouched. What changed is that a browser now runs automatically **somewhere else**:
+`.github/workflows/browser-gate.yml` is its OWN workflow — on push to master, on a daily schedule and
+on demand — and runs the **curated fast set** (`test:e2e:prod:fast`, 7 specs / 82 tests) against the
+PRODUCTION arm. It is not in `ci.yml`, not on `pull_request`, and not in `verify`, for precisely the
+reason this rule gives: a ten-minute browser suite gating every merge trains people to re-run red
+builds. **The fast set is about two minutes, and it gates master rather than every branch.**
+
+★ **The full suite is still night work.** The gate covers 7 of its specs; the rest are run
+deliberately, as this rule says, and [NIGHT-RUN.md](NIGHT-RUN.md) remains their one home.
+
+★ **The gate was proven before it was allowed to block**: five runs on an unchanged tree, 5 of 5
+green, no retries. Had it flapped it would have shipped report-only. See
+`reports/evolution/DELIVERY-BROWSER-GATE-1.md`.
 
 **The command and the full reason live in [NIGHT-RUN.md](NIGHT-RUN.md), which is their one home.**
 Not repeated here.
@@ -654,6 +671,12 @@ produced a tree neither side measured, which is exactly when a measurement is wo
 
 Both are already routed by declaration and skip on such a change; this rule states it so that nobody
 runs them by hand "to be safe".
+
+★ **"The browser gate" here means the NIGHT-WORK gate — the thing a person decides to run.** Since
+2026-09-23 there is also an automatic one (R12a), and it is not routed by declaration at all: it runs
+on every push to master whatever the diff, because it is a separate workflow and not part of
+`verify`'s routing. A documentation change therefore still pays nothing by hand, and the automatic
+gate still runs. Both facts are intended.
 
 ### R15d — Re-measuring to correct a number in a document is its own block
 

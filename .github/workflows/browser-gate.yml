@@ -60,6 +60,17 @@
 # The list-and-filter (not `--search`) and the CRLF-stripping dedup are lifted from
 # `audit-schedule.yml` because both were learned the hard way there.
 #
+# ── ★★ IT BLOCKS BECAUSE IT WAS PROVEN STABLE FIRST, NOT BECAUSE IT WAS ASSUMED TO BE ──────────
+# A gate that flaps is worse than no gate — it teaches everyone that red means nothing, which is the
+# exact failure the precedent above warns about. So before this file was allowed to fail a run it was
+# executed FIVE TIMES on a Linux runner against an UNCHANGED TREE (run 35903843784, attempts 1–5,
+# 2026-09-23): **5 of 5 green, 82 tests each time, no retries.** Had any attempt failed, the decision
+# rule was report-only and the failing spec named — not a quieter set.
+#
+# The five runs needed a temporary `feat/delivery-browser-gate-1` entry in the push trigger, because
+# `workflow_dispatch` cannot reach a workflow that is not yet on the default branch (HTTP 404,
+# verified). It was removed before the merge; this paragraph is what is left of it.
+#
 # 05:41 UTC, not on the hour: GitHub queues cron workloads and on-the-hour schedules are the most
 # delayed. It is also an hour before the dependency audit, so two scheduled jobs do not contend.
 # ============================================================
@@ -68,11 +79,7 @@ name: Browser gate (production arm)
 
 on:
   push:
-    # TEMPORARY-STABILITY-RUNS: the branch is here ONLY so the five stability runs of
-    # DELIVERY-BROWSER-GATE-1 can happen before this gate is allowed to block anything.
-    # workflow_dispatch cannot reach a workflow that is not yet on the default branch, so this is
-    # the only way to run it on the runner first. IT IS REMOVED BEFORE THE MERGE.
-    branches: [master, feat/delivery-browser-gate-1]
+    branches: [master]
   schedule:
     - cron: '41 5 * * *'
   # The hand crank, for the same reason ci.yml has one: when the platform loses a run there has to
