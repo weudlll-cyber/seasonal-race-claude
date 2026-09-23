@@ -1,143 +1,73 @@
 {
   "races": {
     "closed-garden-path-12": {
-      "recordedOn": "2026-09-23",
-      "recordedCommit": "3aeb169f",
-      "recordedBecause": "CHASE-SHIP-1, 2026-09-23: the chase is the shipped race by the owner's decision. chaseAfterOutcomeEnabled false->true, selection 'leader'->'gap', slots 2->5. Round-trip proved the chase keys are the SOLE cause: with the key back at false both golden races return EXACTLY to their previously recorded outcomes. The four fingerprints were re-minted at the same ship.",
+      "recordedOn": "2026-09-06",
+      "recordedCommit": "bcf41a9b",
+      "recordedBecause": "first recording — no previous expectation existed",
       "realizedDurationSec": 35.35360572287397,
       "results": [
         {
           "name": "Flash",
           "rank": 1,
-          "finishTimeSec": 36.224
+          "finishTimeSec": 36.592
         },
         {
-          "name": "Turbo",
+          "name": "Nitro",
           "rank": 2,
-          "finishTimeSec": 36.352
+          "finishTimeSec": 36.624
         },
         {
           "name": "Zephyr",
           "rank": 3,
-          "finishTimeSec": 36.352
+          "finishTimeSec": 36.688
         },
         {
-          "name": "Nitro",
+          "name": "Turbo",
           "rank": 4,
-          "finishTimeSec": 36.432
-        },
-        {
-          "name": "Storm",
-          "rank": 5,
-          "finishTimeSec": 36.544
+          "finishTimeSec": 36.72
         },
         {
           "name": "Drift",
-          "rank": 6,
-          "finishTimeSec": 36.576
+          "rank": 5,
+          "finishTimeSec": 36.768
         },
         {
           "name": "Thunder",
+          "rank": 6,
+          "finishTimeSec": 36.928
+        },
+        {
+          "name": "Storm",
           "rank": 7,
-          "finishTimeSec": 36.624
+          "finishTimeSec": 36.944
         },
         {
           "name": "Rocket",
           "rank": 8,
-          "finishTimeSec": 36.704
-        },
-        {
-          "name": "Bolt",
-          "rank": 9,
-          "finishTimeSec": 36.72
+          "finishTimeSec": 36.976
         },
         {
           "name": "Speedy",
+          "rank": 9,
+          "finishTimeSec": 36.976
+        },
+        {
+          "name": "Bolt",
           "rank": 10,
-          "finishTimeSec": 36.768
+          "finishTimeSec": 37.152
         },
         {
           "name": "Comet",
           "rank": 11,
-          "finishTimeSec": 37.152
+          "finishTimeSec": 38.096
         },
         {
           "name": "Blaze",
           "rank": 12,
-          "finishTimeSec": 38.32
+          "finishTimeSec": 39.024
         }
       ],
-      "history": [
-        {
-          "recordedOn": "2026-09-06",
-          "recordedCommit": "bcf41a9b",
-          "supersededOn": "2026-09-23",
-          "supersededCommit": "3aeb169f",
-          "supersededBecause": "CHASE-SHIP-1, 2026-09-23: the chase is the shipped race by the owner's decision. chaseAfterOutcomeEnabled false->true, selection 'leader'->'gap', slots 2->5. Round-trip proved the chase keys are the SOLE cause: with the key back at false both golden races return EXACTLY to their previously recorded outcomes. The four fingerprints were re-minted at the same ship.",
-          "results": [
-            {
-              "name": "Flash",
-              "rank": 1,
-              "finishTimeSec": 36.592
-            },
-            {
-              "name": "Nitro",
-              "rank": 2,
-              "finishTimeSec": 36.624
-            },
-            {
-              "name": "Zephyr",
-              "rank": 3,
-              "finishTimeSec": 36.688
-            },
-            {
-              "name": "Turbo",
-              "rank": 4,
-              "finishTimeSec": 36.72
-            },
-            {
-              "name": "Drift",
-              "rank": 5,
-              "finishTimeSec": 36.768
-            },
-            {
-              "name": "Thunder",
-              "rank": 6,
-              "finishTimeSec": 36.928
-            },
-            {
-              "name": "Storm",
-              "rank": 7,
-              "finishTimeSec": 36.944
-            },
-            {
-              "name": "Rocket",
-              "rank": 8,
-              "finishTimeSec": 36.976
-            },
-            {
-              "name": "Speedy",
-              "rank": 9,
-              "finishTimeSec": 36.976
-            },
-            {
-              "name": "Bolt",
-              "rank": 10,
-              "finishTimeSec": 37.152
-            },
-            {
-              "name": "Comet",
-              "rank": 11,
-              "finishTimeSec": 38.096
-            },
-            {
-              "name": "Blaze",
-              "rank": 12,
-              "finishTimeSec": 39.024
-            }
-          ]
-        }
-      ]
+      "history": []
     },
     "open-river-run-6": {
       "recordedOn": "2026-09-06",

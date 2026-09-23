@@ -36,6 +36,38 @@
 // `fingerprint-default.mjs` hashes the shipped defaults across ten tracks and is blind to
 // everything a golden race pins. The two are complementary and neither replaces the other.
 //
+// ── ★★★ THE PINNING RULE HAS A HOLE THE MOMENT A NEW CONFIG KEY IS ADDED — 2026-09-23 ───────
+// A key that exists in `defaults.js` and NOT in the fixture's `configs` block is read from
+// `defaults.js`, silently, and the rule above stops being true for it. There is no guard that
+// catches this: the fixture cannot know about a key nobody told it about.
+//
+// It happened. CHASE-BUILD-1 added three keys to `defaults.js` — `chaseAfterOutcomeEnabled`,
+// `chaseAfterOutcomeSelection`, `chaseAfterOutcomeSlots` — and did not add them here. They were
+// inert while all three defaulted to today's race, so nothing showed. When CHASE-SHIP-1 flipped
+// them on, `closed-garden-path-12` moved, and it moved for a reason this file says is impossible:
+// a shipped default changed.
+//
+// ★ THE FIRST DIAGNOSIS WAS WRONG AND IS RECORDED HERE SO IT IS NOT REPEATED. The move was read as
+// "the shipped race changed, so the golden races are re-recorded at the ship, like a fingerprint",
+// and they WERE re-recorded. That is the treatment for a fingerprint and the wrong treatment for a
+// golden race, which by the rule above does not track the shipped world at all. The tell was a
+// SECOND guard going red at the same time: `check-golden-races.test.mjs` asserts that at least one
+// golden race is decided within five frames, and the re-recorded race's winning margin had opened
+// from 2 frames to 8. A re-record cannot restore a property the fixture was CHOSEN for.
+//
+// THE REPAIR: the three keys are pinned here at the values in force when these races were
+// recorded. With them pinned, the races reproduce their long-standing recorded outcomes to the
+// millisecond WHILE `defaults.js` ships the chase ON — which is this rule working exactly as
+// written — and the close-finish guard is green again.
+//
+// ★ SO: ADDING A KEY TO `defaults.js` MEANS ADDING IT TO `fixtures/races.json` IN THE SAME COMMIT,
+// at whatever value the golden races should keep racing with. Pinning is not a one-time act.
+//
+// ☀ What this does NOT do: it does not hide the ship. The shipped race changing is recorded where
+// it belongs — the four fingerprints in `docs/fingerprints.json`, all four re-minted at CHASE-SHIP-1.
+// A golden race and a fingerprint answer different questions, as the paragraph above says, and this
+// episode is what it looks like when one is asked to answer the other's.
+//
 // ── WHY THE NAMES ARE PART OF THE RACE ──────────────────────────────────────────────────────────
 // A racer's NAME is physics: `stablePairBit` hashes it to break avoidance symmetry, so renaming a
 // racer changes who wins. The roster is therefore pinned by name and in order, exactly like the
