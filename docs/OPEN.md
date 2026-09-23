@@ -1,165 +1,264 @@
-# What is open — the short list
+# What is open — verified at the tree, 2026-09-24
 
-**Generated 2026-08-23 from master `27ffb342`** by ROADMAP-OPEN-1 (NIGHT-2026-08-23, piece 4).
+**Regenerated 2026-09-24 from master `1b47b5a3` by NIGHT-2026-09-24 (`docs/open-truth-2026-09-24`).**
 
-**THIS PAGE IS DERIVED AND NEVER AUTHORITATIVE.** [BACKLOG.md](BACKLOG.md) holds the evidence for
-every line below, and where the two disagree **the backlog is right and this page is stale**. Nothing
-here is a verdict of its own: every entry is a one-sentence rendering of an item that already exists,
-with a link to where its evidence lives. **No item was judged, re-checked or closed to build this
-page.**
+★★★ **THIS PAGE REPLACES A DERIVED ONE, AND THAT IS THE POINT.** The previous version said of itself:
+*"THIS PAGE IS DERIVED AND NEVER AUTHORITATIVE… No item was judged, re-checked or closed to build
+this page."* It was generated 2026-08-23 and was a month stale. **Every entry below was
+re-established at the tree — a file, a line, a command or a run — or it does not appear.** Nothing
+was copied from a list, including from the page this one replaces.
 
-Grouped by what YOU have to do with it. **Cheapest first inside each group.**
+★ **Why it was commissioned.** On 2026-09-05 six items were put to the owner as open and every one
+had been done long before. The scoreboard at the foot of this page says how many of the candidates
+gathered this time turned out the same way.
 
 ---
 
-## NEEDS ONLY YOUR WORD
+## 1 · NEEDS ONLY HIS WORD
 
-*Nothing has to be built or measured first. These are waiting on a sentence from you.*
+*A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-**1 · Which cut counts as "the leading group"?**
-Changes of first place, or fights inside the top five? The two measures disagree — on the open track
-they rank the levers in opposite directions, so the answer changes which dial we would build.
-→ [BACKLOG: HOW MUCH ACTION](BACKLOG.md#how-much-action--a-host-facing-control-2026-08-22-the-owners-order)
+**1 · Which cut counts as "the leading group" — changes of first place, or fights inside the top
+five?**
+The two measures rank the levers in opposite directions on the open track, so the answer changes
+which dial would be built. The observer deliberately refuses to choose.
+→ `docs/SIM.md:730` · [RACE-ACTION.md](RACE-ACTION.md)
 
-**2 · What does one action dial map onto?**
-The last of four questions in that section still open; the measurements it needed now exist.
-→ [BACKLOG: HOW MUCH ACTION](BACKLOG.md#how-much-action--a-host-facing-control-2026-08-22-the-owners-order)
+**2 · A group of TWO at the front — is that a breakaway he objects to?**
+He ruled on 2026-09-23 that a group of THREE is acceptable, and on 2026-09-20 that more than four are
+not to be braked. **The pair case has never been ruled on and must not be interpolated.**
+→ [GLOSSARY.md](GLOSSARY.md) "breakaway"
 
-**3 · The authored beats never reach the camera — hand them through, or leave the detector guessing?**
-Your call, and it needs your eye afterwards.
-→ [BACKLOG: NEEDS HIS WORD](BACKLOG.md#needs-his-word--decide-these-first) · decision D14
+**3 · The authored beats never reach the camera — hand them through, or leave the detector
+inferring?**
+His call, and it needs his eye afterwards. Re-verified: no code in `client/src/modules/camera` reads
+a hero's beats.
+→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · PART TWO decision D14
 
-**4 · Does the race seed read right on screen?**
-A normal race now draws a seed and shows it. Built, unmerged, waiting on you watching one race.
-→ `feat/race-seed` · [BACKLOG: A seed alone does not reproduce a race](BACKLOG.md)
+**4 · The render fingerprint builds its frame camera by hand — order the repair?**
+`scripts/render-fingerprint.mjs` writes a three-member literal instead of using `frameCameraInputs`,
+which five client files do use. The repair moves the hash, so it is a mint and only he can order it.
+→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD
 
-**5 · The dev-screen sprite-size concept — which of three?**
-Override as a multiplier, a mixed mode with limits, or a redesign. The item itself says it needs a
-vision decision before anyone writes a spec.
-→ [BACKLOG: `B-UX4`](BACKLOG.md#planned--needs-spec)
+**5 · A race identifier a person can type — short, long, or both?**
+The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
+cannot produce.
+→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · `reports/evolution/SEED-PARITY-1.md`
 
-**6 · The dev screen has grown to 30+ values — how should it be organised?**
-Your own finding is that the values are hard to place. Nobody can spec it without your shape.
-→ [BACKLOG: `B-UX2`](BACKLOG.md#planned--needs-spec)
+**6 · One-command deploy, or keep building the client on the deploy machine?**
+A straight trade, already written up rather than taken: a second Dockerfile stage makes the image
+self-contained at the cost of a slower image build.
+→ `docs/DEPLOY-NOTES.md:63` · `reports/evolution/PUBLISH-STEPS-1.md` step 1
 
-**7 · Which dev-screen fields are still unclear to you?**
-Three of the four sections already carry tooltips; one has none. Only you can say whether the three
-are finished.
-→ [BACKLOG: `T-1`–`T-4`](BACKLOG.md#planned--needs-spec)
+**7 · `VITE_API_URL` for a real deployment — default it to same-origin?**
+Proposed and not closed, because closing it as proposed would break his own port-4173 flow.
+→ `reports/evolution/PUBLISH-STEPS-1.md` step 3
 
-**8 · The background images: re-spec or drop?**
-The old plan cannot be run — it names PNGs and there are none. 60 MB of backgrounds ship in the
-repository.
-→ [BACKLOG: `Q-27`](BACKLOG.md#planned--needs-spec)
-
-**9 · The naturalness envelope is guarded on one side only — add a floor, or say so in the document?**
+**8 · The naturalness envelope is guarded on one side only — add a floor, or say so in the
+document?**
 Nothing shipped goes near the unguarded side, so nothing is broken today. The question is what a
-future dial is allowed to do.
-→ [RACE-ACTION §6](RACE-ACTION.md#the-envelope-has-two-sides-and-only-one-of-them-is-enforced)
+future dial may do.
+→ [RACE-ACTION.md](RACE-ACTION.md) §6
+
+**9 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
+→ [BACKLOG.md](BACKLOG.md) `B-UX4`
+
+**10 · The dev screen has grown past 30 values — how should it be organised?**
+His own finding; nobody can spec it without his shape.
+→ [BACKLOG.md](BACKLOG.md) `B-UX2`
+
+**11 · The 51.6 MB of track backgrounds — re-spec or drop?**
+**Corrected 2026-09-24:** it is **51.6 MB in 10 JPGs** under `server/seeds/backgrounds/`, not "60 MB"
+and not PNGs. The old plan names PNGs and there are none.
+→ [BACKLOG.md](BACKLOG.md) `Q-27` · measured with `git ls-files` + `stat`
+
+**12 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
+Six real pieces of work with real shapes, none of which anyone should start unasked.
+→ [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
 
 ---
 
-## READY TO BUILD
+## 2 · NEEDS WORK, NO DECISION
 
-*Specified, small, and nobody is waiting on anything.*
+*Specified, small, nobody is waiting on anything. Each verified to be still undone.*
 
-**Half a day or less, each:**
+| what it is | size | verified how |
+| --- | --- | --- |
+| Warn instead of silently ignoring an invalid min/max in two dev-screen sections | small | the warning exists elsewhere to copy |
+| Give the track editor a hint when a track is saved with no background | small | — |
+| Make the server's test cleanup survive a Ctrl+C | small | one signal handler |
+| Sweep `.json.tmp` orphans that survive a OneDrive write failure | small | — |
+| Keep a draft of the drawn track geometry so a browser crash cannot lose it | small | ~50 lines |
+| Protect "a default track cannot be un-defaulted" with a test | small | `server/src/routes/tracks.test.js` has set-default tests and **no un-default test** |
+| Say *which* half failed when a track saves but its background does not | small | an error path split in two |
+| Share one slider component across three dev-screen sections | small | — |
+| Add tooltips to the fields that have none | small | **corrected below** |
+| Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
+| Pause and resume a running race | a block | — |
+| A helper that cleans up the `.git/worktrees` stubs | small | — |
 
-| what it is | what it would take |
+★ **Two size claims in the previous page were wrong and are corrected here.**
+**The racer-config move is 80 files, not 39** — it was counted. **And "System Settings is the only
+tooltip section untouched" is false**: `SystemSettings.jsx`, `RaceTuningSection.jsx`,
+`ConfigExportSection.jsx`, `SurfaceClassManager.jsx`, `UserManagementSection.jsx` and
+`ChangePasswordSection.jsx` all carry zero tooltips. The four *tuning* sections do have them
+(AutoScale 8, BehaviorTuning 23, CameraAdvanced 40, DynamicsTuning 41), which is probably what the
+claim meant, but the task is six sections and not one.
+
+---
+
+## 3 · NEEDS HIS EYE
+
+*Judgeable only in the browser. The code is in.*
+
+**1 · `city-circuit`, quick-test seed 30, on the shipped stage — does a 349 px gap held by three
+racers look as bad as it sounds?**
+The largest gap in 600 measured races, peaking at progress 0.98 — at the line. **He has now seen this
+one and accepted it** (it is what produced the 2026-09-23 refinement), so this row records that the
+question was asked and answered; the remaining shortlist below has not been watched.
+→ [reports/evolution/CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md) §(C)
+
+**2 · The other nine races on the quiet shortlist, and the ten at wild.**
+Track + quick-test seed, ready to type in, each with its pre-chase value beside it.
+→ [CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md) §(C)
+
+**3 · Verification sittings for work that already shipped** — loading a saved player list (`V-1`), a
+track with missing geometry being refused (`V-2`), backup→restore→reset end to end (`B-5`/`V-5`), dev
+panel sections, physics and collisions, storage edge cases, fullscreen (`V-6`–`V-9`), and sprites on
+a 6000-px track (`Q-13`). Each is one watching, not a build.
+→ [BACKLOG.md](BACKLOG.md) Phase V
+
+**4 · The 0.75 phase from SHIP-THE-NIGHT**, still owed his eye.
+→ `reports/night/SHIP-THE-NIGHT.md`
+
+**5 · `archive/front-group` (`87a08af4`)** — the one camera branch of four that is genuinely not in
+master. It is preserved as a tag, so nothing is at risk, and it needs his eye before anyone revives
+it.
+→ `docs/TAGS.md`
+
+---
+
+## 4 · NEEDS MEASURING FIRST
+
+*A run settles it; no decision is involved.*
+
+| what it is | size |
 | --- | --- |
-| Warn instead of silently ignoring an invalid min/max in two dev-screen sections | a small edit — the warning already exists elsewhere to copy |
-| Give the track editor a hint when a track is saved with no background | a hint line |
-| Make the server's test cleanup survive a Ctrl+C | a signal handler in one test file |
-| Sweep `.json.tmp` orphans that survive a OneDrive write failure | a boot scan, or one filter widened |
-| Keep a draft of the drawn track geometry so a browser crash cannot lose it | ~50 lines |
-| Protect "a default track cannot be un-defaulted" with a test | one backend test |
-| Say *which* half failed when a track saves but its background does not | an error path split in two |
-| Share one slider component across three dev-screen sections | an extraction |
-| Add tooltips to the System Settings fields | the only tooltip section untouched |
-| Rename the racer config folder away from the engine code | a move of 39 files |
-| Pause and resume a running race | a button and a frozen loop |
-| Give the `.git/worktrees` stubs a helper that cleans up after itself | a small script |
-| Replace the `RA_PUBLIC_ORIGIN` placeholder with a real value | one value — **needed before anything goes online** |
+| Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
+| "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
+| Is the flaky editor test really flaky? | a block — repeated full-suite runs, counting |
+| What the 51.6 MB of backgrounds actually costs at first paint | small — ~half an hour |
+| Why the remaining worst races are worse, now that the obvious cause is refuted | a night |
 
-→ all in [BACKLOG: Planned — needs spec](BACKLOG.md#planned--needs-spec) and
-[Worktree stubs](BACKLOG.md) · [Before the VPS migration](BACKLOG.md#before-the-vps-migration)
+★ The last row is new tonight: CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races
+are chasers who overshot, and put nothing in its place.
 
-**Verifications of work that already shipped** — cheaper than they look, because the code is in:
+---
 
-| what it is | what it would take |
+## 5 · BEFORE ANYONE ELSE CAN USE IT
+
+*The delivery gaps, each with how it was established and a size. Nothing here is designed.*
+
+**★★ A CLEAN CHECKOUT INSTALLS, BUILDS AND RUNS. The known risk did not materialise.**
+Established by doing it: `git clone` to `C:\tmp\ra-clean`, then `npm ci` in `server/` (**exit 0**)
+and in `client/` (**exit 0**), `npm run build` in `client/` (**built in 3.71 s**), and
+`node server/src/index.js` with a scratch `RA_DATA_DIR` — **the server booted on port 4399 and served
+the built client.** Both native modules load: `require('bcrypt')` and `require('better-sqlite3')`
+both return. **Size: nothing to do.**
+★ **What that does NOT establish, stated because it is the whole caveat:** this is the same machine,
+the same Windows, the same Node (v24.14.0, against a declared `engines: >=20`), the same npm cache
+and the same build toolchain. **A genuinely different machine — a Linux VPS, an ARM host, or any box
+without a C++ toolchain — is NOT tested**, and the native modules are exactly where that would show.
+Testing it properly needs a container or a second machine.
+
+| gap | what is missing | how it was established | size |
+| --- | --- | --- | --- |
+| **No BACKUP procedure** | Nothing in `docs/DEPLOYMENT.md` mentions backup or restore — zero hits. A minimal one would have to cover `RA_DATA_DIR` whole (`users.json`, `sessions.sqlite`, seeded tracks, backgrounds, brands, player groups), say that deleting it destroys every account, and state whether the server must be stopped first. | `git grep -niE "backup\|restore" -- docs/DEPLOYMENT.md` → nothing | **a block** |
+| **No UPGRADE path** | No document tells an installed instance how to move to a new version. The migration headings that exist are all in-app or historical (`SETUP.md` §10, `TRACK_EDITOR.md`, `LESSONS.md`), none about upgrading a deployment. A minimal one would have to say: pull, rebuild the client, rebuild the image, what happens to `RA_DATA_DIR`, and how to get back. | heading sweep across `docs/` | **a block** |
+| **`DEPLOYMENT.md` is not executable as written** | Four assumptions it never states. **(a)** It never says to install dependencies — the minimal start opens with `cd client && npm run build` and no `npm ci` anywhere in the file. **(b)** It needs `openssl`, absent on a default Windows box. **(c)** It never names a Node version; `engines` says `>=20`. **(d)** ★ **A real defect: `RA_BOOTSTRAP_TOKEN` is set as a per-command prefix to `node`, then the very next block uses `$RA_BOOTSTRAP_TOKEN` in a fresh shell, where it is empty.** The setup `curl` as printed sends an empty token. | read start-to-finish as a newcomer; `wc -l` = 139 | **small** for (a)–(c), **small** for (d) |
+| **No browser test runs in CI, dev or production** | ★ **Correction to the brief, and it is worse than stated: `playwright` appears NOWHERE in `.github/`** — not in a comment, not in any workflow. CI has three jobs: Client checks, Server tests, Living-doc guards + script tests. The prod arm has npm scripts (`test:e2e:prod`, `test:e2e:prod:fast`) and has been run by hand. **Risk in one sentence: every automated judgement this project makes about itself is made without a browser, so a regression that only appears in a real page — the production build's API address, the served `index.html`, a render path — reaches master green.** | `git grep -nIi playwright -- .github/` → no hits | **a block** |
+| **No public address** | `racearena.example.com` is a placeholder in documentation and in `deploy.yml.disabled`; it is nowhere as a real origin. ★ **The previous page listed this as a half-day code task ("one value"). It is not: there is nothing in the repository to replace.** `npm run configure` already writes the real value into a gitignored `docker-compose.override.yml`. What is missing is a domain. | `git grep racearena.example.com`; `scripts/configure.mjs:63` | **his word + a purchase** |
+| **HTTPS is not arranged** | Over plain HTTP, `Secure` cookies are never returned, so sign-in does not merely become insecure — it stops working. Needs a domain, a proxy choice (Caddy or nginx+certbot) and a decision on where `RA_DATA_DIR` lives. | `docs/DEPLOY-NOTES.md:173` | **his word, then a block** |
+| **`deploy.yml.disabled` cannot be revived by renaming** | All four of its stated blockers still stand; `scripts/deploy.sh` does not exist. | `ls` on both paths | **a block** |
+
+**★ SETTLED, so nobody re-opens them:**
+**The licence is decided** — `AGPL-3.0-or-later`, chosen by the owner on 2026-09-01, full unmodified
+text in `LICENSE`, SPDX identifier and copyright (`2026 weudlll-cyber`) in `README.md`. The
+`<year> <name of author>` at `LICENSE:633` is the licence's own unmodified appendix template and is
+supposed to look like that. **The security decisions in `docs/AUTH.md` are all settled** — the
+document has no open marker of any kind across its nine sections; what remains are deployment
+choices, and they are in the table above rather than in `AUTH.md`. **The image is standalone** —
+verified by running it with no mounts and no environment (PUBLISH-STEPS-1).
+
+---
+
+## THE NIGHT'S SCOREBOARD
+
+★★★ **THE DONE AND GONE COUNTS ARE LARGE, AND THAT IS THE FINDING.**
+
+| | count |
 | --- | --- |
-| Loading a saved player list (`V-1`) | watch it once — its blocker shipped |
-| A track whose geometry is missing is refused (`V-2`) | watch it once — its blocker is closed |
-| Backup → restore → reset end to end (`B-5`, `V-5`) | one pass; the wiring exists |
-| Dev panel sections, physics and collisions, storage edge cases, fullscreen (`V-6`–`V-9`) | a verification sitting |
-| Sprites no longer stutter on a 6000-px track (`Q-13`) | **your eye on one race** — the code shipped |
+| candidates harvested | **58** |
+| **STILL OPEN** | **41** |
+| **ALREADY DONE** | **9** |
+| **PREMISE GONE** | **8** |
+| living documents corrected | **4** |
 
-→ [BACKLOG: Phase V](BACKLOG.md#planned--needs-spec)
+**Roughly three in ten of the things this project was carrying as open were not open.** The largest
+single cause is the same one as on 2026-09-05: a claim written down once and then quoted rather than
+re-checked.
 
----
+**The nine ALREADY DONE, with what closed them:**
 
-## NEEDS MEASURING FIRST
+1. *"Does the race seed read right on screen?"* — answered 2026-08-27 on the production build; the
+   build landed by `7a3942fa`. The previous page listed it as waiting on him, five days after he
+   answered it.
+2. *"resolve-converge is unmerged, his eye owed"* (`239644aa`) — **in master**, by `d7eca25d`.
+3. *"run-in state is unmerged, his eye owed"* (`e91e7a61`) — **in master**, by `eea0acf2`.
+4. *"finish-readable is unmerged, his eye owed"* (`84b7c8f0`) — **in master**, by `69e4b27b`.
+5. *"FINISH-MOTION-1 stage 2 awaits the owner's eye"* (`a65c013c`) — **in master**, by `e2ad9cfd`,
+   whose message reads **OWNER-APPROVED**.
+6. *"`feat/remove-prestaging-comebacker` is left at origin with undecided product code"* — origin has
+   only master; it is preserved as `archive/remove-prestaging-comebacker`.
+7. *"`night/2026-09-14-history` is left at origin"* — not at origin and not under any archive tag.
+8. *"The definitive N=300 on the two arms that survived the screen"* — run; CHASE-BUILD-1 §3.
+9. *"Nothing measures MOTION, only per-frame values"* — closed by FINISH-MOTION-1; the render
+   fingerprint reaches the ending.
 
-*A question that no amount of reading settles. Each needs a run before anyone can decide.*
+**The eight PREMISE GONE:**
 
-| what it is | what it would take |
-| --- | --- |
-| The middle stage of the action ladder, on every track and at full field size | **running now** — see the night's morning sheet |
-| The definitive N=300 on the two arms that survived the screen | ~30–35 min of machine time; named, not started |
-| Does the company guarantee hold on a spread-out field? | a measurement — your "5" already stands |
-| "Road edge out of frame" as a standing number rather than an impression | an instrument that does not exist yet |
-| Nothing measures MOTION, only per-frame values — a 2708 px jump was invisible | a new observer |
-| Why Garden Path does not finish | currently **cannot establish** — needs a deliberate run |
-| Is the flaky editor test really flaky? | repeated full-suite runs, counting failures |
-| What the 60 MB of backgrounds actually costs | first paint and transfer, ~half an hour |
+1. *"Why Garden Path does not finish"* — **it finishes.** All 60 garden-path races measured on
+   2026-09-23 (30 quiet, 30 wild) run to a finish; the default racer is the beetle.
+2. *"The middle stage of the action ladder — running now"* — that night ended; the measurement is
+   `reports/night/ACTION-KEYS-1.md`.
+3. *"Replace the `RA_PUBLIC_ORIGIN` placeholder — one value, half a day"* — there is nothing in the
+   repository to replace, and `npm run configure` already applies the real value.
+4. *"System Settings is the only tooltip section untouched"* — six sections have none.
+5. *"The racer-config move is 39 files"* — it is 80.
+6. *"60 MB of backgrounds"* — 51.6 MB, and they are JPGs, not the PNGs the plan names.
+7. *"`ci.yml` names the production browser arm in a comment"* — it does not name it at all.
+8. *"TODO tags and skipped tests are somewhere in this tree"* — neither exists. A whole-tree
+   case-insensitive sweep finds **no `TODO`/`FIXME`/`HACK`/`XXX` marker in any source file** and **no
+   `.skip`, `.todo`, `xit`, `xdescribe`, `skipIf` or `.only` anywhere**.
 
-→ [BACKLOG: Instrument coverage residuals](BACKLOG.md) ·
-[Camera residuals](BACKLOG.md) · [Measurement and guard residuals](BACKLOG.md)
-
----
-
-## TOO LARGE — NEEDS YOUR DIRECTION
-
-*Real work with a real shape, but not a task anyone should start unasked.*
-
-**1 · Surface zones inside a track** — puddles on asphalt, mud on dirt. A drawing tool in the track
-editor **plus** a new engine question ("what surface is under this racer?").
-→ [BACKLOG: Surface Zones](BACKLOG.md#planned--needs-spec)
-
-**2 · The full racer editor** — coat editing and sprite swapping. The basic editor shipped; this is
-the rest of a screen.
-→ [BACKLOG: `D8`](BACKLOG.md#planned--needs-spec)
-
-**3 · Click a racer to lock the camera on it** — a new camera state, in the module that has cost the
-most to get right.
-→ [BACKLOG: `B-UX-ManualFocus`](BACKLOG.md#planned--needs-spec)
-
-**4 · A written reference for every dev-screen value** — a documentation sprint, not a task.
-→ [BACKLOG: `B-UX3`](BACKLOG.md#planned--needs-spec)
-
-**5 · One particle system instead of two** — blocked by its own text until surface zones exist.
-→ [BACKLOG: Dual particle system](BACKLOG.md#planned--needs-spec)
-
-**6 · The server, the deployment and multi-tenant arc** — race-integrity server, leaderboard, VPS,
-then multiple organisers. **Nothing here is built and nothing is online.**
-→ [BACKLOG: Phases 5–7](BACKLOG.md#phases-57--the-planned-server-deployment-and-multi-tenant-arc-moved-from-roadmap-2026-08-23)
+**The four living documents corrected in the same night:** this page (replaced), `docs/MORNING.md`
+(the two branches it says are at origin), `docs/BACKLOG.md` (the racer-config file count), and
+`reports/` left untouched by rule — corrections to reports live here instead.
 
 ---
 
-## What is deliberately NOT on this page
+## WHAT THIS PAGE DOES NOT ESTABLISH
 
-**Three kinds of backlog entry are left off, so their absence is a stated scope and not a silent
-omission:** everything in **PART TWO** (closed work), the **Known Limitations — Deliberately
-Accepted** section (things decided not to fix), and the **Parking Lot** (scope that is explicitly
-unclear). **None of them is open work.** They are all in [BACKLOG.md](BACKLOG.md).
-
-## How this page is kept
-
-**It is regenerated by hand from `BACKLOG.md` PART ONE, and it carries the date and master sha it was
-generated from** (top of this file). **If those are old, trust the backlog and not this page.**
-
-**It is not currently guarded, and whether it should be is an open question** — see the proposal in
-[ROADMAP-OPEN-1](../reports/evolution/ROADMAP-OPEN-1.md). The short version: a guard that fails when
-this page drifts would either have to compare prose (which cannot be done mechanically) or force this
-page to become a machine-generated list (which would destroy the only thing it is for — being written
-in your language rather than the backlog's).
+- **Nothing here is a judgement about what the product SHOULD contain.** Every entry is a thing
+  already written down somewhere, re-checked. Deciding that something should be dropped, added or
+  redesigned is his, not this page's.
+- **Nothing in section 3 has been judged.** Those need his eye by definition, and a gap measured in
+  pixels is not a verdict about how a race looks.
+- **The clean-machine result is one machine.** See the caveat in section 5; a Linux or ARM host is
+  untested and the native modules are where that would bite.
+- **The scoreboard counts candidates, not importance.** Nine done and eight gone out of 58 says the
+  list was stale; it says nothing about whether the 41 that remain are worth doing.
+- **`reports/` is append-only and was read, never edited.** Where a report's status line is now
+  wrong — FINISH-MOTION-1's *"awaiting the owner's eye"* is the clearest — the correction is here and
+  the report is left as the dated record it is.

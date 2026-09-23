@@ -77,12 +77,26 @@ exactly as it always has.
 
 ### Minimal production start
 
+★ **BEFORE ANY OF THIS: install the dependencies.** This file assumed it and never said it —
+corrected 2026-09-24. You need **Node 20 or newer** (`engines` says `>=20`; verified on 24.14.0) and
+`openssl`, which a default Windows box does not have.
+
 ```sh
+npm ci --prefix server
+npm ci --prefix client
 cd client && npm run build && cd ..
+```
+
+★ **EXPORT the token — do not prefix it.** Corrected 2026-09-24: this block used to set
+`RA_BOOTSTRAP_TOKEN` as a per-command prefix to `node`, and the `curl` below then referenced
+`$RA_BOOTSTRAP_TOKEN` in a **fresh shell where it is empty**, so the setup call as printed sent an
+empty token and returned 403. Export it first, so both commands see the same value:
+
+```sh
+export RA_BOOTSTRAP_TOKEN="$(openssl rand -hex 16)"
 
 NODE_ENV=production \
 RA_SESSION_SECRET="$(openssl rand -hex 32)" \
-RA_BOOTSTRAP_TOKEN="$(openssl rand -hex 16)" \
 RA_COOKIE_SECURE=auto \
 RA_CSRF_STRICT=auto \
 RA_PUBLIC_ORIGIN=https://racearena.example.com \
