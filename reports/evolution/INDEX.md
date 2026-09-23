@@ -426,6 +426,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-24b.md](MORNING-2026-09-24b.md) — **the morning sheet for the polish night.**
+  ★ Its first finding is about the LIST rather than the code: the five delivery gaps
+  NIGHT-2026-09-24 discovered were written only to `OPEN.md` and **never entered `BACKLOG.md` at
+  all**, so the catch-up was both halves being written for the first time rather than a move between
+  parts. Piece 3's six data-protecting fixes are done, each closed in both documents in the same
+  commit as the work.
+
 - [DELIVERY-BROWSER-GATE-1.md](DELIVERY-BROWSER-GATE-1.md) — **★★ A BROWSER IN THE AUTOMATIC
   JUDGEMENT AT LAST, AND IT WAS PROVEN STABLE BEFORE IT WAS ALLOWED TO BLOCK.** Until this block
   `playwright` appeared in `.github/` NOWHERE, so every automatic statement this project made about
