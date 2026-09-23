@@ -1939,6 +1939,33 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
   numbers live in `client/src/modules/storage/defaults.js`. All four fingerprints minted at this ship
   (`docs/fingerprints.json`); golden races were NOT re-recorded and did not move.
 
+### THE SHIP — the chase after the outcome (2026-09-23)
+
+- `v-ship-chase-after-outcome` (`67817334`, 2026-09-23) — **the ship: CHASE-SHIP-1, the chase merged
+  to master.** The governor is extended past `pulkEndFrac` so that **five** racers, picked from the
+  front of the CHASING field — the first behind the largest gap inside the front band — keep
+  accelerating after the outcome window closes. Three defaults carry it and they live in
+  `client/src/modules/storage/defaults.js`, which is their one home. The owner's breakaway falls
+  **16.0% → 7.3%** at quiet (Fisher p = 0.0013) and **9.7% → 1.7%** at wild (p < 0.0001), while
+  in-window overtakes rise on **ten tracks out of ten** in both stages; it costs band arrival
+  (−2.4 pp quiet, −4.2 wild) with every one of twenty track cells far above the 70% gate.
+  ★ **The headline is a NET and the report says so**: 36 races repaired against **10 that GAINED a
+  breakaway** at quiet, 27 against 3 at wild — "no track gets worse" is not "no race gets worse".
+  **All four fingerprints minted at this ship** (`docs/fingerprints.json`); two shipped-outcome
+  winner pins re-measured and re-pinned; two measured camera stamps moved for the first time on the
+  branch, and one of them made a sentence in `docs/ENDING-PHASES.md` false, corrected in place and
+  named rather than quietly edited. ★★ **The golden races were NOT re-recorded.** They moved once,
+  wrongly: the branch pinned 60 dynamics keys in `scripts/golden/fixtures/races.json` and not the
+  three new ones, so the fixture began reading `defaults.js` — which its own header says cannot
+  happen. Repaired by PINNING, with `expected.json` restored to its long-standing content, and the
+  rule written into that header: **a new key in `defaults.js` means a new key in `races.json`, in
+  the same commit.** Measurement in `reports/evolution/CHASE-BUILD-1.md`; the parity thread's
+  resolution in `reports/evolution/CHASE-PARITY-DIAG-1.md`.
+  ★ **This tag does not register itself in the tree it points at**, like the four that predate the
+  2026-08-18 rule: the owner's ship order for this block put the merge and the remote-branch delete
+  before the tag, so the register line could not go on the branch. The line landed in the commit
+  immediately after the tagged merge.
+
 ### NOT a ship — the group gap brake, refused (2026-09-22)
 
 - **`archive/group-gap-brake-1`** — the archive of `feat/group-gap-brake-1`, tip **`c2e8c54f`**,
