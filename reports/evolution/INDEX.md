@@ -426,6 +426,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [POLISH-2026-09-24B.md](POLISH-2026-09-24B.md) — **★★ EIGHT SMALL ITEMS CLOSED, TWO MEASURED AND
+  NARROWED, AND THE LIST FINALLY KEPT UP WITH THE WORK.** ★ **The flaky editor test did not fail once
+  in 20 full parallel suite runs** — which BOUNDS the rate rather than proving a fix (a 1-in-5 flake
+  would almost certainly have shown; a 1-in-50 very likely would not), so Q-19 is narrowed and not
+  closed and nothing was changed to make it pass. ★★ **"51.6 MB of backgrounds at first paint" is
+  0 MB**: there are ZERO image bytes in the client bundle, backgrounds are fetched per track at
+  runtime, and the real cost is a median 3.61 MB with a worst case of 9.69 MB — nearly three times the
+  whole application. Six data-protecting fixes shipped with tests (a crash-proof track draft, a
+  Ctrl+C-safe cleanup, a boot-time `.tmp` sweep, the un-default test, a save that names WHICH half
+  failed, an out-of-range value refused out loud) plus the worktree-stub helper that found **18 dead
+  registrations `git worktree list` was hiding**. ★ **Q-24 was a TEST GAP, not a defect**, and says so.
+  ★ **The backlog debt was larger than reported**: the five delivery gaps NIGHT-2026-09-24 found had
+  never entered `BACKLOG.md` at all. Pieces 5 and 6 fell to the budget rule and say why.
+
 - [MORNING-2026-09-24b.md](MORNING-2026-09-24b.md) — **the morning sheet for the polish night.**
   ★ Its first finding is about the LIST rather than the code: the five delivery gaps
   NIGHT-2026-09-24 discovered were written only to `OPEN.md` and **never entered `BACKLOG.md` at

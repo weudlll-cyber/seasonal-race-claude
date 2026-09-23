@@ -1538,14 +1538,20 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
 
-- **Q-19 — TrackEditor.effects.test.jsx flaky** — **CANNOT ESTABLISH, 2026-08-23, and that is
-  about the evidence and not about effort.** The file passes **11/11 in isolation** and the full
-  client suite ran green **three times** on 2026-08-22/23. **Three green runs cannot settle an
-  intermittent failure.** *What would decide it:* repeated full-suite runs under the parallel
-  configuration, counting failures — a MEASUREMENT, so it is not a verdict item. — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE, and it cannot be established mechanically:** the file still exists and an intermittent failure is not decidable by a grep. Waiting on repeated full-suite runs under the parallel configuration, counting failures. *(The suite is now bounded at 4 workers, 2026-08-27, so any future count is against a different configuration than the one that produced the flake.)*
-
+- **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
+  parallel suite runs. NARROWED, NOT CLOSED.**
+  The measurement this item has been waiting on since 2026-08-23 has been taken: twenty full client
+  suite runs against an unchanged tree, counting, no retries. **20 GREEN, and the suspect file did
+  not fail once.**
+  ★★ **What that does and does not establish — the difference is why this stays open.** It BOUNDS the
+  rate: a one-in-five flake would almost certainly have shown (chance of missing it 0.8^20 = 1.2%); a
+  one-in-fifty very likely would not (0.98^20 = 67% chance of missing it). **A FREQUENT flake is
+  refuted; a RARE one is not.** The honest verdict is *not reproducible at this rate*, never *fixed*
+  — and nothing was changed to make it pass.
+  ★ The configuration has also moved since the flake was last seen (the suite is bounded at 4 workers
+  since 2026-08-27), so this counts against a different arrangement than the one that produced it.
+  **Close it only on a much larger N, or delete it when the file goes.**
+  Evidence: `reports/evolution/POLISH-2026-09-24B.md` §1.
 - **Q-8** — Watch list: TrackManager.jsx and BrandingProfiles.jsx. **THE LOC FIGURES ARE REMOVED
   RATHER THAN UPDATED.** Recorded as 535 and 330; measured 2026-08-23 as **654** and **559** — both
   now past the 400-line threshold this watch exists to enforce, having grown while the watch
@@ -1571,19 +1577,18 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `RacerEditModal.jsx` is **670** lines, still above 400.
 
-- **Q-27** — Background image weight. **THE ITEM'S PREMISE IS STALE AND THE NUMBER IS UNDERSTATED —
-  re-measured 2026-08-23 (BACKLOG-SORT-42).** It was written as *"~11.7 MB uncompressed PNGs"* and
-  named pngquant/tinypng. **There are ZERO PNG backgrounds:** `server/data/backgrounds/` holds 13
-  files, all `.jpg`. The five named tracks total **21.23 MB** as JPEGs — nearly double the recorded
-  figure — and the whole directory is **60.45 MB**. **So the fix as written cannot be executed** (there
-  is nothing to run pngquant over) **while the concern it was raised for is larger than recorded.**
-  Re-specifying it is the work; the old plan is not.
-  **verify:** `ls server/data/backgrounds/ | grep -c "\.png$"` returns 0 — **still open while the
-  directory weight is unaddressed and no re-spec exists.**
-  _(Priority: low. Audit 2026-05-04, deferred in PR-A2.9.)_
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — there are still **zero** `.png` backgrounds in either `server/data/backgrounds/` or `server/seeds/backgrounds/`, so the fix as written still cannot be executed. Waiting on a re-spec, which is the work.
-
+- **Q-27** — Background image weight. ★★ **MEASURED 2026-09-24, AND THE QUESTION HAD THE WRONG
+  SHAPE.** This item, and `OPEN.md` after it, asked what 51.6 MB of backgrounds costs **at first
+  paint**. The answer is **nothing**: there are **ZERO image bytes in the client bundle** (3.49 MB
+  across 52 files — 0.89 MB JS, 0.06 MB CSS, 2.54 MB fonts and sprites). Backgrounds are fetched at
+  runtime by URL (`trackLoader.js:53`) and cached per session (`bgImageCache.js`), so **no background
+  is ever on the first-paint path and all ten are never loaded together.**
+  **The real cost is per track, paid when one is chosen:** median **3.61 MB**, worst **9.69 MB**
+  (river-run); seatrack 9.53 and mountainstreet 9.32 are the only others above 5 MB.
+  ★ **Still open as a DECISION rather than a measurement**: the worst single track is nearly three
+  times the entire application bundle — roughly 8 s on a 10 Mbit link before it is drawable. Whether
+  to re-encode is a visible change and is the owner's. **No optimisation was attempted.**
+  Evidence: `reports/evolution/POLISH-2026-09-24B.md` §2.
 - **Q-20a** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no hint text exists; waiting on somebody adding it.

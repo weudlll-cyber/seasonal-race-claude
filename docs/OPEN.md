@@ -156,8 +156,8 @@ it.
 | --- | --- |
 | Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
 | "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
-| Is the flaky editor test really flaky? | a block — repeated full-suite runs, counting |
-| What the 51.6 MB of backgrounds actually costs at first paint | small — ~half an hour |
+| Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
+| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **MEASURED: it costs NOTHING at first paint** | **zero image bytes in the bundle** (3.49 MB total). The cost is per track: median 3.61 MB, **worst 9.69 MB**. Still open as a **decision** (re-encode?), not a measurement |
 | Why the remaining worst races are worse, now that the obvious cause is refuted | a night |
 
 ★ The last row is new tonight: CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races
