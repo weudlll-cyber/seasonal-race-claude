@@ -93,15 +93,19 @@ a rule for anybody to follow.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the repair moves the hash, so it is a mint and only he can order it. Re-verified at source today: `scripts/render-fingerprint.mjs` still builds the frame camera as a hand-written literal with three members (`hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`); `frameCameraInputs` is imported by five client files and by that instrument not at all. The guard half still needs only BUILDING.
 
-- [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
-      FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
-      declared members, leaving `anchorRacerIndex` and `runInArrived` **undefined inside the
-      instrument**. **LABEL-FOCUS-1 has never been exercised by it, and RUNIN-NAMES-1 whole visible
-      change is a state it cannot enter** — its unmoved verdict for that feature was empty, not
-      reassuring.
-      Establishes it: [RENDER-FINGERPRINT-BLIND-1](../reports/evolution/RENDER-FINGERPRINT-BLIND-1.md).
-      **NEEDS: ONLY HIS WORD for the repair** — it moves the hash, so it is a mint. **The guard half —
-      checking that callers build the object through `frameCameraInputs` — needs only BUILDING.**
+- [ ] ★★ **ONLY THE GUARD HALF IS LEFT. THE REPAIR ITSELF WAS DONE ON 2026-09-05 AND THIS ENTRY
+      WENT STALE THREE DAYS AFTER IT WAS WRITTEN.** The repair — `render-fingerprint.mjs` building its
+      frame camera from `frameCameraInputs` instead of a hand-written literal — landed in
+      **`d2f10ab2` (RENDER-CAMERA-FIELDS-1), 2026-09-05**, and is in master. Re-verified 2026-09-24:
+      the file calls `frameCameraInputs(cd)` and the comment above that line records what the literal
+      used to be. **All four fingerprints verify against the engine today**, so the hash the entry
+      said a repair would move has already moved and already been recorded.
+      ★★★ **THIS MATTERS BEYOND ONE ENTRY: on 2026-09-23 the owner ORDERED a re-mint on the strength
+      of this row, and there was nothing to re-mint.** NIGHT-2026-09-24C found the work already done
+      and minted nothing — a fingerprint minted with no change behind it would falsify the record.
+      **What is actually left is the GUARD half**, exactly as the entry always said: nothing checks
+      that a caller builds that object through `frameCameraInputs` rather than by hand, so the same
+      mistake can be made a third time. It **needs only BUILDING** — no decision, no mint.
 
 ---
 
