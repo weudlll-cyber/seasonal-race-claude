@@ -2204,6 +2204,27 @@ proposal arriving again in six months looking new.
       stage now preserves the repository layout (`/build/client` + `/build/shared`). Found by running
       it, not by reading it.
 
+- [x] ★★ **`VITE_API_URL` DEFAULTS TO SAME-ORIGIN FOR REAL DEPLOYMENTS, AND HIS 4173 FLOW IS
+      PROVEN UNTOUCHED — his decision of 2026-09-23, built 2026-09-24.** The server now writes its
+      runtime marker on **every** page it serves, not only when `RA_PUBLIC_ORIGIN` is set, and an
+      empty `apiBaseUrl` inside it is a POSITIVE statement of same-origin rather than an absent one.
+      ★ **What was actually broken:** an un-configured server served a page indistinguishable from any
+      other static server's, so the standalone image's client fell back to `http://localhost:4000` —
+      **the recipient's own machine**, not the server's.
+      ★★ **The escape hatch is STRUCTURAL, not a flag, which is why his flows cannot break:** neither
+      of his two local flows is served by our Express app. 5173 is Vite; **4173 is
+      `scripts/serve-production.mjs`, a plain `node:http` static server**. Neither imports
+      `staticClient.js`, so neither ever gets a marker, and both keep falling through to
+      `VITE_API_URL` / `localhost:4000`.
+      ★★★ **PROVEN BY RUNNING BOTH, not asserted.** His 4173 preview, started the way he starts it:
+      `GET /` returned 886 bytes with **NO marker**, and the bundle it serves still carries
+      `http://localhost:4000` baked in, with the API on 4000 answering 200. Our own server on a
+      scratch port with no `RA_PUBLIC_ORIGIN`: `GET /` returned the marker `{"apiBaseUrl":""}` —
+      same-origin — and `/api/health` answered 200 **on that same origin**, so the statement is true.
+      ★ One test changed rather than deleted: *"NOTHING CONFIGURED → the html is returned
+      byte-identical"* asserted exactly the behaviour this decision reverses. It now asserts the new
+      contract, with the old wording quoted above it and why it was right at the time.
+
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 
 **Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART

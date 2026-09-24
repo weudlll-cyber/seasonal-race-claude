@@ -53,9 +53,10 @@ AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfi
 client now and `docker build -f server/Dockerfile .` needs nothing else. Cost measured at **+8 s
 (+2.4%)**, not the large penalty the proposal feared. Proven by running the image with no mounts.
 
-**7 · `VITE_API_URL` for a real deployment — default it to same-origin?**
-Proposed and not closed, because closing it as proposed would break his own port-4173 flow.
-→ `reports/evolution/PUBLISH-STEPS-1.md` step 3
+**7 · ~~`VITE_API_URL` for a real deployment — default it to same-origin?~~** — ★★ **DECIDED AND
+BUILT 2026-09-24.** Our server now marks every page it serves; an empty `apiBaseUrl` means
+same-origin. **His 4173 flow is structurally safe** — it is a plain `node:http` static server that
+never gets a marker — and that was **proven by running it**, not asserted.
 
 **8 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
 decision of 2026-09-23. `NATURALNESS_FLOOR = 0.8` mirrors the ceiling, and it **refuses a

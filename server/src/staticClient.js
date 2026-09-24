@@ -120,14 +120,20 @@ export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
   // origin cannot change while the process runs (`corsOptions` is built once at module load for the
   // same reason). A per-request read would be a second answer to a question already settled.
   //
-  // ★ WHEN NOTHING IS CONFIGURED, NOTHING CHANGES. `injectRuntimeConfig` returns the html
-  // untouched, and the branch below sends the FILE exactly as it did before this piece — same
-  // `sendFile`, same headers, same ETag. The owner's dev server and his 4173 preview never take the
-  // injected path at all, because neither is served by this function.
+  // ★★ THE MARKER IS NOW ALWAYS INJECTED BY THIS FUNCTION (the owner's decision, 2026-09-23).
+  //
+  // It used to be injected only when `RA_PUBLIC_ORIGIN` was set, and the un-configured case sent the
+  // file untouched. That left the standalone image's page IDENTICAL to a page served by any other
+  // static server, so the client had no way to know the API was on its own origin and fell back to
+  // `http://localhost:4000` — which is the recipient's own machine, not the server's.
+  //
+  // ★ WHAT THIS DOES NOT TOUCH, and the reason his flows are safe: **neither of the owner's two
+  // local flows is served by this function.** The dev server on 5173 is Vite, and the 4173 preview is
+  // `scripts/serve-production.mjs`, a plain `node:http` static server. Neither imports this module,
+  // so neither gets a marker, and both keep falling through to `VITE_API_URL` / `localhost:4000`
+  // exactly as before. That is the escape hatch, and it is structural rather than a flag.
   const publicOrigin = resolvePublicOrigin(env);
-  const injectedHtml = publicOrigin
-    ? injectRuntimeConfig(readFileSync(indexFile, 'utf8'), publicOrigin)
-    : null;
+  const injectedHtml = injectRuntimeConfig(readFileSync(indexFile, 'utf8'), publicOrigin);
   app.use((req, res, next) => {
     // THE API IS NEVER ANSWERED WITH THE APP. This is the whole guard, and it is first.
     if (req.path === '/api' || req.path.startsWith(API_PREFIX)) return next();
