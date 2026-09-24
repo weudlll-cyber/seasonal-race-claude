@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchUsers, createUser, updateUser, deleteUser } from '../../../services/usersApi.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const ROLES = ['operator', 'admin'];
@@ -367,7 +368,8 @@ function UserManagementSection() {
           <div className={s.formGrid}>
             <div className={s.formGroup}>
               <label className={s.label} htmlFor="um-username">
-                Username
+                Username{' '}
+                <InfoTooltip text="The name the new user signs in with. Server-enforced uniqueness — a duplicate is refused." />
               </label>
               <input
                 id="um-username"
@@ -379,7 +381,8 @@ function UserManagementSection() {
             </div>
             <div className={s.formGroup}>
               <label className={s.label} htmlFor="um-password">
-                Password
+                Password{' '}
+                <InfoTooltip text="Initial password for the new account. Same rule the server applies everywhere; the user can change it themselves later from this same screen." />
               </label>
               <input
                 id="um-password"
@@ -392,7 +395,8 @@ function UserManagementSection() {
             </div>
             <div className={s.formGroup}>
               <label className={s.label} htmlFor="um-role">
-                Role
+                Role{' '}
+                <InfoTooltip text="operator (default) sees the ordinary Dev Screen; admin also sees this User Management section and any other admin-only affordance." />
               </label>
               <select
                 id="um-role"
@@ -410,7 +414,8 @@ function UserManagementSection() {
             </div>
             <div className={s.formGroup}>
               <label className={s.label} htmlFor="um-team">
-                Team
+                Team{' '}
+                <InfoTooltip text="The team the new account joins. The picker only lists teams that already exist — pick 'New team…' to found one, which is the only way to type a name. Guards against a typo silently splitting a team in two." />
               </label>
               <select
                 id="um-team"
@@ -435,7 +440,8 @@ function UserManagementSection() {
           {newTeam === NEW_TEAM && (
             <div className={s.formGroup} style={{ marginTop: '0.75rem' }}>
               <label className={s.label} htmlFor="um-new-team">
-                New team name
+                New team name{' '}
+                <InfoTooltip text="The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past." />
               </label>
               <input
                 id="um-new-team"

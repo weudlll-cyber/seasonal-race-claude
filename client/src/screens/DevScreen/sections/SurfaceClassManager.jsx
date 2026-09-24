@@ -21,6 +21,7 @@ import {
 import { slugify, uniqueSlug } from '../../../utils/slugify.js';
 import { SurfaceClassPreview } from './SurfaceClassPreview.jsx';
 import { RangeSlider } from '../components/RangeSlider.jsx';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const GENERATOR_OPTIONS = Object.values(GENERATORS).map((g) => ({ id: g.id, label: g.label }));
@@ -304,10 +305,13 @@ function SurfaceClassManager() {
         }}
       >
         <div className={s.card} style={{ padding: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.6rem' }}>
+          <div
+            style={{ display: 'flex', alignItems: 'center', marginBottom: '0.6rem', gap: '0.4rem' }}
+          >
             <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
               Classes <span className={s.badge}>{classes.length}</span>
             </span>
+            <InfoTooltip text="Surface classes are the palette a track paints its ground from. A Default is a code-shipped class; Modified is a code-default the operator has overridden on the server; Custom is one you created here." />
           </div>
 
           {isLoading && classes.length === 0 && (
@@ -409,7 +413,8 @@ function SurfaceClassManager() {
                 {/* Label */}
                 <div className={s.formGroup}>
                   <label className={s.label} htmlFor="sc-label">
-                    Label
+                    Label{' '}
+                    <InfoTooltip text="Human-readable name shown in the list and in the track editor's paint picker. Max 40 characters; the internal id is auto-derived from this label by slugify and stays stable when you rename." />
                   </label>
                   <input
                     id="sc-label"
@@ -424,7 +429,8 @@ function SurfaceClassManager() {
                 {/* Generator */}
                 <div className={s.formGroup}>
                   <label className={s.label} htmlFor="sc-generator">
-                    Generator
+                    Generator{' '}
+                    <InfoTooltip text="Which surface-effect generator draws this class — particle, wave, dust, and so on. Changing this replaces the Generator Settings below with the new generator's defaults." />
                   </label>
                   <select
                     id="sc-generator"
