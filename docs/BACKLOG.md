@@ -944,6 +944,30 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       points. **Until he rules, nobody can say whether these are a problem at all**, so no work on
       them is possible — this is an item waiting on a sentence, not on effort.
 
+## The viewer-invariants gate is RED on master (2026-09-24)
+
+- [ ] ★★ **INVARIANT 6 FAILS ON MASTER: the winner's crossing is not framed on the winner, on
+      `city-circuit` seed 9.** `node scripts/viewer-invariants.mjs --gate` — the exact command
+      `verify --premerge` spawns (`verify.mjs:427-428`, `GATE_GUARD`) — exits 1 with **17 crossing
+      violation(s) in 1 of 2 races**.
+      **Where they are:** all 17 are `city-circuit` seed 9, shipped arm. `space-sprint` seed 9 is the
+      other race in the gate's scope and contributes **0**. Worst frame **6600**, state
+      **PHOTO_FINISH**: the winner sits at **(0.388, 0.112)** of the frame — outside the subject's
+      inner 0.7 region. At the crossing itself he is at 0.369, 0.275, on canvas, band 100%,
+      corridor 1.62. All seven per-invariant counters (course, leader, line, widthstep, panstep,
+      tootight, toowide) are **0**, so this is the crossing framing alone and nothing else.
+      ★★ **IT IS PRE-EXISTING AND THAT WAS MEASURED, NOT ASSUMED.** NIGHT-2026-09-24D held its merge
+      on this red and suspected it was pre-existing without proving it. Run on both trees with the
+      same command: `feat/night-2026-09-24c` 17 violations in 238 s; **`master` c38ad11c, as a
+      control, 17 violations in 191 s** — identical down to the figures. The night branch did not
+      cause it and merging did not introduce it.
+      ★ **Why nobody noticed:** per-commit `verify` does not route this guard; only
+      `verify --premerge` spawns it, and it costs ~200-340 s for two races.
+      ★ **It is a tracked item now, not a merge blocker.** What it needs is his eye first — whether a
+      winner at the frame edge at PHOTO_FINISH on that one seed is a picture he objects to — because
+      `docs/DEAD-ENDS.md` and the accepted-finish record already carry cases where a framing that
+      fails a bar was accepted. **Do not "fix" it before he has looked.**
+
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established

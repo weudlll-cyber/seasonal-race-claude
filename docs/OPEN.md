@@ -125,6 +125,17 @@ claim meant, but the task is six sections and not one.
 
 ## 3 · NEEDS HIS EYE
 
+**0 · ★★ THE `viewer-invariants` GATE IS RED ON MASTER — `city-circuit` seed 9.**
+`node scripts/viewer-invariants.mjs --gate` exits 1 with **17 crossing violations in 1 of 2 races**;
+all 17 are city-circuit seed 9 (space-sprint seed 9 contributes 0). Worst frame 6600 at
+PHOTO_FINISH: the winner is at (0.388, 0.112), outside the subject's inner 0.7 region.
+★ **Measured as PRE-EXISTING, not assumed** — master `c38ad11c` gives the same 17 as the night branch
+did, so nothing recent caused it. It is not a merge blocker; it is this row.
+★ **His eye first, before anyone fixes it:** whether a winner at the frame edge at PHOTO_FINISH on
+that one seed is a picture he objects to. This project already has accepted cases of a framing that
+fails a bar.
+→ [BACKLOG.md](BACKLOG.md), "The viewer-invariants gate is RED on master"
+
 *Judgeable only in the browser. The code is in.*
 
 **1 · `city-circuit`, quick-test seed 30, on the shipped stage — does a 349 px gap held by three
