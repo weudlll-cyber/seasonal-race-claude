@@ -921,29 +921,24 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
-## The viewer-invariants gate is RED on master (2026-09-24)
+## The viewer-invariants gate grades frames the owner does not judge (2026-09-24)
 
-- [ ] ★★ **INVARIANT 6 FAILS ON MASTER: the winner's crossing is not framed on the winner, on
-      `city-circuit` seed 9.** `node scripts/viewer-invariants.mjs --gate` — the exact command
-      `verify --premerge` spawns (`verify.mjs:427-428`, `GATE_GUARD`) — exits 1 with **17 crossing
-      violation(s) in 1 of 2 races**.
-      **Where they are:** all 17 are `city-circuit` seed 9, shipped arm. `space-sprint` seed 9 is the
-      other race in the gate's scope and contributes **0**. Worst frame **6600**, state
-      **PHOTO_FINISH**: the winner sits at **(0.388, 0.112)** of the frame — outside the subject's
-      inner 0.7 region. At the crossing itself he is at 0.369, 0.275, on canvas, band 100%,
-      corridor 1.62. All seven per-invariant counters (course, leader, line, widthstep, panstep,
-      tootight, toowide) are **0**, so this is the crossing framing alone and nothing else.
-      ★★ **IT IS PRE-EXISTING AND THAT WAS MEASURED, NOT ASSUMED.** NIGHT-2026-09-24D held its merge
-      on this red and suspected it was pre-existing without proving it. Run on both trees with the
-      same command: `feat/night-2026-09-24c` 17 violations in 238 s; **`master` c38ad11c, as a
-      control, 17 violations in 191 s** — identical down to the figures. The night branch did not
-      cause it and merging did not introduce it.
-      ★ **Why nobody noticed:** per-commit `verify` does not route this guard; only
-      `verify --premerge` spawns it, and it costs ~200-340 s for two races.
-      ★ **It is a tracked item now, not a merge blocker.** What it needs is his eye first — whether a
-      winner at the frame edge at PHOTO_FINISH on that one seed is a picture he objects to — because
-      `docs/DEAD-ENDS.md` and the accepted-finish record already carry cases where a framing that
-      fails a bar was accepted. **Do not "fix" it before he has looked.**
+- [ ] ★★ **THE GATE GRADES FRAMES THE OWNER DOES NOT JUDGE, SO IT STAYS RED INDEFINITELY.** The
+      ruling of 2026-09-24 answered invariant 6's question and did **not** clear its red — it moved
+      the problem from the picture to the SCOPE.
+      **What the scope is today.** Invariant 6 runs from the crossing frame through every frame after
+      it for as long as the shot that owned the crossing is still running; the scope note is in
+      `scripts/viewer-invariants.mjs`, above the invariant itself.
+      **Why that is now the whole of the failure.** The crossing frame on `city-circuit` seed 9
+      passes on its own figures. **All 17 violations fall in the after-the-crossing stretch** — the
+      stretch he has ruled he does not judge. So `verify --premerge` is red for grading a promise
+      nobody is making, and it will stay red on every run until the scope changes.
+      ★ **A gate that is always red is one nobody believes.** This repository already says exactly
+      that about the browser suite, which is why the finding is filed as a gate problem rather than
+      left as a standing failure somebody learns to scroll past.
+      ★ **THIS ROW NAMES NO FIX AND NO NUMBER.** It is open pending the measurement of where the
+      shot actually ends — [reports/evolution/WINNER-AFTER-CROSSING-1.md](../reports/evolution/WINNER-AFTER-CROSSING-1.md)
+      — and the decision about the guard is the owner's, not this row's.
 
 ## Delivering to someone else — what still stands (2026-09-24)
 
@@ -2189,6 +2184,21 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **INVARIANT 6 — THE WINNER'S CROSSING ON `city-circuit` SEED 9. ANSWERED by the owner,
+      2026-09-24.** The row asked for his eye before anything else, and it has it: **the framing of
+      the frames AFTER the finish is not something he judges.** The crossing frame itself was never
+      in question and is not disposed of by the ruling — it passes on its own figures, the winner at
+      **0.369, 0.275** against the inner 0.7 bar (0.15–0.85 on both axes).
+      **What was measured before he looked**, kept because it is what the ruling was given against:
+      `node scripts/viewer-invariants.mjs --gate` exits 1 with **17 crossing violations in 1 of 2
+      races**, all 17 on `city-circuit` seed 9, shipped arm; `space-sprint` seed 9 contributes 0.
+      Worst frame **6600** at PHOTO_FINISH, the winner at **(0.388, 0.112)**. All seven
+      per-invariant counters 0. Measured as pre-existing rather than assumed — master `c38ad11c`
+      gave the same 17 as the night branch.
+      ★ **The red itself is NOT closed by this**, and the successor row in PART ONE says why: the
+      violations all fall after the crossing, so what is now in question is the guard's SCOPE and not
+      the picture. A subject closing does not close the thing it turned into.
 
 - [x] ★★ **A BREAKAWAY HELD BY TWO RACERS IS ACCEPTED — the owner's decision of 2026-09-24.**
       Closes the nine pair breakaways, which were blocked on a ruling that did not exist.

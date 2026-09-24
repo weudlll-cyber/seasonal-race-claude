@@ -426,6 +426,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [WINNER-AFTER-CROSSING-1.md](WINNER-AFTER-CROSSING-1.md) — **where the shot actually ends, after
+  the owner ruled he does not judge the frames past the finish** — measurement only, nothing
+  proposed. Reused the probe's existing `crossing.after` record (nothing built) and added opt-in
+  reporting, `--after-crossing`. ★ On `city-circuit` seed 9 the winner leaves the inner box at
+  983 ms on the y axis, **267 ms before any ownership change** and 1134 ms before the shot hands
+  over; on `space-sprint` seed 9 the handover comes FIRST, 1084 ms before he leaves the box — which
+  is why one race scores 17 and the other 0. ★★ A natural boundary exists (`PHOTO_FINISH` →
+  `OVERVIEW`) but lands LATER than today's scope, so adopting it would take `city-circuit` from
+  **17 violations to 68**. The scope's "as long as the shot runs" clause never binds in either race.
+
 - [NIGHT-2026-09-24D.md](NIGHT-2026-09-24D.md) — **the resumed night, six of the brief's pieces
   finished** — pieces 0/1/2/3a already done at the start; pieces 3b, 3c, 4, 5, 6 landed tonight;
   piece 7 (company guarantee on a spread field) DEFERRED as the brief permits, with the reason
