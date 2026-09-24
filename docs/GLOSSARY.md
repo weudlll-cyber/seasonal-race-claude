@@ -231,6 +231,11 @@ when nothing worth seeing is ahead of the subject.
 
 **photo finish · drama pulse · lookback** — the closing sequence: the shot on the line, the beat after
 it, and the camera settling back to take in the finish.
+★★ **What is graded, since 2026-09-25:** the run-in — from the endgame threshold to the frame in
+which the leader has crossed, inclusive — on **the racer LEADING each frame**, who must stay inside
+the subject's inner-frame region. Nothing after the crossing frame is graded. Grading the leader of
+every frame necessarily grades the eventual winner over every frame in which he leads; the
+winner-specific version was deliberately not built.
 ★★ **2026-09-24 — the framing of the frames AFTER the finish is not something the owner judges.**
 The crossing frame itself is unaffected by that ruling: it is still judged, and on `city-circuit`
 quick-test seed 9 it passes on its own figures — the winner at 0.369, 0.275, against a bar of the

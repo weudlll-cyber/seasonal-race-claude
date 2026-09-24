@@ -803,15 +803,24 @@ went missing).
       Measured after the change: **200 s clean.**
 
       **PROVED IN BOTH DIRECTIONS, which is what every skip in this project owes.** The reduced gate
-      still passes clean, and it still goes RED on both sabotage arms — `--sabotage-corner` exits 1
-      with 154 crossing violations, `--sabotage-noline` exits 1 with 4. A gate that could not fail
+      still passes clean, and it still goes RED on both sabotage arms. A gate that could not fail
       would be the cheapest of all and worth nothing.
+      ★ **RE-MEASURED 2026-09-25, after invariant 6 was rescoped to the run-in:**
+      `--sabotage-corner` exits 1 with **739 `6-leaderedge` violations in 2 of 2 races**, and
+      `--sabotage-noline` exits 1 with **2 crossing violations in 2 of 2**. Clean, the gate exits 0
+      with **0 of every kind**. The earlier figures on this line — 154 and 4 — described the scope
+      that ran from the crossing ONWARDS and no longer describe anything that exists.
 
-      **AND THE LIMIT OF THAT PROOF, stated rather than assumed away.** The sabotage arms drive the
-      CROSSING check only. The five WINDOW invariants have no sabotage arm, and in the gate's own
-      scope they have never been observed red — the violations both 80-race sweeps found sit at
-      seed 2, which the gate does not run. So the window half of this gate is a REGRESSION NET whose
-      red has not been demonstrated at this scope, and that is a known gap, not a settled question
+      **AND THE LIMIT OF THAT PROOF, stated rather than assumed away.** ★ **Narrowed on 2026-09-25,
+      in the one direction that matters here.** `--sabotage-corner` now drives a WINDOW-scoped
+      invariant: invariant 6's "not at the edge" half moved into the probe and is graded across the
+      whole run-in, so the arm exercises the window machinery — the window test, the frame loop and
+      the event path — on every in-window frame. Its 739 is the two races' 737 in-window frames plus
+      their 2 crossing frames, which is what makes it a coverage measurement and not just a red
+      light. **What still has no sabotage arm are the five ORIGINAL window invariants**, and in the
+      gate's own scope they have never been observed red — the violations both 80-race sweeps found
+      sit at seed 2, which the gate does not run. So those five remain a REGRESSION NET whose red has
+      not been demonstrated at this scope, and that is a known gap, not a settled question
       (Lesson 209).
 
       **WHAT THE TWO-RACE SCOPE NO LONGER COVERS:** the eight other tracks' own geometry, and any

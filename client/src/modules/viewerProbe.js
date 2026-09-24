@@ -48,6 +48,10 @@
 // ============================================================
 
 import { COMPANY_FRAME_PCT } from './camera/framingRule.js';
+// ★ THE SAME CONSTANT INVARIANT 6 ALREADY GRADES AGAINST. `scripts/viewer-invariants.mjs` imported
+// it directly while it graded the crossing from the guard side; now that the grading is here, so is
+// the import. No value is copied and no second number exists.
+import { DEFAULT_INNER_FRAME_PCT } from './camera/framingConfig.js';
 
 let _active = false;
 if (typeof window !== 'undefined') {
@@ -109,7 +113,6 @@ let _crossed = false;
 // itself, which is how "arrival: 0% error on every track" stayed green while the winner sat in a
 // corner. That figure grades the ZOOM FACTOR and says nothing about what is in the picture.
 let _crossing = null;
-let _crossRing = [];
 let _windowStates = {};
 let _contention = null;
 // ── ENDGAME-COMPLETE-1: THE ACCEPTANCE SHEET, ACCUMULATED IN ONE PASS ─────────────────────────
@@ -126,6 +129,8 @@ let _sheet = null;
 // DIAGNOSIS ONLY. With `_ra_viewerdump` set, every frame's transform is kept so a violation can be
 // traced back through the frames that produced it. Off by default: a sweep keeps only the events.
 let _dump = null;
+/** `--sabotage-corner`: force the leader outside the region, to prove invariant 6 can still fail. */
+let _sabCorner = false;
 
 /**
  * Begin recording. Called once per race from RaceScreen; clears anything a previous race left.
@@ -143,7 +148,6 @@ export function beginViewerProbe(run) {
   _tightest = Infinity;
   _crossed = false;
   _crossing = null;
-  _crossRing = [];
   _windowStates = {};
   _contention = { released: [], checks: 0, on: false };
   _sheet = {
@@ -158,6 +162,15 @@ export function beginViewerProbe(run) {
     _dump = sessionStorage.getItem('_ra_viewerdump') === '1' ? [] : null;
   } catch {
     _dump = null;
+  }
+  try {
+    // ★ THE SABOTAGE ARM MOVED WITH THE TEST IT ARMS. `--sabotage-corner` used to displace the
+    // winner on the guard side, where invariant 6 then lived; the grading is here now, so the arm
+    // is too, and the flag keeps meaning what `docs/SHIP-CEREMONY.md` says it means. It is read
+    // once, at the start of a run, and it can only make the guard FAIL — never pass.
+    _sabCorner = sessionStorage.getItem('_ra_viewersabcorner') === '1';
+  } catch {
+    _sabCorner = false;
   }
 }
 
@@ -294,6 +307,47 @@ export function recordViewerFrame(f) {
       `the leader is ${Math.round(d)} px outside the canvas at (${Math.round(LX)}, ${Math.round(LY)})`,
       d
     );
+  }
+
+  // ── 6 — THE LEADER IS NOT AT THE EDGE, THROUGH THE RUN-IN AND ITS LAST FRAME (WINNER-CROSSING-1)
+  //
+  // THE OWNER'S DECISION, 2026-09-24: invariant 6 grades the run-in, on the racer LEADING each
+  // frame, up to and including the frame in which the leader has crossed. It grades nothing after
+  // that. The reasoning behind the scope: grading the leader of every frame necessarily grades the
+  // eventual winner over every frame in which he leads, and that is held to be enough — the
+  // winner-specific version is deliberately not built.
+  //
+  // WHY IT LIVES HERE AND NOT IN THE GUARD. The window is `inWindow` above, whose start is
+  // `f.endgameFrom`, supplied per frame and never exported. A guard-side version could not see the
+  // window at all without copying its value into a second place, which is what this one avoids.
+  //
+  // IT IS A SECOND, STRICTER TEST ON THE SAME LEADER AND THE SAME WINDOW as invariant 2, and its own
+  // event kind so the two never blur: 2 asks whether he is ON THE CANVAS, 6 whether he is inside the
+  // SUBJECT's own inner-frame region — `framingRule.js` states that region exists "so the SUBJECT
+  // does not cling to the edge".
+  //
+  // THE CROSSING FRAME IS INCLUDED, and `inWindow` excludes it by construction: it requires
+  // `finishedCount === 0`, which the crossing frame is the first to break. `_crossed` is still false
+  // here — it is set further down — so this is the one frame that satisfies both, and on it the
+  // leader by `t` is the racer who has just crossed.
+  const atCrossing = f.finishT > 0 && (f.finishedCount ?? 0) > 0 && !_crossed;
+  if (inWindow || atCrossing) {
+    const lo = (1 - DEFAULT_INNER_FRAME_PCT) / 2;
+    const hi = 1 - lo;
+    // The sabotage puts the leader in the corner, which is the same thing the defect does to the
+    // picture. Off by default; the gate never sets it.
+    const fx = _sabCorner ? 0.02 : LX / CW;
+    const fy = _sabCorner ? 0.03 : LY / CH;
+    // BY HOW MUCH, in frame fractions, on whichever axis is worse — the same shape of number every
+    // other event in this file carries, so the report can sort them together.
+    const by = Math.max(lo - fx, fx - hi, lo - fy, fy - hi);
+    if (by > 0)
+      add(
+        '6-leaderedge',
+        `the leader is at (${fx.toFixed(3)}, ${fy.toFixed(3)}) of the frame, outside the subject's ` +
+          `inner ${DEFAULT_INNER_FRAME_PCT} region`,
+        +by.toFixed(4)
+      );
   }
 
   // ── 3 — WHERE THE FINISH LINE IS, IS FINDABLE (in the window) ───────────────────────────────
@@ -612,12 +666,6 @@ export function recordViewerFrame(f) {
       p: prog,
     };
   };
-  if (!_crossed) {
-    let ld = f.racers[0];
-    for (const r of f.racers) if (r.t > ld.t) ld = r;
-    _crossRing.push({ idx: ld.index, shot: _shotOf(ld) });
-    if (_crossRing.length > 30) _crossRing.shift();
-  }
   if ((f.finishedCount ?? 0) > 0 && !_crossed) {
     let w = f.racers[0];
     for (const r of f.racers) if (r.t > w.t) w = r;
@@ -626,7 +674,6 @@ export function recordViewerFrame(f) {
       at: _shotOf(w),
       // The band at the crossing, measured the same way as everywhere else in this file.
       bandPct: _bandPct(f, sx, sy, CW, CH),
-      before: _crossRing.map((q) => q.shot),
       after: [],
     };
   }

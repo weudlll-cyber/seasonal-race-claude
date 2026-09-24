@@ -77,15 +77,6 @@ dev-screen value, one particle system instead of two, and the server/deployment/
 Six real pieces of work with real shapes, none of which anyone should start unasked.
 → [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
 
-**12 · ★★ The `viewer-invariants` gate grades frames he does not judge — what should its scope be?**
-He ruled on 2026-09-24 that the framing AFTER the finish is not something he judges, and the crossing
-frame itself passes on its own figures. **All 17 violations fall after the crossing**, so
-`verify --premerge` stays red for grading a promise nobody is making, and a gate that is always red
-is one nobody believes. **This moved out of "needs his eye": he has looked.** The measurement of
-where the shot actually ends is done and carries no proposal.
-→ [BACKLOG.md](BACKLOG.md), "The viewer-invariants gate grades frames the owner does not judge" ·
-[reports/evolution/WINNER-AFTER-CROSSING-1.md](../reports/evolution/WINNER-AFTER-CROSSING-1.md)
-
 ---
 
 ## 2 · NEEDS WORK, NO DECISION
