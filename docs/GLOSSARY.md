@@ -231,6 +231,10 @@ when nothing worth seeing is ahead of the subject.
 
 **photo finish · drama pulse · lookback** — the closing sequence: the shot on the line, the beat after
 it, and the camera settling back to take in the finish.
+★★ **2026-09-24 — the framing of the frames AFTER the finish is not something the owner judges.**
+The crossing frame itself is unaffected by that ruling: it is still judged, and on `city-circuit`
+quick-test seed 9 it passes on its own figures — the winner at 0.369, 0.275, against a bar of the
+inner 0.7 region (0.15–0.85 on both axes).
 
 **name tag** — a racer's on-screen label. At the start formation ALL of them are shown, deliberately,
 so a viewer can find their racer once.

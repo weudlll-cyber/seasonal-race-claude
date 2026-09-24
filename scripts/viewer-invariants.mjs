@@ -35,6 +35,7 @@
 // Usage:
 //   node scripts/viewer-invariants.mjs --tracks=space-sprint --seeds=9 --arm=shipped --headed
 //   node scripts/viewer-invariants.mjs --seeds=1-40                    # the nightly sweep
+//   node scripts/viewer-invariants.mjs --gate --after-crossing    # + the frames AFTER the crossing
 //   node scripts/viewer-invariants.mjs --gate                     # the SHIP gate: 2 races, 337-369 s
 //   npm run verify -- --premerge                                  # the same two races, from verify
 //
@@ -87,6 +88,11 @@ const DUMP = process.argv.includes("--dump");
 // RACE-JUDDER-1: measure DELIVERY instead of framing. Defaults off; the gate and the sweep are
 // unaffected, and the two arms' camera numbers are not comparable — see REAL_CLOCK's header.
 const REAL = process.argv.includes("--real-clock");
+// WINNER-AFTER-CROSSING-1: print the frames AFTER the crossing, one line each. REPORTING ONLY — it
+// adds no grading and changes none, so `--gate` output and exit code are identical with and without
+// it. The frames it prints are already recorded by the probe (`crossing.after`, cap 260); nothing
+// new is collected and no extra race is run.
+const AFTER_OUT = process.argv.includes("--after-crossing");
 const PACE_OUT = (() => {
   const a = process.argv.find((x) => x.startsWith("--pace-out="));
   return a ? a.slice("--pace-out=".length) : null;
@@ -1083,6 +1089,71 @@ if (XR.length) {
         .map(([k, v]) => `${k} ${v}`)
         .join(", ")
   );
+}
+
+// ── WINNER-AFTER-CROSSING-1: WHERE THE SHOT ACTUALLY ENDS, FRAME BY FRAME (--after-crossing) ───
+//
+// THE QUESTION THIS ANSWERS, and it is the only one: after the winner crosses, is there a NATURAL
+// boundary — a point where the shot that owned the crossing hands over — or is there only an
+// arbitrary number of frames? The owner ruled on 2026-09-24 that the framing AFTER the finish is not
+// something he judges. That does not make invariant 6's red go away; it relocates it to a question
+// about SCOPE, and that question needs numbers rather than a guess.
+//
+// REPORTING ONLY. It reads `crossing.after`, which the probe already fills on every run, and grades
+// nothing: with the flag and without it the verdict and the exit code are the same.
+if (AFTER_OUT && XR.length) {
+  const lo = (1 - INNER_FRAME_PCT) / 2;
+  const hi = 1 - lo;
+  // `after[0]` IS the crossing frame — the probe records `at` and then pushes the same frame — so
+  // the table starts at ms 0 on the frame invariant 6 calls the crossing.
+  for (const r of XR) {
+    const c = r.crossing;
+    console.log(
+      `
+── AFTER THE CROSSING — ${r.arm}/${r.track} seed ${r.seed} ` +
+        `(${c.after.length} frame(s) retained, cap 260) ──`
+    );
+    console.log("  frame   ms   state           binding        winner x,y    inner " + INNER_FRAME_PCT);
+    let firstOut = null;
+    let handover = null;
+    for (const a of c.after) {
+      const outX = a.fx < lo || a.fx > hi;
+      const outY = a.fy < lo || a.fy > hi;
+      // WHICH AXIS, because the two mean different things: x is the winner running out of a shot
+      // that is not following him, y is the shot sitting off the racing line.
+      if ((outX || outY) && !firstOut)
+        firstOut = { ...a, axis: [outX ? "x" : null, outY ? "y" : null].filter(Boolean).join("+") };
+      // HANDOVER is the product's own name changing, not a number: the camera state, or the framing
+      // binding. Whichever moves first is the boundary, if there is one at all.
+      if (!handover && (a.state !== c.at.state || a.binding !== c.at.binding))
+        handover = {
+          ...a,
+          what: a.state !== c.at.state ? `state -> ${a.state}` : `binding -> ${a.binding}`,
+        };
+      console.log(
+        [
+          "  " + String(a.frame).padStart(5),
+          String(a.ms - c.at.ms).padStart(5),
+          "  " + String(a.state).padEnd(15),
+          String(a.binding).padEnd(14),
+          (a.fx.toFixed(3) + ", " + a.fy.toFixed(3)).padStart(13),
+          outX || outY ? "   OUT" : "   in ",
+        ].join("")
+      );
+    }
+    console.log(
+      "  FIRST OUT OF THE BOX: " +
+        (firstOut
+          ? `frame ${firstOut.frame}, ${firstOut.ms - c.at.ms} ms after the crossing, on ${firstOut.axis}`
+          : "never — the winner is inside the box on every retained frame")
+    );
+    console.log(
+      "  HANDOVER:             " +
+        (handover
+          ? `frame ${handover.frame}, ${handover.ms - c.at.ms} ms after the crossing, ${handover.what}`
+          : `never — ${c.at.state}/${c.at.binding} still owns the frame after ${c.after.length} frame(s)`)
+    );
+  }
 }
 
 const INV = ["1-course", "2-leader", "3-line", "4-widthstep", "4-panstep", "5-tootight", "5-toowide"];

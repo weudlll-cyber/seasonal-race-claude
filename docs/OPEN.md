@@ -77,6 +77,15 @@ dev-screen value, one particle system instead of two, and the server/deployment/
 Six real pieces of work with real shapes, none of which anyone should start unasked.
 → [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
 
+**12 · ★★ The `viewer-invariants` gate grades frames he does not judge — what should its scope be?**
+He ruled on 2026-09-24 that the framing AFTER the finish is not something he judges, and the crossing
+frame itself passes on its own figures. **All 17 violations fall after the crossing**, so
+`verify --premerge` stays red for grading a promise nobody is making, and a gate that is always red
+is one nobody believes. **This moved out of "needs his eye": he has looked.** The measurement of
+where the shot actually ends is done and carries no proposal.
+→ [BACKLOG.md](BACKLOG.md), "The viewer-invariants gate grades frames the owner does not judge" ·
+[reports/evolution/WINNER-AFTER-CROSSING-1.md](../reports/evolution/WINNER-AFTER-CROSSING-1.md)
+
 ---
 
 ## 2 · NEEDS WORK, NO DECISION
@@ -119,17 +128,6 @@ claim meant, but the task is six sections and not one.
 ---
 
 ## 3 · NEEDS HIS EYE
-
-**0 · ★★ THE `viewer-invariants` GATE IS RED ON MASTER — `city-circuit` seed 9.**
-`node scripts/viewer-invariants.mjs --gate` exits 1 with **17 crossing violations in 1 of 2 races**;
-all 17 are city-circuit seed 9 (space-sprint seed 9 contributes 0). Worst frame 6600 at
-PHOTO_FINISH: the winner is at (0.388, 0.112), outside the subject's inner 0.7 region.
-★ **Measured as PRE-EXISTING, not assumed** — master `c38ad11c` gives the same 17 as the night branch
-did, so nothing recent caused it. It is not a merge blocker; it is this row.
-★ **His eye first, before anyone fixes it:** whether a winner at the frame edge at PHOTO_FINISH on
-that one seed is a picture he objects to. This project already has accepted cases of a framing that
-fails a bar.
-→ [BACKLOG.md](BACKLOG.md), "The viewer-invariants gate is RED on master"
 
 *Judgeable only in the browser. The code is in.*
 
