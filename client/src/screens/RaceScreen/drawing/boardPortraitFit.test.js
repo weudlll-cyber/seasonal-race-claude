@@ -15,7 +15,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { RACER_TYPES } from '../../../modules/racer-types/index.js';
+import { RACER_TYPES } from '../../../racer-types/index.js';
 import { drawStartBoard, START_BOARD_GEOMETRY } from './startBoardRendering.js';
 
 // NEW-COPIES-1 (2026-09-04): READ from the board, never re-declared here. This block held its own

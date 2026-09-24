@@ -21,7 +21,7 @@ import {
   applyTunableOverride,
   restoreTunableDefault,
   normalizeOverrideMap,
-} from '../../../modules/racer-types/index.js';
+} from '../../../racer-types/index.js';
 import {
   loadAutoScaleConfig,
   DEFAULT_AUTO_SCALE_CONFIG,

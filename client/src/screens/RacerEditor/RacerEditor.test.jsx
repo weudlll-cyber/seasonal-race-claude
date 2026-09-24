@@ -27,12 +27,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
 // RACER-TYPES-SPLIT-1: the server half moved out of the registry, so the names that talk to
 // the server are imported (and mocked) from `serverRacerTypes.js`. The registry import below
 // keeps only what it still owns.
-vi.mock('../../modules/racer-types/index.js', () => ({
+vi.mock('../../racer-types/index.js', () => ({
   RACER_TYPE_IDS: ['horse', 'rocket'],
   listAllRacerTypes: vi.fn().mockReturnValue([]),
   getRacerType: vi.fn(),
 }));
-vi.mock('../../modules/racer-types/serverRacerTypes.js', () => ({
+vi.mock('../../racer-types/serverRacerTypes.js', () => ({
   registerRacerType: mockRegisterRacerType,
 }));
 
@@ -76,7 +76,7 @@ vi.mock('./RacerMetadataPanel.jsx', () => ({
 }));
 
 import RacerEditor from './RacerEditor.jsx';
-import { STANDARD_COAT_PALETTE } from '../../modules/racer-types/standardCoats.js';
+import { STANDARD_COAT_PALETTE } from '../../racer-types/standardCoats.js';
 
 describe('RacerEditor — save', () => {
   beforeEach(() => {

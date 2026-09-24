@@ -95,7 +95,7 @@ import { racerFacts } from "../lib/racerFacts.mjs";
 // (`node scripts/engine-reach.mjs --check scripts/lib/racerFacts.mjs` says so), and this file is
 // outside it. Adding a re-export there would have put a fingerprint question on a change that
 // cannot move a race.
-import { RACER_TYPE_IDS } from "../../client/src/modules/racer-types/index.js";
+import { RACER_TYPE_IDS } from "../../client/src/racer-types/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -145,7 +145,7 @@ export function trackDefaultPairs() {
  *
  * ── THE PHYSICAL FIELDS ARE READ FROM THE REGISTRY, NOT COPIED ─────────────────────────────────
  *
- * `client/src/modules/racer-types/` is the one authority for a racer's physical facts, and as of
+ * `client/src/racer-types/` is the one authority for a racer's physical facts, and as of
  * 2026-09-02 (REGISTRY-LITERALS-1) `speedMultiplier`, `displaySize`, `bodyFillX` and `bodyFillY`
  * are IMPORTED rather than restated. There is nothing here to edit and nothing here to drift.
  *

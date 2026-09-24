@@ -12,7 +12,7 @@ import {
   PRIMARY_TYPES,
   FRAME_COUNT_OPTIONS,
   PRIMARY_PERIOD_DEFAULTS,
-} from '../../modules/racer-types/spriteAnimations.js';
+} from '../../racer-types/spriteAnimations.js';
 import s from './RacerEditor.module.css';
 
 const PRIMARY_LABELS = {

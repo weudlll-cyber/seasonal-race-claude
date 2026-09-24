@@ -87,7 +87,7 @@ const { getRacerType, applyTunableOverride } = await (async () => {
   };
   try {
     return await import(
-      u(join(ROOT, "client/src/modules/racer-types/index.js"))
+      u(join(ROOT, "client/src/racer-types/index.js"))
     );
   } finally {
     console.error = realError;

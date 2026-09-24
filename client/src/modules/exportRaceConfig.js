@@ -15,7 +15,7 @@ import { loadBaseSpeedConfig } from './baseSpeedConfig.js';
 import { loadAutoScaleConfig } from './autoSpriteScale.js';
 import { loadFrameTimingConfig } from './frameTimingConfig.js';
 import { loadCameraConfig } from './cameraConfig.js';
-import { RACER_TYPE_IDS, getRacerType, CONFIG_SNAPSHOT } from './racer-types/index.js';
+import { RACER_TYPE_IDS, getRacerType, CONFIG_SNAPSHOT } from '../racer-types/index.js';
 import { storageGet, KEYS } from './storage/storage.js';
 import {
   DEFAULT_RACE_DYNAMICS_CONFIG,

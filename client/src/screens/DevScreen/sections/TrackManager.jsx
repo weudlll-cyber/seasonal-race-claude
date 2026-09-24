@@ -18,11 +18,7 @@ import {
   exportTrackSeed,
 } from '../../../services/trackApi.js';
 import { DefaultControls } from '../components/DefaultControls.jsx';
-import {
-  listAllRacerTypes,
-  getRacerTypeLabel,
-  getRacerType,
-} from '../../../modules/racer-types/index.js';
+import { listAllRacerTypes, getRacerTypeLabel, getRacerType } from '../../../racer-types/index.js';
 import { listTracks, getTrack } from '../../../modules/track-editor/trackStorage.js';
 import { loadRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
 import { loadRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';

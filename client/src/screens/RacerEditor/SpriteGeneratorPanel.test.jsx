@@ -27,24 +27,24 @@ const {
   mockSampleColor: vi.fn(),
 }));
 
-vi.mock('../../modules/racer-types/backgroundRemoval.js', () => ({
+vi.mock('../../racer-types/backgroundRemoval.js', () => ({
   hasTransparentBackground: mockHasTransparent,
   sampleColor: mockSampleColor,
   removeBackground: mockRemoveBg,
   computeSpriteOffset: mockComputeOffset,
 }));
 
-vi.mock('../../modules/racer-types/spritesheetBuilder.js', () => ({
+vi.mock('../../racer-types/spritesheetBuilder.js', () => ({
   buildSpritesheet: mockBuildSpritesheet,
   drawSpriteFrame: mockDrawSpriteFrame,
   FRAME_SIZE: 128,
 }));
 
-vi.mock('../../modules/racer-types/spriteTinter.js', () => ({
+vi.mock('../../racer-types/spriteTinter.js', () => ({
   detectTintMode: vi.fn(() => 'multiply'),
 }));
 
-vi.mock('../../modules/racer-types/standardCoats.js', () => ({
+vi.mock('../../racer-types/standardCoats.js', () => ({
   STANDARD_COAT_PALETTE: [{ id: 'bay', name: 'Bay', tint: '#8B4513' }],
 }));
 

@@ -21,14 +21,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // ── Module mock ────────────────────────────────────────────────────────────────
 
-vi.mock('../../modules/racer-types/backgroundRemoval.js', () => ({
+vi.mock('../../racer-types/backgroundRemoval.js', () => ({
   computeOpaqueBoundingBox: vi.fn(),
 }));
 
 // ── Imports (after mock) ───────────────────────────────────────────────────────
 
 import { measureBodyFill } from './canvasUtils.js';
-import { computeOpaqueBoundingBox } from '../../modules/racer-types/backgroundRemoval.js';
+import { computeOpaqueBoundingBox } from '../../racer-types/backgroundRemoval.js';
 
 // ── Canvas + Image mock helpers ────────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ import {
   computeBodyNarrowRef,
   computeStartRowCount,
 } from './rowLayout.js';
-import { BODY_LONG_AXIS_MAX_RATIO } from './racer-types/SpriteRacerType.js';
+import { BODY_LONG_AXIS_MAX_RATIO } from '../racer-types/SpriteRacerType.js';
 import { W_REF_MAX } from './raceParams.js';
 
 // ── computeRacersPerRow ────────────────────────────────────────────────────

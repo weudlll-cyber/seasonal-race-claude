@@ -22,13 +22,9 @@ import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
-import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
+import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
 import { assignRaceNumbers } from '../../modules/raceNumbers.js';
-import {
-  assignCoat,
-  assignPattern,
-  PATTERN_IDS,
-} from '../../modules/racer-types/coatAssignment.js';
+import { assignCoat, assignPattern, PATTERN_IDS } from '../../racer-types/coatAssignment.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';

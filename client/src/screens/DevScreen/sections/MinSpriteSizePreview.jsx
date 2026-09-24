@@ -9,14 +9,14 @@
 // ============================================================
 
 import { useEffect, useRef } from 'react';
-import { getCoatVariants } from '../../../modules/racer-types/spriteTinter.js';
-import { getCachedSprite } from '../../../modules/racer-types/spriteLoader.js';
+import { getCoatVariants } from '../../../racer-types/spriteTinter.js';
+import { getCachedSprite } from '../../../racer-types/spriteLoader.js';
 
 /**
  * Renders an animated sprite canvas at the given sizePx.
  * Uses requestAnimationFrame; starts/stops with component mount/unmount.
  *
- * @param {{ racerType: import('../../../modules/racer-types/SpriteRacerType.js').SpriteRacerType, sizePx: number }} props
+ * @param {{ racerType: import('../../../racer-types/SpriteRacerType.js').SpriteRacerType, sizePx: number }} props
  */
 export function MinSpriteSizePreview({ racerType, sizePx }) {
   const canvasRef = useRef(null);

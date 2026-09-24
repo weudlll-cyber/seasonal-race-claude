@@ -7,7 +7,7 @@
 // ── WHY THIS EXISTS ────────────────────────────────────────────────────────────────────────────
 //
 // Four instruments used to carry hardcoded tables of `speedMultiplier`, `displaySize`, `bodyFillX`
-// and `bodyFillY`. Nothing compared them to `client/src/modules/racer-types/`, and the class had
+// and `bodyFillY`. Nothing compared them to `client/src/racer-types/`, and the class had
 // already cost two blocks: `goldenRunner.mjs` disagreed with the registry on five of ten entries
 // for 39 days (SPRITE-TABLE-DRIFT-1, GOLDEN-TABLE-REGISTRY-1), and the report correcting it made a
 // false absence claim about the other tables because its search was capped at ten results.
@@ -42,7 +42,7 @@ import {
   CONFIG_SNAPSHOT,
   RACER_TYPES,
   RACER_TYPE_IDS,
-} from "../../client/src/modules/racer-types/index.js";
+} from "../../client/src/racer-types/index.js";
 
 /** The four physical fields the instruments used to hardcode. */
 export const PHYSICAL_FIELDS = Object.freeze([

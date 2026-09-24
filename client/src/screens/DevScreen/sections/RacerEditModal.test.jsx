@@ -9,13 +9,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../../modules/racer-types/spriteLoader.js', () => ({
+vi.mock('../../../racer-types/spriteLoader.js', () => ({
   getCachedSprite: vi.fn(),
   loadSprite: vi.fn().mockResolvedValue({}),
   _clearSpriteCache: vi.fn(),
 }));
 
-vi.mock('../../../modules/racer-types/spriteTinter.js', () => {
+vi.mock('../../../racer-types/spriteTinter.js', () => {
   const getCoatVariants = vi.fn().mockResolvedValue(new Map());
   getCoatVariants.cached = vi.fn();
   return {
@@ -54,7 +54,7 @@ import {
   restoreTunableDefault,
   _resetLoadedRacerTypesForTesting,
   _setLoadedRacerTypeForTesting,
-} from '../../../modules/racer-types/index.js';
+} from '../../../racer-types/index.js';
 
 beforeEach(() => {
   localStorage.clear();

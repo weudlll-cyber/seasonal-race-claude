@@ -29,7 +29,7 @@ import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
-import { RACER_TYPES, RACER_TYPE_LABELS } from '../../modules/racer-types/index.js';
+import { RACER_TYPES, RACER_TYPE_LABELS } from '../../racer-types/index.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 
 const N_RUNS = 50;

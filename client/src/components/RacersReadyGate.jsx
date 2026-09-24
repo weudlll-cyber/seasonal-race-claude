@@ -7,7 +7,7 @@
 //              Prevents getRacerType() from being called before ready (D6a gate).
 // ============================================================
 
-import { useRacersReady } from '../modules/racer-types/useRacersReady.js';
+import { useRacersReady } from '../racer-types/useRacersReady.js';
 
 export default function RacersReadyGate({ children }) {
   const ready = useRacersReady();

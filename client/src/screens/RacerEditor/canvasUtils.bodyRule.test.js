@@ -28,7 +28,7 @@ import { measureBodyFill } from './canvasUtils.js';
 import {
   computeOpaqueBoundingBox,
   computeSpriteBoundingBox,
-} from '../../modules/racer-types/backgroundRemoval.js';
+} from '../../racer-types/backgroundRemoval.js';
 
 const FRAME = 100;
 

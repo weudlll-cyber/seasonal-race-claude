@@ -2,7 +2,7 @@
 
 **Owns:** where these files came from, and **what they were before the 2026-06-03 tight-crop pass**.
 The LIVE frame geometry of every sheet is not here — it is in the racer-type registry
-(`client/src/modules/racer-types/*RacerType.js`), which is its one home. **Nothing below restates a
+(`client/src/racer-types/*RacerType.js`), which is its one home. **Nothing below restates a
 live value.**
 
 ---

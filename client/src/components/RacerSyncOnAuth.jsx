@@ -17,7 +17,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 // RACER-TYPES-SPLIT-1: the SERVER half. The registry no longer carries the network path,
 // so this names the file that does.
-import { loadServerRacerTypes } from '../modules/racer-types/serverRacerTypes.js';
+import { loadServerRacerTypes } from '../racer-types/serverRacerTypes.js';
 
 export default function RacerSyncOnAuth() {
   const { user, loading, authState } = useAuth();
