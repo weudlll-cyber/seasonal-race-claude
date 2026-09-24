@@ -32,7 +32,27 @@
 // false and says nothing to the user.
 // ============================================================
 
-export const DRAFT_KEY = 'racearena:trackEditorDraft';
+// ★★ ONE KEY PER TRACK (Q-22b, 2026-09-24). The first half of this feature shipped with a single
+// key and was offered only outside load mode, because a single key cannot hold two tracks' drafts:
+// open track A, draw, open track B, and B's draft would overwrite A's with nothing to say so.
+//
+// The shape is the one Q-22 specified when it was written: `…:draft:new` for a track being drawn
+// from scratch, `…:draft:<serverId>` for one being edited. They cannot collide, so editing an
+// existing track is drafted now too — which is the half that was missing.
+const DRAFT_PREFIX = 'racearena:trackEditor:draft';
+
+/** `new` for a fresh drawing, or the server id of the track being edited. */
+export function draftKeyFor(serverId = null) {
+  const id = serverId == null || String(serverId).trim() === '' ? 'new' : String(serverId).trim();
+  return `${DRAFT_PREFIX}:${id}`;
+}
+
+/**
+ * ★ The single-key name the FIRST half shipped under, kept for exactly one purpose: clearing a draft
+ * written by a build from before this change, so an old one cannot sit in storage for a week being
+ * offered by nothing. Nothing writes it any more.
+ */
+export const LEGACY_DRAFT_KEY = 'racearena:trackEditorDraft';
 
 /** Bump only if the stored shape changes incompatibly; an unknown version is ignored, not migrated. */
 export const DRAFT_VERSION = 1;
@@ -51,7 +71,7 @@ const isPointArray = (v) =>
  * ★ Nothing is written for an EMPTY drawing — a draft of nothing would offer to restore nothing,
  * and it would overwrite a real draft the moment the editor mounted.
  */
-export function saveDraft(state, storage = globalThis.localStorage) {
+export function saveDraft(state, storage = globalThis.localStorage, serverId = null) {
   if (!state) return false;
   const { centerPoints, innerPoints, outerPoints } = state;
   const total =
@@ -59,7 +79,7 @@ export function saveDraft(state, storage = globalThis.localStorage) {
   if (total === 0) return false;
   try {
     storage.setItem(
-      DRAFT_KEY,
+      draftKeyFor(serverId),
       JSON.stringify({
         version: DRAFT_VERSION,
         savedAt: Date.now(),
@@ -84,10 +104,10 @@ export function saveDraft(state, storage = globalThis.localStorage) {
  * shaped like geometry returns null rather than throwing — a corrupt draft must not be able to
  * stop the editor from opening.
  */
-export function loadDraft(storage = globalThis.localStorage, now = Date.now()) {
+export function loadDraft(storage = globalThis.localStorage, now = Date.now(), serverId = null) {
   let raw = null;
   try {
-    raw = storage.getItem(DRAFT_KEY);
+    raw = storage.getItem(draftKeyFor(serverId));
   } catch {
     return null;
   }
@@ -108,9 +128,19 @@ export function loadDraft(storage = globalThis.localStorage, now = Date.now()) {
 }
 
 /** Clear the draft. Called when a save succeeds, and when the person declines a restore. */
-export function clearDraft(storage = globalThis.localStorage) {
+export function clearDraft(storage = globalThis.localStorage, serverId = null) {
   try {
-    storage.removeItem(DRAFT_KEY);
+    storage.removeItem(draftKeyFor(serverId));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Remove a draft written by a pre-Q-22b build. Called once on mount; failure is not interesting. */
+export function clearLegacyDraft(storage = globalThis.localStorage) {
+  try {
+    storage.removeItem(LEGACY_DRAFT_KEY);
     return true;
   } catch {
     return false;

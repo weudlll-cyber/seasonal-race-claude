@@ -1646,18 +1646,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — the only `json.tmp` hits in `server/src` are the two test assertions that a `.tmp` does NOT remain after a normal write; there is still no boot sweep and no `.json.tmp` branch in the server's own filter.
 
-- **Q-22b** — TrackEditor draft snapshot, the LOAD-MODE half
-  ★ **Q-22's new-track half CLOSED 2026-09-24 (PART TWO); this is the remainder, split out rather
-  than left implied.** Editing an EXISTING track is not drafted: the draft is written and offered
-  only when the editor was opened without `?load=`. Closing this needs the per-track key Q-22
-  originally specified (`racearena:trackEditor:draft:<serverId>`) so two tracks cannot overwrite each
-  other's draft, and an offer on reopening that track.
-  **Why it was not simply finished in the same pass:** the new-track case loses ALL the work and the
-  load-mode case loses an edit to work that is already saved on the server, so they are not the same
-  severity; and a per-track key is a second storage shape, not a widening of the first.
-  **verify:** `git grep -n "inLoadMode" -- client/src/screens/TrackEditor/TrackEditor.jsx` shows the
-  gate that defines what is left.
-
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
   (image file). If step 1 succeeds and step 2 fails, the user sees a generic
@@ -2061,6 +2049,19 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **Q-22b — editing an existing track is drafted too.** Closed 2026-09-24, the half split out
+      the day before rather than implied. The key is now **per track**, the shape Q-22 specified when
+      it was written: `racearena:trackEditor:draft:new` for a fresh drawing,
+      `…:draft:<serverId>` for an edit.
+      ★ **Why the first half could not just be widened:** a single key cannot hold two tracks' drafts.
+      Open track A, draw, open track B, and B would overwrite A with nothing to say so — which is why
+      the write was gated to new-track mode rather than left to store drafts nobody would ever be
+      offered. With separate keys the gate is gone and both modes draft.
+      ★ A draft written by a pre-Q-22b build is **cleared** on mount rather than left in storage for a
+      week being offered by nothing.
+      **128 editor tests green**, including the one that is the whole point: two tracks' drafts
+      round-trip independently and neither lands in the `new` slot.
 
 ## Small fixes closed by POLISH-2026-09-24B
 

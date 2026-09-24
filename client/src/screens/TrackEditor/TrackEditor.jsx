@@ -16,7 +16,13 @@ import { drawStaticScene } from './trackEditorDraw.js';
 import { extractEffects, extractTrackLights } from './trackEditorSave.js';
 import { DEFAULT_TRACK_LIGHTS } from '../../modules/trackLights.js';
 import { useHistory } from './useHistory.js';
-import { saveDraft, loadDraft, clearDraft, draftPointCount } from './trackEditorDraft.js';
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  clearLegacyDraft,
+  draftPointCount,
+} from './trackEditorDraft.js';
 import { useViewport } from './useViewport.js';
 import { useTrackIO } from './useTrackIO.js';
 import { API_BASE_URL } from '../../services/api.js';
@@ -302,9 +308,18 @@ export default function TrackEditor() {
   useEffect(() => {
     if (draftOfferedRef.current) return;
     draftOfferedRef.current = true;
-    if (searchParams.get('load')) return;
+    // ★ Q-22b: a draft written by a pre-per-track build can never be offered again, so clear it
+    // rather than leaving it in storage forever.
+    clearLegacyDraft();
+    // ★★ BOTH MODES NOW. The new-track case is `null` → the `:new` key; an edit is the track's own
+    // server id → its own key. Two tracks can no longer overwrite each other's draft.
+    //
+    // ★ IT STILL DOES NOT OFFER OVER WORK ALREADY ON SCREEN. In load mode the geometry arrives
+    // asynchronously, so "nothing drawn yet" is checked at the moment the offer is made, and the
+    // load effect below sets `centerPoints` before this can fire for a track that loaded first.
+    const loadId = searchParams.get('load');
     if (centerPoints.length || innerPoints.length || outerPoints.length) return;
-    const d = loadDraft();
+    const d = loadDraft(undefined, undefined, loadId ?? null);
     if (!d) return;
     const when = new Date(d.savedAt).toLocaleString();
     const name = d.trackName ? ` “${d.trackName}”` : '';
@@ -313,7 +328,7 @@ export default function TrackEditor() {
         'Restore it? Cancel discards it.'
     );
     if (!ok) {
-      clearDraft();
+      clearDraft(undefined, loadId ?? null);
       return;
     }
     setCenterPoints(d.centerPoints);
@@ -329,16 +344,17 @@ export default function TrackEditor() {
   // Write the draft whenever the geometry changes. `saveDraft` writes nothing for an empty drawing,
   // so clearing the canvas does not overwrite a real draft with an empty one.
   //
-  // ★★ NEW-TRACK MODE ONLY, AND THE WRITE IS GATED THE SAME WAY THE OFFER IS. Q-22 specifies a
-  // PER-TRACK key so that editing an existing track is drafted too; this is the single-key,
-  // new-track half of it. Writing a draft in load mode while never offering one there would store
-  // data nobody ever sees — worse than not storing it — so the write is gated identically. The
-  // load-mode half stays open in BACKLOG.md as Q-22b.
-  const inLoadMode = !!searchParams.get('load');
+  // ★★ BOTH MODES, SINCE Q-22b (2026-09-24). This was gated to new-track only while the key was a
+  // single one — writing drafts in load mode that could never be offered would have stored data
+  // nobody sees. With a per-track key the offer reaches them, so the gate is gone.
+  const draftId = searchParams.get('load') ?? null;
   useEffect(() => {
-    if (inLoadMode) return;
-    saveDraft({ centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName });
-  }, [inLoadMode, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
+    saveDraft(
+      { centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName },
+      undefined,
+      draftId
+    );
+  }, [draftId, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
   // Runs whenever server tracks or the geometry cache list become available.
@@ -868,7 +884,7 @@ export default function TrackEditor() {
         // ★ A SUCCESSFUL SAVE IS THE ONE THING THAT RETIRES A DRAFT. `useTrackIO` clears the dirty
         // flag exactly when the save landed, so that is the signal — rather than a second success
         // path here that could drift from it.
-        if (dirty === false) clearDraft();
+        if (dirty === false) clearDraft(undefined, draftId);
       },
       resetHistory,
       onBgUploaded: (url) => {

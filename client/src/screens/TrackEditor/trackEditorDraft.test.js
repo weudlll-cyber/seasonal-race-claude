@@ -12,11 +12,16 @@ import {
   saveDraft,
   loadDraft,
   clearDraft,
+  clearLegacyDraft,
   draftPointCount,
-  DRAFT_KEY,
+  draftKeyFor,
+  LEGACY_DRAFT_KEY,
   DRAFT_VERSION,
   DRAFT_MAX_AGE_MS,
 } from './trackEditorDraft.js';
+
+/** The key a draft lands under, so the fixtures do not retype the scheme. */
+const DRAFT_KEY = draftKeyFor(null);
 
 /** A localStorage stand-in. `fail` makes every access throw, as a private window does. */
 function fakeStore(initial = {}, { fail = false } = {}) {
@@ -123,5 +128,49 @@ describe('the crash draft', () => {
 
   it('draftPointCount survives a null draft', () => {
     expect(draftPointCount(null)).toBe(0);
+  });
+});
+
+// ── ★★ Q-22b: ONE KEY PER TRACK — the half that was missing ───────────────────────────────────
+describe('the per-track key (Q-22b)', () => {
+  it('a new drawing and an edited track use DIFFERENT keys', () => {
+    expect(draftKeyFor(null)).toBe('racearena:trackEditor:draft:new');
+    expect(draftKeyFor('abc123')).toBe('racearena:trackEditor:draft:abc123');
+    expect(draftKeyFor('')).toBe('racearena:trackEditor:draft:new');
+    expect(draftKeyFor('  ')).toBe('racearena:trackEditor:draft:new');
+  });
+
+  it('★★ TWO TRACKS CANNOT OVERWRITE EACH OTHER’S DRAFT — the reason this half exists', () => {
+    const st = fakeStore();
+    const a = { ...geometry, trackName: 'Track A' };
+    const b = { ...geometry, trackName: 'Track B', innerPoints: [{ x: 9, y: 9 }] };
+
+    saveDraft(a, st, 'track-a');
+    saveDraft(b, st, 'track-b');
+
+    expect(loadDraft(st, Date.now(), 'track-a').trackName).toBe('Track A');
+    expect(loadDraft(st, Date.now(), 'track-b').trackName).toBe('Track B');
+    // ...and neither is the `new` slot
+    expect(loadDraft(st, Date.now(), null)).toBeNull();
+  });
+
+  it('clearing one track’s draft leaves the others alone', () => {
+    const st = fakeStore();
+    saveDraft(geometry, st, 'track-a');
+    saveDraft(geometry, st, 'track-b');
+    clearDraft(st, 'track-a');
+    expect(loadDraft(st, Date.now(), 'track-a')).toBeNull();
+    expect(loadDraft(st, Date.now(), 'track-b')).not.toBeNull();
+  });
+
+  it('★ a draft from a pre-Q-22b build is CLEARED rather than left to rot', () => {
+    const st = fakeStore({ [LEGACY_DRAFT_KEY]: JSON.stringify({ version: DRAFT_VERSION }) });
+    expect(st._map.has(LEGACY_DRAFT_KEY)).toBe(true);
+    clearLegacyDraft(st);
+    expect(st._map.has(LEGACY_DRAFT_KEY)).toBe(false);
+  });
+
+  it('clearLegacyDraft does not throw on blocked storage', () => {
+    expect(() => clearLegacyDraft(fakeStore({}, { fail: true }))).not.toThrow();
   });
 });
