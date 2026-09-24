@@ -93,19 +93,14 @@ a rule for anybody to follow.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the repair moves the hash, so it is a mint and only he can order it. Re-verified at source today: `scripts/render-fingerprint.mjs` still builds the frame camera as a hand-written literal with three members (`hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`); `frameCameraInputs` is imported by five client files and by that instrument not at all. The guard half still needs only BUILDING.
 
-- [ ] ★★ **ONLY THE GUARD HALF IS LEFT. THE REPAIR ITSELF WAS DONE ON 2026-09-05 AND THIS ENTRY
-      WENT STALE THREE DAYS AFTER IT WAS WRITTEN.** The repair — `render-fingerprint.mjs` building its
-      frame camera from `frameCameraInputs` instead of a hand-written literal — landed in
-      **`d2f10ab2` (RENDER-CAMERA-FIELDS-1), 2026-09-05**, and is in master. Re-verified 2026-09-24:
-      the file calls `frameCameraInputs(cd)` and the comment above that line records what the literal
-      used to be. **All four fingerprints verify against the engine today**, so the hash the entry
-      said a repair would move has already moved and already been recorded.
-      ★★★ **THIS MATTERS BEYOND ONE ENTRY: on 2026-09-23 the owner ORDERED a re-mint on the strength
-      of this row, and there was nothing to re-mint.** NIGHT-2026-09-24C found the work already done
-      and minted nothing — a fingerprint minted with no change behind it would falsify the record.
-      **What is actually left is the GUARD half**, exactly as the entry always said: nothing checks
-      that a caller builds that object through `frameCameraInputs` rather than by hand, so the same
-      mistake can be made a third time. It **needs only BUILDING** — no decision, no mint.
+- [x] ★★ **ONLY THE GUARD HALF WAS LEFT — CLOSED 2026-09-24 (NIGHT-2026-09-24D, PIECE 6).** The repair
+      itself was done on 2026-09-05 (`d2f10ab2`); this entry then went stale for three weeks. NIGHT-
+      2026-09-24D built the guard: `scripts/check-frame-camera-inputs.mjs` scans `client/src/` for any
+      `.js`/`.jsx` file that spells `anchorRacerIndex:`, `comebackLockedRacerIndex:` or
+      `runInArrived:` as an object-literal key outside the ONE home (`frameCameraInputs.js`) and
+      three named exceptions. **Sabotage-proven** by `scripts/check-frame-camera-inputs.test.mjs`: a
+      hand-written literal in a fixture makes the guard exit 1; if it did not, the guard would be
+      decoration. The four fingerprints did not need to move — the runtime repair already had.
 
 ---
 
@@ -967,13 +962,15 @@ are in PART TWO with what closed them; these are the ones still standing.
       proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
       **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
 
-- [ ] **Nothing records which migrations an instance has already applied.** There is one migration
-      script, `scripts/migrate-teams.mjs`, run by hand. `DEPLOYMENT.md`'s upgrade procedure therefore
-      has to say *"read the migrations section and decide"* at its migration step instead of naming a
-      command. **It is survivable today only because that one script is idempotent** — running it
-      twice is harmless. A future migration that is not idempotent would not be survivable, and
-      nothing would stop it being run twice. Raised by DELIVERY-BACKUP-1 (`616f6ea8`), which
-      deliberately did not build it: a ledger is a second mechanism and was not ordered there.
+- [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
+      (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
+      `<dataRoot>/migrations.json`, applies only pending ids, and REFUSES to run any id twice.
+      `scripts/migrate.test.mjs` covers this with 8 tests, including a SABOTAGE test that stubs the
+      ledger write and proves the double-run guard fires. On an instance that ran the standalone
+      `migrate-teams.mjs` before this runner existed, an observable-state probe reads the DATA
+      (`users.json` state) and backfills the ledger without re-running. `DEPLOYMENT.md` step 6 now
+      names one command instead of "read the migrations section and decide". Verified against the
+      live `server/data/`: `node scripts/migrate.mjs --status` reads `teams-1: backfilled-from-state`.
 
 - [ ] **The browser gate covers 7 of the 19 e2e specs, and does not run on pull requests.** The gate
       itself shipped (PART TWO), so what remains is its SCOPE: the other 12 specs stay night work by

@@ -97,13 +97,13 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (**both halves now** — Q-22b closed 2026-09-24 with a per-track key) | done | `trackEditorDraft.js`, 9 tests |
 | ~~Protect "a default track cannot be un-defaulted" with a test~~ — ★ **DONE 2026-09-24 (Q-24)** | done | 2 tests, both directions; **the behaviour was already correct — a test gap, not a defect**. Sabotaging `tracks.js:542` turns both red. |
 | ~~Say *which* half failed when a track saves but its background does not~~ — ★ **DONE 2026-09-24 (Q-25)** | done | the upload has its own `try`; the message says the track WAS saved and that Save retries just the image |
-| Share one slider component across three dev-screen sections | small | — |
-| Add tooltips to the fields that have none | small | **corrected below** |
-| Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
+| ~~Share one slider component across three dev-screen sections~~ — ★ **DONE 2026-09-24 (PIECE 3b)** | done | `RangeSlider` at `client/src/screens/DevScreen/components/`; three instances collapsed. The count was three INSTANCES across TWO sections; recorded as such |
+| ~~Add tooltips to the fields that have none~~ — ★ **DONE 2026-09-24 (PIECE 3c)** | done | All six named sections (SystemSettings, RaceTuning, ConfigExport, SurfaceClassManager, UserManagement, ChangePassword); reused the existing `InfoTooltip` |
+| ~~Move the racer config folder out of the engine tree~~ — ★ **DONE 2026-09-24 (PIECE 5)** | done | 80 files moved from `client/src/modules/racer-types/` to `client/src/racer-types/`; 29 external importers + 13 scripts re-pathed; RACE HULL stayed at 202 |
 | Pause and resume a running race | a block | — |
-| ★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand | small | the repair shipped 2026-09-05; nothing stops a third hand-written copy |
+| ~~★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand~~ — ★ **DONE 2026-09-24 (PIECE 6)** | done | `scripts/check-frame-camera-inputs.mjs` scans object keys `anchorRacerIndex:` / `comebackLockedRacerIndex:` / `runInArrived:` outside the ONE home. Sabotage-proven. LOUD-FAILURE rule upheld |
 | ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
-| ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
+| ~~★ **Nothing records which migrations an instance has already applied**~~ — ★ **DONE 2026-09-24 (PIECE 4)** | done | `scripts/migrate.mjs` + `migrate.test.mjs` (8 tests including sabotage). Runner refuses to run any id twice; observable-state fallback backfills the ledger for instances that ran the standalone script first. `DEPLOYMENT.md` step 6 now names one command |
 
 ★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
 migration script (`scripts/migrate-teams.mjs`), it is run by hand, and **no record exists of what an

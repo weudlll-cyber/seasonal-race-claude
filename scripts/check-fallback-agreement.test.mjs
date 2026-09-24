@@ -456,7 +456,7 @@ test("RULE A carries NO exception for the one file it ever objected to", () => {
 test("LOUD FAILURE: an EMPTY REGISTRY fails rather than reporting '0 disagree'", () => {
   const dir = mkdtempSync(join(tmpdir(), "ra-rulea-emptyreg-"));
   try {
-    const home = join(dir, "client/src/modules/racer-types");
+    const home = join(dir, "client/src/racer-types");
     mkdirSync(home, { recursive: true });
     writeFileSync(
       join(home, "index.js"),
@@ -556,7 +556,7 @@ const registryFixture = (entries) =>
 const withRegistry = (entries, fn) => {
   const dir = mkdtempSync(join(tmpdir(), "ra-ruled-"));
   try {
-    const home = join(dir, "client/src/modules/racer-types");
+    const home = join(dir, "client/src/racer-types");
     mkdirSync(home, { recursive: true });
     writeFileSync(join(home, "index.js"), registryFixture(entries));
     let code = 0;
@@ -769,7 +769,7 @@ test("RULE F says in its OUTPUT that line citations are invisible to it", () => 
 // that a CORRECT citation passes, so a stale range here would make it assert the opposite.
 test("RULE F PAIRED: a symbol genuinely at the linked lines passes", () => {
   withDocs(
-    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L98-L103).\n" },
+    { "a.md": "see [`raceGovernor.js` → `governorPhaseWeight`](../client/src/modules/raceGovernor.js#L160-L165).\n" },
     ({ code, out }) => {
       assert.equal(code, 0);
       assert.match(out, /1 PAIRED/);
