@@ -87,11 +87,20 @@ export function writeLedger(dataRoot, ledger) {
  *
  * The teams backfill entry re-uses `migrateTeams` from `server/src/auth/migrateTeams.js` rather
  * than re-implementing it here — one home for the work, this runner is only the schedule.
+ *
+ * ★★ BUILDING THE REGISTRY MUST NOT NEED THE SERVER TREE INSTALLED. Only RUNNING a migration may.
+ * `migrateTeams.js` imports `usersStore.js`, which imports `bcrypt`, so importing it here — which
+ * is what this function did until 2026-09-24 — made the mere act of listing the migrations depend
+ * on `server/node_modules`. That reddened CI: the "Living-doc guards + script tests" job installs
+ * the ROOT tree only, on the standing assumption (stated in its own comment in
+ * `.github/workflows/ci.yml`) that the script suite has no external dependencies. The heavy import
+ * now lives inside `run()`, where the work actually happens; the registry itself is free.
+ *
+ * `teams.js` stays imported here on purpose: it imports NOTHING, so the observable-state probe
+ * below keeps working with no server dependency installed — which is the whole point, since the
+ * probe is what decides whether the migration needs to run at all.
  */
 export async function buildDefaultMigrations() {
-  const { migrateTeams } = await import(
-    pathToFileURL(join(ROOT, 'server/src/auth/migrateTeams.js')).href
-  );
   const { isWellFormedTeam } = await import(
     pathToFileURL(join(ROOT, 'server/src/auth/teams.js')).href
   );
@@ -118,6 +127,11 @@ export async function buildDefaultMigrations() {
         return users.every((u) => isWellFormedTeam(u.team));
       },
       async run({ dryRun }) {
+        // ★ Imported HERE, not in the registry builder: this is the first point at which the
+        // server tree is genuinely needed. See the note on `buildDefaultMigrations` above.
+        const { migrateTeams } = await import(
+          pathToFileURL(join(ROOT, 'server/src/auth/migrateTeams.js')).href
+        );
         return migrateTeams({ dryRun });
       },
     },
