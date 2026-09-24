@@ -438,6 +438,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   known-gap paragraph in `docs/SHIP-CEREMONY.md` narrows: the arms prove the machinery reacts, and
   the regression-net property at this scope is the only limit that remains.
 
+- [COMPANY-SPREAD-FIELD-1.md](COMPANY-SPREAD-FIELD-1.md) — **the company guarantee measured on a
+  SPREAD field across three field sizes (20/40/70), five tracks, two seeds and three arms (1/5/15).**
+  90 races. At the shipped `minRacersVisible = 5` the spread-tercile binding is LIGHT on the four
+  closed tracks (0–11%) and 5–19% on space-sprint; at 15 it rises to 11–63% with widening ratios
+  2.14–4.38×. The BACKLOG row closes on the measurement question; his 5 remains, per PART TWO D15.
+  Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
+  coverage measurement had to be fit into the same night.
+
 - [WINNER-AFTER-CROSSING-1.md](WINNER-AFTER-CROSSING-1.md) — **where the shot actually ends, after
   the owner ruled he does not judge the frames past the finish** — measurement only, nothing
   proposed. Reused the probe's existing `crossing.after` record (nothing built) and added opt-in

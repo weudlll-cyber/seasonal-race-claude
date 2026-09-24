@@ -65,7 +65,7 @@ word from him:**
 | should `npm run dev` REFUSE to start when the build identity is unreadable | **answered NO — PART TWO D5** |
 | the juxtaposition rule for reports | **adopted — PART TWO D19**, now [VERIFY-RULES.md R16](VERIFY-RULES.md) |
 | a re-minting block names invariants that must not move | **adopted — PART TWO D20**, now [VERIFY-RULES.md R17](VERIFY-RULES.md) |
-| the company guarantee on a SPREAD field, and the 5 → 15 recommendation | **his 5 stands — PART TWO D15.** The item stays open **on a measurement**, not on his word |
+| the company guarantee on a SPREAD field, and the 5 → 15 recommendation | **his 5 stands — PART TWO D15**; **measurement PUBLISHED 2026-09-25 as [COMPANY-SPREAD-FIELD-1](../reports/evolution/COMPANY-SPREAD-FIELD-1.md).** The row closes on the measurement question — his 5 remains |
 | camera timing levers — the comeback shot appears late | **replaced — PART TWO D14.** The sliders would have shown the wrong thing sooner |
 | E3 — the `trajectoryMult` half | **accepted as design — PART TWO D16.** Documented in [RACE-ACTION.md](RACE-ACTION.md) |
 | OUTCOME climb-capacity — drama-at-leader vs deep-band reach | **closed — PART TWO D17.** The lever it proposed is not ordered |
@@ -755,6 +755,16 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       measurement exists and he has seen it.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the spread-field measurement across field sizes, which does not exist. COMPANY-HEADCOUNT-1 (2026-09-02) measured the guarantee's promise on ten tracks and repaired its headcount, but it did not sweep FIELD SIZE on a spread field, which is what this asks for.
+
+      **VERDICT 2026-09-25 (COMPANY-SPREAD-FIELD-1) — CLOSED on the measurement question.** The
+      sweep now exists and is published at
+      [COMPANY-SPREAD-FIELD-1](../reports/evolution/COMPANY-SPREAD-FIELD-1.md): 90 races, 5 tracks
+      × 3 field sizes × 2 seeds × 3 arms (guarantee OFF, his shipped, and the earlier pack-only
+      recommendation), per-cell N=2. At the shipped headcount the spread-tercile binding is LIGHT on
+      the four closed tracks (0–11%) and 5–19% on space-sprint, with widening ratios 1.00–2.61×; at
+      the earlier pack-only recommendation it rises to 11–63% with ratios 2.14–4.38×. The row
+      closes on the measurement existing; the shipped `minRacersVisible` value is unchanged, per
+      PART TWO D15.
 
 - [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
       the build and the camera path, never which guarantee ran. That gap is what made
