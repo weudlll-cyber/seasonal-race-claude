@@ -56,17 +56,53 @@ describe('API_BASE_URL — where the address comes from', () => {
     expect((await freshApi()).API_BASE_URL).toBe('https://races.example.com');
   });
 
+  // ★★ THE EMPTY-STRING AND WHITESPACE CASES LEFT THIS TABLE ON 2026-09-24, and it is the owner's
+  // decision of 2026-09-23 rather than a fix. They read:
+  //
+  //     ['an empty string', { apiBaseUrl: '' }],
+  //     ['whitespace',      { apiBaseUrl: '   ' }],
+  //
+  // and asserted `http://localhost:4000`. That was correct while the marker was written ONLY when
+  // `RA_PUBLIC_ORIGIN` was set, so an empty value could only mean a malformed injection. The server
+  // now writes the marker on EVERY page it serves, and an empty `apiBaseUrl` is its way of saying
+  // "I served this page and the API is on its own origin" — a positive statement, not an absent one.
+  // Treating it as unconfigured is what sent the standalone image's client to `localhost:4000`,
+  // which is the recipient's own machine. They are asserted below, with the opposite expectation.
   it.each([
     ['an absent global', undefined],
     ['a non-object', 'nonsense'],
-    ['an empty string', { apiBaseUrl: '' }],
-    ['whitespace', { apiBaseUrl: '   ' }],
     ['a non-string', { apiBaseUrl: 42 }],
     ['no such key', { somethingElse: 1 }],
   ])('%s falls through to the fallback rather than throwing', async (_label, value) => {
     if (value !== undefined) globalThis[GLOBAL] = value;
     const { API_BASE_URL } = await freshApi();
     expect(API_BASE_URL).toBe('http://localhost:4000');
+  });
+
+  it.each([
+    ['an empty string', { apiBaseUrl: '' }],
+    ['whitespace', { apiBaseUrl: '   ' }],
+    ['a trailing slash only', { apiBaseUrl: '/' }],
+  ])(
+    '★★ %s means SAME-ORIGIN — our server said so by writing the marker at all',
+    async (_label, value) => {
+      globalThis[GLOBAL] = value;
+      const { API_BASE_URL } = await freshApi();
+      // '' makes every caller's `${API_BASE_URL}/api/…` a relative URL, which is the point.
+      expect(API_BASE_URL).toBe('');
+    }
+  );
+
+  it('★ and the distinction is exactly "is the marker there": absent still means localhost', async () => {
+    // The two cases side by side, because this is the whole contract.
+    const withMarker = await (async () => {
+      globalThis[GLOBAL] = { apiBaseUrl: '' };
+      return (await freshApi()).API_BASE_URL;
+    })();
+    delete globalThis[GLOBAL];
+    const withoutMarker = (await freshApi()).API_BASE_URL;
+    expect(withMarker).toBe('');
+    expect(withoutMarker).toBe('http://localhost:4000');
   });
 });
 
