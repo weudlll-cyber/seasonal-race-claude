@@ -426,6 +426,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-24d.md](MORNING-2026-09-24d.md) — **the morning sheet for the resumed night**,
+  with a heartbeat line at least every 30 minutes. ★ Its PIECE 0 says plainly that nothing stalled or
+  blocked in the eight silent hours — the turn simply ended, the last push was complete, and the five
+  live `node` processes were two dev servers and Adobe Creative Cloud.
+
 - [POLISH-2026-09-24B.md](POLISH-2026-09-24B.md) — **★★ EIGHT SMALL ITEMS CLOSED, TWO MEASURED AND
   NARROWED, AND THE LIST FINALLY KEPT UP WITH THE WORK.** ★ **The flaky editor test did not fail once
   in 20 full parallel suite runs** — which BOUNDS the rate rather than proving a fix (a 1-in-5 flake

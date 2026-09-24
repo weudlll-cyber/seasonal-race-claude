@@ -1053,7 +1053,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 3aeb169f 2026-09-23 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c008f21f 2026-09-24 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED AT `c008f21f` (NIGHT-2026-09-24D), IDENTICAL TO THE DIGIT** — 8836/5.92/9.34,
+12395/4.62/8.80, 9247/4.52/8.93, 4250/2.53/19.68, 1944/3.08/8.22, ratio 0.51×. The `via=` closure
+picks up `raceGovernor.js`, which piece 3(d) edited, so the guard asked. **Run, not argued** — and
+the inertness case was a strong one: 3(d) is purely additive (`NATURALNESS_FLOOR`,
+`computeDirectorFloor`, `isWithinNaturalnessFloor`, `assertNaturalnessFloor`), and nothing in the
+governor's own path calls any of them. ★ The table below is unchanged.
 
 ★★★ **RE-MEASURED AT `3aeb169f` (CHASE-SHIP-1, 2026-09-23) — AND FOR THE FIRST TIME IN THIS
 BRANCH'S LIFE EVERY ROW MOVED.** `node scripts/tracking-lag.mjs`, the command this stamp names:
