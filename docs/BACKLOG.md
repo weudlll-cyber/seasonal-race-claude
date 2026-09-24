@@ -968,31 +968,6 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       `docs/DEAD-ENDS.md` and the accepted-finish record already carry cases where a framing that
       fails a bar was accepted. **Do not "fix" it before he has looked.**
 
-## CI is RED on master — one script test cannot resolve `bcrypt` in the guards job (2026-09-24)
-
-- [ ] ★★ **`scripts/migrate.test.mjs` fails in CI and passes locally, and the difference is the
-      environment, not the code.** Merge `ea99bd28`: **CI conclusion `failure`**, job *"Living-doc
-      guards + script tests"*, step *"Run script test suite"* — **625 tests, 620 pass, 1 fail**.
-      The one failure is `not ok 365 - the teams-1 migration in the default registry has the
-      observable-state probe` (`scripts/migrate.test.mjs:157`), `ERR_MODULE_NOT_FOUND`:
-      *"Cannot find package 'bcrypt' imported from `server/src/auth/usersStore.js`"*.
-      **The mechanism.** That test calls `buildDefaultMigrations()`, which imports the real
-      `teams-1` migration, which imports `usersStore.js`, which imports `bcrypt`. The guards job
-      installs the ROOT tree only (`npm ci` at the repo root, `.github/workflows/ci.yml`); it never
-      runs `npm ci` in `server/`, so no server dependency can resolve there. Locally every server
-      dependency is installed, so the same file is **8 pass / 0 fail**.
-      ★ **The same job already handles this exact class one row above**: `backup.test.mjs` SKIPs its
-      two round-trip tests with *"better-sqlite3 is not installed in server/node_modules"*. This
-      test was written without that guard.
-      ★ **It was introduced tonight**, by `6a379b1d` (PIECE 4, the migration ledger) — it is **not**
-      pre-existing, and it is a different subject from the `viewer-invariants` red above.
-      ★ **Until it is fixed, EVERY push to master shows CI red for this one reason**, including
-      docs-only commits that touch nothing near it.
-      ★ **NOT FIXED, DELIBERATELY.** The block that found it (NIGHT-REPORTING-AND-THE-RED) is
-      docs-only by its own rule, and a test file is code. The fix is small and known — probe for the
-      server dependency and SKIP with a reason when it is absent, the way `backup.test.mjs` does,
-      rather than weakening what the test asserts. It needs one commit of its own.
-
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
@@ -2095,6 +2070,29 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **CI was RED on master — `scripts/migrate.test.mjs` could not resolve `bcrypt`.** Opened and
+      closed 2026-09-24, by FIX-CI-MIGRATE-TEST-DEPS.
+      **What it was.** PIECE 4 (`6a379b1d`) gave `buildDefaultMigrations()` an eager
+      `await import` of `server/src/auth/migrateTeams.js`, which imports `usersStore.js`, which
+      imports `bcrypt`. The CI job *"Living-doc guards + script tests"* installs the ROOT tree only
+      — on the standing assumption its own comment in `.github/workflows/ci.yml` states, that the
+      script suite has no external dependencies — so merely BUILDING the registry threw
+      `ERR_MODULE_NOT_FOUND`. 625 tests, 620 pass, **1 fail**, on every push to master including
+      docs-only ones. It was green locally the whole time, because the server tree is installed here.
+      **What closed it: the import is LAZY now**, moved out of `buildDefaultMigrations()` and into
+      the migration's own `run()`. Building the registry costs nothing; only RUNNING the migration
+      needs the server tree.
+      ★ **The sibling import stayed put on purpose.** `server/src/auth/teams.js` imports NOTHING, so
+      the observable-state probe still resolves with no server dependency installed — which means
+      the probe test **runs** in CI rather than skipping. That is why the lazy import was preferred
+      over the skip-with-reason pattern `backup.test.mjs` uses for `better-sqlite3`: a test that
+      always skips in CI protects nothing in CI.
+      **Proven in the condition that actually failed**, not locally: with `server/node_modules`
+      renamed aside, the script suite is **625 tests, 622 pass, 0 fail, 3 skipped** and the probe
+      test PASSES; restored, **624 pass, 0 fail, 1 skipped**.
+      ★ **The rule this leaves behind:** a script under `scripts/` may reach into `server/` for work,
+      but never at module- or registry-BUILD time. The guards job will not have those dependencies.
 
 - [x] ★★ **Q-22b — editing an existing track is drafted too.** Closed 2026-09-24, the half split out
       the day before rather than implied. The key is now **per track**, the shape Q-22 specified when
