@@ -20,6 +20,7 @@ import {
 } from '../../../services/surfaceClassApi.js';
 import { slugify, uniqueSlug } from '../../../utils/slugify.js';
 import { SurfaceClassPreview } from './SurfaceClassPreview.jsx';
+import { RangeSlider } from '../components/RangeSlider.jsx';
 import s from '../DevScreen.module.css';
 
 const GENERATOR_OPTIONS = Object.values(GENERATORS).map((g) => ({ id: g.id, label: g.label }));
@@ -97,17 +98,14 @@ function ConfigFields({ schema, config, onChange }) {
             )}
 
             {field.type === 'range' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="range"
-                  min={field.min}
-                  max={field.max}
-                  step={field.step}
-                  value={value}
-                  onChange={(e) => onChange(field.key, parseFloat(e.target.value))}
-                  aria-label={field.label}
-                  style={{ flex: 1 }}
-                />
+              <RangeSlider
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                value={value}
+                onChange={(e) => onChange(field.key, parseFloat(e.target.value))}
+                ariaLabel={field.label}
+              >
                 <span
                   style={{
                     minWidth: '3.2rem',
@@ -118,7 +116,7 @@ function ConfigFields({ schema, config, onChange }) {
                 >
                   {value}
                 </span>
-              </div>
+              </RangeSlider>
             )}
 
             {field.type === 'select' && (
