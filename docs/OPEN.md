@@ -24,18 +24,13 @@ The two measures rank the levers in opposite directions on the open track, so th
 which dial would be built. The observer deliberately refuses to choose.
 → `docs/SIM.md:730` · [RACE-ACTION.md](RACE-ACTION.md)
 
-**2 · A group of TWO at the front — is that a breakaway he objects to?**
-He ruled on 2026-09-23 that a group of THREE is acceptable, and on 2026-09-20 that more than four are
-not to be braked. **The pair case has never been ruled on and must not be interpolated.**
-→ [GLOSSARY.md](GLOSSARY.md) "breakaway"
-
-**3 · The authored beats never reach the camera — hand them through, or leave the detector
+**2 · The authored beats never reach the camera — hand them through, or leave the detector
 inferring?**
 His call, and it needs his eye afterwards. Re-verified: no code in `client/src/modules/camera` reads
 a hero's beats.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · PART TWO decision D14
 
-**4 · ~~The render fingerprint builds its frame camera by hand~~ — ★★ ALREADY DONE, 2026-09-05.**
+**3 · ~~The render fingerprint builds its frame camera by hand~~ — ★★ ALREADY DONE, 2026-09-05.**
 The repair landed in `d2f10ab2` (RENDER-CAMERA-FIELDS-1) and is in master; all four fingerprints
 verify today. ★★★ **He ordered a re-mint for it on 2026-09-23 and there was nothing to re-mint** —
 NIGHT-2026-09-24C found the work already done and **minted nothing**, because a fingerprint minted
@@ -43,41 +38,41 @@ with no change behind it would falsify the record. **What is left is the GUARD h
 checks that callers build that object through `frameCameraInputs` — and it is in section 2 below.
 → [BACKLOG.md](BACKLOG.md)
 
-**5 · A race identifier a person can type — short, long, or both?**
+**4 · A race identifier a person can type — short, long, or both?**
 The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
 cannot produce.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · `reports/evolution/SEED-PARITY-1.md`
 
-**6 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
+**5 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
 AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfile` builds its own
 client now and `docker build -f server/Dockerfile .` needs nothing else. Cost measured at **+8 s
 (+2.4%)**, not the large penalty the proposal feared. Proven by running the image with no mounts.
 
-**7 · ~~`VITE_API_URL` for a real deployment — default it to same-origin?~~** — ★★ **DECIDED AND
+**6 · ~~`VITE_API_URL` for a real deployment — default it to same-origin?~~** — ★★ **DECIDED AND
 BUILT 2026-09-24.** Our server now marks every page it serves; an empty `apiBaseUrl` means
 same-origin. **His 4173 flow is structurally safe** — it is a plain `node:http` static server that
 never gets a marker — and that was **proven by running it**, not asserted.
 
-**8 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
+**7 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
 decision of 2026-09-23. `NATURALNESS_FLOOR = 0.8` mirrors the ceiling, and it **refuses a
 configuration** rather than clamping a running race — because clamping the product would have changed
 the shipped `wild` race, whose slow-side breach he ACCEPTED on 2026-08-24. Nothing shipped is
 refused; the three race fingerprints are unmoved.
 → [RACE-ACTION.md](RACE-ACTION.md) §6
 
-**9 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
+**8 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
 → [BACKLOG.md](BACKLOG.md) `B-UX4`
 
-**10 · The dev screen has grown past 30 values — how should it be organised?**
+**9 · The dev screen has grown past 30 values — how should it be organised?**
 His own finding; nobody can spec it without his shape.
 → [BACKLOG.md](BACKLOG.md) `B-UX2`
 
-**11 · The 51.6 MB of track backgrounds — re-spec or drop?**
+**10 · The 51.6 MB of track backgrounds — re-spec or drop?**
 **Corrected 2026-09-24:** it is **51.6 MB in 10 JPGs** under `server/seeds/backgrounds/`, not "60 MB"
 and not PNGs. The old plan names PNGs and there are none.
 → [BACKLOG.md](BACKLOG.md) `Q-27` · measured with `git ls-files` + `stat`
 
-**12 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+**11 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
 dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
 Six real pieces of work with real shapes, none of which anyone should start unasked.
 → [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
@@ -145,20 +140,16 @@ one and accepted it** (it is what produced the 2026-09-23 refinement), so this r
 question was asked and answered; the remaining shortlist below has not been watched.
 → [reports/evolution/CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md) §(C)
 
-**2 · The other nine races on the quiet shortlist, and the ten at wild.**
-Track + quick-test seed, ready to type in, each with its pre-chase value beside it.
-→ [CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md) §(C)
-
-**3 · Verification sittings for work that already shipped** — loading a saved player list (`V-1`), a
+**2 · Verification sittings for work that already shipped** — loading a saved player list (`V-1`), a
 track with missing geometry being refused (`V-2`), backup→restore→reset end to end (`B-5`/`V-5`), dev
 panel sections, physics and collisions, storage edge cases, fullscreen (`V-6`–`V-9`), and sprites on
 a 6000-px track (`Q-13`). Each is one watching, not a build.
 → [BACKLOG.md](BACKLOG.md) Phase V
 
-**4 · The 0.75 phase from SHIP-THE-NIGHT**, still owed his eye.
+**3 · The 0.75 phase from SHIP-THE-NIGHT**, still owed his eye.
 → `reports/night/SHIP-THE-NIGHT.md`
 
-**5 · `archive/front-group` (`87a08af4`)** — the one camera branch of four that is genuinely not in
+**4 · `archive/front-group` (`87a08af4`)** — the one camera branch of four that is genuinely not in
 master. It is preserved as a tag, so nothing is at risk, and it needs his eye before anyone revives
 it.
 → `docs/TAGS.md`
@@ -256,6 +247,11 @@ verified by running it with no mounts and no environment (PUBLISH-STEPS-1).
 | **ALREADY DONE** | **9** |
 | **PREMISE GONE** | **8** |
 | living documents corrected | **4** |
+
+★ **Two of the 41 closed the same day, 2026-09-24**, by the owner's decisions on the breakaway
+thread — the pair case and the thread itself. The table is left at the figures the harvest actually
+produced rather than edited down, because it is a record of that night's count; this line is what
+keeps it from reading as current.
 
 **Roughly three in ten of the things this project was carrying as open were not open.** The largest
 single cause is the same one as on 2026-09-05: a claim written down once and then quoted rather than

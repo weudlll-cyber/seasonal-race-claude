@@ -921,29 +921,6 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
-## The remaining breakaways, after the owner's ruling of 2026-09-23 (2026-09-24)
-
-- [ ] ★★ **FOUR SOLO BREAKAWAYS SURVIVE THE SHIP, AND A SOLO IS HIS OWN DEFINITION OF THE THING HE
-      DOES NOT WANT.** The question *"why are the remaining worst races worse"* was put up for
-      closure on 2026-09-24 as moot, because he watched the worst one — `city-circuit` seed 30, a
-      349 px gap held by THREE — and accepted it. **That disposes of the group-of-three population
-      and nothing else.** Re-counted at the tree over every crossing in
-      `reports/evolution/chase-remainder-data/`: at `quiet` 22 crossings split 12 accepted / **3
-      solo** / 7 pair; at `wild` 5 split 2 / **1 solo** / 2 pair.
-      **The four solos:** `dirt-oval` seed 20 @ 205 px (worst), `ice-track` seed 10 @ 163,
-      `ice-track` seed 23 @ 159, and at `wild` `dirt-oval` seed 3 @ 166. That is **1.0% of races at
-      quiet and 0.3% at wild.**
-      ★ **Needs his eye before it needs any work** — CHASE-REMAINDER-1 refuted the one causal
-      hypothesis anyone had and put nothing in its place, so measuring further without knowing
-      whether a 205 px solo actually bothers him would be guessing at the target.
-
-- [ ] ★ **NINE PAIR BREAKAWAYS ARE BLOCKED ON A RULING THAT DOES NOT EXIST.** Seven at `quiet`
-      (worst: `ice-track` seed 20 @ 214 px) and two at `wild` (`dirt-oval` seed 9 @ 208,
-      `garden-path` seed 13 @ 202). [GLOSSARY.md](GLOSSARY.md) records that **a group of TWO has
-      never been ruled on and must not be interpolated** from the solo / three / more-than-four
-      points. **Until he rules, nobody can say whether these are a problem at all**, so no work on
-      them is possible — this is an item waiting on a sentence, not on effort.
-
 ## The viewer-invariants gate is RED on master (2026-09-24)
 
 - [ ] ★★ **INVARIANT 6 FAILS ON MASTER: the winner's crossing is not framed on the winner, on
@@ -2205,6 +2182,36 @@ proposal arriving again in six months looking new.
       the fraction is measured perpendicular to the heading from the anchor, and a viewer's sense of
       "the road ran off the screen" is not the same quantity. **No camera change of any kind was
       made.** Any remedy is his.
+      ★★ **DECIDED 2026-09-24 by the owner: the road edge does not have to be visible — what the
+      frame owes is the racers.** The measured 77.3% is **ACCEPTED as it stands**, across its whole
+      range from 36.2% to 97.6% and at a median fitted width of 0.444 of the road. **This row is
+      therefore closed as DECIDED, not as a measurement still awaiting a verdict**, and **no framing
+      work follows from it.**
+
+## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **A BREAKAWAY HELD BY TWO RACERS IS ACCEPTED — the owner's decision of 2026-09-24.**
+      Closes the nine pair breakaways, which were blocked on a ruling that did not exist.
+      **The figures the decision was taken with**, recorded in the same row because the acceptance
+      was given against these rates and not in the abstract: seven at `quiet`, worst `ice-track`
+      seed 20 @ **214 px**; two at `wild`, `dirt-oval` seed 9 @ **208** and `garden-path` seed 13 @
+      **202**. That is **2.3% of races at quiet and 0.7% at wild**.
+      ★ **A materially higher rate is a NEW question, not a settled one.** What was accepted is a
+      pair at those rates; nothing here says a pair is acceptable at any rate.
+      → [GLOSSARY.md](GLOSSARY.md), "breakaway", carries the ruling itself.
+
+- [x] ★★ **THE BREAKAWAY THREAD IS CLOSED — the owner's decision of 2026-09-24.** No further work
+      is commissioned on the remaining solo breakaways.
+      **The accepted remainder, kept listed so it stays visible:** `dirt-oval` seed 20 @ **205 px**
+      (the worst), `ice-track` seed 10 @ **163**, `ice-track` seed 23 @ **159**, and at `wild`
+      `dirt-oval` seed 3 @ **166** — **1.0% of races at quiet and 0.3% at wild**. A solo is his own
+      definition of the thing he does not want, so these four close as **accepted remainder, not as
+      a solved problem**.
+      **The arc that justifies closing it.** The rate of races containing a breakaway fell from
+      **16.0 in 100** to **7.3% at quiet and 1.7% at wild**. Six directions were measured, **five
+      were refused after measurement** and one shipped — the chase past `choreoOutcomeStart` — and
+      it is **the only arm in four blocks that improved both halves at once**: fewer breakaways AND
+      more overtakes, on **10 of 10 tracks**.
 
 ## Closed by the owner's decisions of 2026-09-23
 
@@ -2222,11 +2229,15 @@ proposal arriving again in six months looking new.
       held by a group of THREE is not the picture he objects to
       ([GLOSSARY.md](GLOSSARY.md), "breakaway"). **12 of the 22 quiet crossings and 2 of the 5 wild
       ones are disposed of by that sentence.**
-      ★★ **The rest of the item is NOT closed and is in PART ONE**, because the same population
-      contains four SOLO breakaways — his own definition of the thing he does not want — and nine
-      pairs, which he has explicitly never ruled on. Closing the whole item on his acceptance of a
+      ★★ **The rest of the item closed too, one day later — on 2026-09-24**, by two separate
+      decisions that have their own rows in this part: the **pair** case was RULED ON and accepted
+      at the measured rates, and the **thread itself** was CLOSED, leaving the four solos as
+      accepted remainder.
+      ★ **They were right not to close together.** Closing the whole item on his acceptance of a
       different case would have been exactly the error the last three nights were commissioned to
-      stop.
+      stop. The sentence that stood here until 2026-09-24 — *"the rest of the item is NOT closed and
+      is in PART ONE"* — was true when it was written and false the next day; it is corrected here
+      rather than deleted, so the reason it was ever written survives.
 
 - [x] ★★ **THE DEPLOYABLE PACKAGE NOW BRINGS EVERYTHING ITSELF — the owner's decision of
       2026-09-23, built and PROVEN 2026-09-24.** `server/Dockerfile` gained a `client-build` stage

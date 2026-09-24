@@ -155,10 +155,15 @@ answers the wrong question.
   is **acceptable** to him and is not the picture he is complaining about. Established by his own
   eye-test on the shipped `quiet` stage, `city-circuit` quick-test seed 30 — a 349 px gap, the
   largest in 600 measured races, held by three racers.
-- ★★ **A group of TWO is UNDEFINED. It has never been ruled on, and nothing here implies a
-  threshold.** Three points (solo objectionable, three acceptable, more-than-four not to be braked)
-  do not interpolate, and guessing the fourth would put a number in his mouth. **Any measurement that
-  needs the pair case asks him first.**
+- ★★ **2026-09-24 — a group of TWO is ACCEPTED.** The pair case, undefined until that date, is
+  ruled on. **The rates it was accepted against**, recorded beside it because the acceptance was not
+  given in the abstract: **2.3% of races at `quiet`** — seven crossings, worst `ice-track` seed 20 @
+  214 px — and **0.7% at `wild`** — two, `dirt-oval` seed 9 @ 208 and `garden-path` seed 13 @ 202.
+  ★ **A materially higher rate is a new question, not a settled one.**
+- ★★ **2026-09-24 — the thread is CLOSED.** No further work is commissioned on breakaways. Rate of
+  races containing one: **16.0 in 100** before the chase shipped, **7.3% at `quiet` and 1.7% at
+  `wild`** after. Four solo cases remain as accepted remainder — `dirt-oval` seed 20 @ 205 px,
+  `ice-track` seed 10 @ 163, `ice-track` seed 23 @ 159, and at `wild` `dirt-oval` seed 3 @ 166.
 
 ★ **What the 2026-09-23 refinement does to the numbers — and what it does NOT do.** The measured
 rates are **unchanged as measurements**: 7.3% of races at `quiet` and 1.7% at `wild` still cross his
@@ -209,6 +214,13 @@ setting.
   is a different mechanism, was never shipped, and is retired**; see DEAD-ENDS §N.
 - **company guarantee** — enough of the field stays in frame that the shot has tension. This one is
   dramaturgical, not geometric: it protects against showing a leader alone in an empty frame.
+
+**road edge** — the visible boundary of the track. ★★ **2026-09-24 — DECIDED by the owner: it
+does NOT have to be visible. What the frame owes is the racers.** Measured at the shipped `quiet`
+stage over ten tracks x ten seeds: **195,135 of 252,428 corridor-guarantee frames — 77.3% — have the
+road edge out of frame**, ranging from **36.2% on `searound`** to **97.6% on `mountainstreet`**,
+where the median frame fits **0.444** of the road width. Those figures are ACCEPTED as they stand;
+**no framing work follows from them.**
 
 **corridor (zoom unit)** — see the trap table above. Zoom is expressed in track widths.
 
