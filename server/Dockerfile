@@ -1,3 +1,35 @@
+# ── ★★ STAGE 1: THE IMAGE BUILDS ITS OWN CLIENT (the owner's decision, 2026-09-23) ─────────────
+#
+# DECIDED: the deployable package BRINGS EVERYTHING ITSELF, so no build tooling is needed on the
+# target machine. Until this stage existed, `client/dist` had to be built by hand first and handed in
+# through a named build context — which meant a recipient holding only the repository could not
+# produce the image, and the one thing this package is for is being given to somebody else.
+#
+# ★ THE ACCEPTED COST is a full front-end `npm ci` and Vite build on every image build. Measured on
+# a cold cache: **328 s before, 447 s after — +119 s, about 36% slower.** That is the trade he took.
+#
+# ★ `npm ci`, not `npm install`: the lockfile is the point of a reproducible image, and `ci` fails
+# when it disagrees with `package.json` instead of quietly resolving something else.
+# ★★ THE STAGE PRESERVES THE REPOSITORY LAYOUT, AND IT HAS TO. The client is NOT self-contained
+# within `client/`: four of its modules import UP AND OUT into `shared/` —
+# `SetupScreen.jsx` → `../../../../shared/raceShortKey.mjs`,
+# `PlayerGroupsManager.jsx` → `../../../../../shared/nameLimits.mjs`, and
+# `exportRaceConfig.js` / `raceIdentifier.js` → `../../../shared/canonicalJson.mjs`.
+# Copying `client/` alone into a flat workdir put those specifiers above the root and the Vite build
+# died with six UNRESOLVED_IMPORT errors. Found by running it, not by reading it.
+# So `client/` goes to /build/client and `shared/` to /build/shared, exactly as they sit in the
+# repository, and the relative specifiers resolve unchanged.
+FROM node:20-alpine AS client-build
+WORKDIR /build/client
+# The manifest and lockfile FIRST, as their own layer: dependencies change far less often than
+# source, so an edit to a component reuses the install layer instead of repeating it.
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+COPY shared/ /build/shared/
+COPY client/ /build/client/
+RUN npm run build
+
+# ── STAGE 2: THE RUNTIME IMAGE ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine
 
 WORKDIR /app
@@ -56,16 +88,19 @@ COPY shared/raceShortKey.mjs /shared/raceShortKey.mjs
 # context is the repository root (IMAGE-STANDALONE-1 moved it). `client/dist` is a BUILD ARTEFACT
 # rather than source, and the root `.dockerignore` is an allow-list of source; naming it separately
 # keeps it an explicit input rather than something that must happen to be lying in the tree.
-# `docker compose build` supplies it (see `additional_contexts` in docker-compose.yml); a manual
-# build needs `--build-context client=./client`.
+# ★★ SUPERSEDED 2026-09-23 (the owner's decision), AND THE OLD ARRANGEMENT IS DESCRIBED SO THE
+# CHANGE IS LEGIBLE. `client/dist` used to arrive through a NAMED BUILD CONTEXT, which required
+# `npm run build` in `client/` to have been run BY HAND first — `docker compose build` supplied it
+# via `additional_contexts`, and a manual build needed `--build-context client=./client`. The file
+# recorded the alternative and why it had not been taken: *"Building the client inside this image
+# would make it self-contained at the cost of an npm install of the whole front end on every image
+# build; that trade is written up as a proposal rather than taken here."*
 #
-# IT COPIES A BUILD, IT DOES NOT MAKE ONE: `client/dist` must exist first (`npm run build` in
-# client/). Building the client inside this image would make it self-contained at the cost of an
-# npm install of the whole front end on every image build; that trade is written up as a proposal
-# rather than taken here.
+# **He took the trade.** The build now comes from stage 1 above, so the image needs nothing but the
+# repository and neither `additional_contexts` nor `--build-context` is required any more.
 #
 # The server finds it through RA_CLIENT_DIST, which this image declares for itself below.
-COPY --from=client dist/ ./client-dist/
+COPY --from=client-build /build/client/dist/ ./client-dist/
 
 # IMAGE-STANDALONE-1: the image DECLARES where its own client build is, so `docker run` with no
 # extra configuration serves the app. The default in `staticClient.js` is `../../client/dist`

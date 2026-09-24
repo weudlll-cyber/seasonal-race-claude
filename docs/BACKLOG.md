@@ -2183,6 +2183,27 @@ proposal arriving again in six months looking new.
       different case would have been exactly the error the last three nights were commissioned to
       stop.
 
+- [x] ★★ **THE DEPLOYABLE PACKAGE NOW BRINGS EVERYTHING ITSELF — the owner's decision of
+      2026-09-23, built and PROVEN 2026-09-24.** `server/Dockerfile` gained a `client-build` stage
+      that runs `npm ci && npm run build`, so `client/dist` no longer has to be built by hand and
+      handed in through a named build context. `additional_contexts` is gone from
+      `docker-compose.yml` and `--build-context` is no longer needed:
+      **`docker build -f server/Dockerfile .` is enough on its own.**
+      ★ **MEASURED COST, cold cache both times: 328 s before, 336 s after — +8 s, +2.4%.** Far below
+      what the proposal feared ("an npm install of the whole front end on every image build"); the
+      front-end install and Vite build are small against the Alpine native-module compile that
+      already dominated.
+      ★ **PROVEN BY RUNNING IT, not asserted:** built with no named context, `docker run` with no
+      mounts, container reported **Up (healthy)**, `/api/health` 200, `GET /` served an 886-byte
+      index referencing `/assets/index-B1XzFI_w.js`, and that asset returned **934,343 bytes** — the
+      bundle the image built for itself.
+      ★★ **A DEFECT FOUND BY BUILDING IT:** the client is **not self-contained within `client/`**.
+      Four modules import UP into `shared/` — `SetupScreen.jsx`, `PlayerGroupsManager.jsx`,
+      `exportRaceConfig.js` and `raceIdentifier.js`. Copying `client/` alone into a flat workdir put
+      those specifiers above the build root and Vite died with six UNRESOLVED_IMPORT errors. The
+      stage now preserves the repository layout (`/build/client` + `/build/shared`). Found by running
+      it, not by reading it.
+
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 
 **Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART

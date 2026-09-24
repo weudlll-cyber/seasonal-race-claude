@@ -48,10 +48,10 @@ The seed field agrees across paths; the ROSTER is what diverges, so some seeds n
 cannot produce.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · `reports/evolution/SEED-PARITY-1.md`
 
-**6 · One-command deploy, or keep building the client on the deploy machine?**
-A straight trade, already written up rather than taken: a second Dockerfile stage makes the image
-self-contained at the cost of a slower image build.
-→ `docs/DEPLOY-NOTES.md:63` · `reports/evolution/PUBLISH-STEPS-1.md` step 1
+**6 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
+AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfile` builds its own
+client now and `docker build -f server/Dockerfile .` needs nothing else. Cost measured at **+8 s
+(+2.4%)**, not the large penalty the proposal feared. Proven by running the image with no mounts.
 
 **7 · `VITE_API_URL` for a real deployment — default it to same-origin?**
 Proposed and not closed, because closing it as proposed would break his own port-4173 flow.

@@ -137,7 +137,29 @@ const read = (rel) => {
 
 const dockerfile = read(DOCKERFILE);
 const copiedDirs = new Set();
-for (const line of dockerfile.split("\n")) {
+
+// ★★ ONLY THE FINAL STAGE COUNTS, and that became true the moment this Dockerfile grew a second one
+// (NIGHT-2026-09-24D piece 1: a `client-build` stage so the image builds its own client).
+//
+// A COPY in an EARLIER stage copies into an intermediate image that is THROWN AWAY — nothing it
+// wrote is in the shipped layers, so "the container will run the baked copy" is simply false for it,
+// and demanding a mount is meaningless. The guard failed exactly that way on first contact: it read
+// `COPY client/ /build/client/` and `COPY shared/ /build/shared/` from the build stage and asked for
+// `./client:/app/client` to be mounted into the running server.
+//
+// ★ Declaring those as DIVERGENCES would have been worse than the failure: a declaration saying
+// "client is COPYed and not mounted" states something FALSE about the runtime image, which contains
+// no `/client/` at all. An allow-list entry that misdescribes reality is how an allow-list rots —
+// this file says exactly that about its own stale entries two comments up.
+//
+// The final stage begins at the LAST `FROM`. Everything before it is scaffolding.
+const dfLines = dockerfile.split("\n");
+let finalStageStart = 0;
+dfLines.forEach((l, i) => {
+  if (/^\s*FROM\s+/i.test(l)) finalStageStart = i;
+});
+
+for (const line of dfLines.slice(finalStageStart)) {
   const m = /^\s*COPY\s+(.+)$/i.exec(line);
   if (!m) continue;
   // `COPY --from=<stage|context>` DOES NOT READ THE BUILD CONTEXT. It reads an earlier stage or a
