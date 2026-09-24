@@ -921,25 +921,6 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
-## The viewer-invariants gate grades frames the owner does not judge (2026-09-24)
-
-- [ ] ★★ **THE GATE GRADES FRAMES THE OWNER DOES NOT JUDGE, SO IT STAYS RED INDEFINITELY.** The
-      ruling of 2026-09-24 answered invariant 6's question and did **not** clear its red — it moved
-      the problem from the picture to the SCOPE.
-      **What the scope is today.** Invariant 6 runs from the crossing frame through every frame after
-      it for as long as the shot that owned the crossing is still running; the scope note is in
-      `scripts/viewer-invariants.mjs`, above the invariant itself.
-      **Why that is now the whole of the failure.** The crossing frame on `city-circuit` seed 9
-      passes on its own figures. **All 17 violations fall in the after-the-crossing stretch** — the
-      stretch he has ruled he does not judge. So `verify --premerge` is red for grading a promise
-      nobody is making, and it will stay red on every run until the scope changes.
-      ★ **A gate that is always red is one nobody believes.** This repository already says exactly
-      that about the browser suite, which is why the finding is filed as a gate problem rather than
-      left as a standing failure somebody learns to scroll past.
-      ★ **THIS ROW NAMES NO FIX AND NO NUMBER.** It is open pending the measurement of where the
-      shot actually ends — [reports/evolution/WINNER-AFTER-CROSSING-1.md](../reports/evolution/WINNER-AFTER-CROSSING-1.md)
-      — and the decision about the guard is the owner's, not this row's.
-
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
@@ -2184,6 +2165,30 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **THE GATE NO LONGER GRADES FRAMES THE OWNER DOES NOT JUDGE. Closed 2026-09-25 by his
+      decision of 2026-09-24.** Invariant 6 grades the RUN-IN, on the racer LEADING each frame, up
+      to and including the frame in which the leader has crossed. Nothing after that is graded.
+      **The reasoning behind the scope**, recorded because it is what makes the leader sufficient:
+      grading the leader of every frame necessarily grades the eventual winner over every frame in
+      which he leads, and the winner-specific version was deliberately not built.
+      **Before → after, per race, per kind.** `city-circuit` seed 9: **17 → 0** (all 17 were the
+      after-the-crossing "at the edge" kind, which no longer exists). `space-sprint` seed 9:
+      **0 → 0**. The new run-in kind, **`6-leaderedge`, reports 0 in both races** — it is not that
+      nothing is looked at, it is that nothing was found; the leader is inside the region on every
+      in-window frame and on the crossing frame, in both. ★ The gate exits **0** for the first time
+      since the item was opened.
+      ★ **WHERE IT MOVED, AND WHY IT HAD TO.** The "not at the edge" half now lives in
+      `client/src/modules/viewerProbe.js`, beside invariant 2's leader test, because that is where
+      the window is: its start is `endgameFrom`, supplied to the probe per frame and never exported.
+      A guard-side version could only ever have run from the crossing onwards — which is exactly the
+      scope that produced the red. The bar is unchanged and no number was added.
+      ★ **The clause that was never true is gone.** The scope note claimed the window ran "as long as
+      the shot that owned the crossing is still running"; WINNER-AFTER-CROSSING-1 measured that the
+      duration cap always closed it first, so the clause never bound. Cap and clause both removed.
+      ★ **Proved it can still fail:** `--sabotage-corner`, which moved to the probe with the test it
+      arms, takes the gate from 0 to a four-figure count of `6-leaderedge` and exit 1; reverted, 0
+      and exit 0 again.
 
 - [x] ★★ **INVARIANT 6 — THE WINNER'S CROSSING ON `city-circuit` SEED 9. ANSWERED by the owner,
       2026-09-24.** The row asked for his eye before anything else, and it has it: **the framing of
