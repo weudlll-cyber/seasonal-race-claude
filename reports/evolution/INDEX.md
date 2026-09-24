@@ -426,6 +426,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-25.md](MORNING-2026-09-25.md) — **the night sheet for the 2026-09-25 run** — four
+  pieces off master `03f0177a`: sabotage arms for the five OLD viewer invariants, the company
+  guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the
+  usual close-out with `verify --premerge` and a merge decision.
+
 - [WINNER-AFTER-CROSSING-1.md](WINNER-AFTER-CROSSING-1.md) — **where the shot actually ends, after
   the owner ruled he does not judge the frames past the finish** — measurement only, nothing
   proposed. Reused the probe's existing `crossing.after` record (nothing built) and added opt-in
