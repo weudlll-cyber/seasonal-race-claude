@@ -125,6 +125,15 @@ claim meant, but the task is six sections and not one.
 
 ## 3 · NEEDS HIS EYE
 
+**0 · ★★ CI IS RED ON MASTER — `scripts/migrate.test.mjs` cannot resolve `bcrypt` in the guards job.**
+Merge `ea99bd28`: CI `failure`, 625 tests, **620 pass / 1 fail**. The guards job installs the ROOT
+tree only, so `buildDefaultMigrations()` → the `teams-1` migration → `usersStore.js` → `bcrypt`
+cannot resolve; the same file is 8/8 green locally. Introduced tonight by `6a379b1d`, **not**
+pre-existing, and a different subject from the framing red below. Every push to master stays red
+until it is fixed, docs-only commits included. The fix is a SKIP-with-reason probe, as
+`backup.test.mjs` already does for `better-sqlite3` — one commit of its own.
+→ [BACKLOG.md](BACKLOG.md), "CI is RED on master"
+
 **0 · ★★ THE `viewer-invariants` GATE IS RED ON MASTER — `city-circuit` seed 9.**
 `node scripts/viewer-invariants.mjs --gate` exits 1 with **17 crossing violations in 1 of 2 races**;
 all 17 are city-circuit seed 9 (space-sprint seed 9 contributes 0). Worst frame 6600 at

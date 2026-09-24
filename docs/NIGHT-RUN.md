@@ -21,13 +21,58 @@ claude -p "$(cat night-task.md)" --permission-mode dontAsk --output-format json 
 
 Put the block's instructions in `night-task.md` first. That is the whole procedure.
 
-### What each flag is doing, because guessing at these is how the last two nights were lost
+## ★★★ HOW A NIGHT RUN REPORTS — RULES, NOT ADVICE
+
+**A night run that finishes perfectly and says nothing has failed.** Added 2026-09-24 after an
+evening chain did six pieces well and was indistinguishable, from outside, from a chain that had
+died in its first minute.
+
+### 1. THE LOG FILE IS NOT A CHANNEL
+
+`--output-format json` writes **one object at the END of the run** — see the flag table below. So
+`logs/night-*.log` is **0 bytes for hours, by design**. It is **not a progress signal and not a
+liveness signal.**
+
+★ **This has already been misread once**, on 2026-09-24: a launch was declared dead after 55 seconds
+because its log was empty, a second run was started, and for five minutes **two night runs were
+racing on the same branch**. Nothing was lost only because neither had committed yet. If you need a
+liveness signal, read the session transcript under `~/.claude/projects/<project>/*.jsonl`, which
+grows continuously — or read the branch, which is better.
+
+### 2. THE CHANNEL IS THE PUSHED TREE
+
+**A night run reports by committing and pushing. Nothing else reaches anyone.** The owner does not
+read logs and does not use the terminal. A commit at origin is the only thing he can see.
+
+### 3. AFTER EVERY FINISHED PIECE: COMMIT, PUSH, AND APPEND A DATED LINE
+
+Append one dated line to that night's morning sheet under `reports/evolution/` saying **what
+finished, what is running now, and what is still ahead** — then push. Three facts, one line.
+
+### 4. EVERY 45 MINUTES, EVEN WITH NO PIECE FINISHED
+
+A **heartbeat commit** carrying the clock time and one sentence naming what is being worked on at
+that moment. **An empty 45 minutes at origin means the run is stuck**, and that is exactly the
+information that was missing on the evening of 2026-09-24.
+
+★ The morning chains of that same day did this — `b389f6e2` at 09:20 and `6e4aa364` at 10:05 — and
+the evening chain did not, **because it was a habit and not a rule.** It is a rule now.
+
+### 5. THE MORNING SHEET'S `OPEN` SECTION IS REGENERATED, NEVER APPENDED TO
+
+Rewrite it from the piece list every time you touch the sheet. **A heading that was true when it was
+written and false when it is read is worse than no heading** — on 2026-09-24 the sheet still said
+*"everything from PIECE 1 onward"* while six of those pieces were finished and pushed.
+
+---
+
+## What each flag is doing, because guessing at these is how the last two nights were lost
 
 | flag | why |
 | --- | --- |
 | `-p` / `--print` | Non-interactive: run, print, exit. **It also skips the workspace-trust dialog**, which is its own silent blocker in a fresh checkout. |
 | `--permission-mode dontAsk` | The load-bearing one. An unapproved call is **DENIED and the run continues**; without it the call WAITS forever. This is not `--dangerously-skip-permissions`: the deny list still bites, so a force-push or a read of `.env` is refused, not waved through. |
-| `--output-format json` | One machine-readable result object at the end, so the morning check is `jq` and not reading prose. |
+| `--output-format json` | One machine-readable result object at the end, so the morning check is `jq` and not reading prose. ★ **One object AT THE END means the log is empty until then — see rule 1 above; it is not a liveness signal.** |
 | `> logs/night-… 2>&1` | Both streams to one dated file. A night that fails is only debuggable if its output survived. |
 
 ### THE MODE MUST ARRIVE AT LAUNCH — a settings file cannot supply it

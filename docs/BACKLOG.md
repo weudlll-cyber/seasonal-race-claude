@@ -968,6 +968,31 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       `docs/DEAD-ENDS.md` and the accepted-finish record already carry cases where a framing that
       fails a bar was accepted. **Do not "fix" it before he has looked.**
 
+## CI is RED on master — one script test cannot resolve `bcrypt` in the guards job (2026-09-24)
+
+- [ ] ★★ **`scripts/migrate.test.mjs` fails in CI and passes locally, and the difference is the
+      environment, not the code.** Merge `ea99bd28`: **CI conclusion `failure`**, job *"Living-doc
+      guards + script tests"*, step *"Run script test suite"* — **625 tests, 620 pass, 1 fail**.
+      The one failure is `not ok 365 - the teams-1 migration in the default registry has the
+      observable-state probe` (`scripts/migrate.test.mjs:157`), `ERR_MODULE_NOT_FOUND`:
+      *"Cannot find package 'bcrypt' imported from `server/src/auth/usersStore.js`"*.
+      **The mechanism.** That test calls `buildDefaultMigrations()`, which imports the real
+      `teams-1` migration, which imports `usersStore.js`, which imports `bcrypt`. The guards job
+      installs the ROOT tree only (`npm ci` at the repo root, `.github/workflows/ci.yml`); it never
+      runs `npm ci` in `server/`, so no server dependency can resolve there. Locally every server
+      dependency is installed, so the same file is **8 pass / 0 fail**.
+      ★ **The same job already handles this exact class one row above**: `backup.test.mjs` SKIPs its
+      two round-trip tests with *"better-sqlite3 is not installed in server/node_modules"*. This
+      test was written without that guard.
+      ★ **It was introduced tonight**, by `6a379b1d` (PIECE 4, the migration ledger) — it is **not**
+      pre-existing, and it is a different subject from the `viewer-invariants` red above.
+      ★ **Until it is fixed, EVERY push to master shows CI red for this one reason**, including
+      docs-only commits that touch nothing near it.
+      ★ **NOT FIXED, DELIBERATELY.** The block that found it (NIGHT-REPORTING-AND-THE-RED) is
+      docs-only by its own rule, and a test file is code. The fix is small and known — probe for the
+      server dependency and SKIP with a reason when it is absent, the way `backup.test.mjs` does,
+      rather than weakening what the test asserts. It needs one commit of its own.
+
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
