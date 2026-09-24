@@ -370,7 +370,7 @@ const BAND_USE = /\?\s*([a-zA-Z_$][\w$]*)\s*:\s*([A-Z][A-Z0-9_]{2,})/g;
 /** The registry as a home: racerId → (field → scalar), plus the discovered field-name set. */
 export async function loadRacerRegistry(root = ROOT) {
   const ns = await import(
-    pathToFileURL(join(root, "client/src/modules/racer-types/index.js")).href,
+    pathToFileURL(join(root, "client/src/racer-types/index.js")).href,
   );
   const byRacer = new Map();
   const fields = new Set();
@@ -586,7 +586,7 @@ for (const abs of files) {
 // lived in `scripts/`, which `dirs` did not cover, and CENSUS-DUPES-1 named that as its own largest
 // declared hole. The HOME ITSELF is excluded — the racer-type modules are the definitions, not
 // copies of them — as are test files, on the same reasoning the `??` half uses.
-const REGISTRY_HOME = "client/src/modules/racer-types/";
+const REGISTRY_HOME = "client/src/racer-types/";
 // `--registry-root=<dir>` points the REGISTRY load at a fixture. It exists for one reason and it is
 // the reason `--src=`, `--tags-file=` and `--doc=` exist: without it, the loud failure below cannot
 // be fired, and a check that cannot go red is the thing this guard is for. It is NOT `--src=`: that

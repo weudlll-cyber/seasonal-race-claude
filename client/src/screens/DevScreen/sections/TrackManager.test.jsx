@@ -33,7 +33,7 @@ vi.mock('../../../modules/storage/defaults.js', () => ({}));
 vi.mock('../../../modules/track-effects/index.js', () => ({
   listEffects: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../../modules/racer-types/index.js', () => ({
+vi.mock('../../../racer-types/index.js', () => ({
   RACER_TYPE_IDS: ['horse'],
   listAllRacerTypes: vi.fn().mockReturnValue([{ id: 'horse', speedMultiplier: 1.0 }]),
   getRacerTypeLabel: (id) => ({ horse: 'Horse', 'test-cat': 'Test Cat' })[id] ?? id,
@@ -101,7 +101,7 @@ import {
 } from '../../../services/trackApi.js';
 import { listTracks } from '../../../modules/track-editor/trackStorage.js';
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
-import { listAllRacerTypes } from '../../../modules/racer-types/index.js';
+import { listAllRacerTypes } from '../../../racer-types/index.js';
 import TrackManager from './TrackManager.jsx';
 
 // ── test data ─────────────────────────────────────────────────────────────────

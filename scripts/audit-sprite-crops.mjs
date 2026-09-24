@@ -34,7 +34,7 @@ import sharp from "sharp";
 import {
   computeOpaqueBoundingBox,
   computeSpriteBoundingBox,
-} from "../client/src/modules/racer-types/backgroundRemoval.js";
+} from "../client/src/racer-types/backgroundRemoval.js";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -58,7 +58,7 @@ const ASSETS_DIR = join(process.cwd(), "client/public/assets/racers");
 //   the REGISTRY   frameCount, displaySize, spriteUrl and the RECORDED bodyFill values to compare
 //                  against. frameCount is the one input a PNG cannot yield — a strip of N frames
 //                  looks exactly like a strip of 2N — so it must come from the one home for it.
-const RT = await import("../client/src/modules/racer-types/index.js");
+const RT = await import("../client/src/racer-types/index.js");
 const RACER_TYPES = RT.RACER_TYPE_IDS.map((id) => {
   const c = RT.RACER_TYPES[id].config;
   const snap = RT.CONFIG_SNAPSHOT[id];

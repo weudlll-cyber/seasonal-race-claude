@@ -170,8 +170,15 @@ Stop the server first. The target must be empty, or pass `--force` to write into
    ```sh
    npm run build --prefix client
    ```
-6. **Run any pending migrations** — ★ **read the limitation below before this step**, because today
-   it is a decision rather than a command.
+6. **Run any pending migrations** — one command:
+   ```sh
+   node scripts/migrate.mjs
+   ```
+   The runner reads `<dataRoot>/migrations.json`, applies every id that is not already recorded,
+   and refuses to run any migration twice. `--dry-run` lists what it would do; `--status` prints
+   the state of every registered migration. On an instance that ran `migrate-teams.mjs` before
+   this runner existed, the observable-state probe backfills the ledger without re-running the
+   migration — see the file header for the exact rule.
 7. **Start, and check it worked.** Start the server, then **sign in**. That is the one check worth
    making: it exercises the accounts file, the session database and the built client in one action.
    If sign-in works, the upgrade landed.
@@ -180,18 +187,17 @@ Stop the server first. The target must be empty, or pass `--force` to write into
    **An upgrade procedure without a way back is a one-way door**, which is why step 1 is not
    optional.
 
-### ★★ THE MIGRATION SITUATION, STATED AS A LIMITATION RATHER THAN A FEATURE
+### THE MIGRATION LEDGER — added 2026-09-24 (MIGRATION-LEDGER-1)
 
-**There is exactly one migration script, it is run by hand, and NOTHING RECORDS WHICH MIGRATIONS AN
-INSTANCE HAS ALREADY APPLIED.** So step 6 today means *"read the migrations section and decide"*,
-not *"run a command"*.
+Every registered migration has a stable id (the teams backfill is `teams-1`). The runner
+(`scripts/migrate.mjs`) reads `<dataRoot>/migrations.json` to see which ids are already recorded,
+runs only the pending ones, appends each one to the ledger with a timestamp, and refuses to run
+any id twice — the rule is stated in full in the file header.
 
-The one script is `node scripts/migrate-teams.mjs` (see [SETUP.md](SETUP.md) §10). It has a
-`--dry-run`, it is idempotent, and it should be run with the server stopped. Being idempotent is
-what makes the missing ledger survivable: running it twice is harmless. **A future migration that is
-not idempotent would not be**, and there is no mechanism that would stop you running it twice.
-
-**This is recorded as an open point in [OPEN.md](OPEN.md), not as a thing to fix here.**
+The one existing migration, `scripts/migrate-teams.mjs`, still runs standalone; the runner calls
+into the same `migrateTeams` function so there is one home for the work. **Running the standalone
+script does NOT touch the ledger** — the next `node scripts/migrate.mjs` will see the state and
+backfill the ledger without re-running.
 
 ---
 

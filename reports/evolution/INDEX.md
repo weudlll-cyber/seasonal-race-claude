@@ -426,6 +426,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-2026-09-24D.md](NIGHT-2026-09-24D.md) — **the resumed night, six of the brief's pieces
+  finished** — pieces 0/1/2/3a already done at the start; pieces 3b, 3c, 4, 5, 6 landed tonight;
+  piece 7 (company guarantee on a spread field) DEFERRED as the brief permits, with the reason
+  stated. Five items closed in `OPEN.md` and `BACKLOG.md` PART ONE, in the same commit as the work.
+  Four fingerprints unmoved throughout; full client suite green at every step. ★★ **First finding
+  the owner is asked to read**: the pair-at-the-front frequency is measured and awaits his ruling
+  (SOLO 3/300 = 1.0% quiet · PAIR 7/300 = 2.3% quiet).
+
+- [MORNING-2026-09-24d.md](MORNING-2026-09-24d.md) — **the morning sheet for the resumed night**,
+  with a heartbeat line at least every 30 minutes. ★ Its PIECE 0 says plainly that nothing stalled or
+  blocked in the eight silent hours — the turn simply ended, the last push was complete, and the five
+  live `node` processes were two dev servers and Adobe Creative Cloud.
+
 - [POLISH-2026-09-24B.md](POLISH-2026-09-24B.md) — **★★ EIGHT SMALL ITEMS CLOSED, TWO MEASURED AND
   NARROWED, AND THE LIST FINALLY KEPT UP WITH THE WORK.** ★ **The flaky editor test did not fail once
   in 20 full parallel suite runs** — which BOUNDS the rate rather than proving a fix (a 1-in-5 flake

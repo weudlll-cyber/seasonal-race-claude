@@ -64,6 +64,64 @@ export function computeDirectorCeiling(baseSpeedMax, baseSpeedMean, boostHeadroo
   return Math.min(bandMax + Math.max(0, boostHeadroom || 0), NATURALNESS_CEILING);
 }
 
+// ── ★★ THE SLOW SIDE'S LEITPLANKE (NIGHT-2026-09-24C piece 3d, the owner's decision of 2026-09-23)
+//
+// The mirror of NATURALNESS_CEILING. `docs/RACE-ACTION.md` §6 recorded for a month that the envelope
+// is guarded on ONE SIDE ONLY: the fast side is hard-clamped at 1.20 and *"the SLOW side has no
+// ceiling of its own at all — a configuration may brake a racer far below the −20 percent line and
+// nothing in the code objects."* This is the code objecting.
+export const NATURALNESS_FLOOR = 0.8;
+
+/**
+ * The deepest brake a CONFIGURATION may ask for, and whether a given one is inside it.
+ *
+ * ★★★ THIS BOUNDS A CONFIG VALUE, NOT A RUNNING RACE, AND THE DISTINCTION IS THE WHOLE DESIGN.
+ * The obvious symmetric implementation — clamping `spreadFactor × governorMult` up to 0.80 the way
+ * the ceiling clamps it down to 1.20 — WOULD CHANGE THE SHIPPED `wild` RACE, and that breach is
+ * ACCEPTED, not accidental: `docs/RACE-ACTION.md` records the owner accepting on 2026-08-24 that at
+ * `wild` a racer goes under 0.80 in 22 of 30 races. A per-frame clamp would silently undo a decision
+ * he made, which is the opposite of closing a gap.
+ *
+ * So what is guarded is what the document actually complains about: **a configuration nobody
+ * noticed.** The governor's own floor for a braked racer is `1 - max(pulkEnvelopeMaxEffect,
+ * pulkLeaderBrake)`, and the document's objection is that it EXPANDS as the brake grows, without
+ * limit. This says where the limit is.
+ *
+ * At every shipped stage the answer is comfortably inside it — quiet and medium brake 0.10 (floor
+ * 0.88), wild brakes 0.15 (floor 0.85) — so nothing shipped is refused and the three race
+ * fingerprints are unmoved. It refuses a configuration that has never existed, which is the point.
+ *
+ * @param {number} maxEffect  pulkEnvelopeMaxEffect
+ * @param {number} leaderBrake  pulkLeaderBrake
+ * @returns {number} the governor's own slow bound for a braked racer
+ */
+export function computeDirectorFloor(maxEffect = 0, leaderBrake = 0) {
+  return 1 - Math.max(Math.max(0, maxEffect || 0), Math.max(0, leaderBrake || 0));
+}
+
+/**
+ * Is this configuration inside the slow-side leitplanke?
+ * @returns {boolean} false when the config would permit a brake deeper than NATURALNESS_FLOOR
+ */
+export function isWithinNaturalnessFloor(maxEffect = 0, leaderBrake = 0) {
+  return computeDirectorFloor(maxEffect, leaderBrake) >= NATURALNESS_FLOOR - 1e-12;
+}
+
+/**
+ * Refuse a configuration that breaches the slow side. Throws, because a silent clamp here is how
+ * the fast side's own gap ("the clamp is applied only when `pulkCeilingCap` is on") came about.
+ */
+export function assertNaturalnessFloor(maxEffect = 0, leaderBrake = 0) {
+  if (!isWithinNaturalnessFloor(maxEffect, leaderBrake)) {
+    const f = computeDirectorFloor(maxEffect, leaderBrake);
+    throw new RangeError(
+      `naturalness floor breached: pulkEnvelopeMaxEffect=${maxEffect} / pulkLeaderBrake=${leaderBrake} ` +
+        `permit a governor multiplier of ${f.toFixed(3)}, below the ${NATURALNESS_FLOOR} leitplanke.`
+    );
+  }
+  return true;
+}
+
 // Minimum fade span (progress fraction) for the TRANSITION ease-out. If the LIVE
 // (corrStartFrac − pulkEndFrac) span is smaller (owner shortened the OUTCOME onset), the
 // fade widens BACKWARD into PULK so w still reaches exactly 0 at corrStart — no

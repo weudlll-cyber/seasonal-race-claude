@@ -24,9 +24,9 @@ vi.mock('../../../contexts/AuthContext.jsx', () => ({
 import ChangePasswordSection from './ChangePasswordSection.jsx';
 
 function fill(current, next, confirm) {
-  fireEvent.change(screen.getByLabelText('Current password'), { target: { value: current } });
-  fireEvent.change(screen.getByLabelText('New password'), { target: { value: next } });
-  fireEvent.change(screen.getByLabelText('Repeat new password'), { target: { value: confirm } });
+  fireEvent.change(screen.getByLabelText(/^Current password/), { target: { value: current } });
+  fireEvent.change(screen.getByLabelText(/^New password/), { target: { value: next } });
+  fireEvent.change(screen.getByLabelText(/^Repeat new password/), { target: { value: confirm } });
 }
 
 const submit = async () => {
@@ -82,9 +82,9 @@ describe('ChangePasswordSection', () => {
     await submit();
 
     expect(await screen.findByText('Password changed.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Current password')).toHaveValue('');
-    expect(screen.getByLabelText('New password')).toHaveValue('');
-    expect(screen.getByLabelText('Repeat new password')).toHaveValue('');
+    expect(screen.getByLabelText(/^Current password/)).toHaveValue('');
+    expect(screen.getByLabelText(/^New password/)).toHaveValue('');
+    expect(screen.getByLabelText(/^Repeat new password/)).toHaveValue('');
   });
 
   // DELETE THIS and the form could submit with empty fields, spending a bcrypt comparison and a

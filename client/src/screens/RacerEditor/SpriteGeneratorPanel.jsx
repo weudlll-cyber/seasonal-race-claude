@@ -13,15 +13,15 @@ import {
   buildSpritesheet,
   drawSpriteFrame,
   FRAME_SIZE,
-} from '../../modules/racer-types/spritesheetBuilder.js';
+} from '../../racer-types/spritesheetBuilder.js';
 import {
   hasTransparentBackground,
   sampleColor,
   removeBackground,
   computeSpriteOffset,
-} from '../../modules/racer-types/backgroundRemoval.js';
-import { detectTintMode } from '../../modules/racer-types/spriteTinter.js';
-import { STANDARD_COAT_PALETTE } from '../../modules/racer-types/standardCoats.js';
+} from '../../racer-types/backgroundRemoval.js';
+import { detectTintMode } from '../../racer-types/spriteTinter.js';
+import { STANDARD_COAT_PALETTE } from '../../racer-types/standardCoats.js';
 import { drawCheckerboard } from './canvasUtils.js';
 import { AnimationControls } from './AnimationControls.jsx';
 import { SpritesheetPreview } from './SpritesheetPreview.jsx';

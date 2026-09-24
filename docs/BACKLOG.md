@@ -93,15 +93,14 @@ a rule for anybody to follow.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the repair moves the hash, so it is a mint and only he can order it. Re-verified at source today: `scripts/render-fingerprint.mjs` still builds the frame camera as a hand-written literal with three members (`hudState`, `comebackLockedRacerIndex`, `detectBattleGroup`); `frameCameraInputs` is imported by five client files and by that instrument not at all. The guard half still needs only BUILDING.
 
-- [ ] **THE RENDER FINGERPRINT BUILDS ITS FRAME CAMERA OBJECT AS THE HAND-WRITTEN LITERAL THAT
-      FRAME-INPUTS-1 EXISTS TO DELETE.** `render-fingerprint.mjs:445` supplies three of the six
-      declared members, leaving `anchorRacerIndex` and `runInArrived` **undefined inside the
-      instrument**. **LABEL-FOCUS-1 has never been exercised by it, and RUNIN-NAMES-1 whole visible
-      change is a state it cannot enter** — its unmoved verdict for that feature was empty, not
-      reassuring.
-      Establishes it: [RENDER-FINGERPRINT-BLIND-1](../reports/evolution/RENDER-FINGERPRINT-BLIND-1.md).
-      **NEEDS: ONLY HIS WORD for the repair** — it moves the hash, so it is a mint. **The guard half —
-      checking that callers build the object through `frameCameraInputs` — needs only BUILDING.**
+- [x] ★★ **ONLY THE GUARD HALF WAS LEFT — CLOSED 2026-09-24 (NIGHT-2026-09-24D, PIECE 6).** The repair
+      itself was done on 2026-09-05 (`d2f10ab2`); this entry then went stale for three weeks. NIGHT-
+      2026-09-24D built the guard: `scripts/check-frame-camera-inputs.mjs` scans `client/src/` for any
+      `.js`/`.jsx` file that spells `anchorRacerIndex:`, `comebackLockedRacerIndex:` or
+      `runInArrived:` as an object-literal key outside the ONE home (`frameCameraInputs.js`) and
+      three named exceptions. **Sabotage-proven** by `scripts/check-frame-camera-inputs.test.mjs`: a
+      hand-written literal in a fixture makes the guard exit 1; if it did not, the guard would be
+      decoration. The four fingerprints did not need to move — the runtime repair already had.
 
 ---
 
@@ -765,13 +764,6 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
 
-- [ ] **"Road edge out of frame" should be a standing measurement.** The control number is the
-      argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
-      Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
-      happens, and this one was never measured that way — only its effect on zoom was.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no standing instrument exists — none of the eighteen `scripts/check-*.mjs` guards measures the road edge, and the only thing that ever has is the ad-hoc `scripts/his-shot-truth.mjs`. Waiting on somebody making it standing.
-
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
 **Read this before proposing anything that moves `leaderLateralMarginPx` — per-track, adaptive, or a
@@ -929,6 +921,53 @@ Built fresh — the original server scaffold was deleted (incompatible architect
 
 ---
 
+## The remaining breakaways, after the owner's ruling of 2026-09-23 (2026-09-24)
+
+- [ ] ★★ **FOUR SOLO BREAKAWAYS SURVIVE THE SHIP, AND A SOLO IS HIS OWN DEFINITION OF THE THING HE
+      DOES NOT WANT.** The question *"why are the remaining worst races worse"* was put up for
+      closure on 2026-09-24 as moot, because he watched the worst one — `city-circuit` seed 30, a
+      349 px gap held by THREE — and accepted it. **That disposes of the group-of-three population
+      and nothing else.** Re-counted at the tree over every crossing in
+      `reports/evolution/chase-remainder-data/`: at `quiet` 22 crossings split 12 accepted / **3
+      solo** / 7 pair; at `wild` 5 split 2 / **1 solo** / 2 pair.
+      **The four solos:** `dirt-oval` seed 20 @ 205 px (worst), `ice-track` seed 10 @ 163,
+      `ice-track` seed 23 @ 159, and at `wild` `dirt-oval` seed 3 @ 166. That is **1.0% of races at
+      quiet and 0.3% at wild.**
+      ★ **Needs his eye before it needs any work** — CHASE-REMAINDER-1 refuted the one causal
+      hypothesis anyone had and put nothing in its place, so measuring further without knowing
+      whether a 205 px solo actually bothers him would be guessing at the target.
+
+- [ ] ★ **NINE PAIR BREAKAWAYS ARE BLOCKED ON A RULING THAT DOES NOT EXIST.** Seven at `quiet`
+      (worst: `ice-track` seed 20 @ 214 px) and two at `wild` (`dirt-oval` seed 9 @ 208,
+      `garden-path` seed 13 @ 202). [GLOSSARY.md](GLOSSARY.md) records that **a group of TWO has
+      never been ruled on and must not be interpolated** from the solo / three / more-than-four
+      points. **Until he rules, nobody can say whether these are a problem at all**, so no work on
+      them is possible — this is an item waiting on a sentence, not on effort.
+
+## The viewer-invariants gate is RED on master (2026-09-24)
+
+- [ ] ★★ **INVARIANT 6 FAILS ON MASTER: the winner's crossing is not framed on the winner, on
+      `city-circuit` seed 9.** `node scripts/viewer-invariants.mjs --gate` — the exact command
+      `verify --premerge` spawns (`verify.mjs:427-428`, `GATE_GUARD`) — exits 1 with **17 crossing
+      violation(s) in 1 of 2 races**.
+      **Where they are:** all 17 are `city-circuit` seed 9, shipped arm. `space-sprint` seed 9 is the
+      other race in the gate's scope and contributes **0**. Worst frame **6600**, state
+      **PHOTO_FINISH**: the winner sits at **(0.388, 0.112)** of the frame — outside the subject's
+      inner 0.7 region. At the crossing itself he is at 0.369, 0.275, on canvas, band 100%,
+      corridor 1.62. All seven per-invariant counters (course, leader, line, widthstep, panstep,
+      tootight, toowide) are **0**, so this is the crossing framing alone and nothing else.
+      ★★ **IT IS PRE-EXISTING AND THAT WAS MEASURED, NOT ASSUMED.** NIGHT-2026-09-24D held its merge
+      on this red and suspected it was pre-existing without proving it. Run on both trees with the
+      same command: `feat/night-2026-09-24c` 17 violations in 238 s; **`master` c38ad11c, as a
+      control, 17 violations in 191 s** — identical down to the figures. The night branch did not
+      cause it and merging did not introduce it.
+      ★ **Why nobody noticed:** per-commit `verify` does not route this guard; only
+      `verify --premerge` spawns it, and it costs ~200-340 s for two races.
+      ★ **It is a tracked item now, not a merge blocker.** What it needs is his eye first — whether a
+      winner at the frame edge at PHOTO_FINISH on that one seed is a picture he objects to — because
+      `docs/DEAD-ENDS.md` and the accepted-finish record already carry cases where a framing that
+      fails a bar was accepted. **Do not "fix" it before he has looked.**
+
 ## Delivering to someone else — what still stands (2026-09-24)
 
 ★★ **THIS SECTION EXISTS BECAUSE THE SUBJECTS IN IT WERE NEVER HERE.** NIGHT-2026-09-24 established
@@ -947,13 +986,15 @@ are in PART TWO with what closed them; these are the ones still standing.
       proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
       **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
 
-- [ ] **Nothing records which migrations an instance has already applied.** There is one migration
-      script, `scripts/migrate-teams.mjs`, run by hand. `DEPLOYMENT.md`'s upgrade procedure therefore
-      has to say *"read the migrations section and decide"* at its migration step instead of naming a
-      command. **It is survivable today only because that one script is idempotent** — running it
-      twice is harmless. A future migration that is not idempotent would not be survivable, and
-      nothing would stop it being run twice. Raised by DELIVERY-BACKUP-1 (`616f6ea8`), which
-      deliberately did not build it: a ledger is a second mechanism and was not ordered there.
+- [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
+      (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
+      `<dataRoot>/migrations.json`, applies only pending ids, and REFUSES to run any id twice.
+      `scripts/migrate.test.mjs` covers this with 8 tests, including a SABOTAGE test that stubs the
+      ledger write and proves the double-run guard fires. On an instance that ran the standalone
+      `migrate-teams.mjs` before this runner existed, an observable-state probe reads the DATA
+      (`users.json` state) and backfills the ledger without re-running. `DEPLOYMENT.md` step 6 now
+      names one command instead of "read the migrations section and decide". Verified against the
+      live `server/data/`: `node scripts/migrate.mjs --status` reads `teams-1: backfilled-from-state`.
 
 - [ ] **The browser gate covers 7 of the 19 e2e specs, and does not run on pull requests.** The gate
       itself shipped (PART TWO), so what remains is its SCOPE: the other 12 specs stay night work by
@@ -1626,18 +1667,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-checked — the only `json.tmp` hits in `server/src` are the two test assertions that a `.tmp` does NOT remain after a normal write; there is still no boot sweep and no `.json.tmp` branch in the server's own filter.
 
-- **Q-22b** — TrackEditor draft snapshot, the LOAD-MODE half
-  ★ **Q-22's new-track half CLOSED 2026-09-24 (PART TWO); this is the remainder, split out rather
-  than left implied.** Editing an EXISTING track is not drafted: the draft is written and offered
-  only when the editor was opened without `?load=`. Closing this needs the per-track key Q-22
-  originally specified (`racearena:trackEditor:draft:<serverId>`) so two tracks cannot overwrite each
-  other's draft, and an offer on reopening that track.
-  **Why it was not simply finished in the same pass:** the new-track case loses ALL the work and the
-  load-mode case loses an edit to work that is already saved on the server, so they are not the same
-  severity; and a per-track key is a second storage shape, not a widening of the first.
-  **verify:** `git grep -n "inLoadMode" -- client/src/screens/TrackEditor/TrackEditor.jsx` shows the
-  gate that defines what is left.
-
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
   (image file). If step 1 succeeds and step 2 fails, the user sees a generic
@@ -2042,6 +2071,19 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★★ **Q-22b — editing an existing track is drafted too.** Closed 2026-09-24, the half split out
+      the day before rather than implied. The key is now **per track**, the shape Q-22 specified when
+      it was written: `racearena:trackEditor:draft:new` for a fresh drawing,
+      `…:draft:<serverId>` for an edit.
+      ★ **Why the first half could not just be widened:** a single key cannot hold two tracks' drafts.
+      Open track A, draw, open track B, and B would overwrite A with nothing to say so — which is why
+      the write was gated to new-track mode rather than left to store drafts nobody would ever be
+      offered. With separate keys the gate is gone and both modes draft.
+      ★ A draft written by a pre-Q-22b build is **cleared** on mount rather than left in storage for a
+      week being offered by nothing.
+      **128 editor tests green**, including the one that is the whole point: two tracks' drafts
+      round-trip independently and neither lands in the `new` slot.
+
 ## Small fixes closed by POLISH-2026-09-24B
 
 - [x] **Q-22 (the new-track half) — a crash can no longer lose a hand-drawn track.** Closed
@@ -2114,6 +2156,96 @@ proposal arriving again in six months looking new.
       then raced on a blank backdrop with nobody told why. ★ It is rendered as a HINT and styled
       apart from the error channel, because telling someone their work failed when it did not is its
       own defect.
+
+## Measured and closed by NIGHT-2026-09-24C
+
+- [x] ★★ **"Road edge out of frame" IS NOW A STANDING NUMBER — and it is 77.3%.** Closed 2026-09-24
+      by NIGHT-2026-09-24C piece 1. The instrument the item was waiting for exists:
+      `reports/evolution/road-edge-data/road-edge.mjs`, committed with its data, ten tracks x ten
+      seeds at the SHIPPED `quiet` stage.
+      **195,135 of 252,428 corridor-guarantee frames — 77.3% — have the road edge out of frame.**
+      Per track it runs from **searound 36.2%** to **mountainstreet 97.6%**; the median fraction of
+      the track width that fits is **0.444 on mountainstreet** and 0.482 on river-run, i.e. less than
+      half the road.
+      ★ **Against the control the item argues from** — 45.9% of Mountainstreet frames — today's
+      reading for that track is **97.6%**. ★★ **They are NOT directly comparable and this does not
+      claim a regression**: the control was measured with the corridor guarantee FULLY ACTIVE, this
+      is the shipped configuration, and the two are different worlds. What is now true is that a
+      standing number exists where only an impression did.
+      ★ **The denominator is corridor-guarantee frames only**, because that is the guarantee that
+      promises the road; counting LEADER_ZOOM frames would dilute the rate with frames nobody claimed
+      anything about.
+      ★ **Sabotage passed:** blinding the detector collapses every count to zero (0 corridor frames
+      against 5,298 in the control).
+      ★★ **What it does NOT establish, and why nothing was changed:** the item asked for a NUMBER, and
+      a number is what it got. **Whether 77.3% is bad is not a question this instrument can answer** —
+      the fraction is measured perpendicular to the heading from the anchor, and a viewer's sense of
+      "the road ran off the screen" is not the same quantity. **No camera change of any kind was
+      made.** Any remedy is his.
+
+## Closed by the owner's decisions of 2026-09-23
+
+- [x] **Q-27 — the track backgrounds keep their current quality. DECIDED BY THE OWNER, 2026-09-23.**
+      `river-run` at 9.69 MB stays. The measurement that informed it (POLISH-2026-09-24B §2): **zero
+      image bytes in the client bundle** — 3.49 MB across 52 files, none of them a background — so
+      first paint costs nothing, and the cost is per track when one is chosen: **median 3.61 MB,
+      worst 9.69 MB**, with seatrack 9.53 and mountainstreet 9.32 the only others above 5 MB.
+      ★ The re-spec/drop question that had been open since the item was written is answered: **no
+      re-encoding.** Nothing further is owed here.
+
+- [x] **The group-of-three part of "why are the remaining worst races worse" — SUPERSEDED by the
+      owner's ruling of 2026-09-23.** He watched `city-circuit` seed 30 on the shipped `quiet` stage
+      — the largest gap in 600 measured races, 349 px, held by three — and accepted it; a large gap
+      held by a group of THREE is not the picture he objects to
+      ([GLOSSARY.md](GLOSSARY.md), "breakaway"). **12 of the 22 quiet crossings and 2 of the 5 wild
+      ones are disposed of by that sentence.**
+      ★★ **The rest of the item is NOT closed and is in PART ONE**, because the same population
+      contains four SOLO breakaways — his own definition of the thing he does not want — and nine
+      pairs, which he has explicitly never ruled on. Closing the whole item on his acceptance of a
+      different case would have been exactly the error the last three nights were commissioned to
+      stop.
+
+- [x] ★★ **THE DEPLOYABLE PACKAGE NOW BRINGS EVERYTHING ITSELF — the owner's decision of
+      2026-09-23, built and PROVEN 2026-09-24.** `server/Dockerfile` gained a `client-build` stage
+      that runs `npm ci && npm run build`, so `client/dist` no longer has to be built by hand and
+      handed in through a named build context. `additional_contexts` is gone from
+      `docker-compose.yml` and `--build-context` is no longer needed:
+      **`docker build -f server/Dockerfile .` is enough on its own.**
+      ★ **MEASURED COST, cold cache both times: 328 s before, 336 s after — +8 s, +2.4%.** Far below
+      what the proposal feared ("an npm install of the whole front end on every image build"); the
+      front-end install and Vite build are small against the Alpine native-module compile that
+      already dominated.
+      ★ **PROVEN BY RUNNING IT, not asserted:** built with no named context, `docker run` with no
+      mounts, container reported **Up (healthy)**, `/api/health` 200, `GET /` served an 886-byte
+      index referencing `/assets/index-B1XzFI_w.js`, and that asset returned **934,343 bytes** — the
+      bundle the image built for itself.
+      ★★ **A DEFECT FOUND BY BUILDING IT:** the client is **not self-contained within `client/`**.
+      Four modules import UP into `shared/` — `SetupScreen.jsx`, `PlayerGroupsManager.jsx`,
+      `exportRaceConfig.js` and `raceIdentifier.js`. Copying `client/` alone into a flat workdir put
+      those specifiers above the build root and Vite died with six UNRESOLVED_IMPORT errors. The
+      stage now preserves the repository layout (`/build/client` + `/build/shared`). Found by running
+      it, not by reading it.
+
+- [x] ★★ **`VITE_API_URL` DEFAULTS TO SAME-ORIGIN FOR REAL DEPLOYMENTS, AND HIS 4173 FLOW IS
+      PROVEN UNTOUCHED — his decision of 2026-09-23, built 2026-09-24.** The server now writes its
+      runtime marker on **every** page it serves, not only when `RA_PUBLIC_ORIGIN` is set, and an
+      empty `apiBaseUrl` inside it is a POSITIVE statement of same-origin rather than an absent one.
+      ★ **What was actually broken:** an un-configured server served a page indistinguishable from any
+      other static server's, so the standalone image's client fell back to `http://localhost:4000` —
+      **the recipient's own machine**, not the server's.
+      ★★ **The escape hatch is STRUCTURAL, not a flag, which is why his flows cannot break:** neither
+      of his two local flows is served by our Express app. 5173 is Vite; **4173 is
+      `scripts/serve-production.mjs`, a plain `node:http` static server**. Neither imports
+      `staticClient.js`, so neither ever gets a marker, and both keep falling through to
+      `VITE_API_URL` / `localhost:4000`.
+      ★★★ **PROVEN BY RUNNING BOTH, not asserted.** His 4173 preview, started the way he starts it:
+      `GET /` returned 886 bytes with **NO marker**, and the bundle it serves still carries
+      `http://localhost:4000` baked in, with the API on 4000 answering 200. Our own server on a
+      scratch port with no `RA_PUBLIC_ORIGIN`: `GET /` returned the marker `{"apiBaseUrl":""}` —
+      same-origin — and `/api/health` answered 200 **on that same origin**, so the statement is true.
+      ★ One test changed rather than deleted: *"NOTHING CONFIGURED → the html is returned
+      byte-identical"* asserted exactly the behaviour this decision reverses. It now asserts the new
+      contract, with the old wording quoted above it and why it was right at the time.
 
 ## Delivering to someone else — what CLOSED (2026-09-23/24)
 

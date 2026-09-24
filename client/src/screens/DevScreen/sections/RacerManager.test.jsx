@@ -39,7 +39,7 @@ vi.mock('../../../modules/storage/storage.js', () => ({
 // RACER-TYPES-SPLIT-1: the server half moved out of the registry, so the names that talk to
 // the server are imported (and mocked) from `serverRacerTypes.js`. The registry import below
 // keeps only what it still owns.
-vi.mock('../../../modules/racer-types/index.js', () => ({
+vi.mock('../../../racer-types/index.js', () => ({
   RACER_TYPES: { horse: {}, rocket: {} },
   listAllRacerTypes: mockListAllRacerTypes,
   getRacerTypeLabel: (id) =>
@@ -47,7 +47,7 @@ vi.mock('../../../modules/racer-types/index.js', () => ({
   TUNABLE_FIELDS: ['speedMultiplier'],
   normalizeOverrideMap: vi.fn((v) => v ?? {}),
 }));
-vi.mock('../../../modules/racer-types/serverRacerTypes.js', () => ({
+vi.mock('../../../racer-types/serverRacerTypes.js', () => ({
   removeRacerType: mockRemoveRacerType,
 }));
 

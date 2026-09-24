@@ -11,6 +11,7 @@ import { useRef } from 'react';
 import DynamicsTuningSection from './DynamicsTuningSection.jsx';
 import BehaviorTuningSection from './BehaviorTuningSection.jsx';
 import { resetAutoScaleToDefault } from './raceRelevantReset.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function RaceTuningSection() {
@@ -33,6 +34,7 @@ function RaceTuningSection() {
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}
         >
           <span style={{ fontWeight: 700, fontSize: '1rem' }}>Race Tuning</span>
+          <InfoTooltip text="Composite mount for the two race-physics editors: Dynamics (speed, row layout, race dynamics) and Behavior (racer behavior). The Reset All button covers those two plus autoScale; camera and frame-timing overlays are deliberately untouched." />
           <span className={s.spacer} />
           <button
             className={`${s.btn} ${s.btnGhost}`}

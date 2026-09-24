@@ -38,7 +38,7 @@ const { getRacerType, listAllRacerTypes } = await (async () => {
   console.error = () => {};
   try {
     return await import(
-      pathToFileURL(join(ROOT, "client", "src", "modules", "racer-types", "index.js")).href
+      pathToFileURL(join(ROOT, "client", "src", "racer-types", "index.js")).href
     );
   } finally {
     console.error = re;

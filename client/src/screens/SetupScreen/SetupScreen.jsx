@@ -26,11 +26,7 @@ import {
   DEFAULT_ACTIVE_SESSION,
   DEFAULT_CONFIG_WORLD,
 } from '../../modules/storage/defaults.js';
-import {
-  getRacerType,
-  getRacerTypeLabel,
-  listAllRacerTypes,
-} from '../../modules/racer-types/index.js';
+import { getRacerType, getRacerTypeLabel, listAllRacerTypes } from '../../racer-types/index.js';
 import { filterRacerTypesForTrack } from '../../modules/surface-effects/registry.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import {

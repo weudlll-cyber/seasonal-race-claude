@@ -35,29 +35,34 @@ His call, and it needs his eye afterwards. Re-verified: no code in `client/src/m
 a hero's beats.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · PART TWO decision D14
 
-**4 · The render fingerprint builds its frame camera by hand — order the repair?**
-`scripts/render-fingerprint.mjs` writes a three-member literal instead of using `frameCameraInputs`,
-which five client files do use. The repair moves the hash, so it is a mint and only he can order it.
-→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD
+**4 · ~~The render fingerprint builds its frame camera by hand~~ — ★★ ALREADY DONE, 2026-09-05.**
+The repair landed in `d2f10ab2` (RENDER-CAMERA-FIELDS-1) and is in master; all four fingerprints
+verify today. ★★★ **He ordered a re-mint for it on 2026-09-23 and there was nothing to re-mint** —
+NIGHT-2026-09-24C found the work already done and **minted nothing**, because a fingerprint minted
+with no change behind it would falsify the record. **What is left is the GUARD half** — nothing
+checks that callers build that object through `frameCameraInputs` — and it is in section 2 below.
+→ [BACKLOG.md](BACKLOG.md)
 
 **5 · A race identifier a person can type — short, long, or both?**
 The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
 cannot produce.
 → [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · `reports/evolution/SEED-PARITY-1.md`
 
-**6 · One-command deploy, or keep building the client on the deploy machine?**
-A straight trade, already written up rather than taken: a second Dockerfile stage makes the image
-self-contained at the cost of a slower image build.
-→ `docs/DEPLOY-NOTES.md:63` · `reports/evolution/PUBLISH-STEPS-1.md` step 1
+**6 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
+AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfile` builds its own
+client now and `docker build -f server/Dockerfile .` needs nothing else. Cost measured at **+8 s
+(+2.4%)**, not the large penalty the proposal feared. Proven by running the image with no mounts.
 
-**7 · `VITE_API_URL` for a real deployment — default it to same-origin?**
-Proposed and not closed, because closing it as proposed would break his own port-4173 flow.
-→ `reports/evolution/PUBLISH-STEPS-1.md` step 3
+**7 · ~~`VITE_API_URL` for a real deployment — default it to same-origin?~~** — ★★ **DECIDED AND
+BUILT 2026-09-24.** Our server now marks every page it serves; an empty `apiBaseUrl` means
+same-origin. **His 4173 flow is structurally safe** — it is a plain `node:http` static server that
+never gets a marker — and that was **proven by running it**, not asserted.
 
-**8 · The naturalness envelope is guarded on one side only — add a floor, or say so in the
-document?**
-Nothing shipped goes near the unguarded side, so nothing is broken today. The question is what a
-future dial may do.
+**8 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
+decision of 2026-09-23. `NATURALNESS_FLOOR = 0.8` mirrors the ceiling, and it **refuses a
+configuration** rather than clamping a running race — because clamping the product would have changed
+the shipped `wild` race, whose slow-side breach he ACCEPTED on 2026-08-24. Nothing shipped is
+refused; the three race fingerprints are unmoved.
 → [RACE-ACTION.md](RACE-ACTION.md) §6
 
 **9 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
@@ -89,15 +94,16 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 | ~~Give the track editor a hint when a track is saved with no background~~ — ★ **DONE 2026-09-24 (Q-29)** | done | a HINT, styled apart from the error channel |
 | ~~Make the server's test cleanup survive a Ctrl+C~~ — ★ **DONE 2026-09-24 (Q-20b)** | done | a SIGINT/SIGTERM handler that does the file half and **re-raises the signal** |
 | ~~Sweep `.json.tmp` orphans that survive a OneDrive write failure~~ — ★ **DONE 2026-09-24 (Q-20c)** | done | `server/utils/sweepOrphanTmp.js`, swept at boot before anything is served; 6 tests |
-| ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (new-track half; the load-mode half is **Q-22b** in BACKLOG PART ONE) | done | `trackEditorDraft.js`, 9 tests |
+| ~~Keep a draft of the drawn track geometry so a browser crash cannot lose it~~ — ★ **DONE 2026-09-24** (**both halves now** — Q-22b closed 2026-09-24 with a per-track key) | done | `trackEditorDraft.js`, 9 tests |
 | ~~Protect "a default track cannot be un-defaulted" with a test~~ — ★ **DONE 2026-09-24 (Q-24)** | done | 2 tests, both directions; **the behaviour was already correct — a test gap, not a defect**. Sabotaging `tracks.js:542` turns both red. |
 | ~~Say *which* half failed when a track saves but its background does not~~ — ★ **DONE 2026-09-24 (Q-25)** | done | the upload has its own `try`; the message says the track WAS saved and that Save retries just the image |
-| Share one slider component across three dev-screen sections | small | — |
-| Add tooltips to the fields that have none | small | **corrected below** |
-| Move the racer config folder out of the engine tree | a block | **80 tracked files, not 39** — `git ls-files client/src/modules/racer-types/` |
+| ~~Share one slider component across three dev-screen sections~~ — ★ **DONE 2026-09-24 (PIECE 3b)** | done | `RangeSlider` at `client/src/screens/DevScreen/components/`; three instances collapsed. The count was three INSTANCES across TWO sections; recorded as such |
+| ~~Add tooltips to the fields that have none~~ — ★ **DONE 2026-09-24 (PIECE 3c)** | done | All six named sections (SystemSettings, RaceTuning, ConfigExport, SurfaceClassManager, UserManagement, ChangePassword); reused the existing `InfoTooltip` |
+| ~~Move the racer config folder out of the engine tree~~ — ★ **DONE 2026-09-24 (PIECE 5)** | done | 80 files moved from `client/src/modules/racer-types/` to `client/src/racer-types/`; 29 external importers + 13 scripts re-pathed; RACE HULL stayed at 202 |
 | Pause and resume a running race | a block | — |
+| ~~★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand~~ — ★ **DONE 2026-09-24 (PIECE 6)** | done | `scripts/check-frame-camera-inputs.mjs` scans object keys `anchorRacerIndex:` / `comebackLockedRacerIndex:` / `runInArrived:` outside the ONE home. Sabotage-proven. LOUD-FAILURE rule upheld |
 | ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
-| ★ **Nothing records which migrations an instance has already applied** | a block | added 2026-09-24 by DELIVERY-BACKUP-1 — see below |
+| ~~★ **Nothing records which migrations an instance has already applied**~~ — ★ **DONE 2026-09-24 (PIECE 4)** | done | `scripts/migrate.mjs` + `migrate.test.mjs` (8 tests including sabotage). Runner refuses to run any id twice; observable-state fallback backfills the ledger for instances that ran the standalone script first. `DEPLOYMENT.md` step 6 now names one command |
 
 ★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
 migration script (`scripts/migrate-teams.mjs`), it is run by hand, and **no record exists of what an
@@ -118,6 +124,17 @@ claim meant, but the task is six sections and not one.
 ---
 
 ## 3 · NEEDS HIS EYE
+
+**0 · ★★ THE `viewer-invariants` GATE IS RED ON MASTER — `city-circuit` seed 9.**
+`node scripts/viewer-invariants.mjs --gate` exits 1 with **17 crossing violations in 1 of 2 races**;
+all 17 are city-circuit seed 9 (space-sprint seed 9 contributes 0). Worst frame 6600 at
+PHOTO_FINISH: the winner is at (0.388, 0.112), outside the subject's inner 0.7 region.
+★ **Measured as PRE-EXISTING, not assumed** — master `c38ad11c` gives the same 17 as the night branch
+did, so nothing recent caused it. It is not a merge blocker; it is this row.
+★ **His eye first, before anyone fixes it:** whether a winner at the frame edge at PHOTO_FINISH on
+that one seed is a picture he objects to. This project already has accepted cases of a framing that
+fails a bar.
+→ [BACKLOG.md](BACKLOG.md), "The viewer-invariants gate is RED on master"
 
 *Judgeable only in the browser. The code is in.*
 
@@ -155,13 +172,32 @@ it.
 | what it is | size |
 | --- | --- |
 | Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
-| "Road edge out of frame" as a standing number rather than an impression | a night — the instrument does not exist |
+| ~~"Road edge out of frame" as a standing number~~ — ★★ **DONE 2026-09-24: it is 77.3%** | done | 195,135 of 252,428 corridor frames over 10 tracks x 10 seeds; searound 36.2% to mountainstreet 97.6%. The instrument is committed with its data. **Whether 77.3% is bad is his eye, not this number** |
 | Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
-| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **MEASURED: it costs NOTHING at first paint** | **zero image bytes in the bundle** (3.49 MB total). The cost is per track: median 3.61 MB, **worst 9.69 MB**. Still open as a **decision** (re-encode?), not a measurement |
-| Why the remaining worst races are worse, now that the obvious cause is refuted | a night |
+| ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **CLOSED: measured, then DECIDED by the owner 2026-09-23 — the backgrounds KEEP their quality** | zero image bytes in the bundle; per-track median 3.61 MB, worst 9.69 MB (`river-run`), which **stays**. No re-encoding. |
+| ★★ **NARROWED 2026-09-24, NOT closed — and the conditional in the brief FIRED.** The group-of-three part is superseded by the owner's ruling of 2026-09-23; what remains is **4 SOLO breakaways and 9 PAIRS** | see below |
 
-★ The last row is new tonight: CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races
-are chasers who overshot, and put nothing in its place.
+★★★ **THE "WHY ARE THE WORST RACES WORSE" ITEM WAS NOT CLOSED AS MOOT, BECAUSE IT IS NOT.** It was
+put up for closure on the grounds that the owner watched the worst race — `city-circuit` seed 30, a
+349 px gap held by THREE — and accepted it (2026-09-23, [GLOSSARY.md](GLOSSARY.md)). That disposes of
+the group-of-three population and nothing else. Re-counted at the tree over every crossing in
+`reports/evolution/chase-remainder-data/`:
+
+| | quiet (22 crossings) | wild (5) |
+|---|---|---|
+| group ≥ 3 — **accepted by his ruling** | 12 | 2 |
+| ★ **SOLO (group 1) — the picture he DOES object to** | **3** | **1** |
+| ★ **PAIR (group 2) — explicitly UNDEFINED, never ruled on** | **7** | **2** |
+
+★ **The four solos, named so they can be watched:** `dirt-oval` seed 20 @ 205 px (the worst),
+`ice-track` seed 10 @ 163, `ice-track` seed 23 @ 159, and at wild `dirt-oval` seed 3 @ 166.
+**A solo at 205 px is his own definition of the thing he does not want**, and it survives the ship at
+3 of 300 (1.0%) at quiet and 1 of 300 (0.3%) at wild.
+★ **The nine pairs are blocked on a ruling that does not exist** — the glossary says the pair case has
+never been decided and must not be interpolated, so nobody can say whether they are a problem.
+
+★ CHASE-REMAINDER-1 refuted the hypothesis that the remaining ugly races are chasers who overshot,
+and put nothing in its place.
 
 ---
 

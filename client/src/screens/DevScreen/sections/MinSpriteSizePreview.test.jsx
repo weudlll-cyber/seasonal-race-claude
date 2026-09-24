@@ -11,14 +11,14 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../modules/racer-types/spriteTinter.js', () => {
+vi.mock('../../../racer-types/spriteTinter.js', () => {
   const getCoatVariants = vi.fn().mockResolvedValue(new Map());
   getCoatVariants.cached = vi.fn();
   return { getCoatVariants };
 });
 
 import { MinSpriteSizePreview } from './MinSpriteSizePreview.jsx';
-import { getCoatVariants } from '../../../modules/racer-types/spriteTinter.js';
+import { getCoatVariants } from '../../../racer-types/spriteTinter.js';
 
 // Minimal SpriteRacerType-shaped config used across all tests.
 function makeRacerType(overrides = {}) {

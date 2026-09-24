@@ -12,10 +12,10 @@
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../modules/racer-types/useRacersReady.js', () => ({ useRacersReady: vi.fn() }));
+vi.mock('../racer-types/useRacersReady.js', () => ({ useRacersReady: vi.fn() }));
 
 import RacersReadyGate from './RacersReadyGate.jsx';
-import { useRacersReady } from '../modules/racer-types/useRacersReady.js';
+import { useRacersReady } from '../racer-types/useRacersReady.js';
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -181,43 +181,6 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceParams.js` | ONE-HOME-RACE-PARAMS-1 — the sprite geometry every `createRaceFromIdentity` caller has to derive before it can call. |
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
 | `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
-| `modules/racer-types/BeetleRacerType.js` | VW Beetle racer — SpriteRacerType configuration. |
-| `modules/racer-types/BoarderRacerType.js` | Skateboarder racer — SpriteRacerType configuration. |
-| `modules/racer-types/BuggyRacerType.js` | Buggy racer — SpriteRacerType configuration with mask-tinting. |
-| `modules/racer-types/DolphinRacerType.js` | Dolphin racer — SpriteRacerType with body+mask rendering. |
-| `modules/racer-types/DragonRacerType.js` | Dragon racer — SpriteRacerType configuration. |
-| `modules/racer-types/DuckRacerType.js` | Duck racer — SpriteRacerType configuration. |
-| `modules/racer-types/ElephantRacerType.js` | Elephant racer — SpriteRacerType configuration. |
-| `modules/racer-types/F1RacerType.js` | F1 racer — SpriteRacerType configuration. |
-| `modules/racer-types/GiraffeRacerType.js` | Giraffe racer — SpriteRacerType configuration. |
-| `modules/racer-types/HorseRacerType.js` | Horse racer — SpriteRacerType configuration. |
-| `modules/racer-types/KoiRacerType.js` | Koi fish racer — SpriteRacerType with per-coat pattern masks. |
-| `modules/racer-types/LugeRacerType.js` | Luge racer — SpriteRacerType configuration. |
-| `modules/racer-types/MantaRacerType.js` | Manta ray racer — SpriteRacerType with body+mask rendering. |
-| `modules/racer-types/MotorbikeRacerType.js` | Motorbike racer — SpriteRacerType configuration with mask-tinting. |
-| `modules/racer-types/PlaneRacerType.js` | Plane racer — SpriteRacerType configuration with mask-tinting. |
-| `modules/racer-types/RocketRacerType.js` | Rocket racer — SpriteRacerType configuration. |
-| `modules/racer-types/SnailRacerType.js` | Snail racer — SpriteRacerType configuration. |
-| `modules/racer-types/SnakeRacerType.js` | Snake racer — SpriteRacerType configuration. |
-| `modules/racer-types/SnowmobileRacerType.js` | Snowmobile racer — SpriteRacerType with multiply tinting. |
-| `modules/racer-types/SpriteRacerType.js` | **UNKNOWN** — the file's header states no purpose |
-| `modules/racer-types/TurtleRacerType.js` | Turtle racer — SpriteRacerType with dual-mask shell rendering. |
-| `modules/racer-types/beetleCoats.js` | 1970s-era VW Beetle color palette. |
-| `modules/racer-types/boarderCoats.js` | Street/skate culture color palette for the boarder racer. |
-| `modules/racer-types/coatAssignment.js` | Deterministic coat and pattern assignment. |
-| `modules/racer-types/dolphinCoats.js` | 18 dolphin coats using the body+mask system. |
-| `modules/racer-types/genericDustTrail.js` | Generic dust-particle trail factory for new racer types. |
-| `modules/racer-types/index.js` | Factory + registry for all racer-type modules. |
-| `modules/racer-types/koiCoats.js` | 16 koi color coats, grouped by pattern style. |
-| `modules/racer-types/lugeCoats.js` | Winter coat palette for the luge racer type. |
-| `modules/racer-types/mantaCoats.js` | 9 manta ray coats using the body+mask system. |
-| `modules/racer-types/racerWarmup.js` | Shared sprite warm-up for racer type configs. |
-| `modules/racer-types/snowmobileCoats.js` | 16 snowmobile coats for multiply tinting. |
-| `modules/racer-types/spriteLoader.js` | Module-level sprite image cache, keyed by URL. |
-| `modules/racer-types/spriteTinter.js` | Offscreen canvas tinting for sprite coat variants. |
-| `modules/racer-types/standardCoats.js` | Standard 20-coat palette for vehicle racer types. |
-| `modules/racer-types/trailStyles.js` | Named trail style registry for user-created racer types. |
-| `modules/racer-types/turtleCoats.js` | 18 turtle shell coats using the dual-mask system. |
 | `modules/racerNames.js` | THE quick-test roster. |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
 | `modules/rowLayoutConfig.js` | Storage CRUD for D7c row-start layout config. |
@@ -246,6 +209,43 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/trackLights.js` | Track boundary light system — sampling, animation, rendering. |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
 | `modules/viewerProbe.js` | VIEWER-INVARIANTS-1 |
+| `racer-types/BeetleRacerType.js` | VW Beetle racer — SpriteRacerType configuration. |
+| `racer-types/BoarderRacerType.js` | Skateboarder racer — SpriteRacerType configuration. |
+| `racer-types/BuggyRacerType.js` | Buggy racer — SpriteRacerType configuration with mask-tinting. |
+| `racer-types/DolphinRacerType.js` | Dolphin racer — SpriteRacerType with body+mask rendering. |
+| `racer-types/DragonRacerType.js` | Dragon racer — SpriteRacerType configuration. |
+| `racer-types/DuckRacerType.js` | Duck racer — SpriteRacerType configuration. |
+| `racer-types/ElephantRacerType.js` | Elephant racer — SpriteRacerType configuration. |
+| `racer-types/F1RacerType.js` | F1 racer — SpriteRacerType configuration. |
+| `racer-types/GiraffeRacerType.js` | Giraffe racer — SpriteRacerType configuration. |
+| `racer-types/HorseRacerType.js` | Horse racer — SpriteRacerType configuration. |
+| `racer-types/KoiRacerType.js` | Koi fish racer — SpriteRacerType with per-coat pattern masks. |
+| `racer-types/LugeRacerType.js` | Luge racer — SpriteRacerType configuration. |
+| `racer-types/MantaRacerType.js` | Manta ray racer — SpriteRacerType with body+mask rendering. |
+| `racer-types/MotorbikeRacerType.js` | Motorbike racer — SpriteRacerType configuration with mask-tinting. |
+| `racer-types/PlaneRacerType.js` | Plane racer — SpriteRacerType configuration with mask-tinting. |
+| `racer-types/RocketRacerType.js` | Rocket racer — SpriteRacerType configuration. |
+| `racer-types/SnailRacerType.js` | Snail racer — SpriteRacerType configuration. |
+| `racer-types/SnakeRacerType.js` | Snake racer — SpriteRacerType configuration. |
+| `racer-types/SnowmobileRacerType.js` | Snowmobile racer — SpriteRacerType with multiply tinting. |
+| `racer-types/SpriteRacerType.js` | **UNKNOWN** — the file's header states no purpose |
+| `racer-types/TurtleRacerType.js` | Turtle racer — SpriteRacerType with dual-mask shell rendering. |
+| `racer-types/beetleCoats.js` | 1970s-era VW Beetle color palette. |
+| `racer-types/boarderCoats.js` | Street/skate culture color palette for the boarder racer. |
+| `racer-types/coatAssignment.js` | Deterministic coat and pattern assignment. |
+| `racer-types/dolphinCoats.js` | 18 dolphin coats using the body+mask system. |
+| `racer-types/genericDustTrail.js` | Generic dust-particle trail factory for new racer types. |
+| `racer-types/index.js` | Factory + registry for all racer-type modules. |
+| `racer-types/koiCoats.js` | 16 koi color coats, grouped by pattern style. |
+| `racer-types/lugeCoats.js` | Winter coat palette for the luge racer type. |
+| `racer-types/mantaCoats.js` | 9 manta ray coats using the body+mask system. |
+| `racer-types/racerWarmup.js` | Shared sprite warm-up for racer type configs. |
+| `racer-types/snowmobileCoats.js` | 16 snowmobile coats for multiply tinting. |
+| `racer-types/spriteLoader.js` | Module-level sprite image cache, keyed by URL. |
+| `racer-types/spriteTinter.js` | Offscreen canvas tinting for sprite coat variants. |
+| `racer-types/standardCoats.js` | Standard 20-coat palette for vehicle racer types. |
+| `racer-types/trailStyles.js` | Named trail style registry for user-created racer types. |
+| `racer-types/turtleCoats.js` | 18 turtle shell coats using the dual-mask system. |
 | `screens/RaceScreen/BattleDiagHUD.jsx` | BATTLE diagnostics overlay for the DevPanel. |
 | `screens/RaceScreen/BrandLogoOverlay.jsx` | Bottom-right corner logo overlay — shows the active branding profile's logo image during a race. |
 | `screens/RaceScreen/CameraDiagnosticsHUD.jsx` | Live camera diagnostics overlay (Tier-2 toggle in Dev Panel). |

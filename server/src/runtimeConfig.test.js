@@ -120,9 +120,30 @@ describe('the injected script', () => {
     expect(out).toContain('<div>shell</div>');
   });
 
-  it('★ NOTHING CONFIGURED → the html is returned byte-identical', () => {
+  // ★★ THIS TEST ASSERTED THE OPPOSITE UNTIL 2026-09-24, and the replacement is the owner's
+  // decision of 2026-09-23 rather than a fix. It read:
+  //
+  //     it('★ NOTHING CONFIGURED → the html is returned byte-identical', ...)
+  //
+  // which was the correct contract while an un-configured server was indistinguishable from any
+  // other static server. That indistinguishability WAS the defect: the standalone image served a
+  // page with no marker, so the client fell back to `http://localhost:4000` — the recipient's own
+  // machine. The marker is now always written, and an empty `apiBaseUrl` POSITIVELY states
+  // same-origin.
+  it('★★ NOTHING CONFIGURED → the marker is STILL written, declaring same-origin', () => {
     const html = '<html><head></head><body></body></html>';
-    expect(injectRuntimeConfig(html, null)).toBe(html);
-    expect(injectRuntimeConfig(html, '')).toBe(html);
+    for (const origin of [null, undefined, '']) {
+      const out = injectRuntimeConfig(html, origin);
+      expect(out).not.toBe(html);
+      expect(out).toContain(RUNTIME_CONFIG_GLOBAL);
+      // an EMPTY apiBaseUrl is the same-origin statement — not an absent one
+      expect(out).toMatch(/"apiBaseUrl":""/);
+    }
+  });
+
+  it('★ a configured origin still wins over same-origin', () => {
+    const html = '<html><head></head><body></body></html>';
+    const out = injectRuntimeConfig(html, 'https://races.example.com');
+    expect(out).toContain('"apiBaseUrl":"https://races.example.com"');
   });
 });

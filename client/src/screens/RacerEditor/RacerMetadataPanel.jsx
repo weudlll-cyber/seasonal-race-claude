@@ -9,7 +9,7 @@
 // ============================================================
 
 import { useSurfaceClasses } from '../../modules/surface-effects/useSurfaceClasses.js';
-import { listTrailStyles } from '../../modules/racer-types/trailStyles.js';
+import { listTrailStyles } from '../../racer-types/trailStyles.js';
 import s from './RacerEditor.module.css';
 
 const TRAIL_LABELS = {

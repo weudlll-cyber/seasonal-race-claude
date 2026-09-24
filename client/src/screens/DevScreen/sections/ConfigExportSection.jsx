@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { buildWorldConfig, worldStatus } from '../../../modules/exportRaceConfig.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 
 function ConfigExportSection() {
   const [status, setStatus] = useState(() => worldStatus());
@@ -56,7 +57,8 @@ function ConfigExportSection() {
     <div style={{ padding: '0.5rem 0' }}>
       <p style={{ fontSize: '0.88rem', color: '#bbb', marginTop: 0 }}>
         Exports the config the game actually reads when a race starts — so a sim run can be checked
-        against <em>your</em> world, not an assumed one. Nothing here changes the race.
+        against <em>your</em> world, not an assumed one. Nothing here changes the race.{' '}
+        <InfoTooltip text="Read-only stage 0 export. Produces world.json — the shape sim-fairness.mjs consumes — hashes it, and lists any deviation from shipped defaults so nobody has to remember whether a setting was changed." />
       </p>
 
       <div
@@ -69,9 +71,11 @@ function ConfigExportSection() {
         >
           Export race config
         </button>
+        <InfoTooltip text="Downloads world.json and copies its contents to the clipboard as a best-effort convenience. The world hash to the right is recomputed from what was actually written." />
         <span style={chip} data-testid="world-hash">
           world: {hashShort}
         </span>
+        <InfoTooltip text="Short hash of the exported world config. Two exports with the same hash race the same. Also used to name the pinned golden fixtures." />
         <button
           onClick={refresh}
           style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}

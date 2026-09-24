@@ -6,7 +6,7 @@
 // Description: Shared canvas drawing utilities for the Racer Editor.
 // ============================================================
 
-import { computeOpaqueBoundingBox } from '../../modules/racer-types/backgroundRemoval.js';
+import { computeOpaqueBoundingBox } from '../../racer-types/backgroundRemoval.js';
 
 export function drawCheckerboard(ctx, width, height, tileSize = 8) {
   for (let y = 0; y < height; y += tileSize) {

@@ -25,6 +25,7 @@ import {
   exportBrandSeed,
 } from '../../../services/brandApi.js';
 import { DefaultControls } from '../components/DefaultControls.jsx';
+import { RangeSlider } from '../components/RangeSlider.jsx';
 import { syncBrandingMirror } from '../../../modules/branding/brandingSync.js';
 import s from '../DevScreen.module.css';
 
@@ -512,37 +513,31 @@ function BrandingProfiles() {
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Logo Size</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="range"
-                  min={40}
-                  max={160}
-                  step={4}
-                  value={form.logoMaxHeight}
-                  onChange={(e) => f('logoMaxHeight', Number(e.target.value))}
-                  style={{ flex: 1 }}
-                />
+              <RangeSlider
+                min={40}
+                max={160}
+                step={4}
+                value={form.logoMaxHeight}
+                onChange={(e) => f('logoMaxHeight', Number(e.target.value))}
+              >
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', minWidth: '3rem' }}>
                   {form.logoMaxHeight}px
                 </span>
-              </div>
+              </RangeSlider>
             </div>
             <div className={s.formGroup}>
               <label className={s.label}>Logo Opacity</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={form.logoOpacity}
-                  onChange={(e) => f('logoOpacity', Number(e.target.value))}
-                  style={{ flex: 1 }}
-                />
+              <RangeSlider
+                min={0}
+                max={1}
+                step={0.05}
+                value={form.logoOpacity}
+                onChange={(e) => f('logoOpacity', Number(e.target.value))}
+              >
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', minWidth: '3rem' }}>
                   {Math.round(form.logoOpacity * 100)}%
                 </span>
-              </div>
+              </RangeSlider>
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>

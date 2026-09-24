@@ -19,6 +19,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import styles from '../../Auth/Auth.module.css';
 
 function ChangePasswordSection() {
@@ -70,7 +71,8 @@ function ChangePasswordSection() {
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="cp-current">
-          Current password
+          Current password{' '}
+          <InfoTooltip text="Your existing password. Verified by the server; a wrong value returns the same error the login screen uses." />
         </label>
         <input
           id="cp-current"
@@ -84,7 +86,8 @@ function ChangePasswordSection() {
 
       <div className={styles.field} style={{ marginTop: '0.5rem' }}>
         <label className={styles.label} htmlFor="cp-new">
-          New password
+          New password{' '}
+          <InfoTooltip text="The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here." />
         </label>
         <input
           id="cp-new"
@@ -98,7 +101,8 @@ function ChangePasswordSection() {
 
       <div className={styles.field} style={{ marginTop: '0.5rem' }}>
         <label className={styles.label} htmlFor="cp-confirm">
-          Repeat new password
+          Repeat new password{' '}
+          <InfoTooltip text="Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit." />
         </label>
         <input
           id="cp-confirm"

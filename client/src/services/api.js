@@ -62,10 +62,23 @@ export const RUNTIME_CONFIG_GLOBAL = '__RA_RUNTIME_CONFIG__';
  */
 function runtimeApiBaseUrl() {
   if (typeof globalThis === 'undefined') return undefined;
-  const value = globalThis[RUNTIME_CONFIG_GLOBAL]?.apiBaseUrl;
+  const cfg = globalThis[RUNTIME_CONFIG_GLOBAL];
+  const value = cfg?.apiBaseUrl;
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim().replace(/\/+$/, '');
-  return trimmed === '' ? undefined : trimmed;
+  // ★★ AN EMPTY STRING IS NOT "UNCONFIGURED" ANY MORE — IT IS SAME-ORIGIN, and the difference is the
+  // whole of the owner's decision of 2026-09-23.
+  //
+  // The marker is written ONLY by our own server (`server/src/staticClient.js`), and since that date
+  // it is written on every page that server serves. So its PRESENCE means "RaceArena served this
+  // page", and an empty `apiBaseUrl` within it means "...and the API is on this page's own origin".
+  // Returning `''` makes every caller's `${API_BASE_URL}/api/…` a relative URL, which is correct for
+  // the standalone image and for any real deployment behind one address.
+  //
+  // ★ Absent global → `undefined` → falls through to the build-time value and then to
+  // `localhost:4000`. That is the path the owner's 5173 dev server and 4173 preview take, because
+  // neither is served by our Express app, and it is unchanged.
+  return trimmed;
 }
 
 /**

@@ -88,6 +88,22 @@ server/utils/**/*.test.js
 # `raceStore.js` and `shortKey.js` had been importing from `client/src/**`, which this file excludes
 # on purpose, so the image could not start at all. `scripts/check-image-starts.mjs` is the check
 # that now catches it; keeping the list per file is what makes each entry a decision.
+# ★★ THE CLIENT SOURCE, for the in-image build stage (the owner's decision, 2026-09-23).
+# The image builds its own client now, so the front end's source has to reach the build context.
+# `client/node_modules` and `client/dist` stay EXCLUDED: the stage runs its own `npm ci`, and
+# shipping a host-built `dist` or a host's node_modules would defeat the point of building it here
+# (and would put ~1 GB back into the context this allow-list exists to keep small).
+!client/package.json
+!client/package-lock.json
+!client/index.html
+!client/vite.config.js
+!client/vite-plugin-ra-build.js
+!client/src/**
+!client/public/**
+# The client imports UP into shared/ (four modules); the whole directory is already allowed below
+# for the server, and the client-build stage needs the same files.
+!shared/**
+
 !shared/nameLimits.mjs
 !shared/canonicalJson.mjs
 !shared/raceShortKey.mjs

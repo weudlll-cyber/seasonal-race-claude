@@ -16,6 +16,7 @@ import {
 } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_DEFAULTS, DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
+import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const APP_VERSION = '0.1.0';
@@ -97,7 +98,10 @@ function SystemSettings() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Backup */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Backup &amp; Restore</p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+          Backup &amp; Restore{' '}
+          <InfoTooltip text="Round-trips every key in localStorage — tracks, racers, groups, branding, history, and all tuning configs. The exported JSON is versionless and imported by deep-merge: a key the file omits is left as-is." />
+        </p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Export all settings (tracks, racers, groups, branding, history) to a JSON file, or restore
           from a previous backup.
@@ -124,7 +128,10 @@ function SystemSettings() {
 
       {/* Diagnostic Snapshot */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Diagnostic Snapshot</p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+          Diagnostic Snapshot{' '}
+          <InfoTooltip text="Downloads a JSON of the browser's current localStorage — every tuning key, every track geometry override, every camera config. Attach to a bug report so the state that produced the bug can be reproduced elsewhere." />
+        </p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Exports all localStorage data including track geometries (
           <code style={{ fontSize: '0.75rem' }}>racearena:trackGeometries:*</code>) and all tuning
@@ -139,7 +146,10 @@ function SystemSettings() {
 
       {/* Reset */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Factory Reset</p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+          Factory Reset{' '}
+          <InfoTooltip text="Wipes every localStorage key and re-seeds RACE_DEFAULTS and RACE_HISTORY. Tracks, brands and player groups now live on the server and are NOT re-seeded here; a wipe only clears any local override of them." />
+        </p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Wipes all saved settings and restores the 5 built-in tracks, 5 built-in racers, and all
           default values. Use with caution.
@@ -151,7 +161,10 @@ function SystemSettings() {
 
       {/* Version */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>About</p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+          About{' '}
+          <InfoTooltip text="Read-only build facts: the app name, the version string this file holds, the client framework, and the storage backend the browser uses for settings." />
+        </p>
         <table style={{ fontSize: '0.8rem', borderCollapse: 'collapse' }}>
           <tbody>
             {[

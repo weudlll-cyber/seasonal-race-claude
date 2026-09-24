@@ -146,7 +146,12 @@ export function assertPublicOriginUsable(env = process.env) {
  * @returns {string}
  */
 export function runtimeConfigScript(origin) {
-  const payload = JSON.stringify({ apiBaseUrl: origin }).replace(/</g, '\\u003c');
+  // ★★ THE MARKER IS WRITTEN EVEN WITH NO ORIGIN (the owner's decision, 2026-09-23: same-origin by
+  // default for real deployments). `apiBaseUrl: ''` is not "unconfigured" — it is a POSITIVE
+  // statement that this page was served by the RaceArena server and the API is on the page's own
+  // origin. The client can only tell "our server, nothing configured" from "somebody else's static
+  // server" if our server says so, and this is it saying so.
+  const payload = JSON.stringify({ apiBaseUrl: origin ?? '' }).replace(/</g, '\\u003c');
   return `<script>window.${RUNTIME_CONFIG_GLOBAL}=${payload};</script>`;
 }
 
@@ -162,8 +167,10 @@ export function runtimeConfigScript(origin) {
  * @returns {string}
  */
 export function injectRuntimeConfig(html, origin) {
-  if (!origin) return html;
-  const script = runtimeConfigScript(origin);
+  // ★ `origin` may be null — that is the SAME-ORIGIN case and it is injected, not skipped. This used
+  // to `return html` unchanged, which is what left a standalone image's page indistinguishable from
+  // a page served by any other static server.
+  const script = runtimeConfigScript(origin ?? null);
   const headOpen = /<head(\s[^>]*)?>/i;
   if (headOpen.test(html)) return html.replace(headOpen, (m) => `${m}${script}`);
   return script + html;

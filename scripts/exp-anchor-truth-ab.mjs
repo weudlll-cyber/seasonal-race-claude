@@ -101,7 +101,7 @@ const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
   try {
-    return await import(u("client/src/modules/racer-types/index.js"));
+    return await import(u("client/src/racer-types/index.js"));
   } finally {
     console.error = re;
   }
