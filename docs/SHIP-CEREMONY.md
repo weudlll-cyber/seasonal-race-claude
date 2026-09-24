@@ -817,11 +817,35 @@ went missing).
       whole run-in, so the arm exercises the window machinery — the window test, the frame loop and
       the event path — on every in-window frame. Its 739 is the two races' 737 in-window frames plus
       their 2 crossing frames, which is what makes it a coverage measurement and not just a red
-      light. **What still has no sabotage arm are the five ORIGINAL window invariants**, and in the
-      gate's own scope they have never been observed red — the violations both 80-race sweeps found
-      sit at seed 2, which the gate does not run. So those five remain a REGRESSION NET whose red has
-      not been demonstrated at this scope, and that is a known gap, not a settled question
-      (Lesson 209).
+      light.
+
+      ★★ **THE FIVE OLDER INVARIANTS NOW HAVE SABOTAGE ARMS TOO (VIEWER-INVARIANT-SABOTAGE-1,
+      2026-09-25).** Five new flags reuse the sessionStorage channel `--sabotage-corner` uses and
+      each forces its invariant across the threshold **at the check itself**, so the spine scan,
+      the canvas test, the band scan, the step compute and the width compute all still run on every
+      armed frame. Measured on the same two-race scope, shipped arm, seed 9:
+
+      | flag                    | exit | races red | violations | which invariant | worst by | wall clock |
+      | ----------------------- | :--: | :-------: | ---------: | --------------- | -------: | ---------: |
+      | `--sabotage-course`     |   1  | 2 of 2    |     12 650 | 1-course        | 0.0      |     170 s  |
+      | `--sabotage-leader`     |   1  | 2 of 2    |        737 | 2-leader        | 1000 px  |     172 s  |
+      | `--sabotage-line`       |   1  | 2 of 2    |        737 | 3-line          | 100 px   |     167 s  |
+      | `--sabotage-panstep`    |   1  | 2 of 2    |     12 648 | 4-panstep       | 1281 px  |     171 s  |
+      | `--sabotage-toowide`    |   1  | 2 of 2    |     12 651 | 5-toowide       | 1000 wpx |     171 s  |
+      | CLEAN (revert)          |   0  | 0 of 2    |          0 | (every kind 0)  | —        |     172 s  |
+
+      Each arm's count matches the number of frames its invariant grades on this scope: invariants 1,
+      4 and 5 are graded on every frame (~12 650); invariants 2 and 3 are window-scoped, and their
+      737 is the same 737 in-window frames the corner arm reaches. No arm reddens any other
+      invariant — the leader arm displaces `LX/LY` at 2's check only, so 6's frame-fraction test
+      still sees the real point. The default `--gate` still exits 0. Full write-up:
+      [VIEWER-INVARIANT-SABOTAGE-1](../reports/evolution/VIEWER-INVARIANT-SABOTAGE-1.md).
+
+      **What still remains a REGRESSION NET at this scope**, and is a narrower gap than before: at
+      seed 9 on these two tracks the shipped world produces 0 events of any old-invariant kind
+      naturally, and the arms above prove the MACHINERY reacts on demand rather than manufacturing a
+      real-world red where none exists. The events both 80-race sweeps found sit at seed 2, which
+      the gate does not run (Lesson 209 stands, narrowed).
 
       **WHAT THE TWO-RACE SCOPE NO LONGER COVERS:** the eight other tracks' own geometry, and any
       per-track drift that stays WITHIN the envelope these two define. A defect needing one of those

@@ -131,6 +131,18 @@ let _sheet = null;
 let _dump = null;
 /** `--sabotage-corner`: force the leader outside the region, to prove invariant 6 can still fail. */
 let _sabCorner = false;
+// ── SABOTAGE ARMS FOR THE FIVE OLD WINDOW INVARIANTS (VIEWER-INVARIANT-SABOTAGE-1) ──────────────
+//
+// Same shape as `_sabCorner` and read from the same sessionStorage channel that `--dump` uses. Each
+// arm forces its own invariant across the threshold AT the check, so the machinery either side of
+// the threshold — the spine loop, the canvas test, the band scan, the step compute, the width
+// compute — still runs on every armed frame. An arm that could only fire by short-circuiting the
+// machinery would prove nothing about the machinery. Off unless armed; the gate never sets them.
+let _sabCourse = false; // arms invariant 1: force `courseIn = false` after the spine loop
+let _sabLeader = false; // arms invariant 2: displace the leader off canvas in the window
+let _sabLine = false; // arms invariant 3: force the finish band's margin negative in the window
+let _sabPanStep = false; // arms invariant 4: force a whole-canvas pan step between frames
+let _sabTooWide = false; // arms invariant 5: force the picture wider than the world itself
 
 /**
  * Begin recording. Called once per race from RaceScreen; clears anything a previous race left.
@@ -171,6 +183,17 @@ export function beginViewerProbe(run) {
     _sabCorner = sessionStorage.getItem('_ra_viewersabcorner') === '1';
   } catch {
     _sabCorner = false;
+  }
+  // The five old-invariant arms travel the same route. Read once at the start of a run so they cannot
+  // flip mid-race and a red event has one clear cause.
+  try {
+    _sabCourse = sessionStorage.getItem('_ra_viewersabcourse') === '1';
+    _sabLeader = sessionStorage.getItem('_ra_viewersableader') === '1';
+    _sabLine = sessionStorage.getItem('_ra_viewersabline') === '1';
+    _sabPanStep = sessionStorage.getItem('_ra_viewersabpanstep') === '1';
+    _sabTooWide = sessionStorage.getItem('_ra_viewersabtoowide') === '1';
+  } catch {
+    _sabCourse = _sabLeader = _sabLine = _sabPanStep = _sabTooWide = false;
   }
 }
 
@@ -244,6 +267,9 @@ export function recordViewerFrame(f) {
       break;
     }
   }
+  // ARM: `--sabotage-course` forces invariant 1 to trip after the spine loop has run in full, so the
+  // sabotage exercises the spine scan AND the event path without weakening the invariant itself.
+  if (_sabCourse) courseIn = false;
   if (!courseIn) {
     // How far away it is, so the event says by HOW MUCH and not merely that it happened.
     let best = Infinity;
@@ -298,13 +324,18 @@ export function recordViewerFrame(f) {
   for (const r of f.racers) if (r.t > lead.t) lead = r;
   const LX = sx(lead);
   const LY = sy(lead);
-  if (inWindow && !onCanvas(LX, LY)) {
-    const dx = LX < 0 ? -LX : LX > CW ? LX - CW : 0;
-    const dy = LY < 0 ? -LY : LY > CH ? LY - CH : 0;
+  // ARM: `--sabotage-leader` displaces the leader OFF canvas at THIS check only, so invariant 6's
+  // frame-fraction test below still sees the true LX/LY. The onCanvas test and the distance
+  // computation run against the sabotaged pair, exercising both.
+  const LXsab2 = _sabLeader ? -1000 : LX;
+  const LYsab2 = _sabLeader ? LY : LY;
+  if (inWindow && !onCanvas(LXsab2, LYsab2)) {
+    const dx = LXsab2 < 0 ? -LXsab2 : LXsab2 > CW ? LXsab2 - CW : 0;
+    const dy = LYsab2 < 0 ? -LYsab2 : LYsab2 > CH ? LYsab2 - CH : 0;
     const d = Math.hypot(dx, dy);
     add(
       '2-leader',
-      `the leader is ${Math.round(d)} px outside the canvas at (${Math.round(LX)}, ${Math.round(LY)})`,
+      `the leader is ${Math.round(d)} px outside the canvas at (${Math.round(LXsab2)}, ${Math.round(LYsab2)})`,
       d
     );
   }
@@ -362,11 +393,14 @@ export function recordViewerFrame(f) {
       const m = Math.min(HX - Math.abs(sx(w) - CW / 2), HY - Math.abs(sy(w) - CH / 2));
       if (m > band) band = m;
     }
-    if (band < 0)
+    // ARM: `--sabotage-line` forces the band's best margin negative after the scan has run in full,
+    // so the sampling loop, the projection and `getPosition` all still execute on the sabotaged run.
+    const bandSab = _sabLine ? -100 : band;
+    if (bandSab < 0)
       add(
         '3-line',
-        `no part of the finish band is inside the frame region; nearest is ${Math.round(-band)} px outside`,
-        -band
+        `no part of the finish band is inside the frame region; nearest is ${Math.round(-bandSab)} px outside`,
+        -bandSab
       );
   }
 
@@ -380,11 +414,15 @@ export function recordViewerFrame(f) {
         dLn
       );
     const dPan = Math.hypot(f.offsetX - _prev.offsetX, f.offsetY - _prev.offsetY);
-    if (dPan >= CW)
+    // ARM: `--sabotage-panstep` forces the pan step past the canvas-width threshold. The hypot is
+    // computed on the real deltas above, then substituted here so the event carries the sabotage
+    // value and the same code path is exercised for the report.
+    const dPanSab = _sabPanStep ? CW + 1 : dPan;
+    if (dPanSab >= CW)
       add(
         '4-panstep',
-        `the picture moved ${Math.round(dPan)} px sideways in one frame — ${(dPan / CW).toFixed(2)} canvas widths`,
-        dPan
+        `the picture moved ${Math.round(dPanSab)} px sideways in one frame — ${(dPanSab / CW).toFixed(2)} canvas widths`,
+        dPanSab
       );
   }
 
@@ -395,11 +433,15 @@ export function recordViewerFrame(f) {
       `the picture is ${(width / f.trackWidthPx).toFixed(2)} corridors, tighter than the tightest named shot (${(f.tightestNamed / f.trackWidthPx).toFixed(2)})`,
       f.tightestNamed - width
     );
-  if (f.worldWidth > 0 && width > f.worldWidth + 1e-6)
+  // ARM: `--sabotage-toowide` forces the tested width above the world width. Only the "too wide" half
+  // is armed — the wide bound is the weaker of the two and is the one the guard's header calls a
+  // sanity bound, and one arm per invariant is what the ceremony gap names.
+  const widthSab5 = _sabTooWide ? f.worldWidth + 1000 : width;
+  if (f.worldWidth > 0 && widthSab5 > f.worldWidth + 1e-6)
     add(
       '5-toowide',
-      `the picture is ${Math.round(width)} world px wide, wider than the world itself (${Math.round(f.worldWidth)})`,
-      width - f.worldWidth
+      `the picture is ${Math.round(widthSab5)} world px wide, wider than the world itself (${Math.round(f.worldWidth)})`,
+      widthSab5 - f.worldWidth
     );
 
   // ── THE SHEET'S ROW FOR THIS FRAME ─────────────────────────────────────────────────────────

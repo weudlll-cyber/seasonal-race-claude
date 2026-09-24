@@ -431,6 +431,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the
   usual close-out with `verify --premerge` and a merge decision.
 
+- [VIEWER-INVARIANT-SABOTAGE-1.md](VIEWER-INVARIANT-SABOTAGE-1.md) — **the five OLD viewer
+  invariants (1 course, 2 leader, 3 line, 4 step, 5 width) each have a sabotage arm now**, reusing
+  the sessionStorage channel `--sabotage-corner` already establishes. Every one exits 1 in 2 of 2
+  gate races with the expected event kind and nothing else, and the CLEAN revert still exits 0. The
+  known-gap paragraph in `docs/SHIP-CEREMONY.md` narrows: the arms prove the machinery reacts, and
+  the regression-net property at this scope is the only limit that remains.
+
 - [WINNER-AFTER-CROSSING-1.md](WINNER-AFTER-CROSSING-1.md) — **where the shot actually ends, after
   the owner ruled he does not judge the frames past the finish** — measurement only, nothing
   proposed. Reused the probe's existing `crossing.after` record (nothing built) and added opt-in

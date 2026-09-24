@@ -87,6 +87,16 @@ const HEADED = process.argv.includes("--headed");
 const DUMP = process.argv.includes("--dump");
 // Declared here with the other run flags because it is handed to the page at launch, beside `dump`.
 const SAB_CORNER = process.argv.includes("--sabotage-corner");
+// ── SABOTAGE ARMS FOR THE FIVE OLD WINDOW INVARIANTS (VIEWER-INVARIANT-SABOTAGE-1) ──────────────
+//
+// Each arm is a boolean handed to the page through the same sessionStorage channel `--sabotage-corner`
+// uses. The probe reads it once at `beginViewerProbe`, applies it at the corresponding check, and the
+// arm can only make the invariant RED — it can never make one pass.
+const SAB_COURSE = process.argv.includes("--sabotage-course");
+const SAB_LEADER = process.argv.includes("--sabotage-leader");
+const SAB_LINE = process.argv.includes("--sabotage-line");
+const SAB_PANSTEP = process.argv.includes("--sabotage-panstep");
+const SAB_TOOWIDE = process.argv.includes("--sabotage-toowide");
 // RACE-JUDDER-1: measure DELIVERY instead of framing. Defaults off; the gate and the sweep are
 // unaffected, and the two arms' camera numbers are not comparable — see REAL_CLOCK's header.
 const REAL = process.argv.includes("--real-clock");
@@ -449,7 +459,7 @@ async function runOne(page, geo, seed, arm, N) {
   };
 
   await page.addInitScript(
-    ({ geo, activeRace, cfg, clock, dump, sab }) => {
+    ({ geo, activeRace, cfg, clock, dump, sab, sabOld }) => {
       localStorage.setItem(
         `racearena:trackGeometries:${activeRace.geometryId}`,
         JSON.stringify(geo)
@@ -459,10 +469,30 @@ async function runOne(page, geo, seed, arm, N) {
       sessionStorage.setItem("_ra_viewerprobe", "1");
       if (dump) sessionStorage.setItem("_ra_viewerdump", "1");
       if (sab) sessionStorage.setItem("_ra_viewersabcorner", "1");
+      // The five old-invariant arms use the same session channel as the corner arm.
+      if (sabOld.course) sessionStorage.setItem("_ra_viewersabcourse", "1");
+      if (sabOld.leader) sessionStorage.setItem("_ra_viewersableader", "1");
+      if (sabOld.line) sessionStorage.setItem("_ra_viewersabline", "1");
+      if (sabOld.panstep) sessionStorage.setItem("_ra_viewersabpanstep", "1");
+      if (sabOld.toowide) sessionStorage.setItem("_ra_viewersabtoowide", "1");
       // eslint-disable-next-line no-eval
       (0, eval)(clock);
     },
-    { geo, activeRace, cfg, clock: REAL ? REAL_CLOCK : VIRTUAL_CLOCK, dump: DUMP, sab: SAB_CORNER }
+    {
+      geo,
+      activeRace,
+      cfg,
+      clock: REAL ? REAL_CLOCK : VIRTUAL_CLOCK,
+      dump: DUMP,
+      sab: SAB_CORNER,
+      sabOld: {
+        course: SAB_COURSE,
+        leader: SAB_LEADER,
+        line: SAB_LINE,
+        panstep: SAB_PANSTEP,
+        toowide: SAB_TOOWIDE,
+      },
+    }
   );
 
   await page.goto(`${BASE}/race`, { waitUntil: "domcontentloaded" });
