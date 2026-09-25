@@ -899,8 +899,9 @@ are in PART TWO with what closed them; these are the ones still standing.
 
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
-- [ ] ★★ **`arrival-shape.spec.js`, `comeback-precedence.spec.js` and `garden-path-finishes.spec.js`
-      FAIL on the production arm.** Found while MEASURING the arm's per-spec cost, not while
+- [ ] ★★ **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
+      arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
+      green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
       investigating them — see
       [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
       **They pre-date the branch that found them**, and **they are outside the gate's curated set**
@@ -930,6 +931,29 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★ **Has he seen these behaviours?** `garden-path-finishes` — the CLAIM yes (he trimmed the file
       to it on 2026-09-04), the failure no. `comeback-precedence` — **no**, nothing in `docs/` records
       it being put to him.
+      ★★ **RE-ESTABLISHED 2026-09-25 by
+      [TWO-FAILING-SPECS-2](../reports/evolution/TWO-FAILING-SPECS-2.md) — a whole production run,
+      19 specs on one worker, 41.4 min: **124 passed, 1 failed** of 125, where three failed before.
+      The row STAYS OPEN; establishing why is not fixing, and nothing was fixed.**
+      ★ **`garden-path-finishes` DOES NOT REPRODUCE.** It **passed inside the full run** (`ok 90`,
+      first crossing 110.7 s, 10 finish times), behind all eight of its alphabetical predecessors —
+      the exact context the original failure was seen in. With the three solo passes that is **4
+      consecutive passes and 0 reproductions**, so it is intermittent rather than an interaction and
+      there is nothing to bisect. ★ NOT claimed: that it has gone, or that `appReady.js`'s
+      dropped-geometry mechanism is the cause — the condition never occurred to be inspected.
+      ★★ **`comeback-precedence` IS CASE (b): THE PREMISE DIED.** Its fixture is garden-path Quick
+      Test **seed 41000**, and the plan dump reads **`written [none] shown [none]`** — no comebacker
+      is cast there at all, nor on any of the ten tracks at that seed, while the spec's own header
+      says the fixture was chosen as *a race whose plan casts a comebacker who climbs*.
+      ★ **The mechanism is NOT broken**, which is what separates (b) from (a): space-sprint seeds 2,
+      3 and 5 still write a comebacker and the camera still shows it. So the **PLAN** fails to produce
+      the state, not the camera's precedence to honour it — the one `COMEBACK_ZOOM` the spec sees
+      comes from OVERVIEW, which carries no hold to cut through.
+      ★ **Not his question**: a fixture whose seed stopped casting what it was picked for is
+      maintenance. **What is still unknown** is whether the assertion holds at a seed that DOES cast
+      one — answering that means re-pointing the fixture, which is a change nobody has authorised.
+      ★ **`arrival-shape` is gone from this row's subject** — it was re-pinned on 2026-09-25 and
+      passed in this run too.
       ★★ **ONE OF THE THREE IS CLOSED, 2026-09-25: `arrival-shape` is GREEN.** He decided that after a
       racer reaches the place the plan drew for him he moves FREELY, and that this is the shipped
       behaviour and stays — so nothing in the product changed and the SPEC was what was wrong. Its
@@ -1540,9 +1564,15 @@ already-settled questions.
   is ever on the first-paint path and all ten are never loaded together.**
   **The real cost is per track, paid when one is chosen:** median **3.61 MB**, worst **9.69 MB**
   (river-run); seatrack 9.53 and mountainstreet 9.32 are the only others above 5 MB.
-  ★ **Still open as a DECISION rather than a measurement**: the worst single track is nearly three
+  ★ ~~**Still open as a DECISION rather than a measurement**~~: the worst single track is nearly three
   times the entire application bundle — roughly 8 s on a 10 Mbit link before it is drawable. Whether
   to re-encode is a visible change and is the owner's. **No optimisation was attempted.**
+  ★★ **THAT SENTENCE WAS ALREADY FALSE WHEN IT WAS WRITTEN — corrected 2026-09-25.** The decision had
+  been taken the day before: **Q-27 is CLOSED in PART TWO, decided by the owner on 2026-09-23** — the
+  backgrounds keep their current quality, `river-run` at 9.69 MB stays, no re-encoding. This
+  measurement is dated 2026-09-24 and called the question open anyway, so the same subject sat in
+  both parts saying opposite things. **PART TWO is the verdict; this stays only as the measurement
+  behind it.**
   Evidence: `reports/evolution/POLISH-2026-09-24B.md` §2.
 - **Q-20a** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
 

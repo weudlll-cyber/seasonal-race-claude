@@ -446,6 +446,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [TWO-FAILING-SPECS-2.md](TWO-FAILING-SPECS-2.md) — **one does not reproduce, the other's fixture
+  went stale.** Nothing fixed, no assertion changed, no spec re-pinned. Whole prod arm once, 41.4 min:
+  **124 passed, 1 failed** of 125, against three failures on 2026-09-25. ★ `garden-path-finishes`
+  **PASSED inside the full run**, behind all eight of its predecessors — 4 consecutive passes now, 0
+  reproductions, so there is nothing to bisect and the mechanism stays unidentified. ★
+  `comeback-precedence` is **case (b)**: its fixture (garden-path seed 41000) has
+  `written [none] shown [none]` — the plan casts no comebacker at all — while other seeds still write
+  one and the camera still shows it. The plan fails to produce the state, not the camera to honour it.
+
 - [ROCKET-SHAPE-TRUTH-1.md](ROCKET-SHAPE-TRUTH-1.md) — **what the sprite-shape lever costs, and
   what it cannot reach.** Measurement only; nothing shipped, nothing minted. ★★ **`bodyFillX/Y` are
   a MEASUREMENT of the artwork** (RACER_DATA_MODEL's opaque-box rule), not settings — a ratio reached
