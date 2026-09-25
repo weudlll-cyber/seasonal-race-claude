@@ -835,6 +835,22 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the fingerprint this row HOPED FOR exists and is
+      surfaced; the LINE still does not carry it, and a PASS is still recorded nowhere.**
+      ★ **What exists now.** The row guesses "the HUD `cfg` fingerprint may already separate
+      behaviours". It does, and it is real: `configFingerprintBadge` is computed at
+      **`client/src/screens/RaceScreen/index.jsx:536`** from the world the race is ACTUALLY running
+      with (a reproduced race uses its recorded one), drawn on screen under the seed badge; and the
+      camera marker reads config diffs through
+      **`client/src/modules/camera/cameraMarker.js:19`** (`countConfigDiffs`), so pressing M records
+      a moment together with how that race was configured.
+      ★ **What is still true.** The `[RA CAMERA LIVE TRUTH]` line itself —
+      **`client/src/screens/RaceScreen/index.jsx:701-709`** — names commit, branch, dirty,
+      `resolvedGrammar`, `leaderForwardFrac`, config provenance and `cameraSeed`, and **zero**
+      occurrences of the cfg fingerprint. It still never says which GUARANTEE ran. And the row's last
+      sentence stands untouched: **an owner's PASS is still recorded nowhere.**
+      **The row now claims those two things only.**
+
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
 **Read this before proposing anything that moves `leaderLateralMarginPx` — per-track, adaptive, or a
@@ -884,6 +900,14 @@ rather than a threshold nobody has found yet.**
       bounded by the frame's 720 px height instead of its 1280 px width.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** ALONG-RESIDUAL-1's P1 is unstarted; the entry's own gate (`node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30`, the `residual0` figure) still decides it. Waiting on a sprite change being sized and measured.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the gate RE-RUN rather than carried — the
+      figure has moved.** The entry's own command, run today:
+      `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` prints
+      `space-sprint margin=90 races=30 frames=42297 residual=979 **residual0=463** clipped=1175`.
+      ★ **463, not the 591 the row states** — measured on today's tree, 30 seeds, exit 0. It is
+      lower and it is nowhere near river-run's 0, so the subject holds and only the number was
+      stale. ALONG-RESIDUAL-1's P1 remains unstarted.
 
 - [x] **~~THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW~~ — ✅ CLOSED 2026-09-01
       by [GOLDEN-TABLE-REGISTRY-1](../reports/evolution/GOLDEN-TABLE-REGISTRY-1.md), the owner's
@@ -937,6 +961,13 @@ rather than a threshold nobody has found yet.**
       every instrument reads the registry directly; that was checked rather than assumed.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE as a warning, with its LAST SENTENCE withdrawn:** *"There is no separate harness racer table to drift"* was refuted on 2026-09-01 by SPRITE-TABLE-DRIFT-1 — two tables existed and one disagreed with the registry on five of ten rows. Both have since been repaired (GOLDEN-TABLE-REGISTRY-1 `de99f690`; REGISTRY-LITERALS-1 `56b99a9d`, which deleted 124 literals and doubled the engine-reach closure), and the body rule now has a written home in `docs/RACER_DATA_MODEL.md` (BODY-IS-THE-BOX-1, `54e32cd3`, 2026-09-02) — **which also found a second measuring rule that differs on five types**. The warning itself is unaffected and still binds.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN as a standing WARNING, and everything it points
+      at is still there.** This row is a caution rather than a defect, so there is nothing in it to
+      finish. Both of its addresses resolve today: `computeBodyNarrowRef` is exported from
+      **`client/src/modules/rowLayout.js:251`**, and **`scripts/diag/sprite-premise.mjs`** exists as
+      the way to measure `drawnBodyLengthPx` off a running race. Its advice is therefore still
+      followable, which is the only sense in which a warning can be open.
 
 - [x] **The instrument trap that produced the wrong first reading, fixed 2026-09-01.**
       `along-residual.mjs`'s old `--margin=` changed only what the MEASUREMENT tested with while the
@@ -1033,6 +1064,12 @@ are in PART TWO with what closed them; these are the ones still standing.
       the one property they are known to share; whether that is the cause is not known.
       ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
       nobody believes, and this repository has already paid for that once.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is one day old.** Opened 2026-09-25 by
+      this session's own measurement and re-confirmed here rather than assumed: the three are still
+      absent from the curated set at **`client/package.json:54`** — which was widened to ten specs
+      the same day and deliberately excluded them — so nothing automatic reports them. No cause has
+      been investigated, which is what the row says.
 
 ## Before the VPS migration
 
