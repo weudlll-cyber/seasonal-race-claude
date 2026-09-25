@@ -170,7 +170,15 @@ Stop the server first. The target must be empty, or pass `--force` to write into
    ```sh
    npm run build --prefix client
    ```
-6. **Run any pending migrations** — one command:
+6. ★ **Carry the data across, and let the command tell you how much there is.**
+   `npm run data:export` is what moves `server/data/` to the new host. **Do not plan from a
+   remembered figure** — an earlier snapshot of this owner's machine read 247 files / 14.4 MB
+   differing from `server/seeds/`, with a further 12 files / 51.7 MB byte-identical to the seeds and
+   therefore not needing to travel at all. Those numbers move whenever he edits a track or uploads a
+   background; the command re-measures them on the day, which is why they are not written down as a
+   target. *(Moved here 2026-09-25 from an open backlog row — a procedure belongs in the procedure.)*
+
+7. **Run any pending migrations** — one command:
    ```sh
    node scripts/migrate.mjs
    ```

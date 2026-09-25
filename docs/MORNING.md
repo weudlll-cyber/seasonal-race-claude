@@ -30,9 +30,12 @@ green now.
 
 ### ★ WHAT NEEDS YOUR WORD
 
-1. ★ **`arrival-shape.spec.js:115` — the test and the servo disagree, and it is a design question.**
-   After a held hero reaches his drawn place: steered to that exact rank, or free anywhere inside his
-   block? **The gap brake is exonerated by measurement.** → [ARRIVAL-BRAKE-1](../reports/night/ARRIVAL-BRAKE-1.md)
+1. ✅ ~~**`arrival-shape.spec.js:115` — the test and the servo disagree, and it is a design
+   question.**~~ **ANSWERED 2026-09-25: after a racer reaches the place the plan drew for him he moves
+   FREELY — he is not steered to hold that exact rank. That is the shipped behaviour and it stays.**
+   Nothing in the product changed; the SPEC was what was wrong, and it is re-pinned to the shipped
+   behaviour and green three runs of three. It can still fail if steering ever returns.
+   → [ARRIVAL-BRAKE-1](../reports/night/ARRIVAL-BRAKE-1.md)
 2. **Whether `npm run test:e2e:prod:fast` becomes a habit.** **110 tests, 3.8 min, all passing**
    (10 specs since 2026-09-25) — and since 2026-09-23 it is no longer only on demand: it is the
    post-merge browser gate, run on every push to master. Still in neither `verify` nor `ci.yml`.
