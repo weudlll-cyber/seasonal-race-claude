@@ -105,7 +105,13 @@ describe('CEREMONY-SKIP-2 — the click handler’s three guards', () => {
   // file green while the first skip of every event is dead under the brand card.
   // WHAT WOULD GO UNNOTICED: exactly that move, and a second attachment point (the handler bound
   // twice would double-skip), and the wrapper losing its handler altogether.
-  it('RaceScreen attaches onCeremonyClick to the WRAPPER — not to a canvas', () => {
+  // ★ UPDATED 2026-09-25 (STAY-ON-THE-FINISH-1): the wrapper now carries `onCanvasMouseDown`, one
+  //   named handler that calls `onCeremonyClick` and then `onFinishClick` — an element may carry one
+  //   `onMouseDown`, and the two intentions cannot both fire (COUNTDOWN vs FINISHED). **Every
+  //   protection below is kept**, re-pointed at the new name, and one is added: the combined handler
+  //   must actually CALL the ceremony one. This test went red on the change and that is what it is
+  //   for; it was re-pointed, not relaxed.
+  it('RaceScreen attaches the canvas mouse-down to the WRAPPER — not to a canvas', () => {
     const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.jsx'), 'utf8');
 
     // 1 — there is exactly ONE element claiming to be the wrapper, so "its opening tag" is a
@@ -120,15 +126,29 @@ describe('CEREMONY-SKIP-2 — the click handler’s three guards', () => {
     expect(tag.startsWith('<div'), `the wrapper is no longer a <div>: ${tag.slice(0, 40)}`).toBe(
       true
     );
-    expect(tag, 'the wrapper element no longer carries onMouseDown={onCeremonyClick}').toContain(
-      'onMouseDown={onCeremonyClick}'
+    expect(tag, 'the wrapper element no longer carries onMouseDown={onCanvasMouseDown}').toContain(
+      'onMouseDown={onCanvasMouseDown}'
     );
 
     // 3 — and it is attached in exactly one place. Two mentions and no more: the `const` that
     //     defines it, and the one attribute above. A third would mean a second attachment point,
     //     which double-skips; a first-and-only would mean it is defined and never hung anywhere.
-    const mentions = src.split('onCeremonyClick').length - 1;
-    expect(mentions, `onCeremonyClick is mentioned ${mentions}× (want 2: define + attach)`).toBe(2);
+    const mentions = src.split('onCanvasMouseDown').length - 1;
+    expect(mentions, `onCanvasMouseDown is mentioned ${mentions}× (want 2: define + attach)`).toBe(
+      2
+    );
+
+    // 3b — ★ AND THE COMBINED HANDLER STILL CALLS THE CEREMONY ONE. Without this, re-pointing the
+    //      check above to the new name would let the ceremony skip be dropped entirely while every
+    //      assertion in this file stayed green — which is precisely the hole the rename could open.
+    const ceremonyMentions = src.split('onCeremonyClick').length - 1;
+    expect(
+      ceremonyMentions,
+      `onCeremonyClick is mentioned ${ceremonyMentions}× (want 2: define + call from onCanvasMouseDown)`
+    ).toBe(2);
+    expect(src, 'onCanvasMouseDown no longer calls onCeremonyClick').toContain(
+      'onCeremonyClick(e);'
+    );
 
     // 4 — no canvas in this screen carries a mouse-down. This is the sabotage the comment above
     //     names, caught directly rather than by inference.

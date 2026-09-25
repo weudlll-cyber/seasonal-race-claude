@@ -6,6 +6,12 @@
 // Description: Live race canvas with scrolling camera (open tracks),
 //              TV camera director (closed tracks), multi-lap support,
 //              fullscreen toggle, and fade-to-black navigation.
+//
+// ★ STAY-ON-THE-FINISH-1 (the owner's decision, 2026-09-25): THE HAND-OVER TO THE RESULTS IS NOW A
+//   CHOICE. `autoAdvance` on — today's behaviour, the screen hands over when the camera ending
+//   closes. Off — the finish picture stands until the operator left-clicks it. The ENDING ITSELF is
+//   untouched by this: `endingOnRaceScreenMs` keeps its two inputs and its arithmetic, because
+//   `scripts/camera-fingerprint.mjs` reads the same function and the two may not diverge.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -55,6 +61,8 @@ import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
 import RA_BUILD from 'virtual:ra-build';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
+// STAY-ON-THE-FINISH-1: the operator's own defaults, for the one key this screen acts on.
+import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
@@ -220,6 +228,9 @@ export default function RaceScreen() {
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);
+  // STAY-ON-THE-FINISH-1: the operator's race defaults, read ONCE at mount for the same reason the
+  // camera config is — a setting changed mid-race must not alter the race that is already running.
+  const [raceDefaults] = useState(() => storageGet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS));
   const showCameraStateHud =
     cameraConfig.showCameraStateHud ?? DEFAULT_CAMERA_CONFIG.showCameraStateHud;
   const showCameraDiagnostics =
@@ -233,6 +244,18 @@ export default function RaceScreen() {
   // CEREMONY-SKIP-1: read like its neighbour, and every read needs a default (check-config-keys).
   const ceremonySkipOnClick =
     cameraConfig.ceremonySkipOnClick ?? DEFAULT_CAMERA_CONFIG.ceremonySkipOnClick;
+  // ★★ STAY-ON-THE-FINISH-1 — does the screen hand over by itself when the ending closes?
+  //
+  // Read from the OPERATOR's defaults, not the camera config: this is his choice about the room he
+  // is standing in, not a property of the picture. Read like its camera neighbours above — `??` onto
+  // the shipped default, because `check-config-keys` requires every read to have one and because a
+  // config stored before this key did anything would otherwise read `undefined` here.
+  const autoAdvance = raceDefaults.autoAdvance ?? DEFAULT_RACE_DEFAULTS.autoAdvance;
+  // The frame loop runs outside React's render scope, so it reads the switch through a ref — the
+  // same shape `cameraConfigRef` uses one screen up, and for the same reason.
+  const autoAdvanceRef = useRef(autoAdvance);
+  // eslint-disable-next-line react-hooks/refs
+  autoAdvanceRef.current = autoAdvance;
   const showBattleDiag = cameraConfig.showBattleDiag ?? DEFAULT_CAMERA_CONFIG.showBattleDiag;
   const showComebackDiag = cameraConfig.showComebackDiag ?? DEFAULT_CAMERA_CONFIG.showComebackDiag;
   const showGovernorDiag = cameraConfig.showGovernorDiag ?? DEFAULT_CAMERA_CONFIG.showGovernorDiag;
@@ -1237,13 +1260,25 @@ export default function RaceScreen() {
             // that this timer and `scripts/camera-fingerprint.mjs`'s window read ONE function. The
             // instrument used to stop on the frame this timer starts, which is why it had never
             // rendered a FINISHED frame. Same arithmetic, same result; one home.
-            finishNavTimerRef.current = setTimeout(
-              () => fadeNavRef.current('/results'),
-              endingOnRaceScreenMs({
-                holdMs: cameraConfigRef.current?.finishHoldAfterLastMs,
-                pauseMs,
-              })
-            );
+            //
+            // ★★ STAY-ON-THE-FINISH-1 — THE SWITCH DECIDES WHETHER THIS TIMER HANDS OVER, and that is
+            // ALL it decides. The ending's LENGTH is untouched: `endingOnRaceScreenMs` keeps its two
+            // inputs and its arithmetic, and `scripts/camera-fingerprint.mjs` reads the same function,
+            // so the two cannot diverge. No term was added to it and it reads no new key.
+            //
+            // With the switch OFF the picture simply stands — the camera goes on composing the
+            // settled finish shot exactly as it does for the seconds before the hand-over, because
+            // nothing about the ending changed. The operator moves on by clicking the picture
+            // (`onFinishClick` below).
+            if (autoAdvanceRef.current) {
+              finishNavTimerRef.current = setTimeout(
+                () => fadeNavRef.current('/results'),
+                endingOnRaceScreenMs({
+                  holdMs: cameraConfigRef.current?.finishHoldAfterLastMs,
+                  pauseMs,
+                })
+              );
+            }
 
             // WINNER-CARD-1: the card is fired HERE, from the same block that starts the pause, so
             // the two can never disagree about when the ending begins.
@@ -1987,12 +2022,40 @@ export default function RaceScreen() {
     st.countdownStart = now - next;
   };
 
+  // ★★ STAY-ON-THE-FINISH-1: THE WAY OFF THE PICTURE, and it is an affordance that already existed.
+  //
+  // WHY A CLICK ON THE PICTURE AND NOT A NEW BUTTON OR A KEY. This screen already answers a left
+  // click on the race picture by moving the show along — that is CEREMONY-SKIP-1 at the start, on
+  // this very wrapper. An operator who has learnt "click the picture to get on with it" for the
+  // opening needs nothing new for the closing, and a second gesture for the same intention would be
+  // the thing to explain. It costs no config key, no number and no element.
+  //
+  // IT IS ONLY LIVE WHEN THE PICTURE WOULD OTHERWISE STAND: with the switch ON the screen hands over
+  // by itself and this is not needed; before the last racer is home there is a race to watch and a
+  // stray click must not end it. So: FINISHED, and the switch OFF. Outside that it does nothing,
+  // which is why "stay" cannot become "stuck".
+  const onFinishClick = (e) => {
+    if (autoAdvance) return; // the timer above is already taking us there
+    if (e.button !== 0) return; // left click only, as the ceremony skip is
+    if (g.current?.phase !== PHASE.FINISHED) return;
+    fadeNavRef.current('/results');
+  };
+
+  // ONE HANDLER ON THE WRAPPER, because an element may carry one `onMouseDown`. The two intentions
+  // it serves cannot both fire: the ceremony skip is guarded on PHASE.COUNTDOWN and the hand-over on
+  // PHASE.FINISHED. It is NAMED rather than written inline so the attachment stays checkable from
+  // the source, which is what `ceremonySkip.test.jsx` does and what caught this change.
+  const onCanvasMouseDown = (e) => {
+    onCeremonyClick(e);
+    onFinishClick(e);
+  };
+
   return (
     <div ref={screenRef} className="screen screen--race">
       <div className="race-layout">
         <div
           className="race-canvas-wrapper"
-          onMouseDown={onCeremonyClick}
+          onMouseDown={onCanvasMouseDown}
           data-testid="race-canvas-wrapper"
         >
           <canvas
