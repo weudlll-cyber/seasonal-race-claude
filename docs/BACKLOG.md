@@ -543,46 +543,6 @@ nothing is designed here, no key is added, and no change is implied.
       fail. Both sites are corrected in place. **WHAT THE GATE RUNS IS NOT CHANGED** — that decides
       what reddens a build and is the owner's; it is on the morning sheet as his.
 
-- [ ] ★★ **THE SHIPPED GATE GRADES A QUANTITY THIS PROJECT WITHDREW TWICE, WHICH IS WHY IT REPORTS
-      ZERO WHILE HE SEES JUMPS. — ESCALATED 2026-09-25.**
-      This row used to read "nothing measures motion". Something does, and that is worse: the check in
-      the viewer probe (`client/src/modules/viewerProbe.js:415-425`) grades a frame's change in offset
-      against a **1280 px catastrophe line** — a whole canvas width. A jump a viewer plainly sees is
-      nowhere near it, so the gate is green on the very thing the owner reports, and a green gate on a
-      real defect is not a gap in coverage but a false statement.
-      `scripts/diag/judder-census.mjs` exists because of that mismatch.
-      ★ **The replacement is designed and costed** in
-      [MOTION-CONTINUITY-1](../reports/evolution/MOTION-CONTINUITY-1.md), and **its one prerequisite
-      has since been built** (`client/src/modules/camera/CameraDirector.js:5022-5023`), so the work no
-      longer waits on anything.
-      ★ **"Pan displacement" is dropped from the wording** — it named the old measure, and keeping it
-      would re-propose the thing being replaced.
-      ★★ **MEASURED 2026-09-25 — [JUDDER-TRUTH-1](../reports/evolution/JUDDER-TRUTH-1.md). The row
-      STAYS OPEN; measuring is not fixing, and no bar is proposed here.**
-      **The bar is unreachable.** Ten tracks, seed 9, shipped: across **61,429 frame steps** the
-      largest single-frame Δoffset is **845.4 px = 66% of the 1280 bar**, and the median frame is
-      **0.6%** of it. ★ The one reading that pointed the other way — §1.2's headless maxima up to
-      2,332 px — **does not reproduce in the browser**, and the browser wins.
-      **The PAN channel shows nothing anomalous on any track** (maxima 0.021-0.052 frame widths), and
-      its largest local ratios are an artefact worth knowing about: **64.9x, 64.2x and 36.5x on pans
-      of about one screen pixel.** A local rule with no floor finds stillness, not jolts.
-      **The ZOOM channel carries the whole signal, and it is ONE recurring event:** the five largest
-      steps in the sweep are **0.1198-0.1259 ln**, all in **LEADER_ZOOM between 24.2 s and 26.3 s**,
-      on five of ten tracks — about 80 px of frame-edge movement in one frame, which §2.1 identifies
-      as the field guarantee retiring.
-      ★ **Five owner-reproducible moments are listed in §3**, driven on the Quick Test path, because
-      the harness builds a different race (field 40 and a synthetic roster against Quick Test's 20)
-      and its frame numbers are not his.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no motion-continuity instrument exists — `scripts/check-*.mjs` has no such guard. It is tonight's **piece 12**, which had not started when this verdict was written.
-
-*(The other entry that stood in this section — **Garden Path does not finish** — moved to PART TWO on
-2026-09-03, closed. GARDEN-PATH-CLOSE-1.)*
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN.** No motion-continuity instrument exists:
-      `scripts/finish-motion-truth.mjs` is present and still covers **one phase**, which is what the
-      row already says, and no guard anywhere checks pan displacement against a local median.
-
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
 - [ ] ★★ **`0xC0000142` — IT HAPPENED AGAIN. The watch this row set has FIRED, and the row is no
@@ -2188,6 +2148,35 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **THE JUDDER ROW CLOSES ON HIS EYE, NOT ON A BUILD — and the check STAYS.** Closed
+      2026-09-25 by two owner decisions of that date, after
+      [JUDDER-TRUTH-1](../reports/evolution/JUDDER-TRUTH-1.md) measured it.
+      ★★ **HIS VERDICT.** He watched the five worst moments the measurement produced, on his own
+      Quick Test, seed 9, stage `quiet` — dirt-oval **27.7 s** (the 12.9x one) and **29.1 s**,
+      city-circuit **29.1 s** and **63.4 s**, ice-track **45.0 s**. **No judder is visible.** Zoom
+      changes are visible and change the picture, and they are not objectionable.
+      ★★★ **THIS WAS A TWO-PART PREMISE AND THE SECOND PART FAILED.** The row was escalated on the
+      reasoning *"the check returns a false answer AND the owner sees jumps"*. **The first half
+      stands** — the check does grade a quantity that is not the picture. **The second does not.**
+      That is why this closes rather than becoming work: there is no defect to chase.
+      ★★ **SECOND DECISION, SAME DATE: THE STEP CHECK IS KEPT.** Not removed, its bar not lowered,
+      what it grades not changed. **It is a CATASTROPHE LINE, not a judder detector, and silence is
+      its normal state.** It exists to fire when the camera breaks outright and the picture leaves
+      the screen inside one frame — a condition headless runs have actually produced, above its bar,
+      up to **2,332 px**. A healthy race staying far below it is the check WORKING.
+      ★ **That sentence was misread once, on 2026-09-25 itself**, as evidence the check was broken —
+      and that misreading is what put this row on the escalation list. It is now written into
+      `viewerProbe.js`'s own declaration block so the next reader meets it before proposing a delete.
+      ★ **PAN IS CLEAN.** 61,429 frame steps, ten tracks, seed 9, shipped stage: maxima **0.021 to
+      0.052 frame widths**. Nothing anomalous anywhere.
+      ★ **THE ZOOM STEP IS MEASURED AND ACCEPTED:** about **0.12 ln in a single frame**, always in
+      **LEADER_ZOOM**, at **24.2-26.3 s**, on **five of ten tracks** — roughly 80 px of frame-edge
+      movement. A real, recurring, visible event, and accepted.
+      ★★ **AND THE MOST USEFUL THING THE MEASUREMENT PRODUCED, for whoever picks the design up later:
+      THE DESIGNED REPLACEMENT RULE WOULD HAVE FLAGGED STILLNESS.** Its largest local-median ratios —
+      **64.9x, 64.2x and 36.5x** — sit on pans of about **one screen pixel**. A local-median rule with
+      no floor finds a camera that is barely moving, not a jolt. **Read this before building it.**
 
 - [x] ★ **`deploy.yml.disabled` — CLOSED: the file says what it is, and the row has no closing
       condition anyone wants.** Closed 2026-09-25 (TRUTH-UP-1), verified at the tree before moving.

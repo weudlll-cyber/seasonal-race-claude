@@ -7,6 +7,14 @@
 // ── WHY IT EXISTS ────────────────────────────────────────────────────────────────────────────────
 //
 // Invariant 4 already runs whole-race and reports zero violations, and the owner still sees jumps.
+//
+// ★★ CORRECTED 2026-09-25: THE SECOND HALF OF THAT SENTENCE IS NO LONGER TRUE, and this file is
+// kept unchanged because the FIRST half still is. JUDDER-TRUTH-1 measured the five worst moments in
+// the tree and the owner watched them on his own Quick Test (dirt-oval 27.7 s and 29.1 s,
+// city-circuit 29.1 s and 63.4 s, ice-track 45.0 s, all seed 9 at `quiet`). His verdict: **no judder
+// is visible.** Zoom changes are visible and change the picture, and they are not objectionable.
+// So of the three possibilities below, (a) is answered NO on the evidence of his eye; this tool's
+// value now is the census it prints, not the hunt it was opened for.
 // Three things could be true and only measurement separates them:
 //
 //   (a) THE BOUND IS LOOSER THAN HIS EYE — steps that pass are still visible.
