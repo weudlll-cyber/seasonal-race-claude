@@ -431,6 +431,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two
   structural oddities, offer two-or-three groupings, close-out and merge decision.
 
+- [COMEBACK-PRECEDENCE-REPIN-1.md](COMEBACK-PRECEDENCE-REPIN-1.md) — **the fixture was re-pinned
+  and it STILL fails.** Three space-sprint seeds (2, 3, 5) that the diag confirms cast a comebacker
+  all failed the browser spec identically: `the race never cut to a comeback at all` — no
+  COMEBACK_ZOOM state in any of the traces. The precedence itself may be fine; the shot is not
+  being taken in the browser. Spec left RED, no assertion touched; owner question named on the
+  morning sheet.
+
 - [MORNING-2026-09-25.md](MORNING-2026-09-25.md) — **the night sheet for the 2026-09-25 run** — four
   pieces off master `03f0177a`: sabotage arms for the five OLD viewer invariants, the company
   guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the
