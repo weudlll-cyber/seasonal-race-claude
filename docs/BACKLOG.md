@@ -733,6 +733,13 @@ rather than a threshold nobody has found yet.**
 
 ## Phases 5–7 — the planned server, deployment and multi-tenant arc (moved from ROADMAP 2026-08-23)
 
+★★ **THE MULTI-TENANT HALF OF THIS SECTION'S TITLE IS NO LONGER ITS SUBJECT, 2026-09-25.** The owner
+stated the tenancy boundary that day — per team: brands, player groups and team-created tracks;
+shared: the shipped tracks and the racer types — and it is recorded on the **TENANCY** row above,
+which owns the subject and stays open as work. The arc was being carried here as a future phase while
+the same subject sat at the tree one section up; they are one subject now. **Nothing here is the home
+of a tenancy fact.** What this section still owns is the SERVER and DEPLOYMENT work.
+
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
 here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns nothing — it was a phase-status table when this block was moved, and ROADMAP-FOLD-2 (`c49d5af5`, 2026-08-27) folded that table in here too. *(Corrected 2026-09-03: this sentence contradicted line 3 of this same file, which has said REDIRECT since that fold. Found as a SECOND SITE of the same claim in README.md, not on its own.)*
@@ -797,6 +804,50 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
       of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
       track sets only.**
+
+      ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
+      of the work, not its completion.**
+
+      **PER TEAM** — each team has its own and sees no other team's:
+      - **brands** (branding profiles)
+      - **player groups**
+      - **tracks the team itself created**
+
+      **SHARED** — one set for everybody, not duplicated per team:
+      - **the shipped tracks**
+      - **the racer types**
+
+      ★ **So "team-created" is the line inside tracks**, and it is the only place in the boundary
+      where one collection splits two ways. A shipped track is common ground; a track a team drew is
+      theirs. Nothing in the tree distinguishes the two today — `server/src/routes/tracks.js` contains
+      **zero** occurrences of "team" — so that distinction is part of the work, not a filter waiting
+      to be switched on.
+
+      ★★ **THIS IS PREPARATION, NOT A DEFECT.** Nothing is leaking and nothing is broken. There is one
+      team using the system, so an unscoped collection and a scoped one look identical from the
+      outside; the boundary is being written down now so that the day a second team exists the answer
+      already exists too. **A row that reads like a bug report would be wrong about what this is.**
+
+      ★ **What is true at the tree today, so the starting point is not re-derived later:**
+      - **Races are scoped, on the server.** `server/src/routes/races.js:127` pages the list by the
+        team stamped on the request, and `:142` takes the team as a required argument to the
+        short-key lookup — so a key from another team answers **404**, the same answer as a key that
+        was never issued, deliberately, because "forbidden" would confirm the race exists.
+      - **Nothing else is scoped.** `tracks.js`, `brands.js`, `racers.js` and `playerGroups.js`
+        contain **zero** occurrences of "team" between them (counted 2026-09-25).
+      - **A team is deliberately NOT a permission** — `server/src/auth/teams.js:9-12` states it: it
+        is data about a user, consulted by neither `requireAuth` nor `requireAdmin`. Scoping a
+        collection per team is therefore **not** a matter of adding a role; the boundary and the
+        permission system are separate machines and this decision touches only the first.
+      - ★ **And a new route cannot be added quietly.**
+        `server/src/auth/routePolicyDrift.test.js:133-148` fails on any mutating `/api` route that is
+        neither admin-classified nor on the operator+ allowlist, naming each one. So the work below
+        will be met by a red test rather than by silence if a route arrives unclassified.
+
+      ★ **THE MULTI-TENANT ARC IS FOLDED IN HERE** (from *Phases 5–7 — the planned server, deployment
+      and multi-tenant arc*, and from the collected-wishes line in `OPEN.md`). It was being carried
+      as a separate future phase while this row carried the same subject at the tree; they are one
+      subject, and the boundary above is what that arc was waiting for somebody to state.
 
 ---
 
