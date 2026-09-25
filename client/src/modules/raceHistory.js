@@ -25,6 +25,13 @@
 // `inputs` carries the RACE'S INPUTS and nothing else. The outcome — winners, finish order,
 // duration — stays where it already was, at the top of the entry, and `toServerPayload` reads it
 // from there. Writing the outcome twice would be two homes for one fact inside one object.
+//
+// ★ RACE-SOURCE-1 (2026-09-25) SITS BESIDE THE OUTCOME, NOT INSIDE `inputs`, and the rule above is
+// why. How a race was STARTED is not an engine input — it changes nothing about the race and
+// `raceIdentifier.js` does not encode it — so folding it into `inputs` would make that field mean
+// "the inputs, plus one thing that is not an input". It is a fact ABOUT the race, which is the class
+// the outcome belongs to, so it is written at the top of the entry and `toServerPayload` forwards it
+// by name, exactly as it forwards the duration and the finish order.
 // ============================================================
 
 import { storageGet, storageSet, KEYS, newId } from './storage/storage';
@@ -92,6 +99,12 @@ export function buildHistoryEntry(parsed) {
     // RACE-ACTION-CONTROL-1: stored beside the seed because the two together make an entry
     // reproducible.
     raceActionStage: stage,
+    // ★★ RACE-SOURCE-1 — HOW THE RACE WAS STARTED, taken from the payload the setup screen wrote.
+    // `?? null` rather than a default: an entry from a build before this field existed says NOTHING
+    // about how it was started, and **absent is not real** — see `shared/raceSource.mjs`. Filling in
+    // a value here would be this file inventing the one fact the marker exists to stop anyone
+    // inventing.
+    raceSource: race.raceSource ?? null,
     winners: order.slice(0, race.winners ?? DEFAULT_RACE_DEFAULTS.winners).map((r) => r.name),
     finishOrder: order,
 
@@ -131,6 +144,10 @@ export function buildHistoryEntry(parsed) {
  *
  * NO TEAM IS SENT. The server reads it from the session — a client that could name a team could
  * file a race into somebody else's history.
+ *
+ * ★ THE SOURCE IS SENT, and the contrast with the team above is the point: the team is a PERMISSION
+ * and the server stamps it, while how the race was started is a fact only this device witnessed. The
+ * server takes it the way it takes the seed and the stage — from what the client sends.
  */
 export function toServerPayload(entry) {
   return {
@@ -140,6 +157,10 @@ export function toServerPayload(entry) {
     elapsedSec: entry.duration,
     results: entry.finishOrder,
     winners: entry.winners,
+    // Forwarded by name, from the top of the entry — see the header for why it is not in `inputs`.
+    // An older entry has no such field and sends `undefined`, which the store reads as "no marker",
+    // which means TEST. That is the intended answer, not a gap.
+    raceSource: entry.raceSource ?? null,
   };
 }
 

@@ -17,13 +17,17 @@
 //              owner's requirement of 2026-09-06 and the reason the store is content-addressed.
 // ============================================================
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createRaceStore } from './raceStore.js';
 import { contentId, canonicalString } from './contentAddress.js';
+// RACE-SOURCE-1: the rule is asserted through the shared predicate the product uses, not through a
+// string comparison written again here — a test with its own copy of the rule cannot catch the rule
+// being inverted.
+import { isRealRace } from '../../../shared/raceSource.mjs';
 
 let filePath;
 let store;
@@ -464,5 +468,108 @@ describe('★ the identifier mapping is complete', () => {
     expect(decoded).not.toHaveProperty('worldWidth');
     expect(decoded).not.toHaveProperty('worldHeight');
     expect(decoded).not.toHaveProperty('trackSurfaceClasses');
+  });
+});
+
+// ── RACE-SOURCE-1: how the race was started ─────────────────────────────────────────────────────
+//
+// ★★ THE RULE UNDER TEST IS "ABSENT IS NOT REAL". Three of the four cases below are about what the
+// store does with a source it was NOT given, because that is the direction a later reader inverts by
+// accident. Each was proven by sabotage before it was kept — see RACE-SOURCE-1's report.
+//
+// The CLIENT half (which of the three `activeRace` writers sets which value, including the trap that
+// a start from an identifier is ORDINARY) is tested where that decision is made:
+// `client/src/screens/SetupScreen/raceSource.test.jsx`. It is not re-asserted here, because the
+// store cannot see how a race was started — it can only see what it was told.
+
+describe('RACE-SOURCE-1 — the store records how the race was started', () => {
+  it('an ordinary race is stored as a real race, and reads back as one', () => {
+    const { shortKey } = store.storeRace(aRace({ raceSource: 'race' }));
+    const back = store.getRaceByShortKey(shortKey, 'Seasonal Entertainment');
+
+    expect(back.raceSource).toBe('race');
+    expect(isRealRace(back.raceSource)).toBe(true);
+  });
+
+  it('a Quick Test is stored as a quick test, and does NOT read back as real', () => {
+    const { shortKey } = store.storeRace(aRace({ raceSource: 'quick-test' }));
+    const back = store.getRaceByShortKey(shortKey, 'Seasonal Entertainment');
+
+    expect(back.raceSource).toBe('quick-test');
+    expect(isRealRace(back.raceSource)).toBe(false);
+  });
+
+  it('★ a payload with NO source at all is stored as NOT real — absent is not real', () => {
+    // `aRace()` carries no `raceSource`, which is exactly the shape every race stored before
+    // 2026-09-25 has and exactly the shape an older client still sends.
+    const { shortKey } = store.storeRace(aRace());
+    const back = store.getRaceByShortKey(shortKey, 'Seasonal Entertainment');
+
+    // The key is PRESENT and null — "this race has no marker" is a fact about it, and dropping the
+    // key would make that indistinguishable from a reader that never looked.
+    expect(back).toHaveProperty('raceSource', null);
+    expect(isRealRace(back.raceSource)).toBe(false);
+  });
+
+  it('an UNRECOGNISED source is stored as NOT real, and is reported rather than swallowed', () => {
+    // The safe direction: of the two ways to be wrong, calling a real race a test is recoverable,
+    // while calling a test a real race silently corrupts a standing. It must not throw either — a
+    // race may not be refused over a metadata field that resending cannot fix.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { shortKey } = store.storeRace(aRace({ raceSource: 'tournament' }));
+      const back = store.getRaceByShortKey(shortKey, 'Seasonal Entertainment');
+
+      expect(back.raceSource).toBeNull();
+      expect(isRealRace(back.raceSource)).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain('tournament');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('the source is INSIDE the content id (Option A) — it is the ONLY thing that differs', () => {
+    // The technical decision of 2026-09-25: `race_source` is part of `row`, so the id is a statement
+    // about the whole race INCLUDING how it was started. This is the assertion that goes red if
+    // somebody later "optimises" the field out of the hash.
+    //
+    // ★ TWO STORES, NOT TWO CLIENT IDS. Storing both races in one database would need two
+    // `clientRaceId`s (the store dedupes on the first), and then the ids would differ whether or not
+    // the source were hashed — the test would pass for a reason that has nothing to do with what it
+    // claims. Two databases let every single field be identical except the one under test.
+    const otherPath = join(os.tmpdir(), `racearena-test-races-${randomUUID()}.sqlite`);
+    const other = createRaceStore(otherPath);
+    try {
+      const real = store.storeRace(aRace({ raceSource: 'race' }));
+      const quick = other.storeRace(aRace({ raceSource: 'quick-test' }));
+
+      expect(real.id).not.toBe(quick.id);
+    } finally {
+      other.close();
+      for (const suffix of ['', '-wal', '-shm']) {
+        const f = otherPath + suffix;
+        if (existsSync(f)) unlinkSync(f);
+      }
+    }
+  });
+
+  it('★ and the sanity check that gives the one above its teeth: everything ELSE being equal, two stores agree on the id', () => {
+    // Without this, "the ids differ" could be an artefact of using two databases at all. They are
+    // not: the address is over the CONTENT, so the same race in two files is the same id.
+    const otherPath = join(os.tmpdir(), `racearena-test-races-${randomUUID()}.sqlite`);
+    const other = createRaceStore(otherPath);
+    try {
+      const a = store.storeRace(aRace({ raceSource: 'race' }));
+      const b = other.storeRace(aRace({ raceSource: 'race' }));
+
+      expect(a.id).toBe(b.id);
+    } finally {
+      other.close();
+      for (const suffix of ['', '-wal', '-shm']) {
+        const f = otherPath + suffix;
+        if (existsSync(f)) unlinkSync(f);
+      }
+    }
   });
 });

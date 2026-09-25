@@ -68,6 +68,7 @@ import { normalizeTeam, isWellFormedTeam } from '../auth/teams.js';
 import { canonicalString, contentId } from './contentAddress.js';
 import { generateShortKey } from './shortKey.js';
 import { normalizeShortKey } from '../../../shared/raceShortKey.mjs';
+import { normalizeRaceSource } from '../../../shared/raceSource.mjs';
 
 const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sqlite');
 
@@ -114,6 +115,19 @@ CREATE TABLE IF NOT EXISTS races (
 
   -- When.
   finished_at          TEXT NOT NULL,
+
+  -- ★★ HOW THE RACE WAS STARTED (RACE-SOURCE-1, 2026-09-25). 'race' or 'quick-test'; the
+  -- vocabulary and the rule for reading it live in shared/raceSource.mjs.
+  -- (No backticks in this block on purpose: SCHEMA is a template literal, and one would end it.)
+  --
+  -- NULLABLE ON PURPOSE, and this is the load-bearing part: **ABSENT IS NOT REAL.** Every row
+  -- stored before 2026-09-25 has NULL here and every one of them is a test race. Nothing back-fills
+  -- them -- rows are immutable by trigger below, and the owner's decision of 2026-09-25 is that no
+  -- race stored so far is carried over when the move to a server happens, so there is nothing to
+  -- back-fill and no migration of old race data to write.
+  -- ★ A later reader asks isRealRace(...). It must never ask "not equal to quick-test", which would
+  --   read every legacy NULL as a real race -- the exact inversion this column exists to prevent.
+  race_source          TEXT,
 
   -- The identifier's own two envelope fields. Kept because a stored race that cannot say which
   -- encoding and which build it came from cannot be honestly re-run: the world travels as a diff
@@ -300,6 +314,32 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
       effectiveRacerTypes: race.effectiveRacerTypes ?? {},
     });
 
+    // RACE-SOURCE-1. Normalised at the boundary so nothing unrecognised can ever become 'race'.
+    const { source, unrecognised } = normalizeRaceSource(race.raceSource);
+    if (unrecognised) {
+      // Loud, but NOT fatal: a race must not be refused over a metadata field it could not fix by
+      // being sent again. The race is stored as a test race, which is the safe direction.
+      console.warn(
+        `[races] unrecognised raceSource ${JSON.stringify(race.raceSource)} — storing the race ` +
+          'with no marker, which counts as a TEST race. See shared/raceSource.mjs.'
+      );
+    }
+
+    // ★★ THE CONTENT ID COVERS HOW THE RACE WAS STARTED, because `race_source` is IN this object
+    // and the id is taken over the whole of it (`contentId(row)` below). That is deliberate — Option
+    // A, a technical decision of 2026-09-25, not the owner's:
+    //
+    //   `contentAddress.js` argues that a content id is a statement about a VALUE, not about a slot.
+    //   A field kept BESIDE the row to spare the id would degrade that to "the id is most of the
+    //   content", and would leave the next person adding a field with no rule to follow. It costs
+    //   nothing measurable: no stored row changes (ids are stored, nothing recomputes them), the
+    //   readable short key is drawn at random and is deliberately outside the hash, `roster_id` and
+    //   `racer_types_id` are separate content ids over their own sub-objects, nothing in any fixture,
+    //   doc or spec pins a race content id, and dedupe is unaffected because a retry carries the
+    //   same marker.
+    //
+    // ★ SO: A LATER FIELD ABOUT THE RACE BELONGS IN HERE, not beside it. If it is worth storing on
+    //   the race, it is part of what the race IS, and the id should say so.
     const row = {
       client_race_id: required(race, 'clientRaceId'),
       team: String(race.team).trim(),
@@ -321,6 +361,17 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
       elapsed_sec: race.elapsedSec ?? null,
       results: canonicalString(race.results),
       winners: canonicalString(race.winners),
+      // ★★ HOW THE RACE WAS STARTED — TAKEN FROM WHAT THE CLIENT SENT, never derived here. The
+      // contrast is with `team` above, which the route stamps from the session because a team is a
+      // PERMISSION and a client that could name one could file a race into somebody else's history.
+      // This is not a permission: it is a fact only the device that started the race witnessed, so
+      // it arrives the way the seed and the stage do. Deriving it would be the guess the marker
+      // exists to remove.
+      //
+      // Absent and unrecognised both normalise to NULL, which reads as a test race. Of the two ways
+      // to be wrong, calling a real race a test is recoverable; calling a test a real race silently
+      // corrupts a standing. An unrecognised value is reported below rather than swallowed.
+      race_source: source,
     };
 
     // The race is content-addressed too, over the row it is about to become. Two genuinely
@@ -415,6 +466,10 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
       elapsedSec: row.elapsed_sec ?? undefined,
       results: JSON.parse(row.results),
       winners: JSON.parse(row.winners),
+      // ★ `?? null` and NOT `?? undefined`: a reader must be able to see that this race has no
+      // marker, because that is a fact about it (it predates RACE-SOURCE-1, so it is a test race).
+      // Dropping the key would make "no marker" and "field not read" look the same.
+      raceSource: row.race_source ?? null,
 
       rosterId: row.roster_id,
       racerTypesId: row.racer_types_id,

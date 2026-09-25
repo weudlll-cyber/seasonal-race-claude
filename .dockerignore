@@ -107,6 +107,10 @@ server/utils/**/*.test.js
 !shared/nameLimits.mjs
 !shared/canonicalJson.mjs
 !shared/raceShortKey.mjs
+# RACE-SOURCE-1 (2026-09-25): `raceStore.js` imports it for `normalizeRaceSource`, and the client
+# imports it at three payload sites. Named here per the rule above, even though `!shared/**` already
+# covers it — the per-file list is what makes each entry a decision rather than a sweep.
+!shared/raceSource.mjs
 
 # ── Deliberately NOT re-included, named so the absences are decisions rather than oversights ─────
 #
