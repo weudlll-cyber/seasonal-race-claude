@@ -28,6 +28,7 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
 } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -39,7 +40,12 @@ const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const TRACKS = (arg("tracks", "space-sprint") || "").split(",").filter(Boolean);
+// Scope validated at boot (NIGHT-2026-09-26 PIECE 4): an unknown or empty --tracks refuses.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/company-under-floor",
+  ids: String(arg("tracks", "space-sprint")).split(",").map((s) => s.trim()).filter(Boolean),
+  all: loadTracks(),
+});
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "30"));
 // Stated explicitly, never inherited from the default — the default MOVED in this very ship, and an

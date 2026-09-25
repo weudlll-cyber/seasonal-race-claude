@@ -454,6 +454,18 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       iterates every track with no scope at all. Passing the scope through is not enough for those,
       so by this block's own rule they stop here and are named rather than half-converted.
 
+      ★★ **NARROWED FURTHER 2026-09-26 by NIGHT-2026-09-26 PIECE 4.**
+      `scripts/lib/trackScope.mjs` grew a second entry point, `resolveTrackScopeIds`, aimed at
+      the diag shape (iterate ids, look each up per iteration via `Map.get`). Same refusal wording,
+      same exit code, same provisions — one home, two doors, not two homes. Five diag tools brought
+      under the refusal (`company-ceiling-who`, `company-under-floor`, `endgame-spec`,
+      `headcount-price`, `sprite-premise`); the sabotage arm on each was verified (`--tracks=nope`
+      / `--track=nope` → exit 2 naming the ten known tracks; a valid scope still produces rows).
+      Ten file-based `-sum.mjs` analysers were NAMED and left alone — their scope reaches
+      `readFileSync(--dir=...)` rather than `loadTracks()`, so they have no natural "known set" to
+      validate against. Report:
+      [TRACKSCOPE-DIAG-REACH-1](../reports/evolution/TRACKSCOPE-DIAG-REACH-1.md).
+
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
       derived the camera seed from the race seed since his decision of 2026-08-23. **Re-deriving the
@@ -1048,6 +1060,19 @@ are in PART TWO with what closed them; these are the ones still standing.
       the same day and deliberately excluded them — so nothing automatic reports them. No cause has
       been investigated, which is what the row says.
 
+      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECE 3.** `comeback-precedence` was re-pinned
+      away from the dead Garden Path seed 41000 to **space-sprint seed 2** — chosen from
+      `scripts/diag/comeback-beats.mjs`, one of three (2, 3, 5) the diag confirmed as CAST AND
+      SHOWN on the driver camera. The spec was then run three times, once against each of those
+      three fixtures. **All three failed identically: `the race never cut to a comeback at all`.**
+      No `COMEBACK_ZOOM` state in any of the three browser traces. That is bigger than a fixture
+      — the plan casts a comebacker, the harness's driver believes the shot fires, and the
+      browser's camera does not take it. No assertion was touched. The row STAYS OPEN and moves
+      into the finding shape: the fixture is not the wall. The open owner question — why the
+      browser's director declines the shot the harness driver takes — is named on
+      `reports/evolution/MORNING-2026-09-26.md` under NEEDS HIS WORD. Full evidence:
+      [COMEBACK-PRECEDENCE-REPIN-1](../reports/evolution/COMEBACK-PRECEDENCE-REPIN-1.md).
+
 ## Before the VPS migration
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
@@ -1597,6 +1622,36 @@ already-settled questions.
       screen **moves no fingerprint**. `scripts/camera-fingerprint.mjs` imports `DEFAULT_CAMERA_CONFIG`
       (`:77`) and builds from it (`:131`) — the shipped defaults, never the stored settings. A print
       moves only when a shipped DEFAULT changes.
+
+      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECES 1, 2, 5 and 6.** Four subjects the row was
+      carrying were narrowed on this night; the row STAYS OPEN — the reorganisation itself is still
+      untouched, and no layout is designed here.
+
+      - **PIECE 1: the nine MISLEADING tooltips are repaired.** Text-only, no behaviour changed;
+        the five that stated a stale config value had the number removed and the effect described,
+        the Camera Advanced group blurb was rewritten to describe the per-offer accept probability
+        the code implements, and the Race Defaults + Racer Editor tooltips describe what the
+        control actually does. Tally column 3 in the inventory: **204 MATCHES · 0 MISLEADING · 1
+        SUSPECTED DEAD · 1 RESERVED = 205.**
+      - **PIECE 2: the structural cause is closed.** `scripts/check-tooltip-values.mjs` (new)
+        refuses any Dev Screen tooltip stating a config value, wired into
+        `.github/workflows/ci.yml` and force-run under `verify --premerge`. Guard test 5/5 green.
+        Running it on the whole screen found 46 more tooltips beyond the nine PIECE 1 fixed; 45
+        were fixed in the same piece as a removal-of-a-number, 1 sits on a dated comment line as
+        history.
+      - **PIECE 5: the two structural oddities are established, not acted on.** `minTargetScreenPx`
+        writes to two stores at two scopes and — as traced from source — reaches no reader on the
+        race path; both values feed only their own preview / seed. The reset-scope mismatch is
+        precise: the master reset covers the five RACE-RELEVANT blocks (including Auto-Scale in
+        its own tab) and deliberately excludes the two COSMETIC blocks (Frame Timing inside Race
+        Tuning, Camera in its own card). Written into DEVSCREEN-INVENTORY.md § *Structural
+        oddities established 2026-09-26*.
+      - **PIECE 6: three candidate groupings are on his desk.** Candidate A re-tags with a
+        fingerprint's-own-line badge and moves nothing (~1 day). Candidate B lifts Frame Timing to
+        a new "What Watches It" group (~2-3 days, 2 controls moved). Candidate C splits Camera
+        Advanced into six timeline cards (~1 week, 79 controls moved, test-id churn). No candidate
+        renames a stored key. No recommendation. Report:
+        [DEVSCREEN-GROUPINGS-1](../reports/evolution/DEVSCREEN-GROUPINGS-1.md).
 
       **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
       work:**

@@ -80,7 +80,7 @@ const PROFILE_FIELDS = [
     // everywhere else; 0.25 (now the default on every state) halves that. See defaults.js.
     tip: (v) =>
       `Lerp time-constant during stable tracking. ${v.toFixed(2)}s. Higher = the subject drifts ` +
-      `further from its framed position before the camera catches up; every state ships 0.25s.`,
+      `further from its framed position before the camera catches up; every state ships the same value.`,
   },
   {
     key: 'entryTC',
@@ -763,7 +763,7 @@ function CameraAdvancedSection() {
               if (v >= 0.001 && v <= 0.02) set('battlePulkThresholdT', v);
             }}
             display={`${((config.battlePulkThresholdT ?? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT) * 100).toFixed(1)}%`}
-            tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Fine-grained for the dense COMBO15 field: range 0.1%–2.0%, step 0.1%. Default 0.05 (5% of a lap) — above the slider max, so the thumb pins at 2.0% until you move it (the stored value is preserved)."
+            tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Fine-grained for the dense COMBO15 field: range 0.1%–2.0%, step 0.1%. If the shipped value lies above the slider max the thumb pins at the max until you move it, and the stored value is preserved."
           />
           <SliderRow
             label="Isolation (lap %)"
@@ -793,7 +793,7 @@ function CameraAdvancedSection() {
               if (v >= 3 && v <= 6) set('battleMaxGroupSize', v);
             }}
             display={`${config.battleMaxGroupSize ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupSize}`}
-            tip="Maximum number of racers in the BATTLE group (3–6). Default 6."
+            tip="Maximum number of racers in the BATTLE group (3–6)."
           />
           <SliderRow
             label="Max. Rank-Span (Expansion)"
@@ -807,7 +807,7 @@ function CameraAdvancedSection() {
               if (v >= 2 && v <= 10) set('battleMaxGroupRankSpan', v);
             }}
             display={`${config.battleMaxGroupRankSpan ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupRankSpan}`}
-            tip="Maximum rank span (highest minus lowest rank) of the BATTLE group after greedy expansion. Default 5 → P3–P8 when seed is at P3. Prevents P3-to-P11 clusters."
+            tip="Maximum rank span (highest minus lowest rank) of the BATTLE group after greedy expansion. Prevents wide clusters — e.g. P3-to-P11 — around a lower-ranked seed."
           />
           <SliderRow
             label="Top-N Required (minimum rank)"
@@ -821,7 +821,7 @@ function CameraAdvancedSection() {
               if (v >= 3 && v <= 20) set('battleMinTopN', v);
             }}
             display={`Top-${config.battleMinTopN ?? DEFAULT_CAMERA_CONFIG.battleMinTopN}`}
-            tip="At least one racer in the pulk must be at position ≤ N. Default 10 → battles only when at least one top-10 racer is involved."
+            tip="At least one racer in the pulk must be at or above this position. Ensures BATTLE fires only when a top-of-field racer is involved."
           />
         </div>
       </div>
@@ -830,8 +830,11 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>3 · MID — Director Weights &amp; OVERVIEW</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Weighted random director: all active events enter the pool with their weights. Mandatory
-          states (Start, Endgame, Finish) are not in the pool.
+          Each weight is the accept probability for that one event on the offer — a per-offer coin
+          flip on a single candidate, not a share of a pool. A declined offer falls through to
+          LEADER. Every offered event goes through this check, including the endgame&apos;s
+          LEAD_CHANGE exception. Eligibility (whether an event is offered at all) decides most
+          selections; a weight moves the outcome only among the offers that fire.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
@@ -846,7 +849,7 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('battleWeight', v);
             }}
             display={(config.battleWeight ?? DEFAULT_CAMERA_CONFIG.battleWeight).toFixed(2)}
-            tip="Selection weight for BATTLE_ZOOM in the candidate pool. Default 0.80."
+            tip="Selection weight for BATTLE_ZOOM in the candidate pool."
           />
           <SliderRow
             label="LEAD_CHANGE weight"
@@ -860,7 +863,7 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('leadChangeWeight', v);
             }}
             display={(config.leadChangeWeight ?? DEFAULT_CAMERA_CONFIG.leadChangeWeight).toFixed(2)}
-            tip="Selection weight for LEAD_CHANGE in the candidate pool. Default 0.70."
+            tip="Selection weight for LEAD_CHANGE in the candidate pool."
           />
           <SliderRow
             label="COMEBACK weight"
@@ -874,7 +877,7 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('comebackWeight', v);
             }}
             display={(config.comebackWeight ?? DEFAULT_CAMERA_CONFIG.comebackWeight).toFixed(2)}
-            tip="Selection weight for COMEBACK_ZOOM in the candidate pool. Default 0.60."
+            tip="Selection weight for COMEBACK_ZOOM in the candidate pool."
           />
           <SliderRow
             label="OVERVIEW weight"
@@ -888,7 +891,7 @@ function CameraAdvancedSection() {
               if (v >= 0 && v <= 1) set('overviewWeight', v);
             }}
             display={(config.overviewWeight ?? DEFAULT_CAMERA_CONFIG.overviewWeight).toFixed(2)}
-            tip="Selection weight for OVERVIEW in the candidate pool. Default 0.30."
+            tip="Selection weight for OVERVIEW in the candidate pool."
           />
           <SliderRow
             label="OVERVIEW cooldown (ms)"
@@ -902,7 +905,7 @@ function CameraAdvancedSection() {
               if (v >= 5000 && v <= 60000) set('overviewCooldownMs', v);
             }}
             display={`${((config.overviewCooldownMs ?? DEFAULT_CAMERA_CONFIG.overviewCooldownMs) / 1000).toFixed(0)}s`}
-            tip="Minimum pause after OVERVIEW before OVERVIEW may appear again. Default 15 s."
+            tip="Minimum pause after OVERVIEW before OVERVIEW may appear again."
           />
           <SliderRow
             label="OVERVIEW target count"
@@ -916,7 +919,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('overviewTargetCount', v);
             }}
             display={`${config.overviewTargetCount ?? DEFAULT_CAMERA_CONFIG.overviewTargetCount}`}
-            tip="Target number of OVERVIEW cuts per race. Default 2."
+            tip="Target number of OVERVIEW cuts per race."
           />
           <SliderRow
             label="OVERVIEW start delay (s)"
@@ -930,7 +933,7 @@ function CameraAdvancedSection() {
               if (v >= 5 && v <= 30) set('overviewStartDelay', v);
             }}
             display={`${config.overviewStartDelay ?? DEFAULT_CAMERA_CONFIG.overviewStartDelay}s`}
-            tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
+            tip="Seconds after race start before OVERVIEW may appear in the pool for the first time."
           />
           <SliderRow
             label="Minimum racer size (% of frame)"
@@ -955,7 +958,7 @@ function CameraAdvancedSection() {
                 ? 'Off'
                 : `${((config.minDrawnFrameFrac ?? DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac) * 100).toFixed(1)}%`
             }
-            tip="A readability floor: a racer is never DRAWN smaller than this share of the frame height, so it stays recognisable when the camera is far out. It affects the drawing only — it does not change the zoom, it cannot override your 'World in shot' setting, and it never moves the camera. Default 4.5%: before this floor existed the Space Sprint start formation drew its rockets at 4.44% and the owner was happy with it; without any floor they are 3.17% and the formation stops overlapping. At the default it only bites in Overview, on the tracks whose racers are drawn smallest. 0 turns it off."
+            tip="A readability floor: a racer is never DRAWN smaller than this share of the frame height, so it stays recognisable when the camera is far out. It affects the drawing only — it does not change the zoom, it cannot override your 'World in shot' setting, and it never moves the camera. The shipped floor was chosen against the Space Sprint start formation, whose rockets sat around this share and the owner accepted; below any floor they drop to about three-quarters of that and the formation stops overlapping. At the shipped setting it only bites in Overview, on the tracks whose racers are drawn smallest. 0 turns it off."
           />
           <SliderRow
             label="Standard corridor (world px)"
@@ -972,7 +975,7 @@ function CameraAdvancedSection() {
               if (v >= 100 && v <= 600) set('referenceCorridorPx', v);
             }}
             display={`${config.referenceCorridorPx ?? DEFAULT_CAMERA_CONFIG.referenceCorridorPx} px`}
-            tip="The width, in world pixels, that ONE corridor means for every camera setting. Every state's 'World in shot' number is measured in these, so changing this rescales EVERY shot on EVERY track at once — raise it and the whole game pulls back, lower it and everything moves in. It is what makes one number mean the same picture on a narrow track and a wide one. Default 300: the widest corridor drawn so far, so today every track is judged against the same yardstick. A track wider than this keeps its own width instead, so its corridor is never cropped."
+            tip="The width, in world pixels, that ONE corridor means for every camera setting. Every state's 'World in shot' number is measured in these, so changing this rescales EVERY shot on EVERY track at once — raise it and the whole game pulls back, lower it and everything moves in. It is what makes one number mean the same picture on a narrow track and a wide one. The shipped value was chosen as the widest corridor drawn so far, so today every track is judged against the same yardstick. A track wider than that keeps its own width instead, so its corridor is never cropped."
           />
           <SliderRow
             label="Company: min racers in frame"
@@ -990,7 +993,7 @@ function CameraAdvancedSection() {
                 ? 'Off'
                 : `${config.minRacersVisible ?? DEFAULT_CAMERA_CONFIG.minRacersVisible}`
             }
-            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 5: the owner's verdict, taken on a SPREAD field where the guarantee actually binds. The earlier measurement preferred 3, but it was taken on a PACK field where company is close by and the guarantee rarely does anything — see docs/CAMERA_DIRECTOR.md §8.1. It also decides when the finish overview stops widening for stragglers: that happens once the leader plus this many are home."
+            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. The shipped value is the owner's verdict, taken on a SPREAD field where the guarantee actually binds. An earlier measurement preferred a lower value, but it was taken on a PACK field where company is close by and the guarantee rarely does anything — see docs/CAMERA_DIRECTOR.md §8.1. It also decides when the finish overview stops widening for stragglers: that happens once the leader plus this many are home."
           />
         </div>
 
@@ -1031,7 +1034,7 @@ function CameraAdvancedSection() {
             value={config.glideDurationMs ?? DEFAULT_CAMERA_CONFIG.glideDurationMs}
             onChange={(e) => set('glideDurationMs', parseInt(e.target.value, 10))}
             display={`${config.glideDurationMs ?? DEFAULT_CAMERA_CONFIG.glideDurationMs} ms`}
-            tip="How long a Glide transition takes to ease pan+zoom from the old shot to the new subject's framing. Only used when Transition style = Glide. Range 300–900 ms. Default 500."
+            tip="How long a Glide transition takes to ease pan+zoom from the old shot to the new subject's framing. Only used when Transition style = Glide."
           />
           <SliderRow
             label="Leader forward-frame"
@@ -1046,7 +1049,7 @@ function CameraAdvancedSection() {
                 ? 'Centre'
                 : (config.leaderForwardFrac ?? DEFAULT_CAMERA_CONFIG.leaderForwardFrac).toFixed(2)
             }
-            tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
+            tip="Where the leader sits along the motion axis. Centre = 0.50; higher values push the leader toward the leading edge so more of the frame shows the pack behind (the action)."
           />
           {/* ── AIM-ROOM-1: SHIPPED at 360 px since 2026-09-02. The key stays so it is revertible. ── */}
           <SliderRow
@@ -1086,7 +1089,7 @@ function CameraAdvancedSection() {
               if (v >= 0.001 && v <= 0.01) set('leadChangeMinGap', v);
             }}
             display={(config.leadChangeMinGap ?? DEFAULT_CAMERA_CONFIG.leadChangeMinGap).toFixed(3)}
-            tip="Minimum T-space gap between P1 and P2 for a stable lead reading. Default 0.002."
+            tip="Minimum T-space gap between P1 and P2 for a stable lead reading."
           />
           <SliderRow
             label="Debounce (ms)"
@@ -1100,7 +1103,7 @@ function CameraAdvancedSection() {
               if (v >= 200 && v <= 2000) set('leadChangeDebounceMs', v);
             }}
             display={`${config.leadChangeDebounceMs ?? DEFAULT_CAMERA_CONFIG.leadChangeDebounceMs}ms`}
-            tip="Duration in ms the new leader must hold before the change is confirmed. Default 800 ms."
+            tip="Duration in ms the new leader must hold before the change is confirmed."
           />
           <SliderRow
             label="Min. observation duration (s)"
@@ -1114,7 +1117,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('leadChangeMinDuration', v);
             }}
             display={`${(config.leadChangeMinDuration ?? DEFAULT_CAMERA_CONFIG.leadChangeMinDuration).toFixed(1)}s`}
-            tip="Minimum time the camera stays on the new leader after LEAD_CHANGE entry. Default 1.5 s."
+            tip="Minimum time the camera stays on the new leader after LEAD_CHANGE entry."
           />
           <SliderRow
             label="LEAD_CHANGE-Cooldown (ms)"
@@ -1128,7 +1131,7 @@ function CameraAdvancedSection() {
               if (v >= 1000 && v <= 30000) set('leadChangeCooldownMs', v);
             }}
             display={`${((config.leadChangeCooldownMs ?? DEFAULT_CAMERA_CONFIG.leadChangeCooldownMs) / 1000).toFixed(0)}s`}
-            tip="Minimum pause after LEAD_CHANGE before re-triggering is possible. Default 5 s."
+            tip="Minimum pause after LEAD_CHANGE before re-triggering is possible."
           />
         </div>
       </div>
@@ -1158,7 +1161,7 @@ function CameraAdvancedSection() {
                 ? `${Math.round((config.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc) * 1000)}ms`
                 : 'Off'
             }
-            tip="EMA time-constant applied to the pan target in COMEBACK and LEADER_ZOOM follow phase. Removes comeback-braking oscillation and per-physics-step jitter. 0 = disabled. Higher = smoother but the camera trails the racer more. Default 50 ms."
+            tip="EMA time-constant applied to the pan target in COMEBACK and LEADER_ZOOM follow phase. Removes comeback-braking oscillation and per-physics-step jitter. 0 = disabled. Higher = smoother but the camera trails the racer more."
           />
           <SliderRow
             label="Min. positions gained"
@@ -1174,7 +1177,7 @@ function CameraAdvancedSection() {
               if (v >= 2 && v <= 10) set('comebackMinPositionsGained', v);
             }}
             display={`${config.comebackMinPositionsGained ?? DEFAULT_CAMERA_CONFIG.comebackMinPositionsGained}`}
-            tip="Minimum positions gained within the time window to trigger COMEBACK. Default 2."
+            tip="Minimum positions gained within the time window to trigger COMEBACK."
           />
           <SliderRow
             label="Time window (s)"
@@ -1188,7 +1191,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 10) set('comebackWindowSec', v);
             }}
             display={`${(config.comebackWindowSec ?? DEFAULT_CAMERA_CONFIG.comebackWindowSec).toFixed(1)}s`}
-            tip="Look-back window for rank history. Positions gained = rank N seconds ago minus current rank. Default 4 s."
+            tip="Look-back window for rank history. Positions gained = rank N seconds ago minus current rank."
           />
           <SliderRow
             label="Min. observation duration (s)"
@@ -1202,7 +1205,7 @@ function CameraAdvancedSection() {
               if (v >= 1 && v <= 5) set('comebackMinDuration', v);
             }}
             display={`${(config.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration).toFixed(1)}s`}
-            tip="Minimum duration after COMEBACK entry on the comeback racer. Default 3 s."
+            tip="Minimum duration after COMEBACK entry on the comeback racer."
           />
           <SliderRow
             label="COMEBACK-Cooldown (ms)"
@@ -1216,7 +1219,7 @@ function CameraAdvancedSection() {
               if (v >= 1000 && v <= 30000) set('comebackCooldownMs', v);
             }}
             display={`${((config.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs) / 1000).toFixed(0)}s`}
-            tip="Minimum pause after COMEBACK before re-triggering is possible. Default 10 s."
+            tip="Minimum pause after COMEBACK before re-triggering is possible."
           />
           <SliderRow
             label="Outcome phase threshold"
@@ -1249,7 +1252,7 @@ function CameraAdvancedSection() {
               if (v >= 0.1 && v <= 0.9) set('comebackMinStartGap', v);
             }}
             display={`${((config.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap) * 100).toFixed(0)}%`}
-            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.25 = must have been in the back 75% of the field. Default 25%."
+            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). A gap of X means the racer had to be in the back (1 - X) share of the field."
           />
           <SliderRow
             label="Max. current rank (lead-group filter)"
@@ -1265,7 +1268,7 @@ function CameraAdvancedSection() {
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
             }}
             display={`${((config.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct) * 100).toFixed(0)}%`}
-            tip="Racer must not have a better normalised rank than this at trigger time. 0.20 = top 20% excluded (e.g. P1–P8 with 40 racers). Default 20%."
+            tip="Racer must not have a better normalised rank than this at trigger time. A rank fraction of X excludes the top X share of the field (e.g. P1–P8 in a 40-racer field for X = 0.20)."
           />
         </div>
         {/* COMEBACK-CONNECT-1 — the plan already writes when each comeback peaks, and the camera
@@ -1307,7 +1310,7 @@ function CameraAdvancedSection() {
             display={(
               config.battleSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFactor
             ).toFixed(2)}
-            tip="Physics speed during BATTLE_ZOOM. 1.0 = normal, 0.5 = half speed. Default 0.5."
+            tip="Physics speed during BATTLE_ZOOM (a factor: 1.0 = normal, 0.5 = half speed)."
           />
           <SliderRow
             label="Min. duration (s)"
@@ -1321,7 +1324,7 @@ function CameraAdvancedSection() {
               if (v >= 1.0 && v <= 5.0) set('battleSlowmoMinDuration', v);
             }}
             display={`${(config.battleSlowmoMinDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration).toFixed(1)}s`}
-            tip="Minimum duration of the slowmo effect after BATTLE_ZOOM ends. Default 2.0s."
+            tip="Minimum duration of the slowmo effect after BATTLE_ZOOM ends."
           />
           <SliderRow
             label="Fade duration (s)"
@@ -1337,7 +1340,7 @@ function CameraAdvancedSection() {
               if (v >= 0.0 && v <= 1.0) set('battleSlowmoFadeDuration', v);
             }}
             display={`${(config.battleSlowmoFadeDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration).toFixed(2)}s`}
-            tip="Duration of slowmo effect fade-in and fade-out. 0 = instant switch. Default 0.3s."
+            tip="Duration of slowmo effect fade-in and fade-out. 0 = instant switch."
           />
           <SliderRow
             label="Focus darkening"
@@ -1353,7 +1356,7 @@ function CameraAdvancedSection() {
             display={(
               config.battleFocusDarkening ?? DEFAULT_CAMERA_CONFIG.battleFocusDarkening
             ).toFixed(2)}
-            tip="Dimming of non-BATTLE racers. 0 = no effect, 1 = completely black. Default 0.4."
+            tip="Dimming of non-BATTLE racers. 0 = no effect, 1 = completely black."
           />
         </div>
       </div>
@@ -1748,7 +1751,7 @@ function CameraAdvancedSection() {
             display={String(
               config.finishOverviewLookbackPx ?? DEFAULT_CAMERA_CONFIG.finishOverviewLookbackPx
             )}
-            tip="FINISH_OVERVIEW: How far before the finish line (in world pixels) the camera target sits. 0 = centred on finish line, 300 = 300 px before the finish (track-independent). Default 300."
+            tip="FINISH_OVERVIEW: How far before the finish line (in world pixels) the camera target sits. 0 = centred on finish line; higher values place the target further back, track-independent."
           />
         </div>
       </div>
@@ -1817,7 +1820,7 @@ function CameraAdvancedSection() {
             display={(
               config.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress
             ).toFixed(3)}
-            tip="Predictive gate: leader progress (fraction of the finish, 0–1) at which the one-shot close-check fires BEFORE the line. Higher = later/closer to the line. Default 0.97."
+            tip="Predictive gate: leader progress (fraction of the finish, 0–1) at which the one-shot close-check fires BEFORE the line. Higher = later/closer to the line."
           />
           <SliderRow
             label="Closeness threshold (t)"
@@ -1835,7 +1838,7 @@ function CameraAdvancedSection() {
             display={(
               config.photoFinishCloseThresholdT ?? DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT
             ).toFixed(3)}
-            tip="Max lap-normalised t-gap between the top-2 finishers to trigger the photo-finish shot (same unit family as the BATTLE temporal threshold). Larger = triggers more often. Default 0.03."
+            tip="Max lap-normalised t-gap between the top-2 finishers to trigger the photo-finish shot (same unit family as the BATTLE temporal threshold). Larger = triggers more often."
           />
           <SliderRow
             label="Slowmo factor"
@@ -1851,7 +1854,7 @@ function CameraAdvancedSection() {
             display={(
               config.photoFinishSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor
             ).toFixed(2)}
-            tip="Physics slow-motion during the photo-finish shot. 1.0 = normal, 0.5 = half speed. Default 0.5."
+            tip="Physics slow-motion during the photo-finish shot (a factor: 1.0 = normal, 0.5 = half speed)."
           />
         </div>
       </div>
@@ -1995,7 +1998,7 @@ function CameraAdvancedSection() {
               }}
               style={{ width: '5rem' }}
             />
-            <InfoTooltip text="Duration in ms the overlay text remains visible. Default: 3500 ms." />
+            <InfoTooltip text="Duration in ms the overlay text remains visible." />
           </label>
         </div>
 

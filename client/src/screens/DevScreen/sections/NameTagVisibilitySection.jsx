@@ -125,7 +125,7 @@ function NameTagVisibilitySection() {
             >
               Show all names for (s)
               <InfoTooltip
-                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. Default 8 s: measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; by 8 s it drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs) / 1000).toFixed(1)} s.`}
+                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. The shipped value is measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; the shipped hold picks the point at which decluttering drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs) / 1000).toFixed(1)} s.`}
               />
             </label>
             <input

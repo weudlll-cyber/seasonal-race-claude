@@ -73,7 +73,7 @@ function AutoScaleSection() {
                 style={{ cursor: 'pointer' }}
               />
               Enabled
-              <InfoTooltip text="Disabled by default. When off, racer display size is unchanged (1× factor). Enable to have sizes auto-adapt per race." />
+              <InfoTooltip text="When off, racer display size is unchanged (1× factor). Enable to have sizes auto-adapt per race." />
             </label>
           </div>
 
@@ -83,7 +83,7 @@ function AutoScaleSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Reference Value
-              <InfoTooltip text="The track-width-per-racer ratio that yields a neutral scale of 1.0. Default 23: at 140px track width with 6 racers (ratio ≈ 23.3) the factor is ≈ 1.0." />
+              <InfoTooltip text="The track-width-per-racer ratio that yields a neutral scale factor of 1.0. Below the ratio, the factor scales UP; above it, the factor scales down." />
             </label>
             <input
               type="number"
@@ -106,7 +106,7 @@ function AutoScaleSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Min Scale
-              <InfoTooltip text="Minimum sprite scale factor (clamp lower bound). Default 0.65 = 65% of normal size." />
+              <InfoTooltip text="Minimum sprite scale factor (clamp lower bound), expressed as a share of the neutral 1.0 factor." />
             </label>
             <input
               type="number"
@@ -136,7 +136,7 @@ function AutoScaleSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Min Target Screen Px
-              <InfoTooltip text="Minimum sprite diameter on screen in pixels. Acts as a floor in the render pipeline: on very large tracks where the camera zooms far out, sprites are enlarged to stay at least this many pixels. Default 32." />
+              <InfoTooltip text="Minimum sprite diameter on screen in pixels. Acts as a floor in the render pipeline: on very large tracks where the camera zooms far out, sprites are enlarged to stay at least this many pixels." />
             </label>
             <input
               type="number"
@@ -160,7 +160,7 @@ function AutoScaleSection() {
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Scale
-              <InfoTooltip text="Maximum sprite scale factor (clamp upper bound). Default 2.5 = 250% of normal size." />
+              <InfoTooltip text="Maximum sprite scale factor (clamp upper bound), expressed as a multiple of the neutral 1.0 factor." />
             </label>
             <input
               type="number"

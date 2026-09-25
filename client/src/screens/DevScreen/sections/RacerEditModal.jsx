@@ -59,7 +59,8 @@ const FIELD_META = {
     min: 16,
     max: 80,
     step: 2,
-    tooltip: 'Sprite size in pixels. Default range 35–50 px.',
+    tooltip:
+      'Sprite size in pixels for this racer type. Setting it here skips auto-scaling for the race and feeds the starting grid (row gap and row count).',
   },
   basePeriodMs: {
     label: 'Anim Period (ms)',
@@ -68,7 +69,7 @@ const FIELD_META = {
     max: 3000,
     step: 50,
     tooltip:
-      'Duration of one full animation cycle in milliseconds. Low = fast flicker, high = slow and calm. Default range 400–1500 ms.',
+      'Duration of one full animation cycle in milliseconds. Low = fast flicker, high = slow and calm.',
   },
   leaderRingColor: {
     label: 'Leader Ring Color',

@@ -33,10 +33,16 @@ import { ensureTrackGeometriesCached } from './appReady.js';
 // never turn an ordinary hold-elapsed cut into a false claim of an interrupt.
 const INSIDE_THE_HOLD_MS = 7500;
 
-// Chosen from the headless sweep as a race whose plan casts a comebacker who climbs. If the race
-// simply produces no comeback at all the spec says so and fails, rather than passing vacuously.
-const TRACK = /Garden Path/;
-const SEED = '41000';
+// Chosen from `scripts/diag/comeback-beats.mjs` — a race whose plan casts a comebacker who climbs
+// and whose shot the harness confirms is taken (space-sprint seed 2: written #9@resolve 0.7,
+// shown #9@0.6001). The earlier pin (Garden Path seed 41000) drifted: the plan cast no comebacker
+// at that seed on any of the ten tracks, so the shot could not fire and the spec failed on a
+// fixture hole, not on the mechanism. Re-pinned 2026-09-26 by NIGHT-2026-09-26 PIECE 3.
+//
+// If the race simply produces no comeback at all the spec still says so and fails, rather than
+// passing vacuously.
+const TRACK = /Space Sprint/;
+const SEED = '2';
 
 test('the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE', async ({
   page,

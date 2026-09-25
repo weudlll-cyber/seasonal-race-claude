@@ -298,6 +298,14 @@ jobs:
       - name: Check no document states a config value
         run: node scripts/check-config-claims.mjs
 
+      # Sibling to the above, aimed at the hole check-config-claims cannot see: tooltips and blurbs
+      # in the Dev Screen section sources. `check-config-claims` scans documents only; tooltips are
+      # source and were outside its reach, and DEVSCREEN-STOCKTAKE (2026-09-25) measured that 38
+      # tooltips carried a stated default with nothing checking them. This guard closes that hole in
+      # the same shape: no stated default in a UI string, one home in defaults.js, dated rows exempt.
+      - name: Check no Dev Screen tooltip states a config value
+        run: node scripts/check-tooltip-values.mjs
+
       # Fails if a living document restates the fairness threshold, whose one home is docs/FAIRNESS.md.
       # It does NOT guard the track count — see the header of the guard for why that is unbuildable.
       - name: Check no document restates the fairness threshold

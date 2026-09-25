@@ -33,6 +33,7 @@ import {
   TRACK_DEFAULT_RACER,
   formatIdentity,
 } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -47,7 +48,13 @@ const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const TRACK = arg("track", "space-sprint");
+// Scope validated at boot (NIGHT-2026-09-26 PIECE 4). Singular --track= flag, one name expected.
+const [TRACK] = resolveTrackScopeIds({
+  tool: "diag/headcount-price",
+  ids: [arg("track", "space-sprint")],
+  all: loadTracks(),
+  flag: "--track",
+});
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "30"));
 const OUT = arg("out", "c:/tmp/hc");
@@ -59,11 +66,8 @@ const FROM_U = Number(arg("from", "0.10"));
 // is the trap this arc has already hit twice.
 const CFG = { ...DEFAULT_CAMERA_CONFIG };
 const PROMISE = CFG.minRacersVisible;
+// `TRACK` was validated at boot by resolveTrackScopeIds — the .get is guaranteed to hit.
 const geo = new Map(loadTracks().map((g) => [g.id, g])).get(TRACK);
-if (!geo) {
-  process.stderr.write(`no track ${TRACK}\n`);
-  process.exit(1);
-}
 const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, !geo.closed);
 
 const races = [];

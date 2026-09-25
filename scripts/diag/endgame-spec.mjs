@@ -83,6 +83,7 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
 } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -578,7 +579,15 @@ export function runCandidate(arm, overrides, only = null) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const rows = runCandidate(ARM, cliOverrides(), TRACK_ARG ? TRACK_ARG.split(",") : null);
+  // Validate the --tracks scope at boot; null means "every track" (NIGHT-2026-09-26 PIECE 4).
+  const only = TRACK_ARG
+    ? resolveTrackScopeIds({
+        tool: "diag/endgame-spec",
+        ids: TRACK_ARG.split(",").map((s) => s.trim()).filter(Boolean),
+        all: loadTracks(),
+      })
+    : null;
+  const rows = runCandidate(ARM, cliOverrides(), only);
   if (JSON_OUT) {
     console.log(JSON.stringify({ label: LABEL, arm: ARM, overrides: cliOverrides(), rows }, null, 1));
   } else {

@@ -426,6 +426,33 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
+  seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
+  tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two
+  structural oddities, offer two-or-three groupings, close-out and merge decision.
+
+- [COMEBACK-PRECEDENCE-REPIN-1.md](COMEBACK-PRECEDENCE-REPIN-1.md) — **the fixture was re-pinned
+  and it STILL fails.** Three space-sprint seeds (2, 3, 5) that the diag confirms cast a comebacker
+  all failed the browser spec identically: `the race never cut to a comeback at all` — no
+  COMEBACK_ZOOM state in any of the traces. The precedence itself may be fine; the shot is not
+  being taken in the browser. Spec left RED, no assertion touched; owner question named on the
+  morning sheet.
+
+- [TRACKSCOPE-DIAG-REACH-1.md](TRACKSCOPE-DIAG-REACH-1.md) — **one home, two doors.**
+  `scripts/lib/trackScope.mjs` grew a second entry point `resolveTrackScopeIds` for tools whose
+  shape iterates ids and looks each up per iteration. Five diag tools brought under the refusal
+  (`company-ceiling-who`, `company-under-floor`, `endgame-spec`, `headcount-price`,
+  `sprite-premise`); ten file-based analysers NAMED and left alone because their scope resists the
+  refusal without a shape change. Guard test 7/7 green; per-tool sabotage arm verified.
+
+- [DEVSCREEN-GROUPINGS-1.md](DEVSCREEN-GROUPINGS-1.md) — **three ways to lay out 205 controls, for
+  the owner to choose from.** Candidate A: re-tag with a fingerprint's-own-line badge, move
+  nothing (~1 day, 0 stored key changes, 0 controls moved). Candidate B: three top-level groups
+  (What Moves the Race / What Watches / Who Sets), Frame Timing lifts to What Watches (~2-3 days,
+  2 controls moved). Candidate C: B + Camera Advanced splits along its own timeline sub-headings
+  into six cards (~1 week, 79 controls moved, some test-id churn). No candidate renames a stored
+  key. No recommendation.
+
 - [MORNING-2026-09-25.md](MORNING-2026-09-25.md) — **the night sheet for the 2026-09-25 run** — four
   pieces off master `03f0177a`: sabotage arms for the five OLD viewer invariants, the company
   guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the
