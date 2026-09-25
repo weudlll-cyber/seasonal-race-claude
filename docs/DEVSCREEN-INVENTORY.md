@@ -88,7 +88,7 @@ card-level **Reset Defaults** button restores the whole block. Every control car
 `COSMETIC_CONFIG_KEYS` — it is not part of the config world the fingerprint hashes at all. It is
 *operator defaults*, and three of its eight controls turn out to reach nothing.
 
-**8 controls.**
+**7 controls** (8 until 2026-09-25 — see the update below).
 
 | Control | Config key | Shipped default | Tooltip | Verdict |
 | --- | --- | --- | --- | --- |
@@ -97,9 +97,8 @@ card-level **Reset Defaults** button restores the whole block. Every control car
 | Default Number of Winners (Podium Spots) | `winners` | 3 | yes | **MATCHES** |
 | Max Players — Closed Tracks | `maxPlayersClosed` | 40 | yes | **MATCHES** |
 | Max Players — Open Tracks | `maxPlayersOpen` | 100 | yes | **MATCHES** |
-| Auto-advance to Result Screen after race | `autoAdvance` | false | yes | ★ **SUSPECTED DEAD** |
-| Delay (seconds) | `autoAdvanceDelay` | 5 | yes | ★ **SUSPECTED DEAD** |
-| Sound effects | `soundEffects` | true | yes | ★ **SUSPECTED DEAD** |
+| Go to the results on its own | `autoAdvance` | on | yes | **MATCHES** — repaired 2026-09-25 |
+| Sound effects | `soundEffects` | on | yes | ★ **RESERVED** — 2026-09-25 |
 
 **Readers, for the four that have one.** `raceActionStage` is normalised at the boundary
 (`normalizeRaceActionStage`) into the race payload and travels with the race to the engine, and it is
@@ -125,27 +124,37 @@ The label says *"Default Race Duration"* and the tooltip *"Default length of a r
 settings *"applied to every new race"*. The effect is: applied to no race that can be started.
 **Written down and left exactly as it is** — what to do about it is a decision, not a stock-take.
 
-### ★ SUSPECTED DEAD — the three at the bottom of the card
+### ★★ UPDATED 2026-09-25 (STAY-ON-THE-FINISH-1) — the three at the bottom of the card
 
-`autoAdvance`, `autoAdvanceDelay` and `soundEffects` are written by their controls and read by
-nothing.
+When this stock-take was taken, `autoAdvance`, `autoAdvanceDelay` and `soundEffects` were written by
+their controls and read by nothing. **The owner's decisions of 2026-09-25 resolved all three, in three
+different ways**, and the record of what was found is kept below the resolution because the finding is
+what produced the decisions.
 
-**What was searched:** the whole repository, uncapped, for `autoAdvance`, `autoAdvanceDelay`,
-`soundEffects`, and the snake-case spellings `auto_advance` and `sound_effects`, across `.js`,
-`.jsx`, `.mjs`, `.json` and `.md`, excluding only `node_modules`, `.git` and build output. **Every
-hit is one of three things:** the declaration in `defaults.js`, the control in `RaceDefaults.jsx`, or
-one unrelated string in `DevScreen.raceAction.test.jsx`'s fixture. There is no consumer on the client,
-none on the server, none in `shared/` and none in `scripts/`.
+| Was | Now | Why |
+| --- | --- | --- |
+| `autoAdvance` SUSPECTED DEAD | **MATCHES** | The switch was given a job: ON hands over to the results when the camera ending closes (today's behaviour, so it now ships ON); OFF leaves the finish picture standing until the operator left-clicks it. Read by `RaceScreen/index.jsx`. |
+| `autoAdvanceDelay` SUSPECTED DEAD | **REMOVED** | A second number for a wait the camera ending already owns. By his decision one value decides how long the picture stands, and it is the ending he already adjusts. The control and the key are gone. |
+| `soundEffects` SUSPECTED DEAD | **RESERVED** | Still read by nothing, and **deliberately kept**: he is sourcing the sounds and this is the seat they will be switched on from. A reserved place is not a dead knob, and a later cleanup grepping for readers must not remove it. |
 
-They are recorded as **SUSPECTED** rather than flatly dead for one reason only: absence of a hit is
-not proof of absence of a reader, since a value could in principle be reached through a dynamic key.
-Nothing in this codebase does that with this store — `useStorage(KEYS.RACE_DEFAULTS, …)` hands out a
-plain object and every other consumer names its field — so the suspicion is thin. It is kept because
-the rule is that only a total absence earns a flat DEAD, and "I could not construct the dynamic
-access" is not the same as "it cannot exist".
+★ **The way off the finish picture already existed and was reused**: a left click on the race
+picture. `CEREMONY-SKIP-1` put a mouse-down on `.race-canvas-wrapper` for exactly that intention at
+the START of the show; the closing uses the same gesture on the same element. No config key, no
+number and no new element were added — and the card shows the hint *"Click the race picture to go to
+the results"* only while the switch is off.
 
-★ **Auto-advance is a pair, and the pair is consistent:** the Delay stepper is rendered only when
-`autoAdvance` is on, so a dead toggle hides a dead stepper. Neither is reachable by a race.
+★★ **AND THE THING SOMEBODY AFRAID TO TURN THE KNOB SHOULD READ: adjusting the finish hold in the
+dev screen MOVES NO FINGERPRINT.** `scripts/camera-fingerprint.mjs` imports `DEFAULT_CAMERA_CONFIG`
+from `defaults.js` (line 77) and builds its camera config from it (line 131) — **the shipped
+defaults, never the stored settings**. A print moves only when a shipped DEFAULT changes. Turning the
+ending longer or shorter on your own screen changes what you see and nothing that is recorded.
+*(Established 2026-09-25, because the opposite had been stated to the owner.)*
+
+**What the original finding was, kept because it is what the decisions answered.** Searched the whole
+repository, uncapped, for all three keys and for the snake-case spellings `auto_advance` and
+`sound_effects`: every hit was the declaration in `defaults.js`, the control in `RaceDefaults.jsx`, or
+one test fixture. There was no consumer on the client, none on the server, none in `shared/` and none
+in `scripts/`.
 
 ### Also in this block, with no control at all
 
@@ -1026,6 +1035,11 @@ counts it without writing any of it.
 | 16 | User Management | 8 | admin | server | neither |
 | | **TOTAL** | **206** | | | |
 
+★ **205 since 2026-09-25**: `autoAdvanceDelay` was removed from Race Defaults by
+STAY-ON-THE-FINISH-1, taking that section from 8 to 7. The table above is left at the figure the
+stock-take counted, with the change stated here and again at the tallies, because a number that is
+quietly edited afterwards cannot be checked against the day it was taken.
+
 ★★ **TWO HUNDRED AND SIX.** The owner's finding was that the dev screen has too many values spread
 too widely, and the number is reported plainly because it is larger than the working figure anyone
 has been using: `B-UX2` was written against *"30+ tunable values"* and the screen carries nearly
@@ -1120,12 +1134,25 @@ holes.
 
 ## Verdict tallies
 
-| Verdict | Count | Share |
-| --- | --- | --- |
-| **MATCHES** | **194** | 94.2% |
-| **MISLEADING** | **9** | 4.4% |
-| **SUSPECTED DEAD** | **3** | 1.5% |
-| **UNTRACED** | **0** | — |
+★★ **UPDATED 2026-09-25 by STAY-ON-THE-FINISH-1.** Both columns are given, because a stock-take
+whose numbers quietly move is not a stock-take. **The total fell by one** — `autoAdvanceDelay` was
+removed, so the screen carries **205** controls, not 206.
+
+| Verdict | As taken | After STAY-ON-THE-FINISH-1 | What moved |
+| --- | --- | --- | --- |
+| **MATCHES** | 194 | **195** | `autoAdvance` repaired |
+| **MISLEADING** | 9 | **9** | unchanged — none of the nine was touched |
+| **SUSPECTED DEAD** | 3 | **1** | one repaired, one removed |
+| **RESERVED** *(new)* | — | **1** | `soundEffects`, by the owner's decision |
+| **UNTRACED** | 0 | **0** | |
+| **TOTAL** | **206** | **205** | `autoAdvanceDelay` removed |
+
+★ **They add up both ways:** 194 + 9 + 3 + 0 = 206, and 195 + 9 + 1 + 1 + 0 = 205.
+
+★ **RESERVED is a new verdict and it is deliberately narrow**: a control that is read by nothing and
+is kept ON PURPOSE, with the reason and the date. It exists so that "nothing reads it" stops being
+read as "delete it". There is exactly one, and adding a second needs the same thing this one has — a
+decision, named and dated.
 
 ### The nine MISLEADING, by name
 
@@ -1148,14 +1175,17 @@ them**.
 
 ### The three SUSPECTED DEAD, by name
 
-`autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all in **Race Defaults**.
+`autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all in **Race Defaults**. ★ **All three were
+resolved on 2026-09-25 by STAY-ON-THE-FINISH-1** — `autoAdvance` repaired to MATCHES,
+`autoAdvanceDelay` removed, `soundEffects` RESERVED by the owner's decision. **One SUSPECTED DEAD
+control remains on the screen: none.** The paragraph below is the finding as it was taken.
 
 **What was searched:** the whole repository, uncapped — every `.js`, `.jsx`, `.mjs`, `.json` and `.md`
 outside `node_modules`, `.git` and build output — for each key and for the snake-case spellings
 `auto_advance` and `sound_effects`. Every hit is the declaration in `defaults.js`, the control in
 `RaceDefaults.jsx`, or one test fixture. No consumer in `client/`, `server/`, `shared/` or `scripts/`.
 
-★ **They are the only dead controls on the screen.** Every one of the 143 keys in the six config-backed
+★ **They were the only dead controls on the screen.** Every one of the 143 keys in the six config-backed
 tuning sections has a behavioural reader in the shipped product — established by searching each key
 across `client/src`, `server/src` and `shared/` and discounting hits in the config plumbing that only
 stores and hashes a value. **Zero keys were left without a reader.** The dead knobs are all in the
