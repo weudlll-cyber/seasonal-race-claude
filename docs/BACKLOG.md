@@ -461,6 +461,13 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
       `--tracks` entry point named in the piece-E report still has the defect.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
+      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
+      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
+      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
+      surrounding numbers are larger than when the row was written: **82 files import the driver**
+      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
+
 - [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
       GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
       **20/20**, because his beetle decision made the race short enough — **the harness hardcodes 2
@@ -469,6 +476,17 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: nothing on its own** — it is the argument for the item above.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is still the argument for the item above, and the mechanism is unchanged — `raceDriver.mjs:201` still gives every closed track `laps: 2` and `:319` still stops at 200,000 ms (line numbers at `e4b2b075`). Waiting on nothing of its own.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED. The mechanism this row names is GONE; the silence
+      is not.** The row's argument rests on "the harness hardcodes 2 laps and that never moved". It
+      moved: **`scripts/lib/raceDriver.mjs:416`** now reads `laps: shape.isOpen ? 1 :
+      lapsOfClosedTrack(geo)`, and `lapsOfClosedTrack` (**`:299-310`**) takes the track's own
+      `defaultLaps` and **throws** rather than substituting one — its error says a lap count nobody
+      chose is how a race silently becomes one this project does not run. So garden-path can no
+      longer be discarded for having been run at the wrong lap count.
+      ★ **What REMAINS true:** a race can still be discarded silently by the **200 s ceiling**, which
+      is untouched, and the discarding is still not reported. The row is kept for that, as the
+      argument for the entry above, and no longer for the lap count.
 
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
@@ -502,6 +520,17 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **no cell would be empty**, so the loud-zero rule above would not catch it.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source (`raceDriver.mjs:201` and `:319`; the line numbers in the entry have moved, the mechanism has not). It is tonight's **piece 11** — *why a 60-second race exceeds 200 seconds of simulation* — which had not started when this verdict was written.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the LAP COUNT half is DONE, the CEILING half is
+      not.** Half of this row has been fixed and the row never said so.
+      ★ **DONE:** the hardcoded lap count is gone. **`scripts/lib/raceDriver.mjs:416`** reads
+      `lapsOfClosedTrack(geo)`, defined at **`:299-310`**, which returns the track's own
+      `defaultLaps` and throws if the record does not state one. The row's own worry — "a track whose
+      `defaultLaps` is 4 is measured at 2" — can no longer happen; it would now be a loud error.
+      ★ **STILL TRUE:** the **200 s ceiling** remains, at **`scripts/lib/raceDriver.mjs:477`** (and
+      described again at **`:622`**, which notes the longest track finishes at 93.1 s of it). His
+      judgement of 2026-08-25 that this is not pressing is unchanged and still recorded.
+      **The row now claims the ceiling only.**
 
 - [x] ~~**THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
       VISIBLE STEP COMES FROM.** On river-run seed 13 a third racer crosses the one-length boundary
@@ -537,6 +566,13 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       closed; it stands on its own as an unused mechanism nobody has decided to point forwards.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source. `CameraDirector.js:2628` states the verdict is one-way and `_contentionOut` is added to at `:2697` and never removed from; nothing admits on it. Waiting on nobody — an unused mechanism nobody has decided to point forwards.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, re-verified at source.** `_updateContentionWatch`
+      is at **`client/src/modules/camera/CameraDirector.js:2758`** (the entry says `:2619`; the line
+      moved, nothing else did), called from **`:4666`**. `_contentionOut` is added to at **`:2806`**
+      and **grep for `_contentionOut.delete` returns 0** — nothing anywhere admits on it. The code's
+      own comments say so twice, at **`:296`** ("it only ever GROWS") and **`:2737`** ("THE VERDICT IS
+      ONE-WAY").
 
 - [x] ~~**AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
       HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.**~~
@@ -638,6 +674,10 @@ nothing is designed here, no key is added, and no change is implied.
 *(The other entry that stood in this section — **Garden Path does not finish** — moved to PART TWO on
 2026-09-03, closed. GARDEN-PATH-CLOSE-1.)*
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN.** No motion-continuity instrument exists:
+      `scripts/finish-motion-truth.mjs` is present and still covers **one phase**, which is what the
+      row already says, and no guard anywhere checks pan displacement against a local median.
+
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
 - [ ] **`0xC0000142` on this machine — watch for a second occurrence before treating it as a
@@ -662,6 +702,19 @@ nothing is designed here, no key is added, and no change is implied.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is a WATCH by construction and closes on a second occurrence or on the machine being retired. One occurrence still.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, AND THIS ROW'S OWN WATCH CONDITION HAS FIRED.**
+      The row says "one occurrence is an anecdote" and sets the trigger: watch for a second. **There
+      was a second, and nobody came back to this row.**
+      ★ **2026-09-19, six weeks after the first**
+      (**`reports/night/BREAKAWAY-GROWTH-1.md:457`**): a running dev server reported `build unknown`
+      with `git rev-parse --short HEAD: exit 3221225794` — the same `0xC0000142` — so its badge named
+      no commit, and every eye test taken on 5173 before the restart was taken on a build whose
+      identity the badge could not state. It is written up as a lesson at **`docs/LESSONS.md:3641`**.
+      ★ **The named fix is still not done:** `client/vite-plugin-ra-build.js:79` still shells out to
+      git per check rather than reading `.git/HEAD` and `.git/index` directly.
+      ★ **What is NOT claimed here:** that the two share a cause. Two is not a pattern either; it is
+      the end of the anecdote, and this row's own condition for looking again.
+
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -676,6 +729,11 @@ nothing is designed here, no key is added, and no change is implied.
       oversight. Anyone closing this must answer both arguments, not just count the copies.**
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** all three copies are still there and the argument is unmet, which is the point of the entry. Waiting on anyone who proposes to consolidate answering both arguments first.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and deliberately so.** All three are present:
+      `scripts/camera-fingerprint.mjs`, `scripts/render-fingerprint.mjs`, `scripts/camera-replay.mjs`.
+      The row exists so that anyone closing it answers the two arguments rather than counting the
+      copies, and nobody has answered them.
 
 - [ ] **The race-identity HASH: `sha(identity + canonical(cameraConfig))`.** Printing the identity
       made "did these two numbers come from the same race?" readable; a hash would make it
@@ -703,6 +761,18 @@ nothing is designed here, no key is added, and no change is implied.
       found by running it and not resolved:** `--owner-unit` mutates the config PER TRACK, after the
       line is printed, so a per-run hash cannot cover it. See RACE-IDENTITY-HASH-1.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — a hash EXISTS, but not the one this row asks
+      for.** `hashIdentity` is real and in use: defined at
+      **`client/src/modules/parity/raceIdentity.js:109`**, consumed by
+      **`scripts/parity/replay.mjs:83`** and **`scripts/parity/soak.mjs:120`**, and `replay.mjs:151`
+      already prints DRIFTED when a replay's identity no longer matches the saved one — which is the
+      mechanical check this row wanted.
+      ★ **But it hashes the IDENTITY ONLY.** `hashIdentity(identity)` returns
+      `hashWorld(identity).full`; the camera config is not in it. That is precisely the insufficiency
+      the row was written about — and **`scripts/his-shot-truth.mjs` still exists**, so its example
+      of two runs with one identity and different numbers still stands.
+      **The row now claims only the missing half: the CONFIG in the hash.**
+
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
 - [x] ~~**The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
@@ -725,15 +795,6 @@ nothing is designed here, no key is added, and no change is implied.
       **STILL TRUE and not done:** the upstream fix — whatever creates a throwaway worktree should
       remove it in a `finally`, so the stub is never created — is unbuilt. It is not what this box
       asked for, and it is filed as its own line below rather than kept open under a closed one.
-
-- [ ] **Nothing removes a throwaway worktree at CREATION's end, so the stub is created and then
-      cleaned up later.** SHIP-CEREMONY step 13 clears the stubs a block leaves behind, which is a
-      cure rather than a prevention. Whatever creates a throwaway worktree should remove it in a
-      `finally`. **Filed 2026-09-03 (SECOND-SITES-LIVE-1)** as the live remainder of the closed
-      `.git/worktrees` entry above; the closure was about prune working, not about stubs not being
-      made. **verify:** grep the tooling for `worktree add` and check each caller has a `finally`.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .git/worktrees | wc -l` returns **3** today, against the 51 the entry last recorded, so the stubs shrank but did not go. It is tonight's **piece 14** (*the worktree stubs, at the cause*), which had not started when this verdict was written.
 
 ---
 
@@ -2183,6 +2244,20 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★ **"Nothing removes a throwaway worktree at creation's end" — MOOT, settled 2026-09-25 by
+      the row's OWN verify command.** It asked that whatever creates a throwaway worktree remove it in
+      a `finally`, and set its own test: *grep the tooling for `worktree add` and check each caller
+      has a `finally`*.
+      **Run today: there are no callers.** `worktree add` appears nowhere under `scripts/` — only in
+      `docs/`, in reports, and in one client test about build identity. Nothing in the tooling creates
+      a worktree, so there is no caller to give a `finally` to. Worktrees here are made by hand, and a
+      hand is not a code path.
+      **And the symptom is absent:** `ls .git/worktrees` returns **0** today, against the **3** its own
+      verdict of 2026-09-02 recorded.
+      ★ **The cure exists, and the row was right to refuse it as the prevention:**
+      `scripts/worktree-stubs.mjs` (Q-28, 2026-09-24) removes stubs that appear. This row closes not
+      because the cure arrived but because the prevention it asks for has no subject.
 
 - [x] ★★ **THE BROWSER GATE IS WIDENED, AND IT COVERS EVERY SPEC THAT DOES NOT WAIT FOR A RACE.**
       Closed 2026-09-25 by the owner's decision of the same day: **the gate widens on the POST-MERGE
