@@ -964,6 +964,38 @@ are in PART TWO with what closed them; these are the ones still standing.
       [VERIFY-RULES.md](VERIFY-RULES.md) R12a, and a browser regression is caught AT master rather
       than before it arrives. Both are deliberate — recorded so the closure is not read as wider than
       it is.
+      ★★ **THE DECISION OF 2026-09-25, AND WHY IT COULD NOT BE WIRED.** The owner decided the widened
+      browser set should run BEFORE a merge rather than after it, with three candidate specs
+      (`d9-smoke`, `race-identifier`, `teams-session`) to be wired into the pre-merge gate **only if
+      they would actually fire there**. Established at the tree, and they would not:
+      **THE PRE-MERGE GATE RUNS NO PLAYWRIGHT SPECS AT ALL.** `verify.mjs:257` sets
+      `GATE_GUARD = "viewer-invariants"` and `verify.mjs:428` spawns it as
+      `node scripts/viewer-invariants.mjs --gate` — a Chromium guard that drives two races, not a
+      spec runner. `verify.mjs` contains no reference to Playwright, to `e2e/`, or to any spec.
+      The curated fast set is `client/package.json:54` (`test:e2e:prod:fast`, 7 specs) and its ONLY
+      consumer is `.github/workflows/browser-gate.yml:177`, which triggers on
+      `push: branches: [master]`, a daily `cron` and `workflow_dispatch` — never on a branch, never
+      on a pull request. So widening that list widens the POST-merge workflow only, which is the
+      opposite of what the decision asks for.
+      ★ **Nothing was wired anywhere**, because there is no pre-merge Playwright step to wire into,
+      and creating one is a second gate mechanism rather than a wiring job. Established and reported
+      in [BROWSER-GATE-PREMERGE-1.md](../reports/evolution/BROWSER-GATE-PREMERGE-1.md).
+      ★ **This row stays OPEN and its subject is unchanged**: the gate is still a subset, and it
+      still runs after the merge and not before it.
+
+## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
+
+- [ ] ★★ **`arrival-shape.spec.js`, `comeback-precedence.spec.js` and `garden-path-finishes.spec.js`
+      FAIL on the production arm.** Found while MEASURING the arm's per-spec cost, not while
+      investigating them — see
+      [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
+      **They pre-date the branch that found them**, and **they are outside the gate's curated set**
+      (`client/package.json:54`), which is why no automatic judgement has been reporting them.
+      ★ **No cause is guessed at here and no fix is proposed.** The brief that found them was to
+      measure, and they were deliberately not investigated. All three wait for a real race, which is
+      the one property they are known to share; whether that is the cause is not known.
+      ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
+      nobody believes, and this repository has already paid for that once.
 
 ## Before the VPS migration
 
