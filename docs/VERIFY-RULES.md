@@ -525,12 +525,13 @@ ordinary routing. It is run deliberately, during night work.
 this rule says about the per-push path and about `verify` is still exactly true, and the guard that
 asserts it is untouched. What changed is that a browser now runs automatically **somewhere else**:
 `.github/workflows/browser-gate.yml` is its OWN workflow — on push to master, on a daily schedule and
-on demand — and runs the **curated fast set** (`test:e2e:prod:fast`, 7 specs / 82 tests) against the
+on demand — and runs the **curated fast set** (`test:e2e:prod:fast`, **10 specs / 110 tests since 2026-09-25**) against the
 PRODUCTION arm. It is not in `ci.yml`, not on `pull_request`, and not in `verify`, for precisely the
 reason this rule gives: a ten-minute browser suite gating every merge trains people to re-run red
-builds. **The fast set is about two minutes, and it gates master rather than every branch.**
+builds. **The fast set is under four minutes, and it gates master rather than every branch.**
 
-★ **The full suite is still night work.** The gate covers 7 of its specs; the rest are run
+★ **The full suite is still night work.** The gate covers 10 of its specs — every one that does not
+wait for a real race; the rest are run
 deliberately, as this rule says, and [NIGHT-RUN.md](NIGHT-RUN.md) remains their one home.
 
 ★ **The gate was proven before it was allowed to block**: five runs on an unchanged tree, 5 of 5
