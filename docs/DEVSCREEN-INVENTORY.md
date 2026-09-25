@@ -938,7 +938,33 @@ the group is the useful unit, with the key list per group as the durable identif
 control sits where. The KEY LIST is exhaustive and mechanically extracted; the grouping is a reading
 aid.)*
 
-**Verdict: 77 MATCHES, 0 SUSPECTED DEAD, 0 MISLEADING found.**
+**Verdict: 73 MATCHES, 4 MISLEADING, 0 SUSPECTED DEAD.**
+
+### ★ MISLEADING ×4 — the four director weights, and it is the GROUP BLURB that is wrong
+
+`battleWeight`, `comebackWeight`, `leadChangeWeight` and `overviewWeight` sit under a paragraph that
+reads: *"Weighted random director: all active events enter the pool with their weights. Mandatory
+states (Start, Endgame, Finish) are not in the pool."*
+
+**Both sentences are contradicted by the code they describe**, and the code says so at length:
+
+- **There is no pool.** `CameraDirector.js` states the design as an **absolute propensity, not a
+  relative share**, and argues the point explicitly — a share *"promises something the camera cannot
+  deliver"*. `_acceptsOffer(weight)` is a per-offer coin flip (`random() < weight`) on ONE candidate;
+  a declined offer falls through to LEADER. Events do not compete with each other at all.
+  ★ The same comment records what this costs a reader who believes the blurb: **eligibility decides
+  about 90% of selections**, so raising `overviewWeight` 0.3 → 10, a 33× increase, moved OVERVIEW's
+  share of the race by **1.8 percentage points**. *"That is why the dial appeared dead."*
+- **The endgame IS weighted.** The blurb says mandatory states are outside the weighting; at the
+  endgame exception the director calls `_acceptsOffer(this._leadChangeWeight)` before offering
+  LEAD_CHANGE. CAMERA-WEIGHTS-1 put it there deliberately — the bypass it replaced produced
+  LEAD_CHANGE at a weight of zero, measured at 1.8% of frames.
+
+So an operator turning these four dials is working from a model of a lottery among competing shots,
+when what each dial sets is one shot's own accept probability, inside gates that decide most of the
+outcome anyway. **The four controls are counted as MISLEADING** because the description they are read
+under is the thing that is wrong; each individual slider is read and does set the propensity its label
+names.
 
 **Every one of the 77 has a behavioural reader in the shipped product**, by the same discounted
 search used for Dynamics. The readers are `CameraDirector.js` and `cameraTimingComputation.js` for the
@@ -961,3 +987,186 @@ was not taken.
 **39 tooltips for 77 controls means roughly half of this section is undescribed** — see the
 no-explanation count at the end. That is the raw material `B-UX3` was folded in for, and this document
 counts it without writing any of it.
+
+---
+
+# THE COUNTS — 2026-09-25
+
+## Controls, per section
+
+| # | Section | Controls | Tier | Block | Race / cosmetic |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Race Defaults | 8 | operator | `RACE_DEFAULTS` | neither — not in the config world |
+| 2 | Change Password | 3 | operator | — | neither |
+| 3 | Player Groups | 2 | operator | server | neither |
+| 4 | Racer Types (card 1 + editor 11) | 12 | operator | racer types | neither (per-type, outside both lists) |
+| 5 | Tracks | 8 | operator | server | neither |
+| 6 | Branding | 11 | operator | server | neither |
+| 7 | Race History | 2 | operator | — (view state) | neither |
+| 8a | Race Tuning → Dynamics | 35 | advanced | `raceDynamicsConfig`, `rowLayoutConfig`, `baseSpeedConfig`, `frameTimingConfig` | **race** (3 blocks) + cosmetic (1) |
+| 8b | Race Tuning → Behavior | 22 | advanced | `raceBehaviorConfig` | **race** |
+| 9 | Sprite Size Range | 1 | advanced | `cameraConfig` | cosmetic |
+| 10 | Camera Advanced | 77 | advanced | `cameraConfig` | cosmetic |
+| 11 | Name Tag Visibility | 3 | advanced | `cameraConfig` | cosmetic |
+| 12 | Auto-Scale | 5 | advanced | `autoScaleConfig` | **race** |
+| 13 | Surface Classes | 9 | advanced | server | neither |
+| 14 | Export Race Config | 0 | advanced | — | — |
+| 15 | System | 0 | advanced | — | — |
+| 16 | User Management | 8 | admin | server | neither |
+| | **TOTAL** | **206** | | | |
+
+★★ **TWO HUNDRED AND SIX.** The owner's finding was that the dev screen has too many values spread
+too widely, and the number is reported plainly because it is larger than the working figure anyone
+has been using: `B-UX2` was written against *"30+ tunable values"* and the screen carries nearly
+**seven times** that. **The figure that matters more is the shape:** one section holds **77 of the
+206**, and three sections hold **134** between them, while five sections hold one control or none.
+
+**Counting rules, so the number can be checked rather than believed.** A control is one thing a person
+can change. A colour picker and its hex field are two (they are two widgets); a preset row and a
+number field for the same key are two. Read-outs, previews, legends, reset links, export buttons and
+the hidden file input behind *Import Settings* are not controls. Per-entity controls are counted once,
+not once per entity — the Racer Editor's 11 are 11, not 11 × the number of types. Surface Classes is
+counted at 9 (2 + the 7 fields of `particle`, what a new class opens with); it renders 5 at its
+thinnest and 10 at its widest.
+
+### By the project's own race / cosmetic line
+
+Using `RACE_RELEVANT_CONFIG_KEYS` and `COSMETIC_CONFIG_KEYS` from `configFingerprint.js`:
+
+| | Controls | Sections |
+| --- | --- | --- |
+| **RACE-RELEVANT** (`raceDynamicsConfig`, `raceBehaviorConfig`, `rowLayoutConfig`, `baseSpeedConfig`, `autoScaleConfig`) | **~60** | Dynamics (most of 35), Behavior (22), Auto-Scale (5) |
+| **COSMETIC** (`cameraConfig`, `frameTimingConfig`) | **~83** | Camera Advanced (77), Name Tag (3), Sprite Size Range (1), Frame Timing within Dynamics (2) |
+| **NEITHER** — outside the hashed config world entirely | **63** | Race Defaults, Password, Groups, Racer Types, Tracks, Branding, History, Surfaces, Users |
+
+★ The race/cosmetic totals are given as *approximately* for one honest reason: Dynamics spans four
+config blocks and its 35 controls are split across them by sub-heading, so an exact split would mean
+attributing each of its controls to a block, which this pass did at the block level and not the
+control level. The two figures are firm to within those two controls of Frame Timing.
+
+★★ **The largest single fact in this table: the screen's biggest section is COSMETIC.** 77 of 206
+controls change the picture and not the race, and they sit in one card. The race itself is tuned by
+about 60 controls in two and a half cards.
+
+## Duplicates
+
+**No key is written by two different controls in a way that could disagree.** What exists is four
+deliberate pairs and one name collision:
+
+| Kind | What | Verdict |
+| --- | --- | --- |
+| Picker + hex field | `color` (Tracks), `primaryColor`, `secondaryColor` (Branding) | Deliberate. Two widgets, one value, same store. |
+| Preset row + field | `scoreboardIntervalMs` (Dynamics) — the one key with two write sites | Deliberate. |
+| Picker + name field | Team + new-team name (User Management) — both end as the account's `team` | Deliberate; the second appears only when the first says "New team". |
+| ★ **Name collision** | **`minTargetScreenPx`** is a control in **Auto-Scale** (in `autoScaleConfig`, a floor for every racer) **and** a control in the **Racer Editor** (per racer type) | **Two different settings with one name, in two stores, at two scopes.** Not a duplicate of one value — worse, because a search for the key finds both and neither says which. |
+
+## Groupings that no longer match
+
+The existing part of this document records that the Dynamics card's order follows **the race
+timeline** — global/technical first, then the phases in temporal order. That still holds within 8a,
+and it is the only section with a stated ordering principle.
+
+**Across the screen there is no ordering principle to have stopped holding.** The registry is two
+tiers — operator, then advanced — and within each tier the order is neither alphabetical, nor by
+size, nor by subject. Reported as the finding rather than as a fault: there is nothing to have
+drifted.
+
+Two controls sit under a heading they do not belong to, and both are recorded above:
+
+- ★ **Frame Timing lives inside Race Tuning.** `dtSmoothingAlpha` and `renderInterpolation` are
+  **COSMETIC** (`frameTimingConfig`) and sit in the card whose master reset restores the five
+  RACE-RELEVANT blocks — and deliberately does not touch them. The card's own text explains this,
+  which is why it is a grouping mismatch rather than a bug, but a reader looking for camera/render
+  settings will not look here.
+- ★ **Auto-Scale is a card of its own and is RACE-RELEVANT.** It moves the starting grid and is one of
+  the five blocks the Race Tuning master reset restores — from another tab.
+
+## Controls with no explanation
+
+**59 of 206 controls have no tooltip and no written description anywhere.**
+
+| Section | Controls | Undescribed |
+| --- | --- | --- |
+| Camera Advanced | 77 | **38** |
+| Surface Classes | 9 | 7 (every generator-schema field) |
+| Tracks | 8 | 6 |
+| Branding | 11 | 4 |
+| User Management | 8 | 3 |
+| Racer Types (manager card) | 1 | 1 |
+| *every other section* | 92 | **0** |
+
+**Method, and its limits.** `<InfoTooltip>` sites were counted per file and set against the control
+count, then corrected by hand in the three places where the crude count lies: the Racer Editor renders
+one `<InfoTooltip text={meta.tooltip} />` inside a loop over six fields (so six are described by one
+site), the three cloud parameters share one group tooltip, and three cards carry LEGENDS whose
+tooltips belong to no control (Racer Types 4, Tracks 6, Branding 2) and were subtracted.
+
+★ **This is `B-UX3`'s raw material and the count is all that is offered.** No explanation was written.
+
+★ **The distribution is the useful part**: eleven of the eighteen surfaces are fully described, and
+**two sections account for 45 of the 59** gaps. The screen is not uniformly undocumented — it has two
+holes.
+
+## Verdict tallies
+
+| Verdict | Count | Share |
+| --- | --- | --- |
+| **MATCHES** | **194** | 94.2% |
+| **MISLEADING** | **9** | 4.4% |
+| **SUSPECTED DEAD** | **3** | 1.5% |
+| **UNTRACED** | **0** | — |
+
+### The nine MISLEADING, by name
+
+| Control | Section | How the effect differs from the promise |
+| --- | --- | --- |
+| Default Race Duration | Race Defaults | Read only where the track has no geometry — which cannot start a race. Every path that can start one ignores it. |
+| Display Size (px) | Racer Editor | Setting it turns auto-scaling OFF for the race and changes `physicalSpriteSize`, which feeds the starting grid. The tooltip says only "sprite size in pixels". |
+| Enabled | Auto-Scale | Tooltip opens *"Disabled by default"*; the shipped default is `true`. |
+| Bonus active until (% race) | Dynamics | Tooltip states *"Default: 67%"*; ships 0.75. |
+| P-Controller starts (% race) | Dynamics | Tooltip states *"Default: 67%"*; ships 0.55. |
+| BATTLE weight | Camera Advanced | The group blurb describes a pool of competing events; the implementation is a per-offer coin flip on one candidate, and eligibility decides ~90% of selections. |
+| COMEBACK weight | Camera Advanced | as above |
+| LEAD CHANGE weight | Camera Advanced | as above, and the blurb's claim that the endgame is unweighted is false — the endgame exception calls `_acceptsOffer` too. |
+| OVERVIEW weight | Camera Advanced | as above; measured at 1.8 percentage points of share for a 33× change. |
+
+★ **Five of the nine are a claim about a NUMBER that has drifted, not a broken mechanism.** That is a
+class, and it has a structural cause: `check-config-claims` holds documents to stating no config
+values; tooltips are source and outside it, and **38 tooltips state a default with nothing checking
+them**.
+
+### The three SUSPECTED DEAD, by name
+
+`autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all in **Race Defaults**.
+
+**What was searched:** the whole repository, uncapped — every `.js`, `.jsx`, `.mjs`, `.json` and `.md`
+outside `node_modules`, `.git` and build output — for each key and for the snake-case spellings
+`auto_advance` and `sound_effects`. Every hit is the declaration in `defaults.js`, the control in
+`RaceDefaults.jsx`, or one test fixture. No consumer in `client/`, `server/`, `shared/` or `scripts/`.
+
+★ **They are the only dead controls on the screen.** Every one of the 143 keys in the six config-backed
+tuning sections has a behavioural reader in the shipped product — established by searching each key
+across `client/src`, `server/src` and `shared/` and discounting hits in the config plumbing that only
+stores and hashes a value. **Zero keys were left without a reader.** The dead knobs are all in the
+operator tier, in the one block that is outside the hashed config world.
+
+## Needs a measured race — NOT a verdict, and nothing here was acted on
+
+**UNTRACED is 0**: every control's chain was followed from source, so none is recorded as untraceable.
+The list below is a different question — controls whose *magnitude* of effect cannot be known from
+reading code, only from running races. Each already has a MATCHES verdict on the question this
+stock-take asked, which is whether the reader does what the label says.
+
+- **The four director weights** (`battleWeight`, `comebackWeight`, `leadChangeWeight`,
+  `overviewWeight`) — how much of the shot mix each one actually moves. Partly answered already by
+  CAMERA-WEIGHTS-1's measurement, which is quoted above; the other three have no equivalent figure.
+- **`gapBrakeMaxAuthority`** — it is a ceiling the brake climbs toward, not a value it runs at, and how
+  often the ceiling binds is a measurement.
+- **`racePlanCorridorStart` / `racePlanBonusTransitionEnd`** — once their tooltips are believed rather
+  than believed-wrong, what moving them does to the finish is a measured question.
+- **`comebackUseBeats`** — ships off; what turning it on does to the comeback shot's timing is a
+  measurement (the earlier finding is that the shot is a median 0.134 of the race early without it).
+- **`referenceValue` / `minScale` / `maxScale`** (Auto-Scale) — the clamp bounds bind or do not bind
+  per track and field size, which source cannot say.
+
+**Nothing on this list was measured, and nothing on it is proposed.**
