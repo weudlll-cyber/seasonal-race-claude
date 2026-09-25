@@ -1443,20 +1443,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -ni "must be"` over `RaceTuningSection.jsx` and `CameraZoomTuningSection.jsx` returns nothing, while the precedent it names still exists. Waiting on somebody applying it in two places.
 
-- **B-UX4** — Sprite size system overhaul
-  - Current behavior: per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
-    values and completely disable auto scaling (`displaySizeScale = 1`). This means
-    sprites can appear too large on narrow tracks — and was one of the factors
-    that led to an incorrect `racersPerRow` value during D7c diagnosis.
-  - Alternative concepts (spec still pending):
-    - **(a) Override as multiplier** over auto scaling (e.g. `displaySizeOverride: 1.25` = 25% larger than auto)
-    - **(b) Mixed mode with min/max limits** — auto scale runs, override sets upper/lower bound
-    - **(c) Complete redesign of the tunable concept** — auto and absolute value as selectable modes
-  - Arose during D7c diagnosis (2026-04-29). Needs vision discussion before spec is written.
-  - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the vision discussion the entry says must come before a spec.
-
 - ~~**B-2** — TrackSelector: custom track behavior when geometry is missing~~ — ✅ **CLOSED
   2026-08-23 (BACKLOG-SORT-42). Closed by `5bde5a94` (QUIET-FAILURES-1, 2026-08-17)**, confirmed at
   source: `SetupScreen.jsx` computes `selectedGeometryReady` from `getTrack(geometryId)` — the cache,
@@ -2117,6 +2103,37 @@ proposal arriving again in six months looking new.
 
 *Recorded on the day he gave them. Each row states the decision and its date — and where the row it
 closes made a factual claim, what that claim really was when it was checked at the tree.*
+
+- [x] ★★ **B-UX4, THE SPRITE-SIZE SYSTEM OVERHAUL — DROPPED BY THE OWNER, 2026-09-25.** Not
+      deferred, not parked on a spec: **dropped.** The three concepts it was holding open — override
+      as a multiplier, a mixed mode with min/max bounds, a redesign with selectable modes — are not
+      going to be built, and the vision discussion the entry was waiting for will not happen.
+
+      ★ **Its content is moved here rather than deleted**, because the entry recorded a real defect
+      and the reason it never mattered, and both are worth finding again:
+
+      > **Current behaviour:** per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
+      > values and completely disable auto-scaling (`displaySizeScale = 1`). Sprites can therefore
+      > appear too large on narrow tracks — and this was one of the factors behind an incorrect
+      > `racersPerRow` value during the D7c diagnosis.
+      >
+      > **Alternative concepts (spec still pending):** **(a)** override as a MULTIPLIER over auto
+      > scaling (e.g. `displaySizeOverride: 1.25` = 25% larger than auto); **(b)** MIXED MODE with
+      > min/max limits — auto scaling runs, the override sets an upper/lower bound; **(c)** COMPLETE
+      > REDESIGN of the tunable concept — auto and absolute value as selectable modes.
+      >
+      > Arose during the D7c diagnosis (2026-04-29). Needs a vision discussion before a spec is
+      > written. **Priority: low.** Not a UX blocker — only visible with a deliberate `displaySize`
+      > override on a large-field, narrow track.
+      >
+      > **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the vision discussion
+      > the entry says must come first.
+
+      ★ **Why this is a clean drop rather than a loss.** The entry's own priority line already said
+      it: the defect is reachable only by deliberately setting an absolute `displaySize` on a narrow
+      track with a large field. Nothing ships in that state, and the D7c diagnosis it confused has
+      long since been settled. A concept question nobody has needed to answer in five months is not
+      a backlog row, and holding three unbuilt alternatives open costs a reader every time they pass.
 
 - [x] ★★ **THE AUTHORED BEATS STAY AS THEY ARE — DECIDED BY THE OWNER, 2026-09-25.** The camera
       goes on INFERRING the comeback moment from rank history; nothing from the plan is handed

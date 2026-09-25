@@ -41,22 +41,24 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **five closed** — three on
-the re-verification and two more on the owner's decisions of that day — and four were already struck
-records, leaving the three below. Each carries the address that was read.
+★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **six closed** — three on
+the re-verification and three more on the owner's decisions of that day — and four were already
+struck records, leaving the two below. Each carries the address that was read.
 
-**1 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
-Still live: `docs/BACKLOG.md:1456` (`B-UX4`).
-
-**2 · The dev screen has grown past 30 values — how should it be organised?**
+**1 · The dev screen has grown past 30 values — how should it be organised?**
 Still live: `docs/BACKLOG.md:1420` (`B-UX2`).
 
-**3 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+**2 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
 dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
 Six real pieces of work with real shapes, none of which anyone should start unasked.
 → [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
+
+- ~~**The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**~~
+  **DROPPED BY THE OWNER, 2026-09-25.** `B-UX4` is not deferred and not waiting on a spec — it is
+  dropped, and all three concepts with it. Its content was moved, not deleted, into
+  [BACKLOG.md](BACKLOG.md), *Closed by the owner's decisions of 2026-09-25*.
 
 - ~~**The authored beats never reach the camera — hand them through, or leave the detector to
   infer?**~~ **DECIDED BY THE OWNER, 2026-09-25: they stay as they are.** The camera goes on
