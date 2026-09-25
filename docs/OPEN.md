@@ -1,93 +1,90 @@
-# What is open — verified at the tree, 2026-09-24
+# What is open — DERIVED from BACKLOG PART ONE, 2026-09-25
 
-**Regenerated 2026-09-24 from master `1b47b5a3` by NIGHT-2026-09-24 (`docs/open-truth-2026-09-24`).**
+★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
+Derived on **2026-09-25** from PART ONE's **six** rows. Where the two disagree, **the backlog wins** —
+and the date above is how a reader tells at a glance whether this has gone stale again.
 
-★★★ **THIS PAGE REPLACES A DERIVED ONE, AND THAT IS THE POINT.** The previous version said of itself:
-*"THIS PAGE IS DERIVED AND NEVER AUTHORITATIVE… No item was judged, re-checked or closed to build
-this page."* It was generated 2026-08-23 and was a month stale. **Every entry below was
-re-established at the tree — a file, a line, a command or a run — or it does not appear.** Nothing
-was copied from a list, including from the page this one replaces.
+★★ **WHY IT WAS REBUILT, because the failure is the interesting part.** The previous version was the
+harvest of 2026-09-24: a page assembled BESIDE the backlog rather than from it. Within a day the
+backlog went from 32 open rows to six, and this page still listed eleven items under "needs his word"
+— among them the race identifier, the track backgrounds, the render fingerprint and the naturalness
+envelope, all four already settled. **One page said six and the other said something else**, which is
+how the owner came to be told "32 open" on a morning when it was not true. That is the same disease
+the backlog itself was cured of the day before, one level up.
 
-★ **Why it was commissioned.** On 2026-09-05 six items were put to the owner as open and every one
-had been done long before. The scoreboard at the foot of this page says how many of the candidates
-gathered this time turned out the same way.
+★ **The rule that follows from it:** the OPEN section below is PART ONE, one line per row, pointing at
+the backlog for the detail. Nothing is added here that the backlog does not carry.
+
+---
+
+## 0 · THE OPEN LIST — all six, from BACKLOG PART ONE
+
+*One line each. The backlog row is the detail; this is only the map.*
+
+1. **A sweep that asks for races and gets none still prints a table and exits 0.** Narrowed
+   2026-09-25 — one shared refusal exists and three callers are on it; what remains is the tools that
+   take a scope in a different shape.
+2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
+   Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
+   Windows condition itself is not closed and cannot be closed from here.
+3. **Season scoring.** Parked on a decision nobody has made — the database half is built; what is
+   missing is a points rule.
+4. **Tenancy.** Races are team-scoped; tracks, brands, racers and player groups are not.
+5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
+   yet. His word plus a purchase.
+6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+
+→ [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
 ---
 
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
+★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **three closed** and four more
+were already struck records, leaving the five below. Each carries the address that was read.
 
-**1 · Which cut counts as "the leading group" — changes of first place, or fights inside the top
-five?**
-The two measures rank the levers in opposite directions on the open track, so the answer changes
-which dial would be built. The observer deliberately refuses to choose.
+**1 · Which cut counts as "the leading group" — changes of first place, or fights inside the top five?**
+Still live: `docs/SIM.md:730` still presents the grid that answers both readings and does not choose
+between them.
 → `docs/SIM.md:730` · [RACE-ACTION.md](RACE-ACTION.md)
 
-**2 · The authored beats never reach the camera — hand them through, or leave the detector
-inferring?**
-His call, and it needs his eye afterwards. Re-verified: no code in `client/src/modules/camera` reads
-a hero's beats.
-→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · PART TWO decision D14
+**2 · The authored beats never reach the camera — hand them through, or leave the detector to infer?**
+Still live, by the row's own test: `git grep -n "beats" -- client/src/modules/camera` returns JSDoc,
+prose comments and test fixtures, and **no production code that reads them**.
+→ [BACKLOG.md](BACKLOG.md) PART TWO decision D14
 
-**3 · ~~The render fingerprint builds its frame camera by hand~~ — ★★ ALREADY DONE, 2026-09-05.**
-The repair landed in `d2f10ab2` (RENDER-CAMERA-FIELDS-1) and is in master; all four fingerprints
-verify today. ★★★ **He ordered a re-mint for it on 2026-09-23 and there was nothing to re-mint** —
-NIGHT-2026-09-24C found the work already done and **minted nothing**, because a fingerprint minted
-with no change behind it would falsify the record. **What is left is the GUARD half** — nothing
-checks that callers build that object through `frameCameraInputs` — and it is in section 2 below.
-→ [BACKLOG.md](BACKLOG.md)
+**3 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
+Still live: `docs/BACKLOG.md:1456` (`B-UX4`).
 
-**4 · A race identifier a person can type — short, long, or both?**
-The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
-cannot produce.
-★★ **BUILT, 2026-09-05, and the two BACKLOG rows behind this closed as SUPERSEDED on 2026-09-25.**
-`client/src/modules/raceIdentifier.js` encodes **all nine inputs** into one string that repeats a race
-on another machine; the durable record stores them (`client/src/modules/raceHistory.js:100-106`), the
-host surface carries it (`SetupScreen/RaceSettings.jsx:33,35`), and a real browser holds the path
-(`client/e2e/race-identifier.spec.js`, inside the gate's curated set since 2026-09-25).
-★ **What is left of the question is the SHAPE, not the feature** — short, long, or both — and whether
-what shipped is the shape he wanted is still his to say.
-→ [BACKLOG.md](BACKLOG.md) PART TWO · [BACKLOG-TRUTH-2.md](../reports/evolution/BACKLOG-TRUTH-2.md)
-· `reports/evolution/SEED-PARITY-1.md`
+**4 · The dev screen has grown past 30 values — how should it be organised?**
+Still live: `docs/BACKLOG.md:1420` (`B-UX2`).
 
-**5 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
-AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfile` builds its own
-client now and `docker build -f server/Dockerfile .` needs nothing else. Cost measured at **+8 s
-(+2.4%)**, not the large penalty the proposal feared. Proven by running the image with no mounts.
-
-**6 · ~~`VITE_API_URL` for a real deployment — default it to same-origin?~~** — ★★ **DECIDED AND
-BUILT 2026-09-24.** Our server now marks every page it serves; an empty `apiBaseUrl` means
-same-origin. **His 4173 flow is structurally safe** — it is a plain `node:http` static server that
-never gets a marker — and that was **proven by running it**, not asserted.
-
-**7 · ~~The naturalness envelope is guarded on one side only~~ — ★★ **DONE 2026-09-24**, by his
-decision of 2026-09-23. `NATURALNESS_FLOOR = 0.8` mirrors the ceiling, and it **refuses a
-configuration** rather than clamping a running race — because clamping the product would have changed
-the shipped `wild` race, whose slow-side breach he ACCEPTED on 2026-08-24. Nothing shipped is
-refused; the three race fingerprints are unmoved.
-→ [RACE-ACTION.md](RACE-ACTION.md) §6
-
-**8 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
-→ [BACKLOG.md](BACKLOG.md) `B-UX4`
-
-**9 · The dev screen has grown past 30 values — how should it be organised?**
-His own finding; nobody can spec it without his shape.
-→ [BACKLOG.md](BACKLOG.md) `B-UX2`
-
-**10 · The 51.6 MB of track backgrounds — re-spec or drop?**
-**Corrected 2026-09-24:** it is **51.6 MB in 10 JPGs** under `server/seeds/backgrounds/`, not "60 MB"
-and not PNGs. The old plan names PNGs and there are none.
-→ [BACKLOG.md](BACKLOG.md) `Q-27` · measured with `git ls-files` + `stat`
-
-**11 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+**5 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
 dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
 Six real pieces of work with real shapes, none of which anyone should start unasked.
 → [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
 
+### Closed on 2026-09-25, and why — kept visible so the removal is not silent
+
+- ~~**A race identifier a person can type — short, long, or both?**~~ **SETTLED BY WHAT SHIPPED.**
+  RACE-IDENTIFIER-1 built it and it encodes all nine inputs; the row closed in
+  [BACKLOG.md](BACKLOG.md) PART TWO. The shape question was answered by building one.
+- ~~**The 51.6 MB of track backgrounds — re-spec or drop?**~~ **DECIDED BY THE OWNER, 2026-09-23**
+  (`Q-27`): the current quality stays, no re-encoding.
+- ~~**The render fingerprint builds its frame camera by hand**~~ — already done 2026-09-05.
+- ~~**One-command deploy**~~, ~~**`VITE_API_URL` same-origin**~~ — both decided.
+- ~~**The naturalness envelope is guarded on one side only**~~ — done 2026-09-24.
+
 ---
 
 ## 2 · NEEDS WORK, NO DECISION
+
+★ **NOT RE-VERIFIED ON 2026-09-25.** This section is the 2026-09-24 harvest as it stood, kept
+unchanged. The rebuild of that date re-checked §1 and §3 at the tree and ran out of budget before
+these; each row still carries its own "verified how" column from the harvest. **Treat every row here
+as dated 2026-09-24, not as checked today** — saying so is cheaper than a page that looks current and
+is not.
 
 *Specified, small, nobody is waiting on anything. Each verified to be still undone.*
 
@@ -130,31 +127,37 @@ claim meant, but the task is six sections and not one.
 ## 3 · NEEDS HIS EYE
 
 *Judgeable only in the browser. The code is in.*
+★ **Re-verified 2026-09-25.** Four rows checked, one closed.
 
-**1 · `city-circuit`, quick-test seed 30, on the shipped stage — does a 349 px gap held by three
-racers look as bad as it sounds?**
-The largest gap in 600 measured races, peaking at progress 0.98 — at the line. **He has now seen this
-one and accepted it** (it is what produced the 2026-09-23 refinement), so this row records that the
-question was asked and answered; the remaining shortlist below has not been watched.
-→ [reports/evolution/CHASE-REMAINDER-1.md](../reports/evolution/CHASE-REMAINDER-1.md) §(C)
+**1 · Verification sittings for work that already shipped** — loading a saved player list, a track with
+missing geometry being refused, backup→restore→reset end to end, dev-screen sections, physics and
+collisions, storage edge cases, fullscreen and sprites.
+→ [BACKLOG.md](BACKLOG.md) Phase V, `docs/BACKLOG.md:1743`
 
-**2 · Verification sittings for work that already shipped** — loading a saved player list (`V-1`), a
-track with missing geometry being refused (`V-2`), backup→restore→reset end to end (`B-5`/`V-5`), dev
-panel sections, physics and collisions, storage edge cases, fullscreen (`V-6`–`V-9`), and sprites on
-a 6000-px track (`Q-13`). Each is one watching, not a build.
-→ [BACKLOG.md](BACKLOG.md) Phase V
+**2 · The 0.75 decisive phase from SHIP-THE-NIGHT**, still owed his eye — *"He chose the value; he has
+not seen it run."*
+→ [SHIP-THE-NIGHT.md](../reports/evolution/SHIP-THE-NIGHT.md):55
+★ **Address corrected 2026-09-25**: this row pointed at `reports/night/SHIP-THE-NIGHT.md`, which does
+not exist. The report is under `reports/evolution/`.
 
-**3 · The 0.75 phase from SHIP-THE-NIGHT**, still owed his eye.
-→ `reports/night/SHIP-THE-NIGHT.md`
+**3 · `archive/front-group` (`87a08af4`)** — the one camera branch of four genuinely not in master.
+→ `docs/TAGS.md:622`
 
-**4 · `archive/front-group` (`87a08af4`)** — the one camera branch of four that is genuinely not in
-master. It is preserved as a tag, so nothing is at risk, and it needs his eye before anyone revives
-it.
-→ `docs/TAGS.md`
+### Closed on 2026-09-25
+
+- ~~**`city-circuit`, quick-test seed 30 — does a 349 px gap held by three look as bad as it sounds?**~~
+  **He watched it and accepted it**, and that acceptance is what produced the group-of-three ruling of
+  2026-09-23. Recorded in [BACKLOG.md](BACKLOG.md) PART TWO.
 
 ---
 
 ## 4 · NEEDS MEASURING FIRST
+
+★ **NOT RE-VERIFIED ON 2026-09-25.** This section is the 2026-09-24 harvest as it stood, kept
+unchanged. The rebuild of that date re-checked §1 and §3 at the tree and ran out of budget before
+these; each row still carries its own "verified how" column from the harvest. **Treat every row here
+as dated 2026-09-24, not as checked today** — saying so is cheaper than a page that looks current and
+is not.
 
 *A run settles it; no decision is involved.*
 
@@ -191,6 +194,12 @@ and put nothing in its place.
 ---
 
 ## 5 · BEFORE ANYONE ELSE CAN USE IT
+
+★ **NOT RE-VERIFIED ON 2026-09-25.** This section is the 2026-09-24 harvest as it stood, kept
+unchanged. The rebuild of that date re-checked §1 and §3 at the tree and ran out of budget before
+these; each row still carries its own "verified how" column from the harvest. **Treat every row here
+as dated 2026-09-24, not as checked today** — saying so is cheaper than a page that looks current and
+is not.
 
 *The delivery gaps, each with how it was established and a size. Nothing here is designed.*
 
