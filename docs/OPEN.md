@@ -41,7 +41,15 @@ checks that callers build that object through `frameCameraInputs` — and it is 
 **4 · A race identifier a person can type — short, long, or both?**
 The seed field agrees across paths; the ROSTER is what diverges, so some seeds name races the browser
 cannot produce.
-→ [BACKLOG.md](BACKLOG.md) NEEDS HIS WORD · `reports/evolution/SEED-PARITY-1.md`
+★★ **BUILT, 2026-09-05, and the two BACKLOG rows behind this closed as SUPERSEDED on 2026-09-25.**
+`client/src/modules/raceIdentifier.js` encodes **all nine inputs** into one string that repeats a race
+on another machine; the durable record stores them (`client/src/modules/raceHistory.js:100-106`), the
+host surface carries it (`SetupScreen/RaceSettings.jsx:33,35`), and a real browser holds the path
+(`client/e2e/race-identifier.spec.js`, inside the gate's curated set since 2026-09-25).
+★ **What is left of the question is the SHAPE, not the feature** — short, long, or both — and whether
+what shipped is the shape he wanted is still his to say.
+→ [BACKLOG.md](BACKLOG.md) PART TWO · [BACKLOG-TRUTH-2.md](../reports/evolution/BACKLOG-TRUTH-2.md)
+· `reports/evolution/SEED-PARITY-1.md`
 
 **5 · ~~One-command deploy, or keep building the client on the deploy machine?~~** — ★★ **DECIDED
 AND BUILT.** He chose the self-contained package on 2026-09-23; `server/Dockerfile` builds its own
