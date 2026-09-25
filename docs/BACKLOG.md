@@ -742,7 +742,7 @@ nothing is designed here, no key is added, and no change is implied.
 
 Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
-- [ ] **The company guarantee on a SPREAD field has never been measured.** The owner approved the
+- [x] **The company guarantee on a SPREAD field has never been measured.** The owner approved the
       new behaviour having seen both regimes — a torn-apart field where the guarantee opens the shot
       wide, and a tight pack where the camera stays at his 1.0. My measurement only covered the pack
       case (n = 65), where it binds ~0%, and on that basis I recommended raising his 5 to 15. **His

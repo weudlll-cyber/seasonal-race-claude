@@ -151,7 +151,7 @@ it.
 
 | what it is | size |
 | --- | --- |
-| Does the company guarantee hold on a spread-out field? His "5" already stands | a block |
+| ~~Does the company guarantee hold on a spread-out field?~~ — ★ **MEASURED 2026-09-25 as [COMPANY-SPREAD-FIELD-1](../reports/evolution/COMPANY-SPREAD-FIELD-1.md).** At the shipped headcount the spread-tercile binding is LIGHT on the four closed tracks (0–11%) and 5–19% on space-sprint with widening 1.00–2.61×; at the earlier pack-only recommendation 11–63% with widening 2.14–4.38×. His 5 stands | done |
 | ~~"Road edge out of frame" as a standing number~~ — ★★ **DONE 2026-09-24: it is 77.3%** | done | 195,135 of 252,428 corridor frames over 10 tracks x 10 seeds; searound 36.2% to mountainstreet 97.6%. The instrument is committed with its data. **Whether 77.3% is bad is his eye, not this number** |
 | Is the flaky editor test really flaky? — ★ **MEASURED 2026-09-24: 0 in 20 full runs. NARROWED, not closed** | a frequent flake is refuted; a rare one is not (0.98^20 = 67% chance of missing a 1-in-50). Never *fixed* — nothing was changed |
 | ~~What the 51.6 MB of backgrounds costs at first paint~~ — ★★ **CLOSED: measured, then DECIDED by the owner 2026-09-23 — the backgrounds KEEP their quality** | zero image bytes in the bundle; per-track median 3.61 MB, worst 9.69 MB (`river-run`), which **stays**. No re-encoding. |

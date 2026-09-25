@@ -446,6 +446,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [BROWSER-GATE-COVERAGE-1.md](BROWSER-GATE-COVERAGE-1.md) — **per-spec runtime measured for every
+  prod-arm spec (19), plus `auth.setup.js`.** 122 of 125 tests passed, 3 failed. The whole suite is
+  ★ 38.6 min, the current fast subset (7 specs, 82 tests) is 2.2 min, and the CHEAPEST widening —
+  adding the three specs OUTSIDE the fast subset that do NOT wait for a real race (`d9-smoke`,
+  `race-identifier`, `teams-session`) — takes it to ~4.0 min for 109 tests. Read-only observation,
+  nothing added to `client/package.json` and nothing changed in CI.
+
 - [WINNER-AFTER-CROSSING-1.md](WINNER-AFTER-CROSSING-1.md) — **where the shot actually ends, after
   the owner ruled he does not judge the frames past the finish** — measurement only, nothing
   proposed. Reused the probe's existing `crossing.after` record (nothing built) and added opt-in
