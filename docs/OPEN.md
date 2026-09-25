@@ -44,11 +44,6 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 ★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **three closed** and four more
 were already struck records, leaving the five below. Each carries the address that was read.
 
-**1 · Which cut counts as "the leading group" — changes of first place, or fights inside the top five?**
-Still live: `docs/SIM.md:730` still presents the grid that answers both readings and does not choose
-between them.
-→ `docs/SIM.md:730` · [RACE-ACTION.md](RACE-ACTION.md)
-
 **2 · The authored beats never reach the camera — hand them through, or leave the detector to infer?**
 Still live, by the row's own test: `git grep -n "beats" -- client/src/modules/camera` returns JSDoc,
 prose comments and test fixtures, and **no production code that reads them**.
@@ -67,6 +62,11 @@ Six real pieces of work with real shapes, none of which anyone should start unas
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
 
+- ~~**Which cut counts as "the leading group" — changes of first place, or fights inside the top
+  five?**~~ **ANSWERED 2026-09-25, and with neither option.** The leading group is a group including
+  the leader that has broken away from the main field — which is the breakaway's own subject, so it
+  takes that definition and its existing threshold and gets no new number.
+  → [GLOSSARY.md](GLOSSARY.md), "breakaway"
 - ~~**A race identifier a person can type — short, long, or both?**~~ **SETTLED BY WHAT SHIPPED.**
   RACE-IDENTIFIER-1 built it and it encodes all nine inputs; the row closed in
   [BACKLOG.md](BACKLOG.md) PART TWO. The shape question was answered by building one.
