@@ -91,6 +91,25 @@ if (typeof window !== 'undefined') {
 //                        BUDGET — 0.693 against the 0.0230 ln the owner's eye was reacting to.
 //                        This file is a floor beneath the framing measurements, not a replacement
 //                        for them: it catches catastrophes, and `endgame-spec.mjs` prices texture.
+//
+//                        ★★ IT IS A CATASTROPHE LINE AND SILENCE IS ITS NORMAL STATE. It is NOT a
+//                        judder detector and was never meant to be one. A healthy race staying far
+//                        below it is the check WORKING. **Anyone proposing to delete it because it
+//                        "never fires" has misread its job** — and that misreading has happened
+//                        once already, on 2026-09-25, when it put a row on the escalation list.
+//                        ★ WHAT THE PAN HALF ACTUALLY GRADES, stated because it is easy to get
+//                        wrong: a change in camera OFFSET, which is NOT the picture's movement. The
+//                        camera zooms about the world origin, so the offset must move when the zoom
+//                        changes; a large offset step beside a zoom change says nothing on its own
+//                        about apparent motion (MOTION-CONTINUITY-1 §1.2, settled twice).
+//                        ★ MEASURED 2026-09-25 (JUDDER-TRUTH-1), ten tracks, seed 9, shipped stage,
+//                        **61,429 frame steps**: the worst single frame reached **845.4 px, 66.0%**
+//                        of the canvas-width bar, with per-track maxima **15.9%-66.0%**. The bar has
+//                        never been reached in the browser.
+//                        ★ AND THAT IS NOT THE SAME AS UNREACHABLE. Headless runs have produced
+//                        steps ABOVE it, up to **2,332 px** (MOTION-CONTINUITY-1 §1.2) — which do not
+//                        reproduce in the browser. That is the evidence the line is reachable by a
+//                        genuinely broken camera rather than decorative.
 //   5 WIDTH BAND         tighter than the tightest NAMED shot, or wider than the WORLD. The tight
 //                        end is the photo finish's own factor, converted to a width by the caller.
 //                        THE WIDE END IS ADMITTEDLY WEAK: "not wider than the world" is a sanity
@@ -403,7 +422,12 @@ export function recordViewerFrame(f) {
       );
   }
 
-  // ── 4 — NO FRAME CHANGES THE PICTURE BEYOND THE STATED BOUND ────────────────────────────────
+  // ── 4 — NO FRAME CHANGES THE PICTURE BEYOND THE STATED BOUND ───────────────────
+  //
+  // ★ BOTH BOUNDS ARE CATASTROPHE LINES — see the declaration block at the head of this file for
+  // what they grade, what has been measured against them, and why silence here is the expected
+  // result rather than a defect. The owner decided on 2026-09-25 that this check STAYS: not removed,
+  // its bar not lowered, and what it grades not changed.─────────────
   if (_prev) {
     const dLn = Math.abs(Math.log(width / _prev.width));
     if (dLn > STEP_LN_MAX)
