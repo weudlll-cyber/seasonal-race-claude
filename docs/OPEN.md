@@ -41,19 +41,22 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **six closed** — three on
-the re-verification and three more on the owner's decisions of that day — and four were already
-struck records, leaving the two below. Each carries the address that was read.
+★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **seven closed** — three on
+the re-verification and four more on the owner's decisions of that day — and four were already
+struck records, leaving the one below. It carries the address that was read.
 
 **1 · The dev screen has grown past 30 values — how should it be organised?**
 Still live: `docs/BACKLOG.md:1420` (`B-UX2`).
 
-**2 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
-dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
-Six real pieces of work with real shapes, none of which anyone should start unasked.
-→ [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
-
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
+
+- ~~**Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+  dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant
+  arc.**~~ **CLOSED, REOPENABLE — the owner, 2026-09-25**, for four of the six. Not dropped: a
+  sentence from him puts any of them back as it stood, and their content was moved rather than
+  deleted. ★ **The other two are alive elsewhere, not closed:** the multi-tenant arc folded into
+  the TENANCY row, and `B-UX3` folded into `B-UX2`. → [BACKLOG.md](BACKLOG.md), *Closed by the
+  owner's decisions of 2026-09-25*.
 
 - ~~**The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**~~
   **DROPPED BY THE OWNER, 2026-09-25.** `B-UX4` is not deferred and not waiting on a spec — it is

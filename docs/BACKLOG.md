@@ -1350,17 +1350,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/modules/racer-types/` still exists. **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
 
-- **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
-  within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
-  zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
-  once Visual Racer Effects is complete.
-  _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
-  replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
-  **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
-  exists only in prose (checked 2026-08-23), so **still open**.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "getZonesAtPosition" -- client/src` still returns nothing, and the TrackEditor has no zone tool. Waiting on Visual Racer Effects being complete, by its own sequencing.
-
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
   only this one).
@@ -1380,16 +1369,6 @@ already-settled questions.
   **A NAMING COLLISION, so it is not read as a cross-reference:** this item is `D7d`, a Phase-D
   sub-item. It has nothing to do with **decision D7** in PART TWO.
 
-- **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
-  Builds on override pattern (B-7).
-  ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
-  (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
-  Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
-  **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
-  returns nothing (checked 2026-08-23), so the coats half is **still open**.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -ni "coat" -- .../RacerEditModal.jsx` still returns nothing, so the coats-edit and sprite-swap halves are unbuilt. Waiting on the B-UX phase, by the order below.
-
 ### Phase B (Wiring Gaps + UX Improvements)
 
 - **B-UX-Pause** — Pause + resume race
@@ -1398,14 +1377,6 @@ already-settled questions.
   - Priority: after camera phase
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
-
-- **B-UX-ManualFocus** — MANUAL_FOCUS: game master click on racer locks camera
-  - Canvas click handler + hit test racer + new MANUAL_FOCUS state in CameraDirector
-  - Lock UI indicator, unlock mechanism (click empty / button)
-  - Effort: ~150–200 LOC, new camera state
-  - Priority: after camera phase (too complex for this phase)
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — `MANUAL_FOCUS` appears nowhere in `client/src`. Waiting on the camera phase.
 
 - **B-UX2** — Dev screen cleanup + help screen
   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
@@ -1464,10 +1435,6 @@ already-settled questions.
 ### Phase Q (Quality Hygiene)
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
-
-- **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
 
 - **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
   parallel suite runs. NARROWED, NOT CLOSED.**
@@ -2103,6 +2070,69 @@ proposal arriving again in six months looking new.
 
 *Recorded on the day he gave them. Each row states the decision and its date — and where the row it
 closes made a factual claim, what that claim really was when it was checked at the tree.*
+
+- [x] ★★ **THE COLLECTED WISHES — CLOSED, REOPENABLE. The owner, 2026-09-25.** Four pieces of
+      work that had real shapes and no owner's word behind them come off the list. **CLOSED,
+      REOPENABLE is not the same as dropped:** `B-UX4` above was DROPPED and will not come back;
+      these four are simply not on the list until he asks for one, and a sentence from him puts any
+      of them back exactly as it stood. Their content is moved here, not deleted, which is what
+      makes reopening cheap.
+
+      ★ **Two of the six that were collected under this heading are NOT closed here, because they
+      are alive somewhere else on this list:** the **server / deployment / multi-tenant arc** is
+      folded into the TENANCY row, which stays open as work; and **`B-UX3`**, the written reference
+      for every dev-screen value, is folded into `B-UX2`, which is COMMISSIONED. Neither is closed
+      and neither is dropped — they moved.
+
+      **1 · SURFACE ZONES** — local surface-class overrides inside a track (a puddle on asphalt, a
+      mud pit on dirt), with a zone-drawing tool in the track editor.
+
+      > - **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
+      >   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
+      >   zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
+      >   once Visual Racer Effects is complete.
+      >   _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
+      >   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
+      >   **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
+      >   exists only in prose (checked 2026-08-23), so **still open**.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "getZonesAtPosition" -- client/src` still returns nothing, and the TrackEditor has no zone tool. Waiting on Visual Racer Effects being complete, by its own sequencing.
+
+      **2 · `D8`, THE FULL RACER CONFIG EDITOR** — the coats-edit UI and the sprite-swap UI. The
+      basic editor shipped long ago; what closes here is the "full" half.
+
+      > - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
+      >   Builds on override pattern (B-7).
+      >   ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
+      >   (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
+      >   Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
+      >   **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
+      >   returns nothing (checked 2026-08-23), so the coats half is **still open**.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -ni "coat" -- .../RacerEditModal.jsx` still returns nothing, so the coats-edit and sprite-swap halves are unbuilt. Waiting on the B-UX phase, by the order below.
+
+      **3 · `B-UX-ManualFocus`, CLICK-TO-LOCK-CAMERA** — the game master clicks a racer and the
+      camera locks to it.
+
+      > - **B-UX-ManualFocus** — MANUAL_FOCUS: game master click on racer locks camera
+      >   - Canvas click handler + hit test racer + new MANUAL_FOCUS state in CameraDirector
+      >   - Lock UI indicator, unlock mechanism (click empty / button)
+      >   - Effort: ~150–200 LOC, new camera state
+      >   - Priority: after camera phase (too complex for this phase)
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — `MANUAL_FOCUS` appears nowhere in `client/src`. Waiting on the camera phase.
+
+      **4 · ONE PARTICLE SYSTEM INSTEAD OF TWO** — consolidating `dustParticles` and
+      `surfaceParticles`.
+
+      > - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
+
+      ★ **What is deliberately NOT claimed:** that any of the four is a bad idea, or that its own
+      verify command has stopped being true. Each one's command still returns what it returned — the
+      work is unbuilt, exactly as described. What changed is only that they are no longer presented
+      as things waiting to happen.
 
 - [x] ★★ **B-UX4, THE SPRITE-SIZE SYSTEM OVERHAUL — DROPPED BY THE OWNER, 2026-09-25.** Not
       deferred, not parked on a spec: **dropped.** The three concepts it was holding open — override
