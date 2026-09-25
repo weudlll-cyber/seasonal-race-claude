@@ -446,6 +446,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [THREE-FAILING-SPECS-1.md](THREE-FAILING-SPECS-1.md) — **why the three prod-arm specs fail, each
+  run three times ALONE.** Triage only; nothing fixed, no assertion changed, nothing added to a gate.
+  ★ `garden-path-finishes` **passes 3/3 alone** — its failure belongs to SUITE CONTEXT, not the spec.
+  ★ `arrival-shape` fails 3/3 at `:155`, received **0** where > 0.5 is required — and whether that is
+  a regression or a dead premise is the owner's own undecided design question (MORNING.md item 1).
+  ★ `comeback-precedence` fails 3/3 at `:111`: the race's only comeback cut comes **from OVERVIEW**,
+  which carries no hold to cut through, so the precedence signature never occurs in that fixture.
+
 - [BACKLOG-TRUTH-2.md](BACKLOG-TRUTH-2.md) — **all 32 open backlog rows, four questions each, at
   the tree.** Nothing fixed, nothing deleted; every verdict carries a file and line or a command and
   its output. ★ Findings include a row whose OWN watch condition had fired unnoticed

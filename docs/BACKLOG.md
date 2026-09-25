@@ -1100,9 +1100,32 @@ are in PART TWO with what closed them; these are the ones still standing.
       [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
       **They pre-date the branch that found them**, and **they are outside the gate's curated set**
       (`client/package.json:54`), which is why no automatic judgement has been reporting them.
-      ★ **No cause is guessed at here and no fix is proposed.** The brief that found them was to
-      measure, and they were deliberately not investigated. All three wait for a real race, which is
-      the one property they are known to share; whether that is the cause is not known.
+      ★★ **TRIAGED 2026-09-25 by [THREE-FAILING-SPECS-1](../reports/evolution/THREE-FAILING-SPECS-1.md)
+      — each run THREE TIMES ALONE. The row STAYS OPEN: establishing why is not fixing it.** Nothing
+      was fixed, no assertion changed, nothing added to a gate.
+      ★ **`garden-path-finishes` — case (c).** It **passes 3 of 3** run on its own (first crossing at
+      100.5 s, 105.7 s, 105.5 s of wall clock). The recorded failure was 1.7 s, which is its FIRST
+      assertion — the scoreboard had no field, so the race never started. That run was the whole
+      19-spec suite on one worker. **The failure belongs to suite context, not to the spec or the
+      product**, and passing alone does not disprove it.
+      ★ **`arrival-shape` — deterministic, and the case is HIS TO DECIDE.** Fails 3/3 at
+      `client/e2e/arrival-shape.spec.js:155`, **received 0 where > 0.5 is required** — not "steered
+      too little" but not steered at all on any in-block frame. The assertion was flipped to its
+      present form on 2026-09-19 (`559d7521`) after `17193be6` brought the brake back; the product
+      does the other thing. **Whether that is a regression or a dead premise is the question already
+      on his list** — `docs/MORNING.md:33` item 1, and `ARRIVAL-BRAKE-1` §5, where both positions are
+      recorded as his own arguments fifteen hours apart. Nothing here chooses between them.
+      ★ **`comeback-precedence` — deterministic, cause narrowed, case undetermined.** Fails 3/3 at
+      `:111`. The race is not missing a comeback shot: it has exactly one, and it comes **from
+      OVERVIEW** (held ~4.95 s, at ~73.5 s, the same to within 30 ms on all three runs). The spec
+      counts only cuts out of LEADER_ZOOM or BATTLE_ZOOM, the two states with a hold to cut through,
+      **so the precedence signature never occurs in this fixture.** Whether the fixture stopped
+      casting a climbing comebacker (b) or the precedence stopped firing (a) needs one headless plan
+      dump on that seed.
+      ★ **Has he seen these behaviours?** `arrival-shape` — **yes**, it is item 1 on his "what needs
+      your word" list. `garden-path-finishes` — the CLAIM yes (he trimmed the file to it on
+      2026-09-04), the failure no. `comeback-precedence` — **no**, nothing in `docs/` records it
+      being put to him.
       ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
       nobody believes, and this repository has already paid for that once.
 
