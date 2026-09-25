@@ -1,4 +1,4 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-25
+# What is open — DERIVED from BACKLOG PART ONE, 2026-09-26
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
 Re-derived on **2026-09-25**, from PART ONE's **seven** rows — after the owner's decisions of that
@@ -30,8 +30,9 @@ day. The list below therefore contains no questions at all: **all seven rows are
 *One line each. The backlog row is the detail; this is only the map.*
 
 1. **A sweep that asks for races and gets none still prints a table and exits 0.** Narrowed
-   2026-09-25 — one shared refusal exists and three callers are on it; what remains is the tools that
-   take a scope in a different shape.
+   again 2026-09-26 — `resolveTrackScopeIds` (a second door on `scripts/lib/trackScope.mjs`)
+   brings five more `scripts/diag/` tools under the refusal; ten file-based analysers are NAMED
+   as resisting the shape.
 2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
@@ -46,13 +47,20 @@ day. The list below therefore contains no questions at all: **all seven rows are
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+   `comeback-precedence` was re-pinned 2026-09-26 to space-sprint seed 2 (from `comeback-beats.mjs`)
+   and still fails identically on three valid fixtures (seeds 2, 3, 5) — no COMEBACK_ZOOM in any
+   trace. The fixture is not the wall; the question is why the browser's director declines the
+   shot the harness driver takes. Named on 2026-09-26 morning sheet under NEEDS HIS WORD.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
-   ★ **The inventory is TAKEN (2026-09-25) and covers the whole screen: 205 controls**, 195 MATCHES /
-   9 MISLEADING / 1 SUSPECTED DEAD / 1 RESERVED, and 59 with no explanation. ★ Three of the twelve
-   flagged controls are already resolved by STAY-ON-THE-FINISH-1 — the auto-advance switch does
-   something now, its duplicate delay is gone, and sound effects is reserved rather than dead.
-   **The reorganisation itself is untouched and no layout is designed** — that is what keeps this
-   row open.
+   Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
+   is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
+   into `verify --premerge`). Inventory tally column 3: **204 MATCHES / 0 MISLEADING / 1 SUSPECTED
+   DEAD / 1 RESERVED = 205**. The two structural oddities (`minTargetScreenPx` collision and the
+   reset-scope disagreement) are established from source, not acted on. Three candidate groupings
+   are on his desk in
+   [DEVSCREEN-GROUPINGS-1](../reports/evolution/DEVSCREEN-GROUPINGS-1.md); no candidate renames a
+   stored key, and no recommendation is made. **The reorganisation itself is untouched and no
+   layout is designed** — that is what keeps this row open.
 
 → [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
