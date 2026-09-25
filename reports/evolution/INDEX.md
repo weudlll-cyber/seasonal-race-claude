@@ -446,6 +446,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [ROCKET-SHAPE-TRUTH-1.md](ROCKET-SHAPE-TRUTH-1.md) — **what the sprite-shape lever costs, and
+  what it cannot reach.** Measurement only; nothing shipped, nothing minted. ★★ **`bodyFillX/Y` are
+  a MEASUREMENT of the artwork** (RACER_DATA_MODEL's opaque-box rule), not settings — a ratio reached
+  by editing the number describes a body the sprite does not have. ★ The arm reaches **all four
+  fingerprints plus golden-races** (`engine-reach --check` and `verify --dry` on a reverted probe).
+  ★ Swept 1.00–2.8813 at N=30: space-sprint `residual0` **446 -> 166**, a 63% cut, against
+  river-run's **29** — **a 5.7x gap survives the most extreme physical arm**, so the ratio is not
+  sufficient and track ORIENTATION carries the rest. ★ A one-part-in-800,000 change moved the result
+  3.7%, so small arm differences are noise. ★★ And **no side-by-side exists to look at**: the arm
+  changes what the engine believes about body length, not one drawn pixel.
+
 - [JUDDER-TRUTH-1.md](JUDDER-TRUTH-1.md) — **what the gate grades, what it should grade, and where
   the picture actually steps.** Measurement only. ★ Over **61,429 frame steps on ten tracks the
   1280 px bar is never approached** — worst track 66%, median frame 0.6% — and §1.2's headless maxima
