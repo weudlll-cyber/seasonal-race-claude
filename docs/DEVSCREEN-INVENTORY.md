@@ -834,3 +834,130 @@ deliberate pair rather than a defect.
 
 ★ **The three per-user controls have no tooltip**; the five in the create-user form all do. The
 tooltip on the role picker is the only place on the screen that states what the two roles see.
+
+---
+
+# 8a · RACE TUNING → DYNAMICS — the verdicts
+
+*The tables for this section are above, unchanged. This is the verdict pass the stock-take adds.*
+
+**35 config keys, 36 write sites** — `scoreboardIntervalMs` is the one key with two controls (a
+preset row and a field), which is a presentation pair and not a duplicate of the kind named at the
+end. Setters: `setDynamics`, `setRow`, `setSpeed`, `setFrameTiming`.
+
+**Every one of the 35 has a behavioural reader in the shipped product** — not merely a mention in the
+config plumbing. Established mechanically: each key was searched across `client/src`, `server/src` and
+`shared/`, and hits in the config-plumbing files (`raceDynamicsConfig.js`, `frameTimingConfig.js`,
+`configFingerprint.js`, `exportRaceConfig.js`, `raceIdentifier.js`, `raceConfigWorld.js`) were
+discounted, because a key that only appears in the machinery that stores and hashes it is not being
+acted on by anything. **0 keys were left with no reader.** The readers are `raceCore.js`,
+`racePlanner.js`, `raceGovernor.js`, `rowLayout.js` and `renderRaceFrame.js`.
+
+**Verdict: 33 MATCHES, 2 MISLEADING.**
+
+### ★ MISLEADING ×2 — two tooltips state a default the game does not ship
+
+Both were found mechanically, then pinned by hand to their own control before being written down.
+
+| Control | Key | The tooltip says | `defaults.js` ships |
+| --- | --- | --- | --- |
+| Bonus active until (% race) | `racePlanBonusTransitionEnd` | *"Default: 67%"* | **0.75** — 75% |
+| P-Controller starts (% race) | `racePlanCorridorStart` | *"Default: 67%"* | **0.55** — 55% |
+
+**What is wrong is the CLAIM, not the mechanism.** Both keys are read by `racePlanner.js` and do what
+their labels describe; an operator who reads the tooltip, decides the shipped value is fine and leaves
+the control alone has been told the race turns at 67% when it turns at 75% in one case and 55% in the
+other. The two neighbouring claims in the same block are correct — *"Default: 1500ms"* for
+`racePlanBonusFadeDuration` (1500) and *"Default: 100%"* for `racePlanCorridorEnd` (1.0) — which is
+what makes the two wrong ones read as trustworthy.
+
+★ **And there is a structural reason this class exists.** `check-config-claims` holds **documents** to
+the rule that they state no config values, precisely so a number cannot drift from `defaults.js`
+unnoticed. **Tooltips are source, so they are outside that guard** — 38 tooltips across the screen
+state a default, and nothing checks any of them. Recorded as an observation; proposing a guard is not
+this block's business.
+
+---
+
+# 8b · RACE TUNING → BEHAVIOR (`BehaviorTuningSection.jsx`) — advanced tier
+
+The second half of the Race Tuning composite. Backing config: `raceBehaviorConfig`
+(**RACE-RELEVANT**). Setter: `setBehavior`.
+
+**22 controls**, one per key, no key written twice. 22 `InfoTooltip`s in the file — this section is
+fully described.
+
+| Group | Controls | Keys |
+| --- | --- | --- |
+| Enable | 1 | `enabled` |
+| Avoidance | 2 | `avoidanceBufferPct`, `avoidanceWarmupMs` |
+| Comfort / lateral | 4 | `comfortThreshold`, `maxLateral`, `maxLateralSpeedPerStep`, `softRepulsionStrength` |
+| Soft steering | 4 | `softSteeringClearancePct`, `softSteeringHysteresisY`, `softSteeringStrength`, `softSteeringSymmetric` |
+| Drafting | 3 | `draftingBoost`, `draftingConeAngle`, `draftingMaxDistance` |
+| Look-before-brake | 6 | `lookBeforeBrakeEnabled`, `lookBeforeBrakeLagFrames`, `lookBeforeBrakeMinDifferential`, `lookBeforeBrakePassStrength`, `lookBeforeBrakeReengageTMultiplier`, `lookBeforeBrakeRequireSlowerLeader` |
+| Start / run-out | 2 | `startSpreadRange`, `runoutZone` |
+
+**Verdict: 22 MATCHES, 0 otherwise.**
+
+Every key has a behavioural reader, and for twenty of them it is the same file — `raceBehavior.js`,
+which is the module the whole card is about. `runoutZone` is additionally read by `durationModel.js`
+(it shortens the usable path, so it changes the derived duration) and `startSpreadRange` by
+`raceCore.js`. The one numeric claim in the section's copy was checked and is correct:
+*"0.005 = 0.5% (default…)"* against `lookBeforeBrakeMinDifferential: 0.005`.
+
+★ **A drafting read-out, not a control:** `drafting-summary` is a computed testid, and it is not
+counted among the 22.
+
+---
+
+# 10 · CAMERA ADVANCED (`CameraAdvancedSection.jsx`) — advanced tier
+
+**The largest section on the screen by a wide margin, and the single fact most worth carrying out of
+this stock-take.** 2116 lines, **77 config keys**, one control each, 39 `InfoTooltip`s, 25
+`data-testid`s, 41 `<input>`s, 15 checkboxes, 2 selects and 1 range. Backing config: `cameraConfig`
+(**COSMETIC** by `configFingerprint.js` — it changes the picture, not the race).
+
+**77 controls.** They are not listed one per row here: the section is organised into named groups and
+the group is the useful unit, with the key list per group as the durable identifier.
+
+| Group | Count | Keys |
+| --- | --- | --- |
+| Battle shot | 12 | `battleCooldownMs`, `battleFocusDarkening`, `battleIsolationThresholdT`, `battleMaxGroupRankSpan`, `battleMaxGroupSize`, `battleMinDurationMs`, `battleMinTopN`, `battlePulkThresholdT`, `battleSlowmoFactor`, `battleSlowmoFadeDuration`, `battleSlowmoMinDuration`, `battleWeight` |
+| Comeback shot | 8 | `comebackCooldownMs`, `comebackMaxCurrentRankPct`, `comebackMinDuration`, `comebackMinPositionsGained`, `comebackMinStartGap`, `comebackUseBeats`, `comebackWeight`, `comebackWindowSec` |
+| Lead change | 5 | `leadChangeCooldownMs`, `leadChangeDebounceMs`, `leadChangeMinDuration`, `leadChangeMinGap`, `leadChangeWeight` |
+| Overview | 4 | `overviewCooldownMs`, `overviewStartDelay`, `overviewTargetCount`, `overviewWeight` |
+| Start ceremony | 8 | `ceremonyBrandMs`, `ceremonyEasing`, `ceremonyPushMs`, `ceremonySettledMs`, `ceremonySkipOnClick`, `ceremonyVenueMs`, `countdownDigitsMs`, `startBoardFloorMs`, `startBoardMsPerName`, `startWindowMs` *(10 keys; the card shows a computed total beside them)* |
+| Finish & ending | 9 | `endgameThreshold`, `endingKeepsFinishShot`, `finishDramaDurationMs`, `finishHoldAfterLastMs`, `finishOverviewLookbackPx`, `finishOverviewZoomOutDurationMs`, `finishPauseMs`, `finishedSplashEnabled`, `podiumRevealBeatMs`, `winnerCardMs` |
+| Photo finish | 5 | `photoFinishCloseThresholdT`, `photoFinishContenderFraming`, `photoFinishEnabled`, `photoFinishLeadProgress`, `photoFinishSlowmoFactor` |
+| Run-in | 4 | `contenderZoom`, `contentionWatch`, `runInOpenMs`, `runInShot` |
+| Framing & aim | 9 | `bandFloor`, `entryConvergencePx`, `entryConvergenceZoom`, `focalSmoothTc`, `glideDurationMs`, `leaderAimRoomFloorPx`, `leaderForwardFrac`, `minDrawnFrameFrac`, `minRacersVisible`, `referenceCorridorPx`, `transitionTConvergence`, `corridorCapArriveMs` |
+| Labels & overlay | 5 | `labelFormHoldMs`, `labelNamesWhenRoom`, `stateOverlayDurationMs`, `stateOverlayEnabled`, `highlightHeroes` |
+| Grammar / phase | 3 | `cameraTransitionGrammar`, `outcomePhaseThreshold`, `battleSlowmoFactor` *(listed once above)* |
+
+*(The group sizes are indicative — the section's own sub-headings are the ground truth for which
+control sits where. The KEY LIST is exhaustive and mechanically extracted; the grouping is a reading
+aid.)*
+
+**Verdict: 77 MATCHES, 0 SUSPECTED DEAD, 0 MISLEADING found.**
+
+**Every one of the 77 has a behavioural reader in the shipped product**, by the same discounted
+search used for Dynamics. The readers are `CameraDirector.js` and `cameraTimingComputation.js` for the
+great majority, `renderRaceFrame.js` and `racerRendering.js` for the drawn ones
+(`battleFocusDarkening`), `startCeremony.js` for the ceremony group, and `RaceScreen/index.jsx` for
+the three slow-motion values, which the screen applies rather than the director.
+
+★ **All ten default-claiming tooltips in this section were checked against `defaults.js` and all ten
+are correct** — the three `On (default)` and three `Off (default)` booleans, and
+*"Default: 3500 ms"* for `stateOverlayDurationMs`. This is the section with the most claims and the
+best record on them, which is worth stating beside the two wrong ones in Dynamics.
+
+★ **What is NOT claimed: that 77 controls each do something a viewer can see.** This stock-take traced
+each key to a reader and read what the reader does with it; it did not measure any of them. Several
+of this section's values are known from earlier work to have narrow or conditional authority. Those
+are listed under *Needs a measured race* at the end, and no verdict here rests on a measurement that
+was not taken.
+
+★ **38 of the 39 tooltips are attached to a control**; the odd one is the card-level description.
+**39 tooltips for 77 controls means roughly half of this section is undescribed** — see the
+no-explanation count at the end. That is the raw material `B-UX3` was folded in for, and this document
+counts it without writing any of it.
