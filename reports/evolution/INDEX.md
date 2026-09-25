@@ -426,6 +426,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
+  seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
+  tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two
+  structural oddities, offer two-or-three groupings, close-out and merge decision.
+
 - [MORNING-2026-09-25.md](MORNING-2026-09-25.md) — **the night sheet for the 2026-09-25 run** — four
   pieces off master `03f0177a`: sabotage arms for the five OLD viewer invariants, the company
   guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the
