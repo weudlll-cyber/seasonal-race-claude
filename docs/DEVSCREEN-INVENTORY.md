@@ -1,6 +1,91 @@
-# DEVSCREEN INVENTORY — the race-dynamics controls, verified at source
+# DEVSCREEN INVENTORY — every control the screen renders, and whether it still does what it says
 
 **Owns:** what the Dev Panel actually renders, verified against source.
+
+★★ **THIS IS A STOCK-TAKE, TAKEN 2026-09-25 (DEVSCREEN-STOCKTAKE). IT IS NOT A DESIGN.** It proposes
+no layout, no grouping and no renaming, and it moves nothing. The owner commissioned the dev screen's
+rework on 2026-09-25 (`B-UX2`, with `B-UX3` folded in) and **how** it should be organised is his
+question, not this document's. What this document is for is the thing that has to exist before that
+question can be answered: a list of what is there.
+
+★★ **HIS SECOND REQUIREMENT, 2026-09-25: EVERYTHING IS CHECKED.** For each control this records
+not only that it exists but whether it **still does what it promises** — the key traced from the
+control to whatever consumes it, and the effect judged against what the label and tooltip claim. The
+four verdicts are defined under *How to read a verdict* below. **A knob that lies is worse than a
+dead one**, because it gets turned and then trusted, so `MISLEADING` is the verdict this stock-take
+exists to surface.
+
+★ **SOURCE TRACING ONLY.** No race was run to settle a knob. Where a control can only be settled by a
+measurement, the verdict is `UNTRACED` with *needs a measured race*, and those are collected in one
+list at the end. Nothing on that list was acted on.
+
+## How completeness was checked, in both directions
+
+**The section list came from what the screen MOUNTS, not from the folder.** `DevScreen.jsx` holds one
+`SECTIONS` registry — sixteen entries, each with an `id`, a `label`, a `component` and a `tier` — and
+that array is the only thing the screen renders. The list was extracted from it mechanically. A
+reachability closure was then walked from `DevScreen.jsx` through every relative import: **24 files
+under `sections/` are reachable and 0 are not**, so on this date the folder and the mount graph agree
+and there is no orphan file pretending to be a section. `RaceTuningSection` is a **composite** — it
+renders `DynamicsTuningSection` and `BehaviorTuningSection` — which is why sixteen registry entries
+yield seventeen control-bearing files.
+
+**Forward (nothing in the code is missing here):** each section's config keys were extracted
+mechanically from the file's own setter idiom — the setter names are discovered from the source
+(`function setXxx(key, val)`) rather than guessed, so a section that invents a new one is still
+covered — and every extracted key appears below.
+
+**Backward (nothing here is absent from the code):** every key this document names for a section was
+searched for in that section's file. Both directions are re-runnable; the method is stated so a later
+reader can repeat it rather than trust it.
+
+★ **The durable identifiers are the label, the config key and the `data-testid`.** Line numbers are
+deliberately not recorded — an inventory pinned to line numbers is stale on the next commit. That
+convention is inherited from the 2026-07-23 version of this document, not invented here.
+
+## How to read a verdict
+
+| Verdict | Means |
+| --- | --- |
+| **MATCHES** | The reader does what the label says, and the reader is named. |
+| **MISLEADING** | It IS read, but the effect is not what the label promises. How they differ is stated. |
+| **SUSPECTED DEAD** | Nothing found reads the key, by an uncapped search of the whole repository. Recorded as SUSPECTED unless the absence is total, and what was searched is stated. |
+| **UNTRACED** | The chain could not be followed from source with confidence. Where it was lost, and what would settle it, are stated. |
+
+★ Counts are grouped by the project's own line between "changes the race" and "changes the picture":
+`RACE_RELEVANT_CONFIG_KEYS` and `COSMETIC_CONFIG_KEYS` in
+[`configFingerprint.js`](../client/src/modules/parity/configFingerprint.js). That split is reused, not
+invented for this document.
+
+## The sixteen sections the screen mounts, in registry order
+
+| # | Tier | id | Label | Component |
+| --- | --- | --- | --- | --- |
+| 1 | operator | `defaults` | Race Defaults | `RaceDefaults.jsx` |
+| 2 | operator | `password` | Change Password | `ChangePasswordSection.jsx` |
+| 3 | operator | `groups` | Player Groups | `PlayerGroupsManager.jsx` |
+| 4 | operator | `racers` | Racer Types | `RacerManager.jsx` (+ `RacerEditModal.jsx`) |
+| 5 | operator | `tracks` | Tracks | `TrackManager.jsx` |
+| 6 | operator | `branding` | Branding | `BrandingProfiles.jsx` |
+| 7 | operator | `history` | Race History | `RaceHistory.jsx` |
+| 8 | advanced | `race-tuning` | Race Tuning | `RaceTuningSection.jsx` → `DynamicsTuningSection.jsx` + `BehaviorTuningSection.jsx` |
+| 9 | advanced | `sprite-size-range` | Sprite Size Range | `SpriteSizeRangeSection.jsx` |
+| 10 | advanced | `camera-advanced` | Camera Advanced | `CameraAdvancedSection.jsx` |
+| 11 | advanced | `nametag-visibility` | Name Tag Visibility | `NameTagVisibilitySection.jsx` |
+| 12 | advanced | `autoscale` | Auto-Scale | `AutoScaleSection.jsx` |
+| 13 | advanced | `surfaces` | Surface Classes | `SurfaceClassManager.jsx` |
+| 14 | advanced | `config-export` | Export Race Config | `ConfigExportSection.jsx` |
+| 15 | advanced | `system` | System | `SystemSettings.jsx` |
+| 16 | advanced | `users` | User Management | `UserManagementSection.jsx` |
+
+---
+
+# 8a · RACE TUNING → DYNAMICS (`DynamicsTuningSection.jsx`)
+
+*This part predates the stock-take and is kept as it stood — it was written on 2026-07-23 and
+re-verified since, and rewriting it would throw away work that is still correct. The verdicts for its
+controls are added at the end of this part rather than folded into its tables, so the original text is
+not disturbed.*
 
 **Read-only inventory of what the DevScreen actually renders.** Rebuilt completely against
 `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered (dead-mechanisms cleanup,
