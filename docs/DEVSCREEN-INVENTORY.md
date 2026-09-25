@@ -93,7 +93,7 @@ card-level **Reset Defaults** button restores the whole block. Every control car
 | Control | Config key | Shipped default | Tooltip | Verdict |
 | --- | --- | --- | --- | --- |
 | Race Action (pills: Quiet / Medium / Wild) | `raceActionStage` | `'quiet'` | yes | **MATCHES** |
-| Default Race Duration (pills: 30 / 60 / 90 / 120) | `duration` | 60 | yes | ★ **MISLEADING** |
+| Default Race Duration (pills: 30 / 60 / 90 / 120) | `duration` | 60 | yes | ★ **MATCHES** — tooltip repaired 2026-09-26 (was MISLEADING) |
 | Default Number of Winners (Podium Spots) | `winners` | 3 | yes | **MATCHES** |
 | Max Players — Closed Tracks | `maxPlayersClosed` | 40 | yes | **MATCHES** |
 | Max Players — Open Tracks | `maxPlayersOpen` | 100 | yes | **MATCHES** |
@@ -106,7 +106,11 @@ one of the nine identifier inputs. `winners` reaches the payload and the result 
 finish order by it. `maxPlayersClosed` / `maxPlayersOpen` are read by `fieldCap.js` (`fieldCapFor`),
 which is the only limit on a field size.
 
-### ★ MISLEADING — "Default Race Duration"
+### ★ MISLEADING → MATCHES 2026-09-26 — "Default Race Duration"
+
+**The finding as taken is kept below because it is what the repair answered.** The tooltip was
+rewritten on 2026-09-26 to describe the value as a Setup-form seed rather than a race duration; the
+control's behaviour is unchanged.
 
 It **is** read, which is why it is not dead: `SetupScreen.jsx` seeds `raceSettings.duration` from it,
 and `effectiveOpenTrackDuration` falls back to that value. **But it falls back to it only when
@@ -228,7 +232,7 @@ tooltips on this screen will find four here that belong to no knob.
 | Control | Config key | Shipped default | Tooltip | Verdict |
 | --- | --- | --- | --- | --- |
 | Speed Multiplier | `speedMultiplier` | per type | yes | **MATCHES** |
-| Display Size (px) | `displaySize` | per type | yes | ★ **MISLEADING** |
+| Display Size (px) | `displaySize` | per type | yes | ★ **MATCHES** — tooltip repaired 2026-09-26 (was MISLEADING) |
 | Anim Period (ms) | `basePeriodMs` | per type | yes | **MATCHES** |
 | Leader Ring Color | `leaderRingColor` | per type | yes | **MATCHES** |
 | Leader Ring Width (rx) | `leaderEllipseRx` | per type | yes | **MATCHES** |
@@ -246,9 +250,14 @@ the animation period and the three leader-ring values, `autoSpriteScale.js` agai
 diameter, the race's compatibility check for the classes, and
 `surface-effects/trailResolver.js` → `generators/cloud.js` for the three cloud parameters.
 
-### ★ MISLEADING — "Display Size (px)"
+### ★ MISLEADING → MATCHES 2026-09-26 — "Display Size (px)"
 
-The tooltip says *"Sprite size in pixels. Default range 35–50 px."* That is true and it is not the
+**The finding as taken is kept below because it is what the repair answered.** The tooltip was
+rewritten on 2026-09-26 to state both effects (skips auto-scale, feeds the starting grid) and the
+config range number was removed. The control's behaviour is unchanged, per the owner's decision to
+drop that subject on 2026-09-25.
+
+The tooltip said *"Sprite size in pixels. Default range 35–50 px."* That is true and it is not the
 whole effect. **Setting this field at all turns AUTO-SCALING OFF for the race, and changes where every
 racer starts.**
 
@@ -724,7 +733,7 @@ card's master reset restores, because it moves the starting grid.
 
 | Control | Config key | Shipped default | Tooltip | Verdict |
 | --- | --- | --- | --- | --- |
-| Enabled | `enabled` | **true** | yes | ★ **MISLEADING** |
+| Enabled | `enabled` | **true** | yes | ★ **MATCHES** — tooltip repaired 2026-09-26 (was MISLEADING) |
 | Reference Value | `referenceValue` | 23 | yes | **MATCHES** |
 | Min Scale | `minScale` | 0.65 | yes | **MATCHES** |
 | Min Target Screen Px | `minTargetScreenPx` | 32 | yes | **MATCHES** |
@@ -733,9 +742,13 @@ card's master reset restores, because it moves the starting grid.
 Four of the five are read by `autoSpriteScale.js`, and `minScale` / `maxScale` also by
 `rowLayout.js`.
 
-### ★ MISLEADING — "Enabled"
+### ★ MISLEADING → MATCHES 2026-09-26 — "Enabled"
 
-The control's own tooltip opens: *"Disabled by default. When off, racer display size is unchanged
+**The finding as taken is kept below because it is what the repair answered.** On 2026-09-26 the
+opening "Disabled by default" sentence was removed; the rest of the tooltip stands and the toggle's
+behaviour is unchanged.
+
+The control's own tooltip opened: *"Disabled by default. When off, racer display size is unchanged
 (1× factor). Enable to have sizes auto-adapt per race."*
 
 **It is enabled by default.** `DEFAULT_AUTO_SCALE_CONFIG.enabled` is `true` at `autoSpriteScale.js`,
@@ -864,11 +877,14 @@ acted on by anything. **0 keys were left with no reader.** The readers are `race
 
 **Verdict: 33 MATCHES, 2 MISLEADING.**
 
-### ★ MISLEADING ×2 — two tooltips state a default the game does not ship
+### ★ MISLEADING ×2 → MATCHES 2026-09-26 — two tooltips stated a default the game did not ship
 
 Both were found mechanically, then pinned by hand to their own control before being written down.
+**Both tooltips were repaired on 2026-09-26** — the drifted number was removed and the effect is
+described without a number, per the piece's rule that a tooltip must not state a config value. The
+row is kept as it was FOUND because a stock-take's finding is worthless without the number it found.
 
-| Control | Key | The tooltip says | `defaults.js` ships |
+| Control | Key | The tooltip said | `defaults.js` ships |
 | --- | --- | --- | --- |
 | Bonus active until (% race) | `racePlanBonusTransitionEnd` | *"Default: 67%"* | **0.75** — 75%, read 2026-09-25 |
 | P-Controller starts (% race) | `racePlanCorridorStart` | *"Default: 67%"* | **0.55** — 55%, read 2026-09-25 |
@@ -960,7 +976,7 @@ aid.)*
 
 **Verdict: 73 MATCHES, 4 MISLEADING, 0 SUSPECTED DEAD.**
 
-### ★ MISLEADING ×4 — the four director weights, and it is the GROUP BLURB that is wrong
+### ★ MISLEADING ×4 → MATCHES 2026-09-26 — the four director weights, and it was the GROUP BLURB that was wrong
 
 `battleWeight`, `comebackWeight`, `leadChangeWeight` and `overviewWeight` sit under a paragraph that
 reads: *"Weighted random director: all active events enter the pool with their weights. Mandatory
@@ -1134,44 +1150,49 @@ holes.
 
 ## Verdict tallies
 
-★★ **UPDATED 2026-09-25 by STAY-ON-THE-FINISH-1.** Both columns are given, because a stock-take
-whose numbers quietly move is not a stock-take. **The total fell by one** — `autoAdvanceDelay` was
-removed, so the screen carries **205** controls, not 206.
+★★ **UPDATED 2026-09-25 by STAY-ON-THE-FINISH-1, then 2026-09-26 by NIGHT-2026-09-26 PIECE 1.**
+All three columns are given, because a stock-take whose numbers quietly move is not a stock-take.
+**The total fell by one on 2026-09-25** — `autoAdvanceDelay` was removed, so the screen carries
+**205** controls. **On 2026-09-26 the nine MISLEADING tooltips were repaired to MATCHES** — the
+five that stated a stale config value had the number REMOVED and the effect described (per the rule
+that a tooltip must not state a config value), the racer-editor and race-defaults texts were
+rewritten to describe the actual effect, and the Camera Advanced weight-group blurb was rewritten
+to describe the per-offer accept probability the code implements. **No behaviour changed.**
 
-| Verdict | As taken | After STAY-ON-THE-FINISH-1 | What moved |
-| --- | --- | --- | --- |
-| **MATCHES** | 194 | **195** | `autoAdvance` repaired |
-| **MISLEADING** | 9 | **9** | unchanged — none of the nine was touched |
-| **SUSPECTED DEAD** | 3 | **1** | one repaired, one removed |
-| **RESERVED** *(new)* | — | **1** | `soundEffects`, by the owner's decision |
-| **UNTRACED** | 0 | **0** | |
-| **TOTAL** | **206** | **205** | `autoAdvanceDelay` removed |
+| Verdict | As taken | After STAY-ON-THE-FINISH-1 | After NIGHT-2026-09-26 PIECE 1 | What moved |
+| --- | --- | --- | --- | --- |
+| **MATCHES** | 194 | 195 | **204** | nine tooltip texts repaired |
+| **MISLEADING** | 9 | 9 | **0** | all nine repaired |
+| **SUSPECTED DEAD** | 3 | 1 | **1** | unchanged this piece |
+| **RESERVED** *(new)* | — | 1 | **1** | unchanged this piece |
+| **UNTRACED** | 0 | 0 | **0** | |
+| **TOTAL** | **206** | 205 | **205** | unchanged this piece |
 
-★ **They add up both ways:** 194 + 9 + 3 + 0 = 206, and 195 + 9 + 1 + 1 + 0 = 205.
+★ **They add up all three ways:** 194 + 9 + 3 + 0 = 206, 195 + 9 + 1 + 1 + 0 = 205,
+204 + 0 + 1 + 1 + 0 = 205.
 
 ★ **RESERVED is a new verdict and it is deliberately narrow**: a control that is read by nothing and
 is kept ON PURPOSE, with the reason and the date. It exists so that "nothing reads it" stops being
 read as "delete it". There is exactly one, and adding a second needs the same thing this one has — a
 decision, named and dated.
 
-### The nine MISLEADING, by name
+### The nine MISLEADING, by name — REPAIRED 2026-09-26 (NIGHT-2026-09-26 PIECE 1)
 
-| Control | Section | How the effect differs from the promise |
-| --- | --- | --- |
-| Default Race Duration | Race Defaults | Read only where the track has no geometry — which cannot start a race. Every path that can start one ignores it. |
-| Display Size (px) | Racer Editor | Setting it turns auto-scaling OFF for the race and changes `physicalSpriteSize`, which feeds the starting grid. The tooltip says only "sprite size in pixels". |
-| Enabled | Auto-Scale | Tooltip opens *"Disabled by default"*; the shipped default is `true`. |
-| Bonus active until (% race) | Dynamics | Tooltip states *"Default: 67%"*; ships 0.75. |
-| P-Controller starts (% race) | Dynamics | Tooltip states *"Default: 67%"*; ships 0.55. |
-| BATTLE weight | Camera Advanced | The group blurb describes a pool of competing events; the implementation is a per-offer coin flip on one candidate, and eligibility decides ~90% of selections. |
-| COMEBACK weight | Camera Advanced | as above |
-| LEAD CHANGE weight | Camera Advanced | as above, and the blurb's claim that the endgame is unweighted is false — the endgame exception calls `_acceptsOffer` too. |
-| OVERVIEW weight | Camera Advanced | as above; measured at 1.8 percentage points of share for a 33× change. |
+| Control | Section | How the effect differed from the promise | Repair |
+| --- | --- | --- | --- |
+| Default Race Duration | Race Defaults | Read only where the track has no geometry — which cannot start a race. Every path that can start one ignores it. | Tooltip rewritten to describe what it actually is: a Setup-form seed, not a value any running race reads. |
+| Display Size (px) | Racer Editor | Setting it turns auto-scaling OFF for the race and changes `physicalSpriteSize`, which feeds the starting grid. The tooltip said only "sprite size in pixels" plus a config range. | Tooltip rewritten to state both effects plainly; the range number was removed. |
+| Enabled | Auto-Scale | Tooltip opened *"Disabled by default"*; the shipped default is `true`. | The "Disabled by default" sentence removed. |
+| Bonus active until (% race) | Dynamics | Tooltip stated *"Default: 67%"*; ships 0.75. | "Default: 67%" removed; the effect is described without a number. |
+| P-Controller starts (% race) | Dynamics | Tooltip stated *"Default: 67%"*; ships 0.55. | "Default: 67%" removed; the effect is described without a number. |
+| BATTLE / COMEBACK / LEAD CHANGE / OVERVIEW weight | Camera Advanced | The group blurb described a pool of competing events; the implementation is a per-offer accept probability on ONE candidate, and the endgame exception goes through the same check. | Group blurb rewritten to describe the per-offer coin flip and the endgame exception. No measured percentages are stated. |
 
-★ **Five of the nine are a claim about a NUMBER that has drifted, not a broken mechanism.** That is a
-class, and it has a structural cause: `check-config-claims` holds documents to stating no config
-values; tooltips are source and outside it, and **38 tooltips state a default with nothing checking
-them**.
+★ **Rule applied to every repair: a tooltip must not state a config value.** Where the reader
+genuinely needs the shipped value, the dev screen already shows the live value in the control
+itself, so the tooltip describes what the knob DOES rather than what it is set to.
+
+★ **What was NOT changed:** none of the nine controls' behaviour, no config default, no key name,
+no widget bound. This piece is text only.
 
 ### The three SUSPECTED DEAD, by name
 

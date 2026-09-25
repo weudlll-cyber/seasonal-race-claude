@@ -830,8 +830,11 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>3 · MID — Director Weights &amp; OVERVIEW</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Weighted random director: all active events enter the pool with their weights. Mandatory
-          states (Start, Endgame, Finish) are not in the pool.
+          Each weight is the accept probability for that one event on the offer — a per-offer coin
+          flip on a single candidate, not a share of a pool. A declined offer falls through to
+          LEADER. Every offered event goes through this check, including the endgame&apos;s
+          LEAD_CHANGE exception. Eligibility (whether an event is offered at all) decides most
+          selections; a weight moves the outcome only among the offers that fire.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow

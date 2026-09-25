@@ -101,7 +101,7 @@ function RaceDefaults() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
           >
             Default Race Duration
-            <InfoTooltip text="Default length of a race in seconds. The actual race duration may vary slightly because racers finish at different speeds. Operators can override this for any individual race." />
+            <InfoTooltip text="Pre-fills the Duration field in Race Setup. The value that actually runs a race is derived by the track — closed tracks from laps and course length, open tracks from the setup slider or the track's own default — so this seed is not read once a race starts." />
           </label>
           <div className={s.optionPills}>
             {DURATIONS.map((d) => (

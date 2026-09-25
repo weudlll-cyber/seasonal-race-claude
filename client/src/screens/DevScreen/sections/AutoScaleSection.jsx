@@ -73,7 +73,7 @@ function AutoScaleSection() {
                 style={{ cursor: 'pointer' }}
               />
               Enabled
-              <InfoTooltip text="Disabled by default. When off, racer display size is unchanged (1× factor). Enable to have sizes auto-adapt per race." />
+              <InfoTooltip text="When off, racer display size is unchanged (1× factor). Enable to have sizes auto-adapt per race." />
             </label>
           </div>
 

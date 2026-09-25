@@ -59,7 +59,8 @@ const FIELD_META = {
     min: 16,
     max: 80,
     step: 2,
-    tooltip: 'Sprite size in pixels. Default range 35–50 px.',
+    tooltip:
+      'Sprite size in pixels for this racer type. Setting it here skips auto-scaling for the race and feeds the starting grid (row gap and row count).',
   },
   basePeriodMs: {
     label: 'Anim Period (ms)',
