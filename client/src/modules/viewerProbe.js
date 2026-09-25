@@ -326,16 +326,15 @@ export function recordViewerFrame(f) {
   const LY = sy(lead);
   // ARM: `--sabotage-leader` displaces the leader OFF canvas at THIS check only, so invariant 6's
   // frame-fraction test below still sees the true LX/LY. The onCanvas test and the distance
-  // computation run against the sabotaged pair, exercising both.
+  // computation run against the sabotaged X, exercising both.
   const LXsab2 = _sabLeader ? -1000 : LX;
-  const LYsab2 = _sabLeader ? LY : LY;
-  if (inWindow && !onCanvas(LXsab2, LYsab2)) {
+  if (inWindow && !onCanvas(LXsab2, LY)) {
     const dx = LXsab2 < 0 ? -LXsab2 : LXsab2 > CW ? LXsab2 - CW : 0;
-    const dy = LYsab2 < 0 ? -LYsab2 : LYsab2 > CH ? LYsab2 - CH : 0;
+    const dy = LY < 0 ? -LY : LY > CH ? LY - CH : 0;
     const d = Math.hypot(dx, dy);
     add(
       '2-leader',
-      `the leader is ${Math.round(d)} px outside the canvas at (${Math.round(LXsab2)}, ${Math.round(LYsab2)})`,
+      `the leader is ${Math.round(d)} px outside the canvas at (${Math.round(LXsab2)}, ${Math.round(LY)})`,
       d
     );
   }
