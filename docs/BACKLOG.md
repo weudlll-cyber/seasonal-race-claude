@@ -50,7 +50,7 @@ because a question that vanishes from an index looks like a question nobody aske
 
 | the question | where it lives |
 | --- | --- |
-| the authored BEATS never reach the camera — hand them through, or leave the detector inferring? | **PART TWO D14** — the open point it leaves. **His call, and it needs his eye afterwards.** |
+| ~~the authored BEATS never reach the camera — hand them through, or leave the detector inferring?~~ | **DECIDED BY THE OWNER 2026-09-25 — they stay as they are, the camera goes on inferring.** *Closed by the owner's decisions of 2026-09-25*, and the claim itself corrected there. |
 | ~~a normal race now draws and shows a seed — does it read right ON SCREEN?~~ | **✅ ANSWERED 2026-08-27. He judged it on the production build and accepted it: the drawn seed reads correctly on the setup panel, and it survives a browser restart.** Both halves of D23 are now confirmed on screen, not merely in the source. The build landed on master by `7a3942fa`; nothing was lost when `feat/race-seed` was swept. See `reports/night/SEED-REAL-RACE-1.md` |
 
 **AND THESE ARE NO LONGER HIS — they are waiting on a MEASUREMENT or on a later block, not on a
@@ -105,40 +105,6 @@ a rule for anybody to follow.
 ---
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the choice he is asked for is unchanged — a short typable identifier that refuses to exist when it would lie, a long copyable one, or both. **Sharpened since it was written:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) showed the seed field itself agrees across paths and the ROSTER is what diverges, so five of seven river-run seeds name races the browser cannot produce.
-
----
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the open point is D14's and it is his call, with his eye owed afterwards. Re-verified today: `git grep -n "beats" -- client/src/modules/camera` returns the JSDoc `@param` line at `CameraDirector.js:785` and the CEREMONY's own unrelated beats, and no code that reads a hero's beats. **B4c below still points at this item as "above"; it is here now.**
-
-- **~~Camera timing levers — comeback shot appears late (tune by eye, no code)~~ REPLACED 2026-08-23 by the owner's DEFINITION of a comeback — PART TWO D14.** 🔜 _(added 2026-07-15, from B4; replaced 2026-08-23)_
-
-  **THE REQUIREMENT, in his terms: a comeback is a racer STORMING FROM FAR BACK TO THE FRONT.** A
-  racer climbing slowly from progress ~0.28 is **not** a comeback. That is the bar the shot has to
-  clear, and it is what the old item was missing.
-
-  **Why the old proposal is retired rather than scheduled.** It was: lower `outcomePhaseThreshold`
-  (which gates reactive comeback detection, and whose slider floor sits above the start of the
-  authored climb) and re-weight `comebackWeight` against `battleWeight` (which it loses to during
-  PULK, so even a fired candidate does not win the lens). **Both changes make the SLOW CLIMB visible
-  EARLIER — and against the definition above that is the wrong thing, sooner.** It would cost the
-  front battle the weight contest was protecting and buy an event that is not the event.
-  *(Values deliberately not restated: they live in `client/src/modules/storage/defaults.js`, which
-  is their one home.)*
-
-  **The beat timing is still true and is kept, because it is what the OPEN POINT below is about:**
-  a comebacker HOLDS its deep rank from its `anchor` beat until its `peak` beat (usually in PULK),
-  then climbs to its `resolve` beat (in OUTCOME). **The `resolve` beat is the storm he is
-  describing.**
-
-  **THE OPEN POINT — the authored BEATS never reach the camera.** Full evidence, established at
-  source and re-verified on 2026-08-23, is in **PART TWO D14**: the generator emits role AND beats,
-  the FULL `cameraPlan` IS delivered to the director, and `comebackDetector.setPlan` keeps only
-  `role === 'comebacker'` and **discards the beats** — so the camera re-infers from rank history
-  what the plan already stated, and the `resolve` beat never arrives at all.
-  **NOTHING IS PROPOSED AND NOTHING IS BUILT.** Whether the beats get handed through is his call,
-  and it needs his eye afterwards.
-  **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns
-  only the two JSDoc `@param` lines and no code that reads them.**
 
 ---
 
@@ -767,6 +733,13 @@ rather than a threshold nobody has found yet.**
 
 ## Phases 5–7 — the planned server, deployment and multi-tenant arc (moved from ROADMAP 2026-08-23)
 
+★★ **THE MULTI-TENANT HALF OF THIS SECTION'S TITLE IS NO LONGER ITS SUBJECT, 2026-09-25.** The owner
+stated the tenancy boundary that day — per team: brands, player groups and team-created tracks;
+shared: the shipped tracks and the racer types — and it is recorded on the **TENANCY** row above,
+which owns the subject and stays open as work. The arc was being carried here as a future phase while
+the same subject sat at the tree one section up; they are one subject now. **Nothing here is the home
+of a tenancy fact.** What this section still owns is the SERVER and DEPLOYMENT work.
+
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
 here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns nothing — it was a phase-status table when this block was moved, and ROADMAP-FOLD-2 (`c49d5af5`, 2026-08-27) folded that table in here too. *(Corrected 2026-09-03: this sentence contradicted line 3 of this same file, which has said REDIRECT since that fold. Found as a SECOND SITE of the same claim in README.md, not on its own.)*
@@ -794,26 +767,61 @@ Neither subsumes the other and both were already open.
 
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
-- [ ] ★ **SEASON SCORING — parked on a decision nobody has made. (Two rows until 2026-09-25: this
-      and "Season archive + reset", which is the same subject and is folded in here.)**
-      **The DB half is DONE**, and that is not in question: outcomes are persisted in a real database
-      — `server/src/races/raceStore.js:64,72` (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own
-      handle and its own file) — and served back by `server/src/routes/races.js:62,121,140`.
-      **What is missing is not code, it is a POINTS RULE.** Standings, an archive and a reset all
-      need somebody to say what a season is and what a result is worth, and nobody has. Until that
-      exists there is nothing to build, which is why this is parked rather than open work.
+- [ ] ★★ **PERIOD EVALUATION — COMMISSIONED BY THE OWNER, 2026-09-25. It replaces "season scoring",
+      which is not what he wants.** *(Three rows until 2026-09-25: this, "Season archive + reset" —
+      folded in 2026-09-25 and CLOSED with it, since a period that is chosen by its dates needs
+      neither an archive nor a reset — and the standings half of the old row.)*
 
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the DB half is DONE, the standings half is
-      not.** This row states two things and only one is still true.
-      **DONE:** outcomes are persisted, in a real database — `server/src/races/raceStore.js:64,72`
-      (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own file so the races are not one
-      `rm sessions.sqlite` from gone) — and served back by `server/src/routes/races.js`: POST at
-      `:62`, a paged GET at `:121`, GET by short key at `:140`. Built by RACE-SAVE-3 / RACE-STORE-2,
-      2026-09-06.
-      **NOT DONE:** no season standings are computed anywhere. "season" occurs **once** in the whole
-      store and there is no standings code on the server.
-      **The row now claims the standings only.**
+      **WHAT IT IS.** A table, over a PERIOD the user chooses, of the races that were run in it. Not
+      a season with a beginning, an end, an archive and a reset — a period, evaluated on demand.
+      **The table counts NAMES**, not racers, not players and not entries: the same name appearing in
+      two races is one row with two results behind it.
 
+      ★★ **QUICK TESTS DO NOT COUNT. This is a hard requirement, not a preference** — a table that
+      mixes throwaway test races into a standing would be worse than no table.
+
+      ★★ **AND THAT REQUIREMENT IS NOT SATISFIABLE TODAY — established at the tree 2026-09-25, and
+      this is the finding the work has to start from.** **A stored race carries nothing that says
+      whether it was a Quick Test.** The `races` table's columns are listed at
+      `server/src/races/raceStore.js:96-160` and none of them is a mode, a source or a flag; the two
+      shared tables it references, `rosters` and `racer_types`
+      (`server/src/races/raceStore.js:86-94`), hold `id` and `content` and nothing else. The client
+      does not send one either: `toServerPayload` (`client/src/modules/raceHistory.js:135-144`)
+      forwards `entry.inputs` unchanged, and Quick Test differs from a normal start only in the
+      values it puts INTO those inputs — a generated name set and an auto-filled field
+      (`client/src/screens/SetupScreen/SetupScreen.jsx:999-1056`). **So the tell would have to be a
+      guess about names, and a guess is not a requirement met.** ★ **The first piece of this work is
+      therefore to make a stored race SAY what it was**, and everything already stored is
+      unclassifiable — rows are immutable by database trigger
+      (`server/src/races/raceStore.js:167-170`), so history cannot be back-filled either.
+
+      ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
+      the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation
+      rather than baked in. **NO NUMBERS ARE ADOPTED HERE.** A 10-8-6-5-4-3-2-1 ladder was offered on
+      2026-09-25 and **was NOT adopted**; it is recorded only so a later reader does not mistake it
+      for a decision that was taken. Writing any ladder into this row would be the same mistake.
+
+      ★ **WHAT ALREADY EXISTS, so the work is not re-derived.** The storage half is done and is not
+      in question:
+      - Outcomes are persisted in a real database — `server/src/races/raceStore.js:64,72`
+        (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own handle and its own file) — and served
+        back by `server/src/routes/races.js`: POST at `:62`, a paged GET at `:121`, GET by short key
+        at `:140`.
+      - **The races are already team-scoped**, so an evaluation is already answering for one team and
+        no other: `server/src/routes/races.js:127` and `:142`. See the **TENANCY** row for the
+        boundary that governs this.
+      - **Finish time is already indexed** — `CREATE INDEX races_by_team ON races(team_normalized,
+        finished_at DESC)` at `server/src/races/raceStore.js:162`, which is exactly the shape a
+        period query needs: one team, ordered by when the race ended. ★ *(Address corrected: the
+        commission named `:158-162`; at the tree `:158-159` are the `results` and `winners` columns
+        and the index is the single line `:162`.)*
+      - **NOT DONE:** no standings are computed anywhere. "season" occurs **once** in the whole store
+        and there is no evaluation code on the server.
+
+      ★ **SEQUENCING, so this is not built twice.** The controls this needs — the period, the points
+      rule, whatever selects what counts — belong in the **reorganised dev screen**, which is
+      `B-UX2`, commissioned the same day. Building them into today's dev screen means building them
+      into the thing `B-UX2` exists to replace. **`B-UX2`'s inventory comes first.**
 - [ ] ★ **TENANCY — what is scoped and what is not. (Two rows until 2026-09-25: this and
       "Per-tenant localStorage namespace or server-side data isolation", folded in here as one
       subject.)**
@@ -831,6 +839,50 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
       of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
       track sets only.**
+
+      ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
+      of the work, not its completion.**
+
+      **PER TEAM** — each team has its own and sees no other team's:
+      - **brands** (branding profiles)
+      - **player groups**
+      - **tracks the team itself created**
+
+      **SHARED** — one set for everybody, not duplicated per team:
+      - **the shipped tracks**
+      - **the racer types**
+
+      ★ **So "team-created" is the line inside tracks**, and it is the only place in the boundary
+      where one collection splits two ways. A shipped track is common ground; a track a team drew is
+      theirs. Nothing in the tree distinguishes the two today — `server/src/routes/tracks.js` contains
+      **zero** occurrences of "team" — so that distinction is part of the work, not a filter waiting
+      to be switched on.
+
+      ★★ **THIS IS PREPARATION, NOT A DEFECT.** Nothing is leaking and nothing is broken. There is one
+      team using the system, so an unscoped collection and a scoped one look identical from the
+      outside; the boundary is being written down now so that the day a second team exists the answer
+      already exists too. **A row that reads like a bug report would be wrong about what this is.**
+
+      ★ **What is true at the tree today, so the starting point is not re-derived later:**
+      - **Races are scoped, on the server.** `server/src/routes/races.js:127` pages the list by the
+        team stamped on the request, and `:142` takes the team as a required argument to the
+        short-key lookup — so a key from another team answers **404**, the same answer as a key that
+        was never issued, deliberately, because "forbidden" would confirm the race exists.
+      - **Nothing else is scoped.** `tracks.js`, `brands.js`, `racers.js` and `playerGroups.js`
+        contain **zero** occurrences of "team" between them (counted 2026-09-25).
+      - **A team is deliberately NOT a permission** — `server/src/auth/teams.js:9-12` states it: it
+        is data about a user, consulted by neither `requireAuth` nor `requireAdmin`. Scoping a
+        collection per team is therefore **not** a matter of adding a role; the boundary and the
+        permission system are separate machines and this decision touches only the first.
+      - ★ **And a new route cannot be added quietly.**
+        `server/src/auth/routePolicyDrift.test.js:133-148` fails on any mutating `/api` route that is
+        neither admin-classified nor on the operator+ allowlist, naming each one. So the work below
+        will be met by a red test rather than by silence if a route arrives unclassified.
+
+      ★ **THE MULTI-TENANT ARC IS FOLDED IN HERE** (from *Phases 5–7 — the planned server, deployment
+      and multi-tenant arc*, and from the collected-wishes line in `OPEN.md`). It was being carried
+      as a separate future phase while this row carried the same subject at the tree; they are one
+      subject, and the boundary above is what that arc was waiting for somebody to state.
 
 ---
 
@@ -1384,17 +1436,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/modules/racer-types/` still exists. **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
 
-- **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
-  within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
-  zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
-  once Visual Racer Effects is complete.
-  _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
-  replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
-  **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
-  exists only in prose (checked 2026-08-23), so **still open**.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "getZonesAtPosition" -- client/src` still returns nothing, and the TrackEditor has no zone tool. Waiting on Visual Racer Effects being complete, by its own sequencing.
-
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
   only this one).
@@ -1414,16 +1455,6 @@ already-settled questions.
   **A NAMING COLLISION, so it is not read as a cross-reference:** this item is `D7d`, a Phase-D
   sub-item. It has nothing to do with **decision D7** in PART TWO.
 
-- **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
-  Builds on override pattern (B-7).
-  ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
-  (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
-  Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
-  **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
-  returns nothing (checked 2026-08-23), so the coats half is **still open**.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -ni "coat" -- .../RacerEditModal.jsx` still returns nothing, so the coats-edit and sprite-swap halves are unbuilt. Waiting on the B-UX phase, by the order below.
-
 ### Phase B (Wiring Gaps + UX Improvements)
 
 - **B-UX-Pause** — Pause + resume race
@@ -1433,40 +1464,73 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
 
-- **B-UX-ManualFocus** — MANUAL_FOCUS: game master click on racer locks camera
-  - Canvas click handler + hit test racer + new MANUAL_FOCUS state in CameraDirector
-  - Lock UI indicator, unlock mechanism (click empty / button)
-  - Effort: ~150–200 LOC, new camera state
-  - Priority: after camera phase (too complex for this phase)
+- [ ] ★★ **`B-UX2` — THE DEV SCREEN'S REORGANISATION: COMMISSIONED BY THE OWNER, 2026-09-25.** It
+      stops being a planned item waiting on a spec and becomes work he has asked for. **`B-UX3`, the
+      detailed variable documentation, is FOLDED IN HERE** — the two entries had already said they
+      belonged together ("the help screen can reference or embed the documentation"), and carrying
+      them apart meant two rows for one subject.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — `MANUAL_FOCUS` appears nowhere in `client/src`. Waiting on the camera phase.
+      ★★ **THE AGREED NEXT STEP IS AN INVENTORY, and it is the only next step.** Before anything is
+      moved, grouped, hidden or renamed, there is to be a written list of what the dev screen
+      actually renders today — every section, every control, every value — verified against source.
+      **Nothing can be reorganised that has not first been counted.**
 
-- **B-UX2** — Dev screen cleanup + help screen
-  - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
-    User finding: "the individual values are hard to contextualize, tooltips alone add little value"
-  - Planned (spec still pending):
-    - Structural reordering: race behavior sliders together, visual sliders together, etc.
-    - Help modal per section with more detailed explanations (more than InfoTooltip)
-    - Optional: beginner / advanced separation (power user sees everything, standard only key values)
-    - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
-  - Priority: medium-high. Should be tackled before D8 (full racer config editor),
-    so D8 is not built into a disorganized dev screen environment.
+      ★★ **A LAYOUT IS DELIBERATELY NOT DESIGNED HERE, and must not be.** No grouping, no ordering,
+      no beginner/advanced split, no section names are decided in this row. The old entry's "planned"
+      bullets below are kept as the record of what was once sketched, **not** as a design to build:
+      what the reorganisation looks like is a question for after the inventory, and it is his.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      ★ **WHAT EXISTS OF THE INVENTORY ALREADY, and what it does not cover.**
+      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) is a real, source-verified inventory — but of
+      **ONE SECTION ONLY.** Its own subtitle says so: *"the race-dynamics controls"*, rebuilt against
+      `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered. **There are 23
+      non-test section files** under `client/src/screens/DevScreen/sections/` (counted 2026-09-25) —
+      camera, sprite sizing, auto-scale, name tags, branding, player groups, racers, tracks, surface
+      classes, users, system settings and the rest. **So the existing document is a model for the
+      work, not a head start on most of it**, and reading it as coverage would understate the job by
+      more than an order of magnitude.
 
-- **B-UX3** — Detailed variable documentation
-  - User finding: "I need an explanation that says more than the tooltip — what do all
-    the variables in the dev screen actually do"
-  - Planned (spec still pending):
-    - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
-    - Per parameter: name, type, default, range, effect in plain language,
-      example values for different use cases (small race vs. large race, etc.)
-    - Diagrams/images where useful (e.g. comfortThreshold visualized)
-    - Cross-references to ARCHITECTURE.md pipeline sections
-  - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
-    Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
+      ★ **What the inventory should inherit from the one that exists**, because it already solved
+      two problems: the durable identifiers are the **label + key + testId**, and **line numbers are
+      deliberately not recorded** — an inventory pinned to line numbers is stale on the next commit.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      ★ **What this row does NOT claim:** that the dev screen is broken. It is not. The entry's
+      original finding stands unchanged — the values are hard to place in context, and tooltips alone
+      do not fix that — and the reorganisation answers that, not a defect.
+
+      ★ **SEQUENCING.** The **PERIOD EVALUATION** row, commissioned the same day, needs controls of
+      its own (the period, the points rule). They belong in the screen this row produces, so this
+      row's inventory comes first.
+
+      **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
+      work:**
+
+      > - **B-UX2** — Dev screen cleanup + help screen
+      >   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
+      >     User finding: "the individual values are hard to contextualize, tooltips alone add little value"
+      >   - Planned (spec still pending):
+      >     - Structural reordering: race behavior sliders together, visual sliders together, etc.
+      >     - Help modal per section with more detailed explanations (more than InfoTooltip)
+      >     - Optional: beginner / advanced separation (power user sees everything, standard only key values)
+      >     - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
+      >   - Priority: medium-high. Should be tackled before D8 (full racer config editor),
+      >     so D8 is not built into a disorganized dev screen environment.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      >
+      > - **B-UX3** — Detailed variable documentation
+      >   - User finding: "I need an explanation that says more than the tooltip — what do all
+      >     the variables in the dev screen actually do"
+      >   - Planned (spec still pending):
+      >     - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
+      >     - Per parameter: name, type, default, range, effect in plain language,
+      >       example values for different use cases (small race vs. large race, etc.)
+      >     - Diagrams/images where useful (e.g. comfortThreshold visualized)
+      >     - Cross-references to ARCHITECTURE.md pipeline sections
+      >   - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
+      >     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
@@ -1476,20 +1540,6 @@ already-settled questions.
   _(Arose during Phase 4 slider implementation 2026-05-06, Severity: LOW — currently consistent with existing speed range convention)_
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -ni "must be"` over `RaceTuningSection.jsx` and `CameraZoomTuningSection.jsx` returns nothing, while the precedent it names still exists. Waiting on somebody applying it in two places.
-
-- **B-UX4** — Sprite size system overhaul
-  - Current behavior: per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
-    values and completely disable auto scaling (`displaySizeScale = 1`). This means
-    sprites can appear too large on narrow tracks — and was one of the factors
-    that led to an incorrect `racersPerRow` value during D7c diagnosis.
-  - Alternative concepts (spec still pending):
-    - **(a) Override as multiplier** over auto scaling (e.g. `displaySizeOverride: 1.25` = 25% larger than auto)
-    - **(b) Mixed mode with min/max limits** — auto scale runs, override sets upper/lower bound
-    - **(c) Complete redesign of the tunable concept** — auto and absolute value as selectable modes
-  - Arose during D7c diagnosis (2026-04-29). Needs vision discussion before spec is written.
-  - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the vision discussion the entry says must come before a spec.
 
 - ~~**B-2** — TrackSelector: custom track behavior when geometry is missing~~ — ✅ **CLOSED
   2026-08-23 (BACKLOG-SORT-42). Closed by `5bde5a94` (QUIET-FAILURES-1, 2026-08-17)**, confirmed at
@@ -1512,10 +1562,6 @@ already-settled questions.
 ### Phase Q (Quality Hygiene)
 
 **Refactor chunks (high structural debt — addressed in upcoming phases):**
-
-- **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
 
 - **Q-19 — `TrackEditor.effects.test.jsx` flaky** — ★★ **MEASURED 2026-09-24: 0 failures in 20 full
   parallel suite runs. NARROWED, NOT CLOSED.**
@@ -2146,6 +2192,147 @@ proposal arriving again in six months looking new.
       range from 36.2% to 97.6% and at a median fitted width of 0.444 of the road. **This row is
       therefore closed as DECIDED, not as a measurement still awaiting a verdict**, and **no framing
       work follows from it.**
+
+## Closed by the owner's decisions of 2026-09-25
+
+*Recorded on the day he gave them. Each row states the decision and its date — and where the row it
+closes made a factual claim, what that claim really was when it was checked at the tree.*
+
+- [x] ★★ **THE COLLECTED WISHES — CLOSED, REOPENABLE. The owner, 2026-09-25.** Four pieces of
+      work that had real shapes and no owner's word behind them come off the list. **CLOSED,
+      REOPENABLE is not the same as dropped:** `B-UX4` above was DROPPED and will not come back;
+      these four are simply not on the list until he asks for one, and a sentence from him puts any
+      of them back exactly as it stood. Their content is moved here, not deleted, which is what
+      makes reopening cheap.
+
+      ★ **Two of the six that were collected under this heading are NOT closed here, because they
+      are alive somewhere else on this list:** the **server / deployment / multi-tenant arc** is
+      folded into the TENANCY row, which stays open as work; and **`B-UX3`**, the written reference
+      for every dev-screen value, is folded into `B-UX2`, which is COMMISSIONED. Neither is closed
+      and neither is dropped — they moved.
+
+      **1 · SURFACE ZONES** — local surface-class overrides inside a track (a puddle on asphalt, a
+      mud pit on dirt), with a zone-drawing tool in the track editor.
+
+      > - **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
+      >   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
+      >   zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
+      >   once Visual Racer Effects is complete.
+      >   _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
+      >   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
+      >   **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
+      >   exists only in prose (checked 2026-08-23), so **still open**.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -l "getZonesAtPosition" -- client/src` still returns nothing, and the TrackEditor has no zone tool. Waiting on Visual Racer Effects being complete, by its own sequencing.
+
+      **2 · `D8`, THE FULL RACER CONFIG EDITOR** — the coats-edit UI and the sprite-swap UI. The
+      basic editor shipped long ago; what closes here is the "full" half.
+
+      > - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
+      >   Builds on override pattern (B-7).
+      >   ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
+      >   (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
+      >   Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
+      >   **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
+      >   returns nothing (checked 2026-08-23), so the coats half is **still open**.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `git grep -ni "coat" -- .../RacerEditModal.jsx` still returns nothing, so the coats-edit and sprite-swap halves are unbuilt. Waiting on the B-UX phase, by the order below.
+
+      **3 · `B-UX-ManualFocus`, CLICK-TO-LOCK-CAMERA** — the game master clicks a racer and the
+      camera locks to it.
+
+      > - **B-UX-ManualFocus** — MANUAL_FOCUS: game master click on racer locks camera
+      >   - Canvas click handler + hit test racer + new MANUAL_FOCUS state in CameraDirector
+      >   - Lock UI indicator, unlock mechanism (click empty / button)
+      >   - Effort: ~150–200 LOC, new camera state
+      >   - Priority: after camera phase (too complex for this phase)
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — `MANUAL_FOCUS` appears nowhere in `client/src`. Waiting on the camera phase.
+
+      **4 · ONE PARTICLE SYSTEM INSTEAD OF TWO** — consolidating `dustParticles` and
+      `surfaceParticles`.
+
+      > - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** both pools still exist — `dustParticles` and `surfaceParticles` are both live in `client/src/screens/RaceScreen/drawing/particleRendering.js`. Waiting on Surface Zones, by its own sequencing.
+
+      ★ **What is deliberately NOT claimed:** that any of the four is a bad idea, or that its own
+      verify command has stopped being true. Each one's command still returns what it returned — the
+      work is unbuilt, exactly as described. What changed is only that they are no longer presented
+      as things waiting to happen.
+
+- [x] ★★ **B-UX4, THE SPRITE-SIZE SYSTEM OVERHAUL — DROPPED BY THE OWNER, 2026-09-25.** Not
+      deferred, not parked on a spec: **dropped.** The three concepts it was holding open — override
+      as a multiplier, a mixed mode with min/max bounds, a redesign with selectable modes — are not
+      going to be built, and the vision discussion the entry was waiting for will not happen.
+
+      ★ **Its content is moved here rather than deleted**, because the entry recorded a real defect
+      and the reason it never mattered, and both are worth finding again:
+
+      > **Current behaviour:** per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
+      > values and completely disable auto-scaling (`displaySizeScale = 1`). Sprites can therefore
+      > appear too large on narrow tracks — and this was one of the factors behind an incorrect
+      > `racersPerRow` value during the D7c diagnosis.
+      >
+      > **Alternative concepts (spec still pending):** **(a)** override as a MULTIPLIER over auto
+      > scaling (e.g. `displaySizeOverride: 1.25` = 25% larger than auto); **(b)** MIXED MODE with
+      > min/max limits — auto scaling runs, the override sets an upper/lower bound; **(c)** COMPLETE
+      > REDESIGN of the tunable concept — auto and absolute value as selectable modes.
+      >
+      > Arose during the D7c diagnosis (2026-04-29). Needs a vision discussion before a spec is
+      > written. **Priority: low.** Not a UX blocker — only visible with a deliberate `displaySize`
+      > override on a large-field, narrow track.
+      >
+      > **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on the vision discussion
+      > the entry says must come first.
+
+      ★ **Why this is a clean drop rather than a loss.** The entry's own priority line already said
+      it: the defect is reachable only by deliberately setting an absolute `displaySize` on a narrow
+      track with a large field. Nothing ships in that state, and the D7c diagnosis it confused has
+      long since been settled. A concept question nobody has needed to answer in five months is not
+      a backlog row, and holding three unbuilt alternatives open costs a reader every time they pass.
+
+- [x] ★★ **THE AUTHORED BEATS STAY AS THEY ARE — DECIDED BY THE OWNER, 2026-09-25.** The camera
+      goes on INFERRING the comeback moment from rank history; nothing from the plan is handed
+      through to it. The open point this row carried since 2026-08-23 (PART TWO **D14**) is answered,
+      and **no work follows from it.** The row is closed, not parked.
+
+      ★★ **ITS BLANKET CLAIM IS CORRECTED HERE RATHER THAN CARRIED ACROSS.** The row said the
+      authored beats *never reach the camera* and are *discarded on arrival*. Checked at the tree on
+      2026-09-25 that is **no longer true as written**, and the precise version is worth keeping
+      because the decision above is what freezes it:
+
+      - **Three beat kinds are authored**, one per hero-curve point — `anchor` (the first), `peak`
+        (the middles), `resolve` (the last): `client/src/modules/heroCurveGenerator.js:789-791`.
+      - **`anchor` and `peak` reach nothing, in any configuration.** No production file under
+        `client/src/modules/camera/` reads either of them.
+      - **`resolve` IS kept and IS read.** COMEBACK-CONNECT-1 built the path: the beat is picked up
+        on the same walk that already reads the role (`comebackDetector.js:110-117`), stored as
+        `_resolveByIndex` (`:117`), and consulted inside `best()` at `:239`, where a plan-named racer
+        is not offered before his own resolve beat.
+      - **But it decides nothing in the shipped product.** That clause sits behind `g.useBeats`
+        (`comebackDetector.js:238`) — which is `comebackUseBeats` (`CameraDirector.js:668`), whose
+        shipped default is `false` (`client/src/modules/storage/defaults.js:398`). **At defaults no
+        authored beat changes any camera behaviour.** So the row was right about the PRODUCT and
+        wrong about the CODE, and the two had drifted apart without the row noticing.
+      - ★ **The row's own verify command has flipped.** It read: *"The day a camera file reads a
+        beat, this point is answered."* `git grep -n "beats" -- client/src/modules/camera` now
+        returns `comebackDetector.js:112`, production code reading a hero's beats. **The day came.
+        The answer he gives is to leave the switch off.**
+
+      ★★ **AND ONE PIECE OF EVIDENCE READS BACKWARDS — written down so it is not repeated.**
+      `node scripts/diag/comeback-beats.mjs --tracks=space-sprint --seeds=2,3,5`, reproduced today,
+      prints `written [#9@resolve 0.7] shown [#9@0.6001]`, `[#38@resolve 0.7] / [#38@0.6001]` and
+      `[#15@resolve 0.7] / [#15@0.7137]`. That looks like the beat arriving. **It is not.** What
+      crosses to the camera there is the **ROLE** — the cast, which the detector has read since the
+      beginning — and `shown` is the camera's OWN inferred progress: **0.0999 EARLY** of the written
+      beat at seeds 2 and 3, 0.0137 late at seed 5. The dump is a picture of the inference, which is
+      precisely what this decision keeps.
+
+      ★ **What the closed row carried and is not lost:** the owner's 2026-08-23 definition (a comeback
+      is a racer STORMING FROM FAR BACK TO THE FRONT) and the retirement of the camera-timing-levers
+      proposal that would have shown the slow climb sooner. Both are stated in full in **PART TWO
+      D14**, which is their home; this row only pointed at them.
 
 ## Closed by the owner's decisions of 2026-09-24
 
@@ -2859,6 +3046,16 @@ the one signal the definition above is about, and it is the one that is thrown a
 **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns only
 the two JSDoc `@param` lines** (in `CameraDirector.js` and `comebackDetector.js`) and no code that
 reads them. That is today's output. The day a camera file reads a beat, this point is answered.
+
+★★ **ANSWERED AND CLOSED, 2026-09-25 — and the verify line above has since FLIPPED, which is why it
+is left standing rather than edited.** `git grep -n "beats" -- client/src/modules/camera` now returns
+`comebackDetector.js:112`: production code reading a hero's `resolve` beat, built by
+COMEBACK-CONNECT-1. By this point's own stated test the day came. **The owner's answer, 2026-09-25,
+is to leave it switched off** — the camera goes on inferring, nothing is handed through, and no work
+follows. `comebackUseBeats` ships `false` (`client/src/modules/storage/defaults.js:398`), so at
+defaults no authored beat changes any camera behaviour; `anchor` and `peak` are read by nothing in
+any configuration. The full correction, and the one piece of evidence that reads backwards, are in
+*Closed by the owner's decisions of 2026-09-25*.
 
 ### D15 · The company guarantee on a SPREAD field — his 5 STANDS, unchanged · 2026-08-23
 

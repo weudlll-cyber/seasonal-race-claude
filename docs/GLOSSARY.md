@@ -144,6 +144,16 @@ of layer 2 of the fairness definition.
 as dated facts because it has been refined twice and a measurement that uses the wrong version
 answers the wrong question.
 
+- ★★ **2026-09-25 — "THE LEADING GROUP" IS THIS SAME CONCEPT, AND IT GETS NO SECOND DEFINITION.**
+  The owner defined the leading group as **a group including the leader that has broken away from the
+  main field.** Compared against the 2026-09-20 definition below, that is the same thing said from
+  the other end: *a group leading together, far from the front of the chasing field.* **So the
+  leading group needs no new definition and no new number** — it is the subject of a breakaway, and
+  its measure is the one already recorded here: **157.05 world px**, window **`[0.70, finish]`**, the
+  group bounded by the game's own front band so it is 1–5 racers.
+  ★ **It is also a THIRD answer to the question that was open.** That question offered "changes of
+  first place" or "fights inside the top five"; the decision is neither, and it replaces the question
+  rather than picking from it.
 - **2026-09-20 — what it IS.** A racer alone at the front, OR a group leading together, FAR from the
   **front of the chasing field**. The distance runs from the back of the leading group to the front
   of the field — the beginning of the pack, never its middle, and no mean, median or centroid.

@@ -1,23 +1,28 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-25
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Derived on **2026-09-25** from PART ONE's **six** rows. Where the two disagree, **the backlog wins** —
-and the date above is how a reader tells at a glance whether this has gone stale again.
+Re-derived on **2026-09-25, after the owner's decisions of that day**, from PART ONE's **seven** rows.
+Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
+whether this has gone stale again.
 
-★★ **WHY IT WAS REBUILT, because the failure is the interesting part.** The previous version was the
-harvest of 2026-09-24: a page assembled BESIDE the backlog rather than from it. Within a day the
-backlog went from 32 open rows to six, and this page still listed eleven items under "needs his word"
-— among them the race identifier, the track backgrounds, the render fingerprint and the naturalness
-envelope, all four already settled. **One page said six and the other said something else**, which is
-how the owner came to be told "32 open" on a morning when it was not true. That is the same disease
-the backlog itself was cured of the day before, one level up.
+★★ **WHY IT WAS REBUILT, because the failure is the interesting part.** The version before
+2026-09-25 was the harvest of 2026-09-24: a page assembled BESIDE the backlog rather than from it.
+Within a day the backlog went from 32 open rows to six, and this page still listed eleven items under
+"needs his word" — among them the race identifier, the track backgrounds, the render fingerprint and
+the naturalness envelope, all four already settled. **One page said six and the other said something
+else**, which is how the owner came to be told "32 open" on a morning when it was not true. That is
+the same disease the backlog itself was cured of the day before, one level up.
 
 ★ **The rule that follows from it:** the OPEN section below is PART ONE, one line per row, pointing at
 the backlog for the detail. Nothing is added here that the backlog does not carry.
 
+★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
+now **EMPTY** — every question it held was answered, dropped or turned into commissioned work that
+day. The list below therefore contains no questions at all: **all seven rows are work.**
+
 ---
 
-## 0 · THE OPEN LIST — all six, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all seven, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -27,12 +32,19 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
-3. **Season scoring.** Parked on a decision nobody has made — the database half is built; what is
-   missing is a points rule.
-4. **Tenancy.** Races are team-scoped; tracks, brands, racers and player groups are not.
+3. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
+   the user chooses, counting NAMES. Quick Tests must not count, and **nothing stored today says
+   whether a race was one** — that finding is where the work starts. The points rule is
+   dev-screen-configurable and **no numbers are adopted**.
+4. **Tenancy — the boundary is stated (2026-09-25), the work is not done.** PER TEAM: brands, player
+   groups, team-created tracks. SHARED: the shipped tracks and the racer types. Races are scoped
+   today; tracks, brands, racers and player groups are not. Preparation, not a defect.
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+   The agreed next step is an **inventory** of every section, control and value; no layout is
+   designed, and the existing inventory covers one section of 23.
 
 → [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
@@ -41,32 +53,44 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **three closed** and four more
-were already struck records, leaving the five below. Each carries the address that was read.
-
-**1 · Which cut counts as "the leading group" — changes of first place, or fights inside the top five?**
-Still live: `docs/SIM.md:730` still presents the grid that answers both readings and does not choose
-between them.
-→ `docs/SIM.md:730` · [RACE-ACTION.md](RACE-ACTION.md)
-
-**2 · The authored beats never reach the camera — hand them through, or leave the detector to infer?**
-Still live, by the row's own test: `git grep -n "beats" -- client/src/modules/camera` returns JSDoc,
-prose comments and test fixtures, and **no production code that reads them**.
-→ [BACKLOG.md](BACKLOG.md) PART TWO decision D14
-
-**3 · The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**
-Still live: `docs/BACKLOG.md:1456` (`B-UX4`).
-
-**4 · The dev screen has grown past 30 values — how should it be organised?**
-Still live: `docs/BACKLOG.md:1420` (`B-UX2`).
-
-**5 · Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
-dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant arc.**
-Six real pieces of work with real shapes, none of which anyone should start unasked.
-→ [BACKLOG.md](BACKLOG.md) Planned — needs spec, and Phases 5–7
+★★ **EMPTY, 2026-09-25 — and that is the state, not an omission.** Eleven rows were checked at the
+tree that day. Three closed on the re-verification, four were already struck records, and the owner's
+decisions of 2026-09-25 closed, dropped or commissioned the rest. **Nothing is waiting on his word.**
+The rows that came out of those decisions are WORK, and they are in
+[BACKLOG.md](BACKLOG.md) PART ONE, not here.
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
 
+- ~~**The dev screen has grown past 30 values — how should it be organised?**~~ **COMMISSIONED BY
+  THE OWNER, 2026-09-25.** `B-UX2` is no longer a question — it is work he has asked for, with
+  `B-UX3` folded into it, and **the agreed next step is an INVENTORY**: every section, every control,
+  every value, verified against source, before anything is moved. ★ No layout is designed, and
+  [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) covers **one section of 23**.
+
+- ~~**Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
+  dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant
+  arc.**~~ **CLOSED, REOPENABLE — the owner, 2026-09-25**, for four of the six. Not dropped: a
+  sentence from him puts any of them back as it stood, and their content was moved rather than
+  deleted. ★ **The other two are alive elsewhere, not closed:** the multi-tenant arc folded into
+  the TENANCY row, and `B-UX3` folded into `B-UX2`. → [BACKLOG.md](BACKLOG.md), *Closed by the
+  owner's decisions of 2026-09-25*.
+
+- ~~**The dev-screen sprite-size concept — override multiplier, mixed mode, or redesign?**~~
+  **DROPPED BY THE OWNER, 2026-09-25.** `B-UX4` is not deferred and not waiting on a spec — it is
+  dropped, and all three concepts with it. Its content was moved, not deleted, into
+  [BACKLOG.md](BACKLOG.md), *Closed by the owner's decisions of 2026-09-25*.
+
+- ~~**The authored beats never reach the camera — hand them through, or leave the detector to
+  infer?**~~ **DECIDED BY THE OWNER, 2026-09-25: they stay as they are.** The camera goes on
+  inferring; nothing is handed through. ★ The question's own premise was also **wrong by then** —
+  the `resolve` beat IS read (`comebackDetector.js:239`), behind `comebackUseBeats`, which ships
+  `false`. Corrected in [BACKLOG.md](BACKLOG.md), *Closed by the owner's decisions of 2026-09-25*.
+
+- ~~**Which cut counts as "the leading group" — changes of first place, or fights inside the top
+  five?**~~ **ANSWERED 2026-09-25, and with neither option.** The leading group is a group including
+  the leader that has broken away from the main field — which is the breakaway's own subject, so it
+  takes that definition and its existing threshold and gets no new number.
+  → [GLOSSARY.md](GLOSSARY.md), "breakaway"
 - ~~**A race identifier a person can type — short, long, or both?**~~ **SETTLED BY WHAT SHIPPED.**
   RACE-IDENTIFIER-1 built it and it encodes all nine inputs; the row closed in
   [BACKLOG.md](BACKLOG.md) PART TWO. The shape question was answered by building one.
