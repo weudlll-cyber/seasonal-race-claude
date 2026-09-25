@@ -106,16 +106,6 @@ a rule for anybody to follow.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the choice he is asked for is unchanged — a short typable identifier that refuses to exist when it would lie, a long copyable one, or both. **Sharpened since it was written:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) showed the seed field itself agrees across paths and the ROSTER is what diverges, so five of seven river-run seeds name races the browser cannot produce.
 
-- [ ] **A SEED IS ONE OF NINE INPUTS, NOT SIX — and two of the nine are stored host preferences.**
-      This corrects the count in *"A seed alone does not reproduce a race"* below, which said six.
-      `raceActionStage` and the world config are read from host storage at press time, so **the same
-      seed on two machines is two races and neither operator changed anything.** His Quick Test
-      belief is right under two conditions that are invisible on screen: the roster *selector* picks
-      among three lists, and **any real player in the lobby re-indexes the whole field**.
-      Establishes it: [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md).
-      **NEEDS: ONLY HIS WORD** — a short typable identifier that refuses to exist when it would lie,
-      a long copyable one, or both.
-
 ---
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the open point is D14's and it is his call, with his eye owed afterwards. Re-verified today: `git grep -n "beats" -- client/src/modules/camera` returns the JSDoc `@param` line at `CameraDirector.js:785` and the CEREMONY's own unrelated beats, and no code that reads a hero's beats. **B4c below still points at this item as "above"; it is here now.**
@@ -461,6 +451,13 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
       `--tracks` entry point named in the piece-E report still has the defect.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
+      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
+      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
+      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
+      surrounding numbers are larger than when the row was written: **82 files import the driver**
+      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
+
 - [ ] **THE CANONICAL SILENT ZERO HEALED BY ACCIDENT AND COULD RETURN AT ANY TIME.**
       GARDEN-PATH-NO-FINISH-1 recorded 360 of 360 races silently discarded. garden-path now completes
       **20/20**, because his beetle decision made the race short enough — **the harness hardcodes 2
@@ -469,6 +466,17 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **NEEDS: nothing on its own** — it is the argument for the item above.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is still the argument for the item above, and the mechanism is unchanged — `raceDriver.mjs:201` still gives every closed track `laps: 2` and `:319` still stops at 200,000 ms (line numbers at `e4b2b075`). Waiting on nothing of its own.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED. The mechanism this row names is GONE; the silence
+      is not.** The row's argument rests on "the harness hardcodes 2 laps and that never moved". It
+      moved: **`scripts/lib/raceDriver.mjs:416`** now reads `laps: shape.isOpen ? 1 :
+      lapsOfClosedTrack(geo)`, and `lapsOfClosedTrack` (**`:299-310`**) takes the track's own
+      `defaultLaps` and **throws** rather than substituting one — its error says a lap count nobody
+      chose is how a race silently becomes one this project does not run. So garden-path can no
+      longer be discarded for having been run at the wrong lap count.
+      ★ **What REMAINS true:** a race can still be discarded silently by the **200 s ceiling**, which
+      is untouched, and the discarding is still not reported. The row is kept for that, as the
+      argument for the entry above, and no longer for the lap count.
 
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
@@ -502,6 +510,17 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       **no cell would be empty**, so the loud-zero rule above would not catch it.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source (`raceDriver.mjs:201` and `:319`; the line numbers in the entry have moved, the mechanism has not). It is tonight's **piece 11** — *why a 60-second race exceeds 200 seconds of simulation* — which had not started when this verdict was written.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the LAP COUNT half is DONE, the CEILING half is
+      not.** Half of this row has been fixed and the row never said so.
+      ★ **DONE:** the hardcoded lap count is gone. **`scripts/lib/raceDriver.mjs:416`** reads
+      `lapsOfClosedTrack(geo)`, defined at **`:299-310`**, which returns the track's own
+      `defaultLaps` and throws if the record does not state one. The row's own worry — "a track whose
+      `defaultLaps` is 4 is measured at 2" — can no longer happen; it would now be a loud error.
+      ★ **STILL TRUE:** the **200 s ceiling** remains, at **`scripts/lib/raceDriver.mjs:477`** (and
+      described again at **`:622`**, which notes the longest track finishes at 93.1 s of it). His
+      judgement of 2026-08-25 that this is not pressing is unchanged and still recorded.
+      **The row now claims the ceiling only.**
 
 - [x] ~~**THE RUN-IN ADMITS A RACER INSTANTLY AND RELEASES HIM ON AN EASE, AND THE ADMIT IS WHERE THE
       VISIBLE STEP COMES FROM.** On river-run seed 13 a third racer crosses the one-length boundary
@@ -538,6 +557,13 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-verified at source. `CameraDirector.js:2628` states the verdict is one-way and `_contentionOut` is added to at `:2697` and never removed from; nothing admits on it. Waiting on nobody — an unused mechanism nobody has decided to point forwards.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, re-verified at source.** `_updateContentionWatch`
+      is at **`client/src/modules/camera/CameraDirector.js:2758`** (the entry says `:2619`; the line
+      moved, nothing else did), called from **`:4666`**. `_contentionOut` is added to at **`:2806`**
+      and **grep for `_contentionOut.delete` returns 0** — nothing anywhere admits on it. The code's
+      own comments say so twice, at **`:296`** ("it only ever GROWS") and **`:2737`** ("THE VERDICT IS
+      ONE-WAY").
+
 - [x] ~~**AT EVERY CROSSING THE SHOT AIM IS THROWN OUT AND TAKES ABOUT A SECOND AND A HALF TO COME
       HOME, WITH THE LAST SECOND AT A CONSTANT ZOOM.**~~
       **✅ CLOSED 2026-08-26 by RUNIN-PIVOT-SCOPE-1, verified at source:** `update()` now calls
@@ -558,56 +584,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
 
 **verify (section-wide):** the item names its own command. **This is a FINDING, not a proposal** —
 nothing is designed here, no key is added, and no change is implied.
-
-- [ ] **A SEED IS NOT A RACE IDENTIFIER. It is one of six inputs, and the other five do not travel
-      with it.** SEED-REAL-RACE-1 made a normal race carry a seed and made that seed outlive the
-      browser session, which is what D23 asked for. **What it did not do — and could not, being
-      scoped to the seed — is make "seed 4242" mean one race.** Re-running the race a seed names
-      needs the track, the racer type, the field SIZE, the NAME LIST, the canonical duration input
-      and the config that was in force. Established at source 2026-08-23; every address below was
-      read, not recalled.
-      **COUNT CORRECTED 2026-08-26: it is NINE inputs, not six.**
-      [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md) re-established the set at source and
-      adds `raceActionStage`, `racePlanEnabled` and the world config — **two of which are stored HOST
-      preferences**, so the same seed on two machines is two races. Nothing else in this entry is
-      withdrawn.
-
-  **THE NAME LIST IS THE ONE THAT SURPRISES PEOPLE, so it is first.** A racer's NAME is a PHYSICS
-  INPUT: `stablePairBit` in `client/src/modules/raceBehavior.js` builds its key from
-  `String(a.name ?? a.id ?? a.index)` and hashes it, and that bit decides the tie-break side of a
-  near-coincident same-lane pair. Rename a racer and the race changes. So "the same seed with the
-  same twenty players" is only the same race if it is the same twenty NAMES.
-
-  **WHERE EACH INPUT LIVES TODAY, and whether anything durable keeps it:**
-
-  | input | in the live race payload (`sessionStorage['activeRace']`) | in the durable record (`racearena:raceHistory` entry) |
-  | --- | --- | --- |
-  | seed | `racePlanSeed` | `seed` ✅ *(added by SEED-REAL-RACE-1)* |
-  | track | `trackId` + `geometryId` | `trackId` ✅ — **but not `geometryId`**, and a track's geometry can be re-drawn |
-  | racer type | `racerTypeId` | **absent** ❌ |
-  | field size | `racers.length` | `playerCount` ✅ |
-  | the NAME LIST, in start order | `racers[].name`, index-ordered | **lost** ❌ — `finishOrder[].name` holds the same set in FINISH order, which is a permutation of the order the plan was built on |
-  | duration / laps | `targetLaps` (closed) or `targetDurationSec` (open) — the two canonical operator inputs | **absent** ❌ — the entry's `duration` is `elapsedTime`, the REALIZED seconds, which is an OUTPUT and not an input |
-  | the config in force | not in the payload at all | **absent** ❌ |
-
-  **THE CONFIG ROW IS THE WIDEST HOLE, and it is not new.** A stored config beats `defaults.js` per
-  key, forever, because the loaders write whole objects — so two races with the same seed, track and
-  roster still differ if a dynamics value was touched between them, and nothing on screen says so.
-  The HUD's `cfg` fingerprint pill already answers "is this the default world"; it is not recorded
-  with the race.
-
-  **WHY THIS IS FILED RATHER THAN FIXED.** Three of the six gaps are one field each on an existing
-  object and would be cheap; the config one is a design question with at least three defensible
-  answers (store the whole object, store its fingerprint, store only what differs from the shipped
-  default), and picking one is not a night's tidying. **Nothing here is proposed.**
-
-  **verify:** `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx`
-  — **still open while it returns nothing**, which is today's output. The day the durable record
-  carries the race's inputs rather than only its outputs, this closes. **The pattern can match**:
-  the same grep over `client/src/screens/SetupScreen/SetupScreen.jsx` returns the lines that build
-  the payload.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it and still returns nothing — `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx` exits 1, where the same pattern over `SetupScreen.jsx` returns 6 lines, so the pattern can match. Waiting on the durable record carrying the race's inputs and on the config-storage design question the entry names.
 
 ---
 
@@ -638,6 +614,10 @@ nothing is designed here, no key is added, and no change is implied.
 *(The other entry that stood in this section — **Garden Path does not finish** — moved to PART TWO on
 2026-09-03, closed. GARDEN-PATH-CLOSE-1.)*
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN.** No motion-continuity instrument exists:
+      `scripts/finish-motion-truth.mjs` is present and still covers **one phase**, which is what the
+      row already says, and no guard anywhere checks pan displacement against a local median.
+
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
 - [ ] **`0xC0000142` on this machine — watch for a second occurrence before treating it as a
@@ -662,6 +642,19 @@ nothing is designed here, no key is added, and no change is implied.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is a WATCH by construction and closes on a second occurrence or on the machine being retired. One occurrence still.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, AND THIS ROW'S OWN WATCH CONDITION HAS FIRED.**
+      The row says "one occurrence is an anecdote" and sets the trigger: watch for a second. **There
+      was a second, and nobody came back to this row.**
+      ★ **2026-09-19, six weeks after the first**
+      (**`reports/night/BREAKAWAY-GROWTH-1.md:457`**): a running dev server reported `build unknown`
+      with `git rev-parse --short HEAD: exit 3221225794` — the same `0xC0000142` — so its badge named
+      no commit, and every eye test taken on 5173 before the restart was taken on a build whose
+      identity the badge could not state. It is written up as a lesson at **`docs/LESSONS.md:3641`**.
+      ★ **The named fix is still not done:** `client/vite-plugin-ra-build.js:79` still shells out to
+      git per check rather than reading `.git/HEAD` and `.git/index` directly.
+      ★ **What is NOT claimed here:** that the two share a cause. Two is not a pattern either; it is
+      the end of the anecdote, and this row's own condition for looking again.
+
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -676,6 +669,11 @@ nothing is designed here, no key is added, and no change is implied.
       oversight. Anyone closing this must answer both arguments, not just count the copies.**
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** all three copies are still there and the argument is unmet, which is the point of the entry. Waiting on anyone who proposes to consolidate answering both arguments first.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and deliberately so.** All three are present:
+      `scripts/camera-fingerprint.mjs`, `scripts/render-fingerprint.mjs`, `scripts/camera-replay.mjs`.
+      The row exists so that anyone closing it answers the two arguments rather than counting the
+      copies, and nobody has answered them.
 
 - [ ] **The race-identity HASH: `sha(identity + canonical(cameraConfig))`.** Printing the identity
       made "did these two numbers come from the same race?" readable; a hash would make it
@@ -703,6 +701,18 @@ nothing is designed here, no key is added, and no change is implied.
       found by running it and not resolved:** `--owner-unit` mutates the config PER TRACK, after the
       line is printed, so a per-run hash cannot cover it. See RACE-IDENTITY-HASH-1.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — a hash EXISTS, but not the one this row asks
+      for.** `hashIdentity` is real and in use: defined at
+      **`client/src/modules/parity/raceIdentity.js:109`**, consumed by
+      **`scripts/parity/replay.mjs:83`** and **`scripts/parity/soak.mjs:120`**, and `replay.mjs:151`
+      already prints DRIFTED when a replay's identity no longer matches the saved one — which is the
+      mechanical check this row wanted.
+      ★ **But it hashes the IDENTITY ONLY.** `hashIdentity(identity)` returns
+      `hashWorld(identity).full`; the camera config is not in it. That is precisely the insufficiency
+      the row was written about — and **`scripts/his-shot-truth.mjs` still exists**, so its example
+      of two runs with one identity and different numbers still stands.
+      **The row now claims only the missing half: the CONFIG in the hash.**
+
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
 - [x] ~~**The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
@@ -725,15 +735,6 @@ nothing is designed here, no key is added, and no change is implied.
       **STILL TRUE and not done:** the upstream fix — whatever creates a throwaway worktree should
       remove it in a `finally`, so the stub is never created — is unbuilt. It is not what this box
       asked for, and it is filed as its own line below rather than kept open under a closed one.
-
-- [ ] **Nothing removes a throwaway worktree at CREATION's end, so the stub is created and then
-      cleaned up later.** SHIP-CEREMONY step 13 clears the stubs a block leaves behind, which is a
-      cure rather than a prevention. Whatever creates a throwaway worktree should remove it in a
-      `finally`. **Filed 2026-09-03 (SECOND-SITES-LIVE-1)** as the live remainder of the closed
-      `.git/worktrees` entry above; the closure was about prune working, not about stubs not being
-      made. **verify:** grep the tooling for `worktree add` and check each caller has a `finally`.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .git/worktrees | wc -l` returns **3** today, against the 51 the entry last recorded, so the stubs shrank but did not go. It is tonight's **piece 14** (*the worktree stubs, at the cause*), which had not started when this verdict was written.
 
 ---
 
@@ -773,6 +774,22 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       the most expensive input this project consumes and it is currently recorded nowhere.**
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the fingerprint this row HOPED FOR exists and is
+      surfaced; the LINE still does not carry it, and a PASS is still recorded nowhere.**
+      ★ **What exists now.** The row guesses "the HUD `cfg` fingerprint may already separate
+      behaviours". It does, and it is real: `configFingerprintBadge` is computed at
+      **`client/src/screens/RaceScreen/index.jsx:536`** from the world the race is ACTUALLY running
+      with (a reproduced race uses its recorded one), drawn on screen under the seed badge; and the
+      camera marker reads config diffs through
+      **`client/src/modules/camera/cameraMarker.js:19`** (`countConfigDiffs`), so pressing M records
+      a moment together with how that race was configured.
+      ★ **What is still true.** The `[RA CAMERA LIVE TRUTH]` line itself —
+      **`client/src/screens/RaceScreen/index.jsx:701-709`** — names commit, branch, dirty,
+      `resolvedGrammar`, `leaderForwardFrac`, config provenance and `cameraSeed`, and **zero**
+      occurrences of the cfg fingerprint. It still never says which GUARANTEE ran. And the row's last
+      sentence stands untouched: **an owner's PASS is still recorded nowhere.**
+      **The row now claims those two things only.**
 
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
@@ -823,6 +840,14 @@ rather than a threshold nobody has found yet.**
       bounded by the frame's 720 px height instead of its 1280 px width.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** ALONG-RESIDUAL-1's P1 is unstarted; the entry's own gate (`node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30`, the `residual0` figure) still decides it. Waiting on a sprite change being sized and measured.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the gate RE-RUN rather than carried — the
+      figure has moved.** The entry's own command, run today:
+      `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` prints
+      `space-sprint margin=90 races=30 frames=42297 residual=979 **residual0=463** clipped=1175`.
+      ★ **463, not the 591 the row states** — measured on today's tree, 30 seeds, exit 0. It is
+      lower and it is nowhere near river-run's 0, so the subject holds and only the number was
+      stale. ALONG-RESIDUAL-1's P1 remains unstarted.
 
 - [x] **~~THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW~~ — ✅ CLOSED 2026-09-01
       by [GOLDEN-TABLE-REGISTRY-1](../reports/evolution/GOLDEN-TABLE-REGISTRY-1.md), the owner's
@@ -877,6 +902,13 @@ rather than a threshold nobody has found yet.**
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE as a warning, with its LAST SENTENCE withdrawn:** *"There is no separate harness racer table to drift"* was refuted on 2026-09-01 by SPRITE-TABLE-DRIFT-1 — two tables existed and one disagreed with the registry on five of ten rows. Both have since been repaired (GOLDEN-TABLE-REGISTRY-1 `de99f690`; REGISTRY-LITERALS-1 `56b99a9d`, which deleted 124 literals and doubled the engine-reach closure), and the body rule now has a written home in `docs/RACER_DATA_MODEL.md` (BODY-IS-THE-BOX-1, `54e32cd3`, 2026-09-02) — **which also found a second measuring rule that differs on five types**. The warning itself is unaffected and still binds.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN as a standing WARNING, and everything it points
+      at is still there.** This row is a caution rather than a defect, so there is nothing in it to
+      finish. Both of its addresses resolve today: `computeBodyNarrowRef` is exported from
+      **`client/src/modules/rowLayout.js:251`**, and **`scripts/diag/sprite-premise.mjs`** exists as
+      the way to measure `drawnBodyLengthPx` off a running race. Its advice is therefore still
+      followable, which is the only sense in which a warning can be open.
+
 - [x] **The instrument trap that produced the wrong first reading, fixed 2026-09-01.**
       `along-residual.mjs`'s old `--margin=` changed only what the MEASUREMENT tested with while the
       director kept flying at the shipped value — so it showed a residual falling with no clipping
@@ -891,8 +923,15 @@ rather than a threshold nobody has found yet.**
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
 here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns nothing — it was a phase-status table when this block was moved, and ROADMAP-FOLD-2 (`c49d5af5`, 2026-08-27) folded that table in here too. *(Corrected 2026-09-03: this sentence contradicted line 3 of this same file, which has said REDIRECT since that fold. Found as a SECOND SITE of the same claim in README.md, not on its own.)*
 
-**verify (section-wide):** none can exist — **nothing here is built, and no command can check the
-absence of a server that was never started.** Each item leaves by being built, not by being checked.
+**verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
+here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
+was still denying it: race outcomes ARE persisted, in a real database
+(`server/src/races/raceStore.js:64,72`, served by `server/src/routes/races.js`); branding profiles
+ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
+(`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
+**What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
+the absence of a server that was never started, and each leaves by being built rather than by being
+checked.
 
 **Its relationship to *Before the VPS migration* (the next section):** that section is the LIST of
 what must be true before anything goes online; this one is the FEATURE WORK those phases contain.
@@ -908,26 +947,111 @@ Neither subsumes the other and both were already open.
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
 - [ ] Server-authoritative race finale: server signs and persists race outcomes
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — PERSISTS yes, SIGNS no, AUTHORITATIVE no.**
+      **Persistence is built:** `server/src/races/raceStore.js:64` imports `better-sqlite3` and `:72`
+      opens `DATA_ROOT/races.sqlite` on its own handle (redirectable by `RA_RACES_DB`), with
+      immutable, content-addressed rows; `server/src/routes/races.js:62` writes a finished race.
+      **Nothing SIGNS.** A search for sign/signature/hmac across the races route and store returns
+      only prose about a signed-IN user. **And nothing is AUTHORITATIVE:** the server stores the
+      outcome the client sends; it does not compute or adjudicate the race.
+
 - [ ] Socket.IO event streaming: server broadcasts authoritative race-tick state
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** `socket.io` appears in neither
+      `server/package.json` nor `client/package.json`. Nothing streams.
+
 - [ ] Race outcomes persisted to DB; season standings computed server-side
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the DB half is DONE, the standings half is
+      not.** This row states two things and only one is still true.
+      **DONE:** outcomes are persisted, in a real database — `server/src/races/raceStore.js:64,72`
+      (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own file so the races are not one
+      `rm sessions.sqlite` from gone) — and served back by `server/src/routes/races.js`: POST at
+      `:62`, a paged GET at `:121`, GET by short key at `:140`. Built by RACE-SAVE-3 / RACE-STORE-2,
+      2026-09-06.
+      **NOT DONE:** no season standings are computed anywhere. "season" occurs **once** in the whole
+      store and there is no standings code on the server.
+      **The row now claims the standings only.**
+
 - [ ] Leaderboard screen (client) reading from server API
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** `client/src/screens/` holds Auth,
+      DevScreen, DiagnoseVerteilung, RaceScreen, RacerEditor, ResultScreen, SetupScreen and
+      TrackEditor. There is no leaderboard screen. ★ The API half it would read now exists
+      (`server/src/routes/races.js`), so this is a client-side gap rather than a whole feature.
+
 - [ ] Season archive + reset
 
 ### Phase 6 — Public Deployment (planned)
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No season concept exists on either
+      side; see the standings row above.
 
 - [ ] VPS deployment (nginx reverse proxy, HTTPS via Let's Encrypt)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is the SAME SUBJECT as the delivery rows
+      in *Before the VPS migration*.** It waits on a domain and a proxy choice — his word plus a
+      purchase — not on work in this tree.
+
 - [ ] Admin auth hardened for public-facing use
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — UNDECIDED — and the reason is that the row states no bar.**
+      ★ **A great deal of hardening exists**, with tests beside each piece: `server/src/auth/`
+      carries `csrf.js`, `guards.js`, `rateLimit.js`, `session.js`, `sessionInvalidation.test.js`,
+      `recoverAdmin.js`, `changePasswordContract.test.js` and `routePolicyDrift.test.js`.
+      ★ **But "hardened for public-facing use" has no stated threshold**, so the tree cannot say
+      whether it is met — and nothing is public, so it cannot be observed either.
+      **What WOULD settle it:** a written bar (a threat model, or a checklist of what must hold
+      before the app is reachable) and one review against it. That is perhaps a day, and it is not
+      started. It is NOT closed here, because closing it would be a guess.
+
 - [ ] Stats pages (top racers, busiest tracks, season history)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No stats screen exists; see the
+      client screen list on the leaderboard row above.
+
 - [ ] Mobile / tablet responsive tuning
 
 ### Phase 7 — Multi-Tenant (planned)
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN.** Four CSS files under `client/src` carry an
+      `@media` rule, so the app is not wholly fixed-width — but the race canvas is a fixed
+      1280x720 store by design, and no tuning pass for phone or tablet has been done.
 
 - [ ] Multiple event organizers with isolated track sets and branding profiles
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — BRANDING PROFILES exist, ISOLATED TRACK SETS do
+      not.** `server/src/routes/brands.js` is a built feature: brand CRUD at operator level or above,
+      with logo upload, serve and delete, and admin promote/export.
+      **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
+      of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
+      track sets only.**
+
 - [ ] Per-tenant localStorage namespace or server-side data isolation
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — server-side data isolation EXISTS, for races.**
+      The row offers two alternatives and one of them is built for one resource:
+      `server/src/routes/races.js:32-35` stamps `req.authUser.team` from the user's own database
+      record on every request via `requireAuth`, **ignores** any `team` in the request body, and
+      makes a race visible to its author's team and to no other — decided on the server, which is
+      exactly what "server-side data isolation" names.
+      **It reaches races and nothing else** — tracks, brands and player groups are not team-scoped.
+      **The row now claims the resources it does not yet cover.**
+
 - [ ] Invite flow for adding players to an organizer's roster
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No occurrence of "invite" anywhere
+      in `server/src` or `client/src`.
+
 - [ ] i18n (English + German base)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt, and it sits against a standing rule,
+      which is recorded here as a FACT and not as a recommendation.** No i18n framework is present.
+      ★ The fact: `CLAUDE.md`'s language rule requires all user-facing text to be in **English**, with
+      no German anywhere in the codebase. A German locale would need that rule changed. **Whether
+      that is wanted is his decision and this verdict does not make it** — it only notes that the
+      two documents currently disagree, so building this row as written would breach the other.
 
 ---
 
@@ -948,6 +1072,15 @@ are in PART TWO with what closed them; these are the ones still standing.
       the real value into a gitignored `docker-compose.override.yml`. What is missing is a domain, a
       proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
       **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it NEEDS HIS WORD — it is not work.**
+      Re-checked at the tree: `racearena.example.com` appears in exactly two places, neither of them
+      a running origin — **`.github/workflows/deploy.yml.disabled:39`** (inside a comment listing
+      this very blocker) and **`docs/DEPLOYMENT.md`** three times. Nowhere is it a real value.
+      ★ **And the code half is genuinely ready.** `scripts/configure.mjs` exports `withPublicOrigin`,
+      which writes the real origin into a gitignored `docker-compose.override.yml` — so there is
+      nothing in the repository to edit when the domain exists. What is missing is a domain, a proxy
+      choice and a decision about where `RA_DATA_DIR` lives: **his word plus a purchase.**
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
@@ -973,6 +1106,12 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
       nobody believes, and this repository has already paid for that once.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is one day old.** Opened 2026-09-25 by
+      this session's own measurement and re-confirmed here rather than assumed: the three are still
+      absent from the curated set at **`client/package.json:54`** — which was widened to ten specs
+      the same day and deliberately excluded them — so nothing automatic reports them. No cause has
+      been investigated, which is what the row says.
+
 ## Before the VPS migration
 
 - [ ] **`npm run data:export` is what carries his data to the VPS, and the same comparison tells the
@@ -989,6 +1128,12 @@ happens only after development is finished. Every entry below is harmless while 
 becomes a real question the moment it is not. Recorded 2026-08-04 (CAMERA-ANCHOR-TRUTH-1); the
 measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.md) §10.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and still a MEASUREMENT rather than a task.**
+      The command exists: **`package.json:13`** (the 2026-09-02 verdict says `:11`; the line moved)
+      runs **`scripts/data-export.mjs`**, which is present. Nothing here is unbuilt.
+      ★ The row records **what must travel** when the migration happens, and it closes when the
+      migration happens — which waits on the public address above, not on anything in the tree.
+
 - [ ] **`deploy.yml.disabled` cannot run — four independent blockers, and it is now DE-REGISTERED
       too** *(**verify:** `ls .github/workflows/deploy.yml.disabled && ls scripts/deploy.sh` — **still
       open while the first succeeds and the second fails**; re-confirmed 2026-08-23, and note it also
@@ -1004,11 +1149,22 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .github/workflows/deploy.yml.disabled` succeeds and `ls scripts/deploy.sh` fails, exactly as the entry predicts. All four blockers stand.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN by its own verify command, run today.**
+      `ls .github/workflows/deploy.yml.disabled` **succeeds**; `ls scripts/deploy.sh` **fails** with
+      "No such file or directory" — which is exactly the condition the row states keeps it open.
+      Blocker (2) therefore still holds, and the file is still kept on purpose as the record of an
+      intent.
+
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `racearena.example.com` is still the only value anywhere — it appears in `deploy.yml.disabled:39` and three times in `docs/DEPLOYMENT.md`, and nowhere as a real origin. Waiting on a real public address.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is the same subject as the public-address
+      row above.** Re-grepped today: `racearena.example.com` is still the only value anywhere —
+      `deploy.yml.disabled:39` and three times in `docs/DEPLOYMENT.md` — and nowhere a real origin.
+      Waiting on the same purchase.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
@@ -2183,6 +2339,51 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **"A SEED IS NOT A RACE IDENTIFIER" — SUPERSEDED, and the two rows that said it are
+      MERGED into this one.** Closed 2026-09-25 by RACE-IDENTIFIER-1, which was built 2026-09-05 and
+      is on master today.
+      ★ **THE MERGE, and why there were two.** PART ONE carried this subject twice: *"A seed is one
+      of NINE inputs, not six"* and *"A seed is not a race identifier — it is one of SIX inputs"*.
+      The first existed only to correct the second's count, and the second had already absorbed the
+      correction in place (*"COUNT CORRECTED 2026-08-26: it is NINE inputs, not six"*). One subject,
+      two rows, one of them a patch on the other. **The count is NINE.**
+      ★ **WHAT SUPERSEDED IT.** `client/src/modules/raceIdentifier.js` — "ONE STRING THAT REPEATS A
+      RACE ON ANOTHER MACHINE" — encodes **the nine inputs, counted at source** rather than carried
+      over, and its header names the exact mechanism both rows were written about:
+      `SetupScreen.jsx:677` fixes the plan seed, but `RaceScreen/index.jsx:488` reads the action
+      stage and `:503` the whole config world **from the host's own storage at press time**, so the
+      same seed on two machines is two races and neither operator changed anything.
+      ★ **It reaches all three places the rows said it had to.** The DURABLE record stores it —
+      `client/src/modules/raceHistory.js:100-106` keeps "every input `raceIdentifier.js` encodes,
+      taken from the race that RAN", with an `identifierVersion`. The HOST surface carries it —
+      `client/src/screens/SetupScreen/RaceSettings.jsx:33,35`. And it is proven in a REAL BROWSER —
+      `client/e2e/race-identifier.spec.js`, which as of 2026-09-25 is inside the browser gate's
+      curated set, so a regression now reddens master rather than waiting for a night.
+      ★★ **AND THE OLDER ROW'S OWN VERIFY COMMAND STILL RETURNS NOTHING — that is recorded here on
+      purpose, because it is the interesting part.** It said the row closes when
+      `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx`
+      returns lines; run today it still returns none. **The row is closed anyway**, because that
+      command tested ONE candidate mechanism — putting the missing fields onto the ResultScreen's
+      record — and a different, better mechanism solved the problem instead. A verify command tests
+      the fix somebody imagined, not the problem; when the two part company the problem wins.
+      ★ **What is NOT claimed:** that every one of the nine is individually round-tripped through the
+      history UI. What is established is that the identifier encodes nine, the record stores what it
+      encodes, and a browser test holds the end-to-end path.
+
+- [x] ★ **"Nothing removes a throwaway worktree at creation's end" — MOOT, settled 2026-09-25 by
+      the row's OWN verify command.** It asked that whatever creates a throwaway worktree remove it in
+      a `finally`, and set its own test: *grep the tooling for `worktree add` and check each caller
+      has a `finally`*.
+      **Run today: there are no callers.** `worktree add` appears nowhere under `scripts/` — only in
+      `docs/`, in reports, and in one client test about build identity. Nothing in the tooling creates
+      a worktree, so there is no caller to give a `finally` to. Worktrees here are made by hand, and a
+      hand is not a code path.
+      **And the symptom is absent:** `ls .git/worktrees` returns **0** today, against the **3** its own
+      verdict of 2026-09-02 recorded.
+      ★ **The cure exists, and the row was right to refuse it as the prevention:**
+      `scripts/worktree-stubs.mjs` (Q-28, 2026-09-24) removes stubs that appear. This row closes not
+      because the cure arrived but because the prevention it asks for has no subject.
 
 - [x] ★★ **THE BROWSER GATE IS WIDENED, AND IT COVERS EVERY SPEC THAT DOES NOT WAIT FOR A RACE.**
       Closed 2026-09-25 by the owner's decision of the same day: **the gate widens on the POST-MERGE

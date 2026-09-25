@@ -1,153 +1,89 @@
-# BACKLOG-TRUTH-2 — six entries checked against the source, and two of them were not what they said
+# BACKLOG-TRUTH-2 — every open row, four questions, at the tree
 
-**Documents only.** `docs/BACKLOG.md` and this report.
+**2026-09-25.** `docs/BACKLOG.md` PART ONE held **32** open rows, written over months, describing the
+tree as it was then. Two were spotted as stale within a minute of being shown to the owner. This is
+all 32, each asked the same four questions — does the thing still exist, was it closed another way,
+does it still reproduce, and what remains exactly — with a file and line or a command and its output
+behind every verdict.
 
-**WHAT WAS NOT RUN, AND WHY.** No browser gate, no client suite, no fingerprint run. The four
-fingerprint roles are computed from the engine; a change confined to `docs/` cannot reach any of
-them, so those gates could not return a different answer than not running them. `check-doc-links`
-and `check-index` are the gates that *can*, and both were run.
+**Nothing here was fixed and no row was deleted.** Establishing truth and repairing are separate
+work.
 
-**THE RULE THIS PIECE OBEYS.** An entry that says FIXED on the strength of a report and is not fixed
-is worse than one that says OPEN. So every entry below was established **at the source** — the
-shipped config file, the shipped function, the origin API, a replay of the real commit — and not from
-the report that claimed it. Two of the six turned out not to be what the report-level reading said.
+## The table — what FELL AWAY first
 
-**And nothing was deleted.** This backlog's own rule is that a question which vanishes looks like a
-question nobody asked, so every closed entry keeps its original text as the evidence for its closure.
-
----
-
-## THE SIX, WITH WHAT ESTABLISHED EACH
-
-| # | entry | verdict | established by |
-| --- | --- | --- | --- |
-| 1 | the merge gate stopped gating | **CLOSED** | `server/vitest.config.js` — bcrypt group bounded to 3 |
-| 2 | the arbiter cannot see data | **HALF closed, half still true** | `routing-replay.mjs` on the real commit; `engine-reach --check` run directly |
-| 3 | the garden-path silent zero | **STILL OPEN — correctly** | `scripts/lib/raceDriver.mjs` still carries the ceiling; no loud zero exists |
-| 4 | the run-in's hard admit | **CLOSED** | `_levelEaseTo` in `CameraDirector.js` |
-| 5 | the pan's stale zoom | **CLOSED** | `update()` calls `_resolvePanTarget()` after the zoom settles |
-| 6 | the chance test points backwards | **STILL OPEN — re-verified** | `_contentionOut` still only grows |
-
-### 1 — the merge gate: CLOSED, and the question it asked was never answered because it stopped mattering
-
-The entry said **NEEDS: ONLY HIS WORD** and offered him a choice: restore the serialisation as a
-performance decision, or teach the gate to report a timeout-only failure as INCONCLUSIVE.
-
-**Neither was needed.** GATE-SERIAL-BCRYPT-1 bounded the bcrypt group to **3 workers**; the margin
-against the unchanged 5,000 ms timeout went from **21 ms to 1,894 ms** with no test over 4 s, and the
-suite is not slower (37.7 s against 39.1 s, inside run-to-run variance). Verified in
-`server/vitest.config.js`, with membership owned by `server/test/suiteShape.mjs` and read from that
-same module by `scripts/verify.mjs` — one home, so the two cannot drift.
-
-**A question can be closed by making it stop applying**, and that is worth recording as such rather
-than leaving a row that asks him to choose between two things nobody needs to do.
-
-### 2 — the arbiter: the dangerous half is closed, the visible half is not
-
-This is the entry that most needed source and not a report, because a report-level reading would have
-closed it and the wrong half would have stayed open.
-
-**✅ The routing hole is closed.** `scripts/lib/routing.mjs` decides which guards run via
-`scripts/lib/dataReach.mjs`, which follows **named** paths and not only import edges. Replayed on the
-real commit with the tool that piece shipped:
-
-```
-COMMIT ba4a4442 — server/seeds/tracks/garden-path.json
-  BEFORE — 5 guards      AFTER — 12 guards      ADDED — 7
-  including all four fingerprints, both suites, both frame checks
-```
-
-That was the half that could let a red master report green.
-
-**⏳ The advisory is still wrong**, and it is the line a human reads at commit time:
-
-```
-$ node scripts/engine-reach.mjs --check server/seeds/tracks/garden-path.json
-ENGINE REACH: none of 1 path(s) carry a change that can reach the race engine.
-  1 outside the hull (cannot reach the engine at all): server/seeds/tracks/garden-path.json
-```
-
-**For a file whose two-line edit moved all four fingerprints** in GARDEN-PATH-DEFAULTS-1. It cannot
-answer otherwise as written: `entryPoints()` walks static `from '...'` specifiers, and a JSON data
-file is never an import edge, so no data path can enter that hull by construction.
-
-**The remaining job is smaller than the entry costed it.** The mechanism that answers correctly is
-already shipped; `engine-reach`'s hull is simply the last caller not using `dataReach`. The report's
-3.4%-of-commits figure was for the whole thing.
-
-### 3 and 6 — two entries that were right, and stay open
-
-Checking is not only for finding errors. **The garden-path silent zero** is accurate as written:
-garden-path completes 20/20 because the beetle made the race short enough, the harness still
-hardcodes 2 laps, `scripts/lib/raceDriver.mjs` still carries its 200 s wall-clock ceiling, and
-nothing anywhere makes a zero-race result loud. The symptom healed; the mechanism did not move.
-
-**The chance test** likewise: `_contentionOut` is still only ever added to, `_contentionPending` only
-gates entry to that removal, and there is no path returning a racer to the framing. Nothing admits on
-it. **One thing nearby did change and the two must not be confused** — RUNIN-LEVEL-SET-BUILD-1 built
-`withinOneLength` membership for the run-in's LEVEL SET, a different mechanism with a different
-subject. The contention watch is untouched by it. Its pointer was corrected: it used to be "context
-for the item above", and the item above is now closed, so it stands on its own as an unused mechanism
-nobody has decided to point forwards.
-
-### 4 and 5 — closed by builds he has already accepted
-
-**The run-in's hard admit** asked *"may the width ease onto a new member over about 1.25 s?"*
-RUNIN-EASED-ADMIT-1 built exactly that, he judged it on a production build, and it shipped as
-`v-ship-runin-calm`. **The word was given by acceptance rather than separately**, which is why the row
-still read as open. `_levelEaseTo` re-anchors whenever the target moves and eases in both directions,
-leaving by arriving.
-
-**The pan's stale zoom** is closed by RUNIN-PIVOT-SCOPE-1: `update()` calls `_resolvePanTarget()`
-after it has settled this frame's zoom, on every path.
+| subject | verdict | evidence | what closed it |
+|---|---|---|---|
+| A throwaway worktree is never removed at creation's end | **MOOT** | its own verify run today: `worktree add` has **no callers under `scripts/`** — only docs, reports and one client test. `ls .git/worktrees` → **0**, against the **3** its 2026-09-02 verdict recorded | nothing in the tooling creates a worktree, so there is no caller to give a `finally`. `scripts/worktree-stubs.mjs` (Q-28, 2026-09-24) clears any that appear |
+| The harness hardcodes a lap count | **NARROWED** *(lap half DONE)* | `scripts/lib/raceDriver.mjs:416` reads `lapsOfClosedTrack(geo)`; `:299-310` returns the track's own `defaultLaps` and **throws** rather than substituting one | the row's worry — "a track whose `defaultLaps` is 4 is measured at 2" — is now a loud error. The **200 s ceiling** at `:477` remains, and the row now claims only that |
+| The canonical silent zero "could return at any time" | **NARROWED** | same as above: the row's stated mechanism ("the harness hardcodes 2 laps and that never moved") no longer holds | a race can still be discarded silently by the 200 s ceiling; kept for that alone |
+| A race-identity hash would make comparison mechanical | **NARROWED** | `hashIdentity` exists — `client/src/modules/parity/raceIdentity.js:109`, used at `scripts/parity/replay.mjs:83` and `soak.mjs:120`; `replay.mjs:151` already prints DRIFTED | but it returns `hashWorld(identity).full` — **identity only, no camera config**, which is the exact insufficiency the row names. `scripts/his-shot-truth.mjs` still exists, so its example stands. The row now claims only the missing half |
+| A sweep cell that returns 0 races still prints a number | **STILL OPEN** | `runRace` at `scripts/lib/raceDriver.mjs:491`; exactly one caller reads its return value, `scripts/raceDriver.test.mjs:157` | — figures **grew**: 82 files import the driver (was 56), 71 call sites (was 44) |
+| The contention watch can only remove, never admit | **STILL OPEN** | `_updateContentionWatch` at `CameraDirector.js:2758`, called from `:4666`; `.add` at `:2806`; grep for `_contentionOut.delete` returns **0**; the code says so itself at `:296` and `:2737` | — |
+| Nothing measures motion, only per-frame values | **STILL OPEN** | `scripts/finish-motion-truth.mjs` present, still one phase; no guard checks pan displacement against a local median | — |
+| `0xC0000142` — watch for a second occurrence | **STILL OPEN — ★ its own trigger HAS FIRED** | second occurrence **2026-09-19**, six weeks after the first: `reports/night/BREAKAWAY-GROWTH-1.md:457`, a dev server reporting `build unknown` with `git rev-parse: exit 3221225794`; lesson at `docs/LESSONS.md:3641`. Fix undone — `client/vite-plugin-ra-build.js:79` still shells out to git per check | — the row still reads "one occurrence is an anecdote". Not claimed: that the two share a cause |
+| Three driver copies remain, by deliberate choice | **STILL OPEN** | all three present: `camera-fingerprint.mjs`, `render-fingerprint.mjs`, `camera-replay.mjs` | — the row exists so anyone closing it answers the two arguments rather than counting copies; unanswered |
+| An owner's PASS is tied to no artefact | **NARROWED** | the cfg fingerprint the row *hoped* existed does: `configFingerprintBadge` at `client/src/screens/RaceScreen/index.jsx:536`, drawn on screen; the camera marker reads config diffs at `client/src/modules/camera/cameraMarker.js:19` | but the `[RA CAMERA LIVE TRUTH]` line (`index.jsx:701-709`) carries commit, branch, grammar, provenance and seed — and **zero** occurrences of it. It still never says which guarantee ran, and a PASS is still recorded nowhere |
+| The sprite's bare-box residual on space-sprint | **STILL OPEN** — figure re-measured | its own gate re-run today: `margin-both-axes.mjs --track=space-sprint --seeds=30` → `residual=979 residual0=463 clipped=1175`, 30 races, 42 297 frames | — **463, not the 591 the row states.** Lower, still nowhere near river-run's 0. ALONG-RESIDUAL-1's P1 unstarted |
+| `displaySize × bodyFill` is not a world box — a standing warning | **STILL OPEN** *(a caution, not a defect)* | both addresses resolve: `computeBodyNarrowRef` at `client/src/modules/rowLayout.js:251`, `scripts/diag/sprite-premise.mjs` present | — nothing in it to finish; a warning is open only in the sense that it is still followable |
+| Three production-arm specs fail | **STILL OPEN** | one day old; still absent from the curated set at `client/package.json:54`, which was widened to ten the same day and deliberately excluded them | — no cause investigated, which is what the row says |
+| A seed is not a race identifier — **two rows, MERGED into one** | **SUPERSEDED** | `client/src/modules/raceIdentifier.js` — "one string that repeats a race on another machine" — encodes **the nine inputs**; the durable record stores them (`client/src/modules/raceHistory.js:100-106`, with an `identifierVersion`); the host surface carries it (`SetupScreen/RaceSettings.jsx:33,35`); a real browser holds it (`client/e2e/race-identifier.spec.js`, inside the gate's curated set since 2026-09-25) | RACE-IDENTIFIER-1, built 2026-09-05. ★ **The older row's own verify command still returns nothing** — it tested one *imagined* fix (fields on the ResultScreen record); a different mechanism solved the problem. The two rows were one subject: the first existed only to correct the second's count, which the second had already absorbed |
+| No public address, so no HTTPS, so sign-in stops working | **STILL OPEN — needs his word, not work** | `racearena.example.com` appears in exactly two places, neither a running origin: `.github/workflows/deploy.yml.disabled:39` (in a comment listing this blocker) and `docs/DEPLOYMENT.md` ×3 | — the code half is ready: `scripts/configure.mjs` exports `withPublicOrigin`, which writes the real origin into a gitignored override. Missing: a domain, a proxy choice, a `RA_DATA_DIR` decision. **His word plus a purchase** |
+| `RA_PUBLIC_ORIGIN` is only a placeholder | **STILL OPEN** | same grep, same two places; nowhere a real origin | — the same subject as the row above, waiting on the same purchase |
+| `deploy.yml.disabled` cannot run | **STILL OPEN** by its own verify | run today: `ls .github/workflows/deploy.yml.disabled` **succeeds**, `ls scripts/deploy.sh` **fails** — exactly the condition the row says keeps it open | — kept on purpose as the record of an intent |
+| `npm run data:export` carries his data to the VPS | **STILL OPEN** — a measurement, not a task | exists: `package.json:13` → `scripts/data-export.mjs` (the 2026-09-02 verdict says `:11`; the line moved) | — records what must travel; closes when the migration happens, which waits on the address above |
+| Race outcomes persisted to DB; season standings server-side | **NARROWED** *(DB half DONE)* | `server/src/races/raceStore.js:64,72` — `better-sqlite3`, `DATA_ROOT/races.sqlite` on its own handle; served by `server/src/routes/races.js` (POST `:62`, paged GET `:121`, GET by key `:140`) | RACE-SAVE-3 / RACE-STORE-2, 2026-09-06. **Standings are not built** — "season" occurs once in the whole store |
+| Server-authoritative race finale: signs and persists outcomes | **NARROWED** *(persists yes)* | same store; but sign/signature/hmac across the races route and store returns only prose about a signed-**in** user | — nothing signs, and nothing is authoritative: the server stores the outcome the client sends |
+| Multiple organizers: isolated track sets + branding profiles | **NARROWED** *(branding built)* | `server/src/routes/brands.js` — brand CRUD at operator+, logo upload/serve/delete, admin promote/export | — **isolation absent**: `server/src/routes/tracks.js` contains **zero** occurrences of "team" |
+| Per-tenant namespace or server-side data isolation | **NARROWED** *(built, for races)* | `server/src/routes/races.js:32-35` — team stamped from the user's DB record per request by `requireAuth`, a `team` in the body **ignored**, a race visible to its author's team and no other | — reaches races only; tracks, brands and player groups are not team-scoped |
+| Admin auth hardened for public-facing use | **UNDECIDED** | substantial hardening exists with tests — `server/src/auth/` has `csrf.js`, `guards.js`, `rateLimit.js`, `session.js`, `sessionInvalidation.test.js`, `recoverAdmin.js`, `routePolicyDrift.test.js` | — but the row states **no bar**, and nothing is public, so the tree cannot settle it. **What would:** a written threat model or pre-exposure checklist, and one review against it — about a day, not started |
+| Socket.IO event streaming | **STILL OPEN** — unbuilt | `socket.io` in neither `server/package.json` nor `client/package.json` | — |
+| Leaderboard screen reading from the server API | **STILL OPEN** — unbuilt | `client/src/screens/` holds Auth, DevScreen, DiagnoseVerteilung, RaceScreen, RacerEditor, ResultScreen, SetupScreen, TrackEditor — no leaderboard | — the API half it would read now exists, so this is a client gap, not a whole feature |
+| Season archive + reset | **STILL OPEN** — unbuilt | no season concept on either side | — |
+| Stats pages | **STILL OPEN** — unbuilt | no stats screen | — |
+| VPS deployment (nginx, HTTPS) | **STILL OPEN** | same subject as the delivery rows — a domain and a proxy choice | — his word plus a purchase, not work in this tree |
+| Mobile / tablet responsive tuning | **STILL OPEN** | four CSS files under `client/src` carry `@media`, so it is not wholly fixed-width; the race canvas is a fixed 1280×720 store by design | — no tuning pass for phone or tablet has been done |
+| Invite flow for an organizer's roster | **STILL OPEN** — unbuilt | no occurrence of "invite" in `server/src` or `client/src` | — |
+| i18n (English + German base) | **STILL OPEN** — unbuilt | no i18n framework present | — ★ recorded as a fact, not a recommendation: `CLAUDE.md`'s language rule requires English everywhere and no German in the codebase, so **the two documents disagree** and building this row as written would breach the other. Which one gives is his call |
 
 ---
 
-## THE RACE-SEED ROW — established, not edited
+## 1 · The honest count
 
-The index carried two rows saying the work sits on `feat/race-seed`, **unmerged**, his eye owed. That
-branch does not exist at origin, and `racePlanSeed` is on master — the combination that could mean
-either "merged and swept" or "lost".
+**29 rows are genuinely open**, down from 32.
 
-**It was merged and swept, and nothing was lost.** `7a3942fa merge(SEED-REAL-RACE-1): a real race
-gets a real seed, and it outlives the tab` is on master, and both halves of D23 are in the shipped
-source: `SetupScreen.jsx:464` passes a drawn `startSeed` as `racePlanSeed` instead of the legacy `0`,
-and its own note records that both values live in `localStorage` rather than `sessionStorage` —
-"watch a race, close the browser, come back, re-run it" is the case he asked for.
+Three left PART ONE: one **MOOT**, one **SUPERSEDED**, and two rows that were one subject **merged
+into one**. Of the 29 that remain, **8 are NARROWED** — they were partly done and said so nowhere —
+and **1 is UNDECIDED**, meaning the tree cannot settle it and it was not closed to tidy up.
 
-**So the rows become an eye-test owed ON MASTER**, and they now say what he would actually be looking
-at: start a normal race with the seed field empty, check the drawn seed is displayed where he expects
-and reads as a number he could type back; then close the tab, reopen, and check it survived.
+Tally across all 32 as they stood: DONE 0 · SUPERSEDED 1 · MOOT 1 · NARROWED 8 · STILL OPEN 20 ·
+UNDECIDED 1.
 
-**Nothing was rebuilt.** The instruction was to say plainly if anything was lost rather than quietly
-restore it; nothing was.
+## 2 · What the 29 are, by area
 
-## CONFORMITY
+- **Measurement, guards and tooling — 8.** Harnesses that can return nothing and still print a
+  number; a ceiling that can discard a race silently; a camera rule implemented backwards; no
+  instrument for motion; a machine fault whose second occurrence nobody noticed; three deliberate
+  copies of one driver; and a hash that exists but leaves the config out.
+- **Camera and sprite — 4.** A verdict that is tied to no artefact; a residual on one track that
+  nothing has moved; a standing warning about sizing; and three browser specs that fail today.
+- **Going online — 5.** No domain, no HTTPS, a deploy file that cannot run, a placeholder origin, and
+  a measurement of what would have to travel. Four of the five wait on a purchase rather than on work.
+- **The planned server arc — 5.** Signing and authority over the finale, live streaming, season
+  standings, a leaderboard screen, and season archive. The database beneath them is built.
+- **Organizers and tenancy — 4.** Isolated track sets, isolation beyond races, an invite flow, and a
+  second language.
+- **Public-facing readiness — 3.** Whether the auth is hard enough to expose, stats pages, and a
+  phone-and-tablet pass.
 
-- Every verdict from source: a config file, a shipped function, the origin API, or a replay of the
-  real commit. No verdict is taken from the report that claimed it.
-- Nothing deleted; every closed entry keeps its original text as its own evidence, per the backlog's
-  stated rule.
-- Closures use the file's existing in-place shape (`- [x] ~~…~~ — ✅ CLOSED …`), not a new one.
-- `check-doc-links`: 653 links, 0 dangling.
+## 3 · FOR THE OWNER TO DECIDE — still technically true, no observable effect on what you see
 
-## PROPOSALS
+Naming these is not proposing anything. Each is accurate today; none of them changes the game on
+screen, and whether a true row is worth carrying is your call.
 
-**P1 — finish the arbiter with the mechanism that already exists.** `engine-reach`'s `entryPoints()`
-hull is the last caller not using `dataReach`. This is the one remaining half of entry 2 and it is now
-a small job.
-
-**P2 (mine) — the backlog cannot currently be wrong out loud, and that is why this piece was needed.**
-Every claim in it is prose; nothing fails when it stops being true. The entries that went stale here
-all had a *checkable* form — a config value, a function's existence, a branch at origin. A `verify:`
-line that is a COMMAND rather than a sentence, for the entries that can carry one, would let the
-backlog rot loudly instead of silently. The file already gestures at this ("an open item carries
-either a command whose output decides it, or a stated reason why no command can") — **the convention
-exists and is not enforced.**
-
-**P3 (mine) — two rows pointed at a branch, and a branch is not a place a document may point.**
-Both race-seed rows named `feat/race-seed`. That is the same failure SHIP-ORDER-CLEANUP-1 found in
-`reports/evolution/INDEX.md` hours earlier, in a second file — so it is a pattern, not an incident. A
-guard rejecting `feat/`, `diag/` or `fix/` branch names in `docs/` and `reports/` prose would catch
-both. Recorded there as P3 and repeated here because the second instance is what makes it worth
-building.
+- **`deploy.yml.disabled` cannot run.** A disabled workflow, kept as the record of an intent. It
+  blocks nothing because nothing deploys.
+- **`RA_PUBLIC_ORIGIN` is a placeholder.** True, and inert until there is a public address — it is
+  the same subject as the row above it.
+- **`npm run data:export` and what would have to travel.** A measurement, not a task; it closes when
+  a migration happens.
+- **Three driver copies remain.** Deliberate, argued, and invisible from outside the tooling.

@@ -446,6 +446,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [BACKLOG-TRUTH-2.md](BACKLOG-TRUTH-2.md) — **all 32 open backlog rows, four questions each, at
+  the tree.** Nothing fixed, nothing deleted; every verdict carries a file and line or a command and
+  its output. ★ Findings include a row whose OWN watch condition had fired unnoticed
+  (`0xC0000142`, a second occurrence on 2026-09-19) and several rows half-done without saying so.
+
 - [BROWSER-GATE-PREMERGE-1.md](BROWSER-GATE-PREMERGE-1.md) — **does the pre-merge gate fire for the
   three candidate specs? No — and not for the reason anyone expected.** ★★ **The pre-merge gate runs
   NO Playwright specs at all**: `verify.mjs:257` sets `GATE_GUARD = "viewer-invariants"` and `:428`
