@@ -257,6 +257,96 @@ recorded here is narrower and still true: **the control does not say it.** Re-ve
 
 ---
 
+# 5 · TRACKS (`TrackManager.jsx`) — operator tier
+
+A CRUD manager over track records. The track's SHAPE is not edited here — that is the Track Geometry
+Editor, a separate screen this card links to.
+
+**8 controls** (the colour picker and its hex field are counted as two, see *Duplicates* at the end
+of this document).
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Track name | `name` | — (new track empty) | yes | **MATCHES** |
+| Icon | `icon` | — | no | **MATCHES** |
+| Description | `description` | — | no | **MATCHES** |
+| Colour (picker) | `color` | — | no | **MATCHES** |
+| Colour (hex field) | `color` | — | no | **MATCHES** |
+| Default racer type | `defaultRacerTypeId` | per track | no | **MATCHES** |
+| Max racers | `maxRacers` | derived, overridable | no | **MATCHES** |
+| Surface classes (pills) | `surfaceClasses` | `[]` | yes | **MATCHES** |
+
+Readers: the Setup Screen's track card and picker for the first five; `fieldCap.js` and `rowLayout.js`
+for `maxRacers`; the race's surface resolution for the classes.
+
+★ **`maxRacersIsOverride` is form state, not a stored field** — it is stripped before save
+(`const { maxRacersIsOverride: _drop, ...formData } = form`) and exists so the form can tell an
+operator's chosen cap from the derived one. Correctly not counted as a control.
+
+★ **This card carries a six-item LEGEND with tooltips and no controls** — *"Configured in the Track
+Geometry Editor: Closed/Open · Laps · Background · Start · Finish · Width"*. Same pattern as the Racer
+Types card. Not counted, noted so the tooltip count is not read as a control count.
+
+---
+
+# 6 · BRANDING (`BrandingProfiles.jsx`) — operator tier
+
+Branding profiles, stored on the server (`brands.js`). One profile is active per session.
+
+**11 controls** (two colours are a picker + hex pair each, counted as four).
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Profile name | `name` | — | yes | **MATCHES** |
+| Event name | `eventName` | — | no | **MATCHES** |
+| Subtitle | `subtitle` | — | no | **MATCHES** |
+| Primary colour (picker) | `primaryColor` | — | yes | **MATCHES** |
+| Primary colour (hex field) | `primaryColor` | — | yes | **MATCHES** |
+| Secondary colour (picker) | `secondaryColor` | — | yes | **MATCHES** |
+| Secondary colour (hex field) | `secondaryColor` | — | yes | **MATCHES** |
+| Sponsor text | `sponsorText` | — | yes | **MATCHES** |
+| Logo (file upload) | `logo` | — | yes | **MATCHES** |
+| Logo max height | `logoMaxHeight` | 90 | no | **MATCHES** |
+| Logo opacity | `logoOpacity` | 0.9 | no | **MATCHES** |
+
+Readers: `BrandLogoOverlay.jsx` and `overlayGeometry.js` for the logo trio, `CeremonyBrandCard.jsx`
+and the result screen for the text and colours, `SetupScreen.jsx` for the subtitle and sponsor text
+that travel with the race.
+
+★ **`logoCorner` has a reader and NO control.** It is in the profile's shape, defaults to
+`'bottom-right'`, is persisted by `brands.js` and is read by `BrandLogoOverlay.jsx` — but nothing on
+this screen sets it. This is the inverse of a dead knob: a live setting with no way to change it. Not
+counted as a control, recorded because it is exactly the kind of thing a stock-take is for.
+
+★ **Another two-item LEGEND with tooltips and no controls** — *"Also configurable per race: Sponsor
+Overlay · Overlay Position"*.
+
+---
+
+# 7 · RACE HISTORY (`RaceHistory.jsx`) — operator tier
+
+A viewer, not a config section. Two filters, both with tooltips; everything else is a table, a
+paginator, an export button and a repeat action.
+
+**2 controls.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Filter by Track | — (component state `filterTrack`) | none (All tracks) | yes | **MATCHES** |
+| Filter by Date | — (component state `filterDate`) | none | yes | **MATCHES** |
+
+Both are applied in one `filtered` memo over the local history and again over the team's server page,
+and both do exactly what their labels say.
+
+★ **Worth recording as the opposite of a MISLEADING control**, because it is the pattern the rest of
+this screen could be measured against: the filters could hide a race silently, and the code refuses
+to let them. `hiddenByFilters` recomputes the list without the filters and states the difference on
+screen as a number, under a comment that says a filter may hide a race but may not hide that it is
+hiding one. Nothing was changed here; it is named because a stock-take that only lists faults gives a
+false picture of the screen.
+
+---
+
 # 8a · RACE TUNING → DYNAMICS (`DynamicsTuningSection.jsx`)
 
 *This part predates the stock-take and is kept as it stood — it was written on 2026-07-23 and
