@@ -50,7 +50,7 @@ because a question that vanishes from an index looks like a question nobody aske
 
 | the question | where it lives |
 | --- | --- |
-| the authored BEATS never reach the camera — hand them through, or leave the detector inferring? | **PART TWO D14** — the open point it leaves. **His call, and it needs his eye afterwards.** |
+| ~~the authored BEATS never reach the camera — hand them through, or leave the detector inferring?~~ | **DECIDED BY THE OWNER 2026-09-25 — they stay as they are, the camera goes on inferring.** *Closed by the owner's decisions of 2026-09-25*, and the claim itself corrected there. |
 | ~~a normal race now draws and shows a seed — does it read right ON SCREEN?~~ | **✅ ANSWERED 2026-08-27. He judged it on the production build and accepted it: the drawn seed reads correctly on the setup panel, and it survives a browser restart.** Both halves of D23 are now confirmed on screen, not merely in the source. The build landed on master by `7a3942fa`; nothing was lost when `feat/race-seed` was swept. See `reports/night/SEED-REAL-RACE-1.md` |
 
 **AND THESE ARE NO LONGER HIS — they are waiting on a MEASUREMENT or on a later block, not on a
@@ -105,40 +105,6 @@ a rule for anybody to follow.
 ---
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the choice he is asked for is unchanged — a short typable identifier that refuses to exist when it would lie, a long copyable one, or both. **Sharpened since it was written:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) showed the seed field itself agrees across paths and the ROSTER is what diverges, so five of seven river-run seeds name races the browser cannot produce.
-
----
-
-**VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the open point is D14's and it is his call, with his eye owed afterwards. Re-verified today: `git grep -n "beats" -- client/src/modules/camera` returns the JSDoc `@param` line at `CameraDirector.js:785` and the CEREMONY's own unrelated beats, and no code that reads a hero's beats. **B4c below still points at this item as "above"; it is here now.**
-
-- **~~Camera timing levers — comeback shot appears late (tune by eye, no code)~~ REPLACED 2026-08-23 by the owner's DEFINITION of a comeback — PART TWO D14.** 🔜 _(added 2026-07-15, from B4; replaced 2026-08-23)_
-
-  **THE REQUIREMENT, in his terms: a comeback is a racer STORMING FROM FAR BACK TO THE FRONT.** A
-  racer climbing slowly from progress ~0.28 is **not** a comeback. That is the bar the shot has to
-  clear, and it is what the old item was missing.
-
-  **Why the old proposal is retired rather than scheduled.** It was: lower `outcomePhaseThreshold`
-  (which gates reactive comeback detection, and whose slider floor sits above the start of the
-  authored climb) and re-weight `comebackWeight` against `battleWeight` (which it loses to during
-  PULK, so even a fired candidate does not win the lens). **Both changes make the SLOW CLIMB visible
-  EARLIER — and against the definition above that is the wrong thing, sooner.** It would cost the
-  front battle the weight contest was protecting and buy an event that is not the event.
-  *(Values deliberately not restated: they live in `client/src/modules/storage/defaults.js`, which
-  is their one home.)*
-
-  **The beat timing is still true and is kept, because it is what the OPEN POINT below is about:**
-  a comebacker HOLDS its deep rank from its `anchor` beat until its `peak` beat (usually in PULK),
-  then climbs to its `resolve` beat (in OUTCOME). **The `resolve` beat is the storm he is
-  describing.**
-
-  **THE OPEN POINT — the authored BEATS never reach the camera.** Full evidence, established at
-  source and re-verified on 2026-08-23, is in **PART TWO D14**: the generator emits role AND beats,
-  the FULL `cameraPlan` IS delivered to the director, and `comebackDetector.setPlan` keeps only
-  `role === 'comebacker'` and **discards the beats** — so the camera re-infers from rank history
-  what the plan already stated, and the `resolve` beat never arrives at all.
-  **NOTHING IS PROPOSED AND NOTHING IS BUILT.** Whether the beats get handed through is his call,
-  and it needs his eye afterwards.
-  **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns
-  only the two JSDoc `@param` lines and no code that reads them.**
 
 ---
 
@@ -2147,6 +2113,53 @@ proposal arriving again in six months looking new.
       therefore closed as DECIDED, not as a measurement still awaiting a verdict**, and **no framing
       work follows from it.**
 
+## Closed by the owner's decisions of 2026-09-25
+
+*Recorded on the day he gave them. Each row states the decision and its date — and where the row it
+closes made a factual claim, what that claim really was when it was checked at the tree.*
+
+- [x] ★★ **THE AUTHORED BEATS STAY AS THEY ARE — DECIDED BY THE OWNER, 2026-09-25.** The camera
+      goes on INFERRING the comeback moment from rank history; nothing from the plan is handed
+      through to it. The open point this row carried since 2026-08-23 (PART TWO **D14**) is answered,
+      and **no work follows from it.** The row is closed, not parked.
+
+      ★★ **ITS BLANKET CLAIM IS CORRECTED HERE RATHER THAN CARRIED ACROSS.** The row said the
+      authored beats *never reach the camera* and are *discarded on arrival*. Checked at the tree on
+      2026-09-25 that is **no longer true as written**, and the precise version is worth keeping
+      because the decision above is what freezes it:
+
+      - **Three beat kinds are authored**, one per hero-curve point — `anchor` (the first), `peak`
+        (the middles), `resolve` (the last): `client/src/modules/heroCurveGenerator.js:789-791`.
+      - **`anchor` and `peak` reach nothing, in any configuration.** No production file under
+        `client/src/modules/camera/` reads either of them.
+      - **`resolve` IS kept and IS read.** COMEBACK-CONNECT-1 built the path: the beat is picked up
+        on the same walk that already reads the role (`comebackDetector.js:110-117`), stored as
+        `_resolveByIndex` (`:117`), and consulted inside `best()` at `:239`, where a plan-named racer
+        is not offered before his own resolve beat.
+      - **But it decides nothing in the shipped product.** That clause sits behind `g.useBeats`
+        (`comebackDetector.js:238`) — which is `comebackUseBeats` (`CameraDirector.js:668`), whose
+        shipped default is `false` (`client/src/modules/storage/defaults.js:398`). **At defaults no
+        authored beat changes any camera behaviour.** So the row was right about the PRODUCT and
+        wrong about the CODE, and the two had drifted apart without the row noticing.
+      - ★ **The row's own verify command has flipped.** It read: *"The day a camera file reads a
+        beat, this point is answered."* `git grep -n "beats" -- client/src/modules/camera` now
+        returns `comebackDetector.js:112`, production code reading a hero's beats. **The day came.
+        The answer he gives is to leave the switch off.**
+
+      ★★ **AND ONE PIECE OF EVIDENCE READS BACKWARDS — written down so it is not repeated.**
+      `node scripts/diag/comeback-beats.mjs --tracks=space-sprint --seeds=2,3,5`, reproduced today,
+      prints `written [#9@resolve 0.7] shown [#9@0.6001]`, `[#38@resolve 0.7] / [#38@0.6001]` and
+      `[#15@resolve 0.7] / [#15@0.7137]`. That looks like the beat arriving. **It is not.** What
+      crosses to the camera there is the **ROLE** — the cast, which the detector has read since the
+      beginning — and `shown` is the camera's OWN inferred progress: **0.0999 EARLY** of the written
+      beat at seeds 2 and 3, 0.0137 late at seed 5. The dump is a picture of the inference, which is
+      precisely what this decision keeps.
+
+      ★ **What the closed row carried and is not lost:** the owner's 2026-08-23 definition (a comeback
+      is a racer STORMING FROM FAR BACK TO THE FRONT) and the retirement of the camera-timing-levers
+      proposal that would have shown the slow climb sooner. Both are stated in full in **PART TWO
+      D14**, which is their home; this row only pointed at them.
+
 ## Closed by the owner's decisions of 2026-09-24
 
 - [x] ★★ **THE SPRITE IS NOT THE CAUSE — CLOSED AS REFUTED, 2026-09-25, on his eye and on the
@@ -2859,6 +2872,16 @@ the one signal the definition above is about, and it is the one that is thrown a
 **verify:** `git grep -n "beats" -- client/src/modules/camera` — **still open while it returns only
 the two JSDoc `@param` lines** (in `CameraDirector.js` and `comebackDetector.js`) and no code that
 reads them. That is today's output. The day a camera file reads a beat, this point is answered.
+
+★★ **ANSWERED AND CLOSED, 2026-09-25 — and the verify line above has since FLIPPED, which is why it
+is left standing rather than edited.** `git grep -n "beats" -- client/src/modules/camera` now returns
+`comebackDetector.js:112`: production code reading a hero's `resolve` beat, built by
+COMEBACK-CONNECT-1. By this point's own stated test the day came. **The owner's answer, 2026-09-25,
+is to leave it switched off** — the camera goes on inferring, nothing is handed through, and no work
+follows. `comebackUseBeats` ships `false` (`client/src/modules/storage/defaults.js:398`), so at
+defaults no authored beat changes any camera behaviour; `anchor` and `peak` are read by nothing in
+any configuration. The full correction, and the one piece of evidence that reads backwards, are in
+*Closed by the owner's decisions of 2026-09-25*.
 
 ### D15 · The company guarantee on a SPREAD field — his 5 STANDS, unchanged · 2026-08-23
 
