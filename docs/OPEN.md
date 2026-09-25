@@ -41,14 +41,19 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★ **Re-verified at the tree on 2026-09-25.** Eleven rows were checked; **seven closed** — three on
-the re-verification and four more on the owner's decisions of that day — and four were already
-struck records, leaving the one below. It carries the address that was read.
-
-**1 · The dev screen has grown past 30 values — how should it be organised?**
-Still live: `docs/BACKLOG.md:1420` (`B-UX2`).
+★★ **EMPTY, 2026-09-25 — and that is the state, not an omission.** Eleven rows were checked at the
+tree that day. Three closed on the re-verification, four were already struck records, and the owner's
+decisions of 2026-09-25 closed, dropped or commissioned the rest. **Nothing is waiting on his word.**
+The rows that came out of those decisions are WORK, and they are in
+[BACKLOG.md](BACKLOG.md) PART ONE, not here.
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
+
+- ~~**The dev screen has grown past 30 values — how should it be organised?**~~ **COMMISSIONED BY
+  THE OWNER, 2026-09-25.** `B-UX2` is no longer a question — it is work he has asked for, with
+  `B-UX3` folded into it, and **the agreed next step is an INVENTORY**: every section, every control,
+  every value, verified against source, before anything is moved. ★ No layout is designed, and
+  [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) covers **one section of 23**.
 
 - ~~**Surface zones, the full racer editor, click-to-lock-camera, a written reference for every
   dev-screen value, one particle system instead of two, and the server/deployment/multi-tenant

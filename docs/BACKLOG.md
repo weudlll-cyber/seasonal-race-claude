@@ -1464,32 +1464,73 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
 
-- **B-UX2** — Dev screen cleanup + help screen
-  - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
-    User finding: "the individual values are hard to contextualize, tooltips alone add little value"
-  - Planned (spec still pending):
-    - Structural reordering: race behavior sliders together, visual sliders together, etc.
-    - Help modal per section with more detailed explanations (more than InfoTooltip)
-    - Optional: beginner / advanced separation (power user sees everything, standard only key values)
-    - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
-  - Priority: medium-high. Should be tackled before D8 (full racer config editor),
-    so D8 is not built into a disorganized dev screen environment.
+- [ ] ★★ **`B-UX2` — THE DEV SCREEN'S REORGANISATION: COMMISSIONED BY THE OWNER, 2026-09-25.** It
+      stops being a planned item waiting on a spec and becomes work he has asked for. **`B-UX3`, the
+      detailed variable documentation, is FOLDED IN HERE** — the two entries had already said they
+      belonged together ("the help screen can reference or embed the documentation"), and carrying
+      them apart meant two rows for one subject.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      ★★ **THE AGREED NEXT STEP IS AN INVENTORY, and it is the only next step.** Before anything is
+      moved, grouped, hidden or renamed, there is to be a written list of what the dev screen
+      actually renders today — every section, every control, every value — verified against source.
+      **Nothing can be reorganised that has not first been counted.**
 
-- **B-UX3** — Detailed variable documentation
-  - User finding: "I need an explanation that says more than the tooltip — what do all
-    the variables in the dev screen actually do"
-  - Planned (spec still pending):
-    - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
-    - Per parameter: name, type, default, range, effect in plain language,
-      example values for different use cases (small race vs. large race, etc.)
-    - Diagrams/images where useful (e.g. comfortThreshold visualized)
-    - Cross-references to ARCHITECTURE.md pipeline sections
-  - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
-    Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
+      ★★ **A LAYOUT IS DELIBERATELY NOT DESIGNED HERE, and must not be.** No grouping, no ordering,
+      no beginner/advanced split, no section names are decided in this row. The old entry's "planned"
+      bullets below are kept as the record of what was once sketched, **not** as a design to build:
+      what the reorganisation looks like is a question for after the inventory, and it is his.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      ★ **WHAT EXISTS OF THE INVENTORY ALREADY, and what it does not cover.**
+      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) is a real, source-verified inventory — but of
+      **ONE SECTION ONLY.** Its own subtitle says so: *"the race-dynamics controls"*, rebuilt against
+      `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered. **There are 23
+      non-test section files** under `client/src/screens/DevScreen/sections/` (counted 2026-09-25) —
+      camera, sprite sizing, auto-scale, name tags, branding, player groups, racers, tracks, surface
+      classes, users, system settings and the rest. **So the existing document is a model for the
+      work, not a head start on most of it**, and reading it as coverage would understate the job by
+      more than an order of magnitude.
+
+      ★ **What the inventory should inherit from the one that exists**, because it already solved
+      two problems: the durable identifiers are the **label + key + testId**, and **line numbers are
+      deliberately not recorded** — an inventory pinned to line numbers is stale on the next commit.
+
+      ★ **What this row does NOT claim:** that the dev screen is broken. It is not. The entry's
+      original finding stands unchanged — the values are hard to place in context, and tooltips alone
+      do not fix that — and the reorganisation answers that, not a defect.
+
+      ★ **SEQUENCING.** The **PERIOD EVALUATION** row, commissioned the same day, needs controls of
+      its own (the period, the points rule). They belong in the screen this row produces, so this
+      row's inventory comes first.
+
+      **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
+      work:**
+
+      > - **B-UX2** — Dev screen cleanup + help screen
+      >   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
+      >     User finding: "the individual values are hard to contextualize, tooltips alone add little value"
+      >   - Planned (spec still pending):
+      >     - Structural reordering: race behavior sliders together, visual sliders together, etc.
+      >     - Help modal per section with more detailed explanations (more than InfoTooltip)
+      >     - Optional: beginner / advanced separation (power user sees everything, standard only key values)
+      >     - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
+      >   - Priority: medium-high. Should be tackled before D8 (full racer config editor),
+      >     so D8 is not built into a disorganized dev screen environment.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      >
+      > - **B-UX3** — Detailed variable documentation
+      >   - User finding: "I need an explanation that says more than the tooltip — what do all
+      >     the variables in the dev screen actually do"
+      >   - Planned (spec still pending):
+      >     - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
+      >     - Per parameter: name, type, default, range, effect in plain language,
+      >       example values for different use cases (small race vs. large race, etc.)
+      >     - Diagrams/images where useful (e.g. comfortThreshold visualized)
+      >     - Cross-references to ARCHITECTURE.md pipeline sections
+      >   - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
+      >     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
