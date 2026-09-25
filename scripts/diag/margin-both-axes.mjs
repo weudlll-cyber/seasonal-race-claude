@@ -35,6 +35,7 @@
 // geometry, not policy, and it should stay roughly flat across the arms. If it moved with the margin
 // the probe would be measuring its own feedback loop rather than the picture.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -75,7 +76,10 @@ const SEEDS = Number(arg("seeds", "30"));
 const SEED0 = Number(arg("seed0", "1"));
 // The arm. Omitted, the shipped value is left alone and this is the baseline arm.
 const MARGIN = arg("margin", null);
-const OUT = arg("out", "c:/tmp/mar");
+// PORTABLE DEFAULT (2026-09-25). This was hardcoded to `c:/tmp/mar`. On Windows that is a real
+// path and the tool behaved; on Linux there is no `c:` drive, so the literal string became a
+// RELATIVE directory and the tool wrote `c:/` into the repository root. `--out` is unchanged.
+const OUT = arg("out", join(tmpdir(), "mar"));
 const TAG = arg("tag", MARGIN === null ? "ship" : `m${MARGIN}`);
 const FROM_U = Number(arg("from", "0.10"));
 

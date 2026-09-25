@@ -12,11 +12,24 @@
 // harness can answer.
 //
 // ★ WHAT IT ASSERTS is only what ONE race can carry: the variant is live, he is released and climbs,
-// and — ★ CORRECTED 2026-09-19 — he IS steered inside his block, which is the shipped design since
-// `17193be6` deleted band steering after arrival on 2026-09-13. This header said the opposite for six
-// days, in step with the assertion at the foot of the file; see the block there for the whole
-// account. The four numbers the decision rests on are printed, not asserted — they are
-// distributions, and a single race is one sample of each.
+// and — ★★ RE-PINNED 2026-09-25 — once he reaches the place the plan drew for him he moves FREELY;
+// he is not steered to hold that exact rank. The four numbers the decision rests on are printed, not
+// asserted — they are distributions, and a single race is one sample of each.
+//
+// ★★ THIS HEADER WAS WRONG FROM 2026-09-19 TO 2026-09-25, AND THE CORRECTION IS RECORDED SO NOBODY
+// RE-DERIVES IT. It said he IS steered inside his block and called that "the shipped design since
+// `17193be6`". Measured in this very browser, three runs out of three: **298-299 frames inside his
+// block, braked in 0%, pushed in 0%** — the commanded multiplier is 1.0 on every one of them. The
+// owner decided on 2026-09-25 that moving freely after arrival is the shipped behaviour and stays,
+// so the product is not what was wrong here; this file was. The assertion at the foot is the same
+// quantity against the same 0.5, with the inequality turned round — nothing was loosened and nothing
+// invented.
+//
+// ★ WHAT IS NOT CLAIMED, because it would be false: that the servo cannot steer. The node test
+// `arrivalShape.test.js` — "(b) arrived and leading, he IS braked back toward his drawn place" —
+// PASSES today, 10 of 10. It constructs a hero who arrives and then moves AHEAD of his drawn place,
+// and in that state the servo does brake him. The real race simply never puts him there for a frame
+// this probe can see, which is why the unit level and the browser can both be right.
 //
 // WHAT IT DELIBERATELY DOES NOT ASSERT:
 //   · WHICH distance is best. That was the sweep's question and it is answered and shipped.
@@ -151,6 +164,8 @@ test('the owner s arrival shape is selectable in the browser, and steers him bac
   ).toBeGreaterThan(5);
   expect(
     (braked + pushed) / mults.length,
-    'he must be STEERED inside his block — the multiplier is 1.0 only under band steering, which was deleted on 2026-09-13'
-  ).toBeGreaterThan(0.5);
+    'he must move FREELY inside his block — a multiplier away from 1.0 on most in-block frames means ' +
+      'he is being steered to hold his drawn rank, which the owner decided on 2026-09-25 is not the ' +
+      'shipped behaviour. If this goes red, steering after arrival has come back.'
+  ).toBeLessThan(0.5);
 });
