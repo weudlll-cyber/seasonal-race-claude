@@ -155,6 +155,108 @@ it is noted here so a later reader of `defaults.js` does not go looking for the 
 
 ---
 
+# 2 · CHANGE PASSWORD (`ChangePasswordSection.jsx`) — operator tier
+
+Not a config section: nothing here is persisted to a config store, and no key exists. Three fields,
+all with tooltips, all consumed by one submit against the server.
+
+**3 controls.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Current password | — (transient form state) | — | yes | **MATCHES** |
+| New password | — (transient form state) | — | yes | **MATCHES** |
+| Repeat new password | — (transient form state) | — | yes | **MATCHES** |
+
+The three tooltips are unusually honest about where each field is checked — the current password is
+verified by the server, the new one against the server's own password rule, and the repeat is stated
+to be a browser-side typo guard the server has no concept of. **MATCHES** on all three: the reader is
+the section's own submit handler and the server's password route.
+
+---
+
+# 3 · PLAYER GROUPS (`PlayerGroupsManager.jsx`) — operator tier
+
+A CRUD manager over named rosters, stored on the server (`playerGroupApi`). Two editable fields per
+group; everything else on the card is a list, a button or a confirmation.
+
+**2 controls.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Group Name | `name` (per group) | — (new group is empty) | yes | **MATCHES** |
+| Player Names (textarea) | `players` (per group) | — | yes | **MATCHES** |
+
+Both are read back by the Setup Screen's group picker, which is what a saved roster is for.
+
+---
+
+# 4 · RACER TYPES (`RacerManager.jsx` + `RacerEditModal.jsx`) — operator tier
+
+Two surfaces. The manager lists the types and carries **one** control; the editor modal, opened per
+type, carries eleven. The eleven are per racer type, so the on-screen count multiplies by the number
+of types — the inventory counts the distinct controls, not the instances.
+
+## 4a · The manager card
+
+**1 control.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Active (checkbox, per type) | `isActive` | per type, in the registry | no | **MATCHES** |
+
+Read by `racer-types/index.js` and the Setup Screen, which offers only active types.
+
+★ **The card also carries a four-item LEGEND** — *"Per type you can configure: Name · Sprite ·
+Characters · Min Size"* — each with its own tooltip. **These are not controls**, they are pointers to
+the Racer Editor, and they are not counted as such. They are noted because a reader counting
+tooltips on this screen will find four here that belong to no knob.
+
+## 4b · The Racer Editor modal
+
+**11 controls**, all with tooltips (the three cloud parameters share one tooltip on their group).
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Speed Multiplier | `speedMultiplier` | per type | yes | **MATCHES** |
+| Display Size (px) | `displaySize` | per type | yes | ★ **MISLEADING** |
+| Anim Period (ms) | `basePeriodMs` | per type | yes | **MATCHES** |
+| Leader Ring Color | `leaderRingColor` | per type | yes | **MATCHES** |
+| Leader Ring Width (rx) | `leaderEllipseRx` | per type | yes | **MATCHES** |
+| Leader Ring Height (ry) | `leaderEllipseRy` | per type | yes | **MATCHES** |
+| Minimum on-screen diameter (slider) | `minTargetScreenPx` | per type | yes | **MATCHES** |
+| Surface classes (pills) | `surfaceClasses` | per type | yes | **MATCHES** |
+| Density | `surfaceEffectOverrides.spawnProbability` | per class | yes (group) | **MATCHES** |
+| Cloud size (px) | `surfaceEffectOverrides.endSize` | per class | yes (group) | **MATCHES** |
+| Lifetime (frames) | `surfaceEffectOverrides.lifetimeFrames` | per class | yes (group) | **MATCHES** |
+
+The field list is not hand-written here: it is `TUNABLE_FIELDS` in `racer-types/index.js`, which the
+modal filters into `STANDARD_FIELDS` plus the three handled specially. Readers, in order:
+`durationModel.js` (`getSpeedMultiplier`), `autoSpriteScale.js`, the racer type classes themselves for
+the animation period and the three leader-ring values, `autoSpriteScale.js` again for the minimum
+diameter, the race's compatibility check for the classes, and
+`surface-effects/trailResolver.js` → `generators/cloud.js` for the three cloud parameters.
+
+### ★ MISLEADING — "Display Size (px)"
+
+The tooltip says *"Sprite size in pixels. Default range 35–50 px."* That is true and it is not the
+whole effect. **Setting this field at all turns AUTO-SCALING OFF for the race, and changes where every
+racer starts.**
+
+At `raceParams.js` the branch is `if (autoScaleConfig?.enabled && !hasDisplaySizeOverride)`. With an
+override present the branch is skipped, so `displaySizeScale` stays `1` and `physicalSpriteSize` is the
+raw `displaySize` rather than the value `computeRacerLayout` would have chosen for the field size and
+the track width. `physicalSpriteSize` is **not a drawing quantity** — the file says so in its own
+comment: it feeds `rowGapPx` and `rowCount`, which is the starting grid. So a control presented as
+sprite sizing silently disables a whole subsystem and moves the start row.
+
+★ **Not a new discovery, and that is part of the finding.** `B-UX4` recorded this in 2026-04-29 and the
+owner **dropped** that row on 2026-09-25, so the behaviour is now settled and intended. What is
+recorded here is narrower and still true: **the control does not say it.** Re-verified at the tree on
+2026-09-25 rather than taken from the dropped row, because a closed row is not evidence.
+
+---
+
 # 8a · RACE TUNING → DYNAMICS (`DynamicsTuningSection.jsx`)
 
 *This part predates the stock-take and is kept as it stood — it was written on 2026-07-23 and
