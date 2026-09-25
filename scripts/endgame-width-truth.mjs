@@ -34,6 +34,8 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveIdentity, loadTracks, buildRace, runRace, TRACK_DEFAULT_RACER } from "./lib/raceDriver.mjs";
+// WORKBENCH-THREE: the one place that turns --tracks into geometries, or refuses by name.
+import { resolveTrackScope } from "./lib/trackScope.mjs";
 // ONE HOME (ONE-HOME-FIVE-MORE-1, 2026-08-23): `HIS` and `setPath` were a PRIVATE COPY here.
 // ONE-HOME-THREE-TRUTHS-1 gave the arm a home in `lib/hisArm.mjs` but recorded the duplication as
 // "exactly two" and converted two files; it was SEVEN. This file was one of the five it missed.
@@ -213,7 +215,13 @@ function measureTrack(geo, cfg, arm) {
   return { track: geo.id, isOpen: shape.isOpen, racers: N, arm, worldBody, floorPx, ceilPx, frames };
 }
 
-const geos = loadTracks().filter((g) => TRACKS.includes(g.id));
+// The default list stands when --tracks is omitted, so the scope handed to the resolver is always
+// an explicit set of names; what it guards here is a name no track answers to.
+const geos = resolveTrackScope({
+  tool: "endgame-width-truth",
+  arg: TRACKS.join(","),
+  all: loadTracks(),
+});
 const out = [];
 for (const geo of geos) {
   out.push(measureTrack(geo, hisConfig(), "his"));

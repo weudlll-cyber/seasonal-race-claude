@@ -702,6 +702,12 @@ export default function RaceScreen() {
           `${RA_BUILD.dirty ? ' DIRTY' : ''} ` +
           `resolvedGrammar=${camDirRef.current.transitionGrammar} ` +
           `leaderForwardFrac=${camDirRef.current.leaderForwardFrac ?? 'null'} ` +
+          // ★★ THE CONFIG FINGERPRINT, ADDED 2026-09-25 (WORKBENCH-THREE). Without it this line could
+          // say WHICH BUILD was on screen but not WHICH CONFIGURATION produced it — and a verdict
+          // given on one is worth nothing without the other, because a stored config beats
+          // `defaults.js` per key and nothing on the line said so. Same value the badge draws and
+          // the camera marker records; computed once at `cfgBadge` above, not recomputed here.
+          `cfg=${cfgBadge.hashShort} ` +
           `hadStoredConfig=${prov.hadStored} ` +
           `source{cameraTransitionGrammar}=${prov.sources.cameraTransitionGrammar} ` +
           `source{leaderForwardFrac}=${prov.sources.leaderForwardFrac} ` +

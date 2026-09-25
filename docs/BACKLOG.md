@@ -467,6 +467,27 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       surrounding numbers are larger than when the row was written: **82 files import the driver**
       (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
 
+      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. One shared place now exists and three
+      callers are on it; the row claims only the callers that are not.**
+      ★ **The shared place:** `scripts/lib/trackScope.mjs`, `resolveTrackScope()`. It validates the
+      requested scope against the tracks that exist and REFUSES by name — naming what was asked for,
+      what the repository has, that there is no "all", and why exiting 0 would be wrong. **The
+      wording is not new:** it is taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`,
+      which already guarded exactly this, rather than invented beside them.
+      ★ **Wired, and each PROVEN to refuse (exit 2) where it used to exit 0:**
+      `line-visible-truth.mjs`, `pan-lag-account.mjs`, `endgame-width-truth.mjs`.
+      ★ **SABOTAGE, both ways:** with the refusal disabled, `--tracks=all` prints the full headers
+      with zero data rows and exits **0** again; restored, it exits **2**. A valid scope
+      (`--tracks=river-run`) is unaffected — real rows, exit 0.
+      ★★ **TWO OF THE FIVE NAMED CALLERS WERE ALREADY GUARDED, and were left alone.**
+      `company-spread-sweep.mjs:160` refuses with exit 2 and names what is missing and what is
+      available; `zoom-rate-truth.mjs:174` throws. Neither is a silent zero, so neither was changed —
+      the second is louder than it needs to be rather than quieter.
+      ★ **WHAT REMAINS, and why it was not forced:** several tools under `scripts/diag/` take a scope
+      in a DIFFERENT shape — `aim-levers.mjs:78` is a single-track `Map.get`, `binding-census.mjs:10`
+      iterates every track with no scope at all. Passing the scope through is not enough for those,
+      so by this block's own rule they stop here and are named rather than half-converted.
+
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
       derived the camera seed from the race seed since his decision of 2026-08-23. **Re-deriving the
@@ -590,6 +611,23 @@ nothing is designed here, no key is added, and no change is implied.
       ★ **What is NOT claimed here:** that the two share a cause. Two is not a pattern either; it is
       the end of the anecdote, and this row's own condition for looking again.
 
+      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. The spawning path is closed; the Windows
+      condition is not, and cannot be closed from here.**
+      ★ **What was done:** the watcher no longer spawns. `client/vite-plugin-ra-build.js`'s
+      change/add/unlink handlers used to call `recheck()` directly, so every source save past the
+      400 ms throttle ran `readBuildInfo()` and **three git children**. They now consult the SAME
+      `gitMoved()` mtime comparison the interval already owned — shared, not copied, so the two can
+      never disagree about whether a git file moved.
+      ★ **MEASURED, because a fix to a spawn-volume problem that does not measure spawn volume has
+      not been demonstrated.** A burst of **20 source saves 120 ms apart**, no git file moving:
+      **6 `readBuildInfo` calls = 18 git children BEFORE, 0 calls = 0 children AFTER.** Counted by
+      driving the plugin's own exported `makeMtimePoll` and `recheck`'s real 400 ms throttle through
+      both wirings; the x3 is the three `spawnSync` sites at `:124`, `:127`, `:135`.
+      ★ **WHAT IS NOT CLAIMED:** that this fixes `0xC0000142`. That is a Windows session-resource
+      failure under sustained process creation; what is removed is the sustained part. **If it
+      happens a third time, this row is the wrong suspect** and the next place to look is elsewhere.
+      ★ The badge's content, the poll interval and what gets reported are all unchanged.
+
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -648,30 +686,6 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       closes on the measurement existing; the shipped `minRacersVisible` value is unchanged, per
       PART TWO D15.
 
-- [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
-      the build and the camera path, never which guarantee ran. That gap is what made
-      CAMERA-COMPANY-ONLY-2 halt a shippable block. The HUD `cfg` fingerprint may already separate
-      behaviours — if it does, putting it in the line is the cheap honest fix. **An owner's PASS is
-      the most expensive input this project consumes and it is currently recorded nowhere.**
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-read at source. `client/src/screens/RaceScreen/index.jsx:643` now names commit, branch, dirty, resolved grammar, `leaderForwardFrac`, per-key config provenance and the camera seed — but still **not** the `cfg` fingerprint and still not which guarantee ran. Waiting on that one field being added to the line.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the fingerprint this row HOPED FOR exists and is
-      surfaced; the LINE still does not carry it, and a PASS is still recorded nowhere.**
-      ★ **What exists now.** The row guesses "the HUD `cfg` fingerprint may already separate
-      behaviours". It does, and it is real: `configFingerprintBadge` is computed at
-      **`client/src/screens/RaceScreen/index.jsx:536`** from the world the race is ACTUALLY running
-      with (a reproduced race uses its recorded one), drawn on screen under the seed badge; and the
-      camera marker reads config diffs through
-      **`client/src/modules/camera/cameraMarker.js:19`** (`countConfigDiffs`), so pressing M records
-      a moment together with how that race was configured.
-      ★ **What is still true.** The `[RA CAMERA LIVE TRUTH]` line itself —
-      **`client/src/screens/RaceScreen/index.jsx:701-709`** — names commit, branch, dirty,
-      `resolvedGrammar`, `leaderForwardFrac`, config provenance and `cameraSeed`, and **zero**
-      occurrences of the cfg fingerprint. It still never says which GUARANTEE ran. And the row's last
-      sentence stands untouched: **an owner's PASS is still recorded nowhere.**
-      **The row now claims those two things only.**
-
 ## THE LEADER'S LATERAL MARGIN IS A RETIRED LEVER (2026-09-01, from MARGIN-PER-TRACK-1)
 
 **Read this before proposing anything that moves `leaderLateralMarginPx` — per-track, adaptive, or a
@@ -700,77 +714,6 @@ rather than a threshold nobody has found yet.**
       **+239 cut episodes**; not one arm on any track beats the shipped 90. **dirt-oval's clip count
       is identical at all eight margins** — the rule never fires there, so a per-track key would have
       had nothing to set on it.
-
-- [ ] **What IS still open is the SPRITE, and it is scored on the bare-box residual.** That column is
-      the only one a change has been shown to be able to move, and it is **463 on space-sprint against
-      29 on river-run** at the same N.
-      ★★ **BOTH FIGURES CORRECTED 2026-09-25, re-measured rather than carried.** The row said *591
-      against 0*. Run today, 30 seeds each:
-      `space-sprint margin=90 races=30 frames=42297 residual=979 residual0=463 clipped=1175` and
-      `river-run  margin=90 races=30 frames=44227 residual=111 residual0=29  clipped=199`.
-      **The gap is still large — 16x — but river-run is not a clean zero, and a comparison against a
-      zero invites a target that does not exist.**
-      ★★ **BEFORE SIZING ANY CHANGE HERE — this was a separate row until 2026-09-25 and is folded in
-      as this task's precondition, because it is an instruction for this job and not an item of its
-      own.** `displaySize x bodyFill` is NOT a racer's world box at race time: `computeBodyNarrowRef`
-      (`client/src/modules/rowLayout.js:251`) equalises the NARROW axis across racer types, so a
-      type's nominal `displaySize` divides out and only its ASPECT RATIO reaches the screen.
-      Reasoning from the racer-type constants gave a wrong answer in both directions when it was
-      tried on 2026-09-01. Go through `computeBodyNarrowRef`, or measure `drawnBodyLengthPx` off a
-      running race with `scripts/diag/sprite-premise.mjs`. The rule's documented home is
-      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md).
-      ★★ **MEASURED 2026-09-25 — [ROCKET-SHAPE-TRUTH-1](../reports/evolution/ROCKET-SHAPE-TRUTH-1.md).
-      The row STAYS OPEN; measuring is not deciding, and no value is recommended here.**
-      ★★ **THE LEVER IS NOT A SETTING.** `bodyFillX/Y` are a MEASUREMENT of the artwork —
-      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md):232-253, the opaque bounding box of the sheet, union
-      over every frame, alpha >= 10, three decimals, under the owner's rule of 2026-09-02. **A ratio
-      reached by editing the number describes a body the sprite does not have.** Getting to any shape
-      below means REDRAWING THE SHEET, after which the value is re-measured rather than chosen;
-      `scripts/audit-sprite-crops.mjs` is what compares the two, and it is wired into no gate.
-      ★★ **AND IT CANNOT REACH THE TARGET.** Swept over the full physical bracket at **N=30 per cell**
-      — today's **2.8813** down to the duck's own **1.0000**, which is the shape river-run already
-      scores 29 with — space-sprint's `residual0` goes **446 -> 166**. A **63% cut, and a 5.7x gap
-      still survives.** The ratio is not sufficient; SPRITE-PREMISE-1's other finding carries the
-      rest, and it is not a sprite property: space-sprint's heading runs `|ux| 0.354` against
-      river-run's 0.951, so a diagonal road is bounded by the frame's 720 px height instead of its
-      1280 px width.
-      ★ **THE MEASUREMENT IS CHAOTICALLY SENSITIVE.** `bodyFillY` 0.801 gives 463; 0.801001 gives 446
-      — **one part in 800,000 moves it 3.7%.** Differences of a few percent between arms are noise.
-      ★★ **THERE IS NO PICTURE TO COMPARE.** The arm holds `bodyFillX`, so the narrow-axis
-      normalisation that sizes the drawn sprite never moves; `bodyFillLong` reaches only
-      `drawnBodyLengthPx` (`raceCore.js:214`), the engine's MODEL of body length, and the draw path
-      reads no `bodyFill` at all. **A shape arm changes no drawn pixel** — the same trap
-      `displaySize` sets, in different clothes.
-      ★ **What a change WOULD cost, established rather than assumed:** `engine-reach --check` puts
-      `RocketRacerType.js` in the race hull, and `verify --premerge --dry` on a one-digit probe
-      selects **all four fingerprints and `golden-races`**.
-      ★ **For his eye:** space-sprint, Quick Test seed **9**, `quiet`, about **35.4 s** — the tightest
-      mid-race shot, where the rocket is biggest on screen. This is ALONG-RESIDUAL-1's P1 and it is unstarted.
-      **verify:** `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` — the
-      `residual0` figure it prints is the gate.
-
-      **WHAT THAT GAP IS, restated precisely 2026-09-01 by
-      [SPRITE-PREMISE-1](../reports/evolution/SPRITE-PREMISE-1.md) after the premise was challenged
-      and held.** LEADER-LAG-TRUTH-1's "space-sprint's sprite is 2.9× river-run's" is **confirmed as
-      arithmetic and narrower as a claim**: the rocket is **2.881× LONGER and exactly 1.000× as
-      WIDE** (diagonal ratio 2.157×). **It is not a big sprite; it is a long thin one** — and the one
-      axis in which it is exceptional is the along-track axis the residual is measured in, so P1 is
-      better targeted than its original wording, not weaker. **NONE of the ratio is camera:** the
-      decomposition closes to 0.0000% residue as world 2.8813 × zoom **1.0000**, with `cd.zoom`
-      2.13333 and every zoom input identical on the two tracks, both corpora at 20 racers and both
-      `LEADER_ZOOM`-dominant at mid-race. The companion "41% less room" is **track ORIENTATION** —
-      the heading runs |ux| 0.354 on space-sprint against 0.951 on river-run, so a diagonal road is
-      bounded by the frame's 720 px height instead of its 1280 px width.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** ALONG-RESIDUAL-1's P1 is unstarted; the entry's own gate (`node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30`, the `residual0` figure) still decides it. Waiting on a sprite change being sized and measured.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the gate RE-RUN rather than carried — the
-      figure has moved.** The entry's own command, run today:
-      `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` prints
-      `space-sprint margin=90 races=30 frames=42297 residual=979 **residual0=463** clipped=1175`.
-      ★ **463, not the 591 the row states** — measured on today's tree, 30 seeds, exit 0. It is
-      lower and it is nowhere near river-run's 0, so the subject holds and only the number was
-      stale. ALONG-RESIDUAL-1's P1 remains unstarted.
 
 - [x] **~~THE PARITY GOLDENS RUN FIVE RACER TYPES THE PRODUCT DOES NOT DRAW~~ — ✅ CLOSED 2026-09-01
       by [GOLDEN-TABLE-REGISTRY-1](../reports/evolution/GOLDEN-TABLE-REGISTRY-1.md), the owner's
@@ -2175,6 +2118,53 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **THE SPRITE IS NOT THE CAUSE — CLOSED AS REFUTED, 2026-09-25, on his eye and on the
+      measurement, which agree.**
+      ★ **His verdict, 2026-09-25.** He watched `space-sprint`, Quick Test seed **9**, stage `quiet`,
+      around **35 s**, on a configuration his own badge showed as **0 race / 11 cosmetic** — that is,
+      default race settings — and sees nothing wrong.
+      ★ **The measurement says the same thing from the other side**
+      ([ROCKET-SHAPE-TRUTH-1](../reports/evolution/ROCKET-SHAPE-TRUTH-1.md)): the ratio was swept from
+      today's **2.8813** down to **1.0000**, the duck's own shape, at N=30 per cell. The residual went
+      **446 -> 166** — and river-run sits at **29**. **A 5.7x gap survives the most extreme physical
+      arm, so the sprite shape is not what the residual is measuring.**
+      ★ **What IS the cause, and it is not a sprite property:** `space-sprint`'s heading runs
+      **|ux| 0.354** against river-run's **0.951**, so a diagonal road is bounded by the frame's
+      **720 px height** instead of its 1280 px width. No shape arm can move that.
+      ★★ **THE TWO TRAPS, kept because they are the reusable part of this row:**
+      **(1)** `displaySize` DIVIDES OUT — only the RATIO `bodyFillY / bodyFillX` reaches the screen, so
+      sweeping the size produces a table of identical pictures that looks like a measurement.
+      **(2)** `bodyFillX/Y` are a **MEASUREMENT of the artwork** under the rule at
+      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md):232-253 — the opaque bounding box of the sheet, union
+      over every frame — **not settings.** Editing them describes a body the sprite does not have, and
+      it changes the RACE, not the picture: the draw path reads no `bodyFill` at all, while
+      `bodyFillLong` reaches `drawnBodyLengthPx` (`raceCore.js:214`) and a one-digit change selects
+      **all four fingerprints and `golden-races`**.
+      ★ **And the figure is unfit as a target anyway:** `bodyFillY` **0.801 gives 463**, **0.801001
+      gives 446** — one part in 800,000 for 3.7%. Anything chasing this number to a set value is
+      chasing noise.
+
+- [x] ★★ **"No artefact ties a verdict to the BEHAVIOUR judged" — CLOSED 2026-09-25: the artefact
+      exists and it is the camera marker.** Established by reading it, not assumed.
+      ★ **Pressing M builds a record that already carries all three things the row asked for**
+      (`client/src/screens/RaceScreen/index.jsx:749-756`): the CONFIGURATION —
+      `cfg.fingerprint` (the same `configFingerprintBadge` value the HUD draws), `cfg.diff` (what
+      differs from the defaults, with values) and `cfg.racerTypeOverrides`; the BUILD — `build:
+      RA_BUILD.commit`; the SHOT — state, lerp and observer phase, zoom, offsets, targets, camT,
+      effective zoom on both axes and the anchor's label; and `at`, the moment. **A judged moment is
+      therefore already tied to the configuration and the build that produced it**, and
+      `scripts/camera-replay.mjs` replays it.
+      ★ **AND THE ROW'S OTHER HALF IS NOW TRUE TOO.** It observed that the `[RA CAMERA LIVE TRUTH]`
+      line named the build and the camera path but never the configuration. It does now: `cfg=` was
+      added to `index.jsx:701-709` in the same commit, reusing the badge value rather than computing
+      anything. So the line a reader meets first no longer says which build without saying which
+      world.
+      ★★ **WHAT IS DELIBERATELY NOT BUILT: a mechanism that RECORDS AN OWNER PASS.** The row's last
+      sentence wanted one. What such a record should be — what it captures, where it lives, what makes
+      it authoritative — is a design question and it is his; he has not been asked, and nothing here
+      answers it on his behalf. What is closed is the artefact question: the moment, the world and the
+      build are tied together and reachable.
 
 - [x] ★★ **THE JUDDER ROW CLOSES ON HIS EYE, NOT ON A BUILD — and the check STAYS.** Closed
       2026-09-25 by two owner decisions of that date, after

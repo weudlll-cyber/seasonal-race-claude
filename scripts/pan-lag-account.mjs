@@ -37,6 +37,8 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveIdentity, loadTracks, buildRace, runRace, TRACK_DEFAULT_RACER } from "./lib/raceDriver.mjs";
+// WORKBENCH-THREE: the one place that turns --tracks into geometries, or refuses by name.
+import { resolveTrackScope } from "./lib/trackScope.mjs";
 // ONE HOME (ONE-HOME-FIVE-MORE-1, 2026-08-23): `HIS` and `setPath` were a PRIVATE COPY here.
 // ONE-HOME-THREE-TRUTHS-1 gave the arm a home in `lib/hisArm.mjs` but recorded the duplication as
 // "exactly two" and converted two files; it was SEVEN. This file was one of the five it missed.
@@ -212,7 +214,11 @@ function measureTrack(geo, cfg, arm, N) {
   };
 }
 
-const all = loadTracks().filter((g) => (TRACK_ARG ? TRACK_ARG.split(",").includes(g.id) : true));
+const all = resolveTrackScope({
+  tool: "pan-lag-account",
+  arg: TRACK_ARG,
+  all: loadTracks(),
+});
 const out = [];
 for (const geo of all) {
   const probe = buildRace(

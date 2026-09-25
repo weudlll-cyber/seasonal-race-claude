@@ -328,9 +328,31 @@ export function raBuildInfo() {
         server.ws.send({ type: 'full-reload' });
       };
 
-      server.watcher.on('change', () => recheck());
-      server.watcher.on('add', () => recheck());
-      server.watcher.on('unlink', () => recheck());
+      // ★★ THE WATCHER CONSULTS THE SAME MTIME COMPARISON THE POLL OWNS, AND DOES NOT SPAWN.
+      //
+      // It used to call `recheck()` straight, so every source save that got past the 400 ms throttle
+      // spawned THREE git children (`readBuildInfo` at :124, :127, :135). Measured on a 20-save burst
+      // 120 ms apart: **18 git children before, 0 after** — because an ordinary save moves neither
+      // `.git/HEAD` nor `.git/index`, and `gitMoved()` says so with two `statSync` calls.
+      //
+      // WHY THIS MATTERS RATHER THAN BEING A TIDY-UP: `0xC0000142` (STATUS_DLL_INIT_FAILED) has hit
+      // this machine twice — 2026-08-05 and 2026-09-19 — leaving a long-lived dev server unable to
+      // spawn ANY child, so the badge could name no commit and an eye test ran on a build whose
+      // identity it could not state (`reports/night/BREAKAWAY-GROWTH-1.md:457`,
+      // `docs/LESSONS.md:3641`). The leading suspect is a session-level resource exhausted by
+      // sustained process creation. This removes the sustained part; it does not claim to fix the
+      // Windows condition.
+      //
+      // ★ `gitMoved` IS SHARED, NOT COPIED, and that is deliberate: one seeded comparison means the
+      // watcher and the interval cannot disagree about whether a git file has moved. Whichever
+      // observes the change first consumes it and calls `recheck(true)`; the other then sees no
+      // change and does nothing, which is the correct outcome because the re-check has already run.
+      const onWatchEvent = () => {
+        if (gitMoved()) recheck(true);
+      };
+      server.watcher.on('change', onWatchEvent);
+      server.watcher.on('add', onWatchEvent);
+      server.watcher.on('unlink', onWatchEvent);
 
       // The poll is the ONLY thing that sees a branch switch with no file churn, or a commit. It runs
       // beside the watcher rather than replacing it: the watcher is still the fastest signal when
