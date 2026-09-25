@@ -1071,7 +1071,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Bonus fade duration (ms)
-              <InfoTooltip text="How long the area bonus takes to fade from full strength to 1.0 after Bonus active until. Default: 1500ms" />
+              <InfoTooltip text="How long the area bonus takes to fade from full strength to 1.0 after Bonus active until." />
             </label>
             <input
               type="number"
@@ -1124,7 +1124,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               P-Controller ends (% race)
-              <InfoTooltip text="The trajectory P-controller deactivates at this point (FINAL phase begins). Must be >= P-Controller starts. Default: 100%" />
+              <InfoTooltip text="The trajectory P-controller deactivates at this point (FINAL phase begins). Must be >= P-Controller starts." />
             </label>
             <input
               type="number"

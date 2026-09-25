@@ -69,7 +69,7 @@ const FIELD_META = {
     max: 3000,
     step: 50,
     tooltip:
-      'Duration of one full animation cycle in milliseconds. Low = fast flicker, high = slow and calm. Default range 400–1500 ms.',
+      'Duration of one full animation cycle in milliseconds. Low = fast flicker, high = slow and calm.',
   },
   leaderRingColor: {
     label: 'Leader Ring Color',
