@@ -81,6 +81,10 @@ COPY server/seeds/ ./seeds/
 COPY shared/nameLimits.mjs /shared/nameLimits.mjs
 COPY shared/canonicalJson.mjs /shared/canonicalJson.mjs
 COPY shared/raceShortKey.mjs /shared/raceShortKey.mjs
+# RACE-SOURCE-1 (2026-09-25): `raceStore.js` imports it for `normalizeRaceSource`. Named in BOTH
+# lists — this one and `.dockerignore`'s — which is what the note above is about; the guard caught
+# the half-done version of exactly this change, with the file allowed into the context and no COPY.
+COPY shared/raceSource.mjs /shared/raceSource.mjs
 
 # SERVE-SPA-1 — THE BUILT CLIENT, FROM A NAMED BUILD CONTEXT.
 #
