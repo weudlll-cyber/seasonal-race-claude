@@ -661,3 +661,84 @@ Removed keys are NOT rejected on load: `loadRaceDynamicsConfig()` merges stored 
 only known keys, so a persisted config still carrying a retired key stays VALID — the owner's other
 settings survive (no silent reset to defaults) and the retired key rides along inertly, because nothing
 reads it any more. Pinned by a test in `raceDynamicsConfig.test.js`.
+
+---
+
+# 9 · SPRITE SIZE RANGE (`SpriteSizeRangeSection.jsx`) — advanced tier
+
+A single-knob section. Backing config: `cameraConfig` (**COSMETIC** by
+`configFingerprint.js`). Card reset `reset-sprite-size-cap`.
+
+**1 control.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Maximum sprite size (px) | `maxTargetScreenPx` | 160 | yes | **MATCHES** |
+
+Read by `autoSpriteScale.js` (the ceiling branch of `resolveDisplayScale`) and by
+`renderRaceFrame.js`. The tooltip's claim — larger lets the camera zoom in close, smaller keeps more
+of the field in frame — is the ceiling's actual effect.
+
+★ **A whole section for one value.** Recorded as a fact about the screen's shape, not as a complaint:
+counting sections is not the same as counting controls, and this is the clearest case of the two
+diverging.
+
+---
+
+# 11 · NAME TAG VISIBILITY (`NameTagVisibilitySection.jsx`) — advanced tier
+
+Backing config: `cameraConfig` (**COSMETIC**). Card reset `reset-nametag-visibility`.
+
+**3 controls**, all with tooltips.
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Name size (% of frame) | `nameTagFrameFrac` | 0.022 | yes | **MATCHES** |
+| Gap above racer (px) | `nameTagMarginPx` | 6 | yes | **MATCHES** |
+| Show all names for (s) | `nameTagAllUntilMs` | 8000 | yes | **MATCHES** |
+
+All three are read by `renderRaceFrame.js`. ★ **Two of the three controls present a different UNIT
+from the one stored** — the size control shows a percentage and stores a fraction (`v / 100`), and the
+duration shows seconds and stores milliseconds (`v * 1000`). Both conversions are at the control and
+both are correct, so the verdict is MATCHES; it is recorded because the label and the key disagree
+about units and a later reader comparing the two will think one of them is wrong.
+
+---
+
+# 12 · AUTO-SCALE (`AutoScaleSection.jsx`) — advanced tier
+
+Backing config: `autoScaleConfig`, whose home is `autoSpriteScale.js`
+(`DEFAULT_AUTO_SCALE_CONFIG`) — **RACE-RELEVANT**: it is one of the five blocks the Race Tuning
+card's master reset restores, because it moves the starting grid.
+
+**5 controls**, all with tooltips.
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Enabled | `enabled` | **true** | yes | ★ **MISLEADING** |
+| Reference Value | `referenceValue` | 23 | yes | **MATCHES** |
+| Min Scale | `minScale` | 0.65 | yes | **MATCHES** |
+| Min Target Screen Px | `minTargetScreenPx` | 32 | yes | **MATCHES** |
+| Max Scale | `maxScale` | 2.5 | yes | **MATCHES** |
+
+Four of the five are read by `autoSpriteScale.js`, and `minScale` / `maxScale` also by
+`rowLayout.js`.
+
+### ★ MISLEADING — "Enabled"
+
+The control's own tooltip opens: *"Disabled by default. When off, racer display size is unchanged
+(1× factor). Enable to have sizes auto-adapt per race."*
+
+**It is enabled by default.** `DEFAULT_AUTO_SCALE_CONFIG.enabled` is `true` at `autoSpriteScale.js`,
+which is the key's one home. The toggle works and the rest of the sentence is accurate; the first
+three words are false, and they are the three a reader acts on. Somebody reading this tooltip
+concludes that auto-scaling is off unless they turn it on, when on a default install it has been
+scaling every race all along.
+
+★ **Recorded, NOT fixed.** This block changes no source file, and a one-word tooltip edit is still an
+edit. It is named here and in the backlog row so the decision is somebody's rather than mine.
+
+★ **And there is a name collision worth knowing before anybody edits either:** `minTargetScreenPx`
+is the key of a control **here** (in `autoScaleConfig`, a floor for every racer) **and** of a
+different control in the Racer Editor (per racer type). Same name, two stores, two scopes. See
+*Duplicates* at the end.
