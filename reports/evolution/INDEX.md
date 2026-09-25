@@ -437,6 +437,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   COMEBACK_ZOOM state in any of the traces. The precedence itself may be fine; the shot is not
   being taken in the browser. Spec left RED, no assertion touched; owner question named on the
   morning sheet.
+  ★★ **SUPERSEDED THE SAME DAY by COMEBACK-THROUGH-THE-SAME-DOOR, below. Its conclusion did not
+  survive:** those three seeds cast no comebacker IN THE BROWSER either, so the shot had nothing to
+  take. The diag that chose them races 40 synthetic racers where the Quick Test races 20 real ones.
+
+- [COMEBACK-THROUGH-THE-SAME-DOOR.md](COMEBACK-THROUGH-THE-SAME-DOOR.md) — **the camera is fine, and
+  the fixture was wrong one level deeper.** Twelve seeds driven through the BROWSER: **7 cast a
+  comebacker and all 7 were cut to** — perfect correlation, 12 of 12. A comeback shot can and does
+  occur in an ordinary race. The spec is re-pinned to a browser-validated fixture (space-sprint seed
+  1) with the lesson in its header: a harness diag cannot validate a browser fixture. What remains
+  red is the PRECEDENCE SIGNATURE only — two of three runs cut at 7846 and 7824 ms, inside the real
+  8000 ms gate but outside the spec's 7500 ms margin, because the camera is not deterministic from
+  the race seed. No assertion touched.
 
 - [TRACKSCOPE-DIAG-REACH-1.md](TRACKSCOPE-DIAG-REACH-1.md) — **one home, two doors.**
   `scripts/lib/trackScope.mjs` grew a second entry point `resolveTrackScopeIds` for tools whose

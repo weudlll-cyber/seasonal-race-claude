@@ -47,10 +47,15 @@ day. The list below therefore contains no questions at all: **all seven rows are
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
-   `comeback-precedence` was re-pinned 2026-09-26 to space-sprint seed 2 (from `comeback-beats.mjs`)
-   and still fails identically on three valid fixtures (seeds 2, 3, 5) — no COMEBACK_ZOOM in any
-   trace. The fixture is not the wall; the question is why the browser's director declines the
-   shot the harness driver takes. Named on 2026-09-26 morning sheet under NEEDS HIS WORD.
+   ★★ **The camera is FINE (2026-09-26, second pass).** Twelve seeds driven through the browser:
+   **seven cast a comebacker and all seven were cut to** — a comeback shot can and does occur in an
+   ordinary race. The night's "the browser declines the shot" question is **WITHDRAWN**: its three
+   fixtures cast no comebacker in the browser either, because the diag that chose them races
+   40 synthetic racers where the Quick Test races 20 real ones. Re-pinned to a browser-validated
+   fixture. What remains red is the **precedence signature only** — two of three runs cut just
+   inside the real hold gate but outside the spec's tighter margin, and the camera is not
+   deterministic from the race seed. Whether that margin is right is an assertion change and has
+   not been made.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
