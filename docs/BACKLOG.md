@@ -106,16 +106,6 @@ a rule for anybody to follow.
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the choice he is asked for is unchanged — a short typable identifier that refuses to exist when it would lie, a long copyable one, or both. **Sharpened since it was written:** SEED-PARITY-1 (`0e11777b`, 2026-09-02) showed the seed field itself agrees across paths and the ROSTER is what diverges, so five of seven river-run seeds name races the browser cannot produce.
 
-- [ ] **A SEED IS ONE OF NINE INPUTS, NOT SIX — and two of the nine are stored host preferences.**
-      This corrects the count in *"A seed alone does not reproduce a race"* below, which said six.
-      `raceActionStage` and the world config are read from host storage at press time, so **the same
-      seed on two machines is two races and neither operator changed anything.** His Quick Test
-      belief is right under two conditions that are invisible on screen: the roster *selector* picks
-      among three lists, and **any real player in the lobby re-indexes the whole field**.
-      Establishes it: [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md).
-      **NEEDS: ONLY HIS WORD** — a short typable identifier that refuses to exist when it would lie,
-      a long copyable one, or both.
-
 ---
 
 **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — NEEDS HIS WORD:** the open point is D14's and it is his call, with his eye owed afterwards. Re-verified today: `git grep -n "beats" -- client/src/modules/camera` returns the JSDoc `@param` line at `CameraDirector.js:785` and the CEREMONY's own unrelated beats, and no code that reads a hero's beats. **B4c below still points at this item as "above"; it is here now.**
@@ -594,56 +584,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
 
 **verify (section-wide):** the item names its own command. **This is a FINDING, not a proposal** —
 nothing is designed here, no key is added, and no change is implied.
-
-- [ ] **A SEED IS NOT A RACE IDENTIFIER. It is one of six inputs, and the other five do not travel
-      with it.** SEED-REAL-RACE-1 made a normal race carry a seed and made that seed outlive the
-      browser session, which is what D23 asked for. **What it did not do — and could not, being
-      scoped to the seed — is make "seed 4242" mean one race.** Re-running the race a seed names
-      needs the track, the racer type, the field SIZE, the NAME LIST, the canonical duration input
-      and the config that was in force. Established at source 2026-08-23; every address below was
-      read, not recalled.
-      **COUNT CORRECTED 2026-08-26: it is NINE inputs, not six.**
-      [RACE-IDENTITY-1](../reports/evolution/RACE-IDENTITY-1.md) re-established the set at source and
-      adds `raceActionStage`, `racePlanEnabled` and the world config — **two of which are stored HOST
-      preferences**, so the same seed on two machines is two races. Nothing else in this entry is
-      withdrawn.
-
-  **THE NAME LIST IS THE ONE THAT SURPRISES PEOPLE, so it is first.** A racer's NAME is a PHYSICS
-  INPUT: `stablePairBit` in `client/src/modules/raceBehavior.js` builds its key from
-  `String(a.name ?? a.id ?? a.index)` and hashes it, and that bit decides the tie-break side of a
-  near-coincident same-lane pair. Rename a racer and the race changes. So "the same seed with the
-  same twenty players" is only the same race if it is the same twenty NAMES.
-
-  **WHERE EACH INPUT LIVES TODAY, and whether anything durable keeps it:**
-
-  | input | in the live race payload (`sessionStorage['activeRace']`) | in the durable record (`racearena:raceHistory` entry) |
-  | --- | --- | --- |
-  | seed | `racePlanSeed` | `seed` ✅ *(added by SEED-REAL-RACE-1)* |
-  | track | `trackId` + `geometryId` | `trackId` ✅ — **but not `geometryId`**, and a track's geometry can be re-drawn |
-  | racer type | `racerTypeId` | **absent** ❌ |
-  | field size | `racers.length` | `playerCount` ✅ |
-  | the NAME LIST, in start order | `racers[].name`, index-ordered | **lost** ❌ — `finishOrder[].name` holds the same set in FINISH order, which is a permutation of the order the plan was built on |
-  | duration / laps | `targetLaps` (closed) or `targetDurationSec` (open) — the two canonical operator inputs | **absent** ❌ — the entry's `duration` is `elapsedTime`, the REALIZED seconds, which is an OUTPUT and not an input |
-  | the config in force | not in the payload at all | **absent** ❌ |
-
-  **THE CONFIG ROW IS THE WIDEST HOLE, and it is not new.** A stored config beats `defaults.js` per
-  key, forever, because the loaders write whole objects — so two races with the same seed, track and
-  roster still differ if a dynamics value was touched between them, and nothing on screen says so.
-  The HUD's `cfg` fingerprint pill already answers "is this the default world"; it is not recorded
-  with the race.
-
-  **WHY THIS IS FILED RATHER THAN FIXED.** Three of the six gaps are one field each on an existing
-  object and would be cheap; the config one is a design question with at least three defensible
-  answers (store the whole object, store its fingerprint, store only what differs from the shipped
-  default), and picking one is not a night's tidying. **Nothing here is proposed.**
-
-  **verify:** `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx`
-  — **still open while it returns nothing**, which is today's output. The day the durable record
-  carries the race's inputs rather than only its outputs, this closes. **The pattern can match**:
-  the same grep over `client/src/screens/SetupScreen/SetupScreen.jsx` returns the lines that build
-  the payload.
-
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it and still returns nothing — `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx` exits 1, where the same pattern over `SetupScreen.jsx` returns 6 lines, so the pattern can match. Waiting on the durable record carrying the race's inputs and on the config-storage design question the entry names.
 
 ---
 
@@ -2281,6 +2221,37 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **"A SEED IS NOT A RACE IDENTIFIER" — SUPERSEDED, and the two rows that said it are
+      MERGED into this one.** Closed 2026-09-25 by RACE-IDENTIFIER-1, which was built 2026-09-05 and
+      is on master today.
+      ★ **THE MERGE, and why there were two.** PART ONE carried this subject twice: *"A seed is one
+      of NINE inputs, not six"* and *"A seed is not a race identifier — it is one of SIX inputs"*.
+      The first existed only to correct the second's count, and the second had already absorbed the
+      correction in place (*"COUNT CORRECTED 2026-08-26: it is NINE inputs, not six"*). One subject,
+      two rows, one of them a patch on the other. **The count is NINE.**
+      ★ **WHAT SUPERSEDED IT.** `client/src/modules/raceIdentifier.js` — "ONE STRING THAT REPEATS A
+      RACE ON ANOTHER MACHINE" — encodes **the nine inputs, counted at source** rather than carried
+      over, and its header names the exact mechanism both rows were written about:
+      `SetupScreen.jsx:677` fixes the plan seed, but `RaceScreen/index.jsx:488` reads the action
+      stage and `:503` the whole config world **from the host's own storage at press time**, so the
+      same seed on two machines is two races and neither operator changed anything.
+      ★ **It reaches all three places the rows said it had to.** The DURABLE record stores it —
+      `client/src/modules/raceHistory.js:100-106` keeps "every input `raceIdentifier.js` encodes,
+      taken from the race that RAN", with an `identifierVersion`. The HOST surface carries it —
+      `client/src/screens/SetupScreen/RaceSettings.jsx:33,35`. And it is proven in a REAL BROWSER —
+      `client/e2e/race-identifier.spec.js`, which as of 2026-09-25 is inside the browser gate's
+      curated set, so a regression now reddens master rather than waiting for a night.
+      ★★ **AND THE OLDER ROW'S OWN VERIFY COMMAND STILL RETURNS NOTHING — that is recorded here on
+      purpose, because it is the interesting part.** It said the row closes when
+      `git grep -n "racerTypeId\|targetLaps\|targetDurationSec" -- client/src/screens/ResultScreen/index.jsx`
+      returns lines; run today it still returns none. **The row is closed anyway**, because that
+      command tested ONE candidate mechanism — putting the missing fields onto the ResultScreen's
+      record — and a different, better mechanism solved the problem instead. A verify command tests
+      the fix somebody imagined, not the problem; when the two part company the problem wins.
+      ★ **What is NOT claimed:** that every one of the nine is individually round-tripped through the
+      history UI. What is established is that the identifier encodes nine, the record stores what it
+      encodes, and a browser test holds the end-to-end path.
 
 - [x] ★ **"Nothing removes a throwaway worktree at creation's end" — MOOT, settled 2026-09-25 by
       the row's OWN verify command.** It asked that whatever creates a throwaway worktree remove it in
