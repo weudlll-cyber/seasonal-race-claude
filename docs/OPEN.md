@@ -2,8 +2,9 @@
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
 Re-derived on **2026-09-25**, from PART ONE's **seven** rows — after the owner's decisions of that
-day, after RACE-SOURCE-1 and after DEVSCREEN-STOCKTAKE. Each of those changed what a row below SAYS
-without changing how many rows there are; the count has been seven since the decisions were recorded.
+day, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1. Each of those changed what a
+row below SAYS without changing how many rows there are; the count has been seven since the decisions
+were recorded.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -46,9 +47,12 @@ day. The list below therefore contains no questions at all: **all seven rows are
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
-   ★ **The inventory is TAKEN (2026-09-25) and covers the whole screen: 206 controls**, 194 MATCHES /
-   9 MISLEADING / 3 SUSPECTED DEAD, and 59 with no explanation. **The reorganisation itself is
-   untouched and no layout is designed** — that is what keeps this row open.
+   ★ **The inventory is TAKEN (2026-09-25) and covers the whole screen: 205 controls**, 195 MATCHES /
+   9 MISLEADING / 1 SUSPECTED DEAD / 1 RESERVED, and 59 with no explanation. ★ Three of the twelve
+   flagged controls are already resolved by STAY-ON-THE-FINISH-1 — the auto-advance switch does
+   something now, its duplicate delay is gone, and sound effects is reserved rather than dead.
+   **The reorganisation itself is untouched and no layout is designed** — that is what keeps this
+   row open.
 
 → [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
