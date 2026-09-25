@@ -861,21 +861,31 @@ Both were found mechanically, then pinned by hand to their own control before be
 
 | Control | Key | The tooltip says | `defaults.js` ships |
 | --- | --- | --- | --- |
-| Bonus active until (% race) | `racePlanBonusTransitionEnd` | *"Default: 67%"* | **0.75** — 75% |
-| P-Controller starts (% race) | `racePlanCorridorStart` | *"Default: 67%"* | **0.55** — 55% |
+| Bonus active until (% race) | `racePlanBonusTransitionEnd` | *"Default: 67%"* | **0.75** — 75%, read 2026-09-25 |
+| P-Controller starts (% race) | `racePlanCorridorStart` | *"Default: 67%"* | **0.55** — 55%, read 2026-09-25 |
 
 **What is wrong is the CLAIM, not the mechanism.** Both keys are read by `racePlanner.js` and do what
 their labels describe; an operator who reads the tooltip, decides the shipped value is fine and leaves
 the control alone has been told the race turns at 67% when it turns at 75% in one case and 55% in the
-other. The two neighbouring claims in the same block are correct — *"Default: 1500ms"* for
-`racePlanBonusFadeDuration` (1500) and *"Default: 100%"* for `racePlanCorridorEnd` (1.0) — which is
-what makes the two wrong ones read as trustworthy.
+other. **The two neighbouring claims in the same block were checked against `defaults.js` on
+2026-09-25 and both are CORRECT** — the fade-duration tooltip against `racePlanBonusFadeDuration`, and
+the P-controller-end tooltip against `racePlanCorridorEnd`. The numbers are not repeated here; the
+values live in `defaults.js`, which is their one home, and repeating them would make this document the
+next thing to drift. That two of the four are right is what makes the two wrong ones read as
+trustworthy.
 
 ★ **And there is a structural reason this class exists.** `check-config-claims` holds **documents** to
 the rule that they state no config values, precisely so a number cannot drift from `defaults.js`
 unnoticed. **Tooltips are source, so they are outside that guard** — 38 tooltips across the screen
 state a default, and nothing checks any of them. Recorded as an observation; proposing a guard is not
 this block's business.
+
+★ **And the guard proved its half of that on this very document.** The first draft of this stock-take
+quoted four shipped values while explaining the two wrong tooltips, and `check-config-claims` failed
+the build on all four before it could be merged. That is the same class of drift, caught in the one
+place it is caught — which is the sharpest way to say what tooltips are missing. The values are gone
+from here; the two dated rows above are kept under the guard's own provision for historical statements,
+because a stock-take's finding is worthless without the number it found.
 
 ---
 
@@ -903,7 +913,8 @@ Every key has a behavioural reader, and for twenty of them it is the same file �
 which is the module the whole card is about. `runoutZone` is additionally read by `durationModel.js`
 (it shortens the usable path, so it changes the derived duration) and `startSpreadRange` by
 `raceCore.js`. The one numeric claim in the section's copy was checked and is correct:
-*"0.005 = 0.5% (default…)"* against `lookBeforeBrakeMinDifferential: 0.005`.
+the section's one numeric tooltip claim was checked against `lookBeforeBrakeMinDifferential` in
+`defaults.js` on 2026-09-25 and agrees. The value is not repeated here, for the reason given in 8a.
 
 ★ **A drafting read-out, not a control:** `drafting-summary` is a computed testid, and it is not
 counted among the 22.
@@ -926,7 +937,7 @@ the group is the useful unit, with the key list per group as the durable identif
 | Comeback shot | 8 | `comebackCooldownMs`, `comebackMaxCurrentRankPct`, `comebackMinDuration`, `comebackMinPositionsGained`, `comebackMinStartGap`, `comebackUseBeats`, `comebackWeight`, `comebackWindowSec` |
 | Lead change | 5 | `leadChangeCooldownMs`, `leadChangeDebounceMs`, `leadChangeMinDuration`, `leadChangeMinGap`, `leadChangeWeight` |
 | Overview | 4 | `overviewCooldownMs`, `overviewStartDelay`, `overviewTargetCount`, `overviewWeight` |
-| Start ceremony | 8 | `ceremonyBrandMs`, `ceremonyEasing`, `ceremonyPushMs`, `ceremonySettledMs`, `ceremonySkipOnClick`, `ceremonyVenueMs`, `countdownDigitsMs`, `startBoardFloorMs`, `startBoardMsPerName`, `startWindowMs` *(10 keys; the card shows a computed total beside them)* |
+| Start ceremony | 10 | `ceremonyBrandMs`, `ceremonyEasing`, `ceremonyPushMs`, `ceremonySettledMs`, `ceremonySkipOnClick`, `ceremonyVenueMs`, `countdownDigitsMs`, `startBoardFloorMs`, `startBoardMsPerName`, `startWindowMs` *(the card shows a computed total beside them)* |
 | Finish & ending | 9 | `endgameThreshold`, `endingKeepsFinishShot`, `finishDramaDurationMs`, `finishHoldAfterLastMs`, `finishOverviewLookbackPx`, `finishOverviewZoomOutDurationMs`, `finishPauseMs`, `finishedSplashEnabled`, `podiumRevealBeatMs`, `winnerCardMs` |
 | Photo finish | 5 | `photoFinishCloseThresholdT`, `photoFinishContenderFraming`, `photoFinishEnabled`, `photoFinishLeadProgress`, `photoFinishSlowmoFactor` |
 | Run-in | 4 | `contenderZoom`, `contentionWatch`, `runInOpenMs`, `runInShot` |
