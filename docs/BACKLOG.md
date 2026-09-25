@@ -1575,6 +1575,29 @@ already-settled questions.
       explanation anywhere**, and **45 of those 59 are in two sections**. The screen is not uniformly
       undocumented; it has two holes.
 
+      ★★ **THREE OF THE TWELVE ARE ALREADY RESOLVED — STAY-ON-THE-FINISH-1, 2026-09-25, on the
+      owner's decisions of that day. The row STAYS OPEN: the reorganisation is still untouched.**
+      - **`autoAdvance` — REPAIRED to MATCHES.** The switch does something now: ON hands over to the
+        results when the camera ending closes (today's behaviour, so it ships ON), OFF leaves the
+        finish picture standing until he clicks it. The way off already existed — the left click on
+        the race picture that CEREMONY-SKIP-1 put on the canvas wrapper — so no key, no number and no
+        new element were added. Its label and tooltip are true now, and the tooltip states no value.
+      - **`autoAdvanceDelay` — REMOVED.** A second number for a wait the camera ending already owns.
+        One value decides how long the picture stands, by his decision, and it is the ending he
+        already adjusts.
+      - **`soundEffects` — RESERVED, not dead.** He is sourcing the sounds; the control is the seat
+        they will be switched on from. A new and deliberately narrow verdict in the inventory, so a
+        later cleanup grepping for readers does not remove it.
+
+      ★ **What remains of the twelve: nine, and they are the nine MISLEADING.** None was touched — each
+      is its own decision. **No SUSPECTED DEAD control is left on the screen.** The total is now
+      **205**, and the inventory states both columns rather than editing the old figures away.
+
+      ★ **Recorded because the opposite had been stated to him:** adjusting the finish hold in the dev
+      screen **moves no fingerprint**. `scripts/camera-fingerprint.mjs` imports `DEFAULT_CAMERA_CONFIG`
+      (`:77`) and builds from it (`:131`) — the shipped defaults, never the stored settings. A print
+      moves only when a shipped DEFAULT changes.
+
       **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
       work:**
 

@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d6df5184 2026-09-24 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ edd0ffec 2026-09-25 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED AT `c008f21f` (NIGHT-2026-09-24D), IDENTICAL TO THE DIGIT** — 8836/5.92/9.34,
 12395/4.62/8.80, 9247/4.52/8.93, 4250/2.53/19.68, 1944/3.08/8.22, ratio 0.51×. The `via=` closure

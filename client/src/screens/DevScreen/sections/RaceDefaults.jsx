@@ -5,6 +5,12 @@
 // Created:     2026-04-19
 // Description: Configure global race defaults — duration, winners, countdown,
 //              auto-advance, and sound effects
+//
+// ★ STAY-ON-THE-FINISH-1 (2026-09-25): the auto-advance switch DOES SOMETHING NOW — off, the finish
+//   picture stays until the operator clicks it. Its "Delay (seconds)" companion is GONE: it was a
+//   second number for a wait the camera ending already owns, and by the owner's decision one value
+//   decides that. Three controls in this file were found SUSPECTED DEAD by the 2026-09-25 stock-take;
+//   this repairs one, deletes one, and `soundEffects` is RESERVED by his decision, not dead.
 // ============================================================
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
@@ -186,46 +192,42 @@ function RaceDefaults() {
 
         <hr className={s.divider} />
 
-        {/* Auto-advance */}
+        {/* ★★ STAY ON THE FINISH — the owner's decision, 2026-09-25 (STAY-ON-THE-FINISH-1).
+            The switch used to offer to turn on something that was always on: nothing read the key,
+            the app always advanced, and the toggle sat at OFF while it did. It decides now.
+
+            THE "Delay (seconds)" STEPPER THAT STOOD HERE IS GONE, and it was not a feature that was
+            removed — it was a SECOND number for a wait the camera ending already owns. Nothing read
+            it either. One value decides how long the picture stands, by his decision, and it is the
+            camera ending he already adjusts. */}
         <div className={s.formGroup}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <label className={s.toggle}>
               <input
                 type="checkbox"
-                checked={defaults.autoAdvance}
+                data-testid="auto-advance-toggle"
+                checked={defaults.autoAdvance ?? DEFAULT_RACE_DEFAULTS.autoAdvance}
                 onChange={(e) => set({ autoAdvance: e.target.checked })}
               />
               <span className={s.toggleSlider} />
             </label>
-            <span style={{ fontSize: '0.875rem' }}>Auto-advance to Result Screen after race</span>
-            <InfoTooltip text="When turned on, the result screen appears automatically after a race ends. Useful for events where the operator wants a hands-off, automated flow." />
+            <span style={{ fontSize: '0.875rem' }}>Go to the results on its own</span>
+            {/* ★ NO CONFIG VALUE IN THIS TEXT. The 2026-09-25 stock-take found 38 tooltips stating a
+                default with nothing checking them, and five of the nine misleading controls on the
+                screen were exactly that drift. This says WHERE the length is set, never what it is. */}
+            <InfoTooltip text="On: the results screen appears by itself once the camera's finish ending has played. Off: the finish picture stays on screen until you click it, so you can hold the moment for the room and move on when you are ready. How long the ending runs is set in Camera Advanced, under the finish — it is one value either way, and this switch does not change it." />
           </div>
-          {defaults.autoAdvance && (
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
+          {!(defaults.autoAdvance ?? DEFAULT_RACE_DEFAULTS.autoAdvance) && (
+            <p
+              data-testid="auto-advance-off-hint"
+              style={{
+                fontSize: '0.78rem',
+                color: 'var(--color-muted)',
+                margin: '0.4rem 0 0 3.2rem',
+              }}
             >
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-                Delay (seconds):
-              </span>
-              <InfoTooltip text="How many seconds to wait after the race ends before showing results. Gives the audience a moment to react to the finish before the screen changes." />
-              <div className={s.stepper}>
-                <button
-                  className={s.stepperBtn}
-                  disabled={defaults.autoAdvanceDelay <= 1}
-                  onClick={() => set({ autoAdvanceDelay: defaults.autoAdvanceDelay - 1 })}
-                >
-                  −
-                </button>
-                <span className={s.stepperValue}>{defaults.autoAdvanceDelay}</span>
-                <button
-                  className={s.stepperBtn}
-                  disabled={defaults.autoAdvanceDelay >= 30}
-                  onClick={() => set({ autoAdvanceDelay: defaults.autoAdvanceDelay + 1 })}
-                >
-                  +
-                </button>
-              </div>
-            </div>
+              Click the race picture to go to the results.
+            </p>
           )}
         </div>
 

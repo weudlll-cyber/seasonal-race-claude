@@ -35,8 +35,26 @@ export const DEFAULT_RACE_DEFAULTS = {
   // `maxPlayers` in the tree is a local or a prop of that name, never this key. It survived because
   // it LOOKED like the field cap and sat beside two keys that are, so a reader counting "the
   // maximum field size" found three numbers where there are two.
-  autoAdvance: false,
-  autoAdvanceDelay: 5,
+  // ★★ STAY-ON-THE-FINISH-1 (the owner's decision, 2026-09-25): THIS KEY DOES SOMETHING NOW.
+  //    ON  — the race screen hands over to the results when the camera ending closes. Today's
+  //          behaviour, which is why it SHIPS TRUE. Before this date the key was read by nothing and
+  //          the app always advanced, so a shipped `false` described a switch that did not exist.
+  //    OFF — the finish picture STAYS until the operator moves on himself, by clicking it.
+  //
+  // ★ A CONFIG STORED BEFORE 2026-09-25 CARRIES `false`, and it will now be obeyed. That is a
+  //   visible change for anyone who ever touched this screen, and it is the honest one: the
+  //   alternative is ignoring a stored value, which would break the switch for exactly the people
+  //   who have a stored config. There is no migration — this project has no schema and no version
+  //   bumps — and one click restores the old behaviour.
+  //
+  // ★ HOW LONG THE PICTURE STANDS IS NOT SET HERE. It is the camera ending, `endingOnRaceScreenMs`,
+  //   whose inputs are `finishHoldAfterLastMs` and `finishPauseMs` in the camera config. `autoAdvanceDelay`
+  //   stood beside this key until 2026-09-25 and was a SECOND number for the same wait; it is gone,
+  //   by the owner's decision that one value decides it. Nothing read it, so nothing lost a reader.
+  autoAdvance: true,
+  // ★ RESERVED, NOT DEAD (the owner, 2026-09-25). Nothing reads this yet; he is sourcing the sounds
+  //   and the control is the place they will be switched on. Recorded so a later cleanup pass that
+  //   greps for readers does not remove a seat somebody is on their way to.
   soundEffects: true,
   language: 'en',
   // RACE-ACTION-CONTROL-1: the host's Race Action stage for the next race. One of
