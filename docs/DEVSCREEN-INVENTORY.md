@@ -1099,7 +1099,99 @@ deliberate pairs and one name collision:
 | Picker + hex field | `color` (Tracks), `primaryColor`, `secondaryColor` (Branding) | Deliberate. Two widgets, one value, same store. |
 | Preset row + field | `scoreboardIntervalMs` (Dynamics) — the one key with two write sites | Deliberate. |
 | Picker + name field | Team + new-team name (User Management) — both end as the account's `team` | Deliberate; the second appears only when the first says "New team". |
-| ★ **Name collision** | **`minTargetScreenPx`** is a control in **Auto-Scale** (in `autoScaleConfig`, a floor for every racer) **and** a control in the **Racer Editor** (per racer type) | **Two different settings with one name, in two stores, at two scopes.** Not a duplicate of one value — worse, because a search for the key finds both and neither says which. |
+| ★ **Name collision** | **`minTargetScreenPx`** is a control in **Auto-Scale** (in `autoScaleConfig`, a floor for every racer) **and** a control in the **Racer Editor** (per racer type) | **Two different settings with one name, in two stores, at two scopes.** Not a duplicate of one value — worse, because a search for the key finds both and neither says which. See §*Structural oddities established 2026-09-26* below for the full established behaviour of both, and of the reset-scope disagreement. |
+
+## Structural oddities established 2026-09-26 (NIGHT-2026-09-26 PIECE 5)
+
+**Two structural oddities were traced from source and written down here; nothing was renamed, moved
+or acted on.** Both were on the stock-take's radar as one-sentence notes; this section is the
+precise reading. What to DO about them is the owner's decision and this section names no proposal.
+
+### (a) `minTargetScreenPx` — one name, two stores, two scopes, and no reader on the race path
+
+**Who writes each.**
+
+- **Auto-Scale (§12).** `AutoScaleSection.jsx` renders the slider (`data-testid="Min Target Screen
+  Px"`). The setter writes to `autoScaleConfig` in `localStorage`, keyed by
+  `KEYS.AUTO_SCALE_CONFIG`. The value ships at 32 and is declared in
+  `autoSpriteScale.js:DEFAULT_AUTO_SCALE_CONFIG`.
+- **Racer Editor (§4b).** `RacerEditModal.jsx` renders a per-racer-type slider whose value flows
+  through `applyTunableOverride(id, 'minTargetScreenPx', newPx)`. That mutates
+  `RACER_TYPES[id].config.minTargetScreenPx`. The persistent copy is written to the racer-type
+  overrides store (`KEYS.RACER_TYPE_OVERRIDES`). The default for the widget is
+  `loadAutoScaleConfig().minTargetScreenPx ?? DEFAULT_AUTO_SCALE_CONFIG.minTargetScreenPx` — so the
+  Racer Editor's widget seeds itself from the AUTO-SCALE global.
+
+**Who reads each.**
+
+- **Auto-Scale global.** Read in `RacerEditModal.jsx:416` as the seed for the per-type widget's
+  default. **NOT read on the render / physics / camera path** — `computeRacerLayout` uses
+  `minScale` and `maxScale`, and does not consult `minTargetScreenPx`. The declaration in
+  `autoSpriteScale.js:19-24` is a stored default; a live reader in the layout code was removed at
+  `CAMERA-PICTURE-FIXES-1` (the comment on line 79 records the removal by name).
+- **Racer Editor per-type.** Read by `MinSpriteSizePreview.jsx` for the animated preview inside the
+  modal (the preview draws the sprite at exactly the passed pixel size). **NOT read on the render /
+  physics / camera path** — no code outside the modal reads
+  `RACER_TYPES[id].config.minTargetScreenPx`.
+
+**What happens today if somebody sets one expecting the other.**
+
+- **They set the Auto-Scale global.** The stored value updates. The Racer Editor's per-type widget
+  will pick up the new global as its default the next time it opens for a type that has no
+  override. Every racer type that ALREADY has an override still shows its own value. The render
+  pipeline is unchanged either way.
+- **They set the Racer Editor per-type.** The stored value updates for that type. The Auto-Scale
+  card still reads the AUTO-SCALE global unchanged. Nothing else reads the per-type value; the
+  animated preview inside the modal updates, but no race renders differently.
+
+**★ THE KEY IS NOT ACTUALLY REACHING RENDER, per this reading of source.** Both stores accept
+writes and both widgets show the value they wrote, but neither value flows to
+`computeRacerLayout`, `renderRaceFrame` or any camera code. The dev-screen inventory records both
+as MATCHES because the reader **for the control's own purpose** (the auto-scale default seed for
+one, the modal preview for the other) does what the label says. **The wider question — whether
+either setting is meant to reach a real race and does not — is not this section's to answer.**
+
+**No stored key was renamed.** *"Do not rename either. A stored key rename touches saved configs
+and is its own decision"* — the brief's own rule.
+
+### (b) Reset-scope disagreement between the card LAYOUT and the master reset
+
+**The Race Tuning master reset ("Reset All Defaults" in `RaceTuningSection.jsx`) covers**, exactly:
+
+| Block | Kind | Source of the reset target |
+| --- | --- | --- |
+| `baseSpeedConfig` | RACE | `RACE_RELEVANT_DEFAULTS.baseSpeedConfig` via `DynamicsTuningSection.resetAll()` |
+| `rowLayoutConfig` | RACE | `RACE_RELEVANT_DEFAULTS.rowLayoutConfig` via `DynamicsTuningSection.resetAll()` |
+| `raceDynamicsConfig` | RACE | `RACE_RELEVANT_DEFAULTS.raceDynamicsConfig` via `DynamicsTuningSection.resetAll()` |
+| `raceBehaviorConfig` | RACE | via `BehaviorTuningSection.resetAll()` |
+| `autoScaleConfig` | RACE | via `resetAutoScaleToDefault()`, written directly to storage |
+
+**The Race Tuning master reset deliberately does NOT cover**:
+
+| Block | Kind | Where it lives | Whose reset covers it |
+| --- | --- | --- | --- |
+| `frameTimingConfig` | COSMETIC | Renders INSIDE Race Tuning → Dynamics § 1 | its own `reset-frame-timing` sub-heading link only |
+| `cameraConfig` | COSMETIC | Renders in Camera Advanced (§10) — outside Race Tuning entirely | Camera Advanced's own per-group resets |
+
+**Where the layout and the scope disagree.**
+
+- **Frame Timing** is COSMETIC and lives INSIDE the Race Tuning card. Reset All Defaults sits at
+  the top of Race Tuning, its tooltip states *"Camera and frame-timing overlays are left
+  untouched"*, and `DynamicsTuningSection.resetAll()` explicitly does not touch frame-timing state
+  (comments at :259-266 say so). The card's copy is accurate. The mismatch is that a reader
+  scanning the card visually will find Frame Timing under the Reset All button whose scope
+  deliberately excludes it. Not a defect in code; a defect in what the layout leads a reader to
+  expect.
+- **Auto-Scale** is RACE-RELEVANT and lives in a card of its OWN (§12), separate from Race Tuning.
+  Reset All Defaults reaches it anyway — via `resetAutoScaleToDefault()`, which writes the default
+  straight to storage without touching the Auto-Scale card's own React state. The Auto-Scale
+  card's local state re-syncs from storage on its next mount (the comment in
+  `raceRelevantReset.js:36-40` states this). The mismatch is that a reader inside Auto-Scale will
+  see a shipped-default state after clicking a button in a card they cannot see.
+
+**Neither is proposed to move.** Both are the fingerprint's own line (race vs cosmetic) held to
+against the visual layout of the screen. What to do about the disagreement is the owner's
+decision and this section names none.
 
 ## Groupings that no longer match
 
