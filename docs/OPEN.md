@@ -1,7 +1,8 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-25
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-25, after the owner's decisions of that day**, from PART ONE's **seven** rows.
+Re-derived on **2026-09-25**, from PART ONE's **seven** rows — after the owner's decisions of that
+day and after RACE-SOURCE-1, which changed what row 3 below says without changing how many there are.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -33,8 +34,9 @@ day. The list below therefore contains no questions at all: **all seven rows are
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
 3. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
-   the user chooses, counting NAMES. Quick Tests must not count, and **nothing stored today says
-   whether a race was one** — that finding is where the work starts. The points rule is
+   the user chooses, counting NAMES. ★ **The marker is BUILT (RACE-SOURCE-1, 2026-09-25):** a stored
+   race records how it was started, and **absent means test** — so excluding Quick Tests is now a
+   filter over a recorded fact. **The evaluation itself is not built.** The points rule is
    dev-screen-configurable and **no numbers are adopted**.
 4. **Tenancy — the boundary is stated (2026-09-25), the work is not done.** PER TEAM: brands, player
    groups, team-created tracks. SHARED: the shipped tracks and the racer types. Races are scoped

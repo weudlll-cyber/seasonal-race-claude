@@ -54,6 +54,20 @@ const ROOT = join(HERE, '..');
 export const LEDGER_FILENAME = 'migrations.json';
 
 /**
+ * Where the races database lives, for a given data root.
+ *
+ * ★ ONE HOME, used by BOTH halves of the `race-source-1` migration — the probe that decides whether
+ * it needs to run and the run itself. Two spellings of "where is the database" is how a probe comes
+ * to answer about one file while the work touches another. It mirrors `raceStore.js`'s own
+ * `DEFAULT_RACES_PATH` (`RA_RACES_DB`, else `<dataRoot>/races.sqlite`) rather than importing it,
+ * because importing that module would drag `better-sqlite3` into the registry — which is exactly
+ * what the note on `buildDefaultMigrations` forbids.
+ */
+function racesDbPath(dataRoot) {
+  return process.env.RA_RACES_DB ?? join(dataRoot, 'races.sqlite');
+}
+
+/**
  * Read the ledger. Missing file → { applied: [] }. Malformed → THROW; a torn ledger is not
  * silently treated as "nothing applied", which would re-run everything.
  */
@@ -135,6 +149,35 @@ export async function buildDefaultMigrations() {
         return migrateTeams({ dryRun });
       },
     },
+    {
+      id: 'race-source-1',
+      description:
+        'The races table gains a race_source column (RACE-SOURCE-1). Existing rows keep NULL, ' +
+        'which reads as a TEST race.',
+      /**
+       * The observable-state probe, for an instance that ran before the ledger existed.
+       *
+       * ★ IT ANSWERS FROM THE FILE'S EXISTENCE ALONE, and that is a deliberate limit. Reading the
+       * SCHEMA would need `better-sqlite3`, and the rule stated on `buildDefaultMigrations` above is
+       * that BUILDING the registry — and therefore probing it — must not need the server tree
+       * installed, because CI's script-suite job installs the root tree only. So: no races database
+       * means no races have ever been stored here and nothing to alter, which is APPLIED. A database
+       * that does exist falls through to `run()`, which imports the driver and is itself a no-op
+       * when the column is already there. The cost of the limit is one no-op run; the cost of
+       * getting it wrong the other way would be a red CI job on every push.
+       */
+      alreadyAppliedByObservableState({ dataRoot }) {
+        return !existsSync(racesDbPath(dataRoot));
+      },
+      async run({ dryRun, dataRoot }) {
+        // ★ Imported HERE and not above, for the reason in the registry note: this is the first
+        // point at which `better-sqlite3` is genuinely needed.
+        const { migrateRaceSource } = await import(
+          pathToFileURL(join(ROOT, 'server/src/races/migrateRaceSource.js')).href
+        );
+        return migrateRaceSource({ dbPath: racesDbPath(dataRoot), dryRun });
+      },
+    },
   ];
 }
 
@@ -170,7 +213,13 @@ export async function runMigrations({
       }
       continue;
     }
-    const runResult = await m.run({ dryRun });
+    // ★ `dataRoot` travels to `run()` as well as to the probe (RACE-SOURCE-1, 2026-09-25). The
+    // runner already knows it and already hands it to `alreadyAppliedByObservableState`; a
+    // migration that had to resolve it again would be a second way of finding the same directory,
+    // and the two would disagree the first time an env override moved one of them. `teams-1`
+    // ignores the argument and resolves its own path, which is left alone — changing a migration
+    // that has already run everywhere buys nothing.
+    const runResult = await m.run({ dryRun, dataRoot });
     report.entries.push({ id: m.id, state: dryRun ? 'would-run' : 'applied', runResult });
     if (!dryRun) {
       ledger.applied.push({ id: m.id, appliedAt: now() });

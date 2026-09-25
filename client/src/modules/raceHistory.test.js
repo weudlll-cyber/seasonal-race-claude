@@ -344,3 +344,39 @@ describe('★ `inputs` and raceIdentifier.js name the same set of inputs', () =>
     ).toEqual([]);
   });
 });
+
+// ── RACE-SOURCE-1: the carrier ──────────────────────────────────────────────────────────────────
+//
+// ★ THIS FILE IS THE LINK, AND A BREAK HERE IS INVISIBLE FROM BOTH ENDS. The setup screen's tests
+// prove the marker is SET; the store's tests prove it is STORED once sent. If it were dropped in
+// between, both of those stay green and the field simply never travels. That is the gap this block
+// closes, so it gets its own assertions.
+describe('RACE-SOURCE-1 — the marker survives from the race payload to the server body', () => {
+  it('the entry carries the source the race was started with', () => {
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'quick-test' } })
+    );
+    expect(e.raceSource).toBe('quick-test');
+  });
+
+  it('★ it sits beside the outcome, NOT inside `inputs` — how a race started is not an engine input', () => {
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } })
+    );
+    expect(e.inputs).not.toHaveProperty('raceSource');
+  });
+
+  it('and it reaches the server body', () => {
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } })
+    );
+    expect(toServerPayload(e).raceSource).toBe('race');
+  });
+
+  it('★ an entry from before this field existed says NULL, not a guess — absent is not real', () => {
+    // `aParsedResult()` carries no `raceSource`, which is exactly the shape an older build wrote.
+    const e = buildHistoryEntry(aParsedResult());
+    expect(e.raceSource).toBeNull();
+    expect(toServerPayload(e).raceSource).toBeNull();
+  });
+});

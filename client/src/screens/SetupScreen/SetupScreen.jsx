@@ -6,6 +6,11 @@
 // Description: Pre-race setup screen — players, track selection, settings;
 //              reads tracks and defaults from localStorage so Dev Panel
 //              changes are reflected immediately
+//
+// ★ RACE-SOURCE-1 (2026-09-25): THIS SCREEN IS WHERE A RACE LEARNS HOW IT WAS STARTED. It writes
+//   `activeRace` in THREE places and every one of them must set `raceSource` — see the note above
+//   `handleStartRace`. The value travels with the race and is stored with it; nothing downstream
+//   can work it out again, which is the whole reason it is set here.
 // ============================================================
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -56,6 +61,8 @@ import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { normalizeRaceActionStage } from '../../modules/raceActionStage.js';
+// RACE-SOURCE-1: the vocabulary is shared with the server that stores it, so the two cannot drift.
+import { RACE_SOURCE } from '../../../../shared/raceSource.mjs';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import {
   sanitizeQuickTestSeedInput,
@@ -850,6 +857,13 @@ function SetupScreen() {
       // ★ The half a seed never carried: the config world this race was recorded with. RaceScreen
       // prefers it over this machine's stored config — see the note at `RaceScreen/index.jsx:466`.
       worldConfigOverride: decoded.world,
+      // ★ RACE-SOURCE-1 — AN IDENTIFIER START IS AN ORDINARY RACE, and this is the writer that
+      // looks like an exception and is not. Reaching here means `handleStartRace` handed off at
+      // `:873-876` because the field held a race rather than a seed; what changed is where the
+      // inputs came FROM, not what kind of race it is. A host who starts somebody else's race is
+      // running a real race, so it counts like one. Marking it separately would invent a third
+      // kind, and this is the one `setItem` a careless change misses.
+      raceSource: RACE_SOURCE.RACE,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -948,6 +962,13 @@ function SetupScreen() {
       // seed above and for the same reason — a race that cannot say which stage it ran cannot be
       // replayed. Normalised at the boundary so the payload always carries one of the three ids.
       raceActionStage: normalizeRaceActionStage(raceDefaults.raceActionStage),
+      // ★★ RACE-SOURCE-1 — HOW THIS RACE WAS STARTED, recorded at the only point that knows.
+      // It travels with the race to the result screen and is stored beside the outcome; nothing
+      // downstream can recover it, because the incidental tells were checked and rejected
+      // (`eventName` is text a host can type, and a skipped `rememberStartedRace` is an absence).
+      // ★ THERE ARE THREE WRITERS OF `activeRace` IN THIS FILE and all three set this field:
+      // here, `startRaceFromIdentifier` (also ORDINARY) and `handleQuickTest`.
+      raceSource: RACE_SOURCE.RACE,
       timestamp: new Date().toISOString(),
     };
     sessionStorage.setItem('activeRace', JSON.stringify(race));
@@ -1058,6 +1079,11 @@ function SetupScreen() {
       // path the camera-replay tool records against, so leaving it out would make a Quick-Test
       // recording silently un-replayable the moment the host is on a non-quiet stage.
       raceActionStage: normalizeRaceActionStage(raceDefaults.raceActionStage),
+      // ★★ RACE-SOURCE-1 — THE ONE WRITER THAT IS NOT A REAL RACE. A period evaluation must not
+      // count these, and this field is the only thing that will ever say so: `eventName` below is
+      // 'Quick Test' by default but is not evidence, because the ordinary path takes that text from
+      // the host and he can type the same words.
+      raceSource: RACE_SOURCE.QUICK_TEST,
       timestamp: new Date().toISOString(),
     };
 
