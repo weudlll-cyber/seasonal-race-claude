@@ -446,6 +446,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [BROWSER-GATE-PREMERGE-1.md](BROWSER-GATE-PREMERGE-1.md) — **does the pre-merge gate fire for the
+  three candidate specs? No — and not for the reason anyone expected.** ★★ **The pre-merge gate runs
+  NO Playwright specs at all**: `verify.mjs:257` sets `GATE_GUARD = "viewer-invariants"` and `:428`
+  spawns it as a Chromium guard that drives two races, not a spec runner; `verify.mjs` names no spec
+  anywhere. The curated set (`client/package.json:54`) is consumed only by
+  `.github/workflows/browser-gate.yml:177`, which runs on push-to-master, a daily cron and dispatch —
+  never on a branch or a pull request, so widening it widens the POST-merge side only. Case (B):
+  nothing wired, nothing proposed; moving the set before the merge is a second gate mechanism and
+  therefore a design question.
+
 - [BROWSER-GATE-COVERAGE-1.md](BROWSER-GATE-COVERAGE-1.md) — **per-spec runtime measured for every
   prod-arm spec (19), plus `auth.setup.js`.** 122 of 125 tests passed, 3 failed. The whole suite is
   ★ 38.6 min, the current fast subset (7 specs, 82 tests) is 2.2 min, and the CHEAPEST widening —
