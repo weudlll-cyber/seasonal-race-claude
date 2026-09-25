@@ -923,8 +923,15 @@ rather than a threshold nobody has found yet.**
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
 here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns nothing — it was a phase-status table when this block was moved, and ROADMAP-FOLD-2 (`c49d5af5`, 2026-08-27) folded that table in here too. *(Corrected 2026-09-03: this sentence contradicted line 3 of this same file, which has said REDIRECT since that fold. Found as a SECOND SITE of the same claim in README.md, not on its own.)*
 
-**verify (section-wide):** none can exist — **nothing here is built, and no command can check the
-absence of a server that was never started.** Each item leaves by being built, not by being checked.
+**verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
+here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
+was still denying it: race outcomes ARE persisted, in a real database
+(`server/src/races/raceStore.js:64,72`, served by `server/src/routes/races.js`); branding profiles
+ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
+(`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
+**What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
+the absence of a server that was never started, and each leaves by being built rather than by being
+checked.
 
 **Its relationship to *Before the VPS migration* (the next section):** that section is the LIST of
 what must be true before anything goes online; this one is the FEATURE WORK those phases contain.
@@ -940,26 +947,111 @@ Neither subsumes the other and both were already open.
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
 - [ ] Server-authoritative race finale: server signs and persists race outcomes
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — PERSISTS yes, SIGNS no, AUTHORITATIVE no.**
+      **Persistence is built:** `server/src/races/raceStore.js:64` imports `better-sqlite3` and `:72`
+      opens `DATA_ROOT/races.sqlite` on its own handle (redirectable by `RA_RACES_DB`), with
+      immutable, content-addressed rows; `server/src/routes/races.js:62` writes a finished race.
+      **Nothing SIGNS.** A search for sign/signature/hmac across the races route and store returns
+      only prose about a signed-IN user. **And nothing is AUTHORITATIVE:** the server stores the
+      outcome the client sends; it does not compute or adjudicate the race.
+
 - [ ] Socket.IO event streaming: server broadcasts authoritative race-tick state
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** `socket.io` appears in neither
+      `server/package.json` nor `client/package.json`. Nothing streams.
+
 - [ ] Race outcomes persisted to DB; season standings computed server-side
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the DB half is DONE, the standings half is
+      not.** This row states two things and only one is still true.
+      **DONE:** outcomes are persisted, in a real database — `server/src/races/raceStore.js:64,72`
+      (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own file so the races are not one
+      `rm sessions.sqlite` from gone) — and served back by `server/src/routes/races.js`: POST at
+      `:62`, a paged GET at `:121`, GET by short key at `:140`. Built by RACE-SAVE-3 / RACE-STORE-2,
+      2026-09-06.
+      **NOT DONE:** no season standings are computed anywhere. "season" occurs **once** in the whole
+      store and there is no standings code on the server.
+      **The row now claims the standings only.**
+
 - [ ] Leaderboard screen (client) reading from server API
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** `client/src/screens/` holds Auth,
+      DevScreen, DiagnoseVerteilung, RaceScreen, RacerEditor, ResultScreen, SetupScreen and
+      TrackEditor. There is no leaderboard screen. ★ The API half it would read now exists
+      (`server/src/routes/races.js`), so this is a client-side gap rather than a whole feature.
+
 - [ ] Season archive + reset
 
 ### Phase 6 — Public Deployment (planned)
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No season concept exists on either
+      side; see the standings row above.
 
 - [ ] VPS deployment (nginx reverse proxy, HTTPS via Let's Encrypt)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is the SAME SUBJECT as the delivery rows
+      in *Before the VPS migration*.** It waits on a domain and a proxy choice — his word plus a
+      purchase — not on work in this tree.
+
 - [ ] Admin auth hardened for public-facing use
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — UNDECIDED — and the reason is that the row states no bar.**
+      ★ **A great deal of hardening exists**, with tests beside each piece: `server/src/auth/`
+      carries `csrf.js`, `guards.js`, `rateLimit.js`, `session.js`, `sessionInvalidation.test.js`,
+      `recoverAdmin.js`, `changePasswordContract.test.js` and `routePolicyDrift.test.js`.
+      ★ **But "hardened for public-facing use" has no stated threshold**, so the tree cannot say
+      whether it is met — and nothing is public, so it cannot be observed either.
+      **What WOULD settle it:** a written bar (a threat model, or a checklist of what must hold
+      before the app is reachable) and one review against it. That is perhaps a day, and it is not
+      started. It is NOT closed here, because closing it would be a guess.
+
 - [ ] Stats pages (top racers, busiest tracks, season history)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No stats screen exists; see the
+      client screen list on the leaderboard row above.
+
 - [ ] Mobile / tablet responsive tuning
 
 ### Phase 7 — Multi-Tenant (planned)
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN.** Four CSS files under `client/src` carry an
+      `@media` rule, so the app is not wholly fixed-width — but the race canvas is a fixed
+      1280x720 store by design, and no tuning pass for phone or tablet has been done.
 
 - [ ] Multiple event organizers with isolated track sets and branding profiles
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — BRANDING PROFILES exist, ISOLATED TRACK SETS do
+      not.** `server/src/routes/brands.js` is a built feature: brand CRUD at operator level or above,
+      with logo upload, serve and delete, and admin promote/export.
+      **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
+      of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
+      track sets only.**
+
 - [ ] Per-tenant localStorage namespace or server-side data isolation
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — server-side data isolation EXISTS, for races.**
+      The row offers two alternatives and one of them is built for one resource:
+      `server/src/routes/races.js:32-35` stamps `req.authUser.team` from the user's own database
+      record on every request via `requireAuth`, **ignores** any `team` in the request body, and
+      makes a race visible to its author's team and to no other — decided on the server, which is
+      exactly what "server-side data isolation" names.
+      **It reaches races and nothing else** — tracks, brands and player groups are not team-scoped.
+      **The row now claims the resources it does not yet cover.**
+
 - [ ] Invite flow for adding players to an organizer's roster
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt.** No occurrence of "invite" anywhere
+      in `server/src` or `client/src`.
+
 - [ ] i18n (English + German base)
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN — unbuilt, and it sits against a standing rule,
+      which is recorded here as a FACT and not as a recommendation.** No i18n framework is present.
+      ★ The fact: `CLAUDE.md`'s language rule requires all user-facing text to be in **English**, with
+      no German anywhere in the codebase. A German locale would need that rule changed. **Whether
+      that is wanted is his decision and this verdict does not make it** — it only notes that the
+      two documents currently disagree, so building this row as written would breach the other.
 
 ---
 
