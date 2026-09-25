@@ -780,20 +780,41 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       ★★ **QUICK TESTS DO NOT COUNT. This is a hard requirement, not a preference** — a table that
       mixes throwaway test races into a standing would be worse than no table.
 
-      ★★ **AND THAT REQUIREMENT IS NOT SATISFIABLE TODAY — established at the tree 2026-09-25, and
-      this is the finding the work has to start from.** **A stored race carries nothing that says
-      whether it was a Quick Test.** The `races` table's columns are listed at
-      `server/src/races/raceStore.js:96-160` and none of them is a mode, a source or a flag; the two
-      shared tables it references, `rosters` and `racer_types`
-      (`server/src/races/raceStore.js:86-94`), hold `id` and `content` and nothing else. The client
-      does not send one either: `toServerPayload` (`client/src/modules/raceHistory.js:135-144`)
-      forwards `entry.inputs` unchanged, and Quick Test differs from a normal start only in the
-      values it puts INTO those inputs — a generated name set and an auto-filled field
-      (`client/src/screens/SetupScreen/SetupScreen.jsx:999-1056`). **So the tell would have to be a
-      guess about names, and a guess is not a requirement met.** ★ **The first piece of this work is
-      therefore to make a stored race SAY what it was**, and everything already stored is
-      unclassifiable — rows are immutable by database trigger
-      (`server/src/races/raceStore.js:167-170`), so history cannot be back-filled either.
+      ★★ **QUICK TESTS CAN NOW BE TOLD APART — BUILT 2026-09-25 (RACE-SOURCE-1). This is the one
+      piece of the row that is DONE; the evaluation itself is not, and the row stays open.**
+      A stored race records **how it was started**: `race` or `quick-test`, in a `race_source` column
+      on the races table, written from what the client sends. The vocabulary and the rule for reading
+      it have one home, [shared/raceSource.mjs](../shared/raceSource.mjs).
+
+      ★★ **ABSENT IS NOT REAL, and a later reader must not invert it.** A race counts as real ONLY
+      when it says so. A row with no marker — every row stored before 2026-09-25 — is a **test**
+      race. The predicate is `isRealRace(source)`, a positive equality; asking `!== 'quick-test'`
+      instead would read every legacy NULL as a real race, which is the exact inversion the column
+      exists to prevent.
+
+      ★★ **THE OWNER'S DECISION, 2026-09-25: every race stored so far is a test race, and none of
+      them is carried over when the move to a server happens.** So there is **no back-fill problem
+      and no migration of old race data** — the rule above and the truth already agree, and the 35
+      rows that existed on that date keep their NULL and are correct with it.
+
+      ★ **A TECHNICAL DECISION RECORDED SO IT IS NOT REVERSED AS AN "OPTIMISATION" — Option A, and
+      it is NOT the owner's.** The marker is INSIDE the row the content id is taken over
+      (`raceStore.js`, `contentId(row)`), so a race's id covers how it was started.
+      [contentAddress.js](../server/src/races/contentAddress.js) argues that a content id is a
+      statement about a VALUE rather than about a slot; keeping the field beside the row to spare the
+      id would degrade that to "the id is most of the content" and leave the next person adding a
+      field with no rule to follow. It costs nothing measurable: no stored row changes, the readable
+      short key is drawn at random and is deliberately outside the hash, `roster_id` and
+      `racer_types_id` are separate content ids over their own sub-objects, nothing pins a race
+      content id, and dedupe is unaffected because a retry carries the same marker.
+
+      ★ **What the marker deliberately is NOT:** a boolean. A named source can grow a third value the
+      day something genuinely third exists. **Two values exist and no third was invented** — in
+      particular a race started from an IDENTIFIER is an ordinary race, not a third kind.
+
+      ★ **What is still open on this row, unchanged:** the evaluation itself — the period, the table,
+      the points rule, and the controls. **Nothing of that was built.** What the marker buys is that
+      when it is built, excluding Quick Tests is a filter over a recorded fact rather than a guess.
 
       ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
       the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation
