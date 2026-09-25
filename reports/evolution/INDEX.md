@@ -438,6 +438,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   being taken in the browser. Spec left RED, no assertion touched; owner question named on the
   morning sheet.
 
+- [TRACKSCOPE-DIAG-REACH-1.md](TRACKSCOPE-DIAG-REACH-1.md) — **one home, two doors.**
+  `scripts/lib/trackScope.mjs` grew a second entry point `resolveTrackScopeIds` for tools whose
+  shape iterates ids and looks each up per iteration. Five diag tools brought under the refusal
+  (`company-ceiling-who`, `company-under-floor`, `endgame-spec`, `headcount-price`,
+  `sprite-premise`); ten file-based analysers NAMED and left alone because their scope resists the
+  refusal without a shape change. Guard test 7/7 green; per-tool sabotage arm verified.
+
 - [MORNING-2026-09-25.md](MORNING-2026-09-25.md) — **the night sheet for the 2026-09-25 run** — four
   pieces off master `03f0177a`: sabotage arms for the five OLD viewer invariants, the company
   guarantee on a spread field across field sizes, a coverage measurement of the browser gate, and the

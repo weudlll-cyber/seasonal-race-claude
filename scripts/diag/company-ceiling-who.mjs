@@ -39,6 +39,7 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
 } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -50,7 +51,13 @@ const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const TRACKS = (arg("tracks", "space-sprint") || "").split(",").filter(Boolean);
+// Scope arrives as a comma-separated list of ids; validated at boot so an unknown or empty filter
+// refuses loudly rather than iterating nothing (NIGHT-2026-09-26 PIECE 4).
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/company-ceiling-who",
+  ids: String(arg("tracks", "space-sprint")).split(",").map((s) => s.trim()).filter(Boolean),
+  all: loadTracks(),
+});
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "30"));
 // Stated explicitly, never inherited: the shipped default moved during this arc, and an arm that

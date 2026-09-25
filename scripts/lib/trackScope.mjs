@@ -17,6 +17,16 @@
 // A measurement that can measure nothing quietly is worse than no measurement: it answers in the
 // voice used for a clean result.
 //
+// ── ONE HOME, TWO DOORS (NIGHT-2026-09-26 PIECE 4) ─────────────────────────────────────────────
+//
+// The `scripts/` measuring tools resolve `--tracks=` into a list of GEOMETRIES up front and then
+// iterate the geometries. `scripts/diag/*.mjs` resolve into a list of NAMES up front, and then
+// look each name up per iteration through a `Map.get(id) → geo`. Same rule, two calling shapes;
+// two entry points. `resolveTrackScope` returns geos (the main tools). `resolveTrackScopeIds`
+// takes an already-parsed list of ids and returns validated ids (the diag tools). The refusal
+// itself is written once, in the private helper `refuse` below — one home, two doors, not two
+// homes.
+//
 // ── THE REFUSAL IS NOT NEW ────────────────────────────────────────────────────────────────────
 //
 // Its wording and shape are taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`, which
@@ -89,4 +99,50 @@ export function resolveTrackScope({ tool, arg, all, flag = "--tracks" }) {
     process.exit(2);
   }
   return geos;
+}
+
+/**
+ * The SECOND DOOR — for tools whose calling shape hands the resolver an already-split list of
+ * track ids and then iterates the ids through a `Map.get(id) → geo` per iteration. That is the
+ * shape most of `scripts/diag/*.mjs` uses, and it cannot be brought under `resolveTrackScope`
+ * without changing every one of them from iterating names to iterating geos. The refusal itself
+ * is identical — same wording, same exit code — so the two doors open on one home.
+ *
+ * @param {object}   p
+ * @param {string}   p.tool  the tool's own name, so the refusal says who is refusing
+ * @param {string[]} p.ids   the already-parsed track ids the caller asked for
+ * @param {Array}    p.all   every geometry that exists, from `loadTracks()`
+ * @param {string}   [p.flag] the flag's name, for tools that spell it `--track=`
+ * @returns {string[]} the validated ids — never empty; the process exits instead
+ */
+export function resolveTrackScopeIds({ tool, ids, all, flag = "--tracks" }) {
+  const known = new Set(all.map((g) => g.id));
+
+  // An empty tracks directory is a silent zero even if the ids array is not empty; refuse first.
+  if (all.length === 0) {
+    console.error(
+      `${tool}: no tracks exist at all, so this run would measure nothing. Refusing to start.\n` +
+        `  Looked in server/data/tracks, falling back to server/seeds/tracks.\n` +
+        `  A sweep that measures nothing must not report success; that is how a silent zero gets ` +
+        `read as a clean result.`
+    );
+    process.exit(2);
+  }
+
+  const asked = Array.isArray(ids) ? ids.map((s) => String(s).trim()).filter(Boolean) : [];
+  const unknown = asked.filter((id) => !known.has(id));
+
+  if (asked.length === 0 || unknown.length > 0) {
+    console.error(
+      `${tool}: ${flag} names ${
+        asked.length === 0 ? "no track at all" : `no such track: ${unknown.join(", ")}`
+      }.\n` +
+        `  asked for: ${asked.length ? asked.join(", ") : "(nothing)"}\n` +
+        `  this repository has: ${[...known].join(", ")}\n` +
+        `  There is no "all" — pass ${flag}=<id>[,<id>...] with a KNOWN id to run.\n` +
+        `  Refusing to run: a filter that matches nothing would report 0 rows and exit 0.`
+    );
+    process.exit(2);
+  }
+  return asked;
 }
