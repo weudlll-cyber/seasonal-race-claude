@@ -959,30 +959,6 @@ are in PART TWO with what closed them; these are the ones still standing.
       names one command instead of "read the migrations section and decide". Verified against the
       live `server/data/`: `node scripts/migrate.mjs --status` reads `teams-1: backfilled-from-state`.
 
-- [ ] **The browser gate covers 7 of the 19 e2e specs, and does not run on pull requests.** The gate
-      itself shipped (PART TWO), so what remains is its SCOPE: the other 12 specs stay night work by
-      [VERIFY-RULES.md](VERIFY-RULES.md) R12a, and a browser regression is caught AT master rather
-      than before it arrives. Both are deliberate — recorded so the closure is not read as wider than
-      it is.
-      ★★ **THE DECISION OF 2026-09-25, AND WHY IT COULD NOT BE WIRED.** The owner decided the widened
-      browser set should run BEFORE a merge rather than after it, with three candidate specs
-      (`d9-smoke`, `race-identifier`, `teams-session`) to be wired into the pre-merge gate **only if
-      they would actually fire there**. Established at the tree, and they would not:
-      **THE PRE-MERGE GATE RUNS NO PLAYWRIGHT SPECS AT ALL.** `verify.mjs:257` sets
-      `GATE_GUARD = "viewer-invariants"` and `verify.mjs:428` spawns it as
-      `node scripts/viewer-invariants.mjs --gate` — a Chromium guard that drives two races, not a
-      spec runner. `verify.mjs` contains no reference to Playwright, to `e2e/`, or to any spec.
-      The curated fast set is `client/package.json:54` (`test:e2e:prod:fast`, 7 specs) and its ONLY
-      consumer is `.github/workflows/browser-gate.yml:177`, which triggers on
-      `push: branches: [master]`, a daily `cron` and `workflow_dispatch` — never on a branch, never
-      on a pull request. So widening that list widens the POST-merge workflow only, which is the
-      opposite of what the decision asks for.
-      ★ **Nothing was wired anywhere**, because there is no pre-merge Playwright step to wire into,
-      and creating one is a second gate mechanism rather than a wiring job. Established and reported
-      in [BROWSER-GATE-PREMERGE-1.md](../reports/evolution/BROWSER-GATE-PREMERGE-1.md).
-      ★ **This row stays OPEN and its subject is unchanged**: the gate is still a subset, and it
-      still runs after the merge and not before it.
-
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
 - [ ] ★★ **`arrival-shape.spec.js`, `comeback-precedence.spec.js` and `garden-path-finishes.spec.js`
@@ -2207,6 +2183,34 @@ proposal arriving again in six months looking new.
       work follows from it.**
 
 ## Closed by the owner's decisions of 2026-09-24
+
+- [x] ★★ **THE BROWSER GATE IS WIDENED, AND IT COVERS EVERY SPEC THAT DOES NOT WAIT FOR A RACE.**
+      Closed 2026-09-25 by the owner's decision of the same day: **the gate widens on the POST-MERGE
+      side, and no pre-merge spec gate is built.** The basis recorded with it — the merge result is
+      waited on before work continues anyway, so a gate that reports after the merge costs no waiting
+      in practice.
+      **What changed: ONE list.** `client/package.json:54` gained `teams-session`, `race-identifier`
+      and `d9-smoke` — the three specs outside the old set that do NOT wait for a real race,
+      established spec by spec in
+      [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md). That list's only
+      consumer is `.github/workflows/browser-gate.yml:177`, so widening it widened the post-merge gate
+      and nothing else. **No second curated set, no parallel npm script, no "fast"/"wider" pair.**
+      **Before → after, measured, not estimated:** **7 specs / 82 tests / 3.1 min → 10 specs /
+      110 tests / 3.8 min**, run locally before the merge, 110 passed, 0 failed. Coverage goes from
+      66% of the suite's tests to **88%**, for about a tenth of the full arm's 38.6 min.
+      ★ **The three FAILING prod-arm specs were deliberately NOT added** — `arrival-shape`,
+      `comeback-precedence`, `garden-path-finishes`. All three wait for a race, all three are red
+      today, and they keep their own row in PART ONE; **a gate that is red on arrival is one nobody
+      believes.**
+      ★ **Why the pre-merge half is not merely undone but IMPOSSIBLE as a wiring job**, established
+      the day before in [BROWSER-GATE-PREMERGE-1.md](../reports/evolution/BROWSER-GATE-PREMERGE-1.md):
+      the pre-merge gate runs no Playwright specs at all (`verify.mjs:257`, `GATE_GUARD =
+      "viewer-invariants"`). Building one is a second gate mechanism, and the decision above is to
+      not build it.
+      ★ **The documents that stated the old size were corrected in the same commit**, which is the
+      half this project keeps paying for: `NIGHT-RUN.md` (the cost table, the coverage share, the
+      membership list, and a list that WRONGLY called these three race-waiting), `VERIFY-RULES.md`,
+      `MORNING.md` and the workflow header.
 
 - [x] ★★ **THE GATE NO LONGER GRADES FRAMES THE OWNER DOES NOT JUDGE. Closed 2026-09-25 by his
       decision of 2026-09-24.** Invariant 6 grades the RUN-IN, on the racer LEADING each frame, up

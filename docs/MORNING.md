@@ -33,8 +33,10 @@ green now.
 1. ★ **`arrival-shape.spec.js:115` — the test and the servo disagree, and it is a design question.**
    After a held hero reaches his drawn place: steered to that exact rank, or free anywhere inside his
    block? **The gap brake is exonerated by measurement.** → [ARRIVAL-BRAKE-1](../reports/night/ARRIVAL-BRAKE-1.md)
-2. **Whether `npm run test:e2e:prod:fast` becomes a habit.** 82 tests, 3.1 min, all passing — wired
-   on demand, in neither `verify` nor CI. → [PROD-FAST-1 in NIGHT-RUN.md](NIGHT-RUN.md)
+2. **Whether `npm run test:e2e:prod:fast` becomes a habit.** **110 tests, 3.8 min, all passing**
+   (10 specs since 2026-09-25) — and since 2026-09-23 it is no longer only on demand: it is the
+   post-merge browser gate, run on every push to master. Still in neither `verify` nor `ci.yml`.
+   → [PROD-FAST-1 in NIGHT-RUN.md](NIGHT-RUN.md)
 3. **Whether a guard should catch committed conflict markers.** Seven were found in two index files
    and removed; no guard sees them, and what such a guard should cover is a decision, not a cleanup.
 

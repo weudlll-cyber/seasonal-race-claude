@@ -38,7 +38,15 @@
 #
 # ── WHAT IT RUNS, AND WHY THAT SET ─────────────────────────────────────────────────────────────
 # `npm run test:e2e:prod:fast` — the CURATED set that already existed in `client/package.json`,
-# reused rather than re-chosen. It runs against `playwright.prod.config.js`, the PRODUCTION arm
+# reused rather than re-chosen. WIDENED 2026-09-25, by the owner's decision, from 7 specs to 10:
+# `teams-session`, `race-identifier` and `d9-smoke` joined it. Those are the three specs outside the
+# old set that do NOT wait for a real race, measured one by one in BROWSER-GATE-COVERAGE-1, so they
+# cost like the set's other specs cost — 10 specs, 110 tests, 3.8 min on Windows against the old
+# 7 / 82 / 3.1. STILL ONE LIST: widening it widens this gate and nothing else, and there is no
+# second "wider" set to keep in step.
+# ★ The three prod-arm specs that FAIL today — `arrival-shape`, `comeback-precedence`,
+# `garden-path-finishes` — are deliberately NOT in it. All three wait for a real race, all three are
+# red, and a gate that is red on arrival is one nobody believes. It runs against `playwright.prod.config.js`, the PRODUCTION arm
 # (PROD-ARM-1): one process, the server serving the built client and the API on one origin, which is
 # what a user actually gets. The dev arm is not run here — it tests a different artefact.
 #
