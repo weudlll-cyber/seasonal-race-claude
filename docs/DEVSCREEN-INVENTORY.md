@@ -742,3 +742,95 @@ edit. It is named here and in the backlog row so the decision is somebody's rath
 is the key of a control **here** (in `autoScaleConfig`, a floor for every racer) **and** of a
 different control in the Racer Editor (per racer type). Same name, two stores, two scopes. See
 *Duplicates* at the end.
+
+---
+
+# 13 · SURFACE CLASSES (`SurfaceClassManager.jsx`) — advanced tier
+
+A CRUD manager over the palette a track paints its ground from. Stored on the server. **This is the
+one section whose control count is not a fixed number**, and the inventory says so rather than
+picking one.
+
+**2 fixed controls, plus the selected generator's schema (3–8 more).**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Display name | `label` (per class) | — | yes | **MATCHES** |
+| Generator | `generatorId` (per class) | `particle` for a new class | yes | **MATCHES** |
+| *…the chosen generator's fields* | `config.<key>` | per generator | no | **MATCHES** |
+
+★ **The generator fields are RENDERED FROM A SCHEMA, not written out.** `GENERATORS[id].configSchema`
+in `surface-effects/registry.js` drives the form, so the controls change when the generator does:
+
+| Generator | Fields | Count |
+| --- | --- | --- |
+| `particle` | `color`, `sizeMin`, `sizeMax`, `lifetimeFrames`, `spawnProbability`, `drift`, `gravity` | 7 |
+| `cloud` | `color`, `startSize`, `endSize`, `lifetimeFrames`, `spawnProbability`, `driftDirection` | 6 |
+| `splash` | `color`, `count`, `sizeMin`, `sizeMax`, `lifetimeFrames`, `spawnProbability`, `gravity`, `spreadAngle` | 8 |
+| `line` | `color`, `thickness`, `lifetimeFrames` | 3 |
+
+So the card renders **5 controls at its thinnest and 10 at its widest**, and **24 schema fields exist
+across the four generators** (14 distinct names, `color` and `lifetimeFrames` appearing in all four).
+For the totals at the end of this document the card is counted as **2 + 7 = 9**, the `particle` case,
+because that is what a new class opens with; the range is stated here so the number is not read as
+exact.
+
+**Verdict MATCHES for all of them**, and the reason is structural rather than one trace per field: a
+schema-driven form cannot name a key its generator does not read, because the same `configSchema` the
+form renders from is what the generator reads its parameters out of. That is the strongest
+match-guarantee on the screen and it is worth naming as such.
+
+★ **None of the generator fields has a tooltip** — the schema carries a key, a label, a range and a
+default, and no description. That is 7 undescribed controls in the default case; see the
+no-explanation count at the end.
+
+---
+
+# 14 · EXPORT RACE CONFIG (`ConfigExportSection.jsx`) — advanced tier
+
+**0 controls.** The card is a read-out and two buttons: the world hash (`world-hash`), a deviation
+banner, an unsimulatable banner, and the export action. Nothing here writes a config key.
+
+Counted as a section with zero controls rather than left out, because "which sections hold knobs" is
+one of the things a reader of this document will want to know.
+
+---
+
+# 15 · SYSTEM (`SystemSettings.jsx`) — advanced tier
+
+**0 controls.** Four tooltips and no knobs: export, import, reset and a read-only build panel. The
+one `<input>` in the file is a hidden `type="file"` that the Import button clicks — a file picker, not
+a setting, and it is not counted.
+
+★ **Its four tooltips are the most precise on the screen** about what an action touches — the import
+is described as round-tripping every localStorage key, the reset as wiping every key and re-seeding
+two of them. Noted as the standard the rest of the screen's copy could be held to; nothing is
+proposed.
+
+---
+
+# 16 · USER MANAGEMENT (`UserManagementSection.jsx`) — admin only
+
+Server-backed account administration. No config keys: everything here is a field of a user record or
+of a create-user form.
+
+**8 controls.**
+
+| Control | Field | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Team (per existing user) | `team` | — | no | **MATCHES** |
+| Role (per existing user) | `role` | — | no | **MATCHES** |
+| Reset password (per existing user) | — (transient) | — | no | **MATCHES** |
+| New user — username | `username` | — | yes | **MATCHES** |
+| New user — password | — (transient) | — | yes | **MATCHES** |
+| New user — role | `role` | `operator` | yes | **MATCHES** |
+| New user — team (picker) | `team` | — | yes | **MATCHES** |
+| New user — new team name | `team` | — | yes | **MATCHES** |
+
+All eight are consumed by the users routes on the server. ★ **The last two are a pair writing ONE
+value**: the picker chooses an existing team or "New team", and the name field appears only in the
+second case. Both end up as the account's `team`. Listed under *Duplicates* at the end as a
+deliberate pair rather than a defect.
+
+★ **The three per-user controls have no tooltip**; the five in the create-user form all do. The
+tooltip on the role picker is the only place on the screen that states what the two roles see.
