@@ -981,6 +981,15 @@ are in PART TWO with what closed them; these are the ones still standing.
       proxy choice (Caddy, or nginx plus certbot) and a decision on where `RA_DATA_DIR` lives.
       **His word plus a purchase.** See [DEPLOY-NOTES.md](DEPLOY-NOTES.md) §173.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it NEEDS HIS WORD — it is not work.**
+      Re-checked at the tree: `racearena.example.com` appears in exactly two places, neither of them
+      a running origin — **`.github/workflows/deploy.yml.disabled:39`** (inside a comment listing
+      this very blocker) and **`docs/DEPLOYMENT.md`** three times. Nowhere is it a real value.
+      ★ **And the code half is genuinely ready.** `scripts/configure.mjs` exports `withPublicOrigin`,
+      which writes the real origin into a gitignored `docker-compose.override.yml` — so there is
+      nothing in the repository to edit when the domain exists. What is missing is a domain, a proxy
+      choice and a decision about where `RA_DATA_DIR` lives: **his word plus a purchase.**
+
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
       `<dataRoot>/migrations.json`, applies only pending ids, and REFUSES to run any id twice.
@@ -1027,6 +1036,12 @@ happens only after development is finished. Every entry below is harmless while 
 becomes a real question the moment it is not. Recorded 2026-08-04 (CAMERA-ANCHOR-TRUTH-1); the
 measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.md) §10.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and still a MEASUREMENT rather than a task.**
+      The command exists: **`package.json:13`** (the 2026-09-02 verdict says `:11`; the line moved)
+      runs **`scripts/data-export.mjs`**, which is present. Nothing here is unbuilt.
+      ★ The row records **what must travel** when the migration happens, and it closes when the
+      migration happens — which waits on the public address above, not on anything in the tree.
+
 - [ ] **`deploy.yml.disabled` cannot run — four independent blockers, and it is now DE-REGISTERED
       too** *(**verify:** `ls .github/workflows/deploy.yml.disabled && ls scripts/deploy.sh` — **still
       open while the first succeeds and the second fails**; re-confirmed 2026-08-23, and note it also
@@ -1042,11 +1057,22 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `ls .github/workflows/deploy.yml.disabled` succeeds and `ls scripts/deploy.sh` fails, exactly as the entry predicts. All four blockers stand.
 
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN by its own verify command, run today.**
+      `ls .github/workflows/deploy.yml.disabled` **succeeds**; `ls scripts/deploy.sh` **fails** with
+      "No such file or directory" — which is exactly the condition the row states keeps it open.
+      Blocker (2) therefore still holds, and the file is still kept on purpose as the record of an
+      intent.
+
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** `racearena.example.com` is still the only value anywhere — it appears in `deploy.yml.disabled:39` and three times in `docs/DEPLOYMENT.md`, and nowhere as a real origin. Waiting on a real public address.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is the same subject as the public-address
+      row above.** Re-grepped today: `racearena.example.com` is still the only value anywhere —
+      `deploy.yml.disabled:39` and three times in `docs/DEPLOYMENT.md` — and nowhere a real origin.
+      Waiting on the same purchase.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
