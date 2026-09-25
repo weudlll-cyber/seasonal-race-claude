@@ -83,7 +83,7 @@ down while this branch is checked out** and is put back on the rename branch at 
 | temp data created | **4** e2e data directories, all removed. ★ **102 pre-existing ones were left alone** — they are not this chain's; see PROD-BROWSER-1 §6 |
 | ★ your race store | ★ **untouched** — `races.sqlite` still stamped **Sep 17 17:19**, before this chain began |
 | instrumentation in the real tree | ★ **none, at any point.** Every sabotage was applied in the detached probe |
-| left in place on purpose | `client/test-results/` and `client/playwright-report/` — they hold the **screenshot of the `arrival-shape` failure** handed over below |
+| ~~left in place on purpose~~ — ★ **REMOVED 2026-09-25** | `client/test-results/` and `client/playwright-report/` were kept for the **screenshot of the `arrival-shape` failure**. That screenshot no longer exists: Playwright clears `test-results` on every run and keeps artefacts only for FAILURES, so the passing runs of 2026-09-25 erased it. Both directories are deleted; they were gitignored and held one file each, 521 KB in total. |
 
 ### ★★ WHAT IS RED, AND WHY IT IS MEANT TO BE
 

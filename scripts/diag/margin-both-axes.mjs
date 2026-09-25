@@ -45,6 +45,7 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
   formatIdentity,
+  RT,
 } from "../lib/raceDriver.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
@@ -83,6 +84,24 @@ const OUT = arg("out", join(tmpdir(), "mar"));
 const TAG = arg("tag", MARGIN === null ? "ship" : `m${MARGIN}`);
 const FROM_U = Number(arg("from", "0.10"));
 
+// ── --body-ratio ── THE SHAPE ARM, RUN-LOCAL AND NEVER WRITTEN ANYWHERE (ROCKET-SHAPE-TRUTH-1) ───
+//
+// WHAT IT DOES: overrides the swept racer type's `bodyFillY` in the IN-MEMORY registry, for the
+// duration of this process only, so a shape can be measured without editing a shipped value. The
+// registry object comes from the driver's own `RT`, so this is the same instance `buildRace` reads
+// at `raceDriver.mjs:372`; nothing is persisted and no file is written.
+//
+// ★ IT VARIES THE LONG AXIS ONLY. `bodyFillX` is left alone, so `bodyFillNarrow = min(X, Y)` does
+//   not move and the arm isolates the along-track axis — which SPRITE-PREMISE-1 established is the
+//   one axis the rocket is exceptional in, and the axis this residual is measured along.
+//
+// ★★ AND IT IS NOT A SHIPPABLE KNOB. `bodyFillX/Y` are MEASUREMENTS of the artwork, not settings:
+//   `docs/RACER_DATA_MODEL.md` defines them as the opaque bounding box of the sheet, union over all
+//   frames, to three decimals. A ratio reached by editing the number describes a body the sprite
+//   does not have. This flag answers "what WOULD the residual be at that shape" — getting there
+//   means redrawing the sheet, and `scripts/audit-sprite-crops.mjs` is what compares the two.
+const BODY_RATIO = arg("body-ratio", null);
+
 const CFG =
   MARGIN === null
     ? DEFAULT_CAMERA_CONFIG
@@ -98,6 +117,21 @@ const CFG =
       };
 
 const geo = new Map(loadTracks().map((g) => [g.id, g])).get(TRACK);
+
+// The arm is applied HERE and not at the flag, because the racer type to override is the TRACK'S
+// own default and the track is only resolved on the line above.
+if (BODY_RATIO !== null) {
+  if (!geo) throw new Error(`--body-ratio: track "${TRACK}" did not resolve`);
+  const typeId = geo.defaultRacerTypeId ?? "horse";
+  const cfg = RT.getRacerType(typeId)?.config;
+  if (!cfg) throw new Error(`--body-ratio: no racer type "${typeId}"`);
+  const x = cfg.bodyFillX;
+  cfg.bodyFillY = +(x * Number(BODY_RATIO)).toFixed(6);
+  console.log(
+    `[arm] ${TRACK}/${typeId}: bodyFillX ${x} held, bodyFillY -> ${cfg.bodyFillY} ` +
+      `(ratio ${Number(BODY_RATIO).toFixed(4)}) — in memory only, nothing written`
+  );
+}
 if (!geo) {
   process.stderr.write(`no track ${TRACK}\n`);
   process.exit(1);

@@ -718,7 +718,34 @@ rather than a threshold nobody has found yet.**
       Reasoning from the racer-type constants gave a wrong answer in both directions when it was
       tried on 2026-09-01. Go through `computeBodyNarrowRef`, or measure `drawnBodyLengthPx` off a
       running race with `scripts/diag/sprite-premise.mjs`. The rule's documented home is
-      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md). This is ALONG-RESIDUAL-1's P1 and it is unstarted.
+      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md).
+      ★★ **MEASURED 2026-09-25 — [ROCKET-SHAPE-TRUTH-1](../reports/evolution/ROCKET-SHAPE-TRUTH-1.md).
+      The row STAYS OPEN; measuring is not deciding, and no value is recommended here.**
+      ★★ **THE LEVER IS NOT A SETTING.** `bodyFillX/Y` are a MEASUREMENT of the artwork —
+      [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md):232-253, the opaque bounding box of the sheet, union
+      over every frame, alpha >= 10, three decimals, under the owner's rule of 2026-09-02. **A ratio
+      reached by editing the number describes a body the sprite does not have.** Getting to any shape
+      below means REDRAWING THE SHEET, after which the value is re-measured rather than chosen;
+      `scripts/audit-sprite-crops.mjs` is what compares the two, and it is wired into no gate.
+      ★★ **AND IT CANNOT REACH THE TARGET.** Swept over the full physical bracket at **N=30 per cell**
+      — today's **2.8813** down to the duck's own **1.0000**, which is the shape river-run already
+      scores 29 with — space-sprint's `residual0` goes **446 -> 166**. A **63% cut, and a 5.7x gap
+      still survives.** The ratio is not sufficient; SPRITE-PREMISE-1's other finding carries the
+      rest, and it is not a sprite property: space-sprint's heading runs `|ux| 0.354` against
+      river-run's 0.951, so a diagonal road is bounded by the frame's 720 px height instead of its
+      1280 px width.
+      ★ **THE MEASUREMENT IS CHAOTICALLY SENSITIVE.** `bodyFillY` 0.801 gives 463; 0.801001 gives 446
+      — **one part in 800,000 moves it 3.7%.** Differences of a few percent between arms are noise.
+      ★★ **THERE IS NO PICTURE TO COMPARE.** The arm holds `bodyFillX`, so the narrow-axis
+      normalisation that sizes the drawn sprite never moves; `bodyFillLong` reaches only
+      `drawnBodyLengthPx` (`raceCore.js:214`), the engine's MODEL of body length, and the draw path
+      reads no `bodyFill` at all. **A shape arm changes no drawn pixel** — the same trap
+      `displaySize` sets, in different clothes.
+      ★ **What a change WOULD cost, established rather than assumed:** `engine-reach --check` puts
+      `RocketRacerType.js` in the race hull, and `verify --premerge --dry` on a one-digit probe
+      selects **all four fingerprints and `golden-races`**.
+      ★ **For his eye:** space-sprint, Quick Test seed **9**, `quiet`, about **35.4 s** — the tightest
+      mid-race shot, where the rocket is biggest on screen. This is ALONG-RESIDUAL-1's P1 and it is unstarted.
       **verify:** `node scripts/diag/margin-both-axes.mjs --track=space-sprint --seeds=30` — the
       `residual0` figure it prints is the gate.
 
