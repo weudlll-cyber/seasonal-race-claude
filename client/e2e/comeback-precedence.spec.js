@@ -33,16 +33,28 @@ import { ensureTrackGeometriesCached } from './appReady.js';
 // never turn an ordinary hold-elapsed cut into a false claim of an interrupt.
 const INSIDE_THE_HOLD_MS = 7500;
 
-// Chosen from `scripts/diag/comeback-beats.mjs` — a race whose plan casts a comebacker who climbs
-// and whose shot the harness confirms is taken (space-sprint seed 2: written #9@resolve 0.7,
-// shown #9@0.6001). The earlier pin (Garden Path seed 41000) drifted: the plan cast no comebacker
-// at that seed on any of the ten tracks, so the shot could not fire and the spec failed on a
-// fixture hole, not on the mechanism. Re-pinned 2026-09-26 by NIGHT-2026-09-26 PIECE 3.
+// ★★ THE FIXTURE IS VALIDATED IN THE BROWSER, AND IT HAS TO BE. This pin has now drifted TWICE,
+// each time for a different reason, and the second reason is the lesson worth keeping:
+//
+//   1. Garden Path seed 41000 — the plan cast no comebacker at that seed on any of the ten tracks.
+//      A plain fixture hole. Re-pinned 2026-09-26 by NIGHT-2026-09-26 PIECE 3.
+//   2. Space-sprint seed 2, chosen from `scripts/diag/comeback-beats.mjs` — and it failed too.
+//      ★ A HARNESS DIAG CANNOT VALIDATE A BROWSER FIXTURE. The diag races 40 SYNTHETIC racers;
+//      the Quick Test races 20 REAL ones — and in this project A RACER'S NAME IS PHYSICS
+//      (`stablePairBit` hashes `r.name`). The same seed through those two doors is TWO DIFFERENT
+//      RACES with two different casts. The diag confirmed a comebacker in ITS race, and the
+//      browser's race at that seed casts none.
+//
+// SO THIS SEED WAS CHOSEN BY RUNNING THE BROWSER (COMEBACK-THROUGH-THE-SAME-DOOR, 2026-09-26).
+// `client/e2e/comeback-cast-probe.spec.js` reads the cast out of the DIRECTOR DIAG panel of a real
+// Quick Test. Over twelve seeds, seven cast a comebacker in the browser and ALL SEVEN cut to it;
+// the five that cast none produced no comeback shot. Seed 1 is one of the seven.
+// ★ IF THIS PIN EVER NEEDS MOVING AGAIN, MOVE IT WITH THAT PROBE, not with the headless diag.
 //
 // If the race simply produces no comeback at all the spec still says so and fails, rather than
 // passing vacuously.
 const TRACK = /Space Sprint/;
-const SEED = '2';
+const SEED = '1';
 
 test('the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE', async ({
   page,

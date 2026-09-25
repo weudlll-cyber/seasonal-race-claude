@@ -1073,6 +1073,32 @@ are in PART TWO with what closed them; these are the ones still standing.
       `reports/evolution/MORNING-2026-09-26.md` under NEEDS HIS WORD. Full evidence:
       [COMEBACK-PRECEDENCE-REPIN-1](../reports/evolution/COMEBACK-PRECEDENCE-REPIN-1.md).
 
+      ★★ **AND THAT CONCLUSION DID NOT SURVIVE THE SAME DAY — COMEBACK-THROUGH-THE-SAME-DOOR,
+      2026-09-26. THE CAMERA IS FINE. The fixture was wrong one level deeper, and so was the method
+      that chose it.**
+      ★ **The confound:** `comeback-beats.mjs` races **40 synthetic racers**; the Quick Test the spec
+      drives races **20 real ones** — and a racer's NAME is physics here. The same seed through those
+      two doors is TWO DIFFERENT RACES. The diag confirmed a comebacker in ITS race; the browser's
+      race at seeds 2, 3 and 5 casts **none**, so there was never a shot to take.
+      ★ **Read in the browser, from an observable that already existed** — the DIRECTOR DIAG panel's
+      authored role, which comes from `racePlanController.getHeroRoles()`. Nothing was added to the
+      product. **Twelve seeds swept: SEVEN cast a comebacker and ALL SEVEN were cut to; the five that
+      cast none produced no shot. Perfect correlation, 12 of 12.**
+      ★★ **So a comeback shot can and does occur in an ordinary race** — in 7 of 12 seeds on
+      space-sprint. The open owner question the night named is **WITHDRAWN**: the browser's director
+      does not decline the shot.
+      ★ **Re-pinned to space-sprint seed 1**, browser-validated, fixture only — no assertion touched —
+      and the lesson is in the spec's header: a harness diag cannot validate a browser fixture.
+      `client/e2e/comeback-cast-probe.spec.js` is the instrument, kept and opt-in.
+      ★ **WHAT REMAINS RED, and it is a different thing from what this row has said twice:** the
+      PRECEDENCE SIGNATURE only. Over three runs the shot fired 3/3 and never cut out of a
+      `LEAD_CHANGE` 3/3; two of the three cut at **7846** and **7824** ms — **inside** the real
+      8000 ms hold gate, so both beat it, but **outside** the spec's deliberately tighter 7500 ms
+      margin. The camera is not deterministic from the race seed, so which state precedes the shot
+      and how long it had been held move between runs of one fixture. **Whether that margin is right
+      is an assertion change and was not made.** Full evidence:
+      [COMEBACK-THROUGH-THE-SAME-DOOR](../reports/evolution/COMEBACK-THROUGH-THE-SAME-DOOR.md).
+
 ## Before the VPS migration
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
