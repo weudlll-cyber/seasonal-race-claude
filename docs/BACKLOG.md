@@ -767,26 +767,61 @@ Neither subsumes the other and both were already open.
 
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
-- [ ] ★ **SEASON SCORING — parked on a decision nobody has made. (Two rows until 2026-09-25: this
-      and "Season archive + reset", which is the same subject and is folded in here.)**
-      **The DB half is DONE**, and that is not in question: outcomes are persisted in a real database
-      — `server/src/races/raceStore.js:64,72` (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own
-      handle and its own file) — and served back by `server/src/routes/races.js:62,121,140`.
-      **What is missing is not code, it is a POINTS RULE.** Standings, an archive and a reset all
-      need somebody to say what a season is and what a result is worth, and nobody has. Until that
-      exists there is nothing to build, which is why this is parked rather than open work.
+- [ ] ★★ **PERIOD EVALUATION — COMMISSIONED BY THE OWNER, 2026-09-25. It replaces "season scoring",
+      which is not what he wants.** *(Three rows until 2026-09-25: this, "Season archive + reset" —
+      folded in 2026-09-25 and CLOSED with it, since a period that is chosen by its dates needs
+      neither an archive nor a reset — and the standings half of the old row.)*
 
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — the DB half is DONE, the standings half is
-      not.** This row states two things and only one is still true.
-      **DONE:** outcomes are persisted, in a real database — `server/src/races/raceStore.js:64,72`
-      (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own file so the races are not one
-      `rm sessions.sqlite` from gone) — and served back by `server/src/routes/races.js`: POST at
-      `:62`, a paged GET at `:121`, GET by short key at `:140`. Built by RACE-SAVE-3 / RACE-STORE-2,
-      2026-09-06.
-      **NOT DONE:** no season standings are computed anywhere. "season" occurs **once** in the whole
-      store and there is no standings code on the server.
-      **The row now claims the standings only.**
+      **WHAT IT IS.** A table, over a PERIOD the user chooses, of the races that were run in it. Not
+      a season with a beginning, an end, an archive and a reset — a period, evaluated on demand.
+      **The table counts NAMES**, not racers, not players and not entries: the same name appearing in
+      two races is one row with two results behind it.
 
+      ★★ **QUICK TESTS DO NOT COUNT. This is a hard requirement, not a preference** — a table that
+      mixes throwaway test races into a standing would be worse than no table.
+
+      ★★ **AND THAT REQUIREMENT IS NOT SATISFIABLE TODAY — established at the tree 2026-09-25, and
+      this is the finding the work has to start from.** **A stored race carries nothing that says
+      whether it was a Quick Test.** The `races` table's columns are listed at
+      `server/src/races/raceStore.js:96-160` and none of them is a mode, a source or a flag; the two
+      shared tables it references, `rosters` and `racer_types`
+      (`server/src/races/raceStore.js:86-94`), hold `id` and `content` and nothing else. The client
+      does not send one either: `toServerPayload` (`client/src/modules/raceHistory.js:135-144`)
+      forwards `entry.inputs` unchanged, and Quick Test differs from a normal start only in the
+      values it puts INTO those inputs — a generated name set and an auto-filled field
+      (`client/src/screens/SetupScreen/SetupScreen.jsx:999-1056`). **So the tell would have to be a
+      guess about names, and a guess is not a requirement met.** ★ **The first piece of this work is
+      therefore to make a stored race SAY what it was**, and everything already stored is
+      unclassifiable — rows are immutable by database trigger
+      (`server/src/races/raceStore.js:167-170`), so history cannot be back-filled either.
+
+      ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
+      the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation
+      rather than baked in. **NO NUMBERS ARE ADOPTED HERE.** A 10-8-6-5-4-3-2-1 ladder was offered on
+      2026-09-25 and **was NOT adopted**; it is recorded only so a later reader does not mistake it
+      for a decision that was taken. Writing any ladder into this row would be the same mistake.
+
+      ★ **WHAT ALREADY EXISTS, so the work is not re-derived.** The storage half is done and is not
+      in question:
+      - Outcomes are persisted in a real database — `server/src/races/raceStore.js:64,72`
+        (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own handle and its own file) — and served
+        back by `server/src/routes/races.js`: POST at `:62`, a paged GET at `:121`, GET by short key
+        at `:140`.
+      - **The races are already team-scoped**, so an evaluation is already answering for one team and
+        no other: `server/src/routes/races.js:127` and `:142`. See the **TENANCY** row for the
+        boundary that governs this.
+      - **Finish time is already indexed** — `CREATE INDEX races_by_team ON races(team_normalized,
+        finished_at DESC)` at `server/src/races/raceStore.js:162`, which is exactly the shape a
+        period query needs: one team, ordered by when the race ended. ★ *(Address corrected: the
+        commission named `:158-162`; at the tree `:158-159` are the `results` and `winners` columns
+        and the index is the single line `:162`.)*
+      - **NOT DONE:** no standings are computed anywhere. "season" occurs **once** in the whole store
+        and there is no evaluation code on the server.
+
+      ★ **SEQUENCING, so this is not built twice.** The controls this needs — the period, the points
+      rule, whatever selects what counts — belong in the **reorganised dev screen**, which is
+      `B-UX2`, commissioned the same day. Building them into today's dev screen means building them
+      into the thing `B-UX2` exists to replace. **`B-UX2`'s inventory comes first.**
 - [ ] ★ **TENANCY — what is scoped and what is not. (Two rows until 2026-09-25: this and
       "Per-tenant localStorage namespace or server-side data isolation", folded in here as one
       subject.)**
