@@ -353,17 +353,23 @@ describe('★ `inputs` and raceIdentifier.js name the same set of inputs', () =>
 // closes, so it gets its own assertions.
 describe('RACE-SOURCE-1 — the marker survives from the race payload to the server body', () => {
   it('the entry carries the source the race was started with', () => {
-    const e = buildHistoryEntry(aParsedResult({ race: { ...aParsedResult().race, raceSource: 'quick-test' } }));
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'quick-test' } })
+    );
     expect(e.raceSource).toBe('quick-test');
   });
 
   it('★ it sits beside the outcome, NOT inside `inputs` — how a race started is not an engine input', () => {
-    const e = buildHistoryEntry(aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } }));
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } })
+    );
     expect(e.inputs).not.toHaveProperty('raceSource');
   });
 
   it('and it reaches the server body', () => {
-    const e = buildHistoryEntry(aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } }));
+    const e = buildHistoryEntry(
+      aParsedResult({ race: { ...aParsedResult().race, raceSource: 'race' } })
+    );
     expect(toServerPayload(e).raceSource).toBe('race');
   });
 
