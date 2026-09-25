@@ -1,23 +1,28 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-25
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Derived on **2026-09-25** from PART ONE's **six** rows. Where the two disagree, **the backlog wins** —
-and the date above is how a reader tells at a glance whether this has gone stale again.
+Re-derived on **2026-09-25, after the owner's decisions of that day**, from PART ONE's **seven** rows.
+Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
+whether this has gone stale again.
 
-★★ **WHY IT WAS REBUILT, because the failure is the interesting part.** The previous version was the
-harvest of 2026-09-24: a page assembled BESIDE the backlog rather than from it. Within a day the
-backlog went from 32 open rows to six, and this page still listed eleven items under "needs his word"
-— among them the race identifier, the track backgrounds, the render fingerprint and the naturalness
-envelope, all four already settled. **One page said six and the other said something else**, which is
-how the owner came to be told "32 open" on a morning when it was not true. That is the same disease
-the backlog itself was cured of the day before, one level up.
+★★ **WHY IT WAS REBUILT, because the failure is the interesting part.** The version before
+2026-09-25 was the harvest of 2026-09-24: a page assembled BESIDE the backlog rather than from it.
+Within a day the backlog went from 32 open rows to six, and this page still listed eleven items under
+"needs his word" — among them the race identifier, the track backgrounds, the render fingerprint and
+the naturalness envelope, all four already settled. **One page said six and the other said something
+else**, which is how the owner came to be told "32 open" on a morning when it was not true. That is
+the same disease the backlog itself was cured of the day before, one level up.
 
 ★ **The rule that follows from it:** the OPEN section below is PART ONE, one line per row, pointing at
 the backlog for the detail. Nothing is added here that the backlog does not carry.
 
+★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
+now **EMPTY** — every question it held was answered, dropped or turned into commissioned work that
+day. The list below therefore contains no questions at all: **all seven rows are work.**
+
 ---
 
-## 0 · THE OPEN LIST — all six, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all seven, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -27,12 +32,19 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
-3. **Season scoring.** Parked on a decision nobody has made — the database half is built; what is
-   missing is a points rule.
-4. **Tenancy.** Races are team-scoped; tracks, brands, racers and player groups are not.
+3. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
+   the user chooses, counting NAMES. Quick Tests must not count, and **nothing stored today says
+   whether a race was one** — that finding is where the work starts. The points rule is
+   dev-screen-configurable and **no numbers are adopted**.
+4. **Tenancy — the boundary is stated (2026-09-25), the work is not done.** PER TEAM: brands, player
+   groups, team-created tracks. SHARED: the shipped tracks and the racer types. Races are scoped
+   today; tracks, brands, racers and player groups are not. Preparation, not a defect.
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+   The agreed next step is an **inventory** of every section, control and value; no layout is
+   designed, and the existing inventory covers one section of 23.
 
 → [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
