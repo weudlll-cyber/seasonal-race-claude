@@ -1523,6 +1523,58 @@ already-settled questions.
       its own (the period, the points rule). They belong in the screen this row produces, so this
       row's inventory comes first.
 
+      ★★ **THE INVENTORY IS TAKEN — DEVSCREEN-STOCKTAKE, 2026-09-25. The agreed next step is DONE and
+      the row STAYS OPEN: the reorganisation itself is untouched, and no layout is designed.**
+      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) now covers **the whole screen** instead of one
+      section. The section list came from `DevScreen.jsx`'s `SECTIONS` registry — what the screen
+      MOUNTS — and a reachability closure found **24 files reachable under `sections/` and 0 not**, so
+      the folder and the mount graph agree.
+
+      ★★ **206 CONTROLS.** This row was written against *"30+ tunable values"*; the screen carries
+      nearly **seven times** that. **And the shape matters more than the total:** one section holds
+      **77 of the 206**, three hold **134** between them, and five hold one control or none. By the
+      project's own line, **the biggest section is COSMETIC** — 77 controls change the picture, not
+      the race, while the race is tuned by about 60 in two and a half cards.
+
+      ★ **Verdicts: 194 MATCHES · 9 MISLEADING · 3 SUSPECTED DEAD · 0 UNTRACED.** Traced from source
+      only; no race was run, and every control whose magnitude needs one is on a list in the document
+      that nothing acted on.
+
+      ★★ **THE NINE MISLEADING, NAMED HERE because a knob that lies is worse than a dead one — it gets
+      turned and then trusted. NOT FIXED: each is its own decision, and this stock-take changed no
+      source file.**
+      - **Default Race Duration** (Race Defaults) — read only where the track has no geometry, which
+        cannot start a race; every path that can start one ignores it.
+      - **Display Size (px)** (Racer Editor) — setting it turns auto-scaling OFF and changes
+        `physicalSpriteSize`, which feeds the starting grid. The tooltip says only "sprite size in
+        pixels". *(The behaviour is settled — `B-UX4` was dropped 2026-09-25. What is open is that the
+        control does not say it.)*
+      - **Enabled** (Auto-Scale) — the tooltip opens *"Disabled by default"*; it ships `true`.
+      - **Bonus active until** and **P-Controller starts** (Dynamics) — both tooltips state
+        *"Default: 67%"*; they ship 0.75 and 0.55.
+      - **The four director weights** (Camera Advanced) — the group blurb describes a pool of competing
+        events and says mandatory states are unweighted. Neither is true: the accept is a per-offer
+        coin flip on ONE candidate, eligibility decides ~90% of selections, and the endgame exception
+        is weighted too.
+
+      ★★ **THE THREE SUSPECTED DEAD, NAMED:** `autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all
+      in **Race Defaults**. Searched uncapped across the whole repository including the snake-case
+      spellings; every hit is the declaration, the control, or one test fixture. **They are the only
+      dead controls on the screen** — all 143 keys in the six config-backed tuning sections have a
+      behavioural product reader.
+
+      ★ **One structural cause worth keeping:** five of the nine MISLEADING are a claim about a NUMBER
+      that drifted. `check-config-claims` holds DOCUMENTS to stating no config values; **tooltips are
+      source and outside it**, and 38 tooltips state a default with nothing checking them.
+
+      ★ **One name collision:** `minTargetScreenPx` is a control in **Auto-Scale** (a floor for every
+      racer) and a different control in the **Racer Editor** (per racer type) — two settings, one name,
+      two stores, two scopes.
+
+      ★ **`B-UX3`'s raw material, counted and not written:** **59 of the 206 controls have no
+      explanation anywhere**, and **45 of those 59 are in two sections**. The screen is not uniformly
+      undocumented; it has two holes.
+
       **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
       work:**
 
