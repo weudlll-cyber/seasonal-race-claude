@@ -136,12 +136,17 @@ collisions, storage edge cases, fullscreen and sprites.
 
 **2 · The 0.75 decisive phase from SHIP-THE-NIGHT**, still owed his eye — *"He chose the value; he has
 not seen it run."*
+★ **NO BACKLOG ROW BACKS THIS.** `docs/BACKLOG.md` does not carry the subject at all, so it is open
+on this page alone. Recorded rather than resolved: giving it a row is a change nobody asked for, and
+deleting a thing his eye is genuinely owed would be worse.
 → [SHIP-THE-NIGHT.md](../reports/evolution/SHIP-THE-NIGHT.md):55
 ★ **Address corrected 2026-09-25**: this row pointed at `reports/night/SHIP-THE-NIGHT.md`, which does
 not exist. The report is under `reports/evolution/`.
 
 **3 · `archive/front-group` (`87a08af4`)** — the one camera branch of four genuinely not in master.
 → `docs/TAGS.md:622`
+★ **NO BACKLOG ROW BACKS THIS EITHER** — it lives in `docs/TAGS.md` and nowhere else. Same treatment
+and same reason as the row above.
 
 ### Closed on 2026-09-25
 

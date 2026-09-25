@@ -899,8 +899,9 @@ are in PART TWO with what closed them; these are the ones still standing.
 
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
-- [ ] ★★ **`arrival-shape.spec.js`, `comeback-precedence.spec.js` and `garden-path-finishes.spec.js`
-      FAIL on the production arm.** Found while MEASURING the arm's per-spec cost, not while
+- [ ] ★★ **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
+      arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
+      green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
       investigating them — see
       [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
       **They pre-date the branch that found them**, and **they are outside the gate's curated set**
