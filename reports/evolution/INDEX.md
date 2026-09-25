@@ -446,6 +446,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   Stage 2 (300 per arm) not run — the shape is described at Stage 1, and PIECE 3's browser-gate
   coverage measurement had to be fit into the same night.
 
+- [JUDDER-TRUTH-1.md](JUDDER-TRUTH-1.md) — **what the gate grades, what it should grade, and where
+  the picture actually steps.** Measurement only. ★ Over **61,429 frame steps on ten tracks the
+  1280 px bar is never approached** — worst track 66%, median frame 0.6% — and §1.2's headless maxima
+  above the bar do NOT reproduce in the browser. ★ The PAN channel shows nothing anomalous anywhere;
+  its biggest local ratios (64.9x) sit on pans of one screen pixel, so a local rule with no floor
+  finds STILLNESS. ★ The ZOOM channel has one recurring event — 0.1198-0.1259 ln, LEADER_ZOOM,
+  24.2-26.3 s, on five of ten tracks. ★ Ends with five Quick-Test-reproducible moments, driven on the
+  owner's own path because the harness races are not his.
+
 - [THREE-FAILING-SPECS-1.md](THREE-FAILING-SPECS-1.md) — **why the three prod-arm specs fail, each
   run three times ALONE.** Triage only; nothing fixed, no assertion changed, nothing added to a gate.
   ★ `garden-path-finishes` **passes 3/3 alone** — its failure belongs to SUITE CONTEXT, not the spec.

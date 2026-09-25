@@ -271,6 +271,13 @@ re-checked.
 8. *"The definitive N=300 on the two arms that survived the screen"* — run; CHASE-BUILD-1 §3.
 9. *"Nothing measures MOTION, only per-frame values"* — closed by FINISH-MOTION-1; the render
    fingerprint reaches the ending.
+   ★★ **THIS ONE WAS JUDGED WRONG, and the correction is dated 2026-09-25 rather than written over
+   the harvest.** FINISH-MOTION-1 reaches the ENDING, which is one phase; the subject is whole-race
+   and is an OPEN row in [BACKLOG.md](BACKLOG.md). Measured today
+   ([JUDDER-TRUTH-1](../reports/evolution/JUDDER-TRUTH-1.md)): something does measure motion, and that
+   is worse than nothing — the shipped check grades Δoffset against a **1280 px** bar that
+   **61,429 frame steps across ten tracks never approach** (worst 66%, median 0.6%). The real signal
+   is in the zoom channel, one recurring event in LEADER_ZOOM at 24-26 s on five of ten tracks.
 
 **The eight PREMISE GONE:**
 

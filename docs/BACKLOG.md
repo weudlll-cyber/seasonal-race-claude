@@ -557,6 +557,22 @@ nothing is designed here, no key is added, and no change is implied.
       longer waits on anything.
       ★ **"Pan displacement" is dropped from the wording** — it named the old measure, and keeping it
       would re-propose the thing being replaced.
+      ★★ **MEASURED 2026-09-25 — [JUDDER-TRUTH-1](../reports/evolution/JUDDER-TRUTH-1.md). The row
+      STAYS OPEN; measuring is not fixing, and no bar is proposed here.**
+      **The bar is unreachable.** Ten tracks, seed 9, shipped: across **61,429 frame steps** the
+      largest single-frame Δoffset is **845.4 px = 66% of the 1280 bar**, and the median frame is
+      **0.6%** of it. ★ The one reading that pointed the other way — §1.2's headless maxima up to
+      2,332 px — **does not reproduce in the browser**, and the browser wins.
+      **The PAN channel shows nothing anomalous on any track** (maxima 0.021-0.052 frame widths), and
+      its largest local ratios are an artefact worth knowing about: **64.9x, 64.2x and 36.5x on pans
+      of about one screen pixel.** A local rule with no floor finds stillness, not jolts.
+      **The ZOOM channel carries the whole signal, and it is ONE recurring event:** the five largest
+      steps in the sweep are **0.1198-0.1259 ln**, all in **LEADER_ZOOM between 24.2 s and 26.3 s**,
+      on five of ten tracks — about 80 px of frame-edge movement in one frame, which §2.1 identifies
+      as the field guarantee retiring.
+      ★ **Five owner-reproducible moments are listed in §3**, driven on the Quick Test path, because
+      the harness builds a different race (field 40 and a synthetic roster against Quick Test's 20)
+      and its frame numbers are not his.
 
       **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** no motion-continuity instrument exists — `scripts/check-*.mjs` has no such guard. It is tonight's **piece 12**, which had not started when this verdict was written.
 
