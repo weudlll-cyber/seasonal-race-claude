@@ -80,6 +80,81 @@ invented for this document.
 
 ---
 
+# 1 · RACE DEFAULTS (`RaceDefaults.jsx`) — operator tier
+
+Backing store: `KEYS.RACE_DEFAULTS`, defaults in `DEFAULT_RACE_DEFAULTS` (`defaults.js`). One
+card-level **Reset Defaults** button restores the whole block. Every control carries an
+`InfoTooltip`. **COSMETIC/RACE split:** this block is in neither `RACE_RELEVANT_CONFIG_KEYS` nor
+`COSMETIC_CONFIG_KEYS` — it is not part of the config world the fingerprint hashes at all. It is
+*operator defaults*, and three of its eight controls turn out to reach nothing.
+
+**8 controls.**
+
+| Control | Config key | Shipped default | Tooltip | Verdict |
+| --- | --- | --- | --- | --- |
+| Race Action (pills: Quiet / Medium / Wild) | `raceActionStage` | `'quiet'` | yes | **MATCHES** |
+| Default Race Duration (pills: 30 / 60 / 90 / 120) | `duration` | 60 | yes | ★ **MISLEADING** |
+| Default Number of Winners (Podium Spots) | `winners` | 3 | yes | **MATCHES** |
+| Max Players — Closed Tracks | `maxPlayersClosed` | 40 | yes | **MATCHES** |
+| Max Players — Open Tracks | `maxPlayersOpen` | 100 | yes | **MATCHES** |
+| Auto-advance to Result Screen after race | `autoAdvance` | false | yes | ★ **SUSPECTED DEAD** |
+| Delay (seconds) | `autoAdvanceDelay` | 5 | yes | ★ **SUSPECTED DEAD** |
+| Sound effects | `soundEffects` | true | yes | ★ **SUSPECTED DEAD** |
+
+**Readers, for the four that have one.** `raceActionStage` is normalised at the boundary
+(`normalizeRaceActionStage`) into the race payload and travels with the race to the engine, and it is
+one of the nine identifier inputs. `winners` reaches the payload and the result screen slices the
+finish order by it. `maxPlayersClosed` / `maxPlayersOpen` are read by `fieldCap.js` (`fieldCapFor`),
+which is the only limit on a field size.
+
+### ★ MISLEADING — "Default Race Duration"
+
+It **is** read, which is why it is not dead: `SetupScreen.jsx` seeds `raceSettings.duration` from it,
+and `effectiveOpenTrackDuration` falls back to that value. **But it falls back to it only when
+`openNaturalMaxSec` is 0**, which happens only when the selected track has no `pathLengthPx` — that
+is, no geometry. A track with no geometry is **refused at start** (`selectedGeometryReady` gates
+`canStart`, QUIET-FAILURES-1). So the one path that consumes this value cannot produce a race.
+
+In every case that does start a race the value is ignored: a **closed** track's length is
+`laps × pathLengthPx / normalSpeed` and the duration is derived, never chosen; an **open** track uses
+the operator's own slider, or `trackDefaultSeconds(...)` from the track. The value also travels into
+the race payload as `race.duration`, and **nothing reads that either** — `RaceScreen` and
+`ResultScreen` never look at it, and the history entry's `duration` is the measured `elapsedTime`.
+
+The label says *"Default Race Duration"* and the tooltip *"Default length of a race in seconds"*, of
+settings *"applied to every new race"*. The effect is: applied to no race that can be started.
+**Written down and left exactly as it is** — what to do about it is a decision, not a stock-take.
+
+### ★ SUSPECTED DEAD — the three at the bottom of the card
+
+`autoAdvance`, `autoAdvanceDelay` and `soundEffects` are written by their controls and read by
+nothing.
+
+**What was searched:** the whole repository, uncapped, for `autoAdvance`, `autoAdvanceDelay`,
+`soundEffects`, and the snake-case spellings `auto_advance` and `sound_effects`, across `.js`,
+`.jsx`, `.mjs`, `.json` and `.md`, excluding only `node_modules`, `.git` and build output. **Every
+hit is one of three things:** the declaration in `defaults.js`, the control in `RaceDefaults.jsx`, or
+one unrelated string in `DevScreen.raceAction.test.jsx`'s fixture. There is no consumer on the client,
+none on the server, none in `shared/` and none in `scripts/`.
+
+They are recorded as **SUSPECTED** rather than flatly dead for one reason only: absence of a hit is
+not proof of absence of a reader, since a value could in principle be reached through a dynamic key.
+Nothing in this codebase does that with this store — `useStorage(KEYS.RACE_DEFAULTS, …)` hands out a
+plain object and every other consumer names its field — so the suspicion is thin. It is kept because
+the rule is that only a total absence earns a flat DEAD, and "I could not construct the dynamic
+access" is not the same as "it cannot exist".
+
+★ **Auto-advance is a pair, and the pair is consistent:** the Delay stepper is rendered only when
+`autoAdvance` is on, so a dead toggle hides a dead stepper. Neither is reachable by a race.
+
+### Also in this block, with no control at all
+
+`language: 'en'` sits in `DEFAULT_RACE_DEFAULTS` and has **no DevScreen control and no reader** —
+searched the same way as the three above. It is not counted as a control below, because it is not one;
+it is noted here so a later reader of `defaults.js` does not go looking for the missing UI.
+
+---
+
 # 8a · RACE TUNING → DYNAMICS (`DynamicsTuningSection.jsx`)
 
 *This part predates the stock-take and is kept as it stood — it was written on 2026-07-23 and
