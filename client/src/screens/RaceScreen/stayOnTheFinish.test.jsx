@@ -70,7 +70,9 @@ describe('STAY-ON-THE-FINISH-1 — the default hands over, as it always has', ()
 
     expect(setTimeoutFn).toHaveBeenCalledTimes(1);
     // …and it is scheduled at the camera ending, not at some second number of this feature's own.
-    expect(setTimeoutFn.mock.calls[0][1]).toBe(endingOnRaceScreenMs({ holdMs: 1000, pauseMs: 2000 }));
+    expect(setTimeoutFn.mock.calls[0][1]).toBe(
+      endingOnRaceScreenMs({ holdMs: 1000, pauseMs: 2000 })
+    );
     setTimeoutFn.mock.calls[0][0]();
     expect(navigate).toHaveBeenCalledWith('/results');
   });
@@ -178,7 +180,10 @@ describe('STAY-ON-THE-FINISH-1 — the screen really makes these decisions', () 
       join(here, '..', 'DevScreen', 'sections', 'RaceDefaults.jsx'),
       'utf8'
     );
-    const defaults = readFileSync(join(here, '..', '..', 'modules', 'storage', 'defaults.js'), 'utf8');
+    const defaults = readFileSync(
+      join(here, '..', '..', 'modules', 'storage', 'defaults.js'),
+      'utf8'
+    );
     expect(control, 'the Delay stepper is still rendered').not.toContain('autoAdvanceDelay');
     // `defaults.js` may NAME it in the comment that records its removal; what must be gone is the key.
     expect(defaults, 'autoAdvanceDelay is still a shipped default').not.toMatch(
@@ -188,7 +193,13 @@ describe('STAY-ON-THE-FINISH-1 — the screen really makes these decisions', () 
 
   it('★ the tooltip states no config value — the drift the stock-take counted 38 of', () => {
     const control = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'DevScreen', 'sections', 'RaceDefaults.jsx'),
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        'DevScreen',
+        'sections',
+        'RaceDefaults.jsx'
+      ),
       'utf8'
     );
     const tip = control.slice(control.indexOf('On: the results screen appears'));
