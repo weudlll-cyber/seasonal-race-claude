@@ -1022,3 +1022,99 @@ heuristic in §4).
   on its original evidence and has **not** been independently re-attacked.
 - The **19 binary blobs** above 2 MB remain unscanned.
 - The second run of §10, over pieces 5, 7 and 9, is below and is a separate pass.
+
+---
+
+## §2.9–2.11 AND §3.5–3.6 — THE UNFINISHED SUB-SECTIONS, COMPLETED 2026-09-27
+
+### 2.11 — what is reachable in a production build
+
+**Established from the built artefact, not from intent.** `npm run build` was run fresh and the
+bundle (`dist/assets/index-*.js`, 940,609 bytes) was searched.
+
+| | present in the production bundle? |
+| --- | --- |
+| source maps (`*.map` in `dist/assets`) | ★ **NO — 0 files.** Not shipped. |
+| the dev vite plugin (`vite-plugin-ra-build`, `makeMtimePoll`) | ★ **NO — 0 occurrences.** |
+| `?viewerprobe=1` | **YES** |
+| `raceInputsProbe`, `holdProbe` | **YES** |
+| `DIRECTOR DIAG`, `COMEBACK DIAG`, `governor-diag-hud` | **YES** |
+| the Dev Panel | **YES** |
+
+★★ **AND THE QUESTION THAT MATTERS: is the developer screen reachable by an ordinary signed-in
+user? YES — and it is deliberate.** `/dev` is wrapped in `ProtectedRoute` (`client/src/App.jsx:97-104`)
+which requires a session but **not** an admin role. Inside, `DevScreen.jsx:191-194` computes
+`effectiveView = isAdmin ? view : 'operator'` and filters the registry to the **7 operator-tier
+sections**; the 9 advanced ones are not rendered for a non-admin.
+
+**Severity: LOW, and here is the reasoning rather than the label.** An operator is *meant* to reach
+Race Defaults, Tracks, Branding and Player Groups — that is their job. What an operator is not meant
+to reach is the advanced tuning, and that filter is **client-side**. But the values those sections
+write are **localStorage**, not server state: a determined operator who defeated the filter would be
+changing their own browser's race settings, which §3.4 has already established the stored race
+records. **No server-side authority rests on this filter** — the server's own boundary is the 16
+admin-classified routes of §1.4, kept honest by `routePolicyDrift.test.js`.
+
+★ **So group A stays empty, and now it stays empty for a reason that was measured rather than
+skipped.** That was the one sentence in this report most able to mislead its reader, and it no
+longer rests on an unrun check.
+
+### 2.9 — unbounded result sets: **PARTIAL**
+
+| route module | limit/offset present |
+| --- | --- |
+| `races` | **4** occurrences — the paged list |
+| `tracks` | 2 |
+| `playerGroups` | 1 |
+| `surfaceClasses`, `brands`, `racers`, `seedNotices` | **0** |
+
+★ **This is a keyword count, not a verdict, and it is reported as one.** Four modules have no
+pagination vocabulary at all, which for a single-operator install with a handful of tracks, brands
+and racer types is not a finding — the collections are bounded by what an operator creates by hand.
+**What was NOT done** is opening each GET handler to confirm the collection cannot grow without
+bound. `seedNotices` returns its rows unpaged, which is correct for a notice list. **Left as
+PARTIAL in UNKNOWN.**
+
+### 3.5 — non-determinism with an outside handle: **the separation IS complete, for the seeded case**
+
+Searched the seven modules of the engine hull — `raceCore`, `racePlanner`, `raceGovernor`,
+`raceStep`, `raceBehavior`, `rowLayout`, `durationModel`:
+
+| | count |
+| --- | --- |
+| `Date.now` | **0, in all seven** |
+| `performance.now` | **0, in all seven** |
+| `Math.random` | **3 sites, every one a `seed <= 0` fallback** — `racePlanner.js:48`, `:147`, `:567`, each of the shape `seed > 0 ? mulberry32(seed) : Math.random` |
+
+★★ **So the result is a pure function of the seed whenever a seed is present**, and the wall clock
+does not enter the engine at all. The camera's frame-driven `rawDt` (`RaceScreen/index.jsx:937`,
+`:1588`) sits entirely outside these modules, which is what makes the picture vary while the race
+does not — the separation the comeback thread inferred is now **confirmed by enumeration**.
+
+★ **The one handle that remains** is `racePlanSeed <= 0`, which takes the `Math.random` branch. That
+path is not reachable from the product since SEED-REAL-RACE-1 made Start Race draw a seed, and an
+empty Quick-Test field draws one too (`quickTestSeed.js:97`). **Not a live handle; named because the
+branch exists.**
+
+### 3.6 — re-running a race from its identifier: ★★ **VERIFIED, AND IT WORKS**
+
+This was named the most valuable unfinished check in the chain. It was run against **a real stored
+race from the owner's own database** — `W57FQA`, seed 9, 40 racers, stage `quiet` — exported with
+its roster, its racer-type blob and its whole `worldConfigs`, and replayed through
+`scripts/diag/replay-stored-race.mjs`:
+
+```
+POSITIONS IDENTICAL:     40 of 40
+FINISH TIMES IDENTICAL:  40 of 40
+★ IDENTICAL — every position and every finishing time in milliseconds.
+```
+
+★★ **So the mitigation B1 leans on is real.** A disputed race CAN be re-run and the engine
+reproduces it exactly — not approximately, and not only in finishing order, but to the millisecond
+on all forty racers.
+
+**What this does and does not prove.** It proves the ENGINE reproduces a stored record from that
+record's own inputs. It does **not** prove that the record describes the race the operator watched —
+if a result were fabricated and posted (B1), replaying it would reproduce the fabrication faithfully.
+★ **The replay settles "did the engine do this", never "did this happen".** That distinction is the
+whole of what an operator can lean on, and it is stated here rather than left to be assumed.
