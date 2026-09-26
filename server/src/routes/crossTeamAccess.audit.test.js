@@ -21,31 +21,31 @@
 //   so it is findable as a record of a 2026-09-26 state rather than as a requirement.
 // ============================================================
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import express from "express";
-import request from "supertest";
-import { existsSync, unlinkSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import os from "node:os";
-import { randomUUID } from "node:crypto";
-import { createRaceStore } from "../races/raceStore.js";
-import { createRacesRouter } from "./races.js";
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import os from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { createRaceStore } from '../races/raceStore.js';
+import { createRacesRouter } from './races.js';
 
-const TEAM_A = "Alpha Racing";
-const TEAM_B = "Beta Racing";
+const TEAM_A = 'Alpha Racing';
+const TEAM_B = 'Beta Racing';
 
 let store, filePath, scratchDir;
 
 beforeEach(() => {
   filePath = join(os.tmpdir(), `racearena-audit-${randomUUID()}.sqlite`);
-  scratchDir = mkdtempSync(join(os.tmpdir(), "racearena-audit-"));
+  scratchDir = mkdtempSync(join(os.tmpdir(), 'racearena-audit-'));
   store = createRaceStore(filePath);
 });
 
 afterEach(() => {
   // Every scratch record this audit created is deleted, as the brief requires.
   store.close();
-  for (const suffix of ["", "-wal", "-shm"]) {
+  for (const suffix of ['', '-wal', '-shm']) {
     if (existsSync(filePath + suffix)) unlinkSync(filePath + suffix);
   }
   rmSync(scratchDir, { recursive: true, force: true });
@@ -54,60 +54,55 @@ afterEach(() => {
 function appWithUser(authUser) {
   const a = express();
   a.use(express.json());
-  a.use("/api/races", (req, _res, next) => {
+  a.use('/api/races', (req, _res, next) => {
     req.authUser = authUser;
     next();
   });
-  a.use("/api/races", createRacesRouter({ store }));
+  a.use('/api/races', createRacesRouter({ store }));
   return a;
 }
 
-const userA = { id: "ua", username: "ada", role: "operator", team: TEAM_A };
-const userB = { id: "ub", username: "bob", role: "operator", team: TEAM_B };
+const userA = { id: 'ua', username: 'ada', role: 'operator', team: TEAM_A };
+const userB = { id: 'ub', username: 'bob', role: 'operator', team: TEAM_B };
 
 function aRace(overrides = {}) {
   return {
-    clientRaceId: "audit-race-1",
-    finishedAt: "2026-09-26T10:00:00.000Z",
+    clientRaceId: 'audit-race-1',
+    finishedAt: '2026-09-26T10:00:00.000Z',
     identifierVersion: 1,
-    buildId: "audit123",
-    geometryId: "garden-path",
-    racerTypeId: "beetle",
+    buildId: 'audit123',
+    geometryId: 'garden-path',
+    racerTypeId: 'beetle',
     racePlanSeed: 4242,
-    raceActionStage: "wild",
+    raceActionStage: 'wild',
     racePlanEnabled: true,
     targetDurationSec: 200,
-    names: ["Ada", "Grace"],
+    names: ['Ada', 'Grace'],
     worldSchemaVersion: 2,
     worldConfigs: {},
     elapsedSec: 100,
-    results: [{ position: 1, name: "Grace" }],
-    winners: ["Grace"],
-    raceSource: "race",
+    results: [{ position: 1, name: 'Grace' }],
+    winners: ['Grace'],
+    raceSource: 'race',
     ...overrides,
   };
 }
 
-describe("DELIVERY-CLEAN-1 §2.4 — can team B reach team A’s races?", () => {
-  it("★ B cannot LIST A’s races", async () => {
-    await request(appWithUser(userA)).post("/api/races").send(aRace());
+describe('DELIVERY-CLEAN-1 §2.4 — can team B reach team A’s races?', () => {
+  it('★ B cannot LIST A’s races', async () => {
+    await request(appWithUser(userA)).post('/api/races').send(aRace());
 
-    const asA = await request(appWithUser(userA)).get("/api/races");
-    const asB = await request(appWithUser(userB)).get("/api/races");
+    const asA = await request(appWithUser(userA)).get('/api/races');
+    const asB = await request(appWithUser(userB)).get('/api/races');
 
-    expect(
-      asA.body.races.length,
-      "A cannot see his own race — the probe is broken",
-    ).toBe(1);
+    expect(asA.body.races.length, 'A cannot see his own race — the probe is broken').toBe(1);
     expect(asB.body.races.length, "B CAN LIST A's races").toBe(0);
   });
 
-  it("★ B cannot READ A’s race by its short key — and is told 404, not 403", async () => {
-    const stored = await request(appWithUser(userA))
-      .post("/api/races")
-      .send(aRace());
+  it('★ B cannot READ A’s race by its short key — and is told 404, not 403', async () => {
+    const stored = await request(appWithUser(userA)).post('/api/races').send(aRace());
     const key = stored.body.shortKey;
-    expect(key, "no short key came back — the probe is broken").toBeTruthy();
+    expect(key, 'no short key came back — the probe is broken').toBeTruthy();
 
     const asA = await request(appWithUser(userA)).get(`/api/races/${key}`);
     const asB = await request(appWithUser(userB)).get(`/api/races/${key}`);
@@ -118,62 +113,55 @@ describe("DELIVERY-CLEAN-1 §2.4 — can team B reach team A’s races?", () => 
     expect(asB.status, "B CAN READ A's race by key").toBe(404);
   });
 
-  it("★ B cannot file a race INTO A’s team by putting the team in the body", async () => {
+  it('★ B cannot file a race INTO A’s team by putting the team in the body', async () => {
     await request(appWithUser(userB))
-      .post("/api/races")
+      .post('/api/races')
       .send(aRace({ team: TEAM_A }));
 
-    const asA = await request(appWithUser(userA)).get("/api/races");
+    const asA = await request(appWithUser(userA)).get('/api/races');
     expect(asA.body.races.length, "B filed a race into A's history").toBe(0);
   });
 
-  it("a user with NO team sees an empty page rather than everybody’s races", async () => {
-    await request(appWithUser(userA)).post("/api/races").send(aRace());
+  it('a user with NO team sees an empty page rather than everybody’s races', async () => {
+    await request(appWithUser(userA)).post('/api/races').send(aRace());
 
     const asNobody = await request(
-      appWithUser({ id: "un", username: "nemo", role: "operator", team: null }),
-    ).get("/api/races");
+      appWithUser({ id: 'un', username: 'nemo', role: 'operator', team: null })
+    ).get('/api/races');
 
     expect(asNobody.body.races).toEqual([]);
   });
 });
 
-describe("DELIVERY-CLEAN-1 §2.4 — the SIX modules with no team scoping, recorded as fact", () => {
+describe('DELIVERY-CLEAN-1 §2.4 — the SIX modules with no team scoping, recorded as fact', () => {
   // These routes carry no team concept at all, which §1.4 established by counting occurrences of
   // `team` in each route module: tracks 0, surfaceClasses 0, playerGroups 0, brands 0, racers 0,
   // seedNotices 0, races 20. There is nothing to test per route here — the absence IS the state —
   // so what is pinned is the COUNT, against the same files, so that a later change to any of them
   // reaches this audit.
-  it("★ six of seven data route modules contain no occurrence of `team` (2026-09-26)", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { fileURLToPath } = await import("node:url");
-    const { dirname, join: j } = await import("node:path");
+  it('★ six of seven data route modules contain no occurrence of `team` (2026-09-26)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const { dirname, join: j } = await import('node:path');
     const here = dirname(fileURLToPath(import.meta.url));
     const counts = {};
     for (const f of [
-      "tracks",
-      "surfaceClasses",
-      "playerGroups",
-      "brands",
-      "racers",
-      "seedNotices",
-      "races",
+      'tracks',
+      'surfaceClasses',
+      'playerGroups',
+      'brands',
+      'racers',
+      'seedNotices',
+      'races',
     ]) {
-      const src = readFileSync(j(here, `${f}.js`), "utf8");
+      const src = readFileSync(j(here, `${f}.js`), 'utf8');
       counts[f] = (src.match(/\bteam\b/g) ?? []).length;
     }
     const unscoped = Object.entries(counts)
       .filter(([, n]) => n === 0)
       .map(([f]) => f);
     expect(unscoped.sort()).toEqual(
-      [
-        "brands",
-        "playerGroups",
-        "racers",
-        "seedNotices",
-        "surfaceClasses",
-        "tracks",
-      ].sort(),
+      ['brands', 'playerGroups', 'racers', 'seedNotices', 'surfaceClasses', 'tracks'].sort()
     );
     expect(counts.races).toBeGreaterThan(0);
   });
