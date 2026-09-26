@@ -52,10 +52,14 @@ day. The list below therefore contains no questions at all: **all seven rows are
    ordinary race. The night's "the browser declines the shot" question is **WITHDRAWN**: its three
    fixtures cast no comebacker in the browser either, because the diag that chose them races
    40 synthetic racers where the Quick Test races 20 real ones. Re-pinned to a browser-validated
-   fixture. What remains red is the **precedence signature only** — two of three runs cut just
-   inside the real hold gate but outside the spec's tighter margin, and the camera is not
-   deterministic from the race seed. Whether that margin is right is an assertion change and has
-   not been made.
+   fixture. ★ **The margin is repaired (2026-09-26): the spec now derives the hold gate from the
+   product's own timing function instead of a hardcoded number nobody decided. No run has failed on
+   it since.** ★★ **What keeps this row open is a bigger finding:** on one fixture, two runs of five
+   produced **no comeback shot at all**. Accepting a comeback offer is a coin flip at a shipped
+   weight, drawn from the camera's own random stream, which is not seeded from the race — so a spec
+   that asserts the shot occurs cannot pass reliably, and what to do about that is a decision, not a
+   margin. ★ The reusable lesson is now in the spec's header: the camera is not determined by the
+   race seed, so a browser spec must assert a property, never a sequence.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired

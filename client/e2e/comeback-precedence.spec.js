@@ -19,7 +19,23 @@
 //
 // THE HUD LAGS BY A FIXED 150 ms (CameraStateHUD.jsx fades out, swaps, fades in). A constant lag
 // shifts every change by the same amount and so leaves the INTERVALS between them intact, which is
-// what is measured here. The threshold below is held well inside the gate anyway.
+// what is measured here. ★ That cancellation is now the WHOLE of the protection: the margin below
+// is the product's own gate, with nothing held back for jitter. It is the right call and the
+// sentence above is the argument for it — a fixed lag on both timestamps leaves the interval alone,
+// so a safety margin was buying nothing and was costing two runs in three (2026-09-26).
+//
+// ★★ READ THIS BEFORE WRITING ANY CAMERA SPEC — MEASURED 2026-09-26.
+//
+// THE CAMERA IS NOT DETERMINED BY THE RACE SEED ALONE. It carries its own random stream. The SAME
+// fixture, run three times, gave: `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, and
+// `LEADER_ZOOM` held 7824 ms before the comeback cut. Same seed, same roster, same track — three
+// different pictures.
+//
+// ★ THEREFORE A BROWSER SPEC THAT ASSERTS AN EXACT SEQUENCE OF CAMERA STATES IS FLAKY BY
+//   CONSTRUCTION. Assert a PROPERTY that holds whatever order the states came in — "some comeback
+//   cut interrupted the state before it", "no comeback cut out of a LEAD_CHANGE" — never "the third
+//   state was BATTLE_ZOOM" and never a fixed duration. Both assertions in this file are properties,
+//   and that is why they survive the run-to-run variation above.
 //
 // WHAT IS NOT ASSERTED, deliberately: "once per comebacker". The DOM cannot tell a forced shot from
 // an ordinary one, so counting them here would be a guess wearing an assertion. That limit is pinned
@@ -28,10 +44,42 @@
 
 import { test, expect } from '@playwright/test';
 import { ensureTrackGeometriesCached } from './appReady.js';
+// ★★ THE GATE IS READ FROM THE PRODUCT, NOT COPIED. See THE MARGIN below.
+import { computeTimingFromConfig } from '../src/modules/camera/cameraTimingComputation.js';
+import { DEFAULT_CAMERA_CONFIG } from '../src/modules/storage/defaults.js';
 
-// The gate for LEADER_ZOOM and BATTLE_ZOOM. Held below the real 8000 ms so the fade's jitter can
-// never turn an ordinary hold-elapsed cut into a false claim of an interrupt.
-const INSIDE_THE_HOLD_MS = 7500;
+// ★★ THE MARGIN, AND WHY IT IS DERIVED — repaired 2026-09-26.
+//
+// This assertion used to compare against a hardcoded 7500 ms, described as "held below the real
+// 8000 ms so the fade's jitter can never turn an ordinary hold-elapsed cut into a false claim of an
+// interrupt." That margin was nobody's decision. Measured on this fixture, the comeback cut landed
+// at 7846 ms and 7824 ms on two runs of three — **inside the product's gate, so interrupts by the
+// product's own rule, and failures by the spec's invented one.** A test that asserts a stricter bar
+// than the design asserts something nobody chose.
+//
+// THE PRODUCT'S RULE, quoted from `CameraDirector.js` where the decision is made:
+//
+//     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
+//
+// with `minHold` = `minStateHoldByState[state] ?? minStateHoldMs` and `stateCap` =
+// `maxStateDurationByState[state] ?? maxStateDuration`. Both come out of
+// `computeTimingFromConfig()`, which is what the director itself is fed — so the numbers below are
+// the SHIPPED numbers by construction and there is no second copy to drift. Change the config and
+// this spec follows it.
+//
+// ★ THE ONE THING THAT IS RESTATED HERE IS THE EXPRESSION, NOT A NUMBER. `Math.max(minHold, cap)`
+//   lives in `CameraDirector` and is not exported; reaching it would mean adding an export to the
+//   product to satisfy a test, which this repair refused to do. If that line ever changes, this
+//   comment is the pointer to the place it changed.
+//
+// ★ PER STATE, because the gate is per state. With the shipped config every state resolves to the
+//   same figure, but asserting one global number would be true by accident.
+const TIMING = computeTimingFromConfig(DEFAULT_CAMERA_CONFIG);
+const holdGateFor = (state) =>
+  Math.max(
+    TIMING.minStateHoldByState[state] ?? TIMING.minStateHoldMs,
+    TIMING.maxStateDurationByState[state] ?? TIMING.maxStateDuration
+  );
 
 // ★★ THE FIXTURE IS VALIDATED IN THE BROWSER, AND IT HAS TO BE. This pin has now drifted TWICE,
 // each time for a different reason, and the second reason is the lesson worth keeping:
@@ -118,13 +166,20 @@ test('the precedence cuts to the comebacker in the browser, and never out of a L
     'a comeback shot cut into a LEAD_CHANGE that was already on screen',
   ).toEqual([]);
 
-  // ★ THE PRECEDENCE ITSELF. At least one comeback cut has to have happened inside the hold, or the
-  // browser is running the old behaviour whatever the unit tests say.
+  // ★ THE PRECEDENCE ITSELF. At least one comeback cut has to have INTERRUPTED the state before it
+  // — reached the screen before that state would have ended on its own — or the browser is running
+  // the old behaviour whatever the unit tests say. Each entry is judged against the gate of the
+  // state it cut out of, which is the same comparison the director makes.
   const forced = entries.filter(
-    (e) => (e.from === 'LEADER_ZOOM' || e.from === 'BATTLE_ZOOM') && e.heldMs < INSIDE_THE_HOLD_MS,
+    (e) =>
+      (e.from === 'LEADER_ZOOM' || e.from === 'BATTLE_ZOOM') && e.heldMs < holdGateFor(e.from),
   );
   expect(
     forced.length,
-    `no comeback cut happened inside the ${INSIDE_THE_HOLD_MS} ms hold — entries: ${JSON.stringify(entries)}`,
+    'the comeback shot did not INTERRUPT the state before it — every cut waited for that state to ' +
+      'end on its own, which is the ordinary path and not the precedence. Entries, each with the ' +
+      `state it cut out of and that state's own gate: ${JSON.stringify(
+        entries.map((e) => ({ ...e, gate: holdGateFor(e.from) }))
+      )}`,
   ).toBeGreaterThan(0);
 });

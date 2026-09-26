@@ -1099,6 +1099,38 @@ are in PART TWO with what closed them; these are the ones still standing.
       is an assertion change and was not made.** Full evidence:
       [COMEBACK-THROUGH-THE-SAME-DOOR](../reports/evolution/COMEBACK-THROUGH-THE-SAME-DOOR.md).
 
+      ★★ **THE MARGIN IS REPAIRED — 2026-09-26. It now comes from the product instead of from a
+      guess, and it is no longer a source of failure.** The spec compared against a hardcoded
+      7500 ms that nobody decided. The product's rule is
+      `holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap)`
+      (`client/src/modules/camera/CameraDirector.js`, with both inputs out of
+      `computeTimingFromConfig`). The spec now DERIVES the gate from that same function, **per state**
+      because the gate is per state, so there is no copied number to drift; change the config and the
+      spec follows. No assertion's meaning changed and nothing else in the file did.
+      ★ Five runs afterwards: the three that produced a shot held **5781**, **966** and **4471** ms —
+      **no run failed on the margin.** Sabotage proven both ways (inflate the measured holds past the
+      gate → red with the right message; restore → green at 1979 ms).
+
+      ★★ **AND THOSE FIVE RUNS TURNED UP A BIGGER ONE, WHICH IS NOT FIXED AND IS NOT A FIXTURE
+      PROBLEM: THE SHOT DOES NOT HAPPEN ON EVERY RUN OF ONE FIXTURE.** Two of the five produced **no
+      comeback at all** on space-sprint seed 1 — the same seed whose plan casts a comebacker and
+      which the cast probe saw cut to. Across six runs of that fixture the shot occurred in four.
+      ★ **The mechanism is in the open and is deliberate**: a comeback offer is accepted by
+      `_acceptsOffer(weight)` — `random() < weight` — in `CameraDirector.js`, `comebackWeight` ships
+      **0.6**, and the camera's random stream is **not** seeded from the race. So on a fixed fixture
+      the shot is a probabilistic event. *(Four of six is consistent with 0.6 and six runs do not
+      prove it; the mechanism is established from source, the rate is not.)*
+      ★ **What that means for this spec:** it asserts a shot occurs, and the product makes that shot a
+      chance event. **It cannot pass reliably as written**, and the repair for that is a decision
+      — not a margin, not a fixture — so nothing was changed. **The row stays open on this alone.**
+
+      ★★ **THE REUSABLE FACT, MEASURED 2026-09-26 AND WRITTEN INTO THE SPEC'S HEADER WHERE THE NEXT
+      CAMERA-SPEC AUTHOR WILL MEET IT: THE CAMERA IS NOT DETERMINED BY THE RACE SEED ALONE.** One
+      fixture gave `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held
+      7824 ms, `LEADER_ZOOM` held 5781 ms, 966 ms, 4471 ms, `BATTLE_ZOOM` held 1979 ms — and twice,
+      nothing. **A browser spec that asserts an exact SEQUENCE of camera states, or an exact
+      duration, is flaky by construction. Assert a PROPERTY.**
+
 ## Before the VPS migration
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
