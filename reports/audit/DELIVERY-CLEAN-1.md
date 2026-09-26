@@ -518,8 +518,12 @@ COMPARE  scalar fields compared: 14, mismatched: 0
 | `worldConfigs` | yes — the resolved config §3.4 depends on |
 | `fieldSize`, roster and racer-type rows | yes — counts identical after restore |
 
-★★ **No field failed to survive.** Reported as the denominator requires: **14 of 14 scalars
-compared by name, plus five structured fields, plus the two shared tables.**
+★★ **No field failed to survive** — **but this figure was CORRECTED by §10.3 and the first version
+is kept beside it.** As first written: *14 of 14 scalars compared by name, plus five structured
+fields.* The adversarial pass established that `hydrate()` returns **27** fields and that **8 were
+never compared**, including `id`, the content address. The round trip was re-run with every field
+populated: **ALL 27 FIELDS COMPARED, 0 mismatched.** The claim holds; it did not hold as
+originally established.
 
 ### 8.3 The database dump and restore — documented, and it works
 
@@ -913,3 +917,108 @@ The script itself is in this report's evidence, not committed as a guard.
 - **7,123 of 7,131 absolutes are unverified.**
 - 4.3's 159 "other number" candidates were read by eye for the one finding above; they were **not**
   individually adjudicated.
+
+---
+
+## §10 — THE ADVERSARIAL PASS, FIRST RUN (over pieces 1, 2, 3, 6, 8, 11)
+
+Re-read as an opponent. Three "no problem here" claims attacked with fresh commands, **and one of
+them did not survive as stated.**
+
+### 10.1 Attack 1 — *"0 secrets in 30,719 objects"*
+
+**The attack:** the 2 MB blob cap was **my own limit**, disclosed in a caveat but never tested. What
+is above it?
+
+**What it found: 44 unscanned blobs, 423 MB — and 25 of them are TEXT** (23 `.json`, 2 `.ndjson`),
+which is precisely where a secret hides. 19 are images. ★ **So the absence claim, as first written,
+covered the tracked working tree and the small blobs and asserted its own limit as if the limit were
+harmless. It was not: a quarter of a gigabyte of committed JSON had never been looked at.**
+
+**The hole was closed rather than defended.** All 25 text blobs were scanned. The first run returned
+**6 hits** in `docs/internal/current-config-snapshot.json`, a file not tracked at HEAD — and those
+six were **my own false positives**: I had written the AWS pattern under a case-insensitive flag, so
+`AKiAOKQxwOakBGODUQ6U` inside a long base64 payload matched a rule meant for uppercase `AKIA`. The
+**strict, case-sensitive pattern returns 0**.
+
+| | verdict |
+| --- | --- |
+| the claim | **survives** — the text surface is now fully covered, 30,719 objects plus the 25 large text blobs |
+| the claim **as originally established** | ★ **it was not established.** It is re-stated here with the larger denominator. |
+| 19 binary blobs (jpg/png) | still unscanned, and defensible — stated rather than hidden |
+
+### 10.2 Attack 2 — *"no value drift in product source: 163 candidates, all benign"*
+
+**The attack:** §6.2 extracted **numeric** defaults with a single unambiguous value and explicitly
+discarded `min`/`max`. **String and boolean defaults were never swept at all**, so the claim covered
+a class, not the config.
+
+**What it found:** 6 string defaults and 49 boolean defaults with a single value, swept the same way
+across product source. ★ **0 disagreements.** The claim **survives, and is now broader than when it
+was made** — numeric, string and boolean.
+
+### 10.3 Attack 3 — *"nothing lost in the restore round trip"*
+
+★★ **THIS ONE DID NOT SURVIVE, AND IT IS THE MOST USEFUL RESULT IN §10.**
+
+**The attack:** how many fields does `hydrate()` actually return, against the number I compared?
+
+**`hydrate()` returns 27. I compared 19.** Eight were never looked at — and they include **`id`, the
+content address itself**, plus `rosterId`, `racerTypesId`, `racerTypeOverrides`,
+`effectiveRacerTypes`, `worldSchemaVersion`, `targetLaps` and `teamNormalized`. *"Nothing lost"* was
+a claim about the fields I had chosen to name, which is exactly the shape of finding this audit
+exists to catch in other people's work.
+
+**Re-run rather than downgraded.** A second round trip was performed with **every** field populated,
+including the two shared-table blobs and `targetLaps`, then compared key-by-key over the whole
+hydrated object:
+
+```
+stored id=b6b6a17554  fields=27
+BACKUP -> archive   WIPE -> data root deleted   RESTORE -> 1 item
+ALL 27 FIELDS COMPARED. mismatched: 0
+```
+
+| | verdict |
+| --- | --- |
+| the claim | **survives at 27 of 27** |
+| the claim **as originally established** | ★ **DOWNGRADED then restored.** It was true of 19 fields and written as though it were true of the record. |
+
+### 10.2 (cross-checks) — numbers against the numbers they should agree with
+
+| pair | agree? |
+| --- | --- |
+| §1.2 scripts total (281) vs 55 tests + 78 diag + 148 other | **yes**, 281 |
+| §1.2 "148 other" vs 80 invoked + 65 unreferenced + 3 live guards | **yes**, 148 |
+| §1.1 39 documents vs 2 root + 37 docs | **yes** |
+| §1.4 58 routes vs the per-mount column (6+4+11+5+8+11+8+2+3) | **yes**, 58 |
+| §1.3 36 guards vs bare-verify 4 run + 32 skipped | **yes**, 36 |
+| §1.3 36 guards vs premerge 15 run + 21 skipped | **yes**, 36 |
+| §4.1 253 addresses vs 39 paired + 202 unpaired + 4 unresolvable | ★ **262 ≠ 253** — see below |
+| §2.2 6 advisories vs 3 server + 3 client | **yes** |
+| §8 27 hydrate fields vs 19 compared + 8 not | **yes** |
+
+★ **THE ONE DISAGREEMENT, reported as a disagreement and not reconciled away.** §4.1's two runs
+counted **different populations**: the existence pass matched `.js/.jsx/.mjs/.json/.md` citations
+(253), the content pass matched `.js/.jsx/.mjs` only (245 = 39 + 202 + 4). The 8-citation gap is the
+`.json` and `.md` addresses the second pass does not look at. Neither number is wrong; **they are
+answers to different questions and the report should not have presented them in one sequence
+without saying so.**
+
+### 10.4 How many claims were downgraded
+
+**One of three attacked** — 10.3, then restored by re-running the measurement properly. **One of
+nine cross-checked number pairs disagreed**, and the disagreement is explained above rather than
+smoothed over.
+
+★ **A zero here would have been suspicious**, and the brief says so. The pass was real: three fresh
+commands, one broken claim, one arithmetic mismatch, and two of my own regex flags shown to
+manufacture false positives (the `(?i)` on the AWS pattern in 10.1, and the "last backticked symbol"
+heuristic in §4).
+
+### §10 first run — UNKNOWN
+
+- Only **3 of the report's claims** were attacked. Every other "no finding" sentence in §§1–8 stands
+  on its original evidence and has **not** been independently re-attacked.
+- The **19 binary blobs** above 2 MB remain unscanned.
+- The second run of §10, over pieces 5, 7 and 9, is below and is a separate pass.
