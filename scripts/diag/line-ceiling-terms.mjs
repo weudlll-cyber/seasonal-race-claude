@@ -129,10 +129,12 @@ console.log(
   `  room = min of those   ${room.toFixed(2)}   <-- DECIDED BY THE ${toY < toX ? "VERTICAL (Y)" : "HORIZONTAL (X)"} SIDES`,
 );
 console.log(`  ceiling = room/needed ${ceiling.toFixed(5)}  cam.zoom   <-- what the LINE needs NOW`);
-// THE HOLD. RUNIN-HOLD-1 captures the ceiling on the ENGAGEMENT frame and holds it while the hold
-// lasts, so what `_setTargets` receives is not the live value above but the value from the frame the
-// window opened — when the line was at its furthest.
-console.log(
+// THE HOLD — RETIRED. RUNIN-HOLD-1 captured the ceiling on the ENGAGEMENT frame and held it
+// while the hold lasted, so what `_setTargets` received was the value from the frame the window
+// opened rather than the live value above. RETIRE-RUNIN-LEGACY-1 (`becc455c`, 2026-08-22) removed
+// that mechanism and the line that printed it — but left the opening `console.log(` behind, so
+// THIS WHOLE SCRIPT STOPPED PARSING on that day and no one noticed for 36 days, because nothing
+// runs it. Orphan removed 2026-09-27, DELIVERY-CLEAN-1 §10 (second adversarial run).
 console.log(`\nWHAT THAT MEANS FOR THE PICTURE`);
 console.log(
   `  visible world at that zoom   ${Math.round(proj.visibleWorldW(ceiling, CW))} x ` +

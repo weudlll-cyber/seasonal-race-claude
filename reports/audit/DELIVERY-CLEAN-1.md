@@ -1314,6 +1314,14 @@ eleven `--premerge` runs and bare skips are listed there by name. Both run-count
 
 **ESLint 9.39.4**, the linter this repository already configures and runs as two guards
 (`client-lint`, `server-lint`), driven with `--rule '{"no-unused-vars":"warn","no-unreachable":"warn"}'`.
+
+> ★★ **METHOD CORRECTED by §10's second run — read that before trusting this section's command.**
+> The server half was first run as `npx eslint` from `server/`, which **crashes** (`server/` has no
+> eslint of its own, so `npx` fetches a separate copy that fails on the client's react plugin), and
+> **I read its empty warning list as a zero**. The repo's own instrument is
+> `node ../client/node_modules/eslint/bin/eslint.js src`. Re-run with it, **the server result below
+> is confirmed — 0 and 0 — and the sabotage test proves it can fail.** The number stands; the
+> command originally named does not.
 ★ **Chosen over installing a dedicated dead-code tool** because it is already the project's own
 instrument and adds nothing to either manifest.
 
@@ -1581,3 +1589,141 @@ repaired · `REDIRECT` = owns nothing and says so.
 - **The README was not rewritten**, by the judgment stated in 9.4, which the owner may overrule.
 - Whether `docs/API.md`'s remaining 46 undocumented routes **should** be documented is a decision,
   not a measurement, and none was taken.
+
+---
+
+## §10 — ADVERSARIAL, SECOND RUN (over §5, §7 and §9)
+
+Reported separately from the first run, as the brief requires. **Seven attacks. Two landed, one was
+dropped and replaced, four survived.** Every "zero" in those three pieces was attacked by sabotage
+rather than re-read, because a zero produced by an instrument that cannot fail is worthless.
+
+### ★★ HIT 1 — §5's SERVER METHOD WAS AN ERROR READ AS A PASS
+
+**The claim:** "server: 0 unused variables and 0 unreachable branches", by `npx eslint src --rule …`.
+
+**The attack:** seed `const raSabotageUnusedVar = 42;` into `server/src/staticClient.js` and check
+the command reports it.
+
+**What happened: the command printed an `eslint-plugin-react` stack trace and no warnings** — with
+the sabotage in place. `server/` has **no eslint of its own**, so `npx` fetched a separate copy into
+the npm cache, which then crashed on the client's react plugin config. ★★ **I read "no warnings
+printed" as "zero warnings found". That is precisely the failure this report's own evidence standard
+names — a check that cannot answer, counted as a pass — committed by me, inside the audit that
+names it.**
+
+**The repo's own instrument is `node ../client/node_modules/eslint/bin/eslint.js src`** (the
+`server/package.json` `lint` script) — the client's binary, the same borrowing pattern as
+`server-format-check`. Re-run with it:
+
+| | |
+| --- | --- |
+| server, clean tree | **0 unused variables, 0 unreachable** — ★ the conclusion SURVIVES |
+| server, with the sabotage | `175:7 'raSabotageUnusedVar' is assigned a value but never used` — ★ it CAN fail |
+| client half | measured correctly the first time: in `client/` `npx` resolves the **local** eslint, same v9.39.4 |
+
+★ **So §5's server result was right and §5's stated method was wrong.** The number stands; the
+sentence describing how it was obtained does not, and is corrected here rather than in place.
+
+★★ **And the correct instrument found something §5 missed:** `server/src/index.js:34` carried an
+**unused `eslint-disable-next-line no-console` directive**. `no-console` is configured as
+`['warn', { allow: ['warn', 'error'] }]` (`client/eslint.config.js:56`), so the `console.error` it
+guarded was already permitted — the directive was dead and the linter had been saying so. The other
+three disables in the same file guard `console.log` and are live. **Converted to a plain comment so
+the reasoning survives without the dead directive. `server` lint is now silent, exit 0.**
+
+### ★★ HIT 2 — A SCRIPT THAT HAS NOT PARSED FOR 36 DAYS
+
+**The claim:** §7.2 repaired 38 drive-letter defaults across 37 files, and §7.1 admitted that
+**221 of 226 scripts were never executed**. The attack went at that admission: run `node --check`
+over every tracked script, which costs nothing and answers "does this file even parse".
+
+**`scripts/diag/line-ceiling-terms.mjs` does not parse.**
+
+```
+scripts/diag/line-ceiling-terms.mjs:136
+console.log(`\nWHAT THAT MEANS FOR THE PICTURE`);
+                                               ^
+```
+
+★ **First question asked, because the honest answer might have been "I broke it": not mine.** The
+file is not in my §7.2 commit (`93c312e8`), and it fails to parse at `master` as well. **The break
+came from `becc455c` (2026-08-22), "RETIRE-RUNIN-LEGACY-1: the ceiling-and-hold run-in is retired,
+completely"** — the retirement removed the arguments of a `console.log(` that printed the held
+ceiling and **left the opening call behind**. A dangling `console.log(` followed by another.
+
+★★ **So a diagnostic tool has been completely dead for 36 days and nothing noticed, because nothing
+runs these scripts.** That is exactly the hole §7.1 named, and this is the first thing found
+through it rather than merely admitted.
+
+**Repaired:** orphan removed, the comment above it rewritten to say the mechanism is retired and to
+record how the file broke. It now **parses and runs**, producing real output
+(`ice-track, seed 9 — _lineCeiling term by term, at 84883 ms (BATTLE_ZOOM)`).
+★ **All 278 tracked scripts now parse. Before this run, 277 did.**
+
+### DROPPED — attack 6, first attempt
+
+The plan was to cross-check §9's route count by booting the Express app and walking its live layer
+stack. **`createApp()` hung** on a fresh `RA_DATA_DIR` and was killed at 600 s. **Dropped with its
+reason rather than reported as an inconclusive result**, and replaced by 6b below. (It is the
+async-or-network hang class: a probe that awaits app construction needs a timeout and an output
+check, which is how it was caught rather than left running.)
+
+### SURVIVED — the four that held
+
+**Attack 1 · Can §9's address checker fail at all?** Two sabotages into `docs/FAIRNESS.md`:
+`raceCore.js:999999` and `nosuchfile.js`. **Both caught** — dead-line 0 → 1
+(*"raceCore.js has 810 lines"*), dead-file flagged. ★ **So §9's "0 addresses past end of file"
+across 39 documents is a real zero.** File restored; `git diff` clean.
+
+**Attack 4 · Does `docs/README.md` really cover all 37, or did a loose `grep` just find the
+string?** Re-run requiring an actual markdown link target whose basename matches:
+**36 of 36 documents genuinely linked** (37 less the map itself). The weaker claim survives the
+stronger test.
+
+**Attack 5 · Any drive-letter literal left under `scripts/`,** by a different regex than §7.2's?
+**Exactly two**, and they are the two §7.2 named as deliberately not repaired
+(`label-bench-matrix.mjs:40`, `phys-bench-matrix.mjs:63`, both `C:/ra-wt-nanoid`, a worktree with no
+portable default). No third.
+
+**Attack 6b · §9's "9 routers, 59 routes", by a completely different instrument.** §9 counted
+`router.<verb>(` call sites with a regex. 6b reused `routePolicyDrift.test.js`'s own router imports
+and its own recursive `extractRoutes` walk over **live Express layer stacks**, which sees the
+`attachPromoteExport` sub-routes as registered layers rather than as text:
+
+```
+  /api/auth 6   /api/users 4   /api/tracks 11   /api/surface-classes 5   /api/player-groups 8
+  /api/brands 11   /api/racers 8   /api/seed-notices 2   /api/races 3
+  ROUTERS: 9   ROUTES: 58   + /api/health: 1   TOTAL: 59
+```
+
+★ **Exact agreement, 9 and 59, from two unrelated methods** — and `tracks 11`, `brands 11`,
+`playerGroups 8` confirm the "+3 sub-routes each" arithmetic independently. The probe was a
+temporary file in `server/`, deleted immediately; `git status` for `server/` is clean of it.
+
+**Attack 7 · Are §5's 8 "orphaned exports" really unimported?** The worry was re-export barrels,
+`await import()` or string-keyed access hiding a use. **Each of the 8 appears in exactly one file —
+its own — and there are ZERO `export *` barrels and zero dynamic imports anywhere in
+`client/src`, `server/src` or `shared`.** The claim is stronger after the attack than before it.
+
+### One thing found while attacking, recorded as a row rather than repaired
+
+★ **`client/e2e/` is outside the format guard's reach.** `client/package.json`'s `format:check` is
+`prettier --check src` — `e2e/` is not in scope, and `client/e2e/d355-smoke.spec.js` **fails
+prettier today**. Verified pre-existing by stashing my change and re-checking at `master`, so it is
+not something this audit introduced. **Not reformatted**: widening a guard's scope is a decision,
+and reformatting a file CI does not check is churn. Group C row.
+
+### §10 run 2 — UNKNOWN
+
+- **`node --check` is a parse check, not a run.** 278 of 278 now parse; **222 of 226 non-test
+  scripts still have never been executed** by this audit, and a script can parse perfectly and throw
+  on its first line.
+- **Only §5's two "zero" claims and §9's one were sabotage-tested.** The other numbers in those
+  pieces were cross-checked where a second method existed and taken on one method where it did not.
+- **The 122 "recording an absence" and 80 "record document" exclusions in §9.1 were classified by a
+  keyword list**, spot-checked on `defaultTracks.js` and `deploy.sh` but not read one by one. A
+  document that says "removed" about a file that is actually still there would be excused wrongly.
+- Attack 6's first attempt never answered, so **nothing is known about whether the fully-booted app
+  registers routes the router-level walk cannot see** (error handlers, 404 fallbacks, the static
+  client mount).
