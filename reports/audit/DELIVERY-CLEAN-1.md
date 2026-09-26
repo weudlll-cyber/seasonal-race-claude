@@ -513,3 +513,147 @@ recoverable only if the operator has moved the archive off the host, which nothi
   *concurrency* claim is inherited from the driver's documentation rather than demonstrated.
 - **Archive integrity over time** — no checksum is written or verified by the tool, so a silently
   corrupted archive would be discovered on restore.
+
+---
+
+## §6 — REDUNDANCY
+
+Both readings, as the brief requires. Half A is the same truth in two places; Half B is one copy
+where there should be two. **Nothing was de-duplicated, no guard removed, no dependency removed, no
+volume changed.**
+
+### 6.1 — DROPPED, with the reason
+
+A copy-paste detector could not be run. `npx jscpd` refuses non-interactively (*"canceled due to
+missing packages and no YES option"*), and installing it into either `package.json` would add a
+dependency to the tree on an audit branch — a change this chain forbids itself. **No clone detection
+was performed.** Rule 8: a check that cannot answer its question is dropped and the drop is
+reported. This is the largest single gap in §6 and it is stated, not glossed.
+
+★ What this means for the rest of §6: **6.1 and 6.4 (two helpers for one job) are unanswered.** The
+sub-sections below stand on their own evidence and do not borrow from a clone report that does not
+exist.
+
+### 6.2 — The same VALUE in two places: **no genuine drift found in product source**
+
+Method, stated so it can be repeated and criticised: every numeric default in
+`client/src/modules/storage/defaults.js` was extracted (**172 keys with a single unambiguous numeric
+value**, after discarding `0`, `1` and `-1` as too common to be evidence), and the whole tracked
+tree was searched for an **assignment-shaped** restatement — `key: value` or `key = value` — whose
+value **differs** from the owner's.
+
+| pass | candidates | verdict |
+| --- | --- | --- |
+| whole tree | **562** | dominated by TEST FIXTURES — a test constructing a config with a different value is doing its job, not drifting |
+| product source only (no tests, no e2e, no `scripts/`) | **163** | **0 genuine drifts** |
+
+★★ **All 163 product-source hits fall into two classes, and neither is a finding:**
+
+1. **A generic name collision** — the overwhelming majority. `min` and `max` are owned in
+   `defaults.js` by `baseSpeedConfig` (0.00096 / 0.00113), and every slider and effect schema in the
+   tree declares its own `min:` / `max:`. `track-effects/effects/*.js`, `surface-effects/generators/*.js`,
+   `CameraAdvancedSection.jsx`, `DynamicsTuningSection.jsx` and `RacerEditModal.jsx` account for
+   nearly all of them. Same name, different subject — **COINCIDENCE**, in the brief's own
+   classification.
+2. **A default parameter in a pure function's signature** — `innerFramePct = 1` at
+   `client/src/modules/camera/framingRule.js:207,427,479`, `minDrawnFrameFrac = 0` at
+   `client/src/modules/autoSpriteScale.js:112`. These are "the caller must supply it" idioms, not
+   copies of the config.
+
+★ **ONE OBSERVATION WORTH KEEPING, and it is not a drift.** `framingRule.js` defaults
+`innerFramePct` to **1** in five signatures while the shipped config value is **0.7**. Nothing is
+wrong today — every live caller passes the value. But a future caller that omits it gets a framing
+rule that behaves unlike the shipped camera, and the divergence would be silent. **Group C, latent,
+never observed.** Recorded, not changed.
+
+★ **Cross-reference, not double-counted:** comments stating a value are §4.3's subject and §4 was
+not run. Tooltips stating a value are now guarded by `check-tooltip-values`, built by
+NIGHT-2026-09-26 and passing.
+
+### 6.3 — The same rule in two documents: **reduced denominator, stated**
+
+§1.1 established that **19 of 39** top-level documents carry no OWNS line. The brief's method for
+this sub-section is "using the OWNS lines from 1.1", so the method reaches **20 of 39 — 51%**. A
+sweep over half a corpus is not a verdict over the corpus, and no overlap claim is made here.
+
+★ What was observed without a sweep, from the OWNS lines that do exist: `docs/ROADMAP.md` (41 lines)
+declares itself a REDIRECT and owns nothing, which the brief says is correct and not an overlap;
+`docs/DEPLOY-NOTES.md` owns *the GAP between the repository and the owner's wish* while
+`docs/DEPLOYMENT.md` owns *deploying to a public same-origin host* — adjacent subjects with a stated
+division. **No disagreement found between any two OWNS lines that exist.** That is a claim about 20
+documents, not 39.
+
+### 6.5–6.8 — NOT DONE
+
+**6.5** (redundant guards and tests), **6.6** (redundant dependencies), **6.7** (redundant stored
+keys beyond the known `minTargetScreenPx` collision) and **6.8** (redundant scripts) were **not
+performed**. 6.7 and 6.8 both depend on work this pass did not reach — 6.8 needs §7's script-by-
+script read, and 6.7 needs a key sweep of the same shape as 6.2 but over names rather than values.
+
+---
+
+## HALF B — ONE COPY WHERE THERE SHOULD BE TWO
+
+### 6.9 The deployed shape
+
+One service, one host. `docker-compose.yml` defines a single `server` container (§2.10) with
+`restart: unless-stopped` and a `HEALTHCHECK`. **No replica, no failover, and that is a legitimate
+answer for a single-operator product** — written as a stated consequence, not dressed up as a
+defect. When the container stops, the app is down until it restarts or an operator intervenes; the
+data is untouched by that.
+
+### 6.10 The backup and the data — **answered in §8, and answered well**
+
+Repeated here in one line because Half B is where it belongs: **the tool refuses to write the
+archive inside the data root** (`scripts/backup.mjs:186`) and `--out` has no default
+(`:320`). ★ **But "outside the data root" is not "another disk or another host"**, and with the
+compose bind-mounting the data directory out of the repository checkout and no production compose
+existing, the realistic deployment keeps data and archive on one machine. **Group B.**
+
+### 6.11 Recovery without the server
+
+What an operator still has if the server is gone:
+
+| | survives? | address |
+| --- | --- | --- |
+| the device's own race history | **yes** — written locally FIRST, always, by the owner's 2026-09-06 rule | `raceHistory.js:9-14` |
+| a full localStorage export | **yes**, if one was taken — Dev Screen → System | `storage.js:107,144` |
+| a CSV of the history | **yes**, if one was taken | `RaceHistory.jsx` |
+| the team's races from other devices | **no** — those live only on the server |
+
+★ **Whether a period evaluation could be reconstructed from that: NOT ESTABLISHED.** The period
+evaluation is not built (it is an open PART ONE row), so there is nothing to reconstruct and no
+format to test against. Cross-referenced to §8 rather than repeated.
+
+### 6.12 Loss mid-race — **NOT TESTED**
+
+The brief says to establish it by doing it. **It was not done.** What can be said from source
+without the test: the result is written to `sessionStorage` at the finish
+(`RaceScreen/index.jsx:1198`) and to local history from the result screen, so a process death
+**before the last racer crosses** loses the race entirely — there is no partial write. That is a
+source reading, not the test the brief asked for, and it is listed in UNKNOWN as such.
+
+### 6.13 What has no second copy at all
+
+The answer to Half B, in one short list — things whose loss cannot be undone by re-running
+something:
+
+1. **The server database**, if no archive has been taken off the host. Every race stored by another
+   operator's device lives only there.
+2. **Uploaded brand logos and racer sprites** — bytes in the data root, reproducible only by the
+   person who uploaded them.
+3. **Track geometries drawn in the editor** and not exported.
+4. **The operator's own tuning**, if it lives only in one browser's localStorage.
+
+★ Everything else in the repository is re-derivable: the client is built from source, the seeds are
+tracked, and a race whose identifier survives can be re-run — **although §3.6 did not verify that
+last claim**, which is why it is named here and not relied on.
+
+### §6 — UNKNOWN
+
+- **6.1 not run at all** (no clone detector). 6.4 depends on it and is equally unanswered.
+- **6.5, 6.6, 6.7, 6.8 not performed.**
+- **6.3 covers 20 of 39 documents**, by the brief's own method.
+- **6.12 not tested**, only read.
+- **6.2's method cannot see a drifted STRING or a drifted boolean** — it extracts numeric defaults
+  only. A duplicated non-numeric truth would pass this sweep invisibly.
