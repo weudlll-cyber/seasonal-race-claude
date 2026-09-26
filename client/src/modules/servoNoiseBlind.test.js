@@ -24,7 +24,11 @@ const FINISH_T = 2.0;
 const TARGET_DUR_MS = 60_000;
 const N = 40;
 const STEP_MS = 16;
-const TARGET_EPSILON = 0.001; // the setter's own, racePlanner.js:704
+// Kept though unread by code: the prose below names it, and a named value is what that prose is
+// about. ★ Its citation was WRONG until 2026-09-27 — it said racePlanner.js:704, which is a phase
+// check; the constant is at :722 and the comparison that uses it at :752.
+// eslint-disable-next-line no-unused-vars -- documentation of the value under test
+const TARGET_EPSILON = 0.001; // the setter's own, racePlanner.js:722
 
 function makeRacers(count = N) {
   return Array.from({ length: count }, (_, i) => ({

@@ -1305,3 +1305,80 @@ eleven `--premerge` runs and bare skips are listed there by name. Both run-count
   superseded) stays unanswered.
 - Whether any of the 65 unreferenced scripts from §1.2 is genuinely dead is **not established** —
   §1.2 counted references, and a script nothing names may still work.
+
+---
+
+## §5 — DEAD CODE AND DEAD VARIABLES
+
+### 5.1 The tool
+
+**ESLint 9.39.4**, the linter this repository already configures and runs as two guards
+(`client-lint`, `server-lint`), driven with `--rule '{"no-unused-vars":"warn","no-unreachable":"warn"}'`.
+★ **Chosen over installing a dedicated dead-code tool** because it is already the project's own
+instrument and adds nothing to either manifest.
+
+**Its known false-positive classes, stated before the results:** it cannot see a symbol reached by a
+dynamic `import()` or by a string key; it treats a name matching `/^_/u` as intentionally unused by
+this repo's config; and it says nothing about an *exported* symbol nobody imports, which is why 5.3's
+second half needed a separate pass.
+
+### 5.2–5.3 Removals — **4 candidates, 3 removed, 1 kept with its reason**
+
+| where | what | verdict |
+| --- | --- | --- |
+| `arrivalShape.test.js:99` | `const N_LARGE = 100` | **REMOVED** — declared, never read |
+| `raceIdentifierReproduction.test.js:37` | `DEFAULT_CAMERA_CONFIG` in the import list | **REMOVED** — dead import |
+| `stagedComeback.test.js:390` | `const field = buildField({ n: 40 })` in the descent-too-deep test | **REMOVED** — the test never reads it |
+| `servoNoiseBlind.test.js:27` | `const TARGET_EPSILON = 0.001` | ★ **KEPT** — unread by code, but the prose at `:136` names it, and a named value is what that prose is about. Marked with a targeted eslint disable and the reason. |
+
+★★ **AND KEEPING IT FOUND A WRONG ADDRESS THAT §4 COULD NOT SEE.** Its comment cited
+`racePlanner.js:704` — a phase check. `TARGET_EPSILON` is at **`:722`** and the comparison that uses
+it at `:752`. **Corrected.** My §4 checker missed it because the symbol is not backticked, so the
+citation fell into the **202 unpaired** — this is a concrete instance of the blind spot §4 named,
+found from a different direction entirely.
+
+★ **One removal was wrong first time and is worth recording.** I removed the *first* `const field =
+buildField({ n: 40 })` in the file rather than the unused one at `:390` — there are ten identical
+lines — and a test went red. Reverted and redone against the line number. **After the repairs:
+0 eslint warnings, and the four touched test files pass 52 of 52.**
+
+**Server: 0 unused variables and 0 unreachable branches**, before any change.
+
+**Lines: 4 removed across 3 files; 5 added in 1 file** (the kept constant's explanation and disable).
+
+### 5.3 REPORT ONLY — exported symbols with no importer
+
+Never removed: an unimported export may be a seam somebody is meant to use, and removing one is a
+decision. **8 found**, searched across `client/src`, `server/src`, `shared`, `scripts/` and
+`client/e2e`:
+
+| file | symbol(s) |
+| --- | --- |
+| `client/src/modules/autoSpriteScale.js` | `pruneStoredAutoScaleConfig` |
+| `client/src/modules/heroCurveGenerator.js` | `rateForLeg` |
+| `server/src/races/migrateRaceSource.js` | `RACE_SOURCE_COLUMN`, `hasRaceSourceColumn` |
+| `server/src/seedDelivery.js` | `_resetDeliveryForTests` |
+| `server/src/staticClient.js` | `API_PREFIX`, `CLIENT_DIST` |
+| `shared/raceSource.mjs` | `RACE_SOURCES` |
+
+★ **Three of the eight are mine, from RACE-SOURCE-1 the day before this audit** —
+`RACE_SOURCE_COLUMN`, `hasRaceSourceColumn` and `RACE_SOURCES`. I exported them as seams for a
+migration and a vocabulary, and nothing imports them yet. Named rather than quietly omitted, because
+an auditor's own week-old code is exactly what an auditor is least likely to look at.
+
+★ `_resetDeliveryForTests` matches the `/^_/` convention and is a test seam by name.
+
+### 5.4 An unused FEATURE is never removed here
+
+**None was found and none was removed.** The four removals above are variables and one import;
+nothing that a person could see or use was touched.
+
+### §5 — UNKNOWN
+
+- **Dynamic reachability was not analysed.** A symbol reached only through `import()` or a string
+  key would be reported as dead by the tool and as alive by nothing; none of the 8 above is of that
+  shape, but the sweep cannot prove the absence of one elsewhere.
+- **`scripts/` was not linted for unused variables** — only `client/src` and `server/src`. The 226
+  non-test scripts are §7's gap and remain it.
+- Whether the 8 unimported exports are seams or residue is **a decision, not a measurement**, and
+  none was taken.

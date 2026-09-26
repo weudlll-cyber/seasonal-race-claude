@@ -387,7 +387,6 @@ describe('DIRECTION-AUTHORITY-1 — the held comebacker', () => {
   });
 
   it('★ a descent too deep for its window is still refused — no limit was relaxed', () => {
-    const field = buildField({ n: 40 });
     // A rate low enough that even one leg cannot fit: the gate still says no, so the shape change
     // did not turn the feasibility test off.
     expect(heldTiming(1, 40, { climb: 2, drop: 2 }, GENERATOR_CONFIG)).toBeNull();
