@@ -410,3 +410,106 @@ to end) was **not done**.
   remaining in the whole chain.
 - Whether `world_configs` is *complete* — whether every key that can change a result lives inside
   those five blocks — was not verified against the engine's actual reads.
+
+---
+
+## §8 — BACKING UP AND RESTORING RESULTS
+
+**Answered by doing it, not by reading about it.** Every figure below came from a round trip run on
+2026-09-26 against a scratch data root in the system temp directory, deleted afterwards.
+
+### 8.1 The matrix — where a result lives, and whether it can go out and come back
+
+| where a result lives | export | import | address |
+| --- | --- | --- | --- |
+| **server database** — `races.sqlite`, the `races` / `rosters` / `racer_types` tables | **YES** — `scripts/backup.mjs --out <dir>` | **YES** — `--restore <archive> --into <dir>` | `scripts/backup.mjs:72,80-81,320` |
+| **browser localStorage** — the device's own race history and every tuning key | **YES** — `exportAllStorage()`, plus `exportDiagnosticSnapshot()` for everything | **YES** — `importAllStorage(data)` | `client/src/modules/storage/storage.js:107,122,144` |
+| operator-facing entry for the browser half | **YES** — Dev Screen → System, Export / Import / Reset buttons | same | `DevScreen/sections/SystemSettings.jsx` |
+| operator-facing entry for the **server** half | ★ **NO npm script** — the operator must type `node scripts/backup.mjs` | same | see 8.4 |
+| **CSV of the race history** | YES, Dev Screen → Race History → Export CSV | **NO** — it is a read-out, not a store | `DevScreen/sections/RaceHistory.jsx` |
+
+### 8.2 The round trip, on synthetic data — **nothing was lost**
+
+A race was written into a scratch store, archived, the data root **deleted**, and the archive
+restored into a fresh directory.
+
+```
+STORED   id=99e18160ab11  shortKey=BYWPEV   counts {"races":1,"rosters":1,"racerTypes":1}
+BACKUP   races.sqlite — 45056 bytes (online backup)  ->  racearena-backup-20260926T214436Z.tar
+WIPE     data root deleted
+RESTORE  1 item(s) restored
+COMPARE  scalar fields compared: 14, mismatched: 0
+```
+
+| field group | survived? |
+| --- | --- |
+| 14 scalar fields (`clientRaceId`, `team`, `finishedAt`, `identifierVersion`, `buildId`, `geometryId`, `racerTypeId`, `racePlanSeed`, `raceActionStage`, `racePlanEnabled`, `targetDurationSec`, `elapsedSec`, `raceSource`, `shortKey`) | **all 14, byte-identical** |
+| `names` | yes — `["Ada","Grace"]` |
+| `results` | yes — `[{"name":"Grace","position":1}]` |
+| `winners` | yes — `["Grace"]` |
+| `worldConfigs` | yes — the resolved config §3.4 depends on |
+| `fieldSize`, roster and racer-type rows | yes — counts identical after restore |
+
+★★ **No field failed to survive.** Reported as the denominator requires: **14 of 14 scalars
+compared by name, plus five structured fields, plus the two shared tables.**
+
+### 8.3 The database dump and restore — documented, and it works
+
+| | |
+| --- | --- |
+| documented? | **yes** — `docs/DEPLOYMENT.md:130` (backup) and `:150` (restore), with the exact commands |
+| both run? | **yes**, above |
+| consistent while the server runs? | **by design** — the SQLite files go through `better-sqlite3`'s `db.backup()` (the online backup API), not a file copy. The header at `scripts/backup.mjs:8-25` argues the case: a plain `copyFile` of a live database can capture a torn page set, and the result *looks perfectly normal* until the damaged page is read. |
+| does the restored database serve the same rows? | **yes** — the race was read back by short key from the restored file and compared field by field |
+
+★ **NOT tested: the application coming up against the restored database.** The comparison above was
+made by opening the restored file with the store directly. Booting the API against it and fetching
+the race through `GET /api/races/:shortKey` was **not done** — see UNKNOWN.
+
+### 8.4 What is not covered
+
+1. ★ **There is no `npm run backup`.** Confirmed across all three `package.json` files: zero script
+   entries matching `backup`. The tool is real, tested (`scripts/backup.test.mjs`) and documented,
+   but the operator has to know the file path. **Group C** — costs nobody anything today, and is the
+   kind of thing that is not found on the day it is needed.
+2. **No schedule.** Nothing runs the backup automatically; it is a command somebody types.
+3. **No verification step.** The tool writes an archive; nothing re-opens it to confirm it restores.
+   The round trip above was performed by this audit, by hand — it is not something the tool does.
+4. **The CSV export has no import.** That is correct for what it is (a read-out for a spreadsheet)
+   and is listed so the matrix is not read as a gap.
+
+★ **None of these was built.** A missing tool is a feature; item 1 is a one-line package entry and
+is *still* not made here, because a `scripts` entry is an operator-visible affordance.
+
+### ★ 8.x → 6.10 — THE BACKUP AND THE DATA ARE **NOT** ON THE SAME DISK BY CONSTRUCTION
+
+The brief expected this to be the item most likely to matter. It is answered, and it is answered the
+good way:
+
+- `--out` has **no default** — `backup.mjs:320` refuses with a usage line if it is absent, so an
+  archive cannot be written by accident;
+- `backup.mjs:186` **refuses outright** if the target is inside the data root, by name:
+  *"the archive must be written OUTSIDE the data root"*;
+- `docs/DEPLOYMENT.md:130` documents it as `--out /somewhere/outside/the/data/dir`.
+
+★★ **But "outside the data root" is NOT "a different disk, or a different host".** The tool prevents
+the archive landing *in* the data directory; nothing prevents it landing one directory up, on the
+same volume, on the same VPS. Combined with §2.10 — the compose bind-mounts the data directory from
+the repository checkout, and there is no production compose — **the realistic default deployment has
+the data and any backup on one machine.** That is the honest state, and it is a **Group B** entry:
+recoverable only if the operator has moved the archive off the host, which nothing checks.
+
+### §8 — UNKNOWN
+
+- **The application was not booted against the restored database.** 8.3 asks for it; the comparison
+  was made at the store level instead. The gap is narrow but real: a restored file that the store
+  reads is not proof that the API serves it.
+- **The browser half was not round-tripped.** `exportAllStorage` / `importAllStorage` exist and are
+  wired to buttons, but this pass tested the **server** database only. The Dev Screen's export →
+  wipe → import path is the one an operator would actually use for their own device, and it is
+  **unverified here** — it is listed in Phase V as owed an eye-test and remains so.
+- **Nothing was tested with a server running.** The online backup API is the right tool for a live
+  database and the header argues it well, but this round trip ran against a quiescent file, so the
+  *concurrency* claim is inherited from the driver's documentation rather than demonstrated.
+- **Archive integrity over time** — no checksum is written or verified by the tool, so a silently
+  corrupted archive would be discovered on restore.
