@@ -11,71 +11,136 @@ rather than edited away, because a number that quietly changes cannot be checked
 
 ## §11 — THE RANKED LIST
 
+★★ **Written from scratch on 2026-09-27, after all eleven pieces were performed.** The version that
+stood here before was written mid-chain, when five pieces had not run; it is not amended, it is
+replaced, and where it was wrong the correction is named below rather than edited away.
+
 Every entry carries an address and an impact. ★ **Group C is not promoted for being easy to fix,
 and no duplicated truth whose copies disagree was found, so nothing was demoted into C either.**
 
 ### A — THREATENS THE OPERATOR
 
-**Empty, and that is a claim with a denominator, not a shrug.**
+**Empty — and the sentence is now worth more than it was, because the check that could have filled
+it has run.**
 
-58 routes enumerated; authentication, session, hashing, rate-limiting, upload bounds, error leakage
-and CORS examined at the addresses in §2; cross-team isolation on races **tested** with two users
-and passing 5 of 5; 30,719 git objects swept for secrets with 0 hits; 6 dependency advisories, all
-one dev-only family not present in the shipped artefact.
+58 routes on nine routers enumerated; authentication, session, hashing, rate-limiting, upload
+bounds, error leakage and CORS examined at the addresses in §2; cross-team isolation on races
+**tested** with two users, 5 of 5 passing; 30,719 git objects swept for secrets, 0 hits; 6
+dependency advisories, all one dev-only family absent from the shipped artefact.
 
-★★ **What that sentence does NOT cover, and why A may be under-populated:** §2.11 was not done, so
-**whether the dev screen, `?viewerprobe=1` or source maps reach a production build is unknown** —
-and that is exactly where an A-group finding would live. **No penetration testing was performed at
-all.** An empty A here means "nothing found by the checks that ran", not "nothing is there".
+★★ **§2.11 has now run, and it is the reason the old caveat is gone.** The production bundle
+carries **no source maps and no dev plugin**. `/dev` is reachable by any signed-in user — that is
+deliberate, an operator is meant to reach Race Defaults, Tracks, Branding and Player Groups — and
+the nine advanced sections are filtered out by `DevScreen.jsx:191-194`. That filter is client-side,
+which is B8 below rather than an A, because the values it guards are `localStorage`, no server
+authority rests on it, and the server's own boundary is the 16 admin-classified routes of §1.4 kept
+honest by `routePolicyDrift.test.js`.
+
+★ **What an empty A still does NOT mean. No penetration testing was performed.** This is "nothing
+found by the checks that ran, and those checks are now enumerated", not "nothing is there".
 
 ### B — COULD AFFECT A RESULT, OR CANNOT BE RECOVERED IF LOST
 
 | # | finding | address | impact |
 | --- | --- | --- | --- |
-| B1 | **A signed-in user can post a result no simulation produced.** The server validates structure, never the outcome. | `raceStore.js:235,264-274`; decision at `raceHistory.js:9-14` | By design (2026-09-06). Bites the day an account is shared or taken. The record does carry `world_configs`, so a dispute is examinable. |
-| B2 | **Data and backup end up on one machine.** The tool refuses the data root, but nothing moves the archive off the host, and the compose bind-mounts data from the repo checkout with no production compose. | `backup.mjs:186,320`; `docker-compose.yml:48-55` | A disk loss takes the races and the archive together. Recoverable only by an operator habit nothing enforces. |
-| B3 | **Six of seven data modules have no team scoping.** Tracks, surface classes, player groups, brands, racers and seed notices contain zero occurrences of `team`; races has 20. | §1.4; `crossTeamAccess.audit.test.js` | Harmless today — one team. On the day a second team is invited, everything except races is shared. |
-| B4 | **The API binds all interfaces.** `4000:4000`. | `docker-compose.yml:17-18` | On a VPS the API is directly reachable unless a firewall or proxy is put in front of it. |
-| B5 | **Re-running a race from its identifier is UNVERIFIED.** It is the mitigation B1 leans on, and this pass did not test it. | §3.6 | If it does not work end to end, B1 has no remedy. **This is the single most valuable unfinished check in the chain.** |
+| B1 | **A signed-in user can post a result no simulation produced.** The server validates structure, never outcome. | `raceStore.js:235,264-274`; decision at `raceHistory.js:9-14` | By design (2026-09-06). Bites the day an account is shared or taken. ★ **Its remedy is now PROVEN — see the B5 row.** |
+| B2 | **Data and backup end up on one machine.** The tool refuses the data root, but nothing moves the archive off the host, and compose bind-mounts data from the repo checkout with no production compose. | `backup.mjs:186,320`; `docker-compose.yml:48-55` | A disk loss takes the races and the archive together. Recoverable only by a habit nothing enforces. |
+| B3 | **Six of seven data modules have no team scoping.** Tracks, surface classes, player groups, brands, racers and seed notices contain zero occurrences of `team`; races has 20. | §1.4; `crossTeamAccess.audit.test.js` | Harmless today — one team. On the day a second team is invited, everything except races is shared. ★ **See the warning attached to that test, below.** |
+| B4 | **The API binds all interfaces.** `4000:4000`. | `docker-compose.yml:17-18` | On a VPS the API is directly reachable unless a firewall or proxy is put in front. |
 | B6 | **A race that ran on non-default settings is recorded but not flagged.** `world_configs` stores the resolved config; nothing marks the row. | `raceStore.js:164,358,465` | A dispute is settleable, but only if somebody thinks to look. |
+| ★ B7 | **NEW — the upload size-and-type bound exists in THREE independent copies.** `LIMIT_FILE_SIZE` → 413 and `INVALID_TYPE` → 400, identical including the interpolated message. | `brands.js:314`, `racers.js:281`, `tracks.js:595` | **This is the bound §2.6 called "bounded".** Change the limit, the status or the wording in one and the other two diverge silently, and the §2.6 claim becomes true of one route and false of two. Recorded, **not de-duplicated** — that is a refactor. |
+| ★ B8 | **NEW — the dev screen's advanced tier is filtered client-side only.** `effectiveView = isAdmin ? view : 'operator'` hides 9 of 16 sections from a non-admin. | `DevScreen.jsx:191-194`; route at `App.jsx:97-104` | **Low, and here is the reasoning rather than the label:** the sections write `localStorage`, not server state, so an operator who defeated the filter would change their own browser's race settings — which §3.4 establishes the stored race records. No server authority rests on it. |
+
+★★ **B5 IS RESOLVED, and it was the most valuable open question in the chain.** It read
+"re-running a race from its identifier is UNVERIFIED — the remedy every other result-integrity
+finding leans on". **It was tested, against a real stored race from the owner's own database**
+(`W57FQA`, seed 9, 40 racers, `quiet`), replayed through `scripts/diag/replay-stored-race.mjs`:
+**40 of 40 positions and 40 of 40 finishing times identical, to the millisecond.** ★ **What it
+proves and does not:** the ENGINE reproduces a stored record from that record's own inputs. It does
+not prove the record describes the race anybody watched — replaying a fabricated result would
+reproduce the fabrication faithfully. **The replay settles "did the engine do this", never "did
+this happen."**
+
+★★ **A WARNING THAT BELONGS ON B3, carried forward on the owner's instruction rather than acted
+on.** `server/src/routes/crossTeamAccess.audit.test.js` is green, and **it asserts today's truth
+INCLUDING WHERE THAT TRUTH IS "NO SCOPING".** It pins that team B cannot read team A's races AND
+that six of seven modules carry no team vocabulary at all. That is correct for an audit probe — it
+stops the boundary eroding unnoticed — and it becomes **wrong the day the boundary is built**,
+because a green test will then be asserting the absence of the thing somebody just built.
+**Nobody should read that green as a boundary that exists.** Whoever builds tenancy must change
+this test in the same commit.
 
 ### C — UNTIDY, COSTS NOBODY ANYTHING TODAY
 
 | # | finding | address |
 | --- | --- | --- |
-| C1 | **No `npm run backup`.** The tool is real, tested and documented; zero script entries match `backup` in any of the three `package.json` files. | §8.4 |
-| C2 | **65 scripts are named by no package script, guard, hook, CI file or other script.** Mostly `exp-*` and `*-truth` tools that are hand-run like `scripts/diag/**` but do not live there. | §1.2 |
-| C3 | **19 of 39 top-level documents carry no OWNS line**, which caps the overlap check at half the corpus. | §1.1, §6.3 |
-| C4 | **`framingRule.js` defaults `innerFramePct` to 1 in five signatures** while the shipped config is 0.7. Every live caller passes it; a future one that does not gets a silently different framing rule. | `framingRule.js:207,427,479` |
-| C5 | **The base image is a floating tag**, `node:20-alpine`, not a digest. A rebuild can change the base without anything saying so. | `Dockerfile:22,33` |
-| C6 | **The backup writes no checksum**, so a silently corrupted archive is discovered on restore. | §8.4 |
-| C7 | **The session cookie lives 30 days.** A deliberate convenience, listed so it is a choice rather than an accident. | `session.js:108` |
+| C1 | **No `npm run backup`.** The tool is real, tested and documented; zero script entries match `backup` in any of the three manifests. | §8.4 |
+| C2 | **65 scripts are named by no package script, guard, hook, CI file or other script.** | §1.2 |
+| C3 | **19 of 39 top-level documents carry no OWNS line**, capping the overlap check at half the corpus. | §1.1, §6.3 |
+| C4 | **`framingRule.js` defaults `innerFramePct` to 1 in five signatures** while the shipped config is 0.7. | `framingRule.js:207,427,479` |
+| C5 | **The base image is a floating tag**, `node:20-alpine`, not a digest. | `Dockerfile:22,33` |
+| C6 | **The backup writes no checksum**, so a corrupted archive is discovered on restore. | §8.4 |
+| C7 | **The session cookie lives 30 days.** Deliberate; listed so it is a choice, not an accident. | `session.js:108` |
+| ★ C8 | **NEW — a dependency version skew.** `@vitest/coverage-v8` is `^4.1.4` in the client and `^4.1.8` in the server. Dev-only. | §6.6 |
+| ★ C9 | **NEW — one stored key name, two settings, two stores.** `minTargetScreenPx` is a global floor in `autoSpriteScale.js:23` and a per-racer-type tunable in `racer-types/index.js:239`. Not renamed: a stored-key rename touches saved configs. | §6.7 |
+| ★ C10 | **NEW — two benchmarks require `--master` on any machine but the one they were written on, and neither says so when it fails.** `C:/ra-wt-nanoid` is a worktree; there is no portable default, so `tmpdir()` would be wrong rather than better. | `label-bench-matrix.mjs:40`, `phys-bench-matrix.mjs:63` |
+| ★ C11 | **NEW — `client/e2e/` is outside the format guard.** `format:check` is `prettier --check src`; `e2e/d355-smoke.spec.js` fails prettier today. Verified pre-existing at master. Not reformatted — widening a guard's scope is a decision. | §10 run 2 |
+| ★ C12 | **NEW — 8 exported symbols with no importer.** Never removed: an unimported export may be a seam. ★ Three of the eight are mine, from RACE-SOURCE-1 the day before this audit. | §5.3 |
+| ★ C13 | **NEW — 46 of the 59 API routes are documented nowhere.** `API.md` documents 13 and now says so correctly. | §9.2 |
+
+### ★ WHAT THIS AUDIT REPAIRED — 62 changes, none of them behaviour
+
+Listed because a report that only names problems hides what it did to the tree.
+
+| where | n | what |
+| --- | ---: | --- |
+| `scripts/diag/*` | 38 | `c:/tmp/…` defaults → `join(tmpdir(), …)`, the pattern the 2026-09-25 fix established |
+| comments across `client/src` | 4 | addresses that named the wrong file or a drifted line |
+| living documents | 14 | the wrong script name, the racer-types move, three archive pointers, a deleted file in a tree, `API.md`'s counts, `README.md`'s three |
+| test files | 4 | three dead variables removed, one kept with its reason and its address corrected |
+| `scripts/diag/line-ceiling-terms.mjs` | 1 | **an orphaned `console.log(` that had made the file unparseable for 36 days** |
+| `server/src/index.js` | 1 | a dead `eslint-disable` the linter was already flagging |
+
+★★ **Two of those repairs are worth more than their size.** The script name
+(`check-bundle-address.mjs` → `audit-bundle-address.mjs`) was wrong in **both documents an operator
+reads while deploying**, and the obvious fix — renaming the script to match — would have
+auto-registered it as a routed guard and reddened `verify` on every tree without a fresh client
+build. And the unparseable script had been dead since `becc455c` on 2026-08-22 with nobody noticing,
+which is the clearest single proof that §7.1's unread 226 scripts is a real gap and not a formality.
 
 ---
 
 ## §11.2 — WHAT NEEDS HIS WORD
 
 Each in one sentence, with the readings he is choosing between. ★ **Nothing appears here that a
-measurement could have settled.**
+measurement could have settled, and one item has LEFT this list because a measurement settled it.**
 
 1. **Should the server check a result, or stay a second store?** Today anyone who can sign in can
-   file a race that was never run (B1). The readings are: leave it — the room is invited and the
-   trust is deliberate; or have the server recompute the outcome from the stored inputs before
-   accepting it, which is a real piece of work and changes what "the server is never a gatekeeper"
-   means.
+   file a race that was never run (B1). The readings: leave it — the room is invited and the trust
+   is deliberate; or have the server recompute the outcome from the stored inputs before accepting
+   it. ★ **This question is now better informed than when it was first asked:** the replay works
+   exactly (B5), so "the operator can re-run a disputed race" is a real remedy and not a hope.
 
-2. **Where should a backup go, and who moves it?** The tool already refuses to write inside the data
-   root, so the remaining question is whether the operator copies the archive off the machine by
-   hand, or whether this project grows something that does it (B2).
+2. **Where should a backup go, and who moves it?** The tool already refuses to write inside the
+   data root, so the question is whether the operator copies the archive off the machine by hand,
+   or whether this project grows something that does it (B2).
 
-3. **When the second team arrives, what is shared?** The tenancy boundary he stated on 2026-09-25
-   covers brands, player groups and team-created tracks; six modules currently scope nothing (B3).
-   The readings are: build the boundary before inviting anybody, or invite and accept that
-   everything but races is common.
+3. **When the second team arrives, what is shared?** The boundary he stated on 2026-09-25 covers
+   brands, player groups and team-created tracks; six modules scope nothing (B3). The readings:
+   build the boundary before inviting anybody, or invite and accept that everything but races is
+   common.
 
-4. **May a browser spec tolerate a frame-starved run?** Carried forward from the comeback thread and
-   unchanged by this audit: tolerate it in the spec, or make the shot frame-independent in the
-   camera.
+4. **May a browser spec tolerate a frame-starved run?** Carried from the comeback thread, unchanged
+   by this audit: tolerate it in the spec, or make the shot frame-independent in the camera.
+
+5. ★ **NEW — should the three upload handlers become one?** B7 is the bound §2.6 leaned on, living
+   in three copies. The readings: leave them and accept that the "bounded" claim is three claims;
+   or de-duplicate, which is a refactor of live request handling and is forbidden to me without his
+   word.
+
+6. ★ **NEW — should I rewrite the README after all?** §9.4 checked 24 of its claims and found 3
+   wrong, all repaired. I judged a wholesale rewrite to be churn against a document with a 3-in-24
+   defect rate and said so rather than skipping quietly. **His call; I will do it on a word.**
 
 ---
 
