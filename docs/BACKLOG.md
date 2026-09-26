@@ -119,6 +119,49 @@ a rule for anybody to follow.
 - [x] ~~**Camera-weights design question — relative vs absolute weighting (deferred).**~~ **CLOSED for
   the same reason — no date, no source.** PART TWO D31.
 
+## DELIVERY-CLEAN-1 — the shippable-state audit (2026-09-26)
+
+★★ **Every row here came from [DELIVERY-CLEAN-1](../reports/audit/DELIVERY-CLEAN-1.md), a FINDING
+run over the whole repository. Group A (threatens the operator) is EMPTY — and the report says in
+the same breath which checks did not run, because an empty A from an incomplete sweep is not the
+same claim as an empty A from a complete one.** The chain did not finish: pieces 4, 5, 7, 9 and 10
+were not performed, and 2.9, 2.11, 3.5, 3.6, 6.1 and 6.4–6.8 are named unfinished in the report.
+
+- [ ] ★★ **B5 — RE-RUNNING A RACE FROM ITS IDENTIFIER IS UNVERIFIED, and it is the remedy every
+      other result-integrity finding leans on.** The server accepts any structurally valid result
+      (B1), and the stated mitigation is that a disputed race can be re-run by the operator. **This
+      audit did not test it** (§3.6). If it does not work end to end, B1 has no remedy at all.
+      **The single most valuable unfinished check in the chain.**
+
+- [ ] ★★ **B2 — THE DATA AND ITS BACKUP END UP ON ONE MACHINE.** `scripts/backup.mjs:186` refuses
+      to write the archive inside the data root and `:320` requires `--out`, so the tool is doing
+      its part. But *outside the data root* is not *another disk*, and `docker-compose.yml:48-55`
+      bind-mounts the data directory out of the repository checkout with **no production compose in
+      the tree**. A disk loss takes the races and the archive together.
+      ★ The round trip itself is PROVEN: export → wipe → restore, **14 of 14 scalar fields plus
+      names, results, winners and worldConfigs, nothing lost** (§8.2).
+
+- [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
+      so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
+      Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
+      and this is about a port.
+
+- [ ] ★ **B6 — a race that ran on NON-DEFAULT settings is recorded but not flagged.**
+      `raceStore.js:164,358,465` store `world_configs` **resolved**, so the record says what the
+      config was. Nothing marks the row, so a dispute is settleable only if somebody looks.
+      ★ This CORRECTS a hypothesis: fingerprints are built from shipped defaults
+      (`camera-fingerprint.mjs:77,131`) so editing stored settings moves no print — but it is not
+      true that nothing records the difference.
+
+- [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
+      the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
+      top-level documents carry no OWNS line, which caps the document-overlap check at half the
+      corpus (§1.1) · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
+      rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
+
+---
+
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
 
 **verify (section-wide):** no command can decide these — **they are design questions, not claims about the tree.** The section closes when the dial is specified, and question 2 is already answered in place.

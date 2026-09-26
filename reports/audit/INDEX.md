@@ -23,6 +23,10 @@ edit someone else's report even to correct it.** If an audit is wrong, the answe
 
 ---
 
+- [MORNING-2026-09-27.md](MORNING-2026-09-27.md) — the close-out sheet for DELIVERY-CLEAN-1: what
+  was done, **what was NOT** (pieces 4, 5, 7, 9 and 10 were not performed), what is open, and the
+  four things that need the owner's word. Read it beside the report, not instead of it.
+
 - [DELIVERY-CLEAN-1.md](DELIVERY-CLEAN-1.md) — **the whole project, audited for a clean shippable
   state** (begun 2026-09-26 from master `6b60edd8`). Can this go on a VPS without danger to its
   operator and without anything outside being able to change a race result — plus the smaller

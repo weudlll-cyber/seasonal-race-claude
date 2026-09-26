@@ -9,6 +9,74 @@ hardcoded path — it was made and is reported; everything else is a row, never 
 that produced it. Where a count of mine was wrong, the wrong figure is kept beside the right one
 rather than edited away, because a number that quietly changes cannot be checked.
 
+## §11 — THE RANKED LIST
+
+Every entry carries an address and an impact. ★ **Group C is not promoted for being easy to fix,
+and no duplicated truth whose copies disagree was found, so nothing was demoted into C either.**
+
+### A — THREATENS THE OPERATOR
+
+**Empty, and that is a claim with a denominator, not a shrug.**
+
+58 routes enumerated; authentication, session, hashing, rate-limiting, upload bounds, error leakage
+and CORS examined at the addresses in §2; cross-team isolation on races **tested** with two users
+and passing 5 of 5; 30,719 git objects swept for secrets with 0 hits; 6 dependency advisories, all
+one dev-only family not present in the shipped artefact.
+
+★★ **What that sentence does NOT cover, and why A may be under-populated:** §2.11 was not done, so
+**whether the dev screen, `?viewerprobe=1` or source maps reach a production build is unknown** —
+and that is exactly where an A-group finding would live. **No penetration testing was performed at
+all.** An empty A here means "nothing found by the checks that ran", not "nothing is there".
+
+### B — COULD AFFECT A RESULT, OR CANNOT BE RECOVERED IF LOST
+
+| # | finding | address | impact |
+| --- | --- | --- | --- |
+| B1 | **A signed-in user can post a result no simulation produced.** The server validates structure, never the outcome. | `raceStore.js:235,264-274`; decision at `raceHistory.js:9-14` | By design (2026-09-06). Bites the day an account is shared or taken. The record does carry `world_configs`, so a dispute is examinable. |
+| B2 | **Data and backup end up on one machine.** The tool refuses the data root, but nothing moves the archive off the host, and the compose bind-mounts data from the repo checkout with no production compose. | `backup.mjs:186,320`; `docker-compose.yml:48-55` | A disk loss takes the races and the archive together. Recoverable only by an operator habit nothing enforces. |
+| B3 | **Six of seven data modules have no team scoping.** Tracks, surface classes, player groups, brands, racers and seed notices contain zero occurrences of `team`; races has 20. | §1.4; `crossTeamAccess.audit.test.js` | Harmless today — one team. On the day a second team is invited, everything except races is shared. |
+| B4 | **The API binds all interfaces.** `4000:4000`. | `docker-compose.yml:17-18` | On a VPS the API is directly reachable unless a firewall or proxy is put in front of it. |
+| B5 | **Re-running a race from its identifier is UNVERIFIED.** It is the mitigation B1 leans on, and this pass did not test it. | §3.6 | If it does not work end to end, B1 has no remedy. **This is the single most valuable unfinished check in the chain.** |
+| B6 | **A race that ran on non-default settings is recorded but not flagged.** `world_configs` stores the resolved config; nothing marks the row. | `raceStore.js:164,358,465` | A dispute is settleable, but only if somebody thinks to look. |
+
+### C — UNTIDY, COSTS NOBODY ANYTHING TODAY
+
+| # | finding | address |
+| --- | --- | --- |
+| C1 | **No `npm run backup`.** The tool is real, tested and documented; zero script entries match `backup` in any of the three `package.json` files. | §8.4 |
+| C2 | **65 scripts are named by no package script, guard, hook, CI file or other script.** Mostly `exp-*` and `*-truth` tools that are hand-run like `scripts/diag/**` but do not live there. | §1.2 |
+| C3 | **19 of 39 top-level documents carry no OWNS line**, which caps the overlap check at half the corpus. | §1.1, §6.3 |
+| C4 | **`framingRule.js` defaults `innerFramePct` to 1 in five signatures** while the shipped config is 0.7. Every live caller passes it; a future one that does not gets a silently different framing rule. | `framingRule.js:207,427,479` |
+| C5 | **The base image is a floating tag**, `node:20-alpine`, not a digest. A rebuild can change the base without anything saying so. | `Dockerfile:22,33` |
+| C6 | **The backup writes no checksum**, so a silently corrupted archive is discovered on restore. | §8.4 |
+| C7 | **The session cookie lives 30 days.** A deliberate convenience, listed so it is a choice rather than an accident. | `session.js:108` |
+
+---
+
+## §11.2 — WHAT NEEDS HIS WORD
+
+Each in one sentence, with the readings he is choosing between. ★ **Nothing appears here that a
+measurement could have settled.**
+
+1. **Should the server check a result, or stay a second store?** Today anyone who can sign in can
+   file a race that was never run (B1). The readings are: leave it — the room is invited and the
+   trust is deliberate; or have the server recompute the outcome from the stored inputs before
+   accepting it, which is a real piece of work and changes what "the server is never a gatekeeper"
+   means.
+
+2. **Where should a backup go, and who moves it?** The tool already refuses to write inside the data
+   root, so the remaining question is whether the operator copies the archive off the machine by
+   hand, or whether this project grows something that does it (B2).
+
+3. **When the second team arrives, what is shared?** The tenancy boundary he stated on 2026-09-25
+   covers brands, player groups and team-created tracks; six modules currently scope nothing (B3).
+   The readings are: build the boundary before inviting anybody, or invite and accept that
+   everything but races is common.
+
+4. **May a browser spec tolerate a frame-starved run?** Carried forward from the comeback thread and
+   unchanged by this audit: tolerate it in the spec, or make the shot frame-independent in the
+   camera.
+
 ---
 
 ## §1 — THE DENOMINATORS

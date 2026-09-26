@@ -1,7 +1,7 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-26
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-25**, from PART ONE's **seven** rows — after the owner's decisions of that
+Re-derived on **2026-09-25**, from PART ONE's **twelve** rows — after the owner's decisions of that
 day, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1. Each of those changed what a
 row below SAYS without changing how many rows there are; the count has been seven since the decisions
 were recorded.
@@ -25,7 +25,7 @@ day. The list below therefore contains no questions at all: **all seven rows are
 
 ---
 
-## 0 · THE OPEN LIST — all seven, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all twelve, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -70,6 +70,19 @@ day. The list below therefore contains no questions at all: **all seven rows are
    [DEVSCREEN-GROUPINGS-1](../reports/evolution/DEVSCREEN-GROUPINGS-1.md); no candidate renames a
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
+
+8. **Re-running a race from its identifier is UNVERIFIED** — and it is the remedy every other
+   result-integrity question leans on. If it does not work end to end, a disputed race has no way
+   of being settled. **The most valuable unfinished check from the 2026-09-26 audit.**
+9. **The data and its backup end up on one machine.** The backup tool refuses to write inside the
+   data root, but nothing moves the archive off the host, and the deployment keeps the database
+   inside the repository checkout.
+10. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+   a firewall or proxy is put in front of it.
+11. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+   the race, so a dispute is examinable, but nothing draws attention to the row.
+12. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
+   documents not declaring what they own, and four smaller items. None of it costs anything today.
 
 → [BACKLOG.md](BACKLOG.md) PART ONE for every one of them.
 
