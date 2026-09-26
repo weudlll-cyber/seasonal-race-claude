@@ -725,3 +725,80 @@ last claim**, which is why it is named here and not relied on.
 - **6.12 not tested**, only read.
 - **6.2's method cannot see a drifted STRING or a drifted boolean** — it extracts numeric defaults
   only. A duplicated non-numeric truth would pass this sweep invisibly.
+
+---
+
+## §4 — COMMENTS THAT LIE
+
+**Partially done.** 4.1 ran and 4.4 repaired what it found; **4.2, 4.3 and 4.5 did not run.**
+
+### 4.1 Every `file:line` address in a comment — 253 found
+
+Method: every tracked `.js` / `.jsx` / `.mjs` file, every line beginning `//`, `*` or `/*`, matched
+for `path/file.ext:NNN` and `#LNNN` forms; each address resolved repo-relative, then relative to the
+citing file, then by unique basename.
+
+| | count |
+| --- | --- |
+| comment addresses found | **253** |
+| resolved to a real file | **211** |
+| ambiguous basename (e.g. `index.jsx`, which many files share) — **not a finding** | **35** |
+| ★ **no such file** | **7** |
+| ★ **cited line past the end of its file** | **0** |
+
+Of the 7 "no such file", **3 are illustrative placeholders** in `check-fallback-agreement`'s own
+documentation of the citation format (`file.js`, `../path/file.js`) — correct as written. The other
+**4 were real**, and all four the same mistake.
+
+### 4.4 What was repaired — 12 corrections in one file
+
+★★ **`scripts/diag/comeback-beats.mjs` cited `cameraDirector.js` — the file is `CameraDirector.js`.**
+A case error that resolves on Windows and would not on Linux, in 4 comments.
+
+★★ **AND THE LINE NUMBERS WERE WRONG TOO — which my own check could not see.** Correcting the case
+exposed it: those comments, and eight more in the same file that had the filename right, pointed at
+lines that no longer hold what they claim.
+
+| the comment claimed | it pointed at | the real address |
+| --- | --- | --- |
+| `_acceptsOffer` | `:724` — prose inside a comment block | **`:736`** |
+| `_weightedRandomPick` | `:730` — more of the same comment | **`:742`** |
+| `max(minStateHold, maxStateDuration)` | `:960` — a note about the ctx transform | **`:1035`** |
+| the leader ratio `leader.t / finishT` | `:1551` — `if (!(sLen > 0)) return null;` | **`:968`** |
+| the director's contest | `:1709-1725` | **`:1840-1850`** |
+| the outcome-phase gate on the candidate | `:1711-1715` | **`:1791-1793`** |
+
+**12 corrections in total.** The script was re-run afterwards and produces identical output
+(`--tracks=space-sprint --seeds=2` → `written [#9@resolve 0.7] shown [#9@0.6001]`), and lints clean.
+
+★★ **THE LIMITATION THIS EXPOSED, and it matters more than the count.** 4.1 asks two questions —
+*does the file exist* and *does the cited line still contain what the comment claims*. **My check
+answered only the first.** It reported `0` addresses past the end of a file, which was true and
+nearly worthless: every one of the 8 worst errors here had a valid filename and an in-range line
+number, and was found only because correcting the case made me read the lines. **A guard built on
+the cheap question would pass this file today.**
+
+### 4.2, 4.3, 4.5 — NOT DONE
+
+- **4.2** (comments containing *only*, *never*, *always*, *every*, *the one place*, *cannot*,
+  enumerated and each verified) — **not started.** In a codebase whose comments are load-bearing,
+  this is the sub-section most likely to hold a real finding, and it is the one I did not reach.
+- **4.3** (comments stating a number that is also a config default) — **not started.** Note that
+  §6.2 swept *code* for drifted values and found none in product source; **comments were not in that
+  sweep**, and `check-config-claims` covers documents while `check-tooltip-values` covers tooltips —
+  so comments are the one surface with no guard and no audit.
+- **4.5** (offer a `check-comment-addresses` guard) — ★ **deliberately NOT built.** The brief's own
+  condition is that a guard which cannot go red under sabotage is not a guard. The only version I
+  could have written tonight is the cheap one, and 4.4 has just demonstrated it would be green on a
+  file carrying eight wrong addresses. **Shipping that would have added a guard whose green means
+  nothing.** The useful guard — one that checks the cited line still contains the cited symbol —
+  already exists in part as `check-fallback-agreement`'s RULE F, which covers **symbol citations in
+  documents**; extending it to comments is a real piece of work and is recorded, not attempted.
+
+### §4 — UNKNOWN
+
+- **Whether any of the 211 resolvable addresses points at the wrong line** is unknown for 203 of
+  them. Eight were found wrong by hand, in one file, by accident.
+- **4.2 and 4.3 entirely unmeasured.**
+- The 35 ambiguous-basename citations were **not disambiguated** — each may be right or wrong and
+  this pass did not open them.
