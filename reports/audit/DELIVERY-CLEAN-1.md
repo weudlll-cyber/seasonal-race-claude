@@ -1221,3 +1221,87 @@ Deciding which of a pair is superseded needs §7's file-by-file read of all 226 
 - **Tests were not swept** for two files asserting one property (the second half of 6.5).
 - 6.2's numeric sweep plus §10.2's string and boolean sweep cover scalars; **object-valued and
   array-valued defaults were never swept** for drift.
+
+---
+
+## §7 — THE SCRIPTS
+
+### 7.2 — hardcoded paths and OS assumptions: **swept across all 278, and 40 repaired**
+
+Run first, before opening anything, because this class has a proven defect behind it:
+`scripts/diag/margin-both-axes.mjs` carried `arg("out", "c:/tmp/mar")` and on Linux wrote megabytes
+into the repository root (fixed 2026-09-25).
+
+**Denominator: 278 of the 281 tracked files under `scripts/` — every `.mjs` and `.js`. The 3
+excluded are `.json`.**
+
+| pattern | occurrences | verdict |
+| --- | --- | --- |
+| **drive letter in a string** | **40** | ★ **the proven defect's class, still present in 37 files** |
+| absolute `/tmp/` | 0 | — |
+| absolute `/home`, `/Users`, `/var`, `/opt`, `/etc` | 0 | — |
+| backslash path separator | 32 | ★ **all false positives** — every one is a regex escape (`"\\s*=\\s*"`, `.replace(/\\/g, "/")`), not a path |
+| shell assumption (`execSync("bash …")` etc.) | 0 | — |
+
+★★ **38 of the 40 REPAIRED**, in 37 files, using the pattern the proven fix already established
+rather than a new one: `import { tmpdir } from "node:os"` and `arg("out", join(tmpdir(), "…"))`,
+exactly as `margin-both-axes.mjs:38,83` does. **Only a DEFAULT changed** — no tool's flag, calling
+shape or behaviour moved, and a caller who passes `--out` gets exactly what they asked for.
+
+★ **A consequence worth naming rather than burying: the default directory MOVED.** On Windows
+`tmpdir()` resolves under the user's temp directory, not `c:/tmp`. A person who relied on finding
+yesterday's dump in `c:/tmp/lev` will not find it there. That is the right trade — the old default
+was unwritable on Linux — but it is a change, not a no-op.
+
+**Verified after the repair:** `runin-anatomy.mjs`, `suite-timing.mjs` and `aim-levers.mjs` were run
+and all three produced real output (`river-run:20:13 camSeed=2246822502 frames=236`; `run 1: wall
+40.7s exit 0 856 tests`; `space-sprint off races=30 frames=42297 clipped=1688`).
+
+★ **THE 2 NOT REPAIRED, and why.** `scripts/label-bench-matrix.mjs:40` and
+`scripts/phys-bench-matrix.mjs:63` default `--master` to `C:/ra-wt-nanoid` — **a git worktree, not a
+scratch directory.** There is no portable default for "the other checkout", so `tmpdir()` would be
+wrong rather than better. **Recorded as a row:** both benchmarks require `--master` on any machine
+but the one they were written on, and neither says so when it fails.
+
+### 7.3 — empty-scope refusal
+
+★ **Established in §1.2 rather than re-derived, and it narrows the open row without closing it.**
+`scripts/lib/trackScope.mjs` is the one home for refusing an empty or unknown scope, and
+NIGHT-2026-09-26 extended it to five more `scripts/diag/` tools through a second entry point. The
+row stays open for the analysers whose scope is not a track list at all.
+
+**What this pass adds:** nothing was rebuilt. The reuse is named — `trackScope.mjs` — and no second
+refusal mechanism was created.
+
+### 7.1 — open every one: **BOUNDED, and the bound is stated**
+
+★★ **NOT COMPLETE, and it is the largest single gap left in this report.** 226 non-test scripts
+were **not** individually opened for "does the header describe the body, does it still run, is it
+referenced". What was done instead, mechanically, over all of them:
+
+| question | answered by | coverage |
+| --- | --- | --- |
+| is it referenced? | §1.2 | **281 of 281** |
+| does it carry a hardcoded path? | §7.2 | **278 of 278** |
+| does it duplicate another script? | §6.1 | **223 of 223** (200 clones, unclassified) |
+| does its header describe its body? | — | ★ **0 of 226** |
+| does it still run? | — | ★ **5 of 226** (the four above plus `comeback-beats.mjs`) |
+
+**So §7.1 is 3 mechanical answers over the whole set and 2 hand answers over 2%.** The honest
+summary is that this piece was measured, not read.
+
+### 7.4 — the guard table
+
+Carried from §1.3 unchanged, because it is the trap an operator walks into: **36 guards in the
+registry; on this branch's diff bare `verify` runs 4 and `verify -- --premerge` runs 15**, and the
+eleven `--premerge` runs and bare skips are listed there by name. Both run-counts are
+**diff-dependent**; the 36 is not.
+
+### §7 — UNKNOWN
+
+- **226 script headers were never read against their bodies** — 7.1's central question.
+- **221 of 226 scripts were never executed** by this audit.
+- The **200 `scripts/` clones** remain unclassified, so 6.8 (which of a duplicated pair is
+  superseded) stays unanswered.
+- Whether any of the 65 unreferenced scripts from §1.2 is genuinely dead is **not established** —
+  §1.2 counted references, and a script nothing names may still work.

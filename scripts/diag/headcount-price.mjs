@@ -23,6 +23,7 @@
 // Usage:
 //   node scripts/diag/headcount-price.mjs --track=space-sprint --seeds=30 --tag=before --out=c:/tmp/hc
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -57,7 +58,7 @@ const [TRACK] = resolveTrackScopeIds({
 });
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "30"));
-const OUT = arg("out", "c:/tmp/hc");
+const OUT = arg("out", join(tmpdir(), "hc"));
 const TAG = arg("tag", "before");
 const FROM_U = Number(arg("from", "0.10"));
 

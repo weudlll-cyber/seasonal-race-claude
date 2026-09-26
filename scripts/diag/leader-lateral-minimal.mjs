@@ -42,6 +42,7 @@
 // the rule has to beat — if the minimal step is not meaningfully smaller, the rule buys nothing over
 // following him and (b) has to say so.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -73,7 +74,7 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/lat");
+const OUT = arg("out", join(tmpdir(), "lat"));
 const TAG = arg("tag", "lat");
 const FROM_U = Number(arg("from", "0.10"));
 // LEADER-LATERAL-BUILD-1: both of the rule's numbers are sweepable, so the shipped defaults are read

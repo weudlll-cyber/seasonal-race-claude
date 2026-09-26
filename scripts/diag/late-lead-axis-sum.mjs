@@ -1,6 +1,8 @@
 // LATE-LEAD-AXIS-1 — the summary tables, from the re-sliced hits. Read-only.
 import { readFileSync } from "node:fs";
-const d = JSON.parse(readFileSync(process.argv[2] ?? "c:/tmp/late-lead-axis.json", "utf8"));
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+const d = JSON.parse(readFileSync(process.argv[2] ?? join(tmpdir(), "late-lead-axis.json"), "utf8"));
 const H = d.hits;
 const med = (a) => {
   if (!a.length) return null;

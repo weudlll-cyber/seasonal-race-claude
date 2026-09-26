@@ -17,6 +17,7 @@
 // it. Here the contender width and the full-road width are each computed as the width that term
 // ALONE asks for, which is the comparison the brief wants.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -52,7 +53,7 @@ const ONLY = arg("track", null);
 const RACERS = Number(arg("racers", "20"));
 const SEED_FROM = Number(arg("from", "1"));
 const SEED_TO = Number(arg("to", "60"));
-const OUT = arg("out", "c:/tmp/runin-cg-anchor");
+const OUT = arg("out", join(tmpdir(), "runin-cg-anchor"));
 
 function measure(geo, seed) {
   const identity = resolveIdentity({

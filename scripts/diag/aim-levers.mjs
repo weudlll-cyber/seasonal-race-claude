@@ -23,6 +23,7 @@
 // count is identical between arms, which is the property that makes an off-vs-on comparison here a
 // comparison of two framings of the SAME races.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -60,7 +61,7 @@ const arg = (k, d) => {
 const TRACK = arg("track", "space-sprint");
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "30"));
-const OUT = arg("out", "c:/tmp/lev");
+const OUT = arg("out", join(tmpdir(), "lev"));
 const FROM_U = Number(arg("from", "0.10"));
 // Arm spec: aspect cap (null = off) and room floor (0 = off).
 const FLOOR = Number(arg("floor", "0"));

@@ -9,12 +9,14 @@
 // (d) lag or body: clipped frames a PERFECT camera would still clip.
 // (e) the requirement: how much of today's lag has to go before the tail clears.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lag");
+const DIR = arg("dir", join(tmpdir(), "lag"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const PREFIX = arg("prefix", "");
 

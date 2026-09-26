@@ -1,12 +1,12 @@
 // RUNIN-CONTENDERS-1 sweep driver. Report-only.
 // Shards by (track, field size) and runs a pool sized from the machine's own core count.
 import { spawn } from "node:child_process";
-import { cpus } from "node:os";
+import { cpus, tmpdir } from "node:os";
 import { mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..", "..");
-const OUT = "c:/tmp/runin-contenders";
+const OUT = join(tmpdir(), "runin-contenders");
 mkdirSync(OUT, { recursive: true });
 
 const TRACKS = [

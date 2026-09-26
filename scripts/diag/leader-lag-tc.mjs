@@ -10,12 +10,14 @@
 // `camJerk` how much that slide CHANGES per frame. A faster camera buys its smaller lag by moving the
 // picture harder, and jerk is where an eye notices.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lagtc");
+const DIR = arg("dir", join(tmpdir(), "lagtc"));
 const TCS = arg("tcs", "0.25,0.18,0.12,0.08,0.05").split(",");
 const TRACKS = arg("tracks", "space-sprint,seatrack,river-run,mountainstreet").split(",");
 

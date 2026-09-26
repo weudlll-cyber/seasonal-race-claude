@@ -10,6 +10,7 @@
 // OFF     — the whole bound is outside the canvas rect. Nothing of him is drawn.
 // CLIPPED — the bound crosses an edge. Part of him is drawn, part is not.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -37,7 +38,7 @@ const ONLY = arg("track", null);
 const RACERS = Number(arg("racers", "20"));
 const SEED_FROM = Number(arg("from", "1"));
 const SEED_TO = Number(arg("to", "50"));
-const OUT = arg("out", "c:/tmp/late-lead-hunt");
+const OUT = arg("out", join(tmpdir(), "late-lead-hunt"));
 const TOPK = Number(arg("topk", "5"));
 
 function measure(geo, seed) {

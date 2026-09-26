@@ -4,6 +4,7 @@
 // know what a NARROWER set would have asked for, it calls the production `contenderGuarantee` — the
 // same pure function `_guaranteeCeiling` calls — on a reduced point set. Nothing is re-implemented.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -29,7 +30,7 @@ const arg = (k, d) => {
 const ONLY = arg("track", null);
 const RACERS = Number(arg("racers", "20"));
 const SEEDS = String(arg("seeds", "9")).split(",").map(Number);
-const OUT = arg("out", "c:/tmp/runin-contenders");
+const OUT = arg("out", join(tmpdir(), "runin-contenders"));
 const TRACE = arg("trace", null); // "seed" -> emit a per-frame trace for that seed
 
 /** One race, fully measured. */

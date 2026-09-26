@@ -1,12 +1,14 @@
 // COMPANY-HEADCOUNT-1 — the two arms, per track, never pooled. Frames align by (seed, frame), so
 // the widening is a PER-FRAME distribution rather than one aggregate divided by another.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/hc");
+const DIR = arg("dir", join(tmpdir(), "hc"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const A = arg("before", "before");
 const B = arg("after", "after");

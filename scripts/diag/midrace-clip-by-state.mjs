@@ -15,12 +15,14 @@
 // change is two episodes, because the question is how long the leader is missing FROM A SHOT THAT IS
 // SUPPOSED TO BE OF HIM — and once the state changes the shot's subject has changed with it.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/midrace");
+const DIR = arg("dir", join(tmpdir(), "midrace"));
 const PREFIX = arg("prefix", "after");
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 // HIS THREE, FIRST AND SEPARATELY — then the two he has excused, for contrast only.

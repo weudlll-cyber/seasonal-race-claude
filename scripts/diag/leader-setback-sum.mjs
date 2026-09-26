@@ -7,12 +7,14 @@
 //     setback" or "a setback that eases", so it is reported as a per-frame delta and not a range.
 // (e) THE RESIDUAL — frames a BACK-ONLY setback cannot fix, with the cause named per frame.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/sb");
+const DIR = arg("dir", join(tmpdir(), "sb"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const STATES = ["LEADER_ZOOM", "LEAD_CHANGE", "OVERVIEW"];
 const FRAC = 0.66; // shipped leaderForwardFrac — read from the trace and asserted below

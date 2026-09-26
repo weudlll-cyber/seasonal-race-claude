@@ -5,12 +5,14 @@
 // hundred faults. Both are reported, and the episode length distribution is what says whether this
 // is a flicker or a state he sits inside.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/midrace");
+const DIR = arg("dir", join(tmpdir(), "midrace"));
 const PREFIX = arg("prefix", "after");
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const f = (n, d = 1) => (n === null || n === undefined ? "   —  " : n.toFixed(d).padStart(6));

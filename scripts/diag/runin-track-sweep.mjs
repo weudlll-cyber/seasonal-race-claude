@@ -13,12 +13,14 @@
 // up 200 s into a 212 s race, the orphan count that came back 0 because a `rev-list` failed with its
 // error swallowed, and the fingerprint that read a missing metric as zero and reversed a decision.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/all10");
+const DIR = arg("dir", join(tmpdir(), "all10"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const RATIO = Number(arg("ratio", "5"));
 const FLOOR = Number(arg("floor", "0.01"));

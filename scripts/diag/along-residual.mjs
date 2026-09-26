@@ -25,6 +25,7 @@
 // therefore the largest `|p - c|` component ratio over the half-frame — one division per corner, no
 // iteration, and exact.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -66,7 +67,7 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/p2");
+const OUT = arg("out", join(tmpdir(), "p2"));
 const TAG = arg("tag", "resid");
 const FROM_U = Number(arg("from", "0.10"));
 // THE MARGIN IS A PARAMETER because there are TWO residuals and they are different sizes. The

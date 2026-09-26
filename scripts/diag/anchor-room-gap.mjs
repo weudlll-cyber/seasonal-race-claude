@@ -21,6 +21,7 @@
 // The replication is checked against the director's own `_lastLateralShift` on every frame; a run
 // whose replication does not match is reported as such rather than believed.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -64,7 +65,7 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/p3");
+const OUT = arg("out", join(tmpdir(), "p3"));
 const TAG = arg("tag", "gap");
 
 const tracks = new Map(loadTracks().map((g) => [g.id, g]));
