@@ -1548,7 +1548,7 @@ export function runSingleRace({
       smooth: dynamicsConfig.enableRowEnvSmooth ?? false, // ease the step over 1s (default false = instant)
     };
     // Per-race director state. ★ THE GOVERNOR IS NOT CALLED IN THIS FILE — it is called by raceCore's
-    // `stepRacePhysics` (raceCore.js:616), which this race loop invokes below, so the sim reaches it
+    // `stepRacePhysics` (raceCore.js:544), which this race loop invokes below, so the sim reaches it
     // transitively and `applyPulkLeadRotation` is deliberately NOT imported here (an unused import
     // sat at :183 until 2026-09-23 and made it look as though the sim ran the governor itself — it
     // is the other way round). That function lazily attaches its own `leadRot` sub-state on first

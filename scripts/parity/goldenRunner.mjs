@@ -385,7 +385,7 @@ function browserPlanConfig(dynamicsConfig, pathLengthPx) {
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
     // ★ GAP-BRAKE-1 — mirror of raceCore.js:290-302. Without these six the plan cannot run the gap
-    // brake at all (`_computeGapLeaderBrake` returns at its guard, racePlanner.js:886), so this arm
+    // brake at all (`_computeGapLeaderBrake` returns at its guard, racePlanner.js:904), so this arm
     // raced a world the browser does not. Shipped default is OFF, so forwarding them is inert today.
     // `trajectoryTransitionDuration` is the brake's rate window — passed in SECONDS, as the store
     // holds it and as raceCore.js:301 passes it; the planner converts once (racePlanner.js:414).

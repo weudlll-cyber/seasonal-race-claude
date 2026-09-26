@@ -1,6 +1,6 @@
 // LEADER-LAG-TRUTH-1 (e) — what a FASTER camera would buy and what it would cost. MEASURE ONLY.
 //
-// `trackingTC` is the time constant of the first-order smoother at CameraDirector.js:1323. Its
+// `trackingTC` is the time constant of the first-order smoother at cameraTimingComputation.js:224. Its
 // steady-state lag under a target moving at constant screen speed is v·(1−lf)/lf, so the closed form
 // PREDICTS the lag ratio for any tc. The sweep is here to check that prediction against the real
 // director rather than to stand in for it — where measured and predicted agree, the smoother is the

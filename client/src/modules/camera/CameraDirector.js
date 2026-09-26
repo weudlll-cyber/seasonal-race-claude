@@ -4345,8 +4345,14 @@ export class CameraDirector {
     if (!(sLen > 0)) return pos;
     const span = frameExtentAlong(sxDir, syDir, frameW, frameH);
     // AIM-ROOM-1 (LEVER B): the SAME reduction `anchorScreenPoint` applies, from the one helper, so
-    // the aim and the pan cannot disagree about where the leader will sit. Inert at the shipped
-    // default (`leaderAimRoomFloorPx` 0).
+    // the aim and the pan cannot disagree about where the leader will sit.
+    // ★ CORRECTED 2026-09-27 (DELIVERY-CLEAN-1 §4.3). This said "Inert at the shipped default
+    // (`leaderAimRoomFloorPx` 0)". The shipped default is NOT 0, so the reduction is NOT inert and
+    // a reader who believed this line would have discounted a lever that is live in every race.
+    // The value is deliberately not restated here — it lives in `defaults.js`, which is its one
+    // home, and a number in a comment has nothing checking it. What is true without the number:
+    // the floor is applied whenever it is positive, and `forwardFracForRoomFloor` is the one
+    // helper that applies it.
     const effFrac = forwardFracForRoomFloor(frac, span, this._leaderAimRoomFloorPx);
     const worldBias = ((effFrac - 0.5) * span) / sLen;
     // A NEGATIVE bias is legal now and is the whole of the run-in's opening placement. The old guard

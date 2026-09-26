@@ -11,7 +11,7 @@
 // diagnostics under scripts/diag/. Every one of them had silently fallen behind:
 //
 //   · all five omitted the gap brake's four keys and `trajectoryTransitionDuration`, so
-//     `_computeGapLeaderBrake` returned at its guard (racePlanner.js:886) and the mechanism could
+//     `_computeGapLeaderBrake` returned at its guard (racePlanner.js:904) and the mechanism could
 //     not run AT ALL — the fairness instrument measured 0 firings and reported "fair" for a race
 //     the browser does not run the moment the owner switches that brake on;
 //   · four of the five also omitted `pathLengthPx`, the brake's distance unit;

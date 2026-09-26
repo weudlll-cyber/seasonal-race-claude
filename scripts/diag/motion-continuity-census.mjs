@@ -28,7 +28,7 @@
 //   ZOOM   `|Δ ln effZoomX|` — log space, because scale is perceived logarithmically.
 //
 // ★ PAN IS MEASURED ON THE X AXIS ALONE, AND THAT IS A LIMIT OF THE RECORD, NOT A CHOICE. The dump
-//   publishes `ez` (`effZoomX`) and no `effZoomY` (`viewerProbe.js:532`), and the centre on Y needs
+//   publishes `ez` (`effZoomX`) and no `effZoomY` (`viewerProbe.js:245`), and the centre on Y needs
 //   `zoom · axisY`. X is the axis the canvas is widest in and the one §1.3's `visW` normalises by.
 //   Stated here rather than left for a reader to infer from a formula.
 //

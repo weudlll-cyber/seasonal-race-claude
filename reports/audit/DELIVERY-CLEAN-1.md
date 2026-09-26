@@ -802,3 +802,114 @@ the cheap question would pass this file today.**
 - **4.2 and 4.3 entirely unmeasured.**
 - The 35 ambiguous-basename citations were **not disambiguated** — each may be right or wrong and
   this pass did not open them.
+
+---
+
+## §4 — COMMENTS THAT LIE (COMPLETED 2026-09-27)
+
+★★ **The first pass of this piece shipped a check that was worthless, and said so. This is what the
+repaired check found.**
+
+### 4.1 REPAIRED — the check now verifies CONTENT, not existence
+
+The first version asked only *does the cited line exist*. It scored **0** on a file carrying eight
+wrong addresses. The repaired version asks the question that matters: **the comment names a symbol
+beside the address — is that symbol still at the cited line?**
+
+★ **Reused, not invented:** this is `check-fallback-agreement`'s RULE F — which already pairs a
+backticked symbol with a line anchor for **documents** — applied to **comments**. The only new thing
+is the surface.
+
+| | existence check (first pass) | **content check (repaired)** |
+| --- | --- | --- |
+| citations judged | 253 (all) | **39 paired** (symbol + address) |
+| wrong | **0** | ★ **17** |
+| unpaired, counted not judged | — | 202 (a bare address makes no checkable claim) |
+
+★★ **17 wrong where the old check found 0.** That is the whole argument for the repair, and it is
+why 4.5 below is still not built.
+
+### 4.4 — 17 repaired, 3 excluded by rule, 1 a false positive of my own check
+
+**14 corrections in the first pass** (a filename case error plus eight drifted line numbers in
+`comeback-beats.mjs`), **then 5 more** once the content check ran:
+
+| file | claimed | corrected to | what was wrong |
+| --- | --- | --- | --- |
+| `planConfigMirror.test.js` | `racePlanner.js:886` | `:904` | drifted line |
+| `goldenRunner.mjs` | `racePlanner.js:886` | `:904` | drifted line |
+| `RaceScreen/index.jsx` | `SetupScreen.jsx:688` → my first fix `:148` | **`:180`** | ★ the comment says *written at* — `:148` is a READ, `:180` is the write |
+| `comeback-beats.mjs` | `heroChoreography.js:111` | **`racePlanner.js:1159`** | ★ **wrong FILE** — `_heroCurves` is not in that module at all |
+| `leader-lag-tc.mjs` | `CameraDirector.js:1323` | **`cameraTimingComputation.js:224`** | ★ **wrong FILE** — `trackingTC` does not appear in the director |
+| `comeback-beats.mjs` | `comebackDetector.js:30` | `:171` | pointed at prose, not the membership test it describes |
+| `motion-continuity-census.mjs` | `viewerProbe.js:39` | `:245` | pointed at prose, not the frame read |
+| + `_pickNextState`, `buildCameraPlan`, `raceProgress`, `endgameThreshold`, `_runInProgressOf`, `finishRank`, `stepRacePhysics` | various | definition lines | drifted |
+
+**3 remaining are in `reports/`** — the lab journal, which this project's own rule allows to go
+stale, and correcting it would rewrite what was believed on the day it was written. **1 is a false
+positive of my own checker**: `comeback-beats.mjs:21` lists three beat names and my "last backticked
+symbol" heuristic picks `resolve` when the address is about `buildCameraPlan`.
+
+### 4.2 — absolutes: **7,131 found, 93 narrowed, 8 verified, 8 survive**
+
+| | count |
+| --- | --- |
+| comment lines containing an absolute (non-report source) | **7,131** |
+| of which *every* 2,071 · *only* 1,922 · *never* 1,526 · *cannot* 936 · *always* 295 · *must not* 290 · *the one place* 34 · *no other* 32 · *impossible* 25 | |
+| narrowed to uniqueness/impossibility claims — the ones that make a reader stop looking | **93** |
+| mechanically verified by an uncapped search | **8** |
+| **survived** | **8 of 8** |
+
+★★ **COVERAGE STATED, because 7,131 cannot be hand-verified in one pass: 8 of 7,131 is 0.1%**,
+chosen by falsifiability rather than at random. This sub-section is **bounded, not complete**.
+
+★ **And my probe produced 3 false positives out of 8**, which is worth more than the pass rate:
+`restampSession.js`'s claim survived because the two other `regenerate(` sites are *login* and
+*setup* anti-session-fixation, not a self-password-change; `durationModel.js`'s survived because the
+three hits are **call sites**, not second definitions; `suiteShape.mjs`'s survived because
+`vitest.config.js:46` **imports it** and `:71` consumes what it returns. A uniqueness claim cannot
+be checked by counting occurrences of a name.
+
+### 4.3 — comments stating a config value: **one wrong, and 65 waiting to drift**
+
+| | count |
+| --- | --- |
+| comment lines naming a config key **and its correct value** | **65** |
+| naming a key and some other number (ranges, counts, dates, measured figures) | 159 candidates, read by hand |
+| ★ **stating a value the config does not ship** | **1** |
+
+★★ **THE ONE, AND IT WAS MISLEADING IN BOTH HALVES.** `CameraDirector.js:4349` read *"Inert at the
+shipped default (`leaderAimRoomFloorPx` 0)"*. The shipped default is **not 0**
+(`defaults.js:944`), so the reduction is **not inert** — it is live in every race. A reader who
+believed that line would have discounted a lever that is always on.
+
+**Repaired the way this project repairs a drifted number: by REMOVING it, not correcting it.** The
+replacement says what is true without a value — the floor is applied whenever it is positive, and
+`forwardFracForRoomFloor` is the one helper that applies it — and points at `defaults.js` as its one
+home. ★ `engine-reach --check` on the file: *"in the hull but INERT — same tokens, same line breaks
+between them — comments only"*, so no fingerprint can move.
+
+★★ **THE 65 ARE THE STANDING EXPOSURE.** Documents are held by `check-config-claims`; tooltips are
+held by `check-tooltip-values` since 2026-09-26. **Comments are held by nothing**, and 65 of them
+carry a config value today. That is the row, not a repair.
+
+### 4.5 — the guard: **STILL NOT BUILT, and now for a better reason**
+
+The brief's condition is that a guard which cannot go red under sabotage is not a guard. The
+repaired check **does** go red — it found 17. But it is **not green tree-wide**: 4 citations remain
+(3 in `reports/`, 1 a false positive of the heuristic), and its own pairing rule misfires on a
+comment that lists several symbols. **Wiring it would put a guard in `--premerge` that is red on
+arrival and whose red includes a case it is wrong about.**
+
+★ **Recorded as a row instead**, with what it would take: pair on the symbol NEAREST the address
+rather than the last one before it, decide whether `reports/` is in scope, and only then wire it.
+The script itself is in this report's evidence, not committed as a guard.
+
+### §4 — UNKNOWN
+
+- **203 of the 242 resolvable citations are UNPAIRED** — a bare `file.js:123` with no symbol makes
+  no claim a machine can check. Whether any points at the wrong line is **unknown**, and it is the
+  larger half of the surface.
+- **7,123 of 7,131 absolutes are unverified.**
+- 4.3's 159 "other number" candidates were read by eye for the one finding above; they were **not**
+  individually adjudicated.

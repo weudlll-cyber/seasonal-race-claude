@@ -1938,7 +1938,7 @@ export default function RaceScreen() {
   //     screen does not take it out, so the operator landed back on Setup with the browser still
   //     fullscreen and the only control that could undo it left behind on the race screen.
   //
-  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:688`
+  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:180`
   // into a store that outlives the tab. It is the RECORD of a seed that really was used — a race did
   // run — and erasing it would destroy the only trace of a drawn seed. And `raceResults`, which this
   // race never wrote: it is written only once every racer has finished (:1108), so a cancelled race

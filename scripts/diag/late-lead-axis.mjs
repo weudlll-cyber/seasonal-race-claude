@@ -91,7 +91,7 @@ function classifyRange(shape, isOpen, tA, tB, n = 120) {
 // ── PER TRACK: what each of the four sides MEANS, over ANY sub-window of the closing stretch ──
 //
 // THE WINDOW IS NOT THE WHOLE STRETCH, and that is what makes the two turning tracks decidable.
-// `_runInProgressOf` (CameraDirector.js:3661) is exactly
+// `_runInProgressOf` (CameraDirector.js:4188) is exactly
 //     u = clamp01( (p - endgameThreshold) / (1 - endgameThreshold) ),  p = leaderT / finishT
 // so a hit's stored u-window [offFrom, offTo] pins the LEADER's own t to
 //     [ (0.95 + 0.05*offFrom) * finishT , (0.95 + 0.05*offTo) * finishT ].

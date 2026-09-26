@@ -172,7 +172,7 @@ runRace(race, identity, cameraConfig, () => true);
 
 // ── The comparison ────────────────────────────────────────────────────────────────────────────
 //
-// ORDER COMES FROM `finishRank` on the replay side (raceCore.js:705), and from the stored `results`
+// ORDER COMES FROM `finishRank` on the replay side (raceCore.js:205), and from the stored `results`
 // array's own order on his — that array is written in finishing order and its times are monotonic,
 // which matters because `QN3HDP` carries a TIE (two racers at 83 088 ms) that a re-sort by time
 // would be free to break either way.

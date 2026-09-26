@@ -18,7 +18,7 @@
 // wrote.
 //
 // WHAT IS DISCARDED: the per-hero `beats` array — `{ progress, event }` with `event` one of
-// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:511-517` from the authored curve's
+// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:781` from the authored curve's
 // own points — and `finalRank`. So the plan states, per comebacker, WHERE IN THE RACE its climb was
 // written, and the camera never sees it.
 //
@@ -53,7 +53,7 @@
 //
 // ★ ONE CLAIM IN THE DETECTOR'S OWN HEADER IS CHECKED HERE RATHER THAN BELIEVED: "Every cast
 // comebacker is drawn from the B1 pool, so case 1 is always already rank-tracked." It matters
-// because `recordRanks` keeps history for `_b1` MEMBERS ONLY (`comebackDetector.js:104`), while
+// because `recordRanks` keeps history for `_b1` MEMBERS ONLY (`comebackDetector.js:171`), while
 // `best()` iterates the CAST — so a cast comebacker outside B1 would have no history and be skipped
 // at `:128` forever. This harness counts them.
 //
@@ -367,7 +367,7 @@ for (const geo of tracks) {
         frameOffers.push([w, a]);
         return a;
       };
-      // `_pickNextState` (CameraDirector.js:1548) is the decision itself. Wrapping it separates
+      // `_pickNextState` (CameraDirector.js:1624) is the decision itself. Wrapping it separates
       // "the director never asked the question this frame" — the hold gate at :960 did not open —
       // from "it asked and returned before the candidate pool was ever built", which is what its
       // start-window and endgame branches do. Without this the two collapse into one unreadable
@@ -428,8 +428,8 @@ for (const geo of tracks) {
     // or the plan does — every read is a read.
     //
     // ★ WHAT CANNOT BE RECORDED HERE, and it is not worked around. The plan's AUTHORED rank at each
-    // beat lives in `plan._heroCurves` (`heroChoreography.js:111` — every curve point is
-    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:511-517`) keeps only
+    // beat lives in `plan._heroCurves` (`racePlanner.js:1159` — every curve point is
+    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:781`) keeps only
     // `{progress, event}`. The controller exposes `getCameraPlan` and `getHeroRoles` and no getter
     // for the curves, so the authored rank is NOT reachable from the delivered plan. What is
     // recorded instead is the racer's ACTUAL rank at the moment the authored progress is reached —
@@ -584,7 +584,7 @@ for (const geo of tracks) {
               } else {
                 // The reason string names the branch, so it is reported rather than guessed at.
                 const head = String(frameDecision ?? "?").split(":")[0];
-                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1548+)`);
+                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1624+)`);
               }
             } else {
               poolSize.set(framePool.length, (poolSize.get(framePool.length) ?? 0) + 1);
@@ -630,7 +630,7 @@ for (const geo of tracks) {
           // COMEBACK-SHAPE-1 — where in the field he was when the shot began.
           rankAtStart: who == null ? null : rankOf(state, who),
           // ★ THE TWO PROGRESS AXES ARE NOT THE SAME NUMBER, and a report that mixed them would be
-          // wrong. `st.raceProgress` (`raceCore.js:518-524`) is a running MAX over UNFINISHED racers,
+          // wrong. `st.raceProgress` (`raceCore.js:239`) is a running MAX over UNFINISHED racers,
           // clamped to 1 — it is the axis the race plan's beats are written in. The director compares
           // its own `leader.t / finishT` (`CameraDirector.js:968`) over ALL racers, uncapped. They
           // agree until the first racer finishes. Both are recorded so the gap can be shown rather
