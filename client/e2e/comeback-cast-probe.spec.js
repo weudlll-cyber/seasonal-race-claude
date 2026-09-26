@@ -60,8 +60,14 @@ for (const SEED of SEEDS) {
       window.__raCamTrace = [];
       // 2 · every distinct role string the DIRECTOR DIAG panel has shown, with when and for whom.
       window.__raRoleTrace = [];
+      // 3 · COMEBACK-GATES-1: how many times the director was LOOKED AT, and what the COMEBACK DIAG
+      //     said while it was refusing. The director is updated once per rendered frame
+      //     (`RaceScreen/index.jsx`), so counting rAF ticks during the race counts its looks.
+      window.__raFrames = 0;
+      window.__raGateTrace = {};
       const seen = new Set();
       const tick = () => {
+        window.__raFrames += 1;
         const el = document.querySelector('[data-testid="camera-state-hud"]');
         const s = el?.getAttribute('data-state') ?? null;
         if (s) {
@@ -80,6 +86,17 @@ for (const SEED of SEEDS) {
             }
           }
         }
+        // The COMEBACK DIAG already names WHICH gate refused — `gain✗`, `gap✗`, `rank✗` per B1
+        // racer, and the phase gate open/closed. Nothing is added to the product to read it; the
+        // distinct lines are tallied so a whole race collapses to a handful of rows.
+        const c = document.querySelector('[data-testid="comeback-diag-hud"]');
+        if (c) {
+          for (const line of c.innerText.split('\n')) {
+            const t = line.trim();
+            if (!t) continue;
+            window.__raGateTrace[t] = (window.__raGateTrace[t] ?? 0) + 1;
+          }
+        }
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -94,6 +111,8 @@ for (const SEED of SEEDS) {
       const raw = localStorage.getItem('racearena:cameraConfig');
       const cfg = raw ? JSON.parse(raw) : {};
       cfg.showGovernorDiag = true;
+      // COMEBACK-GATES-1: the panel that already reports which comeback gate refused.
+      cfg.showComebackDiag = true;
       localStorage.setItem('racearena:cameraConfig', JSON.stringify(cfg));
     });
 
@@ -113,13 +132,31 @@ for (const SEED of SEEDS) {
     const roles = await page.evaluate(() => window.__raRoleTrace ?? []);
     const cam = await page.evaluate(() => window.__raCamTrace ?? []);
     const states = [...new Set(cam.map((e) => e.state))];
+    const frames = await page.evaluate(() => window.__raFrames ?? 0);
+    // The seed the race ACTUALLY ran with, off the payload the setup screen wrote — not the value
+    // this file asked for. A fixture that silently drew its own seed would show up right here.
+    const usedSeed = await page.evaluate(() => {
+      try {
+        return JSON.parse(sessionStorage.getItem('activeRace') ?? '{}').racePlanSeed ?? null;
+      } catch {
+        return null;
+      }
+    });
+    const gates = await page.evaluate(() => window.__raGateTrace ?? {});
+    const refusals = Object.entries(gates)
+      .filter(([k]) => k.includes('✗'))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
 
     console.log(`[cast-probe] seed=${SEED} ROLES SEEN: ${JSON.stringify(roles)}`);
     console.log(`[cast-probe] seed=${SEED} CAMERA STATES: ${JSON.stringify(states)}`);
     console.log(
-      `[cast-probe] seed=${SEED} comebacker-in-browser=${roles.some((r) => r.role === 'comebacker')}` +
-        ` comeback-zoom=${states.includes('COMEBACK_ZOOM')}`
+      `[cast-probe] seed=${SEED} RESULT usedSeed=${usedSeed}` +
+        ` cast=${roles.some((r) => r.role === 'comebacker')}` +
+        ` shot=${states.includes('COMEBACK_ZOOM')}` +
+        ` frames=${frames}`
     );
+    console.log(`[cast-probe] seed=${SEED} TOP REFUSALS: ${JSON.stringify(refusals)}`);
 
     // The only assertion: the instrument worked. Nothing about the product is claimed here.
     expect(cam.length, 'the camera-state HUD produced no trace at all').toBeGreaterThan(2);

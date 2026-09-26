@@ -1124,8 +1124,46 @@ are in PART TWO with what closed them; these are the ones still standing.
       chance event. **It cannot pass reliably as written**, and the repair for that is a decision
       — not a margin, not a fixture — so nothing was changed. **The row stays open on this alone.**
 
-      ★★ **THE REUSABLE FACT, MEASURED 2026-09-26 AND WRITTEN INTO THE SPEC'S HEADER WHERE THE NEXT
-      CAMERA-SPEC AUTHOR WILL MEET IT: THE CAMERA IS NOT DETERMINED BY THE RACE SEED ALONE.** One
+      ★★ **CORRECTED 2026-09-26, SAME DAY — THE CAUSE WRITTEN ABOVE WAS WRONG ON BOTH HALVES, AND
+      IT WAS WRONG BY READING A NAME INSTEAD OF A BODY.**
+      - **The shot is NOT gated by `comebackWeight`.** A cast comebacker's FIRST shot is returned
+        outright at `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick`
+        (`:1840`) and above `_acceptsOffer` (`:1844`); the decline path is reachable only by a
+        `pick` from the candidate pool. The weight gates a SECOND shot of the same racer, not this
+        one. Its own comment says so at `:1806-1808`.
+      - **The camera's stream IS derived from the race seed.** `cameraSeed.js:72-78`
+        (`cameraSeedForRace`) salts the race's seed; `RaceScreen/index.jsx:691` calls it and `:701`
+        hands it to `setRandomSeed`. CAMERA-SEED-AND-LINE-1 did this deliberately after measuring
+        165 physics steps of divergence between two runs of one race seed. The drawn branch is for
+        `racePlanSeed <= 0`, which is the EMPTY seed field (`quickTestSeed.js:97-98`); this fixture
+        types its seed and never enters it — confirmed, `usedSeed=1` in all ten probe runs.
+      - ★ **And the 12-of-12 correlation reported on 2026-09-26 was not a discovery.** With no cast
+        there is no candidate at all (`comebackDetector.js:215`, no fallback since 2026-09-19,
+        recorded at `CameraDirector.js:862-866`), so cast⇒shot and no-cast⇒no-shot is **the only
+        outcome the code permits**. It was reported as an empirical correlation; it is a structural
+        certainty.
+
+      ★★ **WHAT THE VARIATION ACTUALLY IS, and it is stated as a fitting mechanism rather than a
+      demonstrated one.** The physics is fixed-step (16 ms, catch-up capped at two steps per frame)
+      and seeded, so the RACE is identical run to run. The director is updated **once per rendered
+      frame** off a wall-clock delta (`RaceScreen/index.jsx:937`, `:1071`, `:1588`), and every gate
+      the comeback shot passes is a time or progress window. So the draws land in different places
+      in an unchanged stream, and on a loaded machine a window can open and close between two
+      frames. ★ **NOT REPRODUCED ON DEMAND:** ten probe runs on the pinned fixture produced the shot
+      **10 of 10** (`usedSeed=1`, `cast=true`, 3412–3889 frames). Across every run of this fixture,
+      the shot appeared in **17 of 19**. The two misses are therefore cast-but-no-shot — inferred,
+      because the cast is a pure function of the seeded plan and was `true` in all ten probe runs,
+      not because the failing runs recorded it.
+      ★ **DROPPED WITH ITS REASON (brief step 4):** the frame-count comparison between a passing and
+      a failing run **cannot be made** — no failing run was captured with the counter installed, and
+      the probe that has the counter did not fail in ten attempts. ★ **And the probe is not a
+      faithful stand-in for the spec:** it renders two extra diagnostic panels every frame, which
+      changes the very frame cost under test. Naming that confound matters more than the 10/10.
+      ★ **NEEDS HIS WORD:** may a browser spec tolerate a frame-starved run, or must the shot be made
+      frame-independent? The first is a spec change; the second is a camera change.
+
+      ★★ **THE REUSABLE FACT SURVIVES THE CORRECTION UNCHANGED, and is in the spec's header where the
+      next camera-spec author will meet it: THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE.** One
       fixture gave `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held
       7824 ms, `LEADER_ZOOM` held 5781 ms, 966 ms, 4471 ms, `BATTLE_ZOOM` held 1979 ms — and twice,
       nothing. **A browser spec that asserts an exact SEQUENCE of camera states, or an exact

@@ -55,11 +55,16 @@ day. The list below therefore contains no questions at all: **all seven rows are
    fixture. ★ **The margin is repaired (2026-09-26): the spec now derives the hold gate from the
    product's own timing function instead of a hardcoded number nobody decided. No run has failed on
    it since.** ★★ **What keeps this row open is a bigger finding:** on one fixture, two runs of five
-   produced **no comeback shot at all**. Accepting a comeback offer is a coin flip at a shipped
-   weight, drawn from the camera's own random stream, which is not seeded from the race — so a spec
-   that asserts the shot occurs cannot pass reliably, and what to do about that is a decision, not a
-   margin. ★ The reusable lesson is now in the spec's header: the camera is not determined by the
-   race seed, so a browser spec must assert a property, never a sequence.
+   produced **no comeback shot at all**. ★★ **The cause stated here on 2026-09-26 was WRONG and is
+   corrected:** the shot is NOT a coin flip — a cast comebacker's first shot is FORCED above the
+   weighted draw, and the camera's stream IS derived from the race seed. What varies is where in
+   that stream the draws land, because the director is updated once per rendered frame off a
+   wall-clock delta while the physics runs in fixed steps, so a time window can open and close
+   between two frames. **Not reproduced on demand — ten probe runs on the fixture all produced the
+   shot** — so this is the mechanism that fits, not one that has been demonstrated. ★ **NEEDS HIS
+   WORD:** whether a browser spec may tolerate a frame-starved run, or whether the shot must be made
+   frame-independent. ★ The reusable lesson stands and is in the spec's header: assert a property,
+   never a sequence.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
@@ -78,11 +83,22 @@ day. The list below therefore contains no questions at all: **all seven rows are
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★★ **EMPTY, 2026-09-25 — and that is the state, not an omission.** Eleven rows were checked at the
+★★ **ONE ITEM, ADDED 2026-09-26.** *(This section read EMPTY from 2026-09-25 until then, and for
+that day it was true. It stopped being true the moment row 6 above said "needs his word" — two
+pages of one list disagreeing, which is the disease this page was rebuilt to cure. Row 6 is the one
+that is right.)*
+
+**1 · May a browser spec tolerate a frame-starved run, or must the comeback shot be made
+frame-independent?** On one fixture the shot appeared in 17 of 19 runs; the two misses are explained
+by the director getting fewer looks under load, not by chance in the product. Tolerating it is a spec
+change; removing the dependence is a camera change. → [BACKLOG.md](BACKLOG.md) PART ONE, the specs row.
+
+★ **What the 2026-09-25 emptiness meant, kept because the reasoning still holds.** Eleven rows were checked at the
 tree that day. Three closed on the re-verification, four were already struck records, and the owner's
-decisions of 2026-09-25 closed, dropped or commissioned the rest. **Nothing is waiting on his word.**
-The rows that came out of those decisions are WORK, and they are in
-[BACKLOG.md](BACKLOG.md) PART ONE, not here.
+decisions of 2026-09-25 closed, dropped or commissioned the rest, so on that date nothing was
+waiting on his word and the rows that came out of those decisions were WORK, in
+[BACKLOG.md](BACKLOG.md) PART ONE rather than here. **That held until 2026-09-26, when measuring the
+comeback shot produced a question a measurement cannot settle — the item above.**
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
 
