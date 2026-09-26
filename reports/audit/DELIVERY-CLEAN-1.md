@@ -187,3 +187,226 @@ largest, and it is marked as a settled decision so a later reader does not re-op
   this section does not have.
 - **Lockfile/manifest sync and a pinned Node version are not yet checked** — both are 1.6 items and
   both are deferred to §2.10, where the container's own pinning is the same question.
+
+---
+
+## §2 — SECURITY, HALF A: DANGER TO THE OPERATOR
+
+Denominator: the **58 routes over 9 mounts** enumerated in §1.4. Severities, used consistently
+below: **HIGH** = an unauthenticated or cross-tenant party can act; **MEDIUM** = an authenticated
+party can exceed what the owner intends, or an operator can be misled into an unsafe deployment;
+**LOW** = latent, needs an unusual condition, never observed.
+
+★ Nothing in this section was repaired. Security changes are behaviour.
+
+### 2.1 Secrets — swept, working tree AND whole history
+
+| | |
+| --- | --- |
+| working tree | `git grep -nIE` over **all tracked files** for api-key / secret / password / token / private-key / `mongodb://` / `postgres://` / `mysql://` assignments of 8+ characters, excluding test, example and `process.env` forms — **0 hits** |
+| whole history | every blob in **30,719 objects** (`git rev-list --objects --all`, blobs under 2 MB) piped through `git cat-file --batch` and matched against private-key headers, OpenSSH headers, `mongodb(+srv)://`, `postgres://`, `mysql://`, `xox[baprs]-`, `gh[pousr]_`, `AKIA[0-9A-Z]{16}` — **0 hits** |
+| `.gitignore` vs tracked | `.env`, `node_modules`, `client/dist` all ignored and untracked; **0** tracked files under any build-output path |
+| `server/data/` | **exactly 1 tracked file**, `server/data/README.md`. The runtime store is not in the repository. |
+| secret-shaped filenames | one hit, `reports/evolution/IMAGE-NO-CREDENTIALS-1.md` — a report *about* credentials, containing none |
+
+★★ **THE TWO LIMITS OF THAT ABSENCE CLAIM, stated because rule 2 requires it.** Blobs **over 2 MB
+were not scanned** (that bound exists to skip the 10 MB background JPEGs), and the history pattern
+set is **high-confidence only** — a bespoke plaintext password with no recognisable prefix would
+match neither pass. The finding is *"no secret of a recognised shape"*, not *"no secret"*.
+
+**The bootstrap token.** Not defaulted anywhere: `authRouter.js:38` reads `RA_BOOTSTRAP_TOKEN` from
+the environment, `:59` disables setup with a warning when it is absent, and
+`startupReadiness.js:55` says so at boot. INSTALL-SECRETS-1 removed a working token from
+`docker-compose.yml` on 2026-09-08 — the comment at `docker-compose.yml:27-34` records that a
+stranger running a plain `docker compose up` previously got a working token whose value was public.
+`npm run configure` generates one per install into a gitignored override. **No finding.**
+
+### 2.2 Dependencies — 6 advisories, 0 reachable by an operator
+
+| package | critical | high | moderate | low |
+| --- | --- | --- | --- | --- |
+| server | 0 | 0 | **3** | 0 |
+| client | 0 | 0 | **3** | 0 |
+
+All six are one advisory family — **GHSA-82fw-gwwq-j7x9**, via `vitest` / `@vitest/mocker` /
+`@vitest/coverage-v8`. **`vitest` is in `devDependencies` only in both packages** (server 9 deps /
+3 devDeps, client 3 deps / 17 devDeps; `dependencies.vitest` absent in both), and the image installs
+with **`npm install --omit=dev`** (`server/Dockerfile:59`). **The vulnerable path is not in the
+shipped artefact.** Severity **LOW**, written as a dev-only advisory rather than an operator risk.
+
+### 2.3 Authentication and sessions
+
+| | finding | address |
+| --- | --- | --- |
+| hashing | bcrypt, **cost 12** | `usersStore.js:19,36` |
+| comparison | `bcrypt.compare` | `usersStore.js:41` |
+| username enumeration | **guarded** — a real dummy hash is compared when the username is unknown, equalising timing | `authRouter.js:18` |
+| session cookie | `httpOnly: true`, `sameSite: lax`, `secure` from environment, `path: /`, `maxAge` 30 days | `session.js:103-108` |
+| cookie name | `__Host-ra.sid` when secure, else `ra.sid` — the `__Host-` prefix is real hardening | `session.js:35-49` |
+| session store | `resave: false`, `saveUninitialized: false` | `session.js:101-102` |
+| rate limiting | **present on login, setup AND change-password** | `app.js:62-66`, `rateLimit.js:18,34,74` |
+
+**No finding at HIGH or MEDIUM.** ★ The 30-day `maxAge` is a **LOW**: a deliberate convenience for a
+single-operator product, written as a stated consequence rather than a defect.
+
+### 2.4 Authorisation — TESTED, not read
+
+★★ **The one item in §2 answered by doing it.** `server/src/routes/crossTeamAccess.audit.test.js`
+creates two teams and two users and tries the crossing. **5 of 5 pass:**
+
+- team B **cannot list** team A's races (A sees 1, B sees 0);
+- team B **cannot read** A's race by short key — and is told **404, not 403**, so the answer does not
+  confirm the race exists;
+- team B **cannot file into A's team** by putting `team` in the body — the session wins;
+- a user with **no team** gets an empty page, not everybody's races.
+
+★★ **AND THE OTHER SIX MODULES HAVE NO TEAM CONCEPT AT ALL — pinned as fact, not as a wish.**
+Counted over the route sources: `tracks` 0, `surfaceClasses` 0, `playerGroups` 0, `brands` 0,
+`racers` 0, `seedNotices` 0 occurrences of `team`; `races` 20. **Six of seven data modules are
+unscoped.** Severity **MEDIUM**, and the distinction matters: today there is one team, so nothing
+crosses a boundary that exists. The day a second team is invited, every track, brand, racer, player
+group and surface class is shared. That is the TENANCY row, now with a denominator.
+
+★ Scratch data: the probe uses a temp SQLite file and a temp directory, both deleted in `afterEach`.
+
+### 2.5 Transport — verified, not re-argued
+
+`resolveCookieSecure` returns `isProduction` when nothing is set (`session.js`), and
+`RA_COOKIE_SECURE=false` is honoured explicitly — **so login over plain HTTP still works if an
+operator sets it.** That is the already-open GOING ONLINE row; the decision is the owner's and is
+recorded here as still true, not re-argued.
+
+### 2.6 Input surface
+
+| | finding | address |
+| --- | --- | --- |
+| body size | `express.json({ limit: 1mb })` — bounded | `app.js:38` |
+| logo upload size | bounded by `MAX_IMAGE_BYTES`, rejected with a size message | `brands.js` upload handler |
+| logo upload type | allowlist — PNG, JPEG, WebP only, checked twice (multer filter, then again in the handler) | `brands.js` |
+| **path escape** | **not reachable via the filename**: the written name is `brand.id` + extension — derived from the record, never from the client's filename | `brands.js:347,355` |
+| write target | `join(LOGO_DIR, filename)` | `brands.js:347` |
+
+★ **UNKNOWN, and the one gap here:** whether `brand.id` itself can contain a path separator. The
+filename is safe from the *client's* filename but is only as safe as the id's validation, which this
+piece did not open. Carried into §2's UNKNOWN.
+
+### 2.7 Error and log leakage
+
+Error responses carry `err.message` and `err.code` (`races.js:107`), **not `err.stack`** — an
+uncapped grep for `err.stack` across `server/src/routes/*.js` and `app.js` returns nothing. Log
+lines carry the **username** on a rejected race (`races.js:105`) — a username, not a password, a
+token or a session id. **No finding.**
+
+### 2.8 Headers and origin
+
+`helmet()` is applied (`app.js:35`) — **with `contentSecurityPolicy: false`**, the already-recorded
+CSP gap inside the GOING ONLINE row. `crossOriginResourcePolicy` is `cross-origin`, deliberately.
+CORS comes from `corsOptions` with an explicit origin list built once at module load (`app.js:37`,
+`auth/csrf.js`), plus a `csrfOriginGuard`. **CSP off: MEDIUM**, already tracked.
+
+### 2.9–2.11 — NOT COMPLETED IN THIS PASS
+
+Stated rather than implied. What **2.10** did establish:
+
+| | finding | address |
+| --- | --- | --- |
+| runs as root? | **no** — `USER node` | `server/Dockerfile:144` |
+| image pinning | `FROM node:20-alpine` — a **floating tag, not a digest**. A rebuild can silently change the base. Severity **LOW**. | `Dockerfile:22,33` |
+| port binding | `4000:4000` — **binds all interfaces**, so on a VPS the API is directly reachable unless a firewall or proxy prevents it. Severity **MEDIUM**. | `docker-compose.yml:17-18` |
+| restart + health | `restart: unless-stopped`, `HEALTHCHECK` against `/api/health` | `docker-compose.yml:24`, `Dockerfile:165` |
+| volumes | `./server/src`, `./server/utils`, `./server/data`, `./server/seeds` are **bind mounts from the working copy** | `docker-compose.yml:48-55` |
+
+★★ **The volume shape is the finding worth carrying to §6.10.** The compose mounts live source and
+the data directory from the repository checkout, and there is **no separate production compose** —
+`docker-compose.override.yml` and its `.example` are the only siblings. Deploying this file to a VPS
+means the repository working copy IS the deployment, and the database lives inside it. Severity
+**MEDIUM**.
+
+### §2 — UNKNOWN
+
+- **2.9 not done.** No route was checked for an unbounded result set. `GET /api/races` is paged
+  (`races.js:127`); the other 55 were not examined.
+- **2.11 not done.** Whether the dev screen, `?viewerprobe=1`, the dev vite plugin or source maps
+  are present in a **production build** was NOT established from the built artefact. This is the
+  item I would put first if the chain resumes.
+- **`brand.id` validation not read** — see 2.6.
+- **No penetration testing of any kind.** Every finding above is source-read or supertest-level;
+  nothing was run against a live, network-exposed instance.
+- **The six unscoped modules were not tested the way `races` was.** Their absence of scoping is a
+  source count, and a count is not a crossing.
+
+---
+
+## §3 — SECURITY, HALF B: CAN ANYTHING FROM OUTSIDE CHANGE A RESULT
+
+### 3.1 Where the result is computed — the sentence an operator can act on
+
+★★ **The race is computed entirely in the operator's own browser.** The engine
+(`client/src/modules/raceCore.js`, driven from `client/src/screens/RaceScreen/index.jsx`) runs the
+physics; the server never simulates anything. The result reaches the server only as a finished
+record, posted by the browser that produced it.
+
+### 3.2 What the server accepts
+
+| question | answer | address |
+| --- | --- | --- |
+| structural validation? | **yes, but shallow** — required scalar fields via `required()`, and `names`, `results`, `winners` must be arrays and non-empty | `raceStore.js:235,264,269,274` |
+| is any key recomputed server-side? | **the content id is** — SHA-256 over the canonical row the server assembles | `raceStore.js` |
+| is the OUTCOME recomputed? | **NO. The finishing order is taken as given.** | — |
+| is a repeat idempotent? | **yes** — dedupe on `client_race_id`, and again on the content id | `raceStore.js` |
+| can the team be chosen by the body? | **no** — tested in §2.4 | — |
+
+★★ **So an authenticated user CAN post a result no simulation produced.** The server stores any
+structurally valid record. This is not a defect — it is 3.3's decision working as designed.
+
+### 3.3 The recorded decision, and its consequence in plain words
+
+The owner's rule of 2026-09-06, recorded at `client/src/modules/raceHistory.js:9-14`: the race is
+written locally first, always, and **the server is a second store, never a gatekeeper.**
+
+**The consequence, for the owner:** anyone who can sign in can put a race into the history that was
+never run. The system is built for a room of invited players with one operator, and it trusts every
+signed-in account accordingly. **This piece does not propose overturning that**; it states it so the
+choice is visible. The tree and the decision **agree** — no contradiction found in either direction.
+
+### 3.4 Can a user change his own race without it being visible?
+
+★★ **The brief's hypothesis is HALF RIGHT, and the wrong half is the half that matters.**
+
+**Right:** the fingerprints are built from **shipped defaults**, not from stored settings —
+`scripts/camera-fingerprint.mjs:77` imports `DEFAULT_CAMERA_CONFIG` and `:131` builds from it. A user
+who edits stored settings runs a different race and **every fingerprint stays put.** Confirmed.
+
+**Wrong:** *"whether anything records that a race ran on non-default settings"* — **something does.**
+The stored race carries `world_configs`, the **resolved** config the race actually ran with
+(`raceStore.js:164` schema, `:358` write, `:465` read). The schema's own comment states it is stored
+resolved rather than as a diff precisely so the row says what the config WAS, forever, on its own.
+
+**Which stored keys change a RESULT rather than a PICTURE** — the project's own line at
+`configFingerprint.js:20-27`: **race-relevant** are `raceDynamicsConfig`, `raceBehaviorConfig`,
+`rowLayoutConfig`, `baseSpeedConfig`, `autoScaleConfig`; **cosmetic** are `cameraConfig` and
+`frameTimingConfig`.
+
+★ **So a disputed race IS settleable:** the record contains the settings it ran under, and comparing
+them against the shipped defaults is a diff the product already computes for its config badge. What
+is NOT true is that a non-default race announces itself — nothing flags the row; somebody has to
+look.
+
+### 3.5–3.6 — NOT COMPLETED IN THIS PASS
+
+**3.5** is **partly** answered from yesterday's verified work and is not re-derived: the camera is
+frame-driven off wall-clock `rawDt` (`index.jsx:937`, `:1588`) while the physics accumulates in
+fixed 16 ms steps (`:1071`), capped at two catch-up steps per frame (`:1079`). **Whether that
+separation is complete was NOT established** — no full enumeration of `Math.random`, `Date.now` and
+`performance.now` reaching the result path was run. **3.6** (re-run a race from its identifier, end
+to end) was **not done**.
+
+### §3 — UNKNOWN
+
+- **3.5 incomplete**, as above. The separation is shown for the camera and the physics accumulator;
+  it is not proven for the whole result path.
+- **3.6 not attempted.** The mitigation the owner would rely on in a dispute — re-running a race from
+  its identifier — is **unverified by this pass**. Given 3.3, this is the most valuable single check
+  remaining in the whole chain.
+- Whether `world_configs` is *complete* — whether every key that can change a result lives inside
+  those five blocks — was not verified against the engine's actual reads.
