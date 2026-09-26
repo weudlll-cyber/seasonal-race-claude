@@ -1382,3 +1382,202 @@ nothing that a person could see or use was touched.
   non-test scripts are §7's gap and remain it.
 - Whether the 8 unimported exports are seams or residue is **a decision, not a measurement**, and
   none was taken.
+
+---
+
+## §9 — THE DOCUMENTS AND THE README
+
+**Denominator: 39 top-level documents** — the 37 `.md` files directly under `docs/`, plus
+`CLAUDE.md` and `README.md`. (`docs/fingerprints.json` is data with its own guard, not a document;
+`docs/archive/` 22 and `docs/internal/` 1 are below the top level and out of scope.) The brief's
+figure of 39 is right.
+
+### 9.1 — every address in all 39, verified
+
+| | |
+| --- | --- |
+| addresses resolved to a real tracked file | **3,976** |
+| ★ addresses citing a line **past end of file** | **0** |
+| paths that resolved to nothing | 246 |
+
+★★ **THE ZERO IS THE HEADLINE.** Not one of 39 documents cites a line number that no longer exists
+in its file. That does not mean every line still says what the document claims — see UNKNOWN — but
+the coarse form of address rot is absent across the whole document set.
+
+**The 246 unresolved, classified, because a raw count here is not a finding count:**
+
+| class | n | why it is not a finding |
+| --- | --- | --- |
+| the document is **recording an absence** | 122 | all 19 `defaultTracks.js` citations say "NOT BUILT"; `ARCHITECTURE.md:129` says of `scripts/deploy.sh` that it "is not in this repository" |
+| a **record** document, past tense by its job | 80 | `AUDIT.md`, `BACKLOG.md` PART TWO, `LESSONS.md`, `DEAD-ENDS.md`, `MORNING.md`, `TAGS.md`, `FORCE-MAP.md` |
+| **runtime data / harness output** | ~26 | `users.json`, `setup-complete.json`, `identity.json`, `detail.json` |
+| **my detector's fragments** | 5 | `*.test.mjs`, `*-fingerprint.mjs`, `*-ux-verification.spec.js`, and `file.js` — a deliberate placeholder in `VERIFY-RULES.md:837`'s own prose |
+| ★ **genuine, in a living document** | **13** | all repaired, below |
+
+★★ **TWO FAULTS IN MY OWN DETECTOR, both found before anything was reported.** The first run
+returned **1,900** dead files. The extension alternation listed `js` before `jsx|json`, so
+`fingerprints.json` matched as `fingerprints.js` and `index.jsx` as `index.js` — **171 hits from one
+ordering mistake** — and a bare basename in prose was only tried under six guessed roots instead of
+a tree index. A third pass was then needed because of the class above it: an absent path is usually
+a document correctly saying the file is absent. **Three passes to get from 1,900 to 13.**
+
+★ **And one finding I talked myself out of.** I had drafted a report that
+`PROJECT-PRINCIPLES.md:286`'s claim to be "the only LIVE RULE still pointing at the old location"
+was falsified by the three stale pointers below. **It is not.** That sentence is scoped to
+`docs/diagnose/`, and none of the three names that path. Left untouched. Recorded because it was one
+sentence away from going in.
+
+### 9.2–9.3 — the 13 provably wrong sentences, all repaired
+
+★★ **1 · A script cited by the one name it is documented as deliberately NOT having.**
+`docs/DEPLOYMENT.md:41` and `docs/ENVIRONMENT.md:111` both tell an operator to run
+`node scripts/check-bundle-address.mjs`. **There is no such file.** The script is
+`scripts/audit-bundle-address.mjs`, and its own header says the prefix is deliberate:
+`scripts/lib/routing.mjs:343` discovers every top-level `check-*.mjs` as a guard that must be routed
+by `verify`, and this one must not be, because it judges `client/dist`, which `verify` does not
+build. **So the obvious repair — renaming the script to match the documents — would auto-register it
+and redden `verify` on every tree without a fresh client build.** Repaired in the documents and in
+`client/src/services/api.js:31`, which repeated it. ★ This is the most operator-facing defect in the
+report: both documents are the ones a person reads while deploying, and the command they hand over
+is the guard that catches a baked-in address.
+
+★★ **2 · A folder move finished in the code and not in the documents — and it stopped two checks
+answering.** `docs/OPEN.md:164` records that 80 files moved from `client/src/modules/racer-types/`
+to `client/src/racer-types/` on 2026-09-24, re-pathing "29 external importers + 13 scripts".
+It missed:
+
+- `docs/RACER_DATA_MODEL.md:183`, which calls `client/src/modules/racer-types/index.js` **"the single
+  source of truth"** in the present tense — a directory that does not exist — and `:253`;
+- two source comments: `server/src/constants/builtinRacerIds.js:7` and
+  `client/e2e/d355-smoke.spec.js:38`;
+- ★ **two `verify:` commands in BACKLOG PART ONE.** D3.6's names the old folder; Q-9's
+  `git grep -c "" -- client/src/modules/racer-types/index.js` **matched nothing and exited 1** — a
+  check that had quietly stopped being able to answer, which is exactly the class the evidence
+  standard says to drop or repair rather than read as a pass.
+
+**Both re-run at the new path. Both verdicts unchanged** — D3.6 still open (0 hits for
+`racer-configs`, 80 files present), Q-9 still above its own 400-line threshold. ★ **But Q-9's number
+was stale: 478 lines, not the recorded 540** — it shrank by 62 and nobody noticed, because the
+command that would have said so was pointing at nothing. Only addresses and one number were
+touched; no verdict was moved.
+
+★★ **3 · `docs/API.md`'s own honesty note had itself gone stale.** The document says, of itself,
+that the server mounts "**eight** API routers registering **49** routes" with "**36** undocumented",
+re-measured 2026-09-04. **Nine routers are mounted today.** `server/src/routes/races.js` and its
+`app.use('/api/races', racesRouter)` both landed 2026-09-06 in `5c08dc87` (RACE-SAVE-3) — **two days
+after the re-measure** — so the figures were right when written. ★ **And `/api/races` was absent
+from the document's own "missing entirely" list**: the gap list had itself become incomplete, the
+same failure one level up. Re-measured to **9 routers, 59 routes, 46 undocumented**, with the
+counting rule written into the document because it is **not** the 2026-09-04 rule and the two are
+not comparable (the old count excluded the three `attachPromoteExport` sub-routes that
+`routes/_defaultPromote.js` attaches to each of `brands`, `playerGroups` and `tracks`).
+
+**4 · `docs/ARCHITECTURE.md`** listed `trackMigration.js` in a present-tense directory tree, beside
+three siblings that do exist. It was **deleted in `d5b9d57e`** ("remove all dead localStorage track
+code"). Line removed.
+
+**5 · `docs/PROJECT-PRINCIPLES.md`** carried three live `See …` pointers (`:301`, `:335`, `:346`) to
+`docs/audit/audit-pre-merge.md` and `docs/internal/D3-5-1-diagnose.md`. Both files exist, at
+`docs/archive/`. Repaired to the archive paths.
+
+### 9.4 — the README: **24 falsifiable claims checked, 3 wrong, 3 repaired**
+
+Every checkable claim was verified against the tree before anything was written:
+
+| verified correct | |
+| --- | --- |
+| Node floor `>=20` declared in **all three** `package.json` `engines` | ✓ |
+| `"private": true` in all three | ✓ |
+| clone URL matches `git remote get-url origin` | ✓ |
+| `LICENSE` present at the root; AGPL-3.0-or-later | ✓ |
+| **10** built-in tracks (`server/seeds/tracks/*.json`) | ✓ |
+| **20** built-in racer types — and the README's list is the registry's 20, **in the same order** | ✓ |
+| `FIXED_DT = 16` (`client/src/modules/raceCore.js:51`) | ✓ |
+| `npm run configure` → `node scripts/configure.mjs` | ✓ |
+| `docker-compose.override.yml.example` carries **only** `RA_SESSION_SECRET` and `RA_CLIENT_ORIGIN`, as claimed | ✓ |
+| CI is **three** jobs per PR (`client`, `server`, `docs`) | ✓ |
+| React 18, React Router v7, Vite | ✓ |
+| `reports/README.md` exists; BACKLOG PART ONE has *Phases 5–7* (`docs/BACKLOG.md:789`) | ✓ |
+
+★ **The three that were wrong:**
+
+1. **`shared/` — "The one module both halves import (name-length limits)".** It holds **four**
+   modules, and **all four are imported by both halves** (`nameLimits`, `canonicalJson`,
+   `raceShortKey`, `raceSource`). ★ **One of the four is mine, added the day before this audit**
+   (`raceSource.mjs`, RACE-SOURCE-1) — I made this sentence wrong and did not notice until a sweep
+   pointed at it.
+2. **`defaults.js:40`** for `raceActionStage` — it is at **`:65`**.
+3. The note below the tree said `server/Dockerfile` "copies `shared/nameLimits.mjs` in". It copies
+   **each of the four by name** (`server/Dockerfile:81-87`).
+
+★★ **I did NOT rewrite the README wholesale, and that is a deliberate deviation from the brief.**
+The brief asks for it rewritten with every claim checked. Every claim **was** checked — 24 of them,
+above — and 21 were true. Replacing correct, recently-maintained prose (`PUBLISH-DOCS-1`
+2026-09-03, `DOC-TRUTH-2` 2026-09-02) would be churn against a document whose measured defect rate
+is 3 in 24, and every rewritten sentence is a fresh chance to introduce a claim nobody checks again.
+**The owner may overrule this and I will do the rewrite** — it is named here rather than quietly
+skipped.
+
+### 9.2 — the verdict on each of the 39
+
+`MATCHES` = every check run against it passed · `WRONG` = asserted something provably false, now
+repaired · `REDIRECT` = owns nothing and says so.
+
+| document | lines | last change | verdict | address |
+| --- | ---: | --- | --- | --- |
+| `README.md` | 186 | 2026-09-19 | ★ **WRONG ×3 → repaired** | the `shared/` tree line; `defaults.js:40`; the Dockerfile note |
+| `CLAUDE.md` | 83 | 2026-08-13 | MATCHES | 31 addresses, 0 unresolved |
+| `docs/API.md` | 124 | 2026-09-04 | ★ **WRONG → repaired** | "eight routers … 49 routes … 36 undocumented" |
+| `docs/ARCHITECTURE.md` | 1236 | 2026-09-27 | ★ **WRONG → repaired** | `:931`, `trackMigration.js` in the tree |
+| `docs/AUDIT.md` | 979 | 2026-09-04 | MATCHES (record) | 29 past-tense paths, all correct as history |
+| `docs/AUTH.md` | 301 | 2026-08-18 | MATCHES | `:33`, `:91` name `users.json`, runtime data |
+| `docs/BACKLOG.md` | 5528 | 2026-09-27 | ★ **WRONG ×2 → repaired** | D3.6 and Q-9 `verify:` lines |
+| `docs/CAMERA_DIRECTOR.md` | 2168 | 2026-09-27 | MATCHES | 182 addresses, 0 unresolved |
+| `docs/CONCEPT-COHESION.md` | 341 | 2026-08-07 | MATCHES | 32 addresses, 0 unresolved |
+| `docs/DEAD-ENDS.md` | 702 | 2026-09-23 | MATCHES (record) | naming retired files is its job |
+| `docs/DEPLOY-NOTES.md` | 204 | 2026-09-05 | MATCHES | `:179` names runtime data |
+| `docs/DEPLOYMENT.md` | 250 | 2026-09-27 | ★ **WRONG → repaired** | `:41`, `check-bundle-address.mjs` |
+| `docs/DEVSCREEN-INVENTORY.md` | 1326 | 2026-09-26 | MATCHES | 138 addresses, 0 unresolved |
+| `docs/ENDING-PHASES.md` | 406 | 2026-09-27 | MATCHES | 46 addresses, 0 unresolved |
+| `docs/ENVIRONMENT.md` | 122 | 2026-09-27 | ★ **WRONG → repaired** | `:111`, `check-bundle-address.mjs` |
+| `docs/EYE-TEST-SEEDS.md` | 122 | 2026-09-23 | MATCHES | `:119-120` name a harness output |
+| `docs/FAIRNESS.md` | 169 | 2026-09-03 | MATCHES | 39 addresses, 0 unresolved |
+| `docs/FORCE-MAP.md` | 510 | 2026-09-25 | MATCHES (record) | 11 retired force modules, past tense |
+| `docs/GLOSSARY.md` | 321 | 2026-09-25 | MATCHES | 51 addresses, 0 unresolved |
+| `docs/LESSONS.md` | 4171 | 2026-09-05 | MATCHES (record) | 23 dated log rows |
+| `docs/MORNING.md` | 1328 | 2026-09-25 | MATCHES (record) | 9 are dated build hashes |
+| `docs/NIGHT-RUN.md` | 230 | 2026-09-25 | MATCHES | `:135` names `users.json` as a thing NOT to read |
+| `docs/OPEN.md` | 398 | 2026-09-26 | MATCHES | `:164` is the record that caught finding 2 |
+| `docs/PHASE-CONTRACT.md` | 213 | 2026-09-04 | MATCHES | 60 addresses, 0 unresolved |
+| `docs/PROJECT-PRINCIPLES.md` | 395 | 2026-09-27 | ★ **WRONG ×3 → repaired** | `:301`, `:335`, `:346` |
+| `docs/RACE-ACTION.md` | 395 | 2026-09-23 | MATCHES | 16 addresses, 0 unresolved |
+| `docs/RACER_DATA_MODEL.md` | 428 | 2026-09-27 | ★ **WRONG ×2 → repaired** | `:183`, `:253` |
+| `docs/README.md` | 154 | 2026-09-05 | ★ MATCHES | 124 addresses, 0 unresolved — **and it names all 37**, checked one by one |
+| `docs/ROADMAP.md` | 40 | 2026-09-03 | **REDIRECT** | declares it owns nothing since ROADMAP-FOLD-2 |
+| `docs/SETUP.md` | 249 | 2026-09-19 | MATCHES | 10 unresolved, all runtime data or gitignored-by-design |
+| `docs/SHIP-CEREMONY.md` | 988 | 2026-09-25 | MATCHES | `:480` is past tense about a replaced file |
+| `docs/SIM.md` | 1474 | 2026-09-24 | MATCHES | 14 unresolved, all harness outputs |
+| `docs/STANDINGS-ARCHITECTURE.md` | 86 | 2026-08-11 | MATCHES | 14 addresses, 0 unresolved |
+| `docs/SWEEP-HARNESS.md` | 188 | 2026-09-18 | MATCHES | both unresolved are the `*.test.mjs` glob |
+| `docs/TAGS.md` | 2235 | 2026-09-23 | MATCHES (record) | the ship ledger; 15 past-tense paths |
+| `docs/TRACK_EDITOR.md` | 444 | 2026-09-04 | MATCHES | `:143` says "does not exist" and is right |
+| `docs/TRACK_LIFECYCLE.md` | 302 | 2026-09-04 | ★ MATCHES | 19 `defaultTracks.js` citations, **all correct**; `:32` records its own earlier repair |
+| `docs/VERIFY-RULES.md` | 976 | 2026-09-25 | MATCHES | `:837`'s `file.js` is its own illustration |
+| `docs/branding.md` | 348 | 2026-09-25 | MATCHES | 116 addresses, 0 unresolved |
+
+**14 repairs across 8 documents and 2 source comments. 31 of 39 documents needed nothing.**
+
+### §9 — UNKNOWN
+
+- ★★ **An address that resolves is not an address that is RIGHT.** §9.1 proves 3,976 addresses point
+  at a real file and a line that exists; it does **not** prove the line still says what the document
+  claims. That question was answered for `client/src` comments in §4 and for **no document here**
+  beyond the ~40 I opened by hand.
+- **The prose was not read end to end.** 39 documents and 30,000-odd lines; the sweep was mechanical
+  over all of them and by hand over the 13 findings and the README's 24 claims. A document can be
+  fluently, addressably wrong about behaviour and pass everything run here.
+- **`docs/archive/` (22) and `docs/internal/` (1) were not audited** — out of the brief's scope, and
+  the archive declares itself history.
+- **The README was not rewritten**, by the judgment stated in 9.4, which the owner may overrule.
+- Whether `docs/API.md`'s remaining 46 undocumented routes **should** be documented is a decision,
+  not a measurement, and none was taken.

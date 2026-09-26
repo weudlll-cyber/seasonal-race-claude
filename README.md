@@ -91,7 +91,7 @@ does, and what happens when it is missing or wrong — is in
 - **Racer Editor** — custom racer types from PNG sprite sheets: background removal, animation preview, metadata.
 - **Track Editor** — draw inner/outer boundary curves or a center line over a background image (Center Mode and Boundary Mode), stored via the local backend.
 - **Track Effects** — up to 3 simultaneous animated effects per track, with live preview in the editor.
-- **Race Engine** — client-side physics, multi-lap and open-course support; force-based lane separation (home force, avoidance, free-lane separation, speed brake, drafting); a Race Plan softly guides racers toward target finishing positions. A **race-action director** (a pre-OUTCOME longitudinal speed layer in `raceGovernor.js` — a two-master tail-lift + contest-injector, distinct from the Camera Director below) can stage a contested, unpredictable front before the finishing order is resolved. It is now a **stage** rather than a toggle: `raceActionStage` ships as **`quiet`** (`defaults.js:40`), and an operator picks the stage from the Dev Screen's Race Defaults. *(Corrected 2026-09-02, DOC-TRUTH-2: this said "optional … default OFF", which stopped being the shape when RACE-ACTION-CONTROL-1 replaced the toggle with three stages — a stage always runs, and `quiet` is one of them, so "OFF" told a reader the layer does not run.)
+- **Race Engine** — client-side physics, multi-lap and open-course support; force-based lane separation (home force, avoidance, free-lane separation, speed brake, drafting); a Race Plan softly guides racers toward target finishing positions. A **race-action director** (a pre-OUTCOME longitudinal speed layer in `raceGovernor.js` — a two-master tail-lift + contest-injector, distinct from the Camera Director below) can stage a contested, unpredictable front before the finishing order is resolved. It is now a **stage** rather than a toggle: `raceActionStage` ships as **`quiet`** (`defaults.js:65`), and an operator picks the stage from the Dev Screen's Race Defaults. *(Corrected 2026-09-02, DOC-TRUTH-2: this said "optional … default OFF", which stopped being the shape when RACE-ACTION-CONTROL-1 replaced the toggle with three stages — a stage always runs, and `quiet` is one of them, so "OFF" told a reader the layer does not run.)
 - **Camera Director** — TV-style state machine (OVERVIEW, LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) with a finish overview, a group-battle trigger, lead-in/lead-out timing, per-state zoom tuning, and a picture-in-picture minimap.
 - **Frame-timing engine** — fixed-timestep physics (FIXED_DT = 16 ms), dt-smoothing for the camera, and render interpolation for smooth motion at variable frame rates.
 - **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, and race history; system backup/restore; race-plan and physics tuning.
@@ -117,7 +117,8 @@ The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-t
 seasonal-race-claude/
 ├── client/   # React frontend (Vite, vitest, Playwright)
 ├── server/   # Express backend — accounts, tracks, racers, branding (port 4000)
-├── shared/   # The one module both halves import (name-length limits)
+├── shared/   # The four modules both halves import (name limits, canonical JSON,
+│             #   the race short key, the race source)
 ├── scripts/  # Headless simulation + tuning-sweep tools (Node.js)
 ├── docs/     # Architecture, API, setup, specs, lessons — see docs/README.md
 ├── reports/  # The lab journal — append-only, see reports/README.md
@@ -125,8 +126,9 @@ seasonal-race-claude/
 ```
 
 *(`shared/` added 2026-09-03, PUBLISH-DOCS-1: it was missing from this tree while being the reason
-the Docker build context is the repository root — `server/Dockerfile` copies `shared/nameLimits.mjs`
-in, and the image would not run without it. `reports/` added for the same reason: it is a top-level
+the Docker build context is the repository root — `server/Dockerfile` copies each of the four in
+by name (`nameLimits`, `canonicalJson`, `raceShortKey`, `raceSource`), and the image would not run
+without them. `reports/` added for the same reason: it is a top-level
 directory a stranger will meet.)*
 
 ## Documentation

@@ -3,10 +3,10 @@
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
 > **⚠ THIS FILE IS NOT COMPLETE, AND UNTIL 2026-09-02 IT SAID IT WAS.** The line above read *"every
-> endpoint"*. Measured against the tree: the server mounts **eight** API routers registering **49**
-> routes, and this document describes **13** — 7 of the 8 track routes, all 5 surface-class routes,
+> endpoint"*. Measured against the tree: the server mounts **nine** API routers registering **59**
+> routes, and this document describes **13** — 7 of the 11 track routes, all 5 surface-class routes,
 > and `/api/health`. Missing entirely: `/api/auth`, `/api/users`, `/api/player-groups`,
-> `/api/brands`, `/api/racers` and `/api/seed-notices`.
+> `/api/brands`, `/api/racers`, `/api/seed-notices` and `/api/races`.
 > **`/api/auth` is documented in [AUTH.md](AUTH.md)**, which covers its seven endpoints correctly;
 > the others are documented nowhere.
 > **The ownership claim is corrected rather than the gap filled** — writing 36 endpoint descriptions
@@ -16,9 +16,22 @@
 > *(★ Corrected again 2026-09-04, AUDIT-DOCS-1: the missing list ALSO named `/api/surface-classes`,
 > while §Surface-Class API two screens below documents all five of its routes — and the "13" it
 > stands beside already counted them. **A claim wrong in a list and right in a heading of the same
-> file**, which is the exact search shape these passes keep missing. All three counts were
-> re-measured against the tree today and all three still hold: **8 routers, 49 routes, 36
-> undocumented**.)*
+> file**, which is the exact search shape these passes keep missing.)*
+>
+> *(★★ Re-measured 2026-09-27, DELIVERY-CLEAN-1 §9. The 2026-09-04 figures — 8 routers, 49
+> routes, 36 undocumented — were **correct when written and went stale two days later**:
+> `server/src/routes/races.js` and its `app.use('/api/races', racesRouter)` mount both landed on
+> 2026-09-06 in `5c08dc87` (RACE-SAVE-3). So a ninth router appeared, its three routes with it, and
+> **`/api/races` was missing from the "missing entirely" list above** — the document's own honest
+> gap list had itself become incomplete, which is the same failure one level up.*
+>
+> *The method behind the new numbers, stated because it is not the 2026-09-04 method and the two are
+> not comparable: every `router.<verb>(` in the nine modules `app.js` mounts under `/api` (49), plus
+> the three admin sub-routes `attachPromoteExport` (`routes/_defaultPromote.js`) attaches to each of
+> `brands`, `playerGroups` and `tracks` (9), plus `/api/health` (1) — **59**. Undocumented is
+> therefore **46**. The 2026-09-04 count of 49 did not include the `attachPromoteExport` sub-routes;
+> its exact rule was not recoverable from the text, so these figures replace it rather than
+> continuing it.)*
 
 The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/`.
 
