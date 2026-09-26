@@ -298,7 +298,7 @@ is explained in the PR body: which tests removed, which added, which adjusted, w
 failing and why that is intentional. A PR with failing tests may only be merged when the
 failures are documented as deliberate with a reference to the follow-up fix.
 
-See LESSONS.md L1, L8, L17; docs/audit/audit-pre-merge.md.
+See LESSONS.md L1, L8, L17; `docs/archive/audit-pre-merge.md`.
 
 ### Regression Awareness Convention
 
@@ -332,7 +332,7 @@ the tested behavior. In that case the PR body explains: (a) what behavior change
 the old test is obsolete, (c) which new test covers the new behavior. Tests that guard
 correct behavior must not be silently deleted to make a PR green.
 
-See LESSONS.md L19; docs/internal/D3-5-1-diagnose.md §5.
+See LESSONS.md L19; `docs/archive/D3-5-1-diagnose.md` §5.
 
 ### Diagnose-Tool-Lifecycle Convention (Stage-23 pattern)
 
@@ -343,7 +343,7 @@ commit. This keeps the repo free of diagnostic dead weight and makes the `diag:`
 clean revert point if a refactor fails.
 
 Example: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Stage 23).
-Confirmed in: docs/audit/audit-pre-merge.md §5.3.
+Confirmed in: `docs/archive/audit-pre-merge.md` §5.3.
 
 ### DevScreen Block-Placement Convention
 

@@ -180,7 +180,7 @@ Gives the audience time to see the final positions.
 
 ### Code registry as Single Source of Truth (post B-7)
 
-`RACER_TYPES` in `client/src/modules/racer-types/index.js` is the single source of truth for all
+`RACER_TYPES` in `client/src/racer-types/index.js` is the single source of truth for all
 20 built-in types. localStorage stores **only deviations** from the code default:
 
 ```
@@ -250,7 +250,7 @@ than left in the code that implements it.
    decimals**, which is the precision the registry compares at.
 
 **Where it lives in code.** `computeOpaqueBoundingBox`
-(`client/src/modules/racer-types/backgroundRemoval.js`) is step 1–2; `measureBodyFill`
+(`client/src/racer-types/backgroundRemoval.js`) is step 1–2; `measureBodyFill`
 (`client/src/screens/RacerEditor/canvasUtils.js`) is steps 3–4 and is what the Racer Editor calls.
 `node scripts/audit-sprite-crops.mjs` checks the twenty shipped sheets against what the registry
 records; all twenty agree.

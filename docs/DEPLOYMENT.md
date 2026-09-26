@@ -38,7 +38,7 @@ cd client && npm install && npm run build     # produces client/dist
 **Do NOT set `VITE_API_URL`.** Since RUNTIME-API-URL-1 the built client carries **no address at
 all** — the same build can be installed on any server, and the address is asked for at install time
 instead. Setting `VITE_API_URL` bakes one back into the artefact and ties it to one host;
-`node scripts/check-bundle-address.mjs` fails a build that carries one.
+`node scripts/audit-bundle-address.mjs` fails a build that carries one.
 
 **Tell the install where it will be reached:**
 

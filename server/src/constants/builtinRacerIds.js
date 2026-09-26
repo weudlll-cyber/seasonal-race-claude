@@ -4,7 +4,7 @@
 // Project:     RaceArena
 // Description: Server-side list of built-in racer type IDs (E6, D5).
 //              Must be kept in sync with client RACER_TYPE_IDS
-//              (client/src/modules/racer-types/index.js:108).
+//              (client/src/racer-types/index.js:108).
 // ============================================================
 
 // Must be kept in sync with client RACER_TYPE_IDS (one server source, L129).

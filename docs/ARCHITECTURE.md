@@ -928,7 +928,6 @@ seasonal-race-claude/
 │       │   └── trackApi.js          # Write-path client: create/update/deleteTrack, uploadTrackBackground
 │       └── modules/storage/
 │           ├── trackLoader.js       # fetchServerTracks, cacheTrackGeometry, removeCachedTrackData
-│           ├── trackMigration.js    # One-time localStorage→server migration (marker prevents re-runs)
 │           └── useServerTracks.js   # React hooks: useServerTracks() + useServerTracksControl()
 ├── server/          # Node.js / Express backend, port 4000
 │   ├── src/

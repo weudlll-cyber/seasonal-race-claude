@@ -1579,9 +1579,14 @@ already-settled questions.
   earlier tree and understates the move by half).
   Separates configuration from engine code. Small standalone PR.
   **verify:** `git grep -l "racer-configs" -- client/src` returns nothing and
-  `client/src/modules/racer-types/` still exists (checked 2026-08-23), so **still open**.
+  `client/src/racer-types/` still exists, so **still open**. *(Path repaired 2026-09-27,
+  DELIVERY-CLEAN-1 §9: the folder moved from `client/src/modules/racer-types/` to
+  `client/src/racer-types/` on 2026-09-24, recorded at `docs/OPEN.md:164`. Both halves re-run at
+  the new path today — 0 hits for `racer-configs`, 80 tracked files — so the verdict is
+  unchanged; only the address was stale, and as written the command had stopped being able to
+  answer.)*
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/modules/racer-types/` still exists. **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/racer-types/` still exists (address repaired 2026-09-27; see the verify line above). **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
 
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
@@ -1840,10 +1845,15 @@ already-settled questions.
 
 - **Q-9** — Watch: `racer-types/index.js` — candidate for splitting. Recorded at 286 LOC;
   **540 on 2026-08-23**, nearly doubled.
-  **verify:** `git grep -c "" -- client/src/modules/racer-types/index.js` — **still open above 400.**
+  **verify:** `git grep -c "" -- client/src/racer-types/index.js` — **still open above 400.**
+  *(Path repaired 2026-09-27, DELIVERY-CLEAN-1 §9 — at the old address the command matched
+  nothing and exited 1, so this check had quietly stopped being able to answer.)*
   (override API vs. registry vs. boot logic). Not a problem today, monitor.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `client/src/modules/racer-types/index.js` is **540** lines, still above 400.
+  ★ **Re-measured 2026-09-27 (DELIVERY-CLEAN-1 §9): `client/src/racer-types/index.js` is 478
+  lines**, 62 fewer than the 2026-09-02 reading. Still above 400, so the row stays open on its
+  own criterion — the verdict is unchanged and only the number was stale.
 
 - **Q-10** — Watch: `RacerEditModal.jsx`. Recorded at 302 LOC and described as *already 75% of
   the 400-LOC threshold*; measured 2026-08-23 at **670 — 68% PAST it**, and the file has moved to

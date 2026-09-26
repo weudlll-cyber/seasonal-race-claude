@@ -28,7 +28,7 @@
 //      (`playwright.config.js:82`) and `scripts/viewer-invariants.mjs:581` both start a client
 //      pointed at a throwaway API on a random port, and they do it through this variable. Those are
 //      HARNESSES, not packages. ★ It is NOT set when the shipped client is built, and
-//      `scripts/check-bundle-address.mjs` is what stops it being set by accident.
+//      `scripts/audit-bundle-address.mjs` is what stops it being set by accident.
 //   3. FALLBACK — `http://localhost:4000`, unchanged. With nothing configured the client talks to
 //      exactly what it talked to before this piece, so the owner's dev server and his 4173 preview
 //      are untouched.

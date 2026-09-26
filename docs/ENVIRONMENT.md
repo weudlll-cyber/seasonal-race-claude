@@ -108,7 +108,7 @@ disagree about where this install is.
 `VITE_API_URL` still exists and is **build-time**, but it is now for HARNESSES only — the e2e suite
 and `scripts/viewer-invariants.mjs` build a throwaway client against a random port with it. **Do not
 set it for a deployment**: it bakes an address into the artefact, which is the thing
-`RA_PUBLIC_ORIGIN` replaced. `node scripts/check-bundle-address.mjs` fails a build that carries one.
+`RA_PUBLIC_ORIGIN` replaced. `node scripts/audit-bundle-address.mjs` fails a build that carries one.
 
 ## Test-only
 
