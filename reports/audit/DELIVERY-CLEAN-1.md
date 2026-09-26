@@ -1118,3 +1118,106 @@ record's own inputs. It does **not** prove that the record describes the race th
 if a result were fabricated and posted (B1), replaying it would reproduce the fabrication faithfully.
 ★ **The replay settles "did the engine do this", never "did this happen".** That distinction is the
 whole of what an operator can lean on, and it is stated here rather than left to be assumed.
+
+---
+
+## §6 — REDUNDANCY, COMPLETED 2026-09-27
+
+★★ **6.1 IS NO LONGER BLOCKED, and my reason for dropping it was wrong.** I reported that `npx jscpd`
+"refuses non-interactively". It refuses without `--yes`; **`npx --yes jscpd@5.3.2` runs, installs
+nothing into either manifest and commits nothing.** The drop was correct in form — it was reported
+with a reason — and the reason itself was a fact I had not checked. Recorded because this report's
+whole argument is that an unverified reason is not a reason.
+
+### 6.1 — duplicated logic: **222 clones, 22 in product source, classified**
+
+Tool: **jscpd 5.3.2**, run one-shot via `npx --yes`, `--min-lines 12 --min-tokens 80`, tests
+excluded, each tree run separately.
+
+| tree | clones | duplicated lines | % of tree |
+| --- | --- | --- | --- |
+| `client/src` | 15 | 312 | **0.47%** |
+| `server/src` | 7 | 145 | **2.73%** |
+| `shared` | **0** | 0 | **0.00%** |
+| `scripts` | 200 | 4,092 | **5.92%** |
+
+★ **A clone report is candidates, not findings.** All **22 product clones** were opened and
+classified; `scripts`' 200 were **not** individually opened — see the coverage note.
+
+| class | count | what they are |
+| --- | --- | --- |
+| **GENUINE DUPLICATE** | **5** | see below |
+| **PARALLEL BY DESIGN** | **3** | `cloud.js ↔ splash.js` ×2 (two particle generators driven by one registry schema); `NameTagVisibilitySection.jsx:20 ↔ SpriteSizeRangeSection.jsx:22` (the load/save/reset preamble every dev-screen section shares — the established one-home-two-doors shape) |
+| **COINCIDENCE / within-file repetition** | **14** | `EditorShape.js`, `viewerProbe.js`, `spriteTinter.js` ×2, `DynamicsTuningSection.jsx` ×3 (repeated slider blocks), `tracks.js` ×2, `racers.js` — same file, similar shapes, different subjects |
+
+★★ **THE FIVE GENUINE DUPLICATES, and one of them is security-adjacent:**
+
+1. ★ **The multipart upload error handler — THREE copies.** `brands.js:314`, `racers.js:281`,
+   `tracks.js:595` each carry an identical `LIMIT_FILE_SIZE` → 413 and `INVALID_TYPE` → 400 block,
+   including the same interpolated message. **This is the size-and-type bound §2.6 relied on.** If
+   the limit, the status or the wording changes in one, the other two diverge silently and the
+   report's "bounded" claim becomes true of one route and not the others. **RECORDED, not
+   de-duplicated** — a refactor is forbidden here.
+2. **The store preamble** — `brands.js:90 ↔ playerGroups.js:60` and `brands.js:181 ↔
+   playerGroups.js:114`: `seedTypeFromSnapshot(...)`, `loadAll()`, `filePath(id)`, the same shape
+   twice. A JSON-store pattern with two implementations that must agree.
+3. **The five CSS clones** — `DevScreen.module.css ↔ RacerEditor.module.css` at five places, 136
+   lines together. Genuine duplication, **cosmetic only**; counted once here as a group.
+
+★ **COVERAGE, stated: 22 of 222 clones (9.9%) were classified by hand.** The 200 in `scripts/` were
+not, and the reason is worth more than the number: they are the measurement harnesses, which share a
+driver-setup and argument-parsing preamble by convention. Whether that convention should become a
+helper is §6.8's question and is a refactor either way.
+
+### 6.4 — two helpers for one job: **answered by 6.1**
+
+The clone report is the evidence, and it names exactly one pair worth calling out beyond the five
+above: **nothing in `shared/` is duplicated at all (0 clones, 0.00%)**, which is the outcome one
+would want from the module that exists to stop two implementations of one rule. The upload handler
+of 6.1 item 1 is the clearest "one job, three implementations" in the tree.
+
+### 6.5 — redundant guards and tests: **no redundancy found, and the reason is structural**
+
+★★ **Every camera and render guard publishes its own "NOT COVERED" list**, naming what it does not
+assert and which guard owns that question instead. From `verify --dry`'s own output:
+`world-fingerprint` excludes "anything the CAMERA decides and anything DRAWN — those are the camera
+and render fingerprints' question"; `camera-fingerprint` excludes "anything DRAWN: it stops at the
+director's decision" and "the race outcome, which is the world fingerprint's question";
+`check-ending-frame` excludes "every frame before the last crossing, which is the render
+fingerprint's question".
+
+**So two green guards here are two pieces of evidence, not one wearing two hats** — which is the
+precise risk 6.5 exists to detect. **0 redundant pairs found among the 36.** Tests were **not**
+swept for the same property in two files; that half is in UNKNOWN.
+
+### 6.6 — redundant dependencies: **one version skew**
+
+Only **2 dependency names** appear in both manifests. ★ **One is at different versions:**
+`@vitest/coverage-v8` is `^4.1.4` in the client and `^4.1.8` in the server. Dev-only, so no operator
+risk, and it is the same advisory family as §2.2. **Group C.** No duplicate-purpose libraries were
+found; nothing was removed.
+
+### 6.7 — redundant stored keys: **0 new collisions, and the known one is confirmed**
+
+Mechanically: every key name in `defaults.js` was attributed to its `DEFAULT_*` block and the names
+appearing in **more than one block** were counted. ★ **0**, excluding `min`/`max`, whose collision
+§6.2 already established as a generic-name coincidence.
+
+★ **The known collision stands and is NOT in `defaults.js` at all** — which is why the sweep above
+could never have found it. `minTargetScreenPx` is a key in **`autoSpriteScale.js:23`**
+(`DEFAULT_AUTO_SCALE_CONFIG`, a floor for every racer) **and** a per-racer-type tunable in
+**`racer-types/index.js:239`** (`TUNABLE_FIELDS`). Two settings, one name, two stores, two scopes.
+**Not renamed** — a stored-key rename touches saved configs and is its own decision.
+
+### 6.8 — redundant scripts: **not adjudicated, and why**
+
+`scripts/` carries **200 clones over 4,092 lines (5.92%)** — by far the highest density in the tree.
+Deciding which of a pair is superseded needs §7's file-by-file read of all 226 non-test scripts.
+**Left to §7**; the clone density is recorded here as its input.
+
+### §6 — UNKNOWN (revised)
+
+- **200 of 222 clones unclassified** (the `scripts/` set).
+- **Tests were not swept** for two files asserting one property (the second half of 6.5).
+- 6.2's numeric sweep plus §10.2's string and boolean sweep cover scalars; **object-valued and
+  array-valued defaults were never swept** for drift.
