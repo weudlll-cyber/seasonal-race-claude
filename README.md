@@ -1,25 +1,30 @@
 # RaceArena
 
-**Stage a race, draw the track, line up the field — then watch it unfold like a live broadcast, right in your browser.**
+**Stage a race, draw the track, line up the field — then watch it unfold like a live broadcast, in
+your browser.**
 
-<!-- Optional but recommended: add a screenshot or short GIF of a race here, e.g.
-     ![RaceArena in action](docs/screenshot.png) -->
+RaceArena is a browser-based racing-event visualiser and simulator. You are the event organiser:
+pick the racers, choose or draw a track, add some seasonal atmosphere, and start. The race is
+computed in the browser on a Canvas 2D engine with a fixed-timestep physics loop, and a TV-style
+**Camera Director** follows it — cutting to battles, to a comeback, to a lead change, and pulling
+back for the finish.
 
-RaceArena is a browser-based racing-event visualizer and simulator. You play the event organiser: pick the racers (horses, dragons, rockets, dolphins…), choose or draw a track, add some seasonal atmosphere, and hit start. The race runs entirely in the browser, and a TV-style camera director follows the action — diving into battles, catching lead changes, and pulling back for the finish.
+It is a **single-event presentation tool, not an online multiplayer game**: one organiser sets
+everything up and runs the show. A local Express backend holds what has to outlive a browser
+profile — accounts and sessions, tracks and their background images, racer types and sprites,
+branding profiles, player groups and finished races — and serves the built app itself, so there is
+one thing to start and one port.
 
-It began as a simple horse-race visualizer and grew into a full multi-racer, multi-track simulation with a track editor, a sprite-based racer editor, configurable physics, and an event-branding system.
+**What is in the box:** 10 built-in tracks, 20 built-in racer types, a track editor, a sprite-based
+racer editor, 7 animated track effects (rain, stars, bubbles, fireflies, dust, mud, wave), an
+event-branding system, and a Dev Panel for tuning physics, camera and race defaults.
 
-> New here? This is a single-event presentation tool, not an online multiplayer game — one organiser sets everything up locally and runs the show.
+---
 
-## See it running
+## How to run it
 
-**RaceArena needs its backend.** Every screen is behind a sign-in, and the account you sign in with
-is created through the backend — so the client on its own gets you a login screen and no way past it.
-
-**You need Node.js 20 or newer and Docker.** *(Named 2026-09-03, PUBLISH-DOCS-1: this section handed
-a stranger `npm` and `docker compose` commands without saying what had to be installed first. The
-Node floor is declared in every `package.json`'s `engines`; running the backend without Docker is
-possible and is [SETUP.md](docs/SETUP.md) §5's.)*
+**You need Node.js 20 or newer and Docker.** The Node floor is declared in the `engines` field of
+all three `package.json` files.
 
 ```bash
 git clone https://github.com/weudlll-cyber/seasonal-race-claude.git
@@ -29,158 +34,175 @@ cd client && npm install && npm run build && cd ..   # build the app
 docker compose up -d                                 # serves the app AND the API on one port
 ```
 
-Open `http://localhost:4000`. **The first time, you have to create your admin account** — there is no
-default login, and the backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set.
+Then open **`http://localhost:4000`**.
 
-**Generate this install's own secrets first.** They are never printed — `npm run configure` writes
-them into `docker-compose.override.yml`, which is gitignored and is this install's own file:
+**There is no default login.** The first account is created through a bootstrap token, and the
+backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set. Generate this install's secrets
+first — they are never printed, and `npm run configure` writes them into
+`docker-compose.override.yml`, which is gitignored and belongs to this install alone:
 
 ```bash
 npm run configure -- --origin=http://localhost:4000
 docker compose up -d       # restart so the server picks them up
 ```
 
-It asks for the address this install will be reached at, and **`http://localhost:4000` is a valid
-answer** — the `--origin=` above skips the question. The prompt's own examples are a domain and a
-public IP, which is what a deployment needs; a laptop does not.
+`http://localhost:4000` is a valid answer to the address question; `--origin=` above skips the
+prompt. Then read the token out of that file and use it once to create your admin account.
 
-Then read the token out of that file and use it once:
+> **`docker-compose.override.yml` is not optional on a first install.** It is the only home of
+> `RA_BOOTSTRAP_TOKEN`, and without it `POST /api/auth/setup` answers `403` and the install can
+> never be signed into. It also holds `RA_SESSION_SECRET`; without one the server runs on a random
+> secret and every restart signs you out. `docker-compose.override.yml.example` exists but carries
+> only `RA_SESSION_SECRET` and `RA_CLIENT_ORIGIN` — copying it alone still leaves you with no token.
+
+**[SETUP.md](docs/SETUP.md) owns setup** and covers the first account, running the backend without
+Docker, and what to do when something does not come up. **[ENVIRONMENT.md](docs/ENVIRONMENT.md)
+owns every environment variable** — what it does and what breaks without it.
+
+**For development**, run the two halves separately: the API on port 4000, and
+`cd client && npm run dev` for the app on `http://localhost:5173` with hot reload. The sign-in is
+the same one.
+
+---
+
+## How to test it
 
 ```bash
-grep RA_BOOTSTRAP_TOKEN docker-compose.override.yml
-
-curl -X POST http://localhost:4000/api/auth/setup \
-  -H 'Content-Type: application/json' \
-  -H 'x-bootstrap-token: <the RA_BOOTSTRAP_TOKEN from docker-compose.override.yml>' \
-  -d '{"username":"me","password":"choose-a-real-password"}'
+cd client && npm test     # 270 files, 4778 tests
+cd server && npm test     # 37 files, 856 tests
+npm run verify            # the guards this change selects
+npm run verify -- --premerge
 ```
 
-Then sign in at `http://localhost:4000` and you are in, with all 10 built-in tracks and 20 racers.
-Setup runs **once** — a second attempt answers `409 setup already complete`.
+### ★ Bare `verify` green is **not** CI green
 
-**`docker-compose.override.yml` is where this install's secrets live.** It is gitignored, so a fresh
-clone does not have it — `npm run configure` above creates it. **On a first install it is not
-optional**: it is the only home of `RA_BOOTSTRAP_TOKEN`, and without that token
-`POST /api/auth/setup` answers `403` and the install can never be signed into. It also holds
-`RA_SESSION_SECRET`; without one the server runs on a random secret and **every restart signs you
-out**. (`docker-compose.override.yml.example` exists, but it carries only `RA_SESSION_SECRET` and
-`RA_CLIENT_ORIGIN` — copying it alone still leaves you with no token.)
-[ENVIRONMENT.md](docs/ENVIRONMENT.md) owns what every variable does.
+This is the one thing worth knowing before it costs you a red master.
 
-**For development** run the two halves separately instead — `docker compose up -d` for the API and
-`cd client && npm run dev` for the app on `http://localhost:5173`, which gives you hot reload. You
-still need the account above; the sign-in is the same one.
+| | |
+| --- | --- |
+| guards **in the registry** | **36** — the stable number; both modes share the same membership |
+| bare `npm run verify` | selects a subset **from your diff** |
+| `npm run verify -- --premerge` | selects a **wider** subset from the same diff |
 
-Full details are in the [Setup Guide](docs/SETUP.md), and every environment variable — what it
-does, and what happens when it is missing or wrong — is in
-[Environment Variables](docs/ENVIRONMENT.md).
+**Both selection counts are diff-dependent and neither is a property of the tool.** Measured twice
+on two different branches: one diff gave **4** guards bare and **15** premerge; another gave **9**
+bare and **15** premerge. The registry is 36 in both. So the question is never "how many ran" but
+"was `--premerge` the one that ran" — the wide selection is what CI approximates, and a change that
+passes the bare selection can still redden master.
 
-## What you can do
+**CI runs three jobs per push:** `client`, `server` and `docs`. A separate **Browser gate
+(production arm)** workflow runs the Playwright suite against a production build.
 
-- **Build the field** from 20 built-in racer types — or make your own from a PNG sprite sheet in the Racer Editor (background removal, animation preview, auto-tinting).
-- **Race on 10 built-in tracks**, or draw your own in the Track Editor (inner/outer boundary curves or a center line over a background image).
-- **Set the mood** with up to 3 layered animated effects per track (rain, stars, bubbles, fireflies, dust, mud, waves).
-- **Brand the event** with a name, logo, and colours that appear across the setup screen, the in-race overlay, and the results.
-- **Run the race** and let the Camera Director broadcast it: battle close-ups, comeback and lead-change shots, a finish overview, and a picture-in-picture minimap.
-- **Tune everything** from the Dev Panel — physics, per-state camera behaviour, race defaults, and full management of tracks, racers, branding, and race history.
+**[VERIFY-RULES.md](docs/VERIFY-RULES.md) owns what to run and how much.**
 
-## Features (detail)
+---
 
-- **10 built-in tracks** — Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill; each with surface classes, world dimensions, and background images.
-- **20 built-in racer types** — horse, duck, snail, elephant, giraffe, snake, dragon, f1, rocket, buggy, motorbike, plane, luge, beetle, boarder, koi, turtle, manta, dolphin, snowmobile — all sprite-based with surface-class filtering.
-- **Racer Editor** — custom racer types from PNG sprite sheets: background removal, animation preview, metadata.
-- **Track Editor** — draw inner/outer boundary curves or a center line over a background image (Center Mode and Boundary Mode), stored via the local backend.
-- **Track Effects** — up to 3 simultaneous animated effects per track, with live preview in the editor.
-- **Race Engine** — client-side physics, multi-lap and open-course support; force-based lane separation (home force, avoidance, free-lane separation, speed brake, drafting); a Race Plan softly guides racers toward target finishing positions. A **race-action director** (a pre-OUTCOME longitudinal speed layer in `raceGovernor.js` — a two-master tail-lift + contest-injector, distinct from the Camera Director below) can stage a contested, unpredictable front before the finishing order is resolved. It is now a **stage** rather than a toggle: `raceActionStage` ships as **`quiet`** (`defaults.js:65`), and an operator picks the stage from the Dev Screen's Race Defaults. *(Corrected 2026-09-02, DOC-TRUTH-2: this said "optional … default OFF", which stopped being the shape when RACE-ACTION-CONTROL-1 replaced the toggle with three stages — a stage always runs, and `quiet` is one of them, so "OFF" told a reader the layer does not run.)
-- **Camera Director** — TV-style state machine (OVERVIEW, LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) with a finish overview, a group-battle trigger, lead-in/lead-out timing, per-state zoom tuning, and a picture-in-picture minimap.
-- **Frame-timing engine** — fixed-timestep physics (FIXED_DT = 16 ms), dt-smoothing for the camera, and render interpolation for smooth motion at variable frame rates.
-- **Dev Panel** — full CRUD for tracks, racers, branding profiles, race defaults, and race history; system backup/restore; race-plan and physics tuning.
+## How it is deployed
 
-## How it works
+**Today's truth, not a plan.**
 
-The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-timestep physics loop. A local Express backend ("Phase L") holds everything that has to outlive a browser profile — accounts and sessions, tracks and their background images, racer types and sprites, branding profiles and player groups — and, since 2026-09-01, serves the built app itself so there is one thing to start and one port. Tuning you do in the Dev Panel (physics, camera, race defaults) lives in the browser's `localStorage`. See [Architecture](docs/ARCHITECTURE.md) for the full picture.
+The repository ships **one** compose file, `docker-compose.yml`, plus
+`docker-compose.override.yml.example`. It publishes `4000:4000` and runs the server with
+`node --watch`.
 
-## Tech stack
+- ★ **There is no production compose file in the tree.** What is here is a development shape; a
+  deployment is assembled by hand around it.
+- ★ **HTTPS is not in place.** Neither `docker-compose.yml` nor `server/Dockerfile` contains any
+  TLS, certificate or reverse-proxy configuration. Anything served over HTTPS today is served that
+  way by something outside this repository.
+- ★ **The published port binds all interfaces.** On a rented server the API is reachable directly
+  unless a firewall or a proxy is put in front of it.
+- The base image is pinned to a floating tag, not a digest, so a rebuild can change it.
 
-| Layer   | Technology                                                       |
-| ------- | ---------------------------------------------------------------- |
-| Client  | React 18, Vite, React Router v7, CSS Modules                     |
-| Engine  | Canvas 2D, requestAnimationFrame, fixed-timestep physics         |
-| Tests   | vitest (full unit suite), Playwright (e2e)                       |
-| Storage | Browser `localStorage` + local Express backend for tracks/images |
-| Backend | Node / Express (Phase L, port 4000)                              |
-| CI/CD   | GitHub Actions — **three** jobs per PR: client (lint, format, tests + coverage, audit), server (tests, audit), living-doc guards + script tests |
+**[DEPLOYMENT.md](docs/DEPLOYMENT.md) owns deployment** and
+**[DEPLOY-NOTES.md](docs/DEPLOY-NOTES.md) owns the gap** between what the repository can do today
+and what a public install would need.
 
-## Project structure
+---
 
-```
-seasonal-race-claude/
-├── client/   # React frontend (Vite, vitest, Playwright)
-├── server/   # Express backend — accounts, tracks, racers, branding (port 4000)
-├── shared/   # The four modules both halves import (name limits, canonical JSON,
-│             #   the race short key, the race source)
-├── scripts/  # Headless simulation + tuning-sweep tools (Node.js)
-├── docs/     # Architecture, API, setup, specs, lessons — see docs/README.md
-├── reports/  # The lab journal — append-only, see reports/README.md
-└── .github/  # CI/CD workflows
+## How results are kept and restored
+
+A finished race is stored by the backend in `races.sqlite` inside the data root, together with the
+roster, the finishing order and the whole resolved world configuration the race ran under. Accounts,
+sessions, tracks, brands, player groups and uploaded images live in that same data root.
+
+```bash
+node scripts/backup.mjs --out <dir>                       # writes <dir>/racearena-backup-<UTC>.tar
+node scripts/backup.mjs --restore <archive> --into <dir>
 ```
 
-*(`shared/` added 2026-09-03, PUBLISH-DOCS-1: it was missing from this tree while being the reason
-the Docker build context is the repository root — `server/Dockerfile` copies each of the four in
-by name (`nameLimits`, `canonicalJson`, `raceShortKey`, `raceSource`), and the image would not run
-without them. `reports/` added for the same reason: it is a top-level
-directory a stranger will meet.)*
+**The round trip is verified**, not assumed: export → wipe → restore returns every field, name,
+result, winner and world configuration. ★ **What that proves and does not:** it proves the archive
+carries the data back. It does **not** prove a stored race is a race that happened — the server
+accepts a well-formed result without recomputing it. A disputed race can be **re-raced from its own
+record** and compared, which settles *"did the engine do this"* and never *"did this happen"*.
 
-## Documentation
+★ **Where the backup goes is the operator's choice, not the product's** (decided 2026-09-27). The
+project prescribes no destination and ships no default pointing anywhere in particular — point it
+at a cloud-synced folder on a workstation, or at whatever a rented server can reach. **The one rule
+the tool does enforce is that the archive may not be written inside the data root**, because a copy
+beside the original is not a second copy.
 
-**[docs/README.md](docs/README.md) is the map** — every maintained document, what it owns, and the
-order to read them in. If you read nothing else, read that.
+---
 
-The reading order it recommends, so you can start without a second click:
+## Where the documents live
 
-1. This file — what RaceArena is.
-2. [Setup Guide](docs/SETUP.md) — get it running.
-3. **[Glossary](docs/GLOSSARY.md)** — the vocabulary. **Read it early.** This project has heavy
-   private jargon (band, corridor, pulk, chaos phase, fingerprint), and three of those words mean two
-   different things each. A newcomer fails on the words before the details.
-4. [Architecture](docs/ARCHITECTURE.md) — how it is built.
-5. [Project Principles](docs/PROJECT-PRINCIPLES.md) — the rules that override convenience.
-6. [Fairness](docs/FAIRNESS.md) — what the game is actually trying to do. Every racer is identical, so
-   "fair" here means something specific and unobvious, and the race design will not make sense
-   without it.
+This project keeps **one canonical home per fact**: a document declares what it **owns**, and
+everywhere else points at it rather than restating it. ★ **Not every document declares one yet** —
+20 of the 39 top-level documents carry an `Owns:` line, and the five marked † below do not. The
+description beside those is this page's summary of them, not their own claim.
 
-Also useful: [Environment Variables](docs/ENVIRONMENT.md) — **every variable, and what breaks without it** · [API Reference](docs/API.md) · [Backlog](docs/BACKLOG.md) — **the open work and the
-phase history, one home since 2026-08-23** · [Phase status](docs/ROADMAP.md) (a REDIRECT that owns nothing since ROADMAP-FOLD-2, 2026-08-27; the detail is
-in the backlog) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
-race-mechanism change).
+**[docs/README.md](docs/README.md) is the map** — every maintained document and the order to read
+them in. If you read one thing, read that. Then:
 
-`reports/` is the lab journal, not documentation — see [reports/README.md](reports/README.md) for what
-it is and why it may have rotted. `docs/archive/` is history and says so.
+| document | what it owns, or (†) what it covers |
+| --- | --- |
+| [GLOSSARY.md](docs/GLOSSARY.md) † | **the vocabulary — read it early.** Three of this project's terms mean two different things each |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | the system's shape — which layer holds what |
+| [SETUP.md](docs/SETUP.md) | getting it running locally: client, backend, ports, first account |
+| [ENVIRONMENT.md](docs/ENVIRONMENT.md) | every environment variable, and what breaks without it |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | deploying to a public same-origin host |
+| [API.md](docs/API.md) | the backend's HTTP surface — **and it states plainly which endpoints it does not cover** |
+| [AUTH.md](docs/AUTH.md) | how RaceArena authenticates and what an operator must supply |
+| [FAIRNESS.md](docs/FAIRNESS.md) † | what the game is trying to do. Every racer is identical, so "fair" means something specific |
+| [PROJECT-PRINCIPLES.md](docs/PROJECT-PRINCIPLES.md) † | the rules that override convenience |
+| [VERIFY-RULES.md](docs/VERIFY-RULES.md) † | what to run before changing anything, and how much |
+| [BACKLOG.md](docs/BACKLOG.md) | the open work and the phase history — one home |
+| [DEAD-ENDS.md](docs/DEAD-ENDS.md) † | **required reading before proposing any race-mechanism change** |
+| [SIM.md](docs/SIM.md) | the headless simulator and what every metric means |
 
-## Status
+[OPEN.md](docs/OPEN.md) is a short view **derived** from BACKLOG PART ONE; where the two disagree,
+the backlog wins. [ROADMAP.md](docs/ROADMAP.md) is a **redirect** and owns nothing.
 
-The core simulation, editors, camera director, and local backend (Phase L) are in place. A race-integrity / leaderboard / multiplayer server is planned for Phase 5 — see [BACKLOG.md](docs/BACKLOG.md), PART ONE, *Phases 5–7*.
+`reports/` is the lab journal, not documentation — it is append-only and **allowed to go stale by
+rule**; see [reports/README.md](reports/README.md). `docs/archive/` is history and says so.
+
+---
+
+## What this is not
+
+- **The server does not compute the race.** The engine runs in the browser; `server/src` contains
+  no reference to any engine module. The server stores what it is given.
+- **Results are local-first.** Everything lives in this install's own data root. There is no
+  central service, no account you sign up for, and nothing leaves the machine unless you move it.
+- **It is not a multiplayer game.** One organiser runs an event; other people watch the screen.
+- **There is no leaderboard or cross-event standings server yet.** That is planned work, not
+  shipped behaviour — see [BACKLOG.md](docs/BACKLOG.md) PART ONE, *Phases 5–7*.
+
+---
 
 ## Licence
 
 **RaceArena is licensed under the GNU Affero General Public License, version 3 or (at your option)
-any later version.** The full, unmodified licence text is in [LICENSE](LICENSE) at the repository
-root; the SPDX identifier is `AGPL-3.0-or-later`.
+any later version.** The full text is in [LICENSE](LICENSE); the SPDX identifier is
+`AGPL-3.0-or-later`.
 
 Copyright (C) 2026 weudlll-cyber
 
-    This program is free software: you can redistribute it and/or modify it under the terms of the
-    GNU Affero General Public License as published by the Free Software Foundation, either version 3
-    of the License, or (at your option) any later version.
+The AGPL is a copyleft licence with one addition that matters here: **if you run a modified version
+of RaceArena as a network service, you must offer its users the source of your version**
+(section 13). Running it unmodified, or modifying it privately without serving it to anyone, carries
+no such obligation.
 
-    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
-    even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Affero General Public License for more details.
-
-The AGPL is a copyleft licence with one addition that matters for a project like this one: **if you
-run a modified version of RaceArena as a network service, you must offer its users the source of
-your version** (section 13). Running it unmodified, or modifying it privately without serving it to
-anyone, carries no such obligation.
-
-The `"private": true` flag in each `package.json` is unrelated to this — it only stops an accidental
+The `"private": true` flag in each `package.json` is unrelated — it only stops an accidental
 `npm publish`.

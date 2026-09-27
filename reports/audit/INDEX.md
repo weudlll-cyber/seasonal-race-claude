@@ -250,3 +250,16 @@ verdict with numbers on each axis, not a list of work.
   list disagreeing — and all six are now written in, **two of them noting they have no backlog row
   rather than pointing at one that does not exist.** Counts stated both ways: PART ONE 7 + 6 = 13,
   `OPEN.md` section 0 = 13, §1 = 6 questions, which do not move the 13.
+
+- [README-REWRITE-2026-09-27.md](README-REWRITE-2026-09-27.md) — **the README rewritten with every
+  claim checked before it was written, 186 → 208 lines.** Commissioned when the owner overruled
+  §9.4's judgment that a rewrite would be churn. ★★ **THE MOST USEFUL PART IS WHAT WAS DROPPED:**
+  *"there is no mobile layout by design"* is **contradicted at the tree** — nine CSS files carry
+  `max-width` queries, `RaceScreen.css` among them — and *"up to 3 layered effects per track"*,
+  which `docs/ARCHITECTURE.md:173` also asserts, **exists nowhere in the code** and was replaced by
+  the 7 effects that demonstrably ship. ★ Twelve commands are listed one by one with what each
+  produced; **three were NOT run and the reasons are given** rather than glossed —
+  `docker compose up -d` (port 4000 held by the owner's own dev backend; the compose file was
+  validated and the image built instead), `npm run configure` and the setup `curl` (both write real
+  secrets or a real account). ★ A false sentence in my own draft was caught before it shipped:
+  five of the thirteen documents in the new map declare no `Owns:` line, so the map now marks them.

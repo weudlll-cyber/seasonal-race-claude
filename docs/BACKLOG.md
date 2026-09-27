@@ -147,6 +147,27 @@ not an address which is right (§9.1).
       **The replay answers "did the engine do this", never "did this happen."** B1's remedy is
       therefore real, and bounded in a way the owner should know before leaning on it.
 
+- [ ] ★★ **B1 — DECIDED 2026-09-27: VERIFY A RACE ON DEMAND. NEITHER OPTION AS POSED.** The
+      question was whether the server should check a result or stay a second store. **The answer is
+      both halves of neither:** the server stays a second store and goes on accepting results
+      without recomputing them, **and a stored race becomes verifiable ON DEMAND** — re-raced from
+      its own record and the outcome compared, invoked when somebody disputes a result rather than
+      on every submission.
+      ★ **The measured fact this rests on** (the owner's measurement, ten tracks, a 2-core machine,
+      no browser): re-racing one race costs **0.9 s average and 1.3 s worst case at 20 racers**, and
+      **2.2 s average and 2.9 s worst case at 40 racers**. Verifying every submission would put one
+      to three seconds and one blocked core in front of **every** race for a suspicion that is
+      almost never present; verifying on demand costs nothing until it is needed.
+      ★★ **WHAT THIS BUYS, STATED PLAINLY SO NOBODY READS IT AS MORE:** fabrication is **not
+      PREVENTED, it becomes PROVABLE.** A replay settles *"did the engine do this"* and never *"did
+      this happen"* — replaying a fabricated record reproduces the fabrication faithfully
+      (`reports/audit/DELIVERY-CLEAN-1.md` §3.6).
+      ★ **What is missing is a door, not an engine.** `scripts/diag/replay-stored-race.mjs` already
+      does the racing — it takes a stored record's seed, roster, names, track, laps and whole
+      `worldConfigs` and reproduces the race — and §3.6 ran it against a real stored race
+      (`W57FQA`) to **40 of 40 positions and 40 of 40 finishing times, to the millisecond**. The
+      work is a way to reach that from the product. **COMMISSIONED, not built here.**
+
 - [ ] ★★ **B2 — THE DATA AND ITS BACKUP END UP ON ONE MACHINE.** `scripts/backup.mjs:186` refuses
       to write the archive inside the data root and `:320` requires `--out`, so the tool is doing
       its part. But *outside the data root* is not *another disk*, and `docker-compose.yml:48-55`
@@ -154,6 +175,20 @@ not an address which is right (§9.1).
       the tree**. A disk loss takes the races and the archive together.
       ★ The round trip itself is PROVEN: export → wipe → restore, **14 of 14 scalar fields plus
       names, results, winners and worldConfigs, nothing lost** (§8.2).
+
+      ★★ **DECIDED 2026-09-27: THE PRODUCT DOES NOT DECIDE WHERE THE BACKUP GOES.** Each operator
+      of the server chooses his own destination; the project prescribes none and ships no default
+      pointing anywhere in particular. **What the work owes is therefore a CONFIGURABLE destination
+      and documentation of how to set it — nothing more.**
+      ★ **Why that is the right shape and not a dodge, in two facts:** on a Windows machine an
+      operator can point it at a folder that syncs to a cloud drive, and the syncing is then not the
+      project's business at all; on a rented server no such folder exists and he must point it at
+      whatever he can reach. **One prescribed destination could not have served both.**
+      ★ **The one destination rule that IS the product's business already holds:** the tool refuses
+      to write the archive inside the data root (`scripts/backup.mjs:186`, §6.10), because a copy
+      beside the original is not a second copy.
+      ★ **This row no longer waits on anything from the owner** — noted because it used to. Not
+      built here.
 
 - [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
       so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
@@ -173,7 +208,12 @@ not an address which is right (§9.1).
       **This is the bound §2.6 called "bounded".** Change the limit, the status or the wording in
       one and the other two diverge silently, and that claim becomes true of one route and false of
       two. **Recorded, deliberately NOT de-duplicated** — a refactor of live request handling is
-      the owner's call, and it is question 5 on the needs-his-word list.
+      the owner's call.
+      ★★ **DECIDED 2026-09-27: MERGE THE THREE INTO ONE.** COMMISSIONED work at the three
+      addresses the audit established — `server/src/routes/brands.js:314`,
+      `server/src/routes/racers.js:281`, `server/src/routes/tracks.js:595`, each the
+      `upload.single(...)` handler whose error block is the duplicate. **Not built here: it touches
+      live request handling**, which this documents-only block does not open.
 
 - [ ] ★ **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
       `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an
@@ -183,6 +223,21 @@ not an address which is right (§9.1).
       defeated the filter would change their own browser's race settings — which §3.4 establishes
       the stored race records. No server authority rests on it; the server's boundary is the 16
       admin-classified routes of §1.4, guarded by `routePolicyDrift.test.js`.
+
+- [x] ★★ **THE README — DECIDED 2026-09-27: IT MATTERS, SO REWRITE IT. DONE THE SAME DAY.** §9.4 checked 24 of its
+      claims, found 3 wrong, repaired them, and judged a wholesale rewrite to be churn against a
+      document with that defect rate. **That judgment was overruled:** this is the page a stranger
+      reads first, so a wrong sentence in it costs more than a wrong sentence anywhere else.
+      ★ **REWRITTEN 2026-09-27**, 186 → 208 lines, with the method and every checked claim recorded
+      in [README-REWRITE-2026-09-27.md](../reports/audit/README-REWRITE-2026-09-27.md). Sections:
+      what it is · how to run it · how to test it (with the guard table and why bare `verify` green
+      is not CI green) · how it is deployed (no production compose, no HTTPS) · how results are
+      kept and restored · where the documents live · what this is not.
+      ★ **Two claims were DROPPED because they could not be checked**, which is the part of the
+      method worth keeping: *"up to 3 layered effects per track"* (asserted by
+      `docs/ARCHITECTURE.md:173`, **found nowhere in the code** — replaced by the 7 effects that
+      demonstrably ship) and *"no mobile layout by design"* (**contradicted** — nine CSS files
+      carry `max-width` queries, including `RaceScreen.css`).
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
       the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
@@ -961,6 +1016,18 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
       of the work, not its completion.**
 
+      ★★ **AND THE ORDER IS DECIDED, 2026-09-27: BUILD THE BOUNDARY BEFORE A SECOND ORGANISER IS
+      INVITED.** The boundary itself is unchanged from 2026-09-25; what is settled now is that it
+      comes first. The alternative reading — invite, and accept that everything but races is common
+      until the work is done — is rejected.
+      ★★ **A WARNING THAT TRAVELS WITH THIS ROW.**
+      `server/src/routes/crossTeamAccess.audit.test.js` is green, **and it asserts today's truth
+      INCLUDING WHERE THAT TRUTH IS "NO SCOPING"** — it pins both that team B cannot read team A's
+      races and that six of seven modules carry no team vocabulary at all. That is correct for an
+      audit probe and **wrong the day the boundary is built.** Nobody may read that green as a
+      boundary that exists, and **whoever builds the boundary changes that test in the same
+      commit.**
+
       **PER TEAM** — each team has its own and sees no other team's:
       - **brands** (branding profiles)
       - **player groups**
@@ -1238,9 +1305,16 @@ are in PART TWO with what closed them; these are the ones still standing.
       failing run **cannot be made** and is dropped with that reason. ★ **And the probe is not a
       faithful stand-in for the spec:** it renders two extra diagnostic panels every frame, which
       changes the very frame cost under test. Naming that confound matters more than the 10/10.
-      ★ **NEEDS HIS WORD:** may a browser spec tolerate a frame-starved run, or must the shot be made
-      frame-independent? The first is a spec change; the second is a camera change. Listed as item 4
-      of [OPEN.md](OPEN.md) §1.
+      ★★ **DECIDED 2026-09-27: MAKE THE SPEC TOLERANT, AND DO NOT CHANGE THE CAMERA.** The
+      question was whether a browser spec may tolerate a frame-starved run or the shot must be made
+      frame-independent. **The spec gives way; the product does not.**
+      ★ **Its condition, recorded with it:** the camera is reconsidered only if the owner himself
+      ever sees a comeback go unshown. Until then the variation is a property of the harness's
+      environment, not a defect in the picture.
+      ★ **The spec change is NOT in this block.** It edits
+      `client/e2e/comeback-precedence.spec.js`, the file the comeback-correction thread owns, and
+      one writer per file — so it belongs to that thread's follow-up, not to this documents-only
+      block.
 
       ★★ **THE REUSABLE FACT SURVIVES THE CORRECTION UNCHANGED, and is in the spec's header where the
       next camera-spec author will meet it: THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE.** One
