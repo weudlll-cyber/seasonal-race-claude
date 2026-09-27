@@ -6,7 +6,30 @@ time, never appended to.
 
 ---
 
-## THE ONE-LINE ANSWER SO FAR
+## ALL FOUR ARCS MERGED, CI GREEN ON EVERY ONE
+
+| arc | merge | CI | Browser gate |
+| --- | --- | --- | --- |
+| 1 · hardening | `5599a26b` | ✅ success | ✅ success |
+| 2 · documents | `1b93fc00` | ✅ success | ✅ success |
+| 3 · tools | `e6ff2117` | ✅ success | ✅ success |
+| 4 · source | `c4450283` | ✅ success | ✅ success |
+
+★ **All four fingerprints re-minted against the engine after the run: 4 of 4 reproduce.** Origin
+holds `master` alone; every branch deleted; every scratch container, image and data directory this
+run created has been removed.
+
+★★ **THREE OF MY OWN EARLIER FINDINGS WERE WRONG AND ARE CORRECTED HERE.** The run spent as much
+effort attacking its own earlier numbers as producing new ones:
+- *"19 of 39 documents carry no OWNS line"* — a count of a literal string. **37 of 39 already said
+  what they were for.**
+- *"65 scripts nothing names"* — right, but **~29 of them are DISCOVERED BY CONVENTION**, not dead.
+- *"B7: the upload BOUND exists in three copies"* — the bound is single-homed; only the error
+  response is triplicated.
+
+---
+
+## THE ONE-LINE ANSWER
 
 **Arc 1 is done: the doors DELIVERY-CLEAN-1 named are now either pinned by a test that fails if they
 reopen, or recorded as your decision with both sides.** Nothing that changes what you see was
@@ -15,7 +38,7 @@ public address over plain HTTP today and *nothing in the product will ever tell 
 
 ---
 
-## ARC 1 — HARDENING · **MERGED** *(see the merge line at the foot of this section)*
+## ARC 1 — HARDENING · **MERGED**
 
 ### What was built
 
