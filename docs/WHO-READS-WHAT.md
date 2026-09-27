@@ -106,5 +106,5 @@ by rule**. See [../reports/README.md](../reports/README.md).
   and a live reason can still be too long, and this page does not judge that.
 - **The groupings are mine, from each document's own scope line** — no reader was asked. If an
   operator finds they need something from the developer list, the grouping is wrong, not the reader.
-- **39 is the top-level count.** `docs/archive/` (22) and `docs/internal/` (1) are below it and are
+- **40 is the top-level count**, this page included. `docs/archive/` (22) and `docs/internal/` (1) are below it and are
   history by declaration; nobody is directed to them here.

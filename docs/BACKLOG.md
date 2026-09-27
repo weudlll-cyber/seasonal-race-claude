@@ -275,9 +275,12 @@ not an address which is right (§9.1).
       longer contains an unexecuted command.
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
-      the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
+      the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · ~~19 of 39
       top-level documents carry no OWNS line, which caps the document-overlap check at half the
-      corpus (§1.1) · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
+      counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
+      different wordings. Normalised; 39 of 40 now carry a canonical line, `CLAUDE.md` excluded
+      deliberately.** · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
       config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
       rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
       ★ **Six more added 2026-09-27 by the late pieces:** `@vitest/coverage-v8` is `^4.1.4` in the

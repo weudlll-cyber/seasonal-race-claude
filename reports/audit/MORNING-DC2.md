@@ -60,7 +60,35 @@ line and I did not build it** — a new warning at boot is a runtime change you 
 
 ---
 
-## ARC 2 — THE 39 DOCUMENTS · *not started*
+## ARC 2 — THE 39 DOCUMENTS · **MERGED**
+
+**Your question was: who is supposed to read 39 documents, is the reason recognisable, and does
+information live in one place.**
+
+★★ **The earlier audit's "19 of 39 carry no OWNS line" was a count of a literal string.** Measured
+for what you actually asked — *is it recognisable from the document why it exists* — **37 of 39
+already said so**, in three different wordings, which is why no check could see it. Normalised:
+**39 of 40 now carry a canonical line** (`CLAUDE.md` excluded deliberately — its opening is
+load-bearing in its own rules).
+
+★ **Nothing qualified for retirement, and that is a measured result.** Every document has a live
+inbound link once `reports/` and `docs/archive/` are excluded; both subject-dead candidates
+survived (`STANDINGS-ARCHITECTURE` covers a panel that is built; `ROADMAP` is a redirect doing a
+redirect's job).
+
+**What was actually wrong, and is fixed:**
+- **`MORNING.md` is the dated sheet of 2026-09-19 named as if it were current.** Its first line now
+  says so and points at `OPEN.md`.
+- **`AUTH.md` (13 variables) and `DEPLOY-NOTES.md` (7) described environment variables with no
+  pointer to `ENVIRONMENT.md`**, which claims to own every one. Two homes, nothing saying which
+  wins. Deferrals added.
+- **`PHASE-CONTRACT.md` contradicted itself** — opening says "the CURRENT shipped race world", its
+  own `:95` concedes a sweep predates the speed-150 re-baseline. Values scoped to their date; the
+  contract it states marked undated and still binding.
+
+**The deliverable: [docs/WHO-READS-WHAT.md](../../docs/WHO-READS-WHAT.md).** The operator reads
+**five** documents. A developer's first day is **four**, in a fixed order, `GLOSSARY.md` first.
+Nobody reads 40.
 
 ## ARC 3 — THE 281 TOOLS · *not started*
 
