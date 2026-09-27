@@ -1,7 +1,7 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-27
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-27**, from PART ONE's **fourteen** rows — after the owner's decisions of
+Re-derived on **2026-09-27**, from PART ONE's **fifteen** rows — after the owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
 DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
 which closed §1 and opened one new row (verify-on-demand). **The README rewrite was
@@ -30,7 +30,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The fifteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -41,7 +41,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -124,7 +124,13 @@ because nobody looked.**
 13. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
+14. ★ **NEW — an operator can serve this over plain HTTP and nothing ever tells him.** `NODE_ENV`
+   is set nowhere in the shipped files, so the session cookie is not marked `Secure` and sign-in
+   **works** over plain HTTP with the password and session in clear — nothing breaks, which is why
+   nobody notices — and `startupReadiness.js` warns about three other things while containing zero
+   mentions of https/tls/secure. The fix is one readiness line; not built, because a new boot
+   warning is a runtime change he would see.
+15. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
 
 ★★ **ONE ROW LEFT THIS LIST ON 2026-09-27, and it was the most important one on it.**

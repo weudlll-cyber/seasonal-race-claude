@@ -280,3 +280,21 @@ verdict with numbers on each axis, not a list of work.
   and this server writes at boot: container **`Up (healthy)`**, log `serving the built client`, and
   the run **confirmed the README's own 403/bootstrap-token readiness line by observing it.**
   Everything it created was removed.
+
+- [DC2-ARC1-HARDENING.md](DC2-ARC1-HARDENING.md) — **DELIVERY-CLEAN-2 arc 1: three doors pinned by
+  tests that were sabotaged to prove they fail, and five things recorded as the owner's rather than
+  taken.** ★★ **THE FINDING THAT MATTERS: an operator can serve this over plain HTTP and nothing
+  will ever tell him.** `NODE_ENV` is set NOWHERE in the shipped deployment files, so the cookie is
+  not `Secure` and **sign-in works** with password and session in clear — nothing breaks, which is
+  why nobody notices — while `startupReadiness.js` warns about three other things and contains zero
+  mentions of https/tls/secure. ★ **B7 is corrected:** the upload bound is already single-homed in
+  `utils/imageUpload.js`; only the error RESPONSE is triplicated, so one route cannot accept a
+  bigger file, only answer differently. ★ **The 58/59 contradiction is settled and the brief that
+  raised it was wrong** — neither is off by one; 58 is the router surface, 59 adds `/api/health`.
+  ★ **The base image was NOT pinned** because the brief's own condition ("if purely safer") fails:
+  a digest freezes security patches and nothing here watches `FROM`.
+
+- [MORNING-DC2.md](MORNING-DC2.md) — **the running morning sheet for the whole DELIVERY-CLEAN-2
+  unattended run**, one page for all four arcs, its OPEN section regenerated from the tree each
+  time rather than appended to. Read it first: it names what merged, what is a row for his word,
+  and what is blocked.

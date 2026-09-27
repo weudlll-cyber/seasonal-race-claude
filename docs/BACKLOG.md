@@ -215,6 +215,27 @@ not an address which is right (§9.1).
       `upload.single(...)` handler whose error block is the duplicate. **Not built here: it touches
       live request handling**, which this documents-only block does not open.
 
+- [ ] ★★ **B9 — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 1): AN OPERATOR CAN SERVE THIS OVER PLAIN
+      HTTP AND NOTHING WILL EVER TELL HIM.** `docs/DEPLOY-NOTES.md` §4 already said the password and
+      session are readable over plain HTTP, and described the `NODE_ENV=production` trap where the
+      `Secure` cookie is issued and never returned so sign-in stops working. **Two measurements make
+      it worse than that:**
+      - **That trap is not the default case.** `NODE_ENV` is set **nowhere** in the shipped
+        deployment files — not `docker-compose.yml`, not `server/Dockerfile`, not
+        `docker-compose.override.yml.example`. So `resolveCookieSecure(false)` returns `false`
+        (`server/src/auth/session.js:23-29`), the cookie is **not** marked `Secure`, and sign-in
+        **works perfectly** over plain HTTP with the password (`authRouter.js:199`) and the session
+        cookie in clear. ★ **Nothing breaks, which is exactly why nobody notices.**
+      - **Nothing warns at boot.** `server/src/startupReadiness.js` emits readiness lines for
+        `RA_BOOTSTRAP_TOKEN` (`:57`), `RA_SESSION_SECRET` (`:67`) and `RA_CLIENT_ORIGIN` (`:76`) and
+        contains **zero** occurrences of `https`, `tls` or `secure`.
+      ★ **THE FIX IS ONE READINESS LINE and it was NOT built**, because a new line at boot is a
+      runtime change the owner would see — arc 1's rule. The shape it would take: warn when the
+      server is serving a client build and `resolveCookieSecure` is not `true`, in the same voice as
+      the three that already exist. **His word.**
+      ★ Not the same row as B4 (the bind): B4 is about who can reach the port, this is about what
+      travels once they do.
+
 - [ ] ★ **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
       `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an
       admin role; `DevScreen.jsx:191-194` then computes `effectiveView = isAdmin ? view :
