@@ -239,26 +239,29 @@ not an address which is right (§9.1).
         already touched*, and arc 4 touched none of those files. Two are in the engine hull
         (`sim-fairness.mjs` 11, `camera-replay.mjs` 3). Worth doing as each file is next opened.
 
-- [ ] ★★ **B9 — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 1): AN OPERATOR CAN SERVE THIS OVER PLAIN
-      HTTP AND NOTHING WILL EVER TELL HIM.** `docs/DEPLOY-NOTES.md` §4 already said the password and
-      session are readable over plain HTTP, and described the `NODE_ENV=production` trap where the
-      `Secure` cookie is issued and never returned so sign-in stops working. **Two measurements make
-      it worse than that:**
-      - **That trap is not the default case.** `NODE_ENV` is set **nowhere** in the shipped
-        deployment files — not `docker-compose.yml`, not `server/Dockerfile`, not
-        `docker-compose.override.yml.example`. So `resolveCookieSecure(false)` returns `false`
-        (`server/src/auth/session.js:23-29`), the cookie is **not** marked `Secure`, and sign-in
-        **works perfectly** over plain HTTP with the password (`authRouter.js:199`) and the session
-        cookie in clear. ★ **Nothing breaks, which is exactly why nobody notices.**
-      - **Nothing warns at boot.** `server/src/startupReadiness.js` emits readiness lines for
-        `RA_BOOTSTRAP_TOKEN` (`:57`), `RA_SESSION_SECRET` (`:67`) and `RA_CLIENT_ORIGIN` (`:76`) and
-        contains **zero** occurrences of `https`, `tls` or `secure`.
-      ★ **THE FIX IS ONE READINESS LINE and it was NOT built**, because a new line at boot is a
-      runtime change the owner would see — arc 1's rule. The shape it would take: warn when the
-      server is serving a client build and `resolveCookieSecure` is not `true`, in the same voice as
-      the three that already exist. **His word.**
-      ★ Not the same row as B4 (the bind): B4 is about who can reach the port, this is about what
-      travels once they do.
+- [x] ★★ **B9 — CLOSED 2026-09-27 (DELIVERY-CLEAN-3 piece 1). THE STARTUP NOW SAYS IT.** The
+      finding: the whole cookie-`Secure` posture hangs on `NODE_ENV === 'production'`, which is set
+      in **no shipped file**, so the default deployment serves sign-in in clear — and
+      `startupReadiness.js` warned about three things and never about transport. **Nothing broke,
+      which is why nobody noticed.**
+      ★ **What was built:** a fourth readiness line. When the resolved cookie is literally `false`
+      it names the consequence first — *"SIGN-IN TRAVELS UNENCRYPTED — the password and the session
+      cookie are readable by anything on the network path"* — then the switch that fixes it and the
+      section that explains it. Silent on `RA_COOKIE_SECURE=true`, silent under
+      `NODE_ENV=production`, and ★ **silent on `'auto'`**, where trust-proxy decides per request and
+      a warning would be the noise this file's header exists to prevent.
+      ★ **NO RUNTIME BEHAVIOUR CHANGED.** The cookie default is untouched; only an advisory line
+      appears. Changing the default remains the owner's decision and is NOT part of this.
+      ★ **The rule moved to one home:** `server/src/auth/cookiePolicy.js` now owns
+      `resolveCookieSecure`, re-exported by `session.js` so every caller is unchanged — it had to
+      move because `startupReadiness.js` must not import `session.js`, which pulls in
+      `better-sqlite3` and would break that file's promise to be judgeable without an environment.
+      The alternative was a second copy of the rule.
+      ★ **Sabotaged both ways:** forcing it never to fire reddens the FIRES test; forcing it always
+      to fire reddens all three SILENT tests. 7 new tests; the server suite is 870.
+      ★ **And adding it changed what "fully configured" MEANS** — seven of the ten existing
+      readiness tests failed the moment the line existed, because their fixture had never answered
+      the transport question. Updated deliberately, not weakened.
 
 - [ ] ★ **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
       `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an

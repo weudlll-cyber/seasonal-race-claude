@@ -340,3 +340,6 @@ verdict with numbers on each axis, not a list of work.
   ★ Six ranked structural proposals, **none performed**, led by `CameraDirector.js` at 5,507 lines
   — and the cost line that matters: **he would see nothing if it were done right, which is exactly
   why it is dangerous.**
+
+- [MORNING-DC3.md](MORNING-DC3.md) — **the running sheet for the DELIVERY-CLEAN-3 cleanup night**,
+  one page for all six pieces, OPEN section regenerated from the tree each time. Read it first.
