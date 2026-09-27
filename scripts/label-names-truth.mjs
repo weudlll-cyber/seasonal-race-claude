@@ -89,7 +89,6 @@ const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
 const METRICS = JSON.parse(
   readFileSync(join(ROOT, "scripts/fixtures/label-metrics-chrome.json"), "utf8")
 );
-let METRIC_MISSES = 0;
 const realWidth = (text, fontPx) => {
   const w = METRICS.widths[String(text)];
   if (w != null) return w;

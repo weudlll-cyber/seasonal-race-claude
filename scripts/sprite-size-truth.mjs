@@ -36,7 +36,7 @@
 //   node scripts/sprite-size-truth.mjs --json
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import {} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {

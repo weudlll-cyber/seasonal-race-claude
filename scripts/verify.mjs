@@ -32,7 +32,7 @@
 // ============================================================
 
 import { execFile, execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {} from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";

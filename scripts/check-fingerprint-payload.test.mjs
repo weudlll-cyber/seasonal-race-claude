@@ -13,8 +13,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {mkdtempSync, rmSync, writeFileSync} from "node:fs";
+import {} from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 

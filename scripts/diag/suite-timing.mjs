@@ -13,7 +13,7 @@
 // It changes nothing. It spawns the suite the same way `npm test` does and reads vitest's own JSON
 // reporter for per-test durations.
 import { spawnSync } from "node:child_process";
-import { freemem, totalmem, loadavg, tmpdir } from "node:os";
+import {freemem, tmpdir} from "node:os";
 import { readFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";

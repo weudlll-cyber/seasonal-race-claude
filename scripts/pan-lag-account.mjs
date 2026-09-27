@@ -247,7 +247,6 @@ if (JSON_OUT) {
     const f = r.rows;
     if (!f.length) { console.log(`${r.track.padEnd(16)}${String(r.racers).padStart(4)}  ${r.arm.padEnd(8)} — no frames`); continue; }
     const follow = f.filter((x) => !x.snapped && !x.glide);
-    const share = mean(follow.map((x) => (x.measured > 1e-9 ? x.residual / x.measured : 0)));
     console.log(
       [
         r.track.padEnd(16), String(r.racers).padStart(4), "  " + r.arm.padEnd(8),

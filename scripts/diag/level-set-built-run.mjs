@@ -47,7 +47,6 @@ const HIS_TWELVE = [
   "luger-hill-20-51",
   "seatrack-20-11",
 ];
-const TRACE = HIS_TWELVE.join(",");
 
 const shards = [];
 if (PHASE === "1") {

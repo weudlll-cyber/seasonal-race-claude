@@ -383,7 +383,6 @@ for (const { arm, agg } of ranked) {
 }
 
 // Recommendation: the highest-band-reach arm that (a) beats ship by > 1.5pp AND (b) has no guardrail damage.
-const shipArm = uniq.find(({ arm }) => arm.G === 0.75 && arm.s === 0.5);
 const challengers = uniq
   .filter(({ arm }) => !(arm.G === 0.75 && arm.s === 0.5))
   .filter(

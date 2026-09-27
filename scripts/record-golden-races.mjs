@@ -33,7 +33,7 @@
 // turns on, and one no hash can answer.
 // ============================================================
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import {writeFileSync, existsSync} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { runAllGoldenRaces, RACES_PATH, EXPECTED_PATH, readJson, compareRace } from "./check-golden-races.mjs";
 

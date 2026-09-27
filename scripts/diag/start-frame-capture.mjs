@@ -78,7 +78,6 @@ const TRACK_ORDER = [
   "luger-hill", "mountainstreet", "river-run", "seatrack", "space-sprint",
 ];
 
-let prevZ = 0;
 
 if (ALL) {
   const CWA = 1280;
@@ -303,7 +302,6 @@ if (ANCHORS) {
         const dCam = prevCamX === null ? 0 : camX - prevCamX;
         const panTerm = prevCamX === null ? 0 : dCam - zoomTerm - corrTerm;
         // The zoom-about-the-anchor correction fires only when `_focusAnchorRacer` is non-null.
-        const anchorIdx = cd._anchorRacerIndex;
         console.log(
           `${String(Math.round(ms)).padStart(5)} ${camX.toFixed(0).padStart(7)} ` +
             `${(a ? a.x.toFixed(0) : "—").padStart(7)} ${(a ? (camX - a.x).toFixed(0) : "—").padStart(8)}  ` +

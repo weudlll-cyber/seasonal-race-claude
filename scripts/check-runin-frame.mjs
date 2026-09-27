@@ -524,8 +524,6 @@ for (const geo of loadTracks()) {
       true
     : q.canvasMargin < 0
   ).length;
-  const everIn = margins.some((m) => m >= 0);
-  const firstOutI = margins.findIndex((m) => m < 0);
   const onCanvas = samples.map((q, i) =>
     SAB_NEVER || (SAB_VANISH && i >= Math.floor((2 * samples.length) / 3)) ? -1 : q.canvasMargin
   );

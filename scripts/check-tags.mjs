@@ -88,7 +88,6 @@ import { pathToFileURL } from "node:url";
 // ★ ORIGIN IS ASKED DIRECTLY, NOT THE CACHE. `git branch -r` reads remote-tracking refs, which are
 // whatever the last fetch left behind; step 12 already writes this distinction down and the guard
 // has to honour it or it would bless a branch that was deleted locally and still stands remotely.
-const KEEP = (name, reason) => ({ name, reason });
 
 // ── BRANCHES DELIBERATELY KEPT AT ORIGIN ────────────────────────────────────────────────────────
 //

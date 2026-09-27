@@ -72,7 +72,6 @@ const SEEDS = argOf("seeds", argOf("seed", "9"))
   .filter((n) => Number.isFinite(n));
 
 const CW = 1280;
-const CH = 720;
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 // `runInShot` exists only where the run-in has landed; setting it on a tree without the key is a
 // no-op, which is what makes this flag safe to pass on either tree.

@@ -188,7 +188,6 @@ for (const geo of loadTracks({ only: ONLY })) {
     );
     for (const [i, p] of phases.entries()) {
       const rows = p.rows;
-      const rates = rows.map((r) => r.rate);
       const ms = rows[rows.length - 1].ts - rows[0].ts;
       const lc = rows.map((r) => r.lineCeil).filter(Number.isFinite);
       console.log(

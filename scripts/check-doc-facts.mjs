@@ -83,7 +83,7 @@ if (process.argv.includes("--declare")) {
 
 const started = Date.now();
 
-import { readFileSync, readdirSync } from "node:fs";
+import {readFileSync} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
