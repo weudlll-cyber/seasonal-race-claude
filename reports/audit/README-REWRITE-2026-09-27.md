@@ -167,3 +167,9 @@ correct and now records where the limit lives.
 `ResultScreen.css:494` (768px), `RacerEditor.module.css:49` (900px). ★ **Dropping the owner's
 sentence was still right** — it asserted an intent nothing in the tree establishes — but the number
 this report gave for dropping it did not support it, and a property is not a query.
+
+**3 · `docker compose up -d` HAS SINCE BEEN EXECUTED.** The table above marks it NOT run, which was
+true when written. It was run on 2026-09-27 on port 4099 with the data mount redirected — a plain
+run would have bind-mounted the owner's **live** `server/data`, which this server writes to at
+boot, a harm worse than the port clash originally given. Container came up **`(healthy)`** and the
+log read `serving the built client from /app/client-dist`. Full record in the corrections report.

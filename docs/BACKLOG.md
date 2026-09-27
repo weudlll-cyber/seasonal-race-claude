@@ -247,6 +247,11 @@ not an address which is right (§9.1).
         actual `@media (max-width: …)` breakpoint. Dropping the owner's original sentence was still
         right — it claimed an intent nothing establishes — but the number given for dropping it
         did not support it.
+      ★ **And `docker compose up -d`, written into the README unexecuted, WAS RUN on 2026-09-27** —
+      port 4099, data mount redirected, because a plain run would have bind-mounted the owner's
+      live `server/data` and this server writes at boot. Container `Up (healthy)`, log
+      `serving the built client`, everything it created removed. The README's install section no
+      longer contains an unexecuted command.
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
       the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39

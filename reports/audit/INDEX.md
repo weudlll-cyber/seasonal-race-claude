@@ -263,3 +263,20 @@ verdict with numbers on each axis, not a list of work.
   validated and the image built instead), `npm run configure` and the setup `curl` (both write real
   secrets or a real account). ★ A false sentence in my own draft was caught before it shipped:
   five of the thirteen documents in the new map declare no `Owns:` line, so the map now marks them.
+
+- [README-CORRECTIONS-2026-09-27.md](README-CORRECTIONS-2026-09-27.md) — **two findings from the
+  README pass dissolve, and the deployment command is finally run.** ★★ **BOTH OF MY "DROPPED
+  CLAIMS" WERE WRONG, in two different ways.** The 3-effect cap **exists** — `EffectConfig.jsx:11`
+  declares `max = 3`, `:34` refuses the fourth, `:124` hides the control, `TrackEditorToolbar.jsx:128`
+  passes it, and a **fifth site the brief did not name**, `trackEditorSave.js:73`, slices on save.
+  The search had looked in three places and never opened `components/EffectConfig/` — **which
+  `docs/TRACK_EDITOR.md:310` names by that exact word.** The renderer was then established, not
+  assumed: it does **not** cap, so the limit's scope is now written into `ARCHITECTURE.md:173`.
+  ★ The "nine CSS files with `max-width` queries" counted the CSS **property**, not a media query;
+  the real breakpoint count is **three** (640/768/900 px) against a fixed 1280×720 race field.
+  Dropping the owner's sentence stays right — it asserted an intent nothing establishes — but the
+  number given for it did not support it. ★ `docker compose up -d` was **executed**, on port 4099
+  with the data mount redirected, because a plain run would have bind-mounted the owner's LIVE data
+  and this server writes at boot: container **`Up (healthy)`**, log `serving the built client`, and
+  the run **confirmed the README's own 403/bootstrap-token readiness line by observing it.**
+  Everything it created was removed.
