@@ -1,9 +1,10 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-27
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-27**, from PART ONE's **thirteen** rows — after the owner's decisions of
-2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, and after
-DELIVERY-CLEAN-1 finished all eleven of its pieces.
+Re-derived on **2026-09-27**, from PART ONE's **fifteen** rows — after the owner's decisions of
+2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
+DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
+which closed §1 and opened two new rows (verify-on-demand, and the README rewrite).
 
 ★★ **THE COUNT IN THIS HEADER WAS WRONG UNTIL TODAY, AND THE WAY IT WAS WRONG IS THE POINT.** It
 said *"the count has been seven since the decisions were recorded"* while the heading below it said
@@ -27,17 +28,18 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The thirteen rows in section 0 are all WORK**, and that is still true.
-★★ **BUT §1 IS NO LONGER EMPTY, CORRECTED 2026-09-27.** It went on saying *"Nothing is waiting on
-his word"* while `reports/audit/MORNING-2026-09-27.md` listed **six** things that are, and while row
-6 of section 0 said "needs his word" in its own text. **Three places in one list disagreeing is the
-disease this page was rebuilt to cure**; the morning sheet is the one that was right. All six are
-now in §1 below. ★ **The count is unaffected:** §1 holds QUESTIONS, section 0 holds WORK, and
-section 0 is still the thirteen rows of PART ONE.
+work. **The fifteen rows in section 0 are all WORK**, and that is still true.
+★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
+worth keeping.** It went on saying *"Nothing is waiting on his word"* while
+`reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
+said "needs his word" in its own text — **three places in one list disagreeing, which is the
+disease this page was rebuilt to cure.** The six were written in; the owner then answered all six
+the same day, so §1 is empty again — **this time because the answers exist and are linked, not
+because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -100,20 +102,30 @@ section 0 is still the thirteen rows of PART ONE.
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
 
-8. **The data and its backup end up on one machine.** The backup tool refuses to write inside the
+8. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
+   keeps accepting results without recomputing them; a disputed race is re-raced from its own
+   record and compared. **Fabrication is not prevented, it becomes provable.**
+   `scripts/diag/replay-stored-race.mjs` already does the racing, so what is missing is a door from
+   the product, not an engine.
+9. **The data and its backup end up on one machine.** The backup tool refuses to write inside the
    data root, but nothing moves the archive off the host, and the deployment keeps the database
-   inside the repository checkout.
-9. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+   inside the repository checkout. ★ **Decided 2026-09-27: the product does not choose the
+   destination** — the operator does, and the work owes a configurable destination and the
+   documentation for it. **No longer waiting on him.**
+10. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
    a firewall or proxy is put in front of it.
-10. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+11. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-11. ★ **NEW — the upload size-and-type bound exists in three copies**, in the brands, racers and
-   tracks routes. It is the bound the audit called "bounded"; change it in one and the other two
-   diverge silently. Recorded, not de-duplicated — that is a refactor and needs his word.
-12. ★ **NEW — the dev screen's advanced tier is hidden by a client-side filter only.** Low: those
+12. **The upload size-and-type bound exists in three copies**, in the brands, racers and tracks
+   routes. ★ **Decided 2026-09-27: merge them into one.** Commissioned; not built yet, because it
+   touches live request handling.
+13. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-13. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
+14. ★ **NEW — rewrite the README (decided 2026-09-27).** §9.4 judged a wholesale rewrite to be
+   churn; that judgment is overruled, because this is the page a stranger reads first. **In
+   progress in the same block that recorded the decision.**
+15. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
 
 ★★ **ONE ROW LEFT THIS LIST ON 2026-09-27, and it was the most important one on it.**
@@ -132,41 +144,23 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★★ **SIX, as of 2026-09-27.** This section read EMPTY from 2026-09-25, and on that date it was
-true. It stopped being true twice over — once on 2026-09-26 when measuring the comeback shot
-produced item 4, and again on 2026-09-27 when DELIVERY-CLEAN-1 finished with five more — and the
-page went on saying EMPTY through both. **Nothing here is a question a measurement could settle;
-each is a choice between readings.**
+★★ **EMPTY AGAIN, 2026-09-27 — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
+answers rather than asserted.** The section held six questions for one day. Each is now a decision
+in [BACKLOG.md](BACKLOG.md) PART ONE, on the row that carries the work:
 
-1. **Should the server check a result, or stay a second store?** Anyone who can sign in can file a
-   race that was never run — the server validates structure, never outcome. Leave it, or have the
-   server recompute the outcome from the stored inputs before accepting. ★ Better informed since
-   2026-09-27: the replay works exactly, so "re-run the disputed race" is a real remedy.
-   → [BACKLOG.md](BACKLOG.md) PART ONE, *DELIVERY-CLEAN-1*. ★ **It has no row of its own there** —
-   it is described inside the closed B5 row; the detail is `reports/audit/DELIVERY-CLEAN-1.md` §11, B1.
-2. **Where should a backup go, and who moves it?** The tool already refuses to write inside the data
-   root, so the question is whether the operator copies the archive off the machine by hand or the
-   project grows something that does it. → [BACKLOG.md](BACKLOG.md) PART ONE, *DELIVERY-CLEAN-1*,
-   the **B2** row.
-3. **When the second team arrives, what is shared?** The boundary he stated on 2026-09-25 covers
-   brands, player groups and team-created tracks; six of seven data modules scope nothing today.
-   Build the boundary before inviting anybody, or invite and accept that everything but races is
-   common. → [BACKLOG.md](BACKLOG.md) PART ONE, *Phases 5–7*, the **TENANCY** row.
-4. **May a browser spec tolerate a frame-starved run, or must the comeback shot be made
-   frame-independent?** The shot appeared in 17 of 19 runs of one fixture; the misses fit the
-   director getting fewer looks under load, not chance in the product — see row 6 of section 0 for
-   why the first account of this was wrong. Tolerating it is a spec change; removing the dependence
-   is a camera change. → [BACKLOG.md](BACKLOG.md) PART ONE, *Three production-arm specs fail*.
-5. **Should the three upload handlers become one?** The size-and-type bound the audit called
-   "bounded" lives in three identical copies; change one and the other two diverge silently.
-   Leave them and accept the claim is three claims, or de-duplicate — a refactor of live request
-   handling, which is why it was recorded and not done. → [BACKLOG.md](BACKLOG.md) PART ONE,
-   *DELIVERY-CLEAN-1*, the **B7** row.
-6. **Should the README be rewritten after all?** DELIVERY-CLEAN-1 §9.4 checked 24 of its claims,
-   found 3 wrong and repaired them, then judged a wholesale rewrite to be churn against a document
-   with that defect rate — and said so rather than deciding it silently either way.
-   ★ **No backlog row exists**, because it is a question about the audit's own judgment: the detail
-   is `reports/audit/DELIVERY-CLEAN-1.md` §9.4.
+| the question | the decision, 2026-09-27 |
+| --- | --- |
+| Should the server check a result? | **Neither option as posed** — it stays a second store, and a race becomes verifiable ON DEMAND. Re-racing costs 0.9–2.9 s, so checking every submission would buy a rare suspicion with a blocked core on every race. ★ Fabrication is not prevented, it becomes **provable**. |
+| Where should a backup go? | **The product does not decide.** The operator chooses; the work owes a configurable destination and the documentation for it. The one rule that stays the product's business: the copy may not sit inside the data it copies. |
+| When the second team arrives, what is shared? | The boundary is unchanged from 2026-09-25; **the ORDER is decided — build it BEFORE a second organiser is invited.** |
+| May a browser spec tolerate a frame-starved run? | **Yes — the spec gives way, the camera does not.** Reconsidered only if he himself sees a comeback go unshown. |
+| Should the three upload checks become one? | **Yes.** Commissioned; not built yet, because it touches live request handling. |
+| Should the README be rewritten? | **Yes — it matters.** Being done in the same block that recorded the decision. |
+
+★ **None of the six was answerable by measurement**, which is why they were here and not in a
+sweep. ★ **Two of them overturn something written earlier in this repository** — the README
+judgment of §9.4, and the framing of the server question as a choice between two options. Both
+overrulings are recorded on their rows rather than folded away.
 
 ★ **What the 2026-09-25 emptiness meant, kept because the reasoning still holds.** Eleven rows were
 checked at the tree that day. Three closed on the re-verification, four were already struck records,
