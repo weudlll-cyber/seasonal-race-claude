@@ -329,8 +329,22 @@ not an address which is right (§9.1).
       deliberately.** · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
       config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
       rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
-      ★ **Six more added 2026-09-27 by the late pieces:** `@vitest/coverage-v8` is `^4.1.4` in the
-      client and `^4.1.8` in the server (§6.6) · `minTargetScreenPx` names two different settings
+      ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
+      client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
+      the server declaration is now `^4.1.4`, so all four vitest declarations across both
+      manifests are identical and `npm ls` reports no `invalid`. Both suites green on it
+      (server 869, client 4778).
+      ★★ **AND A DEVIATION FROM THE BRIEF, NAMED RATHER THAN HIDDEN.** It said to align to the
+      HIGHER range and refresh the lockfiles. That was attempted first and **could not be
+      verified on this machine: `npm install` reports success and does not materialise an
+      upgrade.** With both manifests set to `^4.1.11` and both lockfiles refreshed, the disk
+      stayed at client 4.1.5 / server 4.1.8 and `npm ls` said *invalid: "^4.1.11" from the root
+      project* — with `node_modules` writable, so it is not a permission fault. Shipping a
+      lockfile nobody here can install would have made CI the first to try it, and the piece's
+      own condition was *confirm both suites still run*. The attempt was reverted in full.
+      ★ The alignment taken instead achieves what the row asked — one declared range — and is
+      provable now. **A lower floor costs nothing in practice: `npm ci` installs from the
+      LOCKFILE, not the range, so CI keeps getting the pinned versions.** · `minTargetScreenPx` names two different settings
       in two stores, `autoSpriteScale.js:23` and `racer-types/index.js:239`, not renamed because a
       stored-key rename touches saved configs (§6.7) · `label-bench-matrix.mjs:40` and
       `phys-bench-matrix.mjs:63` require `--master` on any machine but the one they were written on
@@ -340,6 +354,10 @@ not an address which is right (§9.1).
       export may be a seam, and three of the eight are the auditor's own from the day before
       (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
       (§9.2).
+      ★ **Also open, from DC3 piece 4:** the vitest pair could be moved to a newer 4.1.x, but
+      **not from this machine** — `npm install` will not materialise an upgrade here (see the
+      struck-through `@vitest/coverage-v8` item above). One `npm install` on a machine where
+      that works, plus both suites, closes it.
       ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
       `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
       `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
