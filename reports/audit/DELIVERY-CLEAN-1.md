@@ -88,18 +88,27 @@ this test in the same commit.
 | ★ C12 | **NEW — 8 exported symbols with no importer.** Never removed: an unimported export may be a seam. ★ Three of the eight are mine, from RACE-SOURCE-1 the day before this audit. | §5.3 |
 | ★ C13 | **NEW — 46 of the 59 API routes are documented nowhere.** `API.md` documents 13 and now says so correctly. | §9.2 |
 
-### ★ WHAT THIS AUDIT REPAIRED — 62 changes, none of them behaviour
+### ★ WHAT THIS AUDIT CHANGED IN THE TREE — none of it behaviour
 
 Listed because a report that only names problems hides what it did to the tree.
 
-| where | n | what |
-| --- | ---: | --- |
-| `scripts/diag/*` | 38 | `c:/tmp/…` defaults → `join(tmpdir(), …)`, the pattern the 2026-09-25 fix established |
-| comments across `client/src` | 4 | addresses that named the wrong file or a drifted line |
-| living documents | 14 | the wrong script name, the racer-types move, three archive pointers, a deleted file in a tree, `API.md`'s counts, `README.md`'s three |
-| test files | 4 | three dead variables removed, one kept with its reason and its address corrected |
-| `scripts/diag/line-ceiling-terms.mjs` | 1 | **an orphaned `console.log(` that had made the file unparseable for 36 days** |
-| `server/src/index.js` | 1 | a dead `eslint-disable` the linter was already flagging |
+★★ **THIS TABLE REPLACES A COUNT OF "62" THAT I COULD NOT REPRODUCE.** The first version totted
+up per-piece figures I had written at different times and reached 62; asked to verify it against
+`git diff`, it did not come out. **The figures below are all read from one command**
+(`git diff --numstat master...HEAD`) so any reader can re-run them, which the 62 was not.
+
+| area | files | +/− | what |
+| --- | ---: | --- | --- |
+| `scripts/diag/*` | **42** | +105 − 68 | 38 `c:/tmp/…` defaults → `join(tmpdir(), …)` (the pattern the 2026-09-25 fix established), plus the wrong comment addresses in `comeback-beats.mjs` and `leader-lag-tc.mjs` |
+| `docs/*` | **10** | +165 − 25 | 8 documents repaired; `BACKLOG.md` (+98) and `OPEN.md` (+39) are §11's bookkeeping, not repairs |
+| `client/` + `server/` | **12** | +192 − 12 | of which **168 added lines are ONE new file**, `crossTeamAccess.audit.test.js` — a probe, not a repair |
+| `scripts/` (other) | 2 | +2 − 2 | one wrong address each in `goldenRunner.mjs` and `sim-fairness.mjs` |
+| `README.md` | 1 | +6 − 4 | the three wrong claims of §9.4 |
+| **total** | **67** | **+484 − 111** | |
+
+**The substantive repairs inside that, by kind:** 38 hardcoded script paths · 17 wrong comment and
+document addresses · 3 dead test variables removed and 1 kept with a corrected address · 1
+unparseable script · 1 dead eslint directive · and the wrong sentences in 8 living documents.
 
 ★★ **Two of those repairs are worth more than their size.** The script name
 (`check-bundle-address.mjs` → `audit-bundle-address.mjs`) was wrong in **both documents an operator
@@ -1792,3 +1801,98 @@ and reformatting a file CI does not check is churn. Group C row.
 - Attack 6's first attempt never answered, so **nothing is known about whether the fully-booted app
   registers routes the router-level walk cannot see** (error handlers, 404 fallbacks, the static
   client mount).
+
+---
+
+## MERGE READINESS — the five conditions, with their evidence
+
+**1 · Every piece performed or blocked, and pushed.** All eleven performed; **none blocked**. The
+order deviated once — piece 7 was finished and pushed before piece 5 — which is stated in the
+morning sheet rather than glossed.
+
+**2 · ★★ No visible behaviour change — PROVEN, not asserted.** Five source files under
+`client/src` and `server/src` differ from master. Stripping comment lines from each diff leaves
+**nothing at all**:
+
+```
+$ git diff --name-only master...HEAD -- client/src server/src | grep -v "[.]test[.]" |
+    while read f; do echo "--- $f"; git diff master...HEAD -- "$f" |
+      grep "^[+-]" | grep -v "^[+-][+-]" | grep -vE "^[+-][[:space:]]*(//|[*]|/[*])"; done
+--- client/src/modules/camera/CameraDirector.js
+--- client/src/screens/RaceScreen/index.jsx
+--- client/src/services/api.js
+--- server/src/constants/builtinRacerIds.js
+--- server/src/index.js
+```
+
+**Five headers, zero lines under any of them.** `client/src/modules/storage/defaults.js` is
+untouched (`git diff --stat` returns empty). The three test-file removals delete variables nothing
+read. ★ **This is also the answer to the reach check's one flag in condition 3 below.**
+
+**3 · ★★ No fingerprint moved — and this was checked TWICE, by tools that disagree.**
+
+`scripts/engine-reach.mjs --check` over all 58 non-document changed paths:
+
+```
+ENGINE REACH: client/src/modules/camera/CameraDirector.js is in the hull but INERT — comments only
+ENGINE REACH: scripts/parity/goldenRunner.mjs is in the hull but INERT — comments only
+ENGINE REACH: scripts/sim-fairness.mjs is in the hull but INERT — comments only
+ENGINE REACH: 1 of 58 path(s) can change the race:
+  client/src/screens/RaceScreen/index.jsx
+```
+
+★ **The reach check flags `RaceScreen/index.jsx` and it is wrong to worry.** Its entire diff against
+master is **one character range inside a `//` comment** — `SetupScreen.jsx:688` repaired to `:180`
+by piece 4. The tool gave the three hull files an explicit *"INERT — comments only"* and did not
+give this one the same verdict; **reported rather than argued with**, because the authority on
+whether a fingerprint moved is not the reach check:
+
+```
+check-fingerprints --mint:  4 roles, 1242 tracked files scanned, 0 stray copies,
+                            4 role(s) re-minted against the engine.   exit 0
+```
+
+★★ **`--mint` runs each role's own `reproduce` command and fails if the engine disagrees** — it
+verifies, it does not write (the file contains no `writeFileSync`; checked before running it, since
+minting on my own authority is forbidden). **All four roles reproduce.** And `verify --premerge`
+printed the three values it computes, unchanged:
+
+```
+world-fingerprint   COMBINED 81798e1875975cc2
+render-fingerprint  RENDER   90344c0f0361cbf1
+camera-fingerprint  CAMERA   be48503a324429cb
+```
+
+**4 · Both verify selections green — run separately, because two green suites are not a
+pre-merge clearance and the bare selection is not the wide one.**
+
+```
+npm run verify                      PASS 30   FAIL 0   SKIP 6   exit 0   (414.9s)
+npm run verify -- --premerge        PASS 33   FAIL 0   SKIP 3   exit 0   (604.4s)
+```
+
+★ Both runs printed the same three computed fingerprints — `COMBINED 81798e1875975cc2`,
+`RENDER 90344c0f0361cbf1`, `CAMERA be48503a324429cb` — which is a fourth independent statement
+that nothing moved, on top of `--mint` and the zero-line diff above.
+
+Scripts were touched, so the wide selection was the one that mattered. Every guard that could speak
+to this branch passed, including `check-measured-stamps` (which my piece-4 comment repair had
+reddened once and which was re-stamped at HEAD), `server-format-check`, `client-format-check`,
+`server-lint`, `client-lint`, `script-suite`, `golden-races` and all four fingerprint guards.
+
+**5 · PART ONE and `OPEN.md` agree.** PART ONE's DELIVERY-CLEAN-1 section carries **6 open rows and
+1 closed**; the other PART ONE subjects number **7**; `OPEN.md` lists **13**. 7 + 6 = 13. ★ Before
+today they did not agree and neither page knew it — `OPEN.md`'s header said "the count has been
+seven" while its own heading and list said twelve.
+
+### What a reviewer should distrust in this report
+
+- **The empty group A is the claim most worth attacking.** No penetration testing was done. It
+  means "nothing found by the checks that ran", and those checks are enumerated in §2 and §3 so the
+  gaps are visible rather than implied.
+- **§7.1 is the largest unperformed thing in the chain** — 226 script headers never read against
+  their bodies. §10's second run found a 36-day-dead script through exactly that gap, which is
+  evidence the gap is real and not a formality.
+- **Three of my own numbers were wrong and are corrected in place, not edited away**: two
+  denominators in §1, the server-lint method in §5, and a repair total of "62" in §11 that I could
+  not reproduce from `git diff` when I tried.
