@@ -232,8 +232,16 @@ not an address which is right (§9.1).
         **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
         done right — which is why it is dangerous.**
       - ~~**P2 · the three upload handlers → one.**~~ ★ **DONE 2026-09-27 (DC3 piece 2)** — see the closed B7/P2 row above.
-      - **P3 · the JSON-store preamble**, `brands.js:90`/`:181` ⇔ `playerGroups.js:60`/`:114`,
-        44 lines, two implementations of one pattern that must agree. Cost MODERATE.
+      - ~~**P3 · the JSON-store preamble**~~ ★ **DONE 2026-09-27 (DC3 piece 3)** — and it was
+        **THREE implementations, not two**: `racers.js` carries the same `loadAll` body and §6.1's
+        clone report never said so, because a clone report pairs files and never states how many
+        copies a shape has in total. ★ **Diffed before unifying, as required: no behavioural
+        drift** — the three differed only in a local variable name (cosmetic) and the log label
+        (real, so it is a parameter). Now `server/utils/jsonDirStore.js`; the three routes are
+        −34 lines net and six now-dead `fs` imports went with them. The skip-and-warn behaviour
+        is preserved exactly and `brands.test.js`'s boot-safety test proves it — sabotaging the
+        shared helper to throw reddens it. ★ One implementation now means ONE test guards all
+        three callers.
       - **P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
         (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.
       - **P5 · `CameraAdvancedSection.jsx` (2,118) and `DynamicsTuningSection.jsx` (1,730)** —
