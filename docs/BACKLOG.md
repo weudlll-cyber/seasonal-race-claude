@@ -224,13 +224,20 @@ not an address which is right (§9.1).
       the stored race records. No server authority rests on it; the server's boundary is the 16
       admin-classified routes of §1.4, guarded by `routePolicyDrift.test.js`.
 
-- [ ] ★★ **THE README — DECIDED 2026-09-27: IT MATTERS, SO REWRITE IT.** §9.4 checked 24 of its
+- [x] ★★ **THE README — DECIDED 2026-09-27: IT MATTERS, SO REWRITE IT. DONE THE SAME DAY.** §9.4 checked 24 of its
       claims, found 3 wrong, repaired them, and judged a wholesale rewrite to be churn against a
-      document with that defect rate. **That judgment is overruled:** this is the page a stranger
-      reads first, so a wrong sentence in it costs more than a wrong sentence anywhere else in the
-      tree. **Being done in Part 2 of this same block** — every claim checked before it is written,
-      every command run once before it is written down, and anything that cannot be checked left
-      out and named as dropped.
+      document with that defect rate. **That judgment was overruled:** this is the page a stranger
+      reads first, so a wrong sentence in it costs more than a wrong sentence anywhere else.
+      ★ **REWRITTEN 2026-09-27**, 186 → 208 lines, with the method and every checked claim recorded
+      in [README-REWRITE-2026-09-27.md](../reports/audit/README-REWRITE-2026-09-27.md). Sections:
+      what it is · how to run it · how to test it (with the guard table and why bare `verify` green
+      is not CI green) · how it is deployed (no production compose, no HTTPS) · how results are
+      kept and restored · where the documents live · what this is not.
+      ★ **Two claims were DROPPED because they could not be checked**, which is the part of the
+      method worth keeping: *"up to 3 layered effects per track"* (asserted by
+      `docs/ARCHITECTURE.md:173`, **found nowhere in the code** — replaced by the 7 effects that
+      demonstrably ship) and *"no mobile layout by design"* (**contradicted** — nine CSS files
+      carry `max-width` queries, including `RaceScreen.css`).
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
       the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
