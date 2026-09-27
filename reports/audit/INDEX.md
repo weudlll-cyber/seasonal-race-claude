@@ -253,11 +253,11 @@ verdict with numbers on each axis, not a list of work.
 
 - [README-REWRITE-2026-09-27.md](README-REWRITE-2026-09-27.md) — **the README rewritten with every
   claim checked before it was written, 186 → 208 lines.** Commissioned when the owner overruled
-  §9.4's judgment that a rewrite would be churn. ★★ **THE MOST USEFUL PART IS WHAT WAS DROPPED:**
-  *"there is no mobile layout by design"* is **contradicted at the tree** — nine CSS files carry
-  `max-width` queries, `RaceScreen.css` among them — and *"up to 3 layered effects per track"*,
-  which `docs/ARCHITECTURE.md:173` also asserts, **exists nowhere in the code** and was replaced by
-  the 7 effects that demonstrably ship. ★ Twelve commands are listed one by one with what each
+  §9.4's judgment that a rewrite would be churn. ★★ **BOTH OF ITS "DROPPED CLAIMS" WERE
+  LATER FOUND WRONG — see [README-CORRECTIONS-2026-09-27.md](README-CORRECTIONS-2026-09-27.md).**
+  The 3-effect cap DOES exist (`EffectConfig.jsx:11,34,124`, `trackEditorSave.js:73`); and the
+  "nine CSS files with `max-width` queries" counted the CSS *property*, not a media query — the
+  real breakpoint count is **three**. ★ Twelve commands are listed one by one with what each
   produced; **three were NOT run and the reasons are given** rather than glossed —
   `docker compose up -d` (port 4000 held by the owner's own dev backend; the compose file was
   validated and the image built instead), `npm run configure` and the setup `curl` (both write real
