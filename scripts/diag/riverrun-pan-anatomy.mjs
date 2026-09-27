@@ -171,7 +171,6 @@ for (const hit of HITS) {
   let prevW = null,
     prevS = null;
   for (const r of win) {
-    const dW = prevW === null || r.hwDeg === null ? null : wrap(r.hwDeg - prevW);
     const dS = prevS === null || r.hsDeg === null ? null : wrap(r.hsDeg - prevS);
     prevW = r.hwDeg ?? prevW;
     prevS = r.hsDeg ?? prevS;

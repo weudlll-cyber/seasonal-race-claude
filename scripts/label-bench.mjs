@@ -56,7 +56,6 @@ import {
   tagFontScreenPx,
 } from "../client/src/screens/RaceScreen/nameTagLayout.js";
 import {
-  QUICK_TEST_NAME_SETS,
   resolveNameSet,
 } from "../client/src/modules/racerNames.js";
 import { effectiveZoom } from "../client/src/modules/camera/openTrackCamera.js";

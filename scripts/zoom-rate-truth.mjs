@@ -84,7 +84,6 @@ const TRACKS = argOf("track") ? [argOf("track")] : ["dirt-oval", "river-run"];
 // LINE on the distribution, never as a threshold anything passes or fails — this instrument has no
 // verdict.
 const CW = 1280;
-const CH = 720;
 const STILL_LN_S = 95 / (CW / 2); // ≈ 0.1484 ln/s
 
 const q = (sorted, f) => sorted[Math.min(sorted.length - 1, Math.round(f * (sorted.length - 1)))];

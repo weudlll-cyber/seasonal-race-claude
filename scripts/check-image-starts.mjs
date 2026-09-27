@@ -67,7 +67,7 @@
 // ============================================================
 
 import { readFileSync } from "node:fs";
-import { execFileSync, spawnSync } from "node:child_process";
+import {spawnSync} from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 

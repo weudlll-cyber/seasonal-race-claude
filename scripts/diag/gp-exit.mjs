@@ -18,7 +18,6 @@ for (const geo of loadTracks().filter((g) => g.id === ONLY)) {
     const identity = resolveIdentity({ racers: N, raceSeed: seed, racerType: TRACK_DEFAULT_RACER, roster: ROSTER, note: "gp-exit" });
     const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
     let frames = 0;
-    let lastTs = 0;
     runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ st, ts }) => { frames++; lastTs = ts; }, { slowmo: true });
     const st = race.st;
     let maxT = 0;

@@ -60,7 +60,6 @@ const JSON_IN = ARG("json", null);
 if (!JSON_IN) throw new Error("judder-census: pass --json=<a viewer-invariants --dump file>");
 const TOP = Number(ARG("top", 20));
 const CW = 1280;
-const CH = 720;
 
 const doc = JSON.parse(readFileSync(JSON_IN, "utf8"));
 if (!doc.dumps?.length) throw new Error("judder-census: that file carries no dumps — run with --dump");

@@ -29,7 +29,7 @@
 
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { writeFileSync } from "node:fs";
+import {} from "node:fs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;

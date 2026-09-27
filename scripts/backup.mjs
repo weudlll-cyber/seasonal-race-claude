@@ -59,7 +59,7 @@ import {
   accessSync,
   constants as FS,
 } from 'node:fs';
-import { join, resolve, relative, dirname, basename, sep } from 'node:path';
+import {join, resolve, relative, dirname, sep} from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 // ★ fileURLToPath, never URL.pathname: this repository's path contains spaces, and pathname

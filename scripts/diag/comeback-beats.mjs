@@ -153,7 +153,6 @@ const CONTEST = ARG("contest", "1") !== "0";
 //
 // Default OFF. Nothing here ships; the arm lives in `racePlanner.js` and is removed with it.
 const HOLD = ARG("hold", "off");
-const HOLD_RANK = Number(ARG("hold-rank", "18"));
 const HOLD_UNTIL = Number(ARG("release", "0.70"));
 
 // ── ★ THE FOUR ARMS (COMEBACK-SAME-RACER-1 step 3) ────────────────────────────────────────
