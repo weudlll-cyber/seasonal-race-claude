@@ -12,21 +12,20 @@ import sqliteStoreFactory from 'better-sqlite3-session-store';
 import { randomUUID } from 'node:crypto';
 import { join } from 'path';
 import { DATA_ROOT } from '../dataPaths.js';
+// Imported as well as re-exported above: a bare `export {} from` does not bind the name locally,
+// and `:54` and `:95` below call it.
+import { resolveCookieSecure } from './cookiePolicy.js';
 
 // PRÜFEN note: sqliteStoreFactory({ Store }) — the factory destructures session.Store from the
 // express-session function object, which is standard connect-store adapter convention.
 const SqliteStore = sqliteStoreFactory(session);
 
-// RA_COOKIE_SECURE overrides the environment-derived default so operators can set secure:true
-// on non-production HTTPS or keep it false on production HTTP (e.g. behind a terminating proxy
-// that doesn't set NODE_ENV=production). 'auto' delegates to express-session's trust-proxy logic.
-export function resolveCookieSecure(isProduction) {
-  const v = process.env.RA_COOKIE_SECURE;
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  if (v === 'auto') return 'auto';
-  return isProduction;
-}
+// ★ THE RULE MOVED, THE BEHAVIOUR DID NOT (DELIVERY-CLEAN-3 piece 1, 2026-09-27). It now lives in
+// `cookiePolicy.js` and is re-exported here, so `authRouter.js:14` and `session.test.js:17` import
+// it from the same place as before. It had to move because `startupReadiness.js` needs the same
+// rule and must not import this file — this one pulls in `better-sqlite3`, and that file promises
+// it can be judged without an environment. The alternative was a second copy of the rule.
+export { resolveCookieSecure } from './cookiePolicy.js';
 
 // RA_COOKIE_NAME_MODE controls the session cookie name:
 //   auto (default): __Host-ra.sid when Secure is guaranteed (literal true), else ra.sid

@@ -35,6 +35,8 @@
 // want to know what to type.
 // ============================================================
 
+import { resolveCookieSecure } from './auth/cookiePolicy.js';
+
 /**
  * The startup readiness lines, in order. Empty when there is nothing worth saying.
  *
@@ -77,6 +79,30 @@ export function startupReadinessLines({ env = {}, servingClient = false } = {}) 
         'browser on any other origin will be REFUSED BY CORS with no error the operator can see. ' +
         'Either build the client (npm run build in client/) so this server serves it, or set ' +
         'RA_CLIENT_ORIGIN to the origin the client is served from.'
+    );
+  }
+
+  // 4. THE TRANSPORT (B9, DELIVERY-CLEAN-3 piece 1). The one nobody was told about: the whole
+  //    cookie-Secure posture hangs on NODE_ENV === 'production', and NODE_ENV is set in NO shipped
+  //    file — not docker-compose.yml, not server/Dockerfile, not the .override example. So the
+  //    DEFAULT deployment resolves `secure: false`, sign-in WORKS over plain HTTP, and the password
+  //    and the session cookie travel in clear. Nothing breaks, which is exactly why nobody notices.
+  //
+  //    ★ ONLY when the answer is literally `false`. `resolveCookieSecure` can also return 'auto',
+  //    which hands the decision to express-session's trust-proxy logic per request — that install
+  //    may well be behind a TLS terminator, and warning it would be the noise this file's header
+  //    warns against ("a line an operator learns to ignore").
+  //
+  //    ★ It warns and does not refuse, like every line above: an install on a private LAN over
+  //    plain HTTP is a legitimate thing to run, and this is not the place to decide it is not.
+  if (resolveCookieSecure(production, env) === false) {
+    lines.push(
+      'READINESS: the session cookie is NOT marked Secure, so SIGN-IN TRAVELS UNENCRYPTED — the ' +
+        'password and the session cookie are readable by anything on the network path. This is ' +
+        'the default when NODE_ENV is not "production", which no shipped file sets. Fine on a ' +
+        'machine only you can reach; NOT fine on a public address. Put HTTPS in front (a reverse ' +
+        'proxy terminates it — see docs/DEPLOY-NOTES.md §4) and set RA_COOKIE_SECURE=true, or ' +
+        'RA_COOKIE_SECURE=auto if the proxy sets X-Forwarded-Proto.'
     );
   }
 
