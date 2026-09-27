@@ -202,18 +202,23 @@ not an address which is right (§9.1).
       (`camera-fingerprint.mjs:77,131`) so editing stored settings moves no print — but it is not
       true that nothing records the difference.
 
-- [ ] ★ **B7 — NEW 2026-09-27: THE UPLOAD SIZE-AND-TYPE BOUND EXISTS IN THREE INDEPENDENT
-      COPIES.** `brands.js:314`, `racers.js:281` and `tracks.js:595` each carry an identical
-      `LIMIT_FILE_SIZE` → 413 and `INVALID_TYPE` → 400 block, down to the interpolated message.
-      **This is the bound §2.6 called "bounded".** Change the limit, the status or the wording in
-      one and the other two diverge silently, and that claim becomes true of one route and false of
-      two. **Recorded, deliberately NOT de-duplicated** — a refactor of live request handling is
-      the owner's call.
-      ★★ **DECIDED 2026-09-27: MERGE THE THREE INTO ONE.** COMMISSIONED work at the three
-      addresses the audit established — `server/src/routes/brands.js:314`,
-      `server/src/routes/racers.js:281`, `server/src/routes/tracks.js:595`, each the
-      `upload.single(...)` handler whose error block is the duplicate. **Not built here: it touches
-      live request handling**, which this documents-only block does not open.
+- [x] ★★ **B7 / P2 — CLOSED 2026-09-27 (DELIVERY-CLEAN-3 piece 2). THE THREE UPLOAD RESPONSES ARE
+      ONE.** The row read "the upload size-and-type BOUND exists in three copies"; DC2 arc 1
+      corrected that — the **bound** was already single-homed in `server/utils/imageUpload.js` and
+      only the **error RESPONSE** was triplicated, so the risk was never that one route accepted a
+      bigger file, only that one answered differently.
+      ★ **What was done:** `uploadSingleImage(upload, field)` added to `server/utils/imageUpload.js`,
+      the module that already owns the bound — so the rule that RAISES an error and the rule that
+      ANSWERS it now sit together and cannot drift. The three 19-line anonymous middlewares at
+      `brands.js:314`, `racers.js:281` and `tracks.js:595` are each one call.
+      ★ **Behaviour-preserving, and proved by DRIVING it rather than by reading it:**
+      `uploadErrorResponse.test.js` posts an oversized file and a disallowed type to all three
+      routes and asserts the three responses are **identical**, status and body. Sabotaging one
+      route back to its own handler reddens it and names that route. Server suite 869, all green.
+      ★ **The arc-1 agreement test was DELETED, not repaired** — its own header said it was expected
+      to go red the day this merge happened, because once there is one handler there is nothing to
+      keep in agreement. The new test is strictly better evidence: text matching could not have
+      caught a route wrapped in a different error handler, and this does.
 
 - [ ] ★★ **THE STRUCTURAL PROPOSALS — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 4). SIX, RANKED, NONE
       PERFORMED.** The owner judges the product by eye, so arc 4 removed only what is provably inert
@@ -226,7 +231,7 @@ not an address which is right (§9.1).
         precedence branch returns **above** the arbitration (`:1816-1821`) rather than joining it.
         **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
         done right — which is why it is dangerous.**
-      - **P2 · the three upload handlers → one.** Already his decision; ranked here. Cost LOW.
+      - ~~**P2 · the three upload handlers → one.**~~ ★ **DONE 2026-09-27 (DC3 piece 2)** — see the closed B7/P2 row above.
       - **P3 · the JSON-store preamble**, `brands.js:90`/`:181` ⇔ `playerGroups.js:60`/`:114`,
         44 lines, two implementations of one pattern that must agree. Cost MODERATE.
       - **P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
