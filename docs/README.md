@@ -54,6 +54,7 @@ What a stranger needs in order to understand and change RaceArena.
 
 | document                                       | what it owns                                                        |
 | ---------------------------------------------- | --------------------------------------------------------------------- |
+| [WHO-READS-WHAT.md](WHO-READS-WHAT.md)         | ★ **Who is supposed to read all this** — the reading order per reader. Start here. |
 | [../README.md](../README.md)                   | The front door: what RaceArena is, and the first commands to run.   |
 | [GLOSSARY.md](GLOSSARY.md)                     | The vocabulary. Every private term, defined once.                   |
 | [PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) | The principles that override convenience, including the invariants. |

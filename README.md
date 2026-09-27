@@ -152,26 +152,27 @@ beside the original is not a second copy.
 
 This project keeps **one canonical home per fact**: a document declares what it **owns**, and
 everywhere else points at it rather than restating it. ★ **Not every document declares one yet** —
-20 of the 39 top-level documents carry an `Owns:` line, and the five marked † below do not. The
-description beside those is this page's summary of them, not their own claim.
+**39 of the 40 top-level documents now carry one** — normalised on 2026-09-27; `CLAUDE.md` is the
+exception and declares its scope in its own wording. ★ **[WHO-READS-WHAT.md](docs/WHO-READS-WHAT.md)
+answers "who is supposed to read all this"** and is the page to start from.
 
 **[docs/README.md](docs/README.md) is the map** — every maintained document and the order to read
 them in. If you read one thing, read that. Then:
 
-| document | what it owns, or (†) what it covers |
+| document | what it owns |
 | --- | --- |
-| [GLOSSARY.md](docs/GLOSSARY.md) † | **the vocabulary — read it early.** Three of this project's terms mean two different things each |
+| [GLOSSARY.md](docs/GLOSSARY.md) | **the vocabulary — read it early.** Three of this project's terms mean two different things each |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | the system's shape — which layer holds what |
 | [SETUP.md](docs/SETUP.md) | getting it running locally: client, backend, ports, first account |
 | [ENVIRONMENT.md](docs/ENVIRONMENT.md) | every environment variable, and what breaks without it |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | deploying to a public same-origin host |
 | [API.md](docs/API.md) | the backend's HTTP surface — **and it states plainly which endpoints it does not cover** |
 | [AUTH.md](docs/AUTH.md) | how RaceArena authenticates and what an operator must supply |
-| [FAIRNESS.md](docs/FAIRNESS.md) † | what the game is trying to do. Every racer is identical, so "fair" means something specific |
-| [PROJECT-PRINCIPLES.md](docs/PROJECT-PRINCIPLES.md) † | the rules that override convenience |
-| [VERIFY-RULES.md](docs/VERIFY-RULES.md) † | what to run before changing anything, and how much |
+| [FAIRNESS.md](docs/FAIRNESS.md) | what the game is trying to do. Every racer is identical, so "fair" means something specific |
+| [PROJECT-PRINCIPLES.md](docs/PROJECT-PRINCIPLES.md) | the rules that override convenience |
+| [VERIFY-RULES.md](docs/VERIFY-RULES.md) | what to run before changing anything, and how much |
 | [BACKLOG.md](docs/BACKLOG.md) | the open work and the phase history — one home |
-| [DEAD-ENDS.md](docs/DEAD-ENDS.md) † | **required reading before proposing any race-mechanism change** |
+| [DEAD-ENDS.md](docs/DEAD-ENDS.md) | **required reading before proposing any race-mechanism change** |
 | [SIM.md](docs/SIM.md) | the headless simulator and what every metric means |
 
 [OPEN.md](docs/OPEN.md) is a short view **derived** from BACKLOG PART ONE; where the two disagree,
