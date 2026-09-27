@@ -311,3 +311,18 @@ verdict with numbers on each axis, not a list of work.
   itself about its own currency and its values are now scoped to their date while its rule is
   marked still binding. The deliverable is **[docs/WHO-READS-WHAT.md](../../docs/WHO-READS-WHAT.md)**:
   the operator reads five, a developer's first day is four in a fixed order, and nobody reads 40.
+
+- [DC2-ARC3-TOOLS.md](DC2-ARC3-TOOLS.md) — **DELIVERY-CLEAN-2 arc 3: do we need all 281 tools.**
+  ★★ **C2's 65 is reproduced exactly and then explained: ~29 of it are scripts DISCOVERED BY
+  CONVENTION, not dead ones** — `*.test.mjs` through `scriptTestFiles()` (`verify.mjs:650`, a
+  `git ls-files` filter, never a name) and the top-level `check-*.mjs` guards through the registry's
+  naming convention, so a "who names this file" search is structurally blind to both. Genuinely
+  reached by nothing: **89** (36 top level, 53 in the declared hand-run `scripts/diag/`).
+  ★ **4 removed, 473 lines**, each a spent one-off whose single committed artefact is named.
+  ★ **The kept ones carry the better arguments:** `gen-aquatic-masks.mjs` stays because it is the
+  only worked example of HOW a tint mask is made — a method, not a spent artefact; and the seven
+  `exp-*` stay because **4–6 reports cite each**, and removing them would leave dated records
+  citing a measurement nobody can reproduce. ★ No redundant pair exists: the 14 `*-sum.mjs` are
+  producer/summariser coupled by OUTPUT DIRECTORY (`leader-lag-sum.mjs:19`), which no reader can see
+  from a listing — a readability row, not duplication. ★ The portability sweep went **tree-wide,
+  951 files**: `client/`, `server/` and `shared/` carry **no hardcoded path at all**.
