@@ -21,18 +21,11 @@
 // ============================================================
 
 import express from 'express';
-import {
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-  existsSync,
-  mkdirSync,
-  writeFileSync,
-  createReadStream,
-} from 'fs';
+import { unlinkSync, existsSync, mkdirSync, writeFileSync, createReadStream } from 'fs';
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { loadJsonDir, jsonFilePath } from '../../utils/jsonDirStore.js';
 import {
   detectMagicType,
   IMAGE_MIME,
@@ -57,18 +50,11 @@ const BUILTIN_SET = new Set(BUILTIN_RACER_IDS);
 
 // ── In-memory store ───────────────────────────────────────────────────────────
 
+// One home for this loader: `utils/jsonDirStore.js`. It was written out identically in three route
+// modules (DELIVERY-CLEAN-3 piece 3); the three bodies were diffed before unifying and had NOT
+// drifted. Still exported from here because the tests and `seedRuntime` import it by this name.
 export function loadAll(dir = DATA_DIR) {
-  const map = new Map();
-  if (!existsSync(dir)) return map;
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
-    try {
-      const racer = JSON.parse(readFileSync(join(dir, file), 'utf8'));
-      map.set(racer.id, racer);
-    } catch {
-      console.warn(`[racers] Failed to load ${file} — skipping`);
-    }
-  }
-  return map;
+  return loadJsonDir(dir, 'racers');
 }
 
 const racersMap = loadAll();
@@ -76,7 +62,7 @@ const racersMap = loadAll();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function filePath(id) {
-  return join(DATA_DIR, `${id}.json`);
+  return jsonFilePath(DATA_DIR, id);
 }
 
 /**
