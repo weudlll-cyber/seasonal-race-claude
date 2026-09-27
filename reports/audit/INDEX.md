@@ -23,6 +23,18 @@ edit someone else's report even to correct it.** If an audit is wrong, the answe
 
 ---
 
+- [MORNING-2026-09-27.md](MORNING-2026-09-27.md) — the close-out sheet for DELIVERY-CLEAN-1: what
+  was done, **what was NOT** (pieces 4, 5, 7, 9 and 10 were not performed), what is open, and the
+  four things that need the owner's word. Read it beside the report, not instead of it.
+
+- [DELIVERY-CLEAN-1.md](DELIVERY-CLEAN-1.md) — **the whole project, audited for a clean shippable
+  state** (begun 2026-09-26 from master `6b60edd8`). Can this go on a VPS without danger to its
+  operator and without anything outside being able to change a race result — plus the smaller
+  questions: is the source clean, are the comments true, is anything built twice, are the top-level
+  documents current, do the scripts still do what they claim, can results be backed up and restored.
+  ★ A FINDING run: the only repairs are the ones standing authorisation already covers (a wrong
+  comment, a wrong sentence in a living document, a dead variable, a hardcoded path).
+
 - [PROJECT-HYGIENE-2026-08-25.md](PROJECT-HYGIENE-2026-08-25.md) — read-only hygiene audit of the
   auth seam and the repository's shape. Reads the client/server setup-token and password-change
   contracts end to end and finds them aligned; flags the report archive's size and a corridor

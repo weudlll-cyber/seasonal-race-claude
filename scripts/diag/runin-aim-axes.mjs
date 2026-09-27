@@ -36,6 +36,7 @@
 // MEASURE ONLY. No product file is touched, no key is read that the director does not already
 // expose, and nothing is written but JSON.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -67,7 +68,7 @@ const CASES = (arg("cases", "river-run:20:13") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/runin-aim-axes");
+const OUT = arg("out", join(tmpdir(), "runin-aim-axes"));
 const FROM_U = Number(arg("from", "0.90"));
 const TAG = arg("tag", "axes");
 // RUNIN-PIVOT-SCOPE-1 PART B: the frame clock. RUNIN-SEED13-ANATOMY-1 established that the swing

@@ -34,7 +34,7 @@ import { describe, expect, it } from 'vitest';
 import { raceHash } from '../../../scripts/lib/raceDriver.mjs';
 import { hashWorld } from './raceConfigWorld.js';
 import { decodeRaceIdentifier, encodeRaceIdentifier } from './raceIdentifier.js';
-import { DEFAULT_CONFIG_WORLD, DEFAULT_CAMERA_CONFIG } from './storage/defaults.js';
+import { DEFAULT_CONFIG_WORLD } from './storage/defaults.js';
 import { defaultEffectiveRacerTypes } from './exportRaceConfig.js';
 
 const BUILD = 'abc12345';

@@ -18,6 +18,7 @@
 // the frame is split against the TRACK's screen heading: ALONG (ahead/behind him) and ACROSS
 // (lateral). A count of "clipped frames" alone cannot tell those apart.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -48,7 +49,7 @@ const CASES = (arg("cases", "river-run:20:1") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/midrace");
+const OUT = arg("out", join(tmpdir(), "midrace"));
 const TAG = arg("tag", "clip");
 // THE MID-RACE WINDOW. After the start ceremony has released and before the endgame opens. The
 // endgame threshold is a config value, so it is READ rather than restated here.

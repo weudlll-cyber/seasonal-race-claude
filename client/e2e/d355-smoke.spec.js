@@ -35,7 +35,7 @@ test.describe('D3.5.5 — Edit-Modal opens', () => {
 
   test('Edit button is visible for each racer type', async ({ page }) => {
     // E2E-STALE-2: this asserted `toBe(12)` and the page renders 20 — the built-in registry
-    // (`RACER_TYPES` in modules/racer-types/index.js) has grown to twenty entries. But a literal
+    // (`RACER_TYPES` in racer-types/index.js) has grown to twenty entries. But a literal
     // count is the wrong assertion for a list the SERVER can add to: `listAllRacerTypes()` merges
     // server-created types in, so any spec that creates one would break a hard-coded number for a
     // reason that is not a defect. What the test NAME claims — one Edit button per racer type — is

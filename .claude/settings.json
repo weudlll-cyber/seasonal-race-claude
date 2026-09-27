@@ -114,7 +114,9 @@
       "Skill(run:*)",
       "Skill(dev-start)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(node scripts/fingerprint-default.mjs)",
+      "Bash(grep -iE \"^[A-Z ]*fingerprint|[0-9a-f]{16}$|WORLD\")"
     ],
     "deny": [
       "Bash(git push --force*)",

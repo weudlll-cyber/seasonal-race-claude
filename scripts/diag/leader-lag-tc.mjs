@@ -1,6 +1,6 @@
 // LEADER-LAG-TRUTH-1 (e) — what a FASTER camera would buy and what it would cost. MEASURE ONLY.
 //
-// `trackingTC` is the time constant of the first-order smoother at CameraDirector.js:1323. Its
+// `trackingTC` is the time constant of the first-order smoother at cameraTimingComputation.js:224. Its
 // steady-state lag under a target moving at constant screen speed is v·(1−lf)/lf, so the closed form
 // PREDICTS the lag ratio for any tc. The sweep is here to check that prediction against the real
 // director rather than to stand in for it — where measured and predicted agree, the smoother is the
@@ -10,12 +10,14 @@
 // `camJerk` how much that slide CHANGES per frame. A faster camera buys its smaller lag by moving the
 // picture harder, and jerk is where an eye notices.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lagtc");
+const DIR = arg("dir", join(tmpdir(), "lagtc"));
 const TCS = arg("tcs", "0.25,0.18,0.12,0.08,0.05").split(",");
 const TRACKS = arg("tracks", "space-sprint,seatrack,river-run,mountainstreet").split(",");
 

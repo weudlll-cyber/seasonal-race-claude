@@ -28,7 +28,7 @@ const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 
 // The closing stretch in the RACE's own progress unit: `_runInProgressOf` is 0 at
-// `endgameThreshold` and 1 at the line (CameraDirector.js:3060), so u>0 spans p 0.95 -> 1.00.
+// `endgameThreshold` and 1 at the line (CameraDirector.js:604), so u>0 spans p 0.95 -> 1.00.
 const THRESHOLD = DEFAULT_CAMERA_CONFIG.endgameThreshold;
 
 const SAMPLES = 200;

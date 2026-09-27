@@ -18,7 +18,7 @@
 // wrote.
 //
 // WHAT IS DISCARDED: the per-hero `beats` array — `{ progress, event }` with `event` one of
-// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:511-517` from the authored curve's
+// `anchor` / `peak` / `resolve`, built at `heroCurveGenerator.js:781` from the authored curve's
 // own points — and `finalRank`. So the plan states, per comebacker, WHERE IN THE RACE its climb was
 // written, and the camera never sees it.
 //
@@ -41,7 +41,7 @@
 // has to be split or it says nothing:
 //
 //   1. THE DETECTOR'S OWN GATES (`best()`), which decide whether a candidate EXISTS at all.
-//   2. THE DIRECTOR'S CONTEST (`cameraDirector.js:1709-1725`), which decides whether an existing
+//   2. THE DIRECTOR'S CONTEST (`CameraDirector.js:1840-1850`), which decides whether an existing
 //      candidate BECOMES the shot — outcome phase, cooldown, weight, and a weighted pick against
 //      BATTLE / LEAD_CHANGE / OVERVIEW.
 //
@@ -53,7 +53,7 @@
 //
 // ★ ONE CLAIM IN THE DETECTOR'S OWN HEADER IS CHECKED HERE RATHER THAN BELIEVED: "Every cast
 // comebacker is drawn from the B1 pool, so case 1 is always already rank-tracked." It matters
-// because `recordRanks` keeps history for `_b1` MEMBERS ONLY (`comebackDetector.js:104`), while
+// because `recordRanks` keeps history for `_b1` MEMBERS ONLY (`comebackDetector.js:171`), while
 // `best()` iterates the CAST — so a cast comebacker outside B1 would have no history and be skipped
 // at `:128` forever. This harness counts them.
 //
@@ -66,7 +66,7 @@
 //
 // IT DECIDES THIS MEASUREMENT, because the comeback shot is offered only when
 // `raceState?.isOutcomePhase || leaderProgress > outcomePhaseThreshold`
-// (`cameraDirector.js:1711-1715`). With the flag false the window is the internal fallback alone;
+// (`CameraDirector.js:1791-1793`). With the flag false the window is the internal fallback alone;
 // with the browser's flag it is the PLAN's OUTCOME phase, which `racePlanner.js:526-530` opens at
 // `corridorStart` — much earlier. So the driver's window is a STRICT SUBSET of the browser's, and a
 // count of shots taken on the driver's path is a LOWER BOUND, not the answer.
@@ -109,7 +109,7 @@ const OUTCOME_ARM = ARG("outcome", "browser");
 // ── COMEBACK-WEIGHT-1: the one lever this sweep moves ────────────────────────────────────────
 //
 // THE WEIGHT ACTS TWICE, established at source on 2026-09-06 and stated here because a reader who
-// assumes it acts once will mis-read the table: `_weightedRandomPick` (`cameraDirector.js:726-742`)
+// assumes it acts once will mis-read the table: `_weightedRandomPick` (`CameraDirector.js:742`)
 // draws PROPORTIONALLY among the eligible candidates, and the winner then faces `_acceptsOffer`
 // (`:720-724`), which rolls again against that same weight and falls through to the LEADER default
 // when it declines. So raising it both wins the draw more often and declines less often, and at
@@ -320,10 +320,10 @@ for (const geo of tracks) {
     // camera-dependent field must come out equal.
     //
     // WHAT EACH ONE ANSWERS:
-    //   `_weightedRandomPick` (CameraDirector.js:730) — WHO WAS IN THE POOL and who won the draw.
+    //   `_weightedRandomPick` (CameraDirector.js:742) — WHO WAS IN THE POOL and who won the draw.
     //     If it was not called at all on a frame, the pool was never built, which is a different
     //     class of loss entirely and is classified below.
-    //   `_acceptsOffer` (CameraDirector.js:724) — THE SECOND GATE. The winner still faces a roll
+    //   `_acceptsOffer` (CameraDirector.js:736) — THE SECOND GATE. The winner still faces a roll
     //     against its own weight and a decline falls through to LEADER_ZOOM, so a comeback can win
     //     the draw and still not be shown.
     // ★ COMEBACK-SAME-RACER-1 — the held racer's own story in the MEASURED pass.
@@ -367,7 +367,7 @@ for (const geo of tracks) {
         frameOffers.push([w, a]);
         return a;
       };
-      // `_pickNextState` (CameraDirector.js:1548) is the decision itself. Wrapping it separates
+      // `_pickNextState` (CameraDirector.js:1624) is the decision itself. Wrapping it separates
       // "the director never asked the question this frame" — the hold gate at :960 did not open —
       // from "it asked and returned before the candidate pool was ever built", which is what its
       // start-window and endgame branches do. Without this the two collapse into one unreadable
@@ -387,7 +387,7 @@ for (const geo of tracks) {
     // The pool's own composition on those frames, so "he was alone and still lost" is separable.
     const poolSize = new Map();
     // ★ HOW OFTEN THE QUESTION IS ASKED AT ALL. The contest is not run per frame: `holdGate` at
-    // CameraDirector.js:960 is `max(minStateHold, maxStateDuration)`, so a state is held for the
+    // CameraDirector.js:1035 is `max(minStateHold, maxStateDuration)`, so a state is held for the
     // LONGER of the two and `_pickNextState` runs only when `stateAge >= holdGate`
     // (transitionDecision.js:97). A candidate can be available for thousands of frames and be
     // offered a handful of times — which is the shape COMEBACK-CAMERA-1 measured from the outside.
@@ -401,7 +401,7 @@ for (const geo of tracks) {
     let b1 = null; // the plan's own B1 pool — the set `recordRanks` keeps history for
     let candidateFrames = 0; // frames on which the detector HAD somebody, shot or no shot
     // ...and of those, the frames on which the DIRECTOR would even consider the shot. The comeback
-    // candidate is pushed only inside the outcome phase (`cameraDirector.js:1711-1715`), so a
+    // candidate is pushed only inside the outcome phase (`CameraDirector.js:1791-1793`), so a
     // candidate before it is invisible to the contest no matter how good it is.
     let candidateOutcomeFrames = 0;
     const overlapStates = new Map(); // what the camera showed DURING that overlap
@@ -428,8 +428,8 @@ for (const geo of tracks) {
     // or the plan does — every read is a read.
     //
     // ★ WHAT CANNOT BE RECORDED HERE, and it is not worked around. The plan's AUTHORED rank at each
-    // beat lives in `plan._heroCurves` (`heroChoreography.js:111` — every curve point is
-    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:511-517`) keeps only
+    // beat lives in `plan._heroCurves` (`racePlanner.js:1159` — every curve point is
+    // `{progress, rank}`), and `buildCameraPlan` (`heroCurveGenerator.js:781`) keeps only
     // `{progress, event}`. The controller exposes `getCameraPlan` and `getHeroRoles` and no getter
     // for the curves, so the authored rank is NOT reachable from the delivered plan. What is
     // recorded instead is the racer's ACTUAL rank at the moment the authored progress is reached —
@@ -554,7 +554,7 @@ for (const geo of tracks) {
           if (CONTEST) {
             if (frameDecided) decisionsWithCandidate++;
             const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
-            // THE DIRECTOR'S OWN LEADER RATIO, not the plan's progress — `CameraDirector.js:1551`
+            // THE DIRECTOR'S OWN LEADER RATIO, not the plan's progress — `CameraDirector.js:968`
             // computes `leader.t / finishT` over ALL racers, uncapped, and that is the number its
             // endgame branch compares. Using `raceProgress` here would misclassify the frames
             // between the first finisher and the last.
@@ -576,7 +576,7 @@ for (const geo of tracks) {
                 bump(
                   lossClass,
                   heldFor < minHold
-                    ? "NOT ASKED — an earlier shot is still inside its minStateHold (CameraDirector.js:960)"
+                    ? "NOT ASKED — an earlier shot is still inside its minStateHold (CameraDirector.js:1035)"
                     : "NOT ASKED — update() returned before the decision (CameraDirector.js:916-975)",
                 );
               } else if (leaderRatio > dir._endgameThreshold) {
@@ -584,7 +584,7 @@ for (const geo of tracks) {
               } else {
                 // The reason string names the branch, so it is reported rather than guessed at.
                 const head = String(frameDecision ?? "?").split(":")[0];
-                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1548+)`);
+                bump(lossClass, `ASKED, POOL NEVER BUILT — branch "${head}" returned first (CameraDirector.js:1624+)`);
               }
             } else {
               poolSize.set(framePool.length, (poolSize.get(framePool.length) ?? 0) + 1);
@@ -596,11 +596,11 @@ for (const geo of tracks) {
                 bump(
                   lossClass,
                   declined
-                    ? "WON THE DRAW, THEN DECLINED — the second weight roll (CameraDirector.js:724)"
+                    ? "WON THE DRAW, THEN DECLINED — the second weight roll (CameraDirector.js:736)"
                     : "WON AND ACCEPTED — entering this frame",
                 );
               } else {
-                bump(lossClass, "LOST THE WEIGHTED DRAW (CameraDirector.js:730)");
+                bump(lossClass, "LOST THE WEIGHTED DRAW (CameraDirector.js:742)");
                 if (framePick) bump(beatenBy, framePick.state);
                 else bump(beatenBy, "(no pick — every candidate had weight 0)");
               }
@@ -630,9 +630,9 @@ for (const geo of tracks) {
           // COMEBACK-SHAPE-1 — where in the field he was when the shot began.
           rankAtStart: who == null ? null : rankOf(state, who),
           // ★ THE TWO PROGRESS AXES ARE NOT THE SAME NUMBER, and a report that mixed them would be
-          // wrong. `st.raceProgress` (`raceCore.js:518-524`) is a running MAX over UNFINISHED racers,
+          // wrong. `st.raceProgress` (`raceCore.js:239`) is a running MAX over UNFINISHED racers,
           // clamped to 1 — it is the axis the race plan's beats are written in. The director compares
-          // its own `leader.t / finishT` (`CameraDirector.js:1551`) over ALL racers, uncapped. They
+          // its own `leader.t / finishT` (`CameraDirector.js:968`) over ALL racers, uncapped. They
           // agree until the first racer finishes. Both are recorded so the gap can be shown rather
           // than assumed away.
           leaderRatio: (() => {

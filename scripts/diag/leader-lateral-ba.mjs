@@ -8,13 +8,15 @@
 //   3. the share of frames the camera holds the centre, which is the owner's rule in one number;
 //   4. the along-track residual, which this piece does not touch and must therefore not move.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const BEFORE = arg("before", "c:/tmp/lb/before");
-const AFTER = arg("after", "c:/tmp/lb/after");
+const BEFORE = arg("before", join(tmpdir(), "lb/before"));
+const AFTER = arg("after", join(tmpdir(), "lb/after"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 // A movement a viewer would NOTICE. The run-in work read the picture's per-frame slide in screen px;
 // this is the same quantity. 120 px in one frame at 60 fps is a fifth of the frame width in a

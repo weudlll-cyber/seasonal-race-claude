@@ -34,6 +34,7 @@
 // `_applyLateralGuarantee`'s extra shift, which can only help, so every "still off frame" is
 // conservative.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -67,7 +68,7 @@ const ONLY = arg("track", null);
 const RACERS = Number(arg("racers", "20"));
 const SEED_FROM = Number(arg("from", "1"));
 const SEED_TO = Number(arg("to", "60"));
-const OUT = arg("out", "c:/tmp/runin-level");
+const OUT = arg("out", join(tmpdir(), "runin-level"));
 const TRACE = new Set((arg("trace", "") || "").split(",").filter(Boolean));
 
 function measure(geo, seed) {

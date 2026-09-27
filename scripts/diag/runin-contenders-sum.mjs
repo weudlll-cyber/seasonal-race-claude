@@ -1,6 +1,8 @@
 // RUNIN-CONTENDERS-1 — summarise the sweep. Report-only.
 import { readdirSync, readFileSync } from "node:fs";
-const OUT = "c:/tmp/runin-contenders";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+const OUT = join(tmpdir(), "runin-contenders");
 
 const rows = [];
 let errs = 0;

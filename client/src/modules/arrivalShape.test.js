@@ -96,7 +96,6 @@ const TARGET_DUR_MS = 60_000;
 // racers a one-rank error already saturates `maxMult`, at a hundred it does not. Tests that are
 // ABOUT the clamp use 20; tests that need to read the error itself use 100, and say which.
 const N_SMALL = 20;
-const N_LARGE = 100;
 const HERO = 0; // the staged comebacker
 const DRAWN = 2; // his drawn place: 2nd, inside the top-5 block
 // Past holdReleaseProgress (0.70, where his held curve ends and he is handed back) and before

@@ -1,9 +1,10 @@
 // RUNIN-LEVEL-SET-1 — the summary tables. Read-only; reads only what the sweep wrote.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const DIRS = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-const roots = DIRS.length ? DIRS : ["c:/tmp/runin-level/p1", "c:/tmp/runin-level/p2"];
+const roots = DIRS.length ? DIRS : [join(tmpdir(), "runin-level/p1"), join(tmpdir(), "runin-level/p2")];
 const races = [];
 for (const d of roots) {
   if (!existsSync(d)) continue;

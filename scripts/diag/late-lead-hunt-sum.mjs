@@ -1,11 +1,13 @@
 // LATE-LEAD-HUNT-1 — summarise the hunt. Report-only.
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIRS = String(arg("dirs", "c:/tmp/late-lead-hunt/p1,c:/tmp/late-lead-hunt/p2")).split(",");
+const DIRS = String(arg("dirs", join(tmpdir(), "late-lead-hunt/p1,c:/tmp/late-lead-hunt/p2"))).split(",");
 
 const races = [];
 for (const d of DIRS) {

@@ -1,11 +1,13 @@
 // AIM-LEVERS-1 — per track, never pooled. Both axes of every arm, against `off` at the same N.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lev/s1");
+const DIR = arg("dir", join(tmpdir(), "lev/s1"));
 const TRACKS = (
   arg("tracks", "space-sprint,river-run,seatrack,dirt-oval") || ""
 )

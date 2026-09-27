@@ -4,6 +4,7 @@
 // It does NOT compute a counterfactual. It reads the shot the director actually composes, now that
 // the rule is in it, and counts the frames on which a racer's BODY is off canvas.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolveIdentity, loadTracks, buildRace, runRace, TRACK_DEFAULT_RACER } from "../lib/raceDriver.mjs";
@@ -18,7 +19,7 @@ const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 const arg = (k, d) => { const h = process.argv.find((a) => a.startsWith(`--${k}=`)); return h ? h.slice(k.length + 3) : d; };
 const ONLY = arg("track", null), RACERS = Number(arg("racers", "20"));
 const SEED_FROM = Number(arg("from", "1")), SEED_TO = Number(arg("to", "60"));
-const OUT = arg("out", "c:/tmp/level-built");
+const OUT = arg("out", join(tmpdir(), "level-built"));
 
 function measure(geo, seed) {
   const identity = resolveIdentity({ racers: RACERS, raceSeed: seed, racerType: TRACK_DEFAULT_RACER, roster: ROSTER, note: "level-set-built" });

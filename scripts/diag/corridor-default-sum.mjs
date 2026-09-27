@@ -14,12 +14,14 @@
 // that ship at 0.75 — and leaves OVERVIEW at its own 1.5, so its rate should be flat across the whole
 // sweep. If it ever moves, the override leaked and the table is lying; it is printed for that reason.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lcd");
+const DIR = arg("dir", join(tmpdir(), "lcd"));
 const VALS = (arg("vals", "0.55,0.65,0.75,0.85,1.00,1.20") || "").split(",");
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const SWEPT = ["LEADER_ZOOM", "LEAD_CHANGE"];

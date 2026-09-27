@@ -10,12 +10,14 @@
 // (e) THE LEAD CHANGE — how often the new leader already fits, i.e. the rule correctly does nothing.
 // (f) THE RESIDUAL — frames NO lateral shift can fix, with the cause named.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/lat");
+const DIR = arg("dir", join(tmpdir(), "lat"));
 const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
 const STATE = arg("state", "LEADER_ZOOM");
 

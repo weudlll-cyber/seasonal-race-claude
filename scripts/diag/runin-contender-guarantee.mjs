@@ -23,6 +23,7 @@
 // needs it — omitted here, and it can only ever help, so every "still off frame" below is
 // conservative.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -55,7 +56,7 @@ const ONLY = arg("track", null);
 const RACERS = Number(arg("racers", "20"));
 const SEED_FROM = Number(arg("from", "1"));
 const SEED_TO = Number(arg("to", "50"));
-const OUT = arg("out", "c:/tmp/runin-cg");
+const OUT = arg("out", join(tmpdir(), "runin-cg"));
 /** Races whose per-FRAME series is kept in full — his twelve, plus the worked example. */
 const TRACE = new Set((arg("trace", "") || "").split(",").filter(Boolean));
 

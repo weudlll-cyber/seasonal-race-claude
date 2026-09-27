@@ -16,6 +16,7 @@
 // tracks where top/bottom is the across-track pair that inflates ACROSS; on space-sprint, where
 // top/bottom is the ALONG pair, it deflates it. Both directions are stated per track below.
 import { readdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -32,7 +33,7 @@ const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 const THRESHOLD = DEFAULT_CAMERA_CONFIG.endgameThreshold;
 
-const DATA = ["c:/tmp/late-lead-hunt/p1", "c:/tmp/late-lead-hunt/p2"];
+const DATA = [join(tmpdir(), "late-lead-hunt/p1"), join(tmpdir(), "late-lead-hunt/p2")];
 const SAMPLES = 400;
 
 // World-axis unit vectors for the four stored sides.
@@ -91,7 +92,7 @@ function classifyRange(shape, isOpen, tA, tB, n = 120) {
 // ── PER TRACK: what each of the four sides MEANS, over ANY sub-window of the closing stretch ──
 //
 // THE WINDOW IS NOT THE WHOLE STRETCH, and that is what makes the two turning tracks decidable.
-// `_runInProgressOf` (CameraDirector.js:3661) is exactly
+// `_runInProgressOf` (CameraDirector.js:4188) is exactly
 //     u = clamp01( (p - endgameThreshold) / (1 - endgameThreshold) ),  p = leaderT / finishT
 // so a hit's stored u-window [offFrom, offTo] pins the LEADER's own t to
 //     [ (0.95 + 0.05*offFrom) * finishT , (0.95 + 0.05*offTo) * finishT ].

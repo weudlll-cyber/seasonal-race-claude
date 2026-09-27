@@ -119,6 +119,91 @@ a rule for anybody to follow.
 - [x] ~~**Camera-weights design question — relative vs absolute weighting (deferred).**~~ **CLOSED for
   the same reason — no date, no source.** PART TWO D31.
 
+## DELIVERY-CLEAN-1 — the shippable-state audit (2026-09-26)
+
+★★ **Every row here came from [DELIVERY-CLEAN-1](../reports/audit/DELIVERY-CLEAN-1.md), a FINDING
+run over the whole repository. Group A (threatens the operator) is EMPTY — and the report says in
+the same breath which checks did not run, because an empty A from an incomplete sweep is not the
+same claim as an empty A from a complete one.**
+
+★★ **UPDATED 2026-09-27 — ALL ELEVEN PIECES ARE NOW PERFORMED.** The note that stood here said
+the chain did not finish and named pieces 4, 5, 7, 9, 10 and the sub-sections 2.9, 2.11, 3.5, 3.6,
+6.1 and 6.4–6.8 as unfinished. **Every one of them has since run**, §10 ran a second time over the
+late pieces, and §11 was rewritten from scratch rather than amended. What remains unfinished is
+named inside the report as UNKNOWN per piece, not as a missing piece — chiefly that **226 non-test
+script headers were never read against their bodies** (§7.1) and that an address which resolves is
+not an address which is right (§9.1).
+
+- [x] ★★ **B5 — RE-RUNNING A RACE FROM ITS IDENTIFIER: VERIFIED 2026-09-27, AND IT WORKS.**
+      This row read "UNVERIFIED — the single most valuable unfinished check in the chain", because
+      it is the remedy every other result-integrity finding leans on. **It was tested against a
+      real stored race from the owner's own database** — `W57FQA`, seed 9, 40 racers, stage
+      `quiet` — exported with its roster, racer-type blob and whole `worldConfigs` and replayed
+      through `scripts/diag/replay-stored-race.mjs`: **40 of 40 positions and 40 of 40 finishing
+      times identical, to the millisecond** (§3.6).
+      ★ **What it settles and what it does not.** It proves the ENGINE reproduces a stored record
+      from that record's own inputs. It does **not** prove the record describes the race anybody
+      watched — replaying a fabricated result (B1) would reproduce the fabrication faithfully.
+      **The replay answers "did the engine do this", never "did this happen."** B1's remedy is
+      therefore real, and bounded in a way the owner should know before leaning on it.
+
+- [ ] ★★ **B2 — THE DATA AND ITS BACKUP END UP ON ONE MACHINE.** `scripts/backup.mjs:186` refuses
+      to write the archive inside the data root and `:320` requires `--out`, so the tool is doing
+      its part. But *outside the data root* is not *another disk*, and `docker-compose.yml:48-55`
+      bind-mounts the data directory out of the repository checkout with **no production compose in
+      the tree**. A disk loss takes the races and the archive together.
+      ★ The round trip itself is PROVEN: export → wipe → restore, **14 of 14 scalar fields plus
+      names, results, winners and worldConfigs, nothing lost** (§8.2).
+
+- [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
+      so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
+      Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
+      and this is about a port.
+
+- [ ] ★ **B6 — a race that ran on NON-DEFAULT settings is recorded but not flagged.**
+      `raceStore.js:164,358,465` store `world_configs` **resolved**, so the record says what the
+      config was. Nothing marks the row, so a dispute is settleable only if somebody looks.
+      ★ This CORRECTS a hypothesis: fingerprints are built from shipped defaults
+      (`camera-fingerprint.mjs:77,131`) so editing stored settings moves no print — but it is not
+      true that nothing records the difference.
+
+- [ ] ★ **B7 — NEW 2026-09-27: THE UPLOAD SIZE-AND-TYPE BOUND EXISTS IN THREE INDEPENDENT
+      COPIES.** `brands.js:314`, `racers.js:281` and `tracks.js:595` each carry an identical
+      `LIMIT_FILE_SIZE` → 413 and `INVALID_TYPE` → 400 block, down to the interpolated message.
+      **This is the bound §2.6 called "bounded".** Change the limit, the status or the wording in
+      one and the other two diverge silently, and that claim becomes true of one route and false of
+      two. **Recorded, deliberately NOT de-duplicated** — a refactor of live request handling is
+      the owner's call, and it is question 5 on the needs-his-word list.
+
+- [ ] ★ **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
+      `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an
+      admin role; `DevScreen.jsx:191-194` then computes `effectiveView = isAdmin ? view :
+      'operator'` and renders 7 of 16 sections for a non-admin. **Low, with the reasoning rather
+      than the label:** those sections write `localStorage`, not server state, so an operator who
+      defeated the filter would change their own browser's race settings — which §3.4 establishes
+      the stored race records. No server authority rests on it; the server's boundary is the 16
+      admin-classified routes of §1.4, guarded by `routePolicyDrift.test.js`.
+
+- [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
+      the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
+      top-level documents carry no OWNS line, which caps the document-overlap check at half the
+      corpus (§1.1) · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
+      rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
+      ★ **Six more added 2026-09-27 by the late pieces:** `@vitest/coverage-v8` is `^4.1.4` in the
+      client and `^4.1.8` in the server (§6.6) · `minTargetScreenPx` names two different settings
+      in two stores, `autoSpriteScale.js:23` and `racer-types/index.js:239`, not renamed because a
+      stored-key rename touches saved configs (§6.7) · `label-bench-matrix.mjs:40` and
+      `phys-bench-matrix.mjs:63` require `--master` on any machine but the one they were written on
+      and say nothing when it fails (§7.2) · `client/e2e/` is outside `format:check`, which is
+      `prettier --check src`, and `d355-smoke.spec.js` fails prettier today, pre-existing at master
+      (§10 run 2) · 8 exported symbols have no importer, never removed because an unimported
+      export may be a seam, and three of the eight are the auditor's own from the day before
+      (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
+      (§9.2).
+
+---
+
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
 
 **verify (section-wide):** no command can decide these — **they are design questions, not claims about the tree.** The section closes when the dial is specified, and question 2 is already answered in place.
@@ -1536,9 +1621,14 @@ already-settled questions.
   earlier tree and understates the move by half).
   Separates configuration from engine code. Small standalone PR.
   **verify:** `git grep -l "racer-configs" -- client/src` returns nothing and
-  `client/src/modules/racer-types/` still exists (checked 2026-08-23), so **still open**.
+  `client/src/racer-types/` still exists, so **still open**. *(Path repaired 2026-09-27,
+  DELIVERY-CLEAN-1 §9: the folder moved from `client/src/modules/racer-types/` to
+  `client/src/racer-types/` on 2026-09-24, recorded at `docs/OPEN.md:164`. Both halves re-run at
+  the new path today — 0 hits for `racer-configs`, 80 tracked files — so the verdict is
+  unchanged; only the address was stale, and as written the command had stopped being able to
+  answer.)*
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/modules/racer-types/` still exists. **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** its own command still decides it — `git grep -l "racer-configs" -- client/src` returns nothing and `client/src/racer-types/` still exists (address repaired 2026-09-27; see the verify line above). **Now more expensive than when it was written:** REGISTRY-LITERALS-1 (2026-09-02) put the registry inside the engine hull, so this rename is a 40-file reach and pays the world fingerprint.
 
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
@@ -1797,10 +1887,15 @@ already-settled questions.
 
 - **Q-9** — Watch: `racer-types/index.js` — candidate for splitting. Recorded at 286 LOC;
   **540 on 2026-08-23**, nearly doubled.
-  **verify:** `git grep -c "" -- client/src/modules/racer-types/index.js` — **still open above 400.**
+  **verify:** `git grep -c "" -- client/src/racer-types/index.js` — **still open above 400.**
+  *(Path repaired 2026-09-27, DELIVERY-CLEAN-1 §9 — at the old address the command matched
+  nothing and exited 1, so this check had quietly stopped being able to answer.)*
   (override API vs. registry vs. boot logic). Not a problem today, monitor.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** re-measured today — `client/src/modules/racer-types/index.js` is **540** lines, still above 400.
+  ★ **Re-measured 2026-09-27 (DELIVERY-CLEAN-1 §9): `client/src/racer-types/index.js` is 478
+  lines**, 62 fewer than the 2026-09-02 reading. Still above 400, so the row stays open on its
+  own criterion — the verdict is unchanged and only the number was stale.
 
 - **Q-10** — Watch: `RacerEditModal.jsx`. Recorded at 302 LOC and described as *already 75% of
   the 400-LOC threshold*; measured 2026-08-23 at **670 — 68% PAST it**, and the file has moved to

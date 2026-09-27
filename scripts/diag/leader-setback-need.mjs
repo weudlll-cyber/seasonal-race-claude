@@ -26,6 +26,7 @@
 // sign flip. Those frames are reported separately with their reason, because a residual with a named
 // cause is the useful kind.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -57,7 +58,7 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/setback");
+const OUT = arg("out", join(tmpdir(), "setback"));
 const TAG = arg("tag", "sb");
 const FROM_U = Number(arg("from", "0.10"));
 // HIS THREE STATES. OVERVIEW is included because he named it, and is reported apart because its

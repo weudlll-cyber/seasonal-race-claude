@@ -21,6 +21,7 @@
 // `--tracking-tc=` overrides LEADER_ZOOM's `trackingTC`, the key that governs how fast the camera
 // catches up, so question (e) can be PRICED by sweeping it. Omitting it leaves the shipped defaults.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -52,7 +53,7 @@ const CASES = (arg("cases", "space-sprint:20:6") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/lag");
+const OUT = arg("out", join(tmpdir(), "lag"));
 const TAG = arg("tag", "lag");
 const FROM_U = Number(arg("from", "0.10"));
 const TC = arg("tracking-tc", null);

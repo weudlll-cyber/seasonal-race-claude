@@ -31,7 +31,10 @@ import { resolveDataRoot } from './dataPaths.js';
 try {
   assertPublicOriginUsable(process.env);
 } catch (err) {
-  // eslint-disable-next-line no-console -- deliberate: a refusal to start is what stderr is for
+  // Deliberate: a refusal to start is what stderr is for. No eslint-disable is needed here —
+  // `no-console` is configured as `["warn", { allow: ["warn", "error"] }]`
+  // (`client/eslint.config.js:56`), so `console.error` is already allowed. The directive that
+  // used to sit here was dead and the linter said so; removed 2026-09-27, DELIVERY-CLEAN-1 §10.
   console.error(`RaceArena cannot start: ${err.message}`);
   process.exit(1);
 }

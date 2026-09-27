@@ -8,6 +8,7 @@
 //
 // It changes nothing and reads the shot the director actually composes.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolveIdentity, loadTracks, buildRace, runRace, TRACK_DEFAULT_RACER } from "../lib/raceDriver.mjs";
@@ -26,7 +27,7 @@ const CASES = (arg("cases", "") || "").split(",").filter(Boolean).map((s) => {
   const [track, n, seed] = s.split(":");
   return { track, racers: Number(n), seed: Number(seed) };
 });
-const OUT = arg("out", "c:/tmp/level-step-when");
+const OUT = arg("out", join(tmpdir(), "level-step-when"));
 // --browser-cam derives the camera seed from the RACE seed, which is what RaceScreen does
 // (index.jsx: cameraSeedForRace(racePlanSeed)). Without it, resolveIdentity default 1439767152 is
 // used — a value the product cannot produce for any race since the owner decision of 2026-08-23.

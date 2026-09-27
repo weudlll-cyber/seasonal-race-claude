@@ -19,6 +19,7 @@
 // It changes nothing. Every value below is read off the director's own read-only probe or computed
 // from the racers the director was handed on that frame.
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
@@ -53,7 +54,7 @@ const CASES = (arg("cases", "river-run:20:13") || "")
     const [track, n, seed] = s.split(":");
     return { track, racers: Number(n), seed: Number(seed) };
   });
-const OUT = arg("out", "c:/tmp/runin-anatomy");
+const OUT = arg("out", join(tmpdir(), "runin-anatomy"));
 const FROM_U = Number(arg("from", "0.90"));
 // --harness-cam reverts to the pre-2026-08-23 constant, for the side-by-side only.
 const HARNESS_CAM = process.argv.includes("--harness-cam");

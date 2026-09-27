@@ -30,12 +30,14 @@
 //     stepMax    the largest single-frame picture movement in the arm.
 //     loud       races carrying at least one single-frame movement past the notice threshold.
 import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const DIR = arg("dir", "c:/tmp/mar/s1");
+const DIR = arg("dir", join(tmpdir(), "mar/s1"));
 const TRACKS = (
   arg("tracks", "space-sprint,river-run,seatrack,dirt-oval") || ""
 )
