@@ -1200,7 +1200,10 @@ are in PART TWO with what closed them; these are the ones still standing.
       PROBLEM: THE SHOT DOES NOT HAPPEN ON EVERY RUN OF ONE FIXTURE.** Two of the five produced **no
       comeback at all** on space-sprint seed 1 — the same seed whose plan casts a comebacker and
       which the cast probe saw cut to. Across six runs of that fixture the shot occurred in four.
-      ★ **The mechanism is in the open and is deliberate**: a comeback offer is accepted by
+      ★★ **THE NEXT PARAGRAPH IS SUPERSEDED — READ THE CORRECTION BELOW IT (2026-09-27).** It is
+      kept, not deleted, because the correction has to have something to point at and because a
+      wrong reason that is quietly removed teaches nobody.
+      ★ ~~**The mechanism is in the open and is deliberate**~~: a comeback offer is accepted by
       `_acceptsOffer(weight)` — `random() < weight` — in `CameraDirector.js`, `comebackWeight` ships
       **0.6**, and the camera's random stream is **not** seeded from the race. So on a fixed fixture
       the shot is a probabilistic event. *(Four of six is consistent with 0.6 and six runs do not
@@ -1209,8 +1212,38 @@ are in PART TWO with what closed them; these are the ones still standing.
       chance event. **It cannot pass reliably as written**, and the repair for that is a decision
       — not a margin, not a fixture — so nothing was changed. **The row stays open on this alone.**
 
-      ★★ **THE REUSABLE FACT, MEASURED 2026-09-26 AND WRITTEN INTO THE SPEC'S HEADER WHERE THE NEXT
-      CAMERA-SPEC AUTHOR WILL MEET IT: THE CAMERA IS NOT DETERMINED BY THE RACE SEED ALONE.** One
+      ★★ **CORRECTED 2026-09-27 (carried onto master from `read/comeback-gates`) — THE CAUSE
+      WRITTEN DIRECTLY ABOVE IS WRONG ON BOTH HALVES, AND IT WAS WRONG BY READING A NAME INSTEAD OF
+      A BODY. The paragraph above is kept so the correction has something to point at.**
+      - **The shot is NOT gated by `comebackWeight`.** A cast comebacker's FIRST shot is returned
+        outright at `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick`
+        (`:1840`) and above `_acceptsOffer` (`:1844`); the decline path is reachable only by a
+        `pick` from the candidate pool. The weight gates a SECOND shot of the same racer, not this
+        one.
+      - **The camera's stream IS derived from the race seed.** `cameraSeed.js:72-78`
+        (`cameraSeedForRace`) salts the race's seed; `RaceScreen/index.jsx:691` calls it and `:701`
+        hands it to `setRandomSeed`. CAMERA-SEED-AND-LINE-1 did this deliberately. The drawn branch
+        is for `racePlanSeed <= 0`, the EMPTY seed field; this fixture types its seed and never
+        enters it — `usedSeed=1` in all ten probe runs.
+
+      ★★ **WHAT THE VARIATION ACTUALLY IS, stated as a fitting mechanism rather than a demonstrated
+      one.** The physics is fixed-step (16 ms, catch-up capped at two steps per frame,
+      `RaceScreen/index.jsx:1078`) and seeded, so the RACE is identical run to run. The director is
+      updated **once per rendered frame** off a wall-clock delta, and every gate the comeback shot
+      passes is a time or progress window. So the draws land in different places in an unchanged
+      stream, and on a loaded machine a window can open and close between two frames.
+      ★ **NOT REPRODUCED ON DEMAND:** ten probe runs on the pinned fixture produced the shot **10 of
+      10**; across every run of this fixture it appeared in **17 of 19**. No failing run was captured
+      with the frame counter installed, so the frame-count comparison between a passing and a
+      failing run **cannot be made** and is dropped with that reason. ★ **And the probe is not a
+      faithful stand-in for the spec:** it renders two extra diagnostic panels every frame, which
+      changes the very frame cost under test. Naming that confound matters more than the 10/10.
+      ★ **NEEDS HIS WORD:** may a browser spec tolerate a frame-starved run, or must the shot be made
+      frame-independent? The first is a spec change; the second is a camera change. Listed as item 4
+      of [OPEN.md](OPEN.md) §1.
+
+      ★★ **THE REUSABLE FACT SURVIVES THE CORRECTION UNCHANGED, and is in the spec's header where the
+      next camera-spec author will meet it: THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE.** One
       fixture gave `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held
       7824 ms, `LEADER_ZOOM` held 5781 ms, 966 ms, 4471 ms, `BATTLE_ZOOM` held 1979 ms — and twice,
       nothing. **A browser spec that asserts an exact SEQUENCE of camera states, or an exact

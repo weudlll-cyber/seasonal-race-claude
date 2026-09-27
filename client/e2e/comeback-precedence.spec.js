@@ -26,13 +26,30 @@
 //
 // ★★ READ THIS BEFORE WRITING ANY CAMERA SPEC — MEASURED 2026-09-26.
 //
-// THE CAMERA IS NOT DETERMINED BY THE RACE SEED ALONE. It carries its own random stream. The SAME
-// fixture, run three times, gave: `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, and
-// `LEADER_ZOOM` held 7824 ms before the comeback cut. Same seed, same roster, same track — three
-// different pictures.
+// THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE. Run after run on one seed: `LEADER_ZOOM` held
+// 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held 7824 ms, 5781 ms, 966 ms, 4471 ms,
+// `BATTLE_ZOOM` held 1979 ms — and twice, no comeback shot at all. Same seed, same roster, same
+// track.
 //
-// ★ THEREFORE A BROWSER SPEC THAT ASSERTS AN EXACT SEQUENCE OF CAMERA STATES IS FLAKY BY
-//   CONSTRUCTION. Assert a PROPERTY that holds whatever order the states came in — "some comeback
+// ★ AND THE REASON IS NOT AN UNSEEDED CAMERA. That was written here on 2026-09-26 and it was WRONG;
+//   corrected the same day after reading the bodies. `cameraSeed.js`'s `cameraSeedForRace` DERIVES
+//   the camera's stream from the race's own seed, and `RaceScreen/index.jsx` calls it and hands the
+//   result to `setRandomSeed` — CAMERA-SEED-AND-LINE-1 did that on purpose, having measured 165
+//   physics steps of divergence between two runs of one race seed. This spec's fixture types its
+//   seed, so it takes the seeded branch; the drawn-seed branch exists for an EMPTY seed field and
+//   this spec never enters it.
+//
+// ★ WHAT VARIES IS WHERE IN THE STREAM THE DRAWS LAND, NOT THE STREAM. The physics runs in fixed
+//   16 ms steps, capped at two catch-up steps per frame, while the director is updated ONCE PER
+//   RENDERED FRAME off a wall-clock delta (`RaceScreen/index.jsx`). So the race is identical run to
+//   run and the number and timing of the camera's looks are not. Every gate the comeback shot passes
+//   is a time or progress window, so a window can open and close between two frames on a loaded
+//   machine. **Measured, and honestly: 10 of 10 probe runs on this fixture produced the shot, so
+//   this account is the mechanism that FITS the variation, not one that has been reproduced on
+//   demand.**
+//
+// ★ THE RULE IS UNCHANGED BY THE CORRECTION, AND IT IS THE REUSABLE PART: A BROWSER SPEC THAT
+//   ASSERTS AN EXACT SEQUENCE OF CAMERA STATES IS FLAKY BY CONSTRUCTION. Assert a PROPERTY that holds whatever order the states came in — "some comeback
 //   cut interrupted the state before it", "no comeback cut out of a LEAD_CHANGE" — never "the third
 //   state was BATTLE_ZOOM" and never a fixed duration. Both assertions in this file are properties,
 //   and that is why they survive the run-to-run variation above.

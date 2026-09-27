@@ -1,4 +1,4 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-26
+# What is open — DERIVED from BACKLOG PART ONE, 2026-09-27
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
 Re-derived on **2026-09-27**, from PART ONE's **thirteen** rows — after the owner's decisions of
@@ -26,11 +26,14 @@ the same disease the backlog itself was cured of the day before, one level up.
 the backlog for the detail. Nothing is added here that the backlog does not carry.
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
-now **EMPTY** — every question it held was answered, dropped or turned into commissioned work that
-day. The list below therefore contains no questions at all: **all thirteen rows are work.**
-★ DELIVERY-CLEAN-1's own six questions for him are not listed here; they live in that report's
-§11.2, because this page is derived from PART ONE and PART ONE carries them as findings, not as
-questions.
+was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
+work. **The thirteen rows in section 0 are all WORK**, and that is still true.
+★★ **BUT §1 IS NO LONGER EMPTY, CORRECTED 2026-09-27.** It went on saying *"Nothing is waiting on
+his word"* while `reports/audit/MORNING-2026-09-27.md` listed **six** things that are, and while row
+6 of section 0 said "needs his word" in its own text. **Three places in one list disagreeing is the
+disease this page was rebuilt to cure**; the morning sheet is the one that was right. All six are
+now in §1 below. ★ **The count is unaffected:** §1 holds QUESTIONS, section 0 holds WORK, and
+section 0 is still the thirteen rows of PART ONE.
 
 ---
 
@@ -64,11 +67,28 @@ questions.
    fixture. ★ **The margin is repaired (2026-09-26): the spec now derives the hold gate from the
    product's own timing function instead of a hardcoded number nobody decided. No run has failed on
    it since.** ★★ **What keeps this row open is a bigger finding:** on one fixture, two runs of five
-   produced **no comeback shot at all**. Accepting a comeback offer is a coin flip at a shipped
-   weight, drawn from the camera's own random stream, which is not seeded from the race — so a spec
-   that asserts the shot occurs cannot pass reliably, and what to do about that is a decision, not a
-   margin. ★ The reusable lesson is now in the spec's header: the camera is not determined by the
-   race seed, so a browser spec must assert a property, never a sequence.
+   produced **no comeback shot at all**. ★★ **THE CAUSE RECORDED HERE ON 2026-09-26 WAS WRONG ON
+   BOTH HALVES AND IS CORRECTED (carried onto master 2026-09-27 from `read/comeback-gates`).** It
+   said the shot is a coin flip at a shipped weight drawn from a stream not seeded from the race.
+   **Neither is true at the tree.** A cast comebacker's FIRST shot is returned outright at
+   `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick` (`:1840`) and above
+   `_acceptsOffer` (`:1844`) — the weight gates a SECOND shot of the same racer, not this one. And
+   the camera's stream **is** derived from the race seed: `cameraSeed.js:72-78`
+   (`cameraSeedForRace`) salts it, `RaceScreen/index.jsx:691` calls it and `:701` hands it to
+   `setRandomSeed`.
+   ★ **What varies is WHERE IN THE STREAM THE DRAWS LAND, not the stream.** The physics runs in
+   fixed 16 ms steps, capped at two catch-up steps per frame (`RaceScreen/index.jsx:1078`), while
+   the director is updated **once per rendered frame** off a wall-clock delta. The race is therefore
+   identical run to run and the number and timing of the camera's looks are not, so a time window a
+   gate depends on can open and close between two frames on a loaded machine.
+   ★★ **STATED AS A MECHANISM THAT FITS, NOT ONE THAT WAS REPRODUCED.** Ten probe runs on this
+   fixture produced the shot **10 of 10**; across every run of it the shot appeared in 17 of 19. No
+   failing run was ever captured with the frame counter installed, so the account is inferred from
+   the code path and the frame model, not demonstrated on demand.
+   ★ **NEEDS HIS WORD** — §1 item 4 below: may a browser spec tolerate a frame-starved run, or must
+   the shot be made frame-independent? ★ The reusable lesson survives the correction unchanged and
+   is in the spec's header: **assert a property, never a sequence** — the rule was right even while
+   the reason given for it was wrong.
 7. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
@@ -111,11 +131,48 @@ fabricated result would reproduce the fabrication faithfully. Now in
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
-★★ **EMPTY, 2026-09-25 — and that is the state, not an omission.** Eleven rows were checked at the
-tree that day. Three closed on the re-verification, four were already struck records, and the owner's
-decisions of 2026-09-25 closed, dropped or commissioned the rest. **Nothing is waiting on his word.**
-The rows that came out of those decisions are WORK, and they are in
-[BACKLOG.md](BACKLOG.md) PART ONE, not here.
+
+★★ **SIX, as of 2026-09-27.** This section read EMPTY from 2026-09-25, and on that date it was
+true. It stopped being true twice over — once on 2026-09-26 when measuring the comeback shot
+produced item 4, and again on 2026-09-27 when DELIVERY-CLEAN-1 finished with five more — and the
+page went on saying EMPTY through both. **Nothing here is a question a measurement could settle;
+each is a choice between readings.**
+
+1. **Should the server check a result, or stay a second store?** Anyone who can sign in can file a
+   race that was never run — the server validates structure, never outcome. Leave it, or have the
+   server recompute the outcome from the stored inputs before accepting. ★ Better informed since
+   2026-09-27: the replay works exactly, so "re-run the disputed race" is a real remedy.
+   → [BACKLOG.md](BACKLOG.md) PART ONE, *DELIVERY-CLEAN-1*. ★ **It has no row of its own there** —
+   it is described inside the closed B5 row; the detail is `reports/audit/DELIVERY-CLEAN-1.md` §11, B1.
+2. **Where should a backup go, and who moves it?** The tool already refuses to write inside the data
+   root, so the question is whether the operator copies the archive off the machine by hand or the
+   project grows something that does it. → [BACKLOG.md](BACKLOG.md) PART ONE, *DELIVERY-CLEAN-1*,
+   the **B2** row.
+3. **When the second team arrives, what is shared?** The boundary he stated on 2026-09-25 covers
+   brands, player groups and team-created tracks; six of seven data modules scope nothing today.
+   Build the boundary before inviting anybody, or invite and accept that everything but races is
+   common. → [BACKLOG.md](BACKLOG.md) PART ONE, *Phases 5–7*, the **TENANCY** row.
+4. **May a browser spec tolerate a frame-starved run, or must the comeback shot be made
+   frame-independent?** The shot appeared in 17 of 19 runs of one fixture; the misses fit the
+   director getting fewer looks under load, not chance in the product — see row 6 of section 0 for
+   why the first account of this was wrong. Tolerating it is a spec change; removing the dependence
+   is a camera change. → [BACKLOG.md](BACKLOG.md) PART ONE, *Three production-arm specs fail*.
+5. **Should the three upload handlers become one?** The size-and-type bound the audit called
+   "bounded" lives in three identical copies; change one and the other two diverge silently.
+   Leave them and accept the claim is three claims, or de-duplicate — a refactor of live request
+   handling, which is why it was recorded and not done. → [BACKLOG.md](BACKLOG.md) PART ONE,
+   *DELIVERY-CLEAN-1*, the **B7** row.
+6. **Should the README be rewritten after all?** DELIVERY-CLEAN-1 §9.4 checked 24 of its claims,
+   found 3 wrong and repaired them, then judged a wholesale rewrite to be churn against a document
+   with that defect rate — and said so rather than deciding it silently either way.
+   ★ **No backlog row exists**, because it is a question about the audit's own judgment: the detail
+   is `reports/audit/DELIVERY-CLEAN-1.md` §9.4.
+
+★ **What the 2026-09-25 emptiness meant, kept because the reasoning still holds.** Eleven rows were
+checked at the tree that day. Three closed on the re-verification, four were already struck records,
+and the owner's decisions of 2026-09-25 closed, dropped or commissioned the rest — so on that date
+nothing was waiting on his word, and the rows that came out of those decisions are WORK, in
+[BACKLOG.md](BACKLOG.md) PART ONE rather than here. **That held until 2026-09-26.**
 
 ### Closed on 2026-09-25, and why — kept visible so the removal is not silent
 
