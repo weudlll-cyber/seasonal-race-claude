@@ -326,3 +326,17 @@ verdict with numbers on each axis, not a list of work.
   producer/summariser coupled by OUTPUT DIRECTORY (`leader-lag-sum.mjs:19`), which no reader can see
   from a listing — a readability row, not duplication. ★ The portability sweep went **tree-wide,
   951 files**: `client/`, `server/` and `shared/` carry **no hardcoded path at all**.
+
+- [DC2-ARC4-SOURCE.md](DC2-ARC4-SOURCE.md) — **DELIVERY-CLEAN-2 arc 4: is the source all needed and
+  structured right.** ★ **The product source is CLEAN of dead code** — zero unused variables and
+  zero unreachable code in `client/src`, `client/e2e` and `server/src`, measured with each tree's own
+  eslint. ★★ **The 8 unimported exports are now a STRUCTURAL certainty rather than a grep result:**
+  `client/src`, `server/src` and `shared` contain **zero dynamic imports and zero string-keyed
+  calls**, so there is no mechanism by which an unnamed export could be reached. All 8 kept as
+  seams. ★ **77 unused locals found in `scripts/`, a tree never linted before — and NOT removed**,
+  because §4.4 authorises a dead variable *in a region already touched* and arc 4 touched none of
+  those 48 files; two are in the engine hull. ★ Four "parse errors" in that run were **my
+  instrument**, not the tree. ★ The clone detector **reproduces §6.1 exactly** on both trees.
+  ★ Six ranked structural proposals, **none performed**, led by `CameraDirector.js` at 5,507 lines
+  — and the cost line that matters: **he would see nothing if it were done right, which is exactly
+  why it is dangerous.**

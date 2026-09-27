@@ -215,6 +215,30 @@ not an address which is right (§9.1).
       `upload.single(...)` handler whose error block is the duplicate. **Not built here: it touches
       live request handling**, which this documents-only block does not open.
 
+- [ ] ★★ **THE STRUCTURAL PROPOSALS — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 4). SIX, RANKED, NONE
+      PERFORMED.** The owner judges the product by eye, so arc 4 removed only what is provably inert
+      and proposed everything structural. Full costs in
+      [DC2-ARC4-SOURCE.md](../reports/audit/DC2-ARC4-SOURCE.md) §4.5; he can commission them one at
+      a time.
+      - **P1 · `camera/CameraDirector.js` is 5,507 lines** — nearly 3× the next engine file — and
+        carries the state machine, the offer arbitration (`_weightedRandomPick:742`,
+        `_acceptsOffer:736`) and the framing. The seam the code already implies: the comeback
+        precedence branch returns **above** the arbitration (`:1816-1821`) rather than joining it.
+        **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
+        done right — which is why it is dangerous.**
+      - **P2 · the three upload handlers → one.** Already his decision; ranked here. Cost LOW.
+      - **P3 · the JSON-store preamble**, `brands.js:90`/`:181` ⇔ `playerGroups.js:60`/`:114`,
+        44 lines, two implementations of one pattern that must agree. Cost MODERATE.
+      - **P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
+        (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.
+      - **P5 · `CameraAdvancedSection.jsx` (2,118) and `DynamicsTuningSection.jsx` (1,730)** —
+        mostly repeated slider blocks. ★ **He WOULD see this one**, so it belongs to `B-UX2`, the
+        commissioned dev-screen reorganisation, not to arc 4.
+      - **P6 · 77 unused local variables across 48 files in `scripts/`**, found by linting a tree
+        that had never been linted. **Not removed:** §4.4 authorises a dead variable *in a region
+        already touched*, and arc 4 touched none of those files. Two are in the engine hull
+        (`sim-fairness.mjs` 11, `camera-replay.mjs` 3). Worth doing as each file is next opened.
+
 - [ ] ★★ **B9 — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 1): AN OPERATOR CAN SERVE THIS OVER PLAIN
       HTTP AND NOTHING WILL EVER TELL HIM.** `docs/DEPLOY-NOTES.md` §4 already said the password and
       session are readable over plain HTTP, and described the `NODE_ENV=production` trap where the
