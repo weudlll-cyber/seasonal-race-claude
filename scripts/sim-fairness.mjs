@@ -4229,7 +4229,7 @@ if (isMain) {
   );
   // The sim's t-update chain is:
   //   t += baseSpeed·boost·brake·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·(DT/16)
-  // factor-for-factor identical to the browser's (index.jsx) modulo (DT/16)=1.0. See docs/FORCE-PARITY.md.
+  // factor-for-factor identical to the browser's (index.jsx) modulo (DT/16)=1.0. See docs/archive/FORCE-PARITY.md.
   if (ACTION !== null) {
     console.log(
       `Action axis            : action=${ACTION.toFixed(3)} → empty stub (no couplings; Stage-5b re-targets to the rotation strengths)`,
