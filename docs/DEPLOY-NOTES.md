@@ -164,11 +164,30 @@ returns **nothing**. `server/src/index.js:16` is `app.listen(PORT, …)` — pla
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password, and the session cookie
-carries the session. Over plain HTTP both are readable by anything on the path. **`Secure` cookies
-are not sent over HTTP at all**, so an install that sets `NODE_ENV=production` without HTTPS in front
-does not merely become insecure — sign-in stops working, because the cookie is issued and never
-returned.
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:199` reads
+`username` and `password` from `req.body`), and the session cookie carries the session. Over plain
+HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
+so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become
+insecure — sign-in stops working, because the cookie is issued and never returned.
+
+★★ **TWO THINGS THE PARAGRAPH ABOVE DID NOT SAY, MEASURED 2026-09-27 (DELIVERY-CLEAN-2 arc 1,
+piece 1.6). Both make the plain-HTTP case WORSE than "sign-in stops working".**
+
+- **`NODE_ENV` is set NOWHERE in the shipped deployment files** — not in `docker-compose.yml`, not
+  in `server/Dockerfile`, not in `docker-compose.override.yml.example`. So the trap above is not the
+  default case. The default case is the other one: `resolveCookieSecure(false)` returns **`false`**
+  (run today: `resolveCookieSecure(false) = false`, `resolveCookieSecure(true) = true`), the cookie
+  is **not** marked `Secure`, and sign-in **works perfectly over plain HTTP** — with the password
+  and the session cookie both travelling in clear. **Nothing breaks, which is exactly why nobody
+  notices.**
+- **Nothing warns at boot.** `server/src/startupReadiness.js` emits readiness lines for three
+  conditions — `RA_BOOTSTRAP_TOKEN` (`:57`), `RA_SESSION_SECRET` (`:67`) and `RA_CLIENT_ORIGIN`
+  (`:76`) — and contains **zero** occurrences of `https`, `tls` or `secure`. An operator who
+  serves this on a public address over plain HTTP is told nothing, by anything, ever.
+
+★ **Not changed — recorded.** Adding a readiness line, or defaulting `RA_COOKIE_SECURE`, changes
+what an operator sees at boot and is his decision, not this audit's. Stated here because it is the
+single most consequential thing a person can not-know before going live.
 
 **NEEDS HIS WORD — and it is not a code decision:**
 
@@ -182,6 +201,78 @@ returned.
   "get clean defaults" destroys every account on the install. `server/Dockerfile` creates `/app/data`
   and gives it to uid 1000; a Docker named volume inherits that ownership and a bind mount brings its
   own, which is why the compose path is proved separately.
+
+---
+
+## 5 · ★ HOW TO STAND THIS UP WITHOUT LEAVING A DOOR OPEN
+
+Added 2026-09-27 (DELIVERY-CLEAN-2 arc 1, piece 1.7). **Six doors, in the order they bite.** Each
+says what is true today, what the safe setting is, and **who decides** — because four of the six
+are the owner's call and only two are settled.
+
+| # | the door | today | who decides |
+| --- | --- | --- | --- |
+| 1 | **TLS** | none in the tree; the app expects a terminator in front | §4 above — **his**: a domain and a proxy |
+| 2 | **The bind** | `4000:4000`, every interface | **his** — see below |
+| 3 | **The session cookie over plain HTTP** | sent in clear by default | §4 above — **his** |
+| 4 | **Where the backup goes** | nowhere by default; `--out` is required | **settled 2026-09-27: the operator chooses** |
+| 5 | **Cookie lifetime** | 30 days | **his** |
+| 6 | **Base image** | floating tag | **his** — not a pure win either way |
+
+### 1 · Put a proxy in front, and then close the port
+
+★★ **THE BIND IS NOT A PURE WIN AND SO IT WAS NOT CHANGED.** `docker-compose.yml:17-18` publishes
+`4000:4000`, which listens on every interface. Binding `127.0.0.1:4000` instead would be safer on a
+rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
+the server serves the built app *and* the API on one port (`DEPLOYMENT.md:9-13`), so a browser on
+another machine reaches `http://<host>:4000` directly, and a reverse proxy is described as optional
+(`DEPLOYMENT.md:242`, *"if sitting behind nginx/Caddy"*). Binding to loopback breaks direct access
+and makes a proxy mandatory. **That is a decision about how the product may be run, so it is his.**
+
+**What to do on a VPS, whichever he decides:** put nginx or Caddy in front and make port 4000
+unreachable from outside — either by binding the container to `127.0.0.1:4000` in *your own*
+`docker-compose.override.yml`, or with a host firewall. **One of the two is required.** With
+neither, the API is reachable directly on the public address and the proxy is decoration.
+
+### 2 · Decide the backup destination — the product will not decide it for you
+
+**Settled 2026-09-27: the project prescribes no destination and ships no default.** On a
+workstation, point it at a folder that syncs to a cloud drive and the syncing stops being this
+project's business; on a rented server, point it at whatever that host can reach. One prescribed
+destination could not have served both.
+
+**The one rule the tool enforces**, and it is the product's business because a copy beside the
+original is not a second copy:
+
+```bash
+node scripts/backup.mjs --out <dir>                       # <dir> must be OUTSIDE the data root
+node scripts/backup.mjs --restore <archive> --into <dir>
+```
+
+★ **There is no `npm run backup`** — no script entry in any of the three manifests matches
+`backup`. Run the file directly.
+
+### 3 · The two standing choices, with their costs
+
+**Cookie lifetime — 30 days** (`server/src/auth/session.js:108`,
+`maxAge: 30 * 24 * 60 * 60 * 1000`). The safe alternative is a shorter life, hours rather than
+weeks: a stolen or forgotten session stops working sooner. **The cost is real and is the reason it
+is 30 days** — an organiser running an event does not want to sign in again mid-evening, and this
+install has no refresh flow. **His choice; not changed.**
+
+**Base image — a floating tag** (`server/Dockerfile:22` and `:33`, both `FROM node:20-alpine`).
+★★ **The brief asked me to pin it to a digest "if that is purely safer". It is NOT purely safer,
+so it was not pinned.** A digest makes a rebuild reproducible — the same input gives the same image
+— but it also **freezes the base**, so Alpine and Node security patches stop arriving on rebuild
+until somebody updates the digest by hand. Nothing in this repository watches base images: the
+dependency audit runs daily over the two npm trees and says nothing about `FROM`. **Pinning without
+a bump process trades a rare reproducibility problem for a standing patch problem.** Recorded as
+his choice, with both sides, rather than taken.
+
+**Backup checksum — none** (§8.4). A corrupted archive is discovered on restore, not before.
+★ A precision that matters when reading the source: `scripts/backup.mjs:137` writes a *tar header*
+checksum, which is part of the tar format and **not** an integrity digest of the archive. Do not
+read that line as one.
 
 ---
 

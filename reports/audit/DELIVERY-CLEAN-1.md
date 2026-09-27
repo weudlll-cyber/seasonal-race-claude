@@ -23,7 +23,7 @@ and no duplicated truth whose copies disagree was found, so nothing was demoted 
 **Empty — and the sentence is now worth more than it was, because the check that could have filled
 it has run.**
 
-58 routes on nine routers enumerated; authentication, session, hashing, rate-limiting, upload
+58 routes on nine routers enumerated (**+ `/api/health` = 59 in all** — see the scope note in §1.4); authentication, session, hashing, rate-limiting, upload
 bounds, error leakage and CORS examined at the addresses in §2; cross-team isolation on races
 **tested** with two users, 5 of 5 passing; 30,719 git objects swept for secrets, 0 hits; 6
 dependency advisories, all one dev-only family absent from the shipped artefact.
@@ -86,7 +86,7 @@ this test in the same commit.
 | ★ C10 | **NEW — two benchmarks require `--master` on any machine but the one they were written on, and neither says so when it fails.** `C:/ra-wt-nanoid` is a worktree; there is no portable default, so `tmpdir()` would be wrong rather than better. | `label-bench-matrix.mjs:40`, `phys-bench-matrix.mjs:63` |
 | ★ C11 | **NEW — `client/e2e/` is outside the format guard.** `format:check` is `prettier --check src`; `e2e/d355-smoke.spec.js` fails prettier today. Verified pre-existing at master. Not reformatted — widening a guard's scope is a decision. | §10 run 2 |
 | ★ C12 | **NEW — 8 exported symbols with no importer.** Never removed: an unimported export may be a seam. ★ Three of the eight are mine, from RACE-SOURCE-1 the day before this audit. | §5.3 |
-| ★ C13 | **NEW — 46 of the 59 API routes are documented nowhere.** `API.md` documents 13 and now says so correctly. | §9.2 |
+| ★ C13 | **NEW — 46 of the 59 API routes are documented nowhere** (59 = the 58 on the routers **plus `/api/health`**; see §1.4). `API.md` documents 13 and now says so correctly. | §9.2 |
 
 ### ★ WHAT THIS AUDIT CHANGED IN THE TREE — none of it behaviour
 
@@ -269,7 +269,17 @@ memory said "bare runs 7, premerge 14" — a different diff, and reported here a
 that is explained rather than reconciled**: both are right for their own diff, and neither is a
 property of `verify`. The stable, quotable number is **36 in the registry**.
 
-### 1.4 The HTTP surface — 58 routes across 9 mounts
+### 1.4 The HTTP surface — 58 routes across 9 mounts, **59 counting `/api/health`**
+
+★★ **SCOPE NOTE, added 2026-09-27 (DELIVERY-CLEAN-2 arc 1) — and it CONTRADICTS the brief that
+sent me.** The brief said this report gives 58 in §11-A and 59 in C13, so "one is wrong by one".
+**Neither is wrong.** Re-measured from the tree today: the nine mounted routers carry **58** routes
+(49 direct `router.<verb>(` calls, plus the 9 that `routes/_defaultPromote.js`'s
+`attachPromoteExport` adds — three each to `brands`, `playerGroups` and `tracks`), and
+`/api/health` is registered **directly on the app** at `server/src/app.js:58`, outside every
+router. So **58 is the router surface and 59 is the whole HTTP surface**, both correct for what
+they count. The real defect was that the report used two numbers for what reads like one quantity
+and never said the scopes differed; every use is now labelled.
 
 Command: the route enumerator was **reused, not rebuilt** — `extractRoutes` and the mount list are
 taken from `server/src/auth/routePolicyDrift.test.js`, and the role column from `requiredRole` in
