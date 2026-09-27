@@ -90,7 +90,37 @@ redirect's job).
 **five** documents. A developer's first day is **four**, in a fixed order, `GLOSSARY.md` first.
 Nobody reads 40.
 
-## ARC 3 — THE 281 TOOLS · *not started*
+## ARC 3 — THE 281 TOOLS · **MERGED**
+
+**Your question: do we need them all.** 4 removed, 85 kept with a reason each, and the reasons are
+the point.
+
+★★ **The earlier “65 scripts nothing names” is right and misleading.** I reproduced 65 exactly —
+and **~29 of them are scripts DISCOVERED BY CONVENTION, not dead ones**: every `*.test.mjs` is run
+by `script-suite` through a `git ls-files` filter that never names a file, and every top-level
+`check-*.mjs` is found by the guard registry’s naming convention. A search for “who names this
+file” cannot see either. Genuinely reached by nothing: **89** — 36 at the top level and 53 in
+`scripts/diag/`, which is a **declared hand-run directory** and not a finding.
+
+**Removed (4, 473 lines)** — each a one-off whose single artefact is committed and named:
+`crop-dolphin-sprite`, `gen-boarder-sprite`, `gen-luge-sprite`, `gen-scaled-sprites`. No living
+document instructs anyone to run them; zero references outside `reports/`.
+
+**Kept, and these are the judgements:**
+- `gen-aquatic-masks.mjs` is the same shape but **stays** — it is the only worked example of HOW a
+  tint mask is made. Removing it deletes a method, not a spent artefact.
+- The seven `exp-*` **stay** — **4–6 reports cite each**. Deleting them would leave dated records
+  citing a measurement nobody can reproduce.
+- The `*-truth` family and all of `scripts/diag/` are **live-but-unwired by design** — somebody runs
+  them when they have that question. What each needs to become reachable is one registry line plus a
+  `depends=` set, and that is a decision about CI time, not mine.
+
+★ **No redundant pair exists.** The 14 `*-sum.mjs` are producer/summariser coupled by output
+DIRECTORY, not by name — six have no same-stem producer, which is a readability row, not duplication.
+
+★ **Portability, tree-wide (951 files): `client/`, `server/` and `shared/` carry no hardcoded path
+at all.** The only real ones are the two benchmark `--master` worktree defaults already recorded as
+having no portable alternative.
 
 ## ARC 4 — THE SOURCE · *not started*
 

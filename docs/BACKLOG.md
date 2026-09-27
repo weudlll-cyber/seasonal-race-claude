@@ -275,7 +275,13 @@ not an address which is right (§9.1).
       longer contains an unexecuted command.
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
-      the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · ~~19 of 39
+      the three manifests (§8.4) · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+      the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
+      ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
+      `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
+      registry's naming convention. Genuinely reached by nothing: 89 tree-wide (36 top level,
+      53 in the declared hand-run `scripts/diag/`). 4 spent one-offs removed; the rest kept with
+      a reason each** · ~~19 of 39
       top-level documents carry no OWNS line, which caps the document-overlap check at half the
       corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
       counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
