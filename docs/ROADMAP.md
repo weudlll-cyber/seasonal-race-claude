@@ -1,5 +1,7 @@
 # RaceArena — Development Roadmap
 
+**Owns:** NOTHING. This file is a redirect; everything it held is in [BACKLOG.md](BACKLOG.md).
+
 > **THIS FILE IS A REDIRECT. It owns nothing.**
 > Everything it held is in **[BACKLOG.md](BACKLOG.md)**:
 >

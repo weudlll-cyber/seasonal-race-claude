@@ -1,5 +1,7 @@
 # Race-Action
 
+**Owns:** the shipped race-action mechanism as it exists today. It carries no historical rationale; earlier concept notes are history and live elsewhere.
+
 > **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
 
 _Definitive reference for the shipped race-action mechanism (tip 68f71b5). Forward-looking: this document

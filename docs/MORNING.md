@@ -1,5 +1,7 @@
 # MORNING SHEET — 2026-09-19 · THE TREE IS CLEAN
 
+**Owns:** nothing current. This is the DATED morning sheet of 2026-09-19, kept as the record of that night. What is open now is [OPEN.md](OPEN.md), derived from [BACKLOG.md](BACKLOG.md) PART ONE.
+
 ## ★★★ IT IS ALL ON MASTER, AND CI IS GREEN
 
 **Four merges, one tag, four branches deleted. `master` is `070bc2c3`, CI green on all three jobs.**

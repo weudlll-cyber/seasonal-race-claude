@@ -1,5 +1,7 @@
 # RaceArena — Track Editor Specification
 
+**Owns:** the Track Editor feature — its modes, its geometry model and its storage. It is the single source of truth for the editor.
+
 **Status:** Implemented — TLH-2 complete (2026-05-02)
 **Lead document:** This file is the single source of truth for the Track Editor feature.
 

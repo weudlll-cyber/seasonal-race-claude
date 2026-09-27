@@ -1,6 +1,6 @@
 # Night runs — the one line, and why each flag is there
 
-**What this document owns:** how an unattended block is STARTED, so it finishes while the owner is
+**Owns:** how an unattended block is STARTED, so it finishes while the owner is
 asleep instead of stalling on a dialog nobody is there to answer. The permission RULES are in
 `.claude/settings.json`; this file owns the launcher.
 

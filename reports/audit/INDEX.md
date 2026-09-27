@@ -298,3 +298,16 @@ verdict with numbers on each axis, not a list of work.
   unattended run**, one page for all four arcs, its OPEN section regenerated from the tree each
   time rather than appended to. Read it first: it names what merged, what is a row for his word,
   and what is blocked.
+
+- [DC2-ARC2-DOCUMENTS.md](DC2-ARC2-DOCUMENTS.md) — **DELIVERY-CLEAN-2 arc 2: who reads 39
+  documents, and does each earn its place.** ★★ **THE "19 WITH NO OWNS LINE" WAS A FORMAT COUNT.**
+  It counted the literal string `**Owns:**`; **37 of 39 already declared their reason**, in three
+  different wordings — so no mechanical check could see it and a count of one spelling was read as
+  a statement about the corpus. Normalised to 39 of 40. ★ **Nothing qualified for retirement**, and
+  the tests are given: every document has a live inbound link excluding `reports/` and
+  `docs/archive/` (thinnest: `branding.md` at 1), and both subject-dead candidates survive. ★ Two
+  documents were stating environment variables with no pointer to the owner — `AUTH.md` (13
+  variables) and `DEPLOY-NOTES.md` (7) — deferrals added. ★ `PHASE-CONTRACT.md` contradicted
+  itself about its own currency and its values are now scoped to their date while its rule is
+  marked still binding. The deliverable is **[docs/WHO-READS-WHAT.md](../../docs/WHO-READS-WHAT.md)**:
+  the operator reads five, a developer's first day is four in a fixed order, and nobody reads 40.

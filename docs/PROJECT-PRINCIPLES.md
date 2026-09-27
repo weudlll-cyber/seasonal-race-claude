@@ -1,5 +1,7 @@
 # RaceArena — Project Principles
 
+**Owns:** the principles that override convenience when they conflict — the standing conventions a change is judged against.
+
 Established 2026-04-26. These principles override convenience when they conflict.
 
 ---

@@ -1,6 +1,6 @@
 # RaceArena — the documentation map
 
-**What this document owns:** the map. Every maintained document, what it owns, and the order to read
+**Owns:** the map. Every maintained document, what it owns, and the order to read
 them in. If a document is not listed here it is either in [archive/](archive/README.md) or it should
 not exist. *(CITATIONS-1, 2026-09-03: that claim was false for six living documents — `AUTH.md`,
 `ENVIRONMENT.md`, `ENDING-PHASES.md`, `NIGHT-RUN.md`, `MORNING.md` and `OPEN.md` appeared nowhere
@@ -54,6 +54,7 @@ What a stranger needs in order to understand and change RaceArena.
 
 | document                                       | what it owns                                                        |
 | ---------------------------------------------- | --------------------------------------------------------------------- |
+| [WHO-READS-WHAT.md](WHO-READS-WHAT.md)         | ★ **Who is supposed to read all this** — the reading order per reader. Start here. |
 | [../README.md](../README.md)                   | The front door: what RaceArena is, and the first commands to run.   |
 | [GLOSSARY.md](GLOSSARY.md)                     | The vocabulary. Every private term, defined once.                   |
 | [PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) | The principles that override convenience, including the invariants. |

@@ -1,5 +1,17 @@
 # PHASE CONTRACT — every value calibrated against a phase boundary
 
+**Owns:** the read-only inventory of every value calibrated against a phase boundary, and the rule that follows from it — whoever moves a boundary inherits every value calibrated against it. It proposes nothing and changes nothing.
+
+★★ **ITS NUMBERS ARE DATED 2026-07-14; ITS RULE IS NOT** (added 2026-09-27, DELIVERY-CLEAN-2 arc 2).
+The paragraph below calls this *"the CURRENT shipped race world"*, and that sentence was true when it
+was written and is **no longer safe to read as current**: the world has been re-baselined since —
+speed-150, COMBO15 and gap-reroll's flip among them — and this document's own § at `:95` already
+concedes that one of its sweeps predates the speed-150 re-baseline. **Read the VALUES here as of
+2026-07-14 and check any of them against the source before relying on it**; the live baseline is
+[reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) and config values live in
+`client/src/modules/storage/defaults.js`. **The CONTRACT — a phase boundary is a contract — is
+undated and still binds.**
+
 **Read-only inventory. Nothing here proposes or changes anything.** Date: 2026-07-14, branch `chore/sim-trust`.
 Every claim is verified at source (file:line). This is the CURRENT shipped race world — one unconditional
 choreographed model, no `v4-ON/v4-OFF` conditional. The point of this document is that a phase is a

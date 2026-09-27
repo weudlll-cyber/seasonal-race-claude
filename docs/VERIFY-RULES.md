@@ -1,5 +1,7 @@
 # Verification rules — what to run, when, and how much
 
+**Owns:** the standing verification rules — what to run, when, and how much — so a spec names a rule instead of restating it.
+
 **What this is FOR:** the standing rules a spec would otherwise have to restate. A spec can now name a
 rule instead of repeating it, which is the whole point — the specs had reached 120 lines and the last
 report 378, and most of that was rules already being followed.

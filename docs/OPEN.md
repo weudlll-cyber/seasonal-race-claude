@@ -1,5 +1,7 @@
 # What is open — DERIVED from BACKLOG PART ONE, 2026-09-27
 
+**Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
+
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
 Re-derived on **2026-09-27**, from PART ONE's **fifteen** rows — after the owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after

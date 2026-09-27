@@ -1,5 +1,7 @@
 # FAIRNESS.md — what "fair" means in RaceArena, and how it is measured
 
+**Owns:** the definition of "fair" for the race dynamics, the ONE headline number, and the permanent gate thresholds a race-dynamics change must clear — and it is the only document that states those thresholds.
+
 **This is the canonical definition of fairness for the race dynamics.** It states the owner's definition,
 names the ONE headline number, and pins the permanent gate lines a race-dynamics change must clear. [PROJECT-PRINCIPLES.md §8](PROJECT-PRINCIPLES.md)
 BINDS the operational start-row gate as layer 1 of this definition; **this document states the thresholds,
