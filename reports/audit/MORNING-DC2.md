@@ -122,7 +122,35 @@ DIRECTORY, not by name — six have no same-stem producer, which is a readabilit
 at all.** The only real ones are the two benchmark `--master` worktree defaults already recorded as
 having no portable alternative.
 
-## ARC 4 — THE SOURCE · *not started*
+## ARC 4 — THE SOURCE · **MERGED**
+
+**Your question: is it all needed, and is it structured right.** ★ **Nothing structural was
+performed** — you judge the product by eye, so everything structural is a proposal with its cost.
+
+★ **The product source is clean.** Zero unused variables and zero unreachable code in `client/src`,
+`client/e2e` and `server/src`.
+
+★★ **The 8 unimported exports are now a structural certainty, not a grep result.** `client/src`,
+`server/src` and `shared` contain **zero dynamic imports and zero string-keyed calls** — there is no
+mechanism by which an unnamed export could be reached. All 8 kept as seams; three are mine.
+
+★ **77 unused locals found in `scripts/`, a tree that had never been linted — and NOT removed.**
+Your own rule (§4.4) authorises a dead variable *in a region already touched*, and arc 4 touched
+none of those 48 files. Two are in the engine hull. Recorded as P6.
+
+### The six proposals, ranked — commission them one at a time
+
+| | | cost | what you would see |
+| --- | --- | --- | --- |
+| **P1** | `CameraDirector.js` is **5,507 lines**, ~3× the next engine file, holding the state machine AND the offer arbitration | HIGH | **nothing, if done right — which is why it is dangerous** |
+| **P2** | the three upload handlers → one | LOW | nothing |
+| **P3** | the JSON-store preamble, `brands.js` ⇔ `playerGroups.js`, 44 lines | MODERATE | nothing |
+| **P4** | `RaceScreen/index.jsx` is 2,172 lines, frame loop mixed with setup | HIGH | nothing |
+| **P5** | two Dev Screen sections at 2,118 and 1,730 lines | LOW | ★ **YES** — so it belongs to `B-UX2` |
+| **P6** | 77 unused locals in `scripts/` | trivial × 48 | nothing |
+
+★ The clone detector **reproduced §6.1 exactly** on both trees — a check on that earlier number as
+much as on the tree.
 
 ---
 
@@ -141,14 +169,21 @@ Nothing here is answerable by measurement; each is a choice between readings.
 
 ## THE OPEN LIST — regenerated from the tree
 
-**PART ONE: 7 non-audit subjects + 8 open DELIVERY-CLEAN rows = 15.** `docs/OPEN.md` lists **15**.
+**PART ONE: 7 non-audit subjects + 9 open DELIVERY-CLEAN rows = 16.** `docs/OPEN.md` lists **16**.
 The two agree.
 
-★ Arc 1 **closed no rows and opened one** (B9). It was a hardening arc: it makes existing
-weaknesses harder to reopen silently, which does not resolve them.
+★ **The four arcs closed no PART ONE row and opened two** — B9 (plain HTTP, arc 1) and the
+structural proposals (arc 4). That is the honest shape of this run: it was commissioned to HARDEN,
+to make documents recognisable, to thin the tools and to read the source — none of which resolves
+an open decision. Two items INSIDE the C tidy list were resolved (C3, the OWNS lines; C2, the
+orphan-script count, corrected rather than closed).
 
 ---
 
 ## BLOCKED
 
-Nothing in arc 1 was blocked.
+**Nothing in any of the four arcs was blocked.** Every piece was performed.
+
+★ Two pieces were deliberately NOT taken and are rows rather than blocks, because taking them
+would have broken the run's own rules: the 77 `scripts/` unused locals (§4.4's "region already
+touched"), and every structural refactor in arc 4 (you judge by eye).
