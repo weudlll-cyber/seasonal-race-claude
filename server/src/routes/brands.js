@@ -40,6 +40,7 @@ import {
   IMAGE_MIME,
   MAX_IMAGE_BYTES,
   createUpload,
+  uploadSingleImage,
 } from '../../utils/imageUpload.js';
 import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
@@ -308,59 +309,37 @@ router.get('/:id/logo', (req, res) => {
 });
 
 // POST /api/brands/:id/logo — upload logo (multipart/form-data, field name: logo)
-router.post(
-  '/:id/logo',
-  (req, res, next) => {
-    upload.single('logo')(req, res, (err) => {
-      if (err) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({
-            error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.`,
-          });
-        }
-        if (err.code === 'INVALID_TYPE') {
-          return res
-            .status(400)
-            .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-        }
-        return res.status(400).json({ error: 'File upload failed.' });
-      }
-      next();
-    });
-  },
-  (req, res) => {
-    const brand = brandsMap.get(req.params.id);
-    if (!brand) return res.status(404).json({ error: 'Brand not found' });
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: logo)' });
+router.post('/:id/logo', uploadSingleImage(upload, 'logo'), (req, res) => {
+  const brand = brandsMap.get(req.params.id);
+  if (!brand) return res.status(404).json({ error: 'Brand not found' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: logo)' });
 
-    // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
-    const detectedType = detectMagicType(req.file.buffer);
-    if (!detectedType) {
-      return res
-        .status(400)
-        .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-    }
-
-    const ext =
-      detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
-    const filename = `${brand.id}.${ext}`;
-    const logoPath = join(LOGO_DIR, filename);
-
-    // Delete old logo file if it had a different name (e.g. jpg → png swap).
-    if (brand.logoFile && brand.logoFile !== filename) {
-      const oldPath = join(LOGO_DIR, brand.logoFile);
-      if (existsSync(oldPath)) unlinkSync(oldPath);
-    }
-
-    writeFileSync(logoPath, req.file.buffer);
-
-    const updatedBrand = { ...brand, logoFile: filename, updatedAt: new Date().toISOString() };
-    atomicWriteJson(filePath(brand.id), updatedBrand);
-    brandsMap.set(brand.id, updatedBrand);
-
-    res.json({ logoFile: filename });
+  // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
+  const detectedType = detectMagicType(req.file.buffer);
+  if (!detectedType) {
+    return res
+      .status(400)
+      .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
   }
-);
+
+  const ext = detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
+  const filename = `${brand.id}.${ext}`;
+  const logoPath = join(LOGO_DIR, filename);
+
+  // Delete old logo file if it had a different name (e.g. jpg → png swap).
+  if (brand.logoFile && brand.logoFile !== filename) {
+    const oldPath = join(LOGO_DIR, brand.logoFile);
+    if (existsSync(oldPath)) unlinkSync(oldPath);
+  }
+
+  writeFileSync(logoPath, req.file.buffer);
+
+  const updatedBrand = { ...brand, logoFile: filename, updatedAt: new Date().toISOString() };
+  atomicWriteJson(filePath(brand.id), updatedBrand);
+  brandsMap.set(brand.id, updatedBrand);
+
+  res.json({ logoFile: filename });
+});
 
 // DELETE /api/brands/:id/logo — remove logo
 router.delete('/:id/logo', (req, res) => {

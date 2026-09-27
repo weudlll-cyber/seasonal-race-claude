@@ -38,6 +38,7 @@ import {
   IMAGE_MIME,
   MAX_IMAGE_BYTES,
   createUpload,
+  uploadSingleImage,
 } from '../../utils/imageUpload.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
 import { BUILTIN_RACER_IDS } from '../constants/builtinRacerIds.js';
@@ -275,59 +276,37 @@ router.get('/:id/sprite', (req, res) => {
 });
 
 // POST /api/racers/:id/sprite — upload sprite (multipart/form-data, field name: sprite)
-router.post(
-  '/:id/sprite',
-  (req, res, next) => {
-    upload.single('sprite')(req, res, (err) => {
-      if (err) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({
-            error: `File too large. Maximum ${MAX_IMAGE_BYTES / 1024 / 1024} MB allowed.`,
-          });
-        }
-        if (err.code === 'INVALID_TYPE') {
-          return res
-            .status(400)
-            .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-        }
-        return res.status(400).json({ error: 'File upload failed.' });
-      }
-      next();
-    });
-  },
-  (req, res) => {
-    const racer = racersMap.get(req.params.id);
-    if (!racer) return res.status(404).json({ error: 'Racer not found' });
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: sprite)' });
+router.post('/:id/sprite', uploadSingleImage(upload, 'sprite'), (req, res) => {
+  const racer = racersMap.get(req.params.id);
+  if (!racer) return res.status(404).json({ error: 'Racer not found' });
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: sprite)' });
 
-    // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
-    const detectedType = detectMagicType(req.file.buffer);
-    if (!detectedType) {
-      return res
-        .status(400)
-        .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
-    }
-
-    const ext =
-      detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
-    const filename = `${racer.id}.${ext}`;
-    const spritePath = join(SPRITE_DIR, filename);
-
-    // Delete old sprite file if format changed (e.g. jpg → png swap).
-    if (racer.spriteFile && racer.spriteFile !== filename) {
-      const oldPath = join(SPRITE_DIR, racer.spriteFile);
-      if (existsSync(oldPath)) unlinkSync(oldPath);
-    }
-
-    writeFileSync(spritePath, req.file.buffer);
-
-    const updatedRacer = { ...racer, spriteFile: filename, updatedAt: new Date().toISOString() };
-    atomicWriteJson(filePath(racer.id), updatedRacer);
-    racersMap.set(racer.id, updatedRacer);
-
-    res.json({ spriteFile: filename });
+  // Magic-byte check is authoritative — ignores the client-supplied Content-Type header.
+  const detectedType = detectMagicType(req.file.buffer);
+  if (!detectedType) {
+    return res
+      .status(400)
+      .json({ error: 'File type not allowed. Upload PNG, JPEG, or WebP only.' });
   }
-);
+
+  const ext = detectedType === 'image/png' ? 'png' : detectedType === 'image/webp' ? 'webp' : 'jpg';
+  const filename = `${racer.id}.${ext}`;
+  const spritePath = join(SPRITE_DIR, filename);
+
+  // Delete old sprite file if format changed (e.g. jpg → png swap).
+  if (racer.spriteFile && racer.spriteFile !== filename) {
+    const oldPath = join(SPRITE_DIR, racer.spriteFile);
+    if (existsSync(oldPath)) unlinkSync(oldPath);
+  }
+
+  writeFileSync(spritePath, req.file.buffer);
+
+  const updatedRacer = { ...racer, spriteFile: filename, updatedAt: new Date().toISOString() };
+  atomicWriteJson(filePath(racer.id), updatedRacer);
+  racersMap.set(racer.id, updatedRacer);
+
+  res.json({ spriteFile: filename });
+});
 
 // DELETE /api/racers/:id/sprite — remove sprite file and clear spriteFile
 router.delete('/:id/sprite', (req, res) => {
