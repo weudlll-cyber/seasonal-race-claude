@@ -1,6 +1,6 @@
 # RaceArena — the documentation map
 
-**What this document owns:** the map. Every maintained document, what it owns, and the order to read
+**Owns:** the map. Every maintained document, what it owns, and the order to read
 them in. If a document is not listed here it is either in [archive/](archive/README.md) or it should
 not exist. *(CITATIONS-1, 2026-09-03: that claim was false for six living documents — `AUTH.md`,
 `ENVIRONMENT.md`, `ENDING-PHASES.md`, `NIGHT-RUN.md`, `MORNING.md` and `OPEN.md` appeared nowhere

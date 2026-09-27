@@ -1,6 +1,6 @@
 # GLOSSARY — the words this project uses that no outsider would guess
 
-**What this document owns:** the vocabulary. Every private term in the RaceArena codebase and
+**Owns:** the vocabulary. Every private term in the RaceArena codebase and
 documents, defined once, with a pointer to the document that owns the subject.
 
 **Why it exists.** This project has heavy private jargon, and a newcomer fails on the WORDS long

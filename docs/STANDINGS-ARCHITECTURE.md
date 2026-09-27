@@ -1,6 +1,6 @@
 # The live standings — the two-layer rule
 
-**What this document owns:** the ARCHITECTURE of the live standings panel, as a rule that binds the
+**Owns:** the ARCHITECTURE of the live standings panel, as a rule that binds the
 next change rather than as a record of the last one. It is short on purpose. Everything about why the
 work was done, what it cost and what was measured lives in the reports —
 [SCOREBOARD-CADENCE-1](../reports/evolution/SCOREBOARD-CADENCE-1.md),

@@ -1,6 +1,12 @@
 # AUTH.md — authentication as it is BUILT
 
 **Owns:** how RaceArena authenticates, what an operator must supply, and what is protected.
+
+★ **The 13 `RA_*` variables named below are described here for what they do TO AUTHENTICATION.**
+The complete variable list — every variable the product reads, and what happens when one is
+missing or wrong — is **[ENVIRONMENT.md](ENVIRONMENT.md)’s**, which owns it. Where the two
+disagree, that document wins. *(Deferral added 2026-09-27, DELIVERY-CLEAN-2 arc 2: this page
+named 13 variables and pointed at the owning document nowhere, which is two homes for one fact.)*
 **Every statement here describes what the code does today**, read from `server/src/auth/`,
 `client/src/services/authApi.js`, `client/src/components/ProtectedRoute.jsx`, `client/src/App.jsx`
 and the server tests. Where this document and the source disagree, **the source is right and this

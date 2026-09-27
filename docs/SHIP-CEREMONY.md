@@ -1,5 +1,7 @@
 # SHIP-CEREMONY.md — the checklist for shipping an engine change
 
+**Owns:** the checklist for shipping an engine change, as it is actually practised — every step, written down so it stops living in people’s heads.
+
 This is the ship ceremony **as it is actually practised**, written down so it stops living only in
 people's heads (the drift SHIP-GUARD-1 was created to end). It is derived from the record of the
 changes that ran it: [RACER-FLAPPING-2](../reports/evolution/RACER-FLAPPING-2.md),

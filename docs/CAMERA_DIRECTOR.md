@@ -2,7 +2,7 @@
 
 **Last rewritten:** 2026-08-04 (CAMERA-HYGIENE-2), against the code as it stands on `camera-refactor`.
 
-**What this document is FOR:** the shape of the camera — which file owns what, the order things
+**Owns:** the shape of the camera — which file owns what, the order things
 happen in, and the reasoning that is not visible from any single file. Read it before changing the
 camera; it is written for somebody arriving in six months who was not here for any of this.
 

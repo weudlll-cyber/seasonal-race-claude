@@ -1,5 +1,10 @@
 # DEPLOY-NOTES.md — what stands between here and one command
 
+★ **The `RA_*` variables named on this page are described for what a DEPLOYMENT needs.** The
+complete list is **[ENVIRONMENT.md](ENVIRONMENT.md)’s**, which owns it; where the two disagree,
+that document wins. *(Deferral added 2026-09-27, DELIVERY-CLEAN-2 arc 2 — this page named 7
+variables and pointed at the owner nowhere.)*
+
 **Owns:** the GAP between what the repository can do today and the owner's stated wish — the image on
 a VPS with as close to one command as possible. What each hurdle costs, and which choices are his.
 

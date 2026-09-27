@@ -1,5 +1,7 @@
 # PHASE CONTRACT — every value calibrated against a phase boundary
 
+**Owns:** the read-only inventory of every value calibrated against a phase boundary, verified at source. It proposes nothing and changes nothing.
+
 **Read-only inventory. Nothing here proposes or changes anything.** Date: 2026-07-14, branch `chore/sim-trust`.
 Every claim is verified at source (file:line). This is the CURRENT shipped race world — one unconditional
 choreographed model, no `v4-ON/v4-OFF` conditional. The point of this document is that a phase is a

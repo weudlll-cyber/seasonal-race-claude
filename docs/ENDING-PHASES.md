@@ -1,6 +1,6 @@
 # The ending — every phase from the winner crossing to the settled result screen
 
-**What this document owns:** the INVENTORY of the ending. What happens, in order, what decides how
+**Owns:** the INVENTORY of the ending. What happens, in order, what decides how
 long each part lasts, where that length lives, and whether the Dev Screen can reach it. It is the
 map a change to the ending starts from — the start ceremony has one block of controls in ceremony
 order, and this is the survey the ending's equivalent is built on.

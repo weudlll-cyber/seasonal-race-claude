@@ -1,5 +1,7 @@
 # RaceArena
 
+**Owns:** what RaceArena is, how to run it, how to test it, how it is deployed today, and the map of which document owns which subject. Every subject below has a deeper home and this page points at it.
+
 **Stage a race, draw the track, line up the field — then watch it unfold like a live broadcast, in
 your browser.**
 

@@ -1,6 +1,6 @@
 # DEAD-ENDS — approaches already tried, and why they were dropped
 
-**Purpose.** One exclusion list so no ideation round (Plan-Claude, CC, Copilot, owner) re-proposes
+**Owns:** the exclusion list — one list so no ideation round (Plan-Claude, CC, Copilot, owner) re-proposes
 a mechanism the project already built, measured, and retired. **Read this before proposing any
 race-mechanism change, and before any diagnosis — the git history is the first source, not the
 last resort.** Distilled from the full git history (997 commits, 2026-04-19 … 07-26),
