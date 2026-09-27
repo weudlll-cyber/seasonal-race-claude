@@ -143,3 +143,33 @@ map with `Owns:` lines and the † marks; **What this is not**.
   unrun commands are exactly the ones such a walk would cover.
 - **`docs/ARCHITECTURE.md` was not re-audited**; only the one claim the README wanted to reuse was
   checked, and it did not survive.
+
+---
+
+## ★★ APPENDED 2026-09-27 — BOTH "DROPPED CLAIMS" ABOVE WERE WRONG
+
+**The body of this report is left exactly as written**, because `reports/` is the dated record and
+is append-only. This section is the correction; the full account is
+[README-CORRECTIONS-2026-09-27.md](README-CORRECTIONS-2026-09-27.md).
+
+**1 · The 3-effect cap EXISTS.** This report said it was found nowhere in the code. It is enforced
+**twice on the way in** — the authoring control (`components/EffectConfig/EffectConfig.jsx:11`
+`max = 3`, `:34` refuses a fourth, `:124` hides the add button; `TrackEditorToolbar.jsx:128` passes
+`max={3}`) and again on save (`trackEditorSave.js:73` slices to 3). ★ **How the search missed it:**
+it covered `modules/track-effects/`, `TrackEditor.jsx` and `defaults.js` — and never opened
+`components/EffectConfig/`, **which `docs/TRACK_EDITOR.md:310` names by that exact word.** A
+document was pointing at the answer and the search did not follow it. `ARCHITECTURE.md:173` was
+correct and now records where the limit lives.
+
+**2 · "Nine CSS files carry `max-width` queries" was the wrong measurement.** Nine files use the CSS
+**property** `max-width`, which limits an element's width and says nothing about screen size. Only
+**three** carry an actual `@media (max-width: …)` breakpoint: `RaceScreen.css:476` (640px),
+`ResultScreen.css:494` (768px), `RacerEditor.module.css:49` (900px). ★ **Dropping the owner's
+sentence was still right** — it asserted an intent nothing in the tree establishes — but the number
+this report gave for dropping it did not support it, and a property is not a query.
+
+**3 · `docker compose up -d` HAS SINCE BEEN EXECUTED.** The table above marks it NOT run, which was
+true when written. It was run on 2026-09-27 on port 4099 with the data mount redirected — a plain
+run would have bind-mounted the owner's **live** `server/data`, which this server writes to at
+boot, a harm worse than the port clash originally given. Container came up **`(healthy)`** and the
+log read `serving the built client from /app/client-dist`. Full record in the corrections report.

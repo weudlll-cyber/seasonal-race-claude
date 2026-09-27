@@ -233,11 +233,25 @@ not an address which is right (§9.1).
       what it is · how to run it · how to test it (with the guard table and why bare `verify` green
       is not CI green) · how it is deployed (no production compose, no HTTPS) · how results are
       kept and restored · where the documents live · what this is not.
-      ★ **Two claims were DROPPED because they could not be checked**, which is the part of the
-      method worth keeping: *"up to 3 layered effects per track"* (asserted by
-      `docs/ARCHITECTURE.md:173`, **found nowhere in the code** — replaced by the 7 effects that
-      demonstrably ship) and *"no mobile layout by design"* (**contradicted** — nine CSS files
-      carry `max-width` queries, including `RaceScreen.css`).
+      ★★ **BOTH "DROPPED CLAIMS" WERE RE-EXAMINED 2026-09-27 AND BOTH FINDINGS WERE WRONG.**
+      They read: *"up to 3 layered effects per track"* found nowhere in the code, and *"no mobile
+      layout by design"* contradicted by nine CSS files carrying `max-width` queries.
+      - **The 3-effect cap EXISTS.** It is enforced in the authoring control
+        (`EffectConfig.jsx:11,34,124`, `TrackEditorToolbar.jsx:128`) and again on save
+        (`trackEditorSave.js:73`). I searched `modules/track-effects/`, `TrackEditor.jsx` and
+        `defaults.js` and **never opened `components/EffectConfig/`** — while
+        `docs/TRACK_EDITOR.md:310` names that very component. `ARCHITECTURE.md:173` was right all
+        along and now records where the limit lives.
+      - **The nine was the wrong measurement.** It counted the CSS *property* `max-width`, which
+        limits an element's width and says nothing about screen size. **Three** files carry an
+        actual `@media (max-width: …)` breakpoint. Dropping the owner's original sentence was still
+        right — it claimed an intent nothing establishes — but the number given for dropping it
+        did not support it.
+      ★ **And `docker compose up -d`, written into the README unexecuted, WAS RUN on 2026-09-27** —
+      port 4099, data mount redirected, because a plain run would have bind-mounted the owner's
+      live `server/data` and this server writes at boot. Container `Up (healthy)`, log
+      `serving the built client`, everything it created removed. The README's install section no
+      longer contains an unexecuted command.
 
 - [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
       the three manifests (§8.4) · 65 scripts named by no invoker searched (§1.2) · 19 of 39
@@ -256,6 +270,12 @@ not an address which is right (§9.1).
       export may be a seam, and three of the eight are the auditor's own from the day before
       (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
       (§9.2).
+      ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
+      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
+      `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
+      1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
+      unestablished**; the breakpoints and the fixed field are both facts and nothing in the
+      repository reconciles them. Costs nothing today; recorded so the question has an address.
 
 ---
 

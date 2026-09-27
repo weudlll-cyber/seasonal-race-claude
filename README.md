@@ -16,8 +16,9 @@ branding profiles, player groups and finished races — and serves the built app
 one thing to start and one port.
 
 **What is in the box:** 10 built-in tracks, 20 built-in racer types, a track editor, a sprite-based
-racer editor, 7 animated track effects (rain, stars, bubbles, fireflies, dust, mud, wave), an
-event-branding system, and a Dev Panel for tuning physics, camera and race defaults.
+racer editor, 7 animated track effects (rain, stars, bubbles, fireflies, dust, mud, wave) with **up
+to 3 layered on one track**, an event-branding system, and a Dev Panel for tuning physics, camera
+and race defaults.
 
 ---
 
@@ -188,6 +189,11 @@ rule**; see [reports/README.md](reports/README.md). `docs/archive/` is history a
 - **It is not a multiplayer game.** One organiser runs an event; other people watch the screen.
 - **There is no leaderboard or cross-event standings server yet.** That is planned work, not
   shipped behaviour — see [BACKLOG.md](docs/BACKLOG.md) PART ONE, *Phases 5–7*.
+- **The race picture is a fixed field.** The world-to-screen scales are defined against a
+  1280×720 reference canvas (`client/src/modules/camera/projection.js:37-38`); it does not reflow.
+  Three screens do carry a small-screen breakpoint — the race screen at 640px, the result screen at
+  768px and the racer editor at 900px. ★ **Those are the measurements; this page says nothing about
+  whether phone use is a goal**, because nothing in the repository establishes that.
 
 ---
 
