@@ -233,3 +233,20 @@ verdict with numbers on each axis, not a list of work.
   The report ends with which guards hold which axis, the seven axes nothing holds, and what will have
   rotted in a month — documents, and only slowly, because the difference between 0.07% and 97 false
   claims is not a guard but somebody checking.
+
+- [COMEBACK-CARRY-2026-09-27.md](COMEBACK-CARRY-2026-09-27.md) — **the refuted comeback cause taken
+  off master, and a derived page that was contradicting its own report.** `OPEN.md` still said the
+  comeback shot is *"a coin flip at a shipped weight, drawn from the camera's own random stream,
+  which is not seeded from the race"*; **both halves are false at the tree** — a cast comebacker's
+  first shot is returned outright at `CameraDirector.js:1816-1821`, ABOVE `_weightedRandomPick`
+  (`:1840`) and `_acceptsOffer` (`:1844`), and `cameraSeedForRace` derives the stream from the race
+  seed. ★ **What varies is where in the stream the draws land**, because the director gets one look
+  per rendered frame off a wall-clock delta while the physics runs fixed 16 ms steps capped at two
+  catch-up steps per frame — **written as the mechanism that FITS, not one reproduced on demand:
+  ten probe runs produced the shot ten times.** ★ `BACKLOG.md`'s specs row carried the same wrong
+  cause and was repaired too though the brief did not name it; the superseded paragraph is kept and
+  struck through so the correction has something to point at. ★ `OPEN.md` §1 said *"Nothing is
+  waiting on his word"* while the morning sheet listed **six** things that are — three places in one
+  list disagreeing — and all six are now written in, **two of them noting they have no backlog row
+  rather than pointing at one that does not exist.** Counts stated both ways: PART ONE 7 + 6 = 13,
+  `OPEN.md` section 0 = 13, §1 = 6 questions, which do not move the 13.
