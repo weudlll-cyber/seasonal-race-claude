@@ -1,6 +1,6 @@
 // ============================================================
 // File:        nameLimits.js
-// Path:        shared/nameLimits.js
+// Path:        shared/nameLimits.mjs
 // Project:     RaceArena — NAME-LIMIT-1
 //
 // THE ONE HOME for how long a player name may be. Read by the client and by the server; no path

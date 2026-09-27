@@ -346,9 +346,13 @@ not an address which is right (§9.1).
       provable now. **A lower floor costs nothing in practice: `npm ci` installs from the
       LOCKFILE, not the range, so CI keeps getting the pinned versions.** · `minTargetScreenPx` names two different settings
       in two stores, `autoSpriteScale.js:23` and `racer-types/index.js:239`, not renamed because a
-      stored-key rename touches saved configs (§6.7) · `label-bench-matrix.mjs:40` and
-      `phys-bench-matrix.mjs:63` require `--master` on any machine but the one they were written on
-      and say nothing when it fails (§7.2) · `client/e2e/` is outside `format:check`, which is
+      stored-key rename touches saved configs (§6.7) · ~~`label-bench-matrix.mjs:40` and `phys-bench-matrix.mjs:63` require `--master` on any machine
+      but the one they were written on and say nothing when it fails~~ — ★★ **REFUTED
+      2026-09-27 (DC3 piece 6), and it was my own claim.** They say so loudly:
+      `label-bench-matrix.mjs:55` and `phys-bench-matrix.mjs:90` check the target is a RaceArena
+      tree and print **`FAIL: --master=<path> is not a RaceArena tree.`** then `process.exit(2)`.
+      Both were RUN with a bogus `--master` to prove it. The claim came from §7.2, which asserted
+      it **without ever running them**. Closed as refuted, not done — there was nothing to build (§7.2) · `client/e2e/` is outside `format:check`, which is
       `prettier --check src`, and `d355-smoke.spec.js` fails prettier today, pre-existing at master
       (§10 run 2) · 8 exported symbols have no importer, never removed because an unimported
       export may be a seam, and three of the eight are the auditor's own from the day before

@@ -17,7 +17,7 @@
 // `goldenCoverage.test.js`, which asserts the union rather than trusting it.
 //
 // This is NOT the routine-subset-vs-full split. That one runs FEWER races and is the owner's
-// decision; it is proposed in reports/night/VERIFY-COST-1.md and deliberately not built.
+// decision; it is proposed in reports/evolution/VERIFY-COST-1.md and deliberately not built.
 // ============================================================
 
 /**
