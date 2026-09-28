@@ -5,6 +5,8 @@
 // Description: Track effect — mud splat particles along the track path
 // ============================================================
 
+import { cullBounds, isVisible } from '../../surface-effects/generators/spriteHelpers.js';
+
 const configSchema = [
   // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
   // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
@@ -53,7 +55,14 @@ function create(canvas, config, world) {
     },
     render(ctx) {
       ctx.fillStyle = config.color;
+      // PARTICLES-VISIBILITY-4: skip items whose drawn circle does not touch the canvas (both axis
+      // scales, the helper racer trails use). Only DRAWING is skipped — update() still moves every item,
+      // so nothing pops in when the camera turns. The margin is the item's drawn radius.
+      // A blob's vertices reach at most 1.4 × its 12 × size base radius (see update()).
+      const cull = cullBounds(ctx);
+      const reach = 12 * config.size * 1.4;
       for (const b of blobs) {
+        if (!isVisible(cull, b.x, b.y, reach)) continue;
         ctx.globalAlpha = config.opacity * (1 - b.age / b.maxAge);
         ctx.beginPath();
         ctx.moveTo(

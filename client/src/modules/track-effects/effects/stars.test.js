@@ -10,6 +10,10 @@ function makeMockCtx() {
   const calls = { beginPath: 0, arc: 0, fill: 0 };
   return {
     calls,
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas under the current transform.
+    canvas: MOCK_CANVAS,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+    moveTo() {},
     globalAlpha: 1,
     fillStyle: '',
     beginPath() {
@@ -56,8 +60,10 @@ describe('stars effect — create() contract', () => {
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.calls.arc).toBe(10);
-    expect(ctx.calls.fill).toBe(10);
-    expect(ctx.calls.beginPath).toBe(10);
+    // PARTICLES-VISIBILITY-4: stars are filled per twinkle tier (at most 16), one path per tier.
+    expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
+    expect(ctx.calls.fill).toBeLessThanOrEqual(16);
+    expect(ctx.calls.beginPath).toBe(ctx.calls.fill);
   });
 
   it('render() with count = 0 makes no draw calls', () => {

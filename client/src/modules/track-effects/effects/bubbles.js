@@ -5,6 +5,8 @@
 // Description: Track effect — floating bubble particles along the track path
 // ============================================================
 
+import { cullBounds, isVisible } from '../../surface-effects/generators/spriteHelpers.js';
+
 const configSchema = [
   // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
   // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
@@ -22,12 +24,20 @@ const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.defau
 // the race screen draws track effects inside the world transform and passes the world size, so
 // placement (and any edge wrap or clamp below) covers the whole track instead of a canvas-sized
 // corner of it. The track editor draws in screen space and passes nothing, so it keeps the canvas.
+// PARTICLES-VISIBILITY-4: bubbles and their droplets are drawn in this many alpha tiers, one path and one fill per tier,
+// instead of a path, a fill and an alpha change per item. Each takes its tier's midpoint alpha — at
+// most 1/16 of the opacity away from its own.
+const ALPHA_TIERS = 8;
+
 function create(canvas, config, world) {
   const { width, height } = world ?? canvas;
   let bubbles = [],
     spawnAccum = 0;
   const RISE = 500;
   const POP = 300;
+
+  // One reusable list per alpha tier of flat (x, y, r) triples, refilled every frame (no allocation).
+  const tiers = Array.from({ length: ALPHA_TIERS }, () => []);
 
   return {
     update(dt) {
@@ -54,30 +64,39 @@ function create(canvas, config, world) {
       }
     },
     render(ctx) {
-      ctx.fillStyle = config.color;
+      // PARTICLES-VISIBILITY-4: skip items whose drawn circle does not touch the canvas (both axis
+      // scales, the helper racer trails use). Only DRAWING is skipped — update() still moves every item,
+      // so nothing pops in when the camera turns. The margin is the item's drawn radius.
+      // A popping bubble reaches its spread plus a droplet radius from its centre.
+      const cull = cullBounds(ctx);
+      const reach = config.size * 14;
+      const tierOf = (alpha) => tiers[Math.min(ALPHA_TIERS - 1, Math.floor(alpha * ALPHA_TIERS))];
+      for (const tier of tiers) tier.length = 0;
       for (const b of bubbles) {
+        if (!isVisible(cull, b.x, b.y, reach)) continue;
         if (b.age < b.riseMs) {
           const t = b.age / b.riseMs;
-          ctx.globalAlpha = config.opacity * Math.min(t * 3, 1);
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, Math.max(0.5, config.size * 4 * t), 0, Math.PI * 2);
-          ctx.fill();
+          tierOf(Math.min(t * 3, 1)).push(b.x, b.y, Math.max(0.5, config.size * 4 * t));
         } else {
           const t = (b.age - b.riseMs) / POP;
           const spread = config.size * 12 * t;
-          for (const s of b.splitters) {
-            ctx.globalAlpha = config.opacity * (1 - t);
-            ctx.beginPath();
-            ctx.arc(
-              b.x + s.dx * spread,
-              b.y + s.dy * spread,
-              Math.max(0.5, config.size * 2 * (1 - t)),
-              0,
-              Math.PI * 2
-            );
-            ctx.fill();
-          }
+          const r = Math.max(0.5, config.size * 2 * (1 - t));
+          const tier = tierOf(1 - t);
+          for (const s of b.splitters) tier.push(b.x + s.dx * spread, b.y + s.dy * spread, r);
         }
+      }
+      // PARTICLES-VISIBILITY-4: one path and one fill per alpha tier (see ALPHA_TIERS).
+      ctx.fillStyle = config.color;
+      for (let k = 0; k < ALPHA_TIERS; k++) {
+        const tier = tiers[k];
+        if (tier.length === 0) continue;
+        ctx.globalAlpha = (config.opacity * (k + 0.5)) / ALPHA_TIERS;
+        ctx.beginPath();
+        for (let i = 0; i < tier.length; i += 3) {
+          ctx.moveTo(tier[i] + tier[i + 2], tier[i + 1]);
+          ctx.arc(tier[i], tier[i + 1], tier[i + 2], 0, Math.PI * 2);
+        }
+        ctx.fill();
       }
       ctx.globalAlpha = 1;
     },

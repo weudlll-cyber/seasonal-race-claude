@@ -8,7 +8,8 @@
 //                instead of building a gradient/path per particle (cloud + splash).
 //              - cullBounds/isVisible/isSegmentVisible: viewport culling shared by all
 //                three so off-screen particles are never drawn (spawn/update unchanged).
-//              Single source — cloud, splash and line all reuse these (no copies).
+//              Single source — cloud, splash and line all reuse these (no copies), and since
+//              PARTICLES-VISIBILITY-4 so do the seven track effects.
 // ============================================================
 
 /** Convert a #rrggbb hex to an rgba() string with the given alpha; falls back to a pale blue. */

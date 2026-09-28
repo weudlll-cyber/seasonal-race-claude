@@ -16,15 +16,15 @@ import rain from './rain.js';
 import stars from './stars.js';
 import wave from './wave.js';
 
-// The maxima set by PARTICLES-VISIBILITY-3's browser measurement.
+// The maxima set by browser measurement (PARTICLES-VISIBILITY-3; rain, stars, wave raised by -4).
 const MAX = {
   bubbles: 240000,
   dust: 4000,
   fireflies: 4000,
   mud: 80000,
-  rain: 2000,
-  stars: 2000,
-  wave: 500,
+  rain: 4000,
+  stars: 8000,
+  wave: 1000,
 };
 const EFFECTS = { bubbles, dust, fireflies, mud, rain, stars, wave };
 const CANVAS = { width: 800, height: 600 };
@@ -37,6 +37,9 @@ function countingCtx() {
     get draws() {
       return draws;
     },
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas under the current transform.
+    canvas: CANVAS,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
     globalAlpha: 1,
     fillStyle: '',
     strokeStyle: '',

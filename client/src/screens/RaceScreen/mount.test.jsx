@@ -78,12 +78,16 @@ const GEOMETRY = JSON.parse(
  * calls it has become a worse copy of `render-fingerprint.mjs`.
  */
 function stubCanvas2d() {
+  // PARTICLES-VISIBILITY-4: track effects cull against the canvas under the current transform, so the
+  // stub answers both the way a real 2D context does — the race canvas's fixed 1280x720 store and an
+  // identity matrix — instead of null and undefined.
   const ctx = new Proxy(
-    { canvas: null },
+    { canvas: { width: 1280, height: 720 } },
     {
       get(target, prop) {
         if (prop in target) return target[prop];
         if (prop === 'measureText') return () => ({ width: 10 });
+        if (prop === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
         if (prop === 'getImageData')
           return (x, y, w, h) => new globalThis.ImageData(w || 1, h || 1);
         if (prop === 'createLinearGradient' || prop === 'createRadialGradient')

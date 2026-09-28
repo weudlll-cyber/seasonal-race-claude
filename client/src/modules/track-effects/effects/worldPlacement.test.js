@@ -22,12 +22,22 @@ const EFFECTS = { bubbles, dust, fireflies, mud, rain, stars, wave };
 const CANVAS = { width: 100, height: 60 };
 const WORLD = { width: 3000, height: 2000 };
 
-/** A context that records every position the effect draws at (circle centres, path starts). */
-function recordingCtx() {
-  const points = [];
+/**
+ * A context that records every position the effect draws at: circle centres, or — for mud, which draws
+ * polygons and no circles — path starts. (Ring paths begin with moveTo(x + radius, y), so a path
+ * start is not a position for them; PARTICLES-VISIBILITY-4.)
+ */
+function recordingCtx(area) {
+  const centres = [];
+  const starts = [];
   const noop = () => {};
   return {
-    points,
+    get points() {
+      return centres.length ? centres : starts;
+    },
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas, so it spans the whole area under test.
+    canvas: { width: area.width, height: area.height },
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
     globalAlpha: 1,
     fillStyle: '',
     strokeStyle: '',
@@ -39,8 +49,8 @@ function recordingCtx() {
     fill: noop,
     stroke: noop,
     lineTo: noop,
-    arc: (x, y) => points.push({ x, y }),
-    moveTo: (x, y) => points.push({ x, y }),
+    arc: (x, y) => centres.push({ x, y }),
+    moveTo: (x, y) => starts.push({ x, y }),
   };
 }
 
@@ -54,7 +64,7 @@ function drawnPoints(effect, world) {
   const max = effect.configSchema.find((f) => f.key === 'count')?.max;
   if (max != null) config.count = max;
   const inst = effect.create(CANVAS, config, world);
-  const ctx = recordingCtx();
+  const ctx = recordingCtx(world ?? CANVAS);
   for (let i = 1; i <= 400; i++) {
     inst.update(50);
     if (i % 20 === 0) inst.render(ctx);

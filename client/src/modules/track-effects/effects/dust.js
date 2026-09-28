@@ -5,6 +5,8 @@
 // Description: Track effect — drifting dust particles along the track path
 // ============================================================
 
+import { cullBounds, isVisible } from '../../surface-effects/generators/spriteHelpers.js';
+
 const configSchema = [
   // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
   // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
@@ -56,7 +58,12 @@ function create(canvas, config, world) {
       }
     },
     render(ctx) {
+      // PARTICLES-VISIBILITY-4: skip items whose drawn circle does not touch the canvas (both axis
+      // scales, the helper racer trails use). Only DRAWING is skipped — update() still moves every item,
+      // so nothing pops in when the camera turns. The margin is the item's drawn radius.
+      const cull = cullBounds(ctx);
       for (const p of particles) {
+        if (!isVisible(cull, p.x, p.y, config.size * p.ratio * 3)) continue;
         ctx.globalAlpha = config.opacity;
         ctx.fillStyle = config.color;
         ctx.beginPath();

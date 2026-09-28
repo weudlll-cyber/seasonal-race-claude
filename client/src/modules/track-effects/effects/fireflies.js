@@ -5,6 +5,8 @@
 // Description: Track effect — blinking firefly particles around the track
 // ============================================================
 
+import { cullBounds, isVisible } from '../../surface-effects/generators/spriteHelpers.js';
+
 const configSchema = [
   // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
   // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
@@ -61,17 +63,32 @@ function create(canvas, config, world) {
     },
     render(ctx) {
       const pulse = 0.7 + 0.3 * Math.sin(elapsed * 0.001 * config.pulseSpeed);
-      for (const f of flies) {
-        if (config.glow > 0) {
-          ctx.shadowBlur = config.glow * 15;
-          ctx.shadowColor = config.color;
-        }
-        ctx.globalAlpha = config.opacity * pulse;
-        ctx.fillStyle = config.color;
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, config.size * 2, 0, Math.PI * 2);
-        ctx.fill();
+      // PARTICLES-VISIBILITY-4: skip items whose drawn circle does not touch the canvas (both axis
+      // scales, the helper racer trails use). Only DRAWING is skipped — update() still moves every item,
+      // so nothing pops in when the camera turns. The margin is the item's drawn radius.
+      // The glow is a shadowBlur in SCREEN pixels (the transform does not scale it), so it is
+      // converted to world units with the smaller axis scale before it is added to the margin.
+      const cull = cullBounds(ctx);
+      const r = config.size * 2;
+      const reach = r + (config.glow * 15) / Math.min(cull.sx, cull.sy);
+      // PARTICLES-VISIBILITY-4: every firefly shares one colour, one alpha and one glow, so the state
+      // is set once and all visible flies are filled as ONE path — the glow (a shadow blur, the
+      // expensive part) is computed once per frame instead of once per fly.
+      if (config.glow > 0) {
+        ctx.shadowBlur = config.glow * 15;
+        ctx.shadowColor = config.color;
       }
+      ctx.globalAlpha = config.opacity * pulse;
+      ctx.fillStyle = config.color;
+      ctx.beginPath();
+      let drawn = 0;
+      for (const f of flies) {
+        if (!isVisible(cull, f.x, f.y, reach)) continue;
+        ctx.moveTo(f.x + r, f.y);
+        ctx.arc(f.x, f.y, r, 0, Math.PI * 2);
+        drawn++;
+      }
+      if (drawn > 0) ctx.fill();
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     },
