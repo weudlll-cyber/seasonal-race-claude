@@ -2568,7 +2568,8 @@ owner's hand**: parked here with enough context to be actionable months from now
 ## 2026-09-28 — added (PARTICLES-VISIBILITY-1)
 
 - [ ] ★★ **PARTICLES-VISIBILITY-1 — dust, rain and the finish burst appear at some moments and not
-  others. MEASURED, NOT FIXED; stays open on branch `fix/particles-visibility` until solved.** The owner,
+  others. FIXED ON THE BRANCH (PARTICLES-VISIBILITY-2), NOT MERGED; open on `fix/particles-visibility` until the
+  owner has looked.** The owner,
   2026-09-28, on the production build `7a8166f8`, Dirt Oval, seed 9: no dust or rain in a wide shot, rain
   rings in a close follow shot, faint dust just after the start; and earlier the same day, the finish
   particles do not really work. Measured by replaying his stored race `VY7KKE` in a real browser (40 of 40
@@ -2585,10 +2586,21 @@ owner's hand**: parked here with enough context to be actionable months from now
   - **Finish burst — NOT PROVEN.** It fires on every crossing step (40 of 40) and always reaches the screen;
     at the photo-finish zoom it leaves the frame in 0.4–1.2 s, under the overview it is 4 px dots, and it is
     drawn under the racers. **What he means by not working needs his eye**, not another measurement.
-  - **Next:** proposals 1–3 in the report (cull with both scales; spawn rain over the world; keep finished
-    racers' dust fading) are render-only and move no race. Proposal 4 (readability) and 5 (the burst) wait on
-    his eye. No instrument in the tree covers any of this; a guard belongs with the fix.
-
+  - **FIXED on the branch, 2026-09-28 — PARTICLES-VISIBILITY-2** (`cd070bb4`, not merged). Report:
+    [PARTICLES-VISIBILITY-2](../reports/particles/PARTICLES-VISIBILITY-2.md). The cull tests each axis with its
+    own scale (on-screen dust drawn with the camera on the bottom straight side: 9.3% → 100%); a finished
+    racer's dust keeps fading until it is gone, also after the last crossing (frames with dust standing more than
+    1 s after its racer finished: 674 → 0); and **every** track effect is placed over the whole track instead of a
+    canvas-sized corner (racing frames with a rain ring on screen: 26.8% → 87.2%). His race replayed 40 of 40
+    identical in both arms; no fingerprint moved; new unit tests are red on the old code.
+  - **The owner's decisions of 2026-09-28:** rain falls over the whole track and its amount stays his to set per
+    track; the finish burst stays exactly as it is, with no complaint; the placement fix is extended from rain to
+    every track effect. The burst question above is therefore closed.
+  - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
+    unchanged settings every effect now looks thinner, by the ratio of world to old-corner area: rain on Dirt
+    Oval about 6.8×, bubbles on Seatrack about 27× (already at the slider maximum of 100) and stars on Space
+    Sprint about 26×. The amounts are his to adjust in the Track Editor; none was changed. Dust readability
+    (contrast about 1.3) is untouched and also his call.
 ---
 
 # PART TWO — CLOSED
