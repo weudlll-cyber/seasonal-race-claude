@@ -5,7 +5,11 @@ The OPEN section at the foot is regenerated from the tree.
 
 ---
 
-## ALL SIX PERFORMED. NONE BLOCKED.
+## ALL SIX PERFORMED, ALL SIX MERGED. NONE BLOCKED.
+
+★ **CI and the Browser gate are green on the final merge `d26ebcce`**, and so are the two
+SCHEDULED runs of the following morning — including the **daily dependency audit**, which is the
+one job that can redden master with no code change at all.
 
 | piece | merge | what it did |
 | --- | --- | --- |
@@ -14,7 +18,7 @@ The OPEN section at the foot is regenerated from the tree.
 | 3 · P3, the store preamble | `6a85e5a0` | **three** duplicates, not two; no drift; −34 lines |
 | 4 · C8, the dev dependency | `3fa58487` | aligned — **by a different route than the brief** |
 | 5 · P6, unused locals | `5e23187f` | 34 of 78 removed; 44 held with reasons |
-| 6 · the sweep | *pending* | 4 drifted citations repaired; **C10 refuted** |
+| 6 · the sweep | `d26ebcce` | 4 drifted citations repaired; **C10 refuted** |
 
 ---
 
