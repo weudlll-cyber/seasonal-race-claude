@@ -13,7 +13,11 @@ const configSchema = [
   // measured in the browser, see reports/particles/PARTICLES-VISIBILITY-3.md.
   // The unit is unchanged (fireflies on the track at once), so every stored setting looks as it did.
   // The step divides the default and every stored value, so they stay on the slider's grid.
-  { key: 'count', type: 'range', min: 0, max: 4000, step: 10, default: 30, label: 'Count' },
+  // PARTICLES-VISIBILITY-7: maximum lowered 4000 → 250, the owner's decision of 2026-09-28. 250 is the
+  // highest level at which every run kept frame-time median and p90 inside the range of ten no-effect runs,
+  // for the pre-start flight and the first 10 s of racing; 300 already halved the frame rate in one run.
+  // Measured in the browser, see reports/particles/PARTICLES-VISIBILITY-7.md for the rule and the numbers.
+  { key: 'count', type: 'range', min: 0, max: 250, step: 10, default: 30, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 5, step: 0.1, default: 1.5, label: 'Size' },
   { key: 'color', type: 'color', default: '#ffee88', label: 'Color' },
   { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.8, label: 'Opacity' },

@@ -32,5 +32,9 @@ every report here is reachable and that every link here resolves.
   no level down to the default (30) passed the strict rule against three baseline runs, so no maximum was set. On median
   and p90 alone the frame rate holds at 250 and below and drops from 500. Proposals for the rule, none built.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-6/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-7.md](PARTICLES-VISIBILITY-7.md) — 2026-09-28. The fireflies maximum set to 250 under a
+  corrected rule (median and p90 against ten interleaved no-effect runs, both phases); 300 already halves the frame rate
+  in one run.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-7/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.

@@ -2640,6 +2640,11 @@ owner's hand**: parked here with enough context to be actionable months from now
     on the share of long frames and on single-frame spikes, which also vary without any effect (the machine flipped
     between 60 and 30 fps within a batch). **Needs his word:** accept a rule on median and p90 (maximum 250, then
     refine), or measure with more baseline runs, or on his machine.
+  - **BUILT on the branch, 2026-09-28 — PARTICLES-VISIBILITY-7:** the fireflies maximum is **250** (was 4,000), his
+    decision of 2026-09-28 carried out with a corrected rule — frame-time median and p90 of every run inside the range of
+    ten interleaved no-effect runs, for the pre-start flight and the first 10 s of racing (the rule of the brief's author,
+    not his). 250 passed; 300 already halved the frame rate in one run. Look, minimum, step and default unchanged.
+    Report: [PARTICLES-VISIBILITY-7](../reports/particles/PARTICLES-VISIBILITY-7.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

@@ -20,7 +20,7 @@ import wave from './wave.js';
 const MAX = {
   bubbles: 240000,
   dust: 4000,
-  fireflies: 4000,
+  fireflies: 250,
   mud: 80000,
   rain: 4000,
   stars: 8000,
