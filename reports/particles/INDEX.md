@@ -24,5 +24,9 @@ every report here is reachable and that every link here resolves.
   (all seven) and draw it cheaper where that measurably helped (rain, stars, bubbles, fireflies); where the cost
   went, per build; ceilings re-measured in the race camera AND with the whole track in view.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-4/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-5.md](PARTICLES-VISIBILITY-5.md) — 2026-09-28. Measure only: the pre-start camera flight
+  with mud, dust and fireflies at their maxima. Mud and dust add no stutter; fireflies lower the frame rate (evenly)
+  through the ceremony and the first seconds of racing; the flight never takes longer (it runs on elapsed time).
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-5/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.

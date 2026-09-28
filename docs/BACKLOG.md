@@ -2620,6 +2620,16 @@ owner's hand**: parked here with enough context to be actionable months from now
     mud, dust and fireflies unchanged. **In the race camera no effect changes the frame time up to its maximum.**
     With the whole track in view, mud, dust and fireflies are one frame step slower at their maxima — which this
     block may not lower — so the owner's never-stutter rule is not yet met there for those three. No fingerprint moved.
+  - **The owner's statements of 2026-09-28 (fourth):** the only phase that shows the whole track is the camera
+    flight towards the racers before the start, while every racer stands still; a flight that takes longer is
+    acceptable, stutter is not.
+  - **MEASURED 2026-09-28 — PARTICLES-VISIBILITY-5** (measure only). Report:
+    [PARTICLES-VISIBILITY-5](../reports/particles/PARTICLES-VISIBILITY-5.md). The whole track is on screen in the
+    3 s venue shot and the start of the 2 s push; the flight runs on elapsed time, so it **never takes longer** (18.02–18.05 s
+    against 18.00 in every arm). **Mud (80,000/min) and dust (4,000) add no stutter** to it. **Fireflies (4,000) lower
+    the frame rate evenly** — about 15 fps in the venue shot, 20 fps through the rest of the ceremony and the first 10 s
+    of racing, against 30 fps with no effect — which contradicts PARTICLES-VISIBILITY-4's race-camera result for
+    fireflies on this machine under this load. Options are proposals only; none built.
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches
