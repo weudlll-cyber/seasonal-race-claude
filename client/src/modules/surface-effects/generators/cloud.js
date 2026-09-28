@@ -49,11 +49,13 @@ const configSchema = [
     default: 'back',
     label: 'Drift Direction',
   },
+  // PARTICLES-VISIBILITY-3: the trail's starting opacity, set per surface class in the Dev Screen.
+  // The default is the constant this generator hard-coded until then, so every stored class and
+  // override written before it (none carries the key) renders exactly as it did.
+  { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.6, label: 'Opacity' },
 ];
 
 const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
-
-const START_ALPHA = 0.6;
 
 /**
  * create — returns the spawn/update/render triplet for the cloud generator.
@@ -61,6 +63,8 @@ const START_ALPHA = 0.6;
  * @param {object} [_racer]
  */
 function create(config, _racer) {
+  // A stored class or override without `opacity` falls back to the schema default above.
+  const opacity = config.opacity ?? defaultConfig.opacity;
   const blobSprite = createBlobSprite(config.endSize, config.color);
 
   return {
@@ -68,7 +72,7 @@ function create(config, _racer) {
     // Allocation-free at the seam; spawn-decision logic and RNG call order unchanged.
     spawn(out, x, y, _speed, angle) {
       if (Math.random() > config.spawnProbability) return;
-      const fadePerFrame = START_ALPHA / config.lifetimeFrames;
+      const fadePerFrame = opacity / config.lifetimeFrames;
       const growPerFrame = (config.endSize - config.startSize) / config.lifetimeFrames;
       const driftAngle =
         config.driftDirection === 'back' ? angle + Math.PI : Math.random() * Math.PI * 2;
@@ -80,7 +84,7 @@ function create(config, _racer) {
         vy: Math.sin(driftAngle) * driftSpeed,
         r: config.startSize,
         growPerFrame,
-        alpha: START_ALPHA,
+        alpha: opacity,
         fadePerFrame,
         color: config.color,
       });

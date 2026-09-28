@@ -6,7 +6,12 @@
 // ============================================================
 
 const configSchema = [
-  { key: 'count', type: 'range', min: 10, max: 500, step: 10, default: 80, label: 'Count' },
+  // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
+  // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
+  // measured in the browser, see reports/particles/PARTICLES-VISIBILITY-3.md.
+  // The unit is unchanged (particles on the track at once), so every stored setting looks as it did.
+  // The step divides the default and every stored value, so they stay on the slider's grid.
+  { key: 'count', type: 'range', min: 0, max: 4000, step: 10, default: 80, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 5, step: 0.1, default: 0.8, label: 'Size' },
   { key: 'color', type: 'color', default: '#ddcc99', label: 'Color' },
   { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.35, label: 'Opacity' },

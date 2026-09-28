@@ -6,7 +6,12 @@
 // ============================================================
 
 const configSchema = [
-  { key: 'count', type: 'range', min: 50, max: 500, step: 10, default: 150, label: 'Count' },
+  // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
+  // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
+  // measured in the browser, see reports/particles/PARTICLES-VISIBILITY-3.md.
+  // The unit is unchanged (stars on the track at once), so every stored setting looks as it did.
+  // The step divides the default and every stored value, so they stay on the slider's grid.
+  { key: 'count', type: 'range', min: 0, max: 2000, step: 10, default: 150, label: 'Count' },
   {
     key: 'twinkleSpeed',
     type: 'range',

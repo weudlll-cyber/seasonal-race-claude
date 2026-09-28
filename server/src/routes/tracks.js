@@ -122,9 +122,11 @@ function validateTrackLights(lights) {
 
 // ── Input-validation bounds (SEC-C1 / SEC-C2 / SEC-H4) ───────────────────────
 
-// Highest effect-count slider max across all shipped effects is 500 (dust,
-// fireflies, rain, stars). Cap at 2× that to allow future effects headroom.
-const EFFECT_COUNT_MAX = 1000;
+// Highest effect-count slider max across all shipped effects is 240000 (bubbles, per minute —
+// PARTICLES-VISIBILITY-3 widened every slider so each effect can be made visible over a whole
+// track). Cap at 2× that to allow future effects headroom, the rule this bound has always used;
+// at the old 1000 a track saved with any of the new higher settings would have been refused.
+const EFFECT_COUNT_MAX = 480000;
 
 // Track-editor MAX_BG_W = 8000, MAX_BG_H = 4096. Add 25 % margin.
 const COORD_BOUND = 10000;
