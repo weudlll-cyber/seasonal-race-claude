@@ -2609,6 +2609,17 @@ owner's hand**: parked here with enough context to be actionable months from now
     reach many. The server's count bound followed its own rule (1000 → 480,000). Each racer-trail generator has
     an `opacity` setting (default = its old constant); at 1.0 the Sand dust on Dirt Oval is only a little
     stronger, because its colour is close to the dirt's — colour is in the same editor. No fingerprint moved.
+  - **The owner's decision of 2026-09-28 (third):** effects must never make the race stutter — stutter has been a
+    problem before — and ways must be found to still show them, for example by drawing differently or only in the
+    visible area.
+  - **BUILT on the branch, 2026-09-28 — PARTICLES-VISIBILITY-4** (not merged). Report:
+    [PARTICLES-VISIBILITY-4](../reports/particles/PARTICLES-VISIBILITY-4.md). All seven track effects skip drawing
+    what is off screen; rain, stars and bubbles draw in alpha tiers and fireflies as one path with one glow, where
+    that measurably helped (a pre-rendered sprite measured SLOWER and was dropped). Maxima re-measured in the race
+    camera and with the whole track in view: rain 2,000 → 4,000/s, stars 2,000 → 8,000, wave 500 → 1,000; bubbles,
+    mud, dust and fireflies unchanged. **In the race camera no effect changes the frame time up to its maximum.**
+    With the whole track in view, mud, dust and fireflies are one frame step slower at their maxima — which this
+    block may not lower — so the owner's never-stutter rule is not yet met there for those three. No fingerprint moved.
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

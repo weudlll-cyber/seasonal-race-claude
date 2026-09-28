@@ -20,5 +20,9 @@ every report here is reachable and that every link here resolves.
   off to many (maxima measured in the browser, capped where frame time slowed), and every racer-trail generator has
   an opacity control in the Dev Screen's surface-class editor. Per-effect counts, frame cost and screenshots.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/`, `-2/` and `-3/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-4.md](PARTICLES-VISIBILITY-4.md) — 2026-09-28. Track effects draw only what is on screen
+  (all seven) and draw it cheaper where that measurably helped (rain, stars, bubbles, fireflies); where the cost
+  went, per build; ceilings re-measured in the race camera AND with the whole track in view.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-4/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
