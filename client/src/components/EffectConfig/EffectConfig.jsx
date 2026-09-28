@@ -2,10 +2,18 @@
 // File:        EffectConfig.jsx
 // Path:        client/src/components/EffectConfig/EffectConfig.jsx
 // Project:     RaceArena
-// Description: UI component for configuring per-track particle effects
+// Description: UI component for configuring per-track particle effects. The amount of every
+//              effect shows on one 0–100 level scale (amountLevel.js); all other fields show
+//              their native values.
 // ============================================================
 
 import { listEffects, getEffect, getDefaultConfig } from '../../modules/track-effects/index.js';
+import {
+  AMOUNT_KEY,
+  LEVEL_MAX,
+  levelFromNative,
+  nativeFromLevel,
+} from '../../modules/track-effects/amountLevel.js';
 import s from './EffectConfig.module.css';
 
 export default function EffectConfig({ effects, onChange, max = 3 }) {
@@ -39,6 +47,34 @@ export default function EffectConfig({ effects, onChange, max = 3 }) {
     const value = entry.config[field.key] ?? field.default;
     switch (field.type) {
       case 'range':
+        if (field.key === AMOUNT_KEY) {
+          // PARTICLES-VISIBILITY-8: the amount shows as a level 0–100 of the effect's maximum.
+          // The stored value stays native — the level is computed for display only, and a native
+          // value is written only when this slider is moved, so an untouched amount saves unchanged.
+          const level = levelFromNative(value, field.max);
+          return (
+            <div key={field.key} className={s.field}>
+              <label className={s.label}>
+                {field.label} <span className={s.value}>{level}</span>
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={LEVEL_MAX}
+                step={1}
+                value={level}
+                className={s.range}
+                onChange={(e) =>
+                  handleFieldChange(
+                    idx,
+                    field.key,
+                    nativeFromLevel(parseFloat(e.target.value), field.max)
+                  )
+                }
+              />
+            </div>
+          );
+        }
         return (
           <div key={field.key} className={s.field}>
             <label className={s.label}>
