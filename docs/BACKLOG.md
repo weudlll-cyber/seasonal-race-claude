@@ -2596,11 +2596,24 @@ owner's hand**: parked here with enough context to be actionable months from now
   - **The owner's decisions of 2026-09-28:** rain falls over the whole track and its amount stays his to set per
     track; the finish burst stays exactly as it is, with no complaint; the placement fix is extended from rain to
     every track effect. The burst question above is therefore closed.
+  - **The owner's decisions of 2026-09-28 (second set):** an effect that cannot be seen is of no use; every track
+    effect's amount must go from off through some visible to many visible, with no numbers given — he judges
+    the ends by eye; rain as it looks now on Dirt Oval is acceptable and must remain reachable; the racer dust cloud
+    is only faintly visible, and every racer-trail generator gets an opacity control in the Dev Screen's
+    surface-class editor.
+  - **BUILT on the branch, 2026-09-28 — PARTICLES-VISIBILITY-3** (`181f62d5`, not merged). Report:
+    [PARTICLES-VISIBILITY-3](../reports/particles/PARTICLES-VISIBILITY-3.md). Every track effect's count slider
+    runs from 0 (off) to a maximum measured in the browser — rain 2,000/s, mud 80,000/min, bubbles 240,000/min,
+    dust 4,000, fireflies 4,000, stars 2,000, wave 500 — with units, defaults and every stored track unchanged. Rain,
+    stars and wave are capped below "clearly many" where frame time slowed first on this machine; the others
+    reach many. The server's count bound followed its own rule (1000 → 480,000). Each racer-trail generator has
+    an `opacity` setting (default = its old constant); at 1.0 the Sand dust on Dirt Oval is only a little
+    stronger, because its colour is close to the dirt's — colour is in the same editor. No fingerprint moved.
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
-    unchanged settings every effect now looks thinner, by the ratio of world to old-corner area: rain on Dirt
-    Oval about 6.8×, bubbles on Seatrack about 27× (already at the slider maximum of 100) and stars on Space
-    Sprint about 26×. The amounts are his to adjust in the Track Editor; none was changed. Dust readability
-    (contrast about 1.3) is untouched and also his call.
+    unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
+    bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches
+    far enough to compensate, and the amounts are his to set in the Track Editor — none was changed. Also his: whether
+    the ends of each range look right, and whether the Sand dust wants a higher opacity or a darker colour.
 ---
 
 # PART TWO — CLOSED

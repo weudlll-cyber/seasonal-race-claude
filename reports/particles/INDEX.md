@@ -16,5 +16,9 @@ every report here is reachable and that every link here resolves.
   cull tests each axis with its own scale, a finished racer's dust fades out, and every track effect covers the whole
   track. Before/after on the owner's race, and a table of every track's effects with where their amounts are set.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` and `PARTICLES-VISIBILITY-2/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-3.md](PARTICLES-VISIBILITY-3.md) — 2026-09-28. Every track effect's amount now runs from
+  off to many (maxima measured in the browser, capped where frame time slowed), and every racer-trail generator has
+  an opacity control in the Dev Screen's surface-class editor. Per-effect counts, frame cost and screenshots.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/`, `-2/` and `-3/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
