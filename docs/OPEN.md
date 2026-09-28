@@ -15,7 +15,16 @@ said *"the count has been seven since the decisions were recorded"* while the he
 **twelve** and the list below that held **twelve** — the seven was true before DELIVERY-CLEAN-1's
 first pass appended five rows, the heading was updated and this sentence was not. **One page
 disagreeing with itself is the same disease this page was rebuilt to cure, one level further in.**
-Re-derived from PART ONE today: **thirteen**.
+
+★★ **AND THEN IT HAPPENED TO THIS VERY PARAGRAPH — corrected 2026-09-28.** The sentence that
+closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, which was true on the
+day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
+A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
+**Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
+(lines 15–2570) holds exactly FOURTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+*Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
+*Planned — needs spec*, *Delivering to someone else* and *Build-identity residuals*. Every count on
+this page now says fourteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
