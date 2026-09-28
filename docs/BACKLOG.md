@@ -2630,6 +2630,16 @@ owner's hand**: parked here with enough context to be actionable months from now
     the frame rate evenly** — about 15 fps in the venue shot, 20 fps through the rest of the ceremony and the first 10 s
     of racing, against 30 fps with no effect — which contradicts PARTICLES-VISIBILITY-4's race-camera result for
     fireflies on this machine under this load. Options are proposals only; none built.
+  - **The owner's decision of 2026-09-28 (fifth):** of the options in PARTICLES-VISIBILITY-5, lower the fireflies
+    maximum; the look of the effect stays unchanged.
+  - **MEASURED 2026-09-28 — PARTICLES-VISIBILITY-6; NO MAXIMUM SET.** Report:
+    [PARTICLES-VISIBILITY-6](../reports/particles/PARTICLES-VISIBILITY-6.md). Fireflies from 4,000 halved down to the
+    default 30, three runs each against an interleaved no-effect baseline: **no level matched the baseline on every
+    number within its three-run spread**, the default included, so by the rule no maximum was set and the slider stays
+    0–4,000. On median and p90 alone the frame rate holds at 250 and below and drops from 500; the low levels fail only
+    on the share of long frames and on single-frame spikes, which also vary without any effect (the machine flipped
+    between 60 and 30 fps within a batch). **Needs his word:** accept a rule on median and p90 (maximum 250, then
+    refine), or measure with more baseline runs, or on his machine.
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

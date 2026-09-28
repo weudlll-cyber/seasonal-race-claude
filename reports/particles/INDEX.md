@@ -28,5 +28,9 @@ every report here is reachable and that every link here resolves.
   with mud, dust and fireflies at their maxima. Mud and dust add no stutter; fireflies lower the frame rate (evenly)
   through the ceremony and the first seconds of racing; the flight never takes longer (it runs on elapsed time).
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-5/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-6.md](PARTICLES-VISIBILITY-6.md) — 2026-09-28. The search for a lower fireflies maximum:
+  no level down to the default (30) passed the strict rule against three baseline runs, so no maximum was set. On median
+  and p90 alone the frame rate holds at 250 and below and drops from 500. Proposals for the rule, none built.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-6/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
