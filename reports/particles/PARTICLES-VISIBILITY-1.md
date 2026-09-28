@@ -363,7 +363,9 @@ not with this measurement.
 ## 9 · What was left behind, and what was not
 
 - **On this branch:** this report, its twelve screenshots, one open row in `docs/BACKLOG.md` PART ONE and the
-  re-derived `docs/OPEN.md`. **No product source file changed.**
+  re-derived `docs/OPEN.md`. Also the new directory's `INDEX.md`, its row in `reports/README.md`, and its
+  registration in the index guard (`scripts/check-index.mjs`, `REGISTERED`), which failed the pre-merge run on an
+  undeclared directory until then. **No product source file changed.**
 - **Deleted when done:** the clone `C:/tmp/pv1`, the probe directory `C:/tmp/pv1-probe` (patch scripts, specs, raw
   per-frame JSON), and the clone's data directories `C:/tmp/pv1-data-prod` and `C:/tmp/pv1-data2-prod` (each with
   a throwaway e2e account and the replayed races). Nothing was written to the owner's data. `races.sqlite`

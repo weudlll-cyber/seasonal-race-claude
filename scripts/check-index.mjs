@@ -105,6 +105,10 @@ const REGISTERED = [
   // The whole point of an outside audit is that its findings reach the people who can act on them,
   // so "declared invisible" would have been the wrong answer to the problem it exists to solve.
   { dir: "reports/audit", index: "reports/audit/INDEX.md" },
+  // PARTICLES-VISIBILITY-1, 2026-09-28: a new directory for the particle-visibility problem, which stays
+  // open on its branch until solved. REGISTERED because work will land here again — the fix and its
+  // re-measurement — and because its report is linked from BACKLOG PART ONE.
+  { dir: "reports/particles", index: "reports/particles/INDEX.md" },
 ];
 
 // ── THE ARCHIVES, DECLARED BY NAME (INDEX-COVERAGE-1) ─────────────────────────────────────────
