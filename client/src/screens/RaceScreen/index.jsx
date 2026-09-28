@@ -24,6 +24,7 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
+import { advanceRacerDust } from './racerDust.js';
 import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
@@ -473,10 +474,14 @@ export default function RaceScreen() {
     };
     const trackLightsConfig = geometry.trackLights ?? DEFAULT_TRACK_LIGHTS;
 
+    // PARTICLES-VISIBILITY-2: track effects are drawn INSIDE the world transform (renderRaceFrame.js),
+    // so the world size goes in as `create`'s third argument and every effect places its content over
+    // the whole track. Passing the canvas alone put everything in a canvas-sized corner of the world.
+    const effectWorld = { width: worldWidth, height: worldHeight };
     effectsRef.current = extractEffects(geometry)
       .map(({ id, config }) => {
         const manifest = getEffect(id);
-        return manifest ? manifest.create(canvas, config) : null;
+        return manifest ? manifest.create(canvas, config, effectWorld) : null;
       })
       .filter(Boolean);
 
@@ -1462,42 +1467,9 @@ export default function RaceScreen() {
           d.dv12Max = Math.max(...d._dv12Buf);
         }
 
-        const rt = racerTypeRef.current;
-        // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps)
-        const dtFrames = rawDt / 16;
-        for (const r of st.racers) {
-          if (!r.finished) {
-            const spawnX = r.x;
-            const spawnY = r.y;
-            if (r.surfaceEmitter) {
-              // Surface-class trail: each racer drives its own emitter. spawn appends new
-              // particles IN PLACE into r.surfaceParticles and update advances/compacts it
-              // in place (swap-remove) — no per-frame array/object churn, array identity kept.
-              r.surfaceEmitter.spawn(r.surfaceParticles, spawnX, spawnY, r.baseSpeed, r.angle, ts);
-              r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
-            } else {
-              // native trail fallback: trailFactory-based particles pooled globally
-              st.dustParticles.push(
-                ...rt.getTrailParticles(spawnX, spawnY, r.baseSpeed, r.angle, ts)
-              );
-            }
-          }
-        }
-        // Advance native trail dustParticles — in-place mutation + swap-remove (no allocation).
-        {
-          let i = 0;
-          while (i < st.dustParticles.length) {
-            const p = st.dustParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.alpha -= 0.022;
-            p.r *= 0.97;
-            if (p.alpha <= 0) {
-              st.dustParticles[i] = st.dustParticles[st.dustParticles.length - 1];
-              st.dustParticles.length--;
-            } else i++;
-          }
-        }
+        // Racer dust: spawn behind racers still running, advance everyone's (see racerDust.js).
+        // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps).
+        advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         // Advance burst particles — in-place mutation + swap-remove (no allocation).
         {
           let i = 0;
@@ -1517,6 +1489,9 @@ export default function RaceScreen() {
       } else {
         // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
+        // PARTICLES-VISIBILITY-2: the dust keeps fading here too. Nobody is running, so nothing
+        // spawns; without this call every racer's last dust stood frozen until the screen closed.
+        advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         {
           let i = 0;
           while (i < st.burstParticles.length) {

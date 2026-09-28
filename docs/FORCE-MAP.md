@@ -95,7 +95,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A0. Base speed (duration anchor)
 
-- **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js` → `computeRaceBaseSpeed`](../client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx` → `baseSpeedConfig`](../client/src/screens/RaceScreen/index.jsx#L600).
+- **Code**: `computeRaceBaseSpeed(finishT, targetDuration)` = `finishT / (REFERENCE_FPS × targetDurationSeconds)` — [`raceBaseSpeed.js` → `computeRaceBaseSpeed`](../client/src/modules/raceBaseSpeed.js#L29-L32); consumed at [`index.jsx` → `baseSpeedConfig`](../client/src/screens/RaceScreen/index.jsx#L605).
 - **What**: the per-frame `t`-rate that makes a neutral racer (all multipliers = 1.0) reach the finish in exactly the operator-chosen duration.
 - **When**: always.
 - **Magnitude**: the reference. Everything else is a dimensionless multiplier around 1.0.
@@ -118,7 +118,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A3. `speedBonusMult` — positional back-row compensation
 
-- **Code**: `1 + computeSpeedBonus(rowIndex, …)` — [`index.jsx` → `rowLayoutConfig`](../client/src/screens/RaceScreen/index.jsx#L602).
+- **Code**: `1 + computeSpeedBonus(rowIndex, …)` — [`index.jsx` → `rowLayoutConfig`](../client/src/screens/RaceScreen/index.jsx#L607).
 - **What**: constant per-racer bonus so racers starting further back are not structurally disadvantaged. Constant over the whole race.
 - **Config**: `DEFAULT_ROW_LAYOUT_CONFIG.speedBonusFactor` **1.0**.
 

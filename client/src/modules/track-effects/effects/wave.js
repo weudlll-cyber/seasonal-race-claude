@@ -17,8 +17,12 @@ const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.defau
 const MAX_R = 60;
 const MAX_AGE = 4000;
 
-function create(canvas, config) {
-  const { width, height } = canvas;
+// PARTICLES-VISIBILITY-2: `world` is the area this effect is drawn in when that is not the canvas —
+// the race screen draws track effects inside the world transform and passes the world size, so
+// placement (and any edge wrap or clamp below) covers the whole track instead of a canvas-sized
+// corner of it. The track editor draws in screen space and passes nothing, so it keeps the canvas.
+function create(canvas, config, world) {
+  const { width, height } = world ?? canvas;
   const ripples = Array.from({ length: config.count }, (_, i) => ({
     x: Math.random() * width,
     y: Math.random() * height,

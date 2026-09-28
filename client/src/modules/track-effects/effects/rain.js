@@ -16,8 +16,17 @@ const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.defau
 const MAX_R = 12;
 const MAX_AGE = 500;
 
-function create(canvas, config) {
-  const { width, height } = canvas;
+/**
+ * @param {{width:number,height:number}} canvas  the drawing surface
+ * @param {object} config
+ * @param {{width:number,height:number}} [world]  the area the drops are drawn in, when it is not the
+ *   canvas. PARTICLES-VISIBILITY-2: the race screen draws track effects INSIDE the world transform,
+ *   so drops placed over the canvas size (1280x720) only ever landed in the world's top-left corner;
+ *   it now passes the world size here. The track editor draws effects in screen space and passes
+ *   nothing, so it keeps the canvas. `count` stays drops per second over whichever area this is.
+ */
+function create(canvas, config, world) {
+  const { width, height } = world ?? canvas;
   let drops = [];
   let spawnAccum = 0;
 
