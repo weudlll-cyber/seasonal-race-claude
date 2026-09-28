@@ -36,5 +36,9 @@ every report here is reachable and that every link here resolves.
   corrected rule (median and p90 against ten interleaved no-effect runs, both phases); 300 already halves the frame rate
   in one run.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-7/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-8.md](PARTICLES-VISIBILITY-8.md) — 2026-09-29. Every track effect's amount on one 0–100
+  level scale in the Track Editor (0 off, 100 the effect's maximum, linear), storage unchanged: what each level means
+  natively, the level every stored track shows, and the test that an untouched amount saves byte-identical.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-8/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.

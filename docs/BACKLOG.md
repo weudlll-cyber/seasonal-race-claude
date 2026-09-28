@@ -2645,6 +2645,14 @@ owner's hand**: parked here with enough context to be actionable months from now
     ten interleaved no-effect runs, for the pre-start flight and the first 10 s of racing (the rule of the brief's author,
     not his). 250 passed; 300 already halved the frame rate in one run. Look, minimum, step and default unchanged.
     Report: [PARTICLES-VISIBILITY-7](../reports/particles/PARTICLES-VISIBILITY-7.md).
+  - **The owner's decision of 2026-09-28 (sixth):** the amount control of all seven track effects shows 0–100 — 0 is
+    off, 100 is the effect's current maximum, linear in between (level × maximum / 100).
+  - **BUILT on the branch, 2026-09-29 — PARTICLES-VISIBILITY-8** (`501f1730`, not merged): the Track Editor's amount
+    slider runs 0–100 for all seven effects through one shared conversion; tracks still store, and the race still
+    reads, native amounts. An untouched amount saves byte-identical (tested), and a stored non-zero amount never shows
+    0 (Seatrack's bubbles show 1). Stored tracks show Dirt Oval 5, Seatrack 1, Space Sprint 5. Noticed and left for
+    him: level 1 is coarse for the per-minute effects, so once moved, Seatrack's bubbles cannot return below 24× their
+    stored amount. Report: [PARTICLES-VISIBILITY-8](../reports/particles/PARTICLES-VISIBILITY-8.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

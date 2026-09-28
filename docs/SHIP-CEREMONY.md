@@ -53,8 +53,8 @@ is inside them is arithmetic and nothing else. Regenerate with
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
 | files in the RACE HULL — `node scripts/engine-reach.mjs` | 203 |
-| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 77 |
-| of those, files that CANNOT reach the engine | 22 |
+| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 78 |
+| of those, files that CANNOT reach the engine | 23 |
 | hull files the folder rule never covered — listed in [SIM.md](SIM.md), not here | 148 |
 
 <!-- END GENERATED: engine-reach counts -->
