@@ -1,9 +1,11 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-27
+# What is open — DERIVED from BACKLOG PART ONE, 2026-09-28
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-27**, from PART ONE's **fourteen** rows — after the owner's decisions of
+Re-derived on **2026-09-28**, from PART ONE's **fifteen** rows. The one added today is
+**PARTICLES-VISIBILITY-1** (row 15 below), measured and not fixed. The fourteen before it were derived on
+2026-09-27 — after the owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
 DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
 which closed §1 and opened one new row (verify-on-demand). **The README rewrite was
@@ -21,10 +23,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2570) holds exactly FOURTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+(lines 15–2594) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
 *Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
-*Planned — needs spec*, *Delivering to someone else* and *Build-identity residuals*. Every count on
-this page now says fourteen.
+*Planned — needs spec*, *Delivering to someone else*, *Build-identity residuals* and, since
+2026-09-28, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*. Every count on this page now says fifteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -41,18 +43,20 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The fifteen rows in section 0 are all WORK**, and that is still true — row 15 carries one
+question for his eye inside it, entered in §1 below.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
 said "needs his word" in its own text — **three places in one list disagreeing, which is the
 disease this page was rebuilt to cure.** The six were written in; the owner then answered all six
-the same day, so §1 is empty again — **this time because the answers exist and are linked, not
-because nobody looked.**
+the same day, so §1 was empty again — **this time because the answers exist and are linked, not
+because nobody looked.** ★ **It holds ONE question again since 2026-09-28** — the finish burst, from row
+15 — and says so in §1 itself.
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -139,6 +143,12 @@ because nobody looked.**
    of those files. Costs in the arc 4 report; commission them one at a time.
 14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
+15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1: dust, rain and the finish burst show at some moments
+   and not others.** Measured on his own stored race `VY7KKE`, replayed exactly: the dust cull tests Y
+   with the X scale, so **90%** of on-screen dust is never drawn when the camera is on the bottom straight;
+   rain spawns only in a canvas-sized corner of the world, so it shows in about a quarter of the race; the
+   finish burst fires every time and its complaint is **not proven**. Nothing fixed; open on
+   `fix/particles-visibility`. [Report](../reports/particles/PARTICLES-VISIBILITY-1.md).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -160,7 +170,13 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★★ **EMPTY AGAIN, 2026-09-27 — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
+★ **ONE QUESTION, entered 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1).** He said the finish
+particles do not really work. The measurement found them firing on every crossing and always reaching the
+screen, so **what he means by it is his to say**: too brief at the photo-finish zoom, too small under the
+overview, hidden under the horses, or something else. The report's screenshots are the "before". Nothing
+else on row 15 waits on him: the dust and rain causes are measured, and their fixes are render-only.
+
+★★ **EMPTY AGAIN ON 2026-09-27 (one question entered 2026-09-28, above) — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
 answers rather than asserted.** The section held six questions for one day. Each is now a decision
 in [BACKLOG.md](BACKLOG.md) PART ONE, on the row that carries the work:
 
