@@ -34,6 +34,7 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { catmullRomSpline } from '../../modules/track-editor/catmullRom.js';
+import { computeStartRowCount } from '../../modules/rowLayout.js';
 import { drawTrackLines } from './trackEditorDraw.js';
 
 /**
@@ -193,15 +194,51 @@ export function raceViewCourse(
 }
 
 /**
- * Three racers standing still side by side across the course — at -1/4, 0 and +1/4 of the corridor
- * width from its centre line, all facing the direction of travel.
+ * The lateral distance, in world px, between two neighbours in a start-grid row of the race — the
+ * race's own grid for this field: the row count `raceCore.js` takes from `computeStartRowCount`
+ * (rowLayout.js) with the physical sprite size `deriveSpriteGeometry` derives, and the slots
+ * `computeRowPhysicalY` spreads evenly over ±startSpreadRange, where ±0.5 is the corridor's edge.
+ * So neighbours sit `startSpreadRange × width / (rowSize − 1)` apart.
+ *
+ * @returns {number} world px; 0 when a row holds one racer
  */
-export function raceViewRacerPlacements(course) {
+export function raceViewRowSlotPx({
+  racerType,
+  trackWidthPx,
+  autoScaleConfig,
+  behaviorConfig,
+  hasDisplaySizeOverride,
+  nRacers = RACE_VIEW_FIELD_SIZE,
+}) {
+  const c = racerType.config;
+  const spread = behaviorConfig.startSpreadRange;
+  const effectiveWidth = trackWidthPx * spread;
+  const { physicalSpriteSize } = deriveSpriteGeometry({
+    displaySize: c.displaySize,
+    bodyFillX: c.bodyFillX,
+    bodyFillY: c.bodyFillY,
+    nRacers,
+    effectiveWidth,
+    autoScaleConfig,
+    hasDisplaySizeOverride,
+  });
+  const rowSize = Math.ceil(
+    nRacers / computeStartRowCount(effectiveWidth, nRacers, physicalSpriteSize)
+  );
+  return rowSize > 1 ? (spread * trackWidthPx) / (rowSize - 1) : 0;
+}
+
+/**
+ * Three racers standing still side by side across the course: three neighbouring slots of a start
+ * row, centred on the centre line, `slotPx` apart (raceViewRowSlotPx), all facing the direction of
+ * travel.
+ */
+export function raceViewRacerPlacements(course, slotPx) {
   const nx = -Math.sin(course.angle);
   const ny = Math.cos(course.angle);
   return [-1, 0, 1].map((k) => ({
-    x: course.x + nx * k * (course.width / 4),
-    y: course.y + ny * k * (course.width / 4),
+    x: course.x + nx * k * slotPx,
+    y: course.y + ny * k * slotPx,
     angle: course.angle,
   }));
 }

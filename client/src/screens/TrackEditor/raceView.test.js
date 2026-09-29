@@ -19,6 +19,7 @@ import {
   raceViewRacerScale,
   raceViewCourse,
   raceViewRacerPlacements,
+  raceViewRowSlotPx,
   raceViewArea,
   drawRaceView,
   drawRaceViewFrame,
@@ -30,6 +31,7 @@ import {
   DEFAULT_RACE_BEHAVIOR_CONFIG,
 } from '../../modules/storage/defaults.js';
 import { deriveSpriteGeometry } from '../../modules/raceParams.js';
+import { computeStartRowCount, computeRowPhysicalY } from '../../modules/rowLayout.js';
 import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
@@ -246,12 +248,43 @@ describe('the track course and the racer reference', () => {
     expect(raceViewCourse({ ...LINES, centerPoints: [] }, { x: 0, y: 0 })).toBeNull();
   });
 
-  it('three racers side by side ACROSS the course, a quarter width apart, facing along it', () => {
-    const p = raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 });
+  it('three racers side by side ACROSS the course, one start-grid slot apart, facing along it', () => {
+    const p = raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 }, 60);
     expect(p).toHaveLength(3);
     expect(p.map((q) => q.x)).toEqual([1000, 1000, 1000]);
-    expect(p.map((q) => q.y)).toEqual([425, 500, 575]);
+    expect(p.map((q) => q.y)).toEqual([440, 500, 560]);
     expect(p.every((q) => q.angle === 0)).toBe(true);
+  });
+
+  it('the slot is the race’s own start-grid spacing for the field', () => {
+    const racerType = getRacerType('dolphin');
+    const c = racerType.config;
+    const behaviorConfig = DEFAULT_RACE_BEHAVIOR_CONFIG;
+    const spread = behaviorConfig.startSpreadRange;
+    const { physicalSpriteSize } = deriveSpriteGeometry({
+      displaySize: c.displaySize,
+      bodyFillX: c.bodyFillX,
+      bodyFillY: c.bodyFillY,
+      nRacers: RACE_VIEW_FIELD_SIZE,
+      effectiveWidth: 300 * spread,
+      autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+    });
+    const rowSize = Math.ceil(
+      RACE_VIEW_FIELD_SIZE /
+        computeStartRowCount(300 * spread, RACE_VIEW_FIELD_SIZE, physicalSpriteSize)
+    );
+    // Two neighbours in a row, as the race places them (computeRowPhysicalY, ±0.5 = the edge).
+    const a = computeRowPhysicalY(0, rowSize, spread) / 2;
+    const b = computeRowPhysicalY(1, rowSize, spread) / 2;
+    const got = raceViewRowSlotPx({
+      racerType,
+      trackWidthPx: 300,
+      autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+      behaviorConfig,
+      hasDisplaySizeOverride: false,
+    });
+    expect(rowSize).toBeGreaterThan(1);
+    expect(got).toBeCloseTo((b - a) * 300, 9);
   });
 
   // Three zooms: the owner's racing zoom, one wide enough for the readability floor to lift the
@@ -315,7 +348,7 @@ describe('drawRaceView — lines, racers, and the race’s layer order', () => {
     const racers = {
       racerType: { drawRacer },
       displayScale: 0.77,
-      placements: raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 }),
+      placements: raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 }, 60),
     };
     drawRaceView(ctx, { ...view, lines: LINES, racers }, [effect]);
 

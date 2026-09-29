@@ -44,6 +44,7 @@ import {
   raceViewCourse,
   raceViewRacerPlacements,
   raceViewRacerScale,
+  raceViewRowSlotPx,
   drawRaceViewFrame,
   drawRaceView,
 } from './raceView.js';
@@ -529,7 +530,16 @@ export default function TrackEditor() {
         behaviorConfig,
         hasDisplaySizeOverride: raceViewHasSizeOverride,
       }),
-      placements: raceViewRacerPlacements(raceViewCourseNow),
+      placements: raceViewRacerPlacements(
+        raceViewCourseNow,
+        raceViewRowSlotPx({
+          racerType,
+          trackWidthPx: mode === 'center' ? centerWidth : raceViewCourseNow.width,
+          autoScaleConfig,
+          behaviorConfig,
+          hasDisplaySizeOverride: raceViewHasSizeOverride,
+        })
+      ),
     };
   }
   raceViewRef.current = {
