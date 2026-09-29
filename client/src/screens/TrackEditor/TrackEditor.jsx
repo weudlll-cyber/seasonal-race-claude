@@ -4,13 +4,12 @@
 // Project:     RaceArena
 // Created:     2026-04-25
 // Description: Full-screen track editor — Catmull-Rom spline drawing, undo/redo,
-//              effects config, and server save/load. Beside the whole-track view, a race-view
-//              panel shows the track and its effects at the race camera's racing zoom
-//              (PARTICLES-VISIBILITY-10, raceView.js), with the track lines, three racers at race
-//              size and the panel's area framed in the main view (PARTICLES-VISIBILITY-11).
-//              PARTICLES-VISIBILITY-12: the race view is a VIEW now, switched with the track view
-//              rather than a panel beside it, and a test race runs this track with the unsaved
-//              effects and comes back to exactly this state (testRace.js).
+//              effects config, and server save/load. Two views, switched (PARTICLES-VISIBILITY-12):
+//              the whole track, for drawing, and the race view — a whole race frame at the race
+//              camera's racing zoom with the track lines, the effects and three racers at race size
+//              (raceView.js, PARTICLES-VISIBILITY-10/11); the track view frames the race view's area.
+//              A test race runs this track with the unsaved effects and comes back to exactly this
+//              state (testRace.js).
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
