@@ -2661,6 +2661,15 @@ owner's hand**: parked here with enough context to be actionable months from now
     draws every effect in the world, inside the editor's own world transform, as the race does. What would make the
     bubbles visible is his: in the race camera only the amount puts more on screen (2, 4, 8, 17 at levels 10, 25, 50,
     100). Report: [PARTICLES-VISIBILITY-9](../reports/particles/PARTICLES-VISIBILITY-9.md).
+  - **The owner's decision of 2026-09-29:** the whole-track preview cannot show how large and dense effects look in
+    the race, whose camera is much closer; of the two options he chose a preview at race-camera distance in the editor,
+    and not to change how effects are sized or counted.
+  - **BUILT on the branch, 2026-09-29 — PARTICLES-VISIBILITY-10** (`99be7f50`, not merged): a race-view panel beside
+    the editor's whole-track view, at the race camera's ordinary racing zoom taken from the camera's own code; it opens
+    on the track's start and a click on a track point recentres it. MEASURED against the real race: the same zoom, and
+    the same density at that zoom (Seatrack bubbles 0.22 against 0.20, Dirt Oval rain 0.15 against 0.16 per 100,000
+    px²). Also MEASURED: most blue dots in a Seatrack race frame are the dolphins' water trails, not the bubbles.
+    Report: [PARTICLES-VISIBILITY-10](../reports/particles/PARTICLES-VISIBILITY-10.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

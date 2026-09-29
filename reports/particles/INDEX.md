@@ -44,5 +44,9 @@ every report here is reachable and that every link here resolves.
   invisible in the race (count per screen: a median of 2 on screen, MEASURED; not size, not a defect), and the Track
   Editor's preview now places and draws effects in the world as the race does. Editor-versus-race screenshots.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-9/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-10.md](PARTICLES-VISIBILITY-10.md) — 2026-09-29. A race-view panel in the Track Editor, at
+  the race camera's own racing zoom (from the camera's code, per track), beside the whole-track view; measured against
+  the real race on Seatrack and Dirt Oval: the same zoom, and the same density at that zoom.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-10/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
