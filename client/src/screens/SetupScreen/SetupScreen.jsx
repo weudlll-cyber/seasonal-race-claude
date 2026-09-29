@@ -70,6 +70,7 @@ import {
   QUICK_TEST_SEED_MIN,
   QUICK_TEST_SEED_MAX,
 } from './quickTestSeed.js';
+import { buildQuickTestRace } from './quickTestRace.js';
 import styles from './SetupScreen.module.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { resolveNameSet, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
@@ -1028,64 +1029,19 @@ function SetupScreen() {
       .slice(0, needed);
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
 
-    // Quick Test runs the track's own canonical defaults: its lap count (closed) or its
-    // clamped default seconds (open) — the same inputs the sim CLI takes, so any Quick-Test
-    // race is expressible as a sim invocation.
-    const quickGeom = track.geometryId ? getTrack(track.geometryId) : null;
-    const quickPathLengthPx = quickGeom?.pathLengthPx ?? 0;
-    const quickLaps = trackDefaultLaps(track);
-    // The default seconds are clamped at THIS race's pace, so the Quick-Test type's own
-    // multiplier decides the ceiling — not the track's default type.
-    const quickSpeedMultiplier = getRacerType(effectiveTypeId)?.getSpeedMultiplier() ?? 1.0;
-    const quickSeconds = trackDefaultSeconds(
+    // PARTICLES-VISIBILITY-12: the race itself is built in quickTestRace.js, moved there unchanged so
+    // the Track Editor's test race starts the same race by the same code.
+    const race = buildQuickTestRace({
       track,
-      quickPathLengthPx,
-      paceSpeedPxPerSec(normalSpeedPxPerSec, quickSpeedMultiplier),
-      behaviorConfig.runoutZone
-    );
-    const quickModel = deriveRaceDuration({
-      isOpen: quickIsOpen,
-      pathLengthPx: quickPathLengthPx,
-      laps: quickLaps,
-      requestedSeconds: quickSeconds,
-      normalSpeedPxPerSec,
-      speedMultiplier: quickSpeedMultiplier,
-      runoutZone: behaviorConfig.runoutZone,
-    });
-    const quickRealizedDurationSec = quickModel.realizedDurationSec;
-    const race = {
+      geom,
       racers: testPlayers,
-      trackId: track.id,
-      trackName: track.name,
-      geometryId: track.geometryId ?? null,
       racerTypeId: effectiveTypeId,
-      worldWidth: track.worldWidth ?? 1280,
-      worldHeight: track.worldHeight ?? 720,
-      duration: raceDefaults.duration,
-      eventName: 'Quick Test',
-      winners: raceDefaults.winners,
-      raceMode: quickIsOpen ? 'time' : 'laps',
-      targetLaps: quickIsOpen ? undefined : quickLaps,
-      targetDurationSec: quickIsOpen ? quickSeconds : undefined,
-      realizedDurationSec: quickRealizedDurationSec,
-      paceScale: quickModel.paceScale,
-      trackSurfaceClasses: track.surfaceClasses ?? [],
-      racePlanEnabled: quickRealizedDurationSec >= racePlanMinDur,
-      // Empty field ⇒ a seed is drawn here, once, BEFORE the race starts — the race itself is then
-      // a pure function of it (RaceScreen seeds Math.random from this value). The drawn seed is not
-      // written back into the field, so the next Quick-Test draws a fresh one.
+      raceDefaults,
+      normalSpeedPxPerSec,
+      runoutZone: behaviorConfig.runoutZone,
+      racePlanMinDur,
       racePlanSeed: resolveQuickTestSeed(quickTestSeed).seed,
-      // RACE-ACTION-CONTROL-1 — the same stage the normal path carries. Quick Test is the harness
-      // path the camera-replay tool records against, so leaving it out would make a Quick-Test
-      // recording silently un-replayable the moment the host is on a non-quiet stage.
-      raceActionStage: normalizeRaceActionStage(raceDefaults.raceActionStage),
-      // ★★ RACE-SOURCE-1 — THE ONE WRITER THAT IS NOT A REAL RACE. A period evaluation must not
-      // count these, and this field is the only thing that will ever say so: `eventName` below is
-      // 'Quick Test' by default but is not evidence, because the ordinary path takes that text from
-      // the host and he can type the same words.
-      raceSource: RACE_SOURCE.QUICK_TEST,
-      timestamp: new Date().toISOString(),
-    };
+    });
 
     sessionStorage.setItem('activeRace', JSON.stringify(race));
     navigate('/race');

@@ -38,13 +38,13 @@ import { computeStartRowCount } from '../../modules/rowLayout.js';
 import { drawTrackLines } from './trackEditorDraw.js';
 
 /**
- * The panel's canvas: the CENTRE HALF (each axis) of a 1280×720 race frame, at the race canvas's own
- * pixel scale. A crop rather than a shrunken whole frame, so an effect item is exactly as many canvas
- * pixels across as in the race and as many items fall on each pixel area — only less of the frame
- * is shown.
+ * The race view's canvas: a WHOLE race frame, 1280×720 at the race canvas's own pixel scale, so an
+ * effect item or a racer is exactly as many canvas pixels across as in the race and as many fall on
+ * each pixel area. PARTICLES-VISIBILITY-12 made the race view a full-width view of its own; the
+ * centre-half crop it had as a small panel beside the track view (PARTICLES-VISIBILITY-10) is gone.
  */
-export const RACE_VIEW_W = REFERENCE_CANVAS_W / 2;
-export const RACE_VIEW_H = REFERENCE_CANVAS_H / 2;
+export const RACE_VIEW_W = REFERENCE_CANVAS_W;
+export const RACE_VIEW_H = REFERENCE_CANVAS_H;
 
 /** The camera state whose zoom is the ordinary racing shot — "the reference shot" in defaults.js. */
 const RACING_STATE = 'LEADER_ZOOM';

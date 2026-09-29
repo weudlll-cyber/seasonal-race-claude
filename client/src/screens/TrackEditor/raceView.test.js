@@ -380,7 +380,9 @@ describe('the frame in the main view', () => {
   it('is exactly the panel’s world area, and its line stays 1.5 screen px', () => {
     const view = { centre: { x: 1000, y: 500 }, scaleX: 2.5, scaleY: 2 };
     const area = raceViewArea(view);
-    expect(area).toEqual({ x: 1000 - 128, y: 500 - 90, w: 256, h: 180 });
+    const w = RACE_VIEW_W / 2.5;
+    const h = RACE_VIEW_H / 2;
+    expect(area).toEqual({ x: 1000 - w / 2, y: 500 - h / 2, w, h });
     const ctx = loggingCtx();
     drawRaceViewFrame(ctx, view, 0.25);
     const rect = ctx.log.find((e) => e.op === 'rect');

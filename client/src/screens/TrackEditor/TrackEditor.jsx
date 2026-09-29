@@ -8,6 +8,9 @@
 //              panel shows the track and its effects at the race camera's racing zoom
 //              (PARTICLES-VISIBILITY-10, raceView.js), with the track lines, three racers at race
 //              size and the panel's area framed in the main view (PARTICLES-VISIBILITY-11).
+//              PARTICLES-VISIBILITY-12: the race view is a VIEW now, switched with the track view
+//              rather than a panel beside it, and a test race runs this track with the unsaved
+//              effects and comes back to exactly this state (testRace.js).
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -35,6 +38,17 @@ import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import { getRacerType } from '../../racer-types/index.js';
+import { normalSpeedFrom } from '../../modules/durationModel.js';
+import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
+import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import {
+  testRaceBlockedReason,
+  buildTestRace,
+  startTestRace,
+  peekEditorReturn,
+  clearEditorReturn,
+} from './testRace.js';
 import {
   RACE_VIEW_W,
   RACE_VIEW_H,
@@ -105,6 +119,7 @@ export default function TrackEditor() {
     getCanvasCoords,
     setWorldSize,
     resetViewport,
+    restoreViewport,
   } = useViewport(canvasRef);
 
   // ── effect preview refs ────────────────────────────────────────────────────
@@ -144,6 +159,12 @@ export default function TrackEditor() {
   const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
   // Where the race view looks: null = the start of the track (raceViewStart), else a clicked point.
   const [raceViewCentre, setRaceViewCentre] = useState(null);
+  // PARTICLES-VISIBILITY-12: which view the editor shows — 'track' (draw and edit) or 'race' (the
+  // race view, large). One canvas is shown at a time; both stay mounted, so both stay drawn.
+  const [view, setView] = useState('track');
+  // PARTICLES-VISIBILITY-12: the unsaved state a test race carried (testRace.js). Read in an
+  // initializer WITHOUT removing it — an initializer may run twice — and removed once applied below.
+  const [returnState] = useState(peekEditorReturn);
   const [bgUploadError, setBgUploadError] = useState(null);
   const [effects, setEffects] = useState([]);
   const [trackLights, setTrackLights] = useState(DEFAULT_TRACK_LIGHTS);
@@ -342,6 +363,9 @@ export default function TrackEditor() {
   useEffect(() => {
     if (draftOfferedRef.current) return;
     draftOfferedRef.current = true;
+    // PARTICLES-VISIBILITY-12: back from a test race, the editor restores its own unsaved state
+    // (below); offering an older draft over it would be the wrong state.
+    if (returnState) return;
     // ★ Q-22b: a draft written by a pre-per-track build can never be offered again, so clear it
     // rather than leaving it in storage forever.
     clearLegacyDraft();
@@ -372,6 +396,23 @@ export default function TrackEditor() {
     if (typeof d.centerWidth === 'number') setCenterWidth(d.centerWidth);
     if (d.trackName) setTrackName(d.trackName);
     setIsDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // PARTICLES-VISIBILITY-12: back from a test race — put the carried state back exactly: the
+  // snapshot (points, width, mode, name, background, effects, lights — the undo history's own
+  // `applySnapshot`), the loaded track, the dirty flag, the viewport, the view and the race-view
+  // centre. Then the carried state is removed, so a later visit starts normally.
+  useEffect(() => {
+    if (!returnState) return;
+    clearEditorReturn();
+    applySnapshot(returnState.snapshot);
+    setLoadedGeometryId(returnState.loadedGeometryId);
+    setLoadedServerId(returnState.loadedServerId);
+    setIsDirty(returnState.isDirty);
+    restoreViewport(returnState.viewport);
+    setView(returnState.view);
+    setRaceViewCentre(returnState.raceViewCentre);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -820,6 +861,72 @@ export default function TrackEditor() {
       isPanningRef.current = false;
       canvasRef.current?.releasePointerCapture(e.pointerId);
     }
+  }
+
+  // ── test race (PARTICLES-VISIBILITY-12) ───────────────────────────────────
+  // Quick Test's race for this track with the editor's UNSAVED effects. The track and its geometry
+  // are the SAVED ones — the race runs what is stored; the effects are what is on screen.
+  const testRaceServerTrack = serverTracksCtl.tracks.find((t) => t.id === loadedServerId) ?? null;
+  const testRaceGeom = useMemo(
+    () => (loadedGeometryId ? getTrack(loadedGeometryId) : null),
+    [loadedGeometryId]
+  );
+  const testRaceDefaults = storageGet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
+  const testRaceBlocked = testRaceBlockedReason({
+    serverTrack: testRaceServerTrack,
+    geom: testRaceGeom,
+    hasUnsavedBackgroundFile: !!backgroundFile,
+    raceDefaults: testRaceDefaults,
+  });
+
+  function handleTestRace() {
+    if (testRaceBlocked) return;
+    const race = buildTestRace({
+      serverTrack: testRaceServerTrack,
+      geom: testRaceGeom,
+      effects,
+      raceDefaults: testRaceDefaults,
+      normalSpeedPxPerSec: normalSpeedFrom(loadBaseSpeedConfig()),
+      runoutZone: behaviorConfig.runoutZone,
+      racePlanMinDur: loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30,
+    });
+    // PARTICLES-VISIBILITY-12: the hand-over — everything the editor needs to come back exactly as
+    // it is now travels with the race (testRace.js `startTestRace`) and is restored above.
+    startTestRace(
+      race,
+      {
+        snapshot: getSnapshot(),
+        loadedGeometryId,
+        loadedServerId,
+        isDirty,
+        viewport: {
+          worldW: editorWorldW,
+          worldH: editorWorldH,
+          zoom: viewZoom,
+          panX: viewPanX,
+          panY: viewPanY,
+        },
+        view,
+        raceViewCentre,
+      },
+      navigate
+    );
+  }
+
+  // PARTICLES-VISIBILITY-12: in the race view, a click on a track point recentres it — the same rule
+  // as a click on a point in the track view. The click is turned back into world units through the
+  // race view's own transform (the inverse of drawRaceView's).
+  function handleRaceViewClick(e) {
+    const rect = raceViewCanvasRef.current.getBoundingClientRect();
+    const { centre, scaleX, scaleY } = raceViewRef.current;
+    const px = ((e.clientX - rect.left) * RACE_VIEW_W) / rect.width;
+    const py = ((e.clientY - rect.top) * RACE_VIEW_H) / rect.height;
+    const x = centre.x + (px - RACE_VIEW_W / 2) / scaleX;
+    const y = centre.y + (py - RACE_VIEW_H / 2) / scaleY;
+    const activeList =
+      mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
+    const hit = findPointAtPosition(activeList, x, y, HIT_RADIUS);
+    if (hit !== -1) setRaceViewCentre({ x: activeList[hit].x, y: activeList[hit].y });
   }
 
   function handleCanvasClick(e) {
@@ -1310,7 +1417,45 @@ export default function TrackEditor() {
       />
 
       <div className={s.main}>
-        <div className={s.canvasWrapper} ref={wrapperRef} tabIndex={0} onKeyDown={handleKeyDown}>
+        {/* PARTICLES-VISIBILITY-12: the view switch — Track to draw, Race view to see the effects as
+            the race will show them — and the test race, a real race with the unsaved effects. */}
+        <div className={s.viewBar}>
+          <div className={s.modeGroup} role="group" aria-label="View">
+            <button
+              className={`${s.modeBtn} ${view === 'track' ? s.modeBtnActive : ''}`}
+              aria-pressed={view === 'track'}
+              onClick={() => setView('track')}
+            >
+              Track
+            </button>
+            <button
+              className={`${s.modeBtn} ${view === 'race' ? s.modeBtnActive : ''}`}
+              aria-pressed={view === 'race'}
+              onClick={() => setView('race')}
+            >
+              Race view
+            </button>
+          </div>
+          <button
+            className={s.testRaceBtn}
+            onClick={handleTestRace}
+            disabled={!!testRaceBlocked}
+            title={
+              testRaceBlocked ??
+              'A real race on this track with the current effects — nothing is saved'
+            }
+          >
+            Test race
+          </button>
+          {testRaceBlocked && <span className={s.viewBarNote}>{testRaceBlocked}</span>}
+        </div>
+        <div
+          className={s.canvasWrapper}
+          ref={wrapperRef}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          hidden={view !== 'track'}
+        >
           <canvas
             ref={canvasRef}
             width={CW}
@@ -1324,7 +1469,7 @@ export default function TrackEditor() {
             onPointerUp={handlePointerUp}
           />
         </div>
-        <figure className={s.raceView}>
+        <figure className={s.raceView} hidden={view !== 'race'}>
           <canvas
             ref={raceViewCanvasRef}
             width={RACE_VIEW_W}
@@ -1332,10 +1477,11 @@ export default function TrackEditor() {
             className={s.raceViewCanvas}
             role="img"
             aria-label="Race view — the track and its effects at the race camera's racing zoom"
+            onClick={handleRaceViewClick}
           />
           <figcaption className={s.raceViewCaption}>
-            Race view — the race camera&apos;s racing zoom ({raceViewZoom.scaleY.toFixed(2)}× the
-            world), the centre half of a race frame; three racers at the size of a{' '}
+            Race view — a whole race frame at the race camera&apos;s racing zoom (
+            {raceViewZoom.scaleY.toFixed(2)}× the world); three racers at the size of a{' '}
             {RACE_VIEW_FIELD_SIZE}-racer race. Click a track point to look there.
           </figcaption>
         </figure>

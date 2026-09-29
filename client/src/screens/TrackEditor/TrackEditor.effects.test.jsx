@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, act, fireEvent } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
 import { RACE_VIEW_W, RACE_VIEW_H, raceViewScale, raceViewArea } from './raceView.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { EDITOR_RETURN_KEY } from './testRace.js';
+import { saveDraft } from './trackEditorDraft.js';
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
 const ctxStub = {
@@ -781,5 +783,96 @@ describe('TrackEditor main view frames the race view (PARTICLES-VISIBILITY-11)',
     main.rects.length = 0;
     act(() => _rafCallback(32));
     expectRect(main.rects.at(-1), area({ x: 900, y: 500 }));
+  });
+});
+
+// ── PARTICLES-VISIBILITY-12: the view switch, and the return from a test race ───────────────────
+describe('TrackEditor views and the test-race round trip (PARTICLES-VISIBILITY-12)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  const trackView = (c) =>
+    c.querySelector('canvas[aria-label^="Track editor canvas"]').parentElement;
+  const raceView = (c) => c.querySelector('canvas[aria-label^="Race view"]').parentElement;
+
+  it('the switch shows one view at a time: Track first, then the race view', async () => {
+    const { container } = renderEditor();
+    expect(trackView(container).hidden).toBe(false);
+    expect(raceView(container).hidden).toBe(true);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Race view' })));
+    expect(trackView(container).hidden).toBe(true);
+    expect(raceView(container).hidden).toBe(false);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Track' })));
+    expect(trackView(container).hidden).toBe(false);
+  });
+
+  // The state a test race carries, exactly as TrackEditor's handleTestRace hands it over.
+  const CARRIED = {
+    snapshot: {
+      centerPoints: [
+        { x: 400, y: 300 },
+        { x: 900, y: 500 },
+      ],
+      innerPoints: [],
+      outerPoints: [],
+      centerWidth: 120,
+      mode: 'center',
+      activeBoundary: 'inner',
+      closed: false,
+      name: 'Carried Track',
+      backgroundImage: null,
+      effects: [{ id: 'rain', config: { count: 200 } }],
+      trackLights: undefined,
+    },
+    loadedGeometryId: null,
+    loadedServerId: null,
+    isDirty: true,
+    viewport: { worldW: 1280, worldH: 720, zoom: 1, panX: 0, panY: 0 },
+    view: 'race',
+    raceViewCentre: { x: 900, y: 500 },
+  };
+
+  it('back from a test race: the carried state is put back exactly, and no draft is offered over it', async () => {
+    const raceCtx = trackingCtx();
+    routeContexts({ main: trackingCtx(), raceView: raceCtx });
+    // The item the effect draws sits at the carried race-view centre, so it lands at the panel centre
+    // only if the centre came back; it is created only if the effects came back.
+    const create = vi.fn((canvas, config) => ({
+      update: vi.fn(),
+      render: (c) => c.arc(900, 500, config.count === 200 ? 4.75 : 1),
+    }));
+    getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
+    // A draft of another track waits in storage — the offer must not fire over the carried state.
+    saveDraft({
+      centerPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      innerPoints: [],
+      outerPoints: [],
+    });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    sessionStorage.setItem(EDITOR_RETURN_KEY, JSON.stringify(CARRIED));
+
+    const { container } = renderEditor();
+    await act(async () => {});
+
+    expect(raceView(container).hidden).toBe(false); // the view
+    expect(create).toHaveBeenCalled(); // the effects
+    expect(create.mock.calls.at(-1)[1]).toEqual({ count: 200 });
+    expect(screen.getByPlaceholderText('Track name…').value).toBe('Carried Track'); // the snapshot
+    raceCtx.arcs.length = 0;
+    act(() => _rafCallback(16));
+    const item = raceCtx.arcs.filter((a) => a.r === 4.75).at(-1);
+    expect(item.x).toBeCloseTo(RACE_VIEW_W / 2, 6); // the race-view centre
+    expect(item.y).toBeCloseTo(RACE_VIEW_H / 2, 6);
+    expect(sessionStorage.getItem(EDITOR_RETURN_KEY)).toBeNull(); // cleared once applied
+    expect(confirm).not.toHaveBeenCalled(); // no draft offered over it
   });
 });
