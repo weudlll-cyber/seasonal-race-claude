@@ -2670,6 +2670,14 @@ owner's hand**: parked here with enough context to be actionable months from now
     the same density at that zoom (Seatrack bubbles 0.22 against 0.20, Dirt Oval rain 0.15 against 0.16 per 100,000
     px²). Also MEASURED: most blue dots in a Seatrack race frame are the dolphins' water trails, not the bubbles.
     Report: [PARTICLES-VISIBILITY-10](../reports/particles/PARTICLES-VISIBILITY-10.md).
+  - **The owner's observation of 2026-09-29:** the race-view panel showed only background and effects — nothing about
+    how large a racer is or where the track is — so size could not be judged.
+  - **BUILT on the branch, 2026-09-29 — PARTICLES-VISIBILITY-11** (`e8bad085`, `3965dd2d`, not merged): the panel now
+    draws the editor's track lines, three racers of the track's racer type standing in the race's start-row slots, and
+    the main view frames the panel's area. MEASURED: the panel's racers are the race's size at the racing zoom (dolphin
+    100.09 px, horse 135.26 px, equal to all 40 racers in the captured race frames). Sized for a 40-racer field, his
+    usual one; the size depends on the field, which is his to decide whether to expose.
+    Report: [PARTICLES-VISIBILITY-11](../reports/particles/PARTICLES-VISIBILITY-11.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

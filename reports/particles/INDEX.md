@@ -48,5 +48,9 @@ every report here is reachable and that every link here resolves.
   the race camera's own racing zoom (from the camera's code, per track), beside the whole-track view; measured against
   the real race on Seatrack and Dirt Oval: the same zoom, and the same density at that zoom.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-10/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-11.md](PARTICLES-VISIBILITY-11.md) — 2026-09-29. Reference points in the race-view panel:
+  the editor's track lines, three racers of the track's type at the race's drawn size (MEASURED equal to the race's
+  racers at the racing zoom), and the panel's area framed in the main view.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-11/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
