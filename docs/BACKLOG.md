@@ -2678,6 +2678,15 @@ owner's hand**: parked here with enough context to be actionable months from now
     100.09 px, horse 135.26 px, equal to all 40 racers in the captured race frames). Sized for a 40-racer field, his
     usual one; the size depends on the field, which is his to decide whether to expose.
     Report: [PARTICLES-VISIBILITY-11](../reports/particles/PARTICLES-VISIBILITY-11.md).
+  - **The owner's decisions of 2026-09-29 (on the preview):** the editor gets two switchable views and a "Test race"
+    button; a test race uses the editor's current, unsaved settings and nothing is stored until he presses Save; the
+    test-race field is 40 racers of the track's own racer type; the test race has the track's normal length.
+  - **BUILT on the branch, 2026-09-30 — PARTICLES-VISIBILITY-12** (`d69984bc`, `2a6b366b`, not merged): a Track / Race
+    view switch (the race view a whole race frame at race zoom, the small panel gone) and a Test race — Quick Test's
+    race, by Quick Test's own builder, with the unsaved effects carried in the race hand-off. MEASURED in the browser:
+    after a test race the stored track is byte-identical, no local history, no server race, no result hand-off, and the
+    editor returns with its unsaved state (a control with the protections removed wrote one history entry and one
+    server race). No fingerprint moved. Report: [PARTICLES-VISIBILITY-12](../reports/particles/PARTICLES-VISIBILITY-12.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

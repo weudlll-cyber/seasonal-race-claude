@@ -52,5 +52,10 @@ every report here is reachable and that every link here resolves.
   the editor's track lines, three racers of the track's type at the race's drawn size (MEASURED equal to the race's
   racers at the racing zoom), and the panel's area framed in the main view.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-11/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-12.md](PARTICLES-VISIBILITY-12.md) — 2026-09-30. The Track Editor's Track / Race view switch
+  (the race view a whole race frame at race zoom) and a Test race: a real race with the unsaved effects, 40 racers of
+  the track's type, the track's length; MEASURED that it stores nothing (with a control that shows the check sees a
+  write) and that the editor comes back as it was.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-12/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.

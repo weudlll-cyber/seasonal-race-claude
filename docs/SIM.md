@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **203 files that can change the race** — the engine's own imports AND the imports of every
+the **204 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -284,6 +284,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/renderState.js` | RENDER-FINGERPRINT-1 |
 | `screens/RaceScreen/scoreboardLayout.js` | SCOREBOARD-SLOT-LAYER |
 | `screens/RaceScreen/scoreboardPositions.js` | SCOREBOARD-SLOT-LAYER |
+| `screens/TrackEditor/testRaceRoute.js` | Where a test race returns to. |
 | `screens/TrackEditor/trackEditorSave.js` | Track export logic — validates editor state, builds the server-ready track object, extracts effects and track lights. |
 | `utils/formatRaceTime.js` | Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
@@ -334,7 +335,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-203 files, 24 of them UNKNOWN.
+204 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

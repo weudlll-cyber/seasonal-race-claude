@@ -1,11 +1,11 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-29
+# What is open — DERIVED from BACKLOG PART ONE, 2026-09-30
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-29**, from PART ONE's **fifteen** rows. The one added on 2026-09-28 is
+Re-derived on **2026-09-30**, from PART ONE's **fifteen** rows. The one added on 2026-09-28 is
 **PARTICLES-VISIBILITY-1** (row 15 below), measured, then fixed on its branch the same day by
-PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8 the editor preview matched to the race by -9 a race-view panel added by -10 and given reference points by -11 (all 2026-09-29), and open until the
+PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8, the editor preview matched to the race by -9, a race-view panel added by -10 and given reference points by -11 (all 2026-09-29), that panel turned into a switchable view with a test race by -12 (2026-09-30), and open until the
 owner has looked. The
 fourteen before it were derived on
 2026-09-27 — after the owner's decisions of
@@ -26,7 +26,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2688) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+(lines 15–2697) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
 *Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
 *Planned — needs spec*, *Delivering to someone else*, *Build-identity residuals* and, since
 2026-09-28, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*. Every count on this page now says fifteen.
@@ -146,7 +146,7 @@ burst question entered that morning was answered the same day. §1 says so itsel
    of those files. Costs in the arc 4 report; commission them one at a time.
 14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
-15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1–11: dust, rain and the other track effects showed only
+15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1–12: dust, rain and the other track effects showed only
    sometimes. FIXED ON THE BRANCH, NOT MERGED.** Measured on his own stored race `VY7KKE`, replayed
    exactly, then fixed: on-screen dust drawn with the camera on the bottom straight 9.3% → 100%; dust no
    longer freezes after a finish; every track effect now covers the whole track (racing frames with a rain
@@ -164,7 +164,9 @@ burst question entered that morning was answered the same day. §1 says so itsel
    Track Editor preview place and draw effects in the world, as the race does. PARTICLES-VISIBILITY-10 (2026-09-29)
    added, by his decision, a race-view panel in the editor at the race camera's racing zoom, which measures the same
    zoom and density as the race; PARTICLES-VISIBILITY-11 (2026-09-29) added the track lines, three racers at the
-   race's size and a frame in the main view, after he found size could not be judged. **Open until he has looked** at the preview — the amounts and the ends are his.
+   race's size and a frame in the main view, after he found size could not be judged. PARTICLES-VISIBILITY-12
+   (2026-09-30), by his decisions: a Track / Race view switch and a Test race — a real race with the unsaved effects that
+   stores nothing (measured). **Open until he has looked** at the preview — the amounts and the ends are his.
    [Diagnosis](../reports/particles/PARTICLES-VISIBILITY-1.md) ·
    [fix](../reports/particles/PARTICLES-VISIBILITY-2.md) ·
    [ranges and opacity](../reports/particles/PARTICLES-VISIBILITY-3.md) ·
@@ -175,7 +177,8 @@ burst question entered that morning was answered the same day. §1 says so itsel
    [the 0–100 scale](../reports/particles/PARTICLES-VISIBILITY-8.md) ·
    [the preview matches the race](../reports/particles/PARTICLES-VISIBILITY-9.md) ·
    [the race view](../reports/particles/PARTICLES-VISIBILITY-10.md) ·
-   [its reference points](../reports/particles/PARTICLES-VISIBILITY-11.md).
+   [its reference points](../reports/particles/PARTICLES-VISIBILITY-11.md) ·
+   [views and test race](../reports/particles/PARTICLES-VISIBILITY-12.md).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -197,7 +200,7 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★ **ONE ITEM, 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1–11): look at the fix and say whether it is
+★ **ONE ITEM, 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1–12): look at the fix and say whether it is
 done.** The production preview of `fix/particles-visibility` shows dust on every part of the track, dust
 that fades after a finish, and every track effect over the whole track. Each effect's Count slider in the
 Track Editor now runs from off to a measured maximum, shown as a level 0–100 (PARTICLES-VISIBILITY-8, 2026-09-29), and each surface class has an Opacity control in the
@@ -211,7 +214,9 @@ bubbles Seatrack should show — at level 10 the race camera shows about 2 at a 
 the amount changes that; the editor's preview now shows the same density as the race's whole-track view, and its
 race-view panel (PARTICLES-VISIBILITY-10) shows the track at the race camera's distance — his eye decides whether it
 shows what he needs. Since PARTICLES-VISIBILITY-11 it shows the track lines and three racers at race size for a
-40-racer field; the racer size depends on the field, so whether the panel should offer a field size is his.
+40-racer field; the racer size depends on the field, so whether the panel should offer a field size is his. Since
+PARTICLES-VISIBILITY-12 the race view is its own full-width view, and "Test race" runs a real race with the unsaved
+effects and stores nothing — his eye decides whether that is how he wants to set effects.
 ~~The finish-burst question entered the same morning~~ — **answered 2026-09-28: the burst stays exactly as
 it is.**
 
