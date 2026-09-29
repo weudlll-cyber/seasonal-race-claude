@@ -6,7 +6,8 @@
 // Description: Full-screen track editor — Catmull-Rom spline drawing, undo/redo,
 //              effects config, and server save/load. Beside the whole-track view, a race-view
 //              panel shows the track and its effects at the race camera's racing zoom
-//              (PARTICLES-VISIBILITY-10, raceView.js).
+//              (PARTICLES-VISIBILITY-10, raceView.js), with the track lines, three racers at race
+//              size and the panel's area framed in the main view (PARTICLES-VISIBILITY-11).
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -30,11 +31,20 @@ import { useTrackIO } from './useTrackIO.js';
 import { API_BASE_URL } from '../../services/api.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { storageGet, KEYS } from '../../modules/storage/storage.js';
+import { getRacerType } from '../../racer-types/index.js';
 import {
   RACE_VIEW_W,
   RACE_VIEW_H,
+  RACE_VIEW_FIELD_SIZE,
   raceViewScale,
   raceViewStart,
+  raceViewCourse,
+  raceViewRacerPlacements,
+  raceViewRacerScale,
+  drawRaceViewFrame,
   drawRaceView,
 } from './raceView.js';
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
@@ -128,6 +138,9 @@ export default function TrackEditor() {
   // The camera config the race reads (RaceScreen/index.jsx, `loadCameraConfig`), so the panel's zoom
   // follows the owner's own camera settings. Read once, as the race does at its start.
   const [cameraConfig] = useState(() => loadCameraConfig());
+  // PARTICLES-VISIBILITY-11: the two other configs the race sizes a racer from, as it loads them.
+  const [autoScaleConfig] = useState(() => loadAutoScaleConfig());
+  const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
   // Where the race view looks: null = the start of the track (raceViewStart), else a clicked point.
   const [raceViewCentre, setRaceViewCentre] = useState(null);
   const [bgUploadError, setBgUploadError] = useState(null);
@@ -454,6 +467,82 @@ export default function TrackEditor() {
     };
   }, []);
 
+  // ── race view (PARTICLES-VISIBILITY-10) ───────────────────────────────────
+  // The zoom is the race camera's own ordinary racing zoom for this track (raceView.js names the
+  // camera functions it calls). The track width is the one the race passes, `geometry.width`, which
+  // is `centerWidth` for a centre-mode track; a boundary-mode track has none here, and the camera's
+  // reference corridor then stands alone (referenceWidthFor takes the larger of the two).
+  const raceViewZoom = useMemo(
+    () =>
+      raceViewScale({
+        worldW: editorWorldW,
+        worldH: editorWorldH,
+        isOpenTrack: !closed,
+        trackWidthPx: mode === 'center' ? centerWidth : NaN,
+        cameraConfig,
+      }),
+    [editorWorldW, editorWorldH, closed, mode, centerWidth, cameraConfig]
+  );
+  const raceViewCentreNow =
+    raceViewCentre ??
+    raceViewStart({
+      mode,
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      worldW: editorWorldW,
+      worldH: editorWorldH,
+    });
+  // PARTICLES-VISIBILITY-11: the track lines the panel draws are the main view's own scene state.
+  const raceViewLines = {
+    mode,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    activeBoundary,
+    selectedPointIndex,
+    centerWidth,
+    closed,
+  };
+  // PARTICLES-VISIBILITY-11: three racers of the track's own type, sized as the race sizes them for a
+  // RACE_VIEW_FIELD_SIZE field at this zoom. The type is the one Setup would race here — the track's
+  // `defaultRacerTypeId`, else 'horse' (SetupScreen.jsx) — and the width the one the race passes: the
+  // centre width, or for a boundary track the corridor where the racers stand.
+  const raceViewRacerTypeId =
+    serverTracksCtl.tracks.find((t) => t.id === loadedServerId)?.defaultRacerTypeId ?? 'horse';
+  const raceViewHasSizeOverride = useMemo(() => {
+    const o = storageGet(KEYS.RACER_TYPE_OVERRIDES, {})[raceViewRacerTypeId];
+    return !!o && typeof o === 'object' && 'displaySize' in o;
+  }, [raceViewRacerTypeId]);
+  const raceViewCourseNow = raceViewCourse(raceViewLines, raceViewCentreNow);
+  let raceViewRacers = null;
+  if (raceViewCourseNow) {
+    const racerType = getRacerType(raceViewRacerTypeId);
+    raceViewRacers = {
+      racerType,
+      displayScale: raceViewRacerScale({
+        racerType,
+        trackWidthPx: mode === 'center' ? centerWidth : raceViewCourseNow.width,
+        scaleX: raceViewZoom.scaleX,
+        cameraConfig,
+        autoScaleConfig,
+        behaviorConfig,
+        hasDisplaySizeOverride: raceViewHasSizeOverride,
+      }),
+      placements: raceViewRacerPlacements(raceViewCourseNow),
+    };
+  }
+  raceViewRef.current = {
+    centre: raceViewCentreNow,
+    scaleX: raceViewZoom.scaleX,
+    scaleY: raceViewZoom.scaleY,
+    bgPath: backgroundImage,
+    worldW: editorWorldW,
+    worldH: editorWorldH,
+    lines: raceViewLines,
+    racers: raceViewRacers,
+  };
+
   // Canvas render effect — mirrors state into renderStateRef and draws with viewport transform.
   useEffect(() => {
     renderStateRef.current = {
@@ -482,6 +571,8 @@ export default function TrackEditor() {
     ctx.scale(viewZoom * bsX, viewZoom * bsY);
     ctx.translate(-viewPanX, -viewPanY);
     drawStaticScene(ctx, renderStateRef.current);
+    // PARTICLES-VISIBILITY-11: the race view's area, framed; it follows every recentre.
+    drawRaceViewFrame(ctx, raceViewRef.current, Math.min(viewZoom * bsX, viewZoom * bsY));
     ctx.restore();
   }, [
     centerPoints,
@@ -498,41 +589,9 @@ export default function TrackEditor() {
     viewZoom,
     viewPanX,
     viewPanY,
+    raceViewCentre,
+    raceViewZoom,
   ]);
-
-  // ── race view (PARTICLES-VISIBILITY-10) ───────────────────────────────────
-  // The zoom is the race camera's own ordinary racing zoom for this track (raceView.js names the
-  // camera functions it calls). The track width is the one the race passes, `geometry.width`, which
-  // is `centerWidth` for a centre-mode track; a boundary-mode track has none here, and the camera's
-  // reference corridor then stands alone (referenceWidthFor takes the larger of the two).
-  const raceViewZoom = useMemo(
-    () =>
-      raceViewScale({
-        worldW: editorWorldW,
-        worldH: editorWorldH,
-        isOpenTrack: !closed,
-        trackWidthPx: mode === 'center' ? centerWidth : NaN,
-        cameraConfig,
-      }),
-    [editorWorldW, editorWorldH, closed, mode, centerWidth, cameraConfig]
-  );
-  raceViewRef.current = {
-    centre:
-      raceViewCentre ??
-      raceViewStart({
-        mode,
-        centerPoints,
-        innerPoints,
-        outerPoints,
-        worldW: editorWorldW,
-        worldH: editorWorldH,
-      }),
-    scaleX: raceViewZoom.scaleX,
-    scaleY: raceViewZoom.scaleY,
-    bgPath: backgroundImage,
-    worldW: editorWorldW,
-    worldH: editorWorldH,
-  };
 
   // Draws the race view when no effect loop is running (the loop below draws it every frame). The
   // race's background cache reports no load event, so while its image is still loading this asks
@@ -562,6 +621,11 @@ export default function TrackEditor() {
     innerPoints,
     outerPoints,
     effects,
+    activeBoundary,
+    selectedPointIndex,
+    centerWidth,
+    closed,
+    raceViewRacerTypeId,
   ]);
 
   // Effect preview — starts/stops the rAF animation loop based on the effects array.
@@ -620,6 +684,8 @@ export default function TrackEditor() {
         inst.render(ctx);
         ctx.restore();
       }
+      // PARTICLES-VISIBILITY-11: the race view's area, framed, on top of the effects.
+      drawRaceViewFrame(ctx, raceViewRef.current, Math.min(zoom * bsX, zoom * bsY));
       ctx.restore();
 
       // PARTICLES-VISIBILITY-10: the race view draws the SAME instances, already advanced above, at the
@@ -1259,7 +1325,8 @@ export default function TrackEditor() {
           />
           <figcaption className={s.raceViewCaption}>
             Race view — the race camera&apos;s racing zoom ({raceViewZoom.scaleY.toFixed(2)}× the
-            world), the centre half of a race frame. Click a track point to look there.
+            world), the centre half of a race frame; three racers at the size of a{' '}
+            {RACE_VIEW_FIELD_SIZE}-racer race. Click a track point to look there.
           </figcaption>
         </figure>
       </div>

@@ -34,6 +34,9 @@ const ctxStub = {
   createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
   createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
   ellipse: vi.fn(),
+  // PARTICLES-VISIBILITY-11: the main view frames the race view; the panel's racers rotate.
+  strokeRect: vi.fn(),
+  rotate: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
   scale: vi.fn(),

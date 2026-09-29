@@ -4,7 +4,9 @@
 // Project:     RaceArena
 // Created:     2026-04-29
 // Description: Canvas draw functions for the track editor's static scene —
-//              control points, spline preview, and background image.
+//              control points, spline preview, and background image. The track lines are their
+//              own function (drawTrackLines) so the race-view panel draws the same lines
+//              (PARTICLES-VISIBILITY-11) without a second copy.
 // ============================================================
 
 import { catmullRomSpline, offsetCurve } from '../../modules/track-editor/catmullRom.js';
@@ -19,19 +21,7 @@ const TRACK_COLOR = '#FF00FF';
 // transform first, then call this, then restore. clearRect must happen
 // before the transform is applied so it uses raw canvas coordinates.
 export function drawStaticScene(ctx, state) {
-  const {
-    bgImage = null,
-    mode = 'center',
-    centerPoints = [],
-    innerPoints = [],
-    outerPoints = [],
-    activeBoundary = 'inner',
-    selectedPointIndex = -1,
-    centerWidth = 120,
-    closed = false,
-    worldW = CW,
-    worldH = CH,
-  } = state ?? {};
+  const { bgImage = null, worldW = CW, worldH = CH } = state ?? {};
 
   ctx.globalAlpha = 1;
   ctx.setLineDash([]);
@@ -49,6 +39,29 @@ export function drawStaticScene(ctx, state) {
   ctx.fillRect(0, 0, worldW, worldH);
   ctx.globalAlpha = 1;
 
+  drawTrackLines(ctx, state);
+}
+
+/**
+ * The track's lines and control points — everything drawStaticScene draws above the background.
+ * PARTICLES-VISIBILITY-11: split out unchanged so the race-view panel draws the SAME lines at its own
+ * zoom; drawStaticScene calls it, so the main view draws exactly what it drew before.
+ * Widths and radii are in world units, like the rest of the scene.
+ */
+export function drawTrackLines(ctx, state) {
+  const {
+    mode = 'center',
+    centerPoints = [],
+    innerPoints = [],
+    outerPoints = [],
+    activeBoundary = 'inner',
+    selectedPointIndex = -1,
+    centerWidth = 120,
+    closed = false,
+  } = state ?? {};
+
+  ctx.globalAlpha = 1;
+  ctx.setLineDash([]);
   const minPts = closed ? 3 : 2;
 
   // Draws a curve with a white outline underneath then the main color on top.

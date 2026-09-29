@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { render, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
-import { RACE_VIEW_W, RACE_VIEW_H, raceViewScale } from './raceView.js';
+import { RACE_VIEW_W, RACE_VIEW_H, raceViewScale, raceViewArea } from './raceView.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
@@ -22,6 +22,9 @@ const ctxStub = {
   createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
   createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
   ellipse: vi.fn(),
+  // PARTICLES-VISIBILITY-11: the main view frames the race view; the panel's racers rotate.
+  strokeRect: vi.fn(),
+  rotate: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
   scale: vi.fn(),
@@ -490,9 +493,11 @@ function trackingCtx() {
   let m = { a: 1, d: 1, e: 0, f: 0 };
   const stack = [];
   const arcs = [];
+  const rects = [];
   const known = {
     canvas: { width: 1280, height: 720 },
     arcs,
+    rects,
     save: () => stack.push({ ...m }),
     restore: () => {
       m = stack.pop() ?? { a: 1, d: 1, e: 0, f: 0 };
@@ -505,6 +510,9 @@ function trackingCtx() {
     },
     getTransform: () => ({ a: m.a, b: 0, c: 0, d: m.d, e: m.e, f: m.f }),
     arc: (x, y, r) => arcs.push({ x: m.a * x + m.e, y: m.d * y + m.f, r }),
+    // PARTICLES-VISIBILITY-11: the main view's frame of the race view, at SCREEN position.
+    strokeRect: (x, y, w, h) =>
+      rects.push({ x: m.a * x + m.e, y: m.d * y + m.f, w: w * m.a, h: h * m.d }),
   };
   return new Proxy(known, {
     // Unknown methods are no-ops; the race background reads a gradient back, so they return one.
@@ -650,11 +658,15 @@ describe('TrackEditor race view (PARTICLES-VISIBILITY-10)', () => {
     });
 
   // A fake effect that draws one item at a fixed world offset from wherever `at` says, on any canvas.
+  // Its radius is distinctive: the panel also draws track points and racers, and a test must find
+  // the effect's item among them (PARTICLES-VISIBILITY-11).
+  const FX_R = 4.25;
+  const fxArc = (ctx) => ctx.arcs.filter((a) => a.r === FX_R).at(-1);
   function oneItemEffect(at) {
     let world = null;
     const create = vi.fn((canvas, config, w) => {
       world = w;
-      return { update: vi.fn(), render: (c) => c.arc(at(w).x, at(w).y, 4) };
+      return { update: vi.fn(), render: (c) => c.arc(at(w).x, at(w).y, FX_R) };
     });
     getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
     return { create, world: () => world };
@@ -673,7 +685,7 @@ describe('TrackEditor race view (PARTICLES-VISIBILITY-10)', () => {
     act(() => _rafCallback(16));
     // Nothing drawn yet, so the panel looks at the world centre; the item is 50 / 30 world px off it.
     const { scaleX, scaleY } = expectedScale(3840, 1440);
-    const drawn = raceView.arcs.at(-1);
+    const drawn = fxArc(raceView);
     expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2 + 50 * scaleX, 6);
     expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2 + 30 * scaleY, 6);
   });
@@ -692,7 +704,7 @@ describe('TrackEditor race view (PARTICLES-VISIBILITY-10)', () => {
 
     raceView.arcs.length = 0;
     act(() => _rafCallback(16));
-    let drawn = raceView.arcs.at(-1);
+    let drawn = fxArc(raceView);
     expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2 + 500 * scaleX, 6);
     expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2 + 200 * scaleY, 6);
 
@@ -700,8 +712,74 @@ describe('TrackEditor race view (PARTICLES-VISIBILITY-10)', () => {
     await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
     raceView.arcs.length = 0;
     act(() => _rafCallback(32));
-    drawn = raceView.arcs.at(-1);
+    drawn = fxArc(raceView);
     expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2, 6);
     expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2, 6);
+  });
+});
+
+// ── PARTICLES-VISIBILITY-11: the race view's area, framed in the main view ───────────────────────
+describe('TrackEditor main view frames the race view (PARTICLES-VISIBILITY-11)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  // The default 1280×720 world at zoom 1 maps world px to main-view px one to one, so the frame's
+  // screen rectangle IS the panel's world area.
+  const area = (centre) =>
+    raceViewArea({
+      centre,
+      ...raceViewScale({
+        worldW: 1280,
+        worldH: 720,
+        isOpenTrack: true,
+        trackWidthPx: 120,
+        cameraConfig: loadCameraConfig(),
+      }),
+    });
+  const expectRect = (rect, want) => {
+    for (const k of ['x', 'y', 'w', 'h']) expect(rect[k]).toBeCloseTo(want[k], 6);
+  };
+
+  async function twoPoints(container) {
+    const canvas = container.querySelector('canvas[aria-label^="Track editor canvas"]');
+    await act(async () => fireEvent.click(canvas, { clientX: 400, clientY: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    return canvas;
+  }
+
+  it('the frame is the panel area, and a recentre moves it (no effect running)', async () => {
+    const main = trackingCtx();
+    routeContexts({ main });
+    const { container } = renderEditor();
+    const canvas = await twoPoints(container);
+    expectRect(main.rects.at(-1), area({ x: 400, y: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    expectRect(main.rects.at(-1), area({ x: 900, y: 500 }));
+  });
+
+  it('the effect loop draws the same frame and it follows a recentre', async () => {
+    const main = trackingCtx();
+    routeContexts({ main });
+    getEffect.mockReturnValue({
+      create: vi.fn(() => ({ update: vi.fn(), render: vi.fn() })),
+      configSchema: [],
+      defaultConfig: {},
+    });
+    const { container } = renderEditor();
+    const canvas = await twoPoints(container);
+    await selectEffect(container, 'rain');
+    main.rects.length = 0;
+    act(() => _rafCallback(16));
+    expectRect(main.rects.at(-1), area({ x: 400, y: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    main.rects.length = 0;
+    act(() => _rafCallback(32));
+    expectRect(main.rects.at(-1), area({ x: 900, y: 500 }));
   });
 });

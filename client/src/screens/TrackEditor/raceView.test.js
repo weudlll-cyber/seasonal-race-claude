@@ -5,19 +5,37 @@
 // Project:     RaceArena — PARTICLES-VISIBILITY-10
 // Description: The race-view panel's zoom is the race camera's own ordinary racing zoom, its default
 //              centre is the start of the track, and an item at a world position lands where the
-//              race-camera transform puts it on the panel.
+//              race-camera transform puts it on the panel. PARTICLES-VISIBILITY-11: the track lines,
+//              three racers at the race's own scale across the course, the race's layer order, and
+//              the panel's area as the main view frames it.
 // ============================================================
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   RACE_VIEW_W,
   RACE_VIEW_H,
+  RACE_VIEW_FIELD_SIZE,
   raceViewScale,
   raceViewStart,
+  raceViewRacerScale,
+  raceViewCourse,
+  raceViewRacerPlacements,
+  raceViewArea,
   drawRaceView,
+  drawRaceViewFrame,
 } from './raceView.js';
 import { projectionForTrack } from '../../modules/camera/projection.js';
 import { resolveZoomForCorridors } from '../../modules/camera/zoomUnit.js';
-import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
+import {
+  DEFAULT_CAMERA_CONFIG,
+  DEFAULT_RACE_BEHAVIOR_CONFIG,
+} from '../../modules/storage/defaults.js';
+import { deriveSpriteGeometry } from '../../modules/raceParams.js';
+import {
+  computeRenderDisplayScale,
+  getEffectiveMaxTargetScreenPx,
+  DEFAULT_AUTO_SCALE_CONFIG,
+} from '../../modules/autoSpriteScale.js';
+import { getRacerType } from '../../racer-types/index.js';
 
 // The owner's camera setting for the racing shot, 0.85 standard corridors of 300 world px, as his
 // stored races record it; everything else from the shipped config.
@@ -164,5 +182,176 @@ describe('drawRaceView — where an item lands', () => {
     expect(offset.y).toBeCloseTo(RACE_VIEW_H / 2 - 30 * 2.0, 9);
     // An item is drawn at the race's own canvas-pixel size: a 4-world-px radius × the zoom.
     expect(centre.r).toBeCloseTo(4 * 2.5, 9);
+  });
+});
+
+// ── PARTICLES-VISIBILITY-11: the panel's reference points ───────────────────────────────────────
+
+/** A context that logs, in order, every line, circle, rectangle and racer drawn, at SCREEN position. */
+function loggingCtx() {
+  let m = { a: 1, d: 1, e: 0, f: 0 };
+  const stack = [];
+  const log = [];
+  const at = (x, y) => ({ x: m.a * x + m.e, y: m.d * y + m.f });
+  const known = {
+    canvas: { width: RACE_VIEW_W, height: RACE_VIEW_H },
+    log,
+    save: () => stack.push({ ...m }),
+    restore: () => {
+      m = stack.pop() ?? { a: 1, d: 1, e: 0, f: 0 };
+    },
+    scale: (sx, sy) => {
+      m = { ...m, a: m.a * sx, d: m.d * sy };
+    },
+    translate: (tx, ty) => {
+      m = { ...m, e: m.e + m.a * tx, f: m.f + m.d * ty };
+    },
+    getTransform: () => ({ a: m.a, b: 0, c: 0, d: m.d, e: m.e, f: m.f }),
+    lineTo: (x, y) => log.push({ op: 'line', ...at(x, y) }),
+    arc: (x, y, r) => log.push({ op: 'arc', ...at(x, y), r }),
+    strokeRect: (x, y, w, h) => log.push({ op: 'rect', ...at(x, y), w: w * m.a, h: h * m.d }),
+  };
+  return new Proxy(known, {
+    get: (t, k) => (k in t ? t[k] : () => ({ addColorStop: () => {} })),
+    set: (t, k, v) => {
+      if (k === 'lineWidth') t.lineWidthSet = v;
+      return true;
+    },
+  });
+}
+
+// A straight open track along x, centre points (0, 500) → (2000, 500), 300 wide.
+const LINES = {
+  mode: 'center',
+  centerPoints: [
+    { x: 0, y: 500 },
+    { x: 2000, y: 500 },
+  ],
+  innerPoints: [],
+  outerPoints: [],
+  activeBoundary: 'inner',
+  selectedPointIndex: -1,
+  centerWidth: 300,
+  closed: false,
+};
+
+describe('the track course and the racer reference', () => {
+  it('the course at the centre: the nearest centre-line point, its direction, the corridor width', () => {
+    const c = raceViewCourse(LINES, { x: 1000, y: 520 });
+    // The nearest of 200 spline samples along 2000 world px: within one sample spacing.
+    expect(Math.abs(c.x - 1000)).toBeLessThanOrEqual(2000 / 199);
+    expect(c.y).toBeCloseTo(500, 6);
+    expect(c.angle).toBeCloseTo(0, 6);
+    expect(c.width).toBe(300);
+    expect(raceViewCourse({ ...LINES, centerPoints: [] }, { x: 0, y: 0 })).toBeNull();
+  });
+
+  it('three racers side by side ACROSS the course, a quarter width apart, facing along it', () => {
+    const p = raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 });
+    expect(p).toHaveLength(3);
+    expect(p.map((q) => q.x)).toEqual([1000, 1000, 1000]);
+    expect(p.map((q) => q.y)).toEqual([425, 500, 575]);
+    expect(p.every((q) => q.angle === 0)).toBe(true);
+  });
+
+  // Three zooms: the owner's racing zoom, one wide enough for the readability floor to lift the
+  // racer, and one tight enough for the size ceiling to cap it — so the test tells the two steps
+  // apart, and proves the bounds are applied rather than only the track-density scale.
+  it('the racer scale is the race’s own: deriveSpriteGeometry, then computeRenderDisplayScale', () => {
+    const racerType = getRacerType('dolphin');
+    const c = racerType.config;
+    // The shipped configs the race loads on a machine with nothing stored.
+    const auto = DEFAULT_AUTO_SCALE_CONFIG;
+    const behaviorConfig = DEFAULT_RACE_BEHAVIOR_CONFIG;
+    const { displaySizeScale } = deriveSpriteGeometry({
+      displaySize: c.displaySize,
+      bodyFillX: c.bodyFillX,
+      bodyFillY: c.bodyFillY,
+      nRacers: RACE_VIEW_FIELD_SIZE,
+      effectiveWidth: 300 * behaviorConfig.startSpreadRange,
+      autoScaleConfig: auto,
+    });
+    let boundApplied = false;
+    for (const scaleX of [720 / 255, 0.05, 40]) {
+      const got = raceViewRacerScale({
+        racerType,
+        trackWidthPx: 300,
+        scaleX,
+        cameraConfig: OWNER,
+        autoScaleConfig: auto,
+        behaviorConfig,
+        hasDisplaySizeOverride: false,
+      });
+      const want = computeRenderDisplayScale(
+        c.displaySize,
+        displaySizeScale,
+        scaleX,
+        getEffectiveMaxTargetScreenPx(c.maxTargetScreenPx, OWNER.maxTargetScreenPx),
+        OWNER.minDrawnFrameFrac,
+        720
+      );
+      expect(got).toBeCloseTo(want, 12);
+      if (Math.abs(want - displaySizeScale) > 1e-9) boundApplied = true;
+    }
+    expect(boundApplied).toBe(true);
+  });
+});
+
+describe('drawRaceView — lines, racers, and the race’s layer order', () => {
+  const view = {
+    centre: { x: 1000, y: 500 },
+    scaleX: 2,
+    scaleY: 2,
+    bgPath: null,
+    worldW: 2000,
+    worldH: 1000,
+    frame: 0,
+  };
+  const effect = { render: (c) => c.arc(1010, 505, 1.5) };
+
+  it('draws the track lines, exactly three racers at the given scale, in the race’s order', () => {
+    const ctx = loggingCtx();
+    const drawRacer = vi.fn((c, x, y) => c.log.push({ op: 'racer', x, y }));
+    const racers = {
+      racerType: { drawRacer },
+      displayScale: 0.77,
+      placements: raceViewRacerPlacements({ x: 1000, y: 500, angle: 0, width: 300 }),
+    };
+    drawRaceView(ctx, { ...view, lines: LINES, racers }, [effect]);
+
+    expect(drawRacer).toHaveBeenCalledTimes(3);
+    for (const call of drawRacer.mock.calls) expect(call[7]).toBe(0.77);
+    // The race's order: background, effects, track markings, racers. The background draws a line of
+    // its own (the top of its crowd strip), so the track lines are the ones AFTER the effect.
+    const effectAt = ctx.log.findIndex((e) => e.op === 'arc' && e.r === 1.5);
+    const firstRacer = ctx.log.findIndex((e) => e.op === 'racer');
+    expect(effectAt).toBeGreaterThanOrEqual(0);
+    expect(firstRacer).toBeGreaterThan(effectAt);
+    const trackLines = ctx.log.slice(effectAt, firstRacer).filter((e) => e.op === 'line');
+    expect(trackLines.length).toBeGreaterThan(0);
+    expect(ctx.log.slice(firstRacer).filter((e) => e.op === 'line')).toHaveLength(0);
+    // The course runs through the panel's centre row: its line points sit at y = 180 on the panel.
+    expect(trackLines.some((l) => Math.abs(l.y - RACE_VIEW_H / 2) < 1e-6)).toBe(true);
+  });
+
+  it('draws neither lines nor racers when it is given none', () => {
+    const ctx = loggingCtx();
+    drawRaceView(ctx, view, [effect]);
+    const effectAt = ctx.log.findIndex((e) => e.op === 'arc' && e.r === 1.5);
+    const after = ctx.log.slice(effectAt + 1);
+    expect(after.filter((e) => e.op === 'line' || e.op === 'racer')).toHaveLength(0);
+  });
+});
+
+describe('the frame in the main view', () => {
+  it('is exactly the panel’s world area, and its line stays 1.5 screen px', () => {
+    const view = { centre: { x: 1000, y: 500 }, scaleX: 2.5, scaleY: 2 };
+    const area = raceViewArea(view);
+    expect(area).toEqual({ x: 1000 - 128, y: 500 - 90, w: 256, h: 180 });
+    const ctx = loggingCtx();
+    drawRaceViewFrame(ctx, view, 0.25);
+    const rect = ctx.log.find((e) => e.op === 'rect');
+    expect(rect).toEqual({ op: 'rect', x: area.x, y: area.y, w: area.w, h: area.h });
+    expect(ctx.lineWidthSet).toBeCloseTo(1.5 / 0.25, 12);
   });
 });
