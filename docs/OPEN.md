@@ -5,7 +5,7 @@
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
 Re-derived on **2026-09-29**, from PART ONE's **fifteen** rows. The one added on 2026-09-28 is
 **PARTICLES-VISIBILITY-1** (row 15 below), measured, then fixed on its branch the same day by
-PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8 (2026-09-29), and open until the
+PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8 and the editor preview matched to the race by -9 (both 2026-09-29), and open until the
 owner has looked. The
 fourteen before it were derived on
 2026-09-27 — after the owner's decisions of
@@ -26,7 +26,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2663) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+(lines 15–2671) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
 *Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
 *Planned — needs spec*, *Delivering to someone else*, *Build-identity residuals* and, since
 2026-09-28, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*. Every count on this page now says fifteen.
@@ -146,7 +146,7 @@ burst question entered that morning was answered the same day. §1 says so itsel
    of those files. Costs in the arc 4 report; commission them one at a time.
 14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
-15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1–8: dust, rain and the other track effects showed only
+15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1–9: dust, rain and the other track effects showed only
    sometimes. FIXED ON THE BRANCH, NOT MERGED.** Measured on his own stored race `VY7KKE`, replayed
    exactly, then fixed: on-screen dust drawn with the camera on the bottom straight 9.3% → 100%; dust no
    longer freezes after a finish; every track effect now covers the whole track (racing frames with a rain
@@ -159,7 +159,9 @@ burst question entered that morning was answered the same day. §1 says so itsel
    the frame rate evenly, and the flight never takes longer. PARTICLES-VISIBILITY-6 looked for a lower fireflies
    maximum and set none under a strict rule; PARTICLES-VISIBILITY-7 set it to **250** under a corrected rule (median
    and p90 against ten baseline runs). PARTICLES-VISIBILITY-8 (2026-09-29) shows every amount as a level 0–100 of
-   its maximum, by his decision; the tracks keep their stored amounts. **Open until he has looked** at the preview — the amounts and the ends are his.
+   its maximum, by his decision; the tracks keep their stored amounts. PARTICLES-VISIBILITY-9 (2026-09-29) measured why
+   Seatrack's bubbles at level 10 are invisible in the race (2 on screen: the amount, not size, no defect) and made the
+   Track Editor preview place and draw effects in the world, as the race does. **Open until he has looked** at the preview — the amounts and the ends are his.
    [Diagnosis](../reports/particles/PARTICLES-VISIBILITY-1.md) ·
    [fix](../reports/particles/PARTICLES-VISIBILITY-2.md) ·
    [ranges and opacity](../reports/particles/PARTICLES-VISIBILITY-3.md) ·
@@ -167,7 +169,8 @@ burst question entered that morning was answered the same day. §1 says so itsel
    [the pre-start flight](../reports/particles/PARTICLES-VISIBILITY-5.md) ·
    [the fireflies maximum, first attempt](../reports/particles/PARTICLES-VISIBILITY-6.md) ·
    [set to 250](../reports/particles/PARTICLES-VISIBILITY-7.md) ·
-   [the 0–100 scale](../reports/particles/PARTICLES-VISIBILITY-8.md).
+   [the 0–100 scale](../reports/particles/PARTICLES-VISIBILITY-8.md) ·
+   [the preview matches the race](../reports/particles/PARTICLES-VISIBILITY-9.md).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -189,7 +192,7 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★ **ONE ITEM, 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1–8): look at the fix and say whether it is
+★ **ONE ITEM, 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1–9): look at the fix and say whether it is
 done.** The production preview of `fix/particles-visibility` shows dust on every part of the track, dust
 that fades after a finish, and every track effect over the whole track. Each effect's Count slider in the
 Track Editor now runs from off to a measured maximum, shown as a level 0–100 (PARTICLES-VISIBILITY-8, 2026-09-29), and each surface class has an Opacity control in the
@@ -198,7 +201,9 @@ whether the Sand dust wants a higher opacity or a darker colour. Also his: firef
 frame rate (evenly) through the pre-start flight and the first seconds of racing. He chose to lower the maximum
 (2026-09-28); it is now 250 (PARTICLES-VISIBILITY-7) — his eye decides whether 250 fireflies are enough.
 Mud and dust add no stutter to the flight. Also his: level 1 is coarse for the per-minute effects (bubbles, mud), so a
-small stored amount such as Seatrack's bubbles cannot be set again once that slider has moved.
+small stored amount such as Seatrack's bubbles cannot be set again once that slider has moved. And his: how many
+bubbles Seatrack should show — at level 10 the race camera shows about 2 at a time (PARTICLES-VISIBILITY-9), and only
+the amount changes that; the editor's preview now shows the same density as the race's whole-track view.
 ~~The finish-burst question entered the same morning~~ — **answered 2026-09-28: the burst stays exactly as
 it is.**
 

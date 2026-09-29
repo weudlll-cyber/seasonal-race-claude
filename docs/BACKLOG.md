@@ -2653,6 +2653,14 @@ owner's hand**: parked here with enough context to be actionable months from now
     0 (Seatrack's bubbles show 1). Stored tracks show Dirt Oval 5, Seatrack 1, Space Sprint 5. Noticed and left for
     him: level 1 is coarse for the per-minute effects, so once moved, Seatrack's bubbles cannot return below 24× their
     stored amount. Report: [PARTICLES-VISIBILITY-8](../reports/particles/PARTICLES-VISIBILITY-8.md).
+  - **The owner's observation of 2026-09-29:** on Seatrack with bubbles at level 10 (24,000 per minute), size 0.9 and
+    opacity 0.25 he sees no bubbles in the race, while the Track Editor's preview at the same settings shows very many.
+  - **MEASURED and BUILT 2026-09-29 — PARTICLES-VISIBILITY-9** (`8810dc2f`, not merged): the race is right — a median
+    of 2 bubbles on screen while racing, because the amount is spread over the whole track and the race camera shows
+    under half a percent of it; count is the cause, not size, and no defect. The preview was wrong: it now places and
+    draws every effect in the world, inside the editor's own world transform, as the race does. What would make the
+    bubbles visible is his: in the race camera only the amount puts more on screen (2, 4, 8, 17 at levels 10, 25, 50,
+    100). Report: [PARTICLES-VISIBILITY-9](../reports/particles/PARTICLES-VISIBILITY-9.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches

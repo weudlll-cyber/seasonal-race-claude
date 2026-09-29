@@ -40,5 +40,9 @@ every report here is reachable and that every link here resolves.
   level scale in the Track Editor (0 off, 100 the effect's maximum, linear), storage unchanged: what each level means
   natively, the level every stored track shows, and the test that an untouched amount saves byte-identical.
 
-**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-8/` folders hold the reports' screenshots.
+- [PARTICLES-VISIBILITY-9.md](PARTICLES-VISIBILITY-9.md) — 2026-09-29. Why Seatrack's bubbles at level 10 are
+  invisible in the race (count per screen: a median of 2 on screen, MEASURED; not size, not a defect), and the Track
+  Editor's preview now places and draws effects in the world as the race does. Editor-versus-race screenshots.
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-9/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.
