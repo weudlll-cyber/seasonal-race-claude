@@ -4,7 +4,9 @@
 // Project:     RaceArena
 // Created:     2026-04-25
 // Description: Full-screen track editor — Catmull-Rom spline drawing, undo/redo,
-//              effects config, and server save/load.
+//              effects config, and server save/load. Beside the whole-track view, a race-view
+//              panel shows the track and its effects at the race camera's racing zoom
+//              (PARTICLES-VISIBILITY-10, raceView.js).
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -27,6 +29,14 @@ import { useViewport } from './useViewport.js';
 import { useTrackIO } from './useTrackIO.js';
 import { API_BASE_URL } from '../../services/api.js';
 import { getEffect } from '../../modules/track-effects/index.js';
+import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import {
+  RACE_VIEW_W,
+  RACE_VIEW_H,
+  raceViewScale,
+  raceViewStart,
+  drawRaceView,
+} from './raceView.js';
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
 import TrackEditorToolbar from './TrackEditorToolbar.jsx';
 import TrackEditorSaveBar from './TrackEditorSaveBar.jsx';
@@ -54,6 +64,11 @@ export default function TrackEditor() {
   const bgRef = useRef(null);
   const fileInputRef = useRef(null);
   const wrapperRef = useRef(null);
+  // PARTICLES-VISIBILITY-10: the race-view panel's canvas, what it currently shows, and the one-shot
+  // redraw that waits for its background image while no effect loop is running.
+  const raceViewCanvasRef = useRef(null);
+  const raceViewRef = useRef(null);
+  const raceViewRetryRef = useRef(null);
   const saveTimerRef = useRef(null);
   const saveBarRef = useRef(null);
 
@@ -110,6 +125,11 @@ export default function TrackEditor() {
   const [closed, setClosed] = useState(false);
   const [trackName, setTrackName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState(null);
+  // The camera config the race reads (RaceScreen/index.jsx, `loadCameraConfig`), so the panel's zoom
+  // follows the owner's own camera settings. Read once, as the race does at its start.
+  const [cameraConfig] = useState(() => loadCameraConfig());
+  // Where the race view looks: null = the start of the track (raceViewStart), else a clicked point.
+  const [raceViewCentre, setRaceViewCentre] = useState(null);
   const [bgUploadError, setBgUploadError] = useState(null);
   const [effects, setEffects] = useState([]);
   const [trackLights, setTrackLights] = useState(DEFAULT_TRACK_LIGHTS);
@@ -480,6 +500,70 @@ export default function TrackEditor() {
     viewPanY,
   ]);
 
+  // ── race view (PARTICLES-VISIBILITY-10) ───────────────────────────────────
+  // The zoom is the race camera's own ordinary racing zoom for this track (raceView.js names the
+  // camera functions it calls). The track width is the one the race passes, `geometry.width`, which
+  // is `centerWidth` for a centre-mode track; a boundary-mode track has none here, and the camera's
+  // reference corridor then stands alone (referenceWidthFor takes the larger of the two).
+  const raceViewZoom = useMemo(
+    () =>
+      raceViewScale({
+        worldW: editorWorldW,
+        worldH: editorWorldH,
+        isOpenTrack: !closed,
+        trackWidthPx: mode === 'center' ? centerWidth : NaN,
+        cameraConfig,
+      }),
+    [editorWorldW, editorWorldH, closed, mode, centerWidth, cameraConfig]
+  );
+  raceViewRef.current = {
+    centre:
+      raceViewCentre ??
+      raceViewStart({
+        mode,
+        centerPoints,
+        innerPoints,
+        outerPoints,
+        worldW: editorWorldW,
+        worldH: editorWorldH,
+      }),
+    scaleX: raceViewZoom.scaleX,
+    scaleY: raceViewZoom.scaleY,
+    bgPath: backgroundImage,
+    worldW: editorWorldW,
+    worldH: editorWorldH,
+  };
+
+  // Draws the race view when no effect loop is running (the loop below draws it every frame). The
+  // race's background cache reports no load event, so while its image is still loading this asks
+  // for one more frame, and stops as soon as the image is drawn.
+  useEffect(() => {
+    const drawOnce = (frame) => {
+      raceViewRetryRef.current = null;
+      if (rafRef.current) return;
+      const ctx = raceViewCanvasRef.current?.getContext('2d');
+      if (!ctx) return;
+      const drawn = drawRaceView(ctx, { ...raceViewRef.current, frame: frame ?? 0 }, []);
+      if (!drawn) raceViewRetryRef.current = requestAnimationFrame(drawOnce);
+    };
+    drawOnce();
+    return () => {
+      if (raceViewRetryRef.current) cancelAnimationFrame(raceViewRetryRef.current);
+      raceViewRetryRef.current = null;
+    };
+  }, [
+    raceViewCentre,
+    raceViewZoom,
+    backgroundImage,
+    editorWorldW,
+    editorWorldH,
+    mode,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    effects,
+  ]);
+
   // Effect preview — starts/stops the rAF animation loop based on the effects array.
   // Uses JSON.stringify to detect deep changes and avoid re-running on reference churn.
   const effectsJson = JSON.stringify(effects);
@@ -537,6 +621,17 @@ export default function TrackEditor() {
         ctx.restore();
       }
       ctx.restore();
+
+      // PARTICLES-VISIBILITY-10: the race view draws the SAME instances, already advanced above, at the
+      // race camera's zoom — one state, two views, no second copy of any effect.
+      const raceViewCtx = raceViewCanvasRef.current?.getContext('2d');
+      if (raceViewCtx) {
+        drawRaceView(
+          raceViewCtx,
+          { ...raceViewRef.current, frame: timestamp },
+          effectInstanceRef.current
+        );
+      }
 
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -665,6 +760,10 @@ export default function TrackEditor() {
     const hit = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
     if (hit !== -1) {
       setSelectedPointIndex(hit);
+      // PARTICLES-VISIBILITY-10: a click on a point of the track also recentres the race view there.
+      // It is the one click that edits nothing — it only selects — so recentring adds no new gesture
+      // and changes no existing one; a click anywhere else still inserts or appends a point.
+      setRaceViewCentre({ x: activeList[hit].x, y: activeList[hit].y });
       return;
     }
 
@@ -839,6 +938,8 @@ export default function TrackEditor() {
     setLoadedGeometryId(track.id);
     setLoadedServerId(serverId ?? null);
     setEffects(extractEffects(track));
+    // PARTICLES-VISIBILITY-10: a newly loaded track opens its race view on its own start.
+    setRaceViewCentre(null);
     setTrackLights(extractTrackLights(track));
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
@@ -1147,6 +1248,20 @@ export default function TrackEditor() {
             onPointerUp={handlePointerUp}
           />
         </div>
+        <figure className={s.raceView}>
+          <canvas
+            ref={raceViewCanvasRef}
+            width={RACE_VIEW_W}
+            height={RACE_VIEW_H}
+            className={s.raceViewCanvas}
+            role="img"
+            aria-label="Race view — the track and its effects at the race camera's racing zoom"
+          />
+          <figcaption className={s.raceViewCaption}>
+            Race view — the race camera&apos;s racing zoom ({raceViewZoom.scaleY.toFixed(2)}× the
+            world), the centre half of a race frame. Click a track point to look there.
+          </figcaption>
+        </figure>
       </div>
     </div>
   );
