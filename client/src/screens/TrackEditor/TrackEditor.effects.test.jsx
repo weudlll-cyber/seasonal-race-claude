@@ -475,3 +475,135 @@ describe('TrackEditor background upload size guard', () => {
     expect(container.textContent).not.toMatch(/too large/i);
   });
 });
+
+// ── PARTICLES-VISIBILITY-9: the preview places and draws effects in the WORLD, as the race does ─
+describe('TrackEditor effect preview — world placement (PARTICLES-VISIBILITY-9)', () => {
+  // A 2D context that composes save/restore/scale/translate, answers getTransform, and records every
+  // arc at its SCREEN position — so a test can see where a world point lands on the canvas.
+  function trackingCtx() {
+    let m = { a: 1, d: 1, e: 0, f: 0 };
+    const stack = [];
+    const arcs = [];
+    const known = {
+      canvas: { width: 1280, height: 720 },
+      arcs,
+      save: () => stack.push({ ...m }),
+      restore: () => {
+        m = stack.pop() ?? { a: 1, d: 1, e: 0, f: 0 };
+      },
+      scale: (sx, sy) => {
+        m = { ...m, a: m.a * sx, d: m.d * sy };
+      },
+      translate: (tx, ty) => {
+        m = { ...m, e: m.e + m.a * tx, f: m.f + m.d * ty };
+      },
+      getTransform: () => ({ a: m.a, b: 0, c: 0, d: m.d, e: m.e, f: m.f }),
+      arc: (x, y, r) => arcs.push({ x: m.a * x + m.e, y: m.d * y + m.f, r }),
+    };
+    return new Proxy(known, {
+      get: (t, k) => (k in t ? t[k] : () => {}),
+      set: () => true,
+    });
+  }
+
+  // Uploads a background of the given size; the editor takes its world size from the image.
+  async function setWorld(container, w, h) {
+    vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+      this.readAsDataURL = () => this.onload?.({ target: { result: 'data:image/png;base64,w' } });
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () {
+      const self = this;
+      let onload = null;
+      Object.defineProperty(self, 'onload', {
+        get: () => onload,
+        set: (fn) => {
+          onload = fn;
+        },
+      });
+      Object.defineProperty(self, 'onerror', { get: () => null, set: () => {} });
+      Object.defineProperty(self, 'src', {
+        get: () => '',
+        set: () => {
+          self.naturalWidth = w;
+          self.naturalHeight = h;
+          if (onload) queueMicrotask(() => onload());
+        },
+      });
+    });
+    const file = new File(['x'], 'bg.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: 1024 });
+    await act(async () => {
+      fireEvent.change(container.querySelector('input[type="file"][accept="image/*"]'), {
+        target: { files: [file] },
+      });
+    });
+  }
+
+  async function selectEffect(container, id) {
+    await clickAddEffect(container);
+    const selects = Array.from(container.querySelectorAll('select')).filter((s) => {
+      const none = s.querySelector('option[value=""]');
+      return none && !none.disabled && !s.disabled;
+    });
+    await act(async () => {
+      fireEvent.change(selects[selects.length - 1], { target: { value: id } });
+    });
+  }
+
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  it('passes the editor world size to every effect, and again when the world changes', async () => {
+    const createA = vi.fn(() => ({ update: vi.fn(), render: vi.fn() }));
+    const createB = vi.fn(() => ({ update: vi.fn(), render: vi.fn() }));
+    listEffects.mockReturnValue([
+      { id: 'effect-a', label: 'Effect A', configSchema: [], defaultConfig: {} },
+      { id: 'effect-b', label: 'Effect B', configSchema: [], defaultConfig: {} },
+    ]);
+    getEffect.mockImplementation((id) =>
+      id === 'effect-a'
+        ? { create: createA, configSchema: [], defaultConfig: {} }
+        : id === 'effect-b'
+          ? { create: createB, configSchema: [], defaultConfig: {} }
+          : null
+    );
+    const { container } = renderEditor();
+    await selectEffect(container, 'effect-a');
+    await selectEffect(container, 'effect-b');
+    expect(createA.mock.calls.at(-1)[2]).toEqual({ width: 1280, height: 720 });
+    expect(createB.mock.calls.at(-1)[2]).toEqual({ width: 1280, height: 720 });
+
+    await setWorld(container, 3840, 1440);
+    expect(createA.mock.calls.at(-1)[2]).toEqual({ width: 3840, height: 1440 });
+    expect(createB.mock.calls.at(-1)[2]).toEqual({ width: 3840, height: 1440 });
+  });
+
+  it('an item at a world position is drawn at the matching editor screen position', async () => {
+    const ctx = trackingCtx();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ctx);
+    // One item at a quarter across and three quarters down the world, whatever its size.
+    let world = null;
+    const create = vi.fn((canvas, config, w) => {
+      world = w;
+      return { update: vi.fn(), render: (c) => c.arc(w.width * 0.25, w.height * 0.75, 4) };
+    });
+    getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
+    const { container } = renderEditor();
+    await setWorld(container, 3840, 1440);
+    await selectEffect(container, 'rain');
+    expect(world).toEqual({ width: 3840, height: 1440 });
+
+    ctx.arcs.length = 0;
+    act(() => _rafCallback(16));
+    // The editor's whole-world view maps 3840×1440 onto the 1280×720 canvas: x by 1/3, y by 1/2.
+    const drawn = ctx.arcs.at(-1);
+    expect(drawn.x).toBeCloseTo(1280 * 0.25, 6);
+    expect(drawn.y).toBeCloseTo(720 * 0.75, 6);
+  });
+});

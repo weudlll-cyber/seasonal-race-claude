@@ -23,7 +23,8 @@ const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.defau
 // PARTICLES-VISIBILITY-2: `world` is the area this effect is drawn in when that is not the canvas —
 // the race screen draws track effects inside the world transform and passes the world size, so
 // placement (and any edge wrap or clamp below) covers the whole track instead of a canvas-sized
-// corner of it. The track editor draws in screen space and passes nothing, so it keeps the canvas.
+// corner of it. PARTICLES-VISIBILITY-9: the track editor now passes its world size too and draws inside
+// its own world transform, so its preview shows what the race shows. With no `world`, the canvas is used.
 // PARTICLES-VISIBILITY-4: bubbles and their droplets are drawn in this many alpha tiers, one path and one fill per tier,
 // instead of a path, a fill and an alpha change per item. Each takes its tier's midpoint alpha — at
 // most 1/16 of the opacity away from its own.

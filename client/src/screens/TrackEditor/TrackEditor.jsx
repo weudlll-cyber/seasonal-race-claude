@@ -497,10 +497,15 @@ export default function TrackEditor() {
     const activeEffects = effects.filter((e) => e.id);
     if (activeEffects.length === 0) return;
 
+    // PARTICLES-VISIBILITY-9: the preview places effects over the WORLD, as the race does
+    // (RaceScreen/index.jsx, `effectWorld`), and draws them inside the loop's world transform below.
+    // Created with the canvas alone, it packed the race's whole-track amount into one screen and
+    // drew each item at its world size in screen pixels, so it showed far more than the race.
+    const effectWorld = { width: editorWorldW, height: editorWorldH };
     const instances = activeEffects
       .map((e) => {
         const mod = getEffect(e.id);
-        return mod ? mod.create(canvas, e.config) : null;
+        return mod ? mod.create(canvas, e.config, effectWorld) : null;
       })
       .filter(Boolean);
 
@@ -523,14 +528,15 @@ export default function TrackEditor() {
       ctx.scale(zoom * bsX, zoom * bsY);
       ctx.translate(-panX, -panY);
       drawStaticScene(ctx, renderStateRef.current);
-      ctx.restore();
-
+      // PARTICLES-VISIBILITY-9: effects draw inside the same world-to-screen transform as the track,
+      // so zoom and pan move them with it and each effect culls against this view (cullBounds).
       for (const inst of effectInstanceRef.current) {
         inst.update(dt);
         ctx.save();
         inst.render(ctx);
         ctx.restore();
       }
+      ctx.restore();
 
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -543,7 +549,8 @@ export default function TrackEditor() {
       effectInstanceRef.current = null;
       lastTimeRef.current = null;
     };
-  }, [effectsJson]); // eslint-disable-line react-hooks/exhaustive-deps
+    // The world size is a dependency: loading a track of another size re-creates the effects over it.
+  }, [effectsJson, editorWorldW, editorWorldH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── pointer handlers ──────────────────────────────────────────────────────
 

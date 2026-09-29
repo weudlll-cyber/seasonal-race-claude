@@ -36,8 +36,9 @@ const ALPHA_TIERS = 8;
  * @param {{width:number,height:number}} [world]  the area the drops are drawn in, when it is not the
  *   canvas. PARTICLES-VISIBILITY-2: the race screen draws track effects INSIDE the world transform,
  *   so drops placed over the canvas size (1280x720) only ever landed in the world's top-left corner;
- *   it now passes the world size here. The track editor draws effects in screen space and passes
- *   nothing, so it keeps the canvas. `count` stays drops per second over whichever area this is.
+ *   it now passes the world size here, and since PARTICLES-VISIBILITY-9 so does the track editor, which
+ *   draws inside its own world transform. With no `world`, the canvas is used. `count` stays drops per
+ *   second over whichever area this is.
  */
 function create(canvas, config, world) {
   const { width, height } = world ?? canvas;

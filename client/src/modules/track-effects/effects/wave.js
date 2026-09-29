@@ -29,7 +29,8 @@ const MAX_AGE = 4000;
 // PARTICLES-VISIBILITY-2: `world` is the area this effect is drawn in when that is not the canvas —
 // the race screen draws track effects inside the world transform and passes the world size, so
 // placement (and any edge wrap or clamp below) covers the whole track instead of a canvas-sized
-// corner of it. The track editor draws in screen space and passes nothing, so it keeps the canvas.
+// corner of it. PARTICLES-VISIBILITY-9: the track editor now passes its world size too and draws inside
+// its own world transform, so its preview shows what the race shows. With no `world`, the canvas is used.
 function create(canvas, config, world) {
   const { width, height } = world ?? canvas;
   const ripples = Array.from({ length: config.count }, (_, i) => ({
