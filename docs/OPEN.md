@@ -1,16 +1,16 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-30
+# What is open — DERIVED from BACKLOG PART ONE, 2026-10-01
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-30**, from PART ONE's **fifteen** rows. The one added on 2026-09-28 is
-**PARTICLES-VISIBILITY-1** (row 15 below), measured, then fixed on its branch the same day by
-PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8, the editor preview matched to the race by -9, a race-view panel added by -10 and given reference points by -11 (all 2026-09-29), that panel turned into a switchable view with a test race by -12 and the false "unsaved track" message fixed by -13 (both 2026-09-30), and open until the
-owner has looked. The one-off red run of `scripts/fingerprint-default.test.mjs` (its harness now waits for the output
-instead of a clock) and the red client audit gate (fixed by two dependency overrides) were added and CLOSED on
-2026-09-30, so they are in PART TWO and not here. The
-fourteen before it were derived on
-2026-09-27 — after the owner's decisions of
+Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. **PARTICLES-VISIBILITY-1 to -13** (opened
+2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
+on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
+and what was left as is. The one-off red run of
+`scripts/fingerprint-default.test.mjs` was added and CLOSED the same day (its harness now waits for the output
+instead of a clock), so it is in PART TWO and not here — as is the red client audit gate of the same day, fixed by
+two dependency overrides. The fourteen were derived on 2026-09-27 — after the
+owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
 DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
 which closed §1 and opened one new row (verify-on-demand). **The README rewrite was
@@ -28,10 +28,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2704) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+(lines 15–2570) holds exactly FOURTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
 *Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
-*Planned — needs spec*, *Delivering to someone else*, *Build-identity residuals* and, since
-2026-09-28, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*. Every count on this page now says fifteen.
+*Planned — needs spec*, *Delivering to someone else* and *Build-identity residuals*. Every count on
+this page now says fourteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -48,20 +48,18 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fifteen rows in section 0 are all WORK**, and that is still true — row 15 waits for his
-look at its fix, entered in §1 below.
+work. **The fourteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
 said "needs his word" in its own text — **three places in one list disagreeing, which is the
 disease this page was rebuilt to cure.** The six were written in; the owner then answered all six
-the same day, so §1 was empty again — **this time because the answers exist and are linked, not
-because nobody looked.** ★ **It holds ONE item again since 2026-09-28** — his look at row 15's fix. The
-burst question entered that morning was answered the same day. §1 says so itself.
+the same day, so §1 is empty again — **this time because the answers exist and are linked, not
+because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -148,42 +146,6 @@ burst question entered that morning was answered the same day. §1 says so itsel
    of those files. Costs in the arc 4 report; commission them one at a time.
 14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
-15. ★ **NEW 2026-09-28 — PARTICLES-VISIBILITY-1–13: dust, rain and the other track effects showed only
-   sometimes. FIXED ON THE BRANCH, NOT MERGED.** Measured on his own stored race `VY7KKE`, replayed
-   exactly, then fixed: on-screen dust drawn with the camera on the bottom straight 9.3% → 100%; dust no
-   longer freezes after a finish; every track effect now covers the whole track (racing frames with a rain
-   ring on screen 26.8% → 87.2%). The finish burst stays as it is, by his decision. Since
-   PARTICLES-VISIBILITY-3 every effect's amount runs from off to a measured maximum, and every racer trail has
-   an opacity control. Since PARTICLES-VISIBILITY-4 effects draw only what is on screen, and cheaper where it
-   helped: in the race camera no effect changes the frame time up to its maximum; with the whole track in view,
-   mud, dust and fireflies are still one frame step slower at their maxima. PARTICLES-VISIBILITY-5 measured the
-   one phase that really shows the whole track, the pre-start flight: mud and dust add no stutter, fireflies lower
-   the frame rate evenly, and the flight never takes longer. PARTICLES-VISIBILITY-6 looked for a lower fireflies
-   maximum and set none under a strict rule; PARTICLES-VISIBILITY-7 set it to **250** under a corrected rule (median
-   and p90 against ten baseline runs). PARTICLES-VISIBILITY-8 (2026-09-29) shows every amount as a level 0–100 of
-   its maximum, by his decision; the tracks keep their stored amounts. PARTICLES-VISIBILITY-9 (2026-09-29) measured why
-   Seatrack's bubbles at level 10 are invisible in the race (2 on screen: the amount, not size, no defect) and made the
-   Track Editor preview place and draw effects in the world, as the race does. PARTICLES-VISIBILITY-10 (2026-09-29)
-   added, by his decision, a race-view panel in the editor at the race camera's racing zoom, which measures the same
-   zoom and density as the race; PARTICLES-VISIBILITY-11 (2026-09-29) added the track lines, three racers at the
-   race's size and a frame in the main view, after he found size could not be judged. PARTICLES-VISIBILITY-12
-   (2026-09-30), by his decisions: a Track / Race view switch and a Test race — a real race with the unsaved effects that
-   stores nothing (measured). PARTICLES-VISIBILITY-13 (2026-09-30), by his order to fix the known faults first: the
-   editor's "An unsaved track … was found" now appears only for real unsaved changes, for their own track.
-   **Open until he has looked** at the preview — the amounts and the ends are his.
-   [Diagnosis](../reports/particles/PARTICLES-VISIBILITY-1.md) ·
-   [fix](../reports/particles/PARTICLES-VISIBILITY-2.md) ·
-   [ranges and opacity](../reports/particles/PARTICLES-VISIBILITY-3.md) ·
-   [stutter](../reports/particles/PARTICLES-VISIBILITY-4.md) ·
-   [the pre-start flight](../reports/particles/PARTICLES-VISIBILITY-5.md) ·
-   [the fireflies maximum, first attempt](../reports/particles/PARTICLES-VISIBILITY-6.md) ·
-   [set to 250](../reports/particles/PARTICLES-VISIBILITY-7.md) ·
-   [the 0–100 scale](../reports/particles/PARTICLES-VISIBILITY-8.md) ·
-   [the preview matches the race](../reports/particles/PARTICLES-VISIBILITY-9.md) ·
-   [the race view](../reports/particles/PARTICLES-VISIBILITY-10.md) ·
-   [its reference points](../reports/particles/PARTICLES-VISIBILITY-11.md) ·
-   [views and test race](../reports/particles/PARTICLES-VISIBILITY-12.md) ·
-   [known faults fixed](../reports/particles/PARTICLES-VISIBILITY-13.md).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -205,29 +167,7 @@ fabricated result would reproduce the fabrication faithfully. Now in
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
 
-★ **ONE ITEM, 2026-09-28, from row 15 (PARTICLES-VISIBILITY-1–13): look at the fix and say whether it is
-done.** The production preview of `fix/particles-visibility` shows dust on every part of the track, dust
-that fades after a finish, and every track effect over the whole track. Each effect's Count slider in the
-Track Editor now runs from off to a measured maximum, shown as a level 0–100 (PARTICLES-VISIBILITY-8, 2026-09-29), and each surface class has an Opacity control in the
-Dev Screen. His to judge by eye: the ends of each range, the amounts on his tracks (none was changed), and
-whether the Sand dust wants a higher opacity or a darker colour. Also his: fireflies at their maximum lower the
-frame rate (evenly) through the pre-start flight and the first seconds of racing. He chose to lower the maximum
-(2026-09-28); it is now 250 (PARTICLES-VISIBILITY-7) — his eye decides whether 250 fireflies are enough.
-Mud and dust add no stutter to the flight. Also his: level 1 is coarse for the per-minute effects (bubbles, mud), so a
-small stored amount such as Seatrack's bubbles cannot be set again once that slider has moved. And his: how many
-bubbles Seatrack should show — at level 10 the race camera shows about 2 at a time (PARTICLES-VISIBILITY-9), and only
-the amount changes that; the editor's preview now shows the same density as the race's whole-track view, and its
-race-view panel (PARTICLES-VISIBILITY-10) shows the track at the race camera's distance — his eye decides whether it
-shows what he needs. Since PARTICLES-VISIBILITY-11 it shows the track lines and three racers at race size for a
-40-racer field; the racer size depends on the field, so whether the panel should offer a field size is his. Since
-PARTICLES-VISIBILITY-12 the race view is its own full-width view, and "Test race" runs a real race with the unsaved
-effects and stores nothing — his eye decides whether that is how he wants to set effects. The false "An unsaved
-track … was found" message he reported is fixed (PARTICLES-VISIBILITY-13); the first visits after this build quietly
-drop the old copies his browser holds.
-~~The finish-burst question entered the same morning~~ — **answered 2026-09-28: the burst stays exactly as
-it is.**
-
-★★ **EMPTY AGAIN ON 2026-09-27 (one item entered 2026-09-28, above) — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
+★★ **EMPTY AGAIN, 2026-09-27 — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
 answers rather than asserted.** The section held six questions for one day. Each is now a decision
 in [BACKLOG.md](BACKLOG.md) PART ONE, on the row that carries the work:
 
