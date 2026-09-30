@@ -10,30 +10,72 @@
 // label was consumed AS the label and silently dropped. The script then printed "default config"
 // and the shipped-default hash — a legitimate-looking answer to a question nobody asked. It put a
 // wrong `reproduce` command into docs/fingerprints.json, written on the strength of that output.
+//
+// FINGERPRINT-DEFAULT-FLAKE-1 (2026-09-30): the harness WAITS FOR THE OUTPUT, not for a clock. It
+// used to run the script with `spawnSync` and a fixed 2.5 s SIGKILL and then look at whatever had
+// reached stdout — so a loaded machine that took longer than 2.5 s to start Node turned a correct
+// script into a red run (seen once under verify's parallel load: 2,805 ms, empty stdout). See
+// reports/particles/PARTICLES-VISIBILITY-13.md §B on branch fix/particles-visibility.
 // ============================================================
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPT = join(ROOT, "scripts", "fingerprint-default.mjs");
 
-const run = (...args) =>
-  spawnSync(process.execPath, [SCRIPT, ...args], {
-    cwd: ROOT,
-    encoding: "utf8",
-    // 2.5 s: every line asserted below is printed during ARGUMENT PARSING, before the first track
-    // child is spawned, so this kills the parent while it is still alone. A 15 s budget cost the
-    // script suite 45 s and risked orphaning ten race children on the kill.
-    timeout: 2_500,
-    killSignal: "SIGKILL",
+/** How long a case may wait for the line it expects before it fails. A safety cap, not a verdict. */
+const CAP_MS = 30_000;
+
+/**
+ * Run the script and settle on the FIRST of: `until` matching the output, the child exiting, or
+ * `capMs` passing. The child is killed as soon as it settles — once the awaited line is out, it is
+ * starting its ten race children, and the race itself is not what is under test.
+ *
+ * ★ WHY IT WAITS FOR THE LINE. The line the positive case needs is printed during argument parsing,
+ * ~60 ms after start on an idle machine. A fixed deadline made the verdict a race between that print
+ * and a clock, and a busy machine can lose it; waiting for the line makes the verdict depend only on
+ * what the script prints. `capMs` is there so a script that never prints it fails in bounded time,
+ * with `timedOut` set so the assertion can say so.
+ *
+ * @param {string[]} args
+ * @param {{ until?: RegExp, capMs?: number }} [opts]
+ * @returns {Promise<{ status: number|null, stdout: string, stderr: string, timedOut: boolean }>}
+ */
+const run = (args, { until = null, capMs = CAP_MS } = {}) =>
+  new Promise((resolve) => {
+    const child = spawn(process.execPath, [SCRIPT, ...args], { cwd: ROOT });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const settle = (status, timedOut) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(cap);
+      if (child.exitCode === null) child.kill("SIGKILL");
+      resolve({ status, stdout, stderr, timedOut });
+    };
+    const check = () => {
+      if (until && until.test(stdout + stderr)) settle(null, false);
+    };
+    child.stdout.on("data", (d) => {
+      stdout += d;
+      check();
+    });
+    child.stderr.on("data", (d) => {
+      stderr += d;
+      check();
+    });
+    child.on("exit", (code) => settle(code, false));
+    const cap = setTimeout(() => settle(null, true), capMs);
   });
 
-test("A FLAG IN THE LABEL POSITION is REFUSED, and the message shows the corrected command", () => {
-  const r = run("--gapRerollEnabled=false");
+test("A FLAG IN THE LABEL POSITION is REFUSED, and the message shows the corrected command", async () => {
+  // The refusal exits the script, so this settles on the exit.
+  const r = await run(["--gapRerollEnabled=false"]);
   assert.equal(
     r.status,
     2,
@@ -47,23 +89,32 @@ test("A FLAG IN THE LABEL POSITION is REFUSED, and the message shows the correct
   );
 });
 
-test("CONSEQUENCE: the same flag AFTER a label is accepted and reaches the sim", () => {
+test("CONSEQUENCE: the same flag AFTER a label is accepted and reaches the sim", async () => {
   // The pair. Without this, the guard above would pass against a script that refused everything.
-  // Killed by timeout once it has printed the line that proves the flag was forwarded — the race
-  // itself is not what is under test.
-  const r = run("off", "--gapRerollEnabled=false");
+  // Waits for the `extra sim args:` line itself, whatever it says, and then checks what it says —
+  // so a missing line fails on the cap and a wrong line fails on the match, each saying which.
+  const r = await run(["off", "--gapRerollEnabled=false"], { until: /extra sim args:/ });
+  assert.equal(
+    r.timedOut,
+    false,
+    `no "extra sim args:" line within ${CAP_MS} ms — stdout was: ${JSON.stringify(r.stdout)}`,
+  );
   assert.match(r.stdout, /extra sim args: --gapRerollEnabled=false/);
 });
 
-test("CONSEQUENCE: no arguments at all is still the shipped-default invocation", () => {
-  const r = run();
+// The two cases below assert an ABSENCE, which no output can confirm early, so they watch for the
+// same 2.5 s the old harness did. Under load they can only pass without proof, never fail falsely.
+const ABSENCE_WINDOW_MS = 2_500;
+
+test("CONSEQUENCE: no arguments at all is still the shipped-default invocation", async () => {
+  const r = await run([], { capMs: ABSENCE_WINDOW_MS });
   assert.doesNotMatch(r.stderr ?? "", /LABEL position/);
   // No `extra sim args:` line at all — that line only prints when EXTRA is non-empty, so its
   // ABSENCE is the assertion that the default run passes nothing to the sim.
   assert.doesNotMatch(r.stdout ?? "", /extra sim args:/);
 });
 
-test("A BARE WORD is a label, not a flag — the guard keys on the leading dashes only", () => {
-  const r = run("mylabel");
+test("A BARE WORD is a label, not a flag — the guard keys on the leading dashes only", async () => {
+  const r = await run(["mylabel"], { capMs: ABSENCE_WINDOW_MS });
   assert.doesNotMatch(r.stderr ?? "", /LABEL position/);
 });

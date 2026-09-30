@@ -6,7 +6,9 @@
 Re-derived on **2026-09-30**, from PART ONE's **fifteen** rows. The one added on 2026-09-28 is
 **PARTICLES-VISIBILITY-1** (row 15 below), measured, then fixed on its branch the same day by
 PARTICLES-VISIBILITY-2, extended by PARTICLES-VISIBILITY-3 and -4, measured further by -5 and -6, the fireflies maximum set by -7, every amount put on one 0–100 scale by -8, the editor preview matched to the race by -9, a race-view panel added by -10 and given reference points by -11 (all 2026-09-29), that panel turned into a switchable view with a test race by -12 and the false "unsaved track" message fixed by -13 (both 2026-09-30), and open until the
-owner has looked. The
+owner has looked. The one-off red run of `scripts/fingerprint-default.test.mjs` (its harness now waits for the output
+instead of a clock) and the red client audit gate (fixed by two dependency overrides) were added and CLOSED on
+2026-09-30, so they are in PART TWO and not here. The
 fourteen before it were derived on
 2026-09-27 — after the owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
