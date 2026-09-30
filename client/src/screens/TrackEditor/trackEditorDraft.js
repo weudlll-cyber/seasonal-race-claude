@@ -154,3 +154,27 @@ export function draftPointCount(d) {
     (d.centerPoints?.length ?? 0) + (d.innerPoints?.length ?? 0) + (d.outerPoints?.length ?? 0)
   );
 }
+
+/**
+ * Does this draft hold anything the saved track does not? PARTICLES-VISIBILITY-13: a draft that
+ * equals the saved track — every point, the closed flag, the centre width of a centre-mode track and
+ * the name — is not unsaved work, so it is not offered. Drafts like that were written by every load
+ * before this piece (the owner's recurring "An unsaved track … was found"), and one may still sit in
+ * a browser's storage.
+ *
+ * @param {object} draft  from loadDraft
+ * @param {object} track  a saved track's geometry (`getTrack`)
+ * @returns {boolean} true when the draft is the saved track, unchanged
+ */
+export function draftMatchesTrack(draft, track) {
+  if (!draft || !track) return false;
+  const same = (a, b) => JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+  return (
+    same(draft.centerPoints, track.centerPoints) &&
+    same(draft.innerPoints, track.innerPoints) &&
+    same(draft.outerPoints, track.outerPoints) &&
+    !!draft.closed === (track.closed === true) &&
+    (track.sourceMode !== 'center' || draft.centerWidth === (track.width ?? 120)) &&
+    (draft.trackName ?? '') === (track.name ?? '')
+  );
+}

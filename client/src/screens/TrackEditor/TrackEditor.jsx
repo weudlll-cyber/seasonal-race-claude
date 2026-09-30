@@ -27,6 +27,7 @@ import {
   clearDraft,
   clearLegacyDraft,
   draftPointCount,
+  draftMatchesTrack,
 } from './trackEditorDraft.js';
 import { useViewport } from './useViewport.js';
 import { useTrackIO } from './useTrackIO.js';
@@ -354,10 +355,10 @@ export default function TrackEditor() {
   // ★ THE CRASH DRAFT (POLISH-2026-09-24B). Drawing a track is minutes of mouse work that lives
   // only in React state until Save succeeds; a refresh used to lose all of it.
   //
-  // OFFERED ONCE, ON MOUNT, AND ONLY WHEN THERE IS NOTHING TO OVERWRITE. Silently restoring would
-  // be its own way to lose work, so it ASKS — and it does not ask at all when the editor was opened
-  // on an existing track (`?load=`) or when anything has already been drawn, because in both cases
-  // accepting would destroy what is on screen.
+  // OFFERED ONLY WHEN IT HOLDS UNSAVED WORK, FOR THE TRACK IT BELONGS TO. Silently restoring would be
+  // its own way to lose work, so it ASKS. On mount this effect offers the new-track draft to a fresh
+  // editor with nothing drawn; a loaded track is offered its own draft when it loads (`offerDraft`,
+  // PARTICLES-VISIBILITY-13), and a draft equal to the saved track is dropped without asking.
   const draftOfferedRef = useRef(false);
   useEffect(() => {
     if (draftOfferedRef.current) return;
@@ -368,16 +369,31 @@ export default function TrackEditor() {
     // ★ Q-22b: a draft written by a pre-per-track build can never be offered again, so clear it
     // rather than leaving it in storage forever.
     clearLegacyDraft();
-    // ★★ BOTH MODES NOW. The new-track case is `null` → the `:new` key; an edit is the track's own
-    // server id → its own key. Two tracks can no longer overwrite each other's draft.
-    //
-    // ★ IT STILL DOES NOT OFFER OVER WORK ALREADY ON SCREEN. In load mode the geometry arrives
-    // asynchronously, so "nothing drawn yet" is checked at the moment the offer is made, and the
-    // load effect below sets `centerPoints` before this can fire for a track that loaded first.
-    const loadId = searchParams.get('load');
+    // PARTICLES-VISIBILITY-13: on mount the editor offers ONLY the new-track draft, and only when it
+    // opens fresh. A track opened with `?load=` is offered its own draft when it has loaded
+    // (`loadTrackData` → `offerDraft`), because only then is there a saved track to compare it with.
+    if (searchParams.get('load')) return;
+    // ★ IT STILL DOES NOT OFFER OVER WORK ALREADY ON SCREEN.
     if (centerPoints.length || innerPoints.length || outerPoints.length) return;
-    const d = loadDraft(undefined, undefined, loadId ?? null);
+    offerDraft(null, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // PARTICLES-VISIBILITY-13: THE ONE OFFER, for the track a draft belongs to — `serverId` null for a
+  // new track, else the loaded track, compared with `savedTrack`. A draft that IS the saved track
+  // (draftMatchesTrack) holds no unsaved work: it is dropped without asking. For the new-track draft
+  // there is no one saved track to compare with, so it is compared with every saved one — a copy of a
+  // saved track under the new-track key is what the old keying wrote on every load.
+  function offerDraft(serverId, savedTrack) {
+    const d = loadDraft(undefined, undefined, serverId);
     if (!d) return;
+    const unchanged = savedTrack
+      ? draftMatchesTrack(d, savedTrack)
+      : allSavedTracks.some((t) => draftMatchesTrack(d, getTrack(t.id)));
+    if (unchanged) {
+      clearDraft(undefined, serverId);
+      return;
+    }
     const when = new Date(d.savedAt).toLocaleString();
     const name = d.trackName ? ` “${d.trackName}”` : '';
     const ok = window.confirm(
@@ -385,7 +401,7 @@ export default function TrackEditor() {
         'Restore it? Cancel discards it.'
     );
     if (!ok) {
-      clearDraft(undefined, loadId ?? null);
+      clearDraft(undefined, serverId);
       return;
     }
     setCenterPoints(d.centerPoints);
@@ -395,8 +411,7 @@ export default function TrackEditor() {
     if (typeof d.centerWidth === 'number') setCenterWidth(d.centerWidth);
     if (d.trackName) setTrackName(d.trackName);
     setIsDirty(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
   // PARTICLES-VISIBILITY-12: back from a test race — put the carried state back exactly: the
   // snapshot (points, width, mode, name, background, effects, lights — the undo history's own
@@ -421,14 +436,21 @@ export default function TrackEditor() {
   // ★★ BOTH MODES, SINCE Q-22b (2026-09-24). This was gated to new-track only while the key was a
   // single one — writing drafts in load mode that could never be offered would have stored data
   // nobody sees. With a per-track key the offer reaches them, so the gate is gone.
-  const draftId = searchParams.get('load') ?? null;
+  //
+  // PARTICLES-VISIBILITY-13: KEYED BY THE TRACK ACTUALLY LOADED, AND WRITTEN ONLY WHILE THERE ARE
+  // UNSAVED CHANGES. The key used to be the `?load=` address parameter, which the load itself clears
+  // — so every load wrote the track twice, under its own key and then under the new-track key, with
+  // nothing changed, and a save retired only one of them. `loadedServerId` stays the loaded track's
+  // for the whole session, and `isDirty` is exactly "there are unsaved changes".
+  const draftId = loadedServerId ?? null;
   useEffect(() => {
+    if (!isDirty) return;
     saveDraft(
       { centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName },
       undefined,
       draftId
     );
-  }, [draftId, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
+  }, [isDirty, draftId, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
   // Runs whenever server tracks or the geometry cache list become available.
@@ -1149,6 +1171,9 @@ export default function TrackEditor() {
       setCenterPoints([]);
       setCenterWidth(120);
     }
+    // PARTICLES-VISIBILITY-13: the loaded track's own draft, if it holds unsaved work, is offered now —
+    // after the saved track is on screen, so a restore replaces it and a match is dropped silently.
+    offerDraft(serverId ?? null, track);
   }
 
   async function handleSave() {
