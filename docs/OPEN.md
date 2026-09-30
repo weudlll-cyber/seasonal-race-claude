@@ -3,9 +3,10 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-30**, from PART ONE's **fifteen** rows. The one added on 2026-09-30 is the
-one-off red run of `scripts/fingerprint-default.test.mjs` (row 15 below), not reproduced in 40 runs. The fourteen
-before it were derived on 2026-09-27 — after the owner's decisions of
+Re-derived on **2026-09-30**, from PART ONE's **fourteen** rows. The one-off red run of
+`scripts/fingerprint-default.test.mjs` was added and CLOSED the same day (its harness now waits for the output
+instead of a clock), so it is in PART TWO and not here. The fourteen were derived on 2026-09-27 — after the
+owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
 DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
 which closed §1 and opened one new row (verify-on-demand). **The README rewrite was
@@ -23,10 +24,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2596) holds exactly FIFTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
+(lines 15–2570) holds exactly FOURTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
 *Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
-*Planned — needs spec*, *Delivering to someone else*, *Build-identity residuals* and, since 2026-09-30,
-*2026-09-30 — added (PARTICLES-VISIBILITY-13 piece B)*. Every count on this page now says fifteen.
+*Planned — needs spec*, *Delivering to someone else* and *Build-identity residuals*. Every count on
+this page now says fourteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -43,7 +44,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fifteen rows in section 0 are all WORK**, and that is still true.
+work. **The fourteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -54,7 +55,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -141,10 +142,6 @@ because nobody looked.**
    of those files. Costs in the arc 4 report; commission them one at a time.
 14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
    documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
-15. ★ **NEW 2026-09-30 — `fingerprint-default.test.mjs` went red once in a premerge run** (2026-09-29) and
-   passed 40 of 40 repeats (30 alone, 10 in the full script suite), so nothing was changed. Probable cause, NOT
-   PROVEN: its harness decides pass or fail by a fixed 2.5 s kill, which a loaded machine can miss. The fix is
-   written down in the row, not built. Branch `fix/fingerprint-default-flake`.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -320,10 +317,6 @@ as dated 2026-09-24, not as checked today** — saying so is cheaper than a page
 is not.
 
 *A run settles it; no decision is involved.*
-
-★ **ADDED 2026-09-30 — the one-off red run of `fingerprint-default.test.mjs`** (row 15): reproduce it under the
-load verify puts on the machine (its other guards running beside the script suite); if it reproduces, the
-harness fix in the backlog row applies. Not reproduced in 40 runs without that load.
 
 | what it is | size |
 | --- | --- |

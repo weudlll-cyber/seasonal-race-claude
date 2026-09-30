@@ -2565,32 +2565,6 @@ owner's hand**: parked here with enough context to be actionable months from now
   opens: **chaos traffic for the rear rows** (give the back rows more chaos-window mixing), which would aim to
   raise the bar to "silent even at N=300". Do NOT start without the owner's explicit word.
 
-## 2026-09-30 — added (PARTICLES-VISIBILITY-13 piece B)
-
-- [ ] **`scripts/fingerprint-default.test.mjs` went red ONCE in a premerge run, and could not be reproduced in 40
-  runs.** Seen 2026-09-29 in PARTICLES-VISIBILITY-12's second `verify --premerge` run (branch
-  `fix/particles-visibility`): *"CONSEQUENCE: the same flag AFTER a label is accepted and reaches the sim"* failed in
-  2,805 ms with an EMPTY stdout where it expected `extra sim args: --gapRerollEnabled=false`.
-  - **The owner's order of 2026-09-30:** fix the known faults before he looks at `fix/particles-visibility`; this
-    is tooling, worked on its own branch `fix/fingerprint-default-flake`.
-  - **MEASURED 2026-09-30, on master `7a8166f8`:** 30 of 30 runs of the test alone passed, and 10 of 10 runs of the
-    full script suite as premerge runs it (`node --test` over all 55 `scripts/**/*.test.mjs`) passed. By the rule
-    set for this (not reproduced in 40 runs), **nothing was changed**.
-  - **Probable cause, NOT PROVEN:** the harness (`scripts/fingerprint-default.test.mjs:24-33`) runs the script with
-    `spawnSync` and a fixed 2,500 ms `SIGKILL`, and the verdict is whether the line reached stdout before the kill.
-    Idle, the line comes after 52–66 ms (20 samples); the failing run took 2,805 ms, i.e. the kill with nothing
-    printed. The one failure came while verify ran its other guards in parallel with the script suite, a heavier
-    load than the 40 runs had. The script starts one CPU-bound `sim-fairness.mjs` child per core right after
-    that line (`scripts/fingerprint-default.mjs:239-283`); they end with the killed parent (observed), so they do
-    not accumulate as orphans.
-  - **The fix, if it is ever reproduced (not built):** spawn asynchronously and resolve on the expected line or
-    the child's exit, with a generous deadline as a safety net only — the verdict then depends on what the script
-    prints, not on how fast a loaded machine starts Node. Test and harness only.
-  - **Also noticed:** the two negative cases (*no arguments*, *a bare word*) assert an ABSENCE at the moment of the
-    kill, so under load they pass without having proved anything. They cannot cause this red run.
-  - **To close it:** reproduce it under verify-like load, then apply the fix above and show the counts all green.
-    Report: `reports/particles/PARTICLES-VISIBILITY-13.md` §B, on branch `fix/particles-visibility`.
-
 ---
 
 # PART TWO — CLOSED
@@ -2601,6 +2575,31 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **`scripts/fingerprint-default.test.mjs` went red ONCE in a premerge run.** Opened 2026-09-30 by
+      PARTICLES-VISIBILITY-13 piece B, closed 2026-09-30 by FINGERPRINT-DEFAULT-FLAKE-1.
+      **What it was.** Seen 2026-09-29 in PARTICLES-VISIBILITY-12's second `verify --premerge` run: *"CONSEQUENCE:
+      the same flag AFTER a label is accepted and reaches the sim"* failed in 2,805 ms with an EMPTY stdout. It did
+      not come back in 40 repeats (30 alone, 10 in the script suite), so the first pass changed nothing.
+      **The cause, in the harness.** It ran the script with `spawnSync` and a fixed 2,500 ms `SIGKILL`, and the
+      verdict was whether the awaited line had reached stdout by then. The line comes ~60 ms after start on an idle
+      machine; under verify's parallel load a Node start can take longer than the whole deadline, and then a
+      correct script read as a failure.
+      **What closed it: the harness waits for the OUTPUT, not a clock** — it spawns asynchronously, settles as soon
+      as the awaited line appears (or the child exits), kills the child, and keeps a 30 s cap only to fail a script
+      that never prints the line, with a message that says so. Test file only; no product code, no fingerprint.
+      Afterwards, all green: 30 of 30 runs alone (the positive case now settles in 91–223 ms instead of always
+      waiting out 2.6 s), 10 of 10 runs of the full script suite (305–547 ms), and 5 of 5 `verify --premerge` runs with
+      the script suite passing in each. Those five route only 15 guards for a test-and-docs change, so they carry less
+      load than the failing run had; under an added client-suite load the new harness settled in 207–679 ms — and the
+      OLD harness also passed 10 of 10 there, so the original red run was never reproduced. The fix removes the clock
+      from the verdict; it does not prove the cause. Sabotaged twice — the line never printed (red at the 30 s
+      cap: *no "extra sim args:" line within 30000 ms — stdout was: ""*) and a wrong line printed (red on the match,
+      209 ms) — then restored.
+      ★ **Left as it was, on purpose:** the two ABSENCE cases (*no arguments*, *a bare word*) still watch a 2.5 s
+      window, because nothing the script prints can confirm an absence early. Under load they can only pass without
+      proof, never fail falsely; proving them would need a marker in the script itself, which this piece did not
+      touch. Report: `reports/particles/PARTICLES-VISIBILITY-13.md` §B on branch `fix/particles-visibility`.
 
 - [x] ★★ **CI was RED on master — `scripts/migrate.test.mjs` could not resolve `bcrypt`.** Opened and
       closed 2026-09-24, by FIX-CI-MIGRATE-TEST-DEPS.
