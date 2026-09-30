@@ -2576,6 +2576,25 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★ **CI was RED on master — the client "Security audit gate" (`c4a869c0`).** Opened and closed 2026-09-30, by
+      AUDIT-2026-09-30.
+      **What failed.** Four HIGH advisories, published after the day's scheduled audit had passed, blocked
+      `scripts/audit-gate.mjs` in the *Client checks* job — on the merge of FINGERPRINT-DEFAULT-FLAKE-1, which changed
+      no package file (the master before it, `7a8166f8`, failed the same gate). All four are in DEV-ONLY packages:
+      - `brace-expansion` 5.0.9, via `eslint-plugin-react` → `minimatch` — GHSA-qhr7-859c-m2p7 and GHSA-6j4f-fj2g-mc7p
+        (denial of service by uncontrolled recursion); vulnerable up to 5.0.11.
+      - `undici` 7.29.0, via `jsdom` — GHSA-rfgv-xxqx-mfg5 (denial of service) and GHSA-w293-vg96-wgc3 (TLS
+        certificate validation bypass); vulnerable up to 7.29.0.
+      The server tree had no high advisory.
+      **What fixed it: two overrides in `client/package.json`** — the existing `"brace-expansion"` raised from
+      `^5.0.9` to `^5.0.12`, and `"undici": "^7.30.0"` added (`jsdom` asks for `^7.24.5`, so it stays in range) — and
+      the lockfile re-resolved (12 lines). Installed afterwards, checked in the tree rather than trusted from npm's
+      exit code: `brace-expansion@5.0.12`, `undici@7.30.0`. Client gate 0 high (3 moderate, advisory only), the full
+      client suite (4,778 tests) green, lint and build clean, server gate 0 high.
+      ★ **Left on purpose:** the three MODERATE client advisories, one of which (`vitest`, `@vitest/mocker`) would
+      need the vitest 4 → 5 major; the gate does not block moderate, and a major is its own decision. No allowlist
+      entry was added — the advisories were FIXED, not waived.
+
 - [x] ★ **`scripts/fingerprint-default.test.mjs` went red ONCE in a premerge run.** Opened 2026-09-30 by
       PARTICLES-VISIBILITY-13 piece B, closed 2026-09-30 by FINGERPRINT-DEFAULT-FLAKE-1.
       **What it was.** Seen 2026-09-29 in PARTICLES-VISIBILITY-12's second `verify --premerge` run: *"CONSEQUENCE:
