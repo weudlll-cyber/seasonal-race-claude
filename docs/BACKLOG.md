@@ -2687,6 +2687,13 @@ owner's hand**: parked here with enough context to be actionable months from now
     after a test race the stored track is byte-identical, no local history, no server race, no result hand-off, and the
     editor returns with its unsaved state (a control with the protections removed wrote one history entry and one
     server race). No fingerprint moved. Report: [PARTICLES-VISIBILITY-12](../reports/particles/PARTICLES-VISIBILITY-12.md).
+  - **The owner's order of 2026-09-30:** fix the known faults before he looks at the branch.
+  - **FIXED on the branch, 2026-09-30 — PARTICLES-VISIBILITY-13 piece A** (`b06f02f5`, not merged): "An unsaved track …
+    was found" came after every load, because each load wrote two drafts with nothing changed (the key was the `?load=`
+    address parameter, which the load itself clears). The draft is now keyed by the loaded track and written only while
+    there are unsaved changes; a draft equal to the saved track is dropped silently. MEASURED on the production build:
+    the message now appears only for a changed stored track (when it reopens) and a new unsaved track; the test-race
+    round trip is unchanged. Report: [PARTICLES-VISIBILITY-13](../reports/particles/PARTICLES-VISIBILITY-13.md).
   - **Waits for his eye — the row stays open until he has looked** at the production preview of the branch. At
     unchanged settings every effect looks thinner than before PARTICLES-VISIBILITY-2 (rain on Dirt Oval about 6.8×,
     bubbles on Seatrack about 27×, stars on Space Sprint about 26×); since PARTICLES-VISIBILITY-3 each slider reaches
