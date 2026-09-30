@@ -59,8 +59,8 @@ every report here is reachable and that every link here resolves.
 
 - [PARTICLES-VISIBILITY-13.md](PARTICLES-VISIBILITY-13.md) — 2026-09-30. Two known faults before the owner looks: (A)
   "An unsaved track … was found" appeared after every load — each load wrote two drafts with nothing changed — and now
-  appears only for unsaved changes, for their own track (MEASURED before/after); (B) the intermittent red run of
-  `fingerprint-default.test.mjs`, on its own branch.
+  appears only for unsaved changes, for their own track (MEASURED before/after); (B) the one-off red run of
+  `fingerprint-default.test.mjs`: not reproduced in 40 runs, nothing changed (its own branch).
 
 **Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-12/` folders hold the reports' screenshots.
 `check-index` only considers `*.md`.

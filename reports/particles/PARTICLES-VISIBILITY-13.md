@@ -6,7 +6,7 @@ Two pieces, in this order, each with its own check and push.
 - **Piece A** — the Track Editor's "An unsaved track … was found": this section. On `fix/particles-visibility`,
   code commit `b06f02f5`. Not merged: the owner looks first.
 - **Piece B** — the intermittent red run of `scripts/fingerprint-default.test.mjs`: §B below. Tooling, on its own
-  branch `fix/fingerprint-default-flake`.
+  branch `fix/fingerprint-default-flake` (`babe13d9`). Not reproduced in 40 runs, so nothing changed and nothing merged.
 
 Open row: [BACKLOG.md](../../docs/BACKLOG.md) PART ONE, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*.
 
@@ -157,5 +157,71 @@ in their import closure.
 
 ## B · The intermittent red run of `scripts/fingerprint-default.test.mjs`
 
-**Pending.** Piece B is worked on its own branch, `fix/fingerprint-default-flake`, off master, because it is tooling. This
-section is completed with its result and a reference to its commit once it lands.
+Worked on its own branch, **`fix/fingerprint-default-flake`, off master `7a8166f8`**, because it is tooling. Commit
+**`babe13d9`**, pushed, **not merged**: the rule for this case says so (below). The finding is written into that branch's
+`docs/BACKLOG.md` as a new open row, and its `docs/OPEN.md` is re-derived. There are fifteen rows on that branch,
+master's fourteen plus this one.
+
+### B.0 · The answer
+
+- **Not reproduced in 40 runs. MEASURED** on master `7a8166f8`:
+
+  | how | runs | passed | failed |
+  | --- | --- | --- | --- |
+  | the test file alone (`node --test scripts/fingerprint-default.test.mjs`) | 30 | 30 | 0 |
+  | inside the full script suite as premerge runs it (`node --test` over all 55 `scripts/**/*.test.mjs`, `verify.mjs:372-373`) | 10 | 10 | 0 |
+
+- **By the rule set for this case (rule 3: not reproduced in 40 runs), nothing was changed.** A harness fix was
+  prepared and is written down, not built.
+- **The fingerprint value is not in question.** The test never measures a fingerprint (its header says so); it exits
+  before a race is simulated. Rule 2 did not arise.
+
+### B.1 · The failure that was seen
+
+From PARTICLES-VISIBILITY-12's second premerge run (2026-09-29), exactly:
+
+```
+test at scripts\fingerprint-default.test.mjs:50:1
+✖ CONSEQUENCE: the same flag AFTER a label is accepted and reaches the sim (2805.3504ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /extra sim args: --gapRerollEnabled=false/. Input:
+
+  ''
+```
+
+The same test passed alone twice right after, and the third premerge run passed.
+
+### B.2 · The probable cause — NOT PROVEN
+
+- **The verdict is a race between a print and a clock.** The harness (`scripts/fingerprint-default.test.mjs:24-33`)
+  runs the script with `spawnSync` and a fixed **2,500 ms `SIGKILL`**, then looks at whatever reached stdout. The
+  script prints the awaited line (`scripts/fingerprint-default.mjs:239`) and immediately starts one CPU-bound
+  `sim-fairness.mjs` child per core (`:255-283`). The kill always comes (every passing run takes about 2.6 s), and a
+  pass means only that the line reached the pipe first.
+- **Idle, the line comes after 52–66 ms** (20 samples, median 60 ms), 40 times inside the deadline. **The failing run
+  took 2,805 ms with an empty stdout**: the kill with nothing printed.
+- **The one failure came under a heavier load than the 40 runs had.** Verify ran its other guards (the client suite,
+  the world fingerprint's own ten simulations) beside the script suite. That is the likeliest way a Node start can take
+  more than 2.5 s. It was not reproduced, so it stays a probable cause.
+- **Ruled out: orphaned simulations piling up.** The ten children started by each case end together with the killed
+  parent (observed by listing processes a few seconds apart). They do not accumulate across runs.
+
+### B.3 · The fix, if it is ever reproduced — written down, not built
+
+Test and harness only:
+- spawn asynchronously;
+- resolve on the expected line or on the child's exit, then kill it;
+- keep a generous deadline purely as a safety net.
+
+The verdict then depends on what the script prints, not on how fast a loaded machine starts Node.
+
+**Also noticed, and left:** the two negative cases (*no arguments* and *a bare word*) assert an ABSENCE at the moment of
+the kill, so under load they pass without having proved anything. They cannot produce this red run. Fixing them needs
+a marker the script prints after its argument parsing, which would be a change to the script, not to the test.
+
+### B.4 · Files
+
+Test and harness: none changed. `docs/BACKLOG.md` (the new open row) and `docs/OPEN.md` (re-derived, fifteen) on the
+piece B branch.
+
+**Merge note:** both branches now count fifteen open rows, each with its own new row. Whichever merges second will
+need its OPEN.md re-derived to sixteen.
