@@ -2576,6 +2576,23 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★ **The Browser gate was RED on master — the merge of `fix/particles-visibility` (`fc4dd636`).** Opened and closed
+      2026-10-01, by MASTER-GREEN-1 (branch `fix/master-green`).
+      **What failed.** The production browser arm (fast set, run 36785405858): 2 failed, 108 passed. CI itself was green.
+      1. `client/e2e/b1617-smoke.spec.js:44` "Track Editor loads without JS console errors" — strict mode violation,
+         `locator('canvas')` resolved to 2 elements. **Why:** since PARTICLES-VISIBILITY-10/12 the Track Editor renders
+         two canvases, the track view and the race view (`TrackEditor.jsx`); a bare `canvas` locator is ambiguous. The
+         ship ran `verify -- --premerge`, which does not run the browser suite, and the suite was not run before merging.
+      2. `client/e2e/d11-ux-verification.spec.js:182` (V8) — `apiRequestContext.get: socket hang up` on `GET /api/tracks`.
+         Run again 5 times on the production arm: 5 of 5 passed, and it passed in the full local fast set. Recorded as an
+         intermittent; cause NOT PROVEN; not changed.
+      **What fixed it:** both Track Editor locators in `b1617-smoke.spec.js` (lines 44 and 58; 58 used `.first()` and so
+      depended on the DOM order) now name the editor canvas by its label, `canvas[aria-label^="Track editor canvas"]`.
+      No other spec in `client/e2e/` locates a bare `canvas` on the Track Editor route (the others use
+      `canvas.race-canvas` on the race screen). Test-only; the production arm's fast set locally: 110 passed, 0 failed.
+      ★ **The lesson:** a change to a screen's markup needs the production browser arm run before merging, because
+      `verify` does not run it.
+
 - [x] ★★ **PARTICLES-VISIBILITY-1 to -13 — dust, rain and the other track effects showed only sometimes; the Track
       Editor could not show how they look in the race.** Opened 2026-09-28, closed 2026-10-01 by the merge of
       `fix/particles-visibility`.

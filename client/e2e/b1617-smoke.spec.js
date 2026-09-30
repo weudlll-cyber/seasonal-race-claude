@@ -9,6 +9,9 @@
 
 import { test, expect } from '@playwright/test';
 
+// The Track Editor's drawing canvas, by the start of its aria-label (TrackEditor.jsx).
+const TRACK_EDITOR_CANVAS = 'canvas[aria-label^="Track editor canvas"]';
+
 // ── B-16 — Camera section still renders correctly ────────────────────────────
 
 test.describe('B-16 — Camera adaptive zoom: UI not regressed', () => {
@@ -41,7 +44,9 @@ test.describe('B-16 — Camera adaptive zoom: UI not regressed', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/track-editor');
-    await expect(page.locator('canvas')).toBeVisible();
+    // The editor renders two canvases since PARTICLES-VISIBILITY-10/12 (the track view and the hidden race
+    // view), so a bare 'canvas' locator is ambiguous; this names the track-editor canvas by its label.
+    await expect(page.locator(TRACK_EDITOR_CANVAS)).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 });
@@ -55,7 +60,7 @@ test.describe('B-17 — pathLengthPx is computed and stored on track save', () =
     await page.goto('/track-editor');
 
     // Draw a minimal 2-point open track
-    const canvas = page.locator('canvas').first();
+    const canvas = page.locator(TRACK_EDITOR_CANVAS);
     const box = await canvas.boundingBox();
     // Click two points on the canvas to create a track line
     await canvas.click({ position: { x: box.width * 0.25, y: box.height * 0.5 } });

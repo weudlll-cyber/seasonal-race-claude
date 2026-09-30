@@ -9,7 +9,8 @@ on the production preview on 2026-10-01 and approved it, and it is merged — so
 and what was left as is. The one-off red run of
 `scripts/fingerprint-default.test.mjs` was added and CLOSED the same day (its harness now waits for the output
 instead of a clock), so it is in PART TWO and not here — as is the red client audit gate of the same day, fixed by
-two dependency overrides. The fourteen were derived on 2026-09-27 — after the
+two dependency overrides — and, on 2026-10-01, the red Browser gate on the particles merge, fixed in one browser test. The
+fourteen were derived on 2026-09-27 — after the
 owner's decisions of
 2026-09-25, after RACE-SOURCE-1, DEVSCREEN-STOCKTAKE and STAY-ON-THE-FINISH-1, after
 DELIVERY-CLEAN-1 finished all eleven of its pieces, and after **the six decisions of 2026-09-27**,
