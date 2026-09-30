@@ -60,11 +60,14 @@ const configSchema = [
     default: 1.2,
     label: 'Spread Angle',
   },
+  // PARTICLES-VISIBILITY-3: the trail's starting opacity, set per surface class in the Dev Screen.
+  // The default is the constant this generator hard-coded until then, so every stored class and
+  // override written before it (none carries the key) renders exactly as it did.
+  { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.85, label: 'Opacity' },
 ];
 
 const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
-const START_ALPHA = 0.85;
 const BURST_SPEED = 2.5;
 
 /**
@@ -73,6 +76,8 @@ const BURST_SPEED = 2.5;
  * @param {object} [_racer]
  */
 function create(config, _racer) {
+  // A stored class or override without `opacity` falls back to the schema default above.
+  const opacity = config.opacity ?? defaultConfig.opacity;
   // Pre-render the droplet sprite ONCE per emitter (cached by this instance's color/size),
   // sized to the largest droplet radius. Never rebuilt per frame.
   const dropletSprite = createBlobSprite(config.sizeMax, config.color);
@@ -84,7 +89,7 @@ function create(config, _racer) {
     spawn(out, x, y, speed, angle) {
       if (Math.random() > config.spawnProbability) return;
       const count = Math.max(1, Math.round(config.count));
-      const fadePerFrame = START_ALPHA / config.lifetimeFrames;
+      const fadePerFrame = opacity / config.lifetimeFrames;
       const burstSpeed = BURST_SPEED + speed * 0.5;
 
       for (let k = 0; k < count; k++) {
@@ -101,7 +106,7 @@ function create(config, _racer) {
           vy: Math.sin(spreadDir) * s,
           gy: config.gravity,
           r,
-          alpha: START_ALPHA,
+          alpha: opacity,
           fadePerFrame,
           color: config.color,
         });

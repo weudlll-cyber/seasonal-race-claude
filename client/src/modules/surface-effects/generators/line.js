@@ -36,11 +36,13 @@ const configSchema = [
     default: 90,
     label: 'Lifetime (frames)',
   },
+  // PARTICLES-VISIBILITY-3: the trail's starting opacity, set per surface class in the Dev Screen.
+  // The default is the constant this generator hard-coded until then, so every stored class and
+  // override written before it (none carries the key) renders exactly as it did.
+  { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.7, label: 'Opacity' },
 ];
 
 const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
-
-const START_ALPHA = 0.7;
 
 /**
  * create — returns the spawn/update/render triplet for the line generator.
@@ -49,9 +51,11 @@ const START_ALPHA = 0.7;
  * @param {object} [_racer]
  */
 function create(config, _racer) {
+  // A stored class or override without `opacity` falls back to the schema default above.
+  const opacity = config.opacity ?? defaultConfig.opacity;
   let lastX = null;
   let lastY = null;
-  const fadePerFrame = START_ALPHA / config.lifetimeFrames;
+  const fadePerFrame = opacity / config.lifetimeFrames;
 
   return {
     // Stateful: emits a segment from the previous spawn position to the current one,
@@ -69,7 +73,7 @@ function create(config, _racer) {
         y1: lastY,
         x2: x,
         y2: y,
-        alpha: START_ALPHA,
+        alpha: opacity,
         fadePerFrame,
         color: config.color,
         thickness: config.thickness,
@@ -111,10 +115,10 @@ function create(config, _racer) {
         let began = false;
         for (let i = 0; i < n; i++) {
           const p = particles[i];
-          // Bucket the segment by its fade level (alpha ∈ (0, START_ALPHA]).
+          // Bucket the segment by its fade level (alpha ∈ (0, opacity]).
           const bucket = Math.min(
             ALPHA_BUCKETS - 1,
-            Math.max(0, Math.floor((p.alpha / START_ALPHA) * ALPHA_BUCKETS))
+            Math.max(0, Math.floor((p.alpha / opacity) * ALPHA_BUCKETS))
           );
           if (bucket !== b) continue;
           if (!isSegmentVisible(cull, p.x1, p.y1, p.x2, p.y2, halfThick)) continue;
@@ -127,7 +131,7 @@ function create(config, _racer) {
         }
         if (began) {
           // Representative alpha = midpoint of this bucket's fade range.
-          ctx.globalAlpha = ((b + 0.5) / ALPHA_BUCKETS) * START_ALPHA;
+          ctx.globalAlpha = ((b + 0.5) / ALPHA_BUCKETS) * opacity;
           ctx.stroke();
         }
       }

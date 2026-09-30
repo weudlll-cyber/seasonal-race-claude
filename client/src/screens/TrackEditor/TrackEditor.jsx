@@ -4,7 +4,12 @@
 // Project:     RaceArena
 // Created:     2026-04-25
 // Description: Full-screen track editor — Catmull-Rom spline drawing, undo/redo,
-//              effects config, and server save/load.
+//              effects config, and server save/load. Two views, switched (PARTICLES-VISIBILITY-12):
+//              the whole track, for drawing, and the race view — a whole race frame at the race
+//              camera's racing zoom with the track lines, the effects and three racers at race size
+//              (raceView.js, PARTICLES-VISIBILITY-10/11); the track view frames the race view's area.
+//              A test race runs this track with the unsaved effects and comes back to exactly this
+//              state (testRace.js).
 // ============================================================
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -22,11 +27,41 @@ import {
   clearDraft,
   clearLegacyDraft,
   draftPointCount,
+  draftMatchesTrack,
 } from './trackEditorDraft.js';
 import { useViewport } from './useViewport.js';
 import { useTrackIO } from './useTrackIO.js';
 import { API_BASE_URL } from '../../services/api.js';
 import { getEffect } from '../../modules/track-effects/index.js';
+import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { storageGet, KEYS } from '../../modules/storage/storage.js';
+import { getRacerType } from '../../racer-types/index.js';
+import { normalSpeedFrom } from '../../modules/durationModel.js';
+import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
+import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import {
+  testRaceBlockedReason,
+  buildTestRace,
+  startTestRace,
+  peekEditorReturn,
+  clearEditorReturn,
+} from './testRace.js';
+import {
+  RACE_VIEW_W,
+  RACE_VIEW_H,
+  RACE_VIEW_FIELD_SIZE,
+  raceViewScale,
+  raceViewStart,
+  raceViewCourse,
+  raceViewRacerPlacements,
+  raceViewRacerScale,
+  raceViewRowSlotPx,
+  drawRaceViewFrame,
+  drawRaceView,
+} from './raceView.js';
 import { useServerTracksControl } from '../../modules/storage/useServerTracks.js';
 import TrackEditorToolbar from './TrackEditorToolbar.jsx';
 import TrackEditorSaveBar from './TrackEditorSaveBar.jsx';
@@ -54,6 +89,11 @@ export default function TrackEditor() {
   const bgRef = useRef(null);
   const fileInputRef = useRef(null);
   const wrapperRef = useRef(null);
+  // PARTICLES-VISIBILITY-10: the race-view panel's canvas, what it currently shows, and the one-shot
+  // redraw that waits for its background image while no effect loop is running.
+  const raceViewCanvasRef = useRef(null);
+  const raceViewRef = useRef(null);
+  const raceViewRetryRef = useRef(null);
   const saveTimerRef = useRef(null);
   const saveBarRef = useRef(null);
 
@@ -79,6 +119,7 @@ export default function TrackEditor() {
     getCanvasCoords,
     setWorldSize,
     resetViewport,
+    restoreViewport,
   } = useViewport(canvasRef);
 
   // ── effect preview refs ────────────────────────────────────────────────────
@@ -110,6 +151,20 @@ export default function TrackEditor() {
   const [closed, setClosed] = useState(false);
   const [trackName, setTrackName] = useState('');
   const [backgroundImage, setBackgroundImage] = useState(null);
+  // The camera config the race reads (RaceScreen/index.jsx, `loadCameraConfig`), so the panel's zoom
+  // follows the owner's own camera settings. Read once, as the race does at its start.
+  const [cameraConfig] = useState(() => loadCameraConfig());
+  // PARTICLES-VISIBILITY-11: the two other configs the race sizes a racer from, as it loads them.
+  const [autoScaleConfig] = useState(() => loadAutoScaleConfig());
+  const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
+  // Where the race view looks: null = the start of the track (raceViewStart), else a clicked point.
+  const [raceViewCentre, setRaceViewCentre] = useState(null);
+  // PARTICLES-VISIBILITY-12: which view the editor shows — 'track' (draw and edit) or 'race' (the
+  // race view, large). One canvas is shown at a time; both stay mounted, so both stay drawn.
+  const [view, setView] = useState('track');
+  // PARTICLES-VISIBILITY-12: the unsaved state a test race carried (testRace.js). Read in an
+  // initializer WITHOUT removing it — an initializer may run twice — and removed once applied below.
+  const [returnState] = useState(peekEditorReturn);
   const [bgUploadError, setBgUploadError] = useState(null);
   const [effects, setEffects] = useState([]);
   const [trackLights, setTrackLights] = useState(DEFAULT_TRACK_LIGHTS);
@@ -300,27 +355,45 @@ export default function TrackEditor() {
   // ★ THE CRASH DRAFT (POLISH-2026-09-24B). Drawing a track is minutes of mouse work that lives
   // only in React state until Save succeeds; a refresh used to lose all of it.
   //
-  // OFFERED ONCE, ON MOUNT, AND ONLY WHEN THERE IS NOTHING TO OVERWRITE. Silently restoring would
-  // be its own way to lose work, so it ASKS — and it does not ask at all when the editor was opened
-  // on an existing track (`?load=`) or when anything has already been drawn, because in both cases
-  // accepting would destroy what is on screen.
+  // OFFERED ONLY WHEN IT HOLDS UNSAVED WORK, FOR THE TRACK IT BELONGS TO. Silently restoring would be
+  // its own way to lose work, so it ASKS. On mount this effect offers the new-track draft to a fresh
+  // editor with nothing drawn; a loaded track is offered its own draft when it loads (`offerDraft`,
+  // PARTICLES-VISIBILITY-13), and a draft equal to the saved track is dropped without asking.
   const draftOfferedRef = useRef(false);
   useEffect(() => {
     if (draftOfferedRef.current) return;
     draftOfferedRef.current = true;
+    // PARTICLES-VISIBILITY-12: back from a test race, the editor restores its own unsaved state
+    // (below); offering an older draft over it would be the wrong state.
+    if (returnState) return;
     // ★ Q-22b: a draft written by a pre-per-track build can never be offered again, so clear it
     // rather than leaving it in storage forever.
     clearLegacyDraft();
-    // ★★ BOTH MODES NOW. The new-track case is `null` → the `:new` key; an edit is the track's own
-    // server id → its own key. Two tracks can no longer overwrite each other's draft.
-    //
-    // ★ IT STILL DOES NOT OFFER OVER WORK ALREADY ON SCREEN. In load mode the geometry arrives
-    // asynchronously, so "nothing drawn yet" is checked at the moment the offer is made, and the
-    // load effect below sets `centerPoints` before this can fire for a track that loaded first.
-    const loadId = searchParams.get('load');
+    // PARTICLES-VISIBILITY-13: on mount the editor offers ONLY the new-track draft, and only when it
+    // opens fresh. A track opened with `?load=` is offered its own draft when it has loaded
+    // (`loadTrackData` → `offerDraft`), because only then is there a saved track to compare it with.
+    if (searchParams.get('load')) return;
+    // ★ IT STILL DOES NOT OFFER OVER WORK ALREADY ON SCREEN.
     if (centerPoints.length || innerPoints.length || outerPoints.length) return;
-    const d = loadDraft(undefined, undefined, loadId ?? null);
+    offerDraft(null, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // PARTICLES-VISIBILITY-13: THE ONE OFFER, for the track a draft belongs to — `serverId` null for a
+  // new track, else the loaded track, compared with `savedTrack`. A draft that IS the saved track
+  // (draftMatchesTrack) holds no unsaved work: it is dropped without asking. For the new-track draft
+  // there is no one saved track to compare with, so it is compared with every saved one — a copy of a
+  // saved track under the new-track key is what the old keying wrote on every load.
+  function offerDraft(serverId, savedTrack) {
+    const d = loadDraft(undefined, undefined, serverId);
     if (!d) return;
+    const unchanged = savedTrack
+      ? draftMatchesTrack(d, savedTrack)
+      : allSavedTracks.some((t) => draftMatchesTrack(d, getTrack(t.id)));
+    if (unchanged) {
+      clearDraft(undefined, serverId);
+      return;
+    }
     const when = new Date(d.savedAt).toLocaleString();
     const name = d.trackName ? ` “${d.trackName}”` : '';
     const ok = window.confirm(
@@ -328,7 +401,7 @@ export default function TrackEditor() {
         'Restore it? Cancel discards it.'
     );
     if (!ok) {
-      clearDraft(undefined, loadId ?? null);
+      clearDraft(undefined, serverId);
       return;
     }
     setCenterPoints(d.centerPoints);
@@ -338,6 +411,22 @@ export default function TrackEditor() {
     if (typeof d.centerWidth === 'number') setCenterWidth(d.centerWidth);
     if (d.trackName) setTrackName(d.trackName);
     setIsDirty(true);
+  }
+
+  // PARTICLES-VISIBILITY-12: back from a test race — put the carried state back exactly: the
+  // snapshot (points, width, mode, name, background, effects, lights — the undo history's own
+  // `applySnapshot`), the loaded track, the dirty flag, the viewport, the view and the race-view
+  // centre. Then the carried state is removed, so a later visit starts normally.
+  useEffect(() => {
+    if (!returnState) return;
+    clearEditorReturn();
+    applySnapshot(returnState.snapshot);
+    setLoadedGeometryId(returnState.loadedGeometryId);
+    setLoadedServerId(returnState.loadedServerId);
+    setIsDirty(returnState.isDirty);
+    restoreViewport(returnState.viewport);
+    setView(returnState.view);
+    setRaceViewCentre(returnState.raceViewCentre);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -347,14 +436,21 @@ export default function TrackEditor() {
   // ★★ BOTH MODES, SINCE Q-22b (2026-09-24). This was gated to new-track only while the key was a
   // single one — writing drafts in load mode that could never be offered would have stored data
   // nobody sees. With a per-track key the offer reaches them, so the gate is gone.
-  const draftId = searchParams.get('load') ?? null;
+  //
+  // PARTICLES-VISIBILITY-13: KEYED BY THE TRACK ACTUALLY LOADED, AND WRITTEN ONLY WHILE THERE ARE
+  // UNSAVED CHANGES. The key used to be the `?load=` address parameter, which the load itself clears
+  // — so every load wrote the track twice, under its own key and then under the new-track key, with
+  // nothing changed, and a save retired only one of them. `loadedServerId` stays the loaded track's
+  // for the whole session, and `isDirty` is exactly "there are unsaved changes".
+  const draftId = loadedServerId ?? null;
   useEffect(() => {
+    if (!isDirty) return;
     saveDraft(
       { centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName },
       undefined,
       draftId
     );
-  }, [draftId, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
+  }, [isDirty, draftId, centerPoints, innerPoints, outerPoints, closed, centerWidth, trackName]);
 
   // Auto-load a track when ?load=<serverId> is in the URL (from TrackManager Edit button).
   // Runs whenever server tracks or the geometry cache list become available.
@@ -434,6 +530,91 @@ export default function TrackEditor() {
     };
   }, []);
 
+  // ── race view (PARTICLES-VISIBILITY-10) ───────────────────────────────────
+  // The zoom is the race camera's own ordinary racing zoom for this track (raceView.js names the
+  // camera functions it calls). The track width is the one the race passes, `geometry.width`, which
+  // is `centerWidth` for a centre-mode track; a boundary-mode track has none here, and the camera's
+  // reference corridor then stands alone (referenceWidthFor takes the larger of the two).
+  const raceViewZoom = useMemo(
+    () =>
+      raceViewScale({
+        worldW: editorWorldW,
+        worldH: editorWorldH,
+        isOpenTrack: !closed,
+        trackWidthPx: mode === 'center' ? centerWidth : NaN,
+        cameraConfig,
+      }),
+    [editorWorldW, editorWorldH, closed, mode, centerWidth, cameraConfig]
+  );
+  const raceViewCentreNow =
+    raceViewCentre ??
+    raceViewStart({
+      mode,
+      centerPoints,
+      innerPoints,
+      outerPoints,
+      worldW: editorWorldW,
+      worldH: editorWorldH,
+    });
+  // PARTICLES-VISIBILITY-11: the track lines the panel draws are the main view's own scene state.
+  const raceViewLines = {
+    mode,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    activeBoundary,
+    selectedPointIndex,
+    centerWidth,
+    closed,
+  };
+  // PARTICLES-VISIBILITY-11: three racers of the track's own type, sized as the race sizes them for a
+  // RACE_VIEW_FIELD_SIZE field at this zoom. The type is the one Setup would race here — the track's
+  // `defaultRacerTypeId`, else 'horse' (SetupScreen.jsx) — and the width the one the race passes: the
+  // centre width, or for a boundary track the corridor where the racers stand.
+  const raceViewRacerTypeId =
+    serverTracksCtl.tracks.find((t) => t.id === loadedServerId)?.defaultRacerTypeId ?? 'horse';
+  const raceViewHasSizeOverride = useMemo(() => {
+    const o = storageGet(KEYS.RACER_TYPE_OVERRIDES, {})[raceViewRacerTypeId];
+    return !!o && typeof o === 'object' && 'displaySize' in o;
+  }, [raceViewRacerTypeId]);
+  const raceViewCourseNow = raceViewCourse(raceViewLines, raceViewCentreNow);
+  let raceViewRacers = null;
+  if (raceViewCourseNow) {
+    const racerType = getRacerType(raceViewRacerTypeId);
+    raceViewRacers = {
+      racerType,
+      displayScale: raceViewRacerScale({
+        racerType,
+        trackWidthPx: mode === 'center' ? centerWidth : raceViewCourseNow.width,
+        scaleX: raceViewZoom.scaleX,
+        cameraConfig,
+        autoScaleConfig,
+        behaviorConfig,
+        hasDisplaySizeOverride: raceViewHasSizeOverride,
+      }),
+      placements: raceViewRacerPlacements(
+        raceViewCourseNow,
+        raceViewRowSlotPx({
+          racerType,
+          trackWidthPx: mode === 'center' ? centerWidth : raceViewCourseNow.width,
+          autoScaleConfig,
+          behaviorConfig,
+          hasDisplaySizeOverride: raceViewHasSizeOverride,
+        })
+      ),
+    };
+  }
+  raceViewRef.current = {
+    centre: raceViewCentreNow,
+    scaleX: raceViewZoom.scaleX,
+    scaleY: raceViewZoom.scaleY,
+    bgPath: backgroundImage,
+    worldW: editorWorldW,
+    worldH: editorWorldH,
+    lines: raceViewLines,
+    racers: raceViewRacers,
+  };
+
   // Canvas render effect — mirrors state into renderStateRef and draws with viewport transform.
   useEffect(() => {
     renderStateRef.current = {
@@ -462,6 +643,8 @@ export default function TrackEditor() {
     ctx.scale(viewZoom * bsX, viewZoom * bsY);
     ctx.translate(-viewPanX, -viewPanY);
     drawStaticScene(ctx, renderStateRef.current);
+    // PARTICLES-VISIBILITY-11: the race view's area, framed; it follows every recentre.
+    drawRaceViewFrame(ctx, raceViewRef.current, Math.min(viewZoom * bsX, viewZoom * bsY));
     ctx.restore();
   }, [
     centerPoints,
@@ -478,6 +661,43 @@ export default function TrackEditor() {
     viewZoom,
     viewPanX,
     viewPanY,
+    raceViewCentre,
+    raceViewZoom,
+  ]);
+
+  // Draws the race view when no effect loop is running (the loop below draws it every frame). The
+  // race's background cache reports no load event, so while its image is still loading this asks
+  // for one more frame, and stops as soon as the image is drawn.
+  useEffect(() => {
+    const drawOnce = (frame) => {
+      raceViewRetryRef.current = null;
+      if (rafRef.current) return;
+      const ctx = raceViewCanvasRef.current?.getContext('2d');
+      if (!ctx) return;
+      const drawn = drawRaceView(ctx, { ...raceViewRef.current, frame: frame ?? 0 }, []);
+      if (!drawn) raceViewRetryRef.current = requestAnimationFrame(drawOnce);
+    };
+    drawOnce();
+    return () => {
+      if (raceViewRetryRef.current) cancelAnimationFrame(raceViewRetryRef.current);
+      raceViewRetryRef.current = null;
+    };
+  }, [
+    raceViewCentre,
+    raceViewZoom,
+    backgroundImage,
+    editorWorldW,
+    editorWorldH,
+    mode,
+    centerPoints,
+    innerPoints,
+    outerPoints,
+    effects,
+    activeBoundary,
+    selectedPointIndex,
+    centerWidth,
+    closed,
+    raceViewRacerTypeId,
   ]);
 
   // Effect preview — starts/stops the rAF animation loop based on the effects array.
@@ -497,10 +717,15 @@ export default function TrackEditor() {
     const activeEffects = effects.filter((e) => e.id);
     if (activeEffects.length === 0) return;
 
+    // PARTICLES-VISIBILITY-9: the preview places effects over the WORLD, as the race does
+    // (RaceScreen/index.jsx, `effectWorld`), and draws them inside the loop's world transform below.
+    // Created with the canvas alone, it packed the race's whole-track amount into one screen and
+    // drew each item at its world size in screen pixels, so it showed far more than the race.
+    const effectWorld = { width: editorWorldW, height: editorWorldH };
     const instances = activeEffects
       .map((e) => {
         const mod = getEffect(e.id);
-        return mod ? mod.create(canvas, e.config) : null;
+        return mod ? mod.create(canvas, e.config, effectWorld) : null;
       })
       .filter(Boolean);
 
@@ -523,13 +748,27 @@ export default function TrackEditor() {
       ctx.scale(zoom * bsX, zoom * bsY);
       ctx.translate(-panX, -panY);
       drawStaticScene(ctx, renderStateRef.current);
-      ctx.restore();
-
+      // PARTICLES-VISIBILITY-9: effects draw inside the same world-to-screen transform as the track,
+      // so zoom and pan move them with it and each effect culls against this view (cullBounds).
       for (const inst of effectInstanceRef.current) {
         inst.update(dt);
         ctx.save();
         inst.render(ctx);
         ctx.restore();
+      }
+      // PARTICLES-VISIBILITY-11: the race view's area, framed, on top of the effects.
+      drawRaceViewFrame(ctx, raceViewRef.current, Math.min(zoom * bsX, zoom * bsY));
+      ctx.restore();
+
+      // PARTICLES-VISIBILITY-10: the race view draws the SAME instances, already advanced above, at the
+      // race camera's zoom — one state, two views, no second copy of any effect.
+      const raceViewCtx = raceViewCanvasRef.current?.getContext('2d');
+      if (raceViewCtx) {
+        drawRaceView(
+          raceViewCtx,
+          { ...raceViewRef.current, frame: timestamp },
+          effectInstanceRef.current
+        );
       }
 
       rafRef.current = requestAnimationFrame(loop);
@@ -543,7 +782,8 @@ export default function TrackEditor() {
       effectInstanceRef.current = null;
       lastTimeRef.current = null;
     };
-  }, [effectsJson]); // eslint-disable-line react-hooks/exhaustive-deps
+    // The world size is a dependency: loading a track of another size re-creates the effects over it.
+  }, [effectsJson, editorWorldW, editorWorldH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── pointer handlers ──────────────────────────────────────────────────────
 
@@ -644,6 +884,72 @@ export default function TrackEditor() {
     }
   }
 
+  // ── test race (PARTICLES-VISIBILITY-12) ───────────────────────────────────
+  // Quick Test's race for this track with the editor's UNSAVED effects. The track and its geometry
+  // are the SAVED ones — the race runs what is stored; the effects are what is on screen.
+  const testRaceServerTrack = serverTracksCtl.tracks.find((t) => t.id === loadedServerId) ?? null;
+  const testRaceGeom = useMemo(
+    () => (loadedGeometryId ? getTrack(loadedGeometryId) : null),
+    [loadedGeometryId]
+  );
+  const testRaceDefaults = storageGet(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
+  const testRaceBlocked = testRaceBlockedReason({
+    serverTrack: testRaceServerTrack,
+    geom: testRaceGeom,
+    hasUnsavedBackgroundFile: !!backgroundFile,
+    raceDefaults: testRaceDefaults,
+  });
+
+  function handleTestRace() {
+    if (testRaceBlocked) return;
+    const race = buildTestRace({
+      serverTrack: testRaceServerTrack,
+      geom: testRaceGeom,
+      effects,
+      raceDefaults: testRaceDefaults,
+      normalSpeedPxPerSec: normalSpeedFrom(loadBaseSpeedConfig()),
+      runoutZone: behaviorConfig.runoutZone,
+      racePlanMinDur: loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30,
+    });
+    // PARTICLES-VISIBILITY-12: the hand-over — everything the editor needs to come back exactly as
+    // it is now travels with the race (testRace.js `startTestRace`) and is restored above.
+    startTestRace(
+      race,
+      {
+        snapshot: getSnapshot(),
+        loadedGeometryId,
+        loadedServerId,
+        isDirty,
+        viewport: {
+          worldW: editorWorldW,
+          worldH: editorWorldH,
+          zoom: viewZoom,
+          panX: viewPanX,
+          panY: viewPanY,
+        },
+        view,
+        raceViewCentre,
+      },
+      navigate
+    );
+  }
+
+  // PARTICLES-VISIBILITY-12: in the race view, a click on a track point recentres it — the same rule
+  // as a click on a point in the track view. The click is turned back into world units through the
+  // race view's own transform (the inverse of drawRaceView's).
+  function handleRaceViewClick(e) {
+    const rect = raceViewCanvasRef.current.getBoundingClientRect();
+    const { centre, scaleX, scaleY } = raceViewRef.current;
+    const px = ((e.clientX - rect.left) * RACE_VIEW_W) / rect.width;
+    const py = ((e.clientY - rect.top) * RACE_VIEW_H) / rect.height;
+    const x = centre.x + (px - RACE_VIEW_W / 2) / scaleX;
+    const y = centre.y + (py - RACE_VIEW_H / 2) / scaleY;
+    const activeList =
+      mode === 'center' ? centerPoints : activeBoundary === 'inner' ? innerPoints : outerPoints;
+    const hit = findPointAtPosition(activeList, x, y, HIT_RADIUS);
+    if (hit !== -1) setRaceViewCentre({ x: activeList[hit].x, y: activeList[hit].y });
+  }
+
   function handleCanvasClick(e) {
     if (dragIndexRef.current !== -1) return;
     if (didPanRef.current) {
@@ -658,6 +964,10 @@ export default function TrackEditor() {
     const hit = findPointAtPosition(activeList, coords.x, coords.y, HIT_RADIUS);
     if (hit !== -1) {
       setSelectedPointIndex(hit);
+      // PARTICLES-VISIBILITY-10: a click on a point of the track also recentres the race view there.
+      // It is the one click that edits nothing — it only selects — so recentring adds no new gesture
+      // and changes no existing one; a click anywhere else still inserts or appends a point.
+      setRaceViewCentre({ x: activeList[hit].x, y: activeList[hit].y });
       return;
     }
 
@@ -832,6 +1142,8 @@ export default function TrackEditor() {
     setLoadedGeometryId(track.id);
     setLoadedServerId(serverId ?? null);
     setEffects(extractEffects(track));
+    // PARTICLES-VISIBILITY-10: a newly loaded track opens its race view on its own start.
+    setRaceViewCentre(null);
     setTrackLights(extractTrackLights(track));
     setBoundarySwitchConfirmed(false);
     setSelectedPointIndex(-1);
@@ -859,6 +1171,9 @@ export default function TrackEditor() {
       setCenterPoints([]);
       setCenterWidth(120);
     }
+    // PARTICLES-VISIBILITY-13: the loaded track's own draft, if it holds unsaved work, is offered now —
+    // after the saved track is on screen, so a restore replaces it and a match is dropped silently.
+    offerDraft(serverId ?? null, track);
   }
 
   async function handleSave() {
@@ -1126,7 +1441,45 @@ export default function TrackEditor() {
       />
 
       <div className={s.main}>
-        <div className={s.canvasWrapper} ref={wrapperRef} tabIndex={0} onKeyDown={handleKeyDown}>
+        {/* PARTICLES-VISIBILITY-12: the view switch — Track to draw, Race view to see the effects as
+            the race will show them — and the test race, a real race with the unsaved effects. */}
+        <div className={s.viewBar}>
+          <div className={s.modeGroup} role="group" aria-label="View">
+            <button
+              className={`${s.modeBtn} ${view === 'track' ? s.modeBtnActive : ''}`}
+              aria-pressed={view === 'track'}
+              onClick={() => setView('track')}
+            >
+              Track
+            </button>
+            <button
+              className={`${s.modeBtn} ${view === 'race' ? s.modeBtnActive : ''}`}
+              aria-pressed={view === 'race'}
+              onClick={() => setView('race')}
+            >
+              Race view
+            </button>
+          </div>
+          <button
+            className={s.testRaceBtn}
+            onClick={handleTestRace}
+            disabled={!!testRaceBlocked}
+            title={
+              testRaceBlocked ??
+              'A real race on this track with the current effects — nothing is saved'
+            }
+          >
+            Test race
+          </button>
+          {testRaceBlocked && <span className={s.viewBarNote}>{testRaceBlocked}</span>}
+        </div>
+        <div
+          className={s.canvasWrapper}
+          ref={wrapperRef}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          hidden={view !== 'track'}
+        >
           <canvas
             ref={canvasRef}
             width={CW}
@@ -1140,6 +1493,22 @@ export default function TrackEditor() {
             onPointerUp={handlePointerUp}
           />
         </div>
+        <figure className={s.raceView} hidden={view !== 'race'}>
+          <canvas
+            ref={raceViewCanvasRef}
+            width={RACE_VIEW_W}
+            height={RACE_VIEW_H}
+            className={s.raceViewCanvas}
+            role="img"
+            aria-label="Race view — the track and its effects at the race camera's racing zoom"
+            onClick={handleRaceViewClick}
+          />
+          <figcaption className={s.raceViewCaption}>
+            Race view — a whole race frame at the race camera&apos;s racing zoom (
+            {raceViewZoom.scaleY.toFixed(2)}× the world); three racers at the size of a{' '}
+            {RACE_VIEW_FIELD_SIZE}-racer race. Click a track point to look there.
+          </figcaption>
+        </figure>
       </div>
     </div>
   );

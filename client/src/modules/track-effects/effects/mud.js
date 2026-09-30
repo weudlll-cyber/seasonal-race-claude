@@ -5,8 +5,15 @@
 // Description: Track effect — mud splat particles along the track path
 // ============================================================
 
+import { cullBounds, isVisible } from '../../surface-effects/generators/spriteHelpers.js';
+
 const configSchema = [
-  { key: 'count', type: 'range', min: 10, max: 100, step: 5, default: 40, label: 'Count' },
+  // PARTICLES-VISIBILITY-3: 0 = off (nothing spawned or drawn). The maximum is where the effect is
+  // clearly many on screen in an ordinary race, or lower where frame time measurably degraded first;
+  // measured in the browser, see reports/particles/PARTICLES-VISIBILITY-3.md.
+  // The unit is unchanged (blobs per minute), so every stored setting looks as it did.
+  // The step divides the default and every stored value, so they stay on the slider's grid.
+  { key: 'count', type: 'range', min: 0, max: 80000, step: 20, default: 40, label: 'Count' },
   { key: 'size', type: 'range', min: 0.5, max: 3, step: 0.1, default: 1.2, label: 'Size' },
   { key: 'color', type: 'color', default: '#553322', label: 'Color' },
   { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.7, label: 'Opacity' },
@@ -14,8 +21,13 @@ const configSchema = [
 ];
 const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
 
-function create(canvas, config) {
-  const { width, height } = canvas;
+// PARTICLES-VISIBILITY-2: `world` is the area this effect is drawn in when that is not the canvas —
+// the race screen draws track effects inside the world transform and passes the world size, so
+// placement (and any edge wrap or clamp below) covers the whole track instead of a canvas-sized
+// corner of it. PARTICLES-VISIBILITY-9: the track editor now passes its world size too and draws inside
+// its own world transform, so its preview shows what the race shows. With no `world`, the canvas is used.
+function create(canvas, config, world) {
+  const { width, height } = world ?? canvas;
   let blobs = [],
     spawnAccum = 0;
 
@@ -44,7 +56,14 @@ function create(canvas, config) {
     },
     render(ctx) {
       ctx.fillStyle = config.color;
+      // PARTICLES-VISIBILITY-4: skip items whose drawn circle does not touch the canvas (both axis
+      // scales, the helper racer trails use). Only DRAWING is skipped — update() still moves every item,
+      // so nothing pops in when the camera turns. The margin is the item's drawn radius.
+      // A blob's vertices reach at most 1.4 × its 12 × size base radius (see update()).
+      const cull = cullBounds(ctx);
+      const reach = 12 * config.size * 1.4;
       for (const b of blobs) {
+        if (!isVisible(cull, b.x, b.y, reach)) continue;
         ctx.globalAlpha = config.opacity * (1 - b.age / b.maxAge);
         ctx.beginPath();
         ctx.moveTo(

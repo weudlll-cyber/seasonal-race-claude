@@ -31,11 +31,13 @@ const configSchema = [
   },
   { key: 'drift', type: 'range', min: 0, max: 5, step: 0.1, default: 1.0, label: 'Drift' },
   { key: 'gravity', type: 'range', min: 0, max: 0.5, step: 0.01, default: 0, label: 'Gravity' },
+  // PARTICLES-VISIBILITY-3: the trail's starting opacity, set per surface class in the Dev Screen.
+  // The default is the constant this generator hard-coded until then, so every stored class and
+  // override written before it (none carries the key) renders exactly as it did.
+  { key: 'opacity', type: 'range', min: 0, max: 1, step: 0.05, default: 0.8, label: 'Opacity' },
 ];
 
 const defaultConfig = Object.fromEntries(configSchema.map((f) => [f.key, f.default]));
-
-const START_ALPHA = 0.8;
 
 /**
  * create — returns the spawn/update/render triplet for the particle generator.
@@ -43,6 +45,8 @@ const START_ALPHA = 0.8;
  * @param {object} [_racer] — reserved for VRE-3 per-racer customisation
  */
 function create(config, _racer) {
+  // A stored class or override without `opacity` falls back to the schema default above.
+  const opacity = config.opacity ?? defaultConfig.opacity;
   return {
     /**
      * Spawn 0 or 1 particle per call based on spawnProbability, appended IN PLACE
@@ -54,7 +58,7 @@ function create(config, _racer) {
     spawn(out, x, y, _speed, angle) {
       if (Math.random() > config.spawnProbability) return;
       const r = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin);
-      const fadePerFrame = START_ALPHA / config.lifetimeFrames;
+      const fadePerFrame = opacity / config.lifetimeFrames;
       out.push({
         x: x + (Math.random() - 0.5) * 6,
         y: y + (Math.random() - 0.5) * 6,
@@ -62,7 +66,7 @@ function create(config, _racer) {
         vy: Math.sin(angle + Math.PI) * config.drift + (Math.random() - 0.5) * 0.8,
         gy: config.gravity,
         r,
-        alpha: START_ALPHA,
+        alpha: opacity,
         fadePerFrame,
         color: config.color,
       });

@@ -2576,6 +2576,73 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★★ **PARTICLES-VISIBILITY-1 to -13 — dust, rain and the other track effects showed only sometimes; the Track
+      Editor could not show how they look in the race.** Opened 2026-09-28, closed 2026-10-01 by the merge of
+      `fix/particles-visibility`.
+      **The owner's approval, 2026-10-01:** he looked at the branch on the production preview and approved it.
+      **The owner's decisions on record:** 2026-09-28 — rain falls over the whole track and its amount is his; the
+      finish burst stays as it is; the fix covers every effect; every effect reaches from off to many and never makes
+      the race stutter; lower the fireflies maximum, look unchanged; every amount shows 0–100 (0 off, 100 the maximum,
+      linear). 2026-09-29 — a preview at race-camera distance, effects not re-sized or re-counted; two switchable
+      views and a test race with the unsaved settings, nothing stored until Save, 40 racers of the track's type, the
+      track's length. 2026-09-30 — fix the known faults before he looks.
+      **What closed it, one line per piece** (each report is the detail):
+      1. [PV-1](../reports/particles/PARTICLES-VISIBILITY-1.md) — measured on his race VY7KKE: dust culled with the wrong axis scale, rain
+         spawned in a canvas-sized corner of the world; the finish-burst complaint NOT PROVEN.
+      2. [PV-2](../reports/particles/PARTICLES-VISIBILITY-2.md) — fixed: the cull tests each axis with its own scale, a finished racer's
+         dust fades out, every track effect covers the whole track.
+      3. [PV-3](../reports/particles/PARTICLES-VISIBILITY-3.md) — every effect's amount from off to a measured maximum; an opacity control
+         for every racer trail; the server's effect cap raised to match.
+      4. [PV-4](../reports/particles/PARTICLES-VISIBILITY-4.md) — effects draw only what is on screen, cheaper where measured to help;
+         ceilings re-measured.
+      5. [PV-5](../reports/particles/PARTICLES-VISIBILITY-5.md) — the pre-start flight measured: mud and dust add no stutter, fireflies
+         lower the frame rate evenly, the flight never takes longer.
+      6. [PV-6](../reports/particles/PARTICLES-VISIBILITY-6.md) — no lower fireflies maximum passed a strict rule; nothing set.
+      7. [PV-7](../reports/particles/PARTICLES-VISIBILITY-7.md) — fireflies maximum 250 under a corrected rule (median and p90 against ten
+         baseline runs).
+      8. [PV-8](../reports/particles/PARTICLES-VISIBILITY-8.md) — every amount on one 0–100 level scale; storage unchanged, an untouched
+         amount saves byte-identical.
+      9. [PV-9](../reports/particles/PARTICLES-VISIBILITY-9.md) — Seatrack's bubbles at level 10: 2 on screen, count not size; the editor
+         preview now places and draws effects in the world, as the race does.
+      10. [PV-10](../reports/particles/PARTICLES-VISIBILITY-10.md) — a race-view panel at the race camera's own racing zoom; same zoom and
+          density as the race, MEASURED.
+      11. [PV-11](../reports/particles/PARTICLES-VISIBILITY-11.md) — the panel's track lines, three racers at race size (MEASURED equal) and
+          its area framed in the main view.
+      12. [PV-12](../reports/particles/PARTICLES-VISIBILITY-12.md) — a Track / Race view switch and a test race with the unsaved effects;
+          MEASURED to store nothing, with a control.
+      13. [PV-13](../reports/particles/PARTICLES-VISIBILITY-13.md) — the false "An unsaved track … was found" fixed (each load wrote two
+          drafts); the one-off red run of `fingerprint-default.test.mjs` measured, then fixed on master by
+          FINGERPRINT-DEFAULT-FLAKE-1.
+      **Left as is** — noticed in the reports, not changed, and deliberately not opened as rows:
+      - The finish-burst complaint stays NOT PROVEN; the burst is unchanged by his decision (PV-1).
+      - Racers' dust is faint (contrast about 1.3), and Sand dust stays faint even at opacity 1.0 because of its colour
+        (PV-2, PV-3).
+      - The race reads surface classes from the browser cache, filled only by screens that load them (PV-3).
+      - The racer edit modal's overrides are three hard-coded cloud fields, not the schema (PV-3).
+      - Rain, stars and wave are capped below "clearly many" by frame cost on the test machine; the ladders stopped at
+        the levels tried (PV-3, PV-4).
+      - Mud, dust and fireflies are one frame step slower in the whole-track worst case at their maxima, and a slow frame
+        slows the race itself (PV-4).
+      - A pre-rendered sprite drawn with `drawImage` measured slower than `arc` + `fill`; the racer-trail generators
+        were not converted (PV-4).
+      - The test machine flips between about 60 and 30 fps within a batch, and single-frame spikes of 250–400 ms occur at
+        the ceremony's start with or without effects (PV-6, PV-7).
+      - Level 1 is coarse for the per-minute effects, so a small stored amount cannot be set again once its slider has
+        moved; the schema step no longer shapes that slider; its label still says "Count" (PV-8).
+      - On an open track the editor's whole-track view and the race's venue shot differ in scale and shape; the editor
+        draws effects over its track lines and on a darker background than the race (PV-9).
+      - The race view shows the ordinary racing shot only, without the finish gate, lights, trails or name tags; it
+        recentres on track points only; boundary-mode tracks use the reference corridor width; its background builds a
+        darkened world-sized copy (about 100 MB on Seatrack) (PV-10, PV-11).
+      - The reference racers assume a 40-racer field and wear the default coat; the editor's lines are heavy at race
+        zoom; a 300-px corridor's edges fall outside the view (PV-11).
+      - A test race runs the saved geometry, not unsaved point edits, and draws a fresh seed each time;
+        `loadCameraConfig` may prune stored camera keys equal to their defaults, as it did before (PV-12).
+      - Effects, lights and the background are not in a draft, by that module's design; a reload drops the track from
+        the address (PV-13).
+      - Noticed and later resolved within this row: the bubbles cap (PV-2 → PV-3), effects drawing off-screen items
+        (PV-3 → PV-4), and the false draft message (PV-12 → PV-13).
+
 - [x] ★ **CI was RED on master — the client "Security audit gate" (`c4a869c0`).** Opened and closed 2026-09-30, by
       AUDIT-2026-09-30.
       **What failed.** Four HIGH advisories, published after the day's scheduled audit had passed, blocked

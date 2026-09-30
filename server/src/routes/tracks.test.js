@@ -1118,10 +1118,10 @@ describe('POST /api/tracks — C1: effect count validation', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects count: 1001 (above cap)', async () => {
+  it('rejects count: 480001 (above cap)', async () => {
     const res = await api
       .post('/api/tracks')
-      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: 1001 } }] });
+      .send({ ...VALID_TRACK, effects: [{ id: 'dust', config: { count: 480001 } }] });
     expect(res.status).toBe(400);
   });
 
@@ -1132,14 +1132,14 @@ describe('POST /api/tracks — C1: effect count validation', () => {
     expect(res.status).toBe(400);
   });
 
-  it('accepts count: 500 (highest UI slider max) — valid track created', async () => {
+  it('accepts count: 240000 (highest UI slider max, bubbles per minute) — valid track created', async () => {
     const res = await api.post('/api/tracks').send({
       ...VALID_TRACK,
       effects: [
         {
           id: 'dust',
           config: {
-            count: 500,
+            count: 240000,
             size: 1,
             color: '#fff',
             opacity: 0.5,
@@ -1153,10 +1153,10 @@ describe('POST /api/tracks — C1: effect count validation', () => {
     createdIds.push(res.body.id);
   });
 
-  it('accepts count: 1000 (cap boundary) — valid track created', async () => {
+  it('accepts count: 480000 (cap boundary) — valid track created', async () => {
     const res = await api.post('/api/tracks').send({
       ...VALID_TRACK,
-      effects: [{ id: 'dust', config: { count: 1000 } }],
+      effects: [{ id: 'dust', config: { count: 480000 } }],
     });
     expect(res.status).toBe(201);
     createdIds.push(res.body.id);

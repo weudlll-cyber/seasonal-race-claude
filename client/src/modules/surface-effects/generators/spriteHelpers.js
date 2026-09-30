@@ -8,7 +8,8 @@
 //                instead of building a gradient/path per particle (cloud + splash).
 //              - cullBounds/isVisible/isSegmentVisible: viewport culling shared by all
 //                three so off-screen particles are never drawn (spawn/update unchanged).
-//              Single source — cloud, splash and line all reuse these (no copies).
+//              Single source — cloud, splash and line all reuse these (no copies), and since
+//              PARTICLES-VISIBILITY-4 so do the seven track effects.
 // ============================================================
 
 /** Convert a #rrggbb hex to an rgba() string with the given alpha; falls back to a pale blue. */
@@ -50,33 +51,46 @@ export function createBlobSprite(maxSize, color) {
   }
 }
 
-/** Snapshot the current transform's scale + offset and the canvas size for viewport culling. */
+/**
+ * Snapshot the current transform's scale + offset and the canvas size for viewport culling.
+ *
+ * PARTICLES-VISIBILITY-2: BOTH axis scales, `sx` (the transform's `a`) and `sy` (its `d`). This used
+ * to keep only `a` and apply it to the vertical axis too, which is only right when the world is
+ * scaled equally both ways. A closed track is not (`renderRaceFrame.js` scales by width/worldW and
+ * height/worldH), so the vertical test was off by `y · (a − d)`: on Dirt Oval 90% of the dust that
+ * was on screen was culled with the camera on the bottom straight (PARTICLES-VISIBILITY-1).
+ */
 export function cullBounds(ctx) {
-  const { a: ez, e: ox, f: oy } = ctx.getTransform();
-  return { ez, ox, oy, cw: ctx.canvas.width, ch: ctx.canvas.height };
+  const { a: sx, d: sy, e: ox, f: oy } = ctx.getTransform();
+  return { sx, sy, ox, oy, cw: ctx.canvas.width, ch: ctx.canvas.height };
 }
 
 /**
  * Point-radius viewport test (cloud/splash). True when a circle of world-radius `radius`
- * at world (px,py) touches the canvas. Identical logic to cloud's original inline cull.
+ * at world (px,py) touches the canvas. Each axis is tested with its own scale.
  */
 export function isVisible(cull, px, py, radius) {
-  const sr = radius * cull.ez;
-  const sx = px * cull.ez + cull.ox;
-  if (sx + sr < 0 || sx - sr > cull.cw) return false;
-  const sy = py * cull.ez + cull.oy;
-  if (sy + sr < 0 || sy - sr > cull.ch) return false;
+  const rx = radius * cull.sx;
+  const x = px * cull.sx + cull.ox;
+  if (x + rx < 0 || x - rx > cull.cw) return false;
+  const ry = radius * cull.sy;
+  const y = py * cull.sy + cull.oy;
+  if (y + ry < 0 || y - ry > cull.ch) return false;
   return true;
 }
 
-/** Segment-AABB viewport test (line). True when the segment's thickened bounding box touches the canvas. */
+/**
+ * Segment-AABB viewport test (line). True when the segment's thickened bounding box touches the
+ * canvas. Each axis is tested with its own scale — the same correction as `isVisible`.
+ */
 export function isSegmentVisible(cull, x1, y1, x2, y2, halfThick) {
-  const m = halfThick * cull.ez;
-  const sx1 = x1 * cull.ez + cull.ox;
-  const sx2 = x2 * cull.ez + cull.ox;
-  if (Math.max(sx1, sx2) + m < 0 || Math.min(sx1, sx2) - m > cull.cw) return false;
-  const sy1 = y1 * cull.ez + cull.oy;
-  const sy2 = y2 * cull.ez + cull.oy;
-  if (Math.max(sy1, sy2) + m < 0 || Math.min(sy1, sy2) - m > cull.ch) return false;
+  const mx = halfThick * cull.sx;
+  const sx1 = x1 * cull.sx + cull.ox;
+  const sx2 = x2 * cull.sx + cull.ox;
+  if (Math.max(sx1, sx2) + mx < 0 || Math.min(sx1, sx2) - mx > cull.cw) return false;
+  const my = halfThick * cull.sy;
+  const sy1 = y1 * cull.sy + cull.oy;
+  const sy2 = y2 * cull.sy + cull.oy;
+  if (Math.max(sy1, sy2) + my < 0 || Math.min(sy1, sy2) - my > cull.ch) return false;
   return true;
 }

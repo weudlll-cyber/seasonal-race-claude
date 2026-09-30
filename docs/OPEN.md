@@ -1,9 +1,12 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-09-30
+# What is open — DERIVED from BACKLOG PART ONE, 2026-10-01
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-09-30**, from PART ONE's **fourteen** rows. The one-off red run of
+Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. **PARTICLES-VISIBILITY-1 to -13** (opened
+2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
+on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
+and what was left as is. The one-off red run of
 `scripts/fingerprint-default.test.mjs` was added and CLOSED the same day (its harness now waits for the output
 instead of a clock), so it is in PART TWO and not here — as is the red client audit gate of the same day, fixed by
 two dependency overrides. The fourteen were derived on 2026-09-27 — after the

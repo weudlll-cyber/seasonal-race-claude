@@ -10,6 +10,10 @@ function makeMockCtx() {
   const calls = { beginPath: 0, arc: 0, fill: 0 };
   return {
     calls,
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas under the current transform.
+    canvas: MOCK_CANVAS,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+    moveTo() {},
     globalAlpha: 1,
     fillStyle: '',
     shadowBlur: 0,
@@ -58,7 +62,8 @@ describe('fireflies effect — create() contract', () => {
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.calls.arc).toBe(8);
-    expect(ctx.calls.fill).toBe(8);
+    // PARTICLES-VISIBILITY-4: all flies are one path with one fill, so the glow is computed once.
+    expect(ctx.calls.fill).toBe(1);
   });
 
   it('render() with count = 0 makes no draw calls', () => {

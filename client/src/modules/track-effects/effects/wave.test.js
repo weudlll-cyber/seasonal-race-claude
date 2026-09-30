@@ -10,6 +10,9 @@ function makeMockCtx() {
   const calls = { beginPath: 0, arc: 0, stroke: 0 };
   return {
     calls,
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas under the current transform.
+    canvas: MOCK_CANVAS,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
     globalAlpha: 1,
     strokeStyle: '',
     lineWidth: 1,

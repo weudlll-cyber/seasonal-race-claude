@@ -127,6 +127,19 @@ export function useViewport(canvasRef) {
     setViewPanY(0);
   }
 
+  /**
+   * PARTICLES-VISIBILITY-12: puts back a viewport exactly as it was — world size, zoom and pan — when
+   * the editor returns from a test race with its unsaved state.
+   */
+  function restoreViewport({ worldW, worldH, zoom, panX, panY }) {
+    setEditorWorldW(worldW);
+    setEditorWorldH(worldH);
+    viewTransformRef.current = { zoom, panX, panY, worldW, worldH };
+    setViewZoom(zoom);
+    setViewPanX(panX);
+    setViewPanY(panY);
+  }
+
   return {
     viewZoom,
     viewPanX,
@@ -143,5 +156,6 @@ export function useViewport(canvasRef) {
     getCanvasCoords,
     setWorldSize,
     resetViewport,
+    restoreViewport,
   };
 }

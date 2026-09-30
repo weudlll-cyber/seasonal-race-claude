@@ -18,6 +18,7 @@ import {
   LEGACY_DRAFT_KEY,
   DRAFT_VERSION,
   DRAFT_MAX_AGE_MS,
+  draftMatchesTrack,
 } from './trackEditorDraft.js';
 
 /** The key a draft lands under, so the fixtures do not retype the scheme. */
@@ -172,5 +173,64 @@ describe('the per-track key (Q-22b)', () => {
 
   it('clearLegacyDraft does not throw on blocked storage', () => {
     expect(() => clearLegacyDraft(fakeStore({}, { fail: true }))).not.toThrow();
+  });
+});
+
+// ── PARTICLES-VISIBILITY-13: a draft equal to the saved track is not unsaved work ────────────────
+describe('draftMatchesTrack', () => {
+  const track = {
+    name: 'Seatrack',
+    sourceMode: 'center',
+    width: 300,
+    closed: false,
+    centerPoints: [
+      { x: 1, y: 2 },
+      { x: 3, y: 4 },
+    ],
+    innerPoints: [{ x: 5, y: 6 }],
+    outerPoints: [{ x: 7, y: 8 }],
+  };
+  const draft = {
+    trackName: 'Seatrack',
+    centerWidth: 300,
+    closed: false,
+    centerPoints: track.centerPoints,
+    innerPoints: track.innerPoints,
+    outerPoints: track.outerPoints,
+  };
+  it('matches the saved track, unchanged', () =>
+    expect(draftMatchesTrack(draft, track)).toBe(true));
+  it.each([
+    [
+      'a moved point',
+      {
+        centerPoints: [
+          { x: 1, y: 2 },
+          { x: 3, y: 5 },
+        ],
+      },
+    ],
+    [
+      'an added point',
+      {
+        innerPoints: [
+          { x: 5, y: 6 },
+          { x: 9, y: 9 },
+        ],
+      },
+    ],
+    ['the closed flag', { closed: true }],
+    ['the centre width', { centerWidth: 280 }],
+    ['the name', { trackName: 'Seatrack 2' }],
+  ])('does not match after %s', (_, change) =>
+    expect(draftMatchesTrack({ ...draft, ...change }, track)).toBe(false)
+  );
+  it('ignores the centre width of a boundary track (the editor holds none for it)', () =>
+    expect(
+      draftMatchesTrack({ ...draft, centerWidth: 120 }, { ...track, sourceMode: 'boundary' })
+    ).toBe(true));
+  it('no draft or no track is never a match', () => {
+    expect(draftMatchesTrack(null, track)).toBe(false);
+    expect(draftMatchesTrack(draft, null)).toBe(false);
   });
 });

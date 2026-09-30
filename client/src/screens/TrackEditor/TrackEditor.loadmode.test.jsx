@@ -30,6 +30,13 @@ const ctxStub = {
   fill: vi.fn(),
   closePath: vi.fn(),
   setLineDash: vi.fn(),
+  // PARTICLES-VISIBILITY-10: the race view draws the race background (gradients, crowd ellipses).
+  createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  ellipse: vi.fn(),
+  // PARTICLES-VISIBILITY-11: the main view frames the race view; the panel's racers rotate.
+  strokeRect: vi.fn(),
+  rotate: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
   scale: vi.fn(),

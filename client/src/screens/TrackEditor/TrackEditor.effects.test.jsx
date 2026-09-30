@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, act, fireEvent } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TrackEditor from './TrackEditor.jsx';
+import { RACE_VIEW_W, RACE_VIEW_H, raceViewScale, raceViewArea } from './raceView.js';
+import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { EDITOR_RETURN_KEY } from './testRace.js';
+import { saveDraft } from './trackEditorDraft.js';
 
 // ── Canvas stub ───────────────────────────────────────────────────────────────
 const ctxStub = {
@@ -16,6 +20,13 @@ const ctxStub = {
   fill: vi.fn(),
   closePath: vi.fn(),
   setLineDash: vi.fn(),
+  // PARTICLES-VISIBILITY-10: the race view draws the race background (gradients, crowd ellipses).
+  createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  ellipse: vi.fn(),
+  // PARTICLES-VISIBILITY-11: the main view frames the race view; the panel's racers rotate.
+  strokeRect: vi.fn(),
+  rotate: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
   scale: vi.fn(),
@@ -473,5 +484,395 @@ describe('TrackEditor background upload size guard', () => {
     });
 
     expect(container.textContent).not.toMatch(/too large/i);
+  });
+});
+
+// ── PARTICLES-VISIBILITY-9: the preview places and draws effects in the WORLD, as the race does ─
+// Shared by the PARTICLES-VISIBILITY-9 and -10 blocks below.
+// A 2D context that composes save/restore/scale/translate, answers getTransform, and records every
+// arc at its SCREEN position — so a test can see where a world point lands on the canvas.
+function trackingCtx() {
+  let m = { a: 1, d: 1, e: 0, f: 0 };
+  const stack = [];
+  const arcs = [];
+  const rects = [];
+  const known = {
+    canvas: { width: 1280, height: 720 },
+    arcs,
+    rects,
+    save: () => stack.push({ ...m }),
+    restore: () => {
+      m = stack.pop() ?? { a: 1, d: 1, e: 0, f: 0 };
+    },
+    scale: (sx, sy) => {
+      m = { ...m, a: m.a * sx, d: m.d * sy };
+    },
+    translate: (tx, ty) => {
+      m = { ...m, e: m.e + m.a * tx, f: m.f + m.d * ty };
+    },
+    getTransform: () => ({ a: m.a, b: 0, c: 0, d: m.d, e: m.e, f: m.f }),
+    arc: (x, y, r) => arcs.push({ x: m.a * x + m.e, y: m.d * y + m.f, r }),
+    // PARTICLES-VISIBILITY-11: the main view's frame of the race view, at SCREEN position.
+    strokeRect: (x, y, w, h) =>
+      rects.push({ x: m.a * x + m.e, y: m.d * y + m.f, w: w * m.a, h: h * m.d }),
+  };
+  return new Proxy(known, {
+    // Unknown methods are no-ops; the race background reads a gradient back, so they return one.
+    get: (t, k) => (k in t ? t[k] : () => ({ addColorStop: () => {} })),
+    set: () => true,
+  });
+}
+
+// Each canvas gets its own context: the editor view `main`, the race view `raceView`; any other
+// canvas gets a fresh tracking context nobody reads.
+function routeContexts({ main, raceView = trackingCtx() }) {
+  HTMLCanvasElement.prototype.getContext = vi.fn(function () {
+    const label = this.getAttribute('aria-label') ?? '';
+    if (label.startsWith('Track editor canvas')) return main;
+    if (label.startsWith('Race view')) return raceView;
+    return trackingCtx();
+  });
+}
+
+// Uploads a background of the given size; the editor takes its world size from the image.
+async function setWorld(container, w, h) {
+  vi.spyOn(globalThis, 'FileReader').mockImplementation(function () {
+    this.readAsDataURL = () => this.onload?.({ target: { result: 'data:image/png;base64,w' } });
+  });
+  vi.spyOn(globalThis, 'Image').mockImplementation(function () {
+    const self = this;
+    let onload = null;
+    Object.defineProperty(self, 'onload', {
+      get: () => onload,
+      set: (fn) => {
+        onload = fn;
+      },
+    });
+    Object.defineProperty(self, 'onerror', { get: () => null, set: () => {} });
+    Object.defineProperty(self, 'src', {
+      get: () => '',
+      set: () => {
+        self.naturalWidth = w;
+        self.naturalHeight = h;
+        if (onload) queueMicrotask(() => onload());
+      },
+    });
+  });
+  const file = new File(['x'], 'bg.png', { type: 'image/png' });
+  Object.defineProperty(file, 'size', { value: 1024 });
+  await act(async () => {
+    fireEvent.change(container.querySelector('input[type="file"][accept="image/*"]'), {
+      target: { files: [file] },
+    });
+  });
+}
+
+async function selectEffect(container, id) {
+  await clickAddEffect(container);
+  const selects = Array.from(container.querySelectorAll('select')).filter((s) => {
+    const none = s.querySelector('option[value=""]');
+    return none && !none.disabled && !s.disabled;
+  });
+  await act(async () => {
+    fireEvent.change(selects[selects.length - 1], { target: { value: id } });
+  });
+}
+
+describe('TrackEditor effect preview — world placement (PARTICLES-VISIBILITY-9)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  it('passes the editor world size to every effect, and again when the world changes', async () => {
+    const createA = vi.fn(() => ({ update: vi.fn(), render: vi.fn() }));
+    const createB = vi.fn(() => ({ update: vi.fn(), render: vi.fn() }));
+    listEffects.mockReturnValue([
+      { id: 'effect-a', label: 'Effect A', configSchema: [], defaultConfig: {} },
+      { id: 'effect-b', label: 'Effect B', configSchema: [], defaultConfig: {} },
+    ]);
+    getEffect.mockImplementation((id) =>
+      id === 'effect-a'
+        ? { create: createA, configSchema: [], defaultConfig: {} }
+        : id === 'effect-b'
+          ? { create: createB, configSchema: [], defaultConfig: {} }
+          : null
+    );
+    const { container } = renderEditor();
+    await selectEffect(container, 'effect-a');
+    await selectEffect(container, 'effect-b');
+    expect(createA.mock.calls.at(-1)[2]).toEqual({ width: 1280, height: 720 });
+    expect(createB.mock.calls.at(-1)[2]).toEqual({ width: 1280, height: 720 });
+
+    await setWorld(container, 3840, 1440);
+    expect(createA.mock.calls.at(-1)[2]).toEqual({ width: 3840, height: 1440 });
+    expect(createB.mock.calls.at(-1)[2]).toEqual({ width: 3840, height: 1440 });
+  });
+
+  it('an item at a world position is drawn at the matching editor screen position', async () => {
+    const ctx = trackingCtx();
+    routeContexts({ main: ctx });
+    // One item at a quarter across and three quarters down the world, whatever its size.
+    let world = null;
+    const create = vi.fn((canvas, config, w) => {
+      world = w;
+      return { update: vi.fn(), render: (c) => c.arc(w.width * 0.25, w.height * 0.75, 4) };
+    });
+    getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
+    const { container } = renderEditor();
+    await setWorld(container, 3840, 1440);
+    await selectEffect(container, 'rain');
+    expect(world).toEqual({ width: 3840, height: 1440 });
+
+    ctx.arcs.length = 0;
+    act(() => _rafCallback(16));
+    // The editor's whole-world view maps 3840×1440 onto the 1280×720 canvas: x by 1/3, y by 1/2.
+    const drawn = ctx.arcs.at(-1);
+    expect(drawn.x).toBeCloseTo(1280 * 0.25, 6);
+    expect(drawn.y).toBeCloseTo(720 * 0.75, 6);
+  });
+});
+
+// ── PARTICLES-VISIBILITY-10: the race-view panel ──────────────────────────────────────────────────
+describe('TrackEditor race view (PARTICLES-VISIBILITY-10)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  // The zoom the panel must use: the race camera's, for the editor's current track (open by
+  // default, centre width 120) and the camera config this browser holds (none — the shipped one).
+  const expectedScale = (worldW, worldH) =>
+    raceViewScale({
+      worldW,
+      worldH,
+      isOpenTrack: true,
+      trackWidthPx: 120,
+      cameraConfig: loadCameraConfig(),
+    });
+
+  // A fake effect that draws one item at a fixed world offset from wherever `at` says, on any canvas.
+  // Its radius is distinctive: the panel also draws track points and racers, and a test must find
+  // the effect's item among them (PARTICLES-VISIBILITY-11).
+  const FX_R = 4.25;
+  const fxArc = (ctx) => ctx.arcs.filter((a) => a.r === FX_R).at(-1);
+  function oneItemEffect(at) {
+    let world = null;
+    const create = vi.fn((canvas, config, w) => {
+      world = w;
+      return { update: vi.fn(), render: (c) => c.arc(at(w).x, at(w).y, FX_R) };
+    });
+    getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
+    return { create, world: () => world };
+  }
+
+  it('receives the world size and the race camera’s derived zoom', async () => {
+    const raceView = trackingCtx();
+    routeContexts({ main: trackingCtx(), raceView });
+    const fx = oneItemEffect((w) => ({ x: w.width / 2 + 50, y: w.height / 2 + 30 }));
+    const { container } = renderEditor();
+    await setWorld(container, 3840, 1440);
+    await selectEffect(container, 'rain');
+    expect(fx.world()).toEqual({ width: 3840, height: 1440 });
+
+    raceView.arcs.length = 0;
+    act(() => _rafCallback(16));
+    // Nothing drawn yet, so the panel looks at the world centre; the item is 50 / 30 world px off it.
+    const { scaleX, scaleY } = expectedScale(3840, 1440);
+    const drawn = fxArc(raceView);
+    expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2 + 50 * scaleX, 6);
+    expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2 + 30 * scaleY, 6);
+  });
+
+  it('a click on a track point recentres it there; the first point is the default', async () => {
+    const raceView = trackingCtx();
+    routeContexts({ main: trackingCtx(), raceView });
+    oneItemEffect(() => ({ x: 900, y: 500 }));
+    const { container } = renderEditor();
+    const canvas = container.querySelector('canvas[aria-label^="Track editor canvas"]');
+    // Two points: the first (400, 300) is where the panel starts, the second is the item's spot.
+    await act(async () => fireEvent.click(canvas, { clientX: 400, clientY: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    await selectEffect(container, 'rain');
+    const { scaleX, scaleY } = expectedScale(1280, 720);
+
+    raceView.arcs.length = 0;
+    act(() => _rafCallback(16));
+    let drawn = fxArc(raceView);
+    expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2 + 500 * scaleX, 6);
+    expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2 + 200 * scaleY, 6);
+
+    // Clicking the second point only selects it — and centres the race view on it.
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    raceView.arcs.length = 0;
+    act(() => _rafCallback(32));
+    drawn = fxArc(raceView);
+    expect(drawn.x).toBeCloseTo(RACE_VIEW_W / 2, 6);
+    expect(drawn.y).toBeCloseTo(RACE_VIEW_H / 2, 6);
+  });
+});
+
+// ── PARTICLES-VISIBILITY-11: the race view's area, framed in the main view ───────────────────────
+describe('TrackEditor main view frames the race view (PARTICLES-VISIBILITY-11)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  // The default 1280×720 world at zoom 1 maps world px to main-view px one to one, so the frame's
+  // screen rectangle IS the panel's world area.
+  const area = (centre) =>
+    raceViewArea({
+      centre,
+      ...raceViewScale({
+        worldW: 1280,
+        worldH: 720,
+        isOpenTrack: true,
+        trackWidthPx: 120,
+        cameraConfig: loadCameraConfig(),
+      }),
+    });
+  const expectRect = (rect, want) => {
+    for (const k of ['x', 'y', 'w', 'h']) expect(rect[k]).toBeCloseTo(want[k], 6);
+  };
+
+  async function twoPoints(container) {
+    const canvas = container.querySelector('canvas[aria-label^="Track editor canvas"]');
+    await act(async () => fireEvent.click(canvas, { clientX: 400, clientY: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    return canvas;
+  }
+
+  it('the frame is the panel area, and a recentre moves it (no effect running)', async () => {
+    const main = trackingCtx();
+    routeContexts({ main });
+    const { container } = renderEditor();
+    const canvas = await twoPoints(container);
+    expectRect(main.rects.at(-1), area({ x: 400, y: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    expectRect(main.rects.at(-1), area({ x: 900, y: 500 }));
+  });
+
+  it('the effect loop draws the same frame and it follows a recentre', async () => {
+    const main = trackingCtx();
+    routeContexts({ main });
+    getEffect.mockReturnValue({
+      create: vi.fn(() => ({ update: vi.fn(), render: vi.fn() })),
+      configSchema: [],
+      defaultConfig: {},
+    });
+    const { container } = renderEditor();
+    const canvas = await twoPoints(container);
+    await selectEffect(container, 'rain');
+    main.rects.length = 0;
+    act(() => _rafCallback(16));
+    expectRect(main.rects.at(-1), area({ x: 400, y: 300 }));
+    await act(async () => fireEvent.click(canvas, { clientX: 900, clientY: 500 }));
+    main.rects.length = 0;
+    act(() => _rafCallback(32));
+    expectRect(main.rects.at(-1), area({ x: 900, y: 500 }));
+  });
+});
+
+// ── PARTICLES-VISIBILITY-12: the view switch, and the return from a test race ───────────────────
+describe('TrackEditor views and the test-race round trip (PARTICLES-VISIBILITY-12)', () => {
+  let originalGetContext;
+  beforeEach(() => {
+    originalGetContext = HTMLCanvasElement.prototype.getContext;
+  });
+  afterEach(() => {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    vi.restoreAllMocks();
+  });
+
+  const trackView = (c) =>
+    c.querySelector('canvas[aria-label^="Track editor canvas"]').parentElement;
+  const raceView = (c) => c.querySelector('canvas[aria-label^="Race view"]').parentElement;
+
+  it('the switch shows one view at a time: Track first, then the race view', async () => {
+    const { container } = renderEditor();
+    expect(trackView(container).hidden).toBe(false);
+    expect(raceView(container).hidden).toBe(true);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Race view' })));
+    expect(trackView(container).hidden).toBe(true);
+    expect(raceView(container).hidden).toBe(false);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Track' })));
+    expect(trackView(container).hidden).toBe(false);
+  });
+
+  // The state a test race carries, exactly as TrackEditor's handleTestRace hands it over.
+  const CARRIED = {
+    snapshot: {
+      centerPoints: [
+        { x: 400, y: 300 },
+        { x: 900, y: 500 },
+      ],
+      innerPoints: [],
+      outerPoints: [],
+      centerWidth: 120,
+      mode: 'center',
+      activeBoundary: 'inner',
+      closed: false,
+      name: 'Carried Track',
+      backgroundImage: null,
+      effects: [{ id: 'rain', config: { count: 200 } }],
+      trackLights: undefined,
+    },
+    loadedGeometryId: null,
+    loadedServerId: null,
+    isDirty: true,
+    viewport: { worldW: 1280, worldH: 720, zoom: 1, panX: 0, panY: 0 },
+    view: 'race',
+    raceViewCentre: { x: 900, y: 500 },
+  };
+
+  it('back from a test race: the carried state is put back exactly, and no draft is offered over it', async () => {
+    const raceCtx = trackingCtx();
+    routeContexts({ main: trackingCtx(), raceView: raceCtx });
+    // The item the effect draws sits at the carried race-view centre, so it lands at the panel centre
+    // only if the centre came back; it is created only if the effects came back.
+    const create = vi.fn((canvas, config) => ({
+      update: vi.fn(),
+      render: (c) => c.arc(900, 500, config.count === 200 ? 4.75 : 1),
+    }));
+    getEffect.mockReturnValue({ create, configSchema: [], defaultConfig: {} });
+    // A draft of another track waits in storage — the offer must not fire over the carried state.
+    saveDraft({
+      centerPoints: [
+        { x: 1, y: 1 },
+        { x: 2, y: 2 },
+      ],
+      innerPoints: [],
+      outerPoints: [],
+    });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    sessionStorage.setItem(EDITOR_RETURN_KEY, JSON.stringify(CARRIED));
+
+    const { container } = renderEditor();
+    await act(async () => {});
+
+    expect(raceView(container).hidden).toBe(false); // the view
+    expect(create).toHaveBeenCalled(); // the effects
+    expect(create.mock.calls.at(-1)[1]).toEqual({ count: 200 });
+    expect(screen.getByPlaceholderText('Track name…').value).toBe('Carried Track'); // the snapshot
+    raceCtx.arcs.length = 0;
+    act(() => _rafCallback(16));
+    const item = raceCtx.arcs.filter((a) => a.r === 4.75).at(-1);
+    expect(item.x).toBeCloseTo(RACE_VIEW_W / 2, 6); // the race-view centre
+    expect(item.y).toBeCloseTo(RACE_VIEW_H / 2, 6);
+    expect(sessionStorage.getItem(EDITOR_RETURN_KEY)).toBeNull(); // cleared once applied
+    expect(confirm).not.toHaveBeenCalled(); // no draft offered over it
   });
 });

@@ -307,6 +307,8 @@
   margin: 0;
 }
 
+/* PARTICLES-VISIBILITY-12: one view at a time under the view bar — the track view or the race view,
+   each the full width (the race view was a panel beside the track view in PARTICLES-VISIBILITY-10/11). */
 .main {
   flex: 1;
   display: flex;
@@ -317,10 +319,61 @@
   overflow-y: auto;
 }
 
+.viewBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 1280px;
+}
+
+.testRaceBtn {
+  background: #0d0d0f;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.95rem;
+  cursor: pointer;
+}
+
+.testRaceBtn:disabled {
+  border-color: #2a2a35;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.viewBarNote {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
 .canvasWrapper {
   max-width: 1280px;
   width: 100%;
   outline: none;
+}
+
+.raceView {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0;
+}
+
+.raceViewCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #2a2a35;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.raceViewCaption {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #9a9aa8);
 }
 
 .canvas {

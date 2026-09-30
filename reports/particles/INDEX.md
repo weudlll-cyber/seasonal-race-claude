@@ -1,0 +1,66 @@
+# Particles — index
+
+The particle effects on the race screen: the surface dust behind the racers, the track effects (rain and
+the others) and the finish burst. **None of them is covered by a fingerprint**, which is why these
+reports exist.
+
+`node scripts/check-index.mjs --dir=reports/particles --index=reports/particles/INDEX.md` checks that
+every report here is reachable and that every link here resolves.
+
+- [PARTICLES-VISIBILITY-1.md](PARTICLES-VISIBILITY-1.md) — 2026-09-28. Why dust, rain and the finish
+  burst appear at some moments and not others, measured on the owner's own stored race. Dust is culled
+  with the wrong axis scale, and rain spawns in a canvas-sized corner of the world; both MEASURED. The
+  burst complaint is NOT PROVEN. Open row: BACKLOG PART ONE, *2026-09-28 — added (PARTICLES-VISIBILITY-1)*.
+
+- [PARTICLES-VISIBILITY-2.md](PARTICLES-VISIBILITY-2.md) — 2026-09-28. The fix, on the branch and not merged: the
+  cull tests each axis with its own scale, a finished racer's dust fades out, and every track effect covers the whole
+  track. Before/after on the owner's race, and a table of every track's effects with where their amounts are set.
+
+- [PARTICLES-VISIBILITY-3.md](PARTICLES-VISIBILITY-3.md) — 2026-09-28. Every track effect's amount now runs from
+  off to many (maxima measured in the browser, capped where frame time slowed), and every racer-trail generator has
+  an opacity control in the Dev Screen's surface-class editor. Per-effect counts, frame cost and screenshots.
+
+- [PARTICLES-VISIBILITY-4.md](PARTICLES-VISIBILITY-4.md) — 2026-09-28. Track effects draw only what is on screen
+  (all seven) and draw it cheaper where that measurably helped (rain, stars, bubbles, fireflies); where the cost
+  went, per build; ceilings re-measured in the race camera AND with the whole track in view.
+
+- [PARTICLES-VISIBILITY-5.md](PARTICLES-VISIBILITY-5.md) — 2026-09-28. Measure only: the pre-start camera flight
+  with mud, dust and fireflies at their maxima. Mud and dust add no stutter; fireflies lower the frame rate (evenly)
+  through the ceremony and the first seconds of racing; the flight never takes longer (it runs on elapsed time).
+
+- [PARTICLES-VISIBILITY-6.md](PARTICLES-VISIBILITY-6.md) — 2026-09-28. The search for a lower fireflies maximum:
+  no level down to the default (30) passed the strict rule against three baseline runs, so no maximum was set. On median
+  and p90 alone the frame rate holds at 250 and below and drops from 500. Proposals for the rule, none built.
+
+- [PARTICLES-VISIBILITY-7.md](PARTICLES-VISIBILITY-7.md) — 2026-09-28. The fireflies maximum set to 250 under a
+  corrected rule (median and p90 against ten interleaved no-effect runs, both phases); 300 already halves the frame rate
+  in one run.
+
+- [PARTICLES-VISIBILITY-8.md](PARTICLES-VISIBILITY-8.md) — 2026-09-29. Every track effect's amount on one 0–100
+  level scale in the Track Editor (0 off, 100 the effect's maximum, linear), storage unchanged: what each level means
+  natively, the level every stored track shows, and the test that an untouched amount saves byte-identical.
+
+- [PARTICLES-VISIBILITY-9.md](PARTICLES-VISIBILITY-9.md) — 2026-09-29. Why Seatrack's bubbles at level 10 are
+  invisible in the race (count per screen: a median of 2 on screen, MEASURED; not size, not a defect), and the Track
+  Editor's preview now places and draws effects in the world as the race does. Editor-versus-race screenshots.
+
+- [PARTICLES-VISIBILITY-10.md](PARTICLES-VISIBILITY-10.md) — 2026-09-29. A race-view panel in the Track Editor, at
+  the race camera's own racing zoom (from the camera's code, per track), beside the whole-track view; measured against
+  the real race on Seatrack and Dirt Oval: the same zoom, and the same density at that zoom.
+
+- [PARTICLES-VISIBILITY-11.md](PARTICLES-VISIBILITY-11.md) — 2026-09-29. Reference points in the race-view panel:
+  the editor's track lines, three racers of the track's type at the race's drawn size (MEASURED equal to the race's
+  racers at the racing zoom), and the panel's area framed in the main view.
+
+- [PARTICLES-VISIBILITY-12.md](PARTICLES-VISIBILITY-12.md) — 2026-09-30. The Track Editor's Track / Race view switch
+  (the race view a whole race frame at race zoom) and a Test race: a real race with the unsaved effects, 40 racers of
+  the track's type, the track's length; MEASURED that it stores nothing (with a control that shows the check sees a
+  write) and that the editor comes back as it was.
+
+- [PARTICLES-VISIBILITY-13.md](PARTICLES-VISIBILITY-13.md) — 2026-09-30. Two known faults before the owner looks: (A)
+  "An unsaved track … was found" appeared after every load — each load wrote two drafts with nothing changed — and now
+  appears only for unsaved changes, for their own track (MEASURED before/after); (B) the one-off red run of
+  `fingerprint-default.test.mjs`: not reproduced in 40 runs, nothing changed (its own branch).
+
+**Not indexed, and deliberately:** the `PARTICLES-VISIBILITY-1/` to `-12/` folders hold the reports' screenshots.
+`check-index` only considers `*.md`.

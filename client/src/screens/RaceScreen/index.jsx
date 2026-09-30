@@ -24,6 +24,7 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
+import { advanceRacerDust } from './racerDust.js';
 import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
@@ -49,6 +50,7 @@ import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
+import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
 import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
@@ -473,10 +475,19 @@ export default function RaceScreen() {
     };
     const trackLightsConfig = geometry.trackLights ?? DEFAULT_TRACK_LIGHTS;
 
-    effectsRef.current = extractEffects(geometry)
+    // PARTICLES-VISIBILITY-2: track effects are drawn INSIDE the world transform (renderRaceFrame.js),
+    // so the world size goes in as `create`'s third argument and every effect places its content over
+    // the whole track. Passing the canvas alone put everything in a canvas-sized corner of the world.
+    const effectWorld = { width: worldWidth, height: worldHeight };
+    // PARTICLES-VISIBILITY-12: a test race from the Track Editor carries the editor's UNSAVED effects
+    // in its payload (`raceData.testRace.effects`), so they are raced without being stored anywhere;
+    // every other race reads the stored track's effects, as before.
+    effectsRef.current = extractEffects(
+      raceData.testRace ? { effects: raceData.testRace.effects } : geometry
+    )
       .map(({ id, config }) => {
         const manifest = getEffect(id);
-        return manifest ? manifest.create(canvas, config) : null;
+        return manifest ? manifest.create(canvas, config, effectWorld) : null;
       })
       .filter(Boolean);
 
@@ -1218,34 +1229,37 @@ export default function RaceScreen() {
               .filter((r) => r.finished)
               .sort((a, b) => a.finishRank - b.finishRank);
             const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
-            sessionStorage.setItem(
-              'raceResults',
-              JSON.stringify({
-                finishOrder: [...byRank, ...rest].map((r) => ({
-                  name: r.name,
-                  icon: r.icon,
-                  color: r.color,
-                  index: r.index,
-                  lap: r.lap ?? 1,
-                  progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
-                  finishTimeMs: r.finishTimeMs ?? null,
-                })),
-                elapsedTime: Math.round((ts - st.raceStart) / 1000),
-                race: raceData,
-                // RACE-SAVE-3: THE CONFIG WORLD THIS RACE ACTUALLY RAN WITH, carried to the result
-                // screen rather than re-gathered there.
-                //
-                // `raceData` alone cannot describe a race. Two of the identifier's nine inputs are
-                // read from the HOST at race start and never travel in the payload — the config
-                // world is one of them (`cfgWorld` above, the same value the badge and the camera
-                // marker use). The result screen has only `raceData`, so it would have to gather
-                // the world itself, from the loaders that read the Dev Screen AS IT IS NOW: change
-                // a setting while the race is on screen and the stored race would claim values it
-                // never ran. That is the exact class RACE-IDENTIFIER-1 exists to prevent, and it is
-                // why this is a carry rather than a second gather.
-                worldConfig: cfgWorld,
-              })
-            );
+            // PARTICLES-VISIBILITY-12: a test race hands NO result on — the result screen is where a
+            // race is recorded (ResultScreen `recordFinishedRace`), and a test race records nothing.
+            if (!raceData.testRace)
+              sessionStorage.setItem(
+                'raceResults',
+                JSON.stringify({
+                  finishOrder: [...byRank, ...rest].map((r) => ({
+                    name: r.name,
+                    icon: r.icon,
+                    color: r.color,
+                    index: r.index,
+                    lap: r.lap ?? 1,
+                    progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
+                    finishTimeMs: r.finishTimeMs ?? null,
+                  })),
+                  elapsedTime: Math.round((ts - st.raceStart) / 1000),
+                  race: raceData,
+                  // RACE-SAVE-3: THE CONFIG WORLD THIS RACE ACTUALLY RAN WITH, carried to the result
+                  // screen rather than re-gathered there.
+                  //
+                  // `raceData` alone cannot describe a race. Two of the identifier's nine inputs are
+                  // read from the HOST at race start and never travel in the payload — the config
+                  // world is one of them (`cfgWorld` above, the same value the badge and the camera
+                  // marker use). The result screen has only `raceData`, so it would have to gather
+                  // the world itself, from the loaders that read the Dev Screen AS IT IS NOW: change
+                  // a setting while the race is on screen and the stored race would claim values it
+                  // never ran. That is the exact class RACE-IDENTIFIER-1 exists to prevent, and it is
+                  // why this is a carry rather than a second gather.
+                  worldConfig: cfgWorld,
+                })
+              );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
             // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
             // two ADD, so the ending grows by exactly the hold — the card's window stays `min(card,
@@ -1272,7 +1286,11 @@ export default function RaceScreen() {
             // (`onFinishClick` below).
             if (autoAdvanceRef.current) {
               finishNavTimerRef.current = setTimeout(
-                () => fadeNavRef.current('/results'),
+                // PARTICLES-VISIBILITY-12: a test race goes back to the Track Editor, not to results.
+                () =>
+                  raceData.testRace
+                    ? fadeNavRef.current(TEST_RACE_RETURN_ROUTE)
+                    : fadeNavRef.current('/results'),
                 endingOnRaceScreenMs({
                   holdMs: cameraConfigRef.current?.finishHoldAfterLastMs,
                   pauseMs,
@@ -1462,42 +1480,9 @@ export default function RaceScreen() {
           d.dv12Max = Math.max(...d._dv12Buf);
         }
 
-        const rt = racerTypeRef.current;
-        // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps)
-        const dtFrames = rawDt / 16;
-        for (const r of st.racers) {
-          if (!r.finished) {
-            const spawnX = r.x;
-            const spawnY = r.y;
-            if (r.surfaceEmitter) {
-              // Surface-class trail: each racer drives its own emitter. spawn appends new
-              // particles IN PLACE into r.surfaceParticles and update advances/compacts it
-              // in place (swap-remove) — no per-frame array/object churn, array identity kept.
-              r.surfaceEmitter.spawn(r.surfaceParticles, spawnX, spawnY, r.baseSpeed, r.angle, ts);
-              r.surfaceEmitter.update(r.surfaceParticles, dtFrames);
-            } else {
-              // native trail fallback: trailFactory-based particles pooled globally
-              st.dustParticles.push(
-                ...rt.getTrailParticles(spawnX, spawnY, r.baseSpeed, r.angle, ts)
-              );
-            }
-          }
-        }
-        // Advance native trail dustParticles — in-place mutation + swap-remove (no allocation).
-        {
-          let i = 0;
-          while (i < st.dustParticles.length) {
-            const p = st.dustParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.alpha -= 0.022;
-            p.r *= 0.97;
-            if (p.alpha <= 0) {
-              st.dustParticles[i] = st.dustParticles[st.dustParticles.length - 1];
-              st.dustParticles.length--;
-            } else i++;
-          }
-        }
+        // Racer dust: spawn behind racers still running, advance everyone's (see racerDust.js).
+        // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps).
+        advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         // Advance burst particles — in-place mutation + swap-remove (no allocation).
         {
           let i = 0;
@@ -1517,6 +1502,9 @@ export default function RaceScreen() {
       } else {
         // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
+        // PARTICLES-VISIBILITY-2: the dust keeps fading here too. Nobody is running, so nothing
+        // spawns; without this call every racer's last dust stood frozen until the screen closed.
+        advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         {
           let i = 0;
           while (i < st.burstParticles.length) {
@@ -1956,7 +1944,8 @@ export default function RaceScreen() {
       }
     }
     sessionStorage.removeItem('activeRace');
-    fadeNavigate('/setup');
+    // PARTICLES-VISIBILITY-12: a cancelled test race goes back to the Track Editor it came from.
+    fadeNavigate(raceData?.testRace ? TEST_RACE_RETURN_ROUTE : '/setup');
   }
 
   // ── Error / loading states ───────────────────────────────────────────────
@@ -2038,7 +2027,9 @@ export default function RaceScreen() {
     if (autoAdvance) return; // the timer above is already taking us there
     if (e.button !== 0) return; // left click only, as the ceremony skip is
     if (g.current?.phase !== PHASE.FINISHED) return;
-    fadeNavRef.current('/results');
+    raceData?.testRace
+      ? fadeNavRef.current(TEST_RACE_RETURN_ROUTE)
+      : fadeNavRef.current('/results');
   };
 
   // ONE HANDLER ON THE WRAPPER, because an element may carry one `onMouseDown`. The two intentions

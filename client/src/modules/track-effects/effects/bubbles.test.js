@@ -10,6 +10,10 @@ function makeMockCtx() {
   const calls = { beginPath: 0, arc: 0, fill: 0 };
   return {
     calls,
+    // PARTICLES-VISIBILITY-4: effects cull against the canvas under the current transform.
+    canvas: MOCK_CANVAS,
+    getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+    moveTo() {},
     globalAlpha: 1,
     fillStyle: '',
     beginPath() {
@@ -63,7 +67,9 @@ describe('bubbles effect — create() contract', () => {
     const ctx = makeMockCtx();
     instance.render(ctx);
     expect(ctx.calls.arc).toBe(5);
-    expect(ctx.calls.fill).toBe(5);
+    // PARTICLES-VISIBILITY-4: bubbles are filled per alpha tier (at most 8), not one fill per bubble.
+    expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
+    expect(ctx.calls.fill).toBeLessThanOrEqual(8);
   });
 
   it('render() with count = 0 makes no draw calls', () => {
