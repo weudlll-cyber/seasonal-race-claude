@@ -1202,6 +1202,21 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
       move and are minted only after his eye. **This row stays open** — for that mint, and for the tracks, brand and player group.
 
+- [ ] ★ **THE COMEBACK SHOT HOLDS AT LEAST 8 s, AND LONGER WHILE THE CATCH-UP IS STILL IN PROGRESS —
+      the owner's decision of 2026-10-02. Open; measured, not built.** Today it holds exactly 8 s (the
+      COMEBACK_ZOOM profile's `maxStateDuration` and `comebackMinDuration` in `defaults.js`).
+      [COMEBACK-HOLD-MEASURE-1](../reports/evolution/COMEBACK-HOLD-MEASURE-1.md), N=30 races: 10 shots,
+      all ended by the 8 s cap; 6 of 10 racers were still gaining places at the cut; nothing in the code
+      today says "the comeback is finished" — the plan's `resolve` beat is an entry gate only, and fell
+      before every cut. **What a build has to choose is that end signal.** **verify:** rerun
+      `node scripts/diag/comeback-hold-measure.mjs` — today every shot's "ended by" is the 8 s cap.
+
+- [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
+      items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
+      on-screen build/source badge; the off-default settings badge; plus a sweep for any further
+      developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
+      work and names a check per display.
+
 - [ ] ★ **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
       is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
       Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones

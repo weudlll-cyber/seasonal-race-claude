@@ -426,6 +426,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-HOLD-MEASURE-1.md](COMEBACK-HOLD-MEASURE-1.md) — **how the comeback shot ends today,
+  measured (2026-10-02).** 30 races (10 shipped tracks x Quick-Test seeds 1-3, 20 racers) on the
+  branch with the owner's camera settings: **10 shots, all 10 ended by the 8 s cap**; every racer was
+  already at or past his drawn place at the cut, yet **6 of 10 went on gaining places** (up to 13.9 s
+  more, median 2.2 s, N=10). Raising the cap would rarely be cut short by anything else (0 of 10
+  before 12 s, derived). **No "comeback finished" signal ends a shot today**; the plan's `resolve`
+  beat is an entry gate only and fell before every cut. Measurement only.
+
 - [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
   seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
   tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two

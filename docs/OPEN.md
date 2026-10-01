@@ -9,7 +9,9 @@ inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN OF 2026-08-31 (
 same day the TENANCY row closed: the boundary will not be built** (decision of 2026-10-01; PART TWO,
 survey archived as the tag `archive/tenancy-survey-1`) — so fourteen. ★ **Fifteen since
 SHIP-OWNER-COSMETIC-1 (2026-10-01, branch `ship/owner-cosmetic-defaults`)**, which opened one row: the
-Dev Screen comeback settings that may have had no effect since the 2026-09-19 rule. **PARTICLES-VISIBILITY-1 to -13** (opened
+Dev Screen comeback settings that may have had no effect since the 2026-09-19 rule. ★ **Seventeen
+since COMEBACK-HOLD-MEASURE-1 (2026-10-02)**: the comeback hold (at least 8 s, longer while catching
+up — measured, not built) and switching off the developer-only displays before delivery. **PARTICLES-VISIBILITY-1 to -13** (opened
 2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
 on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
 and what was left as is. The one-off red run of
@@ -35,10 +37,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2541) holds exactly FIFTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 4 in
+(lines 15–2556) holds exactly SEVENTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 6 in
 *Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
 *The night of 2026-08-25*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
-2026-10-01 after SHIP-OWNER-COSMETIC-1.)* Every current count on this page says fifteen.
+2026-10-02 after COMEBACK-HOLD-MEASURE-1.)* Every current count on this page says seventeen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -55,7 +57,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fifteen rows in section 0 are all WORK**, and that is still true.
+work. **The seventeen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -66,7 +68,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all seventeen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -158,6 +160,12 @@ because nobody looked.**
 15. ★ **NEW 2026-10-01 — Dev Screen comeback settings that may do nothing** since the 2026-09-19 rule
    (a comeback is shown when one was planned). Survey which still act; remove the dead ones; list the
    rest for him.
+16. ★ **NEW 2026-10-02 — the comeback shot: at least 8 s, longer while catching up** (his decision).
+   Measured, not built: today all 10 shots in 30 races end at the 8 s cap, 6 with the racer still
+   gaining; no "comeback finished" signal exists to end a longer shot on.
+17. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
+   rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
+   after everything else.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
