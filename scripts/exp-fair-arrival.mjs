@@ -10,6 +10,8 @@ import { readFileSync, mkdirSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rowMinOf } from "./sim/observers/fairness-stats.mjs";
+import { loadTracks } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 
 const pExec = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,12 +50,14 @@ const trackSeed = (id) =>
     readFileSync(join(ROOT, "server/seeds/tracks", `${id}.json`), "utf8"),
   );
 const TRACKS_ARG = argVal("tracks", "searound,ice-track");
-const TRACK_IDS =
-  TRACKS_ARG === "ten"
-    ? TEN
-    : TRACKS_ARG.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared place,
+// which refuses (exit 2) a name no track answers to and a scope that names nothing (`--tracks=` used
+// to sweep zero tracks, print the table headers and exit 0).
+const TRACK_IDS = resolveTrackScopeIds({
+  tool: "exp-fair-arrival",
+  ids: TRACKS_ARG === "ten" ? TEN : TRACKS_ARG,
+  all: loadTracks(),
+});
 const TRACKS = TRACK_IDS.map((id) => {
   const s = trackSeed(id);
   return { id, racer: s.defaultRacerTypeId, closed: !!s.closed };

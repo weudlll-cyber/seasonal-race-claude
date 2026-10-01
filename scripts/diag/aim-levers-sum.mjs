@@ -2,17 +2,21 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
 const DIR = arg("dir", join(tmpdir(), "lev/s1"));
-const TRACKS = (
-  arg("tracks", "space-sprint,river-run,seatrack,dirt-oval") || ""
-)
-  .split(",")
-  .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/aim-levers-sum",
+  ids: arg("tracks", "space-sprint,river-run,seatrack,dirt-oval"),
+  all: loadTracks(),
+});
 const ARMS = (arg("arms", "off,a,b300,b360,ab300") || "")
   .split(",")
   .filter(Boolean);

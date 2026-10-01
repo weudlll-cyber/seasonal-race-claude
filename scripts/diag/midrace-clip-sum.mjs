@@ -7,6 +7,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
@@ -14,7 +16,13 @@ const arg = (k, d) => {
 };
 const DIR = arg("dir", join(tmpdir(), "midrace"));
 const PREFIX = arg("prefix", "after");
-const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/midrace-clip-sum",
+  ids: arg("tracks", ""),
+  all: loadTracks(),
+});
 const f = (n, d = 1) => (n === null || n === undefined ? "   —  " : n.toFixed(d).padStart(6));
 
 const perTrack = [];

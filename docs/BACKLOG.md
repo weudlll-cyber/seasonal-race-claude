@@ -301,10 +301,11 @@ not an address which is right (§9.1).
 
 - [ ] **C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
       the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
-      in the root manifest, target from `RA_BACKUP_DIR` · ★ **NEW 2026-10-01:** `npm run data:export`
+      in the root manifest, target from `RA_BACKUP_DIR` · ~~★ **NEW 2026-10-01:** `npm run data:export`
       reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
       install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
-      documents now say not to use it there · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+      documents now say not to use it there~~ — ★ **CLOSED 2026-10-02 (DATA-EXPORT-DATADIR-1):** reads
+      `RA_DATA_DIR` through `resolveDataRoot`; the warnings are gone · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
       the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
       ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
       `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
@@ -615,6 +616,15 @@ source before it was moved rather than taken from a report:**
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
 
+- [ ] ★ **`pair-reach-census` STILL ANSWERS A SCOPE THAT MATCHES NOTHING WITH A TABLE AND EXIT 0 —
+      opened 2026-10-02, the one remainder of HARNESS-EMPTY-SCOPE-1** (PART TWO). Its documented
+      `--tracks=a,b` matches nothing and exits 0. It is an engine-hull driver (it imports `raceCore.js`),
+      and wiring it to `scripts/lib/trackScope.mjs` pulled that shared place into the hull, so it was
+      left by rule. A fix must refuse the empty scope without making the shared place a hull file.
+      **verify:** `node scripts/pair-reach-census.mjs --tracks=no-such-track; echo $?` prints a table
+      and 0 while this row is open.
+
+
 **He asked for the day's findings collected so they can be taken one at a time.** Every item below is
 a FINDING. **No work is proposed here and no verdict is invented** — each says only what it is, what
 establishes it, and which of three things it needs next: **MEASURING**, **BUILDING**, or **ONLY HIS
@@ -639,82 +649,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md).
       **NEEDS: ONLY HIS WORD** — restore the serialisation as a performance decision, or teach the
       gate to report a timeout-only failure as INCONCLUSIVE rather than as pass or fail.
-
-- [ ] **A SWEEP THAT ASKS FOR RACES AND GETS NONE STILL PRINTS A TABLE AND EXITS 0.**
-      ★★ **RETARGETED 2026-09-25 — the DRIVER half is done and the row no longer claims it.** A
-      truncated race now throws (`scripts/lib/raceDriver.mjs:627-635`), so the original framing —
-      *"44 call `runRace` and exactly one reads its return value"* — describes a problem that has been
-      answered at the source and is deleted here rather than left to look unbuilt.
-      **What reproduces today is the SCOPE half:** a tool handed a track name that matches nothing
-      filters its work list to empty, prints a full table with zero data rows, and exits 0. That is
-      the failure the guard on the viewer harness catches for itself and nothing else does.
-      ★ **The row now asks for ONE shared place** that validates a track name against the registry
-      and refuses an empty scope, used by the tools that take `--tracks`, rather than the same check
-      copied per tool.
-      ★ **Deleted as stale: "the guard is NOT wired into CI, verify or a hook."** `scripts/verify.mjs`
-      makes `viewer-invariants` the pre-merge gate guard, so that sentence has been false for weeks.
-      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md).
-      **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
-      in the report.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:414` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:157`, the driver's own test. Waiting on BUILDING.
-
-      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
-      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
-      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
-      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
-      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
-      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
-      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
-      established at source:** `scripts/viewer-invariants.mjs` filters
-      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
-      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
-      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
-      race is driven, so `runRace`'s return value could not have caught it either.
-      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
-      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
-      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
-      `--tracks` entry point named in the piece-E report still has the defect.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
-      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
-      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
-      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
-      surrounding numbers are larger than when the row was written: **82 files import the driver**
-      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
-
-      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. One shared place now exists and three
-      callers are on it; the row claims only the callers that are not.**
-      ★ **The shared place:** `scripts/lib/trackScope.mjs`, `resolveTrackScope()`. It validates the
-      requested scope against the tracks that exist and REFUSES by name — naming what was asked for,
-      what the repository has, that there is no "all", and why exiting 0 would be wrong. **The
-      wording is not new:** it is taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`,
-      which already guarded exactly this, rather than invented beside them.
-      ★ **Wired, and each PROVEN to refuse (exit 2) where it used to exit 0:**
-      `line-visible-truth.mjs`, `pan-lag-account.mjs`, `endgame-width-truth.mjs`.
-      ★ **SABOTAGE, both ways:** with the refusal disabled, `--tracks=all` prints the full headers
-      with zero data rows and exits **0** again; restored, it exits **2**. A valid scope
-      (`--tracks=river-run`) is unaffected — real rows, exit 0.
-      ★★ **TWO OF THE FIVE NAMED CALLERS WERE ALREADY GUARDED, and were left alone.**
-      `company-spread-sweep.mjs:160` refuses with exit 2 and names what is missing and what is
-      available; `zoom-rate-truth.mjs:174` throws. Neither is a silent zero, so neither was changed —
-      the second is louder than it needs to be rather than quieter.
-      ★ **WHAT REMAINS, and why it was not forced:** several tools under `scripts/diag/` take a scope
-      in a DIFFERENT shape — `aim-levers.mjs:78` is a single-track `Map.get`, `binding-census.mjs:10`
-      iterates every track with no scope at all. Passing the scope through is not enough for those,
-      so by this block's own rule they stop here and are named rather than half-converted.
-
-      ★★ **NARROWED FURTHER 2026-09-26 by NIGHT-2026-09-26 PIECE 4.**
-      `scripts/lib/trackScope.mjs` grew a second entry point, `resolveTrackScopeIds`, aimed at
-      the diag shape (iterate ids, look each up per iteration via `Map.get`). Same refusal wording,
-      same exit code, same provisions — one home, two doors, not two homes. Five diag tools brought
-      under the refusal (`company-ceiling-who`, `company-under-floor`, `endgame-spec`,
-      `headcount-price`, `sprite-premise`); the sabotage arm on each was verified (`--tracks=nope`
-      / `--track=nope` → exit 2 naming the ten known tracks; a valid scope still produces rows).
-      Ten file-based `-sum.mjs` analysers were NAMED and left alone — their scope reaches
-      `readFileSync(--dir=...)` rather than `loadTracks()`, so they have no natural "known set" to
-      validate against. Report:
-      [TRACKSCOPE-DIAG-REACH-1](../reports/evolution/TRACKSCOPE-DIAG-REACH-1.md).
 
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
@@ -2540,6 +2474,107 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **A SWEEP THAT ASKS FOR RACES AND GETS NONE — CLOSED 2026-10-02 by
+      [HARNESS-EMPTY-SCOPE-1](../reports/evolution/HARNESS-EMPTY-SCOPE-1.md).** A census of
+      `scripts/` finds **30** tools that read a `--tracks` flag. **28 now resolve their scope through
+      the one shared place**, `scripts/lib/trackScope.mjs` (reused, not added beside:
+      `resolveTrackScope` for tools that iterate geometries, `resolveTrackScopeIds` for tools that
+      iterate names) — seven were already on it, **21 were wired here**, including the file-reading
+      `-sum` analysers the 2026-09-26 block left alone: their scope is still a list of TRACK names, so
+      the registry is the known set. Each of the 28 was run with `--tracks=all` and with
+      `--tracks=`: **exit 2, the refusal naming what was asked and what exists, 0 bytes on stdout.**
+      An EMPTY `--tracks=` is now refused rather than read as "every track", and
+      `viewer-invariants.mjs` calls the shared place instead of keeping the original copy of its
+      wording. **What keeps it closed:** `scripts/lib/trackScopeWiring.test.mjs` fails if any script
+      outside the race hull reads a `tracks` flag without importing the shared place.
+      ★ **TWO ARE LEFT, BY RULE, AND NAMED:** `outcome-phase-window.mjs` and `pair-reach-census.mjs`
+      import `raceCore.js` directly, so they are race-hull DRIVERS and `engine-reach.mjs` counts their
+      whole import closure. Wiring them put `trackScope.mjs` into the hull (measured:
+      `engine-reach --check` answered *3 paths can change the race*), so they were reverted; the
+      wiring test pins `trackScope.mjs` OUTSIDE the hull. `outcome-phase-window` already refuses an
+      empty or unknown scope with exit 2 on its own. **`pair-reach-census` does not:** its documented
+      `--tracks=a,b` goes to `loadTracks({ only })`, which matches ONE id, so any multi-track scope
+      prints nothing and exits 0 (measured on master). That is a defect of one tool, not of the
+      shared place, and it is named here rather than fixed with a second copy of the refusal.
+      **Not claimed either:** a valid scope whose DATA is missing (a `-sum` analyser pointed at a
+      `--dir` with no files) still prints "NO FILE" rows and exits 0 — that is the data half, a
+      different question from the scope. *The row as it stood:*
+      **A SWEEP THAT ASKS FOR RACES AND GETS NONE STILL PRINTS A TABLE AND EXITS 0.**
+      ★★ **RETARGETED 2026-09-25 — the DRIVER half is done and the row no longer claims it.** A
+      truncated race now throws (`scripts/lib/raceDriver.mjs:627-635`), so the original framing —
+      *"44 call `runRace` and exactly one reads its return value"* — describes a problem that has been
+      answered at the source and is deleted here rather than left to look unbuilt.
+      **What reproduces today is the SCOPE half:** a tool handed a track name that matches nothing
+      filters its work list to empty, prints a full table with zero data rows, and exits 0. That is
+      the failure the guard on the viewer harness catches for itself and nothing else does.
+      ★ **The row now asks for ONE shared place** that validates a track name against the registry
+      and refuses an empty scope, used by the tools that take `--tracks`, rather than the same check
+      copied per tool.
+      ★ **Deleted as stale: "the guard is NOT wired into CI, verify or a hook."** `scripts/verify.mjs`
+      makes `viewer-invariants` the pre-merge gate guard, so that sentence has been false for weeks.
+      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md).
+      **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
+      in the report.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:414` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:157`, the driver's own test. Waiting on BUILDING.
+
+      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
+      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
+      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
+      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
+      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
+      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
+      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
+      established at source:** `scripts/viewer-invariants.mjs` filters
+      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
+      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
+      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
+      race is driven, so `runRace`'s return value could not have caught it either.
+      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
+      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
+      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
+      `--tracks` entry point named in the piece-E report still has the defect.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
+      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
+      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
+      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
+      surrounding numbers are larger than when the row was written: **82 files import the driver**
+      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
+
+      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. One shared place now exists and three
+      callers are on it; the row claims only the callers that are not.**
+      ★ **The shared place:** `scripts/lib/trackScope.mjs`, `resolveTrackScope()`. It validates the
+      requested scope against the tracks that exist and REFUSES by name — naming what was asked for,
+      what the repository has, that there is no "all", and why exiting 0 would be wrong. **The
+      wording is not new:** it is taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`,
+      which already guarded exactly this, rather than invented beside them.
+      ★ **Wired, and each PROVEN to refuse (exit 2) where it used to exit 0:**
+      `line-visible-truth.mjs`, `pan-lag-account.mjs`, `endgame-width-truth.mjs`.
+      ★ **SABOTAGE, both ways:** with the refusal disabled, `--tracks=all` prints the full headers
+      with zero data rows and exits **0** again; restored, it exits **2**. A valid scope
+      (`--tracks=river-run`) is unaffected — real rows, exit 0.
+      ★★ **TWO OF THE FIVE NAMED CALLERS WERE ALREADY GUARDED, and were left alone.**
+      `company-spread-sweep.mjs:160` refuses with exit 2 and names what is missing and what is
+      available; `zoom-rate-truth.mjs:174` throws. Neither is a silent zero, so neither was changed —
+      the second is louder than it needs to be rather than quieter.
+      ★ **WHAT REMAINS, and why it was not forced:** several tools under `scripts/diag/` take a scope
+      in a DIFFERENT shape — `aim-levers.mjs:78` is a single-track `Map.get`, `binding-census.mjs:10`
+      iterates every track with no scope at all. Passing the scope through is not enough for those,
+      so by this block's own rule they stop here and are named rather than half-converted.
+
+      ★★ **NARROWED FURTHER 2026-09-26 by NIGHT-2026-09-26 PIECE 4.**
+      `scripts/lib/trackScope.mjs` grew a second entry point, `resolveTrackScopeIds`, aimed at
+      the diag shape (iterate ids, look each up per iteration via `Map.get`). Same refusal wording,
+      same exit code, same provisions — one home, two doors, not two homes. Five diag tools brought
+      under the refusal (`company-ceiling-who`, `company-under-floor`, `endgame-spec`,
+      `headcount-price`, `sprite-premise`); the sabotage arm on each was verified (`--tracks=nope`
+      / `--track=nope` → exit 2 naming the ten known tracks; a valid scope still produces rows).
+      Ten file-based `-sum.mjs` analysers were NAMED and left alone — their scope reaches
+      `readFileSync(--dir=...)` rather than `loadTracks()`, so they have no natural "known set" to
+      validate against. Report:
+      [TRACKSCOPE-DIAG-REACH-1](../reports/evolution/TRACKSCOPE-DIAG-REACH-1.md).
 
 - [x] ★ **TENANCY — CLOSED 2026-10-01: THE BOUNDARY WILL NOT BE BUILT (decision of the owner,
       2026-10-01).** Organizers on one installation share everything that is shared today; races stay
