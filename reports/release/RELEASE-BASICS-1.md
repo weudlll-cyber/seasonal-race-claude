@@ -254,7 +254,10 @@ The mechanism's own statement of the rule is `server/src/seedDelivery.js:10-30`.
 - `scripts`: `node --test scripts/backup.test.mjs`: 11 passed, 1 skipped (chmod is not honoured on
   Windows; existing). `node --test scripts/status.test.mjs`: 9 passed. `node --test
   scripts/check-index.test.mjs`: 9 passed.
-- `npm run verify -- --premerge`: the result is in [MORNING-RELEASE-1](MORNING-RELEASE-1.md).
+- `npm run verify -- --premerge`: **PASS 22, FAIL 0, SKIP 14.** The first run was red on
+  `server-format-check`: the new startup-banner line in `server/src/index.js` was too long. It was
+  fixed with prettier, and the second run was green. The 14 skips are the fingerprint, race-frame and
+  client guards, deselected because nothing they cover changed. That agrees with `engine-reach`.
 - `node scripts/engine-reach.mjs --check <all 18 paths>`: none can reach the engine.
 - The throwaway install directory was deleted after both runs. Port 4391 was free afterwards. The
   owner's servers on 4000, 4173 and 5173 were not touched. **His working tree was switched to this

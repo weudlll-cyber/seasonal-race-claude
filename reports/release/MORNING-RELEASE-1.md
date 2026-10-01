@@ -56,4 +56,4 @@ plan for tenancy. **Nothing is merged. Both branches wait for you.**
 | new tests | 24, all green; each new piece sabotaged once and caught |
 | install / update / rollback followed literally | run 2: passed every step |
 | `node scripts/engine-reach.mjs --check` | none of 18 paths can reach the engine |
-| `npm run verify -- --premerge` | *filled in when it finishes* |
+| `npm run verify -- --premerge` | **PASS 22, FAIL 0, SKIP 14** (second run; the first was red on one over-long line, fixed) |
