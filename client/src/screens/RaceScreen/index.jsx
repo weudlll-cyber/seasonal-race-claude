@@ -85,11 +85,8 @@ import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
 import GovernorDiagHUD from './GovernorDiagHUD.jsx';
 import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
-import {
-  selectOverlayText,
-  selectOverlayTextNoRepeat,
-  selectWinnerText,
-} from '../../modules/stateOverlayTemplates.js';
+import { selectWinnerText } from '../../modules/stateOverlayTemplates.js';
+import { overlayVarsFor, pickOverlayText } from './stateOverlaySelection.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
 import {
   DEFAULT_TRACK_LIGHTS,
@@ -333,60 +330,15 @@ export default function RaceScreen() {
     if (!(cfg.stateOverlayEnabled ?? DEFAULT_CAMERA_CONFIG.stateOverlayEnabled)) return;
     if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'].includes(camState)) return;
 
-    const vars = {};
+    // P4-RACESCREEN-SPLIT-1: the derivation and the no-repeat choice live in stateOverlaySelection.js.
     const racers = g.current?.racers ?? [];
-    if (camState === 'OVERVIEW') {
-      if (racers.length > 0) {
-        const leader = racers.reduce((a, b) => (b.t > a.t ? b : a));
-        if (leader?.name) vars.leader = leader.name;
-      }
-    } else if (camState === 'BATTLE_ZOOM') {
-      // Derive {position} (rank of frontmost battle racer) and {count} (group size).
-      const dir = camDirRef.current;
-      if (dir && racers.length > 0) {
-        const battleData = dir.getBattleDiagData(racers);
-        const sorted = [...racers].sort((a, b) => b.t - a.t);
-        if (battleData.lockedRacer) {
-          const pos = sorted.indexOf(battleData.lockedRacer) + 1;
-          if (pos > 0) vars.position = pos;
-        } else {
-          vars.position = 1;
-        }
-        vars.count = Math.max(battleData.groupRacers.length, 3);
-      }
-    } else if (camState === 'COMEBACK_ZOOM') {
-      // Derive {name} from the locked comeback racer.
-      const dir = camDirRef.current;
-      if (dir) {
-        const cbData = dir.getComebackDiagData(racers, performance.now());
-        if (cbData.lockedRacer?.name) vars.name = cbData.lockedRacer.name;
-      }
-    } else if (camState === 'LEAD_CHANGE') {
-      // Derive {newLeader} and {previousLeader} from lead-change data.
-      const dir = camDirRef.current;
-      if (dir) {
-        const lcData = dir.getLeadChangeDiagData();
-        if (lcData.newLeader) vars.newLeader = lcData.newLeader;
-        if (lcData.previousLeader) vars.previousLeader = lcData.previousLeader;
-      }
-    }
-
-    let result;
-    if (camState === 'BATTLE_ZOOM') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedBattleIndicesRef.current);
-      if (result) overlayUsedBattleIndicesRef.current.add(result.index);
-    } else if (camState === 'COMEBACK_ZOOM') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedComebackIndicesRef.current);
-      if (result) overlayUsedComebackIndicesRef.current.add(result.index);
-    } else if (camState === 'LEAD_CHANGE') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedLeadChangeIndicesRef.current);
-      if (result) overlayUsedLeadChangeIndicesRef.current.add(result.index);
-    } else {
-      result = selectOverlayText(camState, vars, overlayLastIndexRef.current);
-      if (result) {
-        overlayLastIndexRef.current = { ...overlayLastIndexRef.current, [camState]: result.index };
-      }
-    }
+    const vars = overlayVarsFor(camState, racers, camDirRef.current);
+    const result = pickOverlayText(camState, vars, {
+      usedBattle: overlayUsedBattleIndicesRef.current,
+      usedComeback: overlayUsedComebackIndicesRef.current,
+      usedLeadChange: overlayUsedLeadChangeIndicesRef.current,
+      lastIndexRef: overlayLastIndexRef,
+    });
     if (!result) return;
 
     setOverlayText(result.text);
