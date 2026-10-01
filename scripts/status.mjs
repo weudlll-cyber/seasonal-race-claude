@@ -9,7 +9,8 @@
 //                1. the API answers on its health route        GET <url>/api/health → 200, status ok
 //                2. free disk space at the data directory      at least --min-free-mb
 //                3. the data directory is writable             a probe file is created and removed
-//                4. the newest backup is recent enough         at most --max-backup-age-hours old
+//                4. the newest backup is recent enough         at most --max-backup-age-hours old,
+//                   and intact                                 its .sha256 present and matching (TIDY-C-1)
 //
 //              Exit 0 = every check passed · 1 = at least one FAILED · 2 = the command was misused.
 //
@@ -19,6 +20,8 @@
 //   · `scripts/backup.mjs` `archiveTakenAt()` — the archive NAME is the backup's timestamp, and the
 //     format lives in that file only. Ages come from the name, not from mtimes, because copying an
 //     archive to another disk resets its mtime and would make a stale backup look fresh.
+//   · `scripts/backup.mjs` `verifyChecksum()` — the checksum file's name and format live there too,
+//     beside the writer, so status never re-derives them. (TIDY-C-1)
 //   · `RA_BACKUP_DIR` — the same setting `npm run backup` writes into, so one value schedules both.
 //   · `GET /api/health` — the existing public route (`server/src/auth/guards.js:14`); nothing new
 //     is added to the server for this.
@@ -50,7 +53,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 
-const { archiveTakenAt } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
+const { archiveTakenAt, verifyChecksum } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
 
 export const DEFAULTS = { minFreeMb: 1024, maxBackupAgeHours: 26, healthTimeoutMs: 5000 };
 
@@ -114,13 +117,23 @@ export function checkBackup(backupsDir, maxAgeHours = DEFAULTS.maxBackupAgeHours
   } catch (e) {
     return fail('backup', `cannot read backup directory ${backupsDir}: ${e.code ?? e.message}`);
   }
-  const taken = names.map(archiveTakenAt).filter(Boolean).sort((a, b) => b - a);
+  // The NAME is kept beside its instant so the newest archive's checksum can be checked (TIDY-C-1).
+  const taken = names
+    .map((name) => ({ name, at: archiveTakenAt(name) }))
+    .filter((t) => t.at)
+    .sort((a, b) => b.at - a.at);
   if (!taken.length) return fail('backup', `no racearena-backup-*.tar in ${backupsDir}`);
-  const ageHours = (now - taken[0]) / 3_600_000;
-  const shown = `${ageHours.toFixed(1)} h old (${taken[0].toISOString()})`;
-  return ageHours <= maxAgeHours
-    ? ok('backup', `newest backup is ${shown}, maximum ${maxAgeHours} h`)
-    : fail('backup', `newest backup is ${shown}, older than the maximum ${maxAgeHours} h`);
+  const newest = taken[0];
+  const ageHours = (now - newest.at) / 3_600_000;
+  const shown = `${ageHours.toFixed(1)} h old (${newest.at.toISOString()})`;
+  if (ageHours > maxAgeHours)
+    return fail('backup', `newest backup is ${shown}, older than the maximum ${maxAgeHours} h`);
+  // TIDY-C-1: a recent archive that is missing its checksum, or no longer matches it, is not a backup
+  // anyone can rely on, so it FAILS the same line rather than passing on age alone.
+  const sum = verifyChecksum(join(backupsDir, newest.name));
+  return sum.ok
+    ? ok('backup', `newest backup is ${shown}, maximum ${maxAgeHours} h; ${sum.detail}`)
+    : fail('backup', `newest backup is ${shown}, but ${sum.detail}`);
 }
 
 /** All four checks. Exported so the tests drive it without a process. */

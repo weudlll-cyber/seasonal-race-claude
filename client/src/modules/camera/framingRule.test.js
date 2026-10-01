@@ -103,9 +103,11 @@ describe('the table: six states, three columns, one answer to the position quest
 });
 
 describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — corridor', () => {
+  // TIDY-C-1: an omitted `innerFramePct` now means the SHIPPED safe region, so the geometry
+  // below, which is measured against the FULL frame, passes `1` explicitly.
   it.each(TRACKS)('$name: the corridor fits at the guaranteed zoom, every 1° of heading', (t) => {
     for (let deg = 0; deg < 360; deg += 1) {
-      const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H);
+      const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1);
       const perp = {
         x: -Math.sin((deg * Math.PI) / 180) * t.tw,
         y: Math.cos((deg * Math.PI) / 180) * t.tw,
@@ -118,7 +120,7 @@ describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — corridor', () => {
     '$name: and it is TIGHT — one step tighter and the corridor no longer fits',
     (t) => {
       for (let deg = 0; deg < 360; deg += 7) {
-        const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H);
+        const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1);
         const perp = {
           x: -Math.sin((deg * Math.PI) / 180) * t.tw,
           y: Math.cos((deg * Math.PI) / 180) * t.tw,
@@ -153,7 +155,15 @@ describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — corridor', () => {
     let over = 0;
     let sum = 0;
     for (let deg = 0; deg < 360; deg += 1) {
-      const aware = corridorGuarantee(headingAt(deg), CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+      const aware = corridorGuarantee(
+        headingAt(deg),
+        CLOSED.tw,
+        CLOSED.axisX,
+        CLOSED.axisY,
+        W,
+        H,
+        1
+      );
       expect(aware).toBeGreaterThanOrEqual(worst - 1e-9); // never tighter than the worst case
       if (aware > worst * 1.001) over++;
       sum += aware / worst;
@@ -163,13 +173,13 @@ describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — corridor', () => {
   });
 
   it('a degenerate heading falls back to the worst orientation rather than to nothing', () => {
-    const z = corridorGuarantee({ x: 0, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    const z = corridorGuarantee({ x: 0, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H, 1);
     const worst = Math.min(
       zoomCeilingToFit({ x: CLOSED.tw, y: 0 }, CLOSED.axisX, CLOSED.axisY, W, H),
       zoomCeilingToFit({ x: 0, y: CLOSED.tw }, CLOSED.axisX, CLOSED.axisY, W, H)
     );
     expect(z).toBeCloseTo(worst, 9);
-    expect(corridorGuarantee(null, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H)).toBeCloseTo(
+    expect(corridorGuarantee(null, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H, 1)).toBeCloseTo(
       worst,
       9
     );
