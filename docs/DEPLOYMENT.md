@@ -372,9 +372,7 @@ A version older than the one that introduced them has no `npm run status` and ig
 back to such a version.
 
 **Moving to a different machine** is a backup on the old one and a restore into the empty
-`RA_DATA_DIR` of a fresh install on the new one. *(`npm run data:export` is NOT the tool for this
-layout. It reads a fixed `server/data` and ignores `RA_DATA_DIR` (`scripts/data-export.mjs:45`),
-so with the data outside the release directory it measures the wrong place.)*
+`RA_DATA_DIR` of a fresh install on the new one.
 
 ### The migration ledger — added 2026-09-24 (MIGRATION-LEDGER-1)
 
