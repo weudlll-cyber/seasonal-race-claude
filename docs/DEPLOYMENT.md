@@ -74,128 +74,294 @@ exactly as it always has.
 | `RA_CLIENT_ORIGIN` | `https://other.example.com`     | Only needed if the SPA is ever served from a **different** origin than the API (split hosting). **In the same-origin model above it is not required** — and unset means CORS is off, which is the correct and safest state for same-origin. |
 | `RA_DATA_DIR`      | `/var/lib/racearena`            | Redirects the whole runtime store. **See the warning below.**                                                                                  |
 | `PORT`             | `4000`                          | Listen port. Defaults to 4000.                                                                                                                 |
+| `RA_BIND_ADDRESS`  | `127.0.0.1`                     | The IP address the API listens on. Unset = every interface, as before. **Recommended `127.0.0.1` behind a reverse proxy.** Not an IP address → the server refuses to start. |
+| `RA_BACKUP_DIR`    | `/var/backups/racearena`        | Where `npm run backup` writes and where `npm run status` looks for the newest backup. Read by those two commands only, never by the server. |
 
-### Minimal production start
+## Install, update and roll back — from a release download
 
-★ **BEFORE ANY OF THIS: install the dependencies.** This file assumed it and never said it —
-corrected 2026-09-24. You need **Node 20 or newer** (`engines` says `>=20`; verified on 24.14.0) and
-`openssl`, which a default Windows box does not have.
+**This is the one home for installing, updating and rolling back an install.** [SETUP.md](SETUP.md)
+covers a developer's local machine, [DEPLOY-NOTES.md](DEPLOY-NOTES.md) what is still in the way of
+"one command", and [README.md](../README.md) points here.
+
+**Written for an operator who has never seen this project, and followed literally.** On 2026-10-01
+(RELEASE-BASICS-1) every command below was run as printed, in a throwaway directory: an older
+version installed, data created, updated to a newer one, rolled back. The data was checked intact
+after each step. The run, and every place where following the text literally failed and what
+was changed, are in
+[reports/release/MORNING-RELEASE-1.md](../reports/release/MORNING-RELEASE-1.md). The commands are
+POSIX shell. On Windows they run unchanged in Git Bash.
+
+### The layout: four places, and only one of them is replaced by an update
+
+| what | the example path used below | what an update does to it |
+| --- | --- | --- |
+| the releases, **one directory per version** | `/opt/racearena/racearena-<version>` | adds a new directory beside the old one; the old one stays until you delete it |
+| **the data** (`RA_DATA_DIR`) | `/var/lib/racearena/data` | nothing. Only the server and a restore write into it |
+| **the backups** (`RA_BACKUP_DIR`) | `/var/backups/racearena` | gains one archive |
+| **the settings file** | `/etc/racearena.env` | nothing |
+
+★★ **Set `RA_DATA_DIR`. This is the step that makes an update safe.** Without it, the data lives
+in `server/data` *inside the release directory*. The next version is unpacked into a new
+directory, so it would start with no accounts and none of your tracks, and deleting the old release
+directory would delete the data. Everything this install owns lives under that one directory:
+accounts, sessions, stored races, uploaded sprites and logos, tracks, brands and player groups.
+**Nothing outside it is yours.**
+
+### What a release download is
+
+A release is a tagged version of the repository. Its download is GitHub's source archive:
+`https://github.com/weudlll-cyber/seasonal-race-claude/archive/<tag>.tar.gz`. A commit hash works
+in place of `<tag>`. The archive contains the source and **no built client**, so step 3 builds one.
+It needs **Node 20 or newer** (`engines` says `>=20`), `npm`, `curl` and `openssl`.
+
+### Install
+
+**1 · Choose the version and the places.** Every later step reads these variables, so run all
+steps in one shell. If you change shells, set them again.
 
 ```sh
-npm ci --prefix server
-npm ci --prefix client
-cd client && npm run build && cd ..
+VERSION=<tag or commit>
+RA_HOME=/opt/racearena
+RA_ENV_FILE=/etc/racearena.env
 ```
 
-★ **EXPORT the token — do not prefix it.** Corrected 2026-09-24: this block used to set
-`RA_BOOTSTRAP_TOKEN` as a per-command prefix to `node`, and the `curl` below then referenced
-`$RA_BOOTSTRAP_TOKEN` in a **fresh shell where it is empty**, so the setup call as printed sent an
-empty token and returned 403. Export it first, so both commands see the same value:
+**2 · Download and unpack.**
 
 ```sh
-export RA_BOOTSTRAP_TOKEN="$(openssl rand -hex 16)"
+mkdir -p "$RA_HOME" && cd "$RA_HOME"
+curl -fL -o "racearena-$VERSION.tar.gz" "https://github.com/weudlll-cyber/seasonal-race-claude/archive/$VERSION.tar.gz"
+mkdir "racearena-$VERSION"
+tar -xzf "racearena-$VERSION.tar.gz" -C "racearena-$VERSION" --strip-components=1
+```
 
-NODE_ENV=production \
-RA_SESSION_SECRET="$(openssl rand -hex 32)" \
-RA_COOKIE_SECURE=auto \
-RA_CSRF_STRICT=auto \
-RA_PUBLIC_ORIGIN=https://racearena.example.com \
+**3 · Install the dependencies in BOTH trees, and build the client.** They are two separate
+installs. The server serves a built client; it does not build one.
+
+```sh
+cd "$RA_HOME/racearena-$VERSION"
+npm ci --prefix server
+npm ci --prefix client --include=dev
+npm run build --prefix client
+```
+
+★ **`--include=dev` is not optional.** The client's build tool (`vite`) is a development
+dependency. A shell that has loaded the settings file has `NODE_ENV=production`, and under that
+`npm ci` silently skips development dependencies. The build then fails with `vite` not found, and
+the server starts **without the app**. The literal run hit exactly this on the update, where the
+settings file was already loaded.
+
+**4 · Write the settings file, once.** It holds the session secret, so it is readable by its owner
+only. The secret is generated once here, when the file is written; generating a new one on every
+start would sign everybody out at every restart.
+
+```sh
+mkdir -p /var/lib/racearena/data /var/backups/racearena
+cat > "$RA_ENV_FILE" <<EOF
+NODE_ENV=production
+PORT=4000
+RA_BIND_ADDRESS=127.0.0.1
+RA_PUBLIC_ORIGIN=https://racearena.example.com
+RA_SESSION_SECRET=$(openssl rand -hex 32)
+RA_COOKIE_SECURE=auto
+RA_CSRF_STRICT=auto
+RA_DATA_DIR=/var/lib/racearena/data
+RA_BACKUP_DIR=/var/backups/racearena
+EOF
+chmod 600 "$RA_ENV_FILE"
+```
+
+- `RA_PUBLIC_ORIGIN` is the address your visitors type. `npm run configure` asks for it instead,
+  but it writes a Docker override file, so on this path you write the line yourself.
+- ★ **`RA_BIND_ADDRESS=127.0.0.1` is the recommended setting behind a reverse proxy** (nginx,
+  Caddy). The API then answers only on this machine, so the proxy is the only way in. **Leave the
+  line out if browsers reach the server directly on its port.** Unset, it listens on every
+  interface, as it always has. It accepts an IP address only; anything else stops the server at
+  start with a message naming the variable.
+- Every variable is described in [ENVIRONMENT.md](ENVIRONMENT.md).
+
+**5 · Start it, the first time with a one-time setup token.**
+
+```sh
+cd "$RA_HOME/racearena-$VERSION"
+set -a; . "$RA_ENV_FILE"; set +a
+export RA_BOOTSTRAP_TOKEN="$(openssl rand -hex 16)"
+node server/src/index.js &
+```
+
+**6 · Create the first admin.**
+
+```sh
+curl -X POST "$RA_PUBLIC_ORIGIN/api/auth/setup" \
+  -H 'Content-Type: application/json' \
+  -H "Origin: $RA_PUBLIC_ORIGIN" \
+  -H "x-bootstrap-token: $RA_BOOTSTRAP_TOKEN" \
+  -d '{"username":"admin","password":"<choose a strong one>"}'
+```
+
+★ **The `Origin` header is required.** With `NODE_ENV=production` the CSRF guard refuses a
+request that names no origin, and answers `403 {"error":"origin required"}`. The earlier version
+of this command omitted the header and failed exactly that way.
+
+**7 · Restart without the token, and from now on start it the same way every time.** Stop the
+process from step 5, then:
+
+```sh
+unset RA_BOOTSTRAP_TOKEN
+cd "$RA_HOME/racearena-$VERSION"
+set -a; . "$RA_ENV_FILE"; set +a
 node server/src/index.js
 ```
 
-Then create the first admin once, and unset `RA_BOOTSTRAP_TOKEN` afterwards:
+Run it under your process manager (a systemd unit, pm2, a Windows service) with **the release
+directory as its working directory** and **the settings file as its environment**. A systemd
+unit reads the file as `EnvironmentFile=/etc/racearena.env`. *(The process-manager setup was not
+part of the literal run. Only the start command above was.)*
+
+**8 · Check it.** Open the address and sign in. That one action uses the accounts file, the
+session database and the built client. Then:
 
 ```sh
-curl -X POST https://racearena.example.com/api/auth/setup \
-  -H 'Content-Type: application/json' \
-  -H "x-bootstrap-token: $RA_BOOTSTRAP_TOKEN" \
-  -d '{"username":"...","password":"..."}'
+cd "$RA_HOME/racearena-$VERSION"
+set -a; . "$RA_ENV_FILE"; set +a
+npm run status
 ```
 
-## Backing up, and upgrading
+Until the first backup exists, `npm run status` reports the backup check as FAIL. That is
+expected. The backup section below fixes it.
 
-**Written for someone who has never seen this project, in the order they will actually do it.**
+### Backups, and the status check — schedule both
 
-### Where the data is
-
-**Everything this install owns lives under ONE directory**: `RA_DATA_DIR`, which defaults to
-`server/data`. Accounts, sessions, stored races, uploaded sprites and logos, tracks, brands and
-player groups are all under it. **Nothing outside it is yours** — the rest of the checkout is code
-and shipped defaults. **Deleting that directory to "get clean defaults" destroys every account on
-the install.**
-
-### Taking a backup
+**Take a backup:**
 
 ```sh
-node scripts/backup.mjs --out /somewhere/outside/the/data/dir
+cd "$RA_HOME/racearena-$VERSION"
+set -a; . "$RA_ENV_FILE"; set +a
+npm run backup
 ```
 
-**It works while the server is running** — you do not have to stop the service. It writes one
-`.tar` named `racearena-backup-<UTC timestamp>.tar`, prints every item and its size, and **refuses
-rather than writing a half-archive** if anything is wrong.
+It writes one `racearena-backup-<UTC timestamp>.tar` into `RA_BACKUP_DIR`. `--out <dir>` names a
+different directory for one run. **It works while the server is running.** It prints every item and
+its size, and it **refuses rather than writing a half-archive** if anything is wrong. **It refuses
+to write into the data directory**, because a copy beside the original is not a second copy.
+Where the backups go is your choice. Point `RA_BACKUP_DIR` at a disk, mount or synced folder that
+survives losing this one. Versions older than this command have the same tool as
+`node scripts/backup.mjs --out "$RA_BACKUP_DIR"`, which still works.
 
-★ **Check the archive afterwards.** It should be roughly the size of your data directory. A backup
-of a few kilobytes when the data directory is tens of megabytes means something went wrong, and the
+★ **Check the archive afterwards.** It should be roughly the size of your data directory. If the
+data directory is tens of megabytes and the backup is a few kilobytes, something went wrong. The
 tool prints the totals so you can compare them.
 
 ★ **Why you cannot simply copy the folder.** `sessions.sqlite` and `races.sqlite` are live
 databases. A file copy taken while the server is writing can capture a half-finished transaction,
-and the damaged file **looks perfectly normal** until the day you restore it. The tool copies those
-two through SQLite's own online backup instead. Copy the folder by hand and you may be keeping
-something that cannot be restored.
+and the damaged file **looks perfectly normal** until the day you restore it. The tool copies
+those two through SQLite's own online backup instead.
 
-### Restoring
+**Check the install:**
 
 ```sh
-node scripts/backup.mjs --restore /path/to/racearena-backup-<stamp>.tar --into /path/to/data
+npm run status
 ```
 
-Stop the server first. The target must be empty, or pass `--force` to write into it anyway.
+Run it from the release directory with the settings loaded, as above. It prints one line per check
+and **exits non-zero when any check fails**, so a scheduler can alert on the exit code:
 
-### Upgrading to a new version
+| check | passes when | change it with |
+| --- | --- | --- |
+| `api` | `GET /api/health` answers `200` with `status: ok` | `--url <address>`. Default: `127.0.0.1` (or `RA_BIND_ADDRESS`) on `PORT` |
+| `disk` | at least 1024 MB free where the data directory is | `--min-free-mb <n>` |
+| `writable` | a probe file can be written into the data directory and removed | — |
+| `backup` | the newest archive in `RA_BACKUP_DIR` is at most 26 hours old (daily, plus slack) | `--backups <dir>`, `--max-backup-age-hours <n>` |
 
-**Do these in order. Step 1 is what makes step 8 possible.**
+Exit code `0` = all passed, `1` = at least one failed, `2` = the command was misused. A backup's
+age is read from its file name, not from the file date, so a copied archive still shows its real
+age. Example schedule (cron). Replace `<version>` with the running release, and change it again
+after every update:
 
-1. **Take a backup**, as above, and **check the archive exists and is a sensible size**. Do not skip
-   this because the upgrade looks small.
-2. **Stop the service.** `docker compose down`, or stop the `node` process.
-3. **Fetch the new version** — `git pull`, or pull the new image.
-4. **Install dependencies in BOTH trees.** They are separate installs and skipping either leaves a
-   half-upgraded install:
-   ```sh
-   npm ci --prefix server
-   npm ci --prefix client
-   ```
-5. **Rebuild the client.** The server serves a built client; it does not build one.
-   ```sh
-   npm run build --prefix client
-   ```
-6. ★ **Carry the data across, and let the command tell you how much there is.**
-   `npm run data:export` is what moves `server/data/` to the new host. **Do not plan from a
-   remembered figure** — an earlier snapshot of this owner's machine read 247 files / 14.4 MB
-   differing from `server/seeds/`, with a further 12 files / 51.7 MB byte-identical to the seeds and
-   therefore not needing to travel at all. Those numbers move whenever he edits a track or uploads a
-   background; the command re-measures them on the day, which is why they are not written down as a
-   target. *(Moved here 2026-09-25 from an open backlog row — a procedure belongs in the procedure.)*
+```sh
+15 3 * * *   cd /opt/racearena/racearena-<version> && set -a && . /etc/racearena.env && npm run --silent backup
+*/10 * * * * cd /opt/racearena/racearena-<version> && set -a && . /etc/racearena.env && npm run --silent status || <your alert command>
+```
 
-7. **Run any pending migrations** — one command:
-   ```sh
-   node scripts/migrate.mjs
-   ```
-   The runner reads `<dataRoot>/migrations.json`, applies every id that is not already recorded,
-   and refuses to run any migration twice. `--dry-run` lists what it would do; `--status` prints
-   the state of every registered migration. On an instance that ran `migrate-teams.mjs` before
-   this runner existed, the observable-state probe backfills the ledger without re-running the
-   migration — see the file header for the exact rule.
-7. **Start, and check it worked.** Start the server, then **sign in**. That is the one check worth
-   making: it exercises the accounts file, the session database and the built client in one action.
-   If sign-in works, the upgrade landed.
-8. **★ IF IT DID NOT WORK, GO BACK.** Stop the service, restore the backup from step 1 into the data
-   directory, check out the previous version, reinstall and rebuild as in steps 4–5, and start it.
-   **An upgrade procedure without a way back is a one-way door**, which is why step 1 is not
-   optional.
+### Update to a newer version
 
-### THE MIGRATION LEDGER — added 2026-09-24 (MIGRATION-LEDGER-1)
+**Do these in order. Step 3's backup is what makes rolling back possible.**
+
+**1 · Name both versions.** `OLD` is the directory that is running now.
+
+```sh
+OLD=<running version>
+NEW=<new tag or commit>
+RA_HOME=/opt/racearena
+RA_ENV_FILE=/etc/racearena.env
+```
+
+**2 · Download, unpack, install and build `NEW` beside `OLD`.** Do install steps 2 and 3 with
+`VERSION=$NEW`. The running install is not touched, so this can happen while it serves races.
+
+```sh
+VERSION=$NEW
+```
+
+**3 · Stop the service, then take the backup.** Taking it after the stop means nothing is written
+between the backup and the switch.
+
+```sh
+cd "$RA_HOME/racearena-$OLD"
+set -a; . "$RA_ENV_FILE"; set +a
+node scripts/backup.mjs --out "$RA_BACKUP_DIR"
+```
+
+Note the archive name it prints. **Check it exists and is a sensible size.** Do not skip this
+because the update looks small.
+
+**4 · Run any pending migrations, with the NEW version's runner.**
+
+```sh
+cd "$RA_HOME/racearena-$NEW"
+set -a; . "$RA_ENV_FILE"; set +a
+node scripts/migrate.mjs
+```
+
+It applies every migration not yet recorded in `<data>/migrations.json` and refuses to run one
+twice. `--dry-run` lists what it would do. See *The migration ledger* below.
+
+**5 · Start `NEW`**, the same way as install step 7 but in the new directory. Point your process
+manager and your cron lines at it.
+
+**6 · Check it worked.** Sign in, and run `npm run status`. If sign-in works and every check passes,
+the update landed. Keep the `OLD` directory until you are satisfied. It is the way back.
+
+### Roll back a bad update
+
+**1 · Stop `NEW`.**
+
+**2 · Set the current data aside, and restore the backup from update step 3 into an EMPTY
+directory.**
+
+```sh
+cd "$RA_HOME/racearena-$OLD"
+set -a; . "$RA_ENV_FILE"; set +a
+mv "$RA_DATA_DIR" "$RA_DATA_DIR.after-failed-update-$(date +%Y%m%d%H%M%S)"
+node scripts/backup.mjs --restore "$RA_BACKUP_DIR/<the archive from update step 3>" --into "$RA_DATA_DIR"
+```
+
+★ **Why not restore over the current data with `--force`.** A restore writes the archive's files,
+and it does not delete files the newer version created since, such as new migration-ledger entries
+or newly delivered seed files. `--force` would leave `OLD` starting on a mix of both versions. An
+empty directory holds exactly the backup. **The set-aside directory is not deleted.** Anything
+created between the update and the rollback is in it, and is not in the restored data.
+
+**3 · Start `OLD`**, as in install step 7, in the old directory. Sign in, and run `npm run status`.
+A version older than the one that introduced them has no `npm run status` and ignores
+`RA_BIND_ADDRESS`, so it listens on every interface again until you update. The literal run rolled
+back to such a version.
+
+**Moving to a different machine** is a backup on the old one and a restore into the empty
+`RA_DATA_DIR` of a fresh install on the new one. *(`npm run data:export` is NOT the tool for this
+layout. It reads a fixed `server/data` and ignores `RA_DATA_DIR` (`scripts/data-export.mjs:45`),
+so with the data outside the release directory it measures the wrong place.)*
+
+### The migration ledger — added 2026-09-24 (MIGRATION-LEDGER-1)
 
 Every registered migration has a stable id (the teams backfill is `teams-1`). The runner
 (`scripts/migrate.mjs`) reads `<dataRoot>/migrations.json` to see which ids are already recorded,
@@ -241,7 +407,8 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
 
 - **Reverse proxy**: if sitting behind nginx/Caddy, ensure `trust proxy` is honoured
   (`NODE_ENV=production` enables it). Set `RA_COOKIE_SECURE=auto` so Express reads the
-  forwarded protocol rather than guessing.
+  forwarded protocol rather than guessing. Set `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in
+  (install step 4).
 - **Session secret rotation**: changing `RA_SESSION_SECRET` invalidates all existing sessions
   (users are logged out). Plan rotations during maintenance windows.
 - **The runtime store holds your accounts.** `users.json`, `sessions.sqlite` and the seeded tracks,

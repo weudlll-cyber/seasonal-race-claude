@@ -162,5 +162,10 @@ if (isMain) {
   for (const c of checks) console.log(`${c.ok ? 'OK  ' : 'FAIL'}  ${c.name.padEnd(8)} ${c.detail}`);
   const failed = checks.filter((c) => !c.ok).length;
   console.log(failed ? `\n${failed} check(s) FAILED` : '\nall checks passed');
-  process.exit(failed ? 1 : 0);
+  // ★ exitCode, NEVER process.exit() here. The literal install run (RELEASE-BASICS-1) printed "all
+  // checks passed" and then died in libuv — `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`,
+  // src\win\async.c — exiting 127: a forced exit while the health check's fetch socket was still
+  // closing. A scheduler reads 127 as a failure. Setting the code and letting the event loop drain
+  // ends the process cleanly once that socket closes.
+  process.exitCode = failed ? 1 : 0;
 }

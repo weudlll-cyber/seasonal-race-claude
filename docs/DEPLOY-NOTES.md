@@ -226,6 +226,12 @@ are the owner's call and only two are settled.
 
 ### 1 · Put a proxy in front, and then close the port
 
+★ **Since 2026-10-01 (RELEASE-BASICS-1) the plain-`node` install has a setting for this:
+`RA_BIND_ADDRESS=127.0.0.1`.** The default is unchanged — unset still listens on every interface —
+so the decision below is still his and still open; what changed is that an operator who has a proxy
+can close the port with one line instead of a firewall. [DEPLOYMENT.md](DEPLOYMENT.md) recommends it
+behind a proxy. The Docker publish `4000:4000` below is untouched.
+
 ★★ **THE BIND IS NOT A PURE WIN AND SO IT WAS NOT CHANGED.** `docker-compose.yml:17-18` publishes
 `4000:4000`, which listens on every interface. Binding `127.0.0.1:4000` instead would be safer on a
 rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
@@ -254,8 +260,10 @@ node scripts/backup.mjs --out <dir>                       # <dir> must be OUTSID
 node scripts/backup.mjs --restore <archive> --into <dir>
 ```
 
-★ **There is no `npm run backup`** — no script entry in any of the three manifests matches
-`backup`. Run the file directly.
+★ ~~**There is no `npm run backup`**~~ — **added 2026-10-01 (RELEASE-BASICS-1):** `npm run backup`
+in the root manifest runs the same file and takes its target from `RA_BACKUP_DIR`, so a scheduled
+line needs no argument. `npm run status` reports the newest backup's age. How to use both is
+[DEPLOYMENT.md](DEPLOYMENT.md)'s.
 
 ### 3 · The two standing choices, with their costs
 
