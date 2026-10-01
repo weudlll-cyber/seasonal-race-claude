@@ -168,32 +168,17 @@ not an address which is right (§9.1).
       (`W57FQA`) to **40 of 40 positions and 40 of 40 finishing times, to the millisecond**. The
       work is a way to reach that from the product. **COMMISSIONED, not built here.**
 
-- [ ] ★★ **B2 — THE DATA AND ITS BACKUP END UP ON ONE MACHINE.** `scripts/backup.mjs:186` refuses
-      to write the archive inside the data root and `:320` requires `--out`, so the tool is doing
-      its part. But *outside the data root* is not *another disk*, and `docker-compose.yml:48-55`
-      bind-mounts the data directory out of the repository checkout with **no production compose in
-      the tree**. A disk loss takes the races and the archive together.
-      ★ The round trip itself is PROVEN: export → wipe → restore, **14 of 14 scalar fields plus
-      names, results, winners and worldConfigs, nothing lost** (§8.2).
-
-      ★★ **DECIDED 2026-09-27: THE PRODUCT DOES NOT DECIDE WHERE THE BACKUP GOES.** Each operator
-      of the server chooses his own destination; the project prescribes none and ships no default
-      pointing anywhere in particular. **What the work owes is therefore a CONFIGURABLE destination
-      and documentation of how to set it — nothing more.**
-      ★ **Why that is the right shape and not a dodge, in two facts:** on a Windows machine an
-      operator can point it at a folder that syncs to a cloud drive, and the syncing is then not the
-      project's business at all; on a rented server no such folder exists and he must point it at
-      whatever he can reach. **One prescribed destination could not have served both.**
-      ★ **The one destination rule that IS the product's business already holds:** the tool refuses
-      to write the archive inside the data root (`scripts/backup.mjs:186`, §6.10), because a copy
-      beside the original is not a second copy.
-      ★ **This row no longer waits on anything from the owner** — noted because it used to. Not
-      built here.
-
 - [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
       so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
       Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
       and this is about a port.
+      ★ **NARROWED 2026-10-01 (RELEASE-BASICS-1 (c)) — the plain-`node` install has a setting.**
+      `RA_BIND_ADDRESS=127.0.0.1` makes the API answer on the machine only, and
+      [DEPLOYMENT.md](DEPLOYMENT.md) recommends it behind a proxy (`server/src/bindAddress.js`, tested
+      on both values). **The DEFAULT is unchanged** — unset still listens on every interface — and the
+      Docker publish `4000:4000` is untouched, so **what keeps this row open is his choice of
+      default** ([DEPLOY-NOTES.md](DEPLOY-NOTES.md) §1). **verify:** `server/src/bindAddress.test.js`,
+      the test named "DEFAULT (no setting): listens on every interface".
 
 - [ ] ★ **B6 — a race that ran on NON-DEFAULT settings is recorded but not flagged.**
       `raceStore.js:164,358,465` store `world_configs` **resolved**, so the record says what the
@@ -314,8 +299,12 @@ not an address which is right (§9.1).
       `serving the built client`, everything it created removed. The README's install section no
       longer contains an unexecuted command.
 
-- [ ] **C — the tidy list, none of it costing anything today.** No `npm run backup` entry in any of
-      the three manifests (§8.4) · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+- [ ] **C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
+      the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
+      in the root manifest, target from `RA_BACKUP_DIR` · ★ **NEW 2026-10-01:** `npm run data:export`
+      reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
+      install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
+      documents now say not to use it there · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
       the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
       ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
       `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
@@ -1235,6 +1224,47 @@ are in PART TWO with what closed them; these are the ones still standing.
       which writes the real origin into a gitignored `docker-compose.override.yml` — so there is
       nothing in the repository to edit when the domain exists. What is missing is a domain, a proxy
       choice and a decision about where `RA_DATA_DIR` lives: **his word plus a purchase.**
+      ★ **2026-10-01 (RELEASE-BASICS-1): the plain-`node` path is written and PROVEN** — install from
+      a release download, update, roll back, followed literally with the data checked at every step
+      ([DEPLOYMENT.md](DEPLOYMENT.md)). It puts `RA_DATA_DIR` outside the release directory. The
+      Docker items above are unchanged.
+
+★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
+software is to be downloadable for many server operators, and every operator must be able to host
+several organizers on one server. **Therefore the tenancy boundary (decided 2026-09-25; order decided
+2026-09-27: build it before a second organizer is invited) is part of the FIRST RELEASE.** The
+TENANCY row is the work; [reports/release/](../reports/release/INDEX.md) is where the release work
+reports.
+
+- [ ] ★ **PERSONAL DATA — inventoried 2026-10-01; three kinds cannot be deleted except by hand.**
+      RELEASE-BASICS-1 (d)1, **facts only, no legal assessment**; the full table (every field, file,
+      writer and deletion path) is §(d)1 of
+      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
+      **What has no deletion path today:** (1) **race history**, which holds racer names in
+      `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
+      has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
+      append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
+      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
+      Also: deleting a user leaves their sessions in place until each one's next request
+      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
+      and no stored IP address exist. **Whether any of this must change is the owner's question.**
+      **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
+
+- [ ] ★ **THE DELIVERY PLAN OF 2026-08-31 — the delivery mechanism exists; the step that makes his
+      installation the shipped default does not.** RELEASE-BASICS-1 (d)2; detail in §(d)2 of
+      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
+      **Exists:** ten shipped tracks with their backgrounds, one default brand with its logo and one
+      default player group, each a versioned unit (`server/seeds/versions.json`); a raised version
+      **overwrites the operator's copy and warns** — a notice per record, shown as a banner on the
+      setup screen (`server/src/seedDelivery.js:162-170`,
+      `client/src/components/SeedRedeliveryNotice.jsx:78-83`).
+      **Does not exist:** a committed command that copies his installation's current tracks, brand
+      and player group into `server/seeds` and raises their versions — the 2026-08-31 copy was a
+      one-off, and `GET …/export-seed` returns one record and writes nothing.
+      ★ **And the shipped tracks have drifted from his installation:** `searound` and `seatrack`
+      differ from their seeds in `effects` (compared 2026-10-01; the other eight tracks and all ten
+      backgrounds are byte-identical). **verify:** on his machine,
+      `cmp server/seeds/tracks/searound.json server/data/tracks/searound.json`.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
@@ -2575,6 +2605,54 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **RELEASE-BASICS-1 — delivery basics for the first release. Opened and closed 2026-10-01
+      (branch `release/basics`), on the owner's facts of 2026-10-01** (recorded in PART ONE,
+      *Delivering to someone else*). Report: [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
+      (a) **Install, update and roll back from a release download — ONE home,
+      [DEPLOYMENT.md](DEPLOYMENT.md), FOLLOWED LITERALLY:** an older commit installed from GitHub's
+      archive, data created, updated, rolled back; sign-in, a session from install time and the
+      created record checked after every step. Following it literally failed in three places, all
+      fixed: the setup `curl` had no `Origin` header (`403 origin required` under production
+      settings); the client install needs `--include=dev` once the settings file is loaded
+      (`NODE_ENV=production` skips `vite`); `npm run status` exited 127 on a libuv assertion after
+      a pass (now `process.exitCode`). The Docker path was not re-run.
+      (b) **`npm run backup`** (the existing tool and its refusal to write into the data directory;
+      target from `RA_BACKUP_DIR`) and **`npm run status`** (health route, free disk, writable data
+      directory, newest backup's age; exit 1 on any failure). Tests for both, each sabotaged once.
+      (c) **`RA_BIND_ADDRESS`** — an IP address the API listens on; **unset is today's call,
+      unchanged**; tested by listening on both values. B4 stays open on the default.
+      (d) two read-only inventories, which opened the PERSONAL DATA and DELIVERY PLAN rows.
+
+- [x] ★★ **B2 — THE DATA AND ITS BACKUP END UP ON ONE MACHINE. — CLOSED 2026-10-01 by
+      RELEASE-BASICS-1 (b)**, which built what the decision below says the work owes: a CONFIGURABLE
+      destination (`RA_BACKUP_DIR`, read by `npm run backup` and `npm run status`) and the
+      documentation of how to set it ([DEPLOYMENT.md](DEPLOYMENT.md), *Backups, and the status
+      check*). The install layout there also puts the data OUTSIDE the release directory, and
+      `npm run status` fails when the newest backup is older than 26 h, so a scheduler notices a
+      backup that stopped. Moving the archive to another disk stays the operator's choice, as
+      decided. *The row as it stood:* `scripts/backup.mjs:186` refuses
+      to write the archive inside the data root and `:320` requires `--out`, so the tool is doing
+      its part. But *outside the data root* is not *another disk*, and `docker-compose.yml:48-55`
+      bind-mounts the data directory out of the repository checkout with **no production compose in
+      the tree**. A disk loss takes the races and the archive together.
+      ★ The round trip itself is PROVEN: export → wipe → restore, **14 of 14 scalar fields plus
+      names, results, winners and worldConfigs, nothing lost** (§8.2).
+
+      ★★ **DECIDED 2026-09-27: THE PRODUCT DOES NOT DECIDE WHERE THE BACKUP GOES.** Each operator
+      of the server chooses his own destination; the project prescribes none and ships no default
+      pointing anywhere in particular. **What the work owes is therefore a CONFIGURABLE destination
+      and documentation of how to set it — nothing more.**
+      ★ **Why that is the right shape and not a dodge, in two facts:** on a Windows machine an
+      operator can point it at a folder that syncs to a cloud drive, and the syncing is then not the
+      project's business at all; on a rented server no such folder exists and he must point it at
+      whatever he can reach. **One prescribed destination could not have served both.**
+      ★ **The one destination rule that IS the product's business already holds:** the tool refuses
+      to write the archive inside the data root (`scripts/backup.mjs:186`, §6.10), because a copy
+      beside the original is not a second copy.
+      ★ **This row no longer waits on anything from the owner** — noted because it used to. Not
+      built here.
+
 
 - [x] ★ **The Browser gate was RED on master — the merge of `fix/particles-visibility` (`fc4dd636`).** Opened and closed
       2026-10-01, by MASTER-GREEN-1 (branch `fix/master-green`).

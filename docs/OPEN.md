@@ -3,7 +3,10 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. **PARTICLES-VISIBILITY-1 to -13** (opened
+Re-derived on **2026-10-01**, from PART ONE's **fifteen** rows. ★ **Fifteen since RELEASE-BASICS-1
+(2026-10-01, branch `release/basics`)**: it closed B2 — the backup destination is now configurable and
+documented — and its two read-only inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN
+OF 2026-08-31. **PARTICLES-VISIBILITY-1 to -13** (opened
 2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
 on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
 and what was left as is. The one-off red run of
@@ -29,10 +32,11 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2570) holds exactly FOURTEEN unchecked `- [ ]` rows** — 7 in *DELIVERY-CLEAN-1*, 2 in
-*Phases 5–7*, and one each in *Three production-arm specs fail*, *The night of 2026-08-25*,
-*Planned — needs spec*, *Delivering to someone else* and *Build-identity residuals*. Every count on
-this page now says fourteen.
+(lines 15–2600) holds exactly FIFTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
+*Delivering to someone else*, 2 in *Phases 5–7*, and one each in *Three production-arm specs fail*,
+*The night of 2026-08-25*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
+2026-10-01 after RELEASE-BASICS-1; it was fourteen, with 7 in DELIVERY-CLEAN-1 and 1 in Delivering.)*
+Every current count on this page says fifteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -49,7 +53,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The fifteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -60,7 +64,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -80,7 +84,8 @@ because nobody looked.**
    groups, team-created tracks. SHARED: the shipped tracks and the racer types. Races are scoped
    today; tracks, brands, racers and player groups are not. Preparation, not a defect.
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
-   yet. His word plus a purchase.
+   yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
+   proven by following it literally (RELEASE-BASICS-1, 2026-10-01).
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
    ★★ **The camera is FINE (2026-09-26, second pass).** Twelve seeds driven through the browser:
    **seven cast a comebacker and all seven were cut to** — a comeback shot can and does occur in an
@@ -128,25 +133,28 @@ because nobody looked.**
    record and compared. **Fabrication is not prevented, it becomes provable.**
    `scripts/diag/replay-stored-race.mjs` already does the racing, so what is missing is a door from
    the product, not an engine.
-9. **The data and its backup end up on one machine.** The backup tool refuses to write inside the
-   data root, but nothing moves the archive off the host, and the deployment keeps the database
-   inside the repository checkout. ★ **Decided 2026-09-27: the product does not choose the
-   destination** — the operator does, and the work owes a configurable destination and the
-   documentation for it. **No longer waiting on him.**
-10. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
-   a firewall or proxy is put in front of it.
-11. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+9. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+   a firewall or proxy is put in front of it. ★ Narrowed 2026-10-01: a plain-`node` install can set
+   `RA_BIND_ADDRESS=127.0.0.1`; the default is unchanged and is his choice.
+10. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-12. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
+11. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-13. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
+12. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
    `CameraDirector.js` at 5,507 lines, nearly 3× the next engine file, carrying the state machine
    and the offer arbitration together. **He would see nothing if it were done right, which is why
    it is dangerous.** Also: 77 unused locals in `scripts/`, not removed because arc 4 touched none
    of those files. Costs in the arc 4 report; commission them one at a time.
-14. **The tidy list** — no `npm run backup` command, 65 scripts nothing names, half the top-level
-   documents not declaring what they own, and **ten** smaller items. None of it costs anything today.
+13. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
+   they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
+   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it.)*
+14. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
+   admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
+   hand; a deleted user's sessions linger until their next request. Whether that changes is his.
+15. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
+   warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
+   shipped tracks (`searound`, `seatrack`) have drifted from his copies.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so

@@ -177,6 +177,10 @@ chmod 600 "$RA_ENV_FILE"
   line out if browsers reach the server directly on its port.** Unset, it listens on every
   interface, as it always has. It accepts an IP address only; anything else stops the server at
   start with a message naming the variable.
+  ★ **Not inside a Docker container.** There the server must listen on the container's own
+  interface for the published port to reach it, so `127.0.0.1` would make it unreachable. Leave
+  the variable unset and publish `127.0.0.1:4000:4000` in your own `docker-compose.override.yml`
+  instead ([DEPLOY-NOTES.md](DEPLOY-NOTES.md) §1).
 - Every variable is described in [ENVIRONMENT.md](ENVIRONMENT.md).
 
 **5 · Start it, the first time with a one-time setup token.**
