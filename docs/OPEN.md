@@ -7,7 +7,9 @@ Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. ★ **RELEASE-B
 closed B2 — the backup destination is now configurable and documented — and its two read-only
 inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN OF 2026-08-31 (fifteen). ★ **The
 same day the TENANCY row closed: the boundary will not be built** (decision of 2026-10-01; PART TWO,
-survey archived as the tag `archive/tenancy-survey-1`) — so fourteen. **PARTICLES-VISIBILITY-1 to -13** (opened
+survey archived as the tag `archive/tenancy-survey-1`) — so fourteen. ★ **Fifteen since
+SHIP-OWNER-COSMETIC-1 (2026-10-01, branch `ship/owner-cosmetic-defaults`)**, which opened one row: the
+Dev Screen comeback settings that may have had no effect since the 2026-09-19 rule. **PARTICLES-VISIBILITY-1 to -13** (opened
 2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
 on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
 and what was left as is. The one-off red run of
@@ -33,11 +35,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2526) holds exactly FOURTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
+(lines 15–2541) holds exactly FIFTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 4 in
 *Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
 *The night of 2026-08-25*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
-2026-10-01 after RELEASE-BASICS-1 and the closing of the TENANCY row.)* Every current count on this
-page says fourteen.
+2026-10-01 after SHIP-OWNER-COSMETIC-1.)* Every current count on this page says fifteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -54,7 +55,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The fifteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -65,7 +66,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fifteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -152,7 +153,11 @@ because nobody looked.**
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
 14. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
    warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
-   shipped tracks (`searound`, `seatrack`) have drifted from his copies.
+   shipped tracks (`searound`, `seatrack`) have drifted from his copies. ★ His camera settings became
+   the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1, branch, not merged, not minted).
+15. ★ **NEW 2026-10-01 — Dev Screen comeback settings that may do nothing** since the 2026-09-19 rule
+   (a comeback is shown when one was planned). Survey which still act; remove the dead ones; list the
+   rest for him.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so

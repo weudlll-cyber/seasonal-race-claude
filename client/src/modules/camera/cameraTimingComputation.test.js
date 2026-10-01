@@ -52,7 +52,8 @@ function minimalProfiles() {
 describe('computeTimingFromConfig — null config (all defaults)', () => {
   const t = computeTimingFromConfig(null);
 
-  it('uses fallback battlePulkThresholdT', () => expect(t.battlePulkThresholdT).toBe(0.05));
+  it('uses fallback battlePulkThresholdT', () =>
+    expect(t.battlePulkThresholdT).toBe(DEFAULT_CAMERA_CONFIG.battlePulkThresholdT));
   it('uses fallback battleIsolationThresholdT', () => expect(t.battleIsolationThresholdT).toBe(0));
   it('uses fallback battleMinDurationMs', () => expect(t.battleMinDurationMs).toBe(3000));
   // ENDGAME-FALLBACK-1: this pinned the literal 0.85 that lived beside the key. The second copy is
@@ -62,7 +63,8 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   // while it drifted two ships out of date.
   it('reads the DEFAULT endgameThreshold, it does not copy it', () =>
     expect(t.endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold));
-  it('uses fallback battleCooldownMs', () => expect(t.battleCooldownMs).toBe(8000));
+  it('uses fallback battleCooldownMs', () =>
+    expect(t.battleCooldownMs).toBe(DEFAULT_CAMERA_CONFIG.battleCooldownMs));
   // FALLBACK-MIRRORS-1: pinned the literal 8000 that lived beside the key against a shipped 4000.
   // The copy is gone — this branch reads `defaults.js` now — so the RULE is what is pinned and it
   // cannot go stale when the default moves. IF DELETED: nothing states that the LEGACY path (a
@@ -230,7 +232,7 @@ describe('computeTimingFromConfig — candidate weights', () => {
   });
   it('defaults all weights correctly', () => {
     const t = computeTimingFromConfig(null);
-    expect(t.battleWeight).toBe(0.8);
+    expect(t.battleWeight).toBe(DEFAULT_CAMERA_CONFIG.battleWeight);
     expect(t.leadChangeWeight).toBe(0.7);
     expect(t.comebackWeight).toBe(0.6);
     expect(t.overviewWeight).toBe(0.3);

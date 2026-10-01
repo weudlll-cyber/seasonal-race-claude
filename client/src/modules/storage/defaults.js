@@ -124,9 +124,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   // The anchor is the owner's own eye: he typed 1.67 on Searound under the old unit, saw 219 world
   // px and judged it good ("the racers are not too big"). 0.75 x 300 = 225 px is that picture,
   // 2.7% wider — below what the eye separates. Every other state keeps the ratio to LEADER it had.
+  // ★ SUPERSEDED 2026-10-01: the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1), so every
+  //   value in this block is now his own later setting and the ratios between states are his too.
+  //   The paragraphs above are the record of how the unit was anchored, not a description of today.
   cameraStateProfiles: {
     OVERVIEW: {
-      visibleCorridors: 1.5, // 450 world px — the widest shot, double LEADER
+      visibleCorridors: 1.5, // 450 world px — the widest shot
+      // ★ 2026-10-01: TRACKING IS BACK AT 1.5 by the owner's decision of 2026-10-01, which replaced
+      // the 0.25 design below. The paragraph below is kept as the record of what 0.25 measured.
       // TRACKING made as quick as every other state (CAMERA-ANCHOR-TRUTH-1 §4c). At 1.5 the
       // OVERVIEW subject sat a median 13.78 pp of the frame away from where the framing rule put
       // him — 3.65x every other state pooled (3.78 pp) — and the old value carried no reason in the
@@ -328,6 +333,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the config key-by-key from THESE keys (d94a7b9d), a stored `true` was dropped on every load —
   // the checkbox appeared to work and the rings never came back. A key the renderer reads must
   // exist here or it cannot survive loading; `scripts/check-config-keys.mjs` now fails if one does not.
+  // ★ 2026-10-01: ON by default — the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1).
   highlightHeroes: true,
   // ENDGAME-THRESHOLD-095: the endgame — and with it the run-in's window — opens at 95% of the way
   // to the finish rather than 90%. THE OWNER'S DECISION, 2026-08-18: he had been running 0.95
@@ -376,7 +382,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // COMEBACK camera tuning
   comebackMinPositionsGained: 2, // minimum rank-places gained within the window to trigger
   comebackWindowSec: 4, // seconds of rank history to evaluate (1–10)
-  comebackMinDuration: 3, // seconds camera stays on the comeback racer (1–5)
+  comebackMinDuration: 8, // seconds camera stays on the comeback racer (1–10)
   // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
   // independently of the external isOutcomePhase flag from RaceScreen.
   //
@@ -388,6 +394,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   // carried a stale 0.75 while this said 0.65, and all three now READ this value rather than
   // copying it (LESSONS L207), so the slider, the diagnostic HUD and the game cannot disagree
   // again whatever it is set to next.
+  // ★ 2026-10-01: the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1) — the decisive
+  // phase is the last third again; the paragraph above is the 2026-08-10 record.
   outcomePhaseThreshold: 0.65,
   // COMEBACK start-rank filter: racer must have been at least this far back (as fraction of
   // field) at the start of the observation window. Prevents triggering for racers already
@@ -446,7 +454,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // in the camera is, not an input to it. OVERVIEW now runs the same rule as every other state:
   // anchor the leader, guarantee the corridor, sit forward of centre. See camera/framingRule.js.
   // Director (weighted random) — candidate pool weights (0.0–1.0)
-  battleWeight: 0,
+  battleWeight: 0, // 0 = the BATTLE shot ships OFF (owner's decision, 2026-10-01); the shot stays in the code
   leadChangeWeight: 0.7,
   comebackWeight: 0.6,
   overviewWeight: 0.3,
@@ -492,12 +500,15 @@ export const DEFAULT_CAMERA_CONFIG = {
   // he watched the podium at 700 and moved the slider there himself, so the ending keeps one rhythm
   // instead of gaining a second, unrelated one. And it is the number that makes the change legible:
   // the settled, CARD-FREE picture at the end is what actually grows here, because the winner card
-  // is capped at `min(winnerCardMs, finishPauseMs)` = 3000 of the 3500 ms pause and does not inherit
-  // this. That window goes from 500 ms to 2000 ms — a fourfold change, unmistakable in an eye test,
-  // where 250 or 500 would be argued about.
+  // is capped at `min(winnerCardMs, finishPauseMs)` — 3000 of a 3500 ms pause when this shipped — and
+  // does not inherit this. That window went from 500 ms to 2000 ms — a fourfold change, unmistakable
+  // in an eye test, where 250 or 500 would be argued about.
+  // ★ CORRECTED 2026-10-01: by the owner's decision of 2026-10-01 the card fills the whole pause
+  // (`winnerCardMs` equals `finishPauseMs`), so the only card-free settled picture is this hold.
   //
   // MEASURED end to end at this default (20 racers, shipped config): the ending from the last
-  // crossing to a settled result screen is 11 370 ms against 9 870 at 0. On a race with a genuinely
+  // crossing to a settled result screen is 11 370 ms against 9 870 at 0 (at the 2026-08-12 defaults;
+  // the 2026-10-01 defaults add 500 ms to both, through the longer pause). On a race with a genuinely
   // far-behind straggler (Searound seed 9) the last crossing is unchanged — this key cannot move it,
   // it only follows it.
   //
@@ -602,10 +613,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   // The pause went 2500 -> 3500 in the same breath, because at 1800 the CARD's key was the binding
   // half and at 3000 the PAUSE would have become one.
   //
-  // 3000 INSIDE A 3500 ms PAUSE: 450 ms in, ~2100 ms at full, 450 ms out (the fades are the opening
-  // brand card's own 0.45 s, so the two cards share one language rather than each having a tempo),
-  // and 500 ms of clean race picture before the screen fades to the podium. 900 ms at full was
-  // enough to READ a number and a name and not enough to LOOK at them, which is what he saw.
+  // AS SHIPPED 2026-08-11, 3000 INSIDE A 3500 ms PAUSE: 450 ms in, ~2100 ms at full, 450 ms out (the
+  // fades are the opening brand card's own 0.45 s, so the two cards share one language rather than
+  // each having a tempo), and 500 ms of clean race picture before the screen fades to the podium.
+  // 900 ms at full was enough to READ a number and a name and not enough to LOOK at them, which is
+  // what he saw.
+  // ★ 2026-10-01, the owner's decision: the card fills the whole pause (this key equals
+  // `finishPauseMs`), so there is no clean race picture after it. The fades are unchanged.
   //
   // ZERO MEANS NO CARD AT ALL — not a zero-length fade. Nothing is scheduled and the component
   // renders null, so the race screen at 0 is the race screen before this key existed.
@@ -807,6 +821,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   //
   // 1500 ms: the 4x arrival spread over it gives about 0.9 halvings/s of visible width, against the
   // 2.9 the step delivered. Longer is calmer and spends more of the shot arriving.
+  // ★ 2026-10-01: ships longer than 1500 — the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1);
+  // the halvings/s figure above is the one for 1500 ms.
   corridorCapArriveMs: 5000,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
@@ -888,6 +904,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   // DEFAULT OFF, ON MY OWN MEASUREMENT, and the numbers are in reports/night/LABEL-DEGRADE-1.md.
   // Shipping it on against them would have been the wrong call; the toggle is here so his eye can
   // overrule my arithmetic, which is the one thing it can legitimately do.
+  // ★ 2026-10-01: ON by default — the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1). The
+  // measurement above stays the record of why it first shipped off.
   labelNamesWhenRoom: true,
   // ── HOW LONG A NAME MUST BE EARNED FOR (LABEL-HOLD-1) ─────────────────────────────────────────
   // A label shows the NAME once its box has been clear of every other label and racer for this long
@@ -985,6 +1003,8 @@ export const DEFAULT_CAMERA_CONFIG = {
   // default of 5 answered by a fallback of 3 is the L199 trap rather than a second opinion —
   // `DEFAULT_MIN_RACERS_VISIBLE` in camera/framingConfig.js (the partial-config fallback) and the
   // Dev Screen slider, which now reads this object instead of carrying a literal at all.
+  // ★ 2026-10-01: the owner's cosmetic settings became the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1) (both mirrors
+  // above READ this value, so nothing else moved with it).
   minRacersVisible: 8,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
@@ -1225,12 +1245,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // (DynamicsTuningSection.jsx).
   //
   // ★★ THE YARDSTICK IS THE LEADER SHOT, NOT `referenceCorridorPx`. One canvas width as HE sees it
-  // is `cameraStateProfiles.LEADER_ZOOM.visibleCorridors x referenceCorridorPx` = 0.75 x 300 =
-  // 225 px, which line 131 above names in as many words: "the reference shot, the owner's own
-  // eye". Converting against the bare 300 instead makes every allowance 33% too permissive, which
+  // is `cameraStateProfiles.LEADER_ZOOM.visibleCorridors x referenceCorridorPx` (0.75 x 300 = 225 px
+  // when this was written), the shot the LEADER profile above names "the reference shot, the owner's
+  // own eye". Converting against the bare 300 instead makes every allowance 33% too permissive, which
   // is exactly what the first draft of this key did — 210 px reads as 0.93 of his widths, not 0.70.
+  // ★ 2026-10-01: the Dev Screen READS that product (DynamicsTuningSection.jsx:62), so it follows the
+  // LEADER default, which moved that day. The stored value below is world px and did not move.
   //
-  //     world px = canvas widths x 225
+  //     world px = canvas widths x (LEADER visibleCorridors x referenceCorridorPx)
   //
   // The value below is the OWNER'S OWN, set by him on 2026-09-14. It is tighter than the 157 px the
   // first build carried (his photographed breakaway, 0.698 corrected canvas widths): he wants the

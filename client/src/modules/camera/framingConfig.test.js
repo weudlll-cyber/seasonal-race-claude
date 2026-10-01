@@ -209,28 +209,34 @@ describe('OVERVIEW time constants (CAMERA-ANCHOR-TRUTH-1 §4c)', () => {
   const OVERVIEW = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW;
   const STATES = Object.keys(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
 
-  it('OVERVIEW tracks as quickly as every other state — trackingTC 0.25', () => {
-    // Measured: at 1.5 the OVERVIEW subject sat a median 13.78 pp of frame from its framed position,
-    // 3.65x every other state pooled (3.78 pp). At 0.25 that halves to 6.78 pp.
-    expect(OVERVIEW.trackingTC).toBe(0.25);
+  it("OVERVIEW tracks slowly — trackingTC 1.5, the owner's decision of 2026-10-01", () => {
+    // THE OWNER'S DECISION OF 2026-10-01 REPLACED THE 0.25 DESIGN (SHIP-OWNER-COSMETIC-1). Kept as
+    // the record of what that design measured: at 1.5 the OVERVIEW subject sat a median 13.78 pp of
+    // frame from its framed position, 3.65x every other state pooled (3.78 pp); at 0.25, 6.78 pp.
+    expect(OVERVIEW.trackingTC).toBe(1.5);
   });
 
-  it('every state now ships the same trackingTC — there is no slow state left', () => {
+  it('every state except OVERVIEW ships trackingTC 0.25 — OVERVIEW is the one slow state', () => {
+    // Since the owner's decision of 2026-10-01 OVERVIEW is slow again (above); every OTHER state
+    // still tracks at 0.25, and this still fails if a second slow state appears.
     for (const s of STATES) {
-      expect(DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s].trackingTC, `${s} trackingTC`).toBe(0.25);
+      const want = s === 'OVERVIEW' ? 1.5 : 0.25;
+      expect(DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s].trackingTC, `${s} trackingTC`).toBe(want);
     }
   });
 
-  it('OVERVIEW keeps its SLOW ENTRY on purpose — entryTC 1.5, and this is not an oversight', () => {
+  it('OVERVIEW keeps its SLOW ENTRY on purpose — entryTC 1.5; since 2026-10-01 its tracking matches it', () => {
     // The lag metric samples the TRACKING phase, so it cannot adjudicate entry: entryTC 0.8 vs 1.5
     // moved the OVERVIEW median by 0.09 pp. The glide into the wide shot is deliberate and stays
     // until an ENTRY-phase instrument exists to argue otherwise. If you are changing this, measure
     // entry convergence first — do not reason from the tracking number.
     expect(OVERVIEW.entryTC).toBe(1.5);
-    expect(OVERVIEW.entryTC).toBeGreaterThan(OVERVIEW.trackingTC);
+    // Was `entryTC > trackingTC`. The owner's decision of 2026-10-01 set OVERVIEW's tracking to 1.5
+    // as well, so the whole OVERVIEW shot is equally slow: entry and tracking are now EQUAL.
+    expect(OVERVIEW.entryTC).toBe(OVERVIEW.trackingTC);
   });
 
-  it('OVERVIEW is the only state whose entry is slower than its tracking', () => {
+  it('OVERVIEW is the only state with a slow entry', () => {
     for (const s of STATES) {
       const p = DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s];
       if (s === 'OVERVIEW') continue;

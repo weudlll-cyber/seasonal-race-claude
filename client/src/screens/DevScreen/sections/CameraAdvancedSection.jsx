@@ -1197,12 +1197,12 @@ function CameraAdvancedSection() {
             label="Min. observation duration (s)"
             testId="comeback-min-duration"
             min={1}
-            max={5}
+            max={10}
             step={0.5}
             value={config.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
-              if (v >= 1 && v <= 5) set('comebackMinDuration', v);
+              if (v >= 1 && v <= 10) set('comebackMinDuration', v);
             }}
             display={`${(config.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration).toFixed(1)}s`}
             tip="Minimum duration after COMEBACK entry on the comeback racer."

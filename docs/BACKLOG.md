@@ -1191,6 +1191,22 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       differ from their seeds in `effects` (compared 2026-10-01; the other eight tracks and all ten
       backgrounds are byte-identical). **verify:** on his machine,
       `cmp server/seeds/tracks/searound.json server/data/tracks/searound.json`.
+      ★ **2026-10-01 — SHIP-OWNER-COSMETIC-1, the camera half of "his installation becomes the shipped
+      default"** (branch `ship/owner-cosmetic-defaults`, **NOT merged, NOT minted**). On the owner's
+      request of 2026-10-01, his cosmetic settings (`COSMETIC_CONFIG_KEYS`,
+      `client/src/modules/parity/configFingerprint.js:27`) became the shipped camera defaults in
+      `client/src/modules/storage/defaults.js`, taken from his Dev Screen export with the existing
+      `splitConfigDiffs`; his race settings were already the defaults. The owner's decisions of
+      2026-10-01 on it: the BATTLE shot ships off (the feature stays in the code), OVERVIEW tracks
+      slowly again, the winner card fills the whole pause, and the comeback hold is longer with a wider
+      Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
+      move and are minted only after his eye. **This row stays open** — for that mint, and for the tracks, brand and player group.
+
+- [ ] ★ **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
+      is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
+      Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones
+      proven dead, and list the rest for the owner. Not started. **verify:** none yet — the survey is
+      the work; its report names a check per setting.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads

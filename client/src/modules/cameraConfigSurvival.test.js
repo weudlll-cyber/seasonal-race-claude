@@ -91,22 +91,25 @@ describe('the owner’s settings survive this build', () => {
   });
 
   it('a setting he did NOT store still arrives from the defaults, including one this branch changed', () => {
-    // He never stored trackingTC. CAMERA-ANCHOR-TRUTH-1 §4c changed OVERVIEW's from 1.5 to 0.25, so
-    // he gets the new value — which is the rule working, not a loss.
+    // He never stored trackingTC. CAMERA-ANCHOR-TRUTH-1 §4c changed OVERVIEW's from 1.5 to 0.25, and
+    // the owner's decision of 2026-10-01 put it back at 1.5 — either way he gets the shipped value,
+    // which is the rule working, not a loss. Read, not copied, so the next move cannot stale it.
     const cfg = loadCameraConfig();
     expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackingTC
     );
-    expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(0.25);
+    expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(1.5);
   });
 
   it('a stored value WINS over a default this branch changed, if he ever sets one', () => {
     const profiles = {};
     for (const [state, v] of Object.entries(HIS.corridors))
       profiles[state] = { visibleCorridors: v };
-    profiles.OVERVIEW.trackingTC = 1.5;
+    // 0.25, not 1.5: since 2026-10-01 the shipped default IS 1.5, and a stored value equal to the
+    // default would pass this test without proving that a stored value wins.
+    profiles.OVERVIEW.trackingTC = 0.25;
     storageSet(KEYS.CAMERA_CONFIG, { ...HIS.topLevel, cameraStateProfiles: profiles });
-    expect(loadCameraConfig().cameraStateProfiles.OVERVIEW.trackingTC).toBe(1.5);
+    expect(loadCameraConfig().cameraStateProfiles.OVERVIEW.trackingTC).toBe(0.25);
   });
 
   it('a retired key sitting in his storage is ignored rather than resurrected', () => {

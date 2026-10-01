@@ -51,6 +51,12 @@ found by searching, not trusted from a count):
 - `docs/TAGS.md` — the company guarantee, and the framing failure ("that is not exciting")
 - `docs/SHIP-CEREMONY.md` — the runaway budget
 - `client/src/modules/storage/defaults.js` — the podium build-up's tempo
+- `client/src/modules/storage/defaults.js` — the hold after the last crossing (ENDING-HOLD-1,
+  2026-08-12). **Added 2026-10-01 under the grandfather clause below**; it spans two lines, which
+  is why the line-based search that built this list missed it.
+- `client/src/modules/storage/defaults.js` — the winner card's length ("the display is too short",
+  2026-08-11), quoted twice: at `finishPauseMs` and at `winnerCardMs`. **Added 2026-10-01 under the
+  grandfather clause below.**
 - `docs/CAMERA_DIRECTOR.md` — the leader shot's bounding, the company guarantee retiring once home,
   and "I have seen all the races"
 - `docs/FAIRNESS.md` — the 2026-08-12 verdict on the disproportionate-chaos watchdog
