@@ -301,10 +301,11 @@ not an address which is right (§9.1).
 
 - [ ] **C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
       the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
-      in the root manifest, target from `RA_BACKUP_DIR` · ★ **NEW 2026-10-01:** `npm run data:export`
+      in the root manifest, target from `RA_BACKUP_DIR` · ~~★ **NEW 2026-10-01:** `npm run data:export`
       reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
       install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
-      documents now say not to use it there · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+      documents now say not to use it there~~ — ★ **CLOSED 2026-10-02 (DATA-EXPORT-DATADIR-1):** reads
+      `RA_DATA_DIR` through `resolveDataRoot`; the warnings are gone · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
       the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
       ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
       `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
@@ -605,6 +606,15 @@ source before it was moved rather than taken from a report:**
 ## THE REST — open, in the order they were already in
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
+
+- [ ] ★ **`pair-reach-census` STILL ANSWERS A SCOPE THAT MATCHES NOTHING WITH A TABLE AND EXIT 0 —
+      opened 2026-10-02, the one remainder of HARNESS-EMPTY-SCOPE-1** (PART TWO). Its documented
+      `--tracks=a,b` matches nothing and exits 0. It is an engine-hull driver (it imports `raceCore.js`),
+      and wiring it to `scripts/lib/trackScope.mjs` pulled that shared place into the hull, so it was
+      left by rule. A fix must refuse the empty scope without making the shared place a hull file.
+      **verify:** `node scripts/pair-reach-census.mjs --tracks=no-such-track; echo $?` prints a table
+      and 0 while this row is open.
+
 
 **He asked for the day's findings collected so they can be taken one at a time.** Every item below is
 a FINDING. **No work is proposed here and no verdict is invented** — each says only what it is, what

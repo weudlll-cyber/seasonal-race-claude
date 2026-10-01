@@ -434,6 +434,11 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   `pair-reach-census`, keeps a measured silent zero on multi-track scopes. A census test keeps the
   next tool honest. Closes the BACKLOG row.
 
+- [DATA-EXPORT-DATADIR-1.md](DATA-EXPORT-DATADIR-1.md) — **`npm run data:export` reads `RA_DATA_DIR`**
+  (2026-10-02) — `resolveDataRoot()` replaces the fixed `server/data`; the seeds comparison is unchanged;
+  two scratch-directory tests, each sabotaged red once; the "do not use it on the release layout"
+  warnings removed from DEPLOYMENT, SETUP and BACKLOG row C.
+
 - [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
   seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
   tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two

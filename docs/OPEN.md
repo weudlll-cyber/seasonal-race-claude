@@ -3,10 +3,11 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-02**, from PART ONE's **thirteen** rows. ★ **HARNESS-EMPTY-SCOPE-1 (2026-10-02)**
+Re-derived on **2026-10-02**, from PART ONE's **fourteen** rows. ★ **HARNESS-EMPTY-SCOPE-1 (2026-10-02)**
 closed the row *a sweep that asks for races and gets none still prints a table and exits 0* —
 every tool that takes `--tracks` now refuses an empty or unknown scope through one shared place —
-so thirteen. ★ **RELEASE-BASICS-1 (2026-10-01)**
+so thirteen — and it opened one remainder row the same day, `pair-reach-census`, the one hull
+driver that still answers an empty scope with exit 0, so **fourteen**. ★ **RELEASE-BASICS-1 (2026-10-01)**
 closed B2 — the backup destination is now configurable and documented — and its two read-only
 inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN OF 2026-08-31 (fifteen). ★ **The
 same day the TENANCY row closed: the boundary will not be built** (decision of 2026-10-01; PART TWO,
@@ -36,11 +37,11 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2450) holds exactly THIRTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
-*Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
-*Planned — needs spec* and *Build-identity residuals*. *(Re-counted 2026-10-02 after
-HARNESS-EMPTY-SCOPE-1 closed the one row in *The night of 2026-08-25*.)* Every current count on
-this page says thirteen.
+(lines 15–2459) holds exactly FOURTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
+*Delivering to someone else*, and one each in *The night of 2026-08-25*, *Phases 5–7*, *Three
+production-arm specs fail*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
+2026-10-02: HARNESS-EMPTY-SCOPE-1 closed the old row in *The night of 2026-08-25* and opened the
+`pair-reach-census` remainder in its place.)* Every current count on this page says fourteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -57,7 +58,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The thirteen rows in section 0 are all WORK**, and that is still true.
+work. **The fourteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -68,7 +69,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -145,13 +146,17 @@ because nobody looked.**
    of those files. Costs in the arc 4 report; commission them one at a time.
 11. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
-   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it.)*
+   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
+   DATA-EXPORT-DATADIR-1.)*
 12. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
 13. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
    warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
    shipped tracks (`searound`, `seatrack`) have drifted from his copies.
+14. ★ **NEW 2026-10-02 — `pair-reach-census` answers a scope that matches nothing with exit 0.** The
+   one remainder of HARNESS-EMPTY-SCOPE-1: a race-hull driver, left by rule so the shared scope check
+   stays outside the hull.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
