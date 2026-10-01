@@ -22,7 +22,11 @@
 // physics frame rather than off a wall clock, so a single browser run can place a shot a frame or
 // two differently (comeback-precedence.spec.js header). Stated, not hidden.
 //
-// Usage: node scripts/diag/comeback-hold-measure.mjs [--seeds=1,2,3] [--json=<file>]
+// Usage: node scripts/diag/comeback-hold-measure.mjs [--seeds=1,2,3] [--json=<file>] [--gain-stop-ms=<n>]
+//
+// COMEBACK-HOLD-1 added `--gain-stop-ms=`: overrides `comebackGainStopMs` on a COPY of the config for
+// this run (defaults.js is never written), so the arms of the W choice race identical races; and the
+// per-shot `regainWithin3s`: did the racer take a place again within 3 s of the shot ending.
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -40,7 +44,12 @@ const ARG = (k, d) => {
 };
 const SEEDS = ARG("seeds", "1,2,3").split(",").map(Number).filter(Number.isFinite);
 const JSON_OUT = ARG("json", null);
-const CFG = DEFAULT_CAMERA_CONFIG; // this branch's shipped camera, read not copied
+const GAIN_STOP = ARG("gain-stop-ms", null);
+// this branch's shipped camera, read not copied — or a COPY with the one arm value changed
+const CFG =
+  GAIN_STOP == null
+    ? DEFAULT_CAMERA_CONFIG
+    : { ...structuredClone(DEFAULT_CAMERA_CONFIG), comebackGainStopMs: Number(GAIN_STOP) };
 const RACERS = 20; // the Quick Test field
 
 const tracks = loadTracks();
@@ -166,6 +175,10 @@ for (const geo of tracks) {
       // after the cut he went on taking places at all.
       sh.gainingOnlyS = +((tBest - sh.endMs) / 1000).toFixed(2);
       sh.bestRankAfter = best;
+      // COMEBACK-HOLD-1's selection rule: after the shot ended, did he gain again within 3 s?
+      sh.regainWithin3s = (series.get(sh.racer) ?? []).some(
+        ([m, rk]) => m > sh.endMs && m <= sh.endMs + 3000 && rk < sh.rankEnd,
+      );
       sh.firstFinishMs = firstFinishMs;
       sh.photoGateMs = photoGateMs;
       shots.push(sh);

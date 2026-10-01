@@ -426,6 +426,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-HOLD-1.md](COMEBACK-HOLD-1.md) — **the comeback shot: at least 8 s, then only while the
+  racer is gaining, at most 15 s — BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged,
+  not minted).** One new condition: after the minimum the shot ends when the racer gained no place in
+  the last W ms, read from the detector's own rank history. **W = 2000 ms**, chosen by measurement
+  (N=30 races per arm, 2000/3000/4000: fewest shots ended and then followed by a gain within 3 s —
+  1 / 3 / 2). No shot reaches 15 s. World unchanged; camera/render unchanged against the branch.
+  Quick-Test seed for the eye: **River Run 3**, an 8.6 s comeback in the browser.
+
 - [COMEBACK-HOLD-MEASURE-1.md](COMEBACK-HOLD-MEASURE-1.md) — **how the comeback shot ends today,
   measured (2026-10-02).** 30 races (10 shipped tracks x Quick-Test seeds 1-3, 20 racers) on the
   branch with the owner's camera settings: **10 shots, all 10 ended by the 8 s cap**; every racer was

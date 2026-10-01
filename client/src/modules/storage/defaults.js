@@ -199,7 +199,10 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadInDuration: 0.3,
       leadOutDuration: 1.5,
       innerFramePct: 0.7,
-      maxStateDuration: 8000,
+      // COMEBACK-HOLD-1 (the owner's decision, 2026-10-02): the comeback shot holds AT LEAST
+      // `comebackMinDuration` and stays while the racer is still gaining places, up to THIS hard
+      // maximum. The gain test is `comebackGainStopMs` below; this is only the ceiling.
+      maxStateDuration: 15000,
       minStateHold: 5000,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false,
@@ -383,6 +386,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackMinPositionsGained: 2, // minimum rank-places gained within the window to trigger
   comebackWindowSec: 4, // seconds of rank history to evaluate (1–10)
   comebackMinDuration: 8, // seconds camera stays on the comeback racer (1–10)
+  // COMEBACK-HOLD-1 (2026-10-02): after `comebackMinDuration`, the comeback shot ENDS when the racer
+  // has gained no place within this many ms; until then it stays, up to the COMEBACK_ZOOM profile's
+  // `maxStateDuration`. Read from the comeback detector's own rank history (comebackDetector.js
+  // `gainedWithin`), which keeps `comebackWindowSec` + 2 s — so a value above that is clamped to what
+  // the history holds. 0 = off: the shot then runs to the maximum. Chosen by measurement in
+  // reports/evolution/COMEBACK-HOLD-1.md; no Dev Screen control by decision.
+  comebackGainStopMs: 2000,
   // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
   // independently of the external isOutcomePhase flag from RaceScreen.
   //

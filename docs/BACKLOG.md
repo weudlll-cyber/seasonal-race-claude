@@ -1210,6 +1210,12 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       today says "the comeback is finished" — the plan's `resolve` beat is an entry gate only, and fell
       before every cut. **What a build has to choose is that end signal.** **verify:** rerun
       `node scripts/diag/comeback-hold-measure.mjs` — today every shot's "ended by" is the 8 s cap.
+      ★ **BUILT 2026-10-02 on `ship/owner-cosmetic-defaults` — COMEBACK-HOLD-1, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-1.md)). The owner's rule of 2026-10-02: at
+      least 8 s, then while the racer is still gaining places, at most 15 s. The end signal is "no
+      place gained in the last W ms", read from the detector's own rank history; W chosen by
+      measurement (N=30 races per arm). Quick-Test seed to look at: River Run, seed 3. **Stays open
+      until the owner has looked.**
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the

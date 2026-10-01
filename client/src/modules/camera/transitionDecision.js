@@ -49,6 +49,7 @@ export const TRANSITION_REASON = {
   BATTLE_GROUP_P2_DRIFT: 'battle-group-p2-drift',
   LEAD_CHANGE_INTERRUPT: 'lead-change-interrupt',
   COMEBACK_PRECEDENCE: 'comeback-precedence',
+  COMEBACK_GAIN_STOPPED: 'comeback-gain-stopped',
   HOLD_ELAPSED: 'hold-elapsed',
   FINISH_DRAMA_EXPIRED: 'finish-drama-expired',
   FINISH_DRAMA_FORCED: 'finish-drama-forced',
@@ -75,6 +76,7 @@ export function decideTransition({
   battleGroupP2Drifted,
   leadChangePending,
   comebackPrecedencePending,
+  comebackGainStopped = false,
   finishDramaExpired,
   forceFinishDrama,
   photoFinishGateReady,
@@ -114,6 +116,14 @@ export function decideTransition({
     };
   }
   // 4. The hold gate and its four bypasses, in the order they were OR-ed.
+  // COMEBACK-HOLD-1: a comeback shot past its minimum whose racer has stopped gaining ends here,
+  // before its (longer) hold gate. The caller computes the flag; it is false in every other state.
+  if (comebackGainStopped) {
+    return {
+      action: TRANSITION_ACTION.TRANSITION,
+      reason: TRANSITION_REASON.COMEBACK_GAIN_STOPPED,
+    };
+  }
   if (stateAge >= holdGate) {
     return { action: TRANSITION_ACTION.TRANSITION, reason: TRANSITION_REASON.HOLD_ELAPSED };
   }

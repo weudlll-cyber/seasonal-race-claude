@@ -691,6 +691,7 @@ export class CameraDirector {
     this._contenderZoom = t.contenderZoom;
     this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
+    this._comebackGainStopMs = t.comebackGainStopMs; // COMEBACK-HOLD-1
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
     this._leadChangeWeight = t.leadChangeWeight;
@@ -1033,6 +1034,17 @@ export class CameraDirector {
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
     // until a different state is detected — no stateCap blocker.
     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
+    // COMEBACK-HOLD-1 (the owner's decision, 2026-10-02): at least the comeback minimum, then only
+    // while the locked racer is still gaining places; `stateCap` (the profile maximum) bounds it.
+    // The minimum is the COMEBACK state's own, read from the per-state table, not `minHold` — a
+    // repeat entry would set that to 0, and repeats of a running comeback are refused below.
+    const comebackMinHoldMs =
+      this._minStateHoldByState[CAM_STATE.COMEBACK_ZOOM] ?? this._minStateHoldMs;
+    const comebackGainStopped =
+      this.state === CAM_STATE.COMEBACK_ZOOM &&
+      this._comebackGainStopMs > 0 &&
+      stateAge >= comebackMinHoldMs &&
+      !this._comeback.gainedWithin(this._comebackLockedRacerIndex, ts, this._comebackGainStopMs);
     // The DECISION is pure and carries its reason; the ACTIONS and every assignment stay here.
     // The two battle predicates keep the original's short-circuit: they are consulted ONLY once
     // BATTLE_ZOOM has held for battleMinDurationMs. Both are pure reads (group resolution +
@@ -1049,6 +1061,7 @@ export class CameraDirector {
       battleGroupP2Drifted: battleExitEligible ? this._isBattleGroupP2Drifted(racers) : false,
       leadChangePending: this._leadChangePending,
       comebackPrecedencePending: this._comebackPrecedenceRacer != null,
+      comebackGainStopped,
       finishDramaExpired,
       forceFinishDrama,
       photoFinishGateReady,
@@ -1789,10 +1802,16 @@ export class CameraDirector {
       const comebackCooledDown = ts - this._lastComebackExitTs >= this._comebackCooldownMs;
       let _comebackRacer = null;
       const _internalOutcomePhase = leaderProgress > this._outcomePhaseThreshold;
+      // COMEBACK-HOLD-1: a RUNNING comeback shot is never offered again. Re-picking it would be a
+      // same-state repeat (hold 0, `_transition`), which could carry the shot past its maximum; its
+      // length is the gain rule's and the cap's to decide, nothing else's. With a cooldown above 0
+      // the cooldown already refuses it (`_transition` stamps the exit before picking); this guard
+      // is what holds when the Dev Screen sets the cooldown to 0.
       if (
         (raceState?.isOutcomePhase || _internalOutcomePhase) &&
         comebackCooledDown &&
-        this._comebackWeight > 0
+        this._comebackWeight > 0 &&
+        this.state !== CAM_STATE.COMEBACK_ZOOM
       ) {
         // `leaderProgress` is the same value the outcome-phase test one line above already uses,
         // read here rather than recomputed. COMEBACK-CONNECT-1 needs it because the plan's beats
