@@ -25,6 +25,7 @@ import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
 import { advanceRacerDust } from './racerDust.js';
+import { advanceBurstParticles } from './burstParticles.js';
 import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
@@ -1323,41 +1324,14 @@ export default function RaceScreen() {
         // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps).
         advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         // Advance burst particles — in-place mutation + swap-remove (no allocation).
-        {
-          let i = 0;
-          while (i < st.burstParticles.length) {
-            const p = st.burstParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.18;
-            p.alpha -= 0.014;
-            p.r *= 0.97;
-            if (p.alpha <= 0) {
-              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
-              st.burstParticles.length--;
-            } else i++;
-          }
-        }
+        advanceBurstParticles(st.burstParticles, true);
       } else {
         // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
         // PARTICLES-VISIBILITY-2: the dust keeps fading here too. Nobody is running, so nothing
         // spawns; without this call every racer's last dust stood frozen until the screen closed.
         advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
-        {
-          let i = 0;
-          while (i < st.burstParticles.length) {
-            const p = st.burstParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.18;
-            p.alpha -= 0.014;
-            if (p.alpha <= 0) {
-              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
-              st.burstParticles.length--;
-            } else i++;
-          }
-        }
+        advanceBurstParticles(st.burstParticles, false); // no shrink here — see burstParticles.js
       }
 
       // Perf-log bracket 3: after all branches (particles + render-interp on RACING path).
