@@ -100,6 +100,8 @@ import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClas
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
+// P4-RACESCREEN-SPLIT-1: the per-frame payload for the probe above is built in its own module.
+import { viewerFramePayload } from './viewerFrameProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import { nextBeatStart } from '../../modules/camera/startCeremony.js';
@@ -1734,116 +1736,20 @@ export default function RaceScreen() {
       // VIEWER-INVARIANTS-1: the five sentences, checked on the transform the frame was DRAWN with.
       // Placed HERE, beside the marker and for the same reason: these are the renderer's own
       // reported values, not a second derivation of them. Inert unless ?viewerprobe=1.
-      recordViewerFrame({
-        ts,
-        effZoomX: frame.effZoomX,
-        effZoomY: frame.effZoomY,
-        offsetX: cam.offsetX,
-        offsetY: cam.offsetY,
-        canvasW: CANVAS_W,
-        canvasH: CANVAS_H,
-        shape,
-        trackWidthPx,
-        racers: st.racers,
-        finishT: st.finishT,
-        finishedCount: st.finishedCount,
-        endgameFrom: camDirRef.current._endgameThreshold,
-        tightestNamed:
-          CANVAS_W / (camDirRef.current._photoFinishZoom * (frame.effZoomX / cam.zoom)),
-        worldWidth,
-        state: camDirRef.current.state,
-        binding: camDirRef.current._framingProbe?.binding ?? '?',
-        lerpPhase: camDirRef.current._lerpPhase,
-        contentionOn: !!camDirRef.current._contentionWatch,
-        contentionOut: camDirRef.current._contentionOut
-          ? [...camDirRef.current._contentionOut]
-          : null,
-        contentionChecks: camDirRef.current._contentionChecks ?? 0,
-        // ── ENDGAME-COMPLETE-1: the last quantities the acceptance sheet grades from ───────────
-        // The two factors item 2 names, the heading item 9 and 10 measure along, and the racers
-        // item 7 requires in frame — all read from the director rather than re-derived here.
-        leaderZoom: camDirRef.current._leaderZoom,
-        photoFinishZoom: camDirRef.current._photoFinishZoom,
-        heading: camDirRef.current._headingScreen(camDirRef.current._framingProbe?.t ?? 0),
-        contenderIdx: (() => {
-          try {
-            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-            return camDirRef.current._abreastContenders(ordered).map((r) => r?.index ?? -1);
-          } catch {
-            return null;
-          }
-        })(),
-        // ── ITEM 7's MEMBERSHIP (ITEM7-MEMBERSHIP-1) ────────────────────────────────────────
-        //
-        // WHO CAN STILL WIN, which is a different question from who the shot holds. The owner's
-        // decision of 2026-09-04: a racer who has fallen back so far that he can no longer win does
-        // not have to be in the picture. Requirement 7 is unchanged; this is the set that answers it.
-        //
-        //   MEMBER = survivor of the geometric loop   MINUS   every racer at contention weight 0
-        //
-        // THE FALLBACK IS EXCLUDED because it answers a framing question — `_abreastContenders`
-        // falls back to the top two so the photo finish has somebody to hold, and that is correct
-        // for the shot and silent about chances. THE WEIGHT SUBTRACTION is the owner's decision, in
-        // the project's own terms: `_contentionWeight` reaches 0 exactly when `_updateContentionWatch`
-        // has projected twice that the racer cannot reach the line first and the ease has run out.
-        //
-        // NEITHER RULE ALONE WOULD DO. The watch does not run before `endgameThreshold` and needs
-        // two checks `_contentionCheckMs` apart, so nobody is released for about the first half
-        // second of the window — membership by release alone would demand the WHOLE FIELD on canvas
-        // there. The geometric loop is what excludes the field; the subtraction is what excludes the
-        // ones geometry still calls level.
-        //
-        // NOTHING IS RECOMPUTED HERE. Both are director methods, read the way every other director
-        // field on this payload is read.
-        item7: (() => {
-          try {
-            const cd = camDirRef.current;
-            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-            const survivors = cd._abreastSurvivors(ordered);
-            const ts = cd._frameTs;
-            const member = survivors.filter((r) => cd._contentionWeight(r.index, ts) > 0);
-            // What today's set contains that the survivors do not: the fallback's own additions.
-            const shown = cd._abreastContenders(ordered);
-            return {
-              member: member.map((r) => r?.index ?? -1),
-              // Racers today's grading requires that the LOOP never admitted.
-              byFallback: Math.max(0, shown.length - survivors.length),
-              // Racers the loop admitted that the race has already decided.
-              byWeight: survivors.length - member.length,
-            };
-          } catch {
-            return null;
-          }
-        })(),
-        // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
-        // residual, and it is the quantity that decides whether a shot that loses its subject is a
-        // FRAMING decision or a DELIVERY one.
-        targetOffsetX: camDirRef.current.targetOffsetX,
-        targetOffsetY: camDirRef.current.targetOffsetY,
-        targetZoom: camDirRef.current.targetZoom,
-        camZoom: cam.zoom,
-        // WHERE THE FRAMING RULE INTENDS THE SUBJECT, as a fraction along the motion axis, and the
-        // run-in's own travel parameter that drives it.
-        forwardFrac: camDirRef.current._forwardFracNow(),
-        runInU: camDirRef.current._runInSweepU ? camDirRef.current._runInSweepU() : null,
-        runInProgress: camDirRef.current._runInProgress,
-        composing: !!camDirRef.current._runInComposingNow,
-        // WHAT THE PAN IS AIMED AT, in world coordinates, beside the candidates it could be aimed
-        // at. Whichever it tracks is the pan's real subject, which no amount of reading the framing
-        // rule will settle.
-        panTargetX: camDirRef.current._lastPanTargetX ?? null,
-        panTargetY: camDirRef.current._lastPanTargetY ?? null,
-        lineWorld: camDirRef.current._finishLineWorldPoint(st.finishT),
-        lateralShift: camDirRef.current._lastLateralShift ?? null,
-        panClamped: camDirRef.current._lastResolvedPanTarget?.wasClamped ?? null,
-        panCamX: camDirRef.current._lastResolvedPanTarget?.camX ?? null,
-        worldMaxX: camDirRef.current._worldBounds?.maxX ?? null,
-        worldMaxY: camDirRef.current._worldBounds?.maxY ?? null,
-        anchorPoint: camDirRef.current._framingProbe?.point ?? null,
-        // The racers the framing was actually built on this frame, by index. Read from the probe
-        // the director already writes; nothing is re-derived.
-        subjectIndices: camDirRef.current._framingProbe?.pair?.map((r) => r?.index ?? -1) ?? null,
-      });
+      recordViewerFrame(
+        viewerFramePayload({
+          ts,
+          frame,
+          cam,
+          shape,
+          trackWidthPx,
+          st,
+          worldWidth,
+          cd: camDirRef.current,
+          canvasW: CANVAS_W,
+          canvasH: CANVAS_H,
+        })
+      );
 
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frame.effZoomX * (worldWidth / CANVAS_W) : cam.zoom;
