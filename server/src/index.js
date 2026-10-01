@@ -12,6 +12,7 @@ import { reportStartupReadiness } from './startupReadiness.js';
 import { assertPublicOriginUsable } from './runtimeConfig.js';
 import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
+import { resolveBindAddress, listenOn } from './bindAddress.js';
 
 // ── RUNTIME-API-URL-1: THE ADDRESS IS JUDGED BEFORE ANYTHING LISTENS ───────────────────────────
 //
@@ -28,8 +29,12 @@ import { resolveDataRoot } from './dataPaths.js';
 //
 // It runs BEFORE `createApp()` so nothing is bound, no port is taken and no data file is touched by
 // an install that is about to be told to fix its configuration.
+// RELEASE-BASICS-1 (c): the bind address is judged by the same gate, for the same reason — a value
+// that is present but is not an address must stop the start, never fall back to every interface.
+let bindAddress;
 try {
   assertPublicOriginUsable(process.env);
+  bindAddress = resolveBindAddress(process.env);
 } catch (err) {
   // Deliberate: a refusal to start is what stderr is for. No eslint-disable is needed here —
   // `no-console` is configured as `["warn", { allow: ["warn", "error"] }]`
@@ -50,7 +55,8 @@ sweepOrphanTmp(resolveDataRoot(), (msg) => {
 const app = createApp();
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
+// Unset RA_BIND_ADDRESS → the same `listen(PORT, cb)` call as before; see bindAddress.js.
+listenOn(app, PORT, bindAddress, () => {
   // ★ STDOUT BY DECISION (the owner, 2026-09-06), not by oversight. This is the "it started" line,
   // and normal output belongs on stdout; stderr is for what is wrong. This file already draws that
   // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js:95)
@@ -61,7 +67,7 @@ app.listen(PORT, () => {
   // and the line after it names the warning that must NOT appear beside it. That reading only works
   // while the go-ahead and the warnings are on different streams.
   // eslint-disable-next-line no-console -- deliberate: the startup banner is normal output, above
-  console.log(`RaceArena server running on port ${PORT}`);
+  console.log(`RaceArena server running on port ${PORT}${bindAddress ? ` (bound to ${bindAddress})` : ''}`);
   // PUBLISH-STEPS-1: say what this install CANNOT do, while the operator is still looking at the
   // terminal they started it in. It only warns — a same-origin install needs no RA_CLIENT_ORIGIN,
   // so refusing to start without one would break the arrangement SERVE-SPA-1 moved towards. The

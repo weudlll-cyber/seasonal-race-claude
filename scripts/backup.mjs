@@ -41,6 +41,7 @@
 //
 // ── USAGE ──────────────────────────────────────────────────────────────────────────────────────
 //   node scripts/backup.mjs --out <dir>              # write <dir>/racearena-backup-<UTC>.tar
+//   npm run backup                                   # the same, into $RA_BACKUP_DIR (RELEASE-BASICS-1)
 //   node scripts/backup.mjs --restore <archive> --into <dir>
 //   node scripts/backup.mjs --restore <archive> --into <dir> --force   # overwrite a non-empty dir
 //
@@ -109,6 +110,17 @@ export function stampUtc(d = new Date()) {
  *  seconds-resolution stamp is the naming rule and the tests pin it. */
 export function archiveName(d = new Date()) {
   return `racearena-backup-${stampUtc(d)}.tar`;
+}
+
+/** The reverse of `archiveName`: the UTC instant a backup was taken, read from its NAME, or `null`
+ *  for a file that is not one of ours. Lives beside `archiveName` so the format is one fact in one
+ *  file; `scripts/status.mjs` reads backup ages through this rather than through file mtimes, which
+ *  a copy to another disk resets. (RELEASE-BASICS-1) */
+export function archiveTakenAt(name) {
+  const m = /^racearena-backup-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z\.tar$/.exec(name);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s] = m;
+  return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
 }
 
 // ── a minimal, correct USTAR writer ────────────────────────────────────────────────────────────
@@ -316,8 +328,10 @@ if (isMain) {
       const into = arg('into') ?? resolveDataRoot();
       restore({ archivePath: archive, into, force: process.argv.includes('--force'), log: console.log });
     } else {
-      const outDir = arg('out');
-      if (!outDir) throw new BackupRefusal('usage: node scripts/backup.mjs --out <dir>');
+      // RELEASE-BASICS-1 (b): `RA_BACKUP_DIR` is the scheduled default, so `npm run backup` needs no
+      // argument in a cron line, and `npm run status` reads backup ages from the same directory.
+      const outDir = arg('out') ?? process.env.RA_BACKUP_DIR;
+      if (!outDir) throw new BackupRefusal('usage: node scripts/backup.mjs --out <dir>   (or set RA_BACKUP_DIR)');
       await backup({ dataRoot: resolveDataRoot(), outDir, log: console.log });
     }
   } catch (e) {

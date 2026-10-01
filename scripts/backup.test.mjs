@@ -211,3 +211,63 @@ test('SABOTAGE: a backup that silently skips the database FAILS the round trip',
     rmSync(s, { recursive: true, force: true });
   }
 });
+
+// ── RELEASE-BASICS-1 (b): `npm run backup` — the documented entry point, run as an operator would ──
+// These go through `npm run`, not through the exported function: the claim being tested is that
+// the COMMAND in package.json exists, reaches this tool, takes its target from RA_BACKUP_DIR, and
+// keeps the tool's refusal to write into the data directory.
+import { spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+const { archiveTakenAt } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
+
+const npmBackup = (env) =>
+  spawnSync('npm run --silent backup', {
+    cwd: join(HERE, '..'),
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
+    shell: true, // npm is a .cmd shim on Windows
+  });
+
+test('archiveTakenAt reads back exactly what archiveName wrote, and nothing else', () => {
+  const d = new Date('2026-10-01T03:04:05Z');
+  assert.equal(archiveTakenAt(archiveName(d)).toISOString(), d.toISOString());
+  assert.equal(archiveTakenAt('racearena-backup-20261001T030405Z.tar.part'), null);
+  assert.equal(archiveTakenAt('notes.txt'), null);
+});
+
+test('`npm run backup` writes one archive into RA_BACKUP_DIR', () => {
+  const dir = scratch();
+  try {
+    seedRoot(join(dir, 'data'));
+    const r = npmBackup({ RA_DATA_DIR: join(dir, 'data'), RA_BACKUP_DIR: join(dir, 'backups') });
+    assert.equal(r.status, 0, r.stderr + r.stdout);
+    const made = readdirSync(join(dir, 'backups')).filter((n) => archiveTakenAt(n));
+    assert.equal(made.length, 1, `expected one archive, found ${made}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('`npm run backup` REFUSES when RA_BACKUP_DIR is inside the data directory', () => {
+  const dir = scratch();
+  try {
+    seedRoot(join(dir, 'data'));
+    const r = npmBackup({ RA_DATA_DIR: join(dir, 'data'), RA_BACKUP_DIR: join(dir, 'data', 'backups') });
+    assert.notEqual(r.status, 0, 'a backup into the data directory must be refused');
+    assert.match(r.stderr, /OUTSIDE the data root/);
+    assert.equal(existsSync(join(dir, 'data', 'backups')) && readdirSync(join(dir, 'data', 'backups')).some((n) => archiveTakenAt(n)), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('`npm run backup` with no target names both ways to give one', () => {
+  const env = { RA_DATA_DIR: scratch() };
+  try {
+    const r = npmBackup({ ...env, RA_BACKUP_DIR: '' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /--out <dir>.*RA_BACKUP_DIR/);
+  } finally {
+    rmSync(env.RA_DATA_DIR, { recursive: true, force: true });
+  }
+});
