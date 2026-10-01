@@ -67,12 +67,14 @@ const CW = 1280;
 const CH = 720;
 const SEED = 9;
 const JSON_OUT = process.argv.includes("--json");
-const TRACK_ARG = (process.argv.find((a) => a.startsWith("--tracks=")) ?? "").slice(9);
+// null when the flag is absent; an empty `--tracks=` is passed on and refused (HARNESS-EMPTY-SCOPE-1)
+// rather than quietly replaced by the default list below.
+const TRACK_ARG = process.argv.find((a) => a.startsWith("--tracks="))?.slice(9) ?? null;
 const ROSTER = QUICK_TEST_NAME_SETS[DEFAULT_NAME_SET];
 
 // HIS SUPPORTED TARGETS: open tracks 100 racers, closed 40.
 const FIELD_FOR = (isOpen) => (isOpen ? 100 : 40);
-const TRACKS = TRACK_ARG ? TRACK_ARG.split(",") : ["space-sprint", "dirt-oval", "city-circuit"];
+const TRACKS = TRACK_ARG ?? "space-sprint,dirt-oval,city-circuit";
 
 const hisConfig = () => {
   const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
@@ -216,10 +218,10 @@ function measureTrack(geo, cfg, arm) {
 }
 
 // The default list stands when --tracks is omitted, so the scope handed to the resolver is always
-// an explicit set of names; what it guards here is a name no track answers to.
+// an explicit set of names; what it guards here is a name no track answers to, or an empty value.
 const geos = resolveTrackScope({
   tool: "endgame-width-truth",
-  arg: TRACKS.join(","),
+  arg: TRACKS,
   all: loadTracks(),
 });
 const out = [];

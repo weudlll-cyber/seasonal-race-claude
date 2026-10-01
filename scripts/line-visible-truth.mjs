@@ -68,7 +68,9 @@ const INNER_TODAY = 0.7;
 const INNER_HIS = 1.0;
 const BAND_ENOUGH = 0.9; // HIS number
 const JSON_OUT = process.argv.includes("--json");
-const TRACK_ARG = (process.argv.find((a) => a.startsWith("--tracks=")) ?? "").slice(9);
+// null when the flag is absent (= every track); an empty `--tracks=` is a scope naming nothing and
+// the shared place refuses it (HARNESS-EMPTY-SCOPE-1) instead of reading it as "every track".
+const TRACK_ARG = process.argv.find((a) => a.startsWith("--tracks="))?.slice(9) ?? null;
 const ROSTER = QUICK_TEST_NAME_SETS[DEFAULT_NAME_SET];
 
 const hisConfig = () => {

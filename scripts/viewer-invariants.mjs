@@ -134,6 +134,7 @@ const SEEDS =
 // until one was edited, and the divergence would then have read as a change in HIS
 // NUMBERS rather than as an error.
 import { HIS, setPath } from "./lib/hisArm.mjs";
+import { resolveTrackScope } from "./lib/trackScope.mjs";
 // `--set=key=value`, applied after the arm, so one build can be measured with a switch on and
 // off without rebuilding. Values parse as boolean, number or string, in that order.
 const CLI_SET = process.argv
@@ -292,52 +293,36 @@ function geometries() {
 // on this page changes which tracks `--gate` runs.
 const GATE_TRACKS = "space-sprint,city-circuit";
 const trackArg = ARG("tracks", GATE ? GATE_TRACKS : null);
-const ALL_GEOMETRIES = geometries();
-const TRACKS = ALL_GEOMETRIES.filter((g) =>
-  trackArg ? trackArg.split(",").includes(g.id) : true
-);
-
 // ── A NAME THIS HARNESS DOES NOT KNOW IS A MISTAKE, NOT AN EMPTY SET ────────────────────────────
 //
 // WHY THIS EXISTS. On 2026-09-04 a run asked for `--tracks=all`. No geometry has the id `all`, the
-// filter above returned nothing, and the harness reported 0 races in 52 seconds and EXITED CLEAN.
-// It is the silent-zero class the backlog has carried since the night of 2026-08-25, and this is
-// its next occurrence — see BACKLOG.md, "A SWEEP CELL THAT ASKS FOR 60 RACES AND RETURNS 0".
+// filter returned nothing, and the harness reported 0 races in 52 seconds and EXITED CLEAN. It is
+// the silent-zero class the backlog carried since the night of 2026-08-25.
 //
 // WHAT IT COST is not the 52 seconds. It is that the run LOOKED LIKE AN ANSWER: a sweep that
 // measured nothing is indistinguishable, on the way out, from a sweep that measured everything and
 // found nothing wrong. That is the failure worth being loud about.
 //
-// THE CHECK NAMES BOTH SIDES — what was asked for and what exists — because a rejection that only
-// says "unknown" sends the reader back to the filesystem to find out what the legal names are.
-if (trackArg !== null) {
-  const asked = trackArg
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const known = new Set(ALL_GEOMETRIES.map((g) => g.id));
-  const unknown = asked.filter((id) => !known.has(id));
-  if (asked.length === 0 || unknown.length > 0) {
-    console.error(
-      `viewer-invariants: --tracks=${trackArg} names ${
-        asked.length === 0 ? "no track at all" : `no such track: ${unknown.join(", ")}`
-      }.\n` +
-        `  asked for: ${asked.length ? asked.join(", ") : "(nothing)"}\n` +
-        `  this repository has: ${[...known].join(", ")}\n` +
-        `  There is no "all" — OMIT --tracks to run every track.\n` +
-        `  Refusing to run: a filter that matches nothing would report 0 races and exit 0.`
-    );
-    process.exit(2);
-  }
-}
+// WHERE THE CHECK LIVES (HARNESS-EMPTY-SCOPE-1, 2026-10-02). It was written here first, and its
+// wording became `scripts/lib/trackScope.mjs`. This harness now calls that one home instead of
+// keeping the original copy beside it: same sentences, same exit 2, and it names both sides — what
+// was asked for and what exists — so a reader is not sent back to the filesystem for the legal
+// names. Omitted `--tracks` still means every track, and `--gate` without it still means
+// GATE_TRACKS.
+const TRACKS = resolveTrackScope({
+  tool: "viewer-invariants",
+  arg: trackArg,
+  all: geometries(),
+});
 
 // ── AND THE BACKSTOP: A RUN THAT WOULD SCORE NOTHING NEVER STARTS ───────────────────────────────
 //
-// The name check above catches the one cause that has actually happened. This catches the CLASS,
-// including the causes it cannot see: an empty `server/data/tracks`, a `--seeds=` range that runs
-// backwards. The run's scope is the product ARMS x TRACKS x SEEDS — the same three lists `WORK` is
-// built from, several hundred lines below — so the message prints all three rather than guessing
-// which one is at fault.
+// The name check above catches the one cause that has actually happened, and since
+// HARNESS-EMPTY-SCOPE-1 it also refuses an empty `server/data/tracks`, so TRACKS cannot be empty
+// here and is deliberately NOT in the condition (an unreachable limb — see ARMS below). This
+// catches the rest of the CLASS: a `--seeds=` range that runs backwards. The run's scope is the
+// product ARMS x TRACKS x SEEDS — the same three lists `WORK` is built from, several hundred lines
+// below — so the message prints all three rather than guessing which one is at fault.
 //
 // IT SITS HERE, NOT AT `WORK`, ON PURPOSE: the browser is launched between the two points, and a
 // refusal that costs a browser launch is a refusal that arrives after the run has begun.
@@ -348,7 +333,7 @@ if (trackArg !== null) {
 // wearing the guard's own clothes. What `--arm=` actually produces is one arm NAMED `""`, which
 // runs and scores. That is silent GARBAGE, not a silent zero, it is a different defect, and it is
 // left unguarded here and named in the piece-E report rather than half-covered.
-if (TRACKS.length === 0 || SEEDS.length === 0) {
+if (SEEDS.length === 0) {
   console.error(
     `viewer-invariants: this run would drive 0 races. Refusing to start.\n` +
       `  arms   (${ARMS.length}): ${ARMS.join(", ") || "(none)"} — from --arm=\n` +
