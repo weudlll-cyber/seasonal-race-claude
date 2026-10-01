@@ -107,6 +107,12 @@ import { nextBeatStart } from '../../modules/camera/startCeremony.js';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import { endingOnRaceScreenMs } from './endingSchedule.js';
 import { splitFinishOrder, buildRaceResults } from './raceResults.js';
+import {
+  governorDiagSnapshot,
+  recordHoldProbe,
+  recordRacePlanStepDiag,
+  recordTopThreeSpeedDiag,
+} from './raceLoopDiagnostics.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -1122,23 +1128,17 @@ export default function RaceScreen() {
           // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs. Read-only; touches
           // nothing but the diag ref. heroRoles = the retained index→role map (null until heroes cast).
           if (racePlanController && govFractions) {
-            const diagCfg = pulkLeadRotationOn
-              ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
-              : { directorEnabled: false };
-            governorDiagRef.current = {
-              cfg: diagCfg,
-              phase: govPhase,
-              progress: st.raceProgress,
-              pulkStartFrac: govFractions.pulkStartFrac,
-              pulkEndFrac: govFractions.pulkEndFrac,
-              corrStartFrac: govFractions.corrStartFrac,
-              seed: govSeed,
-              finishT: st.finishT,
+            governorDiagRef.current = governorDiagSnapshot({
+              racePlanController,
+              govPhase,
+              st,
+              govFractions,
+              govSeed,
               pathLengthPx,
-              meanBodyLen: govMeanBodyLen,
-              isOpen: isOpenTrack,
-              heroRoles: racePlanController.getHeroRoles?.() ?? null,
-            };
+              govMeanBodyLen,
+              isOpenTrack,
+              pulkLeadRotationOn,
+            });
           }
 
           // ── HOLD-PROBE (DIRECTION-AUTHORITY-1): what the HELD comebacker is doing, for a browser
@@ -1149,36 +1149,7 @@ export default function RaceScreen() {
           //
           // It records the plan's OWN idea of who is held (`getHeldRelease`) and his LIVE rank off
           // the same sorted field the scoreboard uses — never a recomputation of either.
-          try {
-            if (localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
-              const heldMap = racePlanController.getHeldRelease?.() ?? null;
-              if (heldMap && heldMap.size) {
-                const order = [...st.racers].sort((a, b) => b.t - a.t);
-                const w = (window.__raHoldTrace ||= []);
-                for (const [idx, releaseAt] of heldMap) {
-                  const rank = order.findIndex((r) => r.index === idx) + 1;
-                  // ARRIVAL-VARIANTS-1 added `m`: the multiplier the servo is actually applying, so
-                  // a browser test can see whether he is being braked, pushed or left alone. Read off
-                  // the same racer object, never recomputed.
-                  const me = st.racers.find((r) => r.index === idx);
-                  if (rank > 0)
-                    w.push({
-                      i: idx,
-                      rank,
-                      p: st.raceProgress,
-                      releaseAt,
-                      m: me?.trajectoryMult ?? null,
-                      // ARRIVAL-SHAPE-E-1 added `d`: his DRAWN place, asked of the controller rather
-                      // than recomputed, so a browser test can say "two ranks before his place"
-                      // without re-deriving the thing it is there to observe.
-                      d: racePlanController.getTargetRank?.(idx) ?? null,
-                    });
-                }
-              }
-            }
-          } catch {
-            /* storage unavailable — a diagnostic must never take a race down */
-          }
+          recordHoldProbe(st, racePlanController);
 
           // Scoreboard: update when physicsTs crosses a bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
@@ -1313,98 +1284,14 @@ export default function RaceScreen() {
 
           // Race-Plan per-step diagnostics → diagDataRef (polled by CameraDiagnosticsHUD)
           if (racePlanController) {
-            const activeR = st.racers.filter((r) => !r.finished);
-            if (activeR.length > 0) {
-              let sfMin = Infinity,
-                sfMax = -Infinity,
-                sfSum = 0;
-              let tmMin = Infinity,
-                tmMax = -Infinity;
-              for (const r of activeR) {
-                const sf = r.spreadFactor ?? 1;
-                const tm = r.trajectoryMult ?? 1;
-                if (sf < sfMin) sfMin = sf;
-                if (sf > sfMax) sfMax = sf;
-                sfSum += sf;
-                if (tm < tmMin) tmMin = tm;
-                if (tm > tmMax) tmMax = tm;
-                // Speed ring buffer (5 s @ 16 ms/step = 313 slots)
-                let ring = speedRings.get(r.index);
-                if (!ring) {
-                  ring = { buf: new Float32Array(313).fill(1.0), idx: 0 };
-                  speedRings.set(r.index, ring);
-                }
-                ring.buf[ring.idx % 313] = tm;
-                ring.idx++;
-              }
-              const d = diagDataRef.current;
-              d.rpPhase = racePlanController.getPhase(physicsTs, st.raceProgress);
-              d.rpTs = physicsTs;
-              d.rpReRollActive = physicsTs < lastRollDeadline;
-              d.rpSfMin = sfMin;
-              d.rpSfMax = sfMax;
-              d.rpSfMean = sfSum / activeR.length;
-              d.rpTmMin = tmMin;
-              d.rpTmMax = tmMax;
-              let bbMin = Infinity,
-                bbMax = -Infinity;
-              for (const r of activeR) {
-                const bb = r.areaBonusMult ?? 1;
-                if (bb < bbMin) bbMin = bb;
-                if (bb > bbMax) bbMax = bb;
-              }
-              d.rpBbMin = bbMin;
-              d.rpBbMax = bbMax;
-
-              // B1 winner list (targetRank 1–5)
-              if (rpPlanInfo) {
-                const ranked = [...activeR].sort((a, b) => b.t - a.t);
-                const rankByIdx = new Map(ranked.map((r, i) => [r.index, i + 1]));
-                const b1Racers = [];
-                for (const [racerIdx, targetRank] of rpPlanInfo.targetRanks) {
-                  if (!rpPlanInfo.b1Indices.has(racerIdx)) continue;
-                  const racer = st.racers.find((r) => r.index === racerIdx && !r.finished);
-                  if (!racer) continue;
-                  b1Racers.push({
-                    index: racerIdx,
-                    name: racer.name,
-                    targetRank,
-                    currentRank: rankByIdx.get(racerIdx) ?? 0,
-                    delta: (rankByIdx.get(racerIdx) ?? 0) - targetRank,
-                    startRow: assignmentByRacer.get(racerIdx)?.rowIndex ?? 0,
-                  });
-                }
-                b1Racers.sort((a, b) => a.targetRank - b.targetRank);
-                d.rpB1Racers = b1Racers;
-              }
-
-              // Top-10 speed monitor
-              const top10 = [...activeR].sort((a, b) => b.t - a.t).slice(0, 10);
-              d.rpTop10 = top10.map((r, i) => {
-                const ring = speedRings.get(r.index);
-                let tmMin5s = r.trajectoryMult ?? 1;
-                let tmMax5s = r.trajectoryMult ?? 1;
-                if (ring && ring.idx > 0) {
-                  const filled = Math.min(ring.idx, 313);
-                  let mn = Infinity,
-                    mx = -Infinity;
-                  for (let j = 0; j < filled; j++) {
-                    if (ring.buf[j] < mn) mn = ring.buf[j];
-                    if (ring.buf[j] > mx) mx = ring.buf[j];
-                  }
-                  tmMin5s = mn;
-                  tmMax5s = mx;
-                }
-                return {
-                  rank: i + 1,
-                  name: r.name,
-                  tm: r.trajectoryMult ?? 1.0,
-                  tmMin5s,
-                  tmMax5s,
-                  isOscillating: tmMax5s - tmMin5s > 0.18,
-                };
-              });
-            }
+            recordRacePlanStepDiag(diagDataRef.current, st, {
+              racePlanController,
+              physicsTs,
+              lastRollDeadline,
+              rpPlanInfo,
+              assignmentByRacer,
+              speedRings,
+            });
           }
 
           st.physicsAccum -= FIXED_DT;
@@ -1429,32 +1316,7 @@ export default function RaceScreen() {
         // D1: per-racer pixel speed and smoothed Δv between top-3 — diagnostics HUD only.
         // Gated: the sort + spread runs only when the diagnostics overlay is visible.
         if (showCameraDiagnostics) {
-          const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-          for (const r of st.racers) {
-            const dx = r.x - (r._diagPrevX ?? r.x);
-            const dy = r.y - (r._diagPrevY ?? r.y);
-            r._diagSpeed = Math.sqrt(dx * dx + dy * dy);
-            r._diagDx = dx;
-            r._diagDy = dy;
-            r._diagPrevX = r.x;
-            r._diagPrevY = r.y;
-          }
-          const r0 = ordered[0];
-          const r1 = ordered[1];
-          const r2 = ordered[2];
-          const raw01 = r0 && r1 ? r0._diagSpeed - r1._diagSpeed : 0;
-          const raw12 = r1 && r2 ? r1._diagSpeed - r2._diagSpeed : 0;
-          const α = 0.1;
-          diagDataRef.current.dv01 = diagDataRef.current.dv01 * (1 - α) + raw01 * α;
-          diagDataRef.current.dv12 = diagDataRef.current.dv12 * (1 - α) + raw12 * α;
-          // M3: ring-buffer max over last 60 frames (absolute value, captures jitter peaks)
-          const d = diagDataRef.current;
-          const bi = d._dvBufIdx % 60;
-          d._dv01Buf[bi] = Math.abs(raw01);
-          d._dv12Buf[bi] = Math.abs(raw12);
-          d._dvBufIdx++;
-          d.dv01Max = Math.max(...d._dv01Buf);
-          d.dv12Max = Math.max(...d._dv12Buf);
+          recordTopThreeSpeedDiag(diagDataRef.current, st.racers);
         }
 
         // Racer dust: spawn behind racers still running, advance everyone's (see racerDust.js).
