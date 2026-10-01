@@ -229,7 +229,8 @@ npm run data:export          # writes a portable copy of the runtime store
 ★ **For a backup you can restore, use `npm run backup`** (added 2026-10-01): it copies the two live
 databases through SQLite's own online backup and archives the whole data directory, and
 [DEPLOYMENT.md](DEPLOYMENT.md) owns how to run, schedule and restore it. `data:export` archives only
-what differs from the shipped seeds, and reads a fixed `server/data`.
+what differs from the shipped seeds, and reads the same data directory the server does (`RA_DATA_DIR`,
+else `server/data`).
 
 **What is in there:** `users.json`, `sessions.sqlite`, `races.sqlite`, `setup-complete.json`, and the
 tracks, backgrounds, brands and player groups — the seeded ones and the ones you made. Stopping the

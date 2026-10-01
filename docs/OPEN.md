@@ -146,7 +146,8 @@ because nobody looked.**
    of those files. Costs in the arc 4 report; commission them one at a time.
 12. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
-   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it.)*
+   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
+   DATA-EXPORT-DATADIR-1.)*
 13. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.

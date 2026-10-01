@@ -2,8 +2,9 @@
 // File:        scripts/data-export.mjs
 // Project:     RaceArena — DATA-EXPORT-1
 //
-// BOXES UP THE ONLY IRREPLACEABLE THING. `server/data` is git-ignored, so it does not exist at
-// origin. OneDrive syncs it, and syncing is not backing up: a deletion propagates exactly as
+// BOXES UP THE ONLY IRREPLACEABLE THING. The data root — `server/data`, or wherever `RA_DATA_DIR`
+// points (DATA-EXPORT-DATADIR-1) — is called `server/data` below for short. It is git-ignored, so
+// it does not exist at origin. OneDrive syncs it, and syncing is not backing up: a deletion propagates exactly as
 // faithfully as a file does. This writes one dated archive of the part of `server/data` that exists
 // nowhere else, so the owner does not have to remember which part that is.
 //
@@ -38,11 +39,18 @@ import {
   rmSync,
 } from "node:fs";
 import { join, dirname, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DATA = join(ROOT, "server", "data");
+// DATA-EXPORT-DATADIR-1: the data root comes from THE resolver, `resolveDataRoot()` in
+// `server/src/dataPaths.js`, imported the way `scripts/backup.mjs` imports it — so `RA_DATA_DIR` is
+// honoured and an install laid out as docs/DEPLOYMENT.md says is measured where its data lives.
+// The seeds stay fixed: they ship with the code, not with the data.
+const { resolveDataRoot } = await import(
+  pathToFileURL(join(ROOT, "server/src/dataPaths.js")).href
+);
+const DATA = resolveDataRoot();
 const SEEDS = join(ROOT, "server", "seeds");
 
 const arg = (k, d) => {
@@ -173,8 +181,8 @@ console.log(
 // AN EMPTY EXPORT IS A LEGITIMATE RESULT AND MUST NOT LOOK LIKE SUCCESS AT BOXING SOMETHING UP.
 if (unique.length === 0) {
   console.log(
-    `\n  NOTHING TO EXPORT. Every file under server/data matches server/seeds, which git already\n` +
-      `  tracks. No archive was written — this is a correct result, not a completed backup.\n`,
+    `\n  NOTHING TO EXPORT. Every file under ${DATA} matches server/seeds, which git\n` +
+      `  already tracks. No archive was written — this is a correct result, not a completed backup.\n`,
   );
   process.exit(0);
 }
