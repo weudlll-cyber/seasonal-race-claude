@@ -79,6 +79,9 @@ because nobody looked.**
 4. **Tenancy — the boundary is stated (2026-09-25), the work is not done.** PER TEAM: brands, player
    groups, team-created tracks. SHARED: the shipped tracks and the racer types. Races are scoped
    today; tracks, brands, racers and player groups are not. Preparation, not a defect.
+   ★ **Part of the first release (the owner's facts, 2026-10-01). Surveyed and planned the same day:**
+   [TENANCY-SURVEY-1](../reports/release/TENANCY-SURVEY-1.md), eight build pieces and **eight
+   questions for him**, the first being whether surface classes are per organizer or shared.
 5. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase.
 6. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.

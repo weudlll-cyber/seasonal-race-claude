@@ -1128,6 +1128,27 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
       of the work, not its completion.**
 
+      ★★★ **PART OF THE FIRST RELEASE — the owner's facts of 2026-10-01.** The software is to be
+      downloadable for many server operators, and every operator must be able to host several
+      organizers on one server; so this boundary ships in the first release.
+      ★★ **SURVEYED AND PLANNED, 2026-10-01 —
+      [TENANCY-SURVEY-1](../reports/release/TENANCY-SURVEY-1.md)** (read-only, no product change).
+      It has the facts at source (how a team comes into being, roles and routes, every collection,
+      the browser, shipped vs created), a **BUILD PLAN of eight pieces T1–T8** (one subsystem and at
+      most one new mechanism each), and **eight QUESTIONS for the owner**, one decision per line.
+      Three findings the plan is built around:
+      - **The one gap inside races:** the duplicate check `getRaceByClientId`
+        (`server/src/races/raceStore.js:488-491`, used at `races.js:80-88`) is not team-scoped, so a
+        retried upload can be answered with ANOTHER team's short key. Piece T1; it needs no decision.
+      - **One browser shares everything** between the people who sign in on it: the local race
+        history with racer names, unsaved track drafts, and (INFERRED) offline races uploaded into
+        the NEXT person's team. Piece T5.
+      - **`admin` is server-wide**: an organizer made admin would manage every organizer's users.
+        Question 2.
+      ★ **SURFACE CLASSES ARE IN NEITHER LIST** of the boundary below — per organizer or shared is
+      question 1 in the survey. So are the seed-redelivery notice (question 6) and racer types that
+      an organizer creates (question 8).
+
       ★★ **AND THE ORDER IS DECIDED, 2026-09-27: BUILD THE BOUNDARY BEFORE A SECOND ORGANISER IS
       INVITED.** The boundary itself is unchanged from 2026-09-25; what is settled now is that it
       comes first. The alternative reading — invite, and accept that everything but races is common
