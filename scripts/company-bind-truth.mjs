@@ -38,6 +38,7 @@ import {
   buildRace,
   runRace,
 } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 
 const arg = (k, d) => {
@@ -47,9 +48,13 @@ const arg = (k, d) => {
 
 // The two tracks the benches already use: searound is CLOSED and bunches the field into a repeating
 // pack; river-run is OPEN and strings it out. The pack/spread contrast is the whole argument here.
-const TRACKS = (arg("tracks", "searound,river-run") || "")
-  .split(",")
-  .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "company-bind-truth",
+  ids: arg("tracks", "searound,river-run"),
+  all: loadTracks(),
+});
 // 1 disables the guarantee (`<= 1` returns Infinity), so it is the control arm.
 const ARMS = (arg("arms", "1,3,5") || "").split(",").map(Number);
 const RACERS = Number(arg("racers", "40"));
@@ -132,11 +137,8 @@ console.log(
   "track        minRacers   frames   CAPPED%   CHANGED%   widest   zoom p5 / median / p95",
 );
 for (const id of TRACKS) {
+  // Validated above by resolveTrackScopeIds, so this lookup cannot miss.
   const geo = loadTracks({ only: id })[0];
-  if (!geo) {
-    console.error(`no such track: ${id}`);
-    continue;
-  }
   const results = ARMS.map((a) => runArm(geo, a));
   const off = results.find((r) => r.minRacersVisible <= 1) ?? results[0];
   for (const r of results) {

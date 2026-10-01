@@ -1,9 +1,12 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-10-01
+# What is open — DERIVED from BACKLOG PART ONE, 2026-10-02
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. ★ **RELEASE-BASICS-1 (2026-10-01)**
+Re-derived on **2026-10-02**, from PART ONE's **thirteen** rows. ★ **HARNESS-EMPTY-SCOPE-1 (2026-10-02)**
+closed the row *a sweep that asks for races and gets none still prints a table and exits 0* —
+every tool that takes `--tracks` now refuses an empty or unknown scope through one shared place —
+so thirteen. ★ **RELEASE-BASICS-1 (2026-10-01)**
 closed B2 — the backup destination is now configurable and documented — and its two read-only
 inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN OF 2026-08-31 (fifteen). ★ **The
 same day the TENANCY row closed: the boundary will not be built** (decision of 2026-10-01; PART TWO,
@@ -33,11 +36,11 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2526) holds exactly FOURTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
+(lines 15–2450) holds exactly THIRTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
 *Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
-*The night of 2026-08-25*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
-2026-10-01 after RELEASE-BASICS-1 and the closing of the TENANCY row.)* Every current count on this
-page says fourteen.
+*Planned — needs spec* and *Build-identity residuals*. *(Re-counted 2026-10-02 after
+HARNESS-EMPTY-SCOPE-1 closed the one row in *The night of 2026-08-25*.)* Every current count on
+this page says thirteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -54,7 +57,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The thirteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -65,26 +68,22 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
-1. **A sweep that asks for races and gets none still prints a table and exits 0.** Narrowed
-   again 2026-09-26 — `resolveTrackScopeIds` (a second door on `scripts/lib/trackScope.mjs`)
-   brings five more `scripts/diag/` tools under the refusal; ten file-based analysers are NAMED
-   as resisting the shape.
-2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
+1. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
-3. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
+2. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
    the user chooses, counting NAMES. ★ **The marker is BUILT (RACE-SOURCE-1, 2026-09-25):** a stored
    race records how it was started, and **absent means test** — so excluding Quick Tests is now a
    filter over a recorded fact. **The evaluation itself is not built.** The points rule is
    dev-screen-configurable and **no numbers are adopted**.
-4. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
+3. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
    proven by following it literally (RELEASE-BASICS-1, 2026-10-01).
-5. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+4. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
    ★★ **The camera is FINE (2026-09-26, second pass).** Twelve seeds driven through the browser:
    **seven cast a comebacker and all seven were cut to** — a comeback shot can and does occur in an
    ordinary race. The night's "the browser declines the shot" question is **WITHDRAWN**: its three
@@ -115,7 +114,7 @@ because nobody looked.**
    the shot be made frame-independent? ★ The reusable lesson survives the correction unchanged and
    is in the spec's header: **assert a property, never a sequence** — the rule was right even while
    the reason given for it was wrong.
-6. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+5. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
    into `verify --premerge`). Inventory tally column 3: **204 MATCHES / 0 MISLEADING / 1 SUSPECTED
@@ -126,31 +125,31 @@ because nobody looked.**
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
 
-7. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
+6. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
    keeps accepting results without recomputing them; a disputed race is re-raced from its own
    record and compared. **Fabrication is not prevented, it becomes provable.**
    `scripts/diag/replay-stored-race.mjs` already does the racing, so what is missing is a door from
    the product, not an engine.
-8. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+7. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
    a firewall or proxy is put in front of it. ★ Narrowed 2026-10-01: a plain-`node` install can set
    `RA_BIND_ADDRESS=127.0.0.1`; the default is unchanged and is his choice.
-9. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+8. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-10. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
+9. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-11. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
+10. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
    `CameraDirector.js` at 5,507 lines, nearly 3× the next engine file, carrying the state machine
    and the offer arbitration together. **He would see nothing if it were done right, which is why
    it is dangerous.** Also: 77 unused locals in `scripts/`, not removed because arc 4 touched none
    of those files. Costs in the arc 4 report; commission them one at a time.
-12. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
+11. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
    on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it.)*
-13. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
+12. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
-14. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
+13. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
    warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
    shipped tracks (`searound`, `seatrack`) have drifted from his copies.
 

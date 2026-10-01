@@ -25,6 +25,7 @@ import {
   runRace,
   TRACK_DEFAULT_RACER,
 } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -52,11 +53,13 @@ const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
-const TRACKS = (
-  arg("tracks", "space-sprint,river-run,seatrack,dirt-oval") || ""
-)
-  .split(",")
-  .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/room-floor-estimate",
+  ids: arg("tracks", "space-sprint,river-run,seatrack,dirt-oval"),
+  all: loadTracks(),
+});
 const N = Number(arg("racers", "20"));
 const SEEDS = Number(arg("seeds", "10"));
 const FROM_U = Number(arg("from", "0.10"));
@@ -78,8 +81,8 @@ const tracks = new Map(loadTracks().map((g) => [g.id, g]));
 const rows = [];
 
 for (const t of TRACKS) {
+  // Every id was validated by resolveTrackScopeIds above, so the lookup cannot miss.
   const geo = tracks.get(t);
-  if (!geo) continue;
   const chord = [];
   const room = [];
   const half = [];

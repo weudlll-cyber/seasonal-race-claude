@@ -16,6 +16,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
@@ -23,7 +25,13 @@ const arg = (k, d) => {
 };
 const DIR = arg("dir", join(tmpdir(), "lcd"));
 const VALS = (arg("vals", "0.55,0.65,0.75,0.85,1.00,1.20") || "").split(",");
-const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/corridor-default-sum",
+  ids: arg("tracks", ""),
+  all: loadTracks(),
+});
 const SWEPT = ["LEADER_ZOOM", "LEAD_CHANGE"];
 const CONTROL = "OVERVIEW";
 const DEFAULT_V = "0.75";

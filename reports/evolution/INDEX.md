@@ -426,6 +426,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HARNESS-EMPTY-SCOPE-1.md](HARNESS-EMPTY-SCOPE-1.md) — **every `--tracks` tool outside the race
+  hull refuses an empty or unknown scope through one place.** A census finds 30 tools; 28 now use
+  `scripts/lib/trackScope.mjs` (7 already, 21 wired), each proven to exit 2 with 0 bytes of stdout on
+  `--tracks=all` and `--tracks=`; an empty `--tracks=` is no longer read as "every track". Two hull
+  drivers are left by rule — wiring them pulled the shared place into the race hull — and one of them,
+  `pair-reach-census`, keeps a measured silent zero on multi-track scopes. A census test keeps the
+  next tool honest. Closes the BACKLOG row.
+
 - [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
   seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
   tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two

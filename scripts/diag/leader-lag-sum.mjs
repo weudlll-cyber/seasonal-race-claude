@@ -11,13 +11,21 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
   return h ? h.slice(k.length + 3) : d;
 };
 const DIR = arg("dir", join(tmpdir(), "lag"));
-const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/leader-lag-sum",
+  ids: arg("tracks", ""),
+  all: loadTracks(),
+});
 const PREFIX = arg("prefix", "");
 
 const q = (a, p) => (a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : NaN);
