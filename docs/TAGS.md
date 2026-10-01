@@ -293,6 +293,15 @@ carried the SAME change and was deleted outright for the same reason.
   and its location is recorded in
   [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md).
 
+### TENANCY-SURVEY-1 — the survey and build plan, archived when the boundary was not built (2026-10-01)
+
+- `archive/tenancy-survey-1` (`042f06cc`, 2026-10-01) — **the `tenancy/survey` branch's one commit**:
+  `reports/release/TENANCY-SURVEY-1.md` (what is scoped per team at source, the build plan T1–T8 and
+  eight questions) and the TENANCY-row pointer to it. **Not merged and not built — decision of the
+  owner, 2026-10-01** (BACKLOG PART TWO, the TENANCY row). Read it with
+  `git show archive/tenancy-survey-1:reports/release/TENANCY-SURVEY-1.md`. The branch was deleted
+  once this tag existed at origin.
+
 ### DROP-CROP-SCRIPT — the one-shot crop tool, deleted once its work was proven done (2026-09-03)
 
 - `archive/crop-sprite-sheets` (`9c0c9956`, 2026-09-03) — **`scripts/crop-sprite-sheets.mjs`, the

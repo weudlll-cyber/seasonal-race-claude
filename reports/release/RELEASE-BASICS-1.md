@@ -5,9 +5,9 @@ merged.** The owner looks first.
 
 **The owner's facts of 2026-10-01**, recorded as dated facts: the software is to be downloadable for
 many server operators, and every operator must be able to host several organizers on one server.
-Therefore the tenancy boundary (decided 2026-09-25; order decided 2026-09-27: build it before a second
-organizer is invited) is part of the first release. The tenancy work is piece 2
-([TENANCY-SURVEY-1](TENANCY-SURVEY-1.md), on its own branch). This piece is everything else an
+The tenancy work was piece 2, a survey and build plan, now archived as the tag `archive/tenancy-survey-1` (`042f06cc`), which holds `reports/release/TENANCY-SURVEY-1.md`.
+**On 2026-10-01 the owner decided that the tenancy boundary will not be built** (BACKLOG PART TWO,
+the TENANCY row). This piece is everything else an
 operator needs to install and keep an install.
 
 **Nothing in the race moves.** `node scripts/engine-reach.mjs --check` with all 18 changed paths:
@@ -244,9 +244,8 @@ The mechanism's own statement of the rule is `server/src/seedDelivery.js:10-30`.
   version. Not touched.
 - **A backup has no checksum** (already on the tidy list), and no retention. Not touched.
 - **The previous text's step list numbered "7" twice.** Gone with the rewrite.
-- **Merging this branch and `tenancy/survey` will conflict, trivially**, in `reports/release/INDEX.md`,
-  `docs/BACKLOG.md` and `docs/OPEN.md`. Both branch off master and both edit those files, as the brief
-  required. Whichever merges second re-derives OPEN.md's count.
+- *(Was: merging this branch and `tenancy/survey` would conflict. Moot since 2026-10-01: `tenancy/survey`
+  was not merged; it is archived as the tag `archive/tenancy-survey-1`.)*
 
 ## Checks run
 

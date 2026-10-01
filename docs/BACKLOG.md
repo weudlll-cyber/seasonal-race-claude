@@ -986,12 +986,11 @@ rather than a threshold nobody has found yet.**
 
 ## Phases 5–7 — the planned server, deployment and multi-tenant arc (moved from ROADMAP 2026-08-23)
 
-★★ **THE MULTI-TENANT HALF OF THIS SECTION'S TITLE IS NO LONGER ITS SUBJECT, 2026-09-25.** The owner
-stated the tenancy boundary that day — per team: brands, player groups and team-created tracks;
-shared: the shipped tracks and the racer types — and it is recorded on the **TENANCY** row above,
-which owns the subject and stays open as work. The arc was being carried here as a future phase while
-the same subject sat at the tree one section up; they are one subject now. **Nothing here is the home
-of a tenancy fact.** What this section still owns is the SERVER and DEPLOYMENT work.
+★★ **THE MULTI-TENANT HALF OF THIS SECTION'S TITLE IS NO LONGER ITS SUBJECT.** It was folded into
+the **TENANCY** row on 2026-09-25, and that row was **closed on 2026-10-01: the boundary will not be
+built** (decision of the owner, 2026-10-01; PART TWO, with the survey archived as the tag
+`archive/tenancy-survey-1`). **Nothing here is the home of a tenancy fact.** What this section still
+owns is the SERVER and DEPLOYMENT work.
 
 **MOVED WHOLE from `docs/ROADMAP.md` by ROADMAP-FOLD-1 (NIGHT-2026-08-23 piece 3), under his decision
 D24. Not re-verified and no verdict changed** — the text below is the roadmap's, unedited. It sits
@@ -1082,8 +1081,8 @@ Built fresh — the original server scaffold was deleted (incompatible architect
         back by `server/src/routes/races.js`: POST at `:62`, a paged GET at `:121`, GET by short key
         at `:140`.
       - **The races are already team-scoped**, so an evaluation is already answering for one team and
-        no other: `server/src/routes/races.js:127` and `:142`. See the **TENANCY** row for the
-        boundary that governs this.
+        no other: `server/src/routes/races.js:127` and `:142`. Races stay scoped per team; no further
+        boundary is built (the **TENANCY** row, PART TWO, closed 2026-10-01).
       - **Finish time is already indexed** — `CREATE INDEX races_by_team ON races(team_normalized,
         finished_at DESC)` at `server/src/races/raceStore.js:162`, which is exactly the shape a
         period query needs: one team, ordered by when the race ended. ★ *(Address corrected: the
@@ -1096,79 +1095,6 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       rule, whatever selects what counts — belong in the **reorganised dev screen**, which is
       `B-UX2`, commissioned the same day. Building them into today's dev screen means building them
       into the thing `B-UX2` exists to replace. **`B-UX2`'s inventory comes first.**
-- [ ] ★ **TENANCY — what is scoped and what is not. (Two rows until 2026-09-25: this and
-      "Per-tenant localStorage namespace or server-side data isolation", folded in here as one
-      subject.)**
-      **SCOPED TODAY:** races. `server/src/routes/races.js:127` and `:142` filter by the team stamped
-      on the request from the user's own database record, so a race is visible to its author's team
-      and to no other, decided on the server.
-      **NOT SCOPED:** `server/src/routes/tracks.js`, `brands.js`, `racers.js` and `playerGroups.js` —
-      every organizer shares one set of each.
-      **Branding profiles exist** as a feature (`brands.js`, CRUD at operator level and above, logo
-      upload, serve and delete); what does not exist is one set of them PER organizer.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — BRANDING PROFILES exist, ISOLATED TRACK SETS do
-      not.** `server/src/routes/brands.js` is a built feature: brand CRUD at operator level or above,
-      with logo upload, serve and delete, and admin promote/export.
-      **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
-      of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
-      track sets only.**
-
-      ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
-      of the work, not its completion.**
-
-      ★★ **AND THE ORDER IS DECIDED, 2026-09-27: BUILD THE BOUNDARY BEFORE A SECOND ORGANISER IS
-      INVITED.** The boundary itself is unchanged from 2026-09-25; what is settled now is that it
-      comes first. The alternative reading — invite, and accept that everything but races is common
-      until the work is done — is rejected.
-      ★★ **A WARNING THAT TRAVELS WITH THIS ROW.**
-      `server/src/routes/crossTeamAccess.audit.test.js` is green, **and it asserts today's truth
-      INCLUDING WHERE THAT TRUTH IS "NO SCOPING"** — it pins both that team B cannot read team A's
-      races and that six of seven modules carry no team vocabulary at all. That is correct for an
-      audit probe and **wrong the day the boundary is built.** Nobody may read that green as a
-      boundary that exists, and **whoever builds the boundary changes that test in the same
-      commit.**
-
-      **PER TEAM** — each team has its own and sees no other team's:
-      - **brands** (branding profiles)
-      - **player groups**
-      - **tracks the team itself created**
-
-      **SHARED** — one set for everybody, not duplicated per team:
-      - **the shipped tracks**
-      - **the racer types**
-
-      ★ **So "team-created" is the line inside tracks**, and it is the only place in the boundary
-      where one collection splits two ways. A shipped track is common ground; a track a team drew is
-      theirs. Nothing in the tree distinguishes the two today — `server/src/routes/tracks.js` contains
-      **zero** occurrences of "team" — so that distinction is part of the work, not a filter waiting
-      to be switched on.
-
-      ★★ **THIS IS PREPARATION, NOT A DEFECT.** Nothing is leaking and nothing is broken. There is one
-      team using the system, so an unscoped collection and a scoped one look identical from the
-      outside; the boundary is being written down now so that the day a second team exists the answer
-      already exists too. **A row that reads like a bug report would be wrong about what this is.**
-
-      ★ **What is true at the tree today, so the starting point is not re-derived later:**
-      - **Races are scoped, on the server.** `server/src/routes/races.js:127` pages the list by the
-        team stamped on the request, and `:142` takes the team as a required argument to the
-        short-key lookup — so a key from another team answers **404**, the same answer as a key that
-        was never issued, deliberately, because "forbidden" would confirm the race exists.
-      - **Nothing else is scoped.** `tracks.js`, `brands.js`, `racers.js` and `playerGroups.js`
-        contain **zero** occurrences of "team" between them (counted 2026-09-25).
-      - **A team is deliberately NOT a permission** — `server/src/auth/teams.js:9-12` states it: it
-        is data about a user, consulted by neither `requireAuth` nor `requireAdmin`. Scoping a
-        collection per team is therefore **not** a matter of adding a role; the boundary and the
-        permission system are separate machines and this decision touches only the first.
-      - ★ **And a new route cannot be added quietly.**
-        `server/src/auth/routePolicyDrift.test.js:133-148` fails on any mutating `/api` route that is
-        neither admin-classified nor on the operator+ allowlist, naming each one. So the work below
-        will be met by a red test rather than by silence if a route arrives unclassified.
-
-      ★ **THE MULTI-TENANT ARC IS FOLDED IN HERE** (from *Phases 5–7 — the planned server, deployment
-      and multi-tenant arc*, and from the collected-wishes line in `OPEN.md`). It was being carried
-      as a separate future phase while this row carried the same subject at the tree; they are one
-      subject, and the boundary above is what that arc was waiting for somebody to state.
 
 ---
 
@@ -1231,10 +1157,10 @@ are in PART TWO with what closed them; these are the ones still standing.
 
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
-several organizers on one server. **Therefore the tenancy boundary (decided 2026-09-25; order decided
-2026-09-27: build it before a second organizer is invited) is part of the FIRST RELEASE.** The
-TENANCY row is the work; [reports/release/](../reports/release/INDEX.md) is where the release work
-reports.
+several organizers on one server. **On 2026-10-01 the owner also decided that the tenancy boundary
+will NOT be built:** organizers on one installation share everything that is shared today, and races
+stay scoped per team as already built (the TENANCY row, PART TWO).
+[reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
 - [ ] ★ **PERSONAL DATA — inventoried 2026-10-01; three kinds cannot be deleted except by hand.**
       RELEASE-BASICS-1 (d)1, **facts only, no legal assessment**; the full table (every field, file,
@@ -2606,6 +2532,88 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★ **TENANCY — CLOSED 2026-10-01: THE BOUNDARY WILL NOT BE BUILT (decision of the owner,
+      2026-10-01).** Organizers on one installation share everything that is shared today; races stay
+      scoped per team exactly as already built (`server/src/routes/races.js:69`, `:91`). This
+      supersedes the boundary decided on 2026-09-25 and the order decided on 2026-09-27, both kept
+      below as they stood. **The survey and the build plan T1–T8 are archived as the tag
+      `archive/tenancy-survey-1`** (`042f06cc`, `reports/release/TENANCY-SURVEY-1.md` in that tree);
+      nothing from it was built. What an operator needs to know is in [DEPLOYMENT.md](DEPLOYMENT.md),
+      *What organizers on one installation share*. *The row as it stood:*
+      **TENANCY — what is scoped and what is not. (Two rows until 2026-09-25: this and
+      "Per-tenant localStorage namespace or server-side data isolation", folded in here as one
+      subject.)**
+      **SCOPED TODAY:** races. `server/src/routes/races.js:127` and `:142` filter by the team stamped
+      on the request from the user's own database record, so a race is visible to its author's team
+      and to no other, decided on the server.
+      **NOT SCOPED:** `server/src/routes/tracks.js`, `brands.js`, `racers.js` and `playerGroups.js` —
+      every organizer shares one set of each.
+      **Branding profiles exist** as a feature (`brands.js`, CRUD at operator level and above, logo
+      upload, serve and delete); what does not exist is one set of them PER organizer.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — NARROWED — BRANDING PROFILES exist, ISOLATED TRACK SETS do
+      not.** `server/src/routes/brands.js` is a built feature: brand CRUD at operator level or above,
+      with logo upload, serve and delete, and admin promote/export.
+      **The isolation half is absent:** `server/src/routes/tracks.js` contains **zero** occurrences
+      of "team" — tracks are not scoped to an organizer at all. **The row now claims the isolated
+      track sets only.**
+
+      ★★ **THE BOUNDARY — DECIDED BY THE OWNER, 2026-09-25. The row STAYS OPEN: this is the shape
+      of the work, not its completion.**
+
+      ★★ **AND THE ORDER IS DECIDED, 2026-09-27: BUILD THE BOUNDARY BEFORE A SECOND ORGANISER IS
+      INVITED.** The boundary itself is unchanged from 2026-09-25; what is settled now is that it
+      comes first. The alternative reading — invite, and accept that everything but races is common
+      until the work is done — is rejected.
+      ★★ **A WARNING THAT TRAVELS WITH THIS ROW.**
+      `server/src/routes/crossTeamAccess.audit.test.js` is green, **and it asserts today's truth
+      INCLUDING WHERE THAT TRUTH IS "NO SCOPING"** — it pins both that team B cannot read team A's
+      races and that six of seven modules carry no team vocabulary at all. That is correct for an
+      audit probe and **wrong the day the boundary is built.** Nobody may read that green as a
+      boundary that exists, and **whoever builds the boundary changes that test in the same
+      commit.**
+
+      **PER TEAM** — each team has its own and sees no other team's:
+      - **brands** (branding profiles)
+      - **player groups**
+      - **tracks the team itself created**
+
+      **SHARED** — one set for everybody, not duplicated per team:
+      - **the shipped tracks**
+      - **the racer types**
+
+      ★ **So "team-created" is the line inside tracks**, and it is the only place in the boundary
+      where one collection splits two ways. A shipped track is common ground; a track a team drew is
+      theirs. Nothing in the tree distinguishes the two today — `server/src/routes/tracks.js` contains
+      **zero** occurrences of "team" — so that distinction is part of the work, not a filter waiting
+      to be switched on.
+
+      ★★ **THIS IS PREPARATION, NOT A DEFECT.** Nothing is leaking and nothing is broken. There is one
+      team using the system, so an unscoped collection and a scoped one look identical from the
+      outside; the boundary is being written down now so that the day a second team exists the answer
+      already exists too. **A row that reads like a bug report would be wrong about what this is.**
+
+      ★ **What is true at the tree today, so the starting point is not re-derived later:**
+      - **Races are scoped, on the server.** `server/src/routes/races.js:127` pages the list by the
+        team stamped on the request, and `:142` takes the team as a required argument to the
+        short-key lookup — so a key from another team answers **404**, the same answer as a key that
+        was never issued, deliberately, because "forbidden" would confirm the race exists.
+      - **Nothing else is scoped.** `tracks.js`, `brands.js`, `racers.js` and `playerGroups.js`
+        contain **zero** occurrences of "team" between them (counted 2026-09-25).
+      - **A team is deliberately NOT a permission** — `server/src/auth/teams.js:9-12` states it: it
+        is data about a user, consulted by neither `requireAuth` nor `requireAdmin`. Scoping a
+        collection per team is therefore **not** a matter of adding a role; the boundary and the
+        permission system are separate machines and this decision touches only the first.
+      - ★ **And a new route cannot be added quietly.**
+        `server/src/auth/routePolicyDrift.test.js:133-148` fails on any mutating `/api` route that is
+        neither admin-classified nor on the operator+ allowlist, naming each one. So the work below
+        will be met by a red test rather than by silence if a route arrives unclassified.
+
+      ★ **THE MULTI-TENANT ARC IS FOLDED IN HERE** (from *Phases 5–7 — the planned server, deployment
+      and multi-tenant arc*, and from the collected-wishes line in `OPEN.md`). It was being carried
+      as a separate future phase while this row carried the same subject at the tree; they are one
+      subject, and the boundary above is what that arc was waiting for somebody to state.
+
 - [x] ★★ **RELEASE-BASICS-1 — delivery basics for the first release. Opened and closed 2026-10-01
       (branch `release/basics`), on the owner's facts of 2026-10-01** (recorded in PART ONE,
       *Delivering to someone else*). Report: [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
@@ -2936,7 +2944,7 @@ closes made a factual claim, what that claim really was when it was checked at t
 
       ★ **Two of the six that were collected under this heading are NOT closed here, because they
       are alive somewhere else on this list:** the **server / deployment / multi-tenant arc** is
-      folded into the TENANCY row, which stays open as work; and **`B-UX3`**, the written reference
+      folded into the TENANCY row (closed 2026-10-01, not built); and **`B-UX3`**, the written reference
       for every dev-screen value, is folded into `B-UX2`, which is COMMISSIONED. Neither is closed
       and neither is dropped — they moved.
 
@@ -4985,7 +4993,7 @@ one it held, moved whole and unedited, same as everything else in this section.
 | Phase T — Tooltip Retrofit (planned) | PLANNED | BACKLOG PART ONE — `V-1`–`V-9` / `T-1`–`T-4` |
 | Phase 5 — Race-Integrity Server & Leaderboard (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
 | Phase 6 — Public Deployment (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
-| Phase 7 — Multi-Tenant (planned) | PLANNED | BACKLOG PART ONE — *Phases 5–7* |
+| Phase 7 — Multi-Tenant | **NOT BUILT** — decision of 2026-10-01 | BACKLOG PART TWO — the *TENANCY* row |
 | Session Log | HISTORY | BACKLOG PART TWO — *Phase history* |
 | Planned Phase Order (as of 2026-05-06) | HISTORY | BACKLOG PART TWO — *Phase history* |
 | 2026-07-10 — status update (INFRA: sim-trust) | HISTORY | BACKLOG PART TWO — *Phase history* |

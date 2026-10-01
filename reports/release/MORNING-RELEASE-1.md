@@ -3,9 +3,14 @@
 **Updated after each piece and pushed each time.** Last update: **after piece 2 — the night is finished.**
 
 **Why this night:** the owner's facts of 2026-10-01 say the software is to be downloadable for many
-server operators, and each operator must be able to host several organizers on one server. So the
-tenancy boundary belongs in the first release. Two pieces: delivery basics, and a survey and build
-plan for tenancy. **Nothing is merged. Both branches wait for you.**
+server operators, and each operator must be able to host several organizers on one server. Two
+pieces: delivery basics, and a survey and build plan for tenancy.
+
+★ **Superseded the same day, 2026-10-01: the owner decided that the tenancy boundary will NOT be
+built**, and approved merging `release/basics`. Organizers on one installation share everything that
+is shared today; races stay scoped per team. `tenancy/survey` was not merged; it is archived as
+the tag `archive/tenancy-survey-1` (`042f06cc`), which holds `reports/release/TENANCY-SURVEY-1.md`. The piece-2 entries and the tenancy questions below are kept as they were written
+that night; **they are answered by that decision and are no longer open.**
 
 ## Done
 
@@ -26,7 +31,7 @@ plan for tenancy. **Nothing is merged. Both branches wait for you.**
   - Nothing in the race moves; no fingerprint.
 
 - **Piece 2, tenancy survey — branch `tenancy/survey`, pushed, NOT merged.**
-  `reports/release/TENANCY-SURVEY-1.md` on that branch. No product change.
+  `reports/release/TENANCY-SURVEY-1.md`, now in the tag `archive/tenancy-survey-1`. No product change.
   - **What is true today:** only races are kept apart per organizer. Tracks, brands, player groups,
     racer types and surface classes are one shared set. An organizer made `admin` would manage
     everybody's users. **On one shared browser, the second person sees the first person's local race
