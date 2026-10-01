@@ -1,6 +1,6 @@
 # MORNING-RELEASE-1 — the night chain of 2026-10-01, towards a deliverable state
 
-**Updated after each piece and pushed each time.** Last update: **after piece 1** (piece 2 running).
+**Updated after each piece and pushed each time.** Last update: **after piece 2 — the night is finished.**
 
 **Why this night:** the owner's facts of 2026-10-01 say the software is to be downloadable for many
 server operators, and each operator must be able to host several organizers on one server. So the
@@ -25,10 +25,21 @@ plan for tenancy. **Nothing is merged. Both branches wait for you.**
     of 2026-08-31.
   - Nothing in the race moves; no fingerprint.
 
+- **Piece 2, tenancy survey — branch `tenancy/survey`, pushed, NOT merged.**
+  `reports/release/TENANCY-SURVEY-1.md` on that branch. No product change.
+  - **What is true today:** only races are kept apart per organizer. Tracks, brands, player groups,
+    racer types and surface classes are one shared set. An organizer made `admin` would manage
+    everybody's users. **On one shared browser, the second person sees the first person's local race
+    history and unsaved track drawings**, and races recorded offline would probably be uploaded into
+    the second person's organizer (read from the code, not tested).
+  - **A build plan in eight pieces**, T1 to T8. The first, T1, closes a small gap in races and
+    needs no decision from you: a retried race upload can be answered with another organizer's race
+    key.
+  - **Eight questions for you**, one decision each, listed below.
+
 ## Running
 
-- **Piece 2, tenancy survey — branch `tenancy/survey`.** Read-only survey finished; report being
-  written.
+- Nothing.
 
 ## Open — found tonight, written into the backlog
 
@@ -41,6 +52,27 @@ plan for tenancy. **Nothing is merged. Both branches wait for you.**
 
 ## Needs your word
 
+**The tenancy questions** (the options and what each means are in TENANCY-SURVEY-1, *QUESTIONS*):
+
+1. Surface classes: one set for the whole server, or each organizer their own?
+2. Who manages an organizer's users: only the person running the server, or each organizer's own
+   administrator?
+3. May an organizer change a shipped track: no (they make their own copy), only the server's
+   administrator, or anyone (as today)?
+4. What does a new organizer get of your shipped brand and "Example Group": their own copy, shared
+   read-only templates, or nothing?
+5. Your existing brands, groups and drawn tracks: yours only after the boundary, or shared?
+6. The "updated records replaced your settings" notice: only the server's administrator, each
+   organizer, or as today?
+7. On a shared browser: each person's own things kept apart, or everything cleared at sign-out?
+8. Racer types an organizer creates: shared like the built-in ones, or kept per organizer?
+
+**And:**
+
+- **Merge `tenancy/survey`?** It changes only documents. Merging it after `release/basics` gives
+  small conflicts in `reports/release/INDEX.md`, `docs/BACKLOG.md` and `docs/OPEN.md`; the second
+  merge re-derives OPEN.md's count.
+
 - **Merge `release/basics`?** Look at the installation guide in `docs/DEPLOYMENT.md` first.
 - **The server's default address binding** is still "every interface". Now there is a setting for
   "this machine only"; whether that should become the default is your choice (BACKLOG row B4).
@@ -51,9 +83,10 @@ plan for tenancy. **Nothing is merged. Both branches wait for you.**
 
 ## Checks
 
-| check | piece 1 |
-| --- | --- |
-| new tests | 24, all green; each new piece sabotaged once and caught |
-| install / update / rollback followed literally | run 2: passed every step |
-| `node scripts/engine-reach.mjs --check` | none of 18 paths can reach the engine |
-| `npm run verify -- --premerge` | **PASS 22, FAIL 0, SKIP 14** (second run; the first was red on one over-long line, fixed) |
+| check | piece 1 | piece 2 |
+| --- | --- | --- |
+| new tests | 24, all green; each new piece sabotaged once and caught | none (read-only) |
+| install / update / rollback followed literally | run 2: passed every step | — |
+| `node scripts/engine-reach.mjs --check` | none of 18 paths can reach the engine | documents only |
+| `npm run verify -- --premerge` | **PASS 22, FAIL 0, SKIP 14** (second run; the first was red on one over-long line, fixed) | not run: documents only. `check-index`, its tests (9/9) and `check-doc-links` (0 dangling) were run, and the commit hook's 9 guards passed |
+| BACKLOG PART ONE open rows | 15 (B2 closed, two opened) | 14 (the TENANCY row stays open, with the plan) |
