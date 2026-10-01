@@ -67,7 +67,9 @@ listenOn(app, PORT, bindAddress, () => {
   // and the line after it names the warning that must NOT appear beside it. That reading only works
   // while the go-ahead and the warnings are on different streams.
   // eslint-disable-next-line no-console -- deliberate: the startup banner is normal output, above
-  console.log(`RaceArena server running on port ${PORT}${bindAddress ? ` (bound to ${bindAddress})` : ''}`);
+  console.log(
+    `RaceArena server running on port ${PORT}${bindAddress ? ` (bound to ${bindAddress})` : ''}`
+  );
   // PUBLISH-STEPS-1: say what this install CANNOT do, while the operator is still looking at the
   // terminal they started it in. It only warns — a same-origin install needs no RA_CLIENT_ORIGIN,
   // so refusing to start without one would break the arrangement SERVE-SPA-1 moved towards. The

@@ -218,7 +218,7 @@ The mechanism's own statement of the rule is `server/src/seedDelivery.js:10-30`.
 | --- | --- | --- |
 | `server/src/bindAddress.js` | 0 | 62 |
 | `server/src/bindAddress.test.js` | 0 | 55 |
-| `server/src/index.js` | 70 | 76 |
+| `server/src/index.js` | 70 | 78 |
 | `scripts/status.mjs` | 0 | 171 |
 | `scripts/status.test.mjs` | 0 | 161 |
 | `scripts/backup.mjs` | 327 | 341 |
