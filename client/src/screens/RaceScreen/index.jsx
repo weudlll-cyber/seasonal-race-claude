@@ -33,7 +33,6 @@ import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
 import { assignRaceNumbers } from '../../modules/raceNumbers.js';
 import { assignCoat, assignPattern, PATTERN_IDS } from '../../racer-types/coatAssignment.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
-import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 // RACE-PARAMS-2: `normalSpeedFrom` is no longer imported here — `buildRaceCoreParams` derives it
 // from the same one home, and a second caller is a second place for it to be derived differently.
@@ -107,6 +106,7 @@ import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import { nextBeatStart } from '../../modules/camera/startCeremony.js';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import { endingOnRaceScreenMs } from './endingSchedule.js';
+import { splitFinishOrder, buildRaceResults } from './raceResults.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -1227,40 +1227,15 @@ export default function RaceScreen() {
           if (st.finishedCount >= nRacers) {
             st.phase = PHASE.FINISHED;
             setPhase(PHASE.FINISHED);
-            const byRank = st.racers
-              .filter((r) => r.finished)
-              .sort((a, b) => a.finishRank - b.finishRank);
-            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+            // P4-RACESCREEN-SPLIT-1: the finish order and the result payload are built in
+            // raceResults.js; the write and the test-race gate stay here.
+            const { byRank, rest } = splitFinishOrder(st.racers);
             // PARTICLES-VISIBILITY-12: a test race hands NO result on — the result screen is where a
             // race is recorded (ResultScreen `recordFinishedRace`), and a test race records nothing.
             if (!raceData.testRace)
               sessionStorage.setItem(
                 'raceResults',
-                JSON.stringify({
-                  finishOrder: [...byRank, ...rest].map((r) => ({
-                    name: r.name,
-                    icon: r.icon,
-                    color: r.color,
-                    index: r.index,
-                    lap: r.lap ?? 1,
-                    progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
-                    finishTimeMs: r.finishTimeMs ?? null,
-                  })),
-                  elapsedTime: Math.round((ts - st.raceStart) / 1000),
-                  race: raceData,
-                  // RACE-SAVE-3: THE CONFIG WORLD THIS RACE ACTUALLY RAN WITH, carried to the result
-                  // screen rather than re-gathered there.
-                  //
-                  // `raceData` alone cannot describe a race. Two of the identifier's nine inputs are
-                  // read from the HOST at race start and never travel in the payload — the config
-                  // world is one of them (`cfgWorld` above, the same value the badge and the camera
-                  // marker use). The result screen has only `raceData`, so it would have to gather
-                  // the world itself, from the loaders that read the Dev Screen AS IT IS NOW: change
-                  // a setting while the race is on screen and the stored race would claim values it
-                  // never ran. That is the exact class RACE-IDENTIFIER-1 exists to prevent, and it is
-                  // why this is a carry rather than a second gather.
-                  worldConfig: cfgWorld,
-                })
+                JSON.stringify(buildRaceResults({ byRank, rest, st, ts, raceData, cfgWorld }))
               );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
             // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
