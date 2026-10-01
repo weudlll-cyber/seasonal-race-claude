@@ -8,6 +8,9 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MORNING-2026-10-02.md](MORNING-2026-10-02.md) — the morning sheet for the 2026-10-02 night chain:
+  done / running / open / needs the owner's word, updated after every piece on that piece's branch.
+
 - [BREAKAWAY-COUNT-2026-09-20.md](BREAKAWAY-COUNT-2026-09-20.md) — **★★★ 16 in 100, and every
   previous count measured the wrong distance** (2026-09-20, `diag/breakaway-count-1`; **a count, no
   engine source, nothing minted**). ★★ **In the last 30% of the race a breakaway by the OWNER'S
