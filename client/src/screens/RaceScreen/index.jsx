@@ -20,7 +20,8 @@ import { PHASE } from './racePhase.js';
 import { renderRaceFrame } from './renderRaceFrame.js';
 import { createLabelFormHold } from './labelFormHold.js';
 import { frameCameraInputs } from './frameCameraInputs.js';
-import { attachRenderState, attachRacerRenderState, stepFocusFade } from './renderState.js';
+import { attachRenderState, attachRacerRenderState } from './renderState.js';
+import { advanceSlowmo } from './battleSlowmo.js';
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
@@ -1044,46 +1045,8 @@ export default function RaceScreen() {
         // second site of a sentence `docs/CAMERA_DIRECTOR.md` carried in the same wrong direction.)
         {
           const hud = camDirRef.current?.hudState;
-          const isBattleZoom = hud === 'BATTLE_ZOOM';
-          // 15a: the photo-finish shot reuses the same slow-motion path as BATTLE (uniform,
-          // global time-dilation — headless sim is sim-time based, fairness unaffected).
-          const isPhotoFinish = hud === 'PHOTO_FINISH';
-          const isSlowmoState = isBattleZoom || isPhotoFinish;
-          const smFactor = isPhotoFinish
-            ? (cameraConfigRef.current.photoFinishSlowmoFactor ??
-              DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor)
-            : (cameraConfigRef.current.battleSlowmoFactor ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoFactor);
-          const smMinDurMs =
-            (cameraConfigRef.current.battleSlowmoMinDuration ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration) * 1000;
-          const smFadeDurMs =
-            (cameraConfigRef.current.battleSlowmoFadeDuration ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration) * 1000;
-          if (isSlowmoState && !st.slowmoActive) {
-            st.slowmoActive = true;
-            st.slowmoStartWallTs = ts;
-            st.slowmoIsPhotoFinish = isPhotoFinish;
-          }
-          if (!isSlowmoState && st.slowmoActive) {
-            // 15a-predictive: a PHOTO_FINISH slowmo releases IMMEDIATELY when the shot ends
-            // (state left PHOTO_FINISH on the 2nd crossing) so normal speed returns for the
-            // zoom-out. BATTLE slowmo keeps its min-duration guard unchanged.
-            const releaseOk = st.slowmoIsPhotoFinish || ts - st.slowmoStartWallTs >= smMinDurMs;
-            if (releaseOk) {
-              st.slowmoActive = false;
-              st.slowmoIsPhotoFinish = false;
-            }
-          }
-          const fadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
-          st.slowmoFadeProgress = st.slowmoActive
-            ? Math.min(1, st.slowmoFadeProgress + fadeStep)
-            : Math.max(0, st.slowmoFadeProgress - fadeStep);
-          const effectiveSlowmoFactor = 1.0 - (1.0 - smFactor) * st.slowmoFadeProgress;
-          // ── BATTLE focus fade (same duration as slowmo fade) ─────────────────
-          stepFocusFade(st, isBattleZoom, rawDt, smFadeDurMs);
-          if (st.slowmoTs === null) st.slowmoTs = ts;
-          st.slowmoTs += rawDt * effectiveSlowmoFactor;
+          // P4-RACESCREEN-SPLIT-1: the slow-motion clock itself lives in battleSlowmo.js.
+          const effectiveSlowmoFactor = advanceSlowmo(st, hud, ts, rawDt, cameraConfigRef.current);
           // ── Fixed-timestep physics accumulator ─────────────────────────────
           // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
           // long frames (50ms) would yield 3 steps but are capped at 2 (see catch-up cap below); short frames (12ms) yield 0.
