@@ -131,7 +131,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       // OVERVIEW subject sat a median 13.78 pp of the frame away from where the framing rule put
       // him — 3.65x every other state pooled (3.78 pp) — and the old value carried no reason in the
       // code. At 0.25 that halves to 6.78 pp (p95 25.57 -> 19.64) and nothing else moves.
-      trackingTC: 0.25,
+      trackingTC: 1.5,
       // ENTRY DELIBERATELY LEFT SLOW. The glide into the wide shot is intentional, and the
       // measurement CANNOT condemn it: the lag metric samples the tracking phase only, so entryTC
       // 0.8 vs 1.5 moved the OVERVIEW median by 0.09 pp (6.78 vs 6.69) — inside the noise of the
@@ -146,7 +146,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
     },
     LEADER_ZOOM: {
-      visibleCorridors: 0.75, // 225 world px — the reference shot, the owner's own eye
+      visibleCorridors: 0.85, // the reference shot, the owner's own eye
       // LEADER-LATERAL-BUILD-1 — THE OWNER'S RULE: hold the centreline, step aside only when the
       // leader would otherwise be clipped, and only as far as needed. Both numbers below are
       // measured, not chosen; LEADER-LATERAL-BUILD-1 records the arm each came from.
@@ -175,7 +175,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
-      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
+      visibleCorridors: 0.8, // tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -188,7 +188,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
-      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
+      visibleCorridors: 0.7, // tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -217,7 +217,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     LEAD_CHANGE: {
-      visibleCorridors: 0.75, // same framing as LEADER — only the subject differs
+      visibleCorridors: 0.9, // wider than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -328,7 +328,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the config key-by-key from THESE keys (d94a7b9d), a stored `true` was dropped on every load —
   // the checkbox appeared to work and the rings never came back. A key the renderer reads must
   // exist here or it cannot survive loading; `scripts/check-config-keys.mjs` now fails if one does not.
-  highlightHeroes: false,
+  highlightHeroes: true,
   // ENDGAME-THRESHOLD-095: the endgame — and with it the run-in's window — opens at 95% of the way
   // to the finish rather than 90%. THE OWNER'S DECISION, 2026-08-18: he had been running 0.95
   // himself, judged it on a production build on 2026-08-17, and waived a before/after sweep, so no
@@ -344,7 +344,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one
   // value means the same on-track closeness on every track (replaced the world-px test that
   // rejected every cluster on the expanded 3072–6144px worlds).
-  battlePulkThresholdT: 0.05,
+  battlePulkThresholdT: 0.001,
   // Isolation threshold (arc): no non-group racer may be within this lap fraction of any group
   // member. Ships disabled (0 = off; raise via DevScreen to re-enable the "isolated duel" filter).
   // When re-enabled, a value ≈ 1.5 × battlePulkThresholdT is suggested.
@@ -388,7 +388,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // carried a stale 0.75 while this said 0.65, and all three now READ this value rather than
   // copying it (LESSONS L207), so the slider, the diagnostic HUD and the game cannot disagree
   // again whatever it is set to next.
-  outcomePhaseThreshold: 0.75,
+  outcomePhaseThreshold: 0.65,
   // COMEBACK start-rank filter: racer must have been at least this far back (as fraction of
   // field) at the start of the observation window. Prevents triggering for racers already
   // near the front. E.g. 0.40 = must have been in the bottom 60% of the field.
@@ -437,7 +437,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // is one rule, not three: the shot opens without panning until the leader reaches the place in
   // frame he holds for the rest of the race, and from that moment the camera follows him.
   startWindowMs: 10000,
-  battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
+  battleCooldownMs: 20000, // ms after leaving BATTLE before it can re-trigger
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
@@ -446,7 +446,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // in the camera is, not an input to it. OVERVIEW now runs the same rule as every other state:
   // anchor the leader, guarantee the corridor, sit forward of centre. See camera/framingRule.js.
   // Director (weighted random) — candidate pool weights (0.0–1.0)
-  battleWeight: 0.8,
+  battleWeight: 0,
   leadChangeWeight: 0.7,
   comebackWeight: 0.6,
   overviewWeight: 0.3,
@@ -475,7 +475,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // about the winner card. RAISING THE CARD ALONE WOULD HAVE DONE NOTHING, because the card's window
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
   // This is the ROOM; `winnerCardMs` below is the tenant.
-  finishPauseMs: 3500, // ms pause after last racer finishes before leaderboard
+  finishPauseMs: 4000, // ms pause after last racer finishes before leaderboard
   // ── THE HELD OVERVIEW (ENDING-HOLD-1) ─────────────────────────────────────────────────────────
   // Extra time on the settled finish picture AFTER the last racer is home, BEFORE `finishPauseMs`
   // starts running. The two are added, so the ending lengthens by exactly this and nothing else
@@ -552,7 +552,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
   // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
   finishedSplashEnabled: false,
-  finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
+  finishOverviewLookbackPx: 150, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
   // can predict the whole sequence from this single slider: 3rd at 0, 2nd at one beat, the WINNER at
@@ -609,7 +609,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   //
   // ZERO MEANS NO CARD AT ALL — not a zero-length fade. Nothing is scheduled and the component
   // renders null, so the race screen at 0 is the race screen before this key existed.
-  winnerCardMs: 3000,
+  winnerCardMs: 4000,
   // Photo-Finish (15a): when the first two finishers cross essentially together, show a tight
   // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
   // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.
@@ -807,7 +807,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   //
   // 1500 ms: the 4x arrival spread over it gives about 0.9 halvings/s of visible width, against the
   // 2.9 the step delivered. Longer is calmer and spends more of the shot arriving.
-  corridorCapArriveMs: 1500,
+  corridorCapArriveMs: 5000,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
@@ -888,7 +888,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // DEFAULT OFF, ON MY OWN MEASUREMENT, and the numbers are in reports/night/LABEL-DEGRADE-1.md.
   // Shipping it on against them would have been the wrong call; the toggle is here so his eye can
   // overrule my arithmetic, which is the one thing it can legitimately do.
-  labelNamesWhenRoom: false,
+  labelNamesWhenRoom: true,
   // ── HOW LONG A NAME MUST BE EARNED FOR (LABEL-HOLD-1) ─────────────────────────────────────────
   // A label shows the NAME once its box has been clear of every other label and racer for this long
   // continuously; it gives the name up the instant it stops being clear. Promotion only — the
@@ -985,7 +985,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // default of 5 answered by a fallback of 3 is the L199 trap rather than a second opinion —
   // `DEFAULT_MIN_RACERS_VISIBLE` in camera/framingConfig.js (the partial-config fallback) and the
   // Dev Screen slider, which now reads this object instead of carrying a literal at all.
-  minRacersVisible: 5,
+  minRacersVisible: 8,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.
