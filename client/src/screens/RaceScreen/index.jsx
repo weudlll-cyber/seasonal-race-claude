@@ -35,35 +35,26 @@ import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
 import { assignRaceNumbers } from '../../modules/raceNumbers.js';
 import { assignCoat, assignPattern, PATTERN_IDS } from '../../racer-types/coatAssignment.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
-import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
-// RACE-PARAMS-2: `normalSpeedFrom` is no longer imported here — `buildRaceCoreParams` derives it
-// from the same one home, and a second caller is a second place for it to be derived differently.
-import { MIN_LAPS } from '../../modules/durationModel.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
-import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { buildRaceCoreParams } from '../../modules/raceParams.js';
-import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
-import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { applyRaceActionStage, normalizeRaceActionStage } from '../../modules/raceActionStage.js';
-import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
+// P4-RACESCREEN-SPLIT-1: the world a race is built from — racer-type fields, the config world, the
+// action stage, the badge and the engine parameters — is resolved there (RACE-IDENTIFIER-1/-2,
+// RACE-ACTION-CONTROL-1, RACE-PARAMS-2). RACE-PARAMS-2: `normalSpeedFrom` is not imported on this
+// path at all — `buildRaceCoreParams` derives it from the same one home.
+import { resolveRaceWorld } from './raceWorldSetup.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
-import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
-import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
-import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
+import { buildCameraMarker } from '../../modules/camera/cameraMarker.js';
 import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
 // where a bare `virtual:` specifier cannot resolve.
 import RA_BUILD from 'virtual:ra-build';
-// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
-import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
 // STAY-ON-THE-FINISH-1: the operator's own defaults, for the one key this screen acts on.
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
@@ -458,82 +449,6 @@ export default function RaceScreen() {
 
     const trackEmoji = racerType.getEmoji() ?? null;
 
-    // ── ★ RACE-IDENTIFIER-2: THE RACER TYPE IS PART OF THE RACE, AND IT WAS BEING TAKEN FROM THIS
-    //    MACHINE. This is the defect the owner hit: he retuned a racer, pasted an identifier, and
-    //    got HIS racer at HIS speed under the identifier's name.
-    //
-    //    `getRacerType` returns the type with THIS host's stored overrides already applied
-    //    (`racer-types/index.js:293-300` applies them at boot). The identifier has recorded the
-    //    same fields all along — `effectiveRacerTypes`, which `exportRaceConfig.js` builds from
-    //    `SIM_TYPE_FIELDS` — and nothing on the race path read them. `speedMultiplier` is a
-    //    first-order physics input, so the result was a DIFFERENT RACE under the same identifier,
-    //    silently, which is the one outcome this feature exists to prevent.
-    //
-    //    NOTHING ABOUT THE ENCODING CHANGES HERE. The values were always in the string; this is the
-    //    read that was missing. A race with no identifier takes the live type exactly as before.
-    const recordedType = raceData.worldConfigOverride?.effectiveRacerTypes?.[typeId] ?? null;
-    const typeField = (name) =>
-      recordedType && name in recordedType ? recordedType[name] : racerType.config[name];
-
-    const speedMultiplier =
-      recordedType && 'speedMultiplier' in recordedType
-        ? recordedType.speedMultiplier
-        : racerType.getSpeedMultiplier();
-
-    // ── RACE-IDENTIFIER-1: where a REPRODUCED race stops reading this machine ──────────────────
-    //
-    // Every loader below reads THE HOST'S localStorage, and that is exactly why a seed alone does
-    // not repeat a race: two operators on the same seed and the same build get two races, because
-    // their stored config differs and nothing on screen says so.
-    //
-    // When a race was started from a race identifier, the identifier carries the config world it was
-    // recorded with, and the payload brings it here. `cfg()` prefers that copy and otherwise reads
-    // the host exactly as before — so with no identifier in play this is the same code it replaced,
-    // loader for loader, which is why no fingerprint moves.
-    const overrideConfigs = raceData.worldConfigOverride?.configs ?? null;
-    const cfg = (name, load) => overrideConfigs?.[name] ?? load();
-
-    const baseSpeedConfig = cfg('baseSpeedConfig', loadBaseSpeedConfig);
-
-    // ★ COPIED BEFORE IT IS MUTATED, and the copy is the whole point of the spread.
-    //
-    // `cfg()` returns the RECORDED config when a race was started from an identifier — the very
-    // object that also sits in `cfgWorld` below and, since RACE-SAVE-3, gets stored as the race's
-    // world. Writing `isOpen` onto it therefore wrote a derived field INTO THE RECORD: a repeated
-    // race was stored with one key its original did not have, so the two were no longer the same
-    // race on paper even though they ran identically. Found by the browser test in RACE-HISTORY-4,
-    // which compares a repeat's stored world against the original's.
-    //
-    // `loadRaceBehaviorConfig()` already returns a fresh object each call, so the non-override path
-    // never had the problem and is unaffected by the copy.
-    const behaviorConfig = { ...cfg('raceBehaviorConfig', loadRaceBehaviorConfig) };
-    behaviorConfig.isOpen = isOpenTrack;
-    const rowConfig = cfg('rowLayoutConfig', loadRowLayoutConfig);
-    // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
-    // than from the live Dev Screen setting — so changing the control while a race is on screen
-    // cannot change the race on screen, and a replayed payload runs the stage it recorded. A payload
-    // from before this change carries no stage and normalises to the shipped one.
-    const raceActionStage = normalizeRaceActionStage(raceData.raceActionStage);
-    // The stage is applied on TOP of the stored dynamics, and the identifier records the config
-    // world AFTER that application (`buildWorldConfig` does the same), so a reproduced race takes
-    // the recorded block whole rather than re-applying a stage to it.
-    const dynamicsConfig = overrideConfigs?.raceDynamicsConfig
-      ? overrideConfigs.raceDynamicsConfig
-      : applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
-    const frameTimingConfig = cfg('frameTimingConfig', loadFrameTimingConfig);
-
-    // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
-    // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
-    // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
-    // badge and the marker can never disagree about what this race was configured with.
-    // The badge and the camera marker must describe the world the race is ACTUALLY running with,
-    // which for a reproduced race is the recorded one.
-    const cfgWorld = raceData.worldConfigOverride ?? buildWorldConfig({ raceActionStage });
-    const cfgBadge = configFingerprintBadge(cfgWorld);
-    const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
-
-    // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
-    const autoScaleConfig = cfg('autoScaleConfig', loadAutoScaleConfig);
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     // WINNER-CARD-1: the timer list, captured here rather than read from the ref in the cleanup.
@@ -542,53 +457,34 @@ export default function RaceScreen() {
     // it is honest here rather than a silencing, because a cleanup that read the ref LATER could in
     // principle be looking at a different race's list.
     const winnerCardTimers = winnerCardTimersRef.current;
-    // RACE-IDENTIFIER-2: the other three SIM fields the identifier records, read the same way.
-    // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
-    // a retuned SIZE moves the race exactly as a retuned speed does.
-    const displaySize = typeField('displaySize');
-    // ── RACE-PARAMS-2: the whole derivation lives in `modules/raceParams.js` now ────────────────
-    //
-    // ONE-HOME-RACE-PARAMS-1 moved the SPRITE arithmetic there and left the rest standing here —
-    // the effective width, the isOpen-stamped behaviour config, the normal speed, and the twenty
-    // fields `createRaceFromIdentity` takes. Two harnesses had transcribed all of it and said so in
-    // their own headers (`scripts/camera-replay.mjs`, `scripts/parity/goldenRunner.mjs`), which is
-    // how transcriptions drift: the copies agree until one is edited, and the thing that would
-    // notice is one of the copies.
-    //
-    // THE OVERRIDE LOOKUP STAYS HERE, exactly as it did: it is a storage read, and the module
-    // deliberately reads no storage. It is handed the answer rather than going to find it.
-    const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
-    const typeOverride = rawOverrides[typeId];
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
-    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    // ── P4-RACESCREEN-SPLIT-1: WHICH WORLD THIS RACE RUNS IN is resolved in raceWorldSetup.js ────
+    // The racer type's physics fields (recorded or live — RACE-IDENTIFIER-2), the config world
+    // (recorded or this host's — RACE-IDENTIFIER-1), the action stage from the payload
+    // (RACE-ACTION-CONTROL-1), the badge and diff, and the engine's parameters (RACE-PARAMS-2).
     // `displaySizeScale` is NOT a `createRaceFromIdentity` field — it is the drawing scale, and the
-    // rest goes to the engine untouched. Separated here rather than in the module so the object the
-    // engine receives is exactly the object the module built.
-    const { displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
+    // rest goes to the engine untouched.
+    const {
+      speedMultiplier,
+      raceActionStage,
+      dynamicsConfig,
+      frameTimingConfig,
+      cfgWorld,
+      cfgBadge,
+      cfgDiff,
+      displaySize,
+      racePlanSeed,
+      pathLengthPx,
+      displaySizeScale,
+      raceCoreParams,
+    } = resolveRaceWorld({
+      raceData,
+      geometry,
+      typeId,
+      racerType,
       shape: shapeRef.current,
       isOpenTrack,
-      pathLengthPx,
       trackWidthPx,
-      world: {
-        baseSpeedConfig,
-        raceBehaviorConfig: behaviorConfig,
-        rowLayoutConfig: rowConfig,
-        raceDynamicsConfig: dynamicsConfig,
-        autoScaleConfig,
-      },
-      racerType: {
-        displaySize,
-        bodyFillX: typeField('bodyFillX'),
-        bodyFillY: typeField('bodyFillY'),
-        speedMultiplier,
-      },
       nRacers,
-      laps: raceData.targetLaps ?? MIN_LAPS,
-      requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
-      racePlanSeed,
-      racePlanEnabledFlag: !!raceData.racePlanEnabled,
-      hasDisplaySizeOverride:
-        !!typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride,
       constSpeedActive,
     });
     // The camera's body-size reference, read from what the engine was actually built with.
