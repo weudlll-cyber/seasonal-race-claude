@@ -29,7 +29,7 @@ import { advanceRacerDust } from './racerDust.js';
 import { advanceBurstParticles } from './burstParticles.js';
 import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
-import { lerp, lerpAngle } from '../../utils/mathUtils.js';
+import { interpolateRacers } from './renderInterpolation.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
 import { assignRaceNumbers } from '../../modules/raceNumbers.js';
@@ -1308,18 +1308,8 @@ export default function RaceScreen() {
       // objects rather than spreading new ones each frame (eliminates N fat allocations/frame).
       let renderRacers;
       if (frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING) {
-        const n = st.racers.length;
-        while (renderBuf.length < n) renderBuf.push({});
-        renderBuf.length = n;
-        for (let _i = 0; _i < n; _i++) {
-          const r = st.racers[_i];
-          Object.assign(renderBuf[_i], r);
-          renderBuf[_i].t = lerp(r._prevT ?? r.t, r.t, renderAlpha);
-          renderBuf[_i].x = lerp(r._prevX ?? r.x, r.x, renderAlpha);
-          renderBuf[_i].y = lerp(r._prevY ?? r.y, r.y, renderAlpha);
-          renderBuf[_i].angle = lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha);
-        }
-        renderRacers = renderBuf;
+        // P4-RACESCREEN-SPLIT-1: the buffer fill lives in renderInterpolation.js.
+        renderRacers = interpolateRacers(renderBuf, st.racers, renderAlpha);
       } else {
         renderRacers = st.racers;
       }
