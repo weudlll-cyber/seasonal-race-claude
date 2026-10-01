@@ -195,6 +195,10 @@ defaults deletes every account with it** — you would have to run §4 again.
 
 ## 8. Upgrading an install
 
+**This is the local Docker checkout's upgrade.** Installing a release on a server, updating it and
+rolling it back — with the backup that makes the rollback possible — is
+[DEPLOYMENT.md](DEPLOYMENT.md)'s, and is not restated here.
+
 *(Added 2026-09-19, INSTALL-DOCS-1: every piece of this existed and nothing put them in an order.)*
 
 ```bash
@@ -221,6 +225,11 @@ propagates to the cloud exactly as faithfully as a new file does.**
 ```bash
 npm run data:export          # writes a portable copy of the runtime store
 ```
+
+★ **For a backup you can restore, use `npm run backup`** (added 2026-10-01): it copies the two live
+databases through SQLite's own online backup and archives the whole data directory, and
+[DEPLOYMENT.md](DEPLOYMENT.md) owns how to run, schedule and restore it. `data:export` archives only
+what differs from the shipped seeds, and reads a fixed `server/data`.
 
 **What is in there:** `users.json`, `sessions.sqlite`, `races.sqlite`, `setup-complete.json`, and the
 tracks, backgrounds, brands and player groups — the seeded ones and the ones you made. Stopping the

@@ -189,6 +189,8 @@ test("DIRECTION 3 REFUSES a directory that is in neither list — the case repor
     "reports/audit/A1.md": "# A1",
     "reports/particles/INDEX.md": "# Index\n- [V1.md](V1.md)\n",
     "reports/particles/V1.md": "# V1",
+    "reports/release/INDEX.md": "# Index\n- [M1.md](M1.md)\n",
+    "reports/release/M1.md": "# M1",
     // The offender: tracked reports in a directory nobody decided about.
     //
     // AUDIT-REGISTER-1: this used to be `reports/audit/`, which was the real case this test was
@@ -222,6 +224,8 @@ test("DIRECTION 3 ACCEPTS a declared archive — a reason is a decision, and it 
     "reports/audit/A1.md": "# A1",
     "reports/particles/INDEX.md": "# Index\n- [V1.md](V1.md)\n",
     "reports/particles/V1.md": "# V1",
+    "reports/release/INDEX.md": "# Index\n- [M1.md](M1.md)\n",
+    "reports/release/M1.md": "# M1",
     // `perf` is named in ARCHIVED with a reason, so an unindexed file here is EXPECTED.
     "reports/perf/frame-trace-2026-01.md": "# raw capture",
   });

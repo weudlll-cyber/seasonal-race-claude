@@ -130,9 +130,12 @@ roster, the finishing order and the whole resolved world configuration the race 
 sessions, tracks, brands, player groups and uploaded images live in that same data root.
 
 ```bash
-node scripts/backup.mjs --out <dir>                       # writes <dir>/racearena-backup-<UTC>.tar
+npm run backup -- --out <dir>                             # writes <dir>/racearena-backup-<UTC>.tar
 node scripts/backup.mjs --restore <archive> --into <dir>
 ```
+
+**Installing, updating, rolling back and scheduling backups and the status check are
+[DEPLOYMENT.md](docs/DEPLOYMENT.md)'s** — one procedure, followed literally on 2026-10-01.
 
 **The round trip is verified**, not assumed: export → wipe → restore returns every field, name,
 result, winner and world configuration. ★ **What that proves and does not:** it proves the archive

@@ -109,6 +109,10 @@ const REGISTERED = [
   // open on its branch until solved. REGISTERED because work will land here again — the fix and its
   // re-measurement — and because its report is linked from BACKLOG PART ONE.
   { dir: "reports/particles", index: "reports/particles/INDEX.md" },
+  // RELEASE-BASICS-1, 2026-10-01: the first-release work — delivery basics and the tenancy survey.
+  // REGISTERED because work will land here again (the tenancy build is planned in pieces) and because
+  // its reports are linked from BACKLOG PART ONE.
+  { dir: "reports/release", index: "reports/release/INDEX.md" },
 ];
 
 // ── THE ARCHIVES, DECLARED BY NAME (INDEX-COVERAGE-1) ─────────────────────────────────────────

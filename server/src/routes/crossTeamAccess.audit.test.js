@@ -21,34 +21,18 @@
 //   so it is findable as a record of a 2026-09-26 state rather than as a requirement.
 //
 // ════════════════════════════════════════════════════════════════════════════════════════════
-// ★★★ READ THIS BEFORE YOU BUILD TENANCY. THIS FILE IS SUPPOSED TO GO RED THAT DAY.
+// ★★★ THE TENANCY BOUNDARY WILL NOT BE BUILT — decision of the owner, 2026-10-01.
 // ════════════════════════════════════════════════════════════════════════════════════════════
-// Added 2026-09-27, DELIVERY-CLEAN-2 arc 1 piece 1.3, on the owner's instruction that this warning
-// travel WITH the test rather than only in a report nobody opens mid-task.
+// Organizers on one installation share everything that is shared today; races stay scoped per team
+// exactly as already built (`server/src/routes/races.js:69`, `:91`). This supersedes the boundary
+// of 2026-09-25 and the order of 2026-09-27 that this header used to carry (`docs/BACKLOG.md`
+// PART TWO, the TENANCY row; the survey and plan are the tag `archive/tenancy-survey-1`).
 //
-// The owner decided on 2026-09-27: **BUILD THE TENANCY BOUNDARY BEFORE A SECOND ORGANISER IS
-// INVITED** (`docs/BACKLOG.md` PART ONE, *Phases 5–7*, the TENANCY row). The boundary itself was
-// settled 2026-09-25 — PER TEAM: brands, player groups, team-created tracks; SHARED: the shipped
-// tracks and the racer types.
-//
-// When that work lands, the assertions in this file that pin **the absence of scoping** on
-// `tracks`, `surface-classes`, `player-groups`, `brands`, `racers` and `seed-notices` **will fail,
-// and failing is the CORRECT outcome.** They are not a specification and they are not a safety net
-// for those six routes — they are a dated photograph of a state the owner has decided to end.
-//
-// ★ WHAT TO DO WHEN THEY GO RED — in the SAME COMMIT that builds the boundary:
-//   1. Do NOT "fix" the product to keep them green. A green assertion here after tenancy exists
-//      would mean the boundary was not built.
-//   2. Rewrite each absence assertion into the presence assertion it becomes: team B must NOT be
-//      able to read team A's brands / player groups / team-created tracks, and MUST still see the
-//      shipped tracks and racer types, which stay common.
-//   3. Leave the `races` assertions alone — races were already scoped before this file existed and
-//      those are real boundary tests, not photographs.
-//
-// ★ THE FAILURE MODE THIS HEADER EXISTS TO PREVENT: somebody builds tenancy, sees this file go
-// red, reads a green-to-red audit test as a regression they caused, and weakens the new boundary
-// until the old assertions pass again. That would use an audit probe to undo the very work it was
-// written to make visible.
+// So the assertions that pin **the absence of scoping** on `tracks`, `surface-classes`,
+// `player-groups`, `brands`, `racers` and `seed-notices` now describe the DECIDED state, not a state
+// awaiting replacement. If one goes red, somebody has added team vocabulary or scoping to a shared
+// collection: re-read the decision above before changing either the product or this file.
+// The `races` assertions are real boundary tests and stay exactly as they are.
 // ============================================================
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
