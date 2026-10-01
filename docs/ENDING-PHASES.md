@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 062f5bb2 2026-10-01 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 5d8e6fe5 2026-10-01 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 ★★★ **RE-MEASURED 2026-10-01 (SHIP-OWNER-COSMETIC-1) — ONE COLUMN MOVED.** `node
 scripts/straggler-truth.mjs`, seed 9, with the owner's camera settings as the shipped defaults:
