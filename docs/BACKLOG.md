@@ -227,8 +227,11 @@ not an address which is right (§9.1).
         is preserved exactly and `brands.test.js`'s boot-safety test proves it — sabotaging the
         shared helper to throw reddens it. ★ One implementation now means ONE test guards all
         three callers.
-      - **P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
-        (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.
+      - ~~**P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
+        (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.~~
+        ★ **DONE 2026-10-03 — merged into master** (approved by the owner on 2026-10-02 once its
+        fingerprints equal the record; they did, all four, after master was merged into the branch,
+        and premerge and the browser gate 110/110 passed there). *As it stood before the merge:*
         ★ **Built on branch `refactor/racescreen-split`, awaiting merge (2026-10-02)** —
         [P4-RACESCREEN-SPLIT-1](../reports/evolution/P4-RACESCREEN-SPLIT-1.md): eleven verbatim
         extractions, 2,163 → 1,643 lines, RaceScreen tests and all four fingerprint roles verified

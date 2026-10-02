@@ -146,7 +146,8 @@ because nobody looked.**
 9. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-10. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
+10. ★ **NEW — six ranked structural proposals** (DC2 arc 4). ★ P2, P3 and, on 2026-10-03, P4 (the race
+   screen split) are done. Led by
    `CameraDirector.js` at 5,507 lines, nearly 3× the next engine file, carrying the state machine
    and the offer arbitration together. **He would see nothing if it were done right, which is why
    it is dangerous.** Also: 77 unused locals in `scripts/`, not removed because arc 4 touched none

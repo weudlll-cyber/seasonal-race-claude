@@ -502,7 +502,8 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   warnings removed from DEPLOYMENT, SETUP and BACKLOG row C.
 
 - [P4-RACESCREEN-SPLIT-1.md](P4-RACESCREEN-SPLIT-1.md) — **2026-10-02, a refactor on branch
-  `refactor/racescreen-split`, NOT merged.** DC2 arc 4's proposal P4: `RaceScreen/index.jsx` split
+  `refactor/racescreen-split` — MERGED into master 2026-10-03** after its fingerprints equalled the
+  new record. DC2 arc 4's proposal P4: `RaceScreen/index.jsx` split
   along the seams it already had — eleven verbatim extractions, one per commit (the race-world
   resolution, the camera's construction and seeding, the track scene, the racers' render-only fields,
   the slow-motion clock, the loop's HUD diagnostics, the result payload, the burst particles, the
