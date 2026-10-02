@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ebc70d2b 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b953d787 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED 2026-10-03 (P1-CAMERADIRECTOR-SPLIT-1, master merged in), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. The director's split into modules and the comeback work meet in this tree for the first time; the table below stands.
 
