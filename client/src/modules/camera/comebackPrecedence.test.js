@@ -29,6 +29,9 @@ const ALWAYS_TAKE = Object.freeze({
   leadChangeWeight: 1,
   comebackWeight: 1,
   overviewWeight: 1,
+  // COMEBACK-CUT-DELAY-1: the precedence is tested as the SWITCH it is; the 2 s wait in front of it
+  // has its own tests in comebackCutDelay.test.js.
+  comebackCutDelayMs: 0,
 });
 
 const NOW = 40000;

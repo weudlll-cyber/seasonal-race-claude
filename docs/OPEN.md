@@ -1,9 +1,15 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-10-01
+# What is open — DERIVED from BACKLOG PART ONE, 2026-10-02
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-01**, from PART ONE's **fourteen** rows. ★ **RELEASE-BASICS-1 (2026-10-01)**
+Re-derived on **2026-10-02**, from PART ONE's **sixteen** rows. ★ **SHIP-OWNER-COSMETIC-1, merged and
+minted on 2026-10-02 after the owner's look,** closed two rows — the comeback shot, and the Dev Screen
+comeback settings (the two dead controls removed) — eighteen to **sixteen**. The chain before it: ★ **HARNESS-EMPTY-SCOPE-1 (2026-10-02)**
+closed the row *a sweep that asks for races and gets none still prints a table and exits 0* —
+every tool that takes `--tracks` now refuses an empty or unknown scope through one shared place —
+so thirteen — and it opened one remainder row the same day, `pair-reach-census`, the one hull
+driver that still answers an empty scope with exit 0, so **fourteen**. ★ **RELEASE-BASICS-1 (2026-10-01)**
 closed B2 — the backup destination is now configurable and documented — and its two read-only
 inventories opened two rows, PERSONAL DATA and THE DELIVERY PLAN OF 2026-08-31 (fifteen). ★ **The
 same day the TENANCY row closed: the boundary will not be built** (decision of 2026-10-01; PART TWO,
@@ -11,7 +17,9 @@ survey archived as the tag `archive/tenancy-survey-1`) — so fourteen. ★ **Fi
 SHIP-OWNER-COSMETIC-1 (2026-10-01, branch `ship/owner-cosmetic-defaults`)**, which opened one row: the
 Dev Screen comeback settings that may have had no effect since the 2026-09-19 rule. ★ **Seventeen
 since COMEBACK-HOLD-MEASURE-1 (2026-10-02)**: the comeback hold (at least 8 s, longer while catching
-up — measured, not built) and switching off the developer-only displays before delivery. **PARTICLES-VISIBILITY-1 to -13** (opened
+up — measured, not built) and switching off the developer-only displays before delivery.
+★ **Eighteen since COMEBACK-CUT-DIAG-1 (2026-10-02)**: the owner's observation that the comeback racer
+went on far into the lead, recorded as a dated fact. **PARTICLES-VISIBILITY-1 to -13** (opened
 2026-09-28: dust, rain and the other track effects showed only sometimes) is CLOSED — the owner looked at the branch
 on the production preview on 2026-10-01 and approved it, and it is merged — so it is in PART TWO with what closed it
 and what was left as is. The one-off red run of
@@ -37,10 +45,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2556) holds exactly SEVENTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 6 in
-*Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
-*The night of 2026-08-25*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
-2026-10-02 after COMEBACK-HOLD-MEASURE-1.)* Every current count on this page says seventeen.
+(lines 15–2493) holds exactly SIXTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 5 in
+*Delivering to someone else*, and one each in *The night of 2026-08-25*, *Phases 5–7*, *Three
+production-arm specs fail*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
+2026-10-02 after SHIP-OWNER-COSMETIC-1.)* Every current count on this page says sixteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -57,7 +65,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The seventeen rows in section 0 are all WORK**, and that is still true.
+work. **The sixteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -68,26 +76,22 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all seventeen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all sixteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
-1. **A sweep that asks for races and gets none still prints a table and exits 0.** Narrowed
-   again 2026-09-26 — `resolveTrackScopeIds` (a second door on `scripts/lib/trackScope.mjs`)
-   brings five more `scripts/diag/` tools under the refusal; ten file-based analysers are NAMED
-   as resisting the shape.
-2. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
+1. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
-3. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
+2. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
    the user chooses, counting NAMES. ★ **The marker is BUILT (RACE-SOURCE-1, 2026-09-25):** a stored
    race records how it was started, and **absent means test** — so excluding Quick Tests is now a
    filter over a recorded fact. **The evaluation itself is not built.** The points rule is
    dev-screen-configurable and **no numbers are adopted**.
-4. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
+3. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
    proven by following it literally (RELEASE-BASICS-1, 2026-10-01).
-5. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
+4. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
    ★★ **The camera is FINE (2026-09-26, second pass).** Twelve seeds driven through the browser:
    **seven cast a comebacker and all seven were cut to** — a comeback shot can and does occur in an
    ordinary race. The night's "the browser declines the shot" question is **WITHDRAWN**: its three
@@ -118,7 +122,7 @@ because nobody looked.**
    the shot be made frame-independent? ★ The reusable lesson survives the correction unchanged and
    is in the spec's header: **assert a property, never a sequence** — the rule was right even while
    the reason given for it was wrong.
-6. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+5. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
    into `verify --premerge`). Inventory tally column 3: **204 MATCHES / 0 MISLEADING / 1 SUSPECTED
@@ -129,44 +133,48 @@ because nobody looked.**
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
 
-7. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
+6. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
    keeps accepting results without recomputing them; a disputed race is re-raced from its own
    record and compared. **Fabrication is not prevented, it becomes provable.**
    `scripts/diag/replay-stored-race.mjs` already does the racing, so what is missing is a door from
    the product, not an engine.
-8. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+7. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
    a firewall or proxy is put in front of it. ★ Narrowed 2026-10-01: a plain-`node` install can set
    `RA_BIND_ADDRESS=127.0.0.1`; the default is unchanged and is his choice.
-9. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+8. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-10. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
+9. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-11. ★ **NEW — six ranked structural proposals, none performed** (DC2 arc 4). Led by
+10. ★ **NEW — six ranked structural proposals** (DC2 arc 4). ★ P2, P3 and, on 2026-10-03, P4 (the race
+   screen split) are done. Led by
    `CameraDirector.js` at 5,507 lines, nearly 3× the next engine file, carrying the state machine
    and the offer arbitration together. **He would see nothing if it were done right, which is why
    it is dangerous.** Also: 77 unused locals in `scripts/`, not removed because arc 4 touched none
    of those files. Costs in the arc 4 report; commission them one at a time.
-12. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
+11. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
-   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it.)*
-13. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
+   on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
+   DATA-EXPORT-DATADIR-1.)* ★ **2026-10-02 (TIDY-C-1):
+   three more left it** — the `innerFramePct` defaults in `framingRule.js`, the base image's
+   floating tag (now pinned by digest, ordered by the owner that day) and the missing backup
+   checksum. The 30-day session cookie stays, his decision. The row stays open.
+12. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
-14. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
+13. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
    warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
    shipped tracks (`searound`, `seatrack`) have drifted from his copies. ★ His camera settings became
-   the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1, branch, not merged, not minted).
-15. ★ **NEW 2026-10-01 — Dev Screen comeback settings that may do nothing** since the 2026-09-19 rule
-   (a comeback is shown when one was planned). ★ **Surveyed 2026-10-02**: ten settings act, two
-   profile fields are dead by construction, eight showed no effect in 30 races. Removing the dead
-   ones is what remains.
-16. ★ **NEW 2026-10-02 — the comeback shot: at least 8 s, longer while catching up** (his decision).
-   Measured, not built: today all 10 shots in 30 races end at the 8 s cap, 6 with the racer still
-   gaining; no "comeback finished" signal exists to end a longer shot on.
-17. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
+   the shipped defaults on 2026-10-01 and shipped on 2026-10-02 (SHIP-OWNER-COSMETIC-1, merged and
+   minted); the tracks, the brand and the player group remain.
+14. ★ **NEW 2026-10-02 — `pair-reach-census` answers a scope that matches nothing with exit 0.** The
+   one remainder of HARNESS-EMPTY-SCOPE-1: a race-hull driver, left by rule so the shared scope check
+   stays outside the hull.
+15. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.
+16. ★ **NEW 2026-10-02 — his observation**: in his Quick Test (River Run, seed 3) the comeback racer
+   went on far into the lead after the comeback shot cut away. A dated fact; no analysis attached.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so

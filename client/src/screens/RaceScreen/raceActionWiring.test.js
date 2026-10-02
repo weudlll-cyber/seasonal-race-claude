@@ -28,7 +28,26 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(HERE, 'index.jsx'), 'utf8');
+// P4-RACESCREEN-SPLIT-1 MOVED THE SEAM, not the contract. The resolution this file holds the shape
+// of used to sit inline in RaceScreen's init effect; it is now `resolveRaceWorld` in
+// raceWorldSetup.js, and RaceScreen hands its `raceCoreParams` to the engine. Both files are read,
+// because what is guarded is THE RACE PATH, and the race path is now two files, not one — the same
+// shape `CameraDirector.test.js` adopted when FRAME-INPUTS-1 split its render path. The count
+// assertion below (`loadRaceDynamicsConfig()` exactly once) is therefore over BOTH files.
+const SCREEN = readFileSync(join(HERE, 'index.jsx'), 'utf8');
+const src = [SCREEN, readFileSync(join(HERE, 'raceWorldSetup.js'), 'utf8')].join('\n');
+
+describe('P4-RACESCREEN-SPLIT-1 — the resolved world is the one the engine is handed', () => {
+  // Without this the properties below could all hold in raceWorldSetup.js while RaceScreen built
+  // its engine parameters some other way — the split would have opened exactly the gap this file
+  // exists to close.
+  it('RaceScreen resolves the world through resolveRaceWorld and builds the race from its params', () => {
+    expect(SCREEN).toMatch(/\}\s*=\s*resolveRaceWorld\(\{/);
+    // A regex, not the literal call text: scripts/engine-reach.test.mjs treats a literal call of the
+    // engine constructor in any tracked file as a race construction, and this file constructs none.
+    expect(SCREEN).toMatch(/createRaceFromIdentity\(raceCoreParams\)/);
+  });
+});
 
 describe('RACE-ACTION-CONTROL-1 — the race path runs the stage the RACE carries', () => {
   // PROPERTY 2 — the decisive one. Reading the live Dev Screen setting here would mean a race

@@ -36,6 +36,10 @@ const CAM_STATES_FOR_PROFILES = [
   'PHOTO_FINISH',
 ];
 
+// The comeback state has no inner-frame or minimum-hold field: neither reaches its camera — the
+// frame is global and the hold is `comebackMinDuration` (COMEBACK-SETTINGS-SURVEY-1).
+const STATES_EXCEPT_COMEBACK = CAM_STATES_FOR_PROFILES.filter((st) => st !== 'COMEBACK_ZOOM');
+
 const STATE_LABELS = {
   OVERVIEW: 'Overview',
   LEADER_ZOOM: 'Leader Zoom',
@@ -111,6 +115,7 @@ const PROFILE_FIELDS = [
   {
     key: 'innerFramePct',
     label: 'Inner frame %',
+    onlyFor: STATES_EXCEPT_COMEBACK,
     min: 0.3,
     max: 1,
     step: 0.05,
@@ -120,13 +125,16 @@ const PROFILE_FIELDS = [
     key: 'maxStateDuration',
     label: 'Max state duration (ms)',
     min: 1000,
-    max: 15000,
+    // 20000: COMEBACK_ZOOM ships at 20 s since COMEBACK-HOLD-2 (2026-10-02); a max below the shipped
+    // value would clamp it the moment the card opens (check-config-keys RULE C).
+    max: 20000,
     step: 500,
     tip: (v) => `Hard cap on time in this state. ${v}ms.`,
   },
   {
     key: 'minStateHold',
     label: 'Min state hold (ms)',
+    onlyFor: STATES_EXCEPT_COMEBACK,
     min: 1000,
     max: 10000,
     step: 500,

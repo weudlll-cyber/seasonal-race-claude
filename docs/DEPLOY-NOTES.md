@@ -213,7 +213,8 @@ single most consequential thing a person can not-know before going live.
 
 Added 2026-09-27 (DELIVERY-CLEAN-2 arc 1, piece 1.7). **Six doors, in the order they bite.** Each
 says what is true today, what the safe setting is, and **who decides** — because four of the six
-are the owner's call and only two are settled.
+are the owner's call and only two are settled. *(2026-10-02: door 6 is settled too — the owner
+ordered the base image pinned; see §3.)*
 
 | # | the door | today | who decides |
 | --- | --- | --- | --- |
@@ -222,7 +223,7 @@ are the owner's call and only two are settled.
 | 3 | **The session cookie over plain HTTP** | sent in clear by default | §4 above — **his** |
 | 4 | **Where the backup goes** | nowhere by default; `--out` is required | **settled 2026-09-27: the operator chooses** |
 | 5 | **Cookie lifetime** | 30 days | **his** |
-| 6 | **Base image** | floating tag | **his** — not a pure win either way |
+| 6 | **Base image** | ~~floating tag~~ pinned by digest since 2026-10-02 (TIDY-C-1) | **settled 2026-10-02: the owner ordered the pin**; a bump is manual |
 
 ### 1 · Put a proxy in front, and then close the port
 
@@ -273,7 +274,16 @@ weeks: a stolen or forgotten session stops working sooner. **The cost is real an
 is 30 days** — an organiser running an event does not want to sign in again mid-evening, and this
 install has no refresh flow. **His choice; not changed.**
 
-**Base image — a floating tag** (`server/Dockerfile:22` and `:33`, both `FROM node:20-alpine`).
+★★ **PINNED 2026-10-02 (TIDY-C-1), by the owner's order of that day.** Both `FROM` lines in
+`server/Dockerfile` now pin `node:20-alpine` by the multi-arch index digest the tag pointed at on
+2026-10-02, read with `docker buildx imagetools inspect node:20-alpine`. The digest's one home is
+the Dockerfile: the comment above its first `FROM` carries the tag, the digest, the date and how to
+bump it. **The cost recorded below
+is now the accepted one: base-image patches arrive only when somebody re-reads the digest and
+replaces it on both lines.** Nothing in the repository does that for you. The paragraph below is
+the reasoning as it stood before the order, kept as the record of the trade.
+
+~~**Base image — a floating tag**~~ (`server/Dockerfile:22` and `:33` before TIDY-C-1, both `FROM node:20-alpine`).
 ★★ **The brief asked me to pin it to a digest "if that is purely safer". It is NOT purely safer,
 so it was not pinned.** A digest makes a rebuild reproducible — the same input gives the same image
 — but it also **freezes the base**, so Alpine and Node security patches stop arriving on rebuild
@@ -282,7 +292,10 @@ dependency audit runs daily over the two npm trees and says nothing about `FROM`
 a bump process trades a rare reproducibility problem for a standing patch problem.** Recorded as
 his choice, with both sides, rather than taken.
 
-**Backup checksum — none** (§8.4). A corrupted archive is discovered on restore, not before.
+~~**Backup checksum — none** (§8.4). A corrupted archive is discovered on restore, not before.~~
+★ **CLOSED 2026-10-02 (TIDY-C-1):** every archive now has a `<archive>.sha256` beside it in
+`sha256sum` format, and `npm run status` fails the backup check when the newest archive's checksum
+file is missing or does not match. How to use it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
 ★ A precision that matters when reading the source: `scripts/backup.mjs:137` writes a *tar header*
 checksum, which is part of the tar format and **not** an integrity digest of the archive. Do not
 read that line as one.

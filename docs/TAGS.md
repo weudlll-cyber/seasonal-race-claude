@@ -1975,6 +1975,20 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
   before the tag, so the register line could not go on the branch. The line landed in the commit
   immediately after the tagged merge.
 
+### THE SHIP — the owner's camera and the comeback shot (2026-10-02)
+
+- `v-ship-owner-cosmetic` (`26769691`, 2026-10-02) — **the ship: SHIP-OWNER-COSMETIC-1, merged to
+  master and minted on the owner's look of 2026-10-02** on the 4173 production preview. His cosmetic
+  camera settings became the shipped camera defaults; the comeback shot holds until the racer reaches
+  3rd, 8–20 s, never into the final scene (COMEBACK-HOLD-2); the camera waits before the comeback cut,
+  kept at 1500 ms by his decision of 2026-10-02 (COMEBACK-CUT-DELAY-1); and the comeback state's two
+  Dev Screen controls proven dead by construction are removed. Every value lives in
+  `client/src/modules/storage/defaults.js`. **World unchanged; camera and render minted**
+  (`docs/fingerprints.json`). Report: `reports/evolution/SHIP-OWNER-COSMETIC-1.md`.
+  ★ **This tag does not register itself in the tree it points at**, like `v-ship-chase-after-outcome`:
+  the owner's order for this block put the merge, its CI and the tag push before the register line,
+  which landed in the commit immediately after the tagged merge.
+
 ### NOT a ship — the group gap brake, refused (2026-09-22)
 
 - **`archive/group-gap-brake-1`** — the archive of `feat/group-gap-brake-1`, tip **`c2e8c54f`**,

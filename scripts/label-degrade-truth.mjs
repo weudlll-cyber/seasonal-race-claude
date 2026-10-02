@@ -42,6 +42,7 @@ import {
   buildRace,
   runRace,
 } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 import {
   computeTagLayout,
@@ -70,9 +71,13 @@ const CH = 720;
 // TWO CONTRASTING TRACKS, and the contrast is the point: searound is CLOSED and bunches the field
 // into a repeating pack, river-run is OPEN and strings it out. Flicker is a function of how often
 // neighbours cross, so a rule that is calm on one and busy on the other has not been measured.
-const TRACKS = (arg("tracks", "searound,river-run") || "")
-  .split(",")
-  .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "label-degrade-truth",
+  ids: arg("tracks", "searound,river-run"),
+  all: loadTracks(),
+});
 const SIZES = (arg("racers", "40,100") || "")
   .split(",")
   .map(Number)
@@ -207,11 +212,8 @@ console.log(
   "\ntrack        n    names  labels  name%   switches  /label/race  /label/s   churn/s  worst label",
 );
 for (const id of TRACKS) {
+  // Validated above by resolveTrackScopeIds, so this lookup cannot miss.
   const geo = loadTracks({ only: id })[0];
-  if (!geo) {
-    console.error(`no such track: ${id}`);
-    continue;
-  }
   for (const n of SIZES) {
     for (const namesOn of [false, true]) {
       const r = runOne(geo, n, namesOn);

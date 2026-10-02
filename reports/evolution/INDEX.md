@@ -426,6 +426,40 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-OWNER-COSMETIC-1.md](SHIP-OWNER-COSMETIC-1.md) — **the owner's camera and the comeback shot,
+  SHIPPED 2026-10-02 on his look of that day.** His cosmetic camera settings as the shipped defaults,
+  COMEBACK-HOLD-2, COMEBACK-CUT-DELAY-1 (1500 ms, kept by his decision), and the comeback state's two
+  dead Dev Screen controls removed. World unchanged; camera and render minted. Tag
+  `v-ship-owner-cosmetic`. Two backlog rows closed; open list sixteen.
+
+- [COMEBACK-CUT-DELAY-1.md](COMEBACK-CUT-DELAY-1.md) — **the camera waits before cutting to the comeback
+  racer — BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** The owner's
+  decision: wait 1–2 s so he is visibly on the catch-up. 2000 ms lost more than 10% of shots in every
+  field size, so the rule moved it to 1500 ms, which still loses more than 10% on closed 20, open 20
+  and open 40 (99 of 463 shots over the 750 races). None was lost to the final scene: every loss is a
+  climb the detector stopped offering during the wait. Final-scene overlap 0. Quick-Test seed: Ice Track,
+  40 racers, seed 4896 — the shot starts at 48.9 s, two places after the wait began.
+
+- [COMEBACK-HOLD-2.md](COMEBACK-HOLD-2.md) — **the comeback shot holds until the racer reaches 3rd —
+  BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** At least 8 s, at most
+  20 s, never into the final scene (endgame, photo-finish gate, first racer home — whichever first,
+  minimum or not). The gain-stop rule is removed. Over the 750 races of COMEBACK-DURATION-1: 62–84%
+  of shots end by reaching 3rd; **final-scene overlap 0 of 463**. Quick-Test seed: Ice Track, 40
+  racers, seed 4896. World unchanged.
+
+- [COMEBACK-DURATION-1.md](COMEBACK-DURATION-1.md) — **how long a comeback really lasts (2026-10-02,
+  measurement only).** 750 Quick-Test races, crypto-random seeds: closed tracks with 20/40 racers,
+  open tracks with 20/40/80. Comeback shot start → the comebacker's first 3rd place, median / p90:
+  closed 20 — 8.5 / 20.6 s, closed 40 — 13.5 / 25.2 s, open 20 — 6.9 / 14.0 s, open 40 — 10.4 / 17.8 s,
+  open 80 — 12.3 / 17.3 s; never reaching 3rd from 3 of 97 to 16 of 111. Seeds in
+  [COMEBACK-DURATION-1-seeds.csv](COMEBACK-DURATION-1-seeds.csv). Deterministic (rerun 750/750 identical).
+
+- [COMEBACK-CUT-DIAG-1.md](COMEBACK-CUT-DIAG-1.md) — **why the comeback shot ended early in the
+  owner's River Run seed-3 race (2026-10-02, measurement only).** The gain-stop ended it, not a gate.
+  Harness and browser agree (same racer, length within 0.21 s). His setup fields 40 racers, not 20:
+  with 40 the shot is cut at 4th and the racer gains again 0.37 s later; over 30 races of 40 racers the
+  2 s window cuts 11 of 18 shots that then gain within 5 s (20 racers: 1 of 10).
+
 - [P1-CAMERADIRECTOR-SPLIT-1.md](P1-CAMERADIRECTOR-SPLIT-1.md) — **CameraDirector.js split along its
   own seams, picture unchanged (2026-10-02, branch `refactor/camera-director-split`, NOT merged).**
   5,526 -> 3,648 lines in eight one-per-commit extractions: the offer arbitration (pure,
@@ -455,6 +489,37 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   more, median 2.2 s, N=10). Raising the cap would rarely be cut short by anything else (0 of 10
   before 12 s, derived). **No "comeback finished" signal ends a shot today**; the plan's `resolve`
   beat is an entry gate only and fell before every cut. Measurement only.
+
+- [TIDY-C-1.md](TIDY-C-1.md) — **three items off the tidy list, 2026-10-02.** The `framingRule.js`
+  `innerFramePct` defaults now read `DEFAULT_INNER_FRAME_PCT`, and all four fingerprints verified
+  unchanged. The base image is pinned by digest, as the owner ordered that day, and the pinned image
+  built and booted. `npm run backup` writes a `.sha256`, and `npm run status` fails on a missing
+  or mismatched one, with each new test sabotaged red once. The C row stays open.
+
+- [HARNESS-EMPTY-SCOPE-1.md](HARNESS-EMPTY-SCOPE-1.md) — **every `--tracks` tool outside the race
+  hull refuses an empty or unknown scope through one place.** A census finds 30 tools; 28 now use
+  `scripts/lib/trackScope.mjs` (7 already, 21 wired), each proven to exit 2 with 0 bytes of stdout on
+  `--tracks=all` and `--tracks=`; an empty `--tracks=` is no longer read as "every track". Two hull
+  drivers are left by rule — wiring them pulled the shared place into the race hull — and one of them,
+  `pair-reach-census`, keeps a measured silent zero on multi-track scopes. A census test keeps the
+  next tool honest. Closes the BACKLOG row.
+
+- [DATA-EXPORT-DATADIR-1.md](DATA-EXPORT-DATADIR-1.md) — **`npm run data:export` reads `RA_DATA_DIR`**
+  (2026-10-02) — `resolveDataRoot()` replaces the fixed `server/data`; the seeds comparison is unchanged;
+  two scratch-directory tests, each sabotaged red once; the "do not use it on the release layout"
+  warnings removed from DEPLOYMENT, SETUP and BACKLOG row C.
+
+- [P4-RACESCREEN-SPLIT-1.md](P4-RACESCREEN-SPLIT-1.md) — **2026-10-02, a refactor on branch
+  `refactor/racescreen-split` — MERGED into master 2026-10-03** after its fingerprints equalled the
+  new record. DC2 arc 4's proposal P4: `RaceScreen/index.jsx` split
+  along the seams it already had — eleven verbatim extractions, one per commit (the race-world
+  resolution, the camera's construction and seeding, the track scene, the racers' render-only fields,
+  the slow-motion clock, the loop's HUD diagnostics, the result payload, the burst particles, the
+  interpolation buffer, the overlay line selection, the viewer-probe payload). **2,163 → 1,643 lines;
+  none reverted; RaceScreen tests and all four fingerprint roles verified after each.** Found on the
+  way: the burst particles' two inline copies differed by one line, kept as an argument rather than
+  unified. ★ **Still owed: `verify -- --premerge` and the browser gates** — no fingerprint executes
+  `index.jsx`.
 
 - [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
   seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a

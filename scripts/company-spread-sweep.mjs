@@ -34,6 +34,7 @@ import {
   buildRace,
   runRace,
 } from "./lib/raceDriver.mjs";
+import { resolveTrackScope } from "./lib/trackScope.mjs";
 import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -42,14 +43,6 @@ const arg = (k, d) => {
   return p ? p.slice(k.length + 3) : d;
 };
 
-// THE FIVE WHERE IT BINDS, from MIN-RACERS-5's one-seed table. The other five are confirmed once by
-// --tracks, not swept: they were 0.0 % because something else already holds the shot wider.
-const TRACKS = (
-  arg("tracks", "city-circuit,ice-track,dirt-oval,space-sprint,garden-path") ||
-  ""
-)
-  .split(",")
-  .filter(Boolean);
 const RACER_COUNTS = (arg("racers", "20,40,70") || "").split(",").map(Number);
 const SEEDS = (arg("seeds", "5601,5602,5603") || "").split(",").map(Number);
 // 1 disables the guarantee (`<= 1` short-circuits the ceiling to Infinity) — the control arm.
@@ -156,18 +149,16 @@ function splitBySpread(arm, off) {
 
 // `loadTracks({only})` matches ONE exact id — it is not a list. Passing a comma-joined string
 // matched nothing, and the first run of this script printed a header, wrote an empty JSON file and
-// exited 0. That is the shape VERIFY-BASE-1 exists to forbid, so it refuses instead.
-const geos = loadTracks().filter((g) => TRACKS.includes(g.id));
-if (geos.length !== TRACKS.length) {
-  const missing = TRACKS.filter((t) => !geos.some((g) => g.id === t));
-  console.error(
-    `REFUSED: ${missing.length} of ${TRACKS.length} requested track(s) not found: ${missing.join(", ")}\n` +
-      `  available: ${loadTracks()
-        .map((g) => g.id)
-        .join(", ")}`,
-  );
-  process.exit(2);
-}
+// exited 0. That is the shape VERIFY-BASE-1 exists to forbid, so it refuses instead — and since
+// HARNESS-EMPTY-SCOPE-1 the refusal is the shared one, which also catches `--tracks=` (an empty
+// value matched the old private check: 0 found of 0 asked, and it ran nothing and exited 0).
+const geos = resolveTrackScope({
+  tool: "company-spread-sweep",
+  // THE FIVE WHERE IT BINDS, from MIN-RACERS-5's one-seed table. The other five are confirmed once
+  // by --tracks, not swept: they were 0.0 % because something else already holds the shot wider.
+  arg: arg("tracks", "city-circuit,ice-track,dirt-oval,space-sprint,garden-path"),
+  all: loadTracks(),
+});
 const rows = [];
 
 console.log(

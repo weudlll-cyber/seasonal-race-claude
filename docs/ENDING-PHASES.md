@@ -49,7 +49,15 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ f1b82810 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ ebc70d2b 2026-10-03 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED 2026-10-03 (P1-CAMERADIRECTOR-SPLIT-1, master merged in), IDENTICAL TO THE DIGIT** to the row below.
+
+★★ **RE-MEASURED 2026-10-02 (SHIP-OWNER-COSMETIC-1, master merged in), IDENTICAL TO THE DIGIT** to the row below.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-CUT-DELAY-1), IDENTICAL TO THE DIGIT** to the row below — the wait before the comeback cut drops a waiting cut when the final scene is due and does not otherwise reach the ending.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-2), IDENTICAL TO THE DIGIT** to the row below — the comeback-until-3rd rule ends a comeback at the final scene and does not otherwise reach the ending.
 
 ★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-1), IDENTICAL TO THE DIGIT** to the 2026-10-01 row below — the comeback-hold rule does not reach the ending.
 

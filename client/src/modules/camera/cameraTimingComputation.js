@@ -392,8 +392,10 @@ export function computeTimingFromConfig(config) {
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
   const comebackCooldownMs = config?.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs;
-  // COMEBACK-HOLD-1: read here, the one door into the director's timing (see COMEBACK-CONNECT-1 above).
-  const comebackGainStopMs = config?.comebackGainStopMs ?? DEFAULT_CAMERA_CONFIG.comebackGainStopMs;
+  // COMEBACK-HOLD-2: read here, the one door into the director's timing (see COMEBACK-CONNECT-1 above).
+  const comebackTargetRank = config?.comebackTargetRank ?? DEFAULT_CAMERA_CONFIG.comebackTargetRank;
+  // COMEBACK-CUT-DELAY-1: the same door.
+  const comebackCutDelayMs = config?.comebackCutDelayMs ?? DEFAULT_CAMERA_CONFIG.comebackCutDelayMs;
   const leadChangeCooldownMs =
     config?.leadChangeCooldownMs ?? DEFAULT_CAMERA_CONFIG.leadChangeCooldownMs;
 
@@ -471,7 +473,8 @@ export function computeTimingFromConfig(config) {
     contenderZoom,
     corridorCapArriveMs,
     comebackCooldownMs,
-    comebackGainStopMs,
+    comebackTargetRank,
+    comebackCutDelayMs,
     leadChangeCooldownMs,
     battleWeight,
     leadChangeWeight,

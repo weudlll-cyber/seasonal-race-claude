@@ -14,6 +14,8 @@ import {readFileSync, writeFileSync, mkdirSync} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rowMinOf } from "./sim/observers/fairness-stats.mjs";
+import { loadTracks } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 import { tmpdir, cpus } from "node:os";
 import { execFile, execFileSync } from "node:child_process";
 import {
@@ -79,19 +81,22 @@ const seed = (id) =>
   JSON.parse(
     readFileSync(join(ROOT, "server/seeds/tracks", `${id}.json`), "utf8"),
   );
-const TRACKS = argVal("tracks", TEN.join(","))
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean)
-  .map((id) => {
-    const s = seed(id);
-    return {
-      id,
-      surf: s.surfaceClasses,
-      closed: !!s.closed,
-      racers: s.closed ? 40 : 60,
-    };
-  });
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared place,
+// which refuses (exit 2) a name no track answers to and a scope that names nothing (`--tracks=` used
+// to sweep zero tracks, print the table headers and exit 0).
+const TRACKS = resolveTrackScopeIds({
+  tool: "exp-roster-matrix",
+  ids: argVal("tracks", TEN.join(",")),
+  all: loadTracks(),
+}).map((id) => {
+  const s = seed(id);
+  return {
+    id,
+    surf: s.surfaceClasses,
+    closed: !!s.closed,
+    racers: s.closed ? 40 : 60,
+  };
+});
 const intersects = (a, b) => a.some((x) => b.includes(x));
 
 function pExec(file, args) {

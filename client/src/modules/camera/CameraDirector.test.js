@@ -46,6 +46,9 @@ const ALWAYS_TAKE = Object.freeze({
   leadChangeWeight: 1,
   comebackWeight: 1,
   overviewWeight: 1,
+  // COMEBACK-CUT-DELAY-1: these are GATE tests ("the gate opened, the shot started"), so the cut
+  // delay is off here; the delay itself is tested in comebackCutDelay.test.js.
+  comebackCutDelayMs: 0,
 });
 
 // SHIP-OWNER-COSMETIC-1: the BATTLE shot ships OFF by default since the owner's decision of 2026-10-01
@@ -1905,8 +1908,11 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
     cd.state = CAM_STATE.COMEBACK_ZOOM;
     cd.stateEnteredAt = 1000;
+    // The leader stays BELOW this config's endgameThreshold (0.85): since COMEBACK-HOLD-2 (the owner's
+    // decision of 2026-10-02) the endgame ends a running comeback at once, so a leader at 0.9 here
+    // would test a state that can no longer exist. The ranks — and so the targeted 3rd — are unchanged.
     const racers = [
-      { t: 0.9, x: 900, y: worldY, finished: false }, // 1st
+      { t: 0.8, x: 900, y: worldY, finished: false }, // 1st
       { t: 0.7, x: 800, y: worldY, finished: false }, // 2nd
       { t: 0.5, x: worldX, y: worldY, finished: false }, // 3rd — targeted
     ];
