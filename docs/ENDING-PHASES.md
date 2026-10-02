@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ e161fdba 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 85aa75bc 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 ★★ **RE-MEASURED 2026-10-02 (COMEBACK-CUT-DELAY-1), IDENTICAL TO THE DIGIT** to the row below — the wait before the comeback cut drops a waiting cut when the final scene is due and does not otherwise reach the ending.
 
