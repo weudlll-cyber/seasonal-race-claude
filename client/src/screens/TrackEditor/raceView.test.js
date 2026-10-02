@@ -91,7 +91,10 @@ describe('raceViewScale — the race camera’s racing zoom', () => {
     expect(got.scaleX).toBeCloseTo(sx, 9);
   });
 
-  it('follows the camera config: the shipped 0.75 shows 225 world px', () => {
+  it('follows the camera config: the shipped LEADER visibleCorridors x referenceCorridorPx world px', () => {
+    const shippedPx =
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors *
+      DEFAULT_CAMERA_CONFIG.referenceCorridorPx;
     const got = raceViewScale({
       worldW: 6144,
       worldH: 4096,
@@ -99,7 +102,7 @@ describe('raceViewScale — the race camera’s racing zoom', () => {
       trackWidthPx: 300,
       cameraConfig: DEFAULT_CAMERA_CONFIG,
     });
-    expect(got.scaleY).toBeCloseTo(720 / 225, 9);
+    expect(got.scaleY).toBeCloseTo(720 / shippedPx, 9);
   });
 });
 

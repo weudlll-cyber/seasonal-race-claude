@@ -391,6 +391,11 @@ export class CameraDirector {
     // endgame overrules does not burn the racer's one turn.
     this._comebackPrecedenceRacer = null;
     this._comebackPrecedenceShown = new Set();
+    // COMEBACK-CUT-DELAY-1: a comeback shot that is DUE but waiting — { index, since, route } or
+    // null. ONE record for both routes into the shot (`route` 'precedence' = the offer in `update`,
+    // 'pick' = the weighted offer in `_pickNextState`), so a racer is never delayed twice. A waiting
+    // cut is RESOLVED when it matures — taken, or dropped — so a stale one can never block the next.
+    this._comebackDue = null;
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -691,6 +696,8 @@ export class CameraDirector {
     this._contenderZoom = t.contenderZoom;
     this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
+    this._comebackTargetRank = t.comebackTargetRank; // COMEBACK-HOLD-2
+    this._comebackCutDelayMs = t.comebackCutDelayMs; // COMEBACK-CUT-DELAY-1
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
     this._leadChangeWeight = t.leadChangeWeight;
@@ -796,6 +803,7 @@ export class CameraDirector {
     // throws away the previous race's rank history, so it is where this belongs too.
     this._comebackPrecedenceRacer = null;
     this._comebackPrecedenceShown = new Set();
+    this._comebackDue = null; // COMEBACK-CUT-DELAY-1: a waiting cut belongs to its race
   }
 
   /**
@@ -1027,12 +1035,68 @@ export class CameraDirector {
     // hold-gate bypasses are evaluated and where `_diagLeaderProgress` has just been written. The
     // answer is stored rather than recomputed, so `_pickNextState` and `decideTransition` are
     // looking at the same frame's answer and cannot disagree about it.
-    this._comebackPrecedenceRacer = this._comebackPrecedenceOffer(racers, ts, raceState);
+    // COMEBACK-CUT-DELAY-1 — THE TRIGGER POINT of the delay on the precedence route. The offer no
+    // longer fires the cut on the frame it appears: it starts `_comebackDue`, and the precedence is
+    // pending only once the delay has passed AND the offer still names the same racer this frame.
+    // A delay of 0 is the behaviour before, unchanged.
+    const precedenceOffer = this._comebackPrecedenceOffer(racers, ts, raceState);
+    if (this._comebackCutDelayMs > 0) {
+      const due = this._comebackDue;
+      // a new offer starts the wait; an offer for a DIFFERENT racer restarts it for him
+      if (
+        precedenceOffer &&
+        (!due || (due.route === 'precedence' && due.index !== precedenceOffer.index))
+      )
+        this._comebackDue = { index: precedenceOffer.index, since: ts, route: 'precedence' };
+      const d = this._comebackDue;
+      const matured =
+        d != null && d.route === 'precedence' && ts - d.since >= this._comebackCutDelayMs;
+      const stillHim = matured && precedenceOffer?.index === d.index;
+      // matured but no longer offered: that cut is dropped, not left waiting
+      if (matured && !stillHim) this._comebackDue = null;
+      this._comebackPrecedenceRacer = stillHim ? precedenceOffer : null;
+    } else {
+      this._comebackPrecedenceRacer = precedenceOffer;
+    }
     const prevState = this.state;
     const inBattleZoom = this.state === CAM_STATE.BATTLE_ZOOM;
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
     // until a different state is detected — no stateCap blocker.
     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
+    // COMEBACK-HOLD-2 (the owner's decision, 2026-10-02): at least the comeback minimum, then until
+    // the locked racer holds `comebackTargetRank` or better; `stateCap` (the profile maximum) bounds
+    // it. The minimum is the COMEBACK state's own, read from the per-state table, not `minHold` — a
+    // repeat entry would set that to 0, and repeats of a running comeback are refused below.
+    const inComeback = this.state === CAM_STATE.COMEBACK_ZOOM;
+    const comebackMinHoldMs =
+      this._minStateHoldByState[CAM_STATE.COMEBACK_ZOOM] ?? this._minStateHoldMs;
+    const lockedRank = inComeback
+      ? this._comeback.latestRank(this._comebackLockedRacerIndex)
+      : null;
+    const comebackTargetReached =
+      inComeback &&
+      stateAge >= comebackMinHoldMs &&
+      lockedRank != null &&
+      lockedRank <= this._comebackTargetRank;
+    // ...and NEVER INTO THE FINAL SCENE, whose earliest entry ends it at once, minimum or not:
+    //   · the endgame — leader past `endgameThreshold`, which `_pickNextState` answers with the
+    //     endgame shot (its Priority 2.5) — the one entry that would otherwise WAIT for this shot's
+    //     hold to run out, so it is the one this flag exists for;
+    //   · the photo-finish gate (`photoFinishGateReady`) and the first racer home
+    //     (`forceFinishDrama`), which already transition out of ANY state in `decideTransition`;
+    //     they are named here so the rule reads whole.
+    // The transition then runs the ordinary `_transition` → `_pickNextState`, so the final scene's
+    // own shot starts on this very frame, exactly as it would have from any other state.
+    const finalSceneDue =
+      this._diagLeaderProgress > this._endgameThreshold || photoFinishGateReady || forceFinishDrama;
+    const comebackFinalSceneDue = inComeback && finalSceneDue;
+    // COMEBACK-CUT-DELAY-1: a comeback cut still WAITING when the final scene becomes due is dropped
+    // — that shot does not start. (The precedence offer refuses in the final scene too, so the
+    // pending flag below is false on this frame already.)
+    if (finalSceneDue && this._comebackDue) {
+      this._comebackDue = null;
+      this._comebackPrecedenceRacer = null;
+    }
     // The DECISION is pure and carries its reason; the ACTIONS and every assignment stay here.
     // The two battle predicates keep the original's short-circuit: they are consulted ONLY once
     // BATTLE_ZOOM has held for battleMinDurationMs. Both are pure reads (group resolution +
@@ -1049,6 +1113,8 @@ export class CameraDirector {
       battleGroupP2Drifted: battleExitEligible ? this._isBattleGroupP2Drifted(racers) : false,
       leadChangePending: this._leadChangePending,
       comebackPrecedencePending: this._comebackPrecedenceRacer != null,
+      comebackTargetReached,
+      comebackFinalSceneDue,
       finishDramaExpired,
       forceFinishDrama,
       photoFinishGateReady,
@@ -1765,6 +1831,12 @@ export class CameraDirector {
     }
     // Candidate pool: weighted random selection from all currently eligible events
     else {
+      // COMEBACK-CUT-DELAY-1 — WHILE A COMEBACK CUT IS WAITING, THE CAMERA KEEPS ITS SHOT. `null` is
+      // `_transition`'s existing "no change" answer, so whatever is on screen stays, and nothing in
+      // the pool below — a lead change, an overview, a second comebacker — can take the slot and
+      // drop the waiting comeback. The finish sequence, the start window and the endgame all return
+      // ABOVE this line, so the final scene is never held back by it.
+      if (this._comebackDue && ts - this._comebackDue.since < this._comebackCutDelayMs) return null;
       const candidates = [];
 
       // Every pool push is guarded by weight > 0 (BATTLE-WEIGHT-ZERO-1): a 0.00 slider means "never",
@@ -1789,10 +1861,16 @@ export class CameraDirector {
       const comebackCooledDown = ts - this._lastComebackExitTs >= this._comebackCooldownMs;
       let _comebackRacer = null;
       const _internalOutcomePhase = leaderProgress > this._outcomePhaseThreshold;
+      // COMEBACK-HOLD-1: a RUNNING comeback shot is never offered again. Re-picking it would be a
+      // same-state repeat (hold 0, `_transition`), which could carry the shot past its maximum; its
+      // length is the gain rule's and the cap's to decide, nothing else's. With a cooldown above 0
+      // the cooldown already refuses it (`_transition` stamps the exit before picking); this guard
+      // is what holds when the Dev Screen sets the cooldown to 0.
       if (
         (raceState?.isOutcomePhase || _internalOutcomePhase) &&
         comebackCooledDown &&
-        this._comebackWeight > 0
+        this._comebackWeight > 0 &&
+        this.state !== CAM_STATE.COMEBACK_ZOOM
       ) {
         // `leaderProgress` is the same value the outcome-phase test one line above already uses,
         // read here rather than recomputed. COMEBACK-CONNECT-1 needs it because the plan's beats
@@ -1814,10 +1892,24 @@ export class CameraDirector {
           // `_comebackPrecedenceOffer` cleared this frame — one notion of who is climbing, one
           // decision about him.
           if (this._comebackPrecedenceRacer?.index === _comebackRacer.index) {
+            this._comebackDue = null; // COMEBACK-CUT-DELAY-1: the waited cut is taken
             return {
               nextState: CAM_STATE.COMEBACK_ZOOM,
               reason: `comeback-precedence: ${_comebackRacer.name ?? _comebackRacer.index} (cast comebacker, first shot)`,
               data: { comebackRacer: _comebackRacer, comebackPrecedence: true },
+            };
+          }
+          // COMEBACK-CUT-DELAY-1: the weighted route's waited cut, matured and still HIM — taken
+          // without a second draw, which would make the delay a re-roll of a decision already made.
+          if (
+            this._comebackDue?.route === 'pick' &&
+            this._comebackDue.index === _comebackRacer.index
+          ) {
+            this._comebackDue = null;
+            return {
+              nextState: CAM_STATE.COMEBACK_ZOOM,
+              reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} (after the cut delay)`,
+              data: { comebackRacer: _comebackRacer },
             };
           }
           candidates.push({
@@ -1828,6 +1920,10 @@ export class CameraDirector {
           });
         }
       }
+
+      // COMEBACK-CUT-DELAY-1: a weighted-route cut that matured and was NOT taken above (he is no
+      // longer the detected comebacker, or the window closed) is dropped here, never left waiting.
+      if (this._comebackDue?.route === 'pick') this._comebackDue = null;
 
       if (this._isOverviewEligible(ts, raceState) && this._overviewWeight > 0) {
         candidates.push({
@@ -1847,6 +1943,12 @@ export class CameraDirector {
           reason: `leader: ${pick.state} offered and declined (weight ${pick.weight})`,
           data: {},
         };
+      }
+      // COMEBACK-CUT-DELAY-1 — THE TRIGGER POINT on the weighted route: an accepted comeback offer
+      // starts the delay instead of cutting; the camera keeps its shot (`null`) until it matures.
+      if (pick?.state === CAM_STATE.COMEBACK_ZOOM && this._comebackCutDelayMs > 0) {
+        this._comebackDue = { index: pick.data.comebackRacer.index, since: ts, route: 'pick' };
+        return null;
       }
       if (pick) {
         if (pick.state === CAM_STATE.OVERVIEW) {

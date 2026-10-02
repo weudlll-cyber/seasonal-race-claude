@@ -46,6 +46,20 @@ const ALWAYS_TAKE = Object.freeze({
   leadChangeWeight: 1,
   comebackWeight: 1,
   overviewWeight: 1,
+  // COMEBACK-CUT-DELAY-1: these are GATE tests ("the gate opened, the shot started"), so the cut
+  // delay is off here; the delay itself is tested in comebackCutDelay.test.js.
+  comebackCutDelayMs: 0,
+});
+
+// SHIP-OWNER-COSMETIC-1: the BATTLE shot ships OFF by default since the owner's decision of 2026-10-01
+// (battleWeight 0, closeness 0.001, cooldown 20000). The tests that test the battle shot itself
+// switch it ON in their own config with the values it shipped with before that day, so they keep
+// testing the shot rather than the default. Spread it AFTER any defaults spread and BEFORE a test's
+// own keys, so ALWAYS_TAKE's weight and each test's tunables still win.
+const BATTLE_ON = Object.freeze({
+  battleWeight: 0.8,
+  battlePulkThresholdT: 0.05,
+  battleCooldownMs: 8000,
 });
 
 // ── lapProgress ───────────────────────────────────────────────────────────────
@@ -465,7 +479,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
   });
 
   it('Priority 4: battle (pulk of 3 within 200px) → BATTLE_ZOOM', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
@@ -1235,11 +1249,11 @@ describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: _maxStateDuration and _endgameThreshold READ the defaults, _battleGates.closenessT=0.05, _battleMinDurationMs=3000', () => {
+  it('no config: _maxStateDuration, _endgameThreshold, _battleGates.closenessT and _battleCooldownMs READ the defaults, _battleMinDurationMs=3000', () => {
     const cd = new CameraDirector();
     // FALLBACK-MIRRORS-1: was the literal 8000, against a shipped 4000. Asserts the rule now.
     expect(cd._maxStateDuration).toBe(DEFAULT_CAMERA_CONFIG.maxStateDuration);
-    expect(cd._battleGates.closenessT).toBe(0.05);
+    expect(cd._battleGates.closenessT).toBe(DEFAULT_CAMERA_CONFIG.battlePulkThresholdT);
     expect(cd._battleMinDurationMs).toBe(3000);
     // ENDGAME-FALLBACK-1: this used to pin the literal 0.85 that `cameraTimingComputation.js`
     // carried beside the key. The second copy is gone — the fallback READS `defaults.js` now — so
@@ -1249,7 +1263,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     // unreachable and therefore invisible for two ships.
     expect(cd._endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold);
     expect(cd._startWindowMs).toBe(10000);
-    expect(cd._battleCooldownMs).toBe(8000);
+    expect(cd._battleCooldownMs).toBe(DEFAULT_CAMERA_CONFIG.battleCooldownMs);
     expect(cd._battleMaxDurationMs).toBe(6000);
     expect(cd._minStateHoldMs).toBe(5000);
   });
@@ -1259,6 +1273,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       ...pctConfig,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
+      ...BATTLE_ON,
       ...ALWAYS_TAKE,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
@@ -1308,6 +1323,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       ...pctConfig,
       maxStateDuration: 4000,
       endgameThreshold: 0.95,
+      ...BATTLE_ON,
       ...ALWAYS_TAKE,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
@@ -1404,7 +1420,7 @@ describe('CameraDirector — D1: postStartLeaderHold', () => {
   });
 
   it('BATTLE allowed after postStartHold window (raceElapsed=10001)', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 5000; // cooldown not expired (10001-5000=5001 < 8000) → P3 skipped
@@ -1439,7 +1455,7 @@ describe('CameraDirector — D2: battleCooldown', () => {
   });
 
   it('BATTLE fires after 8s battle cooldown', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastBattleExitTs = 3000; // ts=11001: 11001-3000=8001 >= 8000 → cooled
@@ -1457,7 +1473,7 @@ describe('CameraDirector — D2: battleCooldown', () => {
 
 describe('CameraDirector — D3: battleMaxDurationMs', () => {
   it('no transition before 6s in BATTLE state', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
     // stateAge=5999 < max(5000, 6000)=6000 → no transition
@@ -1892,8 +1908,11 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
     cd.state = CAM_STATE.COMEBACK_ZOOM;
     cd.stateEnteredAt = 1000;
+    // The leader stays BELOW this config's endgameThreshold (0.85): since COMEBACK-HOLD-2 (the owner's
+    // decision of 2026-10-02) the endgame ends a running comeback at once, so a leader at 0.9 here
+    // would test a state that can no longer exist. The ranks — and so the targeted 3rd — are unchanged.
     const racers = [
-      { t: 0.9, x: 900, y: worldY, finished: false }, // 1st
+      { t: 0.8, x: 900, y: worldY, finished: false }, // 1st
       { t: 0.7, x: 800, y: worldY, finished: false }, // 2nd
       { t: 0.5, x: worldX, y: worldY, finished: false }, // 3rd — targeted
     ];
@@ -2958,7 +2977,14 @@ describe('CameraDirector — Etappe 10: diagnostic fields', () => {
 
   it('battle-diag resets automatically on new BATTLE_ZOOM entry', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
+    const cd = new CameraDirector(
+      1280,
+      720,
+      false,
+      { ...phasedConfig, ...BATTLE_ON, ...ALWAYS_TAKE },
+      36,
+      shape
+    );
     cd._battleDiagSnapshots = [{ f: 1, phase: 'entry' }];
     cd._battleDiagFrozen = true;
     cd._battleDiagFrameCount = 60;
@@ -3191,7 +3217,7 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   });
 
   it('_isPulk: 3 racers all within threshold at ranks 3/4/5 → true', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     // Two leaders at ranks 1/2, then battle group at ranks 3/4/5 — all within 50px
     const racers = [
       { x: 9000, y: 300, t: 0.7 }, // P1 — leader
@@ -3259,7 +3285,7 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   });
 
   it('_isPulk: group at ranks 11/12/13 passes when battleMinTopN=15', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleMinTopN: 15 });
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, battleMinTopN: 15 });
     const leaders = Array.from({ length: 10 }, (_, i) => ({
       x: i * 300,
       y: 0,
@@ -3276,7 +3302,7 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   // ── State machine: BATTLE entry via pulk ─────────────────────────────────
 
   it('BATTLE triggers via Priority 4 when pulk exists at ranks 3/4/5', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired
@@ -3364,7 +3390,7 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   });
 
   it('BATTLE stays if pulk still present after battleMinDurationMs', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleMinDurationMs: 3000 });
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, battleMinDurationMs: 3000 });
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
     const pulk = [
@@ -3447,7 +3473,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('_isPulk: passes when all 3 conditions met — spatial, temporal, rank span ≤ 3, rank ≥ 3', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const racers = [
       { x: 9000, y: 300, t: 0.95, finished: false }, // P1 — leader
       { x: 8500, y: 300, t: 0.92, finished: false }, // P2 — leader
@@ -3460,7 +3486,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('_detectPulkGroup: returns frontmost-first triple when battle detected', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const leader1 = { x: 9000, y: 300, t: 0.95 }; // P1
     const leader2 = { x: 8500, y: 300, t: 0.92 }; // P2
     const r0 = { x: 500, y: 300, t: 0.9 }; // P3 — battle group frontmost
@@ -3485,7 +3511,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('camera lock: _battleLockedRacer is set to frontmost group racer on BATTLE_ZOOM entry', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3508,7 +3534,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('getBattleDiagData: returns active=true with locked/group info during BATTLE_ZOOM', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3548,7 +3574,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('BATTLE boundary: ranks 9/10/11 trigger BATTLE (frontmost rank 9 ≥ 3, no top-10 cap)', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     // 8 spread-out leaders + 3 close racers at ranks 9/10/11
     const leaders = Array.from({ length: 8 }, (_, i) => ({
       x: i * 500,
@@ -3562,7 +3588,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('BATTLE boundary: 4-racer group at ranks 4/5/6/7 triggers BATTLE', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     // 3 leaders + 4 close racers at ranks 4/5/6/7
     const leaders = [
       { x: 9000, y: 0, t: 0.9 }, // P1
@@ -3629,7 +3655,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   // ── getBattleDiagData extended fields ────────────────────────────────────
 
   it('getBattleDiagData: groupRacerRanks, originalGroupValid, currentGroupRacers present', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3656,7 +3682,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('getBattleDiagData: ranks updated when overtakers push group to higher ranks; group still spatially valid', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const leader1 = { x: 9000, y: 300, t: 0.7 };
     const leader2 = { x: 8500, y: 300, t: 0.65 };
     const r0 = { x: 500, y: 300, t: 0.5 }; // originally rank 3
@@ -3682,7 +3708,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   // creating NEW objects every frame. Without index-based lookup, all === comparisons fail
   // after Frame N+1 and the camera silently falls back to the leader.
   it('index-based lookup: camera lock survives renderInterpolation spread-copy (r.index stable)', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -4448,7 +4474,7 @@ describe('LEAD_CHANGE camera state', () => {
 
 describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
   it('returns true when no group is stored but a valid pulk exists (falls back to _isPulk)', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     cd._battleGroupRacerIndices = []; // empty — no stored group
     // Full racers with valid pulk at rank 3+: falls back to _isPulk which returns true
     const racers = [
@@ -4463,7 +4489,7 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
   });
 
   it('returns true when all stored group racers are still within spatial threshold', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const r0 = { index: 0, t: 0.5, x: 500, y: 300 };
     const r1 = { index: 1, t: 0.48, x: 510, y: 300 };
     const r2 = { index: 2, t: 0.46, x: 520, y: 300 };
@@ -4484,7 +4510,7 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
   });
 
   it('fires early BATTLE exit when original group disperses after battleMinDurationMs', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE }, 36);
     // Use update() to transition into BATTLE, then disperse the group.
     // Leaders at t=0.7/0.65 (leaderProgress=0.7<0.85 endgameThreshold — no endgame block).
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
@@ -4528,7 +4554,7 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
 
 describe('CameraDirector — Q1: isolation condition', () => {
   it('isolation disabled by default (threshold=0): BATTLE fires with arc-near non-group racer', () => {
-    const cd = new CameraDirector(); // default battleIsolationThresholdT = 0 (no config → disabled)
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON); // isolation not configured → default 0, disabled
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
@@ -4559,7 +4585,10 @@ describe('CameraDirector — Q1: isolation condition', () => {
   });
 
   it('BATTLE passes when all non-group racers are outside isolation threshold (arc)', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdT: 0.075 });
+    const cd = new CameraDirector(1280, 720, false, {
+      ...BATTLE_ON,
+      battleIsolationThresholdT: 0.075,
+    });
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
@@ -4576,7 +4605,7 @@ describe('CameraDirector — Q1: isolation condition', () => {
 
 describe('CameraDirector — Q2: greedy group expansion', () => {
   it('returns 3-member group when only seed triple qualifies', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
@@ -4591,7 +4620,7 @@ describe('CameraDirector — Q2: greedy group expansion', () => {
   });
 
   it('returns 4-member group when 4th racer qualifies', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, BATTLE_ON);
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
@@ -4606,7 +4635,7 @@ describe('CameraDirector — Q2: greedy group expansion', () => {
   });
 
   it('caps group at battleMaxGroupSize even when more qualify', () => {
-    const cd = new CameraDirector(1280, 720, false, { battleMaxGroupSize: 4 });
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, battleMaxGroupSize: 4 });
     const racers = [
       { t: 0.9, x: 9000, y: 300 }, // P1
       { t: 0.85, x: 8500, y: 300 }, // P2
@@ -4631,7 +4660,7 @@ describe('CameraDirector — Q4: centroid camera', () => {
   });
 
   it('_battleLockT is set to group centroid T at BATTLE entry', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE }, 36);
     // Leaders at t=0.7/0.65 — leaderProgress=0.7<0.85 endgameThreshold, no endgame block
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
     const leader2 = { index: 11, t: 0.65, x: 8500, y: 300, finished: false };
@@ -4656,7 +4685,7 @@ describe('CameraDirector — Q4: centroid camera', () => {
   });
 
   it('_battleLockT is cleared when BATTLE exits', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE }, 36);
     // Leaders at t=0.7/0.65 — leaderProgress=0.7<0.85 endgameThreshold, no endgame block
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
     const leader2 = { index: 11, t: 0.65, x: 8500, y: 300, finished: false };
@@ -4709,14 +4738,20 @@ describe('CameraDirector — BATTLE Pulk quality (rank-span, minTopN, P2-drift)'
       { x: 560, y: 300, t: 0.44 }, // P9 — span would be 6 (indices 2..8)
     ];
 
-    const cdDefault = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 5 });
+    const cdDefault = new CameraDirector(1280, 720, false, {
+      ...BATTLE_ON,
+      battleMaxGroupRankSpan: 5,
+    });
     const groupDefault = cdDefault._detectPulkGroup(makeRacers());
     expect(groupDefault).not.toBeNull();
     // P9 (index 8) must not be in the group — span would be 8-2=6 > 5
     const indicesDefault = groupDefault.map((r) => makeRacers().findIndex((rr) => rr === r));
     expect(Math.max(...indicesDefault) - Math.min(...indicesDefault)).toBeLessThanOrEqual(5);
 
-    const cdWide = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 7 });
+    const cdWide = new CameraDirector(1280, 720, false, {
+      ...BATTLE_ON,
+      battleMaxGroupRankSpan: 7,
+    });
     const groupWide = cdWide._detectPulkGroup(makeRacers());
     expect(groupWide).not.toBeNull();
     // P9 may now be included (span 6 ≤ 7)
@@ -4733,7 +4768,7 @@ describe('CameraDirector — BATTLE Pulk quality (rank-span, minTopN, P2-drift)'
       { x: 520, y: 300, t: 0.48 }, // P5
       { x: 530, y: 300, t: 0.47 }, // P6 — blocked by span=2 (would make span=3)
     ];
-    const cd = new CameraDirector(1280, 720, false, { battleMaxGroupRankSpan: 2 });
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, battleMaxGroupRankSpan: 2 });
     const group = cd._detectPulkGroup(racers);
     expect(group).not.toBeNull();
     expect(group.length).toBe(3); // only P3/P4/P5
@@ -4768,7 +4803,7 @@ describe('CameraDirector — BATTLE Pulk quality (rank-span, minTopN, P2-drift)'
       { x: 102, y: 0, t: 0.54 }, // P10
       { x: 104, y: 0, t: 0.53 }, // P11
     ];
-    const cd = new CameraDirector(1280, 720, false, { battleMinTopN: 12 });
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, battleMinTopN: 12 });
     expect(cd._isPulk([...leaders, ...battle])).toBe(true);
   });
 
@@ -5233,9 +5268,9 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     expect(cd._finishOverviewLookbackPx).toBe(450);
   });
 
-  it('config round-trip: finishOverviewLookbackPx defaults to 300', () => {
+  it('config round-trip: finishOverviewLookbackPx READS the default', () => {
     const cd = new CameraDirector();
-    expect(cd._finishOverviewLookbackPx).toBe(300);
+    expect(cd._finishOverviewLookbackPx).toBe(DEFAULT_CAMERA_CONFIG.finishOverviewLookbackPx);
   });
 
   it('finishPauseMs getter: returns configured value', () => {
@@ -6994,7 +7029,7 @@ describe('CAMERA-HYGIENE-2 — the detectBattleGroup contract with RaceScreen', 
   });
 
   it('the director answers to that name, and gives the same group as the internal path', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const cd = new CameraDirector(1280, 720, false, { ...BATTLE_ON, ...ALWAYS_TAKE });
     expect(typeof cd.detectBattleGroup).toBe('function');
     const racers = tightBattleRacers;
     const viaPublic = cd.detectBattleGroup(racers);

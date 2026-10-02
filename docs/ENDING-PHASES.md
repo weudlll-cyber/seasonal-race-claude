@@ -49,7 +49,22 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ f2e58384 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 85b65d51 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED 2026-10-02 (SHIP-OWNER-COSMETIC-1, master merged in), IDENTICAL TO THE DIGIT** to the row below.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-CUT-DELAY-1), IDENTICAL TO THE DIGIT** to the row below — the wait before the comeback cut drops a waiting cut when the final scene is due and does not otherwise reach the ending.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-2), IDENTICAL TO THE DIGIT** to the row below — the comeback-until-3rd rule ends a comeback at the final scene and does not otherwise reach the ending.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-1), IDENTICAL TO THE DIGIT** to the 2026-10-01 row below — the comeback-hold rule does not reach the ending.
+
+★★★ **RE-MEASURED 2026-10-01 (SHIP-OWNER-COSMETIC-1) — ONE COLUMN MOVED.** `node
+scripts/straggler-truth.mjs`, seed 9, with the owner's camera settings as the shipped defaults:
+phase 6, the zoom-out lead, the unfinished racers in shot and the settled frames are **identical to
+the digit** to the table below. **"Any racer in shot" moved: dirt-oval 20/20 (was 7 of 20) and
+40/40 (was 13 of 40); river-run unchanged at 20/20 and 40/40** — the whole field is in the settled
+finish picture now. Every other cell of the table below stands.
 
 ★★ **RE-MEASURED AT `c008f21f` (NIGHT-2026-09-24D), IDENTICAL TO THE DIGIT** — 6.87/5.20/7of7/7of20/132f,
 8.65/6.12/11of11/13of40/187f, 5.18/3.17/1of1/20of20/10f, 6.97/4.67/6of6/40of40/100f. Same reason as
