@@ -43,7 +43,9 @@ describe('P4-RACESCREEN-SPLIT-1 — the resolved world is the one the engine is 
   // exists to close.
   it('RaceScreen resolves the world through resolveRaceWorld and builds the race from its params', () => {
     expect(SCREEN).toMatch(/\}\s*=\s*resolveRaceWorld\(\{/);
-    expect(SCREEN).toContain('createRaceFromIdentity(raceCoreParams)');
+    // A regex, not the literal call text: scripts/engine-reach.test.mjs treats a literal call of the
+    // engine constructor in any tracked file as a race construction, and this file constructs none.
+    expect(SCREEN).toMatch(/createRaceFromIdentity\(raceCoreParams\)/);
   });
 });
 
