@@ -60,6 +60,15 @@
 //                         otherwise he is steered to the finish and the row says so
 //       his rank at steering start, at the comeback shot's start (if one locked on him), and at the
 //       finish; and the first frame he holds 3rd place or better after each of the two starts
+//
+// COMEBACK-CUT-DELAY-1 added, read-only — the WAIT before the cut (`dir._comebackDue`):
+//   · per race `waits`: every wait, how it ended — `cut` (the shot started on him), `final-scene`
+//     (dropped with the final scene due: leader past `endgameThreshold`, a racer home, or the photo
+//     finish running), `not-offered` (dropped any other way), or `race-end`
+//   · per shot `dueMs` / `rankAtDue` / `gainedDuringDelay` (places taken during the wait; null with
+//     no wait, i.e. the delay at 0) and `speedVsMedian`: his track distance over the last 1 s divided
+//     by the median of the unfinished field's, at the cut — above 1 means he is visibly faster
+//   Arm the delay with `--set=comebackCutDelayMs=<ms>`.
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -178,6 +187,9 @@ for (const geo of tracks) {
     const cast = []; // the plan's comebackers, once the plan arrives
     const tl = []; // per-frame timeline rows for them (only with --timeline)
     const cb = new Map(); // COMEBACK-DURATION-1: index -> per-comebacker record (only with --duration-out)
+    const waits = []; // COMEBACK-CUT-DELAY-1: every wait before a cut, and how it ended
+    let openWait = null; // { obj, index, route, startMs, rankAtDue }
+    const tHist = []; // COMEBACK-CUT-DELAY-1: [ms, Map(index -> t)] over the last ~1 s, for speeds
 
     runRace(race, identity, CFG, ({ cd: dir, st: state, ts, raceStart }) => {
       // The driver has already delivered the plan this frame (cameraPlanDelivery.mjs); read it once.
@@ -199,6 +211,23 @@ for (const geo of tracks) {
       const s = dir.state;
       trace.update(`${s}|${dir.zoom}|${dir.offsetX}|${dir.offsetY};`);
       const ranks = series.size || s === "COMEBACK_ZOOM" ? rankMapOf(state) : null;
+      // COMEBACK-CUT-DELAY-1: the wait — opened when a new due record appears, closed when it goes
+      const finalSceneNow =
+        lead > DEFAULT_CAMERA_CONFIG.endgameThreshold || state.racers.some((r) => r.finished) || !!dir._inPhotoFinish;
+      const dueObj = dir._comebackDue ?? null;
+      if (openWait && dueObj !== openWait.obj) {
+        const cutOnHim = s === "COMEBACK_ZOOM" && prev !== "COMEBACK_ZOOM" && dir.comebackLockedRacerIndex === openWait.index;
+        openWait.endMs = ms;
+        openWait.how = cutOnHim ? "cut" : finalSceneNow ? "final-scene" : "not-offered";
+        delete openWait.obj;
+        waits.push(openWait);
+        openWait = null;
+      }
+      if (dueObj && !openWait) {
+        openWait = { obj: dueObj, index: dueObj.index, route: dueObj.route ?? null, startMs: ms, rankAtDue: rankMapOf(state).get(dueObj.index) };
+      }
+      tHist.push([ms, new Map(state.racers.map((r) => [r.index, r.t]))]);
+      while (tHist.length > 1 && ms - tHist[0][0] > 1000) tHist.shift();
 
       if (s === "COMEBACK_ZOOM" && prev !== "COMEBACK_ZOOM") {
         const who = dir.comebackLockedRacerIndex ?? null;
@@ -215,7 +244,24 @@ for (const geo of tracks) {
           from: prev,
           capFiredMs: null, // the 8 s gate fired but the pick chose COMEBACK again (a repeat)
           finalSceneFrames: 0, // COMEBACK-HOLD-2: frames on the comeback while the final scene was due
+          // COMEBACK-CUT-DELAY-1: the wait that led here (the last one closed, on this frame, as a cut)
+          dueMs: null,
+          rankAtDue: null,
+          gainedDuringDelay: null,
+          speedVsMedian: null,
         };
+        const w = waits.at(-1);
+        if (w && w.how === "cut" && w.endMs === ms && w.index === who) {
+          cur.dueMs = w.startMs;
+          cur.rankAtDue = w.rankAtDue;
+          cur.gainedDuringDelay = w.rankAtDue - cur.rankStart;
+        }
+        const old = tHist[0][1];
+        const run = (r) => r.t - (old.get(r.index) ?? r.t);
+        const field = state.racers.filter((r) => !r.finished).map(run).sort((a, b) => a - b);
+        const med = field.length ? field[Math.floor(field.length / 2)] : 0;
+        const him = state.racers.find((r) => r.index === who);
+        cur.speedVsMedian = him && med > 0 ? +(run(him) / med).toFixed(3) : null;
         if (who != null && !series.has(who)) series.set(who, []);
       }
       // COMEBACK-HOLD-2: a comeback frame while the final scene is due is an OVERLAP — counted, never assumed
@@ -351,6 +397,10 @@ for (const geo of tracks) {
       sh.photoGateMs = photoGateMs;
       shots.push(sh);
     }
+    if (openWait) {
+      delete openWait.obj;
+      waits.push({ ...openWait, endMs: null, how: "race-end" });
+    }
     const finishes = st.racers
       .map((r) => ({ index: r.index, name: r.name ?? null, finishTimeMs: r.finishTimeMs ?? null }))
       .sort((a, b) => (a.finishTimeMs ?? Infinity) - (b.finishTimeMs ?? Infinity));
@@ -384,7 +434,7 @@ for (const geo of tracks) {
         });
       }
     }
-    races.push({ track: geo.id, seed, finishes, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
+    races.push({ track: geo.id, seed, finishes, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs, waits });
   }
 }
 

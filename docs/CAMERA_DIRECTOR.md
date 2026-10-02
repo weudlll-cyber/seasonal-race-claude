@@ -1053,7 +1053,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ef4fa49e 2026-10-02 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e161fdba 2026-10-02 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-CUT-DELAY-1), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. The wait before the comeback cut changed files in the stamp's closure; this measurement's race has no comeback shot it changes. The table below stands.
 
 ★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-2), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. The comeback-until-3rd rule changed files in the stamp's closure; this measurement's race has no comeback shot it changes. The table below stands.
 

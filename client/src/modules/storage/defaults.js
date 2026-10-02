@@ -392,6 +392,12 @@ export const DEFAULT_CAMERA_CONFIG = {
   // first racer home) ends it at once, minimum or not. The rank is read from the comeback detector's
   // own rank history (`comebackDetector.js` `latestRank`). No Dev Screen control, by decision.
   comebackTargetRank: 3,
+  // COMEBACK-CUT-DELAY-1 (the owner's decision, 2026-10-02): before cutting to the comeback racer the
+  // camera WAITS this long (1-2 s decided), keeping its shot, so he is visibly on the catch-up when
+  // the shot starts. It cuts only if he is still the offered comebacker and the final scene is not
+  // due. 1500, not 2000: 2000 lost more than 10 % of the shots, and his rule then names 1500
+  // (reports/evolution/COMEBACK-CUT-DELAY-1.md). 0 = cut at once. No Dev Screen control.
+  comebackCutDelayMs: 1500,
   // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
   // independently of the external isOutcomePhase flag from RaceScreen.
   //

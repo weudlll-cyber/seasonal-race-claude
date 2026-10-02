@@ -46,6 +46,9 @@ const ALWAYS_TAKE = Object.freeze({
   leadChangeWeight: 1,
   comebackWeight: 1,
   overviewWeight: 1,
+  // COMEBACK-CUT-DELAY-1: these are GATE tests ("the gate opened, the shot started"), so the cut
+  // delay is off here; the delay itself is tested in comebackCutDelay.test.js.
+  comebackCutDelayMs: 0,
 });
 
 // SHIP-OWNER-COSMETIC-1: the BATTLE shot ships OFF by default since the owner's decision of 2026-10-01
