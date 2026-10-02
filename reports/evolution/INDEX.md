@@ -426,6 +426,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [P4-RACESCREEN-SPLIT-1.md](P4-RACESCREEN-SPLIT-1.md) — **2026-10-02, a refactor on branch
+  `refactor/racescreen-split`, NOT merged.** DC2 arc 4's proposal P4: `RaceScreen/index.jsx` split
+  along the seams it already had — eleven verbatim extractions, one per commit (the race-world
+  resolution, the camera's construction and seeding, the track scene, the racers' render-only fields,
+  the slow-motion clock, the loop's HUD diagnostics, the result payload, the burst particles, the
+  interpolation buffer, the overlay line selection, the viewer-probe payload). **2,163 → 1,643 lines;
+  none reverted; RaceScreen tests and all four fingerprint roles verified after each.** Found on the
+  way: the burst particles' two inline copies differed by one line, kept as an argument rather than
+  unified. ★ **Still owed: `verify -- --premerge` and the browser gates** — no fingerprint executes
+  `index.jsx`.
+
 - [MORNING-2026-09-26.md](MORNING-2026-09-26.md) — **the night sheet for the 2026-09-26 run** —
   seven pieces off master `f6bc6c38` on branch `night/2026-09-26`: nine misleading tooltips, a
   tooltip guard, re-pin `comeback-precedence`, extend `trackScope` to `scripts/diag/`, establish two
