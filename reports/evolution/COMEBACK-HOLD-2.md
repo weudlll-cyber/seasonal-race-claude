@@ -45,6 +45,8 @@ endgame test asserts the next state is LEADER_ZOOM on that same `update`.
 
 **Kept:** the guard that never re-picks a running comeback (the repeat path cannot pass the maximum).
 
+**The Dev Screen.** The per-state table's "Max state duration" field accepted at most 15000 ms, so it could not show the new 20000. `check-config-keys` RULE C refused the commit. The field's maximum is now 20000 (`CameraAdvancedSection.jsx`); the shipped value was not moved to fit the control.
+
 ## Measured — the same 750 races as COMEBACK-DURATION-1
 
 The seeds come from [COMEBACK-DURATION-1-seeds.csv](COMEBACK-DURATION-1-seeds.csv): Quick-Test seeds
@@ -125,6 +127,9 @@ reach the race, so every role was verified with `check-fingerprints.mjs --mint`,
 | `client/src/modules/camera/comebackHold.test.js` | 165 | 156 |
 | `client/src/modules/camera/CameraDirector.test.js` | 8230 | 8233 |
 | `scripts/diag/comeback-hold-measure.mjs` | 398 | 404 |
+| `client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx` | 2118 | 2120 |
+| `docs/FORCE-MAP.md` | citation line only | |
+| `docs/CAMERA_DIRECTOR.md`, `docs/ENDING-PHASES.md` | stamp + one dated note each | |
 
 ## Noticed and left
 
