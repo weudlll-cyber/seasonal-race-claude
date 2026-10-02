@@ -426,6 +426,12 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-SETTINGS-SURVEY-1.md](COMEBACK-SETTINGS-SURVEY-1.md) — **which Dev Screen comeback
+  settings still change the picture (2026-10-02, survey only).** Every control driven over the same
+  30 races, camera output hashed per frame and compared byte for byte (control: 30/30 identical).
+  Ten act; the COMEBACK_ZOOM profile's inner frame and minimum hold are dead by construction; eight
+  more showed no effect in these races but still have live readers. Nothing removed.
+
 - [COMEBACK-HOLD-1.md](COMEBACK-HOLD-1.md) — **the comeback shot: at least 8 s, then only while the
   racer is gaining, at most 15 s — BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged,
   not minted).** One new condition: after the minimum the shot ends when the racer gained no place in

@@ -1226,8 +1226,15 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 - [ ] ★ **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
       is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
       Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones
-      proven dead, and list the rest for the owner. Not started. **verify:** none yet — the survey is
-      the work; its report names a check per setting.
+      proven dead, and list the rest for the owner. **verify:** rerun the arm's
+      `node scripts/diag/comeback-hold-measure.mjs --set=<key>=<value>` and compare `cameraTraceHash`.
+      ★ **SURVEYED 2026-10-02 — [COMEBACK-SETTINGS-SURVEY-1](../reports/evolution/COMEBACK-SETTINGS-SURVEY-1.md)**
+      (driven over 30 races, camera output compared byte for byte; nothing removed). **Act:** weight
+      (rarely), min. positions, window, min. duration, min. start gap, max. current rank, use beats,
+      and the COMEBACK_ZOOM profile's world-in-shot, tracking speed and maximum duration; the
+      diagnostics toggle acts on the display only. **No effect, structurally:** the profile's inner
+      frame and minimum hold. **No effect in these races, live reader:** cooldown, outcome-phase
+      threshold and six profile fields. **Stays open:** removing the dead ones is the remaining work.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads

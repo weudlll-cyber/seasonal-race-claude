@@ -158,8 +158,9 @@ because nobody looked.**
    shipped tracks (`searound`, `seatrack`) have drifted from his copies. ★ His camera settings became
    the shipped defaults on 2026-10-01 (SHIP-OWNER-COSMETIC-1, branch, not merged, not minted).
 15. ★ **NEW 2026-10-01 — Dev Screen comeback settings that may do nothing** since the 2026-09-19 rule
-   (a comeback is shown when one was planned). Survey which still act; remove the dead ones; list the
-   rest for him.
+   (a comeback is shown when one was planned). ★ **Surveyed 2026-10-02**: ten settings act, two
+   profile fields are dead by construction, eight showed no effect in 30 races. Removing the dead
+   ones is what remains.
 16. ★ **NEW 2026-10-02 — the comeback shot: at least 8 s, longer while catching up** (his decision).
    Measured, not built: today all 10 shots in 30 races end at the 8 s cap, 6 with the racer still
    gaining; no "comeback finished" signal exists to end a longer shot on.

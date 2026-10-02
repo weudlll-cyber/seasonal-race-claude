@@ -27,12 +27,19 @@
 // COMEBACK-HOLD-1 added `--gain-stop-ms=`: overrides `comebackGainStopMs` on a COPY of the config for
 // this run (defaults.js is never written), so the arms of the W choice race identical races; and the
 // per-shot `regainWithin3s`: did the racer take a place again within 3 s of the shot ending.
+//
+// COMEBACK-SETTINGS-SURVEY-1 added `--set=key=value[,key=value]`: any top-level camera key, on the
+// same COPY of the config (numbers, true/false parsed; nothing persists), and a per-race
+// `cameraTraceHash` — SHA-256 over every frame's state, zoom and offsets. Two arms whose 30 hashes are
+// identical drew the same camera on every frame of every race: that is what "no effect" means here.
 // ============================================================
 
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolveIdentity, loadTracks, buildRace, runRace } from "../lib/raceDriver.mjs";
+import { setPath } from "../lib/hisArm.mjs"; // dotted keys for --set, cloning on the way down
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const { DEFAULT_CAMERA_CONFIG } = await import(
@@ -46,10 +53,32 @@ const SEEDS = ARG("seeds", "1,2,3").split(",").map(Number).filter(Number.isFinit
 const JSON_OUT = ARG("json", null);
 const GAIN_STOP = ARG("gain-stop-ms", null);
 // this branch's shipped camera, read not copied — or a COPY with the one arm value changed
+const SETS = Object.fromEntries(
+  (ARG("set", "") || "")
+    .split(",")
+    .filter(Boolean)
+    .map((kv) => {
+      const [k, v] = kv.split("=");
+      return [k, v === "true" ? true : v === "false" ? false : Number(v)];
+    }),
+);
 const CFG =
-  GAIN_STOP == null
+  GAIN_STOP == null && !Object.keys(SETS).length
     ? DEFAULT_CAMERA_CONFIG
-    : { ...structuredClone(DEFAULT_CAMERA_CONFIG), comebackGainStopMs: Number(GAIN_STOP) };
+    : {
+        ...structuredClone(DEFAULT_CAMERA_CONFIG),
+        ...(GAIN_STOP == null ? {} : { comebackGainStopMs: Number(GAIN_STOP) }),
+      };
+// a dotted key (e.g. cameraStateProfiles.COMEBACK_ZOOM.visibleCorridors) must name an existing leaf
+const leafExists = (o, path) =>
+  path.split(".").reduce((c, k) => (c != null && k in Object(c) ? c[k] : undefined), o) !== undefined;
+for (const [k, v] of Object.entries(SETS)) {
+  if (!leafExists(DEFAULT_CAMERA_CONFIG, k)) {
+    console.error(`comeback-hold-measure: --set names "${k}", which is not a camera config key.`);
+    process.exit(2);
+  }
+  setPath(CFG, k, v);
+}
 const RACERS = 20; // the Quick Test field
 
 const tracks = loadTracks();
@@ -95,6 +124,7 @@ for (const geo of tracks) {
     const series = new Map(); // racerIndex -> [[ms, rank, finished]]
     let firstFinishMs = null;
     let photoGateMs = null;
+    const trace = createHash("sha256"); // every frame's camera output, for the survey's byte compare
 
     runRace(race, identity, CFG, ({ cd: dir, st: state, ts, raceStart }) => {
       // The driver has already delivered the plan this frame (cameraPlanDelivery.mjs); read it once.
@@ -113,6 +143,7 @@ for (const geo of tracks) {
       if (firstFinishMs == null && state.racers.some((r) => r.finished)) firstFinishMs = ms;
       if (photoGateMs == null && reason === "photo-finish-gate") photoGateMs = ms;
       const s = dir.state;
+      trace.update(`${s}|${dir.zoom}|${dir.offsetX}|${dir.offsetY};`);
       const ranks = series.size || s === "COMEBACK_ZOOM" ? rankMapOf(state) : null;
 
       if (s === "COMEBACK_ZOOM" && prev !== "COMEBACK_ZOOM") {
@@ -183,7 +214,7 @@ for (const geo of tracks) {
       sh.photoGateMs = photoGateMs;
       shots.push(sh);
     }
-    races.push({ track: geo.id, seed, planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
+    races.push({ track: geo.id, seed, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
   }
 }
 
