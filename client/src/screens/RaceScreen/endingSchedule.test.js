@@ -46,9 +46,12 @@ describe('ENDING-HOLD-1 — the shipped default IS the hold', () => {
     const card = Math.min(DEFAULT_CAMERA_CONFIG.winnerCardMs, PAUSE);
     const tailBefore = endingHoldMs(0) + PAUSE - card;
     const tailAfter = endingHoldMs(DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs) + PAUSE - card;
-    expect(tailBefore).toBe(500);
-    expect(tailAfter).toBe(2000);
-    expect(card).toBe(3000); // unchanged by the hold
+    // THE OWNER'S DECISION OF 2026-10-01 (SHIP-OWNER-COSMETIC-1): the card fills the whole pause
+    // (4000 inside 4000), so there is no card-free stretch after the card and the HOLD is the whole
+    // card-free tail. Was 500 -> 2000 with a 3000 card in a 3500 pause.
+    expect(tailBefore).toBe(0);
+    expect(tailAfter).toBe(1500);
+    expect(card).toBe(4000); // unchanged by the hold
   });
 });
 
@@ -99,10 +102,11 @@ describe('ENDING-HOLD-1 — the total the Dev Screen shows', () => {
     );
   });
 
-  // The number the owner is judging: 11 370 ms at the shipped config, against 9 870 with no hold.
-  it('the shipped ending costs 11370 ms, and 9870 with the hold switched off', () => {
-    expect(total()).toBe(11370);
-    expect(total({ holdMs: 0 })).toBe(9870);
+  // The number the owner is judging. 11 370 / 9 870 until the owner's decision of 2026-10-01
+  // (SHIP-OWNER-COSMETIC-1) lengthened the pause 3500 -> 4000: the ending is 500 ms longer.
+  it('the shipped ending costs 11870 ms, and 10370 with the hold switched off', () => {
+    expect(total()).toBe(11870);
+    expect(total({ holdMs: 0 })).toBe(10370);
   });
 
   it('grows by exactly the hold', () => {

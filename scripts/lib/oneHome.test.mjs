@@ -45,15 +45,21 @@ test("HIS carries the eleven keys the harnesses were written around, with their 
 // SHIPPED arm included — would silently inherit his settings. That is a measurement reporting the
 // wrong arm's numbers under the right arm's name.
 test("applyHisArm does NOT mutate the defaults it was cloned from", () => {
-  const before = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackingTC;
-  const cfg = applyHisArm(structuredClone(DEFAULT_CAMERA_CONFIG));
+  // SHIP-OWNER-COSMETIC-1: since 2026-10-01 his camera settings ARE the shipped defaults, so the
+  // shipped object can no longer show a mutation. The source is therefore a config whose value is
+  // NOT his, and whose nested profiles are SHARED with the object handed to the arm — which is
+  // exactly the case the clone exists for.
+  const source = structuredClone(DEFAULT_CAMERA_CONFIG);
+  source.cameraStateProfiles.OVERVIEW.trackingTC = 0.25;
+  const before = source.cameraStateProfiles.OVERVIEW.trackingTC;
+  const cfg = applyHisArm({ ...source });
   assert.equal(cfg.cameraStateProfiles.OVERVIEW.trackingTC, 1.5, "his value did not land");
   assert.equal(
-    DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackingTC,
+    source.cameraStateProfiles.OVERVIEW.trackingTC,
     before,
-    "applying the arm reached back into the shipped defaults"
+    "applying the arm reached back into the config it was applied to"
   );
-  assert.notEqual(before, 1.5, "this test proves nothing if the default already equals his value");
+  assert.notEqual(before, 1.5, "this test proves nothing if the source already equals his value");
 });
 
 test("setPath writes a nested path and leaves siblings alone", () => {

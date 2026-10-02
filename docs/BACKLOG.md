@@ -306,10 +306,11 @@ not an address which is right (§9.1).
 
 - [ ] **C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
       the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
-      in the root manifest, target from `RA_BACKUP_DIR` · ★ **NEW 2026-10-01:** `npm run data:export`
+      in the root manifest, target from `RA_BACKUP_DIR` · ~~★ **NEW 2026-10-01:** `npm run data:export`
       reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
       install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
-      documents now say not to use it there · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+      documents now say not to use it there~~ — ★ **CLOSED 2026-10-02 (DATA-EXPORT-DATADIR-1):** reads
+      `RA_DATA_DIR` through `resolveDataRoot`; the warnings are gone · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
       the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
       ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
       `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
@@ -320,9 +321,18 @@ not an address which is right (§9.1).
       corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
       counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
       different wordings. Normalised; 39 of 40 now carry a canonical line, `CLAUDE.md` excluded
-      deliberately.** · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
-      config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
-      rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
+      deliberately.** · ~~`framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      config is 0.7, harmless while every caller passes it~~ — ★ **CLOSED 2026-10-02 (TIDY-C-1):**
+      the three defaults now read `DEFAULT_INNER_FRAME_PCT` (`framingConfig.js`, which reads
+      `targetInnerFramePct` from `defaults.js`), the same constant the director falls back to;
+      every caller still passes the value, and `check-fingerprints --mint` verified all four roles
+      unchanged · ~~`Dockerfile:22,33` pins a floating tag rather than a digest~~ — ★ **CLOSED
+      2026-10-02 (TIDY-C-1), ordered by the owner that day:** both `FROM` lines pin `node:20-alpine`
+      by its multi-arch index digest, with a comment saying a bump is manual; `check-image-starts`
+      built and booted the pinned image · ~~the backup writes no checksum~~ — ★ **CLOSED 2026-10-02
+      (TIDY-C-1):** `npm run backup` writes `<archive>.sha256` in `sha256sum` format, and
+      `npm run status` FAILS the backup check when the newest archive's checksum file is missing or
+      does not match · the session cookie lives 30 days (his decision; untouched).
       ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
       client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
       the server declaration is now `^4.1.4`, so all four vitest declarations across both
@@ -611,6 +621,15 @@ source before it was moved rather than taken from a report:**
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
 
+- [ ] ★ **`pair-reach-census` STILL ANSWERS A SCOPE THAT MATCHES NOTHING WITH A TABLE AND EXIT 0 —
+      opened 2026-10-02, the one remainder of HARNESS-EMPTY-SCOPE-1** (PART TWO). Its documented
+      `--tracks=a,b` matches nothing and exits 0. It is an engine-hull driver (it imports `raceCore.js`),
+      and wiring it to `scripts/lib/trackScope.mjs` pulled that shared place into the hull, so it was
+      left by rule. A fix must refuse the empty scope without making the shared place a hull file.
+      **verify:** `node scripts/pair-reach-census.mjs --tracks=no-such-track; echo $?` prints a table
+      and 0 while this row is open.
+
+
 **He asked for the day's findings collected so they can be taken one at a time.** Every item below is
 a FINDING. **No work is proposed here and no verdict is invented** — each says only what it is, what
 establishes it, and which of three things it needs next: **MEASURING**, **BUILDING**, or **ONLY HIS
@@ -635,82 +654,6 @@ WORD**. Where a subject already has a home in this file it is LINKED, not restat
       Establishes it: [GATE-RED-1](../reports/evolution/GATE-RED-1.md).
       **NEEDS: ONLY HIS WORD** — restore the serialisation as a performance decision, or teach the
       gate to report a timeout-only failure as INCONCLUSIVE rather than as pass or fail.
-
-- [ ] **A SWEEP THAT ASKS FOR RACES AND GETS NONE STILL PRINTS A TABLE AND EXITS 0.**
-      ★★ **RETARGETED 2026-09-25 — the DRIVER half is done and the row no longer claims it.** A
-      truncated race now throws (`scripts/lib/raceDriver.mjs:627-635`), so the original framing —
-      *"44 call `runRace` and exactly one reads its return value"* — describes a problem that has been
-      answered at the source and is deleted here rather than left to look unbuilt.
-      **What reproduces today is the SCOPE half:** a tool handed a track name that matches nothing
-      filters its work list to empty, prints a full table with zero data rows, and exits 0. That is
-      the failure the guard on the viewer harness catches for itself and nothing else does.
-      ★ **The row now asks for ONE shared place** that validates a track name against the registry
-      and refuses an empty scope, used by the tools that take `--tracks`, rather than the same check
-      copied per tool.
-      ★ **Deleted as stale: "the guard is NOT wired into CI, verify or a hook."** `scripts/verify.mjs`
-      makes `viewer-invariants` the pre-merge gate guard, so that sentence has been false for weeks.
-      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md).
-      **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
-      in the report.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:414` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:157`, the driver's own test. Waiting on BUILDING.
-
-      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
-      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
-      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
-      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
-      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
-      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
-      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
-      established at source:** `scripts/viewer-invariants.mjs` filters
-      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
-      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
-      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
-      race is driven, so `runRace`'s return value could not have caught it either.
-      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
-      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
-      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
-      `--tracks` entry point named in the piece-E report still has the defect.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
-      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
-      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
-      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
-      surrounding numbers are larger than when the row was written: **82 files import the driver**
-      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
-
-      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. One shared place now exists and three
-      callers are on it; the row claims only the callers that are not.**
-      ★ **The shared place:** `scripts/lib/trackScope.mjs`, `resolveTrackScope()`. It validates the
-      requested scope against the tracks that exist and REFUSES by name — naming what was asked for,
-      what the repository has, that there is no "all", and why exiting 0 would be wrong. **The
-      wording is not new:** it is taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`,
-      which already guarded exactly this, rather than invented beside them.
-      ★ **Wired, and each PROVEN to refuse (exit 2) where it used to exit 0:**
-      `line-visible-truth.mjs`, `pan-lag-account.mjs`, `endgame-width-truth.mjs`.
-      ★ **SABOTAGE, both ways:** with the refusal disabled, `--tracks=all` prints the full headers
-      with zero data rows and exits **0** again; restored, it exits **2**. A valid scope
-      (`--tracks=river-run`) is unaffected — real rows, exit 0.
-      ★★ **TWO OF THE FIVE NAMED CALLERS WERE ALREADY GUARDED, and were left alone.**
-      `company-spread-sweep.mjs:160` refuses with exit 2 and names what is missing and what is
-      available; `zoom-rate-truth.mjs:174` throws. Neither is a silent zero, so neither was changed —
-      the second is louder than it needs to be rather than quieter.
-      ★ **WHAT REMAINS, and why it was not forced:** several tools under `scripts/diag/` take a scope
-      in a DIFFERENT shape — `aim-levers.mjs:78` is a single-track `Map.get`, `binding-census.mjs:10`
-      iterates every track with no scope at all. Passing the scope through is not enough for those,
-      so by this block's own rule they stop here and are named rather than half-converted.
-
-      ★★ **NARROWED FURTHER 2026-09-26 by NIGHT-2026-09-26 PIECE 4.**
-      `scripts/lib/trackScope.mjs` grew a second entry point, `resolveTrackScopeIds`, aimed at
-      the diag shape (iterate ids, look each up per iteration via `Map.get`). Same refusal wording,
-      same exit code, same provisions — one home, two doors, not two homes. Five diag tools brought
-      under the refusal (`company-ceiling-who`, `company-under-floor`, `endgame-spec`,
-      `headcount-price`, `sprite-premise`); the sabotage arm on each was verified (`--tracks=nope`
-      / `--track=nope` → exit 2 naming the ten known tracks; a valid scope still produces rows).
-      Ten file-based `-sum.mjs` analysers were NAMED and left alone — their scope reaches
-      `readFileSync(--dir=...)` rather than `loadTracks()`, so they have no natural "known set" to
-      validate against. Report:
-      [TRACKSCOPE-DIAG-REACH-1](../reports/evolution/TRACKSCOPE-DIAG-REACH-1.md).
 
 - [x] ~~**THE HARNESS RUNS A CAMERA THE PRODUCT CANNOT PRODUCE, and 19 instruments make picture claims
       on it.** 43 of 53 `resolveIdentity` callers take the constant `1439767152`; the browser has
@@ -1196,6 +1139,31 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       differ from their seeds in `effects` (compared 2026-10-01; the other eight tracks and all ten
       backgrounds are byte-identical). **verify:** on his machine,
       `cmp server/seeds/tracks/searound.json server/data/tracks/searound.json`.
+      ★ **2026-10-01 — SHIP-OWNER-COSMETIC-1, the camera half of "his installation becomes the shipped
+      default"** (branch `ship/owner-cosmetic-defaults`, **NOT merged, NOT minted**). On the owner's
+      request of 2026-10-01, his cosmetic settings (`COSMETIC_CONFIG_KEYS`,
+      `client/src/modules/parity/configFingerprint.js:27`) became the shipped camera defaults in
+      `client/src/modules/storage/defaults.js`, taken from his Dev Screen export with the existing
+      `splitConfigDiffs`; his race settings were already the defaults. The owner's decisions of
+      2026-10-01 on it: the BATTLE shot ships off (the feature stays in the code), OVERVIEW tracks
+      slowly again, the winner card fills the whole pause, and the comeback hold is longer with a wider
+      Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
+      move and are minted only after his eye. 
+      ★ **2026-10-02 — THE CAMERA HALF IS DONE: SHIP-OWNER-COSMETIC-1 merged and minted** on the
+      owner's look of that day ([report](../reports/evolution/SHIP-OWNER-COSMETIC-1.md)); his camera
+      settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
+      the player group.**
+
+- [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
+      his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
+      racer went on far into the lead after the comeback shot cut away. Recorded as he reported it.
+      **verify:** none — an observation, not yet a question with a measurement attached.
+
+- [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
+      items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
+      on-screen build/source badge; the off-default settings badge; plus a sweep for any further
+      developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
+      work and names a check per display.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
@@ -2536,6 +2504,174 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **THE COMEBACK SHOT — CLOSED 2026-10-02 by
+      [SHIP-OWNER-COSMETIC-1](../reports/evolution/SHIP-OWNER-COSMETIC-1.md), merged and minted.** The
+      owner looked at the branch on the 4173 production preview on 2026-10-02 and approved it: the
+      shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final scene
+      ([COMEBACK-HOLD-2](../reports/evolution/COMEBACK-HOLD-2.md)), after a wait before the cut that
+      stays at 1500 ms by his decision of 2026-10-02 — fewer comeback shots in 20-racer fields
+      accepted; the camera cuts only if the detector still offers the racer after the wait
+      ([COMEBACK-CUT-DELAY-1](../reports/evolution/COMEBACK-CUT-DELAY-1.md)).
+      *The row as it stood:*
+      **THE COMEBACK SHOT HOLDS AT LEAST 8 s, AND LONGER WHILE THE CATCH-UP IS STILL IN PROGRESS —
+      the owner's decision of 2026-10-02. Open; measured, not built.** Today it holds exactly 8 s (the
+      COMEBACK_ZOOM profile's `maxStateDuration` and `comebackMinDuration` in `defaults.js`).
+      [COMEBACK-HOLD-MEASURE-1](../reports/evolution/COMEBACK-HOLD-MEASURE-1.md), N=30 races: 10 shots,
+      all ended by the 8 s cap; 6 of 10 racers were still gaining places at the cut; nothing in the code
+      today says "the comeback is finished" — the plan's `resolve` beat is an entry gate only, and fell
+      before every cut. **What a build has to choose is that end signal.** **verify:** rerun
+      `node scripts/diag/comeback-hold-measure.mjs` — today every shot's "ended by" is the 8 s cap.
+      ★ **BUILT 2026-10-02 on `ship/owner-cosmetic-defaults` — COMEBACK-HOLD-1, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-1.md)). The owner's rule of 2026-10-02: at
+      least 8 s, then while the racer is still gaining places, at most 15 s. The end signal is "no
+      place gained in the last W ms", read from the detector's own rank history; W chosen by
+      measurement (N=30 races per arm). Quick-Test seed to look at: River Run, seed 3. **Stays open
+      until the owner has looked.**
+      ★ **2026-10-02 — the owner looked; the shot cut while the racer was around 5th.** Diagnosed in
+      [COMEBACK-CUT-DIAG-1](../reports/evolution/COMEBACK-CUT-DIAG-1.md): the gain-stop ended it (no
+      gate did). His setup fields 40 racers, not the 20 the window was chosen on; on 40-racer fields
+      the 2 s window cuts 11 of 18 shots that then gain again within 5 s. The window is open again.
+      ★ **2026-10-02 — how long a comeback really lasts, measured:
+      [COMEBACK-DURATION-1](../reports/evolution/COMEBACK-DURATION-1.md)** (750 Quick-Test races; the
+      owner's definition: a comebacker is real once he has taken 3rd). From the shot's start to his
+      first 3rd place, the median is above 8 s in every field size except open tracks with 20 racers,
+      and the p90 runs to 25 s (closed, 40 racers).
+      ★ **BUILT 2026-10-02 — COMEBACK-HOLD-2, on `ship/owner-cosmetic-defaults`, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-2.md)). The owner's decision of 2026-10-02:
+      the shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final
+      scene. It replaces the gain-stop rule. Over the 750 races: final-scene overlap 0 of 463 shots.
+      Quick-Test seed to look at: Ice Track, 40 racers, seed 4896. **Stays open until the owner has
+      looked.**
+      ★ **BUILT 2026-10-02 — COMEBACK-CUT-DELAY-1, on the same branch, awaiting the owner's eye**
+      ([report](../reports/evolution/COMEBACK-CUT-DELAY-1.md)). The owner's decision of 2026-10-02:
+      before cutting to the comeback racer the camera waits 1–2 s, keeping its shot. 2000 ms lost more
+      than 10% of shots, so by his rule it is 1500 ms; that still loses more than 10% on 20-racer
+      fields and on open 40 — none to the final scene, all to climbs that stopped during the wait.
+      Same Quick-Test seed: the shot now starts at 48.9 s. **Stays open until the owner has looked.**
+
+- [x] ★ **DEV SCREEN COMEBACK SETTINGS — CLOSED 2026-10-02 by
+      [SHIP-OWNER-COSMETIC-1](../reports/evolution/SHIP-OWNER-COSMETIC-1.md).** The two controls proven
+      dead by construction are removed: the COMEBACK_ZOOM column of the per-state table no longer
+      shows *inner frame* or *minimum hold* (`onlyFor` in `CameraAdvancedSection.jsx`), and the
+      comeback profile in `defaults.js` no longer carries the two keys. Every fingerprint unchanged.
+      **Kept, because they are still read** (no effect in the survey's 30 races only): the comeback
+      cooldown, the outcome-phase threshold, and the COMEBACK_ZOOM profile's entry speed, lead-in,
+      lead-out, entry timeout, lead-ahead and lead-out switch.
+      *The row as it stood:*
+      **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
+      is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
+      Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones
+      proven dead, and list the rest for the owner. **verify:** rerun the arm's
+      `node scripts/diag/comeback-hold-measure.mjs --set=<key>=<value>` and compare `cameraTraceHash`.
+      ★ **SURVEYED 2026-10-02 — [COMEBACK-SETTINGS-SURVEY-1](../reports/evolution/COMEBACK-SETTINGS-SURVEY-1.md)**
+      (driven over 30 races, camera output compared byte for byte; nothing removed). **Act:** weight
+      (rarely), min. positions, window, min. duration, min. start gap, max. current rank, use beats,
+      and the COMEBACK_ZOOM profile's world-in-shot, tracking speed and maximum duration; the
+      diagnostics toggle acts on the display only. **No effect, structurally:** the profile's inner
+      frame and minimum hold. **No effect in these races, live reader:** cooldown, outcome-phase
+      threshold and six profile fields. **Stays open:** removing the dead ones is the remaining work.
+
+- [x] ★ **A SWEEP THAT ASKS FOR RACES AND GETS NONE — CLOSED 2026-10-02 by
+      [HARNESS-EMPTY-SCOPE-1](../reports/evolution/HARNESS-EMPTY-SCOPE-1.md).** A census of
+      `scripts/` finds **30** tools that read a `--tracks` flag. **28 now resolve their scope through
+      the one shared place**, `scripts/lib/trackScope.mjs` (reused, not added beside:
+      `resolveTrackScope` for tools that iterate geometries, `resolveTrackScopeIds` for tools that
+      iterate names) — seven were already on it, **21 were wired here**, including the file-reading
+      `-sum` analysers the 2026-09-26 block left alone: their scope is still a list of TRACK names, so
+      the registry is the known set. Each of the 28 was run with `--tracks=all` and with
+      `--tracks=`: **exit 2, the refusal naming what was asked and what exists, 0 bytes on stdout.**
+      An EMPTY `--tracks=` is now refused rather than read as "every track", and
+      `viewer-invariants.mjs` calls the shared place instead of keeping the original copy of its
+      wording. **What keeps it closed:** `scripts/lib/trackScopeWiring.test.mjs` fails if any script
+      outside the race hull reads a `tracks` flag without importing the shared place.
+      ★ **TWO ARE LEFT, BY RULE, AND NAMED:** `outcome-phase-window.mjs` and `pair-reach-census.mjs`
+      import `raceCore.js` directly, so they are race-hull DRIVERS and `engine-reach.mjs` counts their
+      whole import closure. Wiring them put `trackScope.mjs` into the hull (measured:
+      `engine-reach --check` answered *3 paths can change the race*), so they were reverted; the
+      wiring test pins `trackScope.mjs` OUTSIDE the hull. `outcome-phase-window` already refuses an
+      empty or unknown scope with exit 2 on its own. **`pair-reach-census` does not:** its documented
+      `--tracks=a,b` goes to `loadTracks({ only })`, which matches ONE id, so any multi-track scope
+      prints nothing and exits 0 (measured on master). That is a defect of one tool, not of the
+      shared place, and it is named here rather than fixed with a second copy of the refusal.
+      **Not claimed either:** a valid scope whose DATA is missing (a `-sum` analyser pointed at a
+      `--dir` with no files) still prints "NO FILE" rows and exits 0 — that is the data half, a
+      different question from the scope. *The row as it stood:*
+      **A SWEEP THAT ASKS FOR RACES AND GETS NONE STILL PRINTS A TABLE AND EXITS 0.**
+      ★★ **RETARGETED 2026-09-25 — the DRIVER half is done and the row no longer claims it.** A
+      truncated race now throws (`scripts/lib/raceDriver.mjs:627-635`), so the original framing —
+      *"44 call `runRace` and exactly one reads its return value"* — describes a problem that has been
+      answered at the source and is deleted here rather than left to look unbuilt.
+      **What reproduces today is the SCOPE half:** a tool handed a track name that matches nothing
+      filters its work list to empty, prints a full table with zero data rows, and exits 0. That is
+      the failure the guard on the viewer harness catches for itself and nothing else does.
+      ★ **The row now asks for ONE shared place** that validates a track name against the registry
+      and refuses an empty scope, used by the tools that take `--tracks`, rather than the same check
+      copied per tool.
+      ★ **Deleted as stale: "the guard is NOT wired into CI, verify or a hook."** `scripts/verify.mjs`
+      makes `viewer-invariants` the pre-merge gate guard, so that sentence has been false for weeks.
+      Establishes it: [HARNESS-LOUD-ZERO-1](../reports/evolution/HARNESS-LOUD-ZERO-1.md).
+      **NEEDS: BUILDING** — the design and its measured cost (0 of 1,140 cells on today's master) are
+      in the report.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt. Re-counted today: `runRace` is exported from `scripts/lib/raceDriver.mjs:414` and **exactly one** caller reads its return value — `scripts/raceDriver.test.mjs:157`, the driver's own test. Waiting on BUILDING.
+
+      **NEXT OCCURRENCE, 2026-09-04 — `--tracks=all`.** A run asked the viewer harness for all ten
+      tracks, got a track list of length zero, **reported 0 races in 52 s and exited clean**.
+      ★ **RE-MEASURED ON THE NIGHT OF 2026-09-04 BY REMOVING THE NEW GUARD AND RE-RUNNING IT, AND IT
+      IS WORSE THAN THAT ENTRY SAYS: the run exits 0 in 43 s and prints
+      `Every frame of every race swept satisfied all five invariants. PASS`.** It does not merely
+      fail to answer — it answers PASS, over zero races, in the voice the gate uses when it has
+      checked everything. That is the cost, and it is not the 43 seconds. **The mechanism,
+      established at source:** `scripts/viewer-invariants.mjs` filters
+      `geometries().filter((g) => trackArg.split(",").includes(g.id))` — no geometry has the id
+      `all`, so an unknown name filters to nothing and nothing downstream asks why. It is the same
+      class as the entry above and a DIFFERENT instance of it: this one loses the races before any
+      race is driven, so `runRace`'s return value could not have caught it either.
+      **Guarded 2026-09-04 (night chain, piece E)** at that harness only — a zero-length scope and an
+      unknown track name both fail loudly, naming what was asked for and what was found. The guard is
+      NOT wired into CI, verify or a hook; that is its own order and has not been given. Every other
+      `--tracks` entry point named in the piece-E report still has the defect.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and the figures have GROWN.** Re-counted at the
+      tree today, not carried: `runRace` is exported from **`scripts/lib/raceDriver.mjs:491`** (the
+      entry says `:414`; the line moved, the mechanism did not) and **exactly one** caller still reads
+      its return value — **`scripts/raceDriver.test.mjs:157`**, the driver's own test. The
+      surrounding numbers are larger than when the row was written: **82 files import the driver**
+      (was 56) and there are **71 `runRace` call sites** (was 44). Unbuilt.
+
+      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. One shared place now exists and three
+      callers are on it; the row claims only the callers that are not.**
+      ★ **The shared place:** `scripts/lib/trackScope.mjs`, `resolveTrackScope()`. It validates the
+      requested scope against the tracks that exist and REFUSES by name — naming what was asked for,
+      what the repository has, that there is no "all", and why exiting 0 would be wrong. **The
+      wording is not new:** it is taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`,
+      which already guarded exactly this, rather than invented beside them.
+      ★ **Wired, and each PROVEN to refuse (exit 2) where it used to exit 0:**
+      `line-visible-truth.mjs`, `pan-lag-account.mjs`, `endgame-width-truth.mjs`.
+      ★ **SABOTAGE, both ways:** with the refusal disabled, `--tracks=all` prints the full headers
+      with zero data rows and exits **0** again; restored, it exits **2**. A valid scope
+      (`--tracks=river-run`) is unaffected — real rows, exit 0.
+      ★★ **TWO OF THE FIVE NAMED CALLERS WERE ALREADY GUARDED, and were left alone.**
+      `company-spread-sweep.mjs:160` refuses with exit 2 and names what is missing and what is
+      available; `zoom-rate-truth.mjs:174` throws. Neither is a silent zero, so neither was changed —
+      the second is louder than it needs to be rather than quieter.
+      ★ **WHAT REMAINS, and why it was not forced:** several tools under `scripts/diag/` take a scope
+      in a DIFFERENT shape — `aim-levers.mjs:78` is a single-track `Map.get`, `binding-census.mjs:10`
+      iterates every track with no scope at all. Passing the scope through is not enough for those,
+      so by this block's own rule they stop here and are named rather than half-converted.
+
+      ★★ **NARROWED FURTHER 2026-09-26 by NIGHT-2026-09-26 PIECE 4.**
+      `scripts/lib/trackScope.mjs` grew a second entry point, `resolveTrackScopeIds`, aimed at
+      the diag shape (iterate ids, look each up per iteration via `Map.get`). Same refusal wording,
+      same exit code, same provisions — one home, two doors, not two homes. Five diag tools brought
+      under the refusal (`company-ceiling-who`, `company-under-floor`, `endgame-spec`,
+      `headcount-price`, `sprite-premise`); the sabotage arm on each was verified (`--tracks=nope`
+      / `--track=nope` → exit 2 naming the ten known tracks; a valid scope still produces rows).
+      Ten file-based `-sum.mjs` analysers were NAMED and left alone — their scope reaches
+      `readFileSync(--dir=...)` rather than `loadTracks()`, so they have no natural "known set" to
+      validate against. Report:
+      [TRACKSCOPE-DIAG-REACH-1](../reports/evolution/TRACKSCOPE-DIAG-REACH-1.md).
 
 - [x] ★ **TENANCY — CLOSED 2026-10-01: THE BOUNDARY WILL NOT BE BUILT (decision of the owner,
       2026-10-01).** Organizers on one installation share everything that is shared today; races stay

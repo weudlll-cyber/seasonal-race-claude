@@ -36,10 +36,16 @@
 //              over-widens for most of the lap. These functions take the actual heading, so the
 //              guarantee binds exactly when it must and not a frame earlier.
 //
-//              Pure: no state, no config reads, no clock. Its only import is the frame chord.
+//              Pure: no state, no config reads, no clock. Its imports are the frame chord and ONE
+//              shipped constant — `DEFAULT_INNER_FRAME_PCT`, the default for an omitted
+//              `innerFramePct` (TIDY-C-1) — read at module load, never per call.
 // ============================================================
 
 import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
+// TIDY-C-1: the shipped safe region (`targetInnerFramePct` in defaults.js), reused from
+// framingConfig.js — the same constant the director falls back to — so an omitted `innerFramePct`
+// below means the shipped value rather than a literal 1 nothing ships.
+import { DEFAULT_INNER_FRAME_PCT } from './framingConfig.js';
 // frameExtentAlong is still the right measure for anchorScreenPoint (a fraction ALONG the frame's
 // own chord) and for pairGuarantee (a span between two things that must both be in frame). Only the
 // corridor changed, because only the corridor is measured OUTWARD from the anchor to each side.
@@ -204,7 +210,7 @@ export function corridorGuarantee(
   axisY,
   frameW,
   frameH,
-  innerFramePct = 1,
+  innerFramePct = DEFAULT_INNER_FRAME_PCT, // TIDY-C-1: the shipped safe region, not a literal 1
   anchorAt = null
 ) {
   if (!(trackWidthPx > 0)) return Infinity;
@@ -424,7 +430,7 @@ export function contenderGuarantee(
   axisY,
   frameW,
   frameH,
-  innerFramePct = 1,
+  innerFramePct = DEFAULT_INNER_FRAME_PCT, // TIDY-C-1: the shipped safe region, not a literal 1
   padding = 0,
   anchorWorld = null,
   anchorAt = null
@@ -476,7 +482,7 @@ export function pairGuarantee(
   axisY,
   frameW,
   frameH,
-  innerFramePct = 1,
+  innerFramePct = DEFAULT_INNER_FRAME_PCT, // TIDY-C-1: the shipped safe region, not a literal 1
   padding = 0,
   anchorWorld = null,
   anchorAt = null

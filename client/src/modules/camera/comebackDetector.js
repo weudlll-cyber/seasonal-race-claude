@@ -157,6 +157,18 @@ export class ComebackDetector {
   }
 
   /**
+   * COMEBACK-HOLD-2: this racer's rank as `recordRanks` last recorded it — this frame's, since the
+   * director records before it decides. A PURE READ of the history that already exists; no second
+   * tracker. `null` for a racer with no history (he could not have been offered a shot then).
+   * @param {number} index
+   * @returns {number|null}
+   */
+  latestRank(index) {
+    const hist = this._history.get(index);
+    return hist && hist.length ? hist[hist.length - 1].rank : null;
+  }
+
+  /**
    * Record this frame's rank for every watched racer. Called once per frame. Only the roster is
    * tracked, so the per-frame allocation stays trivial in a 40-racer field.
    * @param {Array} racers  full live racer array, any order

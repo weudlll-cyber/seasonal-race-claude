@@ -1053,7 +1053,32 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6622d4cd 2026-09-27 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 85b65d51 2026-10-02 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-02 (SHIP-OWNER-COSMETIC-1, master merged in), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. Master's TIDY-C-1 (`framingRule.js`) and this branch's comeback work meet in this tree for the first time; the table below stands.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-CUT-DELAY-1), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. The wait before the comeback cut changed files in the stamp's closure; this measurement's race has no comeback shot it changes. The table below stands.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-2), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. The comeback-until-3rd rule changed files in the stamp's closure; this measurement's race has no comeback shot it changes. The table below stands.
+
+★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-1), IDENTICAL TO THE DIGIT** — 20606/4.36/10.43, 9014/3.71/10.24, 6049/11.77/16.00, 1944/3.22/8.22, ratio 2.89×. The comeback-hold rule changed files in the stamp's closure; this measurement's race has no comeback shot whose length the rule changes. The table below stands.
+
+★★★ **RE-MEASURED 2026-10-01 (SHIP-OWNER-COSMETIC-1) — THE OWNER'S CAMERA SETTINGS ARE THE SHIPPED
+DEFAULTS, AND THIS TABLE MOVED WITH THEM.** `node scripts/tracking-lag.mjs`, the command this stamp
+names, on the branch `ship/owner-cosmetic-defaults`:
+
+| state | frames | median pp | p95 pp |
+|---|---|---|---|
+| LEADER_ZOOM | **20606** | 4.36 | 10.43 |
+| LEAD_CHANGE | **9014** | 3.71 | 10.24 |
+| OVERVIEW | **6049** | **11.77** | 16.00 |
+| PHOTO_FINISH | **1944** | 3.22 | 8.22 |
+
+**OVERVIEW median 11.77 pp against every other state pooled 4.07 pp — ratio 2.89×.** Two causes,
+both the owner's decisions of 2026-10-01: **BATTLE_ZOOM has no row** because the BATTLE shot ships
+off, and **OVERVIEW tracks at 1.5 again**, so the lag CAMERA-ANCHOR-TRUTH-1 §4c halved by moving it
+to 0.25 is back — larger than that section's 13.78 pp-at-1.5 figure because the race and the other
+camera defaults differ. This is the table that is CURRENT; the CHASE-SHIP-1 table below is history.
 
 ★★ **RE-MEASURED AT `c008f21f` (NIGHT-2026-09-24D), IDENTICAL TO THE DIGIT** — 8836/5.92/9.34,
 12395/4.62/8.80, 9247/4.52/8.93, 4250/2.53/19.68, 1944/3.08/8.22, ratio 0.51×. The `via=` closure

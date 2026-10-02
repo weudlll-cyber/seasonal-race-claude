@@ -44,6 +44,7 @@ import {
   buildRace,
   runRace,
 } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 import {
   computeTagLayout,
@@ -80,9 +81,13 @@ const CH = 720;
 // TWO CONTRASTING TRACKS, the same pair LABEL-DEGRADE-1 used so the switch numbers are comparable:
 // searound is CLOSED and bunches the field into a repeating pack, river-run is OPEN and strings it
 // out. A rule that is calm on one and busy on the other has not been measured.
-const TRACKS = (arg("tracks", "searound,river-run") || "")
-  .split(",")
-  .filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "label-occlusion-truth",
+  ids: arg("tracks", "searound,river-run"),
+  all: loadTracks(),
+});
 const N = Number(arg("racers", "100"));
 const HOLD_MS = Number(
   arg("hold", String(DEFAULT_CAMERA_CONFIG.labelFormHoldMs)),
@@ -339,11 +344,8 @@ console.log(
   "track        demote  labels  name%   switches  /label/race  worst  churn/s   NON-EXEMPT  exempt-ovl  focus-sw",
 );
 for (const id of TRACKS) {
+  // Validated above by resolveTrackScopeIds, so this lookup cannot miss.
   const geo = loadTracks({ only: id })[0];
-  if (!geo) {
-    console.error(`no such track: ${id}`);
-    continue;
-  }
   // TWO ARMS. The first is the owner's rule as written — a symmetric hold. The second makes the
   // name->number switch immediate, which is the only way a held name never sits on a racer; it is
   // measured here so the choice between them is a number rather than an argument.

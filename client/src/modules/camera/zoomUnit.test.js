@@ -150,20 +150,26 @@ describe('3. a larger setting is a wider shot — in every state', () => {
   it('the states are COMMENSURABLE: one number, one ordering, across states', () => {
     const cd = new CameraDirector(3072, 2048, false, DEFAULT_CAMERA_CONFIG, 28.5, null, 131);
     const c = (z) => corridorsForCamZoom(z, REF, CH / 2048);
-    expect(c(cd._overviewStateZoom)).toBeCloseTo(1.5, 6);
-    expect(c(cd._leaderZoom)).toBeCloseTo(0.75, 6);
-    expect(c(cd._leadChangeZoom)).toBeCloseTo(0.75, 6);
-    expect(c(cd._battleZoom)).toBeCloseTo(0.55, 6);
-    expect(c(cd._comebackZoom)).toBeCloseTo(0.55, 6);
-    expect(c(cd._photoFinishZoom)).toBeCloseTo(0.4, 6);
-    // the owner's ordering: OVERVIEW widest at 2x LEADER, BATTLE/COMEBACK tighter, PHOTO tightest
+    // Each state frames exactly its shipped visibleCorridors — READ, not copied (SHIP-OWNER-COSMETIC-1
+    // moved five of them on 2026-10-01 and a copy here would have gone stale with them).
+    const shipped = (s) => DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s].visibleCorridors;
+    expect(c(cd._overviewStateZoom)).toBeCloseTo(shipped('OVERVIEW'), 6);
+    expect(c(cd._leaderZoom)).toBeCloseTo(shipped('LEADER_ZOOM'), 6);
+    expect(c(cd._leadChangeZoom)).toBeCloseTo(shipped('LEAD_CHANGE'), 6);
+    expect(c(cd._battleZoom)).toBeCloseTo(shipped('BATTLE_ZOOM'), 6);
+    expect(c(cd._comebackZoom)).toBeCloseTo(shipped('COMEBACK_ZOOM'), 6);
+    expect(c(cd._photoFinishZoom)).toBeCloseTo(shipped('PHOTO_FINISH'), 6);
+    // the owner's ordering: OVERVIEW widest, BATTLE/COMEBACK tighter than LEADER, PHOTO tightest
     expect(cd._overviewStateZoom).toBeLessThan(cd._leaderZoom);
     expect(cd._battleZoom).toBeGreaterThan(cd._leaderZoom);
     expect(cd._comebackZoom).toBeGreaterThan(cd._leaderZoom);
     expect(cd._photoFinishZoom).toBeGreaterThan(cd._battleZoom);
   });
 
-  it('the LEADER default is the picture the owner judged good: 225 world px', () => {
+  // The SAME amount of world on every track is the property; the amount is the shipped LEADER value
+  // (225 px until 2026-10-01, when the owner's own setting became the default), read from defaults.
+  it('the LEADER default frames the same world px on every track: visibleCorridors x the reference', () => {
+    const want = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors * REF;
     for (const t of TRACKS) {
       const { axisY } = axesFor(t);
       const cd = new CameraDirector(
@@ -175,7 +181,7 @@ describe('3. a larger setting is a wider shot — in every state', () => {
         null,
         t.tw
       );
-      expect(visibleWorldPx(cd._leaderZoom, axisY), t.name).toBeCloseTo(225, 3);
+      expect(visibleWorldPx(cd._leaderZoom, axisY), t.name).toBeCloseTo(want, 3);
     }
   });
 

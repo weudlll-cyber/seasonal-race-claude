@@ -19,7 +19,12 @@
 # died with six UNRESOLVED_IMPORT errors. Found by running it, not by reading it.
 # So `client/` goes to /build/client and `shared/` to /build/shared, exactly as they sit in the
 # repository, and the relative specifiers resolve unchanged.
-FROM node:20-alpine AS client-build
+# ★ BASE IMAGE PINNED BY DIGEST (TIDY-C-1, ordered by the owner 2026-10-02). Tag `node:20-alpine`,
+# multi-arch index digest sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293, read from the registry on 2026-10-02
+# (`docker buildx imagetools inspect node:20-alpine`). Both stages use the same digest. A rebuild is
+# now reproducible, and Alpine/Node patches no longer arrive on their own: a BUMP IS MANUAL — re-read
+# the digest of the tag the same way and replace it on both `FROM` lines. Nothing watches it for you.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS client-build
 WORKDIR /build/client
 # The manifest and lockfile FIRST, as their own layer: dependencies change far less often than
 # source, so an edit to a component reuses the install layer instead of repeating it.
@@ -30,7 +35,8 @@ COPY client/ /build/client/
 RUN npm run build
 
 # ── STAGE 2: THE RUNTIME IMAGE ─────────────────────────────────────────────────────────────────
-FROM node:20-alpine
+# Same pinned digest as stage 1 — see the note above the first `FROM` (TIDY-C-1).
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
 
 WORKDIR /app
 
