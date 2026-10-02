@@ -29,7 +29,20 @@ import { dirname, join } from 'node:path';
 import { CameraDirector } from './CameraDirector.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const directorSrc = readFileSync(join(HERE, 'CameraDirector.js'), 'utf8');
+// P1-CAMERADIRECTOR-SPLIT-1: the director's code is CameraDirector.js AND the modules split out of
+// it (the run-in schedule above all). CameraDirector.js comes FIRST, so every positive match below
+// still finds the production line where it was; the negative match now also covers the moved code.
+const directorSrc = [
+  'CameraDirector.js',
+  'CameraDirectorDiag.js',
+  'CameraDirectorCeremony.js',
+  'CameraDirectorRunIn.js',
+  'CameraDirectorLevelSet.js',
+  'CameraDirectorCeilings.js',
+  'offerArbitration.js',
+]
+  .map((f) => readFileSync(join(HERE, f), 'utf8'))
+  .join('\n');
 
 /**
  * Drive the latch directly through the two quantities it is made of.

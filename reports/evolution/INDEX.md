@@ -460,6 +460,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   with 40 the shot is cut at 4th and the racer gains again 0.37 s later; over 30 races of 40 racers the
   2 s window cuts 11 of 18 shots that then gain within 5 s (20 racers: 1 of 10).
 
+- [P1-CAMERADIRECTOR-SPLIT-1.md](P1-CAMERADIRECTOR-SPLIT-1.md) — **CameraDirector.js split along its
+  own seams, picture unchanged (2026-10-02, branch `refactor/camera-director-split` — MERGED into master 2026-10-03** after master's comeback work was ported onto its offer arbitration; every fingerprint equal to the record, 60 comeback races byte-identical to master's camera).**
+  5,526 -> 3,648 lines in eight one-per-commit extractions: the offer arbitration (pure,
+  `offerArbitration.js`, the precedence now visibly above the pool), `CAM_STATE` to `camState.js`, and
+  four prototype mixins (ceremony, run-in, level set, ceilings). After every step the engine
+  fingerprints equal the tip's; none reverted. Two source-reading guards widened to the new files,
+  each proven by sabotage. Premerge verify and the browser gate owed.
+
 - [COMEBACK-SETTINGS-SURVEY-1.md](COMEBACK-SETTINGS-SURVEY-1.md) — **which Dev Screen comeback
   settings still change the picture (2026-10-02, survey only).** Every control driven over the same
   30 races, camera output hashed per frame and compared byte for byte (control: 30/30 identical).
