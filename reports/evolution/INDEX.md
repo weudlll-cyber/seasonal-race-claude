@@ -426,6 +426,12 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [TIDY-C-1.md](TIDY-C-1.md) — **three items off the tidy list, 2026-10-02.** The `framingRule.js`
+  `innerFramePct` defaults now read `DEFAULT_INNER_FRAME_PCT`, and all four fingerprints verified
+  unchanged. The base image is pinned by digest, as the owner ordered that day, and the pinned image
+  built and booted. `npm run backup` writes a `.sha256`, and `npm run status` fails on a missing
+  or mismatched one, with each new test sabotaged red once. The C row stays open.
+
 - [HARNESS-EMPTY-SCOPE-1.md](HARNESS-EMPTY-SCOPE-1.md) — **every `--tracks` tool outside the race
   hull refuses an empty or unknown scope through one place.** A census finds 30 tools; 28 now use
   `scripts/lib/trackScope.mjs` (7 already, 21 wired), each proven to exit 2 with 0 bytes of stdout on

@@ -41,6 +41,7 @@
 //
 // ── USAGE ──────────────────────────────────────────────────────────────────────────────────────
 //   node scripts/backup.mjs --out <dir>              # write <dir>/racearena-backup-<UTC>.tar
+//                                                    #   and its <archive>.sha256 beside it (TIDY-C-1)
 //   npm run backup                                   # the same, into $RA_BACKUP_DIR (RELEASE-BASICS-1)
 //   node scripts/backup.mjs --restore <archive> --into <dir>
 //   node scripts/backup.mjs --restore <archive> --into <dir> --force   # overwrite a non-empty dir
@@ -60,7 +61,8 @@ import {
   accessSync,
   constants as FS,
 } from 'node:fs';
-import {join, resolve, relative, dirname, sep} from 'node:path';
+import {join, resolve, relative, dirname, sep, basename} from 'node:path';
+import { createHash } from 'node:crypto';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
 // ★ fileURLToPath, never URL.pathname: this repository's path contains spaces, and pathname
@@ -121,6 +123,42 @@ export function archiveTakenAt(name) {
   if (!m) return null;
   const [, y, mo, d, h, mi, s] = m;
   return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+}
+
+// ── the integrity checksum (TIDY-C-1) ──────────────────────────────────────────────────────────
+// Every archive gets a `<archive>.sha256` beside it in the standard `sha256sum` format
+// ("<hex>  <filename>"), so `sha256sum -c` checks it on any Linux host with no tool of ours, and
+// `npm run status` checks it through `verifyChecksum` below. Lives here, beside `archiveName`, so the
+// archive and its checksum are one format in one file. Not to be confused with the tar HEADER
+// checksum in `tarHeader`, which is part of the tar format and says nothing about the whole archive.
+
+/** The checksum file that belongs to an archive path (or name). */
+export function checksumPath(archive) {
+  return `${archive}.sha256`;
+}
+
+/** The `sha256sum` line for an archive's bytes: lowercase hex, TWO spaces, the bare file name. */
+export function checksumLine(bytes, archiveFileName) {
+  return `${createHash('sha256').update(bytes).digest('hex')}  ${archiveFileName}
+`;
+}
+
+/**
+ * Does the archive still match its checksum file? `{ ok, detail }`, never a throw, so a caller can
+ * report it as one line. A missing or malformed checksum file is NOT a pass: an archive that cannot
+ * be checked cannot be trusted to restore.
+ */
+export function verifyChecksum(archive) {
+  const sumFile = checksumPath(archive);
+  if (!existsSync(sumFile)) return { ok: false, detail: `no checksum file ${basename(sumFile)}` };
+  const m = /^([0-9a-f]{64}) [ *](.+)$/m.exec(readFileSync(sumFile, 'utf8'));
+  if (!m) return { ok: false, detail: `checksum file ${basename(sumFile)} is not in sha256sum format` };
+  if (m[2].trim() !== basename(archive))
+    return { ok: false, detail: `checksum file ${basename(sumFile)} names ${m[2].trim()}, not ${basename(archive)}` };
+  const actual = createHash('sha256').update(readFileSync(archive)).digest('hex');
+  return actual === m[1]
+    ? { ok: true, detail: 'checksum matches' }
+    : { ok: false, detail: `checksum MISMATCH for ${basename(archive)} — the archive changed after it was written` };
 }
 
 // ── a minimal, correct USTAR writer ────────────────────────────────────────────────────────────
@@ -265,7 +303,11 @@ export async function backup({ dataRoot, outDir, env = process.env, now = new Da
       chunks.push(tarHeader(it.name, body.length, statSync(it.from).mtimeMs), body, Buffer.alloc(pad512(body.length)));
     }
     chunks.push(Buffer.alloc(1024)); // two empty blocks end a tar
-    writeFileSync(archivePath, Buffer.concat(chunks));
+    const archiveBytes = Buffer.concat(chunks);
+    writeFileSync(archivePath, archiveBytes);
+    // TIDY-C-1: the checksum is computed from the SAME bytes just written, not re-read, and written
+    // after the archive so a checksum file never exists for an archive that does not.
+    writeFileSync(checksumPath(archivePath), checksumLine(archiveBytes, basename(archivePath)));
   } finally {
     rmSync(staging, { recursive: true, force: true });
   }
@@ -273,7 +315,8 @@ export async function backup({ dataRoot, outDir, env = process.env, now = new Da
   const total = items.reduce((s, i) => s + i.bytes, 0);
   log(`items     : ${items.length} (${total} bytes before archiving)`);
   log(`archive   : ${archivePath} (${statSync(archivePath).size} bytes)`);
-  return { archivePath, items, dataRoot: root, bytes: total };
+  log(`checksum  : ${checksumPath(archivePath)}`);
+  return { archivePath, checksumPath: checksumPath(archivePath), items, dataRoot: root, bytes: total };
 }
 
 // ── restore ────────────────────────────────────────────────────────────────────────────────────

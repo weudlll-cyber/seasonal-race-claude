@@ -3,7 +3,8 @@
 // Path:        scripts/backup.test.mjs
 // Project:     RaceArena — DELIVERY-BACKUP-1
 // Description: The refusal cases, the naming rule, and a backup→restore round trip that carries a
-//              real SQLite database with rows in it.
+//              real SQLite database with rows in it. Since TIDY-C-1 also the archive's `.sha256`
+//              checksum file and `verifyChecksum`, which `npm run status` relies on.
 //
 // ★★ WHY THERE IS A DATABASE IN A UNIT TEST. The whole point of this tool is that the databases are
 // copied through SQLite's own online backup rather than as files. A test that only moved JSON around
@@ -15,15 +16,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, chmodSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const { backup, restore, BackupRefusal, archiveName, stampUtc, strayOverrides, SQLITE_SIDE } =
-  await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
+const {
+  backup,
+  restore,
+  BackupRefusal,
+  archiveName,
+  stampUtc,
+  strayOverrides,
+  SQLITE_SIDE,
+  checksumPath,
+  verifyChecksum,
+} = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
 
 let Database = null;
 try {
@@ -235,6 +246,44 @@ test('archiveTakenAt reads back exactly what archiveName wrote, and nothing else
   assert.equal(archiveTakenAt('notes.txt'), null);
 });
 
+// ── the checksum file (TIDY-C-1) ───────────────────────────────────────────────────────────────
+
+test('every archive gets a sha256sum-format checksum file beside it, and it matches', async () => {
+  const dir = scratch();
+  try {
+    seedRoot(join(dir, 'data'));
+    const { archivePath } = await backup({ dataRoot: join(dir, 'data'), outDir: join(dir, 'out') });
+    const line = readFileSync(checksumPath(archivePath), 'utf8');
+    // The exact `sha256sum` layout: 64 lowercase hex, TWO spaces, the bare file name, a newline.
+    const expected = createHash('sha256').update(readFileSync(archivePath)).digest('hex');
+    assert.equal(line, `${expected}  ${basename(archivePath)}
+`);
+    assert.deepEqual(verifyChecksum(archivePath), { ok: true, detail: 'checksum matches' });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('verifyChecksum FAILS on a changed archive, a missing file, and a file naming another archive', async () => {
+  const dir = scratch();
+  try {
+    seedRoot(join(dir, 'data'));
+    const { archivePath } = await backup({ dataRoot: join(dir, 'data'), outDir: join(dir, 'out') });
+    const sum = readFileSync(checksumPath(archivePath), 'utf8');
+    writeFileSync(checksumPath(archivePath), sum.replace(basename(archivePath), 'other.tar'));
+    assert.equal(verifyChecksum(archivePath).ok, false, 'a checksum for another archive is not this one');
+    writeFileSync(checksumPath(archivePath), sum);
+    const body = readFileSync(archivePath);
+    body[0] ^= 0xff; // one flipped byte: the corruption a checksum exists to catch
+    writeFileSync(archivePath, body);
+    assert.match(verifyChecksum(archivePath).detail, /MISMATCH/);
+    rmSync(checksumPath(archivePath));
+    assert.match(verifyChecksum(archivePath).detail, /no checksum file/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('`npm run backup` writes one archive into RA_BACKUP_DIR', () => {
   const dir = scratch();
   try {
@@ -243,6 +292,7 @@ test('`npm run backup` writes one archive into RA_BACKUP_DIR', () => {
     assert.equal(r.status, 0, r.stderr + r.stdout);
     const made = readdirSync(join(dir, 'backups')).filter((n) => archiveTakenAt(n));
     assert.equal(made.length, 1, `expected one archive, found ${made}`);
+    assert.equal(verifyChecksum(join(dir, 'backups', made[0])).ok, true, 'the CLI writes the checksum too');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

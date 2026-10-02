@@ -12,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { exec } from 'node:child_process';
@@ -22,7 +22,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const { runStatus, checkHealth, checkDisk, checkWritable, checkBackup, defaultUrl } = await import(
   pathToFileURL(join(HERE, 'status.mjs')).href
 );
-const { archiveName } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
+const { archiveName, checksumPath, checksumLine } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
 
 const NOW = new Date('2026-10-01T12:00:00Z');
 const hoursAgo = (h, from = NOW) => new Date(from.getTime() - h * 3_600_000);
@@ -33,8 +33,14 @@ function fixture({ backupAgeHours = 1, from = NOW } = {}) {
   const backups = join(dir, 'backups');
   mkdirSync(data);
   mkdirSync(backups);
-  if (backupAgeHours !== null) writeFileSync(join(backups, archiveName(hoursAgo(backupAgeHours, from))), '');
-  return { dir, data, backups, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  let archive = null;
+  if (backupAgeHours !== null) {
+    archive = join(backups, archiveName(hoursAgo(backupAgeHours, from)));
+    writeFileSync(archive, '');
+    // TIDY-C-1: an intact archive has its checksum file, written by the same helper `backup.mjs` uses.
+    writeFileSync(checksumPath(archive), checksumLine(Buffer.alloc(0), basename(archive)));
+  }
+  return { dir, data, backups, archive, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
 }
 
 /** A stand-in API: answers /api/health the way the real route does, or with `status`. */
@@ -109,6 +115,23 @@ test('backup FAILS when too old, when none exists, and when no directory is conf
   } finally {
     old.cleanup();
     none.cleanup();
+  }
+});
+
+test('backup FAILS when the newest archive has no checksum file, or no longer matches it (TIDY-C-1)', () => {
+  const f = fixture();
+  try {
+    assert.equal(checkBackup(f.backups, 26, NOW).ok, true, 'intact: recent and matching');
+    writeFileSync(f.archive, 'changed after it was written');
+    const changed = checkBackup(f.backups, 26, NOW);
+    assert.equal(changed.ok, false, 'a changed archive must fail');
+    assert.match(changed.detail, /MISMATCH/);
+    rmSync(checksumPath(f.archive));
+    const missing = checkBackup(f.backups, 26, NOW);
+    assert.equal(missing.ok, false, 'a missing checksum file must fail');
+    assert.match(missing.detail, /no checksum file/);
+  } finally {
+    f.cleanup();
   }
 });
 

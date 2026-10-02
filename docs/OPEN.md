@@ -37,7 +37,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2459) holds exactly FOURTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
+(lines 15–2468) holds exactly FOURTEEN unchecked `- [ ]` rows** — 6 in *DELIVERY-CLEAN-1*, 3 in
 *Delivering to someone else*, and one each in *The night of 2026-08-25*, *Phases 5–7*, *Three
 production-arm specs fail*, *Planned — needs spec* and *Build-identity residuals*. *(Re-counted
 2026-10-02: HARNESS-EMPTY-SCOPE-1 closed the old row in *The night of 2026-08-25* and opened the
@@ -147,7 +147,11 @@ because nobody looked.**
 11. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
    on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
-   DATA-EXPORT-DATADIR-1.)*
+   DATA-EXPORT-DATADIR-1.)* ★ **2026-10-02 (TIDY-C-1):
+   three more left it** — the `innerFramePct` defaults in `framingRule.js`, the base image's
+   floating tag (now pinned by digest, ordered by the owner that day) and the missing backup
+   checksum. The 30-day session cookie stays, his decision. The row stays open, so PART ONE is
+   still **fourteen** rows.
 12. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.

@@ -316,9 +316,18 @@ not an address which is right (§9.1).
       corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
       counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
       different wordings. Normalised; 39 of 40 now carry a canonical line, `CLAUDE.md` excluded
-      deliberately.** · `framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
-      config is 0.7, harmless while every caller passes it · `Dockerfile:22,33` pins a floating tag
-      rather than a digest · the backup writes no checksum · the session cookie lives 30 days.
+      deliberately.** · ~~`framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      config is 0.7, harmless while every caller passes it~~ — ★ **CLOSED 2026-10-02 (TIDY-C-1):**
+      the three defaults now read `DEFAULT_INNER_FRAME_PCT` (`framingConfig.js`, which reads
+      `targetInnerFramePct` from `defaults.js`), the same constant the director falls back to;
+      every caller still passes the value, and `check-fingerprints --mint` verified all four roles
+      unchanged · ~~`Dockerfile:22,33` pins a floating tag rather than a digest~~ — ★ **CLOSED
+      2026-10-02 (TIDY-C-1), ordered by the owner that day:** both `FROM` lines pin `node:20-alpine`
+      by its multi-arch index digest, with a comment saying a bump is manual; `check-image-starts`
+      built and booted the pinned image · ~~the backup writes no checksum~~ — ★ **CLOSED 2026-10-02
+      (TIDY-C-1):** `npm run backup` writes `<archive>.sha256` in `sha256sum` format, and
+      `npm run status` FAILS the backup check when the newest archive's checksum file is missing or
+      does not match · the session cookie lives 30 days (his decision; untouched).
       ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
       client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
       the server declaration is now `^4.1.4`, so all four vitest declarations across both
