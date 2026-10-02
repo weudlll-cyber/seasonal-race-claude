@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **204 files that can change the race** — the engine's own imports AND the imports of every
+the **215 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -264,6 +264,8 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/ScoreboardViewport.jsx` | SHIP-THE-STANDINGS |
 | `screens/RaceScreen/StateOverlay.jsx` | Narrative text overlay shown during the first few seconds of an OVERVIEW / BATTLE / COMEBACK camera state. |
 | `screens/RaceScreen/WinnerCard.jsx` | WINNER-CARD-1 |
+| `screens/RaceScreen/battleSlowmo.js` | The slow-motion clock RaceScreen runs during BATTLE_ZOOM and PHOTO_FINISH: when it engages and releases, its fade in and out, the BATTLE focus fade that shares its duration, and… |
+| `screens/RaceScreen/burstParticles.js` | One frame of the finish-line burst particles (the ones `emitBurst` in drawing/particleRendering.js spawns when a racer crosses): move, fall, fade, and remove the faded ones. |
 | `screens/RaceScreen/drawing/battleDiagRendering.js` | Canvas renderer for battle-diagnostics markers; draws world-space overlays and records a 20-frame snapshot during BATTLE_ZOOM state. |
 | `screens/RaceScreen/drawing/overlayRendering.js` | Canvas renderer for race overlays — event title, lap counter, position results panel, and camera-debug info. |
 | `screens/RaceScreen/drawing/particleRendering.js` | Canvas renderer for burst and trail particles — pure draw/emit functions, no game state. |
@@ -277,13 +279,22 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/labelFormHold.js` | LABEL-OCCLUSION-1, narrowed by -2 |
 | `screens/RaceScreen/nameTagLayout.js` | WHICH name tags are drawn this frame, decided in SCREEN space (CAMERA-TAGS-1). |
 | `screens/RaceScreen/perfLog.js` | Per-frame timing ring buffer for stutter diagnosis. |
+| `screens/RaceScreen/raceCamera.js` | The camera a browser race is filmed with, built and SEEDED once at race start: the CameraDirector with the race's world and corridor width, its random seed derived from the race… |
+| `screens/RaceScreen/raceLoopDiagnostics.js` | The READ-ONLY diagnostics RaceScreen's frame loop writes for its dev HUDs and its browser-test probes: the GovernorDiagHUD snapshot, the hold probe, the Race-Plan per-step reado… |
 | `screens/RaceScreen/racePhase.js` | RENDER-FINGERPRINT-1 |
+| `screens/RaceScreen/raceResults.js` | The hand-over from the race screen to the result screen: the finish order and the `raceResults` payload RaceScreen writes to sessionStorage on the frame the last racer crosses. |
 | `screens/RaceScreen/raceSession.js` | Pure helpers for sessionStorage-based race handoff. |
+| `screens/RaceScreen/raceWorldSetup.js` | Everything the browser race is BUILT FROM, resolved once at race start: the racer type's physics fields (recorded or live), the config world (recorded or read from this host), t… |
+| `screens/RaceScreen/racerDisplayFields.js` | The render-only fields RaceScreen puts on each physics racer once the race is built: the roster's display fields, the icon, the coat, the pattern, the start number and the per-r… |
 | `screens/RaceScreen/racerDust.js` | One frame of the racers' dust: spawn behind racers still running, advance every racer's dust (running or finished) and the shared fallback pool. |
+| `screens/RaceScreen/renderInterpolation.js` | The interpolated racer snapshot RaceScreen hands the camera and the renderer while a race runs: each racer's `t`, `x`, `y` and `angle` placed between the previous physics step a… |
 | `screens/RaceScreen/renderRaceFrame.js` | RENDER-FINGERPRINT-1 |
 | `screens/RaceScreen/renderState.js` | RENDER-FINGERPRINT-1 |
 | `screens/RaceScreen/scoreboardLayout.js` | SCOREBOARD-SLOT-LAYER |
 | `screens/RaceScreen/scoreboardPositions.js` | SCOREBOARD-SLOT-LAYER |
+| `screens/RaceScreen/stateOverlaySelection.js` | WHICH narrative line the state overlay shows when the camera enters a state: the template variables read off the race and the director ({leader}, {position}, {count}, {name}, {n… |
+| `screens/RaceScreen/trackScene.js` | The track's static scene, prepared once at race start: the cached track-light positions and their config, and the track-effect instances (from the stored track, or from a Track… |
+| `screens/RaceScreen/viewerFrameProbe.js` | The per-frame payload RaceScreen hands `recordViewerFrame` (modules/viewerProbe.js): the transform the frame was DRAWN with, plus every director quantity the acceptance sheet gr… |
 | `screens/TrackEditor/testRaceRoute.js` | Where a test race returns to. |
 | `screens/TrackEditor/trackEditorSave.js` | Track export logic — validates editor state, builds the server-ready track object, extracts effects and track lights. |
 | `utils/formatRaceTime.js` | Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32). |
@@ -335,7 +346,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-204 files, 24 of them UNKNOWN.
+215 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

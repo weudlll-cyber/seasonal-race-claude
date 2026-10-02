@@ -66,6 +66,19 @@ export const GUARD = {
   files: [
     "client/src/screens/RaceScreen/renderRaceFrame.js",
     "client/src/screens/RaceScreen/index.jsx",
+    // P4-RACESCREEN-SPLIT-1: code that lived in index.jsx and now lives in these modules is named
+    // with it, so a change to it selects this guard exactly as the same change did before the split.
+    "client/src/screens/RaceScreen/battleSlowmo.js",
+    "client/src/screens/RaceScreen/burstParticles.js",
+    "client/src/screens/RaceScreen/raceCamera.js",
+    "client/src/screens/RaceScreen/raceLoopDiagnostics.js",
+    "client/src/screens/RaceScreen/raceResults.js",
+    "client/src/screens/RaceScreen/raceWorldSetup.js",
+    "client/src/screens/RaceScreen/racerDisplayFields.js",
+    "client/src/screens/RaceScreen/renderInterpolation.js",
+    "client/src/screens/RaceScreen/stateOverlaySelection.js",
+    "client/src/screens/RaceScreen/trackScene.js",
+    "client/src/screens/RaceScreen/viewerFrameProbe.js",
     "client/src/modules/storage/defaults.js",
   ],
   reach: [],

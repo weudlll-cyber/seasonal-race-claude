@@ -7,6 +7,25 @@
 //              TV camera director (closed tracks), multi-lap support,
 //              fullscreen toggle, and fade-to-black navigation.
 //
+// ★ WHAT THIS FILE OWNS SINCE P4-RACESCREEN-SPLIT-1 (2026-10-02). The React component — its state,
+//   refs and effects, the race-init effect that wires one race together, the rAF loop (phase
+//   advancement, the fixed-timestep physics accumulator and its catch-up cap, the camera update,
+//   the draw call), the finish hand-over and the DOM. It is still the ENGINE DRIVER: it imports
+//   `raceCore.js` and calls `createRaceFromIdentity` / `stepRacePhysics` itself. What it no longer
+//   carries inline, each moved verbatim into a module beside it:
+//     raceWorldSetup.js        which world the race is built from (configs, stage, badge, params)
+//     trackScene.js            track lights and track-effect instances
+//     raceCamera.js            the CameraDirector, built and seeded
+//     racerDisplayFields.js    the racers' render-only fields
+//     battleSlowmo.js          the BATTLE / PHOTO_FINISH slow-motion clock
+//     raceLoopDiagnostics.js   the loop's dev-HUD readouts and the hold probe
+//     raceResults.js           the finish order and the result-screen payload
+//     burstParticles.js        the finish-line burst particle step
+//     renderInterpolation.js   the interpolated racer snapshot between physics steps
+//     stateOverlaySelection.js which narrative line the state overlay shows
+//     viewerFrameProbe.js      the per-frame viewer-probe payload
+//   reports/evolution/P4-RACESCREEN-SPLIT-1.md has the map and what stayed here, and why.
+//
 // ★ STAY-ON-THE-FINISH-1 (the owner's decision, 2026-09-25): THE HAND-OVER TO THE RESULTS IS NOW A
 //   CHOICE. `autoAdvance` on — today's behaviour, the screen hands over when the camera ending
 //   closes. Off — the finish picture stands until the operator left-clicks it. The ENDING ITSELF is
@@ -20,49 +39,38 @@ import { PHASE } from './racePhase.js';
 import { renderRaceFrame } from './renderRaceFrame.js';
 import { createLabelFormHold } from './labelFormHold.js';
 import { frameCameraInputs } from './frameCameraInputs.js';
-import { attachRenderState, attachRacerRenderState, stepFocusFade } from './renderState.js';
+import { attachRenderState, attachRacerRenderState } from './renderState.js';
+import { advanceSlowmo } from './battleSlowmo.js';
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
 import { advanceRacerDust } from './racerDust.js';
+import { advanceBurstParticles } from './burstParticles.js';
 import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
-import { lerp, lerpAngle } from '../../utils/mathUtils.js';
+import { interpolateRacers } from './renderInterpolation.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
-import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
-import { assignRaceNumbers } from '../../modules/raceNumbers.js';
-import { assignCoat, assignPattern, PATTERN_IDS } from '../../racer-types/coatAssignment.js';
-import { CameraDirector } from '../../modules/camera/CameraDirector.js';
-import { lapProgress } from '../../modules/camera/lapUtils.js';
-import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
-// RACE-PARAMS-2: `normalSpeedFrom` is no longer imported here — `buildRaceCoreParams` derives it
-// from the same one home, and a second caller is a second place for it to be derived differently.
-import { MIN_LAPS } from '../../modules/durationModel.js';
+import { getRacerType } from '../../racer-types/index.js';
+import { attachRacerDisplayFields } from './racerDisplayFields.js';
+import { createRaceCamera } from './raceCamera.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
-import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
-import { buildRaceCoreParams } from '../../modules/raceParams.js';
-import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
-import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
-import { applyRaceActionStage, normalizeRaceActionStage } from '../../modules/raceActionStage.js';
-import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
+// P4-RACESCREEN-SPLIT-1: the world a race is built from — racer-type fields, the config world, the
+// action stage, the badge and the engine parameters — is resolved there (RACE-IDENTIFIER-1/-2,
+// RACE-ACTION-CONTROL-1, RACE-PARAMS-2). RACE-PARAMS-2: `normalSpeedFrom` is not imported on this
+// path at all — `buildRaceCoreParams` derives it from the same one home.
+import { resolveRaceWorld } from './raceWorldSetup.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
-import { getEffect } from '../../modules/track-effects/index.js';
-import { extractEffects } from '../TrackEditor/trackEditorSave.js';
+import { cacheTrackLights, createTrackEffects } from './trackScene.js';
 import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
-import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
-import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
-import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
-import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
+import { buildCameraMarker } from '../../modules/camera/cameraMarker.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
 // where a bare `virtual:` specifier cannot resolve.
 import RA_BUILD from 'virtual:ra-build';
-// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
-import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
 // STAY-ON-THE-FINISH-1: the operator's own defaults, for the one key this screen acts on.
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
@@ -84,27 +92,27 @@ import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
 import GovernorDiagHUD from './GovernorDiagHUD.jsx';
 import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
-import {
-  selectOverlayText,
-  selectOverlayTextNoRepeat,
-  selectWinnerText,
-} from '../../modules/stateOverlayTemplates.js';
+import { selectWinnerText } from '../../modules/stateOverlayTemplates.js';
+import { overlayVarsFor, pickOverlayText } from './stateOverlaySelection.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
-import {
-  DEFAULT_TRACK_LIGHTS,
-  LIGHT_SPACING_PX,
-  sampleBoundaryAtInterval,
-} from '../../modules/trackLights.js';
-import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassCache.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
-import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
+import { recordViewerFrame } from '../../modules/viewerProbe.js';
+// P4-RACESCREEN-SPLIT-1: the per-frame payload for the probe above is built in its own module.
+import { viewerFramePayload } from './viewerFrameProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import { nextBeatStart } from '../../modules/camera/startCeremony.js';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import { endingOnRaceScreenMs } from './endingSchedule.js';
+import { splitFinishOrder, buildRaceResults } from './raceResults.js';
+import {
+  governorDiagSnapshot,
+  recordHoldProbe,
+  recordRacePlanStepDiag,
+  recordTopThreeSpeedDiag,
+} from './raceLoopDiagnostics.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -323,60 +331,15 @@ export default function RaceScreen() {
     if (!(cfg.stateOverlayEnabled ?? DEFAULT_CAMERA_CONFIG.stateOverlayEnabled)) return;
     if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'].includes(camState)) return;
 
-    const vars = {};
+    // P4-RACESCREEN-SPLIT-1: the derivation and the no-repeat choice live in stateOverlaySelection.js.
     const racers = g.current?.racers ?? [];
-    if (camState === 'OVERVIEW') {
-      if (racers.length > 0) {
-        const leader = racers.reduce((a, b) => (b.t > a.t ? b : a));
-        if (leader?.name) vars.leader = leader.name;
-      }
-    } else if (camState === 'BATTLE_ZOOM') {
-      // Derive {position} (rank of frontmost battle racer) and {count} (group size).
-      const dir = camDirRef.current;
-      if (dir && racers.length > 0) {
-        const battleData = dir.getBattleDiagData(racers);
-        const sorted = [...racers].sort((a, b) => b.t - a.t);
-        if (battleData.lockedRacer) {
-          const pos = sorted.indexOf(battleData.lockedRacer) + 1;
-          if (pos > 0) vars.position = pos;
-        } else {
-          vars.position = 1;
-        }
-        vars.count = Math.max(battleData.groupRacers.length, 3);
-      }
-    } else if (camState === 'COMEBACK_ZOOM') {
-      // Derive {name} from the locked comeback racer.
-      const dir = camDirRef.current;
-      if (dir) {
-        const cbData = dir.getComebackDiagData(racers, performance.now());
-        if (cbData.lockedRacer?.name) vars.name = cbData.lockedRacer.name;
-      }
-    } else if (camState === 'LEAD_CHANGE') {
-      // Derive {newLeader} and {previousLeader} from lead-change data.
-      const dir = camDirRef.current;
-      if (dir) {
-        const lcData = dir.getLeadChangeDiagData();
-        if (lcData.newLeader) vars.newLeader = lcData.newLeader;
-        if (lcData.previousLeader) vars.previousLeader = lcData.previousLeader;
-      }
-    }
-
-    let result;
-    if (camState === 'BATTLE_ZOOM') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedBattleIndicesRef.current);
-      if (result) overlayUsedBattleIndicesRef.current.add(result.index);
-    } else if (camState === 'COMEBACK_ZOOM') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedComebackIndicesRef.current);
-      if (result) overlayUsedComebackIndicesRef.current.add(result.index);
-    } else if (camState === 'LEAD_CHANGE') {
-      result = selectOverlayTextNoRepeat(camState, vars, overlayUsedLeadChangeIndicesRef.current);
-      if (result) overlayUsedLeadChangeIndicesRef.current.add(result.index);
-    } else {
-      result = selectOverlayText(camState, vars, overlayLastIndexRef.current);
-      if (result) {
-        overlayLastIndexRef.current = { ...overlayLastIndexRef.current, [camState]: result.index };
-      }
-    }
+    const vars = overlayVarsFor(camState, racers, camDirRef.current);
+    const result = pickOverlayText(camState, vars, {
+      usedBattle: overlayUsedBattleIndicesRef.current,
+      usedComeback: overlayUsedComebackIndicesRef.current,
+      usedLeadChange: overlayUsedLeadChangeIndicesRef.current,
+      lastIndexRef: overlayLastIndexRef,
+    });
     if (!result) return;
 
     setOverlayText(result.text);
@@ -465,113 +428,16 @@ export default function RaceScreen() {
       bgCanvasRef.current.height = worldHeight;
     }
 
-    // Cache track-light positions once at race init (not per frame).
-    // 800 samples gives ~18 px/sample on a 15 000 px track — accurate enough
-    // for sampleBoundaryAtInterval to place lights at the target 30 px spacing.
-    const { outer: edgeOuter, inner: edgeInner } = shapeRef.current.getEdgePoints(800);
-    const cachedLightPts = {
-      outer: sampleBoundaryAtInterval(edgeOuter, LIGHT_SPACING_PX),
-      inner: sampleBoundaryAtInterval(edgeInner, LIGHT_SPACING_PX),
-    };
-    const trackLightsConfig = geometry.trackLights ?? DEFAULT_TRACK_LIGHTS;
-
-    // PARTICLES-VISIBILITY-2: track effects are drawn INSIDE the world transform (renderRaceFrame.js),
-    // so the world size goes in as `create`'s third argument and every effect places its content over
-    // the whole track. Passing the canvas alone put everything in a canvas-sized corner of the world.
-    const effectWorld = { width: worldWidth, height: worldHeight };
-    // PARTICLES-VISIBILITY-12: a test race from the Track Editor carries the editor's UNSAVED effects
-    // in its payload (`raceData.testRace.effects`), so they are raced without being stored anywhere;
-    // every other race reads the stored track's effects, as before.
-    effectsRef.current = extractEffects(
-      raceData.testRace ? { effects: raceData.testRace.effects } : geometry
-    )
-      .map(({ id, config }) => {
-        const manifest = getEffect(id);
-        return manifest ? manifest.create(canvas, config, effectWorld) : null;
-      })
-      .filter(Boolean);
+    // P4-RACESCREEN-SPLIT-1: the track lights are cached and the track effects created in
+    // trackScene.js, once per race. RaceScreen holds the effects and destroys them in its cleanup.
+    const { cachedLightPts, trackLightsConfig } = cacheTrackLights(shapeRef.current, geometry);
+    effectsRef.current = createTrackEffects(canvas, raceData, geometry, worldWidth, worldHeight);
 
     const racerType = getRacerType(typeId);
     racerTypeRef.current = racerType;
 
     const trackEmoji = racerType.getEmoji() ?? null;
 
-    // ── ★ RACE-IDENTIFIER-2: THE RACER TYPE IS PART OF THE RACE, AND IT WAS BEING TAKEN FROM THIS
-    //    MACHINE. This is the defect the owner hit: he retuned a racer, pasted an identifier, and
-    //    got HIS racer at HIS speed under the identifier's name.
-    //
-    //    `getRacerType` returns the type with THIS host's stored overrides already applied
-    //    (`racer-types/index.js:293-300` applies them at boot). The identifier has recorded the
-    //    same fields all along — `effectiveRacerTypes`, which `exportRaceConfig.js` builds from
-    //    `SIM_TYPE_FIELDS` — and nothing on the race path read them. `speedMultiplier` is a
-    //    first-order physics input, so the result was a DIFFERENT RACE under the same identifier,
-    //    silently, which is the one outcome this feature exists to prevent.
-    //
-    //    NOTHING ABOUT THE ENCODING CHANGES HERE. The values were always in the string; this is the
-    //    read that was missing. A race with no identifier takes the live type exactly as before.
-    const recordedType = raceData.worldConfigOverride?.effectiveRacerTypes?.[typeId] ?? null;
-    const typeField = (name) =>
-      recordedType && name in recordedType ? recordedType[name] : racerType.config[name];
-
-    const speedMultiplier =
-      recordedType && 'speedMultiplier' in recordedType
-        ? recordedType.speedMultiplier
-        : racerType.getSpeedMultiplier();
-
-    // ── RACE-IDENTIFIER-1: where a REPRODUCED race stops reading this machine ──────────────────
-    //
-    // Every loader below reads THE HOST'S localStorage, and that is exactly why a seed alone does
-    // not repeat a race: two operators on the same seed and the same build get two races, because
-    // their stored config differs and nothing on screen says so.
-    //
-    // When a race was started from a race identifier, the identifier carries the config world it was
-    // recorded with, and the payload brings it here. `cfg()` prefers that copy and otherwise reads
-    // the host exactly as before — so with no identifier in play this is the same code it replaced,
-    // loader for loader, which is why no fingerprint moves.
-    const overrideConfigs = raceData.worldConfigOverride?.configs ?? null;
-    const cfg = (name, load) => overrideConfigs?.[name] ?? load();
-
-    const baseSpeedConfig = cfg('baseSpeedConfig', loadBaseSpeedConfig);
-
-    // ★ COPIED BEFORE IT IS MUTATED, and the copy is the whole point of the spread.
-    //
-    // `cfg()` returns the RECORDED config when a race was started from an identifier — the very
-    // object that also sits in `cfgWorld` below and, since RACE-SAVE-3, gets stored as the race's
-    // world. Writing `isOpen` onto it therefore wrote a derived field INTO THE RECORD: a repeated
-    // race was stored with one key its original did not have, so the two were no longer the same
-    // race on paper even though they ran identically. Found by the browser test in RACE-HISTORY-4,
-    // which compares a repeat's stored world against the original's.
-    //
-    // `loadRaceBehaviorConfig()` already returns a fresh object each call, so the non-override path
-    // never had the problem and is unaffected by the copy.
-    const behaviorConfig = { ...cfg('raceBehaviorConfig', loadRaceBehaviorConfig) };
-    behaviorConfig.isOpen = isOpenTrack;
-    const rowConfig = cfg('rowLayoutConfig', loadRowLayoutConfig);
-    // RACE-ACTION-CONTROL-1: the stage this race was STARTED with, read from the race payload rather
-    // than from the live Dev Screen setting — so changing the control while a race is on screen
-    // cannot change the race on screen, and a replayed payload runs the stage it recorded. A payload
-    // from before this change carries no stage and normalises to the shipped one.
-    const raceActionStage = normalizeRaceActionStage(raceData.raceActionStage);
-    // The stage is applied on TOP of the stored dynamics, and the identifier records the config
-    // world AFTER that application (`buildWorldConfig` does the same), so a reproduced race takes
-    // the recorded block whole rather than re-applying a stage to it.
-    const dynamicsConfig = overrideConfigs?.raceDynamicsConfig
-      ? overrideConfigs.raceDynamicsConfig
-      : applyRaceActionStage(loadRaceDynamicsConfig(), raceActionStage);
-    const frameTimingConfig = cfg('frameTimingConfig', loadFrameTimingConfig);
-
-    // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
-    // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
-    // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
-    // badge and the marker can never disagree about what this race was configured with.
-    // The badge and the camera marker must describe the world the race is ACTUALLY running with,
-    // which for a reproduced race is the recorded one.
-    const cfgWorld = raceData.worldConfigOverride ?? buildWorldConfig({ raceActionStage });
-    const cfgBadge = configFingerprintBadge(cfgWorld);
-    const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
-
-    // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
-    const autoScaleConfig = cfg('autoScaleConfig', loadAutoScaleConfig);
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
     // WINNER-CARD-1: the timer list, captured here rather than read from the ref in the cleanup.
@@ -580,53 +446,34 @@ export default function RaceScreen() {
     // it is honest here rather than a silencing, because a cleanup that read the ref LATER could in
     // principle be looking at a different race's list.
     const winnerCardTimers = winnerCardTimersRef.current;
-    // RACE-IDENTIFIER-2: the other three SIM fields the identifier records, read the same way.
-    // They set the drawn body size, which the START GRID packs on and the avoidance body uses — so
-    // a retuned SIZE moves the race exactly as a retuned speed does.
-    const displaySize = typeField('displaySize');
-    // ── RACE-PARAMS-2: the whole derivation lives in `modules/raceParams.js` now ────────────────
-    //
-    // ONE-HOME-RACE-PARAMS-1 moved the SPRITE arithmetic there and left the rest standing here —
-    // the effective width, the isOpen-stamped behaviour config, the normal speed, and the twenty
-    // fields `createRaceFromIdentity` takes. Two harnesses had transcribed all of it and said so in
-    // their own headers (`scripts/camera-replay.mjs`, `scripts/parity/goldenRunner.mjs`), which is
-    // how transcriptions drift: the copies agree until one is edited, and the thing that would
-    // notice is one of the copies.
-    //
-    // THE OVERRIDE LOOKUP STAYS HERE, exactly as it did: it is a storage read, and the module
-    // deliberately reads no storage. It is handed the answer rather than going to find it.
-    const rawOverrides = storageGet(KEYS.RACER_TYPE_OVERRIDES, {});
-    const typeOverride = rawOverrides[typeId];
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
-    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    // ── P4-RACESCREEN-SPLIT-1: WHICH WORLD THIS RACE RUNS IN is resolved in raceWorldSetup.js ────
+    // The racer type's physics fields (recorded or live — RACE-IDENTIFIER-2), the config world
+    // (recorded or this host's — RACE-IDENTIFIER-1), the action stage from the payload
+    // (RACE-ACTION-CONTROL-1), the badge and diff, and the engine's parameters (RACE-PARAMS-2).
     // `displaySizeScale` is NOT a `createRaceFromIdentity` field — it is the drawing scale, and the
-    // rest goes to the engine untouched. Separated here rather than in the module so the object the
-    // engine receives is exactly the object the module built.
-    const { displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
+    // rest goes to the engine untouched.
+    const {
+      speedMultiplier,
+      raceActionStage,
+      dynamicsConfig,
+      frameTimingConfig,
+      cfgWorld,
+      cfgBadge,
+      cfgDiff,
+      displaySize,
+      racePlanSeed,
+      pathLengthPx,
+      displaySizeScale,
+      raceCoreParams,
+    } = resolveRaceWorld({
+      raceData,
+      geometry,
+      typeId,
+      racerType,
       shape: shapeRef.current,
       isOpenTrack,
-      pathLengthPx,
       trackWidthPx,
-      world: {
-        baseSpeedConfig,
-        raceBehaviorConfig: behaviorConfig,
-        rowLayoutConfig: rowConfig,
-        raceDynamicsConfig: dynamicsConfig,
-        autoScaleConfig,
-      },
-      racerType: {
-        displaySize,
-        bodyFillX: typeField('bodyFillX'),
-        bodyFillY: typeField('bodyFillY'),
-        speedMultiplier,
-      },
       nRacers,
-      laps: raceData.targetLaps ?? MIN_LAPS,
-      requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
-      racePlanSeed,
-      racePlanEnabledFlag: !!raceData.racePlanEnabled,
-      hasDisplaySizeOverride:
-        !!typeOverride && typeof typeOverride === 'object' && 'displaySize' in typeOverride,
       constSpeedActive,
     });
     // The camera's body-size reference, read from what the engine was actually built with.
@@ -679,42 +526,27 @@ export default function RaceScreen() {
     const govMeanBodyLen = raceMeta.govMeanBodyLen;
     const pulkLeadRotationOn = raceMeta.pulkLeadRotationOn;
 
-    camDirRef.current = new CameraDirector(
+    // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
+    // director owns the schedule and cannot know what a branding profile is; this is the only thing
+    // it is told, once, and every consumer of the schedule inherits the answer.
+    const ceremonyBrandProfile = activeBrand?.logo ? activeBrand : null;
+    // P4-RACESCREEN-SPLIT-1: the director is built and SEEDED in raceCamera.js — constructor, the
+    // seed derived from the race seed (CAMERA-REPRO-1 / CAMERA-SEED-AND-LINE-1), the viewer probe
+    // (VIEWER-INVARIANTS-1) and the brand-card answer above, in that order.
+    const { director, cameraRandomSeed } = createRaceCamera({
       worldWidth,
       worldHeight,
       isOpenTrack,
       cameraConfig,
       drawnBodyWidthRefPx,
-      shapeRef.current,
-      // CAMERA-ZOOM-UNIT-1: the corridor width every zoom setting is expressed in — the SAME
-      // number the physics uses (geometry.width, spline estimate only for tracks without one).
-      trackWidthPx
-    );
-    // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
-    // OVERVIEW is due), and it needs a seed for them. That seed used to be DRAWN from Math.random
-    // per race, which made a marked moment replayable but the same race seed irreproducible —
-    // measured at 165 physics steps running a different state between two runs of race seed 9.
-    // CAMERA-SEED-AND-LINE-1 derives it from the race's own seed instead; the marker still carries
-    // the value, so every existing replay path is unchanged.
-    // CAMERA-SEED-AND-LINE-1: DERIVED FROM THE RACE SEED, not drawn. Same race seed, same camera,
-    // shot for shot — so a picture he reports can be stood in again. `cameraSeed.js` states the
-    // trade and the unseeded case; `racePlanSeed` is bound above from `raceData`.
-    const cameraRandomSeed = cameraSeedForRace(racePlanSeed);
-    // VIEWER-INVARIANTS-1: the race's identity, echoed into every violation this run produces so an
-    // event names the race it happened in. Inert unless ?viewerprobe=1.
-    beginViewerProbe({
-      track: raceData.trackId ?? null,
-      seed: racePlanSeed,
-      racers: raceState.racers.length,
-      cameraSeed: cameraRandomSeed,
+      shape: shapeRef.current,
       trackWidthPx,
+      racePlanSeed,
+      trackId: raceData.trackId ?? null,
+      nRacers: raceState.racers.length,
+      ceremonyBrandActive: !!ceremonyBrandProfile,
     });
-    camDirRef.current.setRandomSeed(cameraRandomSeed);
-    // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
-    // director owns the schedule and cannot know what a branding profile is; this is the only thing
-    // it is told, once, and every consumer of the schedule inherits the answer.
-    const ceremonyBrandProfile = activeBrand?.logo ? activeBrand : null;
-    camDirRef.current.setCeremonyBrandActive(!!ceremonyBrandProfile);
+    camDirRef.current = director;
     setCeremonyBrandUp(false);
     setCeremonyBoardUp(false);
     prevCeremonyRef.current = { brand: false, board: false };
@@ -815,28 +647,16 @@ export default function RaceScreen() {
     setWinnerCardUp(false);
     setWinnerCard(null);
 
-    // ── Augment the extracted physics racers with render-only fields (icon/colour/coat/pattern/
-    // trail/emitter). Done IN PLACE so the render array and the physics array stepRacePhysics mutates
-    // are the SAME objects. `for (k in src) if (!(k in r))` copies the roster's display fields without
-    // ever overwriting a physics field — reproducing the former `{ ...r, ...physics }` spread exactly.
-    // None of these draw from raceRng (coat/pattern hash the name), so the physics stream is untouched.
-    // RACE-NUMBERS-1: one permutation for the whole field, drawn from the seed on its own generator.
-    const raceNumbers = assignRaceNumbers(raceState.racers.length, racePlanSeed);
-    for (let i = 0; i < raceState.racers.length; i++) {
-      const r = raceState.racers[i];
-      const src = raceData.racers[i];
-      for (const k in src) if (!(k in r)) r[k] = src[k];
-      r.icon = trackEmoji ?? src.icon;
-      r.coatId = getCoatsByType(typeId) ? assignCoat(src.name, getCoatsByType(typeId)) : undefined;
-      r.patternId = assignPattern(src.name, PATTERN_IDS);
-      // RACE-NUMBERS-1: the start number is a RENDER-ONLY field, attached here beside the coat and
-      // the pattern — AFTER the race has been built, so it cannot participate in building it. The
-      // draw itself consumes no shared stream (see raceNumbers.js); attaching it here as well means
-      // there is no ordering by which it could.
-      r.raceNumber = raceNumbers[r.index] ?? null;
-      // VRE-4: one emitter instance per racer (stateful generators must not be shared)
-      r.surfaceEmitter = resolveTrailEmitter(racerType, trackSurfaceClasses);
-    }
+    // ── P4-RACESCREEN-SPLIT-1: the render-only fields (roster display fields, icon, coat, pattern,
+    // start number, trail emitter) are attached in racerDisplayFields.js — IN PLACE, AFTER the race
+    // is built, drawing nothing from its random stream.
+    attachRacerDisplayFields(raceState.racers, raceData.racers, {
+      racePlanSeed,
+      trackEmoji,
+      typeId,
+      racerType,
+      trackSurfaceClasses,
+    });
     attachRacerRenderState(raceState.racers);
 
     // g.current IS the extracted physics state (racers, finishT, maxLaps, finishedCount, raceProgress,
@@ -1035,46 +855,8 @@ export default function RaceScreen() {
         // second site of a sentence `docs/CAMERA_DIRECTOR.md` carried in the same wrong direction.)
         {
           const hud = camDirRef.current?.hudState;
-          const isBattleZoom = hud === 'BATTLE_ZOOM';
-          // 15a: the photo-finish shot reuses the same slow-motion path as BATTLE (uniform,
-          // global time-dilation — headless sim is sim-time based, fairness unaffected).
-          const isPhotoFinish = hud === 'PHOTO_FINISH';
-          const isSlowmoState = isBattleZoom || isPhotoFinish;
-          const smFactor = isPhotoFinish
-            ? (cameraConfigRef.current.photoFinishSlowmoFactor ??
-              DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor)
-            : (cameraConfigRef.current.battleSlowmoFactor ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoFactor);
-          const smMinDurMs =
-            (cameraConfigRef.current.battleSlowmoMinDuration ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration) * 1000;
-          const smFadeDurMs =
-            (cameraConfigRef.current.battleSlowmoFadeDuration ??
-              DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration) * 1000;
-          if (isSlowmoState && !st.slowmoActive) {
-            st.slowmoActive = true;
-            st.slowmoStartWallTs = ts;
-            st.slowmoIsPhotoFinish = isPhotoFinish;
-          }
-          if (!isSlowmoState && st.slowmoActive) {
-            // 15a-predictive: a PHOTO_FINISH slowmo releases IMMEDIATELY when the shot ends
-            // (state left PHOTO_FINISH on the 2nd crossing) so normal speed returns for the
-            // zoom-out. BATTLE slowmo keeps its min-duration guard unchanged.
-            const releaseOk = st.slowmoIsPhotoFinish || ts - st.slowmoStartWallTs >= smMinDurMs;
-            if (releaseOk) {
-              st.slowmoActive = false;
-              st.slowmoIsPhotoFinish = false;
-            }
-          }
-          const fadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
-          st.slowmoFadeProgress = st.slowmoActive
-            ? Math.min(1, st.slowmoFadeProgress + fadeStep)
-            : Math.max(0, st.slowmoFadeProgress - fadeStep);
-          const effectiveSlowmoFactor = 1.0 - (1.0 - smFactor) * st.slowmoFadeProgress;
-          // ── BATTLE focus fade (same duration as slowmo fade) ─────────────────
-          stepFocusFade(st, isBattleZoom, rawDt, smFadeDurMs);
-          if (st.slowmoTs === null) st.slowmoTs = ts;
-          st.slowmoTs += rawDt * effectiveSlowmoFactor;
+          // P4-RACESCREEN-SPLIT-1: the slow-motion clock itself lives in battleSlowmo.js.
+          const effectiveSlowmoFactor = advanceSlowmo(st, hud, ts, rawDt, cameraConfigRef.current);
           // ── Fixed-timestep physics accumulator ─────────────────────────────
           // Each rAF contributes rawDt ms. Physics steps in FIXED_DT=16ms increments:
           // long frames (50ms) would yield 3 steps but are capped at 2 (see catch-up cap below); short frames (12ms) yield 0.
@@ -1120,23 +902,17 @@ export default function RaceScreen() {
           // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs. Read-only; touches
           // nothing but the diag ref. heroRoles = the retained index→role map (null until heroes cast).
           if (racePlanController && govFractions) {
-            const diagCfg = pulkLeadRotationOn
-              ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
-              : { directorEnabled: false };
-            governorDiagRef.current = {
-              cfg: diagCfg,
-              phase: govPhase,
-              progress: st.raceProgress,
-              pulkStartFrac: govFractions.pulkStartFrac,
-              pulkEndFrac: govFractions.pulkEndFrac,
-              corrStartFrac: govFractions.corrStartFrac,
-              seed: govSeed,
-              finishT: st.finishT,
+            governorDiagRef.current = governorDiagSnapshot({
+              racePlanController,
+              govPhase,
+              st,
+              govFractions,
+              govSeed,
               pathLengthPx,
-              meanBodyLen: govMeanBodyLen,
-              isOpen: isOpenTrack,
-              heroRoles: racePlanController.getHeroRoles?.() ?? null,
-            };
+              govMeanBodyLen,
+              isOpenTrack,
+              pulkLeadRotationOn,
+            });
           }
 
           // ── HOLD-PROBE (DIRECTION-AUTHORITY-1): what the HELD comebacker is doing, for a browser
@@ -1147,36 +923,7 @@ export default function RaceScreen() {
           //
           // It records the plan's OWN idea of who is held (`getHeldRelease`) and his LIVE rank off
           // the same sorted field the scoreboard uses — never a recomputation of either.
-          try {
-            if (localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
-              const heldMap = racePlanController.getHeldRelease?.() ?? null;
-              if (heldMap && heldMap.size) {
-                const order = [...st.racers].sort((a, b) => b.t - a.t);
-                const w = (window.__raHoldTrace ||= []);
-                for (const [idx, releaseAt] of heldMap) {
-                  const rank = order.findIndex((r) => r.index === idx) + 1;
-                  // ARRIVAL-VARIANTS-1 added `m`: the multiplier the servo is actually applying, so
-                  // a browser test can see whether he is being braked, pushed or left alone. Read off
-                  // the same racer object, never recomputed.
-                  const me = st.racers.find((r) => r.index === idx);
-                  if (rank > 0)
-                    w.push({
-                      i: idx,
-                      rank,
-                      p: st.raceProgress,
-                      releaseAt,
-                      m: me?.trajectoryMult ?? null,
-                      // ARRIVAL-SHAPE-E-1 added `d`: his DRAWN place, asked of the controller rather
-                      // than recomputed, so a browser test can say "two ranks before his place"
-                      // without re-deriving the thing it is there to observe.
-                      d: racePlanController.getTargetRank?.(idx) ?? null,
-                    });
-                }
-              }
-            }
-          } catch {
-            /* storage unavailable — a diagnostic must never take a race down */
-          }
+          recordHoldProbe(st, racePlanController);
 
           // Scoreboard: update when physicsTs crosses a bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
@@ -1225,40 +972,15 @@ export default function RaceScreen() {
           if (st.finishedCount >= nRacers) {
             st.phase = PHASE.FINISHED;
             setPhase(PHASE.FINISHED);
-            const byRank = st.racers
-              .filter((r) => r.finished)
-              .sort((a, b) => a.finishRank - b.finishRank);
-            const rest = st.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+            // P4-RACESCREEN-SPLIT-1: the finish order and the result payload are built in
+            // raceResults.js; the write and the test-race gate stay here.
+            const { byRank, rest } = splitFinishOrder(st.racers);
             // PARTICLES-VISIBILITY-12: a test race hands NO result on — the result screen is where a
             // race is recorded (ResultScreen `recordFinishedRace`), and a test race records nothing.
             if (!raceData.testRace)
               sessionStorage.setItem(
                 'raceResults',
-                JSON.stringify({
-                  finishOrder: [...byRank, ...rest].map((r) => ({
-                    name: r.name,
-                    icon: r.icon,
-                    color: r.color,
-                    index: r.index,
-                    lap: r.lap ?? 1,
-                    progress: Math.min(lapProgress(r.t, st.finishT) * 100, 100),
-                    finishTimeMs: r.finishTimeMs ?? null,
-                  })),
-                  elapsedTime: Math.round((ts - st.raceStart) / 1000),
-                  race: raceData,
-                  // RACE-SAVE-3: THE CONFIG WORLD THIS RACE ACTUALLY RAN WITH, carried to the result
-                  // screen rather than re-gathered there.
-                  //
-                  // `raceData` alone cannot describe a race. Two of the identifier's nine inputs are
-                  // read from the HOST at race start and never travel in the payload — the config
-                  // world is one of them (`cfgWorld` above, the same value the badge and the camera
-                  // marker use). The result screen has only `raceData`, so it would have to gather
-                  // the world itself, from the loaders that read the Dev Screen AS IT IS NOW: change
-                  // a setting while the race is on screen and the stored race would claim values it
-                  // never ran. That is the exact class RACE-IDENTIFIER-1 exists to prevent, and it is
-                  // why this is a carry rather than a second gather.
-                  worldConfig: cfgWorld,
-                })
+                JSON.stringify(buildRaceResults({ byRank, rest, st, ts, raceData, cfgWorld }))
               );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
             // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
@@ -1336,98 +1058,14 @@ export default function RaceScreen() {
 
           // Race-Plan per-step diagnostics → diagDataRef (polled by CameraDiagnosticsHUD)
           if (racePlanController) {
-            const activeR = st.racers.filter((r) => !r.finished);
-            if (activeR.length > 0) {
-              let sfMin = Infinity,
-                sfMax = -Infinity,
-                sfSum = 0;
-              let tmMin = Infinity,
-                tmMax = -Infinity;
-              for (const r of activeR) {
-                const sf = r.spreadFactor ?? 1;
-                const tm = r.trajectoryMult ?? 1;
-                if (sf < sfMin) sfMin = sf;
-                if (sf > sfMax) sfMax = sf;
-                sfSum += sf;
-                if (tm < tmMin) tmMin = tm;
-                if (tm > tmMax) tmMax = tm;
-                // Speed ring buffer (5 s @ 16 ms/step = 313 slots)
-                let ring = speedRings.get(r.index);
-                if (!ring) {
-                  ring = { buf: new Float32Array(313).fill(1.0), idx: 0 };
-                  speedRings.set(r.index, ring);
-                }
-                ring.buf[ring.idx % 313] = tm;
-                ring.idx++;
-              }
-              const d = diagDataRef.current;
-              d.rpPhase = racePlanController.getPhase(physicsTs, st.raceProgress);
-              d.rpTs = physicsTs;
-              d.rpReRollActive = physicsTs < lastRollDeadline;
-              d.rpSfMin = sfMin;
-              d.rpSfMax = sfMax;
-              d.rpSfMean = sfSum / activeR.length;
-              d.rpTmMin = tmMin;
-              d.rpTmMax = tmMax;
-              let bbMin = Infinity,
-                bbMax = -Infinity;
-              for (const r of activeR) {
-                const bb = r.areaBonusMult ?? 1;
-                if (bb < bbMin) bbMin = bb;
-                if (bb > bbMax) bbMax = bb;
-              }
-              d.rpBbMin = bbMin;
-              d.rpBbMax = bbMax;
-
-              // B1 winner list (targetRank 1–5)
-              if (rpPlanInfo) {
-                const ranked = [...activeR].sort((a, b) => b.t - a.t);
-                const rankByIdx = new Map(ranked.map((r, i) => [r.index, i + 1]));
-                const b1Racers = [];
-                for (const [racerIdx, targetRank] of rpPlanInfo.targetRanks) {
-                  if (!rpPlanInfo.b1Indices.has(racerIdx)) continue;
-                  const racer = st.racers.find((r) => r.index === racerIdx && !r.finished);
-                  if (!racer) continue;
-                  b1Racers.push({
-                    index: racerIdx,
-                    name: racer.name,
-                    targetRank,
-                    currentRank: rankByIdx.get(racerIdx) ?? 0,
-                    delta: (rankByIdx.get(racerIdx) ?? 0) - targetRank,
-                    startRow: assignmentByRacer.get(racerIdx)?.rowIndex ?? 0,
-                  });
-                }
-                b1Racers.sort((a, b) => a.targetRank - b.targetRank);
-                d.rpB1Racers = b1Racers;
-              }
-
-              // Top-10 speed monitor
-              const top10 = [...activeR].sort((a, b) => b.t - a.t).slice(0, 10);
-              d.rpTop10 = top10.map((r, i) => {
-                const ring = speedRings.get(r.index);
-                let tmMin5s = r.trajectoryMult ?? 1;
-                let tmMax5s = r.trajectoryMult ?? 1;
-                if (ring && ring.idx > 0) {
-                  const filled = Math.min(ring.idx, 313);
-                  let mn = Infinity,
-                    mx = -Infinity;
-                  for (let j = 0; j < filled; j++) {
-                    if (ring.buf[j] < mn) mn = ring.buf[j];
-                    if (ring.buf[j] > mx) mx = ring.buf[j];
-                  }
-                  tmMin5s = mn;
-                  tmMax5s = mx;
-                }
-                return {
-                  rank: i + 1,
-                  name: r.name,
-                  tm: r.trajectoryMult ?? 1.0,
-                  tmMin5s,
-                  tmMax5s,
-                  isOscillating: tmMax5s - tmMin5s > 0.18,
-                };
-              });
-            }
+            recordRacePlanStepDiag(diagDataRef.current, st, {
+              racePlanController,
+              physicsTs,
+              lastRollDeadline,
+              rpPlanInfo,
+              assignmentByRacer,
+              speedRings,
+            });
           }
 
           st.physicsAccum -= FIXED_DT;
@@ -1452,73 +1090,21 @@ export default function RaceScreen() {
         // D1: per-racer pixel speed and smoothed Δv between top-3 — diagnostics HUD only.
         // Gated: the sort + spread runs only when the diagnostics overlay is visible.
         if (showCameraDiagnostics) {
-          const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-          for (const r of st.racers) {
-            const dx = r.x - (r._diagPrevX ?? r.x);
-            const dy = r.y - (r._diagPrevY ?? r.y);
-            r._diagSpeed = Math.sqrt(dx * dx + dy * dy);
-            r._diagDx = dx;
-            r._diagDy = dy;
-            r._diagPrevX = r.x;
-            r._diagPrevY = r.y;
-          }
-          const r0 = ordered[0];
-          const r1 = ordered[1];
-          const r2 = ordered[2];
-          const raw01 = r0 && r1 ? r0._diagSpeed - r1._diagSpeed : 0;
-          const raw12 = r1 && r2 ? r1._diagSpeed - r2._diagSpeed : 0;
-          const α = 0.1;
-          diagDataRef.current.dv01 = diagDataRef.current.dv01 * (1 - α) + raw01 * α;
-          diagDataRef.current.dv12 = diagDataRef.current.dv12 * (1 - α) + raw12 * α;
-          // M3: ring-buffer max over last 60 frames (absolute value, captures jitter peaks)
-          const d = diagDataRef.current;
-          const bi = d._dvBufIdx % 60;
-          d._dv01Buf[bi] = Math.abs(raw01);
-          d._dv12Buf[bi] = Math.abs(raw12);
-          d._dvBufIdx++;
-          d.dv01Max = Math.max(...d._dv01Buf);
-          d.dv12Max = Math.max(...d._dv12Buf);
+          recordTopThreeSpeedDiag(diagDataRef.current, st.racers);
         }
 
         // Racer dust: spawn behind racers still running, advance everyone's (see racerDust.js).
         // rawDt in ms; generators expect dt in frames (1 = one frame at 60fps).
         advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
         // Advance burst particles — in-place mutation + swap-remove (no allocation).
-        {
-          let i = 0;
-          while (i < st.burstParticles.length) {
-            const p = st.burstParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.18;
-            p.alpha -= 0.014;
-            p.r *= 0.97;
-            if (p.alpha <= 0) {
-              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
-              st.burstParticles.length--;
-            } else i++;
-          }
-        }
+        advanceBurstParticles(st.burstParticles, true);
       } else {
         // FINISHED — keep burst particles alive, in-place mutation + swap-remove.
         computePositions();
         // PARTICLES-VISIBILITY-2: the dust keeps fading here too. Nobody is running, so nothing
         // spawns; without this call every racer's last dust stood frozen until the screen closed.
         advanceRacerDust(st.racers, st.dustParticles, racerTypeRef.current, rawDt / 16, ts);
-        {
-          let i = 0;
-          while (i < st.burstParticles.length) {
-            const p = st.burstParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.18;
-            p.alpha -= 0.014;
-            if (p.alpha <= 0) {
-              st.burstParticles[i] = st.burstParticles[st.burstParticles.length - 1];
-              st.burstParticles.length--;
-            } else i++;
-          }
-        }
+        advanceBurstParticles(st.burstParticles, false); // no shrink here — see burstParticles.js
       }
 
       // Perf-log bracket 3: after all branches (particles + render-interp on RACING path).
@@ -1532,18 +1118,8 @@ export default function RaceScreen() {
       // objects rather than spreading new ones each frame (eliminates N fat allocations/frame).
       let renderRacers;
       if (frameTimingConfig.renderInterpolation && st.phase === PHASE.RACING) {
-        const n = st.racers.length;
-        while (renderBuf.length < n) renderBuf.push({});
-        renderBuf.length = n;
-        for (let _i = 0; _i < n; _i++) {
-          const r = st.racers[_i];
-          Object.assign(renderBuf[_i], r);
-          renderBuf[_i].t = lerp(r._prevT ?? r.t, r.t, renderAlpha);
-          renderBuf[_i].x = lerp(r._prevX ?? r.x, r.x, renderAlpha);
-          renderBuf[_i].y = lerp(r._prevY ?? r.y, r.y, renderAlpha);
-          renderBuf[_i].angle = lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha);
-        }
-        renderRacers = renderBuf;
+        // P4-RACESCREEN-SPLIT-1: the buffer fill lives in renderInterpolation.js.
+        renderRacers = interpolateRacers(renderBuf, st.racers, renderAlpha);
       } else {
         renderRacers = st.racers;
       }
@@ -1734,116 +1310,20 @@ export default function RaceScreen() {
       // VIEWER-INVARIANTS-1: the five sentences, checked on the transform the frame was DRAWN with.
       // Placed HERE, beside the marker and for the same reason: these are the renderer's own
       // reported values, not a second derivation of them. Inert unless ?viewerprobe=1.
-      recordViewerFrame({
-        ts,
-        effZoomX: frame.effZoomX,
-        effZoomY: frame.effZoomY,
-        offsetX: cam.offsetX,
-        offsetY: cam.offsetY,
-        canvasW: CANVAS_W,
-        canvasH: CANVAS_H,
-        shape,
-        trackWidthPx,
-        racers: st.racers,
-        finishT: st.finishT,
-        finishedCount: st.finishedCount,
-        endgameFrom: camDirRef.current._endgameThreshold,
-        tightestNamed:
-          CANVAS_W / (camDirRef.current._photoFinishZoom * (frame.effZoomX / cam.zoom)),
-        worldWidth,
-        state: camDirRef.current.state,
-        binding: camDirRef.current._framingProbe?.binding ?? '?',
-        lerpPhase: camDirRef.current._lerpPhase,
-        contentionOn: !!camDirRef.current._contentionWatch,
-        contentionOut: camDirRef.current._contentionOut
-          ? [...camDirRef.current._contentionOut]
-          : null,
-        contentionChecks: camDirRef.current._contentionChecks ?? 0,
-        // ── ENDGAME-COMPLETE-1: the last quantities the acceptance sheet grades from ───────────
-        // The two factors item 2 names, the heading item 9 and 10 measure along, and the racers
-        // item 7 requires in frame — all read from the director rather than re-derived here.
-        leaderZoom: camDirRef.current._leaderZoom,
-        photoFinishZoom: camDirRef.current._photoFinishZoom,
-        heading: camDirRef.current._headingScreen(camDirRef.current._framingProbe?.t ?? 0),
-        contenderIdx: (() => {
-          try {
-            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-            return camDirRef.current._abreastContenders(ordered).map((r) => r?.index ?? -1);
-          } catch {
-            return null;
-          }
-        })(),
-        // ── ITEM 7's MEMBERSHIP (ITEM7-MEMBERSHIP-1) ────────────────────────────────────────
-        //
-        // WHO CAN STILL WIN, which is a different question from who the shot holds. The owner's
-        // decision of 2026-09-04: a racer who has fallen back so far that he can no longer win does
-        // not have to be in the picture. Requirement 7 is unchanged; this is the set that answers it.
-        //
-        //   MEMBER = survivor of the geometric loop   MINUS   every racer at contention weight 0
-        //
-        // THE FALLBACK IS EXCLUDED because it answers a framing question — `_abreastContenders`
-        // falls back to the top two so the photo finish has somebody to hold, and that is correct
-        // for the shot and silent about chances. THE WEIGHT SUBTRACTION is the owner's decision, in
-        // the project's own terms: `_contentionWeight` reaches 0 exactly when `_updateContentionWatch`
-        // has projected twice that the racer cannot reach the line first and the ease has run out.
-        //
-        // NEITHER RULE ALONE WOULD DO. The watch does not run before `endgameThreshold` and needs
-        // two checks `_contentionCheckMs` apart, so nobody is released for about the first half
-        // second of the window — membership by release alone would demand the WHOLE FIELD on canvas
-        // there. The geometric loop is what excludes the field; the subtraction is what excludes the
-        // ones geometry still calls level.
-        //
-        // NOTHING IS RECOMPUTED HERE. Both are director methods, read the way every other director
-        // field on this payload is read.
-        item7: (() => {
-          try {
-            const cd = camDirRef.current;
-            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
-            const survivors = cd._abreastSurvivors(ordered);
-            const ts = cd._frameTs;
-            const member = survivors.filter((r) => cd._contentionWeight(r.index, ts) > 0);
-            // What today's set contains that the survivors do not: the fallback's own additions.
-            const shown = cd._abreastContenders(ordered);
-            return {
-              member: member.map((r) => r?.index ?? -1),
-              // Racers today's grading requires that the LOOP never admitted.
-              byFallback: Math.max(0, shown.length - survivors.length),
-              // Racers the loop admitted that the race has already decided.
-              byWeight: survivors.length - member.length,
-            };
-          } catch {
-            return null;
-          }
-        })(),
-        // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
-        // residual, and it is the quantity that decides whether a shot that loses its subject is a
-        // FRAMING decision or a DELIVERY one.
-        targetOffsetX: camDirRef.current.targetOffsetX,
-        targetOffsetY: camDirRef.current.targetOffsetY,
-        targetZoom: camDirRef.current.targetZoom,
-        camZoom: cam.zoom,
-        // WHERE THE FRAMING RULE INTENDS THE SUBJECT, as a fraction along the motion axis, and the
-        // run-in's own travel parameter that drives it.
-        forwardFrac: camDirRef.current._forwardFracNow(),
-        runInU: camDirRef.current._runInSweepU ? camDirRef.current._runInSweepU() : null,
-        runInProgress: camDirRef.current._runInProgress,
-        composing: !!camDirRef.current._runInComposingNow,
-        // WHAT THE PAN IS AIMED AT, in world coordinates, beside the candidates it could be aimed
-        // at. Whichever it tracks is the pan's real subject, which no amount of reading the framing
-        // rule will settle.
-        panTargetX: camDirRef.current._lastPanTargetX ?? null,
-        panTargetY: camDirRef.current._lastPanTargetY ?? null,
-        lineWorld: camDirRef.current._finishLineWorldPoint(st.finishT),
-        lateralShift: camDirRef.current._lastLateralShift ?? null,
-        panClamped: camDirRef.current._lastResolvedPanTarget?.wasClamped ?? null,
-        panCamX: camDirRef.current._lastResolvedPanTarget?.camX ?? null,
-        worldMaxX: camDirRef.current._worldBounds?.maxX ?? null,
-        worldMaxY: camDirRef.current._worldBounds?.maxY ?? null,
-        anchorPoint: camDirRef.current._framingProbe?.point ?? null,
-        // The racers the framing was actually built on this frame, by index. Read from the probe
-        // the director already writes; nothing is re-derived.
-        subjectIndices: camDirRef.current._framingProbe?.pair?.map((r) => r?.index ?? -1) ?? null,
-      });
+      recordViewerFrame(
+        viewerFramePayload({
+          ts,
+          frame,
+          cam,
+          shape,
+          trackWidthPx,
+          st,
+          worldWidth,
+          cd: camDirRef.current,
+          canvasW: CANVAS_W,
+          canvasH: CANVAS_H,
+        })
+      );
 
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frame.effZoomX * (worldWidth / CANVAS_W) : cam.zoom;
