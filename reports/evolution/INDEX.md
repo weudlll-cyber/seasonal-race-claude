@@ -461,7 +461,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   2 s window cuts 11 of 18 shots that then gain within 5 s (20 racers: 1 of 10).
 
 - [P1-CAMERADIRECTOR-SPLIT-1.md](P1-CAMERADIRECTOR-SPLIT-1.md) — **CameraDirector.js split along its
-  own seams, picture unchanged (2026-10-02, branch `refactor/camera-director-split`, NOT merged).**
+  own seams, picture unchanged (2026-10-02, branch `refactor/camera-director-split` — MERGED into master 2026-10-03** after master's comeback work was ported onto its offer arbitration; every fingerprint equal to the record, 60 comeback races byte-identical to master's camera).**
   5,526 -> 3,648 lines in eight one-per-commit extractions: the offer arbitration (pure,
   `offerArbitration.js`, the precedence now visibly above the pool), `CAM_STATE` to `camState.js`, and
   four prototype mixins (ceremony, run-in, level set, ceilings). After every step the engine

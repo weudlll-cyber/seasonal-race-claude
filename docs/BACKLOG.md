@@ -205,50 +205,6 @@ not an address which is right (§9.1).
       keep in agreement. The new test is strictly better evidence: text matching could not have
       caught a route wrapped in a different error handler, and this does.
 
-- [ ] ★★ **THE STRUCTURAL PROPOSALS — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 4). SIX, RANKED, NONE
-      PERFORMED.** The owner judges the product by eye, so arc 4 removed only what is provably inert
-      and proposed everything structural. Full costs in
-      [DC2-ARC4-SOURCE.md](../reports/audit/DC2-ARC4-SOURCE.md) §4.5; he can commission them one at
-      a time.
-      - **P1 · `camera/CameraDirector.js` is 5,507 lines** — nearly 3× the next engine file — and
-        carries the state machine, the offer arbitration (`_weightedRandomPick:742`,
-        `_acceptsOffer:736`) and the framing. The seam the code already implies: the comeback
-        precedence branch returns **above** the arbitration (`:1816-1821`) rather than joining it.
-        **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
-        done right — which is why it is dangerous.**
-        ★ **Built on branch `refactor/camera-director-split`, awaiting merge (2026-10-02)** —
-        [P1-CAMERADIRECTOR-SPLIT-1](../reports/evolution/P1-CAMERADIRECTOR-SPLIT-1.md): 5,526 -> 3,648
-        lines, eight extractions, engine fingerprints unchanged at every step; premerge verify and the
-        browser gate owed.
-      - ~~**P2 · the three upload handlers → one.**~~ ★ **DONE 2026-09-27 (DC3 piece 2)** — see the closed B7/P2 row above.
-      - ~~**P3 · the JSON-store preamble**~~ ★ **DONE 2026-09-27 (DC3 piece 3)** — and it was
-        **THREE implementations, not two**: `racers.js` carries the same `loadAll` body and §6.1's
-        clone report never said so, because a clone report pairs files and never states how many
-        copies a shape has in total. ★ **Diffed before unifying, as required: no behavioural
-        drift** — the three differed only in a local variable name (cosmetic) and the log label
-        (real, so it is a parameter). Now `server/utils/jsonDirStore.js`; the three routes are
-        −34 lines net and six now-dead `fs` imports went with them. The skip-and-warn behaviour
-        is preserved exactly and `brands.test.js`'s boot-safety test proves it — sabotaging the
-        shared helper to throw reddens it. ★ One implementation now means ONE test guards all
-        three callers.
-      - ~~**P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
-        (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.~~
-        ★ **DONE 2026-10-03 — merged into master** (approved by the owner on 2026-10-02 once its
-        fingerprints equal the record; they did, all four, after master was merged into the branch,
-        and premerge and the browser gate 110/110 passed there). *As it stood before the merge:*
-        ★ **Built on branch `refactor/racescreen-split`, awaiting merge (2026-10-02)** —
-        [P4-RACESCREEN-SPLIT-1](../reports/evolution/P4-RACESCREEN-SPLIT-1.md): eleven verbatim
-        extractions, 2,163 → 1,643 lines, RaceScreen tests and all four fingerprint roles verified
-        after each. ★ **Still owed before merge: `verify -- --premerge` and the browser gates** —
-        no fingerprint executes `index.jsx`, so only the browser can prove the product path.
-      - **P5 · `CameraAdvancedSection.jsx` (2,118) and `DynamicsTuningSection.jsx` (1,730)** —
-        mostly repeated slider blocks. ★ **He WOULD see this one**, so it belongs to `B-UX2`, the
-        commissioned dev-screen reorganisation, not to arc 4.
-      - **P6 · 77 unused local variables across 48 files in `scripts/`**, found by linting a tree
-        that had never been linted. **Not removed:** §4.4 authorises a dead variable *in a region
-        already touched*, and arc 4 touched none of those files. Two are in the engine hull
-        (`sim-fairness.mjs` 11, `camera-replay.mjs` 3). Worth doing as each file is next opened.
-
 - [x] ★★ **B9 — CLOSED 2026-09-27 (DELIVERY-CLEAN-3 piece 1). THE STARTUP NOW SAYS IT.** The
       finding: the whole cookie-`Secure` posture hangs on `NODE_ENV === 'production'`, which is set
       in **no shipped file**, so the default deployment serves sign-in in clear — and
@@ -2511,6 +2467,64 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **THE STRUCTURAL PROPOSALS — CLOSED 2026-10-03: P1 and P4 merged, as the owner approved
+      on 2026-10-02.** P1, the camera director split
+      ([P1-CAMERADIRECTOR-SPLIT-1](../reports/evolution/P1-CAMERADIRECTOR-SPLIT-1.md)), and P4, the race
+      screen split ([P4-RACESCREEN-SPLIT-1](../reports/evolution/P4-RACESCREEN-SPLIT-1.md)), are on
+      master with every fingerprint equal to the record; P2 and P3 were done on 2026-09-27. **Not
+      carried forward as rows:** P5 belongs to `B-UX2`, the commissioned dev-screen reorganisation, as
+      the row itself said; P6 (unused locals in `scripts/`) is done as each file is next opened.
+      *The row as it stood:*
+      **THE STRUCTURAL PROPOSALS — NEW 2026-09-27 (DELIVERY-CLEAN-2 arc 4). SIX, RANKED, NONE
+      PERFORMED.** The owner judges the product by eye, so arc 4 removed only what is provably inert
+      and proposed everything structural. Full costs in
+      [DC2-ARC4-SOURCE.md](../reports/audit/DC2-ARC4-SOURCE.md) §4.5; he can commission them one at
+      a time.
+      - ~~**P1 · `camera/CameraDirector.js` is 5,507 lines** — nearly 3× the next engine file — and
+        carries the state machine, the offer arbitration (`_weightedRandomPick:742`,
+        `_acceptsOffer:736`) and the framing. The seam the code already implies: the comeback
+        precedence branch returns **above** the arbitration (`:1816-1821`) rather than joining it.
+        **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
+        done right — which is why it is dangerous.**~~
+        ★ **DONE 2026-10-03 — merged into master.** Master (with COMEBACK-HOLD-2 and
+        COMEBACK-CUT-DELAY-1) was merged into the branch. The four conflicts were in the candidate pool,
+        which extraction 4 had moved behind `offerPool` / `arbitrateOffers`, and they were resolved by
+        porting the cut delay's four touch points onto that structure. All four fingerprints equal the
+        record, and 60 Quick-Test races with 33 comeback shots draw a byte-identical camera trace to
+        master's. *As it stood before the merge:*
+        ★ **Built on branch `refactor/camera-director-split`, awaiting merge (2026-10-02)** —
+        [P1-CAMERADIRECTOR-SPLIT-1](../reports/evolution/P1-CAMERADIRECTOR-SPLIT-1.md): 5,526 -> 3,648
+        lines, eight extractions, engine fingerprints unchanged at every step; premerge verify and the
+        browser gate owed.
+      - ~~**P2 · the three upload handlers → one.**~~ ★ **DONE 2026-09-27 (DC3 piece 2)** — see the closed B7/P2 row above.
+      - ~~**P3 · the JSON-store preamble**~~ ★ **DONE 2026-09-27 (DC3 piece 3)** — and it was
+        **THREE implementations, not two**: `racers.js` carries the same `loadAll` body and §6.1's
+        clone report never said so, because a clone report pairs files and never states how many
+        copies a shape has in total. ★ **Diffed before unifying, as required: no behavioural
+        drift** — the three differed only in a local variable name (cosmetic) and the log label
+        (real, so it is a parameter). Now `server/utils/jsonDirStore.js`; the three routes are
+        −34 lines net and six now-dead `fs` imports went with them. The skip-and-warn behaviour
+        is preserved exactly and `brands.test.js`'s boot-safety test proves it — sabotaging the
+        shared helper to throw reddens it. ★ One implementation now means ONE test guards all
+        three callers.
+      - ~~**P4 · `RaceScreen/index.jsx` is 2,172 lines**, mixing the rAF loop and physics stepping
+        (`:1078`) with camera seeding (`:691`, `:701`) and the ceremony. Cost HIGH, in the hull.~~
+        ★ **DONE 2026-10-03 — merged into master** (approved by the owner on 2026-10-02 once its
+        fingerprints equal the record; they did, all four, after master was merged into the branch,
+        and premerge and the browser gate 110/110 passed there). *As it stood before the merge:*
+        ★ **Built on branch `refactor/racescreen-split`, awaiting merge (2026-10-02)** —
+        [P4-RACESCREEN-SPLIT-1](../reports/evolution/P4-RACESCREEN-SPLIT-1.md): eleven verbatim
+        extractions, 2,163 → 1,643 lines, RaceScreen tests and all four fingerprint roles verified
+        after each. ★ **Still owed before merge: `verify -- --premerge` and the browser gates** —
+        no fingerprint executes `index.jsx`, so only the browser can prove the product path.
+      - **P5 · `CameraAdvancedSection.jsx` (2,118) and `DynamicsTuningSection.jsx` (1,730)** —
+        mostly repeated slider blocks. ★ **He WOULD see this one**, so it belongs to `B-UX2`, the
+        commissioned dev-screen reorganisation, not to arc 4.
+      - **P6 · 77 unused local variables across 48 files in `scripts/`**, found by linting a tree
+        that had never been linted. **Not removed:** §4.4 authorises a dead variable *in a region
+        already touched*, and arc 4 touched none of those files. Two are in the engine hull
+        (`sim-fairness.mjs` 11, `camera-replay.mjs` 3). Worth doing as each file is next opened.
 
 - [x] ★ **THE COMEBACK SHOT — CLOSED 2026-10-02 by
       [SHIP-OWNER-COSMETIC-1](../reports/evolution/SHIP-OWNER-COSMETIC-1.md), merged and minted.** The
