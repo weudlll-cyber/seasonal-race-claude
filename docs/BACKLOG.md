@@ -216,6 +216,10 @@ not an address which is right (§9.1).
         precedence branch returns **above** the arbitration (`:1816-1821`) rather than joining it.
         **Cost HIGH:** most fingerprint-sensitive file in the tree. **He would see nothing if it is
         done right — which is why it is dangerous.**
+        ★ **Built on branch `refactor/camera-director-split`, awaiting merge (2026-10-02)** —
+        [P1-CAMERADIRECTOR-SPLIT-1](../reports/evolution/P1-CAMERADIRECTOR-SPLIT-1.md): 5,526 -> 3,648
+        lines, eight extractions, engine fingerprints unchanged at every step; premerge verify and the
+        browser gate owed.
       - ~~**P2 · the three upload handlers → one.**~~ ★ **DONE 2026-09-27 (DC3 piece 2)** — see the closed B7/P2 row above.
       - ~~**P3 · the JSON-store preamble**~~ ★ **DONE 2026-09-27 (DC3 piece 3)** — and it was
         **THREE implementations, not two**: `racers.js` carries the same `loadAll` body and §6.1's
