@@ -165,7 +165,8 @@ because nobody looked.**
    ones is what remains.
 16. ★ **NEW 2026-10-02 — the comeback shot: until the racer reaches 3rd** (his decision: at least 8 s,
    at most 20 s, never into the final scene). ★ Built on the branch (COMEBACK-HOLD-2), awaiting his
-   eye; the final scene never overlaps it in 750 races.
+   eye; the final scene never overlaps it in 750 races. ★ The cut now waits first (COMEBACK-CUT-DELAY-1,
+   his decision of 2026-10-02), which costs comeback shots on 20-racer fields — his call.
 17. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.

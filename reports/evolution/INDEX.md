@@ -426,6 +426,14 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-CUT-DELAY-1.md](COMEBACK-CUT-DELAY-1.md) — **the camera waits before cutting to the comeback
+  racer — BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** The owner's
+  decision: wait 1–2 s so he is visibly on the catch-up. 2000 ms lost more than 10% of shots in every
+  field size, so the rule moved it to 1500 ms, which still loses more than 10% on closed 20, open 20
+  and open 40 (99 of 463 shots over the 750 races). None was lost to the final scene: every loss is a
+  climb the detector stopped offering during the wait. Final-scene overlap 0. Quick-Test seed: Ice Track,
+  40 racers, seed 4896 — the shot starts at 48.9 s, two places after the wait began.
+
 - [COMEBACK-HOLD-2.md](COMEBACK-HOLD-2.md) — **the comeback shot holds until the racer reaches 3rd —
   BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** At least 8 s, at most
   20 s, never into the final scene (endgame, photo-finish gate, first racer home — whichever first,

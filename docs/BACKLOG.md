@@ -1231,6 +1231,12 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       scene. It replaces the gain-stop rule. Over the 750 races: final-scene overlap 0 of 463 shots.
       Quick-Test seed to look at: Ice Track, 40 racers, seed 4896. **Stays open until the owner has
       looked.**
+      ★ **BUILT 2026-10-02 — COMEBACK-CUT-DELAY-1, on the same branch, awaiting the owner's eye**
+      ([report](../reports/evolution/COMEBACK-CUT-DELAY-1.md)). The owner's decision of 2026-10-02:
+      before cutting to the comeback racer the camera waits 1–2 s, keeping its shot. 2000 ms lost more
+      than 10% of shots, so by his rule it is 1500 ms; that still loses more than 10% on 20-racer
+      fields and on open 40 — none to the final scene, all to climbs that stopped during the wait.
+      Same Quick-Test seed: the shot now starts at 48.9 s. **Stays open until the owner has looked.**
 
 - [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
       his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
