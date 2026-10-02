@@ -5,10 +5,24 @@
 // Created:     2026-04-22
 //
 // WHAT THIS IS FOR: two things, and only these two.
-//   1. WHICH SHOT are we on — the state machine: eligibility, the holds and cooldowns, the weighted
-//      pick, the finish sequence's scripted lifecycle.
+//   1. WHICH SHOT are we on — the state machine: eligibility, the holds and cooldowns, the offer
+//      (drawn through offerArbitration.js), the finish sequence's scripted lifecycle.
 //   2. WHERE IS THE CAMERA this frame — its own motion: `zoom`, `offsetX`, `offsetY`, `camT`, the
 //      lerp phases and the three branches (glide / cut / follow) that may write the offset.
+//
+// THE DIRECTOR IS MORE THAN THIS FILE (P1-CAMERADIRECTOR-SPLIT-1). Cohesive blocks of its methods
+// live in their own modules and are installed onto CameraDirector.prototype at the bottom of this
+// file, the way CameraDirectorDiag.js always was. They are the director — they read and write
+// `this` — and the camera fingerprint covers them exactly as it covers this file. None of them
+// imports from here, which keeps every dependency one-way:
+//   the camera before the gun ............. CameraDirectorCeremony.js  (updateCountdown & co.)
+//   the guarantees as zoom ceilings ....... CameraDirectorCeilings.js  (bounds only; composed here)
+//   who is level / still in contention .... CameraDirectorLevelSet.js  (the unit stays a static here)
+//   the run-in / endgame schedule ......... CameraDirectorRunIn.js     (asked once per frame)
+//   what the Dev Screen sees .............. CameraDirectorDiag.js      (read-only on the camera)
+// and two that hold no state at all:
+//   the state names ....................... camState.js          (CAM_STATE, re-exported here)
+//   which offered shot is taken ........... offerArbitration.js  (the draw, the offer, OVERVIEW's clock)
 //
 // WHAT THIS IS NOT FOR: anything answerable without a camera. Those questions have their own files
 // and this one only asks them —
@@ -17,22 +31,16 @@
 //   how wide is each shot, and how ........ framingConfig.js     (defaults + validation bands)
 //   when does anything happen ............. cameraTimingComputation.js
 //   who must stay in frame ................ framingRule.js       (guarantees WIDEN; never steer)
-//   the guarantees as zoom ceilings ....... CameraDirectorCeilings.js (prototype mixin)
 //   world <-> screen ...................... projection.js        (the ONLY mapping)
 //   how much world is in shot ............. zoomUnit.js          (standard corridors)
 //   where did the camera go wrong ......... detourRecorder.js    (never writes a camera value)
 //   does the camera cut this frame ........ transitionDecision.js
-//   the camera before the gun ............. CameraDirectorCeremony.js (prototype mixin)
-//   the run-in / endgame schedule ......... CameraDirectorRunIn.js (prototype mixin)
-//   who is level / still in contention .... CameraDirectorLevelSet.js (prototype mixin)
 //   how does a race END ................... finishPhase.js       (the whole finish sequence)
-//   the state names ...................... camState.js          (CAM_STATE, re-exported here)
-//   which offered shot is taken ........... offerArbitration.js  (the draw, the offer, OVERVIEW's clock)
 //
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
-// decision this file makes on every frame of a seeded race across ten tracks. A refactor that
-// tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
-// arguable. The value it must match lives in docs/fingerprints.json and nowhere else — this
+// decision this file (and the modules above) makes on every frame of a seeded race across ten
+// tracks. A refactor that tidies code must not move the picture, and unlike a tuning change that
+// is PROVABLE rather than arguable. The value it must match lives in docs/fingerprints.json and nowhere else — this
 // comment deliberately carries no copy. If your change is meant to move the picture, it is not
 // hygiene — say so, and re-baseline deliberately.
 //
