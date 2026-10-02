@@ -426,6 +426,12 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-OWNER-COSMETIC-1.md](SHIP-OWNER-COSMETIC-1.md) — **the owner's camera and the comeback shot,
+  SHIPPED 2026-10-02 on his look of that day.** His cosmetic camera settings as the shipped defaults,
+  COMEBACK-HOLD-2, COMEBACK-CUT-DELAY-1 (1500 ms, kept by his decision), and the comeback state's two
+  dead Dev Screen controls removed. World unchanged; camera and render minted. Tag
+  `v-ship-owner-cosmetic`. Two backlog rows closed; open list sixteen.
+
 - [COMEBACK-CUT-DELAY-1.md](COMEBACK-CUT-DELAY-1.md) — **the camera waits before cutting to the comeback
   racer — BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** The owner's
   decision: wait 1–2 s so he is visibly on the catch-up. 2000 ms lost more than 10% of shots in every

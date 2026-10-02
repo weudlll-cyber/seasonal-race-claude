@@ -1143,43 +1143,11 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       2026-10-01 on it: the BATTLE shot ships off (the feature stays in the code), OVERVIEW tracks
       slowly again, the winner card fills the whole pause, and the comeback hold is longer with a wider
       Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
-      move and are minted only after his eye. **This row stays open** — for that mint, and for the tracks, brand and player group.
-
-- [ ] ★ **THE COMEBACK SHOT HOLDS AT LEAST 8 s, AND LONGER WHILE THE CATCH-UP IS STILL IN PROGRESS —
-      the owner's decision of 2026-10-02. Open; measured, not built.** Today it holds exactly 8 s (the
-      COMEBACK_ZOOM profile's `maxStateDuration` and `comebackMinDuration` in `defaults.js`).
-      [COMEBACK-HOLD-MEASURE-1](../reports/evolution/COMEBACK-HOLD-MEASURE-1.md), N=30 races: 10 shots,
-      all ended by the 8 s cap; 6 of 10 racers were still gaining places at the cut; nothing in the code
-      today says "the comeback is finished" — the plan's `resolve` beat is an entry gate only, and fell
-      before every cut. **What a build has to choose is that end signal.** **verify:** rerun
-      `node scripts/diag/comeback-hold-measure.mjs` — today every shot's "ended by" is the 8 s cap.
-      ★ **BUILT 2026-10-02 on `ship/owner-cosmetic-defaults` — COMEBACK-HOLD-1, awaiting the owner's
-      eye** ([report](../reports/evolution/COMEBACK-HOLD-1.md)). The owner's rule of 2026-10-02: at
-      least 8 s, then while the racer is still gaining places, at most 15 s. The end signal is "no
-      place gained in the last W ms", read from the detector's own rank history; W chosen by
-      measurement (N=30 races per arm). Quick-Test seed to look at: River Run, seed 3. **Stays open
-      until the owner has looked.**
-      ★ **2026-10-02 — the owner looked; the shot cut while the racer was around 5th.** Diagnosed in
-      [COMEBACK-CUT-DIAG-1](../reports/evolution/COMEBACK-CUT-DIAG-1.md): the gain-stop ended it (no
-      gate did). His setup fields 40 racers, not the 20 the window was chosen on; on 40-racer fields
-      the 2 s window cuts 11 of 18 shots that then gain again within 5 s. The window is open again.
-      ★ **2026-10-02 — how long a comeback really lasts, measured:
-      [COMEBACK-DURATION-1](../reports/evolution/COMEBACK-DURATION-1.md)** (750 Quick-Test races; the
-      owner's definition: a comebacker is real once he has taken 3rd). From the shot's start to his
-      first 3rd place, the median is above 8 s in every field size except open tracks with 20 racers,
-      and the p90 runs to 25 s (closed, 40 racers).
-      ★ **BUILT 2026-10-02 — COMEBACK-HOLD-2, on `ship/owner-cosmetic-defaults`, awaiting the owner's
-      eye** ([report](../reports/evolution/COMEBACK-HOLD-2.md)). The owner's decision of 2026-10-02:
-      the shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final
-      scene. It replaces the gain-stop rule. Over the 750 races: final-scene overlap 0 of 463 shots.
-      Quick-Test seed to look at: Ice Track, 40 racers, seed 4896. **Stays open until the owner has
-      looked.**
-      ★ **BUILT 2026-10-02 — COMEBACK-CUT-DELAY-1, on the same branch, awaiting the owner's eye**
-      ([report](../reports/evolution/COMEBACK-CUT-DELAY-1.md)). The owner's decision of 2026-10-02:
-      before cutting to the comeback racer the camera waits 1–2 s, keeping its shot. 2000 ms lost more
-      than 10% of shots, so by his rule it is 1500 ms; that still loses more than 10% on 20-racer
-      fields and on open 40 — none to the final scene, all to climbs that stopped during the wait.
-      Same Quick-Test seed: the shot now starts at 48.9 s. **Stays open until the owner has looked.**
+      move and are minted only after his eye. 
+      ★ **2026-10-02 — THE CAMERA HALF IS DONE: SHIP-OWNER-COSMETIC-1 merged and minted** on the
+      owner's look of that day ([report](../reports/evolution/SHIP-OWNER-COSMETIC-1.md)); his camera
+      settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
+      the player group.**
 
 - [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
       his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
@@ -1191,19 +1159,6 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
       developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
       work and names a check per display.
-
-- [ ] ★ **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
-      is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
-      Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones
-      proven dead, and list the rest for the owner. **verify:** rerun the arm's
-      `node scripts/diag/comeback-hold-measure.mjs --set=<key>=<value>` and compare `cameraTraceHash`.
-      ★ **SURVEYED 2026-10-02 — [COMEBACK-SETTINGS-SURVEY-1](../reports/evolution/COMEBACK-SETTINGS-SURVEY-1.md)**
-      (driven over 30 races, camera output compared byte for byte; nothing removed). **Act:** weight
-      (rarely), min. positions, window, min. duration, min. start gap, max. current rank, use beats,
-      and the COMEBACK_ZOOM profile's world-in-shot, tracking speed and maximum duration; the
-      diagnostics toggle acts on the display only. **No effect, structurally:** the profile's inner
-      frame and minimum hold. **No effect in these races, live reader:** cooldown, outcome-phase
-      threshold and six profile fields. **Stays open:** removing the dead ones is the remaining work.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
@@ -2544,6 +2499,73 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **THE COMEBACK SHOT — CLOSED 2026-10-02 by
+      [SHIP-OWNER-COSMETIC-1](../reports/evolution/SHIP-OWNER-COSMETIC-1.md), merged and minted.** The
+      owner looked at the branch on the 4173 production preview on 2026-10-02 and approved it: the
+      shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final scene
+      ([COMEBACK-HOLD-2](../reports/evolution/COMEBACK-HOLD-2.md)), after a wait before the cut that
+      stays at 1500 ms by his decision of 2026-10-02 — fewer comeback shots in 20-racer fields
+      accepted; the camera cuts only if the detector still offers the racer after the wait
+      ([COMEBACK-CUT-DELAY-1](../reports/evolution/COMEBACK-CUT-DELAY-1.md)).
+      *The row as it stood:*
+      **THE COMEBACK SHOT HOLDS AT LEAST 8 s, AND LONGER WHILE THE CATCH-UP IS STILL IN PROGRESS —
+      the owner's decision of 2026-10-02. Open; measured, not built.** Today it holds exactly 8 s (the
+      COMEBACK_ZOOM profile's `maxStateDuration` and `comebackMinDuration` in `defaults.js`).
+      [COMEBACK-HOLD-MEASURE-1](../reports/evolution/COMEBACK-HOLD-MEASURE-1.md), N=30 races: 10 shots,
+      all ended by the 8 s cap; 6 of 10 racers were still gaining places at the cut; nothing in the code
+      today says "the comeback is finished" — the plan's `resolve` beat is an entry gate only, and fell
+      before every cut. **What a build has to choose is that end signal.** **verify:** rerun
+      `node scripts/diag/comeback-hold-measure.mjs` — today every shot's "ended by" is the 8 s cap.
+      ★ **BUILT 2026-10-02 on `ship/owner-cosmetic-defaults` — COMEBACK-HOLD-1, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-1.md)). The owner's rule of 2026-10-02: at
+      least 8 s, then while the racer is still gaining places, at most 15 s. The end signal is "no
+      place gained in the last W ms", read from the detector's own rank history; W chosen by
+      measurement (N=30 races per arm). Quick-Test seed to look at: River Run, seed 3. **Stays open
+      until the owner has looked.**
+      ★ **2026-10-02 — the owner looked; the shot cut while the racer was around 5th.** Diagnosed in
+      [COMEBACK-CUT-DIAG-1](../reports/evolution/COMEBACK-CUT-DIAG-1.md): the gain-stop ended it (no
+      gate did). His setup fields 40 racers, not the 20 the window was chosen on; on 40-racer fields
+      the 2 s window cuts 11 of 18 shots that then gain again within 5 s. The window is open again.
+      ★ **2026-10-02 — how long a comeback really lasts, measured:
+      [COMEBACK-DURATION-1](../reports/evolution/COMEBACK-DURATION-1.md)** (750 Quick-Test races; the
+      owner's definition: a comebacker is real once he has taken 3rd). From the shot's start to his
+      first 3rd place, the median is above 8 s in every field size except open tracks with 20 racers,
+      and the p90 runs to 25 s (closed, 40 racers).
+      ★ **BUILT 2026-10-02 — COMEBACK-HOLD-2, on `ship/owner-cosmetic-defaults`, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-2.md)). The owner's decision of 2026-10-02:
+      the shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final
+      scene. It replaces the gain-stop rule. Over the 750 races: final-scene overlap 0 of 463 shots.
+      Quick-Test seed to look at: Ice Track, 40 racers, seed 4896. **Stays open until the owner has
+      looked.**
+      ★ **BUILT 2026-10-02 — COMEBACK-CUT-DELAY-1, on the same branch, awaiting the owner's eye**
+      ([report](../reports/evolution/COMEBACK-CUT-DELAY-1.md)). The owner's decision of 2026-10-02:
+      before cutting to the comeback racer the camera waits 1–2 s, keeping its shot. 2000 ms lost more
+      than 10% of shots, so by his rule it is 1500 ms; that still loses more than 10% on 20-racer
+      fields and on open 40 — none to the final scene, all to climbs that stopped during the wait.
+      Same Quick-Test seed: the shot now starts at 48.9 s. **Stays open until the owner has looked.**
+
+- [x] ★ **DEV SCREEN COMEBACK SETTINGS — CLOSED 2026-10-02 by
+      [SHIP-OWNER-COSMETIC-1](../reports/evolution/SHIP-OWNER-COSMETIC-1.md).** The two controls proven
+      dead by construction are removed: the COMEBACK_ZOOM column of the per-state table no longer
+      shows *inner frame* or *minimum hold* (`onlyFor` in `CameraAdvancedSection.jsx`), and the
+      comeback profile in `defaults.js` no longer carries the two keys. Every fingerprint unchanged.
+      **Kept, because they are still read** (no effect in the survey's 30 races only): the comeback
+      cooldown, the outcome-phase threshold, and the COMEBACK_ZOOM profile's entry speed, lead-in,
+      lead-out, entry timeout, lead-ahead and lead-out switch.
+      *The row as it stood:*
+      **DEV SCREEN COMEBACK SETTINGS THAT MAY HAVE NO EFFECT SINCE THE 2026-09-19 RULE** (a comeback
+      is shown when one was planned — PLANNED-COMEBACK-ONLY-1, [TAGS.md](TAGS.md)). Opened 2026-10-01.
+      Survey which of the Dev Screen's comeback settings still act on what is shown; remove the ones
+      proven dead, and list the rest for the owner. **verify:** rerun the arm's
+      `node scripts/diag/comeback-hold-measure.mjs --set=<key>=<value>` and compare `cameraTraceHash`.
+      ★ **SURVEYED 2026-10-02 — [COMEBACK-SETTINGS-SURVEY-1](../reports/evolution/COMEBACK-SETTINGS-SURVEY-1.md)**
+      (driven over 30 races, camera output compared byte for byte; nothing removed). **Act:** weight
+      (rarely), min. positions, window, min. duration, min. start gap, max. current rank, use beats,
+      and the COMEBACK_ZOOM profile's world-in-shot, tracking speed and maximum duration; the
+      diagnostics toggle acts on the display only. **No effect, structurally:** the profile's inner
+      frame and minimum hold. **No effect in these races, live reader:** cooldown, outcome-phase
+      threshold and six profile fields. **Stays open:** removing the dead ones is the remaining work.
 
 - [x] ★ **A SWEEP THAT ASKS FOR RACES AND GETS NONE — CLOSED 2026-10-02 by
       [HARNESS-EMPTY-SCOPE-1](../reports/evolution/HARNESS-EMPTY-SCOPE-1.md).** A census of
