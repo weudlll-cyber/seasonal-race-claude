@@ -33,7 +33,7 @@ import { interpolateRacers } from './renderInterpolation.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType } from '../../racer-types/index.js';
 import { attachRacerDisplayFields } from './racerDisplayFields.js';
-import { CameraDirector } from '../../modules/camera/CameraDirector.js';
+import { createRaceCamera } from './raceCamera.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
 // P4-RACESCREEN-SPLIT-1: the world a race is built from — racer-type fields, the config world, the
 // action stage, the badge and the engine parameters — is resolved there (RACE-IDENTIFIER-1/-2,
@@ -48,7 +48,6 @@ import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { buildCameraMarker } from '../../modules/camera/cameraMarker.js';
-import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
@@ -86,7 +85,7 @@ import {
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassCache.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
-import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
+import { recordViewerFrame } from '../../modules/viewerProbe.js';
 // P4-RACESCREEN-SPLIT-1: the per-frame payload for the probe above is built in its own module.
 import { viewerFramePayload } from './viewerFrameProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
@@ -535,42 +534,27 @@ export default function RaceScreen() {
     const govMeanBodyLen = raceMeta.govMeanBodyLen;
     const pulkLeadRotationOn = raceMeta.pulkLeadRotationOn;
 
-    camDirRef.current = new CameraDirector(
+    // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
+    // director owns the schedule and cannot know what a branding profile is; this is the only thing
+    // it is told, once, and every consumer of the schedule inherits the answer.
+    const ceremonyBrandProfile = activeBrand?.logo ? activeBrand : null;
+    // P4-RACESCREEN-SPLIT-1: the director is built and SEEDED in raceCamera.js — constructor, the
+    // seed derived from the race seed (CAMERA-REPRO-1 / CAMERA-SEED-AND-LINE-1), the viewer probe
+    // (VIEWER-INVARIANTS-1) and the brand-card answer above, in that order.
+    const { director, cameraRandomSeed } = createRaceCamera({
       worldWidth,
       worldHeight,
       isOpenTrack,
       cameraConfig,
       drawnBodyWidthRefPx,
-      shapeRef.current,
-      // CAMERA-ZOOM-UNIT-1: the corridor width every zoom setting is expressed in — the SAME
-      // number the physics uses (geometry.width, spline estimate only for tracks without one).
-      trackWidthPx
-    );
-    // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
-    // OVERVIEW is due), and it needs a seed for them. That seed used to be DRAWN from Math.random
-    // per race, which made a marked moment replayable but the same race seed irreproducible —
-    // measured at 165 physics steps running a different state between two runs of race seed 9.
-    // CAMERA-SEED-AND-LINE-1 derives it from the race's own seed instead; the marker still carries
-    // the value, so every existing replay path is unchanged.
-    // CAMERA-SEED-AND-LINE-1: DERIVED FROM THE RACE SEED, not drawn. Same race seed, same camera,
-    // shot for shot — so a picture he reports can be stood in again. `cameraSeed.js` states the
-    // trade and the unseeded case; `racePlanSeed` is bound above from `raceData`.
-    const cameraRandomSeed = cameraSeedForRace(racePlanSeed);
-    // VIEWER-INVARIANTS-1: the race's identity, echoed into every violation this run produces so an
-    // event names the race it happened in. Inert unless ?viewerprobe=1.
-    beginViewerProbe({
-      track: raceData.trackId ?? null,
-      seed: racePlanSeed,
-      racers: raceState.racers.length,
-      cameraSeed: cameraRandomSeed,
+      shape: shapeRef.current,
       trackWidthPx,
+      racePlanSeed,
+      trackId: raceData.trackId ?? null,
+      nRacers: raceState.racers.length,
+      ceremonyBrandActive: !!ceremonyBrandProfile,
     });
-    camDirRef.current.setRandomSeed(cameraRandomSeed);
-    // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
-    // director owns the schedule and cannot know what a branding profile is; this is the only thing
-    // it is told, once, and every consumer of the schedule inherits the answer.
-    const ceremonyBrandProfile = activeBrand?.logo ? activeBrand : null;
-    camDirRef.current.setCeremonyBrandActive(!!ceremonyBrandProfile);
+    camDirRef.current = director;
     setCeremonyBrandUp(false);
     setCeremonyBoardUp(false);
     prevCeremonyRef.current = { brand: false, board: false };
