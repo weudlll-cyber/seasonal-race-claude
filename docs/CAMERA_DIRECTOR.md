@@ -1053,7 +1053,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b4e95ec7 2026-10-02 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 85b65d51 2026-10-02 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED 2026-10-02 (SHIP-OWNER-COSMETIC-1, master merged in), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. Master's TIDY-C-1 (`framingRule.js`) and this branch's comeback work meet in this tree for the first time; the table below stands.
 
