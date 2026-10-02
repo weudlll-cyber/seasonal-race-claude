@@ -8,9 +8,12 @@
 // "holds gate, weights choose" (see `acceptsOffer` below), lifted out of CameraDirector.js so the
 // arbitration can be read, and tested, without a constructed director.
 //
-// WHAT IT IS NOT FOR: eligibility, holds, cooldowns, the finish sequence, the start window, the
-// endgame or the comeback precedence. Those decide WHETHER a shot is offered, and every one of them
-// stays in the director, which is the only caller. This module holds no state and touches no
+// It also carries OVERVIEW's offer schedule (bottom of the file): OVERVIEW is the one shot a clock
+// offers rather than the track, and the clock is re-set only as a consequence of the draw.
+//
+// WHAT IT IS NOT FOR: detecting battles, lead changes or comebacks, the holds, the finish
+// sequence, the start window, the endgame or the comeback precedence. Those decide WHETHER a shot
+// is offered, and every one of them stays in the director, which is the only caller. This module holds no state and touches no
 // `this`: its one source of randomness is the `random` function the caller passes in, which is the
 // director's own `_random()` — so the director's seeded stream is drawn in exactly the order it was
 // drawn before the extraction, and the camera fingerprint cannot tell the two apart.
@@ -81,4 +84,55 @@ export function weightedRandomPick(candidates, random) {
     if (r <= 0) return c;
   }
   return pool[pool.length - 1];
+}
+
+// ── THE OVERVIEW'S OFFER SCHEDULE ────────────────────────────────────────────────────────────
+//
+// OVERVIEW is the one shot whose offer is SCHEDULED rather than detected: nothing on the track
+// makes it eligible, a clock does. These two functions are that clock — when OVERVIEW may be
+// offered, and, when an offered OVERVIEW is taken, when it may be offered next. They sit beside
+// the arbitration because the second one runs only as a consequence of the draw. Like the rest of
+// this module they hold no state; the director stores the result in `_overviewScheduleNext`.
+
+/**
+ * May OVERVIEW be offered this frame?
+ *
+ * @param {number} ts  the director's frame timestamp, ms
+ * @param {object|null} raceState  needs `raceElapsed`
+ * @param {{startDelaySec:number, lastExitTs:number, cooldownMs:number, scheduleNext:number|null}} s
+ *   the director's overview start delay (SECONDS), its last OVERVIEW exit, its cooldown, and the
+ *   race-elapsed instant the schedule last set (null = not yet scheduled)
+ * @returns {boolean}
+ */
+export function overviewEligible(ts, raceState, s) {
+  if (!raceState) return false;
+  if (raceState.raceElapsed < s.startDelaySec * 1000) return false;
+  if (ts - s.lastExitTs < s.cooldownMs) return false;
+  if (s.scheduleNext !== null && raceState.raceElapsed < s.scheduleNext) return false;
+  return true;
+}
+
+/**
+ * The race-elapsed instant at which OVERVIEW may next be offered, after one has been taken.
+ *
+ * Spreads `targetCount` overviews over the race's estimated length (from the leader's progress so
+ * far), with a ±20% jitter so they do not land on a metronome. Without an estimate — the leader has
+ * barely moved, or there is no finish — the cooldown is the interval.
+ *
+ * @param {object|null} raceState  reads `finishT`, `raceElapsed`
+ * @param {object|null} leader  reads `t`
+ * @param {number} targetCount  overviews per race
+ * @param {number} cooldownMs  the fallback interval
+ * @param {() => number} random  the caller's random stream; drawn exactly once
+ * @returns {number}
+ */
+export function nextOverviewAt(raceState, leader, targetCount, cooldownMs, random) {
+  const leaderT = leader?.t ?? 0;
+  const finishT = raceState?.finishT ?? 0;
+  const elapsed = raceState?.raceElapsed ?? 0;
+  const estimate =
+    leaderT > 0.001 && finishT > 0 && elapsed > 0 ? (finishT / leaderT) * elapsed : null;
+  const interval = estimate != null ? estimate / Math.max(1, targetCount) : cooldownMs;
+  const jitter = 0.8 + random() * 0.4;
+  return elapsed + interval * jitter;
 }

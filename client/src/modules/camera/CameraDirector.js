@@ -22,7 +22,7 @@
 //   where did the camera go wrong ......... detourRecorder.js    (never writes a camera value)
 //   does the camera cut this frame ........ transitionDecision.js
 //   how does a race END ................... finishPhase.js       (the whole finish sequence)
-//   which offered shot is taken ........... offerArbitration.js  (the weighted draw + the offer)
+//   which offered shot is taken ........... offerArbitration.js  (the draw, the offer, OVERVIEW's clock)
 //
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
 // decision this file makes on every frame of a seeded race across ten tracks. A refactor that
@@ -106,7 +106,12 @@ import {
 } from './startCeremony.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
-import { acceptsOffer, weightedRandomPick } from './offerArbitration.js';
+import {
+  acceptsOffer,
+  weightedRandomPick,
+  overviewEligible,
+  nextOverviewAt,
+} from './offerArbitration.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -725,27 +730,25 @@ export class CameraDirector {
     return weightedRandomPick(candidates, () => this._random());
   }
 
+  /** May OVERVIEW be offered this frame? The rule is `overviewEligible` in offerArbitration.js. */
   _isOverviewEligible(ts, raceState) {
-    if (!raceState) return false;
-    if (raceState.raceElapsed < this._overviewStartDelay * 1000) return false;
-    if (ts - this._lastOverviewExitTs < this._overviewCooldownMs) return false;
-    if (this._overviewScheduleNext !== null && raceState.raceElapsed < this._overviewScheduleNext)
-      return false;
-    return true;
+    return overviewEligible(ts, raceState, {
+      startDelaySec: this._overviewStartDelay,
+      lastExitTs: this._lastOverviewExitTs,
+      cooldownMs: this._overviewCooldownMs,
+      scheduleNext: this._overviewScheduleNext,
+    });
   }
 
+  /** A taken OVERVIEW sets when the next may be offered — `nextOverviewAt` in offerArbitration.js. */
   _scheduleNextOverview(ts, raceState, leader) {
-    const leaderT = leader?.t ?? 0;
-    const finishT = raceState?.finishT ?? 0;
-    const elapsed = raceState?.raceElapsed ?? 0;
-    const estimate =
-      leaderT > 0.001 && finishT > 0 && elapsed > 0 ? (finishT / leaderT) * elapsed : null;
-    const interval =
-      estimate != null
-        ? estimate / Math.max(1, this._overviewTargetCount)
-        : this._overviewCooldownMs;
-    const jitter = 0.8 + this._random() * 0.4;
-    this._overviewScheduleNext = elapsed + interval * jitter;
+    this._overviewScheduleNext = nextOverviewAt(
+      raceState,
+      leader,
+      this._overviewTargetCount,
+      this._overviewCooldownMs,
+      () => this._random()
+    );
   }
 
   /**
