@@ -23,6 +23,8 @@
 // the shape of two concerns sharing one function. Lifting it is the first cut of that split.
 // ============================================================
 
+import { CAM_STATE } from './camState.js';
+
 /**
  * CAMERA-WEIGHTS-1: THE WEIGHT'S MEANING, stated so the owner can predict what a value buys.
  *
@@ -84,6 +86,105 @@ export function weightedRandomPick(candidates, random) {
     if (r <= 0) return c;
   }
   return pool[pool.length - 1];
+}
+
+// ── THE POOL AND THE ARBITRATION ──────────────────────────────────────────────────────────────
+//
+// What `_pickNextState` does once the finish sequence, the start window and the endgame have all
+// declined to own the frame, and once the comeback precedence has declined to force a shot. Those
+// four return ABOVE this — that ordering is the seam (DC2-ARC4-SOURCE.md §4.5 P1) — and the
+// director decides each shot's eligibility before calling here. What remains is pure: lay the
+// offered shots out in the pool's fixed order, draw one, and take or decline it.
+
+/**
+ * The offered shots, as the candidate pool, in the pool's fixed order: BATTLE, LEAD_CHANGE,
+ * COMEBACK, OVERVIEW. The order is part of the draw (`weightedRandomPick` walks it cumulatively),
+ * which is why it is fixed here and not left to the caller.
+ *
+ * Each argument is null when that shot is NOT offered. Every one of the director's offer tests
+ * carries `weight > 0` (BATTLE-WEIGHT-ZERO-1): a 0.00 slider means "never", consistently for every
+ * event — and the selector filters weight <= 0 again as defense in depth.
+ *
+ * @param {object} offers
+ * @param {{weight:number, closenessT:number}|null} offers.battle
+ * @param {{weight:number, from:string|null, to:string|null}|null} offers.leadChange  the previous and
+ *   current leader's names, for the reason text
+ * @param {{weight:number, racer:object, minPositionsGained:number}|null} offers.comeback
+ * @param {{weight:number}|null} offers.overview
+ * @returns {Array<{state:string, weight:number, reason:string, data?:object}>}
+ */
+export function offerPool({ battle, leadChange, comeback, overview }) {
+  const candidates = [];
+  if (battle) {
+    candidates.push({
+      state: CAM_STATE.BATTLE_ZOOM,
+      weight: battle.weight,
+      reason: `battle: pulk (arc<=${battle.closenessT})`,
+    });
+  }
+  if (leadChange) {
+    candidates.push({
+      state: CAM_STATE.LEAD_CHANGE,
+      weight: leadChange.weight,
+      reason: `lead-change: ${leadChange.from ?? '?'} → ${leadChange.to ?? '?'}`,
+    });
+  }
+  if (comeback) {
+    const r = comeback.racer;
+    candidates.push({
+      state: CAM_STATE.COMEBACK_ZOOM,
+      weight: comeback.weight,
+      reason: `comeback: ${r.name ?? r.index} gained ≥${comeback.minPositionsGained} positions`,
+      data: { comebackRacer: r },
+    });
+  }
+  if (overview) {
+    candidates.push({
+      state: CAM_STATE.OVERVIEW,
+      weight: overview.weight,
+      reason: 'overview: scheduled',
+    });
+  }
+  return candidates;
+}
+
+/**
+ * Draw from the pool and decide the offer. Returns the director's decision for the frame, plus
+ * `taken` — the candidate that was drawn AND accepted, or null — so the caller can run the
+ * consequence of a taken shot (OVERVIEW re-sets its schedule) and strip it from the decision.
+ *
+ * `pick` and `accept` are the director's own `_weightedRandomPick` and `_acceptsOffer`, passed in
+ * rather than called here directly so that they draw the director's seeded stream and remain the
+ * methods tests can observe. `accept` is called only when something was drawn — the same order of
+ * draws as before the extraction.
+ *
+ * @param {Array} candidates  from `offerPool`
+ * @param {(c:Array) => object|null} pick
+ * @param {(weight:number) => boolean} accept
+ * @returns {{nextState:string, reason:string, data:object, taken:object|null}}
+ */
+export function arbitrateOffers(candidates, pick, accept) {
+  const drawn = pick(candidates);
+  // THE OFFER. Eligibility and the cooldowns have decided that this shot MAY be taken; the weight
+  // decides whether it IS. Declining falls through to the leader default below, which is the
+  // honest neutral — not a second pick, which would make a low weight boost whatever came next.
+  if (drawn && !accept(drawn.weight)) {
+    return {
+      nextState: CAM_STATE.LEADER_ZOOM,
+      reason: `leader: ${drawn.state} offered and declined (weight ${drawn.weight})`,
+      data: {},
+      taken: null,
+    };
+  }
+  if (drawn) {
+    return { nextState: drawn.state, reason: drawn.reason, data: drawn.data ?? {}, taken: drawn };
+  }
+  return {
+    nextState: CAM_STATE.LEADER_ZOOM,
+    reason: 'leader: default (no active candidates)',
+    data: {},
+    taken: null,
+  };
 }
 
 // ── THE OVERVIEW'S OFFER SCHEDULE ────────────────────────────────────────────────────────────

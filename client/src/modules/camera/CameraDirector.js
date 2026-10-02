@@ -113,6 +113,8 @@ import {
   weightedRandomPick,
   overviewEligible,
   nextOverviewAt,
+  offerPool,
+  arbitrateOffers,
 } from './offerArbitration.js';
 
 // The state names live in camState.js (P1-CAMERADIRECTOR-SPLIT-1), so that modules this file
@@ -1741,28 +1743,18 @@ export class CameraDirector {
         };
       }
     }
-    // Candidate pool: weighted random selection from all currently eligible events
+    // ── THE OFFERS. Each shot's eligibility is decided here; the pool, the draw and the offer are
+    // offerArbitration.js. The comeback precedence returns ABOVE the pool — that is the seam
+    // DC2-ARC4-SOURCE.md §4.5 P1 named, and it is now visible as an ordering rather than as a
+    // return in the middle of the pool's construction.
     else {
-      const candidates = [];
-
-      // Every pool push is guarded by weight > 0 (BATTLE-WEIGHT-ZERO-1): a 0.00 slider means "never",
-      // consistently for every event. (The selector below also filters weight <= 0 as defense in depth.)
-      if (hasBattle && battleCooledDown && this._battleWeight > 0) {
-        candidates.push({
-          state: CAM_STATE.BATTLE_ZOOM,
-          weight: this._battleWeight,
-          reason: `battle: pulk (arc<=${this._battleGates.closenessT})`,
-        });
-      }
+      // Every offer test carries weight > 0 (BATTLE-WEIGHT-ZERO-1): a 0.00 slider means "never",
+      // consistently for every event. (The selector also filters weight <= 0 as defense in depth.)
+      const battleOffered = hasBattle && battleCooledDown && this._battleWeight > 0;
 
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
-      if (this._leadChangePending && lcCooledDown && this._leadChangeWeight > 0) {
-        candidates.push({
-          state: CAM_STATE.LEAD_CHANGE,
-          weight: this._leadChangeWeight,
-          reason: `lead-change: ${this._prevLeaderName ?? '?'} → ${this._currentLeaderName ?? '?'}`,
-        });
-      }
+      const leadChangeOffered =
+        this._leadChangePending && lcCooledDown && this._leadChangeWeight > 0;
 
       const comebackCooledDown = ts - this._lastComebackExitTs >= this._comebackCooldownMs;
       let _comebackRacer = null;
@@ -1782,68 +1774,61 @@ export class CameraDirector {
         // read here rather than recomputed. COMEBACK-CONNECT-1 needs it because the plan's beats
         // are written in race progress, not in wall-clock ms.
         _comebackRacer = this._detectComebackRacer(racers, ts, leaderProgress);
-        if (_comebackRacer) {
-          // ── ★ COMEBACK-PRECEDENCE-1 — THE FORCE ──────────────────────────────────────────────
-          //
-          // COMEBACK-SAME-RACER-1 §4 established that an interrupt ALONE is not a precedence:
-          // `_transition` calls this method and commits whatever comes back, so interrupting the
-          // hold merely re-opens the weighted draw, which the comebacker wins about a quarter of
-          // the time. This return IS the precedence — it lands above `_weightedRandomPick` and
-          // above `_acceptsOffer`, so the draw is not re-opened and the offer cannot be declined.
-          //
-          // ★ WHY HERE AND NOT AT THE `_transition` CALL SITE. Forcing there would override the
-          // finish sequence, the start window and the endgame, each of which returns above this
-          // branch and owns the screen outright. Placed here, the force inherits every one of
-          // those gates instead of restating them, and the identity test keeps it the SAME racer
-          // `_comebackPrecedenceOffer` cleared this frame — one notion of who is climbing, one
-          // decision about him.
-          if (this._comebackPrecedenceRacer?.index === _comebackRacer.index) {
-            return {
-              nextState: CAM_STATE.COMEBACK_ZOOM,
-              reason: `comeback-precedence: ${_comebackRacer.name ?? _comebackRacer.index} (cast comebacker, first shot)`,
-              data: { comebackRacer: _comebackRacer, comebackPrecedence: true },
-            };
-          }
-          candidates.push({
-            state: CAM_STATE.COMEBACK_ZOOM,
-            weight: this._comebackWeight,
-            reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackGates.minPositionsGained} positions`,
-            data: { comebackRacer: _comebackRacer },
-          });
+        // ── ★ COMEBACK-PRECEDENCE-1 — THE FORCE ────────────────────────────────────────────────
+        //
+        // COMEBACK-SAME-RACER-1 §4 established that an interrupt ALONE is not a precedence:
+        // `_transition` calls this method and commits whatever comes back, so interrupting the
+        // hold merely re-opens the weighted draw, which the comebacker wins about a quarter of
+        // the time. This return IS the precedence — it lands above `_weightedRandomPick` and
+        // above `_acceptsOffer`, so the draw is not re-opened and the offer cannot be declined.
+        //
+        // ★ WHY HERE AND NOT AT THE `_transition` CALL SITE. Forcing there would override the
+        // finish sequence, the start window and the endgame, each of which returns above this
+        // branch and owns the screen outright. Placed here, the force inherits every one of
+        // those gates instead of restating them, and the identity test keeps it the SAME racer
+        // `_comebackPrecedenceOffer` cleared this frame — one notion of who is climbing, one
+        // decision about him.
+        if (_comebackRacer && this._comebackPrecedenceRacer?.index === _comebackRacer.index) {
+          return {
+            nextState: CAM_STATE.COMEBACK_ZOOM,
+            reason: `comeback-precedence: ${_comebackRacer.name ?? _comebackRacer.index} (cast comebacker, first shot)`,
+            data: { comebackRacer: _comebackRacer, comebackPrecedence: true },
+          };
         }
       }
 
-      if (this._isOverviewEligible(ts, raceState) && this._overviewWeight > 0) {
-        candidates.push({
-          state: CAM_STATE.OVERVIEW,
-          weight: this._overviewWeight,
-          reason: 'overview: scheduled',
-        });
-      }
+      const overviewOffered = this._isOverviewEligible(ts, raceState) && this._overviewWeight > 0;
 
-      const pick = this._weightedRandomPick(candidates);
-      // THE OFFER. Eligibility and the cooldowns have decided that this shot MAY be taken; the weight
-      // decides whether it IS. Declining falls through to the leader default below, which is the
-      // honest neutral — not a second pick, which would make a low weight boost whatever came next.
-      if (pick && !this._acceptsOffer(pick.weight)) {
-        return {
-          nextState: CAM_STATE.LEADER_ZOOM,
-          reason: `leader: ${pick.state} offered and declined (weight ${pick.weight})`,
-          data: {},
-        };
+      const candidates = offerPool({
+        battle: battleOffered
+          ? { weight: this._battleWeight, closenessT: this._battleGates.closenessT }
+          : null,
+        leadChange: leadChangeOffered
+          ? {
+              weight: this._leadChangeWeight,
+              from: this._prevLeaderName,
+              to: this._currentLeaderName,
+            }
+          : null,
+        comeback: _comebackRacer
+          ? {
+              weight: this._comebackWeight,
+              racer: _comebackRacer,
+              minPositionsGained: this._comebackGates.minPositionsGained,
+            }
+          : null,
+        overview: overviewOffered ? { weight: this._overviewWeight } : null,
+      });
+
+      const { taken, ...decision } = arbitrateOffers(
+        candidates,
+        (c) => this._weightedRandomPick(c),
+        (w) => this._acceptsOffer(w)
+      );
+      if (taken?.state === CAM_STATE.OVERVIEW) {
+        this._scheduleNextOverview(ts, raceState, leader);
       }
-      if (pick) {
-        if (pick.state === CAM_STATE.OVERVIEW) {
-          this._scheduleNextOverview(ts, raceState, leader);
-        }
-        return { nextState: pick.state, reason: pick.reason, data: pick.data ?? {} };
-      } else {
-        return {
-          nextState: CAM_STATE.LEADER_ZOOM,
-          reason: 'leader: default (no active candidates)',
-          data: {},
-        };
-      }
+      return decision;
     }
   }
 
