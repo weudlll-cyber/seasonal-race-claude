@@ -1220,6 +1220,11 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       [COMEBACK-CUT-DIAG-1](../reports/evolution/COMEBACK-CUT-DIAG-1.md): the gain-stop ended it (no
       gate did). His setup fields 40 racers, not the 20 the window was chosen on; on 40-racer fields
       the 2 s window cuts 11 of 18 shots that then gain again within 5 s. The window is open again.
+      ★ **2026-10-02 — how long a comeback really lasts, measured:
+      [COMEBACK-DURATION-1](../reports/evolution/COMEBACK-DURATION-1.md)** (750 Quick-Test races; the
+      owner's definition: a comebacker is real once he has taken 3rd). From the shot's start to his
+      first 3rd place, the median is above 8 s in every field size except open tracks with 20 racers,
+      and the p90 runs to 25 s (closed, 40 racers).
 
 - [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
       his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback

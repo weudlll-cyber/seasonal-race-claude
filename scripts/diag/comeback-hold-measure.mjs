@@ -42,6 +42,21 @@
 //   · `--timeline=<file>` — every frame of every CAST comebacker: rank, the 2 s gain read
 //     (`gainedWithin`), whether he is the locked comeback racer, the transition reason, whether the
 //     detector would offer him now (`best()`), and its three rank gates; plus every racer's finish.
+//
+// COMEBACK-DURATION-1 added, read-only:
+//   · `--names=current|long|mixed` — which Quick Test name set `--roster=quicktest` draws from (the
+//     Quick Test fills an empty player list from the chosen set; `current` has 70 names, so an
+//     80-racer Quick Test needs `long` or `mixed`)
+//   · `--duration-out=<file>` — one row per CAST comebacker per race (the cast is read from the race
+//     plan's own `getCameraPlan()`, racePlanner.js:1935, role 'comebacker'):
+//       steering START  = the frame the plan casts him (racePlanner.js:1193, isHeroChoreographed)
+//       steering END    = his hand-off: a HELD comebacker at his curve's `releaseAt`
+//                         (`getHeldRelease()`, racePlanner.js:1287 `heldFree`); otherwise, if his drawn
+//                         place is in the top band (<= BAND_EDGES[0]), at `choreoReleaseProgress`
+//                         (racePlanner.js:1279-1282 `released`, read from DEFAULT_RACE_DYNAMICS_CONFIG);
+//                         otherwise he is steered to the finish and the row says so
+//       his rank at steering start, at the comeback shot's start (if one locked on him), and at the
+//       finish; and the first frame he holds 3rd place or better after each of the two starts
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -63,6 +78,13 @@ const SEEDS = ARG("seeds", "1,2,3").split(",").map(Number).filter(Number.isFinit
 const ONLY_TRACK = ARG("track", null);
 const ROSTER_MODE = ARG("roster", null);
 const TIMELINE_OUT = ARG("timeline", null);
+const NAME_SET = ARG("names", null);
+const DURATION_OUT = ARG("duration-out", null);
+const { DEFAULT_RACE_DYNAMICS_CONFIG } = await import(
+  pathToFileURL(join(ROOT, "client/src/modules/storage/defaults.js")).href
+);
+const { BAND_EDGES } = await import(pathToFileURL(join(ROOT, "client/src/modules/racePlanner.js")).href);
+const CHOREO_RELEASE = DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress;
 const JSON_OUT = ARG("json", null);
 const GAIN_STOP = ARG("gain-stop-ms", null);
 // this branch's shipped camera, read not copied — or a COPY with the one arm value changed
@@ -112,7 +134,12 @@ if (ROSTER_MODE === "quicktest") {
   const { resolveNameSet, DEFAULT_NAME_SET } = await import(
     pathToFileURL(join(ROOT, "client/src/modules/racerNames.js")).href
   );
-  ROSTER = resolveNameSet(DEFAULT_NAME_SET).slice(0, RACERS);
+  const names = resolveNameSet(NAME_SET ?? DEFAULT_NAME_SET);
+  if (names.length < RACERS) {
+    console.error(`comeback-hold-measure: name set "${NAME_SET ?? DEFAULT_NAME_SET}" has ${names.length} names; a Quick Test cannot field ${RACERS} from it.`);
+    process.exit(2);
+  }
+  ROSTER = names.slice(0, RACERS);
 } else if (ROSTER_MODE != null) {
   console.error(`comeback-hold-measure: --roster=${ROSTER_MODE} is not known (only "quicktest").`);
   process.exit(2);
@@ -121,6 +148,7 @@ if (ROSTER_MODE === "quicktest") {
 const shots = [];
 const races = [];
 const timelines = [];
+const durationRows = [];
 for (const geo of tracks) {
   for (const seed of SEEDS) {
     const identity = resolveIdentity({ raceSeed: seed, racers: RACERS, roster: ROSTER });
@@ -153,6 +181,7 @@ for (const geo of tracks) {
     const trace = createHash("sha256"); // every frame's camera output, for the survey's byte compare
     const cast = []; // the plan's comebackers, once the plan arrives
     const tl = []; // per-frame timeline rows for them (only with --timeline)
+    const cb = new Map(); // COMEBACK-DURATION-1: index -> per-comebacker record (only with --duration-out)
 
     runRace(race, identity, CFG, ({ cd: dir, st: state, ts, raceStart }) => {
       // The driver has already delivered the plan this frame (cameraPlanDelivery.mjs); read it once.
@@ -203,6 +232,45 @@ for (const geo of tracks) {
         cur.rankEnd = cur.racer == null ? null : ranks.get(cur.racer);
         mine.push(cur);
         cur = null;
+      }
+      if (DURATION_OUT && cast.length) {
+        const rm = ranks ?? rankMapOf(state);
+        const prog = state.raceProgress ?? 0;
+        for (const idx of cast) {
+          let c = cb.get(idx);
+          if (!c) {
+            const held = meta.racePlanController?.getHeldRelease?.()?.get(idx) ?? null;
+            const drawn = meta.racePlanController?.getTargetRank?.(idx) ?? null;
+            const releaseAt =
+              held != null ? held : drawn != null && drawn <= BAND_EDGES[0] ? CHOREO_RELEASE : null;
+            c = {
+              idx,
+              held: held != null,
+              drawn,
+              releaseAt,
+              steerStartMs: ms,
+              rankAtSteerStart: rm.get(idx),
+              steerEndMs: null,
+              shotStartMs: null,
+              rankAtShotStart: null,
+              thirdAfterSteerMs: null,
+              thirdAfterShotMs: null,
+              wasOutsideTop3: false, // has he been behind 3rd since the steering began?
+              thirdAfterOutsideMs: null, // first 3rd-or-better AFTER having been behind it
+            };
+            cb.set(idx, c);
+          }
+          const rank = rm.get(idx);
+          if (c.steerEndMs == null && c.releaseAt != null && prog >= c.releaseAt) c.steerEndMs = ms;
+          if (c.shotStartMs == null && s === "COMEBACK_ZOOM" && dir.comebackLockedRacerIndex === idx) {
+            c.shotStartMs = ms;
+            c.rankAtShotStart = rank;
+          }
+          if (c.thirdAfterSteerMs == null && rank <= 3) c.thirdAfterSteerMs = ms;
+          if (rank > 3) c.wasOutsideTop3 = true;
+          else if (c.wasOutsideTop3 && c.thirdAfterOutsideMs == null) c.thirdAfterOutsideMs = ms;
+          if (c.shotStartMs != null && c.thirdAfterShotMs == null && rank <= 3) c.thirdAfterShotMs = ms;
+        }
       }
       if (TIMELINE_OUT && cast.length) {
         const rm = ranks ?? rankMapOf(state);
@@ -281,6 +349,35 @@ for (const geo of tracks) {
       .map((r) => ({ index: r.index, name: r.name ?? null, finishTimeMs: r.finishTimeMs ?? null }))
       .sort((a, b) => (a.finishTimeMs ?? Infinity) - (b.finishTimeMs ?? Infinity));
     if (TIMELINE_OUT) timelines.push({ track: geo.id, seed, cast, finishes, rows: tl });
+    if (DURATION_OUT) {
+      const placeOf = new Map(finishes.map((f, i) => [f.index, i + 1]));
+      const raceRow = { track: geo.id, open: !geo.closed, racers: RACERS, seed, names: NAME_SET ?? "current" };
+      if (!cb.size) durationRows.push({ ...raceRow, comebacker: null });
+      for (const c of cb.values()) {
+        const fin = finishes.find((f) => f.index === c.idx);
+        durationRows.push({
+          ...raceRow,
+          comebacker: c.idx,
+          name: fin?.name ?? null,
+          held: c.held,
+          drawn: c.drawn,
+          rankAtSteerStart: c.rankAtSteerStart,
+          rankAtShotStart: c.rankAtShotStart,
+          finishPlace: placeOf.get(c.idx) ?? null,
+          shot: c.shotStartMs != null,
+          // steered to the finish when no hand-off point exists: then the steering ends at his finish
+          steeredToFinish: c.steerEndMs == null,
+          steeringS: +(((c.steerEndMs ?? fin?.finishTimeMs ?? c.steerStartMs) - c.steerStartMs) / 1000).toFixed(2),
+          shotToThirdS: c.shotStartMs == null || c.thirdAfterShotMs == null ? null : +((c.thirdAfterShotMs - c.shotStartMs) / 1000).toFixed(2),
+          steerToThirdS: c.thirdAfterSteerMs == null ? null : +((c.thirdAfterSteerMs - c.steerStartMs) / 1000).toFixed(2),
+          // the variant: counted only once he has first been behind 3rd (a racer already 3rd at the
+          // cast reads 0 above, which says nothing about his comeback)
+          steerToThirdAfterOutsideS:
+            c.thirdAfterOutsideMs == null ? null : +((c.thirdAfterOutsideMs - c.steerStartMs) / 1000).toFixed(2),
+          everOutsideTop3: c.wasOutsideTop3,
+        });
+      }
+    }
     races.push({ track: geo.id, seed, finishes, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
   }
 }
@@ -298,3 +395,4 @@ for (const s of shots)
   );
 if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ races, shots }, null, 2));
 if (TIMELINE_OUT) writeFileSync(TIMELINE_OUT, JSON.stringify(timelines));
+if (DURATION_OUT) writeFileSync(DURATION_OUT, JSON.stringify(durationRows));

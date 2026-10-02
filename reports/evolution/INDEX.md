@@ -426,6 +426,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-DURATION-1.md](COMEBACK-DURATION-1.md) — **how long a comeback really lasts (2026-10-02,
+  measurement only).** 750 Quick-Test races, crypto-random seeds: closed tracks with 20/40 racers,
+  open tracks with 20/40/80. Comeback shot start → the comebacker's first 3rd place, median / p90:
+  closed 20 — 8.5 / 20.6 s, closed 40 — 13.5 / 25.2 s, open 20 — 6.9 / 14.0 s, open 40 — 10.4 / 17.8 s,
+  open 80 — 12.3 / 17.3 s; never reaching 3rd from 3 of 97 to 16 of 111. Seeds in
+  [COMEBACK-DURATION-1-seeds.csv](COMEBACK-DURATION-1-seeds.csv). Deterministic (rerun 750/750 identical).
+
 - [COMEBACK-CUT-DIAG-1.md](COMEBACK-CUT-DIAG-1.md) — **why the comeback shot ended early in the
   owner's River Run seed-3 race (2026-10-02, measurement only).** The gain-stop ended it, not a gate.
   Harness and browser agree (same racer, length within 0.21 s). His setup fields 40 racers, not 20:
