@@ -31,9 +31,8 @@ import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { interpolateRacers } from './renderInterpolation.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
-import { getRacerType, getCoatsByType } from '../../racer-types/index.js';
-import { assignRaceNumbers } from '../../modules/raceNumbers.js';
-import { assignCoat, assignPattern, PATTERN_IDS } from '../../racer-types/coatAssignment.js';
+import { getRacerType } from '../../racer-types/index.js';
+import { attachRacerDisplayFields } from './racerDisplayFields.js';
 import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
 // P4-RACESCREEN-SPLIT-1: the world a race is built from — racer-type fields, the config world, the
@@ -84,7 +83,6 @@ import {
   LIGHT_SPACING_PX,
   sampleBoundaryAtInterval,
 } from '../../modules/trackLights.js';
-import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassCache.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
@@ -673,28 +671,16 @@ export default function RaceScreen() {
     setWinnerCardUp(false);
     setWinnerCard(null);
 
-    // ── Augment the extracted physics racers with render-only fields (icon/colour/coat/pattern/
-    // trail/emitter). Done IN PLACE so the render array and the physics array stepRacePhysics mutates
-    // are the SAME objects. `for (k in src) if (!(k in r))` copies the roster's display fields without
-    // ever overwriting a physics field — reproducing the former `{ ...r, ...physics }` spread exactly.
-    // None of these draw from raceRng (coat/pattern hash the name), so the physics stream is untouched.
-    // RACE-NUMBERS-1: one permutation for the whole field, drawn from the seed on its own generator.
-    const raceNumbers = assignRaceNumbers(raceState.racers.length, racePlanSeed);
-    for (let i = 0; i < raceState.racers.length; i++) {
-      const r = raceState.racers[i];
-      const src = raceData.racers[i];
-      for (const k in src) if (!(k in r)) r[k] = src[k];
-      r.icon = trackEmoji ?? src.icon;
-      r.coatId = getCoatsByType(typeId) ? assignCoat(src.name, getCoatsByType(typeId)) : undefined;
-      r.patternId = assignPattern(src.name, PATTERN_IDS);
-      // RACE-NUMBERS-1: the start number is a RENDER-ONLY field, attached here beside the coat and
-      // the pattern — AFTER the race has been built, so it cannot participate in building it. The
-      // draw itself consumes no shared stream (see raceNumbers.js); attaching it here as well means
-      // there is no ordering by which it could.
-      r.raceNumber = raceNumbers[r.index] ?? null;
-      // VRE-4: one emitter instance per racer (stateful generators must not be shared)
-      r.surfaceEmitter = resolveTrailEmitter(racerType, trackSurfaceClasses);
-    }
+    // ── P4-RACESCREEN-SPLIT-1: the render-only fields (roster display fields, icon, coat, pattern,
+    // start number, trail emitter) are attached in racerDisplayFields.js — IN PLACE, AFTER the race
+    // is built, drawing nothing from its random stream.
+    attachRacerDisplayFields(raceState.racers, raceData.racers, {
+      racePlanSeed,
+      trackEmoji,
+      typeId,
+      racerType,
+      trackSurfaceClasses,
+    });
     attachRacerRenderState(raceState.racers);
 
     // g.current IS the extracted physics state (racers, finishT, maxLaps, finishedCount, raceProgress,
