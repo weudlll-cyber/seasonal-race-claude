@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 268eeb33 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ ef4fa49e 2026-10-02 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
 
 ★★ **RE-MEASURED 2026-10-02 (COMEBACK-HOLD-2), IDENTICAL TO THE DIGIT** to the row below — the comeback-until-3rd rule ends a comeback at the final scene and does not otherwise reach the ending.
 
