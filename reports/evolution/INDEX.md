@@ -426,6 +426,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [COMEBACK-HOLD-2.md](COMEBACK-HOLD-2.md) — **the comeback shot holds until the racer reaches 3rd —
+  BUILT on `ship/owner-cosmetic-defaults` (2026-10-02, not merged, not minted).** At least 8 s, at most
+  20 s, never into the final scene (endgame, photo-finish gate, first racer home — whichever first,
+  minimum or not). The gain-stop rule is removed. Over the 750 races of COMEBACK-DURATION-1: 62–84%
+  of shots end by reaching 3rd; **final-scene overlap 0 of 463**. Quick-Test seed: Ice Track, 40
+  racers, seed 4896. World unchanged.
+
 - [COMEBACK-DURATION-1.md](COMEBACK-DURATION-1.md) — **how long a comeback really lasts (2026-10-02,
   measurement only).** 750 Quick-Test races, crypto-random seeds: closed tracks with 20/40 racers,
   open tracks with 20/40/80. Comeback shot start → the comebacker's first 3rd place, median / p90:

@@ -157,24 +157,15 @@ export class ComebackDetector {
   }
 
   /**
-   * COMEBACK-HOLD-1: has this racer gained at least one place within the last `windowMs`?
-   * A PURE READ of the history `recordRanks` already keeps — no second tracker. Net gain: his latest
-   * rank against the first sample at or after `ts - windowMs`, so a place gained and lost again
-   * inside the window counts as no gain. The history is pruned to `windowSec + PRUNE_MARGIN_MS`, so a
-   * longer `windowMs` silently reads the shorter span that exists.
-   * Unknown racer or fewer than two samples → false: with nothing to show a gain, the shot does not
-   * get extended on a guess.
+   * COMEBACK-HOLD-2: this racer's rank as `recordRanks` last recorded it — this frame's, since the
+   * director records before it decides. A PURE READ of the history that already exists; no second
+   * tracker. `null` for a racer with no history (he could not have been offered a shot then).
    * @param {number} index
-   * @param {number} ts
-   * @param {number} windowMs
-   * @returns {boolean}
+   * @returns {number|null}
    */
-  gainedWithin(index, ts, windowMs) {
+  latestRank(index) {
     const hist = this._history.get(index);
-    if (!hist || hist.length < 2) return false;
-    const start = earliestAtOrAfter(hist, ts - windowMs);
-    const now = hist[hist.length - 1];
-    return !!start && now.rank < start.rank;
+    return hist && hist.length ? hist[hist.length - 1].rank : null;
   }
 
   /**

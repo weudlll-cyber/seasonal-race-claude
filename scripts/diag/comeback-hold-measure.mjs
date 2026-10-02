@@ -22,11 +22,14 @@
 // physics frame rather than off a wall clock, so a single browser run can place a shot a frame or
 // two differently (comeback-precedence.spec.js header). Stated, not hidden.
 //
-// Usage: node scripts/diag/comeback-hold-measure.mjs [--seeds=1,2,3] [--json=<file>] [--gain-stop-ms=<n>]
+// Usage: node scripts/diag/comeback-hold-measure.mjs [--seeds=1,2,3] [--json=<file>]
 //
-// COMEBACK-HOLD-1 added `--gain-stop-ms=`: overrides `comebackGainStopMs` on a COPY of the config for
-// this run (defaults.js is never written), so the arms of the W choice race identical races; and the
-// per-shot `regainWithin3s`: did the racer take a place again within 3 s of the shot ending.
+// COMEBACK-HOLD-1 added the per-shot `regainWithin3s`: did the racer take a place again within 3 s of
+// the shot ending. (Its `--gain-stop-ms=` arm went with the gain-stop rule at COMEBACK-HOLD-2.)
+//
+// COMEBACK-HOLD-2 added the per-shot `finalSceneFrames`: frames the camera spent in COMEBACK_ZOOM
+// while the final scene was due — leader past `endgameThreshold`, any racer home, or the photo finish
+// running (`_inPhotoFinish`). The rule says this is always 0; the instrument counts it, not assumes it.
 //
 // COMEBACK-SETTINGS-SURVEY-1 added `--set=key=value[,key=value]`: any top-level camera key, on the
 // same COPY of the config (numbers, true/false parsed; nothing persists), and a per-race
@@ -39,9 +42,9 @@
 //     default name set (`resolveNameSet(DEFAULT_NAME_SET)` in client/src/modules/racerNames.js, read,
 //     not copied), exactly what SetupScreen fills an empty player list with. A racer's NAME is an
 //     engine input (raceDriver.mjs, the roster block), so without this the race is not the browser's.
-//   · `--timeline=<file>` — every frame of every CAST comebacker: rank, the 2 s gain read
-//     (`gainedWithin`), whether he is the locked comeback racer, the transition reason, whether the
-//     detector would offer him now (`best()`), and its three rank gates; plus every racer's finish.
+//   · `--timeline=<file>` — every frame of every CAST comebacker: rank, whether he is the locked
+//     comeback racer, the transition reason, whether the detector would offer him now (`best()`), and
+//     its three rank gates; plus every racer's finish.
 //
 // COMEBACK-DURATION-1 added, read-only:
 //   · `--names=current|long|mixed` — which Quick Test name set `--roster=quicktest` draws from (the
@@ -86,7 +89,6 @@ const { DEFAULT_RACE_DYNAMICS_CONFIG } = await import(
 const { BAND_EDGES } = await import(pathToFileURL(join(ROOT, "client/src/modules/racePlanner.js")).href);
 const CHOREO_RELEASE = DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress;
 const JSON_OUT = ARG("json", null);
-const GAIN_STOP = ARG("gain-stop-ms", null);
 // this branch's shipped camera, read not copied — or a COPY with the one arm value changed
 const SETS = Object.fromEntries(
   (ARG("set", "") || "")
@@ -97,13 +99,7 @@ const SETS = Object.fromEntries(
       return [k, v === "true" ? true : v === "false" ? false : Number(v)];
     }),
 );
-const CFG =
-  GAIN_STOP == null && !Object.keys(SETS).length
-    ? DEFAULT_CAMERA_CONFIG
-    : {
-        ...structuredClone(DEFAULT_CAMERA_CONFIG),
-        ...(GAIN_STOP == null ? {} : { comebackGainStopMs: Number(GAIN_STOP) }),
-      };
+const CFG = !Object.keys(SETS).length ? DEFAULT_CAMERA_CONFIG : structuredClone(DEFAULT_CAMERA_CONFIG);
 // a dotted key (e.g. cameraStateProfiles.COMEBACK_ZOOM.visibleCorridors) must name an existing leaf
 const leafExists = (o, path) =>
   path.split(".").reduce((c, k) => (c != null && k in Object(c) ? c[k] : undefined), o) !== undefined;
@@ -218,9 +214,20 @@ for (const geo of tracks) {
           startRaceProgress: +(state.raceProgress ?? 0).toFixed(4),
           from: prev,
           capFiredMs: null, // the 8 s gate fired but the pick chose COMEBACK again (a repeat)
+          finalSceneFrames: 0, // COMEBACK-HOLD-2: frames on the comeback while the final scene was due
         };
         if (who != null && !series.has(who)) series.set(who, []);
-      } else if (s === "COMEBACK_ZOOM" && cur && cur.capFiredMs == null && reason === "hold-elapsed") {
+      }
+      // COMEBACK-HOLD-2: a comeback frame while the final scene is due is an OVERLAP — counted, never assumed
+      if (
+        s === "COMEBACK_ZOOM" &&
+        cur &&
+        (lead > DEFAULT_CAMERA_CONFIG.endgameThreshold ||
+          state.racers.some((r) => r.finished) ||
+          dir._inPhotoFinish)
+      )
+        cur.finalSceneFrames++;
+      if (s === "COMEBACK_ZOOM" && cur && cur.capFiredMs == null && reason === "hold-elapsed") {
         cur.capFiredMs = ms; // transition fired, state stayed: same-state repeat
       }
       if (s !== "COMEBACK_ZOOM" && prev === "COMEBACK_ZOOM" && cur) {
@@ -292,7 +299,6 @@ for (const geo of tracks) {
             state: s,
             reason,
             locked: dir.comebackLockedRacerIndex === idx,
-            gained2000: dir._comeback.gainedWithin(idx, ts, 2000),
             offered: offered === idx,
             // the three rank gates of best(), evaluated as best() evaluates them
             gateStartGap: startS ? (startS.rank - 1) / nd >= g.minStartGap : null,

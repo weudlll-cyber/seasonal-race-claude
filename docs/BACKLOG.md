@@ -1225,6 +1225,12 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       owner's definition: a comebacker is real once he has taken 3rd). From the shot's start to his
       first 3rd place, the median is above 8 s in every field size except open tracks with 20 racers,
       and the p90 runs to 25 s (closed, 40 racers).
+      ★ **BUILT 2026-10-02 — COMEBACK-HOLD-2, on `ship/owner-cosmetic-defaults`, awaiting the owner's
+      eye** ([report](../reports/evolution/COMEBACK-HOLD-2.md)). The owner's decision of 2026-10-02:
+      the shot holds until the racer reaches 3rd, at least 8 s, at most 20 s, never into the final
+      scene. It replaces the gain-stop rule. Over the 750 races: final-scene overlap 0 of 463 shots.
+      Quick-Test seed to look at: Ice Track, 40 racers, seed 4896. **Stays open until the owner has
+      looked.**
 
 - [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
       his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback

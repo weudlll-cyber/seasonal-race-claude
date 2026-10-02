@@ -163,9 +163,9 @@ because nobody looked.**
    (a comeback is shown when one was planned). ★ **Surveyed 2026-10-02**: ten settings act, two
    profile fields are dead by construction, eight showed no effect in 30 races. Removing the dead
    ones is what remains.
-16. ★ **NEW 2026-10-02 — the comeback shot: at least 8 s, longer while catching up** (his decision).
-   Measured, not built: today all 10 shots in 30 races end at the 8 s cap, 6 with the racer still
-   gaining; no "comeback finished" signal exists to end a longer shot on.
+16. ★ **NEW 2026-10-02 — the comeback shot: until the racer reaches 3rd** (his decision: at least 8 s,
+   at most 20 s, never into the final scene). ★ Built on the branch (COMEBACK-HOLD-2), awaiting his
+   eye; the final scene never overlaps it in 750 races.
 17. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.

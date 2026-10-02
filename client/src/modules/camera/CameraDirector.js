@@ -691,7 +691,7 @@ export class CameraDirector {
     this._contenderZoom = t.contenderZoom;
     this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
-    this._comebackGainStopMs = t.comebackGainStopMs; // COMEBACK-HOLD-1
+    this._comebackTargetRank = t.comebackTargetRank; // COMEBACK-HOLD-2
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
     this._leadChangeWeight = t.leadChangeWeight;
@@ -1034,17 +1034,35 @@ export class CameraDirector {
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
     // until a different state is detected — no stateCap blocker.
     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
-    // COMEBACK-HOLD-1 (the owner's decision, 2026-10-02): at least the comeback minimum, then only
-    // while the locked racer is still gaining places; `stateCap` (the profile maximum) bounds it.
-    // The minimum is the COMEBACK state's own, read from the per-state table, not `minHold` — a
+    // COMEBACK-HOLD-2 (the owner's decision, 2026-10-02): at least the comeback minimum, then until
+    // the locked racer holds `comebackTargetRank` or better; `stateCap` (the profile maximum) bounds
+    // it. The minimum is the COMEBACK state's own, read from the per-state table, not `minHold` — a
     // repeat entry would set that to 0, and repeats of a running comeback are refused below.
+    const inComeback = this.state === CAM_STATE.COMEBACK_ZOOM;
     const comebackMinHoldMs =
       this._minStateHoldByState[CAM_STATE.COMEBACK_ZOOM] ?? this._minStateHoldMs;
-    const comebackGainStopped =
-      this.state === CAM_STATE.COMEBACK_ZOOM &&
-      this._comebackGainStopMs > 0 &&
+    const lockedRank = inComeback
+      ? this._comeback.latestRank(this._comebackLockedRacerIndex)
+      : null;
+    const comebackTargetReached =
+      inComeback &&
       stateAge >= comebackMinHoldMs &&
-      !this._comeback.gainedWithin(this._comebackLockedRacerIndex, ts, this._comebackGainStopMs);
+      lockedRank != null &&
+      lockedRank <= this._comebackTargetRank;
+    // ...and NEVER INTO THE FINAL SCENE, whose earliest entry ends it at once, minimum or not:
+    //   · the endgame — leader past `endgameThreshold`, which `_pickNextState` answers with the
+    //     endgame shot (its Priority 2.5) — the one entry that would otherwise WAIT for this shot's
+    //     hold to run out, so it is the one this flag exists for;
+    //   · the photo-finish gate (`photoFinishGateReady`) and the first racer home
+    //     (`forceFinishDrama`), which already transition out of ANY state in `decideTransition`;
+    //     they are named here so the rule reads whole.
+    // The transition then runs the ordinary `_transition` → `_pickNextState`, so the final scene's
+    // own shot starts on this very frame, exactly as it would have from any other state.
+    const comebackFinalSceneDue =
+      inComeback &&
+      (this._diagLeaderProgress > this._endgameThreshold ||
+        photoFinishGateReady ||
+        forceFinishDrama);
     // The DECISION is pure and carries its reason; the ACTIONS and every assignment stay here.
     // The two battle predicates keep the original's short-circuit: they are consulted ONLY once
     // BATTLE_ZOOM has held for battleMinDurationMs. Both are pure reads (group resolution +
@@ -1061,7 +1079,8 @@ export class CameraDirector {
       battleGroupP2Drifted: battleExitEligible ? this._isBattleGroupP2Drifted(racers) : false,
       leadChangePending: this._leadChangePending,
       comebackPrecedencePending: this._comebackPrecedenceRacer != null,
-      comebackGainStopped,
+      comebackTargetReached,
+      comebackFinalSceneDue,
       finishDramaExpired,
       forceFinishDrama,
       photoFinishGateReady,
