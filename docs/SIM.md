@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **204 files that can change the race** — the engine's own imports AND the imports of every
+the **210 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -136,9 +136,14 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/branding/useActiveBrandProfile.js` | Hook and pure resolver for the currently-active branding profile. |
 | `modules/buildInfo.js` | BUILD-TRUTH-1 |
 | `modules/camera/CameraDirector.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/CameraDirectorCeilings.js` | P1-CAMERADIRECTOR-SPLIT-1 |
+| `modules/camera/CameraDirectorCeremony.js` | P1-CAMERADIRECTOR-SPLIT-1 |
 | `modules/camera/CameraDirectorDiag.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/CameraDirectorLevelSet.js` | P1-CAMERADIRECTOR-SPLIT-1 |
+| `modules/camera/CameraDirectorRunIn.js` | P1-CAMERADIRECTOR-SPLIT-1 |
 | `modules/camera/Minimap.js` | **UNKNOWN** — the file's header states no purpose |
 | `modules/camera/battleGroup.js` | CAMERA-HYGIENE-2 |
+| `modules/camera/camState.js` | P1-CAMERADIRECTOR-SPLIT-1 |
 | `modules/camera/cameraMarker.js` | CAMERA-REPRO-1 — the MARKER: one copyable line that names a single moment of a single race precisely enough to stand in it again. |
 | `modules/camera/cameraSeed.js` | CAMERA-SEED-AND-LINE-1 |
 | `modules/camera/cameraTimingComputation.js` | **UNKNOWN** — the file's header states no purpose |
@@ -149,6 +154,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/camera/framingConfig.js` | CAMERA-HYGIENE-2 |
 | `modules/camera/framingRule.js` | THE framing rule (CAMERA-FRAMING-1) — the second half of the owner's camera design. |
 | `modules/camera/lapUtils.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/camera/offerArbitration.js` | P1-CAMERADIRECTOR-SPLIT-1 |
 | `modules/camera/openTrackCamera.js` | **UNKNOWN** — the file's header states no purpose |
 | `modules/camera/panTarget.js` | **UNKNOWN** — the file's header states no purpose |
 | `modules/camera/projection.js` | THE single world<->screen mapping for the camera (CAMERA-PROJECTION-1). |
@@ -335,7 +341,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 
-204 files, 24 of them UNKNOWN.
+210 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
