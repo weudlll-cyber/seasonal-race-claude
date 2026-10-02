@@ -43,8 +43,7 @@ import { resolveRaceWorld } from './raceWorldSetup.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
-import { getEffect } from '../../modules/track-effects/index.js';
-import { extractEffects } from '../TrackEditor/trackEditorSave.js';
+import { cacheTrackLights, createTrackEffects } from './trackScene.js';
 import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { buildCameraMarker } from '../../modules/camera/cameraMarker.js';
@@ -77,11 +76,6 @@ import LeadChangeDiagHUD from './LeadChangeDiagHUD.jsx';
 import { selectWinnerText } from '../../modules/stateOverlayTemplates.js';
 import { overlayVarsFor, pickOverlayText } from './stateOverlaySelection.js';
 import { storageGet, KEYS } from '../../modules/storage/storage.js';
-import {
-  DEFAULT_TRACK_LIGHTS,
-  LIGHT_SPACING_PX,
-  sampleBoundaryAtInterval,
-} from '../../modules/trackLights.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassCache.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
@@ -415,31 +409,10 @@ export default function RaceScreen() {
       bgCanvasRef.current.height = worldHeight;
     }
 
-    // Cache track-light positions once at race init (not per frame).
-    // 800 samples gives ~18 px/sample on a 15 000 px track — accurate enough
-    // for sampleBoundaryAtInterval to place lights at the target 30 px spacing.
-    const { outer: edgeOuter, inner: edgeInner } = shapeRef.current.getEdgePoints(800);
-    const cachedLightPts = {
-      outer: sampleBoundaryAtInterval(edgeOuter, LIGHT_SPACING_PX),
-      inner: sampleBoundaryAtInterval(edgeInner, LIGHT_SPACING_PX),
-    };
-    const trackLightsConfig = geometry.trackLights ?? DEFAULT_TRACK_LIGHTS;
-
-    // PARTICLES-VISIBILITY-2: track effects are drawn INSIDE the world transform (renderRaceFrame.js),
-    // so the world size goes in as `create`'s third argument and every effect places its content over
-    // the whole track. Passing the canvas alone put everything in a canvas-sized corner of the world.
-    const effectWorld = { width: worldWidth, height: worldHeight };
-    // PARTICLES-VISIBILITY-12: a test race from the Track Editor carries the editor's UNSAVED effects
-    // in its payload (`raceData.testRace.effects`), so they are raced without being stored anywhere;
-    // every other race reads the stored track's effects, as before.
-    effectsRef.current = extractEffects(
-      raceData.testRace ? { effects: raceData.testRace.effects } : geometry
-    )
-      .map(({ id, config }) => {
-        const manifest = getEffect(id);
-        return manifest ? manifest.create(canvas, config, effectWorld) : null;
-      })
-      .filter(Boolean);
+    // P4-RACESCREEN-SPLIT-1: the track lights are cached and the track effects created in
+    // trackScene.js, once per race. RaceScreen holds the effects and destroys them in its cleanup.
+    const { cachedLightPts, trackLightsConfig } = cacheTrackLights(shapeRef.current, geometry);
+    effectsRef.current = createTrackEffects(canvas, raceData, geometry, worldWidth, worldHeight);
 
     const racerType = getRacerType(typeId);
     racerTypeRef.current = racerType;
