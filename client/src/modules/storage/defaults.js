@@ -198,12 +198,12 @@ export const DEFAULT_CAMERA_CONFIG = {
       entryTC: 0.8,
       leadInDuration: 0.3,
       leadOutDuration: 1.5,
-      innerFramePct: 0.7,
+      // No `innerFramePct` and no `minStateHold` here: both were dead by construction for this
+      // state (COMEBACK-SETTINGS-SURVEY-1) — the hold is `comebackMinDuration`, the frame is global.
       // COMEBACK-HOLD-2 (the owner's decision, 2026-10-02): the comeback shot holds AT LEAST
       // `comebackMinDuration` and until the racer has reached `comebackTargetRank` (below), up to
       // THIS hard maximum — and never into the final scene, which ends it at once.
       maxStateDuration: 20000,
-      minStateHold: 5000,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false,
       leadOutEnabled: false,
