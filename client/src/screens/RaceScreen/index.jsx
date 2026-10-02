@@ -7,6 +7,25 @@
 //              TV camera director (closed tracks), multi-lap support,
 //              fullscreen toggle, and fade-to-black navigation.
 //
+// ★ WHAT THIS FILE OWNS SINCE P4-RACESCREEN-SPLIT-1 (2026-10-02). The React component — its state,
+//   refs and effects, the race-init effect that wires one race together, the rAF loop (phase
+//   advancement, the fixed-timestep physics accumulator and its catch-up cap, the camera update,
+//   the draw call), the finish hand-over and the DOM. It is still the ENGINE DRIVER: it imports
+//   `raceCore.js` and calls `createRaceFromIdentity` / `stepRacePhysics` itself. What it no longer
+//   carries inline, each moved verbatim into a module beside it:
+//     raceWorldSetup.js        which world the race is built from (configs, stage, badge, params)
+//     trackScene.js            track lights and track-effect instances
+//     raceCamera.js            the CameraDirector, built and seeded
+//     racerDisplayFields.js    the racers' render-only fields
+//     battleSlowmo.js          the BATTLE / PHOTO_FINISH slow-motion clock
+//     raceLoopDiagnostics.js   the loop's dev-HUD readouts and the hold probe
+//     raceResults.js           the finish order and the result-screen payload
+//     burstParticles.js        the finish-line burst particle step
+//     renderInterpolation.js   the interpolated racer snapshot between physics steps
+//     stateOverlaySelection.js which narrative line the state overlay shows
+//     viewerFrameProbe.js      the per-frame viewer-probe payload
+//   reports/evolution/P4-RACESCREEN-SPLIT-1.md has the map and what stayed here, and why.
+//
 // ★ STAY-ON-THE-FINISH-1 (the owner's decision, 2026-09-25): THE HAND-OVER TO THE RESULTS IS NOW A
 //   CHOICE. `autoAdvance` on — today's behaviour, the screen hands over when the camera ending
 //   closes. Off — the finish picture stands until the operator left-clicks it. The ENDING ITSELF is
