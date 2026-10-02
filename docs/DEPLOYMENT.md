@@ -254,7 +254,8 @@ set -a; . "$RA_ENV_FILE"; set +a
 npm run backup
 ```
 
-It writes one `racearena-backup-<UTC timestamp>.tar` into `RA_BACKUP_DIR`. `--out <dir>` names a
+It writes one `racearena-backup-<UTC timestamp>.tar` into `RA_BACKUP_DIR`, and beside it a
+`.tar.sha256` checksum file in the standard `sha256sum` format. `--out <dir>` names a
 different directory for one run. **It works while the server is running.** It prints every item and
 its size, and it **refuses rather than writing a half-archive** if anything is wrong. **It refuses
 to write into the data directory**, because a copy beside the original is not a second copy.
@@ -265,6 +266,10 @@ survives losing this one. Versions older than this command have the same tool as
 ★ **Check the archive afterwards.** It should be roughly the size of your data directory. If the
 data directory is tens of megabytes and the backup is a few kilobytes, something went wrong. The
 tool prints the totals so you can compare them.
+
+★ **Check a copy before you rely on it.** Copy the `.sha256` file together with its archive. On
+Linux, `sha256sum -c racearena-backup-<UTC timestamp>.tar.sha256`, run in the directory that holds
+both, prints `OK` when the archive is unchanged. `npm run status` checks the newest one for you.
 
 ★ **Why you cannot simply copy the folder.** `sessions.sqlite` and `races.sqlite` are live
 databases. A file copy taken while the server is writing can capture a half-finished transaction,
@@ -285,7 +290,7 @@ and **exits non-zero when any check fails**, so a scheduler can alert on the exi
 | `api` | `GET /api/health` answers `200` with `status: ok` | `--url <address>`. Default: `127.0.0.1` (or `RA_BIND_ADDRESS`) on `PORT` |
 | `disk` | at least 1024 MB free where the data directory is | `--min-free-mb <n>` |
 | `writable` | a probe file can be written into the data directory and removed | — |
-| `backup` | the newest archive in `RA_BACKUP_DIR` is at most 26 hours old (daily, plus slack) | `--backups <dir>`, `--max-backup-age-hours <n>` |
+| `backup` | the newest archive in `RA_BACKUP_DIR` is at most 26 hours old (daily, plus slack), and its `.sha256` checksum file is there and matches | `--backups <dir>`, `--max-backup-age-hours <n>` |
 
 Exit code `0` = all passed, `1` = at least one failed, `2` = the command was misused. A backup's
 age is read from its file name, not from the file date, so a copied archive still shows its real
@@ -372,9 +377,7 @@ A version older than the one that introduced them has no `npm run status` and ig
 back to such a version.
 
 **Moving to a different machine** is a backup on the old one and a restore into the empty
-`RA_DATA_DIR` of a fresh install on the new one. *(`npm run data:export` is NOT the tool for this
-layout. It reads a fixed `server/data` and ignores `RA_DATA_DIR` (`scripts/data-export.mjs:45`),
-so with the data outside the release directory it measures the wrong place.)*
+`RA_DATA_DIR` of a fresh install on the new one.
 
 ### The migration ledger — added 2026-09-24 (MIGRATION-LEDGER-1)
 

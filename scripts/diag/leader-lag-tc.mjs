@@ -12,6 +12,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
@@ -19,7 +21,13 @@ const arg = (k, d) => {
 };
 const DIR = arg("dir", join(tmpdir(), "lagtc"));
 const TCS = arg("tcs", "0.25,0.18,0.12,0.08,0.05").split(",");
-const TRACKS = arg("tracks", "space-sprint,seatrack,river-run,mountainstreet").split(",");
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/leader-lag-tc",
+  ids: arg("tracks", "space-sprint,seatrack,river-run,mountainstreet"),
+  all: loadTracks(),
+});
 
 const q = (a, p) => (a.length ? a[Math.min(a.length - 1, Math.floor(a.length * p))] : NaN);
 const f = (n, d = 1) => (n === null || n === undefined || Number.isNaN(n) ? "   —  " : n.toFixed(d).padStart(7));

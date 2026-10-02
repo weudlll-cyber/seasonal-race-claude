@@ -29,13 +29,28 @@
 //
 // ── THE REFUSAL IS NOT NEW ────────────────────────────────────────────────────────────────────
 //
-// Its wording and shape are taken from `scripts/viewer-invariants.mjs:313-331` and `:353-362`, which
-// already guard exactly this and already say the useful things: name what was asked for, name what
-// exists, say there is no "all", and say why exiting 0 would be wrong. This file is those sentences
-// moved somewhere every tool can reach, not a second style of refusal invented beside them.
-// `scripts/company-bind-truth.mjs:137` guards the single-track form the same way.
+// Its wording and shape are taken from the guard `scripts/viewer-invariants.mjs` carried, which
+// already said the useful things: name what was asked for, name what exists, say there is no "all",
+// and say why exiting 0 would be wrong. This file is those sentences moved somewhere every tool can
+// reach, not a second style of refusal invented beside them — and since HARNESS-EMPTY-SCOPE-1 that
+// harness calls this file instead of keeping its original copy.
 //
 // EXITS 2 on refusal, which is what the guarded sites already use.
+//
+// ── EVERY `--tracks` TOOL OUTSIDE THE RACE HULL IS ON IT (HARNESS-EMPTY-SCOPE-1, 2026-10-02) ───
+//
+// The last callers that took `--tracks` and validated nothing were brought onto these two doors,
+// including the file-reading `-sum` analysers: their scope is still a list of TRACK names, so the
+// registry is still the known set, and an omitted `--tracks` on them printed headers over nothing.
+// The list of tools, and how each was proven to refuse, is in
+// reports/evolution/HARNESS-EMPTY-SCOPE-1.md. A NEW tool that takes `--tracks` belongs here too —
+// `trackScopeWiring.test.mjs` fails until it is.
+//
+// ★ THIS FILE MUST STAY OUTSIDE THE RACE HULL. A script that imports `raceCore.js` directly is a
+// hull DRIVER, and `engine-reach.mjs` counts its whole import closure; one such driver importing
+// this file would make every edit here a change that "can move a race". So hull drivers
+// (`outcome-phase-window.mjs`, `pair-reach-census.mjs` today) are not wired, and the wiring test
+// pins this file outside the hull.
 // ============================================================
 
 /**
@@ -43,7 +58,8 @@
  *
  * @param {object}   p
  * @param {string}   p.tool   the tool's own name, so the refusal says who is refusing
- * @param {string?}  p.arg    the raw `--tracks=` value; null/undefined means "every track"
+ * @param {string?}  p.arg    the raw `--tracks=` value; null/undefined (flag absent) means "every
+ *                            track"; an empty string is a scope naming nothing and is refused
  * @param {Array}    p.all    every geometry that exists, from `loadTracks()`
  * @param {string}   [p.flag] the flag's name, for tools that spell it `--track=`
  * @returns {Array}  the geometries to run — never empty; the process exits instead
@@ -53,7 +69,10 @@ export function resolveTrackScope({ tool, arg, all, flag = "--tracks" }) {
 
   // OMITTED MEANS EVERY TRACK, and that is the only way to ask for all of them. It is checked
   // against `all` being non-empty too: an empty tracks directory is itself a silent zero.
-  if (arg === null || arg === undefined || arg === "") {
+  // HARNESS-EMPTY-SCOPE-1: an EMPTY value (`--tracks=`, typically an unset shell variable) is NOT
+  // "omitted" — it is a scope that names nothing, and it falls through to the refusal below. It
+  // used to be read as "every track", which turned a typo into the longest possible run.
+  if (arg === null || arg === undefined) {
     if (all.length === 0) {
       console.error(
         `${tool}: no tracks exist at all, so this run would measure nothing. Refusing to start.\n` +
@@ -110,7 +129,8 @@ export function resolveTrackScope({ tool, arg, all, flag = "--tracks" }) {
  *
  * @param {object}   p
  * @param {string}   p.tool  the tool's own name, so the refusal says who is refusing
- * @param {string[]} p.ids   the already-parsed track ids the caller asked for
+ * @param {string[]|string} p.ids  the track ids the caller asked for — an array, or the raw
+ *                            comma-separated `--tracks=` value, split here so no caller re-writes it
  * @param {Array}    p.all   every geometry that exists, from `loadTracks()`
  * @param {string}   [p.flag] the flag's name, for tools that spell it `--track=`
  * @returns {string[]} the validated ids — never empty; the process exits instead
@@ -129,7 +149,11 @@ export function resolveTrackScopeIds({ tool, ids, all, flag = "--tracks" }) {
     process.exit(2);
   }
 
-  const asked = Array.isArray(ids) ? ids.map((s) => String(s).trim()).filter(Boolean) : [];
+  // A raw flag value is split HERE (HARNESS-EMPTY-SCOPE-1) so the twenty-odd callers do not each
+  // carry their own `.split(",").map(trim).filter(Boolean)`. Anything else — null, a number — is a
+  // scope that names nothing and is refused below.
+  const list = typeof ids === "string" ? ids.split(",") : Array.isArray(ids) ? ids : [];
+  const asked = list.map((s) => String(s).trim()).filter(Boolean);
   const unknown = asked.filter((id) => !known.has(id));
 
   if (asked.length === 0 || unknown.length > 0) {

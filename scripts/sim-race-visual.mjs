@@ -25,7 +25,7 @@
 // instrument is NOT a clearance for it. See scripts/lib/cameraPlanDelivery.mjs.
 // ============================================================
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { deflateSync } from "zlib";
@@ -40,9 +40,16 @@ function argVal(key, def) {
   const m = argv.find((a) => a.startsWith(`--${key}=`));
   return m ? m.slice(key.length + 3) : def;
 }
-const TRACKS = argVal("tracks", "space-sprint,dirt-oval")
-  .split(",")
-  .map((s) => s.trim());
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared place,
+// which refuses (exit 2) a name no track answers to and a scope that names nothing. Before, an
+// unknown name was SKIPPED per track below, so a scope of only unknown names rendered nothing and
+// exited 0.
+const REGISTRY = loadTracks();
+const TRACKS = resolveTrackScopeIds({
+  tool: "sim-race-visual",
+  ids: argVal("tracks", "space-sprint,dirt-oval"),
+  all: REGISTRY,
+});
 const SEEDS = argVal("seeds", "1,2,3,4,5").split(",").map(Number);
 const BURST_LEN = Number(argVal("burstLen", "20"));
 const OUT_BASE = join(ROOT, argVal("out", "client/tmp/sim-frames"));
@@ -78,6 +85,8 @@ import {
   OPEN_TRACK_BASE_ZOOM,
 } from "../client/src/modules/camera/CameraDirector.js";
 import { effectiveZoom } from "../client/src/modules/camera/openTrackCamera.js";
+import { loadTracks } from "./lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "./lib/trackScope.mjs";
 
 // ── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
 // Replaces Math.random so simulations are deterministic per seed.
@@ -732,15 +741,10 @@ console.log(
 );
 console.log(`Output  : ${OUT_BASE}\n`);
 
-const trackDataDir = join(ROOT, "server/data/tracks");
-
 for (const trackId of TRACKS) {
-  const trackPath = join(trackDataDir, `${trackId}.json`);
-  if (!existsSync(trackPath)) {
-    console.error(`  [SKIP] Track not found: ${trackPath}`);
-    continue;
-  }
-  const track = JSON.parse(readFileSync(trackPath, "utf8"));
+  // The record comes from the same registry the scope was validated against (server/data/tracks,
+  // falling back to server/seeds/tracks), so every validated id has one.
+  const track = REGISTRY.find((g) => g.id === trackId);
   const trackDir = join(OUT_BASE, trackId);
   mkdirSync(trackDir, { recursive: true });
 

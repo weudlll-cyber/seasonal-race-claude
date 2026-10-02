@@ -1,6 +1,6 @@
 // ============================================================
 // File:        scripts/lib/trackScope.test.mjs
-// Project:     RaceArena — NIGHT-2026-09-26 PIECE 4
+// Project:     RaceArena — NIGHT-2026-09-26 PIECE 4; HARNESS-EMPTY-SCOPE-1
 //
 // The refusal is one home behind two doors: resolveTrackScope for the main tools that iterate
 // geos, resolveTrackScopeIds for the diag tools that iterate ids and look each up per iteration.
@@ -40,6 +40,18 @@ if (mode === "geos-unknown") {
   console.log("ids", r.length, r[0]);
 } else if (mode === "ids-no-tracks-at-all") {
   resolveTrackScopeIds({ tool: "fixture", ids: ["river-run"], all: [] });
+} else if (mode === "geos-empty-string") {
+  resolveTrackScope({ tool: "fixture", arg: "", all });
+} else if (mode === "geos-omitted") {
+  const r = resolveTrackScope({ tool: "fixture", arg: null, all });
+  console.log("geos", r.length);
+} else if (mode === "ids-raw-string") {
+  const r = resolveTrackScopeIds({ tool: "fixture", ids: " river-run , space-sprint ", all });
+  console.log("ids", r.join("|"));
+} else if (mode === "ids-raw-empty-string") {
+  resolveTrackScopeIds({ tool: "fixture", ids: "", all });
+} else if (mode === "ids-raw-unknown-string") {
+  resolveTrackScopeIds({ tool: "fixture", ids: "river-run,all", all });
 }
 `;
 
@@ -114,5 +126,51 @@ test("resolveTrackScope still returns the selected geo for a valid --tracks arg"
     const r = run(p, "geos-valid");
     assert.equal(r.status, 0);
     assert.match(r.stdout, /^geos 1 space-sprint/);
+  });
+});
+
+// ── HARNESS-EMPTY-SCOPE-1 ────────────────────────────────────────────────────
+// An EMPTY `--tracks=` is a scope that names nothing. It used to be read as "every track" by the
+// first door, so a blank shell variable silently ran the longest possible sweep.
+test("resolveTrackScope refuses an explicit empty --tracks= value with exit 2", () => {
+  withFixture((p) => {
+    const r = run(p, "geos-empty-string");
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /names no track at all/);
+  });
+});
+
+// The flag being ABSENT is still the one way to ask for every track.
+test("resolveTrackScope still reads an absent flag (null) as every track", () => {
+  withFixture((p) => {
+    const r = run(p, "geos-omitted");
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /^geos 2/);
+  });
+});
+
+// The second door takes the raw flag value too, so no caller re-writes the split; order is the
+// caller's, not the registry's, because several tools print tracks in the order asked.
+test("resolveTrackScopeIds accepts a raw comma string, trims it and keeps the asked order", () => {
+  withFixture((p) => {
+    const r = run(p, "ids-raw-string");
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /^ids river-run\|space-sprint/);
+  });
+});
+
+test("resolveTrackScopeIds refuses a raw empty string with exit 2", () => {
+  withFixture((p) => {
+    const r = run(p, "ids-raw-empty-string");
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /no track at all/);
+  });
+});
+
+test("resolveTrackScopeIds refuses a raw string carrying one unknown name, naming only that one", () => {
+  withFixture((p) => {
+    const r = run(p, "ids-raw-unknown-string");
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /no such track: all\./);
   });
 });

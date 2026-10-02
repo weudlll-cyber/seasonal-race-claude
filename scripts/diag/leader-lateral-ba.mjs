@@ -10,6 +10,8 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { loadTracks } from "../lib/raceDriver.mjs";
+import { resolveTrackScopeIds } from "../lib/trackScope.mjs";
 
 const arg = (k, d) => {
   const h = process.argv.find((a) => a.startsWith(`--${k}=`));
@@ -17,7 +19,13 @@ const arg = (k, d) => {
 };
 const BEFORE = arg("before", join(tmpdir(), "lb/before"));
 const AFTER = arg("after", join(tmpdir(), "lb/after"));
-const TRACKS = (arg("tracks", "") || "").split(",").filter(Boolean);
+// HARNESS-EMPTY-SCOPE-1: the scope is checked against the track registry by the one shared
+// place, which refuses (exit 2) a name no track answers to and a scope that names nothing.
+const TRACKS = resolveTrackScopeIds({
+  tool: "diag/leader-lateral-ba",
+  ids: arg("tracks", ""),
+  all: loadTracks(),
+});
 // A movement a viewer would NOTICE. The run-in work read the picture's per-frame slide in screen px;
 // this is the same quantity. 120 px in one frame at 60 fps is a fifth of the frame width in a
 // sixtieth of a second — well past the point an eye reads it as a jump rather than a pan.

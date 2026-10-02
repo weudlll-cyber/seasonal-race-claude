@@ -111,7 +111,8 @@ const MONO_DEADBAND = 0.005; // 0.5% of width; below this a "re-opening" is nume
 const JSON_OUT = process.argv.includes("--json");
 const ARM = (process.argv.find((a) => a.startsWith("--arm=")) ?? "--arm=his").slice(6);
 const LABEL = (process.argv.find((a) => a.startsWith("--label=")) ?? "--label=today").slice(8);
-const TRACK_ARG = (process.argv.find((a) => a.startsWith("--tracks=")) ?? "").slice(9);
+// null when the flag is absent; an empty `--tracks=` is passed on and refused (HARNESS-EMPTY-SCOPE-1).
+const TRACK_ARG = process.argv.find((a) => a.startsWith("--tracks="))?.slice(9) ?? null;
 
 // THE ELEVEN KEYS AND `setPath` LIVE IN ONE HOME (ONE-HOME-THREE-TRUTHS-1).
 // They were written out identically in this file AND in the other harness; both
@@ -580,13 +581,10 @@ export function runCandidate(arm, overrides, only = null) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   // Validate the --tracks scope at boot; null means "every track" (NIGHT-2026-09-26 PIECE 4).
-  const only = TRACK_ARG
-    ? resolveTrackScopeIds({
-        tool: "diag/endgame-spec",
-        ids: TRACK_ARG.split(",").map((s) => s.trim()).filter(Boolean),
-        all: loadTracks(),
-      })
-    : null;
+  const only =
+    TRACK_ARG !== null
+      ? resolveTrackScopeIds({ tool: "diag/endgame-spec", ids: TRACK_ARG, all: loadTracks() })
+      : null;
   const rows = runCandidate(ARM, cliOverrides(), only);
   if (JSON_OUT) {
     console.log(JSON.stringify({ label: LABEL, arm: ARM, overrides: cliOverrides(), rows }, null, 1));
