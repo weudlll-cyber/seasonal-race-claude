@@ -68,8 +68,8 @@ after it changed them:
 - master's TIDY-C-1.
 
 The pinned races contain no comeback shot, a blind spot the comeback reports name. The record is
-[docs/fingerprints.json](../../docs/fingerprints.json). Its `mintedOn` is provisional (`b42c4cd4`,
-the branch tip whose tree was minted) and is corrected to the merge SHA in the commit after the merge.
+[docs/fingerprints.json](../../docs/fingerprints.json). Its `mintedOn` was provisional (`b42c4cd4`,
+the branch tip whose tree was minted) and was corrected to the merge SHA, `26769691`, in the commit after the merge.
 
 **The first mint attempt was blocked.** On 2026-10-02 the edit of `docs/fingerprints.json` was denied
 by the Claude Code auto-mode permission classifier, reason "Modify Shared Resources". It was neither
