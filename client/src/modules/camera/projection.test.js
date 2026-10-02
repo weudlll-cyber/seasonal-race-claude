@@ -43,7 +43,20 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // sites; three separate bugs (CAMERA-FOCUS-5 and its two survivors) were one of those sites using
 // the X scale on the Y axis. This test is what stops a fourth.
 describe('CAMERA-PROJECTION-1 — the projection is the only world→screen path', () => {
-  const SRC = readFileSync(join(HERE, 'CameraDirector.js'), 'utf8');
+  // P1-CAMERADIRECTOR-SPLIT-1: the director's code now lives in CameraDirector.js AND the modules
+  // split out of it. A structural guard that read only the first would go quietly blind to every
+  // method that moved, so it reads all of them. (CameraDirectorDiag.js is included too: it was
+  // already a part of the director and nothing makes it exempt.)
+  const DIRECTOR_FILES = [
+    'CameraDirector.js',
+    'CameraDirectorDiag.js',
+    'CameraDirectorCeremony.js',
+    'CameraDirectorRunIn.js',
+    'CameraDirectorLevelSet.js',
+    'CameraDirectorCeilings.js',
+    'offerArbitration.js',
+  ];
+  const SRC = DIRECTOR_FILES.map((f) => readFileSync(join(HERE, f), 'utf8')).join('\n');
   // Strip comments so prose about the old code cannot fail the test.
   const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
   const CODE = stripComments(SRC);
