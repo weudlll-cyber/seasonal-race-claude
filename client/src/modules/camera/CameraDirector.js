@@ -22,6 +22,7 @@
 //   where did the camera go wrong ......... detourRecorder.js    (never writes a camera value)
 //   does the camera cut this frame ........ transitionDecision.js
 //   how does a race END ................... finishPhase.js       (the whole finish sequence)
+//   the state names ...................... camState.js          (CAM_STATE, re-exported here)
 //   which offered shot is taken ........... offerArbitration.js  (the draw, the offer, OVERVIEW's clock)
 //
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
@@ -106,6 +107,7 @@ import {
 } from './startCeremony.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
+import { CAM_STATE } from './camState.js';
 import {
   acceptsOffer,
   weightedRandomPick,
@@ -113,16 +115,10 @@ import {
   nextOverviewAt,
 } from './offerArbitration.js';
 
-export const CAM_STATE = {
-  OVERVIEW: 'OVERVIEW',
-  LEADER_ZOOM: 'LEADER_ZOOM',
-  BATTLE_ZOOM: 'BATTLE_ZOOM',
-  COMEBACK_ZOOM: 'COMEBACK_ZOOM',
-  LEAD_CHANGE: 'LEAD_CHANGE',
-  // Photo-Finish (15a): tight top-2 group shot at a close finish. Dedicated state (Option B),
-  // not a reuse of BATTLE_ZOOM; reuses BATTLE's arc-midpoint pan + group spriteScale for framing.
-  PHOTO_FINISH: 'PHOTO_FINISH',
-};
+// The state names live in camState.js (P1-CAMERADIRECTOR-SPLIT-1), so that modules this file
+// imports can name a state without a circular import. Re-exported here so every existing
+// `import { CAM_STATE } from './CameraDirector.js'` keeps working and resolves to the same object.
+export { CAM_STATE };
 
 // Base zoom multiplier for open tracks. CAMERA-PROJECTION-1: the single definition now lives in
 // projection.js (it is a property of the world→screen mapping, not of the director); re-exported

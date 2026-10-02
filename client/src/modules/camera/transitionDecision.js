@@ -61,8 +61,8 @@ export const TRANSITION_REASON = {
  * Decide whether the camera transitions this frame, and why.
  *
  * Takes DERIVED FLAGS, not the director: `inBattleZoom`/`inLeaderZoom` rather than a state enum, so
- * this file needs no import from CameraDirector.js (which would be circular — CAM_STATE lives
- * there) and so the decision is testable without naming states.
+ * this file needs no import from CameraDirector.js (which would be circular — CAM_STATE lived
+ * there until P1-CAMERADIRECTOR-SPLIT-1 moved it to camState.js) and so the decision is testable without naming states.
  *
  * @returns {{action: string, reason: string}} action from TRANSITION_ACTION, reason from TRANSITION_REASON.
  */

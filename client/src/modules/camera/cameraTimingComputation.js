@@ -72,7 +72,8 @@ const DEFAULT_MAX_ENTRY_DURATION_MS = {
 // numbers was never consulted, and the Dev Screen row that edits it moved nothing.
 //
 // IT CANNOT IMPORT `CAM_STATE`. CameraDirector.js imports this module, so the arrow only runs one
-// way — see the header. What binds the two is a TEST: `cameraTimingComputation.test.js` asserts
+// way — see the header. (Since P1-CAMERADIRECTOR-SPLIT-1 the enum lives in camState.js, which
+// imports nothing, so that import would now be possible; the list and its test were left as they are.) What binds the two is a TEST: `cameraTimingComputation.test.js` asserts
 // that every per-state map this function returns carries exactly the keys of `CAM_STATE`, which
 // fails the moment a seventh state is added to the director and not to this line.
 const ALL_STATES = [
