@@ -1216,6 +1216,15 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       place gained in the last W ms", read from the detector's own rank history; W chosen by
       measurement (N=30 races per arm). Quick-Test seed to look at: River Run, seed 3. **Stays open
       until the owner has looked.**
+      ★ **2026-10-02 — the owner looked; the shot cut while the racer was around 5th.** Diagnosed in
+      [COMEBACK-CUT-DIAG-1](../reports/evolution/COMEBACK-CUT-DIAG-1.md): the gain-stop ended it (no
+      gate did). His setup fields 40 racers, not the 20 the window was chosen on; on 40-racer fields
+      the 2 s window cuts 11 of 18 shots that then gain again within 5 s. The window is open again.
+
+- [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
+      his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
+      racer went on far into the lead after the comeback shot cut away. Recorded as he reported it.
+      **verify:** none — an observation, not yet a question with a measurement attached.
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the

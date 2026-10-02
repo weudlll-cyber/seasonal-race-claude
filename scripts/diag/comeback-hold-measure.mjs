@@ -32,6 +32,16 @@
 // same COPY of the config (numbers, true/false parsed; nothing persists), and a per-race
 // `cameraTraceHash` — SHA-256 over every frame's state, zoom and offsets. Two arms whose 30 hashes are
 // identical drew the same camera on every frame of every race: that is what "no effect" means here.
+//
+// COMEBACK-CUT-DIAG-1 added three things, all read-only:
+//   · `--track=<id>` — one track only (`loadTracks({ only })`, the driver's own filter)
+//   · `--roster=quicktest` — the races carry the Quick Test's DEFAULT field: the first N names of the
+//     default name set (`resolveNameSet(DEFAULT_NAME_SET)` in client/src/modules/racerNames.js, read,
+//     not copied), exactly what SetupScreen fills an empty player list with. A racer's NAME is an
+//     engine input (raceDriver.mjs, the roster block), so without this the race is not the browser's.
+//   · `--timeline=<file>` — every frame of every CAST comebacker: rank, the 2 s gain read
+//     (`gainedWithin`), whether he is the locked comeback racer, the transition reason, whether the
+//     detector would offer him now (`best()`), and its three rank gates; plus every racer's finish.
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -50,6 +60,9 @@ const ARG = (k, d) => {
   return a ? a.slice(k.length + 3) : d;
 };
 const SEEDS = ARG("seeds", "1,2,3").split(",").map(Number).filter(Number.isFinite);
+const ONLY_TRACK = ARG("track", null);
+const ROSTER_MODE = ARG("roster", null);
+const TIMELINE_OUT = ARG("timeline", null);
 const JSON_OUT = ARG("json", null);
 const GAIN_STOP = ARG("gain-stop-ms", null);
 // this branch's shipped camera, read not copied — or a COPY with the one arm value changed
@@ -79,9 +92,10 @@ for (const [k, v] of Object.entries(SETS)) {
   }
   setPath(CFG, k, v);
 }
-const RACERS = 20; // the Quick Test field
+// the Quick Test field: 20 in a fresh browser; `--racers=` for another (the owner's setup fields 40)
+const RACERS = Number(ARG("racers", "20"));
 
-const tracks = loadTracks();
+const tracks = loadTracks(ONLY_TRACK ? { only: ONLY_TRACK } : {});
 if (!tracks.length) {
   console.error("comeback-hold-measure: no tracks loaded.");
   process.exit(2);
@@ -93,11 +107,23 @@ const rankMapOf = (st) => {
   return m;
 };
 
+let ROSTER = null;
+if (ROSTER_MODE === "quicktest") {
+  const { resolveNameSet, DEFAULT_NAME_SET } = await import(
+    pathToFileURL(join(ROOT, "client/src/modules/racerNames.js")).href
+  );
+  ROSTER = resolveNameSet(DEFAULT_NAME_SET).slice(0, RACERS);
+} else if (ROSTER_MODE != null) {
+  console.error(`comeback-hold-measure: --roster=${ROSTER_MODE} is not known (only "quicktest").`);
+  process.exit(2);
+}
+
 const shots = [];
 const races = [];
+const timelines = [];
 for (const geo of tracks) {
   for (const seed of SEEDS) {
-    const identity = resolveIdentity({ raceSeed: seed, racers: RACERS });
+    const identity = resolveIdentity({ raceSeed: seed, racers: RACERS, roster: ROSTER });
     const race = buildRace(geo, identity, CFG);
     const { st, meta, cd } = race;
     // the browser's outcome flag, as comeback-beats.mjs --outcome=browser supplies it
@@ -125,6 +151,8 @@ for (const geo of tracks) {
     let firstFinishMs = null;
     let photoGateMs = null;
     const trace = createHash("sha256"); // every frame's camera output, for the survey's byte compare
+    const cast = []; // the plan's comebackers, once the plan arrives
+    const tl = []; // per-frame timeline rows for them (only with --timeline)
 
     runRace(race, identity, CFG, ({ cd: dir, st: state, ts, raceStart }) => {
       // The driver has already delivered the plan this frame (cameraPlanDelivery.mjs); read it once.
@@ -132,6 +160,7 @@ for (const geo of tracks) {
         const cp = meta.racePlanController.getCameraPlan?.();
         if (cp) {
           planRead = true;
+          for (const h of cp.heroes ?? []) if (h.role === "comebacker") cast.push(h.index);
           for (const h of cp.heroes ?? [])
             for (const b of h.beats ?? []) if (b.event === "resolve") resolveOf.set(h.index, b.progress);
         }
@@ -175,6 +204,35 @@ for (const geo of tracks) {
         mine.push(cur);
         cur = null;
       }
+      if (TIMELINE_OUT && cast.length) {
+        const rm = ranks ?? rankMapOf(state);
+        const g = dir._comeback._gates;
+        const nd = Math.max(state.racers.length - 1, 1);
+        const offered = dir._comeback.best(state.racers, ts, state.raceProgress)?.index ?? null;
+        for (const idx of cast) {
+          const rank = rm.get(idx);
+          const r = state.racers.find((x) => x.index === idx);
+          const hist = dir._comeback.historyFor(idx);
+          const startS = hist.find((h) => h.ts >= ts - g.windowSec * 1000);
+          tl.push({
+            ms,
+            p: +(state.raceProgress ?? 0).toFixed(4),
+            idx,
+            name: r?.name ?? null,
+            rank,
+            finished: !!r?.finished,
+            state: s,
+            reason,
+            locked: dir.comebackLockedRacerIndex === idx,
+            gained2000: dir._comeback.gainedWithin(idx, ts, 2000),
+            offered: offered === idx,
+            // the three rank gates of best(), evaluated as best() evaluates them
+            gateStartGap: startS ? (startS.rank - 1) / nd >= g.minStartGap : null,
+            gateNotUpFront: (rank - 1) / nd >= g.maxCurrentRankPct,
+            gateGained: startS ? startS.rank - rank >= g.minPositionsGained : null,
+          });
+        }
+      }
       if (ranks)
         for (const [idx, arr] of series) {
           const r = state.racers.find((x) => x.index === idx);
@@ -210,11 +268,20 @@ for (const geo of tracks) {
       sh.regainWithin3s = (series.get(sh.racer) ?? []).some(
         ([m, rk]) => m > sh.endMs && m <= sh.endMs + 3000 && rk < sh.rankEnd,
       );
+      // COMEBACK-CUT-DIAG-1: the same question over 5 s, and when his next place came at all
+      const after = (series.get(sh.racer) ?? []).filter(([m]) => m > sh.endMs);
+      sh.regainWithin5s = after.some(([m, rk]) => m <= sh.endMs + 5000 && rk < sh.rankEnd);
+      const nextGain = after.find(([, rk]) => rk < sh.rankEnd);
+      sh.nextGainAfterS = nextGain ? +((nextGain[0] - sh.endMs) / 1000).toFixed(2) : null;
       sh.firstFinishMs = firstFinishMs;
       sh.photoGateMs = photoGateMs;
       shots.push(sh);
     }
-    races.push({ track: geo.id, seed, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
+    const finishes = st.racers
+      .map((r) => ({ index: r.index, name: r.name ?? null, finishTimeMs: r.finishTimeMs ?? null }))
+      .sort((a, b) => (a.finishTimeMs ?? Infinity) - (b.finishTimeMs ?? Infinity));
+    if (TIMELINE_OUT) timelines.push({ track: geo.id, seed, cast, finishes, rows: tl });
+    races.push({ track: geo.id, seed, finishes, cameraTraceHash: trace.digest("hex"), planDelivered: planRead, shots: mine.length, firstFinishMs, photoGateMs });
   }
 }
 
@@ -230,3 +297,4 @@ for (const s of shots)
       `${s.remainingS.toFixed(1).padStart(6)}   ${s.capFiredMs != null ? "yes" : "no"}   gaining-only ${s.gainingOnlyS.toFixed(1)}s`,
   );
 if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ races, shots }, null, 2));
+if (TIMELINE_OUT) writeFileSync(TIMELINE_OUT, JSON.stringify(timelines));
