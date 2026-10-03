@@ -22,12 +22,20 @@ const CLOSED_GEOM = {
   backgroundImage: null,
   effects: [],
   innerPoints: [
-    { x: 280, y: 220 }, { x: 680, y: 220 }, { x: 860, y: 400 },
-    { x: 680, y: 580 }, { x: 280, y: 580 }, { x: 120, y: 400 },
+    { x: 280, y: 220 },
+    { x: 680, y: 220 },
+    { x: 860, y: 400 },
+    { x: 680, y: 580 },
+    { x: 280, y: 580 },
+    { x: 120, y: 400 },
   ],
   outerPoints: [
-    { x: 240, y: 180 }, { x: 720, y: 180 }, { x: 940, y: 400 },
-    { x: 720, y: 620 }, { x: 240, y: 620 }, { x: 80, y: 400 },
+    { x: 240, y: 180 },
+    { x: 720, y: 180 },
+    { x: 940, y: 400 },
+    { x: 720, y: 620 },
+    { x: 240, y: 620 },
+    { x: 80, y: 400 },
   ],
 };
 
@@ -39,10 +47,16 @@ const OPEN_GEOM = {
   backgroundImage: null,
   effects: [],
   innerPoints: [
-    { x: 100, y: 340 }, { x: 400, y: 340 }, { x: 700, y: 360 }, { x: 1000, y: 340 },
+    { x: 100, y: 340 },
+    { x: 400, y: 340 },
+    { x: 700, y: 360 },
+    { x: 1000, y: 340 },
   ],
   outerPoints: [
-    { x: 100, y: 380 }, { x: 400, y: 380 }, { x: 700, y: 400 }, { x: 1000, y: 380 },
+    { x: 100, y: 380 },
+    { x: 400, y: 380 },
+    { x: 700, y: 400 },
+    { x: 1000, y: 380 },
   ],
 };
 
@@ -73,8 +87,26 @@ async function seedStorage(page, { closedGeomId, openGeomId } = {}) {
       // If no stored tracks yet (fresh localStorage), seed the two we need
       if (!tracks.length) {
         updated.push(
-          { id: 'dirt-oval', name: 'Dirt Oval', defaultRacerTypeId: 'horse', geometryId: closedGeomId ?? null, worldWidth: 1280, color: '#c8a46a', trackWidth: 140, description: '' },
-          { id: 'space-sprint', name: 'Space Sprint', defaultRacerTypeId: 'rocket', geometryId: openGeomId ?? null, worldWidth: 1280, color: '#7c3aed', trackWidth: 140, description: '' }
+          {
+            id: 'dirt-oval',
+            name: 'Dirt Oval',
+            defaultRacerTypeId: 'horse',
+            geometryId: closedGeomId ?? null,
+            worldWidth: 1280,
+            color: '#c8a46a',
+            trackWidth: 140,
+            description: '',
+          },
+          {
+            id: 'space-sprint',
+            name: 'Space Sprint',
+            defaultRacerTypeId: 'rocket',
+            geometryId: openGeomId ?? null,
+            worldWidth: 1280,
+            color: '#7c3aed',
+            trackWidth: 140,
+            description: '',
+          }
         );
       }
       localStorage.setItem('racearena:tracks', JSON.stringify(updated));
@@ -164,9 +196,7 @@ test.describe('D9 — lap selector (closed track)', () => {
 
     // Switch to Snail (speedMultiplier 0.30). By VALUE — the option label carries an emoji.
     await page.getByTestId('racer-type-select').selectOption('snail');
-    await expect
-      .poll(() => readEstimate(page))
-      .toBeGreaterThan(horseSecs * 2); // exact ratio ~ 1/0.30 = 3.33×
+    await expect.poll(() => readEstimate(page)).toBeGreaterThan(horseSecs * 2); // exact ratio ~ 1/0.30 = 3.33×
   });
 
   test('estimated duration is lower for a faster racer type than for Horse', async ({ page }) => {
@@ -353,7 +383,7 @@ test.describe('D9 — race screen startup', () => {
         const race = {
           racers: [
             { name: 'Alpha', color: '#f00', icon: '🐴' },
-            { name: 'Beta',  color: '#0f0', icon: '🐴' },
+            { name: 'Beta', color: '#0f0', icon: '🐴' },
             { name: 'Gamma', color: '#00f', icon: '🐴' },
           ],
           trackId: 'dirt-oval',

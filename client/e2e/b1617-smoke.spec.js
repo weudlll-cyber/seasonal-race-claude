@@ -67,7 +67,9 @@ test.describe('B-17 — pathLengthPx is computed and stored on track save', () =
     await canvas.click({ position: { x: box.width * 0.75, y: box.height * 0.5 } });
 
     // Fill in the track name (required to save)
-    const nameInput = page.locator('input[placeholder*="name" i], input[placeholder*="track" i]').first();
+    const nameInput = page
+      .locator('input[placeholder*="name" i], input[placeholder*="track" i]')
+      .first();
     if (await nameInput.isVisible()) {
       await nameInput.fill('B17 Test Track');
     }

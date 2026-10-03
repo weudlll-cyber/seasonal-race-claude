@@ -118,10 +118,9 @@ test('the team sees its races, and the button repeats one exactly as it ran', as
     repeat.inputs.effectiveRacerTypes,
     'the repeat must carry the RECORDED racer values, not the ones just set on this machine'
   ).toEqual(original.inputs.effectiveRacerTypes);
-  expect(
-    repeat.inputs.worldConfigs,
-    'the repeat must carry the RECORDED config world'
-  ).toEqual(original.inputs.worldConfigs);
+  expect(repeat.inputs.worldConfigs, 'the repeat must carry the RECORDED config world').toEqual(
+    original.inputs.worldConfigs
+  );
   expect(JSON.stringify(repeat.inputs.worldConfigs)).not.toContain('999');
 
   // And the outcome matches, which is the point of all of it.
@@ -167,9 +166,7 @@ test('the short key typed into the seed field runs the same race, and an unknown
   await page.getByTestId('resolve-short-key').click();
 
   // The field now holds the race, not the name: the key was replaced by the identifier it names.
-  await expect
-    .poll(async () => seedField.inputValue(), { timeout: 20_000 })
-    .toMatch(/^RA1-/);
+  await expect.poll(async () => seedField.inputValue(), { timeout: 20_000 }).toMatch(/^RA1-/);
 
   await page.getByRole('button', { name: /start race/i }).click();
   await expect(page).toHaveURL(/\/race/, { timeout: 60_000 });
@@ -211,7 +208,7 @@ test('a race that has not reached the server is listed, says so, has no key, and
   await openHistory(page);
 
   const pendingRow = page.locator('[data-testid="history-row-pending"]').first();
-  await expect(pendingRow, 'an unsent race is not hidden — it is the owner\'s race').toBeVisible();
+  await expect(pendingRow, "an unsent race is not hidden — it is the owner's race").toBeVisible();
 
   // ★ It says what it is, and has NO key. A blank cell would let it read as stored.
   await expect(pendingRow.locator('[data-testid="row-state"]')).toHaveText(/not sent yet/i);

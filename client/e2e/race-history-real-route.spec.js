@@ -76,13 +76,14 @@ test('★ a filter that hides a race says so, and the empty state does not lie',
   // ★ The race is now hidden. The screen must say that, and must not claim nothing was recorded.
   await expect(
     page.getByTestId('history-hidden-count'),
-    'the list says how many races the filters are holding back',
+    'the list says how many races the filters are holding back'
   ).toBeVisible({ timeout: 10_000 });
 
   const empty = page.getByTestId('history-empty');
   if (await empty.count()) {
-    await expect(empty, 'an empty list caused by a filter must not read as "nothing recorded"').toContainText(
-      /match these filters/i,
-    );
+    await expect(
+      empty,
+      'an empty list caused by a filter must not read as "nothing recorded"'
+    ).toContainText(/match these filters/i);
   }
 });

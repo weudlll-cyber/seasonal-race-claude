@@ -310,9 +310,11 @@ not an address which is right (§9.1).
       `label-bench-matrix.mjs:55` and `phys-bench-matrix.mjs:90` check the target is a RaceArena
       tree and print **`FAIL: --master=<path> is not a RaceArena tree.`** then `process.exit(2)`.
       Both were RUN with a bogus `--master` to prove it. The claim came from §7.2, which asserted
-      it **without ever running them**. Closed as refuted, not done — there was nothing to build (§7.2) · `client/e2e/` is outside `format:check`, which is
+      it **without ever running them**. Closed as refuted, not done — there was nothing to build (§7.2) · ~~`client/e2e/` is outside `format:check`, which is
       `prettier --check src`, and `d355-smoke.spec.js` fails prettier today, pre-existing at master
-      (§10 run 2) · 8 exported symbols have no importer, never removed because an unimported
+      (§10 run 2)~~ — ★ **CLOSED 2026-10-04 (TIDY-C-2):** it was 19 files, not one; all formatted,
+      and `format` / `format:check` now cover `src e2e`. Sabotaged once: an unformatted line in an e2e
+      spec fails `format:check`. The browser gate passed on the reformatted specs · 8 exported symbols have no importer, never removed because an unimported
       export may be a seam, and three of the eight are the auditor's own from the day before
       (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
       (§9.2).
@@ -320,6 +322,12 @@ not an address which is right (§9.1).
       **not from this machine** — `npm install` will not materialise an upgrade here (see the
       struck-through `@vitest/coverage-v8` item above). One `npm install` on a machine where
       that works, plus both suites, closes it.
+      ★ **TIDY-C-2, 2026-10-04 — what is still open, and why each one STAYS:** the 30-day session
+      cookie (his decision); `minTargetScreenPx` naming two settings (a rename touches saved configs, so
+      it is a behaviour change, not a tidy); the 8 unimported exports (each may be a seam, which is a
+      judgement); the 46 undocumented routes (documentation work, not one fix); the vitest upgrade
+      (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
+      is a defect with one obvious fix that he would not see.
       ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
       `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
       `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed

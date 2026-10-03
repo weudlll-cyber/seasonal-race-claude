@@ -54,7 +54,9 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2252) holds exactly ELEVEN unchecked `- [ ]` rows** — 4 in *DELIVERY-CLEAN-1*, 4 in\n*Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and\n*Build-identity residuals*. *(Re-counted 2026-10-04 after DEVSCREEN-TIER-1.)* Every current
+(lines 15–2252) holds exactly ELEVEN unchecked `- [ ]` rows** — 4 in *DELIVERY-CLEAN-1*, 4 in
+*Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and
+*Build-identity residuals*. *(Re-counted 2026-10-04 after DEVSCREEN-TIER-1.)* Every current
 count on this page says eleven.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.

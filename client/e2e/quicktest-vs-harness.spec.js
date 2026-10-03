@@ -21,7 +21,10 @@ test('dump what Quick Test actually runs for river-run seed 13', async ({ page }
   await page.reload();
   await ensureTrackGeometriesCached(page);
 
-  await page.locator('button', { hasText: /River Run/ }).first().click();
+  await page
+    .locator('button', { hasText: /River Run/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: /Quick Test/ }).click();
   await page.waitForURL(/\/race/);
 

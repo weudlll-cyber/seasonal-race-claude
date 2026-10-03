@@ -577,9 +577,7 @@ test.describe('V8 — Speed Range default values in Dev Screen', () => {
     // The formula is stated on the screen's own tooltip; this reproduces it from the defaults
     // instead of hard-coding the answer, which is what went stale last time.
     const gap = 2 * (1 - DEFAULT_BASE_SPEED_CONFIG.min / DEFAULT_BASE_SPEED_CONFIG.max);
-    await expect(page.getByTestId('speed-spread-preview')).toContainText(
-      `${gap.toFixed(2)} laps`
-    );
+    await expect(page.getByTestId('speed-spread-preview')).toContainText(`${gap.toFixed(2)} laps`);
   });
 });
 

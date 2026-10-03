@@ -70,7 +70,9 @@ test.describe('V2 — Badge indicators', () => {
     expect(await defaultBadges.count()).toBeGreaterThanOrEqual(9);
   });
 
-  test('no Modified or Custom badges present when backend has no overrides/custom', async ({ page }) => {
+  test('no Modified or Custom badges present when backend has no overrides/custom', async ({
+    page,
+  }) => {
     // Clear any leftover test classes
     await page.goto('/dev');
     // These should be 0 unless test pollution occurred — acceptable if test ordering varies
@@ -198,7 +200,9 @@ test.describe('V5 — Default-Override lifecycle', () => {
     await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${OVERRIDE_ID}`).catch(() => {});
   });
 
-  test('saving a code-default class creates a Modified override and shows Modified badge', async ({ page }) => {
+  test('saving a code-default class creates a Modified override and shows Modified badge', async ({
+    page,
+  }) => {
     await goToSurfaceClasses(page);
 
     // Select Mud (code-default)
@@ -250,7 +254,10 @@ test.describe('V5 — Default-Override lifecycle', () => {
     });
     // The setup is now ASSERTED rather than swallowed. A silently-failing setup is what let this
     // test pass and fail on leaked state from the test above it for two months.
-    expect(created.ok(), `could not create the override the test needs (${created.status()})`).toBeTruthy();
+    expect(
+      created.ok(),
+      `could not create the override the test needs (${created.status()})`
+    ).toBeTruthy();
 
     // E2E-FLAKE-1: THE SCREEN OPENS ON THE CODE DEFAULTS AND MAY NEVER LEAVE THEM.
     // `useSurfaceClasses` seeds its state from `listAllSurfaceClasses()` — the code defaults — and
