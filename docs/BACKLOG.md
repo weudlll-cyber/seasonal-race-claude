@@ -1133,7 +1133,15 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
 - [ ] ★★ **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
-      arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
+      arm.** ★★ **RE-CHECKED 2026-10-03 —
+      [BROWSER-SPECS-RECHECK-1](../reports/evolution/BROWSER-SPECS-RECHECK-1.md)** (branch
+      `measure/browser-specs-recheck`), ten runs each on master `3e4457d4`, nothing changed.
+      `comeback-precedence` **0 of 10**: no comeback shot at all (`:178`). It passes 3 of 3 on the
+      master before the 2026-10-02 ship. With the cut delay set to 0 the shot returns, but out of an
+      11–19 s LEADER_ZOOM, so the spec's signature (`:190-193`) no longer reads from the camera-state
+      display. Both changes of 2026-10-02 changed what it checks. `garden-path-finishes` **4 of 10**:
+      every failure is a `.count()` read that does not wait (`:46`, `:64`), in races that ran and
+      crossed. **Still open: each needs a decision.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
       green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
       investigating them — see
       [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
