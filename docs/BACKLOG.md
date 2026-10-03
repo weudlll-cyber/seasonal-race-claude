@@ -229,15 +229,6 @@ not an address which is right (§9.1).
       readiness tests failed the moment the line existed, because their fixture had never answered
       the transport question. Updated deliberately, not weakened.
 
-- [ ] ★ **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
-      `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an
-      admin role; `DevScreen.jsx:191-194` then computes `effectiveView = isAdmin ? view :
-      'operator'` and renders 7 of 16 sections for a non-admin. **Low, with the reasoning rather
-      than the label:** those sections write `localStorage`, not server state, so an operator who
-      defeated the filter would change their own browser's race settings — which §3.4 establishes
-      the stored race records. No server authority rests on it; the server's boundary is the 16
-      admin-classified routes of §1.4, guarded by `routePolicyDrift.test.js`.
-
 - [x] ★★ **THE README — DECIDED 2026-09-27: IT MATTERS, SO REWRITE IT. DONE THE SAME DAY.** §9.4 checked 24 of its
       claims, found 3 wrong, repaired them, and judged a wholesale rewrite to be churn against a
       document with that defect rate. **That judgment was overruled:** this is the page a stranger
@@ -2267,6 +2258,31 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **B8 — CLOSED 2026-10-04 (DEVSCREEN-TIER-1): the Dev Screen's admin view comes from the
+      SERVER-CONFIRMED session, not from the stored hint.** No code changed. The chain:
+      - `DevScreen.jsx:173-174` reads `user.role` from `useAuth()`.
+      - `AuthContext.jsx:41-43` sets `user` only from a successful `GET /api/auth/me` (`authApi.js:12,16`).
+      - The stored hint `racearena:lastUser` goes only into `offlineUser` (`AuthContext.jsx:60-64`),
+        which the Dev Screen never reads.
+      - `/dev` (`App.jsx:98-104`) is a `ProtectedRoute` without `allowOffline`, so in the offline-hint
+        state it redirects to `/login` (`ProtectedRoute.jsx:46-47`).
+      - Pinned by `ProtectedRoute.test.jsx:152` (`/dev` equivalent → `/login` in offline-hint) and
+        `:170` (`user` stays null in offline-hint). Sabotage: making the offline-hint branch render its
+        children reddens five of its tests, `:152` among them.
+
+      **What stays true, and is not a defect of the role source:** the tier is a filter in the
+      client, so a user who alters the client in their own browser can render the advanced sections.
+      Those sections write that browser's `localStorage`, and no server authority rests on them — the
+      row's own reasoning below. *The row as it stood:*
+      **B8 — NEW 2026-09-27: the dev screen's advanced tier is filtered CLIENT-SIDE only.**
+      `/dev` is behind `ProtectedRoute` (`App.jsx:97-104`), which requires a session but not an
+      admin role; `DevScreen.jsx:191-194` then computes `effectiveView = isAdmin ? view :
+      'operator'` and renders 7 of 16 sections for a non-admin. **Low, with the reasoning rather
+      than the label:** those sections write `localStorage`, not server state, so an operator who
+      defeated the filter would change their own browser's race settings — which §3.4 establishes
+      the stored race records. No server authority rests on it; the server's boundary is the 16
+      admin-classified routes of §1.4, guarded by `routePolicyDrift.test.js`.
 
 - [x] ★ **THE PRE-COMMIT HOOK REFUSES CONFLICT MARKERS — CLOSED 2026-10-04 (HOOK-CONFLICT-MARKERS-1).**
       `scripts/check-conflict-markers.mjs` runs in the hook with `--staged`, reading the staged blob of
