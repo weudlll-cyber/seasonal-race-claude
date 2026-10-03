@@ -167,13 +167,16 @@ also the only place a new failure surfaces: the pre-commit hook deliberately doe
 fingerprints and CI does not run `verify`. A failure here is not always a bug — a block that moves a
 hash deliberately SHOULD fail it until the value is minted, which is this ceremony working.
 
-**The VALUES below are copies. Their one home is [docs/fingerprints.json](fingerprints.json)** — the
-value, the commit it was minted on, the date, and the script that reproduces it. Do not type a
-fingerprint into this table or anywhere else: put it in the record and run
-`node scripts/check-fingerprints.mjs --fix`, which writes it into every place that states it.
-The guard fails if any of them disagrees, if a site loses the wording it is found by, or if a new
-file starts stating a value without being declared. This document still owns the PROCEDURE for
-minting; [SIM.md](SIM.md) owns the lineage; [REBASELINE.md](../reports/parity/REBASELINE.md) owns the
+**The values have ONE home: [docs/fingerprints.json](fingerprints.json)** — the value, the commit it
+was minted on, the date, and the script that reproduces it. No other document states a current value,
+and `node scripts/check-fingerprints.mjs` (its default, containment run) fails if one does.
+**To mint a role:** edit its entry in the record — the new `value`, `mintedOn` (provisional until the
+merge; see THE SHIP ORDER, steps 5 and 11), `date` and `mintedBy`, with the entry's previous values
+moved into its `superseded…` fields — then run `node scripts/check-fingerprints.mjs --mint`, which
+re-runs every role's `reproduce` command and fails unless the engine agrees with the record. It writes
+nothing. *(Corrected 2026-10-03: this said to run `--fix`, a writer that ONE-TRUTH-2 removed together
+with the copies it wrote; SHIP-OWNER-COSMETIC-1 found it gone.)* This document still owns the
+PROCEDURE for minting; [SIM.md](SIM.md) owns the lineage; [REBASELINE.md](../reports/parity/REBASELINE.md) owns the
 baseline statistics behind the current world.
 
 |                                               | covers                                                                          | run it when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -910,7 +913,8 @@ went missing).
       (`… off --gapRerollEnabled=false`). Mint on the state you are actually committing — behaviour, not
       formatting, sets the hash, so a lint/prettier pass in the commit hook does not move it, but a stray
       code edit does. An avoidance/engine change usually moves **both** ON and OFF (it runs in both
-      worlds); record old → new for each.
+      worlds); record old → new for each, in `docs/fingerprints.json`, as THE THREE FINGERPRINTS above
+      describes.
 - [ ] **4. REBASELINE top block** ([reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)).
       Add the new **current-baseline** entry (world, fingerprints, gate table, any residual status) and
       **demote the previous** current-baseline block to "previous". This file's top block is the canonical

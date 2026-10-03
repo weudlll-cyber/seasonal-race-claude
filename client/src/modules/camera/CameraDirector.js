@@ -1819,7 +1819,8 @@ export class CameraDirector {
       const _internalOutcomePhase = leaderProgress > this._outcomePhaseThreshold;
       // COMEBACK-HOLD-1: a RUNNING comeback shot is never offered again. Re-picking it would be a
       // same-state repeat (hold 0, `_transition`), which could carry the shot past its maximum; its
-      // length is the gain rule's and the cap's to decide, nothing else's. With a cooldown above 0
+      // length is COMEBACK-HOLD-2's to decide (target place, minimum, maximum, final scene), nothing
+      // else's. With a cooldown above 0
       // the cooldown already refuses it (`_transition` stamps the exit before picking); this guard
       // is what holds when the Dev Screen sets the cooldown to 0.
       if (

@@ -426,6 +426,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HYGIENE-2026-10-03.md](HYGIENE-2026-10-03.md) — **what changed since 2026-10-01, checked against the code
+  (2026-10-03, branch `chore/hygiene-2026-10-03`, no behaviour changed).** The minting procedure in
+  SHIP-CEREMONY no longer names the removed `--fix`; the camera module map gains the six split modules;
+  the COMEBACK row states the current rule by key; 16 FORCE-MAP links and the other race-screen pointers
+  now point at where the code lives; two comments that restated values name their keys; one new backlog
+  row (conflict markers pass the hook). The owner's 43 local branches: none tree-contained, none deleted.
+
 - [COMEBACK-RUNAWAY-1.md](COMEBACK-RUNAWAY-1.md) — **does the comeback racer run away? Measured, nothing
   changed (2026-10-03, branch `measure/comeback-runaway`).** Over the 750 Quick-Test races: where a
   comebacker leads after reaching 3rd, his largest lead is p90 0.24–0.38 canvas widths, no more than

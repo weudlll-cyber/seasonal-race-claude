@@ -125,8 +125,9 @@ const PROFILE_FIELDS = [
     key: 'maxStateDuration',
     label: 'Max state duration (ms)',
     min: 1000,
-    // 20000: COMEBACK_ZOOM ships at 20 s since COMEBACK-HOLD-2 (2026-10-02); a max below the shipped
-    // value would clamp it the moment the card opens (check-config-keys RULE C).
+    // The largest shipped `maxStateDuration` (COMEBACK_ZOOM's since COMEBACK-HOLD-2, `defaults.js`)
+    // must fit: a max below a shipped value would clamp it the moment the card opens
+    // (check-config-keys RULE C).
     max: 20000,
     step: 500,
     tip: (v) => `Hard cap on time in this state. ${v}ms.`,

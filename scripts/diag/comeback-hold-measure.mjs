@@ -252,7 +252,7 @@ for (const geo of tracks) {
         for (const [idx, role] of subjects) {
           const key = `${role}:${idx}`;
           let o = ra.get(key);
-          if (!o) ra.set(key, (o = { idx, role, reached3Ms: null, maxLeadWidths: 0, maxLeadPct: 0, maxLeadMs: null, finWidths: null }));
+          if (!o) ra.set(key, (o = { idx, role, reached3Ms: null, maxLeadWidths: 0, maxLeadPct: 0, finWidths: null }));
           const pos = byT.findIndex((r) => r.index === idx);
           const me = byT[pos];
           if (!me) continue;
@@ -262,7 +262,6 @@ for (const geo of tracks) {
             if (w > o.maxLeadWidths) {
               o.maxLeadWidths = w;
               o.maxLeadPct = state.finishT > 0 ? (100 * (me.t - byT[1].t)) / state.finishT : 0;
-              o.maxLeadMs = ms;
             }
           }
           if (o.finWidths == null && me.finished) {
@@ -290,7 +289,7 @@ for (const geo of tracks) {
           resolveBeat: who == null ? null : (resolveOf.get(who) ?? null),
           startRaceProgress: +(state.raceProgress ?? 0).toFixed(4),
           from: prev,
-          capFiredMs: null, // the 8 s gate fired but the pick chose COMEBACK again (a repeat)
+          capFiredMs: null, // the hold gate fired but the pick chose COMEBACK again (a repeat)
           finalSceneFrames: 0, // COMEBACK-HOLD-2: frames on the comeback while the final scene was due
           // COMEBACK-CUT-DELAY-1: the wait that led here (the last one closed, on this frame, as a cut)
           dueMs: null,

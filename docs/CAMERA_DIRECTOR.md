@@ -41,11 +41,19 @@ construction and must be argued another way.
 | `finishPhase.js`                                                     | HOW A RACE ENDS: the whole finish sequence — the approach gate, the fork between the photo finish and the drama, both ends, and the three hold-gate bypasses. Pure. | Owning any of the six finish latches. It answers; the director remembers. |
 | `detourRecorder.js`                                                  | The per-transition diagnostic frame log.                                                                                                                            | Anything. It never writes a camera value — that is the whole point.       |
 | `CameraDirectorDiag.js`                                              | The diagnostics mixin: the HUD panels and the frame-log ring buffer.                                                                                                | Direction. Read-only by design.                                           |
+| `camState.js` | The state names, `CAM_STATE`, and nothing else; `CameraDirector.js` re-exports it. | Any behaviour. |
+| `offerArbitration.js` | The offer arbitration: the candidate pool (`offerPool`), the weighted draw and the offer (`arbitrateOffers`), and OVERVIEW's offer schedule. Pure functions. | Deciding WHICH shots are eligible — the director does that, and the comeback precedence returns above it. |
+| `CameraDirectorCeremony.js` | Mixin: the camera during the start ceremony — the venue shot, the push in, the beat schedule. | The race itself. |
+| `CameraDirectorRunIn.js` | Mixin: the run-in, the camera's endgame until the leader crosses — its schedule, widen and close. | The finish sequence after the crossing (`finishPhase.js`). |
+| `CameraDirectorLevelSet.js` | Mixin: who is still in the fight at the line — the contention watch, the level set, the abreast contenders. | Framing them; it answers who, the ceilings answer how wide. |
+| `CameraDirectorCeilings.js` | Mixin: the guarantee ceilings — how wide the shot must be so that whoever matters stays in frame. | Choosing the shot. |
 | `lapUtils.js`, `openTrackCamera.js`, `Minimap.js`, `cameraMarker.js` | Lap arithmetic; the open-track base zoom for the render transform; the minimap; the reproducible-moment marker.                                                     | —                                                                         |
 
 **The one-way rule.** The director imports from the modules; no module imports from the director.
-`CameraDirectorDiag.js` is installed onto the prototype by `Object.defineProperties` at the bottom of
-`CameraDirector.js` precisely so it can use `this.*` without an import cycle.
+`CameraDirectorDiag.js` and the four mixins of the 2026-10-02 split (`CameraDirectorCeremony.js`,
+`CameraDirectorRunIn.js`, `CameraDirectorLevelSet.js`, `CameraDirectorCeilings.js` —
+P1-CAMERADIRECTOR-SPLIT-1) are installed onto the prototype by `Object.defineProperties` at the
+bottom of `CameraDirector.js` precisely so they can use `this.*` without an import cycle.
 
 ---
 
@@ -58,7 +66,7 @@ construction and must be argued another way.
 | `OVERVIEW`      | The establishing shot — the widest setting of the same rule every other state runs.                                                                                                            |
 | `LEADER_ZOOM`   | The current leader, framed forward so the pack behind him fills the frame.                                                                                                                     |
 | `BATTLE_ZOOM`   | A detected group fighting behind the lead.                                                                                                                                                     |
-| `COMEBACK_ZOOM` | The racer the race PLAN cast as a comebacker, climbing through the field. ★ Since 2026-09-19 the cast is the whole population: with nobody cast as a comebacker this shot is not taken at all. |
+| `COMEBACK_ZOOM` | The racer the race PLAN cast as a comebacker, climbing through the field. ★ Since 2026-09-19 the cast is the whole population: with nobody cast as a comebacker this shot is not taken at all. ★ Since 2026-10-02 (the owner's decisions): the cut WAITS `comebackCutDelayMs` after the offer and happens only if he is still offered and the final scene is not due (COMEBACK-CUT-DELAY-1); the shot then holds until he reaches `comebackTargetRank`, at least `comebackMinDuration`, at most the profile's `maxStateDuration`, and never into the final scene (COMEBACK-HOLD-2). Values: `defaults.js`. |
 | `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
 | `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
 
@@ -144,7 +152,9 @@ The order matters and parts of it are load-bearing:
 1. Record ranks (comeback detector) and leader tracking.
 2. Compute `stateAge`, `minHold`, `stateCap`; evaluate the one-shot photo-finish gate.
 3. BATTLE early exits — group dispersed, or a member drifted into P1/P2.
-4. LEAD_CHANGE interrupt out of LEADER_ZOOM.
+4. LEAD_CHANGE interrupt out of LEADER_ZOOM; the comeback precedence, once its cut delay has
+   matured (COMEBACK-CUT-DELAY-1); and the comeback shot's own ends — the final scene at once, the
+   target place after the minimum (COMEBACK-HOLD-2). All of them are reasons in `transitionDecision.js`.
 5. The general hold gate → `_transition()`.
 6. **T-space entry lerp** — during entry, advance `_camT` along the TRACK toward the target, so the
    camera travels the curve instead of cutting across the infield.
@@ -1053,7 +1063,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b953d787 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d750c034 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-03 (HYGIENE-2026-10-03), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. The change in the closure is one comment in `CameraDirector.js` (`engine-reach`: inert, comments only); run rather than argued.
 
 ★★ **RE-MEASURED 2026-10-03 (P1-CAMERADIRECTOR-SPLIT-1, master merged in), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. The director's split into modules and the comeback work meet in this tree for the first time; the table below stands.
 
