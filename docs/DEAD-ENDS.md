@@ -529,8 +529,9 @@ progress 0.9502, by the same mechanism.** The one-seed sample was hiding it; the
 list already said it would.
 
 **Why it was not repaired.** The mechanism is that `_scheduleClose`'s line floor
-(`CameraDirector.js:4078`) is armed but measured from the anchor the framing rule *intends*
-(`CameraDirector.js:3482`) while the opening glide is still running at the deadline — so the floor
+(`_lineCeiling`, `CameraDirectorCeilings.js:363`, called from `_scheduleClose`,
+`CameraDirectorRunIn.js:522`) is armed but measured from the anchor the framing rule *intends*
+(`_anchorScreen`, `CameraDirectorCeilings.js:283`) while the opening glide is still running at the deadline — so the floor
 reports satisfied while the band is off canvas. **Every available repair changes races that are not
 failing**: measuring from the observed anchor re-opens ENDGAME-REPAIR-1's singularity (undefined on
 63–84% of frames on six tracks), and un-retiring the `line` ceiling during the schedule breaks "the

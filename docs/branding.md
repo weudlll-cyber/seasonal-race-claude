@@ -182,10 +182,10 @@ The canvas carrier chain in full:
    ([`index.jsx` → `activeRace`](../client/src/screens/RaceScreen/index.jsx#L372))
    and passes it to:
    - `drawTitle(ctx, shape, raceData)` for closed tracks
-     ([`RaceScreen/index.jsx:1449`](../client/src/screens/RaceScreen/index.jsx#L1516),
+     ([`RaceScreen/renderRaceFrame.js:371`](../client/src/screens/RaceScreen/renderRaceFrame.js#L371),
      [`overlayRendering.js` → `drawTitle`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L22-L41))
    - `drawTitleOpen(ctx, raceData)` for open tracks
-     ([`RaceScreen/index.jsx:1447`](../client/src/screens/RaceScreen/index.jsx#L1514),
+     ([`RaceScreen/renderRaceFrame.js:369`](../client/src/screens/RaceScreen/renderRaceFrame.js#L369),
      [`overlayRendering.js` → `drawTitleOpen`](../client/src/screens/RaceScreen/drawing/overlayRendering.js#L48-L62))
 
    Both functions render `eventName` in gold (`#ffd700`) and, when present, `subtitle` below it in
@@ -234,20 +234,20 @@ The ResultScreen is no longer a bare `<h1>`. As of `b9a2f03`:
 Every racer's physics-clock timestamp is recorded the moment they cross the finish line:
 
 ```js
-r.finishTimeMs = physicsTs; // RaceScreen/index.jsx:1019
+r.finishTimeMs = physicsTs; // modules/raceCore.js:754
 ```
 
 It is carried into the `finishOrder` array written to `sessionStorage.raceResults`:
 
 ```js
-finishTimeMs: r.finishTimeMs ?? null,  // RaceScreen/index.jsx:1059
+finishTimeMs: r.finishTimeMs ?? null,  // RaceScreen/raceResults.js:57
 ```
 
 Formatting is handled by a shared utility
 ([`client/src/utils/formatRaceTime.js`](../client/src/utils/formatRaceTime.js))
 that formats milliseconds as `ss.hh` (e.g. `29.34`) or `m:ss.hh` (e.g. `1:05.32`). It is consumed
 by both the in-race live scoreboard
-([`RaceScreen/index.jsx:1639–1640`](../client/src/screens/RaceScreen/index.jsx#L1706-L1707))
+([`RaceScreen/ScoreboardCard.jsx:95`](../client/src/screens/RaceScreen/ScoreboardCard.jsx#L95))
 and the ResultScreen podium slots and rank rows.
 
 #### Sponsor strip carrier

@@ -3,7 +3,9 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-03**, from PART ONE's **twelve** rows. ★ **The comeback-runaway row closed on 2026-10-03**
+Re-derived on **2026-10-03**, from PART ONE's **thirteen** rows. ★ **The 2026-10-03 hygiene pass opened one row**:
+the pre-commit hook does not detect committed conflict markers (a proposal, not built) — twelve to
+**thirteen**. ★ **The comeback-runaway row closed on 2026-10-03**
 by the owner's rule of that day (COMEBACK-RUNAWAY-1: the comebacker's largest lead is not larger than
 the drawn winner's in any field size) — thirteen to **twelve**. ★ **BROWSER-SPECS-2 (2026-10-03)** closed the
 two failing production-arm specs: both pass 10 of 10 — fourteen to **thirteen**. ★ **PAIR-REACH-SCOPE-1 (2026-10-03)** closed the
@@ -51,10 +53,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2261) holds exactly TWELVE unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 4 in
-*Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and
-*Build-identity residuals*. *(Re-counted 2026-10-03 after the comeback-runaway row closed.)* Every current
-count on this page says twelve.
+(lines 15–2270) holds exactly THIRTEEN unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 4 in
+*Delivering to someone else*, and one each in *Measurement and guard residuals*, *Phases 5–7*,
+*Planned — needs spec* and *Build-identity residuals*. *(Re-counted 2026-10-03 after the hygiene
+pass.)* Every current count on this page says thirteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -71,7 +73,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The twelve rows in section 0 are all WORK**, and that is still true.
+work. **The thirteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -82,7 +84,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all twelve, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -142,6 +144,9 @@ because nobody looked.**
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
 the decision about the default is still his; what is closed is that nobody was told.
+13. ★ **NEW 2026-10-03 — the pre-commit hook does not detect committed conflict markers.** A merge commit
+   carried `<<<<<<<` / `>>>>>>>` lines and the hook passed it; caught by reading and amended before the
+   push. A proposal for a guard, not built.
 
 ★★ **ONE ROW LEFT THIS LIST ON 2026-09-27, and it was the most important one on it.**
 *"Re-running a race from its identifier is UNVERIFIED — the remedy every other result-integrity

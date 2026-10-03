@@ -3,7 +3,7 @@
 //
 // ★ REWRITTEN 2026-10-03 (BROWSER-SPECS-2) for the owner's decisions of 2026-10-02. The spec it
 // replaces read the precedence off the camera-state HUD as "a COMEBACK_ZOOM entered before the state
-// it left reached its hold"; with the 1500 ms cut delay and the leader shot re-picked in place, that
+// it left reached its hold"; with the cut delay (`comebackCutDelayMs`) and the leader shot re-picked in place, that
 // signature can no longer be read from the screen (BROWSER-SPECS-RECHECK-1). What it checks now is
 // the rule itself, every number READ from defaults.js:
 //
