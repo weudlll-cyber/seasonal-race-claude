@@ -1132,193 +1132,6 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
-- [ ] ★★ **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
-      arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
-      green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
-      investigating them — see
-      [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
-      **They pre-date the branch that found them**, and **they are outside the gate's curated set**
-      (`client/package.json:54`), which is why no automatic judgement has been reporting them.
-      ★★ **TRIAGED 2026-09-25 by [THREE-FAILING-SPECS-1](../reports/evolution/THREE-FAILING-SPECS-1.md)
-      — each run THREE TIMES ALONE. The row STAYS OPEN: establishing why is not fixing it.** Nothing
-      was fixed, no assertion changed, nothing added to a gate.
-      ★ **`garden-path-finishes` — case (c).** It **passes 3 of 3** run on its own (first crossing at
-      100.5 s, 105.7 s, 105.5 s of wall clock). The recorded failure was 1.7 s, which is its FIRST
-      assertion — the scoreboard had no field, so the race never started. That run was the whole
-      19-spec suite on one worker. **The failure belongs to suite context, not to the spec or the
-      product**, and passing alone does not disprove it.
-      ★ **`arrival-shape` — deterministic, and the case is HIS TO DECIDE.** Fails 3/3 at
-      `client/e2e/arrival-shape.spec.js:155`, **received 0 where > 0.5 is required** — not "steered
-      too little" but not steered at all on any in-block frame. The assertion was flipped to its
-      present form on 2026-09-19 (`559d7521`) after `17193be6` brought the brake back; the product
-      does the other thing. **Whether that is a regression or a dead premise is the question already
-      on his list** — `docs/MORNING.md:33` item 1, and `ARRIVAL-BRAKE-1` §5, where both positions are
-      recorded as his own arguments fifteen hours apart. Nothing here chooses between them.
-      ★ **`comeback-precedence` — deterministic, cause narrowed, case undetermined.** Fails 3/3 at
-      `:111`. The race is not missing a comeback shot: it has exactly one, and it comes **from
-      OVERVIEW** (held ~4.95 s, at ~73.5 s, the same to within 30 ms on all three runs). The spec
-      counts only cuts out of LEADER_ZOOM or BATTLE_ZOOM, the two states with a hold to cut through,
-      **so the precedence signature never occurs in this fixture.** Whether the fixture stopped
-      casting a climbing comebacker (b) or the precedence stopped firing (a) needs one headless plan
-      dump on that seed.
-      ★ **Has he seen these behaviours?** `garden-path-finishes` — the CLAIM yes (he trimmed the file
-      to it on 2026-09-04), the failure no. `comeback-precedence` — **no**, nothing in `docs/` records
-      it being put to him.
-      ★★ **RE-ESTABLISHED 2026-09-25 by
-      [TWO-FAILING-SPECS-2](../reports/evolution/TWO-FAILING-SPECS-2.md) — a whole production run,
-      19 specs on one worker, 41.4 min: **124 passed, 1 failed** of 125, where three failed before.
-      The row STAYS OPEN; establishing why is not fixing, and nothing was fixed.**
-      ★ **`garden-path-finishes` DOES NOT REPRODUCE.** It **passed inside the full run** (`ok 90`,
-      first crossing 110.7 s, 10 finish times), behind all eight of its alphabetical predecessors —
-      the exact context the original failure was seen in. With the three solo passes that is **4
-      consecutive passes and 0 reproductions**, so it is intermittent rather than an interaction and
-      there is nothing to bisect. ★ NOT claimed: that it has gone, or that `appReady.js`'s
-      dropped-geometry mechanism is the cause — the condition never occurred to be inspected.
-      ★★ **`comeback-precedence` IS CASE (b): THE PREMISE DIED.** Its fixture is garden-path Quick
-      Test **seed 41000**, and the plan dump reads **`written [none] shown [none]`** — no comebacker
-      is cast there at all, nor on any of the ten tracks at that seed, while the spec's own header
-      says the fixture was chosen as *a race whose plan casts a comebacker who climbs*.
-      ★ **The mechanism is NOT broken**, which is what separates (b) from (a): space-sprint seeds 2,
-      3 and 5 still write a comebacker and the camera still shows it. So the **PLAN** fails to produce
-      the state, not the camera's precedence to honour it — the one `COMEBACK_ZOOM` the spec sees
-      comes from OVERVIEW, which carries no hold to cut through.
-      ★ **Not his question**: a fixture whose seed stopped casting what it was picked for is
-      maintenance. **What is still unknown** is whether the assertion holds at a seed that DOES cast
-      one — answering that means re-pointing the fixture, which is a change nobody has authorised.
-      ★ **`arrival-shape` is gone from this row's subject** — it was re-pinned on 2026-09-25 and
-      passed in this run too.
-      ★★ **ONE OF THE THREE IS CLOSED, 2026-09-25: `arrival-shape` is GREEN.** He decided that after a
-      racer reaches the place the plan drew for him he moves FREELY, and that this is the shipped
-      behaviour and stays — so nothing in the product changed and the SPEC was what was wrong. Its
-      foot assertion is re-pinned to the shipped behaviour and its header corrected; three runs, three
-      passes, 298 in-block frames each at braked 0% / pushed 0%. **It is deliberately still able to
-      fail:** the same quantity against the same 0.5 with the inequality turned round, so steering
-      returning turns it red. The row is NOT split, because the two that remain are one subject: specs
-      that fail outside the gate.
-      ★★ **LOAD-BEARING, AND EASY TO LOSE:** `garden-path-finishes`'s surviving test is the **only
-      browser evidence that garden-path finishes at all**
-      ([DROP-GP-SPEC-1](../reports/evolution/DROP-GP-SPEC-1.md):1,41). Whatever is done about its
-      suite-context flakiness, deleting it would remove that evidence entirely.
-      ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
-      nobody believes, and this repository has already paid for that once.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is one day old.** Opened 2026-09-25 by
-      this session's own measurement and re-confirmed here rather than assumed: the three are still
-      absent from the curated set at **`client/package.json:54`** — which was widened to ten specs
-      the same day and deliberately excluded them — so nothing automatic reports them. No cause has
-      been investigated, which is what the row says.
-
-      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECE 3.** `comeback-precedence` was re-pinned
-      away from the dead Garden Path seed 41000 to **space-sprint seed 2** — chosen from
-      `scripts/diag/comeback-beats.mjs`, one of three (2, 3, 5) the diag confirmed as CAST AND
-      SHOWN on the driver camera. The spec was then run three times, once against each of those
-      three fixtures. **All three failed identically: `the race never cut to a comeback at all`.**
-      No `COMEBACK_ZOOM` state in any of the three browser traces. That is bigger than a fixture
-      — the plan casts a comebacker, the harness's driver believes the shot fires, and the
-      browser's camera does not take it. No assertion was touched. The row STAYS OPEN and moves
-      into the finding shape: the fixture is not the wall. The open owner question — why the
-      browser's director declines the shot the harness driver takes — is named on
-      `reports/evolution/MORNING-2026-09-26.md` under NEEDS HIS WORD. Full evidence:
-      [COMEBACK-PRECEDENCE-REPIN-1](../reports/evolution/COMEBACK-PRECEDENCE-REPIN-1.md).
-
-      ★★ **AND THAT CONCLUSION DID NOT SURVIVE THE SAME DAY — COMEBACK-THROUGH-THE-SAME-DOOR,
-      2026-09-26. THE CAMERA IS FINE. The fixture was wrong one level deeper, and so was the method
-      that chose it.**
-      ★ **The confound:** `comeback-beats.mjs` races **40 synthetic racers**; the Quick Test the spec
-      drives races **20 real ones** — and a racer's NAME is physics here. The same seed through those
-      two doors is TWO DIFFERENT RACES. The diag confirmed a comebacker in ITS race; the browser's
-      race at seeds 2, 3 and 5 casts **none**, so there was never a shot to take.
-      ★ **Read in the browser, from an observable that already existed** — the DIRECTOR DIAG panel's
-      authored role, which comes from `racePlanController.getHeroRoles()`. Nothing was added to the
-      product. **Twelve seeds swept: SEVEN cast a comebacker and ALL SEVEN were cut to; the five that
-      cast none produced no shot. Perfect correlation, 12 of 12.**
-      ★★ **So a comeback shot can and does occur in an ordinary race** — in 7 of 12 seeds on
-      space-sprint. The open owner question the night named is **WITHDRAWN**: the browser's director
-      does not decline the shot.
-      ★ **Re-pinned to space-sprint seed 1**, browser-validated, fixture only — no assertion touched —
-      and the lesson is in the spec's header: a harness diag cannot validate a browser fixture.
-      `client/e2e/comeback-cast-probe.spec.js` is the instrument, kept and opt-in.
-      ★ **WHAT REMAINS RED, and it is a different thing from what this row has said twice:** the
-      PRECEDENCE SIGNATURE only. Over three runs the shot fired 3/3 and never cut out of a
-      `LEAD_CHANGE` 3/3; two of the three cut at **7846** and **7824** ms — **inside** the real
-      8000 ms hold gate, so both beat it, but **outside** the spec's deliberately tighter 7500 ms
-      margin. The camera is not deterministic from the race seed, so which state precedes the shot
-      and how long it had been held move between runs of one fixture. **Whether that margin is right
-      is an assertion change and was not made.** Full evidence:
-      [COMEBACK-THROUGH-THE-SAME-DOOR](../reports/evolution/COMEBACK-THROUGH-THE-SAME-DOOR.md).
-
-      ★★ **THE MARGIN IS REPAIRED — 2026-09-26. It now comes from the product instead of from a
-      guess, and it is no longer a source of failure.** The spec compared against a hardcoded
-      7500 ms that nobody decided. The product's rule is
-      `holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap)`
-      (`client/src/modules/camera/CameraDirector.js`, with both inputs out of
-      `computeTimingFromConfig`). The spec now DERIVES the gate from that same function, **per state**
-      because the gate is per state, so there is no copied number to drift; change the config and the
-      spec follows. No assertion's meaning changed and nothing else in the file did.
-      ★ Five runs afterwards: the three that produced a shot held **5781**, **966** and **4471** ms —
-      **no run failed on the margin.** Sabotage proven both ways (inflate the measured holds past the
-      gate → red with the right message; restore → green at 1979 ms).
-
-      ★★ **AND THOSE FIVE RUNS TURNED UP A BIGGER ONE, WHICH IS NOT FIXED AND IS NOT A FIXTURE
-      PROBLEM: THE SHOT DOES NOT HAPPEN ON EVERY RUN OF ONE FIXTURE.** Two of the five produced **no
-      comeback at all** on space-sprint seed 1 — the same seed whose plan casts a comebacker and
-      which the cast probe saw cut to. Across six runs of that fixture the shot occurred in four.
-      ★★ **THE NEXT PARAGRAPH IS SUPERSEDED — READ THE CORRECTION BELOW IT (2026-09-27).** It is
-      kept, not deleted, because the correction has to have something to point at and because a
-      wrong reason that is quietly removed teaches nobody.
-      ★ ~~**The mechanism is in the open and is deliberate**~~: a comeback offer is accepted by
-      `_acceptsOffer(weight)` — `random() < weight` — in `CameraDirector.js`, `comebackWeight` ships
-      **0.6**, and the camera's random stream is **not** seeded from the race. So on a fixed fixture
-      the shot is a probabilistic event. *(Four of six is consistent with 0.6 and six runs do not
-      prove it; the mechanism is established from source, the rate is not.)*
-      ★ **What that means for this spec:** it asserts a shot occurs, and the product makes that shot a
-      chance event. **It cannot pass reliably as written**, and the repair for that is a decision
-      — not a margin, not a fixture — so nothing was changed. **The row stays open on this alone.**
-
-      ★★ **CORRECTED 2026-09-27 (carried onto master from `read/comeback-gates`) — THE CAUSE
-      WRITTEN DIRECTLY ABOVE IS WRONG ON BOTH HALVES, AND IT WAS WRONG BY READING A NAME INSTEAD OF
-      A BODY. The paragraph above is kept so the correction has something to point at.**
-      - **The shot is NOT gated by `comebackWeight`.** A cast comebacker's FIRST shot is returned
-        outright at `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick`
-        (`:1840`) and above `_acceptsOffer` (`:1844`); the decline path is reachable only by a
-        `pick` from the candidate pool. The weight gates a SECOND shot of the same racer, not this
-        one.
-      - **The camera's stream IS derived from the race seed.** `cameraSeed.js:72-78`
-        (`cameraSeedForRace`) salts the race's seed; `RaceScreen/index.jsx:691` calls it and `:701`
-        hands it to `setRandomSeed`. CAMERA-SEED-AND-LINE-1 did this deliberately. The drawn branch
-        is for `racePlanSeed <= 0`, the EMPTY seed field; this fixture types its seed and never
-        enters it — `usedSeed=1` in all ten probe runs.
-
-      ★★ **WHAT THE VARIATION ACTUALLY IS, stated as a fitting mechanism rather than a demonstrated
-      one.** The physics is fixed-step (16 ms, catch-up capped at two steps per frame,
-      `RaceScreen/index.jsx:1078`) and seeded, so the RACE is identical run to run. The director is
-      updated **once per rendered frame** off a wall-clock delta, and every gate the comeback shot
-      passes is a time or progress window. So the draws land in different places in an unchanged
-      stream, and on a loaded machine a window can open and close between two frames.
-      ★ **NOT REPRODUCED ON DEMAND:** ten probe runs on the pinned fixture produced the shot **10 of
-      10**; across every run of this fixture it appeared in **17 of 19**. No failing run was captured
-      with the frame counter installed, so the frame-count comparison between a passing and a
-      failing run **cannot be made** and is dropped with that reason. ★ **And the probe is not a
-      faithful stand-in for the spec:** it renders two extra diagnostic panels every frame, which
-      changes the very frame cost under test. Naming that confound matters more than the 10/10.
-      ★★ **DECIDED 2026-09-27: MAKE THE SPEC TOLERANT, AND DO NOT CHANGE THE CAMERA.** The
-      question was whether a browser spec may tolerate a frame-starved run or the shot must be made
-      frame-independent. **The spec gives way; the product does not.**
-      ★ **Its condition, recorded with it:** the camera is reconsidered only if the owner himself
-      ever sees a comeback go unshown. Until then the variation is a property of the harness's
-      environment, not a defect in the picture.
-      ★ **The spec change is NOT in this block.** It edits
-      `client/e2e/comeback-precedence.spec.js`, the file the comeback-correction thread owns, and
-      one writer per file — so it belongs to that thread's follow-up, not to this documents-only
-      block.
-
-      ★★ **THE REUSABLE FACT SURVIVES THE CORRECTION UNCHANGED, and is in the spec's header where the
-      next camera-spec author will meet it: THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE.** One
-      fixture gave `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held
-      7824 ms, `LEADER_ZOOM` held 5781 ms, 966 ms, 4471 ms, `BATTLE_ZOOM` held 1979 ms — and twice,
-      nothing. **A browser spec that asserts an exact SEQUENCE of camera states, or an exact
-      duration, is flaky by construction. Assert a PROPERTY.**
-
 ## Before the VPS migration
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
@@ -2459,6 +2272,208 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **THE TWO FAILING PRODUCTION-ARM SPECS — CLOSED 2026-10-03 (BROWSER-SPECS-2, branch
+      `fix/browser-specs`): both pass 10 of 10 on the production build, no product code changed.**
+      `comeback-precedence.spec.js` is rewritten for the owner's comeback rule of 2026-10-02 and reads
+      the race screen's live director from the canvas through React's fiber links (no product code
+      exposes it). On Space Sprint, Quick-Test seed 8, it checks four things: the cut comes when the
+      wait for the same racer matures (1500–1533 ms in ten runs), the shot ends at his first chance at
+      the target place after the minimum (10.7–10.8 s, 3rd), never above the maximum, and never into
+      the final scene. **Sabotage, each run once:** the delay forced to 0 fails ("a comeback cut with
+      no wait before it"); the target end disabled fails (the shot ran to the 20 s cap); the minimum
+      raised to 12 s fails ("ended 1250 ms after its first chance"). The minimum cut to 2.4 s does NOT
+      fail, and cannot on this fixture, because here the racer reaches 3rd only after the minimum; the
+      minimum's lower bound is held by `comebackHold.test.js`. `garden-path-finishes.spec.js`: its two
+      scoreboard reads now poll with bounded timeouts (30 s and 10 s) instead of reading once; both
+      assertions are unchanged. At the crossing the board held 1 to 18 finish times across the ten
+      runs, which is the race the single reads lost. *The row as it stood:*
+      **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
+      arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
+      green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
+      investigating them — see
+      [BROWSER-GATE-COVERAGE-1.md](../reports/evolution/BROWSER-GATE-COVERAGE-1.md).
+      **They pre-date the branch that found them**, and **they are outside the gate's curated set**
+      (`client/package.json:54`), which is why no automatic judgement has been reporting them.
+      ★★ **TRIAGED 2026-09-25 by [THREE-FAILING-SPECS-1](../reports/evolution/THREE-FAILING-SPECS-1.md)
+      — each run THREE TIMES ALONE. The row STAYS OPEN: establishing why is not fixing it.** Nothing
+      was fixed, no assertion changed, nothing added to a gate.
+      ★ **`garden-path-finishes` — case (c).** It **passes 3 of 3** run on its own (first crossing at
+      100.5 s, 105.7 s, 105.5 s of wall clock). The recorded failure was 1.7 s, which is its FIRST
+      assertion — the scoreboard had no field, so the race never started. That run was the whole
+      19-spec suite on one worker. **The failure belongs to suite context, not to the spec or the
+      product**, and passing alone does not disprove it.
+      ★ **`arrival-shape` — deterministic, and the case is HIS TO DECIDE.** Fails 3/3 at
+      `client/e2e/arrival-shape.spec.js:155`, **received 0 where > 0.5 is required** — not "steered
+      too little" but not steered at all on any in-block frame. The assertion was flipped to its
+      present form on 2026-09-19 (`559d7521`) after `17193be6` brought the brake back; the product
+      does the other thing. **Whether that is a regression or a dead premise is the question already
+      on his list** — `docs/MORNING.md:33` item 1, and `ARRIVAL-BRAKE-1` §5, where both positions are
+      recorded as his own arguments fifteen hours apart. Nothing here chooses between them.
+      ★ **`comeback-precedence` — deterministic, cause narrowed, case undetermined.** Fails 3/3 at
+      `:111`. The race is not missing a comeback shot: it has exactly one, and it comes **from
+      OVERVIEW** (held ~4.95 s, at ~73.5 s, the same to within 30 ms on all three runs). The spec
+      counts only cuts out of LEADER_ZOOM or BATTLE_ZOOM, the two states with a hold to cut through,
+      **so the precedence signature never occurs in this fixture.** Whether the fixture stopped
+      casting a climbing comebacker (b) or the precedence stopped firing (a) needs one headless plan
+      dump on that seed.
+      ★ **Has he seen these behaviours?** `garden-path-finishes` — the CLAIM yes (he trimmed the file
+      to it on 2026-09-04), the failure no. `comeback-precedence` — **no**, nothing in `docs/` records
+      it being put to him.
+      ★★ **RE-ESTABLISHED 2026-09-25 by
+      [TWO-FAILING-SPECS-2](../reports/evolution/TWO-FAILING-SPECS-2.md) — a whole production run,
+      19 specs on one worker, 41.4 min: **124 passed, 1 failed** of 125, where three failed before.
+      The row STAYS OPEN; establishing why is not fixing, and nothing was fixed.**
+      ★ **`garden-path-finishes` DOES NOT REPRODUCE.** It **passed inside the full run** (`ok 90`,
+      first crossing 110.7 s, 10 finish times), behind all eight of its alphabetical predecessors —
+      the exact context the original failure was seen in. With the three solo passes that is **4
+      consecutive passes and 0 reproductions**, so it is intermittent rather than an interaction and
+      there is nothing to bisect. ★ NOT claimed: that it has gone, or that `appReady.js`'s
+      dropped-geometry mechanism is the cause — the condition never occurred to be inspected.
+      ★★ **`comeback-precedence` IS CASE (b): THE PREMISE DIED.** Its fixture is garden-path Quick
+      Test **seed 41000**, and the plan dump reads **`written [none] shown [none]`** — no comebacker
+      is cast there at all, nor on any of the ten tracks at that seed, while the spec's own header
+      says the fixture was chosen as *a race whose plan casts a comebacker who climbs*.
+      ★ **The mechanism is NOT broken**, which is what separates (b) from (a): space-sprint seeds 2,
+      3 and 5 still write a comebacker and the camera still shows it. So the **PLAN** fails to produce
+      the state, not the camera's precedence to honour it — the one `COMEBACK_ZOOM` the spec sees
+      comes from OVERVIEW, which carries no hold to cut through.
+      ★ **Not his question**: a fixture whose seed stopped casting what it was picked for is
+      maintenance. **What is still unknown** is whether the assertion holds at a seed that DOES cast
+      one — answering that means re-pointing the fixture, which is a change nobody has authorised.
+      ★ **`arrival-shape` is gone from this row's subject** — it was re-pinned on 2026-09-25 and
+      passed in this run too.
+      ★★ **ONE OF THE THREE IS CLOSED, 2026-09-25: `arrival-shape` is GREEN.** He decided that after a
+      racer reaches the place the plan drew for him he moves FREELY, and that this is the shipped
+      behaviour and stays — so nothing in the product changed and the SPEC was what was wrong. Its
+      foot assertion is re-pinned to the shipped behaviour and its header corrected; three runs, three
+      passes, 298 in-block frames each at braked 0% / pushed 0%. **It is deliberately still able to
+      fail:** the same quantity against the same 0.5 with the inequality turned round, so steering
+      returning turns it red. The row is NOT split, because the two that remain are one subject: specs
+      that fail outside the gate.
+      ★★ **LOAD-BEARING, AND EASY TO LOSE:** `garden-path-finishes`'s surviving test is the **only
+      browser evidence that garden-path finishes at all**
+      ([DROP-GP-SPEC-1](../reports/evolution/DROP-GP-SPEC-1.md):1,41). Whatever is done about its
+      suite-context flakiness, deleting it would remove that evidence entirely.
+      ★ **They must not be added to any gate while they fail** — a gate that is red on arrival is one
+      nobody believes, and this repository has already paid for that once.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, and it is one day old.** Opened 2026-09-25 by
+      this session's own measurement and re-confirmed here rather than assumed: the three are still
+      absent from the curated set at **`client/package.json:54`** — which was widened to ten specs
+      the same day and deliberately excluded them — so nothing automatic reports them. No cause has
+      been investigated, which is what the row says.
+
+      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECE 3.** `comeback-precedence` was re-pinned
+      away from the dead Garden Path seed 41000 to **space-sprint seed 2** — chosen from
+      `scripts/diag/comeback-beats.mjs`, one of three (2, 3, 5) the diag confirmed as CAST AND
+      SHOWN on the driver camera. The spec was then run three times, once against each of those
+      three fixtures. **All three failed identically: `the race never cut to a comeback at all`.**
+      No `COMEBACK_ZOOM` state in any of the three browser traces. That is bigger than a fixture
+      — the plan casts a comebacker, the harness's driver believes the shot fires, and the
+      browser's camera does not take it. No assertion was touched. The row STAYS OPEN and moves
+      into the finding shape: the fixture is not the wall. The open owner question — why the
+      browser's director declines the shot the harness driver takes — is named on
+      `reports/evolution/MORNING-2026-09-26.md` under NEEDS HIS WORD. Full evidence:
+      [COMEBACK-PRECEDENCE-REPIN-1](../reports/evolution/COMEBACK-PRECEDENCE-REPIN-1.md).
+
+      ★★ **AND THAT CONCLUSION DID NOT SURVIVE THE SAME DAY — COMEBACK-THROUGH-THE-SAME-DOOR,
+      2026-09-26. THE CAMERA IS FINE. The fixture was wrong one level deeper, and so was the method
+      that chose it.**
+      ★ **The confound:** `comeback-beats.mjs` races **40 synthetic racers**; the Quick Test the spec
+      drives races **20 real ones** — and a racer's NAME is physics here. The same seed through those
+      two doors is TWO DIFFERENT RACES. The diag confirmed a comebacker in ITS race; the browser's
+      race at seeds 2, 3 and 5 casts **none**, so there was never a shot to take.
+      ★ **Read in the browser, from an observable that already existed** — the DIRECTOR DIAG panel's
+      authored role, which comes from `racePlanController.getHeroRoles()`. Nothing was added to the
+      product. **Twelve seeds swept: SEVEN cast a comebacker and ALL SEVEN were cut to; the five that
+      cast none produced no shot. Perfect correlation, 12 of 12.**
+      ★★ **So a comeback shot can and does occur in an ordinary race** — in 7 of 12 seeds on
+      space-sprint. The open owner question the night named is **WITHDRAWN**: the browser's director
+      does not decline the shot.
+      ★ **Re-pinned to space-sprint seed 1**, browser-validated, fixture only — no assertion touched —
+      and the lesson is in the spec's header: a harness diag cannot validate a browser fixture.
+      `client/e2e/comeback-cast-probe.spec.js` is the instrument, kept and opt-in.
+      ★ **WHAT REMAINS RED, and it is a different thing from what this row has said twice:** the
+      PRECEDENCE SIGNATURE only. Over three runs the shot fired 3/3 and never cut out of a
+      `LEAD_CHANGE` 3/3; two of the three cut at **7846** and **7824** ms — **inside** the real
+      8000 ms hold gate, so both beat it, but **outside** the spec's deliberately tighter 7500 ms
+      margin. The camera is not deterministic from the race seed, so which state precedes the shot
+      and how long it had been held move between runs of one fixture. **Whether that margin is right
+      is an assertion change and was not made.** Full evidence:
+      [COMEBACK-THROUGH-THE-SAME-DOOR](../reports/evolution/COMEBACK-THROUGH-THE-SAME-DOOR.md).
+
+      ★★ **THE MARGIN IS REPAIRED — 2026-09-26. It now comes from the product instead of from a
+      guess, and it is no longer a source of failure.** The spec compared against a hardcoded
+      7500 ms that nobody decided. The product's rule is
+      `holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap)`
+      (`client/src/modules/camera/CameraDirector.js`, with both inputs out of
+      `computeTimingFromConfig`). The spec now DERIVES the gate from that same function, **per state**
+      because the gate is per state, so there is no copied number to drift; change the config and the
+      spec follows. No assertion's meaning changed and nothing else in the file did.
+      ★ Five runs afterwards: the three that produced a shot held **5781**, **966** and **4471** ms —
+      **no run failed on the margin.** Sabotage proven both ways (inflate the measured holds past the
+      gate → red with the right message; restore → green at 1979 ms).
+
+      ★★ **AND THOSE FIVE RUNS TURNED UP A BIGGER ONE, WHICH IS NOT FIXED AND IS NOT A FIXTURE
+      PROBLEM: THE SHOT DOES NOT HAPPEN ON EVERY RUN OF ONE FIXTURE.** Two of the five produced **no
+      comeback at all** on space-sprint seed 1 — the same seed whose plan casts a comebacker and
+      which the cast probe saw cut to. Across six runs of that fixture the shot occurred in four.
+      ★★ **THE NEXT PARAGRAPH IS SUPERSEDED — READ THE CORRECTION BELOW IT (2026-09-27).** It is
+      kept, not deleted, because the correction has to have something to point at and because a
+      wrong reason that is quietly removed teaches nobody.
+      ★ ~~**The mechanism is in the open and is deliberate**~~: a comeback offer is accepted by
+      `_acceptsOffer(weight)` — `random() < weight` — in `CameraDirector.js`, `comebackWeight` ships
+      **0.6**, and the camera's random stream is **not** seeded from the race. So on a fixed fixture
+      the shot is a probabilistic event. *(Four of six is consistent with 0.6 and six runs do not
+      prove it; the mechanism is established from source, the rate is not.)*
+      ★ **What that means for this spec:** it asserts a shot occurs, and the product makes that shot a
+      chance event. **It cannot pass reliably as written**, and the repair for that is a decision
+      — not a margin, not a fixture — so nothing was changed. **The row stays open on this alone.**
+
+      ★★ **CORRECTED 2026-09-27 (carried onto master from `read/comeback-gates`) — THE CAUSE
+      WRITTEN DIRECTLY ABOVE IS WRONG ON BOTH HALVES, AND IT WAS WRONG BY READING A NAME INSTEAD OF
+      A BODY. The paragraph above is kept so the correction has something to point at.**
+      - **The shot is NOT gated by `comebackWeight`.** A cast comebacker's FIRST shot is returned
+        outright at `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick`
+        (`:1840`) and above `_acceptsOffer` (`:1844`); the decline path is reachable only by a
+        `pick` from the candidate pool. The weight gates a SECOND shot of the same racer, not this
+        one.
+      - **The camera's stream IS derived from the race seed.** `cameraSeed.js:72-78`
+        (`cameraSeedForRace`) salts the race's seed; `RaceScreen/index.jsx:691` calls it and `:701`
+        hands it to `setRandomSeed`. CAMERA-SEED-AND-LINE-1 did this deliberately. The drawn branch
+        is for `racePlanSeed <= 0`, the EMPTY seed field; this fixture types its seed and never
+        enters it — `usedSeed=1` in all ten probe runs.
+
+      ★★ **WHAT THE VARIATION ACTUALLY IS, stated as a fitting mechanism rather than a demonstrated
+      one.** The physics is fixed-step (16 ms, catch-up capped at two steps per frame,
+      `RaceScreen/index.jsx:1078`) and seeded, so the RACE is identical run to run. The director is
+      updated **once per rendered frame** off a wall-clock delta, and every gate the comeback shot
+      passes is a time or progress window. So the draws land in different places in an unchanged
+      stream, and on a loaded machine a window can open and close between two frames.
+      ★ **NOT REPRODUCED ON DEMAND:** ten probe runs on the pinned fixture produced the shot **10 of
+      10**; across every run of this fixture it appeared in **17 of 19**. No failing run was captured
+      with the frame counter installed, so the frame-count comparison between a passing and a
+      failing run **cannot be made** and is dropped with that reason. ★ **And the probe is not a
+      faithful stand-in for the spec:** it renders two extra diagnostic panels every frame, which
+      changes the very frame cost under test. Naming that confound matters more than the 10/10.
+      ★★ **DECIDED 2026-09-27: MAKE THE SPEC TOLERANT, AND DO NOT CHANGE THE CAMERA.** The
+      question was whether a browser spec may tolerate a frame-starved run or the shot must be made
+      frame-independent. **The spec gives way; the product does not.**
+      ★ **Its condition, recorded with it:** the camera is reconsidered only if the owner himself
+      ever sees a comeback go unshown. Until then the variation is a property of the harness's
+      environment, not a defect in the picture.
+      ★ **The spec change is NOT in this block.** It edits
+      `client/e2e/comeback-precedence.spec.js`, the file the comeback-correction thread owns, and
+      one writer per file — so it belongs to that thread's follow-up, not to this documents-only
+      block.
+
+      ★★ **THE REUSABLE FACT SURVIVES THE CORRECTION UNCHANGED, and is in the spec's header where the
+      next camera-spec author will meet it: THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE.** One
+      fixture gave `LEADER_ZOOM` held 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held
+      7824 ms, `LEADER_ZOOM` held 5781 ms, 966 ms, 4471 ms, `BATTLE_ZOOM` held 1979 ms — and twice,
+      nothing. **A browser spec that asserts an exact SEQUENCE of camera states, or an exact
+      duration, is flaky by construction. Assert a PROPERTY.**
 
 - [x] ★ **`pair-reach-census` REFUSES A SCOPE THAT NAMES NOTHING — CLOSED 2026-10-03
       (PAIR-REACH-SCOPE-1, branch `fix/pair-reach-scope`).** An empty `--tracks=`, or any name no track

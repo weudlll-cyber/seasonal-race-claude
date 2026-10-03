@@ -1,142 +1,95 @@
 // ============================================================
-// comeback-precedence.spec.js — COMEBACK-PRECEDENCE-1
+// comeback-precedence.spec.js — the owner's comeback rule, in a real browser
 //
-// ★ WHY THIS EXISTS AT ALL. The precedence changes WHAT HE SEES, and this project has twice shipped
-// a defect that hid in the gap between the logic and the picture: CAMERA-SEED-AND-LINE-1 (every
-// harness pinned a camera seed the browser never uses) and RENDER-FINGERPRINT-1 (the draw path could
-// not be driven headlessly at all). A unit test and a headless sweep are both on the far side of
-// that gap. This spec is on the near side: it reads the camera state out of the DOM of a race
-// running in a real Chromium, drawn by the real renderer.
+// ★ REWRITTEN 2026-10-03 (BROWSER-SPECS-2) for the owner's decisions of 2026-10-02. The spec it
+// replaces read the precedence off the camera-state HUD as "a COMEBACK_ZOOM entered before the state
+// it left reached its hold"; with the 1500 ms cut delay and the leader shot re-picked in place, that
+// signature can no longer be read from the screen (BROWSER-SPECS-RECHECK-1). What it checks now is
+// the rule itself, every number READ from defaults.js:
 //
-// ── ★ WHAT MAKES A COMEBACK CUT *THE PRECEDENCE* AND NOT AN ORDINARY ONE ───────────────────────
+//   1. THE CUT WAITS. A comeback cut is preceded by a wait for the same racer, and comes when that
+//      wait reaches `comebackCutDelayMs` — not before it.
+//   2. THE SHOT ENDS AT THE TARGET PLACE after the minimum: on the first frame on which he holds
+//      `comebackTargetRank` or better and `comebackMinDuration` has passed.
+//   3. NEVER ABOVE THE MAXIMUM (COMEBACK_ZOOM `maxStateDuration`) and NEVER INTO THE FINAL SCENE.
 //
-// The hold gate is `max(minStateHold, maxStateDuration)` and for LEADER_ZOOM and BATTLE_ZOOM that is
-// 8000 ms (storage/defaults.js). Without an interrupt the director cannot change state before the
-// gate elapses — `transitionDecision.js` returns HELD and `_transition` is never called. So a
-// COMEBACK_ZOOM entered out of one of those two states after LESS than the gate is a transition that
-// could not have happened on the ordinary path. Of the interrupt slots, only the precedence can
-// produce COMEBACK_ZOOM. ★ That inequality is the signature, and it is visible from outside.
+// ── HOW A BROWSER SPEC CAN SEE THIS ─────────────────────────────────────────────────────────────
 //
-// THE HUD LAGS BY A FIXED 150 ms (CameraStateHUD.jsx fades out, swaps, fades in). A constant lag
-// shifts every change by the same amount and so leaves the INTERVALS between them intact, which is
-// what is measured here. ★ That cancellation is now the WHOLE of the protection: the margin below
-// is the product's own gate, with nothing held back for jitter. It is the right call and the
-// sentence above is the argument for it — a fixed lag on both timestamps leaves the interval alone,
-// so a safety margin was buying nothing and was costing two runs in three (2026-09-26).
+// Nothing on the screen says who the comebacker is or when the wait began: the camera HUD shows the
+// state, the anchor label is set for the leader shots only, and the scoreboard's order moves on its
+// own 500 ms cadence. So the spec reads the race screen's LIVE CameraDirector — the object the
+// screen draws with, reached from the canvas through React's own fiber links. No product code
+// exposes it, and none was added. The cut and the end are the director's own clock
+// (`stateEnteredAt`, `_comebackDue.since`), which is the clock its delay, minimum and maximum run
+// on; every rank is the comeback detector's own (`latestRank`), the rank the rule reads. The trace
+// callback is registered before the race loop's, so each frame it reads what the last one decided.
 //
-// ★★ READ THIS BEFORE WRITING ANY CAMERA SPEC — MEASURED 2026-09-26.
-//
-// THE SAME FIXTURE DOES NOT GIVE THE SAME PICTURE. Run after run on one seed: `LEADER_ZOOM` held
-// 7846 ms, `BATTLE_ZOOM` held 4614 ms, `LEADER_ZOOM` held 7824 ms, 5781 ms, 966 ms, 4471 ms,
-// `BATTLE_ZOOM` held 1979 ms — and twice, no comeback shot at all. Same seed, same roster, same
-// track.
-//
-// ★ AND THE REASON IS NOT AN UNSEEDED CAMERA. That was written here on 2026-09-26 and it was WRONG;
-//   corrected the same day after reading the bodies. `cameraSeed.js`'s `cameraSeedForRace` DERIVES
-//   the camera's stream from the race's own seed, and `RaceScreen/index.jsx` calls it and hands the
-//   result to `setRandomSeed` — CAMERA-SEED-AND-LINE-1 did that on purpose, having measured 165
-//   physics steps of divergence between two runs of one race seed. This spec's fixture types its
-//   seed, so it takes the seeded branch; the drawn-seed branch exists for an EMPTY seed field and
-//   this spec never enters it.
-//
-// ★ WHAT VARIES IS WHERE IN THE STREAM THE DRAWS LAND, NOT THE STREAM. The physics runs in fixed
-//   16 ms steps, capped at two catch-up steps per frame, while the director is updated ONCE PER
-//   RENDERED FRAME off a wall-clock delta (`RaceScreen/index.jsx`). So the race is identical run to
-//   run and the number and timing of the camera's looks are not. Every gate the comeback shot passes
-//   is a time or progress window, so a window can open and close between two frames on a loaded
-//   machine. **Measured, and honestly: 10 of 10 probe runs on this fixture produced the shot, so
-//   this account is the mechanism that FITS the variation, not one that has been reproduced on
-//   demand.**
-//
-// ★ THE RULE IS UNCHANGED BY THE CORRECTION, AND IT IS THE REUSABLE PART: A BROWSER SPEC THAT
-//   ASSERTS AN EXACT SEQUENCE OF CAMERA STATES IS FLAKY BY CONSTRUCTION. Assert a PROPERTY that holds whatever order the states came in — "some comeback
-//   cut interrupted the state before it", "no comeback cut out of a LEAD_CHANGE" — never "the third
-//   state was BATTLE_ZOOM" and never a fixed duration. Both assertions in this file are properties,
-//   and that is why they survive the run-to-run variation above.
-//
-// WHAT IS NOT ASSERTED, deliberately: "once per comebacker". The DOM cannot tell a forced shot from
-// an ordinary one, so counting them here would be a guess wearing an assertion. That limit is pinned
-// where it is visible — comebackPrecedence.test.js.
+// THE FIXTURE: Space Sprint, Quick-Test seed 8, a fresh Quick Test's 20 racers. Its race has one
+// comeback shot in the browser that waits, then ends when the racer reaches the target place after
+// the minimum (measured 2026-10-03: the cut 1517 ms into the wait, the shot 10.8 s). Neither the
+// maximum nor the final scene ends it, so those two are asserted as bounds and exercised by
+// `comebackHold.test.js`.
 // ============================================================
 
 import { test, expect } from '@playwright/test';
 import { ensureTrackGeometriesCached } from './appReady.js';
-// ★★ THE GATE IS READ FROM THE PRODUCT, NOT COPIED. See THE MARGIN below.
-import { computeTimingFromConfig } from '../src/modules/camera/cameraTimingComputation.js';
 import { DEFAULT_CAMERA_CONFIG } from '../src/modules/storage/defaults.js';
 
-// ★★ THE MARGIN, AND WHY IT IS DERIVED — repaired 2026-09-26.
-//
-// This assertion used to compare against a hardcoded 7500 ms, described as "held below the real
-// 8000 ms so the fade's jitter can never turn an ordinary hold-elapsed cut into a false claim of an
-// interrupt." That margin was nobody's decision. Measured on this fixture, the comeback cut landed
-// at 7846 ms and 7824 ms on two runs of three — **inside the product's gate, so interrupts by the
-// product's own rule, and failures by the spec's invented one.** A test that asserts a stricter bar
-// than the design asserts something nobody chose.
-//
-// THE PRODUCT'S RULE, quoted from `CameraDirector.js` where the decision is made:
-//
-//     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
-//
-// with `minHold` = `minStateHoldByState[state] ?? minStateHoldMs` and `stateCap` =
-// `maxStateDurationByState[state] ?? maxStateDuration`. Both come out of
-// `computeTimingFromConfig()`, which is what the director itself is fed — so the numbers below are
-// the SHIPPED numbers by construction and there is no second copy to drift. Change the config and
-// this spec follows it.
-//
-// ★ THE ONE THING THAT IS RESTATED HERE IS THE EXPRESSION, NOT A NUMBER. `Math.max(minHold, cap)`
-//   lives in `CameraDirector` and is not exported; reaching it would mean adding an export to the
-//   product to satisfy a test, which this repair refused to do. If that line ever changes, this
-//   comment is the pointer to the place it changed.
-//
-// ★ PER STATE, because the gate is per state. With the shipped config every state resolves to the
-//   same figure, but asserting one global number would be true by accident.
-const TIMING = computeTimingFromConfig(DEFAULT_CAMERA_CONFIG);
-const holdGateFor = (state) =>
-  Math.max(
-    TIMING.minStateHoldByState[state] ?? TIMING.minStateHoldMs,
-    TIMING.maxStateDurationByState[state] ?? TIMING.maxStateDuration
-  );
-
-// ★★ THE FIXTURE IS VALIDATED IN THE BROWSER, AND IT HAS TO BE. This pin has now drifted TWICE,
-// each time for a different reason, and the second reason is the lesson worth keeping:
-//
-//   1. Garden Path seed 41000 — the plan cast no comebacker at that seed on any of the ten tracks.
-//      A plain fixture hole. Re-pinned 2026-09-26 by NIGHT-2026-09-26 PIECE 3.
-//   2. Space-sprint seed 2, chosen from `scripts/diag/comeback-beats.mjs` — and it failed too.
-//      ★ A HARNESS DIAG CANNOT VALIDATE A BROWSER FIXTURE. The diag races 40 SYNTHETIC racers;
-//      the Quick Test races 20 REAL ones — and in this project A RACER'S NAME IS PHYSICS
-//      (`stablePairBit` hashes `r.name`). The same seed through those two doors is TWO DIFFERENT
-//      RACES with two different casts. The diag confirmed a comebacker in ITS race, and the
-//      browser's race at that seed casts none.
-//
-// SO THIS SEED WAS CHOSEN BY RUNNING THE BROWSER (COMEBACK-THROUGH-THE-SAME-DOOR, 2026-09-26).
-// `client/e2e/comeback-cast-probe.spec.js` reads the cast out of the DIRECTOR DIAG panel of a real
-// Quick Test. Over twelve seeds, seven cast a comebacker in the browser and ALL SEVEN cut to it;
-// the five that cast none produced no comeback shot. Seed 1 is one of the seven.
-// ★ IF THIS PIN EVER NEEDS MOVING AGAIN, MOVE IT WITH THAT PROBE, not with the headless diag.
-//
-// If the race simply produces no comeback at all the spec still says so and fails, rather than
-// passing vacuously.
 const TRACK = /Space Sprint/;
-const SEED = '1';
+const SEED = '8';
 
-test('the precedence cuts to the comebacker in the browser, and never out of a LEAD_CHANGE', async ({
+const DELAY = DEFAULT_CAMERA_CONFIG.comebackCutDelayMs;
+const MIN_MS = DEFAULT_CAMERA_CONFIG.comebackMinDuration * 1000;
+const MAX_MS = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.maxStateDuration;
+const TARGET = DEFAULT_CAMERA_CONFIG.comebackTargetRank;
+const ENDGAME = DEFAULT_CAMERA_CONFIG.endgameThreshold;
+// A decision lands on the first FRAME at which its condition holds, so it can trail the exact
+// instant by a frame — a few on a loaded machine. 250 ms bounds "at the first chance" without
+// letting a cut or an end by some other route pass for it.
+const FRAME_SLACK_MS = 250;
+
+test('the comeback cut waits, and the shot ends at the target place within its bounds', async ({
   page,
 }) => {
   test.setTimeout(300_000);
 
-  // The per-frame recorder, installed BEFORE the app so it is running when the race starts. It reads
-  // the DOM the renderer produced; it re-derives nothing, which is CAMERA-REPRO-1's own rule.
   await page.addInitScript(() => {
-    window.__raCamTrace = [];
-    const tick = () => {
-      const el = document.querySelector('[data-testid="camera-state-hud"]');
-      const s = el?.getAttribute('data-state') ?? null;
-      if (s) {
-        const trace = window.__raCamTrace;
-        const last = trace[trace.length - 1];
-        if (!last || last.state !== s) trace.push({ state: s, t: Math.round(performance.now()) });
+    window.__cdTrace = [];
+    const findDirector = () => {
+      const el = document.querySelector('canvas');
+      const key = el && Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+      for (let f = key ? el[key] : null, d = 0; f && d < 40; f = f.return, d++)
+        for (let h = f.memoizedState, n = 0; h && n < 200; h = h.next, n++) {
+          const c = h.memoizedState?.current;
+          if (c && typeof c === 'object' && 'comebackLockedRacerIndex' in c && '_comeback' in c)
+            return c;
+        }
+      return null;
+    };
+    let lastKey = '';
+    let lastLocked = null;
+    const tick = (now) => {
+      const cd = window.__cd ?? (window.__cd = findDirector());
+      if (cd) {
+        const due = cd._comebackDue;
+        if (cd.comebackLockedRacerIndex != null) lastLocked = cd.comebackLockedRacerIndex;
+        const who = cd.comebackLockedRacerIndex ?? due?.index ?? lastLocked;
+        const row = {
+          t: now, // this frame's rAF time — the same clock the director's timestamps are on
+          st: cd.state,
+          at: cd.stateEnteredAt,
+          locked: cd.comebackLockedRacerIndex,
+          due: due ? { i: due.index, since: due.since } : null,
+          rank: who == null ? null : cd._comeback.latestRank(who),
+          why: cd._lastTransitionReason,
+          lp: cd._diagLeaderProgress ?? 0,
+          finale: !!(cd._inPhotoFinish || cd._inFinishDrama || cd._inFinishMode),
+        };
+        const key = JSON.stringify([row.st, row.at, row.locked, row.due, row.rank, row.finale]);
+        if (key !== lastKey) {
+          lastKey = key;
+          window.__cdTrace.push(row);
+        }
       }
       requestAnimationFrame(tick);
     };
@@ -145,58 +98,92 @@ test('the precedence cuts to the comebacker in the browser, and never out of a L
 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
-
-  // Quick Test is the only replayable door (CAMERA-REPRO-1): Start Race sends racePlanSeed 0.
   await page.evaluate((seed) => sessionStorage.setItem('quickTestSeed', seed), SEED);
   await page.reload();
   await ensureTrackGeometriesCached(page);
-
   await page.locator('button', { hasText: TRACK }).first().click();
   await page.getByRole('button', { name: /Quick Test/ }).click();
   await page.waitForURL(/\/race/);
-
-  // The race is over when the winner card appears. The trace keeps running until then.
   await expect(page.getByTestId('winner-card')).toBeVisible({ timeout: 280_000 });
 
-  const trace = await page.evaluate(() => window.__raCamTrace ?? []);
-  console.log('[comeback-precedence] trace: ' + JSON.stringify(trace));
+  const { found, trace } = await page.evaluate(() => ({
+    found: !!window.__cd,
+    trace: window.__cdTrace ?? [],
+  }));
+  expect(found, "the race screen's CameraDirector was not found from the canvas").toBe(true);
 
-  expect(trace.length, 'the camera-state HUD produced no trace at all').toBeGreaterThan(2);
-
-  // Every entry into COMEBACK_ZOOM, with how long the state before it had been on screen.
-  const entries = [];
-  for (let i = 1; i < trace.length; i++) {
-    if (trace[i].state !== 'COMEBACK_ZOOM' || trace[i - 1].state === 'COMEBACK_ZOOM') continue;
-    entries.push({
-      from: trace[i - 1].state,
-      heldMs: trace[i].t - trace[i - 1].t,
-      at: trace[i].t,
-    });
+  // One shot per COMEBACK_ZOOM entry: its rows, the last wait seen before it, and the first row after
+  // it — the exit, carrying the reason the director recorded and the rank it decided on.
+  const shots = [];
+  let lastDue = null;
+  for (let i = 0; i < trace.length; i++) {
+    const r = trace[i];
+    const prev = trace[i - 1];
+    if (r.st === 'COMEBACK_ZOOM' && prev?.st !== 'COMEBACK_ZOOM')
+      shots.push({ enter: r, due: lastDue, rows: [r] });
+    else if (r.st === 'COMEBACK_ZOOM') shots.at(-1).rows.push(r);
+    else if (prev?.st === 'COMEBACK_ZOOM') shots.at(-1).exit = r;
+    if (r.due) lastDue = r.due;
   }
-  console.log('[comeback-precedence] comeback entries: ' + JSON.stringify(entries));
-
-  expect(entries.length, 'the race never cut to a comeback at all').toBeGreaterThan(0);
-
-  // ★ LIMIT 2, IN THE PICTURE. A comeback shot may never replace a lead change on screen.
-  expect(
-    entries.filter((e) => e.from === 'LEAD_CHANGE'),
-    'a comeback shot cut into a LEAD_CHANGE that was already on screen',
-  ).toEqual([]);
-
-  // ★ THE PRECEDENCE ITSELF. At least one comeback cut has to have INTERRUPTED the state before it
-  // — reached the screen before that state would have ended on its own — or the browser is running
-  // the old behaviour whatever the unit tests say. Each entry is judged against the gate of the
-  // state it cut out of, which is the same comparison the director makes.
-  const forced = entries.filter(
-    (e) =>
-      (e.from === 'LEADER_ZOOM' || e.from === 'BATTLE_ZOOM') && e.heldMs < holdGateFor(e.from),
+  console.log(
+    '[comeback] ' +
+      JSON.stringify(
+        shots.map((s) => ({
+          racer: s.enter.locked,
+          waitedMs: s.due ? +(s.enter.at - s.due.since).toFixed(1) : null,
+          shotMs: s.exit ? +(s.exit.at - s.enter.at).toFixed(1) : null,
+          endedBy: s.exit?.why ?? null,
+          rankAtEnd: s.exit?.rank ?? null,
+        }))
+      )
   );
-  expect(
-    forced.length,
-    'the comeback shot did not INTERRUPT the state before it — every cut waited for that state to ' +
-      'end on its own, which is the ordinary path and not the precedence. Entries, each with the ' +
-      `state it cut out of and that state's own gate: ${JSON.stringify(
-        entries.map((e) => ({ ...e, gate: holdGateFor(e.from) }))
-      )}`,
-  ).toBeGreaterThan(0);
+  expect(shots.length, 'the race never cut to the comebacker').toBeGreaterThan(0);
+
+  for (const s of shots) {
+    const racer = s.enter.locked;
+    // 1 · THE CUT WAITS, for HIM, and comes when the wait matures
+    expect(s.due, 'a comeback cut with no wait before it').not.toBeNull();
+    expect(s.due.i, 'the wait was for a different racer than the cut').toBe(racer);
+    const waited = s.enter.at - s.due.since;
+    expect(waited, `the cut came ${waited} ms into the wait`).toBeGreaterThanOrEqual(DELAY);
+    expect(
+      waited,
+      `the cut came ${waited} ms into the wait, not when it matured`
+    ).toBeLessThanOrEqual(DELAY + FRAME_SLACK_MS);
+
+    expect(s.exit, 'the comeback shot was still running when the race ended').toBeDefined();
+    const dur = s.exit.at - s.enter.at;
+
+    // 3 · NEVER ABOVE THE MAXIMUM, NEVER INTO THE FINAL SCENE
+    expect(dur, `the shot ran ${dur} ms`).toBeLessThanOrEqual(MAX_MS + FRAME_SLACK_MS);
+    for (const r of s.rows) {
+      expect(r.lp, 'a comeback frame with the leader past the endgame').toBeLessThanOrEqual(
+        ENDGAME
+      );
+      expect(r.finale, 'a comeback frame inside the finish sequence').toBe(false);
+    }
+
+    // 2 · IT ENDS AT THE TARGET PLACE, AFTER THE MINIMUM, AT THE FIRST CHANCE. This fixture's shot
+    // is ended by that rule — asserted, so a changed race is reported as such, not misread.
+    expect(s.exit.why, "this fixture's shot is ended by its racer reaching the target place").toBe(
+      'comeback-target-reached'
+    );
+    expect(dur, `the shot ended after ${dur} ms, before the minimum`).toBeGreaterThanOrEqual(
+      MIN_MS
+    );
+    expect(s.exit.rank, 'he was not at the target place when the shot ended').toBeLessThanOrEqual(
+      TARGET
+    );
+    // The first chance: the first moment at or after the minimum at which he held the target place.
+    // His rank at a moment is the last recorded change at or before it.
+    const minAt = s.enter.at + MIN_MS;
+    const all = [...s.rows, s.exit];
+    const rankAt = (time) => all.filter((r) => r.t <= time).at(-1)?.rank ?? null;
+    const firstChance =
+      rankAt(minAt) <= TARGET ? minAt : all.find((r) => r.t > minAt && r.rank <= TARGET)?.t;
+    expect(
+      s.exit.at - firstChance,
+      `the shot ended ${s.exit.at - firstChance} ms after its first chance to end`
+    ).toBeLessThanOrEqual(FRAME_SLACK_MS);
+  }
 });

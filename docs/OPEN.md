@@ -3,7 +3,8 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-03**, from PART ONE's **fourteen** rows. ★ **PAIR-REACH-SCOPE-1 (2026-10-03)** closed the
+Re-derived on **2026-10-03**, from PART ONE's **thirteen** rows. ★ **BROWSER-SPECS-2 (2026-10-03)** closed the
+two failing production-arm specs: both pass 10 of 10 — fourteen to **thirteen**. ★ **PAIR-REACH-SCOPE-1 (2026-10-03)** closed the
 `pair-reach-census` row: it now refuses a scope that names nothing — fifteen to **fourteen**. ★ **The structural-proposals row closed on
 2026-10-03**: P1 (the camera director split) and P4 (the race screen split) are merged, P2 and P3 were
 done before — sixteen to **fifteen**. ★ **SHIP-OWNER-COSMETIC-1, merged and
@@ -48,10 +49,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2453) holds exactly FOURTEEN unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 5 in
-*Delivering to someone else*, and one each in *Phases 5–7*, *Three production-arm specs fail*,
-*Planned — needs spec* and *Build-identity residuals*. *(Re-counted 2026-10-03 after
-PAIR-REACH-SCOPE-1.)* Every current count on this page says fourteen.
+(lines 15–2266) holds exactly THIRTEEN unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 5 in
+*Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and
+*Build-identity residuals*. *(Re-counted 2026-10-03 after BROWSER-SPECS-2.)* Every current count on
+this page says thirteen.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -68,7 +69,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The fourteen rows in section 0 are all WORK**, and that is still true.
+work. **The thirteen rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -79,7 +80,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all fourteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -94,38 +95,7 @@ because nobody looked.**
 3. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
    proven by following it literally (RELEASE-BASICS-1, 2026-10-01).
-4. **Two production-arm specs fail** — `comeback-precedence` and `garden-path-finishes`.
-   ★★ **The camera is FINE (2026-09-26, second pass).** Twelve seeds driven through the browser:
-   **seven cast a comebacker and all seven were cut to** — a comeback shot can and does occur in an
-   ordinary race. The night's "the browser declines the shot" question is **WITHDRAWN**: its three
-   fixtures cast no comebacker in the browser either, because the diag that chose them races
-   40 synthetic racers where the Quick Test races 20 real ones. Re-pinned to a browser-validated
-   fixture. ★ **The margin is repaired (2026-09-26): the spec now derives the hold gate from the
-   product's own timing function instead of a hardcoded number nobody decided. No run has failed on
-   it since.** ★★ **What keeps this row open is a bigger finding:** on one fixture, two runs of five
-   produced **no comeback shot at all**. ★★ **THE CAUSE RECORDED HERE ON 2026-09-26 WAS WRONG ON
-   BOTH HALVES AND IS CORRECTED (carried onto master 2026-09-27 from `read/comeback-gates`).** It
-   said the shot is a coin flip at a shipped weight drawn from a stream not seeded from the race.
-   **Neither is true at the tree.** A cast comebacker's FIRST shot is returned outright at
-   `CameraDirector.js:1816-1821`, which lands ABOVE `_weightedRandomPick` (`:1840`) and above
-   `_acceptsOffer` (`:1844`) — the weight gates a SECOND shot of the same racer, not this one. And
-   the camera's stream **is** derived from the race seed: `cameraSeed.js:72-78`
-   (`cameraSeedForRace`) salts it, `RaceScreen/index.jsx:691` calls it and `:701` hands it to
-   `setRandomSeed`.
-   ★ **What varies is WHERE IN THE STREAM THE DRAWS LAND, not the stream.** The physics runs in
-   fixed 16 ms steps, capped at two catch-up steps per frame (`RaceScreen/index.jsx:1078`), while
-   the director is updated **once per rendered frame** off a wall-clock delta. The race is therefore
-   identical run to run and the number and timing of the camera's looks are not, so a time window a
-   gate depends on can open and close between two frames on a loaded machine.
-   ★★ **STATED AS A MECHANISM THAT FITS, NOT ONE THAT WAS REPRODUCED.** Ten probe runs on this
-   fixture produced the shot **10 of 10**; across every run of it the shot appeared in 17 of 19. No
-   failing run was ever captured with the frame counter installed, so the account is inferred from
-   the code path and the frame model, not demonstrated on demand.
-   ★ **NEEDS HIS WORD** — §1 item 4 below: may a browser spec tolerate a frame-starved run, or must
-   the shot be made frame-independent? ★ The reusable lesson survives the correction unchanged and
-   is in the spec's header: **assert a property, never a sequence** — the rule was right even while
-   the reason given for it was wrong.
-5. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+4. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
    into `verify --premerge`). Inventory tally column 3: **204 MATCHES / 0 MISLEADING / 1 SUSPECTED
@@ -136,38 +106,38 @@ because nobody looked.**
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
 
-6. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
+5. ★ **NEW — verify a race ON DEMAND (decided 2026-09-27).** The server stays a second store and
    keeps accepting results without recomputing them; a disputed race is re-raced from its own
    record and compared. **Fabrication is not prevented, it becomes provable.**
    `scripts/diag/replay-stored-race.mjs` already does the racing, so what is missing is a door from
    the product, not an engine.
-7. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+6. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
    a firewall or proxy is put in front of it. ★ Narrowed 2026-10-01: a plain-`node` install can set
    `RA_BIND_ADDRESS=127.0.0.1`; the default is unchanged and is his choice.
-8. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+7. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-9. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
+8. **The dev screen's advanced tier is hidden by a client-side filter only.** Low: those
    sections write the browser's own storage, not server state, and the server's boundary is the 16
    admin-classified routes, which a test guards.
-10. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
+9. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
    on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
    DATA-EXPORT-DATADIR-1.)* ★ **2026-10-02 (TIDY-C-1):
    three more left it** — the `innerFramePct` defaults in `framingRule.js`, the base image's
    floating tag (now pinned by digest, ordered by the owner that day) and the missing backup
    checksum. The 30-day session cookie stays, his decision. The row stays open.
-11. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
+10. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
-12. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
+11. ★ **NEW 2026-10-01 — the delivery plan of 2026-08-31.** The redelivery mechanism exists and
    warns when it overwrites; **no command turns his installation into the shipped defaults**, and two
    shipped tracks (`searound`, `seatrack`) have drifted from his copies. ★ His camera settings became
    the shipped defaults on 2026-10-01 and shipped on 2026-10-02 (SHIP-OWNER-COSMETIC-1, merged and
    minted); the tracks, the brand and the player group remain.
-13. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
+12. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.
-14. ★ **NEW 2026-10-02 — his observation**: in his Quick Test (River Run, seed 3) the comeback racer
+13. ★ **NEW 2026-10-02 — his observation**: in his Quick Test (River Run, seed 3) the comeback racer
    went on far into the lead after the comeback shot cut away. A dated fact; no analysis attached.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
@@ -283,7 +253,7 @@ is not.
 | ~~★ **A guard that callers build the frame camera through `frameCameraInputs`** rather than by hand~~ — ★ **DONE 2026-09-24 (PIECE 6)** | done | `scripts/check-frame-camera-inputs.mjs` scans object keys `anchorRacerIndex:` / `comebackLockedRacerIndex:` / `runInArrived:` outside the ONE home. Sabotage-proven. LOUD-FAILURE rule upheld |
 | ~~A helper that cleans up the `.git/worktrees` stubs~~ — ★ **DONE 2026-09-24 (Q-28)** | done | `scripts/worktree-stubs.mjs`; **all 18 dead stubs removed**. Only ever touches `.git/` — never a checkout, because of the junction hazard. 6 tests |
 | ~~★ **Nothing records which migrations an instance has already applied**~~ — ★ **DONE 2026-09-24 (PIECE 4)** | done | `scripts/migrate.mjs` + `migrate.test.mjs` (8 tests including sabotage). Runner refuses to run any id twice; observable-state fallback backfills the ledger for instances that ran the standalone script first. `DEPLOYMENT.md` step 6 now names one command |
-| ★★ **TWO production-arm specs fail — `comeback-precedence` and `garden-path-finishes`** (`arrival-shape` was the third and is **CLOSED 2026-09-25**) | one needs a plan dump, one needs a suite run | ★ **`arrival-shape` is GREEN**: he decided a racer moves FREELY after reaching his drawn place, that is the shipped behaviour and it stays, so the SPEC was wrong — re-pinned, 3 runs 3 passes, and still able to fail if steering returns. ★ `garden-path-finishes` passes 3/3 ALONE; its failure is suite context, and its surviving test is the ONLY browser evidence that the track finishes. ★ `comeback-precedence` fails 3/3: the race's only comeback cut comes from OVERVIEW, which has no hold to cut through. → [BACKLOG.md](BACKLOG.md) · [THREE-FAILING-SPECS-1.md](../reports/evolution/THREE-FAILING-SPECS-1.md) |
+| ~~**TWO production-arm specs fail**~~ ★ **CLOSED 2026-10-03 (BROWSER-SPECS-2): both pass 10 of 10** — the history below is kept as it stood. (`arrival-shape` was the third and is **CLOSED 2026-09-25**) | one needs a plan dump, one needs a suite run | ★ **`arrival-shape` is GREEN**: he decided a racer moves FREELY after reaching his drawn place, that is the shipped behaviour and it stays, so the SPEC was wrong — re-pinned, 3 runs 3 passes, and still able to fail if steering returns. ★ `garden-path-finishes` passes 3/3 ALONE; its failure is suite context, and its surviving test is the ONLY browser evidence that the track finishes. ★ `comeback-precedence` fails 3/3: the race's only comeback cut comes from OVERVIEW, which has no hold to cut through. → [BACKLOG.md](BACKLOG.md) · [THREE-FAILING-SPECS-1.md](../reports/evolution/THREE-FAILING-SPECS-1.md) |
 
 ★★ **THE MIGRATION LEDGER, added 2026-09-24 and deliberately NOT built.** There is exactly one
 migration script (`scripts/migrate-teams.mjs`), it is run by hand, and **no record exists of what an

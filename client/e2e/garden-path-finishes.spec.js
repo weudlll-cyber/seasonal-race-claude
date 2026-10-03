@@ -30,7 +30,10 @@ test('garden-path crosses the line in a browser', async ({ page }) => {
 
   await page.goto('/setup?viewerprobe=1');
   await ensureTrackGeometriesCached(page);
-  await page.locator('button', { hasText: /Garden Path/ }).first().click();
+  await page
+    .locator('button', { hasText: /Garden Path/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: /Quick Test/ }).click();
   await expect(page).toHaveURL(/\/race/);
 
@@ -42,8 +45,16 @@ test('garden-path crosses the line in a browser', async ({ page }) => {
 
   // A field must be on the board before waiting ten minutes for one of them to finish — without
   // this, an empty race is indistinguishable from a slow one and the failure is an opaque timeout.
+  // BROWSER-SPECS-2 (2026-10-03): POLLED, not read once. The probe appears before the scoreboard has
+  // mounted its cards, and a single `.count()` there failed 3 of 10 runs (BROWSER-SPECS-RECHECK-1).
+  // The assertion is unchanged; it is given the 30 s the race screen has to show its field.
+  await expect
+    .poll(() => page.locator('.scoreboard-card').count(), {
+      message: 'the scoreboard must be rendering a field',
+      timeout: 30_000,
+    })
+    .toBeGreaterThan(1);
   const fieldSize = await page.locator('.scoreboard-card').count();
-  expect(fieldSize, 'the scoreboard must be rendering a field').toBeGreaterThan(1);
 
   const started = Date.now();
   // The probe's own latch (`viewerProbe.js` → `_crossed`), set from `finishedCount > 0` — the SAME
@@ -55,11 +66,19 @@ test('garden-path crosses the line in a browser', async ({ page }) => {
     })
     .toBe(true);
 
+  // BROWSER-SPECS-2: the probe latches the crossing on the frame it happens; the board shows the time
+  // on its own cadence after it, so a read in the same instant saw 0 in 3 of 10 runs. Polled for up
+  // to 10 s — far longer than the board's cadence, far shorter than anything a missing time could be.
+  await expect
+    .poll(() => page.locator('.sb-finish-time').count(), {
+      message: 'a crossing must put a finish time on the board',
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(0);
   const finishers = await page.locator('.sb-finish-time').count();
   console.log(
     `[garden-path] field=${fieldSize} FIRST CROSSING after ` +
       `${((Date.now() - started) / 1000).toFixed(1)} s of wall clock; ` +
       `${finishers} finish time(s) on the scoreboard at that moment`
   );
-  expect(finishers, 'a crossing must put a finish time on the board').toBeGreaterThan(0);
 });
