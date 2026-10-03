@@ -1109,11 +1109,6 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
       the player group.**
 
-- [ ] ★ **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
-      his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
-      racer went on far into the lead after the comeback shot cut away. Recorded as he reported it.
-      **verify:** none — an observation, not yet a question with a measurement attached.
-
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
@@ -2273,6 +2268,30 @@ rule outlives the item.
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
 
+- [x] ★ **THE COMEBACK RACER RUNNING AWAY — CLOSED 2026-10-03, by the owner's rule of that day: the
+      row closes if [COMEBACK-RUNAWAY-1](../reports/evolution/COMEBACK-RUNAWAY-1.md) shows the
+      comebacker's largest lead is not larger than the drawn winner's in any field size. It does not
+      exceed it in any field size.** Largest lead after first holding 3rd, in canvas widths (median,
+      p90, max), comebacker against drawn winner, over the 750 Quick-Test races:
+      - closed 20: 0.15/0.29/0.64 against 0.20/0.34/0.86;
+      - closed 40: 0.15/0.31/0.38 against 0.21/0.38/0.55;
+      - open 20: 0.22/0.38/0.48 against 0.26/0.44/0.62;
+      - open 40: 0.16/0.26/0.34 against 0.19/0.34/0.74;
+      - open 80: 0.17/0.24/0.29 against 0.17/0.30/0.58.
+      Comebackers still win 15–30% of races, because the front five run unsteered past
+      `choreoReleaseProgress` (`racePlanner.js:1276-1279`). That is recorded in the report and was not
+      changed. *The row as it stood:*
+      **THE OWNER'S OBSERVATION OF 2026-10-02 — the comeback racer went on far into the lead.** In
+      his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
+      racer went on far into the lead after the comeback shot cut away. Recorded as he reported it.
+      **verify:** none — an observation, not yet a question with a measurement attached.
+      ★ **2026-10-03 — measured: [COMEBACK-RUNAWAY-1](../reports/evolution/COMEBACK-RUNAWAY-1.md)**
+      (branch `measure/comeback-runaway`, 750 Quick-Test races, nothing changed). A comebacker's lead
+      after reaching 3rd is no larger than the drawn winner's. Comebackers win 15–30% of races and
+      drawn winners 22–37%: past `choreoReleaseProgress` the front five run unsteered. His own race,
+      re-run on current master, finishes with the comebacker 3rd. **Stays open** — what, if anything,
+      to change is his question.
+
 - [x] ★★ **THE TWO FAILING PRODUCTION-ARM SPECS — CLOSED 2026-10-03 (BROWSER-SPECS-2, branch
       `fix/browser-specs`): both pass 10 of 10 on the production build, no product code changed.**
       `comeback-precedence.spec.js` is rewritten for the owner's comeback rule of 2026-10-02 and reads
@@ -2287,7 +2306,9 @@ proposal arriving again in six months looking new.
       minimum's lower bound is held by `comebackHold.test.js`. `garden-path-finishes.spec.js`: its two
       scoreboard reads now poll with bounded timeouts (30 s and 10 s) instead of reading once; both
       assertions are unchanged. At the crossing the board held 1 to 18 finish times across the ten
-      runs, which is the race the single reads lost. *The row as it stood:*
+      runs, which is the race the single reads lost. The re-check that found why, ten runs each on
+      the old specs: [BROWSER-SPECS-RECHECK-1](../reports/evolution/BROWSER-SPECS-RECHECK-1.md).
+      *The row as it stood:*
       **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
       arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
       green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while

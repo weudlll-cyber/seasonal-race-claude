@@ -69,6 +69,13 @@
 //     no wait, i.e. the delay at 0) and `speedVsMedian`: his track distance over the last 1 s divided
 //     by the median of the unfinished field's, at the cut — above 1 means he is visibly faster
 //   Arm the delay with `--set=comebackCutDelayMs=<ms>`.
+//
+// COMEBACK-RUNAWAY-1 added `--runaway-out=<file>`, read-only: one row per CAST comebacker and per
+// DRAWN winner (the racer whose `getTargetRank` is 1) per race — his finishing place; his margin at
+// the finish to the next racer in finish order, in seconds (`finishTimeMs`) and in canvas widths;
+// and his largest lead as race leader after he first held 3rd or better. Canvas widths are the
+// SHIPPED director's own picture: both racers projected through `dir._proj.toScreen` at that
+// frame's zoom and offsets, the straight-line screen distance divided by the canvas width.
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -92,6 +99,7 @@ const ROSTER_MODE = ARG("roster", null);
 const TIMELINE_OUT = ARG("timeline", null);
 const NAME_SET = ARG("names", null);
 const DURATION_OUT = ARG("duration-out", null);
+const RUNAWAY_OUT = ARG("runaway-out", null);
 const { DEFAULT_RACE_DYNAMICS_CONFIG } = await import(
   pathToFileURL(join(ROOT, "client/src/modules/storage/defaults.js")).href
 );
@@ -154,6 +162,8 @@ const shots = [];
 const races = [];
 const timelines = [];
 const durationRows = [];
+const runawayRows = [];
+const REF_CANVAS_W = 1280; // the race canvas is a fixed 1280x720 store
 for (const geo of tracks) {
   for (const seed of SEEDS) {
     const identity = resolveIdentity({ raceSeed: seed, racers: RACERS, roster: ROSTER });
@@ -190,6 +200,8 @@ for (const geo of tracks) {
     const waits = []; // COMEBACK-CUT-DELAY-1: every wait before a cut, and how it ended
     let openWait = null; // { obj, index, route, startMs, rankAtDue }
     const tHist = []; // COMEBACK-CUT-DELAY-1: [ms, Map(index -> t)] over the last ~1 s, for speeds
+    const ra = new Map(); // COMEBACK-RUNAWAY-1: index -> { role, reached3Ms, maxLead*, atFinish* }
+    let drawnWinner = null;
 
     runRace(race, identity, CFG, ({ cd: dir, st: state, ts, raceStart }) => {
       // The driver has already delivered the plan this frame (cameraPlanDelivery.mjs); read it once.
@@ -227,6 +239,42 @@ for (const geo of tracks) {
         openWait = { obj: dueObj, index: dueObj.index, route: dueObj.route ?? null, startMs: ms, rankAtDue: rankMapOf(state).get(dueObj.index) };
       }
       tHist.push([ms, new Map(state.racers.map((r) => [r.index, r.t]))]);
+      if (RUNAWAY_OUT && planRead) {
+        if (drawnWinner == null)
+          drawnWinner = state.racers.find((r) => meta.racePlanController?.getTargetRank?.(r.index) === 1)?.index ?? -1;
+        const byT = [...state.racers].sort((a, b) => b.t - a.t);
+        const scr = (r) => dir._proj.toScreen(r, dir.zoom, dir.offsetX, dir.offsetY);
+        const widths = (a, b) => {
+          const p = scr(a), q = scr(b);
+          return Math.hypot(p.x - q.x, p.y - q.y) / REF_CANVAS_W;
+        };
+        const subjects = [...cast.map((i) => [i, "comebacker"]), ...(drawnWinner >= 0 ? [[drawnWinner, "drawnWinner"]] : [])];
+        for (const [idx, role] of subjects) {
+          const key = `${role}:${idx}`;
+          let o = ra.get(key);
+          if (!o) ra.set(key, (o = { idx, role, reached3Ms: null, maxLeadWidths: 0, maxLeadPct: 0, maxLeadMs: null, finWidths: null }));
+          const pos = byT.findIndex((r) => r.index === idx);
+          const me = byT[pos];
+          if (!me) continue;
+          if (o.reached3Ms == null && pos < 3) o.reached3Ms = ms;
+          if (o.reached3Ms != null && pos === 0 && !me.finished && byT[1]) {
+            const w = widths(me, byT[1]);
+            if (w > o.maxLeadWidths) {
+              o.maxLeadWidths = w;
+              o.maxLeadPct = state.finishT > 0 ? (100 * (me.t - byT[1].t)) / state.finishT : 0;
+              o.maxLeadMs = ms;
+            }
+          }
+          if (o.finWidths == null && me.finished) {
+            // the next racer in FINISH ORDER: the one home just before him, or, if he is first home,
+            // the leading racer still running
+            const home = state.racers.filter((r) => r.finished && r.index !== idx && (r.finishTimeMs ?? Infinity) <= (me.finishTimeMs ?? Infinity));
+            const ahead = home.sort((a, b) => b.finishTimeMs - a.finishTimeMs)[0];
+            const other = ahead ?? byT.find((r) => !r.finished && r.index !== idx);
+            if (other) o.finWidths = +widths(me, other).toFixed(3);
+          }
+        }
+      }
       while (tHist.length > 1 && ms - tHist[0][0] > 1000) tHist.shift();
 
       if (s === "COMEBACK_ZOOM" && prev !== "COMEBACK_ZOOM") {
@@ -405,6 +453,25 @@ for (const geo of tracks) {
       .map((r) => ({ index: r.index, name: r.name ?? null, finishTimeMs: r.finishTimeMs ?? null }))
       .sort((a, b) => (a.finishTimeMs ?? Infinity) - (b.finishTimeMs ?? Infinity));
     if (TIMELINE_OUT) timelines.push({ track: geo.id, seed, cast, finishes, rows: tl });
+    if (RUNAWAY_OUT) {
+      const placeOf = new Map(finishes.map((f, i) => [f.index, i + 1]));
+      for (const o of ra.values()) {
+        const place = placeOf.get(o.idx) ?? null;
+        const mine = finishes[place - 1]?.finishTimeMs ?? null;
+        const next = place === 1 ? finishes[1]?.finishTimeMs : finishes[place - 2]?.finishTimeMs;
+        runawayRows.push({
+          track: geo.id, open: !geo.closed, racers: RACERS, seed, role: o.role, idx: o.idx,
+          drawn: meta.racePlanController?.getTargetRank?.(o.idx) ?? null,
+          place,
+          // + = his lead over the runner-up (he won); - = his gap to the racer home just before him
+          finishMarginS: mine == null || next == null ? null : +((next - mine) / 1000).toFixed(3),
+          finishMarginWidths: o.finWidths,
+          reached3: o.reached3Ms != null,
+          maxLeadWidths: +o.maxLeadWidths.toFixed(3),
+          maxLeadPct: +o.maxLeadPct.toFixed(3), // his lead as a percentage of the race distance
+        });
+      }
+    }
     if (DURATION_OUT) {
       const placeOf = new Map(finishes.map((f, i) => [f.index, i + 1]));
       const raceRow = { track: geo.id, open: !geo.closed, racers: RACERS, seed, names: NAME_SET ?? "current" };
@@ -452,3 +519,4 @@ for (const s of shots)
 if (JSON_OUT) writeFileSync(JSON_OUT, JSON.stringify({ races, shots }, null, 2));
 if (TIMELINE_OUT) writeFileSync(TIMELINE_OUT, JSON.stringify(timelines));
 if (DURATION_OUT) writeFileSync(DURATION_OUT, JSON.stringify(durationRows));
+if (RUNAWAY_OUT) writeFileSync(RUNAWAY_OUT, JSON.stringify(runawayRows));
