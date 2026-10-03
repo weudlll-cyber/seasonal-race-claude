@@ -108,3 +108,40 @@ No finding needed a code change.
 The probe server was stopped. Per the owner's authorization of 2026-10-03, `C:\tmp\probe` and the
 other listed folders were deleted with `Remove-Item -Recurse -Force`. What remains is listed in the
 report of the block that ran this.
+
+## Part 3 — 2026-10-04, the Docker path with `docker compose up` (branch `release/probe-docker`)
+
+**Setup:**
+- a fresh archive of master `34398b25` in a throwaway folder;
+- `docker-compose.override.yml` copied from the example, plus three probe-only lines — host port
+  4102 by `ports: !override` (host port 4000 is in use on this machine), `RA_PUBLIC_ORIGIN` and a
+  setup token;
+- project name `probe-docker`, so nothing collides with any other compose project.
+
+The HTTP steps ran as a node script against `127.0.0.1:4102` only, by the owner's authorization of
+2026-10-03.
+
+| step | result |
+| --- | --- |
+| `docker compose up -d --build` | built, started, **healthy**, published on `127.0.0.1:4102` only. No client build was made first, and none was needed |
+| first admin | `201` |
+| sign in | `200`, `/api/auth/me` `200` |
+| one real race (Chromium, at the public origin) | stored as **`REB5T9`**; the only host contacted was the probe |
+| backup, from the host | `races.sqlite` and `sessions.sqlite` copied online, 30 items; `sha256sum -c` prints `OK` |
+| stop, delete the data folder, restore | `docker compose stop`; `server/data` deleted; `--restore … --into server/data`: 30 items |
+| **users back?** | **yes**: `admin` signs in (`200`) |
+| **race back?** | **yes**: `GET /api/races/REB5T9` answers `200` |
+| cleanup | `docker compose -p probe-docker down -v --rmi local`: container, network and image removed. There was no named volume, because the data is a bind mount. The builder cache remains |
+
+### Findings, part 3
+
+| # | where | the exact sentence | kind | outcome |
+| --- | --- | --- | --- | --- |
+| 9 | *Docker* | *"Run `npm run build` in `client/` first. The image copies a build, it does not make one."* and the named build context `additional_contexts: { client: ./client }` | **wrong**: `server/Dockerfile` builds the client in its own first stage; neither the named context nor the prior build exists | **doc fixed**, the manual `docker build` line with it |
+| 10 | *Docker* | *"Behind a proxy, close it in your own override file."* | **incomplete**: a plain `ports:` list in an override is ADDED to `4000:4000`; replacing it takes `ports: !override` | **doc fixed** |
+| 11 | *Docker* (nothing said) | — | **missing**: the shipped compose file is a development setup — `./server/src` live with `node --watch`, and the data in `./server/data` on the host | **doc fixed** |
+| 12 | *Docker* (nothing said) | — | **missing**: no backup or restore for the Docker path; the image has no `scripts/`. With this compose file the data is a host folder, and the host-side backup and restore worked | **doc fixed** (the commands as run) |
+| 13 | DEPLOY-NOTES §3 | *"`docker-compose.yml` does set a dev value, so compose users are covered"* (the setup token) | **wrong**: the compose file sets only `PORT` | **doc fixed** |
+
+No finding needed a code change. Left behind: the folder `C:\tmp\probe-docker` (its data and backup).
+Deleting it was not part of the authorization of 2026-10-04, so it is listed rather than deleted.
