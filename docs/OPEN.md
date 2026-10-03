@@ -3,7 +3,9 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-03**, from PART ONE's **thirteen** rows. ★ **BROWSER-SPECS-2 (2026-10-03)** closed the
+Re-derived on **2026-10-03**, from PART ONE's **twelve** rows. ★ **The comeback-runaway row closed on 2026-10-03**
+by the owner's rule of that day (COMEBACK-RUNAWAY-1: the comebacker's largest lead is not larger than
+the drawn winner's in any field size) — thirteen to **twelve**. ★ **BROWSER-SPECS-2 (2026-10-03)** closed the
 two failing production-arm specs: both pass 10 of 10 — fourteen to **thirteen**. ★ **PAIR-REACH-SCOPE-1 (2026-10-03)** closed the
 `pair-reach-census` row: it now refuses a scope that names nothing — fifteen to **fourteen**. ★ **The structural-proposals row closed on
 2026-10-03**: P1 (the camera director split) and P4 (the race screen split) are merged, P2 and P3 were
@@ -49,10 +51,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2266) holds exactly THIRTEEN unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 5 in
+(lines 15–2261) holds exactly TWELVE unchecked `- [ ]` rows** — 5 in *DELIVERY-CLEAN-1*, 4 in
 *Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and
-*Build-identity residuals*. *(Re-counted 2026-10-03 after BROWSER-SPECS-2.)* Every current count on
-this page says thirteen.
+*Build-identity residuals*. *(Re-counted 2026-10-03 after the comeback-runaway row closed.)* Every current
+count on this page says twelve.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -69,7 +71,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The thirteen rows in section 0 are all WORK**, and that is still true.
+work. **The twelve rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -80,7 +82,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all thirteen, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all twelve, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -137,9 +139,6 @@ because nobody looked.**
 12. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.
-13. ★ **NEW 2026-10-02 — his observation**: in his Quick Test (River Run, seed 3) the comeback racer
-   went on far into the lead after the comeback shot cut away. A dated fact; no analysis attached.
-
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
 the decision about the default is still his; what is closed is that nobody was told.
