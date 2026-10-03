@@ -754,15 +754,6 @@ nothing is designed here, no key is added, and no change is implied.
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
 
-- [ ] ★ **THE PRE-COMMIT HOOK DOES NOT DETECT COMMITTED CONFLICT MARKERS — observed 2026-10-03; a
-      proposal, not built.** A merge commit was made with `<<<<<<<` / `>>>>>>>` markers still in
-      `reports/evolution/INDEX.md` and `reports/night/MORNING-2026-10-02.md`: the script that was to
-      resolve them failed on a Windows path, and the hook printed `GUARDS: PASS 9   FAIL 0`. Caught by
-      reading the files, and amended before the push. **Proposal:** a hook guard that fails on a staged
-      line beginning `<<<<<<< `, `||||||| ` or `>>>>>>> ` in a tracked text file. A bare `=======` is
-      left out, because Markdown uses it as a heading underline. **verify:** stage a file with a line
-      `<<<<<<< HEAD` and commit; today the hook passes it.
-
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
 - [x] ~~**The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
@@ -2276,6 +2267,25 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **THE PRE-COMMIT HOOK REFUSES CONFLICT MARKERS — CLOSED 2026-10-04 (HOOK-CONFLICT-MARKERS-1).**
+      `scripts/check-conflict-markers.mjs` runs in the hook with `--staged`, reading the staged blob of
+      every staged file, never the working tree. In `verify` it scans every tracked file. It refuses a
+      line that begins with seven `<` or `>` followed by a space or nothing, or a line of exactly seven
+      `=`; it names the file and the line. **No file is excluded:** on 2026-10-04 no tracked file had
+      such a line, and the guard and its test build the markers at run time. A Markdown setext heading
+      would be refused, and this repository writes `#` headings. `scripts/check-conflict-markers.test.mjs`
+      has 6 tests against a scratch repository. **Sabotage:** dropping the lone-divider shape reddens
+      two tests; reading the working tree instead of the index reddens the staged-content test.
+      *The row as it stood:*
+      **THE PRE-COMMIT HOOK DOES NOT DETECT COMMITTED CONFLICT MARKERS — observed 2026-10-03; a
+      proposal, not built.** A merge commit was made with `<<<<<<<` / `>>>>>>>` markers still in
+      `reports/evolution/INDEX.md` and `reports/night/MORNING-2026-10-02.md`: the script that was to
+      resolve them failed on a Windows path, and the hook printed `GUARDS: PASS 9   FAIL 0`. Caught by
+      reading the files, and amended before the push. **Proposal:** a hook guard that fails on a staged
+      line beginning `<<<<<<< `, `||||||| ` or `>>>>>>> ` in a tracked text file. A bare `=======` is
+      left out, because Markdown uses it as a heading underline. **verify:** stage a file with a line
+      `<<<<<<< HEAD` and commit; today the hook passes it.
 
 - [x] ★ **THE COMEBACK RACER RUNNING AWAY — CLOSED 2026-10-03, by the owner's rule of that day: the
       row closes if [COMEBACK-RUNAWAY-1](../reports/evolution/COMEBACK-RUNAWAY-1.md) shows the
