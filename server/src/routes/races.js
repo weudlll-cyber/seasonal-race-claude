@@ -44,6 +44,7 @@
 
 import express from 'express';
 import { createRaceStore } from '../races/raceStore.js';
+import { evaluatePeriod } from '../races/periodEvaluation.js';
 
 /** One store per process, opened lazily so importing this module opens no file. */
 let defaultStore = null;
@@ -129,6 +130,27 @@ export function createRacesRouter({ store } = {}) {
       offset: req.query.offset,
     });
     return res.json({ ...page, team });
+  });
+
+  // GET /evaluation?from=<ISO>&to=<ISO> — PERIOD-EVALUATION-1. The team's real races finished in
+  // the half-open window, counted by NAME (server/src/races/periodEvaluation.js). Quick Tests and
+  // unmarked races are left out and counted as such. ★ Declared BEFORE `/:shortKey`, or Express
+  // would read "evaluation" as a short key and answer 404.
+  router.get('/evaluation', (req, res) => {
+    const { from, to } = req.query;
+    const valid = (v) => typeof v === 'string' && !Number.isNaN(Date.parse(v));
+    if (!valid(from) || !valid(to) || !(Date.parse(from) < Date.parse(to))) {
+      return res.status(400).json({
+        error: 'A period needs "from" and "to" as dates or instants, with "from" before "to".',
+      });
+    }
+    // The store compares `finished_at` as TEXT, which is right only when both sides have one form:
+    // every stored instant is `toISOString()` output, so the bounds are brought to the same form.
+    const fromIso = new Date(from).toISOString();
+    const toIso = new Date(to).toISOString();
+    const team = req.authUser?.team;
+    const races = team ? resolveStore().listRacesInPeriod(team, fromIso, toIso) : [];
+    return res.json({ from: fromIso, to: toIso, ...evaluatePeriod(races) });
   });
 
   // GET /:shortKey — one race, by the name a person can read aloud.

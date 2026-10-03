@@ -969,6 +969,10 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       ★ **What is still open on this row, unchanged:** the evaluation itself — the period, the table,
       the points rule, and the controls. **Nothing of that was built.** What the marker buys is that
       when it is built, excluding Quick Tests is a filter over a recorded fact rather than a guess.
+      ★ **2026-10-04 — BUILT on branch `feat/period-evaluation`, not merged:
+      [PERIOD-EVALUATION-1](../reports/release/PERIOD-EVALUATION-1.md).** A Dev Screen section with a
+      chosen period and a table by NAME; Quick Tests and unmarked races left out; the points rule a
+      setting, OFF with no ladder. Eleven choices are listed there as questions for him.
 
       ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
       the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation

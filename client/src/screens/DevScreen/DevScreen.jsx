@@ -19,6 +19,7 @@ import TrackManager from './sections/TrackManager.jsx';
 import BrandingProfiles from './sections/BrandingProfiles.jsx';
 import RaceDefaults from './sections/RaceDefaults.jsx';
 import RaceHistory from './sections/RaceHistory.jsx';
+import PeriodEvaluation from './sections/PeriodEvaluation.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import RaceTuningSection from './sections/RaceTuningSection.jsx';
@@ -92,6 +93,16 @@ const SECTIONS = [
     label: 'Race History',
     desc: 'View, filter, and export past races',
     component: RaceHistory,
+    tier: 'operator',
+  },
+  // PERIOD-EVALUATION-1 (2026-10-04): the owner's period evaluation. Operator tier, beside the race
+  // history it reads from — a choice listed for the owner in reports/release/PERIOD-EVALUATION-1.md.
+  {
+    id: 'period-evaluation',
+    icon: '🏁',
+    label: 'Period Evaluation',
+    desc: 'Races, wins and podiums per name over a period you choose',
+    component: PeriodEvaluation,
     tier: 'operator',
   },
   // ── Tier 2 — Advanced ────────────────────────────────────

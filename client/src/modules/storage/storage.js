@@ -14,6 +14,7 @@ export const KEYS = {
   ACTIVE_SESSION: 'racearena:activeSession',
   RACE_DEFAULTS: 'racearena:raceDefaults',
   RACE_HISTORY: 'racearena:raceHistory',
+  PERIOD_EVALUATION_CONFIG: 'racearena:periodEvaluationConfig',
   ACTIVE_GROUP: 'racearena:activeGroup',
   AUTO_SCALE_CONFIG: 'racearena:autoScaleConfig',
   BASE_SPEED_CONFIG: 'racearena:baseSpeedConfig',

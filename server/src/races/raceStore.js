@@ -527,6 +527,28 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   }
 
   /**
+   * Every race a team finished in a period — PERIOD-EVALUATION-1.
+   *
+   * The window is HALF-OPEN, `from <= finished_at < to`, in ISO-8601 instants the caller chose, so
+   * two adjacent periods never count a race twice and the server assumes no time zone: the client
+   * turns the user's local dates into instants. Oldest first. It reads the `races_by_team` index,
+   * whose shape (one team, ordered by finish) is exactly this query's.
+   *
+   * ★ NOT PAGINATED, unlike `listRacesPage`, because an evaluation needs every race of its period.
+   * The bound is the period the user chose; a period long enough to make that expensive is a
+   * question for the owner, recorded in the report rather than guessed at here.
+   */
+  function listRacesInPeriod(team, from, to) {
+    if (!isWellFormedTeam(team)) return [];
+    return db
+      .prepare(
+        'SELECT * FROM races WHERE team_normalized = ? AND finished_at >= ? AND finished_at < ? ORDER BY finished_at ASC, id ASC'
+      )
+      .all(normalizeTeam(team), from, to)
+      .map(hydrate);
+  }
+
+  /**
    * One PAGE of a team's races, newest first, with whether there is another.
    *
    * ★ PAGINATED FROM THE FIRST VERSION, on purpose, with three rows in the table. A list that is
@@ -569,6 +591,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     getRaceByShortKey,
     listRacesByTeam,
     listRacesPage,
+    listRacesInPeriod,
     getRacerTypes,
     counts,
     close: () => db.close(),

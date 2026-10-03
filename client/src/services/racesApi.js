@@ -59,6 +59,21 @@ export async function postRace(payload) {
 }
 
 /**
+ * PERIOD-EVALUATION-1: this team's real races finished in `[from, to)`, counted by name. The team is
+ * read from the session server-side, as for every race read. Quick Tests are left out by the server.
+ *
+ * @param {string} from  ISO instant, inclusive
+ * @param {string} to    ISO instant, exclusive
+ * @returns {Promise<{from: string, to: string, counted: number, quickTestsExcluded: number,
+ *   rows: Array<{name: string, races: number, wins: number, podiums: number, places: object}>}>}
+ */
+export async function fetchPeriodEvaluation(from, to) {
+  const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  const res = await apiCall(`${BASE_URL}/evaluation?${q}`, { _skipAuthRedirect: true });
+  return res.json();
+}
+
+/**
  * One page of THIS TEAM's races, newest first. The team is read from the session server-side; there
  * is no team parameter here and there must not be one.
  *
