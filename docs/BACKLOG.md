@@ -1107,6 +1107,11 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       owner's look of that day ([report](../reports/evolution/SHIP-OWNER-COSMETIC-1.md)); his camera
       settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
       the player group.**
+      ★ **2026-10-04 — the difference, field by field: [DELIVERY-DIFF-1](../reports/release/DELIVERY-DIFF-1.md)**
+      (branch `docs/delivery-diff`, read-only). Of the 12 shipped units, 9 are identical to his. The
+      differences are searound's effects (none shipped, bubbles in his) and seatrack's bubbles (count
+      100 → 36,000, size and opacity changed), plus the default player group's edit time only. Not
+      shipped: his own brand, two test groups and three backgrounds that no track uses.
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
