@@ -12,7 +12,9 @@
 
 ## ★ What could NOT be exercised, and why
 
-**Two permission prompts in this session denied `curl`.** One was the archive download from GitHub
+★ *Corrected 2026-10-03 (part 2, below): these were not prompts. They were the project's deny
+list, `.claude/settings.json:150` `"Bash(curl *)"` and `:131` `"Bash(rm -rf /*)"`, which no approval
+overrides.* **Two permission prompts in this session denied `curl`.** One was the archive download from GitHub
 (install step 2). The other was the request to this probe's own server on `127.0.0.1:4100`
 (install step 6). Neither was routed around by another tool.
 
@@ -71,3 +73,38 @@ No finding needed a code change, so there is no `fix/probe-*` branch.
 - **Docker.** The container `probe-install-1` and the image
   `racearena-49027427…-server:latest` were removed. The lists of containers and images match their
   state before the probe. The builder cache from `docker compose build` remains.
+
+## Part 2 — 2026-10-03, the steps that need requests (branch `release/probe-install-2`)
+
+**The owner's authorization, 2026-10-03:** the HTTP steps run as a node script, only against the
+probe server. The `curl` deny rule stays as it is. The probe is the same install as above:
+`49027427`, port 4100, its own data folder.
+
+| guide step | result |
+| --- | --- |
+| install 5 · start with the setup token | OK |
+| install 6 · first admin | `201 {"username":"admin","role":"admin","team":"Seasonal Entertainment"}`. Sent to `http://127.0.0.1:4100` with `Origin: http://localhost:4100` (finding 6) |
+| install 7 · restart without the token | OK |
+| install 8 · sign in | API `200`, `/api/auth/me` `200`. **In the browser: failed at `127.0.0.1:4100`, worked at `localhost:4100`** (finding 7) |
+| races | three Quick Tests run in Chromium (Playwright, from a node script) at `localhost:4100`: stored as **`7TUJ4W`**, **`PGVBAV`**, **`M3GU7W`**. The only host contacted was the probe server |
+| backup | `races.sqlite` (77,824 bytes) and `sessions.sqlite` copied online; 29 items; `sha256sum -c` prints `OK` |
+| delete the data folder | `Remove-Item -Recurse -Force` on the data folder only |
+| restore | `--restore … --into` the deleted folder: 29 items, `users.json` and `races.sqlite` among them |
+| **users back?** | **yes**: `admin` signs in (`200`), `/api/auth/me` `200` |
+| **races back?** | **yes**: `GET /api/races/<key>` answers `200` for all three keys, with their finish times |
+
+### Findings, part 2
+
+| # | where | the exact sentence | kind | outcome |
+| --- | --- | --- | --- | --- |
+| 6 | install step 6 | `curl -X POST "$RA_PUBLIC_ORIGIN/api/auth/setup"` | finding 3 from part 1, now **verified**. Before a proxy or a name exists, the request can go to `http://127.0.0.1:$PORT` with the same `Origin` header, and is accepted | **doc fixed** |
+| 7 | install step 8 | *"Open the address and sign in."* | unclear, and it fails: the server tells the app to call `RA_PUBLIC_ORIGIN` (`server/src/runtimeConfig.js`), so the same server opened under another name shows *"The server is not answering"* and sign-in fails | **doc fixed** |
+| 8 | (no sentence) | — | the app sends a finished race at its NEXT contact with the server (`client/src/modules/pendingRaces.js`, by design, no polling). A race finished just before the browser closes reaches the server later. It is not lost: it stays pending on that device | **recorded, not a defect** |
+
+No finding needed a code change.
+
+### Cleaned up
+
+The probe server was stopped. Per the owner's authorization of 2026-10-03, `C:\tmp\probe` and the
+other listed folders were deleted with `Remove-Item -Recurse -Force`. What remains is listed in the
+report of the block that ran this.

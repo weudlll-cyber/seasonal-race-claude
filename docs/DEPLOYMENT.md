@@ -221,6 +221,11 @@ curl -X POST "$RA_PUBLIC_ORIGIN/api/auth/setup" \
 request that names no origin, and answers `403 {"error":"origin required"}`. The earlier version
 of this command omitted the header and failed exactly that way.
 
+★ **If that address does not reach the server yet** — no proxy, or no name pointing at the machine —
+send the same request to the server directly, `http://127.0.0.1:$PORT/api/auth/setup`, and keep the
+`Origin` header exactly as it is (`$RA_PUBLIC_ORIGIN`). The guard checks the header, not the address
+the request was sent to. *(Verified by PROBE-INSTALL-1, 2026-10-03: answered `201`.)*
+
 **7 · Restart without the token, and from now on start it the same way every time.** Stop the
 process from step 5, then:
 
@@ -237,7 +242,10 @@ unit reads the file as `EnvironmentFile=/etc/racearena.env`. *(The process-manag
 part of the literal run. Only the start command above was.)*
 
 **8 · Check it.** Open the address and sign in. That one action uses the accounts file, the
-session database and the built client. Then:
+session database and the built client. ★ **Open exactly the address in `RA_PUBLIC_ORIGIN`.** The
+server tells the app to send every request there. The same server opened under another name —
+its IP address, or `127.0.0.1` when the setting says `localhost` — loads the page and then reports
+*"The server is not answering"*, and sign-in fails. *(Found by PROBE-INSTALL-1, 2026-10-03.)* Then:
 
 ```sh
 cd "$RA_HOME/racearena-$VERSION"
