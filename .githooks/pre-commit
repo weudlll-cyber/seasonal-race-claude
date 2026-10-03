@@ -95,9 +95,13 @@ cd ..
 # The OUTPUT is still deterministic: each guard writes to its own file and they are replayed in the
 # fixed order below, so a failing run reads identically to the sequential version. That mattered —
 # the reason these are here at all is that a summary line was once read instead of a count.
+#
+# HOOK-CONFLICT-MARKERS-1 (2026-10-04): `check-conflict-markers.mjs --staged` reads the STAGED blob of
+# every staged file and refuses a conflict-marker line — a merge committed unresolved passed all nine
+# guards before it on 2026-10-03.
 fast_fail=0
 fast_pass=0
-guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs scripts/check-fallback-agreement.mjs scripts/check-seed-versions.mjs scripts/check-container-paths.mjs"
+guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs scripts/check-fallback-agreement.mjs scripts/check-seed-versions.mjs scripts/check-container-paths.mjs scripts/check-conflict-markers.mjs"
 
 # STAMP-TRAP-1: the stamp guard runs against the STAGED tree HERE, and only here.
 #
@@ -109,6 +113,7 @@ guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts
 guard_args() {
   case "$1" in
     scripts/check-measured-stamps.mjs) echo "--staged" ;;
+    scripts/check-conflict-markers.mjs) echo "--staged" ;;
     *) echo "" ;;
   esac
 }
