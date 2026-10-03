@@ -220,7 +220,7 @@ for (const c of CASES) {
     ? { ...DEFAULT_CAMERA_CONFIG, finishLineFraming: false }
     : DEFAULT_CAMERA_CONFIG;
   const race = buildRace(geo, identity, cameraConfig);
-  const { shape, st, trackWidthPx } = race;
+  const { shape, trackWidthPx } = race;
   const bsX = shape.isOpen ? 1.5 : CW / geo.worldWidth;
   const bsY = shape.isOpen ? 1.5 : CH / geo.worldHeight;
 

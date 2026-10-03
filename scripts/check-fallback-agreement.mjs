@@ -329,8 +329,11 @@ function literal(text) {
 //   BAND     `Number.isFinite(v) && … ? v : FALLBACK`, where `v` was read from `…someKey` above.
 //            Matched only when the guarded expression and the default sit in the same statement, so
 //            the key is unambiguous.
+// CLEANUP-2026-10-04: the trailing `(\s*\[)?` notes an INDEXED fallback — `?? TABLE[key]`, a per-key
+// table such as `DEFAULT_MAX_STATE_DURATION[state]` — which is not a mirror of the scalar default of
+// the same name. It used to be read as the bare constant and reported UNRESOLVED.
 const NULLISH =
-  /\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\?\?\s*(-?\d+(?:\.\d+)?|true|false|'[^'\n]*'|"[^"\n]*"|[A-Z][A-Z0-9_]{2,}(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)/g;
+  /\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\?\?\s*(-?\d+(?:\.\d+)?|true|false|'[^'\n]*'|"[^"\n]*"|[A-Z][A-Z0-9_]{2,}(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)(\s*\[)?/g;
 // THE BAND PATTERN IS BOUND TO ITS VARIABLE, and the first version was not — that is why this is
 // two steps rather than one regex. A single `.key; … ? v : CONST` window matched ACROSS statements:
 // in `framingConfig.js` it paired `const lff = config?.leaderForwardFrac;` with the
@@ -339,7 +342,10 @@ const NULLISH =
 // matched only when the value being tested is the SAME identifier that was read from the key.
 const BAND_DECL =
   /const\s+([a-zA-Z_$][\w$]*)\s*=\s*[^;\n]*?\.([a-zA-Z_][a-zA-Z0-9_]*)\s*;/g;
-const BAND_USE = /\?\s*([a-zA-Z_$][\w$]*)\s*:\s*([A-Z][A-Z0-9_]{2,})/g;
+// CLEANUP-2026-10-04: the `.key` is captured too, so `? v : DEFAULT_X.key` — the by-reference spelling
+// this guard recommends — is read as by reference. It used to be cut to `DEFAULT_X` and reported
+// UNRESOLVED (`durationModel.js`, `normalSpeedPxPerSec`).
+const BAND_USE = /\?\s*([a-zA-Z_$][\w$]*)\s*:\s*([A-Z][A-Z0-9_]{2,}(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)/g;
 
 // ══ RULE A — A LITERAL MIRRORING A MACHINE-READABLE HOME MUST AGREE WITH IT ══════════════════════
 //
@@ -466,8 +472,20 @@ export function findRegistryCopies(src, file, registry) {
 export function findPairs(src, file, defaults) {
   const consts = localConstants(src);
   const found = [];
-  const push = (key, rhs, kind) => {
+  const push = (key, rhs, kind, indexed = false) => {
     if (!defaults.has(key)) return; // not a mirror of any default
+    // An indexed fallback reads a per-key TABLE, not the scalar default: recorded, never compared.
+    if (indexed) {
+      found.push({
+        file,
+        key,
+        kind,
+        via: `${rhs}[…]`,
+        indexedSkip: true,
+        expected: defaults.get(key).value,
+      });
+      return;
+    }
     // THE SAFE SPELLING, and it is worth naming rather than merely tolerating:
     // `config?.k ?? DEFAULT_CAMERA_CONFIG.k` reads the canonical home, so it CANNOT disagree — it is
     // the shape MIN-RACERS-5 moved the Dev Screen slider to. Counted as `byRef` and never a finding.
@@ -551,7 +569,7 @@ export function findPairs(src, file, defaults) {
     }
     found.push({ file, key, kind, via: rhs, value, unresolved, expected });
   };
-  for (const m of src.matchAll(NULLISH)) push(m[1], m[2], "??");
+  for (const m of src.matchAll(NULLISH)) push(m[1], m[2], "??", !!m[3]);
   const declaredFrom = new Map();
   for (const m of src.matchAll(BAND_DECL)) declaredFrom.set(m[1], m[2]);
   for (const m of src.matchAll(BAND_USE)) {
@@ -658,12 +676,14 @@ const isExcepted = (p) =>
 
 const byRef = pairs.filter((p) => p.byRef);
 const typeSkipped = pairs.filter((p) => p.typeSkip);
+const indexedSkipped = pairs.filter((p) => p.indexedSkip);
 const unresolved = pairs.filter((p) => p.unresolved);
 const disagree = pairs.filter(
   (p) =>
     !p.byRef &&
     !p.unresolved &&
     !p.typeSkip &&
+    !p.indexedSkip &&
     (p.crossKey || !Object.is(p.value, p.expected)),
 );
 const newOnes = disagree.filter((p) => !isExcepted(p));
@@ -674,7 +694,7 @@ if (LIST) {
     const ok = !p.crossKey && Object.is(p.value, p.expected);
     // `skip` and `**` must mean the same thing here as in the failure list below. Two views of one
     // guard that disagree is precisely the confusion a guard is supposed to remove.
-    const mark = p.typeSkip ? "skip" : ok ? "  ok" : " ** ";
+    const mark = p.typeSkip || p.indexedSkip ? "skip" : ok ? "  ok" : " ** ";
     console.log(
       `${mark} ${p.file}:${p.key} ${p.kind} ${JSON.stringify(p.value)} vs default ${JSON.stringify(p.expected)} (via ${p.via})`,
     );
@@ -686,6 +706,7 @@ console.log(
     `${byRef.length} read the default BY REFERENCE and cannot disagree; ` +
     `${disagree.length} disagree (${known.length} on the exception list, ${newOnes.length} new); ` +
     `${typeSkipped.length} skipped (fallback type differs — a display fallback, not a mirror); ` +
+    `${indexedSkipped.length} skipped (indexed table — a per-key map, not a mirror); ` +
     `${unresolved.length} unresolved; ${ambiguous.size} key(s) unscannable (same key, two defaults).`,
 );
 console.log(

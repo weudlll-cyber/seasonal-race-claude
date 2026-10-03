@@ -834,3 +834,22 @@ test("RULE F reports the two kinds SEPARATELY, because they are not equally stro
     },
   );
 });
+
+// ── CLEANUP-2026-10-04: two spellings the guard used to report UNRESOLVED ─────────────────────────
+test("the ternary BY-REFERENCE spelling `? v : DEFAULT_X.key` is read as by reference", () => {
+  const src = `const v = config?.someOtherKey;
+    return Number.isFinite(v) && v > 0 ? v : DEFAULT_THING.someOtherKey;`;
+  const [p] = findPairs(src, "fake/durationModel.js", defaults);
+  assert.equal(p.key, "someOtherKey");
+  assert.equal(p.kind, "band");
+  assert.ok(p.byRef, "it reads the default itself, so it cannot disagree");
+  assert.ok(!p.unresolved, "it is not unresolved");
+});
+
+test("an INDEXED fallback `?? TABLE[key]` is a per-key table, skipped and counted, not unresolved", () => {
+  const src = `const m = (k) => profiles[k]?.someOtherKey ?? PER_STATE_TABLE[k];`;
+  const [p] = findPairs(src, "fake/cameraTimingComputation.js", defaults);
+  assert.equal(p.key, "someOtherKey");
+  assert.ok(p.indexedSkip, "recorded as an indexed skip");
+  assert.ok(!p.unresolved, "it is not unresolved");
+});

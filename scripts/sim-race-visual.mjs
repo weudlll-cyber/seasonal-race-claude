@@ -705,7 +705,6 @@ function runSimulation(track, seed, burstIndex, burstLen) {
     // Capture?
     if (frame >= captureStart && frame < captureEnd) {
       const localF = frame - captureStart;
-      const ts_s = (raceTs / 1000).toFixed(2);
       const world = renderFrame(
         shape,
         racers,
@@ -715,14 +714,7 @@ function runSimulation(track, seed, burstIndex, burstLen) {
         `f${frame}`,
       );
       const camera = renderCameraFrame(shape, racers, cam, ez);
-      captured.push({
-        world,
-        camera,
-        frame,
-        localF,
-        ts_s,
-        camState: camDir.hudState ?? camDir.state,
-      });
+      captured.push({ world, camera, localF });
     }
   }
 
@@ -761,7 +753,7 @@ for (const trackId of TRACKS) {
     const { frames, captureStart } = runSimulation(track, seed, bi, BURST_LEN);
     const startSec = (captureStart / 60).toFixed(2);
 
-    for (const { world, camera, localF, camState } of frames) {
+    for (const { world, camera, localF } of frames) {
       const base = `seed_${seed}__${burstLabel}__frame_${String(localF).padStart(2, "0")}`;
       writeFileSync(join(trackDir, `${base}__world.png`), world);
       writeFileSync(join(trackDir, `${base}__camera.png`), camera);
