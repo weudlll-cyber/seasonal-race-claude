@@ -1113,6 +1113,12 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       his Quick Test on River Run, Quick-Test seed 3 (production preview at `b1556bd5`), the comeback
       racer went on far into the lead after the comeback shot cut away. Recorded as he reported it.
       **verify:** none — an observation, not yet a question with a measurement attached.
+      ★ **2026-10-03 — measured: [COMEBACK-RUNAWAY-1](../reports/evolution/COMEBACK-RUNAWAY-1.md)**
+      (branch `measure/comeback-runaway`, 750 Quick-Test races, nothing changed). A comebacker's lead
+      after reaching 3rd is no larger than the drawn winner's. Comebackers win 15–30% of races and
+      drawn winners 22–37%: past `choreoReleaseProgress` the front five run unsteered. His own race,
+      re-run on current master, finishes with the comebacker 3rd. **Stays open** — what, if anything,
+      to change is his question.
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
