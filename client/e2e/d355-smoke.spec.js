@@ -252,7 +252,10 @@ test.describe('D3.5.5 — localStorage state management', () => {
     await goToDevRacerTypes(page);
 
     await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
-    await page.getByRole('dialog').getByRole('button', { name: /Reset all to defaults/i }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Reset all to defaults/i })
+      .click();
     await page.waitForTimeout(300);
 
     const overrides = await getOverrides(page);

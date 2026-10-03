@@ -69,7 +69,7 @@ test('a race this device recorded is still listed when the server page does not 
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ races: [], hasMore: false, offset: 0, limit: 20, team: 'e2e' }),
-    }),
+    })
   );
 
   // ── 3. ★ IT MUST STILL BE ON SCREEN ───────────────────────────────────────────────────────────

@@ -21,12 +21,20 @@ const CLOSED_GEOM = {
   backgroundImage: null,
   effects: [],
   innerPoints: [
-    { x: 280, y: 220 }, { x: 680, y: 220 }, { x: 860, y: 400 },
-    { x: 680, y: 580 }, { x: 280, y: 580 }, { x: 120, y: 400 },
+    { x: 280, y: 220 },
+    { x: 680, y: 220 },
+    { x: 860, y: 400 },
+    { x: 680, y: 580 },
+    { x: 280, y: 580 },
+    { x: 120, y: 400 },
   ],
   outerPoints: [
-    { x: 240, y: 180 }, { x: 720, y: 180 }, { x: 940, y: 400 },
-    { x: 720, y: 620 }, { x: 240, y: 620 }, { x: 80, y: 400 },
+    { x: 240, y: 180 },
+    { x: 720, y: 180 },
+    { x: 940, y: 400 },
+    { x: 720, y: 620 },
+    { x: 240, y: 620 },
+    { x: 80, y: 400 },
   ],
 };
 
@@ -35,14 +43,18 @@ async function seedGeometry(page) {
     localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
     const raw = localStorage.getItem('racearena:tracks');
     const tracks = raw ? JSON.parse(raw) : [];
-    const patched = tracks.map((t) =>
-      t.id === 'dirt-oval' ? { ...t, geometryId: geom.id } : t
-    );
+    const patched = tracks.map((t) => (t.id === 'dirt-oval' ? { ...t, geometryId: geom.id } : t));
     if (!tracks.length) {
       patched.push({
-        id: 'dirt-oval', name: 'Dirt Oval', defaultRacerTypeId: 'horse',
-        geometryId: geom.id, worldWidth: 1280, worldHeight: 720,
-        color: '#a0522d', trackWidth: 140, description: '',
+        id: 'dirt-oval',
+        name: 'Dirt Oval',
+        defaultRacerTypeId: 'horse',
+        geometryId: geom.id,
+        worldWidth: 1280,
+        worldHeight: 720,
+        color: '#a0522d',
+        trackWidth: 140,
+        description: '',
       });
     }
     localStorage.setItem('racearena:tracks', JSON.stringify(patched));
@@ -51,7 +63,7 @@ async function seedGeometry(page) {
 
 const DEFAULT_CFG = {
   enabled: true,
-  comfortThreshold: 0.70,
+  comfortThreshold: 0.7,
   softRepulsionStrength: 0.06,
   tWeight: 2.0,
   yWeight: 1.0,
@@ -130,9 +142,12 @@ test('V5 — avoidanceWarmupMs change is stored in localStorage immediately', as
 test('V6 — race engine reads custom behavior config from localStorage', async ({ page }) => {
   await seedGeometry(page);
 
-  await page.addInitScript((cfg) => {
-    localStorage.setItem('racearena:raceBehaviorConfig', JSON.stringify(cfg));
-  }, { ...DEFAULT_CFG, avoidanceDistance: 0.6 });
+  await page.addInitScript(
+    (cfg) => {
+      localStorage.setItem('racearena:raceBehaviorConfig', JSON.stringify(cfg));
+    },
+    { ...DEFAULT_CFG, avoidanceDistance: 0.6 }
+  );
 
   const errors = [];
   page.on('console', (msg) => {
@@ -141,10 +156,16 @@ test('V6 — race engine reads custom behavior config from localStorage', async 
 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
-  await page.getByPlaceholder(/player name/i).first().fill('A');
+  await page
+    .getByPlaceholder(/player name/i)
+    .first()
+    .fill('A');
   await page.getByRole('button', { name: /add/i }).click();
   await page.getByRole('tab', { name: /track/i }).click();
-  await page.getByRole('button', { name: /Dirt Oval/ }).first().click();
+  await page
+    .getByRole('button', { name: /Dirt Oval/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: /Start Race/i }).click();
   await page.waitForTimeout(3000);
 
@@ -155,9 +176,12 @@ test('V6 — race engine reads custom behavior config from localStorage', async 
 test('V7 — race works normally when behavior is disabled', async ({ page }) => {
   await seedGeometry(page);
 
-  await page.addInitScript((cfg) => {
-    localStorage.setItem('racearena:raceBehaviorConfig', JSON.stringify(cfg));
-  }, { ...DEFAULT_CFG, enabled: false });
+  await page.addInitScript(
+    (cfg) => {
+      localStorage.setItem('racearena:raceBehaviorConfig', JSON.stringify(cfg));
+    },
+    { ...DEFAULT_CFG, enabled: false }
+  );
 
   const errors = [];
   page.on('console', (msg) => {
@@ -166,12 +190,21 @@ test('V7 — race works normally when behavior is disabled', async ({ page }) =>
 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
-  await page.getByPlaceholder(/player name/i).first().fill('A');
+  await page
+    .getByPlaceholder(/player name/i)
+    .first()
+    .fill('A');
   await page.getByRole('button', { name: /add/i }).click();
-  await page.getByPlaceholder(/player name/i).first().fill('B');
+  await page
+    .getByPlaceholder(/player name/i)
+    .first()
+    .fill('B');
   await page.getByRole('button', { name: /add/i }).click();
   await page.getByRole('tab', { name: /track/i }).click();
-  await page.getByRole('button', { name: /Dirt Oval/ }).first().click();
+  await page
+    .getByRole('button', { name: /Dirt Oval/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: /Start Race/i }).click();
   await page.waitForTimeout(3000);
 
@@ -190,11 +223,17 @@ test('V8 — race with 5 racers and behavior enabled produces no errors', async 
   await page.goto('/setup');
   await ensureTrackGeometriesCached(page);
   for (const name of ['A', 'B', 'C', 'D', 'E']) {
-    await page.getByPlaceholder(/player name/i).first().fill(name);
+    await page
+      .getByPlaceholder(/player name/i)
+      .first()
+      .fill(name);
     await page.getByRole('button', { name: /add/i }).click();
   }
   await page.getByRole('tab', { name: /track/i }).click();
-  await page.getByRole('button', { name: /Dirt Oval/ }).first().click();
+  await page
+    .getByRole('button', { name: /Dirt Oval/ })
+    .first()
+    .click();
   await page.getByRole('button', { name: /Start Race/i }).click();
   await page.waitForTimeout(6000);
 

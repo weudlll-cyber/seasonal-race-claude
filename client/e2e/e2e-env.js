@@ -51,7 +51,9 @@ export const E2E = {
   // A DATA DIRECTORY OF ITS OWN, outside the repository. The server seeds it from server/seeds on
   // first boot (tracks, brands, backgrounds, player-groups), and having no `setup-complete.json` is
   // precisely what lets this run create its own first account.
-  dataDir: stable('RA_E2E_DATA_DIR', () => join(tmpdir(), `racearena-e2e-${randomUUID().slice(0, 8)}`)),
+  dataDir: stable('RA_E2E_DATA_DIR', () =>
+    join(tmpdir(), `racearena-e2e-${randomUUID().slice(0, 8)}`)
+  ),
 };
 
 /** Where the authenticated browser state is saved. Gitignored. */

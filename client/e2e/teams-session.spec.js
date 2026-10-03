@@ -55,10 +55,9 @@ async function signIn(page, { username, password }) {
   await page.getByLabel(/username/i).fill(username);
   await page.getByLabel(/password/i).fill(password);
   await page.getByRole('button', { name: /sign in/i }).click();
-  await expect(
-    page,
-    `sign-in as ${username} did not leave /login`
-  ).not.toHaveURL(/\/login/, { timeout: 15_000 });
+  await expect(page, `sign-in as ${username} did not leave /login`).not.toHaveURL(/\/login/, {
+    timeout: 15_000,
+  });
 }
 
 test.describe('TEAMS-1 — the admin assigns a team and the session carries it', () => {
@@ -82,7 +81,9 @@ test.describe('TEAMS-1 — the admin assigns a team and the session carries it',
     await signIn(page, { username: E2E.username, password: E2E.password });
   }
 
-  test('an admin creates a user with a team; that user signs in and their session has it', async ({ page }) => {
+  test('an admin creates a user with a team; that user signs in and their session has it', async ({
+    page,
+  }) => {
     const operator = newOperator();
 
     // ── 1. The admin — the account auth.setup.js created, which is the first admin and therefore

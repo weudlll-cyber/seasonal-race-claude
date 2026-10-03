@@ -36,7 +36,9 @@ async function history(page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem('racearena:raceHistory') ?? '[]'));
 }
 
-test('a race finishes with the server gone, is kept, and goes up when it returns', async ({ page }) => {
+test('a race finishes with the server gone, is kept, and goes up when it returns', async ({
+  page,
+}) => {
   // The race itself dominates this budget; see the note in garden-path-finishes.spec.js. If it ever
   // expires that is a finding, not a budget to raise.
   test.setTimeout(900_000);
@@ -121,8 +123,12 @@ test('a race finishes with the server gone, is kept, and goes up when it returns
   expect(resend.first.status, 'a race already stored answers 200, not 201').toBe(200);
   expect(resend.second.status).toBe(200);
   expect(resend.first.body.alreadyStored).toBe(true);
-  expect(resend.second.body.id, 'both resends name the SAME stored race').toBe(resend.first.body.id);
-  expect(resend.first.body.id, 'and it is the race the client already had').toBe(sent.sync.serverId);
+  expect(resend.second.body.id, 'both resends name the SAME stored race').toBe(
+    resend.first.body.id
+  );
+  expect(resend.first.body.id, 'and it is the race the client already had').toBe(
+    sent.sync.serverId
+  );
 });
 
 /** The body `POST /api/races` takes — the same shape `toServerPayload` builds, and NO team. */

@@ -67,7 +67,7 @@ async function waitForTrackGeometry(page, trackName) {
             ? 'geometry not cached yet'
             : 'ready';
         }, trackName),
-      { timeout: 20_000 },
+      { timeout: 20_000 }
     )
     .toBe('ready');
 }
@@ -97,7 +97,7 @@ async function startAndWaitForRace(page) {
 const activeRace = (page) =>
   page.evaluate(() => JSON.parse(sessionStorage.getItem('activeRace') ?? 'null'));
 
-test.describe('RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine\'s', () => {
+test.describe("RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this machine's", () => {
   test('copy, change the stage, paste — the identifier wins', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await seedRoster(page);
@@ -183,7 +183,7 @@ test.describe('RACE-IDENTIFIER-1 — a pasted identifier runs ITS race, not this
     await page.evaluate(() => {
       localStorage.setItem(
         'racearena:racerTypeOverrides',
-        JSON.stringify({ horse: { speedMultiplier: 2.5 } }),
+        JSON.stringify({ horse: { speedMultiplier: 2.5 } })
       );
     });
 

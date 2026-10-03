@@ -44,7 +44,10 @@ async function makeStartable(page) {
   await page.getByPlaceholder(/Enter player name/i).fill('Alice');
   await page.getByRole('button', { name: 'Add' }).click();
   await page.getByRole('tab', { name: 'Track' }).click();
-  await page.getByRole('button', { name: /Dirt Oval/ }).first().click();
+  await page
+    .getByRole('button', { name: /Dirt Oval/ })
+    .first()
+    .click();
 }
 
 /** The seed field, on the Settings tab — there is one field and no mode selector. */

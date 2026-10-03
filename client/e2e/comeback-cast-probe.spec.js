@@ -47,7 +47,10 @@ const TRACK = /Space Sprint/;
 // ★ The tests are REGISTERED either way and skip at run time, rather than the loop producing an
 //   empty file. A spec file that defines no tests makes `playwright test <this file>` exit non-zero
 //   with "no tests found", which reads exactly like a broken file to whoever tries it next.
-const ASKED = (process.env.RA_PROBE_SEEDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const ASKED = (process.env.RA_PROBE_SEEDS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 const SEEDS = ASKED.length ? ASKED : ['1'];
 
 for (const SEED of SEEDS) {
