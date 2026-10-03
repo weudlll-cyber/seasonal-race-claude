@@ -105,6 +105,6 @@ No finding needed a code change.
 
 ### Cleaned up
 
-The probe server was stopped. Per the owner's authorization of 2026-10-03, `C:	mp\probe` and the
+The probe server was stopped. Per the owner's authorization of 2026-10-03, `C:\tmp\probe` and the
 other listed folders were deleted with `Remove-Item -Recurse -Force`. What remains is listed in the
 report of the block that ran this.
