@@ -133,8 +133,8 @@ he wants the image to BE rather than in anything the code can settle. **He chose
 separate failures, all from ONE missing file."* It prints, at startup:
 
 - **`RA_BOOTSTRAP_TOKEN` missing** → `POST /api/auth/setup` answers 403 and the install can never be
-  signed into. *(`docker-compose.yml` does set a dev value, so compose users are covered; a plain
-  `docker run` is not.)*
+  signed into. *(Corrected 2026-10-04: this said `docker-compose.yml` sets a dev value. It sets only `PORT`, so a
+  compose install needs the token in its own override file too — PROBE-INSTALL-1 part 3.)*
 - **`RA_SESSION_SECRET` missing** → in development a random one is used and **every restart signs
   everyone out**. In production it is not a warning: `server/src/auth/session.js:68` **throws** and
   the server does not start.

@@ -407,11 +407,12 @@ backfill the ledger without re-running.
 
 ## Docker
 
-`docker compose build` supplies the client build to the image through a **named build context**. The
-image's build context is **the repository root** (`context: .` in `docker-compose.yml`), and
-`client/dist` is a BUILD ARTEFACT rather than source — the root `.dockerignore` is an allow-list of
-source — so `additional_contexts: { client: ./client }` keeps it an explicit input rather than
-something that must happen to be lying in the tree.
+**The image builds the client itself.** The image's build context is **the repository root**
+(`context: .` in `docker-compose.yml`), and `server/Dockerfile` has a first stage, `client-build`,
+that installs and builds `client/` from it; the server stage copies the result
+(`COPY --from=client-build`). *(Corrected 2026-10-04, PROBE-INSTALL-1 part 3: this said the build
+came in through a named build context, `additional_contexts: { client: ./client }`. Neither exists
+today — `docker compose build` from a fresh archive with no `client/dist` built the image.)*
 
 *(Corrected 2026-09-03. This said the context is `./server` and that the named context avoids "moving
 the build context to the repository root". IMAGE-STANDALONE-1 moved it to the root on 2026-09-01, so
@@ -419,12 +420,11 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
 
 **Consequences worth knowing before you build:**
 
-- **Run `npm run build` in `client/` first.** The image copies a build, it does not make one. Without
-  it the build fails on the missing `dist/`.
-- A manual build outside compose needs the context by hand, **from the repository root**:
-  `docker build --build-context client=./client -f server/Dockerfile .`
-  *(Corrected 2026-09-03: the old command ended `./server`, which builds the wrong context since
-  IMAGE-STANDALONE-1 moved it to the root.)*
+- **No client build is needed first.** The image makes its own. *(Corrected 2026-10-04: this said
+  "run `npm run build` in `client/` first — the image copies a build, it does not make one".)*
+- A manual build outside compose, **from the repository root**: `docker build -f server/Dockerfile .`
+  *(Corrected 2026-10-04: the command carried `--build-context client=./client`, for the named
+  context that no longer exists.)*
 - The image **IS standalone**: `server/utils/` and `shared/nameLimits.mjs` are COPYed in
   (`server/Dockerfile:32` and `:42`), so it runs with no mounts and no repository beside it.
   *(Corrected 2026-09-03. This said the opposite — that both came from bind mounts and that closing
@@ -442,7 +442,20 @@ decisions made elsewhere, and a stranger who stops here has neither:
   A container started without it says so in its first lines.
 - **`docker-compose.yml` publishes `4000:4000` on every interface.** Behind a proxy, close it in
   your own override file. [DEPLOY-NOTES.md §5](DEPLOY-NOTES.md#5---how-to-stand-this-up-without-leaving-a-door-open)
-  explains why the shipped file leaves it open.
+  explains why the shipped file leaves it open. ★ **Write it with `!override`** — `ports: !override`
+  followed by `- "127.0.0.1:4000:4000"`. A plain `ports:` list in an override file is ADDED to the
+  base file's, so the open `4000:4000` would stay. *(Found 2026-10-04, PROBE-INSTALL-1 part 3.)*
+- **`docker-compose.yml` is a development setup, and it says so in what it does:** it bind-mounts
+  `./server/src` (with `node --watch`), `./server/utils`, `./server/seeds` and `./server/data` from
+  the folder it is started in. **Your data is therefore the folder `server/data` beside the compose
+  file**, not a Docker volume, and it survives `docker compose down`.
+- **Backups with this compose file run from the host**, because the image carries no `scripts/`:
+  from the repository folder, `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node
+  scripts/backup.mjs`. The databases are copied online, so the container may keep running. To
+  restore: `docker compose stop`, move `server/data` aside,
+  `node scripts/backup.mjs --restore <archive> --into server/data`, then `docker compose start`.
+  *(Run 2026-10-04, PROBE-INSTALL-1 part 3: the user and the stored race were back after the
+  restore.)*
 
 *(Added by PROBE-INSTALL-1, 2026-10-03: following this guide literally, `docker compose build`
 succeeded and the image ran healthy with no mounts, but nothing here leads to the next step.)*
