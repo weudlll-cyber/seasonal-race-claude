@@ -1063,7 +1063,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d750c034 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5fc3fae5 2026-10-03 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
 
 ★★ **RE-MEASURED 2026-10-03 (HYGIENE-2026-10-03), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. The change in the closure is one comment in `CameraDirector.js` (`engine-reach`: inert, comments only); run rather than argued.
 
