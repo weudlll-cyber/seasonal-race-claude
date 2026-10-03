@@ -425,6 +425,20 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
   and it works." Verified by running it: `docker run` with no mounts and no environment serves the app
   and answers the API — PUBLISH-STEPS-1.)*
 
+**This section covers BUILDING the image, not running an install with it.** Running it needs two
+decisions made elsewhere, and a stranger who stops here has neither:
+
+- **The settings come from `docker-compose.override.yml`, which the repository does not ship.**
+  Copy `docker-compose.override.yml.example` and set the session secret and the rest in it. What goes
+  wrong without each value is in [DEPLOY-NOTES.md §3](DEPLOY-NOTES.md#3--the-config-file-that-must-exist-and-what-happens-without-it).
+  A container started without it says so in its first lines.
+- **`docker-compose.yml` publishes `4000:4000` on every interface.** Behind a proxy, close it in
+  your own override file. [DEPLOY-NOTES.md §5](DEPLOY-NOTES.md#5---how-to-stand-this-up-without-leaving-a-door-open)
+  explains why the shipped file leaves it open.
+
+*(Added by PROBE-INSTALL-1, 2026-10-03: following this guide literally, `docker compose build`
+succeeded and the image ran healthy with no mounts, but nothing here leads to the next step.)*
+
 ## Notes
 
 - **Reverse proxy**: if sitting behind nginx/Caddy, ensure `trust proxy` is honoured
