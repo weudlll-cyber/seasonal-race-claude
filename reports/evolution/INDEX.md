@@ -432,6 +432,12 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the drawn winner's (0.30–0.44). Comebackers (all drawn 2nd–5th) win 15–30% of races; drawn winners
   only 22–37%. The front five run unsteered past `choreoReleaseProgress` (`racePlanner.js:1276-1279`).
 
+- [BROWSER-SPECS-RECHECK-1.md](BROWSER-SPECS-RECHECK-1.md) — **the two failing production-arm specs, ten
+  runs each (2026-10-03, branch `measure/browser-specs-recheck`, nothing changed).**
+  `comeback-precedence` 0 of 10: the comeback cut delay drops its fixture's shot (3 of 3 pass before
+  the 2026-10-02 ship), and with the delay at 0 its "forced cut" signature cannot be read from the
+  display. `garden-path-finishes` 4 of 10: two `.count()` reads that do not wait.
+
 - [SHIP-OWNER-COSMETIC-1.md](SHIP-OWNER-COSMETIC-1.md) — **the owner's camera and the comeback shot,
   SHIPPED 2026-10-02 on his look of that day.** His cosmetic camera settings as the shipped defaults,
   COMEBACK-HOLD-2, COMEBACK-CUT-DELAY-1 (1500 ms, kept by his decision), and the comeback state's two

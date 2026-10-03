@@ -2293,7 +2293,9 @@ proposal arriving again in six months looking new.
       minimum's lower bound is held by `comebackHold.test.js`. `garden-path-finishes.spec.js`: its two
       scoreboard reads now poll with bounded timeouts (30 s and 10 s) instead of reading once; both
       assertions are unchanged. At the crossing the board held 1 to 18 finish times across the ten
-      runs, which is the race the single reads lost. *The row as it stood:*
+      runs, which is the race the single reads lost. The re-check that found why, ten runs each on
+      the old specs: [BROWSER-SPECS-RECHECK-1](../reports/evolution/BROWSER-SPECS-RECHECK-1.md).
+      *The row as it stood:*
       **`comeback-precedence.spec.js` and `garden-path-finishes.spec.js` FAIL on the production
       arm.** *(Three until 2026-09-25: `arrival-shape.spec.js` was the third and is re-pinned and
       green — the title is corrected here rather than left to disagree with the row's own body.)* Found while MEASURING the arm's per-spec cost, not while
