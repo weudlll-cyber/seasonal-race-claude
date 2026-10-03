@@ -45,6 +45,13 @@
 import express from 'express';
 import { createRaceStore } from '../races/raceStore.js';
 
+// VERIFY-ON-DEMAND-1 (2026-10-04): the engine path that re-races a stored record. It lives in
+// `scripts/lib/storedRaceReplay.mjs`, shared with `scripts/diag/replay-stored-race.mjs` — one copy.
+// Loaded LAZILY: it pulls in the race engine from `client/src`, which a source install carries and
+// the Docker image does not. Loading it at startup would take the whole server down on the image;
+// loading it on demand turns that into one route answering 501.
+const loadReplay = () => import('../../../scripts/lib/storedRaceReplay.mjs');
+
 /** One store per process, opened lazily so importing this module opens no file. */
 let defaultStore = null;
 function getDefaultStore() {
@@ -83,17 +90,21 @@ export function createRacesRouter({ store } = {}) {
       if (existing) {
         // Recognised and accepted quietly — the second arrival of a race is a retry that worked,
         // not a fault. The stored id comes back so the client can mark it sent either way.
-        return res
-          .status(200)
-          .json({ id: existing.id, shortKey: existing.shortKey, alreadyStored: true });
+        return res.status(200).json({
+          id: existing.id,
+          shortKey: existing.shortKey,
+          alreadyStored: true,
+        });
       }
 
       const result = resolveStore().storeRace({ ...body, team });
       // The key travels back on the store, so the client can show it beside the race the moment it
       // lands rather than fetching the list again to learn its own race's name.
-      return res
-        .status(201)
-        .json({ id: result.id, shortKey: result.shortKey, alreadyStored: !result.stored.race });
+      return res.status(201).json({
+        id: result.id,
+        shortKey: result.shortKey,
+        alreadyStored: !result.stored.race,
+      });
     } catch (err) {
       // A malformed race is 400 because sending the same bytes again will fail the same way. The
       // code travels with it so the client can record WHY that race never went up, against the
@@ -122,7 +133,14 @@ export function createRacesRouter({ store } = {}) {
     const team = req.authUser?.team;
     // No team, no races — an empty page rather than an error. This user simply has no history yet,
     // and a screen that shows nothing is the honest rendering of that.
-    if (!team) return res.json({ races: [], hasMore: false, offset: 0, limit: 0, team: null });
+    if (!team)
+      return res.json({
+        races: [],
+        hasMore: false,
+        offset: 0,
+        limit: 0,
+        team: null,
+      });
 
     const page = resolveStore().listRacesPage(team, {
       limit: req.query.limit,
@@ -144,6 +162,50 @@ export function createRacesRouter({ store } = {}) {
       return res.status(404).json({ error: 'No race with that key.' });
     }
     return res.json(race);
+  });
+
+  // POST /:shortKey/verify — VERIFY-ON-DEMAND-1 (decision of 2026-09-27, BACKLOG B1): race this
+  // stored race again from its own record and report whether every position and every finishing
+  // time agrees. ADMIN-ONLY (guards.js ROUTE_POLICY). The lookup is the same team-scoped one as GET,
+  // so another team's key is NOT FOUND here too.
+  //
+  // ★ WHAT A MATCH PROVES, AND WHAT IT DOES NOT: that the ENGINE produces this result from these
+  // inputs. It never proves the race happened — a fabricated record replays faithfully. That limit
+  // is the BACKLOG row's own wording, and it is why the answer is "agrees", never "genuine".
+  //
+  // ★ IT IS SYNCHRONOUS AND COSTS SECONDS: one full race on the server's thread (measured in
+  // reports/release/VERIFY-ON-DEMAND-1.md). Admin-only and on demand is what keeps that acceptable.
+  router.post('/:shortKey/verify', async (req, res) => {
+    const team = req.authUser?.team;
+    const race = team ? resolveStore().getRaceByShortKey(req.params.shortKey, team) : null;
+    if (!race) {
+      return res.status(404).json({ error: 'No race with that key.' });
+    }
+    let replay;
+    try {
+      replay = await loadReplay();
+    } catch {
+      return res.status(501).json({
+        error: 'Verifying a race needs the race engine, which this installation does not carry.',
+      });
+    }
+    const started = performance.now();
+    try {
+      const r = replay.replayStoredRace(race);
+      return res.json({
+        shortKey: race.shortKey,
+        identical: r.firstDiff === null,
+        positions: { match: r.posMatch, of: r.n },
+        finishTimes: { match: r.timeMatch, of: r.n },
+        firstDiff: r.firstDiff,
+        track: r.track,
+        racers: r.racers,
+        ms: Math.round(performance.now() - started),
+      });
+    } catch (e) {
+      if (e instanceof replay.StoredRaceRefusal) return res.status(422).json({ error: e.message });
+      throw e;
+    }
   });
 
   return router;

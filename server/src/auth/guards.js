@@ -59,6 +59,16 @@ const ROUTE_POLICY = [
     role: 'admin',
     desc: 'tracks promote/demote/export-seed — admin only (D7)',
   },
+  // VERIFY-ON-DEMAND-1 (2026-10-04): re-racing a stored race costs a full race on the server's
+  // thread, so it is admin-only. ★ It MUST be listed here: the drift test's operator allowlist
+  // admits any POST under `/api/races` by prefix, so without this entry the route would pass as
+  // operator+ and nothing would say so. `routePolicyDrift.test.js` pins this path to admin.
+  {
+    methods: ['POST'],
+    test: (p) => /^\/api\/races\/[^/]+\/verify$/.test(p),
+    role: 'admin',
+    desc: 'verify a stored race on demand — admin only (VERIFY-ON-DEMAND-1)',
+  },
 ];
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────

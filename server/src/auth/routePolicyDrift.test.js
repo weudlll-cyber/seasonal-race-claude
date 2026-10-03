@@ -164,3 +164,14 @@ describe('route-surface drift guard', () => {
     }
   });
 });
+
+// VERIFY-ON-DEMAND-1 (2026-10-04): the allowlist above admits any POST under `/api/races` BY PREFIX,
+// so the drift test alone would let the verify route pass as operator+. This pins it to admin.
+describe('POST /api/races/:shortKey/verify is admin-only', () => {
+  it('is classified admin by the route policy', () => {
+    expect(requiredRole('POST', '/api/races/ABC123/verify')).toBe('admin');
+  });
+  it('and storing a race stays operator+', () => {
+    expect(requiredRole('POST', '/api/races')).not.toBe('admin');
+  });
+});

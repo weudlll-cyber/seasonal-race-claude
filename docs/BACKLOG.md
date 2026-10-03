@@ -167,6 +167,12 @@ not an address which is right (§9.1).
       `worldConfigs` and reproduces the race — and §3.6 ran it against a real stored race
       (`W57FQA`) to **40 of 40 positions and 40 of 40 finishing times, to the millisecond**. The
       work is a way to reach that from the product. **COMMISSIONED, not built here.**
+      ★ **2026-10-04 — THE SERVER HALF IS BUILT on branch `feat/verify-on-demand`, not merged:
+      [VERIFY-ON-DEMAND-1](../reports/release/VERIFY-ON-DEMAND-1.md).** `POST /api/races/:shortKey/verify`
+      is admin-only and team-scoped, and reuses one replay module shared with the diagnostic script.
+      It reports agreement on positions and times; a falsified record is reported as not matching
+      (tested). Open-track races were refused by the old replay and are not now. Cost: 0.8–1.8 s at
+      20 racers, 3.9–6.5 s at 40. No button: where and for whom is his decision.
 
 - [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
       so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
