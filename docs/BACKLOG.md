@@ -584,14 +584,6 @@ source before it was moved rather than taken from a report:**
 
 ## The night of 2026-08-25 — everything established, in one place (2026-08-26)
 
-- [ ] ★ **`pair-reach-census` STILL ANSWERS A SCOPE THAT MATCHES NOTHING WITH A TABLE AND EXIT 0 —
-      opened 2026-10-02, the one remainder of HARNESS-EMPTY-SCOPE-1** (PART TWO). Its documented
-      `--tracks=a,b` matches nothing and exits 0. It is an engine-hull driver (it imports `raceCore.js`),
-      and wiring it to `scripts/lib/trackScope.mjs` pulled that shared place into the hull, so it was
-      left by rule. A fix must refuse the empty scope without making the shared place a hull file.
-      **verify:** `node scripts/pair-reach-census.mjs --tracks=no-such-track; echo $?` prints a table
-      and 0 while this row is open.
-
 
 **He asked for the day's findings collected so they can be taken one at a time.** Every item below is
 a FINDING. **No work is proposed here and no verdict is invented** — each says only what it is, what
@@ -2467,6 +2459,22 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **`pair-reach-census` REFUSES A SCOPE THAT NAMES NOTHING — CLOSED 2026-10-03
+      (PAIR-REACH-SCOPE-1, branch `fix/pair-reach-scope`).** An empty `--tracks=`, or any name no track
+      answers to, now exits 2 with nothing on stdout, and the documented `--tracks=a,b` runs both
+      tracks. The check reads the registry the tool already loads (`loadTracks()` from
+      `scripts/lib/raceDriver.mjs`: every geometry's `id` is the known set), so `trackScope.mjs` stays
+      outside the race hull. `scripts/pair-reach-census.test.mjs` covers the three refusals and the
+      two-track scope. Sabotaging the refusal reddens three tests; restoring the one-id lookup reddens
+      the fourth. *The row as it stood:*
+      **`pair-reach-census` STILL ANSWERS A SCOPE THAT MATCHES NOTHING WITH A TABLE AND EXIT 0 —
+      opened 2026-10-02, the one remainder of HARNESS-EMPTY-SCOPE-1** (PART TWO). Its documented
+      `--tracks=a,b` matches nothing and exits 0. It is an engine-hull driver (it imports `raceCore.js`),
+      and wiring it to `scripts/lib/trackScope.mjs` pulled that shared place into the hull, so it was
+      left by rule. A fix must refuse the empty scope without making the shared place a hull file.
+      **verify:** `node scripts/pair-reach-census.mjs --tracks=no-such-track; echo $?` prints a table
+      and 0 while this row is open.
 
 - [x] ★★ **THE STRUCTURAL PROPOSALS — CLOSED 2026-10-03: P1 and P4 merged, as the owner approved
       on 2026-10-02.** P1, the camera director split

@@ -44,7 +44,7 @@ const RACER_COUNTS = arg("racers", "30,70,100").split(",").map(Number);
 const SAMPLES = Number(arg("samples", "24"));
 const SECONDS = Number(arg("seconds", "60"));
 const SEED = Number(arg("seed", "1"));
-const ONLY = arg("tracks", "");
+const TRACKS_ARG = process.argv.find((a) => a.startsWith("--tracks="))?.slice("--tracks=".length) ?? null;
 const JSON_OUT = arg("json", "");
 
 // The two multipliers the gates use. Read from the shipped defaults rather than typed, so this tool
@@ -61,7 +61,32 @@ function shortestArcDeltaT(a, b) {
   return d > 0.5 ? 1 - d : d;
 }
 
-const tracks = loadTracks(ONLY ? { only: ONLY } : {});
+// PAIR-REACH-SCOPE-1: THE SCOPE IS CHECKED AGAINST THE REGISTRY THIS TOOL ALREADY LOADS. Omitted
+// `--tracks` means every track. An EMPTY value, or any name no track answers to, is refused with
+// exit 2 — the convention of the shared refusal (`scripts/lib/trackScope.mjs`,
+// `resolveTrackScope`), which this tool may NOT import: it drives `raceCore.js`, so it sits in the
+// race hull, and `scripts/lib/trackScopeWiring.test.mjs` keeps the shared place out of it.
+// The known set is `loadTracks()` itself — every geometry `buildRace` below can be handed — so
+// there is no second list. It also makes the documented `--tracks=a,b` work: `loadTracks({ only })`
+// matches ONE id, so a list of two used to match nothing and exit 0.
+const ALL_TRACKS = loadTracks();
+const ASKED = TRACKS_ARG == null ? null : TRACKS_ARG.split(",").map((s) => s.trim()).filter(Boolean);
+const UNKNOWN = ASKED ? ASKED.filter((id) => !ALL_TRACKS.some((g) => g.id === id)) : [];
+if (ALL_TRACKS.length === 0 || (ASKED && (ASKED.length === 0 || UNKNOWN.length > 0))) {
+  console.error(
+    `pair-reach-census: --tracks=${TRACKS_ARG ?? ""} names ${
+      ALL_TRACKS.length === 0 ? "nothing: no tracks exist at all" : ASKED.length === 0 ? "no track at all" : `no such track: ${UNKNOWN.join(", ")}`
+    }.
+` +
+      `  this repository has: ${ALL_TRACKS.map((g) => g.id).join(", ") || "(none)"}
+` +
+      `  There is no "all" — OMIT --tracks to run every track.
+` +
+      `  Refusing to run: a filter that matches nothing would report 0 races and exit 0.`,
+  );
+  process.exit(2);
+}
+const tracks = ASKED ? ALL_TRACKS.filter((g) => ASKED.includes(g.id)) : ALL_TRACKS;
 const rows = [];
 
 for (const geo of tracks) {
