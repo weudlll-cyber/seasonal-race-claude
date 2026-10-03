@@ -181,6 +181,10 @@ EOF
 chmod 600 "$RA_ENV_FILE"
 ```
 
+- ★ **The paths in this block are the example places from the layout table, written out, not
+  variables.** If you chose other places, change all four: the two directories in the `mkdir` line
+  and the `RA_DATA_DIR` and `RA_BACKUP_DIR` lines. Every later step reads them from the settings file,
+  so this is the only place they are typed. *(Found by PROBE-INSTALL-1, 2026-10-03.)*
 - `RA_PUBLIC_ORIGIN` is the address your visitors type. `npm run configure` asks for it instead,
   but it writes a Docker override file, so on this path you write the line yourself.
 - ★ **`RA_BIND_ADDRESS=127.0.0.1` is the recommended setting behind a reverse proxy** (nginx,
