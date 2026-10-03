@@ -181,6 +181,10 @@ EOF
 chmod 600 "$RA_ENV_FILE"
 ```
 
+- ★ **The paths in this block are the example places from the layout table, written out, not
+  variables.** If you chose other places, change all four: the two directories in the `mkdir` line
+  and the `RA_DATA_DIR` and `RA_BACKUP_DIR` lines. Every later step reads them from the settings file,
+  so this is the only place they are typed. *(Found by PROBE-INSTALL-1, 2026-10-03.)*
 - `RA_PUBLIC_ORIGIN` is the address your visitors type. `npm run configure` asks for it instead,
   but it writes a Docker override file, so on this path you write the line yourself.
 - ★ **`RA_BIND_ADDRESS=127.0.0.1` is the recommended setting behind a reverse proxy** (nginx,
@@ -420,6 +424,20 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
   `docker-compose.yml` already stated the property this denied: "run the image with no mounts at all
   and it works." Verified by running it: `docker run` with no mounts and no environment serves the app
   and answers the API — PUBLISH-STEPS-1.)*
+
+**This section covers BUILDING the image, not running an install with it.** Running it needs two
+decisions made elsewhere, and a stranger who stops here has neither:
+
+- **The settings come from `docker-compose.override.yml`, which the repository does not ship.**
+  Copy `docker-compose.override.yml.example` and set the session secret and the rest in it. What goes
+  wrong without each value is in [DEPLOY-NOTES.md §3](DEPLOY-NOTES.md#3--the-config-file-that-must-exist-and-what-happens-without-it).
+  A container started without it says so in its first lines.
+- **`docker-compose.yml` publishes `4000:4000` on every interface.** Behind a proxy, close it in
+  your own override file. [DEPLOY-NOTES.md §5](DEPLOY-NOTES.md#5---how-to-stand-this-up-without-leaving-a-door-open)
+  explains why the shipped file leaves it open.
+
+*(Added by PROBE-INSTALL-1, 2026-10-03: following this guide literally, `docker compose build`
+succeeded and the image ran healthy with no mounts, but nothing here leads to the next step.)*
 
 ## Notes
 

@@ -8,6 +8,9 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MORNING-2026-10-03.md](MORNING-2026-10-03.md) — the morning sheet for the 2026-10-03 chain:
+  done / running / open / needs the owner's word, updated after every piece on that piece's branch.
+
 - [MORNING-2026-10-02.md](MORNING-2026-10-02.md) — the morning sheet for the 2026-10-02 night chain:
   done / running / open / needs the owner's word, updated after every piece on that piece's branch.
 
