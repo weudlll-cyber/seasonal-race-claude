@@ -608,7 +608,7 @@
     "id": "minTargetScreenPx",
     "idKind": "configKey",
     "tier": "advanced",
-    "infoText": "The starting value for every racer type’s own “Min Sprite Screen Size” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name.",
+    "infoText": "The starting value for every racer type’s own “Size floor — this racer type only” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name.",
     "textStatus": "REWRITTEN"
   },
   {

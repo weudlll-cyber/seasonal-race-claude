@@ -108,7 +108,7 @@ export const CONTROL_INFO = {
   'AutoScaleSection:maxScale':
     'The largest racers may be grown to on a roomy track, as a multiple of their normal size.',
   'AutoScaleSection:minTargetScreenPx':
-    'The starting value for every racer type’s own “Min Sprite Screen Size” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name.',
+    'The starting value for every racer type’s own “Size floor — this racer type only” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name.',
   'AutoScaleSection:setPreviewWidth':
     'Try-out only, nothing is saved: enter a track width to see the scale the settings above would give.',
   'AutoScaleSection:setPreviewRacers':

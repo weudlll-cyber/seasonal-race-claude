@@ -378,7 +378,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 1.48 | Start — grid and racer size | `AutoScaleSection.jsx` | Reference Value | `referenceValue` (configKey) | advanced | The track-width-per-racer at which racers are drawn at their normal size. A race with more room per racer than this draws them larger; a crowded race draws them smaller. | REWRITTEN |
 | 1.49 | Start — grid and racer size | `AutoScaleSection.jsx` | Min Scale | `minScale` (configKey) | advanced | The smallest racers may be shrunk to on a crowded track, as a share of their normal size. | REWRITTEN |
 | 1.50 | Start — grid and racer size | `AutoScaleSection.jsx` | Max Scale | `maxScale` (configKey) | advanced | The largest racers may be grown to on a roomy track, as a multiple of their normal size. | REWRITTEN |
-| 1.51 | Start — grid and racer size | `AutoScaleSection.jsx` | Min Target Screen Px (Auto-Scale card — every racer type) | `minTargetScreenPx` (configKey) | advanced | The starting value for every racer type’s own “Min Sprite Screen Size” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name. | REWRITTEN |
+| 1.51 | Start — grid and racer size | `AutoScaleSection.jsx` | Min Target Screen Px (Auto-Scale card — every racer type) | `minTargetScreenPx` (configKey) | advanced | The starting value for every racer type’s own “Size floor — this racer type only” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name. | REWRITTEN |
 | 1.52 | Start — grid and racer size | `AutoScaleSection.jsx` | Formula Preview — Track Width | `setPreviewWidth` (handler) | advanced | Try-out only, nothing is saved: enter a track width to see the scale the settings above would give. | NEW |
 | 1.53 | Start — grid and racer size | `AutoScaleSection.jsx` | Formula Preview — Racer Count | `setPreviewRacers` (handler) | advanced | Try-out only, nothing is saved: enter a number of racers to see the scale the settings above would give. | NEW |
 | 1.54 | Speed changes during the race | `DynamicsTuningSection.jsx` | Reset (Speed Re-Roll) | `reset-speed-reroll` (testId) | advanced | Puts the five re-roll settings back to shipped. | NEW |
@@ -987,3 +987,10 @@ the `title` attributes of buttons that now carry an info icon saying the same.
 - The sections still save once on mount, as before; for a config in the app's own form that write is
   byte-identical, and a transient rewrite would be undone by the loaders' prune — the fixture checks
   the end state.
+
+**Coordinator's follow-up, 2026-10-05.** The Auto-Scale size floor's info text named the editor
+control by its old label; it now says "Size floor — this racer type only", the design's own wording,
+in `controlInfo.js`, `design.json` and the table above. `count-controls.mjs` prints 337 on the built
+tree because the source patterns it reads moved with the build; it counted the design's starting
+point (348). **The guard test, `devScreenChapters.guard.test.jsx`, is now the count of record** — it
+reaches all 348 controls by rendering.
