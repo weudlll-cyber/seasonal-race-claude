@@ -4,6 +4,15 @@ One line per report: what it tried → verdict → the lesson/outcome. This is t
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in [docs/fingerprints.json](../../docs/fingerprints.json)**, which is its one home — COMBO15 + margin hysteresis + lateral acceleration cap and everything minted since (lineage in [SIM.md](../../docs/SIM.md)).
 
+## Performance at large fields (2026-10-04)
+
+- [LARGE-FIELD-PERF-1.md](LARGE-FIELD-PERF-1.md) — 90 real browser races on the production build, frame
+  timing from `rAFProbe.js` → closed tracks at 40 are as smooth as at 20 (under 0.3 % of frames late);
+  open tracks at 80 are not (River Run 2 %, Mountainstreet 7 %, p95 35 ms), and the longest stutters
+  (Luger hill, 2–3 s at half rate) sit in the ending's wide shot. The project has no smoothness
+  threshold, so no BACKLOG row; whether to set one is the owner's. Quick Test reaches 80 only with the
+  `long` name list (the default holds 70).
+
 ## CORRECTIONS — findings that invalidate a number in a report below
 
 - **2026-09-14 — [DRAWN-PLACE-TRUTH-1](DRAWN-PLACE-TRUTH-1.md)'s "0 OF 717 CAST COMEBACKERS ARE DRAWN
