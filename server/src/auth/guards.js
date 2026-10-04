@@ -59,6 +59,14 @@ const ROUTE_POLICY = [
     role: 'admin',
     desc: 'tracks promote/demote/export-seed — admin only (D7)',
   },
+  // The period evaluation's points rule is SERVER-WIDE: every signed-in user reads it, only an
+  // admin sets it (the owner's decision of 2026-10-04, PERIOD-EVALUATION-1). GET stays operator+.
+  {
+    methods: ['PUT'],
+    test: (p) => /^\/api\/races\/evaluation\/points-rule$/.test(p),
+    role: 'admin',
+    desc: 'period evaluation points rule — admin sets, everyone reads (PERIOD-EVALUATION-1)',
+  },
 ];
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────

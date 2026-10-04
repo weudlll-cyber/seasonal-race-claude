@@ -69,6 +69,7 @@ import { canonicalString, contentId } from './contentAddress.js';
 import { generateShortKey } from './shortKey.js';
 import { normalizeShortKey } from '../../../shared/raceShortKey.mjs';
 import { normalizeRaceSource } from '../../../shared/raceSource.mjs';
+import { doubledNames, doubledNamesMessage } from '../../../shared/playerNames.mjs';
 
 const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sqlite');
 
@@ -263,6 +264,16 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     }
     if (!Array.isArray(race.names) || race.names.length === 0) {
       const err = new Error('storeRace requires a non-empty roster ("names")');
+      err.code = 'INVALID_ROSTER';
+      throw err;
+    }
+    // THE SAME NAME TWICE IN ONE RACE IS NOT ALLOWED (the owner's decision of 2026-10-04), with
+    // names compared ignoring case and spaces (`shared/playerNames.mjs`). Every roster path in the
+    // client refuses one before the race starts; this is the server's half, so a race that got past
+    // them anyway — an old pending upload, a hand-made request — is refused rather than filed.
+    const doubled = doubledNames(race.names);
+    if (doubled.length > 0) {
+      const err = new Error(doubledNamesMessage(doubled));
       err.code = 'INVALID_ROSTER';
       throw err;
     }

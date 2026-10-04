@@ -69,15 +69,6 @@ export const DEFAULT_BRANDING = [];
 export const DEFAULT_ACTIVE_SESSION = { activeBrandingProfileId: null };
 export const DEFAULT_RACE_HISTORY = [];
 
-// PERIOD-EVALUATION-1 (commissioned by the owner 2026-09-25, docs/BACKLOG.md): the POINTS RULE of the
-// period evaluation is a setting, chosen per evaluation, and NO numbers were adopted — so it starts
-// OFF with an empty ladder, and the evaluation shows plain counts (races, wins, podiums) until the
-// owner sets one on the Dev Screen. `pointsPerPlace[0]` is 1st place; a place beyond the list scores 0.
-export const DEFAULT_PERIOD_EVALUATION_CONFIG = {
-  pointsEnabled: false,
-  pointsPerPlace: [],
-};
-
 // Mean stays at 0.001045 while total min→max spread is reduced to ~17.7%
 // to reduce persistent pack clustering at high racer density.
 //

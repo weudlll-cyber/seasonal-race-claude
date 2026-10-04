@@ -973,6 +973,13 @@ Built fresh — the original server scaffold was deleted (incompatible architect
       [PERIOD-EVALUATION-1](../reports/release/PERIOD-EVALUATION-1.md).** A Dev Screen section with a
       chosen period and a table by NAME; Quick Tests and unmarked races left out; the points rule a
       setting, OFF with no ladder. Eleven choices are listed there as questions for him.
+      ★ **2026-10-04 — THE OWNER ANSWERED ALL ELEVEN, and the branch now follows them** (part two of
+      the same report): names match ignoring case and spaces; the same name twice in one race is
+      refused on every roster path and by the server; ordered by wins, 2nd places, 3rd places, races;
+      podium 1–3; the current month by default; UTC days; finishers only; a Dev Screen section for
+      every signed-in user; **the points rule SERVER-WIDE** — stored on the server, read by everyone,
+      set by admins only — which supersedes "chosen per evaluation" below; periods over 366 days
+      refused. Not merged until he has looked.
 
       ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
       the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation

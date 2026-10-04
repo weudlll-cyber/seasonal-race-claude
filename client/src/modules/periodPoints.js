@@ -3,8 +3,8 @@
 // Path:        client/src/modules/periodPoints.js
 // Project:     RaceArena — PERIOD-EVALUATION-1 (2026-10-04)
 // Description: The period evaluation's POINTS RULE, applied on the client. The server returns, per
-//              name, how often each place was reached (`places`); the rule is a Dev Screen setting
-//              (`DEFAULT_PERIOD_EVALUATION_CONFIG`), off by default, with no numbers adopted.
+//              name, how often each place was reached (`places`), and the rule itself — one for the
+//              whole server, off by default with no numbers adopted (server/src/races/pointsRule.js).
 // ============================================================
 
 /**

@@ -5,34 +5,55 @@
 // Description: The PERIOD EVALUATION the owner commissioned on 2026-09-25 (docs/BACKLOG.md): over a
 //              period the user chooses, a table of the races run in it, counted by NAME.
 //
-// ── WHAT IT COUNTS, AND THE THREE RULES THAT ARE NOT CHOICES ───────────────────────────────────
+// ── THE RULES, EACH THE OWNER'S DECISION OF 2026-10-04 UNLESS SAID OTHERWISE ────────────────────
 //
-// 1. QUICK TESTS DO NOT COUNT — a hard requirement of the row. A race counts only when its stored
-//    source says it is a real race: `isRealRace` from `shared/raceSource.mjs`, a POSITIVE equality.
-//    A race with no marker (every race stored before 2026-09-25) is a test, and stays out.
-// 2. THE TABLE COUNTS NAMES. The same name in two races is ONE row with two results behind it.
-// 3. NO POINTS ARE COMPUTED HERE. The row says the points rule is a setting chosen per evaluation and
-//    adopts no numbers, so the server returns, per name, how often each place was reached
-//    (`places`), and the client applies whatever rule the Dev Screen holds — none, by default.
-//
-// The choices this module DID have to make are listed in reports/release/PERIOD-EVALUATION-1.md as
-// questions for the owner: a name matches only exactly as stored; a name entered twice in one race
-// counts twice; the order is wins, then podiums, then races, then name.
+// 1. QUICK TESTS DO NOT COUNT — the row's own hard requirement (2026-09-25). A race counts only
+//    when its stored source says it is a real race: `isRealRace` from `shared/raceSource.mjs`, a
+//    POSITIVE equality. A race with no marker (every race stored before 2026-09-25) is a test.
+// 2. ONE NAME, ONE ROW, matched IGNORING CASE AND SURROUNDING OR REPEATED SPACES —
+//    `playerNameKey` from `shared/playerNames.mjs`, the same rule that refuses a doubled name in a
+//    roster. A row shows the name as it was FIRST written in the period (trimmed, spaces collapsed).
+// 3. ONLY FINISHED RESULTS COUNT — no DNF. A racer who did not cross the line (`finishTimeMs` is
+//    null; the stored order lists them after every finisher) adds nothing to that name's row, not
+//    even a race. Places are therefore counted among finishers only, which they are already: the
+//    stored `results` are in finishing order with the finishers first.
+// 4. THE SAME NAME TWICE IN ONE RACE is not allowed any more, and every roster path refuses it. A
+//    race stored BEFORE that refusal may still carry one; it counts ONCE, at its better place.
+// 5. PODIUM = places 1 to 3.
+// 6. THE ORDER: wins, then 2nd places, then 3rd places, then races. A tie on all four is broken by
+//    the name, so the table is the same every time it is asked for.
+// 7. NO POINTS ARE COMPUTED HERE. The points rule is a server-wide setting (`pointsRule.js`) that
+//    the client applies to `places`.
 // ============================================================
 
 import { isRealRace } from '../../../shared/raceSource.mjs';
+import { playerNameKey } from '../../../shared/playerNames.mjs';
+
+/** Did this result cross the line? See rule 3. */
+const finished = (result) => result?.finishTimeMs != null;
+
+/** Rule 6. Exported so the client and the tests read the one order. */
+export function compareEvaluationRows(a, b) {
+  return (
+    b.wins - a.wins ||
+    (b.places[2] ?? 0) - (a.places[2] ?? 0) ||
+    (b.places[3] ?? 0) - (a.places[3] ?? 0) ||
+    b.races - a.races ||
+    a.name.localeCompare(b.name)
+  );
+}
 
 /**
  * Evaluate the races of one period.
  *
- * @param {Array<{raceSource?: string|null, results: Array<{name: string}>}>} races
- *   the period's races, each with `results` in finishing order (as the store returns them)
+ * @param {Array<{raceSource?: string|null, results: Array<{name: string, finishTimeMs?: number|null}>}>} races
+ *   the period's races, oldest first, each with `results` in finishing order (as the store returns them)
  * @returns {{ counted: number, quickTestsExcluded: number,
  *   rows: Array<{ name: string, races: number, wins: number, podiums: number,
  *                 places: Record<number, number> }> }}
  */
 export function evaluatePeriod(races) {
-  const byName = new Map();
+  const byKey = new Map();
   let counted = 0;
   let excluded = 0;
   for (const race of races) {
@@ -41,12 +62,23 @@ export function evaluatePeriod(races) {
       continue;
     }
     counted++;
+    const seenInRace = new Set();
     race.results.forEach((result, i) => {
+      if (!finished(result)) return;
+      const key = playerNameKey(result.name);
+      if (!key || seenInRace.has(key)) return; // rule 4: the better place is the earlier one
+      seenInRace.add(key);
       const place = i + 1;
-      let row = byName.get(result.name);
+      let row = byKey.get(key);
       if (!row) {
-        row = { name: result.name, races: 0, wins: 0, podiums: 0, places: {} };
-        byName.set(result.name, row);
+        row = {
+          name: result.name.trim().replace(/\s+/g, ' '),
+          races: 0,
+          wins: 0,
+          podiums: 0,
+          places: {},
+        };
+        byKey.set(key, row);
       }
       row.races++;
       if (place === 1) row.wins++;
@@ -54,9 +86,6 @@ export function evaluatePeriod(races) {
       row.places[place] = (row.places[place] ?? 0) + 1;
     });
   }
-  const rows = [...byName.values()].sort(
-    (a, b) =>
-      b.wins - a.wins || b.podiums - a.podiums || b.races - a.races || a.name.localeCompare(b.name)
-  );
+  const rows = [...byKey.values()].sort(compareEvaluationRows);
   return { counted, quickTestsExcluded: excluded, rows };
 }

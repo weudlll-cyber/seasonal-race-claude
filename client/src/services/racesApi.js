@@ -74,6 +74,32 @@ export async function fetchPeriodEvaluation(from, to) {
 }
 
 /**
+ * The period evaluation's POINTS RULE — one for the whole server (the owner's decision of
+ * 2026-10-04). Every signed-in user reads it; only an admin may save it, and the server refuses
+ * anyone else.
+ *
+ * @returns {Promise<{pointsEnabled: boolean, pointsPerPlace: number[]}>}
+ */
+export async function fetchPointsRule() {
+  const res = await apiCall(`${BASE_URL}/evaluation/points-rule`, { _skipAuthRedirect: true });
+  return res.json();
+}
+
+/**
+ * @param {{pointsEnabled: boolean, pointsPerPlace: number[]}} rule
+ * @returns {Promise<{pointsEnabled: boolean, pointsPerPlace: number[]}>}  the rule as stored
+ */
+export async function savePointsRule(rule) {
+  const res = await apiCall(`${BASE_URL}/evaluation/points-rule`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+    _skipAuthRedirect: true,
+  });
+  return res.json();
+}
+
+/**
  * One page of THIS TEAM's races, newest first. The team is read from the session server-side; there
  * is no team parameter here and there must not be one.
  *

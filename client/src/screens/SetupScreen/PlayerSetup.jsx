@@ -13,6 +13,7 @@ import {
   isNameLengthValid,
   nameTooLongMessage,
 } from '../../../../shared/nameLimits.mjs';
+import { doubledNames, doubledNamesMessage } from '../../../../shared/playerNames.mjs';
 import { sectionsOf } from './rosterGroups.js';
 import styles from './SetupScreen.module.css';
 
@@ -32,6 +33,14 @@ function PlayerSetup({ players, onChange, maxPlayers }) {
     // belongs to does not recognise, and the operator is never told it happened.
     if (!isNameLengthValid(name)) {
       setNameError(nameTooLongMessage([name]));
+      return;
+    }
+    // THE SAME NAME TWICE IN ONE RACE IS NOT ALLOWED (the owner's decision of 2026-10-04), compared
+    // ignoring case and spaces (`shared/playerNames.mjs`). Refused here with the name it clashes
+    // with, the same way an over-long name is.
+    const doubled = doubledNames([...players.map((p) => p.name), name]);
+    if (doubled.length > 0) {
+      setNameError(doubledNamesMessage(doubled));
       return;
     }
     setNameError('');

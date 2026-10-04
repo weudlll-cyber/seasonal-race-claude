@@ -1,13 +1,13 @@
 // PERIOD-EVALUATION-1: the points rule — off by default, a typed ladder, and the arithmetic.
 import { describe, it, expect } from 'vitest';
 import { parsePointsLadder, pointsFor, pointsActive } from './periodPoints.js';
-import { DEFAULT_PERIOD_EVALUATION_CONFIG } from './storage/defaults.js';
 
+// The rule SHIPS OFF on the server (`DEFAULT_POINTS_RULE`, server/src/races/pointsRule.js, tested
+// in server/src/races/periodEvaluation.test.js); this file tests the arithmetic only.
 describe('the period evaluation points rule', () => {
-  it('ships OFF, with no numbers adopted', () => {
-    expect(DEFAULT_PERIOD_EVALUATION_CONFIG.pointsEnabled).toBe(false);
-    expect(DEFAULT_PERIOD_EVALUATION_CONFIG.pointsPerPlace).toEqual([]);
-    expect(pointsActive(DEFAULT_PERIOD_EVALUATION_CONFIG)).toBe(false);
+  it('the server default — off, no ladder — is not active', () => {
+    expect(pointsActive({ pointsEnabled: false, pointsPerPlace: [] })).toBe(false);
+    expect(pointsActive(null)).toBe(false);
   });
 
   it('is active only when switched on AND carrying a ladder', () => {
