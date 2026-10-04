@@ -3,6 +3,7 @@
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
 product file was changed, no stored key was renamed, no default and no behaviour was touched.
+**Built 2026-10-05 on `feat/devscreen-chapters` — see "Build, 2026-10-05" at the end.**
 
 **The decision this answers.** Decided 2026-10-04: the Dev Screen is rebuilt as **Plan D, chapters**.
 Everything that belongs together sits in one chapter; each chapter has a sensible order inside it;
@@ -849,3 +850,140 @@ Each is a placement call, reversible in the table without touching any other row
    one reset; moving it to a finish sub-group would split that reset.
 7. **The chapter order** follows the examples given with the decision: race, camera, look, the things
    a race is made of, then history, diagnostics, accounts.
+
+---
+
+## Build, 2026-10-05
+
+**Built on `feat/devscreen-chapters`, one commit per chapter** (plus a navigation skeleton first and
+the two tests last). The design above is unchanged; this section records how it was built.
+
+### What was built
+
+- **Navigation by chapter.** `client/src/screens/DevScreen/devScreenChapters.js` is the new
+  registry: seven chapters, each with its intro (§2, verbatim) and its sub-groups in the design's
+  order (§3), each sub-group the section PARTS placed in it. `DevScreen.jsx` lists the chapters in
+  the sidebar and renders the active one: heading, intro, then each sub-group as an `h2` with its
+  parts. Tiers are per part and unchanged per control: the operator view keeps only `operator`
+  parts and drops a sub-group or chapter left empty (Diagnostics disappears from it); non-admins
+  always get the operator view; `isOperatorTier` and the persisted view switch are kept.
+- **Parts, not rewrites.** Sections the design splits take a `part` prop and render only the named
+  blocks, with their own state, handlers, keys and storage: `RaceDefaults` (race setup /
+  auto-advance / sound), `RaceTuningSection` (`reset`), `DynamicsTuningSection` (pace, start,
+  speed changes, race plan, PULK, gap brake, frame timing), `BehaviorTuningSection` (interaction,
+  start layout), `CameraAdvancedSection` (the ten camera sub-groups plus drawing floor, track
+  labels, overlay texts, on-screen diagnostics, logs). Without `part` a section renders everything,
+  so its own tests are unchanged. The editor links, the view switch, Back to Setup and Log out are
+  parts `DevScreen.jsx` renders itself.
+- **Every control carries `data-control-id="<file>:<id>"`** exactly as `design.json` names it, on
+  the control or its row, and **its design info text** through `InfoTooltip`. The texts have ONE
+  home, `sections/controlInfo.js` (copied from `design.json`, text for text); `sections/ControlInfo.jsx`
+  holds the two small helpers (`Info`, `Ctl`). `DefaultControls` takes a `controlSection` prop, so
+  its two buttons carry each section's own id and text.
+- **Wording only where the design gives it:** the size-floor pair ("Size floor — every racer type"
+  / "Size floor — this racer type only", visible label and `aria-label`) and the three admin
+  buttons ("Set as default", "Remove default", "Export as seed"). Every other label is today's.
+- **Order inside sub-groups as the positions say**, which moved a few controls inside their
+  section: the Race Defaults reset below the values; the Race Behavior master switch first; in the
+  camera, Push Easing after the push travel and the Start Window after the beats, the endgame
+  threshold before the run-in switches, the comeback controls and the diagnostics switches in the
+  design's sequence; Auto-Scale's Max Scale before the size floor; Edit before the default buttons
+  in a track row. Surface-class generator fields show in one shared field order (the design's) for
+  every generator.
+
+### One piece of wiring the split needs: `sections/useSyncedConfig.js`
+
+A part holds its WHOLE config block, and the chapters mount several parts of one block at once
+(six race-dynamics parts in The race, three camera parts in Look). Two copies with their own state
+would overwrite each other's edits — measured: with the sync removed, an edit in Sprite Size was
+lost to the next edit in Name Tags. The hook keeps every copy in step: a write goes through the
+block's own saver (`storageSet` announces the key), every other copy re-reads it through the block's
+own loader and does not write it back. Loaders, savers, keys and the save on mount are the
+sections' own, unchanged. With it, the Race Tuning master reset writes the five race blocks to
+storage directly (`resetRaceRelevantToDefault` in `raceRelevantReset.js`, same blocks, same values)
+instead of reaching into two child sections through refs — the parts are no longer its children.
+Removed with that: the `forwardRef` / `useImperativeHandle` / `resetAll` of the two tuning sections
+and `resetAutoScaleToDefault`.
+
+### The guard test — `client/src/screens/DevScreen/devScreenChapters.guard.test.jsx`
+
+Renders the real Dev Screen as an admin in the All view, every section real, with the
+server-backed lists mocked to one entry of each kind and shaped so every conditional control
+appears (a closed and an open track, a custom racer type, stored overrides that show every Reset of
+the racer editor, a modified and a custom surface class, a stored race with a short key, and so
+on). It walks all seven chapters and opens every form, modal and editor by clicking (Edit on each
+list, the class list and every generator, Reset Password, "New team…"); each state is a snapshot.
+For every control it checks: listed in the design (EXTRA), in the design chapter and sub-group
+(WRONG PLACE), in one part only (DUPLICATE — a per-entry control repeated down one list is one
+control), carrying the design info text character for character, and in the design's position
+order within the snapshot; after the walk every design row must have been seen (MISSING). **All
+rows are checked by render; none by a source scan.** Rendered per chapter, as designed: 101 · 84 ·
+38 · 69 · 15 · 17 · 24.
+
+**Sabotaged twice, both red, both restored:** moving the overlay-texts part onto the logs (WRONG
+PLACE, DUPLICATE and MISSING went red), and renaming one control id (EXTRA and MISSING went red).
+
+### The saved-settings fixture — `devScreenChapters.savedSettings.test.jsx`
+
+A realistic saved configuration is written under the existing keys by the app's own savers (race
+defaults, base speed, row layout, race dynamics, racer behaviour, frame timing, auto-scale, camera
+with a per-state profile override, sprite size and name tag inside it). The screen is rendered as
+an admin and every chapter walked. It asserts the controls show the saved values, that every stored
+JSON string is byte-identical afterwards, and that two parts of one block keep each other's edits.
+**Sabotaged:** a camera part initialised from the defaults instead of its loader — the values test
+and the byte test both went red (the camera store came back as an empty object); with the sync
+listener removed, the third test went red.
+
+### Lines before → after (touched source files)
+
+`DevScreen.jsx` 319 → 184 · `DevScreen.module.css` 618 → 588 · `CameraAdvancedSection.jsx`
+2127 → 2123 · `DynamicsTuningSection.jsx` 1730 → 1851 · `BehaviorTuningSection.jsx` 729 → 790 ·
+`RaceDefaults.jsx` 254 → 283 · `RaceTuningSection.jsx` 61 → 61 · `AutoScaleSection.jsx` 235 → 268 ·
+`SpriteSizeRangeSection.jsx` 97 → 99 · `NameTagVisibilitySection.jsx` 150 → 148 ·
+`SurfaceClassManager.jsx` 529 → 578 · `PlayerGroupsManager.jsx` 337 → 349 · `TrackManager.jsx`
+650 → 707 · `RacerManager.jsx` 238 → 247 · `RacerEditModal.jsx` 671 → 678 · `BrandingProfiles.jsx`
+561 → 589 · `RaceHistory.jsx` 566 → 588 · `PeriodEvaluation.jsx` 362 → 379 ·
+`ConfigExportSection.jsx` 127 → 127 · `SystemSettings.jsx` 196 → 196 · `ChangePasswordSection.jsx`
+137 → 144 · `UserManagementSection.jsx` 472 → 487 · `SubCard.jsx` 103 → 115 · `DefaultControls.jsx`
+112 → 122 · `raceRelevantReset.js` 41 → 50. New: `devScreenChapters.js` 250,
+`sections/controlInfo.js` 657, `sections/ControlInfo.jsx` 33, `sections/useSyncedConfig.js` 58.
+
+**Removed:** the 16-entry `SECTIONS` registry and the sidebar's buttons, tier divider and back
+button (and their CSS); the camera section's numbered card headings (`SectionHeading`), replaced by
+the sub-group headings; every inline tooltip text the design rewrote (the `tip` / `tooltip` fields
+of the mapped field lists included); the tooltips the design's control texts replace (Race Tuning's
+card tooltip and button title, System's three card tooltips, the surface-class list header's) and
+the `title` attributes of buttons that now carry an info icon saying the same.
+
+### Deviations from the design, each with its reason
+
+1. **An "Advanced" tag on every admin-only part in the All view.** The old sidebar showed an admin
+   which sections the operator view leaves out (its tier divider); chapters mix tiers, so the tag
+   carries that per part. Not in the design.
+2. **The racer editor's Done / Close (✕) is one control; its id and text sit on Done.** The header
+   ✕ comes first in the DOM, before the fields, and would break the design's order; it stays an
+   unmarked second way to the same action.
+3. **Labels the design's "today" column prints differently are kept as rendered today** (for
+   example "Chase: racers accelerated past 0.6", "B2-attacker count (0–5)", "Company: min racers in
+   frame"); that column is today's label with context added, not new wording.
+4. **Tests changed only in locators**, with three places where the locator is a text the design
+   replaced: two tooltip-substring matches (Player Names, Filter by Date) match the new wording; the
+   racer editor's tooltip count is scoped to the modal body (the footer's two buttons have their own
+   icon now). In the tier-toggle test the two ORDER tests read the chapter order (the design puts
+   the camera before the look, so "sprite size before camera" cannot hold), and "switch to Operator
+   while on an advanced section" narrows the view by role, because the view switch itself now sits
+   in an operator chapter. `DefaultControls.test.jsx` moved with the labels, as §8 says. Ten browser
+   specs changed their chapter and heading locators only (not run here).
+
+### Noticed and left
+
+- Auto-Scale's size-floor info text (copied verbatim) names the editor control "Min Sprite Screen
+  Size", the label the design itself renames to "Size floor — this racer type only".
+- The Gap Leader Brake card subtitle still says it ships off; the System card text still says a
+  reset restores built-in tracks and racers (both §8, recorded, not acted on).
+- `count-controls.mjs` now prints 337, not 348: it reads source shapes, and three changed — the
+  diagnostics switches moved into two named lists (−13), the shared Reset template in `SubCard.jsx`
+  (+1), the view switch's buttons now call a prop (+1). The rendering guard is the count of record.
+- The sections still save once on mount, as before; for a config in the app's own form that write is
+  byte-identical, and a transient rewrite would be undone by the loaders' prune — the fixture checks
+  the end state.
