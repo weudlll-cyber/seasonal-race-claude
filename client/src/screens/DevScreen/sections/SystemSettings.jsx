@@ -17,6 +17,7 @@ import {
 import { DEFAULT_RACE_DEFAULTS, DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
 const APP_VERSION = '0.1.0';
@@ -98,24 +99,25 @@ function SystemSettings() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Backup */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
-          Backup &amp; Restore{' '}
-          <InfoTooltip text="Round-trips every key in localStorage — tracks, racers, groups, branding, history, and all tuning configs. The exported JSON is versionless and imported by deep-merge: a key the file omits is left as-is." />
-        </p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Backup &amp; Restore</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Export all settings (tracks, racers, groups, branding, history) to a JSON file, or restore
           from a previous backup.
         </p>
         <div className={s.btnRow}>
-          <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleExport}>
-            ⬇ Export Settings JSON
-          </button>
-          <button
-            className={`${s.btn} ${s.btnSecondary}`}
-            onClick={() => importRef.current?.click()}
-          >
-            ⬆ Import Settings JSON
-          </button>
+          <Ctl id="SystemSettings:handleExport">
+            <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleExport}>
+              ⬇ Export Settings JSON
+            </button>
+          </Ctl>
+          <Ctl id="SystemSettings:importRef.current?.click">
+            <button
+              className={`${s.btn} ${s.btnSecondary}`}
+              onClick={() => importRef.current?.click()}
+            >
+              ⬆ Import Settings JSON
+            </button>
+          </Ctl>
           <input
             ref={importRef}
             type="file"
@@ -128,10 +130,7 @@ function SystemSettings() {
 
       {/* Diagnostic Snapshot */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
-          Diagnostic Snapshot{' '}
-          <InfoTooltip text="Downloads a JSON of the browser's current localStorage — every tuning key, every track geometry override, every camera config. Attach to a bug report so the state that produced the bug can be reproduced elsewhere." />
-        </p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Diagnostic Snapshot</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Exports all localStorage data including track geometries (
           <code style={{ fontSize: '0.75rem' }}>racearena:trackGeometries:*</code>) and all tuning
@@ -139,24 +138,25 @@ function SystemSettings() {
           downloaded file at{' '}
           <code style={{ fontSize: '0.75rem' }}>docs/internal/current-config-snapshot.json</code>.
         </p>
-        <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleDiagnosticExport}>
-          🔬 Export Diagnostic Snapshot
-        </button>
+        <Ctl id="SystemSettings:handleDiagnosticExport">
+          <button className={`${s.btn} ${s.btnSecondary}`} onClick={handleDiagnosticExport}>
+            🔬 Export Diagnostic Snapshot
+          </button>
+        </Ctl>
       </div>
 
       {/* Reset */}
       <div className={s.card}>
-        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
-          Factory Reset{' '}
-          <InfoTooltip text="Wipes every localStorage key and re-seeds RACE_DEFAULTS and RACE_HISTORY. Tracks, brands and player groups now live on the server and are NOT re-seeded here; a wipe only clears any local override of them." />
-        </p>
+        <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Factory Reset</p>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Wipes all saved settings and restores the 5 built-in tracks, 5 built-in racers, and all
           default values. Use with caution.
         </p>
-        <button className={`${s.btn} ${s.btnDanger}`} onClick={handleReset}>
-          Reset All Settings to Defaults
-        </button>
+        <Ctl id="SystemSettings:handleReset">
+          <button className={`${s.btn} ${s.btnDanger}`} onClick={handleReset}>
+            Reset All Settings to Defaults
+          </button>
+        </Ctl>
       </div>
 
       {/* Version */}

@@ -243,8 +243,8 @@ export const CHAPTERS = [
           { component: ChangePasswordSection, tier: OP },
         ],
       },
-      { title: 'User Management', parts: [{ component: UserManagementSection, tier: ADV }] },
-      { title: 'System', parts: [{ component: SystemSettings, tier: ADV }] },
+      { title: 'Race directors', parts: [{ component: UserManagementSection, tier: ADV }] },
+      { title: 'Backup and reset', parts: [{ component: SystemSettings, tier: ADV }] },
     ],
   },
 ];
