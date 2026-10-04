@@ -147,37 +147,6 @@ not an address which is right (§9.1).
       **The replay answers "did the engine do this", never "did this happen."** B1's remedy is
       therefore real, and bounded in a way the owner should know before leaning on it.
 
-- [ ] ★★ **B1 — DECIDED 2026-09-27: VERIFY A RACE ON DEMAND. NEITHER OPTION AS POSED.** The
-      question was whether the server should check a result or stay a second store. **The answer is
-      both halves of neither:** the server stays a second store and goes on accepting results
-      without recomputing them, **and a stored race becomes verifiable ON DEMAND** — re-raced from
-      its own record and the outcome compared, invoked when somebody disputes a result rather than
-      on every submission.
-      ★ **The measured fact this rests on** (the owner's measurement, ten tracks, a 2-core machine,
-      no browser): re-racing one race costs **0.9 s average and 1.3 s worst case at 20 racers**, and
-      **2.2 s average and 2.9 s worst case at 40 racers**. Verifying every submission would put one
-      to three seconds and one blocked core in front of **every** race for a suspicion that is
-      almost never present; verifying on demand costs nothing until it is needed.
-      ★★ **WHAT THIS BUYS, STATED PLAINLY SO NOBODY READS IT AS MORE:** fabrication is **not
-      PREVENTED, it becomes PROVABLE.** A replay settles *"did the engine do this"* and never *"did
-      this happen"* — replaying a fabricated record reproduces the fabrication faithfully
-      (`reports/audit/DELIVERY-CLEAN-1.md` §3.6).
-      ★ **What is missing is a door, not an engine.** `scripts/diag/replay-stored-race.mjs` already
-      does the racing — it takes a stored record's seed, roster, names, track, laps and whole
-      `worldConfigs` and reproduces the race — and §3.6 ran it against a real stored race
-      (`W57FQA`) to **40 of 40 positions and 40 of 40 finishing times, to the millisecond**. The
-      work is a way to reach that from the product. **COMMISSIONED, not built here.**
-      ★ **2026-10-04 — THE SERVER HALF IS BUILT on branch `feat/verify-on-demand`, not merged:
-      [VERIFY-ON-DEMAND-1](../reports/release/VERIFY-ON-DEMAND-1.md).** `POST /api/races/:shortKey/verify`
-      is admin-only and team-scoped, and reuses one replay module shared with the diagnostic script.
-      It reports agreement on positions and times; a falsified record is reported as not matching
-      (tested). Open-track races were refused by the old replay and are not now. Cost: 0.8–1.8 s at
-      20 racers, 3.9–6.5 s at 40. No button: where and for whom is his decision.
-      ★ **2026-10-04 — THE OWNER DECIDED: an admin-only "Verify race" button in the Dev Screen's
-      Race History, and the Docker image carries the race engine.** Both are built on the same
-      branch, not merged until he has looked. A container built from the image stored one race and
-      verified it: **match, 20 of 20 positions and 20 of 20 times**. Details in the same report.
-
 - [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
       so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
       Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
@@ -2251,6 +2220,43 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **B1 — VERIFY A RACE ON DEMAND — CLOSED 2026-10-04 (VERIFY-ON-DEMAND-1): BUILT AND MERGED.**
+      The owner looked at it on the production preview on 2026-10-04 (a stored 40-racer race
+      verified: match, 40 of 40) and approved the merge. What was built: the admin-only "Verify
+      race" button in the Dev Screen's Race History, `POST /api/races/:shortKey/verify`, and the
+      Docker image carrying the race engine — [VERIFY-ON-DEMAND-1](../reports/release/VERIFY-ON-DEMAND-1.md).
+      The row as it stood when open:
+      **B1 — DECIDED 2026-09-27: VERIFY A RACE ON DEMAND. NEITHER OPTION AS POSED.** The
+      question was whether the server should check a result or stay a second store. **The answer is
+      both halves of neither:** the server stays a second store and goes on accepting results
+      without recomputing them, **and a stored race becomes verifiable ON DEMAND** — re-raced from
+      its own record and the outcome compared, invoked when somebody disputes a result rather than
+      on every submission.
+      ★ **The measured fact this rests on** (the owner's measurement, ten tracks, a 2-core machine,
+      no browser): re-racing one race costs **0.9 s average and 1.3 s worst case at 20 racers**, and
+      **2.2 s average and 2.9 s worst case at 40 racers**. Verifying every submission would put one
+      to three seconds and one blocked core in front of **every** race for a suspicion that is
+      almost never present; verifying on demand costs nothing until it is needed.
+      ★★ **WHAT THIS BUYS, STATED PLAINLY SO NOBODY READS IT AS MORE:** fabrication is **not
+      PREVENTED, it becomes PROVABLE.** A replay settles *"did the engine do this"* and never *"did
+      this happen"* — replaying a fabricated record reproduces the fabrication faithfully
+      (`reports/audit/DELIVERY-CLEAN-1.md` §3.6).
+      ★ **What is missing is a door, not an engine.** `scripts/diag/replay-stored-race.mjs` already
+      does the racing — it takes a stored record's seed, roster, names, track, laps and whole
+      `worldConfigs` and reproduces the race — and §3.6 ran it against a real stored race
+      (`W57FQA`) to **40 of 40 positions and 40 of 40 finishing times, to the millisecond**. The
+      work is a way to reach that from the product. **COMMISSIONED, not built here.**
+      ★ **2026-10-04 — THE SERVER HALF IS BUILT on branch `feat/verify-on-demand`, not merged:
+      [VERIFY-ON-DEMAND-1](../reports/release/VERIFY-ON-DEMAND-1.md).** `POST /api/races/:shortKey/verify`
+      is admin-only and team-scoped, and reuses one replay module shared with the diagnostic script.
+      It reports agreement on positions and times; a falsified record is reported as not matching
+      (tested). Open-track races were refused by the old replay and are not now. Cost: 0.8–1.8 s at
+      20 racers, 3.9–6.5 s at 40. No button: where and for whom is his decision.
+      ★ **2026-10-04 — THE OWNER DECIDED: an admin-only "Verify race" button in the Dev Screen's
+      Race History, and the Docker image carries the race engine.** Both are built on the same
+      branch, not merged until he has looked. A container built from the image stored one race and
+      verified it: **match, 20 of 20 positions and 20 of 20 times**. Details in the same report.
 
 - [x] ★ **THE DELIVERY PLAN OF 2026-08-31 — CLOSED 2026-10-04 (DELIVERY-SHIP-1), by the owner's
       decisions of that day.**

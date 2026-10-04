@@ -1,6 +1,7 @@
 # VERIFY-ON-DEMAND-1 — a stored race can be verified on demand (server half)
 
-**2026-10-04, branch `feat/verify-on-demand` (NOT merged).** The decision of 2026-09-27 (BACKLOG B1):
+**2026-10-04, branch `feat/verify-on-demand` — MERGED into master on 2026-10-04, after the owner
+looked at it on the production preview the same day.** The text below is as written before the merge. The decision of 2026-09-27 (BACKLOG B1):
 the server stays a second store and goes on accepting results without recomputing them, and a stored
 race becomes verifiable on demand — re-raced from its own record and compared. **This is the server
 half only. There is no button:** where it appears and for whom is the owner's decision.
