@@ -175,7 +175,9 @@ test.describe('V4 — Generator switch', () => {
   test('switching to particle generator shows Drift field', async ({ page }) => {
     await goToSurfaceClasses(page);
     await page.getByRole('combobox', { name: /Generator type/i }).selectOption('particle');
-    await expect(page.getByText(/Drift/i)).toBeVisible();
+    // By its control's label: since DEVSCREEN-CHAPTERS-1 the field row also carries an info text
+    // that mentions drift, so a text match no longer finds the field alone.
+    await expect(page.getByLabel('Drift', { exact: true })).toBeVisible();
   });
 
   test('switching generator changes the live preview generator attribute', async ({ page }) => {
