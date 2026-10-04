@@ -23,52 +23,70 @@
 //   node analyse.mjs <dist-dir-with-maps> <raw-dir> [--top=12]
 // ============================================================
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { createRequire } from 'node:module';
+import { readFileSync, readdirSync } from "node:fs";
+import { join, basename } from "node:path";
+import { createRequire } from "node:module";
 
 const [, , distDir, rawDir] = process.argv;
-const TOP = Number((process.argv.find((a) => a.startsWith('--top=')) ?? '--top=12').slice(6));
-const require = createRequire(join(process.cwd(), 'client', 'package.json'));
-const { SourceMapConsumer } = require('source-map-js');
+const TOP = Number(
+  (process.argv.find((a) => a.startsWith("--top=")) ?? "--top=12").slice(6),
+);
+const require = createRequire(join(process.cwd(), "client", "package.json"));
+const { SourceMapConsumer } = require("source-map-js");
 
 // ── categories, by ORIGINAL source path and function name; first match wins, read leaf → root ──
 // Order matters: the minimap lives under camera/ and the labels under drawing/, so the specific
 // rules come before the general ones.
 const CATEGORIES = [
-  ['minimap', (f) => /\/camera\/Minimap\.js$/.test(f.src)],
-  ['scoreboard', (f) => /scoreboard/i.test(f.src)],
+  ["minimap", (f) => /\/camera\/Minimap\.js$/.test(f.src)],
+  ["scoreboard", (f) => /scoreboard/i.test(f.src)],
   // Name tags: the label modules, and `drawNameTag` — lines 58-119 of racerRendering.js. The source
   // map gives minified names only, so the function is identified by its line range (checked on master
   // c104c5b6; re-check the range if that file changes).
   [
-    'name tags / labels',
+    "name tags / labels",
     (f) =>
       /labelFormHold|nameTagLayout|label/i.test(f.src) ||
-      (/\/drawing\/racerRendering\.js$/.test(f.src) && f.line >= 58 && f.line <= 119),
+      (/\/drawing\/racerRendering\.js$/.test(f.src) &&
+        f.line >= 58 &&
+        f.line <= 119),
   ],
   [
-    'track effects / particles',
-    (f) => /surface-effects|particle|trail|trackLights|effects?\//i.test(f.src) || /particle|trail/i.test(f.name),
+    "track effects / particles",
+    (f) =>
+      /surface-effects|particle|trail|trackLights|effects?\//i.test(f.src) ||
+      /particle|trail/i.test(f.name),
   ],
-  ['camera director', (f) => /\/modules\/camera\//.test(f.src)],
-  ['drawing racers', (f) => /\/racer-types\/|\/drawing\/racerRendering\.js$/.test(f.src)],
+  ["camera director", (f) => /\/modules\/camera\//.test(f.src)],
   [
-    'physics',
+    "drawing racers",
+    (f) => /\/racer-types\/|\/drawing\/racerRendering\.js$/.test(f.src),
+  ],
+  [
+    "physics",
     (f) =>
       /\/modules\/(raceStep|raceCore|racePlanner|raceBehavior|raceGovernor|heroChoreography|heroCurveGenerator|raceDynamics|raceParams|raceBaseSpeed|rowLayout|raceLengths)/.test(
-        f.src
+        f.src,
       ),
   ],
-  ['other race drawing', (f) => /\/screens\/RaceScreen\/(drawing\/|renderRaceFrame)/.test(f.src)],
-  ['React / DOM updates', (f) => /node_modules\/(react|react-dom|scheduler)\//.test(f.src)],
-  ['other app code', (f) => /\/client\/src\/|^src\//.test(f.src) || /\.\.\/src\//.test(f.src)],
+  [
+    "other race drawing",
+    (f) => /\/screens\/RaceScreen\/(drawing\/|renderRaceFrame)/.test(f.src),
+  ],
+  [
+    "React / DOM updates",
+    (f) => /node_modules\/(react|react-dom|scheduler)\//.test(f.src),
+  ],
+  [
+    "other app code",
+    (f) => /\/client\/src\/|^src\//.test(f.src) || /\.\.\/src\//.test(f.src),
+  ],
 ];
 const NATIVE = {
-  '(program)': 'browser (layout, paint, compositing)',
-  '(garbage collector)': 'garbage collection',
-  '(idle)': 'idle',
-  '(root)': 'browser (layout, paint, compositing)',
+  "(program)": "browser (layout, paint, compositing)",
+  "(garbage collector)": "garbage collection",
+  "(idle)": "idle",
+  "(root)": "browser (layout, paint, compositing)",
 };
 
 // ── the source maps ──────────────────────────────────────────────────────────────────────────────
@@ -78,7 +96,9 @@ function consumerFor(url) {
   if (consumers.has(file)) return consumers.get(file);
   let c = null;
   try {
-    c = new SourceMapConsumer(JSON.parse(readFileSync(join(distDir, 'assets', `${file}.map`), 'utf8')));
+    c = new SourceMapConsumer(
+      JSON.parse(readFileSync(join(distDir, "assets", `${file}.map`), "utf8")),
+    );
   } catch {
     c = null;
   }
@@ -87,11 +107,24 @@ function consumerFor(url) {
 }
 
 function original(callFrame) {
-  if (!callFrame.url || !/^https?:/.test(callFrame.url)) return { src: callFrame.url || '', line: 0, name: callFrame.functionName };
+  if (!callFrame.url || !/^https?:/.test(callFrame.url))
+    return { src: callFrame.url || "", line: 0, name: callFrame.functionName };
   const c = consumerFor(callFrame.url);
-  if (!c) return { src: callFrame.url, line: callFrame.lineNumber + 1, name: callFrame.functionName };
-  const p = c.originalPositionFor({ line: callFrame.lineNumber + 1, column: callFrame.columnNumber });
-  return { src: (p.source ?? callFrame.url).replace(/^(\.\.\/)+/, ''), line: p.line ?? 0, name: p.name ?? callFrame.functionName };
+  if (!c)
+    return {
+      src: callFrame.url,
+      line: callFrame.lineNumber + 1,
+      name: callFrame.functionName,
+    };
+  const p = c.originalPositionFor({
+    line: callFrame.lineNumber + 1,
+    column: callFrame.columnNumber,
+  });
+  return {
+    src: (p.source ?? callFrame.url).replace(/^(\.\.\/)+/, ""),
+    line: p.line ?? 0,
+    name: p.name ?? callFrame.functionName,
+  };
 }
 
 function categoryOf(nodeId, nodes, parentOf, memo) {
@@ -109,18 +142,26 @@ function categoryOf(nodeId, nodes, parentOf, memo) {
   }
   // A generic helper (an easing function, a vector routine) or an unplaced frame takes its CALLER's
   // category when the caller has a specific one: `mathUtils.js` called by the camera is camera time.
-  if (!cat || cat === 'other app code') {
+  if (!cat || cat === "other app code") {
     const p = parentOf.get(nodeId);
     const up = p !== undefined ? categoryOf(p, nodes, parentOf, memo) : null;
-    const specific = up && !['idle', 'browser (layout, paint, compositing)', 'other app code'].includes(up);
-    cat = specific ? up : (cat ?? 'other app code');
+    const specific =
+      up &&
+      ![
+        "idle",
+        "browser (layout, paint, compositing)",
+        "other app code",
+      ].includes(up);
+    cat = specific ? up : (cat ?? "other app code");
   }
   memo.set(nodeId, cat);
   return cat;
 }
 
 // ── per race ─────────────────────────────────────────────────────────────────────────────────────
-const files = readdirSync(rawDir).filter((f) => f.endsWith('.frames.json')).sort();
+const files = readdirSync(rawDir)
+  .filter((f) => f.endsWith(".frames.json"))
+  .sort();
 const groups = new Map(); // key -> aggregate
 function agg(key) {
   if (!groups.has(key))
@@ -145,14 +186,22 @@ function agg(key) {
 }
 
 for (const f of files) {
-  const run = JSON.parse(readFileSync(join(rawDir, f), 'utf8'));
-  const key = `${run.track} ${run.n}${run.profile === false ? ' (profiler off)' : ''}`;
+  const run = JSON.parse(readFileSync(join(rawDir, f), "utf8"));
+  const key = `${run.track} ${run.n}${run.profile === false ? " (profiler off)" : ""}`;
   const g = agg(key);
   g.races++;
   g.seeds.push(run.seed);
   g.mismatch += run.mismatch;
   g.lost += Math.max(0, run.lost);
-  const prof = run.profile === false ? null : JSON.parse(readFileSync(join(rawDir, f.replace('.frames.json', '.cpuprofile')), 'utf8'));
+  const prof =
+    run.profile === false
+      ? null
+      : JSON.parse(
+          readFileSync(
+            join(rawDir, f.replace(".frames.json", ".cpuprofile")),
+            "utf8",
+          ),
+        );
 
   const frames = run.frames; // [gap, state, start]
   const total = frames.reduce((a, [gap]) => a + gap, 0);
@@ -160,7 +209,15 @@ for (const f of files) {
   let acc = 0;
   for (const [gap, state] of frames) {
     acc += gap;
-    seg.push(acc < 2000 ? 'startup' : acc > total * 0.9 ? (state === 'OVERVIEW' ? 'ending, wide shot' : 'ending, other shot') : 'running');
+    seg.push(
+      acc < 2000
+        ? "startup"
+        : acc > total * 0.9
+          ? state === "OVERVIEW"
+            ? "ending, wide shot"
+            : "ending, other shot"
+          : "running",
+    );
     g.frames++;
     g.gaps.push(gap);
     if (gap > 33) {
@@ -187,7 +244,10 @@ for (const f of files) {
   // calibration: the first sample inside __raCalibrationMarker
   let offset = null;
   for (let k = 0; k < prof.samples.length; k++) {
-    if (nodes.get(prof.samples[k]).callFrame.functionName === '__raCalibrationMarker') {
+    if (
+      nodes.get(prof.samples[k]).callFrame.functionName ===
+      "__raCalibrationMarker"
+    ) {
       offset = times[k] / 1000 - run.calibAt;
       break;
     }
@@ -215,7 +275,7 @@ for (const f of files) {
     if (frames[lo][0] <= 33) continue;
     const id = prof.samples[k];
     const cat = categoryOf(id, nodes, parentOf, memo);
-    if (cat === 'idle') {
+    if (cat === "idle") {
       g.idle++;
       continue;
     }
@@ -228,7 +288,7 @@ for (const f of files) {
     while (nid !== undefined) {
       const o = nodes.get(nid).orig;
       if (o.src && /client\/src\/|^src\//.test(o.src)) {
-        where = `${o.src.replace(/^.*?client\//, 'client/')}:${o.line} (${o.name || 'anonymous'})`;
+        where = `${o.src.replace(/^.*?client\//, "client/")}:${o.line} (${o.name || "anonymous"})`;
         break;
       }
       nid = parentOf.get(nid);
@@ -239,26 +299,54 @@ for (const f of files) {
 }
 
 // ── print ────────────────────────────────────────────────────────────────────────────────────────
-const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)} %` : '-');
+const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)} %` : "-");
 const q = (arr, p) => {
   const s = [...arr].sort((a, b) => a - b);
   return s[Math.min(s.length - 1, Math.floor(p * s.length))];
 };
 for (const [key, g] of [...groups].sort()) {
   const work = Object.values(g.samples).reduce((a, b) => a + b, 0);
-  console.log(`\n## ${key} — N = ${g.races} races, ${g.frames} frames, ${g.slow} over 33 ms (${pct(g.slow, g.frames)}), ${g.slow50} over 50 ms`);
-  console.log(`seeds: ${g.seeds.join(', ')} | calibrated ${g.calibFound}/${g.races} | stitch mismatches ${g.mismatch} | lost ${g.lost}`);
-  console.log(`frame ms: p50 ${q(g.gaps, 0.5)?.toFixed(1)} · p95 ${q(g.gaps, 0.95)?.toFixed(1)} · p99 ${q(g.gaps, 0.99)?.toFixed(1)}`);
-  console.log(`slow frames by moment: ${Object.entries(g.bySeg).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ')}`);
-  console.log(`slow frames by camera state: ${Object.entries(g.byState).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ')}`);
+  console.log(
+    `\n## ${key} — N = ${g.races} races, ${g.frames} frames, ${g.slow} over 33 ms (${pct(g.slow, g.frames)}), ${g.slow50} over 50 ms`,
+  );
+  console.log(
+    `seeds: ${g.seeds.join(", ")} | calibrated ${g.calibFound}/${g.races} | stitch mismatches ${g.mismatch} | lost ${g.lost}`,
+  );
+  console.log(
+    `frame ms: p50 ${q(g.gaps, 0.5)?.toFixed(1)} · p95 ${q(g.gaps, 0.95)?.toFixed(1)} · p99 ${q(g.gaps, 0.99)?.toFixed(1)}`,
+  );
+  console.log(
+    `slow frames by moment: ${Object.entries(g.bySeg)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ")}`,
+  );
+  console.log(
+    `slow frames by camera state: ${Object.entries(g.byState)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `${k} ${v}`)
+      .join(", ")}`,
+  );
   if (!g.calibFound) continue;
-  console.log(`CPU samples inside slow frames: ${work} working, ${g.idle} idle — the main thread was idle for ${pct(g.idle, work + g.idle)} of the slow frames' sampled time`);
-  for (const [cat, n] of Object.entries(g.samples).sort((a, b) => b[1] - a[1])) console.log(`  ${cat.padEnd(38)} ${String(n).padStart(6)}  ${pct(n, work)}`);
+  console.log(
+    `CPU samples inside slow frames: ${work} working, ${g.idle} idle — the main thread was idle for ${pct(g.idle, work + g.idle)} of the slow frames' sampled time`,
+  );
+  for (const [cat, n] of Object.entries(g.samples).sort((a, b) => b[1] - a[1]))
+    console.log(
+      `  ${cat.padEnd(38)} ${String(n).padStart(6)}  ${pct(n, work)}`,
+    );
   for (const [sgName, cats] of Object.entries(g.samplesBySeg)) {
     const w = Object.values(cats).reduce((a, b) => a + b, 0);
-    const top3 = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, n]) => `${c} ${pct(n, w)}`).join(' · ');
+    const top3 = Object.entries(cats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([c, n]) => `${c} ${pct(n, w)}`)
+      .join(" · ");
     console.log(`  in "${sgName}" (${w} samples): ${top3}`);
   }
   console.log(`hot code inside slow frames (top ${TOP}):`);
-  for (const [k, n] of [...g.hot].sort((a, b) => b[1] - a[1]).slice(0, TOP)) console.log(`  ${String(n).padStart(6)}  ${pct(n, work).padStart(7)}  ${k}`);
+  for (const [k, n] of [...g.hot].sort((a, b) => b[1] - a[1]).slice(0, TOP))
+    console.log(
+      `  ${String(n).padStart(6)}  ${pct(n, work).padStart(7)}  ${k}`,
+    );
 }

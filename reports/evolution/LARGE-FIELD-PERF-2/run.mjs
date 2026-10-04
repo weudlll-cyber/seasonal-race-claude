@@ -32,40 +32,40 @@
 //   writes <out-dir>/<i>-<track>-<n>-<seed>.frames.json and .cpuprofile per race
 // ============================================================
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { createRequire } from 'node:module';
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { createRequire } from "node:module";
 
 const [, , portArg, planFile, outDir] = process.argv;
 if (!portArg || !planFile || !outDir) {
-  console.error('usage: node run.mjs <port> <plan.json> <out-dir>');
+  console.error("usage: node run.mjs <port> <plan.json> <out-dir>");
   process.exit(2);
 }
-const require = createRequire(join(process.cwd(), 'client', 'package.json'));
-const { chromium } = require('playwright');
+const require = createRequire(join(process.cwd(), "client", "package.json"));
+const { chromium } = require("playwright");
 
 const BASE = `http://127.0.0.1:${portArg}`;
-const USER = process.env.PERF_USER ?? 'perf';
-const PASS = process.env.PERF_PASS ?? '';
+const USER = process.env.PERF_USER ?? "perf";
+const PASS = process.env.PERF_PASS ?? "";
 const POLL_MS = 500;
 const PROBE_RING = 600; // `RING` in client/src/modules/rAFProbe.js
-const plan = JSON.parse(readFileSync(planFile, 'utf8'));
+const plan = JSON.parse(readFileSync(planFile, "utf8"));
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({
   headless: false,
   args: [
-    '--start-maximized',
+    "--start-maximized",
     // A covered window must not be throttled: the measurement is of the race, not of Windows.
-    '--disable-backgrounding-occluded-windows',
-    '--disable-renderer-backgrounding',
-    '--disable-background-timer-throttling',
+    "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding",
+    "--disable-background-timer-throttling",
   ],
 });
 const context = await browser.newContext({ viewport: null });
 await context.addInitScript(() => {
   try {
-    sessionStorage.setItem('_ra_perfprobe', '1');
+    sessionStorage.setItem("_ra_perfprobe", "1");
   } catch {}
   window.__harnessTs = [];
   // The rAF timestamp, not performance.now(): it is the frame's own start, identical for every
@@ -82,21 +82,25 @@ const cdp = await context.newCDPSession(page);
 await page.goto(`${BASE}/login`);
 await page.getByLabel(/username/i).fill(USER);
 await page.getByLabel(/password/i).fill(PASS);
-await page.getByRole('button', { name: /sign in/i }).click();
-await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 20000 });
+await page.getByRole("button", { name: /sign in/i }).click();
+await page.waitForURL((u) => !u.pathname.startsWith("/login"), {
+  timeout: 20000,
+});
 
 async function geometriesCached() {
   await page.waitForFunction(
     () => {
       try {
-        const idx = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '{}');
+        const idx = JSON.parse(
+          localStorage.getItem("racearena:trackGeometries:index") ?? "{}",
+        );
         return Object.keys(idx).length >= 10;
       } catch {
         return false;
       }
     },
     null,
-    { timeout: 60000 }
+    { timeout: 60000 },
   );
 }
 
@@ -104,28 +108,34 @@ for (const [i, race] of plan.entries()) {
   const started = Date.now();
   await page.goto(`${BASE}/setup`);
   await geometriesCached();
-  await page.evaluate((seed) => sessionStorage.setItem('quickTestSeed', String(seed)), race.seed);
+  await page.evaluate(
+    (seed) => sessionStorage.setItem("quickTestSeed", String(seed)),
+    race.seed,
+  );
   await page.reload();
   await geometriesCached();
   await page.locator(`button[title="${race.track}"]`).first().click();
   // The Quick Test N field: the number input with min 1 and the track's cap as max.
   let set = false;
   for (const inp of await page.locator('input[type="number"]').all()) {
-    if ((await inp.getAttribute('min')) === '1' && Number(await inp.getAttribute('max')) >= 40) {
+    if (
+      (await inp.getAttribute("min")) === "1" &&
+      Number(await inp.getAttribute("max")) >= 40
+    ) {
       await inp.fill(String(race.n));
       set = true;
       break;
     }
   }
-  if (!set) throw new Error('Quick Test N field not found');
+  if (!set) throw new Error("Quick Test N field not found");
 
   // `"profile": false` in the plan runs the same race with no profiler: the arm that says how much
   // the profiler itself costs.
   const profiling = race.profile !== false;
   if (profiling) {
-    await cdp.send('Profiler.enable');
-    await cdp.send('Profiler.setSamplingInterval', { interval: 1000 });
-    await cdp.send('Profiler.start');
+    await cdp.send("Profiler.enable");
+    await cdp.send("Profiler.setSamplingInterval", { interval: 1000 });
+    await cdp.send("Profiler.start");
   }
   // Calibration: a named busy loop at a known page time, findable in the profile. The frame list is
   // emptied in the same call, so frame number m is __harnessTs[m - 1] from here on.
@@ -142,7 +152,9 @@ for (const [i, race] of plan.entries()) {
     return t0;
   });
 
-  await page.getByRole('button', { name: new RegExp(`Quick Test \\(${race.n}\\)`) }).click();
+  await page
+    .getByRole("button", { name: new RegExp(`Quick Test \\(${race.n}\\)`) })
+    .click();
   await page.waitForURL(/\/race/, { timeout: 20000 });
 
   // stitched[j] = [frameNumber, state, probeGap]
@@ -153,10 +165,13 @@ for (const [i, race] of plan.entries()) {
     await page.waitForTimeout(POLL_MS);
     const snap = await page.evaluate(() => ({
       c: window.__harnessTs.length,
-      raw: typeof window.__perfProbeRaw === 'function' ? window.__perfProbeRaw() : null,
+      raw:
+        typeof window.__perfProbeRaw === "function"
+          ? window.__perfProbeRaw()
+          : null,
       path: location.pathname,
     }));
-    if (!snap.path.startsWith('/race')) break;
+    if (!snap.path.startsWith("/race")) break;
     if (!snap.raw || snap.raw.length === 0) continue;
     const L = snap.raw.length;
     const k = prevCount === null ? L : snap.c - prevCount;
@@ -167,16 +182,17 @@ for (const [i, race] of plan.entries()) {
     }
     if (prevCount === null && L === PROBE_RING) lost = -1; // first read already full: start unknown
     prevCount = snap.c;
-    if (Date.now() - started > 6 * 60 * 1000) throw new Error('race did not end within 6 minutes');
+    if (Date.now() - started > 6 * 60 * 1000)
+      throw new Error("race did not end within 6 minutes");
   }
   let profile = null;
   if (profiling) {
-    ({ profile } = await cdp.send('Profiler.stop'));
-    await cdp.send('Profiler.disable');
+    ({ profile } = await cdp.send("Profiler.stop"));
+    await cdp.send("Profiler.disable");
   }
 
   const meta = await page.evaluate(() => {
-    const a = JSON.parse(sessionStorage.getItem('activeRace') || '{}');
+    const a = JSON.parse(sessionStorage.getItem("activeRace") || "{}");
     return {
       trackId: a.trackId,
       fieldSize: (a.racers || []).length,
@@ -186,7 +202,8 @@ for (const [i, race] of plan.entries()) {
       ts: window.__harnessTs,
     };
   });
-  if (meta.fieldSize !== race.n) throw new Error(`field ${meta.fieldSize}, planned ${race.n}`);
+  if (meta.fieldSize !== race.n)
+    throw new Error(`field ${meta.fieldSize}, planned ${race.n}`);
 
   // Frame m started at ts[m - 2] and ended at ts[m - 1] (frame numbers count from 1).
   const ts = meta.ts;
@@ -196,20 +213,32 @@ for (const [i, race] of plan.entries()) {
     if (m < 2 || m > ts.length) continue;
     const gap = ts[m - 1] - ts[m - 2];
     if (Math.abs(gap - probeGap) > 0.6) mismatch++;
-    frames.push([Math.round(gap * 100) / 100, state, Math.round(ts[m - 2] * 100) / 100]);
+    frames.push([
+      Math.round(gap * 100) / 100,
+      state,
+      Math.round(ts[m - 2] * 100) / 100,
+    ]);
   }
 
-  const base = `${String(i).padStart(2, '0')}-${race.track.replace(/\s+/g, '_')}-${race.n}-${race.seed}${profiling ? '' : '-noprof'}`;
+  const base = `${String(i).padStart(2, "0")}-${race.track.replace(/\s+/g, "_")}-${race.n}-${race.seed}${profiling ? "" : "-noprof"}`;
   writeFileSync(
     join(outDir, `${base}.frames.json`),
-    JSON.stringify({ ...race, meta: { ...meta, ts: undefined }, calibAt, lost, mismatch, frames })
+    JSON.stringify({
+      ...race,
+      meta: { ...meta, ts: undefined },
+      calibAt,
+      lost,
+      mismatch,
+      frames,
+    }),
   );
-  if (profile) writeFileSync(join(outDir, `${base}.cpuprofile`), JSON.stringify(profile));
+  if (profile)
+    writeFileSync(join(outDir, `${base}.cpuprofile`), JSON.stringify(profile));
   const sorted = frames.map((f) => f[0]).sort((a, b) => a - b);
   console.log(
     `${i + 1}/${plan.length} ${race.track} n=${race.n} seed=${race.seed} frames=${frames.length} ` +
       `lost=${lost} mismatch=${mismatch} p50=${sorted[Math.floor(sorted.length / 2)]?.toFixed(1)} ` +
-      `>33=${sorted.filter((g) => g > 33).length} ${Math.round((Date.now() - started) / 1000)}s`
+      `>33=${sorted.filter((g) => g > 33).length} ${Math.round((Date.now() - started) / 1000)}s`,
   );
 }
 await browser.close();
