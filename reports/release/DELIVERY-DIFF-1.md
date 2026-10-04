@@ -68,3 +68,23 @@ note did not record the values; this report does.
 ## Not done
 
 No seed, version or data file was changed.
+
+## Shipped, 2026-10-04 (DELIVERY-SHIP-1)
+
+The owner's decisions of 2026-10-04: ship `searound` and `seatrack` exactly as on his installation; do
+NOT ship the brand "Fantasa" or the two test player groups.
+
+**What changed:**
+- `server/seeds/tracks/searound.json` and `seatrack.json` are copied byte for byte from his
+  `server/data/tracks/`.
+- Both units are raised to version 2 in `server/seeds/versions.json`.
+
+**What a running install sees:** one redelivery of the two tracks, with the existing notice. It was
+checked on a simulated install holding the old records: both were redelivered, and seatrack's bubbles
+went from 100 to 36,000.
+
+**Checks:**
+- All four fingerprints unchanged.
+- `check-seed-versions` green.
+- `seedDelivery.test.js` now pins the two raised units (it used to assert every unit at 1).
+- Sabotage: setting seatrack back to 1 reddens the test and the guard.

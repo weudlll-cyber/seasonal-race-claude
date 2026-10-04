@@ -1750,10 +1750,10 @@
     {
       "id": "bubbles",
       "config": {
-        "count": 100,
-        "size": 1.9,
+        "count": 36000,
+        "size": 2.6,
         "color": "#aaddff",
-        "opacity": 0.6
+        "opacity": 0.45
       }
     }
   ],
@@ -1765,7 +1765,7 @@
   "isDefault": true,
   "backgroundImageFile": "seatrack.jpg",
   "createdAt": "2026-06-03T10:52:30.677Z",
-  "updatedAt": "2026-06-03T12:57:18.903Z",
+  "updatedAt": "2026-09-29T19:42:56.893Z",
   "maxRacers": null,
   "defaultDurationSec": 60
 }
