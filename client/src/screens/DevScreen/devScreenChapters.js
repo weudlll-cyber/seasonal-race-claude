@@ -27,6 +27,8 @@ import PeriodEvaluation from './sections/PeriodEvaluation.jsx';
 import SystemSettings from './sections/SystemSettings.jsx';
 import AutoScaleSection from './sections/AutoScaleSection.jsx';
 import RaceTuningSection from './sections/RaceTuningSection.jsx';
+import DynamicsTuningSection from './sections/DynamicsTuningSection.jsx';
+import BehaviorTuningSection from './sections/BehaviorTuningSection.jsx';
 import SpriteSizeRangeSection from './sections/SpriteSizeRangeSection.jsx';
 import NameTagVisibilitySection from './sections/NameTagVisibilitySection.jsx';
 import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
@@ -45,9 +47,46 @@ export const CHAPTERS = [
     intro:
       'Everything that changes how a race runs, from the defaults a new race starts with to the mechanisms that shape the finish. Every control here, except the operator defaults at the top, sits in a config block the race fingerprint hashes, so changing one changes the race itself, not only the picture. One reset at the top of the tuning part restores every block in this chapter.',
     subgroups: [
-      { title: 'Race Defaults', parts: [{ component: RaceDefaults, tier: OP }] },
-      { title: 'Race Tuning', parts: [{ component: RaceTuningSection, tier: ADV }] },
-      { title: 'Auto-Scale', parts: [{ component: AutoScaleSection, tier: ADV }] },
+      {
+        title: 'Defaults for a new race',
+        parts: [{ component: RaceDefaults, part: 'raceSetup', tier: OP }],
+      },
+      {
+        title: 'Reset of the whole tuning',
+        parts: [{ component: RaceTuningSection, part: 'reset', tier: ADV }],
+      },
+      {
+        title: 'Pace — all race long',
+        parts: [{ component: DynamicsTuningSection, part: 'pace', tier: ADV }],
+      },
+      {
+        title: 'Racers among each other — all race long',
+        parts: [{ component: BehaviorTuningSection, part: 'interaction', tier: ADV }],
+      },
+      {
+        title: 'Start — grid and racer size',
+        parts: [
+          { component: DynamicsTuningSection, part: 'start', tier: ADV },
+          { component: BehaviorTuningSection, part: 'startLayout', tier: ADV },
+          { component: AutoScaleSection, tier: ADV },
+        ],
+      },
+      {
+        title: 'Speed changes during the race',
+        parts: [{ component: DynamicsTuningSection, part: 'speedChanges', tier: ADV }],
+      },
+      {
+        title: 'Race plan and bonuses',
+        parts: [{ component: DynamicsTuningSection, part: 'racePlan', tier: ADV }],
+      },
+      {
+        title: 'Mid-race contest (PULK)',
+        parts: [{ component: DynamicsTuningSection, part: 'pulk', tier: ADV }],
+      },
+      {
+        title: 'Outcome — the gap leader brake',
+        parts: [{ component: DynamicsTuningSection, part: 'gapBrake', tier: ADV }],
+      },
     ],
   },
   {
@@ -58,6 +97,10 @@ export const CHAPTERS = [
       'Everything the camera does, in the order a race unfolds: how it frames at all times, how it chooses its shot, then the start, the battles and comebacks of the middle, the endgame, the finish and the ending. None of it changes the race — only what you see of it.',
     subgroups: [
       { title: 'Camera Advanced', parts: [{ component: CameraAdvancedSection, tier: ADV }] },
+      {
+        title: 'Ending — after the line',
+        parts: [{ component: RaceDefaults, part: 'autoAdvance', tier: OP }],
+      },
     ],
   },
   {
@@ -75,6 +118,11 @@ export const CHAPTERS = [
         title: 'Name Tag Visibility',
         parts: [{ component: NameTagVisibilitySection, tier: ADV }],
       },
+      {
+        title: 'Smoothness and live standings',
+        parts: [{ component: DynamicsTuningSection, part: 'frameTiming', tier: ADV }],
+      },
+      { title: 'Sound', parts: [{ component: RaceDefaults, part: 'sound', tier: OP }] },
       { title: 'Surface Classes', parts: [{ component: SurfaceClassManager, tier: ADV }] },
     ],
   },

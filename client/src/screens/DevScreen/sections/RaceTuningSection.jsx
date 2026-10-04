@@ -4,16 +4,18 @@
 // Project:     RaceArena
 // Created:     2026-05-04
 // Description: DevScreen section — composite card mounting DynamicsTuningSection
-//              and BehaviorTuningSection with a shared Reset All button.
+//              and BehaviorTuningSection with a shared Reset All button. In the chapter
+//              layout (DEVSCREEN-CHAPTERS-1) only its `part="reset"` card is placed: the two
+//              editors' parts are placed in The race by themselves.
 // ============================================================
 
 import DynamicsTuningSection from './DynamicsTuningSection.jsx';
 import BehaviorTuningSection from './BehaviorTuningSection.jsx';
 import { resetRaceRelevantToDefault } from './raceRelevantReset.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
-function RaceTuningSection() {
+function RaceTuningSection({ part }) {
   // "Reset All Defaults" restores all FIVE race-relevant blocks: baseSpeed + rowLayout + raceDynamics,
   // raceBehavior and autoScale. The two COSMETIC blocks (camera, frameTiming) are deliberately left
   // untouched — see raceRelevantReset.js, which also says why it writes storage directly.
@@ -28,16 +30,16 @@ function RaceTuningSection() {
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}
         >
           <span style={{ fontWeight: 700, fontSize: '1rem' }}>Race Tuning</span>
-          <InfoTooltip text="Composite mount for the two race-physics editors: Dynamics (speed, row layout, race dynamics) and Behavior (racer behavior). The Reset All button covers those two plus autoScale; camera and frame-timing overlays are deliberately untouched." />
           <span className={s.spacer} />
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            onClick={handleReset}
-            title="Resets all race-relevant settings to defaults (speed, dynamics, behavior, row layout, auto-scale). Camera and frame-timing overlays are left untouched."
-            style={{ fontSize: '0.75rem' }}
-          >
-            Reset All Defaults
-          </button>
+          <Ctl id="RaceTuningSection:handleReset">
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              onClick={handleReset}
+              style={{ fontSize: '0.75rem' }}
+            >
+              Reset All Defaults
+            </button>
+          </Ctl>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>
           Fine-tune how races feel and play out. These settings control race physics — how racers
@@ -46,8 +48,12 @@ function RaceTuningSection() {
           races feel wrong.
         </p>
       </div>
-      <DynamicsTuningSection />
-      <BehaviorTuningSection />
+      {part !== 'reset' && (
+        <>
+          <DynamicsTuningSection />
+          <BehaviorTuningSection />
+        </>
+      )}
     </div>
   );
 }

@@ -6,9 +6,11 @@
 // Description: Shared card shell for DevScreen sections — title, optional subtitle,
 //              disable-fade, and reset button slot. SubHeading is a lightweight in-card
 //              group heading (label + optional note + optional per-group Reset) used when
-//              several control groups share one card.
+//              several control groups share one card. `resetControlId` gives the Reset its
+//              control id and info icon (DEVSCREEN-CHAPTERS-1).
 // ============================================================
 
+import { Ctl } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
 const RESET_BTN_STYLE = {
@@ -21,9 +23,19 @@ const RESET_BTN_STYLE = {
   opacity: 0.7,
 };
 
+// The Reset of a card or group — with its control id and info icon when it has one.
+function ResetButton({ onReset, resetTestId, resetControlId }) {
+  const button = (
+    <button onClick={onReset} data-testid={resetTestId} style={RESET_BTN_STYLE}>
+      Reset
+    </button>
+  );
+  return resetControlId ? <Ctl id={resetControlId}>{button}</Ctl> : button;
+}
+
 // In-card group heading: a small divided heading with an optional descriptive note and an optional
 // per-group Reset. Lets one SubCard hold several labelled control groups, each independently reset.
-export function SubHeading({ label, note, onReset, resetTestId }) {
+export function SubHeading({ label, note, onReset, resetTestId, resetControlId }) {
   return (
     <div
       style={{
@@ -48,9 +60,11 @@ export function SubHeading({ label, note, onReset, resetTestId }) {
         </span>
         <span className={s.spacer} />
         {onReset && (
-          <button onClick={onReset} data-testid={resetTestId} style={RESET_BTN_STYLE}>
-            Reset
-          </button>
+          <ResetButton
+            onReset={onReset}
+            resetTestId={resetTestId}
+            resetControlId={resetControlId}
+          />
         )}
       </div>
       {note && (
@@ -62,7 +76,15 @@ export function SubHeading({ label, note, onReset, resetTestId }) {
   );
 }
 
-export function SubCard({ title, subtitle, children, disabled, onReset, resetTestId }) {
+export function SubCard({
+  title,
+  subtitle,
+  children,
+  disabled,
+  onReset,
+  resetTestId,
+  resetControlId,
+}) {
   return (
     <div className={s.card} style={{ opacity: disabled ? 0.45 : 1 }}>
       <div
@@ -75,21 +97,11 @@ export function SubCard({ title, subtitle, children, disabled, onReset, resetTes
         <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{title}</span>
         <span className={s.spacer} />
         {onReset && (
-          <button
-            onClick={onReset}
-            data-testid={resetTestId}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-muted)',
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-              padding: '0.1rem 0.2rem',
-              opacity: 0.7,
-            }}
-          >
-            Reset
-          </button>
+          <ResetButton
+            onReset={onReset}
+            resetTestId={resetTestId}
+            resetControlId={resetControlId}
+          />
         )}
       </div>
       {subtitle && (
