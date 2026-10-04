@@ -207,8 +207,8 @@ export const CHAPTERS = [
     intro:
       'What has been raced: every race your team has run, which you can filter, export, run again and — as an admin — verify on the server, and a table by name over any period you choose. Nothing here changes a setting; it reads the record.',
     subgroups: [
-      { title: 'Race History', parts: [{ component: RaceHistory, tier: OP }] },
-      { title: 'Period Evaluation', parts: [{ component: PeriodEvaluation, tier: OP }] },
+      { title: 'Race history', parts: [{ component: RaceHistory, tier: OP }] },
+      { title: 'Period evaluation', parts: [{ component: PeriodEvaluation, tier: OP }] },
     ],
   },
   {

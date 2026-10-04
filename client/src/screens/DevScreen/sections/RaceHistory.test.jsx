@@ -64,7 +64,8 @@ describe('RaceHistory — section subtitle and tooltips (PR-A3.1)', () => {
     render(<RaceHistory />);
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
     const trackTip = tooltips.find((el) => el.textContent.includes('regardless of track'));
-    const dateTip = tooltips.find((el) => el.textContent.includes('specific event day'));
+    // DEVSCREEN-CHAPTERS-1 rewrote the date filter's info text; the locator matches the new wording.
+    const dateTip = tooltips.find((el) => el.textContent.includes('run on the chosen day'));
     expect(trackTip).toBeTruthy();
     expect(dateTip).toBeTruthy();
   });
