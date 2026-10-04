@@ -405,6 +405,53 @@ backfill the ledger without re-running.
 
 ---
 
+## Behind a reverse proxy — a tested example (Caddy)
+
+The server speaks plain HTTP. On a public address, put a proxy in front of it that speaks HTTPS and
+passes requests on. This is one complete, tested configuration. `racearena.example.com` is a
+placeholder: use your own name, and point it at the machine first.
+
+**The proxy** — a `Caddyfile`:
+
+```caddyfile
+racearena.example.com {
+	reverse_proxy 127.0.0.1:4000
+}
+```
+
+Caddy obtains and renews the certificate for that name by itself. The port must be the server's
+`PORT` (4000 unless you changed it).
+
+**The server's settings** — in your settings file (install step 4), beside the others:
+
+```sh
+NODE_ENV=production
+RA_BIND_ADDRESS=127.0.0.1
+RA_PUBLIC_ORIGIN=https://racearena.example.com
+```
+
+- `RA_BIND_ADDRESS=127.0.0.1`: the server answers only on this machine, so the proxy is the only
+  way in.
+- `RA_PUBLIC_ORIGIN` is the **https** address, exactly as visitors type it.
+- **Leave `RA_COOKIE_SECURE` unset.** In production it is on, and the server trusts the proxy's
+  report that the visitor used https. The session cookie is then sent only over https, with the
+  `__Host-` name prefix. The session lasts 30 days, as without a proxy.
+
+**What was tested** (PROXY-PROBE-1, 2026-10-04, `reports/release/PROXY-PROBE-1.md`):
+- the configuration above, with two changes: the site address was `127.0.0.1:8443` with `tls
+  internal`, because a test has no public name;
+- Caddy 2.11 ran in Docker, sharing the network of the app's container, so `RA_BIND_ADDRESS=127.0.0.1`
+  meant exactly what it means on a host install. The app refused connections on its container's own
+  address and answered on 127.0.0.1.
+- Through the proxy: the first admin was created; sign-in set the cookie `Secure`, `HttpOnly`,
+  `__Host-ra.sid`, valid for 30 days; one race was stored and read back by its short key; logout
+  ended the session (the old cookie got 401).
+
+★ **One thing that does not work:** reaching the proxy by a bare IP address from a program that sends
+no server name (SNI), as Node does. Caddy then has no certificate to choose and ends the TLS
+handshake. A browser on a real name never meets this; a test against an IP needs
+`default_sni <that IP>` in Caddy's global options. *(Found by PROXY-PROBE-1.)*
+
 ## Docker
 
 **The image builds the client itself.** The image's build context is **the repository root**
@@ -462,10 +509,11 @@ succeeded and the image ran healthy with no mounts, but nothing here leads to th
 
 ## Notes
 
-- **Reverse proxy**: if sitting behind nginx/Caddy, ensure `trust proxy` is honoured
-  (`NODE_ENV=production` enables it). Set `RA_COOKIE_SECURE=auto` so Express reads the
-  forwarded protocol rather than guessing. Set `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in
-  (install step 4).
+- **Reverse proxy**: the tested configuration is [Behind a reverse proxy](#behind-a-reverse-proxy--a-tested-example-caddy)
+  above. `NODE_ENV=production` makes the server trust the proxy's forwarded protocol, and with
+  `RA_COOKIE_SECURE` unset the cookie is `Secure` — that is what was tested. `RA_COOKIE_SECURE=auto`
+  (Express decides per request from the forwarded protocol) also exists; it was not part of the test.
+  Set `RA_BIND_ADDRESS=127.0.0.1` so the proxy is the only way in (install step 4).
 - **Session secret rotation**: changing `RA_SESSION_SECRET` invalidates all existing sessions
   (users are logged out). Plan rotations during maintenance windows.
 - **The runtime store holds your accounts.** `users.json`, `sessions.sqlite` and the seeded tracks,
