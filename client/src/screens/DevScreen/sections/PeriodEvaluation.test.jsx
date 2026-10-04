@@ -54,6 +54,12 @@ async function loadTable() {
   return screen.getByTestId('period-evaluation-table');
 }
 
+const cellsOf = (table, row) =>
+  within(within(table).getAllByRole('row')[row])
+    .getAllByRole('cell')
+    .map((c) => c.textContent);
+const nameInRow = (table, row) => cellsOf(table, row)[1];
+
 const headersOf = (table) =>
   within(table)
     .getAllByRole('columnheader')
@@ -103,16 +109,25 @@ describe('PeriodEvaluation — the period', () => {
 describe('PeriodEvaluation — the table', () => {
   it('by default shows races, wins, 2nd and 3rd places, podiums — and NO points column', async () => {
     const table = await loadTable();
-    expect(headersOf(table)).toEqual(['Name', 'Races', 'Wins', '2nd', '3rd', 'Podiums']);
+    expect(headersOf(table)).toEqual(['Place', 'Name', 'Races', 'Wins', '2nd', '3rd', 'Podiums']);
     // The server's order is kept as it came.
-    expect(within(table).getAllByRole('row')[1].textContent).toMatch(/^Bob/);
+    expect(nameInRow(table, 1)).toBe('Bob');
   });
 
   it("with the SERVER's points rule on, adds Points and orders by them", async () => {
     storedRule = { pointsEnabled: true, pointsPerPlace: [3, 2, 1] };
     const table = await loadTable();
-    expect(headersOf(table)).toEqual(['Name', 'Races', 'Wins', '2nd', '3rd', 'Podiums', 'Points']);
-    expect(within(table).getAllByRole('row')[1].textContent).toMatch(/^Ada/); // 5 against Bob's 3
+    expect(headersOf(table)).toEqual([
+      'Place',
+      'Name',
+      'Races',
+      'Wins',
+      '2nd',
+      '3rd',
+      'Podiums',
+      'Points',
+    ]);
+    expect(nameInRow(table, 1)).toBe('Ada'); // 5 against Bob's 3
   });
 });
 
@@ -143,5 +158,54 @@ describe('PeriodEvaluation — the points rule is set by an admin only', () => {
       })
     );
     expect(await screen.findByText(/the points rule for everyone on this server/)).toBeTruthy();
+  });
+});
+
+describe('PeriodEvaluation — the look (the owner, 2026-10-04: restyle it)', () => {
+  it('★ every header is its own column, a Place column leads, and equal rows share a place', async () => {
+    vi.mocked(fetchPeriodEvaluation).mockResolvedValueOnce({
+      from: 'a',
+      to: 'b',
+      counted: 3,
+      quickTestsExcluded: 0,
+      rows: [
+        { name: 'Ada', races: 3, wins: 2, podiums: 3, places: { 1: 2, 2: 1 } },
+        { name: 'Bob', races: 3, wins: 1, podiums: 2, places: { 1: 1, 3: 1 } },
+        { name: 'Cy', races: 3, wins: 1, podiums: 2, places: { 1: 1, 3: 1 } },
+        { name: 'Dee', races: 2, wins: 0, podiums: 0, places: { 4: 2 } },
+      ],
+    });
+    const table = await loadTable();
+    const headers = within(table).getAllByRole('columnheader');
+    // Separate cells, each with its own text — not one run-together header.
+    expect(headers).toHaveLength(7);
+    expect(headers.map((h) => h.textContent)).toEqual([
+      'Place',
+      'Name',
+      'Races',
+      'Wins',
+      '2nd',
+      '3rd',
+      'Podiums',
+    ]);
+    // Bob and Cy are equal on wins, 2nds, 3rds and races: they share 2nd, and Dee is 4th.
+    expect([1, 2, 3, 4].map((row) => cellsOf(table, row)[0])).toEqual(['1', '2', '2', '4']);
+    expect(cellsOf(table, 1)).toEqual(['1', 'Ada', '3', '2', '1', '0', '3']);
+  });
+
+  it('an empty period says so in one line instead of showing an empty table', async () => {
+    vi.mocked(fetchPeriodEvaluation).mockResolvedValueOnce({
+      from: 'a',
+      to: 'b',
+      counted: 0,
+      quickTestsExcluded: 2,
+      rows: [],
+    });
+    await shown();
+    fireEvent.click(screen.getByTestId('period-evaluation-load'));
+    expect((await screen.findByTestId('period-evaluation-empty')).textContent).toBe(
+      'No real race was finished in this period.'
+    );
+    expect(screen.queryByTestId('period-evaluation-table')).toBeNull();
   });
 });
