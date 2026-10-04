@@ -15,7 +15,7 @@ import {
   saveCameraConfig,
   DEFAULT_CAMERA_CONFIG,
 } from '../../../modules/cameraConfig.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { useSyncedConfig } from './useSyncedConfig.js';
 import s from '../DevScreen.module.css';
@@ -45,21 +45,23 @@ function SpriteSizeRangeSection() {
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.2rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Sprite Size Cap</span>
           <span className={s.spacer} />
-          <button
-            onClick={handleReset}
-            data-testid="reset-sprite-size-cap"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-muted)',
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-              padding: '0.1rem 0.2rem',
-              opacity: 0.7,
-            }}
-          >
-            Reset Sprite Size Cap
-          </button>
+          <Ctl id="SpriteSizeRangeSection:reset-sprite-size-cap">
+            <button
+              onClick={handleReset}
+              data-testid="reset-sprite-size-cap"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-muted)',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                padding: '0.1rem 0.2rem',
+                opacity: 0.7,
+              }}
+            >
+              Reset Sprite Size Cap
+            </button>
+          </Ctl>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Maximum sprite size in pixels. Prevents sprites from becoming too large during dramatic
@@ -67,15 +69,13 @@ function SpriteSizeRangeSection() {
         </p>
 
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
+          <div className={s.formGroup} data-control-id="SpriteSizeRangeSection:maxTargetScreenPx">
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Maximum sprite size (px)
-              <InfoTooltip
-                text={`Largest size racers can appear. Higher = camera can zoom in close for drama. Lower = sprites never get huge (helps if animations look choppy when very large). Value: ${config.maxTargetScreenPx}px.`}
-              />
+              <Info id="SpriteSizeRangeSection:maxTargetScreenPx" />
             </label>
             <input
               type="number"

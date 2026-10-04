@@ -169,7 +169,10 @@ export const CHAPTERS = [
         parts: [{ component: DynamicsTuningSection, part: 'frameTiming', tier: ADV }],
       },
       { title: 'Sound', parts: [{ component: RaceDefaults, part: 'sound', tier: OP }] },
-      { title: 'Surface Classes', parts: [{ component: SurfaceClassManager, tier: ADV }] },
+      {
+        title: 'Ground effects (surface classes)',
+        parts: [{ component: SurfaceClassManager, tier: ADV }],
+      },
     ],
   },
   {
