@@ -3,7 +3,7 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-04**, from PART ONE's **nine** rows. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
+Re-derived on **2026-10-04**, from PART ONE's **eight** rows. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
 conflict-marker row: the hook now refuses them — thirteen to **twelve**. ★ **The 2026-10-03 hygiene pass opened one row**:
 the pre-commit hook does not detect committed conflict markers (a proposal, not built) — twelve to
 **thirteen**. ★ **The comeback-runaway row closed on 2026-10-03**
@@ -54,10 +54,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–2214) holds exactly NINE unchecked `- [ ]` rows** — 3 in *DELIVERY-CLEAN-1*, 3 in
-*Delivering to someone else*, and one each in *Phases 5–7*, *Planned — needs spec* and
-*Build-identity residuals*. *(Re-counted 2026-10-04 after VERIFY-ON-DEMAND-1.)* Every current
-count on this page says nine.
+(lines 15–2137) holds exactly EIGHT unchecked `- [ ]` rows** — 3 in *DELIVERY-CLEAN-1*, 3 in
+*Delivering to someone else*, and one each in *Planned — needs spec* and
+*Build-identity residuals*. *(Re-counted 2026-10-04 after PERIOD-EVALUATION-1.)* Every current
+count on this page says eight.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -74,7 +74,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The nine rows in section 0 are all WORK**, and that is still true.
+work. **The eight rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -85,22 +85,17 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all nine, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all eight, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
 1. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
    Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
    Windows condition itself is not closed and cannot be closed from here.
-2. **Period evaluation — COMMISSIONED 2026-09-25**, replacing "season scoring". A table over a period
-   the user chooses, counting NAMES. ★ **The marker is BUILT (RACE-SOURCE-1, 2026-09-25):** a stored
-   race records how it was started, and **absent means test** — so excluding Quick Tests is now a
-   filter over a recorded fact. **The evaluation itself is not built.** The points rule is
-   dev-screen-configurable and **no numbers are adopted**.
-3. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
+2. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
    proven by following it literally (RELEASE-BASICS-1, 2026-10-01).
-4. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
+3. **`B-UX2`, the dev screen's reorganisation — COMMISSIONED 2026-09-25**, with `B-UX3` folded in.
    Narrowed again 2026-09-26: the nine MISLEADING tooltips are repaired and the structural cause
    is closed (a new `check-tooltip-values` guard refuses any UI string stating a config value, wired
    into `verify --premerge`). Inventory tally column 3: **204 MATCHES / 0 MISLEADING / 1 SUSPECTED
@@ -111,22 +106,22 @@ because nobody looked.**
    stored key, and no recommendation is made. **The reorganisation itself is untouched and no
    layout is designed** — that is what keeps this row open.
 
-5. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
+4. **The API binds all network interfaces**, so on a rented server it is reachable directly unless
    a firewall or proxy is put in front of it. ★ Narrowed 2026-10-01: a plain-`node` install can set
    `RA_BIND_ADDRESS=127.0.0.1`; the default is unchanged and is his choice.
-6. **A race run on non-default settings is recorded but not flagged** — the settings travel with
+5. **A race run on non-default settings is recorded but not flagged** — the settings travel with
    the race, so a dispute is examinable, but nothing draws attention to the row.
-7. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
+6. **The tidy list** — 65 scripts nothing names, half the top-level documents not declaring what
    they own, and **ten** smaller items. None of it costs anything today. *(`npm run backup` left it
    on 2026-10-01; `data:export` ignoring `RA_DATA_DIR` joined it, and left it on 2026-10-02 —
    DATA-EXPORT-DATADIR-1.)* ★ **2026-10-02 (TIDY-C-1):
    three more left it** — the `innerFramePct` defaults in `framingRule.js`, the base image's
    floating tag (now pinned by digest, ordered by the owner that day) and the missing backup
    checksum. The 30-day session cookie stays, his decision. The row stays open.
-8. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
+7. ★ **NEW 2026-10-01 — personal data.** Inventoried, facts only: race history (racer names), the
    admin-recovery audit log and a deleted admin's name in `createdBy` cannot be deleted except by
    hand; a deleted user's sessions linger until their next request. Whether that changes is his.
-9. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
+8. ★ **NEW 2026-10-02 — before delivery, switch off the developer-only displays** (Quick Test, the
    rings on steered racers, the build badge, the off-default badge, and a sweep for more). Scheduled
    after everything else.
 

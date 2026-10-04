@@ -900,94 +900,6 @@ Neither subsumes the other and both were already open.
 
 Built fresh — the original server scaffold was deleted (incompatible architecture).
 
-- [ ] ★★ **PERIOD EVALUATION — COMMISSIONED BY THE OWNER, 2026-09-25. It replaces "season scoring",
-      which is not what he wants.** *(Three rows until 2026-09-25: this, "Season archive + reset" —
-      folded in 2026-09-25 and CLOSED with it, since a period that is chosen by its dates needs
-      neither an archive nor a reset — and the standings half of the old row.)*
-
-      **WHAT IT IS.** A table, over a PERIOD the user chooses, of the races that were run in it. Not
-      a season with a beginning, an end, an archive and a reset — a period, evaluated on demand.
-      **The table counts NAMES**, not racers, not players and not entries: the same name appearing in
-      two races is one row with two results behind it.
-
-      ★★ **QUICK TESTS DO NOT COUNT. This is a hard requirement, not a preference** — a table that
-      mixes throwaway test races into a standing would be worse than no table.
-
-      ★★ **QUICK TESTS CAN NOW BE TOLD APART — BUILT 2026-09-25 (RACE-SOURCE-1). This is the one
-      piece of the row that is DONE; the evaluation itself is not, and the row stays open.**
-      A stored race records **how it was started**: `race` or `quick-test`, in a `race_source` column
-      on the races table, written from what the client sends. The vocabulary and the rule for reading
-      it have one home, [shared/raceSource.mjs](../shared/raceSource.mjs).
-
-      ★★ **ABSENT IS NOT REAL, and a later reader must not invert it.** A race counts as real ONLY
-      when it says so. A row with no marker — every row stored before 2026-09-25 — is a **test**
-      race. The predicate is `isRealRace(source)`, a positive equality; asking `!== 'quick-test'`
-      instead would read every legacy NULL as a real race, which is the exact inversion the column
-      exists to prevent.
-
-      ★★ **THE OWNER'S DECISION, 2026-09-25: every race stored so far is a test race, and none of
-      them is carried over when the move to a server happens.** So there is **no back-fill problem
-      and no migration of old race data** — the rule above and the truth already agree, and the 35
-      rows that existed on that date keep their NULL and are correct with it.
-
-      ★ **A TECHNICAL DECISION RECORDED SO IT IS NOT REVERSED AS AN "OPTIMISATION" — Option A, and
-      it is NOT the owner's.** The marker is INSIDE the row the content id is taken over
-      (`raceStore.js`, `contentId(row)`), so a race's id covers how it was started.
-      [contentAddress.js](../server/src/races/contentAddress.js) argues that a content id is a
-      statement about a VALUE rather than about a slot; keeping the field beside the row to spare the
-      id would degrade that to "the id is most of the content" and leave the next person adding a
-      field with no rule to follow. It costs nothing measurable: no stored row changes, the readable
-      short key is drawn at random and is deliberately outside the hash, `roster_id` and
-      `racer_types_id` are separate content ids over their own sub-objects, nothing pins a race
-      content id, and dedupe is unaffected because a retry carries the same marker.
-
-      ★ **What the marker deliberately is NOT:** a boolean. A named source can grow a third value the
-      day something genuinely third exists. **Two values exist and no third was invented** — in
-      particular a race started from an IDENTIFIER is an ordinary race, not a third kind.
-
-      ★ **What is still open on this row, unchanged:** the evaluation itself — the period, the table,
-      the points rule, and the controls. **Nothing of that was built.** What the marker buys is that
-      when it is built, excluding Quick Tests is a filter over a recorded fact rather than a guess.
-      ★ **2026-10-04 — BUILT on branch `feat/period-evaluation`, not merged:
-      [PERIOD-EVALUATION-1](../reports/release/PERIOD-EVALUATION-1.md).** A Dev Screen section with a
-      chosen period and a table by NAME; Quick Tests and unmarked races left out; the points rule a
-      setting, OFF with no ladder. Eleven choices are listed there as questions for him.
-      ★ **2026-10-04 — THE OWNER ANSWERED ALL ELEVEN, and the branch now follows them** (part two of
-      the same report): names match ignoring case and spaces; the same name twice in one race is
-      refused on every roster path and by the server; ordered by wins, 2nd places, 3rd places, races;
-      podium 1–3; the current month by default; UTC days; finishers only; a Dev Screen section for
-      every signed-in user; **the points rule SERVER-WIDE** — stored on the server, read by everyone,
-      set by admins only — which supersedes "chosen per evaluation" below; periods over 366 days
-      refused. Not merged until he has looked.
-
-      ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
-      the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation
-      rather than baked in. **NO NUMBERS ARE ADOPTED HERE.** A 10-8-6-5-4-3-2-1 ladder was offered on
-      2026-09-25 and **was NOT adopted**; it is recorded only so a later reader does not mistake it
-      for a decision that was taken. Writing any ladder into this row would be the same mistake.
-
-      ★ **WHAT ALREADY EXISTS, so the work is not re-derived.** The storage half is done and is not
-      in question:
-      - Outcomes are persisted in a real database — `server/src/races/raceStore.js:64,72`
-        (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own handle and its own file) — and served
-        back by `server/src/routes/races.js`: POST at `:62`, a paged GET at `:121`, GET by short key
-        at `:140`.
-      - **The races are already team-scoped**, so an evaluation is already answering for one team and
-        no other: `server/src/routes/races.js:127` and `:142`. Races stay scoped per team; no further
-        boundary is built (the **TENANCY** row, PART TWO, closed 2026-10-01).
-      - **Finish time is already indexed** — `CREATE INDEX races_by_team ON races(team_normalized,
-        finished_at DESC)` at `server/src/races/raceStore.js:162`, which is exactly the shape a
-        period query needs: one team, ordered by when the race ended. ★ *(Address corrected: the
-        commission named `:158-162`; at the tree `:158-159` are the `results` and `winners` columns
-        and the index is the single line `:162`.)*
-      - **NOT DONE:** no standings are computed anywhere. "season" occurs **once** in the whole store
-        and there is no evaluation code on the server.
-
-      ★ **SEQUENCING, so this is not built twice.** The controls this needs — the period, the points
-      rule, whatever selects what counts — belong in the **reorganised dev screen**, which is
-      `B-UX2`, commissioned the same day. Building them into today's dev screen means building them
-      into the thing `B-UX2` exists to replace. **`B-UX2`'s inventory comes first.**
-
 ---
 
 ## Delivering to someone else — what still stands (2026-09-24)
@@ -2231,6 +2143,102 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **PERIOD EVALUATION — CLOSED 2026-10-04 (PERIOD-EVALUATION-1): BUILT AND MERGED.** The
+      owner looked at it on the production preview on 2026-10-04 (the evaluation with points, the
+      one-year refusal, the same name twice refused, the restyled layout) and approved the merge.
+      What was built is in [PERIOD-EVALUATION-1](../reports/release/PERIOD-EVALUATION-1.md), part
+      two: a Dev Screen section for every signed-in user, names matched ignoring case and spaces,
+      finishers only, UTC days, the current month by default, at most 366 days, the points rule
+      stored on the server and set by admins, and the same name twice refused on every roster
+      path. The row as it stood when open:
+      **PERIOD EVALUATION — COMMISSIONED BY THE OWNER, 2026-09-25. It replaces "season scoring",
+      which is not what he wants.** *(Three rows until 2026-09-25: this, "Season archive + reset" —
+      folded in 2026-09-25 and CLOSED with it, since a period that is chosen by its dates needs
+      neither an archive nor a reset — and the standings half of the old row.)*
+
+      **WHAT IT IS.** A table, over a PERIOD the user chooses, of the races that were run in it. Not
+      a season with a beginning, an end, an archive and a reset — a period, evaluated on demand.
+      **The table counts NAMES**, not racers, not players and not entries: the same name appearing in
+      two races is one row with two results behind it.
+
+      ★★ **QUICK TESTS DO NOT COUNT. This is a hard requirement, not a preference** — a table that
+      mixes throwaway test races into a standing would be worse than no table.
+
+      ★★ **QUICK TESTS CAN NOW BE TOLD APART — BUILT 2026-09-25 (RACE-SOURCE-1). This is the one
+      piece of the row that is DONE; the evaluation itself is not, and the row stays open.**
+      A stored race records **how it was started**: `race` or `quick-test`, in a `race_source` column
+      on the races table, written from what the client sends. The vocabulary and the rule for reading
+      it have one home, [shared/raceSource.mjs](../shared/raceSource.mjs).
+
+      ★★ **ABSENT IS NOT REAL, and a later reader must not invert it.** A race counts as real ONLY
+      when it says so. A row with no marker — every row stored before 2026-09-25 — is a **test**
+      race. The predicate is `isRealRace(source)`, a positive equality; asking `!== 'quick-test'`
+      instead would read every legacy NULL as a real race, which is the exact inversion the column
+      exists to prevent.
+
+      ★★ **THE OWNER'S DECISION, 2026-09-25: every race stored so far is a test race, and none of
+      them is carried over when the move to a server happens.** So there is **no back-fill problem
+      and no migration of old race data** — the rule above and the truth already agree, and the 35
+      rows that existed on that date keep their NULL and are correct with it.
+
+      ★ **A TECHNICAL DECISION RECORDED SO IT IS NOT REVERSED AS AN "OPTIMISATION" — Option A, and
+      it is NOT the owner's.** The marker is INSIDE the row the content id is taken over
+      (`raceStore.js`, `contentId(row)`), so a race's id covers how it was started.
+      [contentAddress.js](../server/src/races/contentAddress.js) argues that a content id is a
+      statement about a VALUE rather than about a slot; keeping the field beside the row to spare the
+      id would degrade that to "the id is most of the content" and leave the next person adding a
+      field with no rule to follow. It costs nothing measurable: no stored row changes, the readable
+      short key is drawn at random and is deliberately outside the hash, `roster_id` and
+      `racer_types_id` are separate content ids over their own sub-objects, nothing pins a race
+      content id, and dedupe is unaffected because a retry carries the same marker.
+
+      ★ **What the marker deliberately is NOT:** a boolean. A named source can grow a third value the
+      day something genuinely third exists. **Two values exist and no third was invented** — in
+      particular a race started from an IDENTIFIER is an ordinary race, not a third kind.
+
+      ★ **What is still open on this row, unchanged:** the evaluation itself — the period, the table,
+      the points rule, and the controls. **Nothing of that was built.** What the marker buys is that
+      when it is built, excluding Quick Tests is a filter over a recorded fact rather than a guess.
+      ★ **2026-10-04 — BUILT on branch `feat/period-evaluation`, not merged:
+      [PERIOD-EVALUATION-1](../reports/release/PERIOD-EVALUATION-1.md).** A Dev Screen section with a
+      chosen period and a table by NAME; Quick Tests and unmarked races left out; the points rule a
+      setting, OFF with no ladder. Eleven choices are listed there as questions for him.
+      ★ **2026-10-04 — THE OWNER ANSWERED ALL ELEVEN, and the branch now follows them** (part two of
+      the same report): names match ignoring case and spaces; the same name twice in one race is
+      refused on every roster path and by the server; ordered by wins, 2nd places, 3rd places, races;
+      podium 1–3; the current month by default; UTC days; finishers only; a Dev Screen section for
+      every signed-in user; **the points rule SERVER-WIDE** — stored on the server, read by everyone,
+      set by admins only — which supersedes "chosen per evaluation" below; periods over 366 days
+      refused. Not merged until he has looked.
+
+      ★ **THE POINTS RULE IS DELIBERATELY NOT FIXED.** It must be **flexible and configurable from
+      the dev screen** — the rule is a setting, not a constant, and it is chosen per evaluation
+      rather than baked in. **NO NUMBERS ARE ADOPTED HERE.** A 10-8-6-5-4-3-2-1 ladder was offered on
+      2026-09-25 and **was NOT adopted**; it is recorded only so a later reader does not mistake it
+      for a decision that was taken. Writing any ladder into this row would be the same mistake.
+
+      ★ **WHAT ALREADY EXISTS, so the work is not re-derived.** The storage half is done and is not
+      in question:
+      - Outcomes are persisted in a real database — `server/src/races/raceStore.js:64,72`
+        (`better-sqlite3`, `DATA_ROOT/races.sqlite`, its own handle and its own file) — and served
+        back by `server/src/routes/races.js`: POST at `:62`, a paged GET at `:121`, GET by short key
+        at `:140`.
+      - **The races are already team-scoped**, so an evaluation is already answering for one team and
+        no other: `server/src/routes/races.js:127` and `:142`. Races stay scoped per team; no further
+        boundary is built (the **TENANCY** row, PART TWO, closed 2026-10-01).
+      - **Finish time is already indexed** — `CREATE INDEX races_by_team ON races(team_normalized,
+        finished_at DESC)` at `server/src/races/raceStore.js:162`, which is exactly the shape a
+        period query needs: one team, ordered by when the race ended. ★ *(Address corrected: the
+        commission named `:158-162`; at the tree `:158-159` are the `results` and `winners` columns
+        and the index is the single line `:162`.)*
+      - **NOT DONE:** no standings are computed anywhere. "season" occurs **once** in the whole store
+        and there is no evaluation code on the server.
+
+      ★ **SEQUENCING, so this is not built twice.** The controls this needs — the period, the points
+      rule, whatever selects what counts — belong in the **reorganised dev screen**, which is
+      `B-UX2`, commissioned the same day. Building them into today's dev screen means building them
+      into the thing `B-UX2` exists to replace. **`B-UX2`'s inventory comes first.**
 
 - [x] ★★ **B1 — VERIFY A RACE ON DEMAND — CLOSED 2026-10-04 (VERIFY-ON-DEMAND-1): BUILT AND MERGED.**
       The owner looked at it on the production preview on 2026-10-04 (a stored 40-racer race

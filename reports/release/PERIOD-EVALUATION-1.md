@@ -1,6 +1,7 @@
 # PERIOD-EVALUATION-1 — the period evaluation, built to the row
 
-**2026-10-04, branch `feat/period-evaluation` (NOT merged until the owner has looked).** Built to the
+**2026-10-04, branch `feat/period-evaluation` — MERGED into master on 2026-10-04, after the owner looked
+at it on the production preview the same day.** Built to the
 PERIOD EVALUATION row in `docs/BACKLOG.md` (commissioned 2026-09-25). **Part one** below is the first
 build and its eleven questions. **The owner answered all eleven the same day; part two is the build
 that follows his answers, and where the two disagree, part two is current.**
