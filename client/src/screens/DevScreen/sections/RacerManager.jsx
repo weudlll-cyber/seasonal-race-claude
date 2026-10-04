@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl } from './ControlInfo.jsx';
 import {
   RACER_TYPES,
   listAllRacerTypes,
@@ -157,9 +158,29 @@ function RacerManager() {
               </span>
               <span className={s.spacer} />
               {!type.isBuiltIn && (
+                <Ctl id="RacerManager:navigate(`/racer-editor">
+                  <button
+                    onClick={() => navigate(`/racer-editor?id=${type.id}`)}
+                    title={`Edit ${type.label} in Racer Editor`}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #3a3a4a',
+                      color: 'var(--color-muted)',
+                      fontSize: '0.72rem',
+                      padding: '0.25rem 0.55rem',
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                      marginRight: '0.25rem',
+                    }}
+                  >
+                    Edit in Racer Editor
+                  </button>
+                </Ctl>
+              )}
+              <Ctl id="RacerManager:setEditTypeId">
                 <button
-                  onClick={() => navigate(`/racer-editor?id=${type.id}`)}
-                  title={`Edit ${type.label} in Racer Editor`}
+                  onClick={() => setEditTypeId(type.id)}
+                  title={`Edit ${type.label} tuning`}
                   style={{
                     background: 'none',
                     border: '1px solid #3a3a4a',
@@ -171,53 +192,41 @@ function RacerManager() {
                     marginRight: '0.25rem',
                   }}
                 >
-                  Edit in Racer Editor
+                  Edit
                 </button>
-              )}
-              <button
-                onClick={() => setEditTypeId(type.id)}
-                title={`Edit ${type.label} tuning`}
-                style={{
-                  background: 'none',
-                  border: '1px solid #3a3a4a',
-                  color: 'var(--color-muted)',
-                  fontSize: '0.72rem',
-                  padding: '0.25rem 0.55rem',
-                  borderRadius: 'var(--radius)',
-                  cursor: 'pointer',
-                  marginRight: '0.25rem',
-                }}
-              >
-                Edit
-              </button>
+              </Ctl>
               {!type.isBuiltIn && (
-                <button
-                  onClick={() => handleDelete(type.id, type.label)}
-                  disabled={deletingId === type.id}
-                  title={`Delete ${type.label}`}
-                  style={{
-                    background: 'none',
-                    border: '1px solid #3a3a4a',
-                    color: '#e63946',
-                    fontSize: '0.72rem',
-                    padding: '0.25rem 0.55rem',
-                    borderRadius: 'var(--radius)',
-                    cursor: deletingId === type.id ? 'not-allowed' : 'pointer',
-                    marginRight: '0.25rem',
-                    opacity: deletingId === type.id ? 0.5 : 1,
-                  }}
-                >
-                  {deletingId === type.id ? 'Deleting…' : 'Delete'}
-                </button>
+                <Ctl id="RacerManager:handleDelete">
+                  <button
+                    onClick={() => handleDelete(type.id, type.label)}
+                    disabled={deletingId === type.id}
+                    title={`Delete ${type.label}`}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #3a3a4a',
+                      color: '#e63946',
+                      fontSize: '0.72rem',
+                      padding: '0.25rem 0.55rem',
+                      borderRadius: 'var(--radius)',
+                      cursor: deletingId === type.id ? 'not-allowed' : 'pointer',
+                      marginRight: '0.25rem',
+                      opacity: deletingId === type.id ? 0.5 : 1,
+                    }}
+                  >
+                    {deletingId === type.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </Ctl>
               )}
-              <label className={s.toggle} title={type.isActive ? 'Disable' : 'Enable'}>
-                <input
-                  type="checkbox"
-                  checked={type.isActive}
-                  onChange={() => toggleActive(type.id)}
-                />
-                <span className={s.toggleSlider} />
-              </label>
+              <Ctl id="RacerManager:toggleActive">
+                <label className={s.toggle} title={type.isActive ? 'Disable' : 'Enable'}>
+                  <input
+                    type="checkbox"
+                    checked={type.isActive}
+                    onChange={() => toggleActive(type.id)}
+                  />
+                  <span className={s.toggleSlider} />
+                </label>
+              </Ctl>
             </div>
           ))}
         </div>

@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { InfoTooltip } from '../../../components/InfoTooltip/InfoTooltip.jsx';
+import { Ctl, Info } from './ControlInfo.jsx';
 import {
   RACER_TYPES,
   TUNABLE_FIELDS,
@@ -50,8 +51,6 @@ const FIELD_META = {
     min: 0.1,
     max: 2.0,
     step: 0.05,
-    tooltip:
-      'How fast this racer moves in a race. 1.0 = Horse baseline. Below 1 is slower, above 1 is faster. Range 0.3 (Snail) to 1.25 (Rocket) is well-balanced.',
   },
   displaySize: {
     label: 'Display Size (px)',
@@ -59,8 +58,6 @@ const FIELD_META = {
     min: 16,
     max: 80,
     step: 2,
-    tooltip:
-      'Sprite size in pixels for this racer type. Setting it here skips auto-scaling for the race and feeds the starting grid (row gap and row count).',
   },
   basePeriodMs: {
     label: 'Anim Period (ms)',
@@ -68,13 +65,10 @@ const FIELD_META = {
     min: 100,
     max: 3000,
     step: 50,
-    tooltip:
-      'Duration of one full animation cycle in milliseconds. Low = fast flicker, high = slow and calm.',
   },
   leaderRingColor: {
     label: 'Leader Ring Color',
     type: 'color',
-    tooltip: 'Color of the glow ring drawn around the leading racer. Enter a hex code (#rrggbb).',
   },
   leaderEllipseRx: {
     label: 'Leader Ring Width (rx)',
@@ -82,7 +76,6 @@ const FIELD_META = {
     min: 8,
     max: 40,
     step: 1,
-    tooltip: 'Horizontal radius of the leader ring ellipse in pixels. Increase for wider sprites.',
   },
   leaderEllipseRy: {
     label: 'Leader Ring Height (ry)',
@@ -90,8 +83,6 @@ const FIELD_META = {
     min: 5,
     max: 30,
     step: 1,
-    tooltip:
-      'Vertical radius of the leader ring ellipse in pixels. Smaller values give a flatter ring.',
   },
 };
 
@@ -435,11 +426,12 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
             return (
               <div
                 key={fieldName}
+                data-control-id={`RacerEditModal:${fieldName}`}
                 className={`${s.fieldRow}${modified ? ` ${s.fieldRowModified}` : ''}${err ? ` ${s.fieldRowError}` : ''}`}
               >
                 <div className={s.labelRow}>
                   <span className={s.fieldLabel}>{meta.label}</span>
-                  <InfoTooltip text={meta.tooltip} />
+                  <Info id={`RacerEditModal:${fieldName}`} />
                   {modified && <span className={s.modifiedBadge}>modified</span>}
                 </div>
 
@@ -476,13 +468,14 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
                   )}
 
                   {modified && (
-                    <button
-                      className={s.resetFieldBtn}
-                      onClick={() => handleFieldReset(fieldName)}
-                      title={`Reset ${meta.label} to default`}
-                    >
-                      Reset
-                    </button>
+                    <Ctl id="RacerEditModal:handleFieldReset">
+                      <button
+                        className={s.resetFieldBtn}
+                        onClick={() => handleFieldReset(fieldName)}
+                      >
+                        Reset
+                      </button>
+                    </Ctl>
                   )}
                 </div>
 
@@ -491,11 +484,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
             );
           })}
 
-          {/* ── Min Sprite Screen Size ── */}
-          <div className={`${s.fieldRow}${minSizeModified ? ` ${s.fieldRowModified}` : ''}`}>
+          {/* ── The size floor of THIS type (stored as minTargetScreenPx, like the every-type floor in
+              The race → Start; two settings, one stored name — the label carries the scope) ── */}
+          <div
+            data-control-id="RacerEditModal:handleMinSizeChange"
+            className={`${s.fieldRow}${minSizeModified ? ` ${s.fieldRowModified}` : ''}`}
+          >
             <div className={s.labelRow}>
-              <span className={s.fieldLabel}>Min Sprite Screen Size</span>
-              <InfoTooltip text="Minimum on-screen diameter for this racer in pixels. On very large tracks the camera zooms out; this floor keeps the sprite visible. Camera zoom still makes it larger when nearby." />
+              <span className={s.fieldLabel}>Size floor — this racer type only</span>
+              <Info id="RacerEditModal:handleMinSizeChange" />
               {minSizeModified && <span className={s.modifiedBadge}>modified</span>}
             </div>
 
@@ -508,17 +505,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
                 step={4}
                 value={effectiveMinSize}
                 onChange={(e) => handleMinSizeChange(parseInt(e.target.value, 10))}
-                aria-label="Min Sprite Screen Size"
+                aria-label="Size floor — this racer type only"
               />
               <span className={s.sliderValue}>{effectiveMinSize}px</span>
               {minSizeModified && (
-                <button
-                  className={s.resetFieldBtn}
-                  onClick={handleMinSizeReset}
-                  title="Reset Min Sprite Screen Size to global default"
-                >
-                  Reset
-                </button>
+                <Ctl id="RacerEditModal:handleMinSizeReset">
+                  <button className={s.resetFieldBtn} onClick={handleMinSizeReset}>
+                    Reset
+                  </button>
+                </Ctl>
               )}
             </div>
 
@@ -536,11 +531,12 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
           </div>
           {/* ── Surface Classes ── */}
           <div
+            data-control-id="RacerEditModal:handleSurfaceClassToggle"
             className={`${s.fieldRow}${surfaceClassesModified ? ` ${s.fieldRowModified}` : ''}${surfaceClassesValue.length === 0 ? ` ${s.fieldRowError}` : ''}`}
           >
             <div className={s.labelRow}>
               <span className={s.fieldLabel}>Surface Classes</span>
-              <InfoTooltip text="Which surface classes this racer is compatible with. During a race the active class is the intersection with the track's classes. At least one class is required." />
+              <Info id="RacerEditModal:handleSurfaceClassToggle" />
               {surfaceClassesModified && <span className={s.modifiedBadge}>modified</span>}
             </div>
             <div className={s.pillRow} data-testid="surface-class-pills">
@@ -563,14 +559,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
               <span className={s.errorMsg}>At least one surface class is required</span>
             )}
             {surfaceClassesModified && surfaceClassesValue.length > 0 && (
-              <button
-                className={s.resetFieldBtn}
-                onClick={handleSurfaceClassesReset}
-                style={{ marginTop: '0.3rem', alignSelf: 'flex-start' }}
-                title="Reset Surface Classes to code default"
-              >
-                Reset to default
-              </button>
+              <Ctl id="RacerEditModal:handleSurfaceClassesReset">
+                <button
+                  className={s.resetFieldBtn}
+                  onClick={handleSurfaceClassesReset}
+                  style={{ marginTop: '0.3rem', alignSelf: 'flex-start' }}
+                >
+                  Reset to default
+                </button>
+              </Ctl>
             )}
           </div>
           {/* ── Cloud Effect Overrides ── */}
@@ -593,7 +590,12 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
                   {effectOverridesModified && <span className={s.modifiedBadge}>modified</span>}
                 </div>
                 {CLOUD_EFFECT_PARAMS.map(({ key, label, min, max, step }) => (
-                  <div key={key} className={s.minSizeRow} style={{ marginTop: '0.45rem' }}>
+                  <div
+                    key={key}
+                    className={s.minSizeRow}
+                    style={{ marginTop: '0.45rem' }}
+                    data-control-id={`RacerEditModal:${key}`}
+                  >
                     <span
                       style={{
                         fontSize: '0.72rem',
@@ -604,6 +606,7 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
                     >
                       {label}
                     </span>
+                    <Info id={`RacerEditModal:${key}`} />
                     <input
                       type="range"
                       className={s.slider}
@@ -625,14 +628,15 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
                   <span className={s.minSizeHint}>class defaults ({cloudClasses[0].label})</span>
                 )}
                 {effectOverridesModified && (
-                  <button
-                    className={s.resetFieldBtn}
-                    onClick={handleEffectReset}
-                    style={{ marginTop: '0.5rem', alignSelf: 'flex-start' }}
-                    title="Remove overrides — revert to surface class defaults"
-                  >
-                    Reset to class defaults
-                  </button>
+                  <Ctl id="RacerEditModal:handleEffectReset">
+                    <button
+                      className={s.resetFieldBtn}
+                      onClick={handleEffectReset}
+                      style={{ marginTop: '0.5rem', alignSelf: 'flex-start' }}
+                    >
+                      Reset to class defaults
+                    </button>
+                  </Ctl>
                 )}
               </div>
             );
@@ -641,27 +645,30 @@ export function RacerEditModal({ typeId, overrides, setOverrides, onClose }) {
         {hasMoreBelow && <div className={s.scrollFade} aria-hidden="true" />}
 
         <div className={s.footer}>
-          <button
-            className={s.resetAllBtn}
-            onClick={handleResetAll}
-            disabled={!hasAnyTunableOverride()}
-            title="Reset all fields for this type to code defaults"
-          >
-            Reset all to defaults
-          </button>
+          <Ctl id="RacerEditModal:handleResetAll">
+            <button
+              className={s.resetAllBtn}
+              onClick={handleResetAll}
+              disabled={!hasAnyTunableOverride()}
+            >
+              Reset all to defaults
+            </button>
+          </Ctl>
           <span className={s.spacer} />
-          <button
-            className={s.doneBtn}
-            onClick={onClose}
-            disabled={surfaceClassesValue.length === 0}
-            title={
-              surfaceClassesValue.length === 0
-                ? 'At least one surface class is required'
-                : undefined
-            }
-          >
-            Done
-          </button>
+          <Ctl id="RacerEditModal:onClose">
+            <button
+              className={s.doneBtn}
+              onClick={onClose}
+              disabled={surfaceClassesValue.length === 0}
+              title={
+                surfaceClassesValue.length === 0
+                  ? 'At least one surface class is required'
+                  : undefined
+              }
+            >
+              Done
+            </button>
+          </Ctl>
         </div>
       </div>
     </div>

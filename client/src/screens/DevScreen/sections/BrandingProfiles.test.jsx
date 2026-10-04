@@ -553,15 +553,15 @@ describe('BrandingProfiles — DefaultControls smoke test', () => {
   it('renders DefaultControls buttons per brand row for admin user', async () => {
     renderProfiles();
     await waitFor(() => screen.getByText('Christmas Party'));
-    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Set as default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 
-  it('renders "Default entfernen" for brand with isDefault=true', async () => {
+  it('renders "Remove default" for brand with isDefault=true', async () => {
     fetchBrands.mockResolvedValue([DEFAULT_BRAND]);
     renderProfiles();
     await waitFor(() => screen.getByText('Seasonal Entertainment'));
-    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Remove default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 });

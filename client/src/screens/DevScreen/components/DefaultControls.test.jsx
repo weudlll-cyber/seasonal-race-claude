@@ -53,17 +53,17 @@ describe('DefaultControls — L126: operator role renders nothing', () => {
 // ── Admin role ────────────────────────────────────────────────────────────────
 
 describe('DefaultControls — admin role, not default', () => {
-  it('shows "Als Default setzen" when isDefault=false', () => {
+  it('shows "Set as default" when isDefault=false', () => {
     render(<DefaultControls {...makeProps({ isDefault: false })} />);
-    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
-    expect(screen.queryByText('Default entfernen')).toBeNull();
+    expect(screen.getByText('Set as default')).toBeInTheDocument();
+    expect(screen.queryByText('Remove default')).toBeNull();
   });
 
-  it('calls setDefault(id) then onChanged() when "Als Default setzen" clicked', async () => {
+  it('calls setDefault(id) then onChanged() when "Set as default" clicked', async () => {
     const props = makeProps({ isDefault: false });
     render(<DefaultControls {...props} />);
     await act(async () => {
-      fireEvent.click(screen.getByText('Als Default setzen'));
+      fireEvent.click(screen.getByText('Set as default'));
     });
     expect(props.setDefault).toHaveBeenCalledWith('item-abc');
     expect(props.onChanged).toHaveBeenCalledOnce();
@@ -71,17 +71,17 @@ describe('DefaultControls — admin role, not default', () => {
 });
 
 describe('DefaultControls — admin role, is default', () => {
-  it('shows "Default entfernen" when isDefault=true', () => {
+  it('shows "Remove default" when isDefault=true', () => {
     render(<DefaultControls {...makeProps({ isDefault: true })} />);
-    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
-    expect(screen.queryByText('Als Default setzen')).toBeNull();
+    expect(screen.getByText('Remove default')).toBeInTheDocument();
+    expect(screen.queryByText('Set as default')).toBeNull();
   });
 
-  it('calls clearDefault(id) then onChanged() when "Default entfernen" clicked', async () => {
+  it('calls clearDefault(id) then onChanged() when "Remove default" clicked', async () => {
     const props = makeProps({ isDefault: true });
     render(<DefaultControls {...props} />);
     await act(async () => {
-      fireEvent.click(screen.getByText('Default entfernen'));
+      fireEvent.click(screen.getByText('Remove default'));
     });
     expect(props.clearDefault).toHaveBeenCalledWith('item-abc');
     expect(props.onChanged).toHaveBeenCalledOnce();
@@ -89,9 +89,9 @@ describe('DefaultControls — admin role, is default', () => {
 });
 
 describe('DefaultControls — export seed', () => {
-  it('always shows "Als Seed exportieren"', () => {
+  it('always shows "Export as seed"', () => {
     render(<DefaultControls {...makeProps()} />);
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 
   it('calls exportSeed(id) and triggers a download on click', async () => {
@@ -112,7 +112,7 @@ describe('DefaultControls — export seed', () => {
     render(<DefaultControls {...props} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Als Seed exportieren'));
+      fireEvent.click(screen.getByText('Export as seed'));
     });
 
     await waitFor(() => {

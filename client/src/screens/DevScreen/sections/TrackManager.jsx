@@ -26,6 +26,7 @@ import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/r
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import { trackDefaultLaps } from '../../../modules/durationModel.js';
 import s from '../DevScreen.module.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
@@ -206,9 +207,11 @@ function TrackManager() {
           </span>
           <span className={s.spacer} />
           {!showForm && (
-            <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
-              + Add Track
-            </button>
+            <Ctl id="TrackManager:setShowForm">
+              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
+                + Add Track
+              </button>
+            </Ctl>
           )}
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.5rem' }}>
@@ -277,7 +280,13 @@ function TrackManager() {
                     : `${track.defaultDurationSec ?? track.defaultDuration ?? 60}s`}
                 </span>
                 <span className={s.spacer} />
+                <Ctl id="TrackManager:handleEdit">
+                  <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
+                    ✏️
+                  </button>
+                </Ctl>
                 <DefaultControls
+                  controlSection="TrackManager"
                   id={track.id}
                   isDefault={track.isDefault}
                   onChanged={serverTracksCtl.refresh}
@@ -286,16 +295,15 @@ function TrackManager() {
                   exportSeed={exportTrackSeed}
                   seedFilename={`track-${track.id}.json`}
                 />
-                <button className={s.btnIconOnly} onClick={() => handleEdit(track)} title="Edit">
-                  ✏️
-                </button>
-                <button
-                  className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(track.id, track.isDefault)}
-                  title="Delete from server"
-                >
-                  🗑
-                </button>
+                <Ctl id="TrackManager:handleDelete">
+                  <button
+                    className={`${s.btnIconOnly} ${s.danger}`}
+                    onClick={() => handleDelete(track.id, track.isDefault)}
+                    title="Delete from server"
+                  >
+                    🗑
+                  </button>
+                </Ctl>
               </div>
             ))}
           </div>
@@ -308,13 +316,13 @@ function TrackManager() {
             {editId ? 'Edit Track' : 'New Track'}
           </p>
           <div className={s.formGrid}>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="TrackManager:name">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Name
-                <InfoTooltip text="What this track is called. Shown in race setup and in the race history." />
+                <Info id="TrackManager:name" />
               </label>
               <input
                 className={s.input}
@@ -324,8 +332,14 @@ function TrackManager() {
                 onChange={(e) => f('name', e.target.value)}
               />
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Emoji Icon</label>
+            <div className={s.formGroup} data-control-id="TrackManager:icon">
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Emoji Icon
+                <Info id="TrackManager:icon" />
+              </label>
               <input
                 className={s.input}
                 placeholder="🌴"
@@ -334,8 +348,14 @@ function TrackManager() {
                 onChange={(e) => f('icon', e.target.value)}
               />
             </div>
-            <div className={s.formGroupFull}>
-              <label className={s.label}>Description</label>
+            <div className={s.formGroupFull} data-control-id="TrackManager:description">
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Description
+                <Info id="TrackManager:description" />
+              </label>
               <input
                 className={s.input}
                 placeholder="Short description shown on the track card"
@@ -344,8 +364,14 @@ function TrackManager() {
                 onChange={(e) => f('description', e.target.value)}
               />
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Color</label>
+            <div className={s.formGroup} data-control-id="TrackManager:color">
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Color
+                <Info id="TrackManager:color" />
+              </label>
               <div className={s.colorRow}>
                 <input
                   type="color"
@@ -371,8 +397,14 @@ function TrackManager() {
                 follows from track length and the normal speed); OPEN tracks are defined by
                 SECONDS. Only the one that applies to this geometry is shown. */}
             {geometryIsClosed(form.geometryId) ? (
-              <div className={s.formGroup}>
-                <label className={s.label}>Default Laps</label>
+              <div className={s.formGroup} data-control-id="TrackManager:defaultLaps">
+                <label
+                  className={s.label}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  Default Laps
+                  <Info id="TrackManager:defaultLaps" />
+                </label>
                 <div className={s.optionPills}>
                   {LAP_CHOICES.map((n) => (
                     <button
@@ -386,8 +418,14 @@ function TrackManager() {
                 </div>
               </div>
             ) : (
-              <div className={s.formGroup}>
-                <label className={s.label}>Default Duration</label>
+              <div className={s.formGroup} data-control-id="TrackManager:defaultDurationSec">
+                <label
+                  className={s.label}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  Default Duration
+                  <Info id="TrackManager:defaultDurationSec" />
+                </label>
                 <div className={s.optionPills}>
                   {DURATIONS.map((d) => (
                     <button
@@ -401,8 +439,14 @@ function TrackManager() {
                 </div>
               </div>
             )}
-            <div className={s.formGroup}>
-              <label className={s.label}>Default Winners</label>
+            <div className={s.formGroup} data-control-id="TrackManager:defaultWinners">
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Default Winners
+                <Info id="TrackManager:defaultWinners" />
+              </label>
               <div className={s.stepper}>
                 <button
                   className={s.stepperBtn}
@@ -421,13 +465,13 @@ function TrackManager() {
                 </button>
               </div>
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="TrackManager:track-geometry-btn">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Track Geometry
-                <InfoTooltip text="The geometry of the track itself — the line racers follow. Edit this in the Track Geometry Editor by dragging control points." />
+                <Info id="TrackManager:track-geometry-btn" />
               </label>
               {editId ? (
                 // Existing server track: geometry status + editor button
@@ -473,8 +517,14 @@ function TrackManager() {
                 </span>
               )}
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Default Racer Type</label>
+            <div className={s.formGroup} data-control-id="TrackManager:defaultRacerTypeId">
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                Default Racer Type
+                <Info id="TrackManager:defaultRacerTypeId" />
+              </label>
               <select
                 className={s.select}
                 value={form.defaultRacerTypeId}
@@ -487,13 +537,13 @@ function TrackManager() {
                 ))}
               </select>
             </div>
-            <div className={s.formGroupFull}>
+            <div className={s.formGroupFull} data-control-id="TrackManager:surfaceClasses">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Surface Classes
-                <InfoTooltip text="The kind of surface the track has — affects dust, particles, and other visual effects. See the Surface Classes section to define new ones." />
+                <Info id="TrackManager:surfaceClasses" />
               </label>
               <div
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}
@@ -551,12 +601,13 @@ function TrackManager() {
               </span>
             </div>
 
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="TrackManager:maxRacers">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Max Racers
+                <Info id="TrackManager:maxRacers" />
                 {form.maxRacersIsOverride && (
                   <span
                     className={s.badge}
@@ -625,21 +676,27 @@ function TrackManager() {
             </p>
           )}
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>
-            <button
-              className={`${s.btn} ${s.btnPrimary}`}
-              onClick={handleSave}
-              disabled={!form.name.trim() || !form.icon.trim() || form.surfaceClasses.length === 0}
-              title={
-                form.surfaceClasses.length === 0
-                  ? 'At least one surface class is required'
-                  : undefined
-              }
-            >
-              {editId ? 'Save Changes' : 'Add Track'}
-            </button>
-            <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
-              Cancel
-            </button>
+            <Ctl id="TrackManager:handleSave">
+              <button
+                className={`${s.btn} ${s.btnPrimary}`}
+                onClick={handleSave}
+                disabled={
+                  !form.name.trim() || !form.icon.trim() || form.surfaceClasses.length === 0
+                }
+                title={
+                  form.surfaceClasses.length === 0
+                    ? 'At least one surface class is required'
+                    : undefined
+                }
+              >
+                {editId ? 'Save Changes' : 'Add Track'}
+              </button>
+            </Ctl>
+            <Ctl id="TrackManager:handleCancel">
+              <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
+                Cancel
+              </button>
+            </Ctl>
           </div>
         </div>
       )}

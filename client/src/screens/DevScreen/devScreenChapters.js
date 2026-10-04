@@ -182,7 +182,7 @@ export const CHAPTERS = [
     intro:
       'The things a race is made of — who races, where, as what, and under which look. Each part lists what exists, the actions on each entry, and then the form for creating or editing one. These are records and per-type settings, not the race tuning of the first chapter.',
     subgroups: [
-      { title: 'Player Groups', parts: [{ component: PlayerGroupsManager, tier: OP }] },
+      { title: 'Player groups', parts: [{ component: PlayerGroupsManager, tier: OP }] },
       {
         title: 'Tracks',
         parts: [
@@ -191,13 +191,13 @@ export const CHAPTERS = [
         ],
       },
       {
-        title: 'Racer Types',
+        title: 'Racer types',
         parts: [
           { own: 'racerEditorLink', tier: OP },
           { component: RacerManager, tier: OP },
         ],
       },
-      { title: 'Branding', parts: [{ component: BrandingProfiles, tier: OP }] },
+      { title: 'Brands', parts: [{ component: BrandingProfiles, tier: OP }] },
     ],
   },
   {

@@ -6,7 +6,7 @@
 // Description: Component tests for RacerEditModal (D3.5.5 + D7a-Plus)
 // ============================================================
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../../racer-types/spriteLoader.js', () => ({
@@ -177,7 +177,12 @@ describe('RacerEditModal', () => {
     renderModal('horse');
     // tooltip spans have display:none — query with hidden:true
     // 6 standard fields + 1 min sprite size + 1 surface classes = 8 total
-    const tooltips = screen.getAllByRole('tooltip', { hidden: true });
+    // DEVSCREEN-CHAPTERS-1: the footer's two buttons carry an info icon of their own now, so the
+    // locator counts the fields' tooltips in the modal BODY (the parent of the field rows).
+    const body = screen
+      .getByLabelText(/Size floor — this racer type only/i)
+      .closest('[data-control-id]').parentElement;
+    const tooltips = within(body).getAllByRole('tooltip', { hidden: true });
     expect(tooltips.length).toBe(8);
   });
 });
@@ -185,18 +190,18 @@ describe('RacerEditModal', () => {
 describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
   it('renders the Min Sprite Screen Size slider', () => {
     renderModal('horse');
-    expect(screen.getByLabelText(/Min Sprite Screen Size/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Size floor — this racer type only/i)).toBeTruthy();
   });
 
   it('slider shows global default (32) when no override is set', () => {
     renderModal('horse');
-    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    const slider = screen.getByLabelText(/Size floor — this racer type only/i);
     expect(slider.value).toBe('32');
   });
 
   it('slider shows override value when override is set', () => {
     renderModal('horse', { horse: { minTargetScreenPx: 64 } });
-    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    const slider = screen.getByLabelText(/Size floor — this racer type only/i);
     expect(slider.value).toBe('64');
   });
 
@@ -218,7 +223,7 @@ describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
 
   it('calls setOverrides when slider changes', () => {
     const { setOverrides } = renderModal('horse');
-    const slider = screen.getByLabelText(/Min Sprite Screen Size/i);
+    const slider = screen.getByLabelText(/Size floor — this racer type only/i);
     fireEvent.change(slider, { target: { value: '56' } });
     expect(setOverrides).toHaveBeenCalled();
   });
@@ -231,8 +236,11 @@ describe('RacerEditModal — min sprite size section (D7a-Plus)', () => {
 
   it('Reset for min size calls setOverrides to remove override', () => {
     const { setOverrides } = renderModal('horse', { horse: { minTargetScreenPx: 48 } });
-    // Find the Reset button in the min size row (title contains "global default")
-    const resetBtn = screen.getByTitle(/Reset Min Sprite Screen Size/i);
+    // Find the Reset button in the min size row (DEVSCREEN-CHAPTERS-1: by its row, not its title)
+    const row = screen
+      .getByLabelText(/Size floor — this racer type only/i)
+      .closest('[data-control-id]');
+    const resetBtn = within(row).getByRole('button', { name: /reset/i });
     fireEvent.click(resetBtn);
     expect(setOverrides).toHaveBeenCalled();
   });

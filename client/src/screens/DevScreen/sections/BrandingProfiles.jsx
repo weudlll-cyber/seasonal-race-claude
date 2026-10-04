@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import {
   fetchBrands,
   createBrand,
@@ -220,9 +221,11 @@ function BrandingProfiles() {
           </span>
           <span className={s.spacer} />
           {!showForm && (
-            <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
-              + New Profile
-            </button>
+            <Ctl id="BrandingProfiles:setShowForm">
+              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
+                + New Profile
+              </button>
+            </Ctl>
           )}
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.5rem' }}>
@@ -305,17 +308,22 @@ function BrandingProfiles() {
                   </span>
                 )}
                 <span className={s.spacer} />
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-                  onClick={() => setPreview(preview === brand.id ? null : brand.id)}
-                >
-                  {preview === brand.id ? 'Hide Preview' : 'Preview'}
-                </button>
-                <button className={s.btnIconOnly} onClick={() => handleEdit(brand)} title="Edit">
-                  ✏️
-                </button>
+                <Ctl id="BrandingProfiles:setPreview">
+                  <button
+                    className={`${s.btn} ${s.btnGhost}`}
+                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+                    onClick={() => setPreview(preview === brand.id ? null : brand.id)}
+                  >
+                    {preview === brand.id ? 'Hide Preview' : 'Preview'}
+                  </button>
+                </Ctl>
+                <Ctl id="BrandingProfiles:handleEdit">
+                  <button className={s.btnIconOnly} onClick={() => handleEdit(brand)} title="Edit">
+                    ✏️
+                  </button>
+                </Ctl>
                 <DefaultControls
+                  controlSection="BrandingProfiles"
                   id={brand.id}
                   isDefault={brand.isDefault}
                   onChanged={refresh}
@@ -324,13 +332,15 @@ function BrandingProfiles() {
                   exportSeed={exportBrandSeed}
                   seedFilename={`brand-${brand.id}.json`}
                 />
-                <button
-                  className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(brand.id, brand.isDefault)}
-                  title="Delete"
-                >
-                  🗑
-                </button>
+                <Ctl id="BrandingProfiles:handleDelete">
+                  <button
+                    className={`${s.btnIconOnly} ${s.danger}`}
+                    onClick={() => handleDelete(brand.id, brand.isDefault)}
+                    title="Delete"
+                  >
+                    🗑
+                  </button>
+                </Ctl>
               </div>
             ))}
           </div>
@@ -361,13 +371,13 @@ function BrandingProfiles() {
             {editId ? 'Edit Branding Profile' : 'New Branding Profile'}
           </p>
           <div className={s.formGrid}>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:name">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Profile Name
-                <InfoTooltip text="What this branding profile is called. Pick a name that helps you recognize it — for example the event name or sponsor." />
+                <Info id="BrandingProfiles:name" />
               </label>
               <input
                 className={s.input}
@@ -377,8 +387,11 @@ function BrandingProfiles() {
                 onChange={(e) => f('name', e.target.value)}
               />
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Event Name (headline)</label>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:eventName">
+              <label className={s.label}>
+                Event Name (headline)
+                <Info id="BrandingProfiles:eventName" />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Winter Race Championship"
@@ -387,8 +400,11 @@ function BrandingProfiles() {
                 onChange={(e) => f('eventName', e.target.value)}
               />
             </div>
-            <div className={s.formGroupFull}>
-              <label className={s.label}>Subtitle</label>
+            <div className={s.formGroupFull} data-control-id="BrandingProfiles:subtitle">
+              <label className={s.label}>
+                Subtitle
+                <Info id="BrandingProfiles:subtitle" />
+              </label>
               <input
                 className={s.input}
                 placeholder="e.g. Powered by the best team in town"
@@ -397,13 +413,13 @@ function BrandingProfiles() {
                 onChange={(e) => f('subtitle', e.target.value)}
               />
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:primaryColor">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Primary Color
-                <InfoTooltip text="The main accent color used in race UI elements like the timer and headers. Pick something that fits your event's look." />
+                <Info id="BrandingProfiles:primaryColor" />
               </label>
               <div className={s.colorRow}>
                 <input
@@ -426,13 +442,13 @@ function BrandingProfiles() {
                 />
               </div>
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:secondaryColor">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Secondary Color
-                <InfoTooltip text="A supporting color used for backgrounds and secondary UI parts. Should contrast well with the primary color so text stays readable." />
+                <Info id="BrandingProfiles:secondaryColor" />
               </label>
               <div className={s.colorRow}>
                 <input
@@ -455,13 +471,13 @@ function BrandingProfiles() {
                 />
               </div>
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:sponsorText">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Sponsor Text
-                <InfoTooltip text="A short message shown in the race intro and result screens. Keep it under 50 characters so it fits nicely on screen." />
+                <Info id="BrandingProfiles:sponsorText" />
               </label>
               <input
                 className={s.input}
@@ -471,13 +487,13 @@ function BrandingProfiles() {
                 onChange={(e) => f('sponsorText', e.target.value)}
               />
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:fileRef.current?.click">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Logo (image file)
-                <InfoTooltip text="Optional logo image shown during races. PNG with transparent background works best. Keep it small — around 200x100 pixels — so it doesn't dominate the screen." />
+                <Info id="BrandingProfiles:fileRef.current?.click" />
               </label>
               <input
                 ref={fileRef}
@@ -500,19 +516,24 @@ function BrandingProfiles() {
                       alt="preview"
                       style={{ height: '2rem', borderRadius: '4px' }}
                     />
-                    <button
-                      className={`${s.btnIconOnly} ${s.danger}`}
-                      onClick={handleRemoveLogo}
-                      title="Remove logo"
-                    >
-                      ✕
-                    </button>
+                    <Ctl id="BrandingProfiles:handleRemoveLogo">
+                      <button
+                        className={`${s.btnIconOnly} ${s.danger}`}
+                        onClick={handleRemoveLogo}
+                        title="Remove logo"
+                      >
+                        ✕
+                      </button>
+                    </Ctl>
                   </>
                 )}
               </div>
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Logo Size</label>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:logoMaxHeight">
+              <label className={s.label}>
+                Logo Size
+                <Info id="BrandingProfiles:logoMaxHeight" />
+              </label>
               <RangeSlider
                 min={40}
                 max={160}
@@ -525,8 +546,11 @@ function BrandingProfiles() {
                 </span>
               </RangeSlider>
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Logo Opacity</label>
+            <div className={s.formGroup} data-control-id="BrandingProfiles:logoOpacity">
+              <label className={s.label}>
+                Logo Opacity
+                <Info id="BrandingProfiles:logoOpacity" />
+              </label>
               <RangeSlider
                 min={0}
                 max={1}
@@ -541,16 +565,20 @@ function BrandingProfiles() {
             </div>
           </div>
           <div className={s.btnRow} style={{ marginTop: '0.75rem' }}>
-            <button
-              className={`${s.btn} ${s.btnPrimary}`}
-              onClick={handleSave}
-              disabled={!form.name.trim() || !form.eventName.trim()}
-            >
-              {editId ? 'Save Changes' : 'Create Profile'}
-            </button>
-            <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
-              Cancel
-            </button>
+            <Ctl id="BrandingProfiles:handleSave">
+              <button
+                className={`${s.btn} ${s.btnPrimary}`}
+                onClick={handleSave}
+                disabled={!form.name.trim() || !form.eventName.trim()}
+              >
+                {editId ? 'Save Changes' : 'Create Profile'}
+              </button>
+            </Ctl>
+            <Ctl id="BrandingProfiles:handleCancel">
+              <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
+                Cancel
+              </button>
+            </Ctl>
           </div>
         </div>
       )}

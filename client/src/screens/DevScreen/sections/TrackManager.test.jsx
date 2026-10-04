@@ -659,13 +659,13 @@ describe('TrackManager — DefaultControls smoke test', () => {
 
   it('renders DefaultControls buttons in each track row for admin user', () => {
     renderTrackManager({ serverTracks: [SERVER_TRACK] });
-    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Set as default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 
-  it('renders "Default entfernen" for a track with isDefault=true', () => {
+  it('renders "Remove default" for a track with isDefault=true', () => {
     renderTrackManager({ serverTracks: [DEFAULT_TRACK] });
-    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Remove default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 });
