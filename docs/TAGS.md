@@ -293,6 +293,21 @@ carried the SAME change and was deleted outright for the same reason.
   and its location is recorded in
   [CLEANUP-2026-08-24](../reports/evolution/CLEANUP-2026-08-24.md).
 
+### LOCAL-CLEANUP-2026-10-04 — the owner's last local branches, archived (2026-10-04)
+
+The owner's decision of 2026-10-04: his local repository holds `master` only. Three local branches,
+none of them merged and none of them at origin any more, were archived before deletion:
+
+- `archive/feat-remove-prestaging-comebacker` (`dcb5bd83`, 2026-10-04) — **the
+  `feat/remove-prestaging-comebacker` branch, three commits from 2026-09-18**: REMOVE-PRESTAGING-1
+  (the staged comebacker as the only path that casts from the B1 pool), its documentation, and the
+  PRESTAGING-WHY-1 report (*the racer who loses his role is not the one who breaks away*). Never
+  merged. Read it with `git log master..archive/feat-remove-prestaging-comebacker`.
+- `night/2026-09-10` and `night/2026-09-17` were **already archived** — as
+  `archive/night-2026-09-10` and `archive/night-2026-09-17`, registered below on the tips the
+  branches still had — so no new tag was made for them; the local branches were deleted against
+  those tags.
+
 ### TENANCY-SURVEY-1 — the survey and build plan, archived when the boundary was not built (2026-10-01)
 
 - `archive/tenancy-survey-1` (`042f06cc`, 2026-10-01) — **the `tenancy/survey` branch's one commit**:
