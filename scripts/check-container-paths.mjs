@@ -105,6 +105,18 @@ export const DECLARED_DIVERGENCES = [
     reason:
       "IT MUST NEVER BE IN THE IMAGE. `server/data/` is the RUNTIME STORE — this install's accounts (users.json, sessions.sqlite, setup-complete.json) sit there beside the seeded records. It used to be COPYed, which meant an image built on a used machine carried the builder's password hashes and a setup marker that made `POST /api/auth/setup` answer 409 forever on the recipient's fresh install. IMAGE-NO-CREDENTIALS-1 removed the COPY and excluded the directory from the build context; since IMAGE-STANDALONE-1 that exclusion lives in the ROOT .dockerignore, which is an allow-list, so this directory is excluded by not being named rather than by a rule that could be forgotten. This divergence is CORRECT and permanent: an operator's data belongs in a volume, never baked into a layer. Every directory the server needs under it is created at runtime with mkdirSync recursive, so nothing is lost by its absence.",
   },
+  {
+    name: "client/src/modules",
+    kind: "copied-not-mounted",
+    reason:
+      'THE ENGINE FOR "VERIFY RACE" MUST BE THE ONE THE IMAGE SERVES (VERIFY-ON-DEMAND-1, 2026-10-04). A verify answers whether the engine produces a stored result, and the races a browser stores are run by the client this image serves — `client-dist`, which is BUILT INTO the image from the same `client/src` and is never mounted. Mounting the engine live would make a dev container verify against a newer engine than the one its browser races, and report a mismatch that is only an unbuilt edit. Baked together, the two move together on a rebuild. The why of the copy itself is in `server/Dockerfile`, "THE RACE ENGINE".',
+  },
+  {
+    name: "client/src/racer-types",
+    kind: "copied-not-mounted",
+    reason:
+      'THE ENGINE FOR "VERIFY RACE" MUST BE THE ONE THE IMAGE SERVES (VERIFY-ON-DEMAND-1, 2026-10-04). A verify answers whether the engine produces a stored result, and the races a browser stores are run by the client this image serves — `client-dist`, which is BUILT INTO the image from the same `client/src` and is never mounted. Mounting the engine live would make a dev container verify against a newer engine than the one its browser races, and report a mismatch that is only an unbuilt edit. Baked together, the two move together on a rebuild. The why of the copy itself is in `server/Dockerfile`, "THE RACE ENGINE".',
+  },
   // `utils` STOOD HERE and is gone, closed by COPY-UTILS-1 on 2026-09-01. It was labelled "history,
   // not necessity" — inside the build context, one COPY line from not diverging, declared only
   // because the piece that built this guard shipped no behaviour. The Dockerfile now copies it.

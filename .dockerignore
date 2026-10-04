@@ -112,6 +112,20 @@ server/utils/**/*.test.js
 # covers it — the per-file list is what makes each entry a decision rather than a sweep.
 !shared/raceSource.mjs
 
+# ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1, 2026-10-04) ────────────────────────────
+# The why is in `server/Dockerfile` ("THE RACE ENGINE"). `client/src/**` is already in the context
+# for the client build; these are the three files from `scripts/` the replay needs, and nothing else
+# of that directory — it holds the measurement tooling, which no installation runs.
+!scripts/lib/storedRaceReplay.mjs
+!scripts/lib/raceDriver.mjs
+!scripts/lib/cameraPlanDelivery.mjs
+
+# The engine's tests stay out, for the reason given above for the server's: the stage-2 image copies
+# `client/src/modules/` and `client/src/racer-types/` whole, and a test beside each file would ride
+# along. The client BUILD never reads a test, so stage 1 loses nothing.
+client/src/**/*.test.js
+client/src/**/*.test.jsx
+
 # ── Deliberately NOT re-included, named so the absences are decisions rather than oversights ─────
 #
 #   server/data/**    THE RUNTIME STORE. Accounts, sessions and the setup marker live there beside
