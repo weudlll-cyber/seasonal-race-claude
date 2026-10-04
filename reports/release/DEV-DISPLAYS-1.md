@@ -98,8 +98,8 @@ Race Tuning.
 
 ## What this means for the row
 
-- **Six items can be switched off by a default alone:** 4, 5, 6, and the items in D (already
-  off). But a default reaches only a browser that never stored the key.
+- **Three items that are on by default can be switched off by a default alone:** 4, 5 and 6. The
+  thirteen in D are already off. A default reaches only a browser that never stored the key.
 - **Ten have no switch at all**, and switching them off is a code change each: 1, 2, 3, 7, 8, 9, 10,
   11, 12, 26 — plus the battle dots, if the BATTLE shot is ever switched back on.
 - **Decisions that are the owner's:**
