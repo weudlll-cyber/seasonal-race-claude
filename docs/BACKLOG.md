@@ -1084,36 +1084,6 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       and no stored IP address exist. **Whether any of this must change is the owner's question.**
       **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
 
-- [ ] ★ **THE DELIVERY PLAN OF 2026-08-31 — the delivery mechanism exists; the step that makes his
-      installation the shipped default does not.** RELEASE-BASICS-1 (d)2; detail in §(d)2 of
-      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
-      **Exists:** ten shipped tracks with their backgrounds, one default brand with its logo and one
-      default player group, each a versioned unit (`server/seeds/versions.json`); a raised version
-      **overwrites the operator's copy and warns** — a notice per record, shown as a banner on the
-      setup screen (`server/src/seedDelivery.js:162-170`,
-      `client/src/components/SeedRedeliveryNotice.jsx:78-83`).
-      **Does not exist:** a committed command that copies his installation's current tracks, brand
-      and player group into `server/seeds` and raises their versions — the 2026-08-31 copy was a
-      one-off, and `GET …/export-seed` returns one record and writes nothing.
-      ★ **And the shipped tracks have drifted from his installation:** `searound` and `seatrack`
-      differ from their seeds in `effects` (compared 2026-10-01; the other eight tracks and all ten
-      backgrounds are byte-identical). **verify:** on his machine,
-      `cmp server/seeds/tracks/searound.json server/data/tracks/searound.json`.
-      ★ **2026-10-01 — SHIP-OWNER-COSMETIC-1, the camera half of "his installation becomes the shipped
-      default"** (branch `ship/owner-cosmetic-defaults`, **NOT merged, NOT minted**). On the owner's
-      request of 2026-10-01, his cosmetic settings (`COSMETIC_CONFIG_KEYS`,
-      `client/src/modules/parity/configFingerprint.js:27`) became the shipped camera defaults in
-      `client/src/modules/storage/defaults.js`, taken from his Dev Screen export with the existing
-      `splitConfigDiffs`; his race settings were already the defaults. The owner's decisions of
-      2026-10-01 on it: the BATTLE shot ships off (the feature stays in the code), OVERVIEW tracks
-      slowly again, the winner card fills the whole pause, and the comeback hold is longer with a wider
-      Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
-      move and are minted only after his eye. 
-      ★ **2026-10-02 — THE CAMERA HALF IS DONE: SHIP-OWNER-COSMETIC-1 merged and minted** on the
-      owner's look of that day ([report](../reports/evolution/SHIP-OWNER-COSMETIC-1.md)); his camera
-      settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
-      the player group.**
-
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
@@ -2272,6 +2242,60 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **THE DELIVERY PLAN OF 2026-08-31 — CLOSED 2026-10-04 (DELIVERY-SHIP-1), by the owner's
+      decisions of that day.**
+      - **Camera.** His camera settings shipped on 2026-10-02 (SHIP-OWNER-COSMETIC-1).
+      - **Tracks.** `searound` and `seatrack` now ship exactly as on his installation — the two
+        records copied byte for byte from his `server/data/tracks/` — with their units raised to
+        version 2 in `server/seeds/versions.json`, so every install still at 1 receives them once,
+        through the existing overwrite-with-notice rule. Checked: an install holding the old records
+        is redelivered both (seatrack's bubbles 100 → 36,000).
+      - **Not shipped, by his decision:** the brand "Fantasa" and the two test player groups. The
+        other eight tracks, the default brand and the default group were already identical
+        ([DELIVERY-DIFF-1](../reports/release/DELIVERY-DIFF-1.md)).
+      - **Checks.** All four fingerprints unchanged (the track files are engine data, so they were
+        checked); `check-seed-versions` green. `seedDelivery.test.js` no longer asserts "every unit
+        at 1" and pins the two raised units; putting seatrack back to 1 reddens it and the guard.
+      - **Recorded, not carried as a row:** there is still no committed command that copies an
+        installation into `server/seeds`. This copy was done by hand again, as the 2026-08-31 one
+        was.
+
+      *The row as it stood:*
+      **THE DELIVERY PLAN OF 2026-08-31 — the delivery mechanism exists; the step that makes his
+      installation the shipped default does not.** RELEASE-BASICS-1 (d)2; detail in §(d)2 of
+      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
+      **Exists:** ten shipped tracks with their backgrounds, one default brand with its logo and one
+      default player group, each a versioned unit (`server/seeds/versions.json`); a raised version
+      **overwrites the operator's copy and warns** — a notice per record, shown as a banner on the
+      setup screen (`server/src/seedDelivery.js:162-170`,
+      `client/src/components/SeedRedeliveryNotice.jsx:78-83`).
+      **Does not exist:** a committed command that copies his installation's current tracks, brand
+      and player group into `server/seeds` and raises their versions — the 2026-08-31 copy was a
+      one-off, and `GET …/export-seed` returns one record and writes nothing.
+      ★ **And the shipped tracks have drifted from his installation:** `searound` and `seatrack`
+      differ from their seeds in `effects` (compared 2026-10-01; the other eight tracks and all ten
+      backgrounds are byte-identical). **verify:** on his machine,
+      `cmp server/seeds/tracks/searound.json server/data/tracks/searound.json`.
+      ★ **2026-10-01 — SHIP-OWNER-COSMETIC-1, the camera half of "his installation becomes the shipped
+      default"** (branch `ship/owner-cosmetic-defaults`, **NOT merged, NOT minted**). On the owner's
+      request of 2026-10-01, his cosmetic settings (`COSMETIC_CONFIG_KEYS`,
+      `client/src/modules/parity/configFingerprint.js:27`) became the shipped camera defaults in
+      `client/src/modules/storage/defaults.js`, taken from his Dev Screen export with the existing
+      `splitConfigDiffs`; his race settings were already the defaults. The owner's decisions of
+      2026-10-01 on it: the BATTLE shot ships off (the feature stays in the code), OVERVIEW tracks
+      slowly again, the winner card fills the whole pause, and the comeback hold is longer with a wider
+      Dev Screen range (the values are in `defaults.js`). World fingerprint unchanged; camera and render
+      move and are minted only after his eye. 
+      ★ **2026-10-02 — THE CAMERA HALF IS DONE: SHIP-OWNER-COSMETIC-1 merged and minted** on the
+      owner's look of that day ([report](../reports/evolution/SHIP-OWNER-COSMETIC-1.md)); his camera
+      settings are the shipped defaults on master. **This row stays open for the tracks, the brand and
+      the player group.**
+      ★ **2026-10-04 — the difference, field by field: [DELIVERY-DIFF-1](../reports/release/DELIVERY-DIFF-1.md)**
+      (branch `docs/delivery-diff`, read-only). Of the 12 shipped units, 9 are identical to his. The
+      differences are searound's effects (none shipped, bubbles in his) and seatrack's bubbles (count
+      100 → 36,000, size and opacity changed), plus the default player group's edit time only. Not
+      shipped: his own brand, two test groups and three backgrounds that no track uses.
 
 - [x] ★ **B8 — CLOSED 2026-10-04 (DEVSCREEN-TIER-1): the Dev Screen's admin view comes from the
       SERVER-CONFIRMED session, not from the stored hint.** No code changed. The chain:

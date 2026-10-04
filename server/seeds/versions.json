@@ -87,14 +87,14 @@
       ]
     },
     "tracks/searound": {
-      "version": 1,
+      "version": 2,
       "files": [
         "tracks/searound.json",
         "backgrounds/searound.jpg"
       ]
     },
     "tracks/seatrack": {
-      "version": 1,
+      "version": 2,
       "files": [
         "tracks/seatrack.json",
         "backgrounds/seatrack.jpg"

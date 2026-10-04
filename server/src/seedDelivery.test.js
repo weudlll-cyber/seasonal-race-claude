@@ -63,9 +63,21 @@ describe('deliverSeeds — the manifest is real', () => {
     expect(seen.size).toBeGreaterThan(0);
   });
 
-  it('starts every shipped unit at the same version', () => {
-    const versions = new Set(Object.values(REAL).map((u) => u.version));
-    expect([...versions]).toEqual([1]);
+  it('carries a positive whole version on every shipped unit', () => {
+    for (const [name, u] of Object.entries(REAL)) {
+      expect(Number.isInteger(u.version) && u.version >= 1, name).toBe(true);
+    }
+  });
+
+  // DELIVERY-SHIP-1 (2026-10-04): the owner's decision to ship searound and seatrack as on his
+  // installation raised exactly these two units, so every install still at 1 receives them once.
+  // This test used to assert that EVERY unit is at 1 — true until the first redelivery, by design.
+  it('raised searound and seatrack to 2 for the delivery of 2026-10-04, and nothing else', () => {
+    const raised = Object.entries(REAL).filter(([, u]) => u.version !== 1);
+    expect(Object.fromEntries(raised.map(([k, u]) => [k, u.version]))).toEqual({
+      'tracks/searound': 2,
+      'tracks/seatrack': 2,
+    });
   });
 });
 
