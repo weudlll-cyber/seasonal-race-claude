@@ -223,7 +223,10 @@ export const CHAPTERS = [
         parts: [{ component: CameraAdvancedSection, part: 'diagnostics', tier: ADV }],
       },
       { title: 'Logs', parts: [{ component: CameraAdvancedSection, part: 'logs', tier: ADV }] },
-      { title: 'Export Race Config', parts: [{ component: ConfigExportSection, tier: ADV }] },
+      {
+        title: 'Race configuration export',
+        parts: [{ component: ConfigExportSection, tier: ADV }],
+      },
     ],
   },
   {

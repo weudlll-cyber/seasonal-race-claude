@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { buildWorldConfig, worldStatus } from '../../../modules/exportRaceConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl } from './ControlInfo.jsx';
 
 function ConfigExportSection() {
   const [status, setStatus] = useState(() => worldStatus());
@@ -64,25 +65,24 @@ function ConfigExportSection() {
       <div
         style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}
       >
-        <button
-          data-testid="export-race-config"
-          onClick={exportWorld}
-          style={{ padding: '0.4rem 0.9rem', fontSize: '0.9rem' }}
-        >
-          Export race config
-        </button>
-        <InfoTooltip text="Downloads world.json and copies its contents to the clipboard as a best-effort convenience. The world hash to the right is recomputed from what was actually written." />
+        <Ctl id="ConfigExportSection:export-race-config">
+          <button
+            data-testid="export-race-config"
+            onClick={exportWorld}
+            style={{ padding: '0.4rem 0.9rem', fontSize: '0.9rem' }}
+          >
+            Export race config
+          </button>
+        </Ctl>
         <span style={chip} data-testid="world-hash">
           world: {hashShort}
         </span>
         <InfoTooltip text="Short hash of the exported world config. Two exports with the same hash race the same. Also used to name the pinned golden fixtures." />
-        <button
-          onClick={refresh}
-          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-          title="Recompute after changing settings"
-        >
-          ↻ refresh
-        </button>
+        <Ctl id="ConfigExportSection:refresh">
+          <button onClick={refresh} style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>
+            ↻ refresh
+          </button>
+        </Ctl>
         {copied && <span style={{ color: '#6c6', fontSize: '0.82rem' }}>copied to clipboard</span>}
       </div>
 
