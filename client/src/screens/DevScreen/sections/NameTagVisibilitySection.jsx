@@ -7,7 +7,6 @@
 //              Controls how many name tags appear during the race.
 // ============================================================
 
-import { useState, useEffect } from 'react';
 import {
   loadCameraConfig,
   saveCameraConfig,
@@ -15,14 +14,17 @@ import {
   DEFAULT_CAMERA_CONFIG,
 } from '../../../modules/cameraConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import s from '../DevScreen.module.css';
 
 function NameTagVisibilitySection() {
-  const [config, setConfig] = useState(() => loadCameraConfig());
-
-  useEffect(() => {
-    saveCameraConfig(config);
-  }, [config]);
+  // Kept in step with every other mounted camera part (useSyncedConfig).
+  const [config, setConfig] = useSyncedConfig(
+    KEYS.CAMERA_CONFIG,
+    loadCameraConfig,
+    saveCameraConfig
+  );
 
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));

@@ -7,6 +7,13 @@
 //              admin sees full toggle + advanced sections; operator is locked to
 //              operator-tier sections regardless of persisted view; null user is
 //              treated as non-admin (fail-closed).
+//
+//              DEVSCREEN-CHAPTERS-1 (2026-10-05): the sidebar lists CHAPTERS now, and a section
+//              is found in the content of the chapter it is placed in — so the LOCATORS below
+//              open a chapter and look for the section's stub, where they used to read a sidebar
+//              label. The view switch moved into "Accounts and system". What each test asserts is
+//              unchanged, except the two order tests, which now read the chapter order the design
+//              sets (race, camera, look, the things a race is made of).
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -60,6 +67,9 @@ vi.mock('./sections/SystemSettings.jsx', () => ({
 vi.mock('./sections/UserManagementSection.jsx', () => ({
   default: () => <div data-testid="section-usermanagement" />,
 }));
+vi.mock('./sections/CameraAdvancedSection.jsx', () => ({
+  default: () => <div data-testid="section-camera-advanced" />,
+}));
 
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import DevScreen, { isOperatorTier } from './DevScreen.jsx';
@@ -72,6 +82,26 @@ function renderDevScreen() {
   );
 }
 
+const RACE = 'The race';
+const CAMERA = 'Camera — start to ending';
+const LOOK = 'Look, labels and effects';
+const RECORDS = 'Tracks, racers, brands and groups';
+const HISTORY = 'History and evaluation';
+const DIAGNOSTICS = 'Diagnostics and verification';
+const ACCOUNTS = 'Accounts and system';
+
+/** Opens a chapter from the sidebar when the current view lists it. */
+function openChapter(title) {
+  const button = screen.queryByRole('button', { name: (name) => name.includes(title) });
+  if (button) fireEvent.click(button);
+}
+
+/** The view switch lives in "Accounts and system". */
+function switchView(label) {
+  openChapter(ACCOUNTS);
+  fireEvent.click(screen.getByText(label));
+}
+
 beforeEach(() => {
   localStorage.clear();
   // Default to admin so all existing toggle tests continue to pass unchanged.
@@ -81,14 +111,15 @@ beforeEach(() => {
 describe('DevScreen tier toggle — UI rendering', () => {
   it('renders the View toggle with All and Operator buttons', () => {
     renderDevScreen();
+    openChapter(ACCOUNTS);
     expect(screen.getByText('All')).toBeTruthy();
     expect(screen.getByText('Operator')).toBeTruthy();
   });
 
   it('defaults to All view on first load', () => {
     renderDevScreen();
-    // In All mode, the tier divider label "Advanced" should appear
-    expect(screen.getByText('Advanced')).toBeTruthy();
+    // In All mode, the tier label "Advanced" should appear
+    expect(screen.getAllByText('Advanced').length).toBeGreaterThan(0);
   });
 });
 
@@ -96,40 +127,49 @@ describe('DevScreen tier toggle — section visibility', () => {
   it('All view shows both Operator and Advanced sections in sidebar', () => {
     renderDevScreen();
     // All tier-1 sections should be in the nav
-    expect(screen.getByText('Race Defaults')).toBeTruthy();
-    expect(screen.getByText('Player Groups')).toBeTruthy();
-    expect(screen.getByText('Race Tuning')).toBeTruthy();
-    expect(screen.getByText('Auto-Scale')).toBeTruthy();
-    expect(screen.getByText('System')).toBeTruthy();
+    expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+    expect(screen.getByTestId('section-racetuning')).toBeTruthy();
+    expect(screen.getByTestId('section-autoscale')).toBeTruthy();
+    openChapter(RECORDS);
+    expect(screen.getByTestId('section-playergroups')).toBeTruthy();
+    openChapter(ACCOUNTS);
+    expect(screen.getByTestId('section-system')).toBeTruthy();
   });
 
   it('Operator view hides advanced sections from sidebar', () => {
     renderDevScreen();
-    fireEvent.click(screen.getByText('Operator'));
+    switchView('Operator');
     // Advanced sections should no longer appear in sidebar
-    expect(screen.queryByText('Race Tuning')).toBeNull();
-    expect(screen.queryByText('Auto-Scale')).toBeNull();
-    expect(screen.queryByText('Surface Classes')).toBeNull();
-    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByTestId('section-system')).toBeNull();
+    openChapter(RACE);
+    expect(screen.queryByTestId('section-racetuning')).toBeNull();
+    expect(screen.queryByTestId('section-autoscale')).toBeNull();
+    openChapter(LOOK);
+    expect(screen.queryByTestId('section-surfaceclasses')).toBeNull();
   });
 
   it('Operator view still shows all Tier-1 sections', () => {
     renderDevScreen();
-    fireEvent.click(screen.getByText('Operator'));
-    expect(screen.getByText('Race Defaults')).toBeTruthy();
-    expect(screen.getByText('Player Groups')).toBeTruthy();
-    expect(screen.getByText('Racer Types')).toBeTruthy();
-    expect(screen.getByText('Tracks')).toBeTruthy();
-    expect(screen.getByText('Branding')).toBeTruthy();
-    expect(screen.getByText('Race History')).toBeTruthy();
+    switchView('Operator');
+    openChapter(RACE);
+    expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+    openChapter(RECORDS);
+    expect(screen.getByTestId('section-playergroups')).toBeTruthy();
+    expect(screen.getByTestId('section-racertypes')).toBeTruthy();
+    expect(screen.getByTestId('section-tracks')).toBeTruthy();
+    expect(screen.getByTestId('section-branding')).toBeTruthy();
+    openChapter(HISTORY);
+    expect(screen.getByTestId('section-racehistory')).toBeTruthy();
   });
 
   it('All view shows tier divider, Operator view does not', () => {
     renderDevScreen();
     // All view: divider present
-    expect(screen.getByText('Advanced')).toBeTruthy();
+    expect(screen.getAllByText('Advanced').length).toBeGreaterThan(0);
     // Switch to Operator
-    fireEvent.click(screen.getByText('Operator'));
+    switchView('Operator');
+    expect(screen.queryByText('Advanced')).toBeNull();
+    openChapter(RACE);
     expect(screen.queryByText('Advanced')).toBeNull();
   });
 });
@@ -139,7 +179,7 @@ describe('DevScreen tier toggle — persistence', () => {
   // This is NOT role-gating (C1); it tests the UI toggle persistence only.
   it('admin: persists view toggle choice to localStorage', () => {
     renderDevScreen();
-    fireEvent.click(screen.getByText('Operator'));
+    switchView('Operator');
     expect(localStorage.getItem('racearena:devPanelView')).toBe('"operator"');
   });
 
@@ -147,18 +187,25 @@ describe('DevScreen tier toggle — persistence', () => {
     localStorage.setItem('racearena:devPanelView', JSON.stringify('operator'));
     renderDevScreen();
     // Should start in operator mode — no advanced sections in sidebar
-    expect(screen.queryByText('Race Tuning')).toBeNull();
-    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByTestId('section-racetuning')).toBeNull();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByTestId('section-system')).toBeNull();
   });
 });
 
 describe('DevScreen tier toggle — active section fallback', () => {
   it('switches active section to first operator section when switching to Operator while on advanced section', () => {
-    renderDevScreen();
-    // Navigate to Race Tuning (advanced)
-    fireEvent.click(screen.getByText('Race Tuning'));
+    const { rerender } = renderDevScreen();
+    // Navigate to the advanced-only chapter. The view switch itself sits in an operator chapter, so
+    // the view is narrowed here by the account's role instead of the switch.
+    openChapter(DIAGNOSTICS);
     // Switch to Operator view
-    fireEvent.click(screen.getByText('Operator'));
+    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' }, logout: vi.fn() });
+    rerender(
+      <MemoryRouter>
+        <DevScreen />
+      </MemoryRouter>
+    );
     // The active section content should now be Race Defaults (first operator section)
     expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
   });
@@ -167,37 +214,42 @@ describe('DevScreen tier toggle — active section fallback', () => {
 describe('DevScreen — new Tier-2 camera sections visibility', () => {
   it('All view shows Sprite Size Range, Camera Advanced, Name Tag Visibility', () => {
     renderDevScreen();
-    expect(screen.getByText('Sprite Size Range')).toBeTruthy();
-    expect(screen.getByText('Camera Advanced')).toBeTruthy();
-    expect(screen.getByText('Name Tag Visibility')).toBeTruthy();
+    openChapter(LOOK);
+    expect(screen.getByTestId('section-sprite-size-range')).toBeTruthy();
+    expect(screen.getByTestId('section-nametag-visibility')).toBeTruthy();
+    openChapter(CAMERA);
+    expect(screen.getByTestId('section-camera-advanced')).toBeTruthy();
   });
 
   it('Operator view hides all three new camera sections', () => {
     renderDevScreen();
-    fireEvent.click(screen.getByText('Operator'));
-    expect(screen.queryByText('Sprite Size Range')).toBeNull();
-    expect(screen.queryByText('Camera Advanced')).toBeNull();
-    expect(screen.queryByText('Name Tag Visibility')).toBeNull();
+    switchView('Operator');
+    openChapter(LOOK);
+    expect(screen.queryByTestId('section-sprite-size-range')).toBeNull();
+    expect(screen.queryByTestId('section-nametag-visibility')).toBeNull();
+    openChapter(CAMERA);
+    expect(screen.queryByTestId('section-camera-advanced')).toBeNull();
   });
 
   it('new camera sections appear after Race Tuning in sidebar', () => {
     renderDevScreen();
-    const text = document.body.textContent;
-    const raceTuningIdx = text.indexOf('Race Tuning');
-    const spriteSizeIdx = text.indexOf('Sprite Size Range');
-    const cameraAdvancedIdx = text.indexOf('Camera Advanced');
-    expect(spriteSizeIdx).toBeGreaterThan(raceTuningIdx);
-    expect(cameraAdvancedIdx).toBeGreaterThan(spriteSizeIdx);
+    const text = document.querySelector('nav').textContent;
+    const raceTuningIdx = text.indexOf(RACE);
+    const spriteSizeIdx = text.indexOf(LOOK);
+    const cameraAdvancedIdx = text.indexOf(CAMERA);
+    // The design's chapter order: the race, then the camera, then the look.
+    expect(cameraAdvancedIdx).toBeGreaterThan(raceTuningIdx);
+    expect(spriteSizeIdx).toBeGreaterThan(cameraAdvancedIdx);
   });
 });
 
 describe('DevScreen — section order (Race Defaults first)', () => {
   it('Race Defaults appears before Player Groups in the nav', () => {
     renderDevScreen();
-    const allText = document.body.textContent;
+    const allText = document.querySelector('nav').textContent;
     // Race Defaults should appear before Player Groups in the DOM
-    const raceDefaultsIdx = allText.indexOf('Race Defaults');
-    const playerGroupsIdx = allText.indexOf('Player Groups');
+    const raceDefaultsIdx = allText.indexOf(RACE);
+    const playerGroupsIdx = allText.indexOf(RECORDS);
     expect(raceDefaultsIdx).toBeGreaterThan(-1);
     expect(raceDefaultsIdx).toBeLessThan(playerGroupsIdx);
   });
@@ -214,6 +266,7 @@ describe('DevScreen role gating — operator (C1-B/C)', () => {
   it('B: operator has no view toggle in the DOM', () => {
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
     renderDevScreen();
+    openChapter(ACCOUNTS);
     expect(screen.queryByText('All')).toBeNull();
     // "Operator" button absent (only toggle uses that label; sidebar labels differ)
     expect(screen.queryByRole('button', { name: 'Operator' })).toBeNull();
@@ -223,15 +276,19 @@ describe('DevScreen role gating — operator (C1-B/C)', () => {
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
     renderDevScreen();
     // Operator-tier sections present
-    expect(screen.getByText('Race Defaults')).toBeTruthy();
-    expect(screen.getByText('Player Groups')).toBeTruthy();
-    expect(screen.getByText('Race History')).toBeTruthy();
+    expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
     // Advanced sections absent
-    expect(screen.queryByText('Race Tuning')).toBeNull();
-    expect(screen.queryByText('Surface Classes')).toBeNull();
-    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByTestId('section-racetuning')).toBeNull();
     // No "Advanced" divider
     expect(screen.queryByText('Advanced')).toBeNull();
+    openChapter(RECORDS);
+    expect(screen.getByTestId('section-playergroups')).toBeTruthy();
+    openChapter(HISTORY);
+    expect(screen.getByTestId('section-racehistory')).toBeTruthy();
+    openChapter(LOOK);
+    expect(screen.queryByTestId('section-surfaceclasses')).toBeNull();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByTestId('section-system')).toBeNull();
   });
 });
 
@@ -240,11 +297,12 @@ describe('DevScreen role gating — operator with stale localStorage (C1-D)', ()
     localStorage.setItem('racearena:devPanelView', JSON.stringify('all'));
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
     renderDevScreen();
-    expect(screen.queryByText('Race Tuning')).toBeNull();
-    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByTestId('section-racetuning')).toBeNull();
     expect(screen.queryByText('Advanced')).toBeNull();
     // Operator sections still visible
-    expect(screen.getByText('Race Defaults')).toBeTruthy();
+    expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByTestId('section-system')).toBeNull();
   });
 });
 
@@ -252,12 +310,13 @@ describe('DevScreen role gating — null user (C1-E)', () => {
   it('E: null user is treated as non-admin — no ADVANCED sections, no view toggle', () => {
     useAuth.mockReturnValue({ user: null });
     renderDevScreen();
-    expect(screen.queryByText('All')).toBeNull();
-    expect(screen.queryByText('Race Tuning')).toBeNull();
-    expect(screen.queryByText('System')).toBeNull();
+    expect(screen.queryByTestId('section-racetuning')).toBeNull();
     expect(screen.queryByText('Advanced')).toBeNull();
     // Operator sections still accessible (fail-closed, not fail-silent)
-    expect(screen.getByText('Race Defaults')).toBeTruthy();
+    expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByText('All')).toBeNull();
+    expect(screen.queryByTestId('section-system')).toBeNull();
   });
 });
 
@@ -265,13 +324,15 @@ describe('DevScreen role gating — User Management section (C4)', () => {
   it('admin (All view) sees "User Management" in sidebar', () => {
     useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' } });
     renderDevScreen();
-    expect(screen.getByText('User Management')).toBeTruthy();
+    openChapter(ACCOUNTS);
+    expect(screen.getByTestId('section-usermanagement')).toBeTruthy();
   });
 
   it('operator does not see "User Management" in sidebar', () => {
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
     renderDevScreen();
-    expect(screen.queryByText('User Management')).toBeNull();
+    openChapter(ACCOUNTS);
+    expect(screen.queryByTestId('section-usermanagement')).toBeNull();
   });
 });
 
@@ -294,6 +355,7 @@ describe('DevScreen role gating — default-deny predicate (C1-F)', () => {
 describe('DevScreen — logout button', () => {
   it('renders a Log out button visible to admin', () => {
     renderDevScreen();
+    openChapter(ACCOUNTS);
     expect(screen.getByRole('button', { name: /log out/i })).toBeTruthy();
   });
 
@@ -301,6 +363,7 @@ describe('DevScreen — logout button', () => {
     const mockLogout = vi.fn();
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' }, logout: mockLogout });
     renderDevScreen();
+    openChapter(ACCOUNTS);
     expect(screen.getByRole('button', { name: /log out/i })).toBeTruthy();
   });
 
@@ -308,6 +371,7 @@ describe('DevScreen — logout button', () => {
     const mockLogout = vi.fn();
     useAuth.mockReturnValue({ user: { username: 'admin', role: 'admin' }, logout: mockLogout });
     renderDevScreen();
+    openChapter(ACCOUNTS);
     fireEvent.click(screen.getByRole('button', { name: /log out/i }));
     expect(mockLogout).toHaveBeenCalledOnce();
   });

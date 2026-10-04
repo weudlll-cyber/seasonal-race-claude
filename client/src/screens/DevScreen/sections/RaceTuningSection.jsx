@@ -7,24 +7,18 @@
 //              and BehaviorTuningSection with a shared Reset All button.
 // ============================================================
 
-import { useRef } from 'react';
 import DynamicsTuningSection from './DynamicsTuningSection.jsx';
 import BehaviorTuningSection from './BehaviorTuningSection.jsx';
-import { resetAutoScaleToDefault } from './raceRelevantReset.js';
+import { resetRaceRelevantToDefault } from './raceRelevantReset.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 function RaceTuningSection() {
-  const dynamicsRef = useRef(null);
-  const behaviorRef = useRef(null);
-
-  // "Reset All Defaults" restores all FIVE race-relevant blocks: baseSpeed + rowLayout + raceDynamics
-  // (Dynamics section), raceBehavior (Behavior section), and autoScale (its own tab, persisted directly).
-  // The two COSMETIC blocks (camera, frameTiming) are deliberately left untouched — see raceRelevantReset.js.
+  // "Reset All Defaults" restores all FIVE race-relevant blocks: baseSpeed + rowLayout + raceDynamics,
+  // raceBehavior and autoScale. The two COSMETIC blocks (camera, frameTiming) are deliberately left
+  // untouched — see raceRelevantReset.js, which also says why it writes storage directly.
   function handleReset() {
-    dynamicsRef.current?.resetAll();
-    behaviorRef.current?.resetAll();
-    resetAutoScaleToDefault();
+    resetRaceRelevantToDefault();
   }
 
   return (
@@ -52,8 +46,8 @@ function RaceTuningSection() {
           races feel wrong.
         </p>
       </div>
-      <DynamicsTuningSection ref={dynamicsRef} />
-      <BehaviorTuningSection ref={behaviorRef} />
+      <DynamicsTuningSection />
+      <BehaviorTuningSection />
     </div>
   );
 }

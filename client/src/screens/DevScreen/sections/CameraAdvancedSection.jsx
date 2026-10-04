@@ -7,7 +7,6 @@
 //              by race timeline (Start → MID → Endgame → Finish → Profiles).
 // ============================================================
 
-import { useEffect, useState } from 'react';
 import {
   // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_CAMERA_CONFIG,
@@ -15,6 +14,8 @@ import {
   saveCameraConfig,
 } from '../../../modules/cameraConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 // CEREMONY-OPENING-2: the total is READ from the same function the race uses, never re-added here.
 // A second sum beside the schedule is precisely how the countdown once became invisible.
 import { ceremonyTotalMs } from '../../../modules/camera/startCeremony.js';
@@ -294,11 +295,12 @@ function SectionHeading({ children }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 function CameraAdvancedSection() {
-  const [config, setConfig] = useState(() => loadCameraConfig());
-
-  useEffect(() => {
-    saveCameraConfig(config);
-  }, [config]);
+  // Kept in step with every other mounted camera part (useSyncedConfig).
+  const [config, setConfig] = useSyncedConfig(
+    KEYS.CAMERA_CONFIG,
+    loadCameraConfig,
+    saveCameraConfig
+  );
 
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));

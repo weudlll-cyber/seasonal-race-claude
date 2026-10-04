@@ -22,6 +22,10 @@ import {
   DEFAULT_AUTO_SCALE_CONFIG,
   saveAutoScaleConfig,
 } from '../../../modules/autoSpriteScale.js';
+import { saveRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
+import { saveRaceBehaviorConfig } from '../../../modules/raceBehaviorConfig.js';
+import { saveRowLayoutConfig } from '../../../modules/rowLayoutConfig.js';
+import { saveBaseSpeedConfig } from '../../../modules/baseSpeedConfig.js';
 
 // The reset target for every race-relevant block, keyed by its world-config block name. This is the
 // authoritative list the reset setters spread from, so a block can never silently drop out of the reset.
@@ -33,9 +37,14 @@ export const RACE_RELEVANT_DEFAULTS = {
   autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
 };
 
-// autoScale has its own DevScreen tab (separate React state), so the master reset persists its default
-// straight to storage — the world the race reads is on-default even if that tab is never opened. The tab's
-// own local state re-syncs from storage on its next mount.
-export function resetAutoScaleToDefault() {
-  saveAutoScaleConfig({ ...DEFAULT_AUTO_SCALE_CONFIG });
+// The master reset itself. DEVSCREEN-CHAPTERS-1: it writes all five blocks straight to storage, each
+// through its own saver — the same values the per-section resets used to set — because the parts that
+// show these blocks are spread over the race chapter and are not this button's children any more.
+// Every mounted part re-reads its block from storage (useSyncedConfig), so the screen follows at once.
+export function resetRaceRelevantToDefault() {
+  saveBaseSpeedConfig({ ...RACE_RELEVANT_DEFAULTS.baseSpeedConfig });
+  saveRowLayoutConfig({ ...RACE_RELEVANT_DEFAULTS.rowLayoutConfig });
+  saveRaceDynamicsConfig({ ...RACE_RELEVANT_DEFAULTS.raceDynamicsConfig });
+  saveRaceBehaviorConfig({ ...RACE_RELEVANT_DEFAULTS.raceBehaviorConfig });
+  saveAutoScaleConfig({ ...RACE_RELEVANT_DEFAULTS.autoScaleConfig });
 }

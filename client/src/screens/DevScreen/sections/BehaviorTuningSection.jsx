@@ -7,7 +7,6 @@
 //              (avoidance, drafting, and priority mode config).
 // ============================================================
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadRaceBehaviorConfig,
   saveRaceBehaviorConfig,
@@ -15,19 +14,19 @@ import {
   DEFAULT_RACE_BEHAVIOR_CONFIG,
 } from '../../../modules/raceBehaviorConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
-import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import { SubCard } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
-const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) {
-  const [behaviorConfig, setBehaviorConfig] = useState(() => loadRaceBehaviorConfig());
-  const [storageError, setStorageError] = useState(null);
-
-  useEffect(() => {
-    const ok = saveRaceBehaviorConfig(behaviorConfig);
-    if (!ok) setStorageError('Settings could not be saved — storage is full.');
-    else setStorageError(null);
-  }, [behaviorConfig]);
+function BehaviorTuningSection() {
+  // Through its own loader and saver, kept in step with every other mounted part (useSyncedConfig).
+  const [behaviorConfig, setBehaviorConfig, saveFailed] = useSyncedConfig(
+    KEYS.RACE_BEHAVIOR_CONFIG,
+    loadRaceBehaviorConfig,
+    saveRaceBehaviorConfig
+  );
+  const storageError = saveFailed ? 'Settings could not be saved — storage is full.' : null;
 
   function setBehavior(key, val) {
     setBehaviorConfig((prev) => ({ ...prev, [key]: val }));
@@ -97,14 +96,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       softSteeringHysteresisY: DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringHysteresisY,
     }));
   }
-
-  // Restores the raceBehavior block (RACE-RELEVANT) from the shared source of truth, so the card-level
-  // "Reset All Defaults" and the badge's race count are computed from the same defaults.
-  function resetAll() {
-    setBehaviorConfig({ ...RACE_RELEVANT_DEFAULTS.raceBehaviorConfig });
-  }
-
-  useImperativeHandle(ref, () => ({ resetAll }));
 
   return (
     <>
@@ -724,6 +715,6 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
       </div>
     </>
   );
-});
+}
 
 export default BehaviorTuningSection;

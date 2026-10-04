@@ -8,7 +8,7 @@
 //              to defaults, InfoTooltip for non-obvious fields.
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import RangeRejectionNotice from './RangeRejectionNotice.jsx';
 import {
   loadAutoScaleConfig,
@@ -17,18 +17,21 @@ import {
   computeAutoScaleFactor,
 } from '../../../modules/autoSpriteScale.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import s from '../DevScreen.module.css';
 
 function AutoScaleSection() {
   // ★ POLISH-3f: what was rejected, so a typed value that does nothing says why.
   const [rejected, setRejected] = useState(null);
-  const [config, setConfig] = useState(() => loadAutoScaleConfig());
+  // Synced, so the race chapter's master reset (which writes storage directly) shows here at once.
+  const [config, setConfig] = useSyncedConfig(
+    KEYS.AUTO_SCALE_CONFIG,
+    loadAutoScaleConfig,
+    saveAutoScaleConfig
+  );
   const [previewRacers, setPreviewRacers] = useState(6);
   const [previewWidth, setPreviewWidth] = useState(140);
-
-  useEffect(() => {
-    saveAutoScaleConfig(config);
-  }, [config]);
 
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));

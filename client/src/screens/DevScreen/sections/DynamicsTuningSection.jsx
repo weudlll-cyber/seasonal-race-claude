@@ -7,7 +7,6 @@
 //              start row layout, race dynamics, and frame timing config.
 // ============================================================
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadBaseSpeedConfig,
   saveBaseSpeedConfig,
@@ -36,7 +35,8 @@ import {
   SCOREBOARD_INTERVAL_MAX_MS,
 } from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
-import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import { SubCard, SubHeading } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
@@ -77,34 +77,34 @@ const RACE_PLAN_TIMING_WARNING_STYLE = {
   lineHeight: 1.4,
 };
 
-const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) {
-  const [speedConfig, setSpeedConfig] = useState(() => loadBaseSpeedConfig());
-  const [rowConfig, setRowConfig] = useState(() => loadRowLayoutConfig());
-  const [dynamicsConfig, setDynamicsConfig] = useState(() => loadRaceDynamicsConfig());
-  const [frameTimingConfig, setFrameTimingConfig] = useState(() => loadFrameTimingConfig());
-  const [storageError, setStorageError] = useState(null);
+function DynamicsTuningSection() {
+  // Each block through its own loader and saver, kept in step with every other mounted part of
+  // this section (useSyncedConfig) — the chapters mount several at once.
+  const [speedConfig, setSpeedConfig] = useSyncedConfig(
+    KEYS.BASE_SPEED_CONFIG,
+    loadBaseSpeedConfig,
+    saveBaseSpeedConfig
+  );
+  const [rowConfig, setRowConfig, rowSaveFailed] = useSyncedConfig(
+    KEYS.ROW_LAYOUT_CONFIG,
+    loadRowLayoutConfig,
+    saveRowLayoutConfig
+  );
+  const [dynamicsConfig, setDynamicsConfig] = useSyncedConfig(
+    KEYS.RACE_DYNAMICS_CONFIG,
+    loadRaceDynamicsConfig,
+    saveRaceDynamicsConfig
+  );
+  const [frameTimingConfig, setFrameTimingConfig] = useSyncedConfig(
+    KEYS.FRAME_TIMING_CONFIG,
+    loadFrameTimingConfig,
+    saveFrameTimingConfig
+  );
+  const storageError = rowSaveFailed ? 'Settings could not be saved — storage is full.' : null;
   // SCOREBOARD-CADENCE-1: the fallback covers a config saved before this key existed, so the control
   // shows the value the race will actually use rather than an empty box.
   const scoreboardIntervalMs =
     frameTimingConfig.scoreboardIntervalMs ?? DEFAULT_FRAME_TIMING_CONFIG.scoreboardIntervalMs;
-
-  useEffect(() => {
-    saveBaseSpeedConfig(speedConfig);
-  }, [speedConfig]);
-
-  useEffect(() => {
-    const ok = saveRowLayoutConfig(rowConfig);
-    if (!ok) setStorageError('Settings could not be saved — storage is full.');
-    else setStorageError(null);
-  }, [rowConfig]);
-
-  useEffect(() => {
-    saveRaceDynamicsConfig(dynamicsConfig);
-  }, [dynamicsConfig]);
-
-  useEffect(() => {
-    saveFrameTimingConfig(frameTimingConfig);
-  }, [frameTimingConfig]);
 
   function setSpeed(key, val) {
     setSpeedConfig((prev) => ({ ...prev, [key]: val }));
@@ -255,17 +255,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   function resetFrameTiming() {
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
-
-  // The card-level "Reset All Defaults" restores only the RACE-RELEVANT blocks this section owns (baseSpeed,
-  // rowLayout, raceDynamics), spread from the shared source of truth. frameTiming is COSMETIC and is left
-  // untouched here on purpose — its dedicated "Frame Timing" Reset link still resets it explicitly.
-  function resetAll() {
-    setSpeedConfig({ ...RACE_RELEVANT_DEFAULTS.baseSpeedConfig });
-    setRowConfig({ ...RACE_RELEVANT_DEFAULTS.rowLayoutConfig });
-    setDynamicsConfig({ ...RACE_RELEVANT_DEFAULTS.raceDynamicsConfig });
-  }
-
-  useImperativeHandle(ref, () => ({ resetAll }));
 
   const spread = spreadPercent(speedConfig.min, speedConfig.max);
   const mean = ((speedConfig.min + speedConfig.max) / 2).toFixed(5);
@@ -1725,6 +1714,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       </SubCard>
     </>
   );
-});
+}
 
 export default DynamicsTuningSection;
