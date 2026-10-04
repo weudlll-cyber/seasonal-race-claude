@@ -218,7 +218,7 @@ describe('DevScreen — new Tier-2 camera sections visibility', () => {
     expect(screen.getByTestId('section-sprite-size-range')).toBeTruthy();
     expect(screen.getByTestId('section-nametag-visibility')).toBeTruthy();
     openChapter(CAMERA);
-    expect(screen.getByTestId('section-camera-advanced')).toBeTruthy();
+    expect(screen.getAllByTestId('section-camera-advanced').length).toBeGreaterThan(0);
   });
 
   it('Operator view hides all three new camera sections', () => {

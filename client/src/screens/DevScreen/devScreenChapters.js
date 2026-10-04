@@ -96,10 +96,46 @@ export const CHAPTERS = [
     intro:
       'Everything the camera does, in the order a race unfolds: how it frames at all times, how it chooses its shot, then the start, the battles and comebacks of the middle, the endgame, the finish and the ending. None of it changes the race — only what you see of it.',
     subgroups: [
-      { title: 'Camera Advanced', parts: [{ component: CameraAdvancedSection, tier: ADV }] },
+      {
+        title: 'Framing — all race long',
+        parts: [{ component: CameraAdvancedSection, part: 'framing', tier: ADV }],
+      },
+      {
+        title: 'Choosing the shot',
+        parts: [{ component: CameraAdvancedSection, part: 'shot', tier: ADV }],
+      },
+      { title: 'Start', parts: [{ component: CameraAdvancedSection, part: 'start', tier: ADV }] },
+      {
+        title: 'Middle — battles',
+        parts: [{ component: CameraAdvancedSection, part: 'battles', tier: ADV }],
+      },
+      {
+        title: 'Middle — lead changes',
+        parts: [{ component: CameraAdvancedSection, part: 'leadChanges', tier: ADV }],
+      },
+      {
+        title: 'Middle — comebacks',
+        parts: [{ component: CameraAdvancedSection, part: 'comebacks', tier: ADV }],
+      },
+      {
+        title: 'Endgame and run-in',
+        parts: [{ component: CameraAdvancedSection, part: 'endgame', tier: ADV }],
+      },
+      {
+        title: 'Finish and photo finish',
+        parts: [{ component: CameraAdvancedSection, part: 'finish', tier: ADV }],
+      },
       {
         title: 'Ending — after the line',
-        parts: [{ component: RaceDefaults, part: 'autoAdvance', tier: OP }],
+        // The operator's hand-over switch last: it decides whether the ending above hands over by itself.
+        parts: [
+          { component: CameraAdvancedSection, part: 'ending', tier: ADV },
+          { component: RaceDefaults, part: 'autoAdvance', tier: OP },
+        ],
+      },
+      {
+        title: 'Zoom profiles per camera state',
+        parts: [{ component: CameraAdvancedSection, part: 'zoomProfiles', tier: ADV }],
       },
     ],
   },
@@ -111,12 +147,22 @@ export const CHAPTERS = [
       'How the race is drawn, apart from where the camera points: how big racers appear, which names and labels are shown, the short overlay texts, how smoothly the picture moves, sound, and the ground effects racers kick up. Nothing here changes the race.',
     subgroups: [
       {
-        title: 'Sprite Size Range',
-        parts: [{ component: SpriteSizeRangeSection, tier: ADV }],
+        title: 'Racer size on screen',
+        parts: [
+          { component: SpriteSizeRangeSection, tier: ADV },
+          { component: CameraAdvancedSection, part: 'drawFloor', tier: ADV },
+        ],
       },
       {
-        title: 'Name Tag Visibility',
-        parts: [{ component: NameTagVisibilitySection, tier: ADV }],
+        title: 'Name tags and track labels',
+        parts: [
+          { component: NameTagVisibilitySection, tier: ADV },
+          { component: CameraAdvancedSection, part: 'trackLabels', tier: ADV },
+        ],
+      },
+      {
+        title: 'Overlay texts',
+        parts: [{ component: CameraAdvancedSection, part: 'overlays', tier: ADV }],
       },
       {
         title: 'Smoothness and live standings',
@@ -169,6 +215,11 @@ export const CHAPTERS = [
     intro:
       'Tools for checking the game rather than running an event: overlays and logs that show what the camera and the race plan are doing, and an export of the exact race configuration for verification in the simulator. None of them changes a race.',
     subgroups: [
+      {
+        title: 'On-screen diagnostics',
+        parts: [{ component: CameraAdvancedSection, part: 'diagnostics', tier: ADV }],
+      },
+      { title: 'Logs', parts: [{ component: CameraAdvancedSection, part: 'logs', tier: ADV }] },
       { title: 'Export Race Config', parts: [{ component: ConfigExportSection, tier: ADV }] },
     ],
   },
