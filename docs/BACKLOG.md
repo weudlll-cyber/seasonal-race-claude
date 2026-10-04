@@ -147,25 +147,6 @@ not an address which is right (§9.1).
       **The replay answers "did the engine do this", never "did this happen."** B1's remedy is
       therefore real, and bounded in a way the owner should know before leaning on it.
 
-- [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
-      so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
-      Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
-      and this is about a port.
-      ★ **NARROWED 2026-10-01 (RELEASE-BASICS-1 (c)) — the plain-`node` install has a setting.**
-      `RA_BIND_ADDRESS=127.0.0.1` makes the API answer on the machine only, and
-      [DEPLOYMENT.md](DEPLOYMENT.md) recommends it behind a proxy (`server/src/bindAddress.js`, tested
-      on both values). **The DEFAULT is unchanged** — unset still listens on every interface — and the
-      Docker publish `4000:4000` is untouched, so **what keeps this row open is his choice of
-      default** ([DEPLOY-NOTES.md](DEPLOY-NOTES.md) §1). **verify:** `server/src/bindAddress.test.js`,
-      the test named "DEFAULT (no setting): listens on every interface".
-
-- [ ] ★ **B6 — a race that ran on NON-DEFAULT settings is recorded but not flagged.**
-      `raceStore.js:164,358,465` store `world_configs` **resolved**, so the record says what the
-      config was. Nothing marks the row, so a dispute is settleable only if somebody looks.
-      ★ This CORRECTS a hypothesis: fingerprints are built from shipped defaults
-      (`camera-fingerprint.mjs:77,131`) so editing stored settings moves no print — but it is not
-      true that nothing records the difference.
-
 - [x] ★★ **B7 / P2 — CLOSED 2026-09-27 (DELIVERY-CLEAN-3 piece 2). THE THREE UPLOAD RESPONSES ARE
       ONE.** The row read "the upload size-and-type BOUND exists in three copies"; DC2 arc 1
       corrected that — the **bound** was already single-homed in `server/utils/imageUpload.js` and
@@ -265,7 +246,7 @@ not an address which is right (§9.1).
       built and booted the pinned image · ~~the backup writes no checksum~~ — ★ **CLOSED 2026-10-02
       (TIDY-C-1):** `npm run backup` writes `<archive>.sha256` in `sha256sum` format, and
       `npm run status` FAILS the backup check when the newest archive's checksum file is missing or
-      does not match · the session cookie lives 30 days (his decision; untouched).
+      does not match · ~~the session cookie lives 30 days~~ — ★ **DECIDED 2026-10-04: 30 days stays.**
       ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
       client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
       the server declaration is now `^4.1.4`, so all four vitest declarations across both
@@ -301,8 +282,8 @@ not an address which is right (§9.1).
       **not from this machine** — `npm install` will not materialise an upgrade here (see the
       struck-through `@vitest/coverage-v8` item above). One `npm install` on a machine where
       that works, plus both suites, closes it.
-      ★ **TIDY-C-2, 2026-10-04 — what is still open, and why each one STAYS:** the 30-day session
-      cookie (his decision); `minTargetScreenPx` naming two settings (a rename touches saved configs, so
+      ★ **TIDY-C-2, 2026-10-04 — what is still open, and why each one STAYS:** ~~the 30-day session
+      cookie~~ (decided 2026-10-04: it stays); `minTargetScreenPx` naming two settings (a rename touches saved configs, so
       it is a behaviour change, not a tidy); the 8 unimported exports (each may be a seam, which is a
       judgement); the 46 undocumented routes (documentation work, not one fix); the vitest upgrade
       (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
@@ -958,6 +939,10 @@ are in PART TWO with what closed them; these are the ones still standing.
       a release download, update, roll back, followed literally with the data checked at every step
       ([DEPLOYMENT.md](DEPLOYMENT.md)). It puts `RA_DATA_DIR` outside the release directory. The
       Docker items above are unchanged.
+      ★ **2026-10-04 — reachability decided (the owner, that day):** the default stays on every
+      interface; behind a reverse proxy the operator sets `RA_BIND_ADDRESS` per
+      [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
+      on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
@@ -966,19 +951,11 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
-- [ ] ★ **PERSONAL DATA — inventoried 2026-10-01; three kinds cannot be deleted except by hand.**
-      RELEASE-BASICS-1 (d)1, **facts only, no legal assessment**; the full table (every field, file,
-      writer and deletion path) is §(d)1 of
-      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
-      **What has no deletion path today:** (1) **race history**, which holds racer names in
-      `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
-      has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
-      append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
-      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
-      Also: deleting a user leaves their sessions in place until each one's next request
-      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
-      and no stored IP address exist. **Whether any of this must change is the owner's question.**
-      **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
+- [ ] ★ **EXACT FIELD SIZE — DECIDED 2026-10-04: a race always starts with exactly the number of
+      racers the user chose**, on Quick Test and on every other path. Found by LARGE-FIELD-PERF-1:
+      "Quick Test (80)" started 70, because the default Quick Test name list holds 70 names. To be
+      built on branch `fix/exact-field-size` (EXACT-FIELD-SIZE-1). **verify:** a Quick Test of every
+      count up to the track's cap starts exactly that many racers.
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
@@ -990,6 +967,21 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       off yet. Ten have no switch at all; three of his items are on by default for every viewer.
       Open for him: what "the dots" are (the only dots, the battle diagnostics, ship off with the
       BATTLE shot); which borderline items count as developer displays.
+      ★★ **2026-10-04 — THE OWNER DECIDED THE DESIGN: ONE TEST-AIDS SWITCH.** Item numbers are
+      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md)'s, where the same list is written out.
+      - **One switch for the whole installation, stored on the server** (not per browser), flipped by
+        admins only, **shipped OFF**.
+      - **OFF hides:** items 1, 2, 3, **4 (the red and green hero rings — these are the "dots" of this
+        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`) and the
+        console-only probes. **While OFF, items 13–25 cannot be switched on in the Dev Screen either.**
+      - **Admin-only regardless of the switch:** all of item 11 (the seed field, the copy row, the
+        run-it-again line, the build-mismatch alert).
+      - **Unchanged, always shown, not on the switch:** items 5, 6 and 8; item 10, the gear (admins see
+        everything, other signed-in users the operator tier, as today); item 12, Test race, for anyone
+        allowed to edit a track; and the green comeback marker.
+      - **B6 is folded in here (2026-10-04):** a race on non-default settings is not flagged in
+        production.
+      - **Still built LAST**, after every other open row. Nothing of it is built yet.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
@@ -1450,6 +1442,11 @@ already-settled questions.
       detailed variable documentation, is FOLDED IN HERE** — the two entries had already said they
       belonged together ("the help screen can reference or embed the documentation"), and carrying
       them apart meant two rows for one subject.
+      ★★ **2026-10-04 — THE OWNER DECIDED: the Dev Screen is rebuilt as PLAN D, chapters.** Everything
+      that belongs together sits in one chapter, each chapter has a sensible order inside it, every
+      control has a fitting info text, nothing is left out and there is no "top ten" view. The three
+      candidate groupings A, B and C of DEVSCREEN-GROUPINGS-1 are **not taken**. The design is
+      DEVSCREEN-CHAPTERS-1 (branch `feat/devscreen-chapters`); every stored key, default and tier stays.
 
       ★★ **THE AGREED NEXT STEP IS AN INVENTORY, and it is the only next step.** Before anything is
       moved, grouped, hidden or renamed, there is to be a written list of what the dev screen
@@ -2143,6 +2140,50 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **B4 — CLOSED 2026-10-04 by the owner's decision of that day: the DEFAULT STAYS as it is
+      (every interface); behind a reverse proxy the operator sets `RA_BIND_ADDRESS` as
+      [DEPLOYMENT.md](DEPLOYMENT.md) describes** (the tested proxy example, PROXY-PROBE-1). The row as
+      it stood:
+      **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
+      so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.
+      Sits beside the GOING ONLINE row rather than inside it, because that row is about a purchase
+      and this is about a port.
+      ★ **NARROWED 2026-10-01 (RELEASE-BASICS-1 (c)) — the plain-`node` install has a setting.**
+      `RA_BIND_ADDRESS=127.0.0.1` makes the API answer on the machine only, and
+      [DEPLOYMENT.md](DEPLOYMENT.md) recommends it behind a proxy (`server/src/bindAddress.js`, tested
+      on both values). **The DEFAULT is unchanged** — unset still listens on every interface — and the
+      Docker publish `4000:4000` is untouched, so **what keeps this row open is his choice of
+      default** ([DEPLOY-NOTES.md](DEPLOY-NOTES.md) §1). **verify:** `server/src/bindAddress.test.js`,
+      the test named "DEFAULT (no setting): listens on every interface".
+
+- [x] ★ **PERSONAL DATA — CLOSED 2026-10-04 by the owner's decision of that day: NO DELETION
+      FUNCTION is built.** Races use nicknames; the admin-recovery log and a deleted admin's name on
+      the accounts they created stay as they are. The row as it stood:
+      **PERSONAL DATA — inventoried 2026-10-01; three kinds cannot be deleted except by hand.**
+      RELEASE-BASICS-1 (d)1, **facts only, no legal assessment**; the full table (every field, file,
+      writer and deletion path) is §(d)1 of
+      [RELEASE-BASICS-1](../reports/release/RELEASE-BASICS-1.md).
+      **What has no deletion path today:** (1) **race history**, which holds racer names in
+      `races.results`, `races.winners` and `rosters` (`races.sqlite`) — `server/src/routes/races.js`
+      has POST and GET only, and nothing issues a DELETE; (2) the **admin-recovery audit log**,
+      append-only (`server/src/auth/recoverAdmin.js:23-27`); (3) a deleted admin's **username in
+      `createdBy`** on the users they created (`usersStore.js:258`; `updateUser` never touches it).
+      Also: deleting a user leaves their sessions in place until each one's next request
+      (`guards.js:123-127`), and backups and exports have no retention. No email, no request log
+      and no stored IP address exist. **Whether any of this must change is the owner's question.**
+      **verify:** `grep -n "router.delete" server/src/routes/races.js` prints nothing while (1) stands.
+
+- [x] ★ **B6 — CLOSED 2026-10-04, FOLDED into "BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY
+      DISPLAYS"** by the owner's decision of that day: a race run on non-default settings is **not
+      flagged in production**; the off-default settings badge is one of the developer displays that
+      row switches off. The row as it stood:
+      **B6 — a race that ran on NON-DEFAULT settings is recorded but not flagged.**
+      `raceStore.js:164,358,465` store `world_configs` **resolved**, so the record says what the
+      config was. Nothing marks the row, so a dispute is settleable only if somebody looks.
+      ★ This CORRECTS a hypothesis: fingerprints are built from shipped defaults
+      (`camera-fingerprint.mjs:77,131`) so editing stored settings moves no print — but it is not
+      true that nothing records the difference.
 
 - [x] ★★ **PERIOD EVALUATION — CLOSED 2026-10-04 (PERIOD-EVALUATION-1): BUILT AND MERGED.** The
       owner looked at it on the production preview on 2026-10-04 (the evaluation with points, the

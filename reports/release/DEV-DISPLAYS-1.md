@@ -110,3 +110,20 @@ Race Tuning.
 
 **verify (for the row):** each display is checked by its own line above. A delivery build passes
 when the items he chooses are absent on a fresh browser profile. No such check exists yet.
+
+## Decided 2026-10-04 — one test-aids switch
+
+The owner decided the design on 2026-10-04. Item numbers are this report's. **Nothing is built yet;
+the switch is built last, after every other open row** (the BACKLOG row *BEFORE DELIVERY: SWITCH OFF
+THE DEVELOPER-ONLY DISPLAYS*).
+
+| | items |
+| --- | --- |
+| **The switch** | ONE for the whole installation, **stored on the server** (not per browser), flipped by **admins only**, shipped **OFF** |
+| **Hidden while OFF** | 1, 2, 3, **4** (the red and green hero rings — these are the "dots" of the row), 7, **9** (Quick Test), **13–25**, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`), and the console-only probes |
+| **Locked while OFF** | items 13–25 cannot be switched on in the Dev Screen either |
+| **Admin-only, regardless of the switch** | all of item 11 — the seed field, the copy row, the run-it-again line, the build-mismatch alert |
+| **Always shown, not on the switch** | 5, 6, 8; **10**, the gear (admins see everything, other signed-in users the operator tier, as today); **12**, Test race, for anyone allowed to edit a track; and the green comeback marker |
+
+**B6** (a race on non-default settings is not flagged) is folded into the same row: item 2, the
+settings badge, is hidden while the switch is OFF, and nothing else flags such a race in production.

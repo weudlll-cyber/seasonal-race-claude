@@ -13,7 +13,7 @@ open tracks.**
 | **the browser** | Playwright's Chromium, **headed**, maximized on the machine's own display; occlusion and background throttling switched off so a covered window could not slow the race |
 | **the instrument** | the project's existing frame-timing probe, **`client/src/modules/rAFProbe.js`** (switched on by `?perfprobe=1`, here through its sessionStorage flag). Each frame records the time since the previous frame (rAF to rAF) and the camera state. The probe keeps the last 600 frames; the harness read it every 2 s and stitched the race together, counting frames with an rAF callback of its own to know how many were new. **Lost frames: 0 in all 90 races.** |
 | **the machine** | Intel Core Ultra 7 165U, integrated Intel graphics, 31 GB, display 1920×1200 at **60 Hz**, on mains power, the balanced power plan. Nothing else was run during the measured races. |
-| **the harness** | outside the repository: `C:\tmp\vod\perf\perf-run.mjs` (the runner) and `analyse.mjs` (the tables), with the raw frames per race in `.jsonl` files beside them |
+| **the harness** | was outside the repository, in `C:\tmp\vod\perf\` (`perf-run.mjs`, the runner, and `analyse.mjs`, the tables, with the raw frames per race in `.jsonl` files beside them). **That folder was deleted on 2026-10-04.** LARGE-FIELD-PERF-2 carries a committed copy of a rebuilt harness, in `reports/evolution/LARGE-FIELD-PERF-2/`. |
 
 **What a normal frame is here.** Chromium on this machine delivers frames every **17.5–17.6 ms** (median
 in every group) — about 57 per second — not 16.7. That is this machine's cadence; nothing below is
