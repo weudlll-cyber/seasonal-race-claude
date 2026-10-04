@@ -1718,7 +1718,17 @@
       "y": 696.7757917307027
     }
   ],
-  "effects": [],
+  "effects": [
+    {
+      "id": "bubbles",
+      "config": {
+        "count": 40,
+        "size": 1.2,
+        "color": "#aaddff",
+        "opacity": 0.6
+      }
+    }
+  ],
   "worldWidth": 3072,
   "worldHeight": 2048,
   "pathLengthPx": 5147.151518220427,
@@ -1727,7 +1737,7 @@
   "isDefault": true,
   "backgroundImageFile": "searound.jpg",
   "createdAt": "2026-06-03T10:59:48.412Z",
-  "updatedAt": "2026-06-03T12:57:18.903Z",
+  "updatedAt": "2026-09-28T22:58:19.248Z",
   "maxRacers": null,
   "defaultLaps": 2
 }
