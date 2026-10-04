@@ -1083,6 +1083,11 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
       developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
       work and names a check per display.
+      ★ **2026-10-04 — THE SWEEP IS DONE: [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md).**
+      27 items, each with file:line, its default, who sees it and its one switch. Nothing switched
+      off yet. Ten have no switch at all; three of his items are on by default for every viewer.
+      Open for him: what "the dots" are (the only dots, the battle diagnostics, ship off with the
+      BATTLE shot); which borderline items count as developer displays.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
