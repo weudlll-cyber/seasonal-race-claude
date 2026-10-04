@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **221 files that can change the race** — the engine's own imports AND the imports of every
+the **222 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -351,8 +351,9 @@ repository rather than a guess — give the FILE a header line and this table im
 | `scripts/sim/observers/report.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
+| `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-221 files, 24 of them UNKNOWN.
+222 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

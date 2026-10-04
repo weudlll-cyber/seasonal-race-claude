@@ -17,6 +17,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
+import { playerNameKey } from '../../../shared/playerNames.mjs';
 import {
   QUICK_TEST_NAMES,
   QUICK_TEST_NAMES_LONG,
@@ -25,6 +26,7 @@ import {
   DEFAULT_NAME_SET,
   resolveNameSet,
   identifyNameSet,
+  fillRosterFor,
 } from './racerNames.js';
 
 describe('the default path cannot be reached by a new roster (QUICKTEST-NAMES-1)', () => {
@@ -153,5 +155,24 @@ describe('a live field can say which roster it is running (PERF-WHERE-1)', () =>
     // reported as the shipped one.
     const reversed = [...QUICK_TEST_NAMES].reverse().map((name) => ({ name }));
     expect(identifyNameSet(reversed)).toBe('custom');
+  });
+});
+
+describe('EXACT-FIELD-SIZE-1 — the fill a Quick Test draws on never runs out', () => {
+  it.each(['current', 'long', 'mixed'])(
+    'the %s list comes first, whole and in order, so a field it can fill is the same race',
+    (key) => {
+      const chosen = resolveNameSet(key);
+      expect(fillRosterFor(key).slice(0, chosen.length)).toEqual(chosen);
+    }
+  );
+
+  it('every name in the fill is different under the shared name rule, and there are enough', () => {
+    for (const key of ['current', 'long', 'mixed']) {
+      const fill = fillRosterFor(key);
+      expect(new Set(fill.map(playerNameKey)).size).toBe(fill.length);
+      // The largest field any track allows is the open cap, 100.
+      expect(fill.length).toBeGreaterThanOrEqual(100);
+    }
   });
 });

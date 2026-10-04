@@ -951,12 +951,6 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
-- [ ] ★ **EXACT FIELD SIZE — DECIDED 2026-10-04: a race always starts with exactly the number of
-      racers the user chose**, on Quick Test and on every other path. Found by LARGE-FIELD-PERF-1:
-      "Quick Test (80)" started 70, because the default Quick Test name list holds 70 names. To be
-      built on branch `fix/exact-field-size` (EXACT-FIELD-SIZE-1). **verify:** a Quick Test of every
-      count up to the track's cap starts exactly that many racers.
-
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
@@ -2140,6 +2134,12 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **EXACT FIELD SIZE — CLOSED 2026-10-04 (EXACT-FIELD-SIZE-1): BUILT AND MERGED.** Quick Test fills from every existing name list, chosen list first, and refuses a count it cannot fill — [EXACT-FIELD-SIZE-1](../reports/release/EXACT-FIELD-SIZE-1.md). The row as it stood: **EXACT FIELD SIZE — DECIDED 2026-10-04: a race always starts with exactly the number of
+      racers the user chose**, on Quick Test and on every other path. Found by LARGE-FIELD-PERF-1:
+      "Quick Test (80)" started 70, because the default Quick Test name list holds 70 names. To be
+      built on branch `fix/exact-field-size` (EXACT-FIELD-SIZE-1). **verify:** a Quick Test of every
+      count up to the track's cap starts exactly that many racers.
 
 - [x] ★ **B4 — CLOSED 2026-10-04 by the owner's decision of that day: the DEFAULT STAYS as it is
       (every interface); behind a reverse proxy the operator sets `RA_BIND_ADDRESS` as
