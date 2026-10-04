@@ -296,13 +296,13 @@ carried the SAME change and was deleted outright for the same reason.
 ### LOCAL-CLEANUP-2026-10-04 — the owner's last local branches, archived (2026-10-04)
 
 The owner's decision of 2026-10-04: his local repository holds `master` only. Three local branches,
-none of them merged and none of them at origin any more, were archived before deletion:
+none of them merged and none of them at origin any more, were deleted against tags that already held
+them, so **no tag is registered in this block**:
 
-- `archive/feat-remove-prestaging-comebacker` (`dcb5bd83`, 2026-10-04) — **the
-  `feat/remove-prestaging-comebacker` branch, three commits from 2026-09-18**: REMOVE-PRESTAGING-1
-  (the staged comebacker as the only path that casts from the B1 pool), its documentation, and the
-  PRESTAGING-WHY-1 report (*the racer who loses his role is not the one who breaks away*). Never
-  merged. Read it with `git log master..archive/feat-remove-prestaging-comebacker`.
+- `feat/remove-prestaging-comebacker` (tip `dcb5bd83`) is held by `archive/remove-prestaging-comebacker`,
+  registered under PLANNED-COMEBACK-ONLY-1 below. A second tag made for it the same day,
+  `archive/feat-remove-prestaging-comebacker`, pointed at the same commit; it was deleted at origin and
+  locally on 2026-10-04 (DECISIONS-2026-10-04) as a duplicate.
 - `night/2026-09-10` and `night/2026-09-17` were **already archived** — as
   `archive/night-2026-09-10` and `archive/night-2026-09-17`, registered below on the tips the
   branches still had — so no new tag was made for them; the local branches were deleted against
