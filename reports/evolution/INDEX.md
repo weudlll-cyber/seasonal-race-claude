@@ -18,6 +18,11 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## Performance at large fields (2026-10-04)
 
+- [LARGE-FIELD-PERF-2.md](LARGE-FIELD-PERF-2.md) — 30 real browser races, Mountainstreet and Luger
+  hill at 80 and 40, Chrome's CPU profiler mapped through source maps → two thirds of the slow frames'
+  time the main thread is idle, waiting on the GPU/compositor; of our own code, physics (the avoidance
+  pass) and track effects lead, and track effects lead in Luger hill's ending wide shot. Cheapest fixes
+  proposed, none built. The harness is committed in `LARGE-FIELD-PERF-2/`.
 - [LARGE-FIELD-PERF-1.md](LARGE-FIELD-PERF-1.md) — 90 real browser races on the production build, frame
   timing from `rAFProbe.js` → closed tracks at 40 are as smooth as at 20 (under 0.3 % of frames late);
   open tracks at 80 are not (River Run 2 %, Mountainstreet 7 %, p95 35 ms), and the longest stutters

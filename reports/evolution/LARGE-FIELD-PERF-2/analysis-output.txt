@@ -1,0 +1,144 @@
+
+## Luger hill 40 — N = 5 races, 24892 frames, 223 over 33 ms (0.9 %), 6 over 50 ms
+seeds: 942358, 93643, 87869, 239979, 146509 | calibrated 5/5 | stitch mismatches 0 | lost 0
+frame ms: p50 17.4 · p95 18.7 · p99 19.0
+slow frames by moment: ending, wide shot 110, running 105, startup 8
+slow frames by camera state: OVERVIEW 159, LEADER_ZOOM 36, PHOTO_FINISH 26, COMEBACK_ZOOM 2
+CPU samples inside slow frames: 1535 working, 3804 idle — the main thread was idle for 71.2 % of the slow frames' sampled time
+  other race drawing                        370  24.1 %
+  browser (layout, paint, compositing)      344  22.4 %
+  track effects / particles                 255  16.6 %
+  other app code                            165  10.7 %
+  drawing racers                            130  8.5 %
+  physics                                   115  7.5 %
+  name tags / labels                         49  3.2 %
+  garbage collection                         40  2.6 %
+  camera director                            36  2.3 %
+  minimap                                    16  1.0 %
+  React / DOM updates                        12  0.8 %
+  scoreboard                                  3  0.2 %
+  in "startup" (281 samples): other race drawing 89.7 % · browser (layout, paint, compositing) 3.6 % · drawing racers 1.1 %
+  in "running" (704 samples): browser (layout, paint, compositing) 24.3 % · track effects / particles 18.5 % · physics 13.1 %
+  in "ending, wide shot" (550 samples): browser (layout, paint, compositing) 29.6 % · track effects / particles 22.4 % · other app code 14.5 %
+hot code inside slow frames (top 10):
+     344   22.4 %  browser (layout, paint, compositing) | (program)
+     249   16.2 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:20 (fp)
+      97    6.3 %  track effects / particles | client/src/modules/surface-effects/generators/line.js:103 (render)
+      61    4.0 %  track effects / particles | client/src/modules/trackLights.js:129 (Fh)
+      59    3.8 %  other app code | 
+      58    3.8 %  drawing racers | client/src/screens/RaceScreen/drawing/racerRendering.js:161 (k)
+      53    3.5 %  track effects / particles | client/src/screens/RaceScreen/drawing/particleRendering.js:40 (vp)
+      46    3.0 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:44 (pp)
+      41    2.7 %  physics | client/src/utils/mathUtils.js:33 (cc)
+      40    2.6 %  garbage collection | (garbage collector)
+
+## Luger hill 80 (profiler off) — N = 5 races, 25181 frames, 999 over 33 ms (4.0 %), 82 over 50 ms
+seeds: 170767, 955724, 918686, 625497, 141942 | calibrated 0/5 | stitch mismatches 0 | lost 0
+frame ms: p50 16.7 · p95 18.3 · p99 35.6
+slow frames by moment: running 502, ending, wide shot 485, startup 12
+slow frames by camera state: OVERVIEW 775, LEADER_ZOOM 173, COMEBACK_ZOOM 46, PHOTO_FINISH 4, LEAD_CHANGE 1
+
+## Luger hill 80 — N = 5 races, 24612 frames, 1080 over 33 ms (4.4 %), 55 over 50 ms
+seeds: 170767, 955724, 918686, 625497, 141942 | calibrated 5/5 | stitch mismatches 0 | lost 0
+frame ms: p50 17.4 · p95 18.8 · p99 35.9
+slow frames by moment: running 590, ending, wide shot 483, startup 7
+slow frames by camera state: OVERVIEW 864, LEADER_ZOOM 205, PHOTO_FINISH 7, COMEBACK_ZOOM 3, LEAD_CHANGE 1
+CPU samples inside slow frames: 7840 working, 17412 idle — the main thread was idle for 69.0 % of the slow frames' sampled time
+  browser (layout, paint, compositing)     1870  23.9 %
+  track effects / particles                1485  18.9 %
+  physics                                  1130  14.4 %
+  drawing racers                            931  11.9 %
+  other race drawing                        813  10.4 %
+  other app code                            681  8.7 %
+  name tags / labels                        378  4.8 %
+  garbage collection                        220  2.8 %
+  camera director                           202  2.6 %
+  minimap                                    93  1.2 %
+  React / DOM updates                        31  0.4 %
+  scoreboard                                  6  0.1 %
+  in "startup" (268 samples): other race drawing 92.5 % · browser (layout, paint, compositing) 2.2 % · scoreboard 1.5 %
+  in "running" (4777 samples): browser (layout, paint, compositing) 24.4 % · physics 18.5 % · track effects / particles 16.5 %
+  in "ending, wide shot" (2795 samples): browser (layout, paint, compositing) 25.0 % · track effects / particles 24.9 % · drawing racers 11.1 %
+hot code inside slow frames (top 10):
+    1870   23.9 %  browser (layout, paint, compositing) | (program)
+     583    7.4 %  track effects / particles | client/src/modules/surface-effects/generators/line.js:103 (render)
+     476    6.1 %  drawing racers | client/src/screens/RaceScreen/drawing/racerRendering.js:161 (k)
+     470    6.0 %  physics | client/src/utils/mathUtils.js:33 (cc)
+     411    5.2 %  track effects / particles | client/src/screens/RaceScreen/drawing/particleRendering.js:40 (vp)
+     297    3.8 %  track effects / particles | client/src/modules/trackLights.js:129 (Fh)
+     253    3.2 %  name tags / labels | client/src/screens/RaceScreen/drawing/racerRendering.js:58 (Pm)
+     246    3.1 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:20 (fp)
+     242    3.1 %  other app code | 
+     224    2.9 %  drawing racers | client/src/racer-types/SpriteRacerType.js:135 (_drawBody)
+
+## Mountainstreet 40 — N = 5 races, 25231 frames, 232 over 33 ms (0.9 %), 6 over 50 ms
+seeds: 40884, 416737, 223467, 923614, 720655 | calibrated 5/5 | stitch mismatches 0 | lost 0
+frame ms: p50 17.4 · p95 18.7 · p99 19.3
+slow frames by moment: running 148, ending, wide shot 72, startup 12
+slow frames by camera state: OVERVIEW 159, LEADER_ZOOM 57, COMEBACK_ZOOM 16
+CPU samples inside slow frames: 1986 working, 3858 idle — the main thread was idle for 66.0 % of the slow frames' sampled time
+  other race drawing                        708  35.6 %
+  browser (layout, paint, compositing)      394  19.8 %
+  track effects / particles                 272  13.7 %
+  other app code                            184  9.3 %
+  physics                                   134  6.7 %
+  drawing racers                            128  6.4 %
+  name tags / labels                         59  3.0 %
+  garbage collection                         52  2.6 %
+  camera director                            33  1.7 %
+  minimap                                    15  0.8 %
+  scoreboard                                  4  0.2 %
+  React / DOM updates                         3  0.2 %
+  in "startup" (598 samples): other race drawing 91.8 % · browser (layout, paint, compositing) 3.2 % · track effects / particles 1.7 %
+  in "running" (1029 samples): browser (layout, paint, compositing) 26.8 % · track effects / particles 16.5 % · other app code 12.7 %
+  in "ending, wide shot" (359 samples): browser (layout, paint, compositing) 27.6 % · track effects / particles 25.6 % · other race drawing 14.5 %
+hot code inside slow frames (top 10):
+     545   27.4 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:20 (fp)
+     394   19.8 %  browser (layout, paint, compositing) | (program)
+      96    4.8 %  track effects / particles | client/src/modules/trackLights.js:129 (Fh)
+      92    4.6 %  track effects / particles | client/src/modules/surface-effects/generators/line.js:103 (render)
+      77    3.9 %  other app code | 
+      70    3.5 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:44 (pp)
+      59    3.0 %  drawing racers | client/src/screens/RaceScreen/drawing/racerRendering.js:161 (k)
+      52    2.6 %  garbage collection | (garbage collector)
+      44    2.2 %  physics | client/src/utils/mathUtils.js:33 (cc)
+      44    2.2 %  name tags / labels | client/src/screens/RaceScreen/drawing/racerRendering.js:58 (Pm)
+
+## Mountainstreet 80 (profiler off) — N = 5 races, 24670 frames, 2343 over 33 ms (9.5 %), 41 over 50 ms
+seeds: 477662, 524497, 906411, 304256, 544859 | calibrated 0/5 | stitch mismatches 0 | lost 0
+frame ms: p50 16.8 · p95 33.3 · p99 36.0
+slow frames by moment: running 1910, ending, wide shot 423, startup 10
+slow frames by camera state: LEADER_ZOOM 1194, OVERVIEW 1143, LEAD_CHANGE 2, PHOTO_FINISH 2, COMEBACK_ZOOM 2
+
+## Mountainstreet 80 — N = 5 races, 24058 frames, 2611 over 33 ms (10.9 %), 52 over 50 ms
+seeds: 477662, 524497, 906411, 304256, 544859 | calibrated 5/5 | stitch mismatches 0 | lost 0
+frame ms: p50 17.5 · p95 34.8 · p99 36.5
+slow frames by moment: running 2180, ending, wide shot 416, startup 15
+slow frames by camera state: LEADER_ZOOM 1430, OVERVIEW 1095, LEAD_CHANGE 48, PHOTO_FINISH 35, COMEBACK_ZOOM 3
+CPU samples inside slow frames: 20060 working, 39910 idle — the main thread was idle for 66.5 % of the slow frames' sampled time
+  browser (layout, paint, compositing)     4528  22.6 %
+  physics                                  3530  17.6 %
+  track effects / particles                3075  15.3 %
+  drawing racers                           2448  12.2 %
+  other race drawing                       2199  11.0 %
+  other app code                           1866  9.3 %
+  name tags / labels                       1010  5.0 %
+  garbage collection                        580  2.9 %
+  camera director                           506  2.5 %
+  minimap                                   243  1.2 %
+  React / DOM updates                        45  0.2 %
+  scoreboard                                 30  0.1 %
+  in "startup" (658 samples): other race drawing 85.0 % · browser (layout, paint, compositing) 3.8 % · scoreboard 2.4 %
+  in "running" (16840 samples): browser (layout, paint, compositing) 22.9 % · physics 19.7 % · track effects / particles 14.6 %
+  in "ending, wide shot" (2562 samples): browser (layout, paint, compositing) 25.2 % · track effects / particles 23.7 % · drawing racers 12.0 %
+hot code inside slow frames (top 10):
+    4528   22.6 %  browser (layout, paint, compositing) | (program)
+    1570    7.8 %  physics | client/src/utils/mathUtils.js:33 (cc)
+    1282    6.4 %  track effects / particles | client/src/modules/surface-effects/generators/line.js:103 (render)
+    1144    5.7 %  drawing racers | client/src/screens/RaceScreen/drawing/racerRendering.js:161 (k)
+    1015    5.1 %  track effects / particles | client/src/modules/trackLights.js:129 (Fh)
+     711    3.5 %  other app code | 
+     668    3.3 %  other race drawing | client/src/screens/RaceScreen/drawing/trackRendering.js:44 (pp)
+     660    3.3 %  name tags / labels | client/src/screens/RaceScreen/drawing/racerRendering.js:58 (Pm)
+     632    3.2 %  physics | client/src/modules/raceBehavior.js:543 (ub)
+     580    2.9 %  garbage collection | (garbage collector)
