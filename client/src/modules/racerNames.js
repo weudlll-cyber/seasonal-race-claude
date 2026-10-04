@@ -33,7 +33,15 @@
 //              original would: same hash, same tie-break, same consequence. So the load-bearing-order
 //              rule above governs all three lists identically. Never sort, never de-duplicate, never
 //              tidy; append only, and know that appending changes any race large enough to reach it.
+//
+//              ── EXACT-FIELD-SIZE-1: A FILL NEVER RUNS OUT (decided 2026-10-04) ─────────────────
+//              A race starts with exactly the number of racers chosen. `fillRosterFor` is how Quick
+//              Test reaches a count larger than the chosen list: that list first, untouched and in
+//              order, then the other lists, skipping any name already used under the shared name
+//              rule. A field the chosen list can fill is therefore the same race as before.
 // ============================================================
+
+import { playerNameKey } from '../../../shared/playerNames.mjs';
 
 /** Quick-test roster, in racer-index order. ORDER IS LOAD-BEARING — see the file header. */
 export const QUICK_TEST_NAMES = [
@@ -361,6 +369,38 @@ export const DEFAULT_NAME_SET = 'current';
  */
 export function resolveNameSet(key) {
   return QUICK_TEST_NAME_SETS[key] ?? QUICK_TEST_NAMES;
+}
+
+/**
+ * EVERY name a Quick Test can fill from, for the chosen set: the chosen list first, exactly as
+ * `resolveNameSet` gives it, then the other lists in the order `long`, `mixed`, `current`. A name
+ * already taken — compared by `playerNameKey`, the rule that refuses the same name twice in a race —
+ * is skipped, so the result never doubles a name.
+ *
+ * WHY THE CHOSEN LIST COMES FIRST AND WHOLE. A racer's name is physics (see the header), so the first
+ * N names of a field the chosen list can fill must be exactly the names it filled before. Only a count
+ * past the end of that list reaches the others — which is the case that used to start short
+ * (EXACT-FIELD-SIZE-1: "Quick Test (80)" started 70 because `current` holds 70 names).
+ *
+ * @param {string} key  the Quick Test name-set key (unknown → the default, as `resolveNameSet`)
+ * @returns {string[]}  a new array; the chosen list's entries first, in order
+ */
+export function fillRosterFor(key) {
+  const chosen = resolveNameSet(key);
+  const others = ['long', 'mixed', 'current']
+    .map((k) => QUICK_TEST_NAME_SETS[k])
+    .filter((list) => list !== chosen);
+  const seen = new Set();
+  const out = [];
+  for (const list of [chosen, ...others]) {
+    for (const name of list) {
+      const k = playerNameKey(name);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(name);
+    }
+  }
+  return out;
 }
 
 /**

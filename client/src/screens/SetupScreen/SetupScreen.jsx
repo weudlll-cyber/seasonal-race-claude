@@ -78,7 +78,7 @@ import {
 import { buildQuickTestRace } from './quickTestRace.js';
 import styles from './SetupScreen.module.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
-import { resolveNameSet, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
+import { fillRosterFor, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
 
 const TABS = ['Players', 'Track', 'Settings'];
 
@@ -683,12 +683,17 @@ function SetupScreen() {
   //   Neither is silently corrected — a value quietly clamped on a track switch is the same fault as
   //   a name silently cut from a roster, and he chose being told over being tidied.
   const quickFieldSize = useMemo(
-    () => quickTestFieldSize(players, quickTestCount, resolveNameSet(quickTestNameSet)),
+    () => quickTestFieldSize(players, quickTestCount, fillRosterFor(quickTestNameSet)),
     [players, quickTestCount, quickTestNameSet]
   );
   const quickOverCap = quickFieldSize > quickMaxPlayers;
   // Said once, so the notice, the button's tooltip and the console refusal cannot drift apart.
   const quickOverCapMessage = `${quickFieldSize} racers would start and this track allows ${quickMaxPlayers}. Lower N, remove ${quickFieldSize - quickMaxPlayers} from the roster, or pick a track that allows more.`;
+  // EXACT-FIELD-SIZE-1 (decided 2026-10-04): a race starts with exactly the number chosen. The fill
+  // draws on every name list (`fillRosterFor`), so this cannot happen with the shipped lists and caps;
+  // if a list or a cap ever changes so that it can, the screen REFUSES — it never starts fewer.
+  const quickShort = players.length < quickTestCount && quickFieldSize < quickTestCount;
+  const quickShortMessage = `Only ${quickFieldSize} racers can be filled, not ${quickTestCount}: there are not enough different names. Lower N, or add players by hand.`;
 
   /**
    * RACE-IDENTIFIER-1 — start the race a string names, on this machine.
@@ -1029,15 +1034,17 @@ function SetupScreen() {
     // the guard that holds if the roster or the track changes between render and click. Reading the
     // cap off `geom` rather than off `quickMaxPlayers` keeps this branch honest even then.
     const clickCap = fieldCapFor(quickIsOpen, raceDefaults);
-    const clickField = quickTestFieldSize(
-      players,
-      quickTestCount,
-      resolveNameSet(quickTestNameSet)
-    );
+    const fillRoster = fillRosterFor(quickTestNameSet);
+    const clickField = quickTestFieldSize(players, quickTestCount, fillRoster);
     if (clickField > clickCap) {
       console.warn(
         `[setup] Quick Test refused: ${clickField} racers would start on "${track.name ?? track.id}" and it allows ${clickCap}`
       );
+      return;
+    }
+    // EXACT-FIELD-SIZE-1 — the same refusal as the button's, held at the click.
+    if (players.length < quickTestCount && clickField < quickTestCount) {
+      console.warn(`[setup] Quick Test refused: ${quickShortMessage}`);
       return;
     }
 
@@ -1057,7 +1064,7 @@ function SetupScreen() {
     // A fill name that is already in the field is skipped, compared by the shared rule (capitals
     // and spaces aside) so the fill can never double a name somebody typed.
     const existingNames = new Set(players.map((p) => playerNameKey(p.name)));
-    const fillNames = resolveNameSet(quickTestNameSet)
+    const fillNames = fillRoster
       .filter((n) => !existingNames.has(playerNameKey(n)))
       .slice(0, needed);
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
@@ -1797,21 +1804,29 @@ function SetupScreen() {
                   <span>{quickOverCapMessage}</span>
                 </p>
               )}
+              {quickShort && !quickOverCap && (
+                <p role="alert" data-testid="quick-short-refusal" className={styles.groupNotice}>
+                  <span aria-hidden="true">⚠️</span>
+                  <span>{quickShortMessage}</span>
+                </p>
+              )}
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                disabled={!quickGeometryReady || quickOverCap || !!doubledMessage}
+                disabled={!quickGeometryReady || quickOverCap || quickShort || !!doubledMessage}
                 title={
                   quickOverCap
                     ? quickOverCapMessage
-                    : doubledMessage
-                      ? doubledMessage
-                      : quickGeometryReady
-                        ? `Auto-fill to ${quickTestCount} test players and start race`
-                        : quickTrack?.geometryId
-                          ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
-                            'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
-                          : 'Draw a track in the Track Editor first'
+                    : quickShort
+                      ? quickShortMessage
+                      : doubledMessage
+                        ? doubledMessage
+                        : quickGeometryReady
+                          ? `Auto-fill to ${quickTestCount} test players and start race`
+                          : quickTrack?.geometryId
+                            ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
+                              'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                            : 'Draw a track in the Track Editor first'
                 }
               >
                 ⚡ Quick Test ({quickTestCount})

@@ -24,6 +24,7 @@
 // ============================================================
 
 import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
+import { playerNameKey } from '../../../../shared/playerNames.mjs';
 
 /**
  * The hard field cap for a track, in racers.
@@ -47,9 +48,11 @@ export function fieldCapFor(isOpen, raceDefaults) {
  *
  *   · THE ROSTER CAN EXCEED N. Quick Test appends fill names to the players already on the screen,
  *     so a roster of 60 with N=20 starts 60. The typed number is a FLOOR, never a ceiling.
- *   · THE FILL CAN FALL SHORT OF N. Fill names that already appear in the roster are skipped, and
- *     the roster is finite, so N=100 against a 100-name set that shares two names with the field
- *     starts 100 — but N=100 against a shorter set starts fewer.
+ *   · THE FILL CAN FALL SHORT OF N. Fill names that already appear in the roster are skipped —
+ *     compared by `playerNameKey`, the shared name rule — and the fill list is finite. Since
+ *     EXACT-FIELD-SIZE-1 (2026-10-04) the screen passes `fillRosterFor(set)`, every list the fill may
+ *     draw from (230 names), so in practice it does not fall short; when it would, the screen REFUSES
+ *     rather than start fewer than N.
  *
  * Written once and read by both the notice and the start handler, so what the screen refuses and
  * what the race would run cannot disagree.
@@ -63,7 +66,7 @@ export function quickTestFieldSize(players, count, fillRoster) {
   const roster = players ?? [];
   const needed = Math.max(0, (count ?? 0) - roster.length);
   if (needed === 0) return roster.length;
-  const existing = new Set(roster.map((p) => p.name));
-  const available = (fillRoster ?? []).filter((n) => !existing.has(n)).length;
+  const existing = new Set(roster.map((p) => playerNameKey(p.name)));
+  const available = (fillRoster ?? []).filter((n) => !existing.has(playerNameKey(n))).length;
   return roster.length + Math.min(needed, available);
 }
