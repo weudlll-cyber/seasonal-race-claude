@@ -91,6 +91,9 @@ COPY shared/raceShortKey.mjs /shared/raceShortKey.mjs
 # lists — this one and `.dockerignore`'s — which is what the note above is about; the guard caught
 # the half-done version of exactly this change, with the file allowed into the context and no COPY.
 COPY shared/raceSource.mjs /shared/raceSource.mjs
+# PERIOD-EVALUATION-1 (2026-10-04): when two player names are the same name — `raceStore.js`,
+# `playerGroups.js` and `periodEvaluation.js` import it. Named in both lists, as above.
+COPY shared/playerNames.mjs /shared/playerNames.mjs
 
 # ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1; the owner's decision, 2026-10-04) ────
 #

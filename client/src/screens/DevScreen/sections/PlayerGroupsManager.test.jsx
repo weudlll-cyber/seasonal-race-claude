@@ -222,6 +222,33 @@ describe('PlayerGroupsManager — create group', () => {
   });
 });
 
+// ── the same name twice (the owner's decision of 2026-10-04) ───────────────────
+
+describe('PlayerGroupsManager — the same name twice', () => {
+  it('★ a group with the same name twice — capitals and spaces aside — is refused, naming it', async () => {
+    createPlayerGroup.mockClear();
+    renderManager();
+    await waitFor(() => screen.getByText('Friday Crew'));
+
+    fireEvent.click(screen.getByText('+ New Group'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Friday Team'), {
+      target: { value: 'New Team' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Alice, Bob, Carol, Dave…'), {
+      target: { value: 'Ada, Bob, ADA ' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Create Group'));
+    });
+
+    expect(createPlayerGroup).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(
+      /^The name "Ada" is in this group twice\./
+    );
+  });
+});
+
 // ── CRUD — update ─────────────────────────────────────────────────────────────
 
 describe('PlayerGroupsManager — update group', () => {

@@ -30,6 +30,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPlayerGroups } from '../../services/playerGroupApi.js';
 import { UNGROUPED_LABEL } from './rosterGroups.js';
+import { playerNameKey } from '../../../../shared/playerNames.mjs';
 import styles from './SetupScreen.module.css';
 
 export { UNGROUPED_LABEL };
@@ -72,8 +73,18 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
   const selected = new Set(players.map((p) => p.group).filter(Boolean));
 
   function addGroup(group) {
-    const already = new Set(players.map((p) => p.name));
-    const incoming = group.players.filter((n) => !already.has(n));
+    // A name already in the field is NOT ADDED TWICE, and says so below. "The same name" is the
+    // shared rule since 2026-10-04 — ignoring case and spaces (`shared/playerNames.mjs`) — and it
+    // covers a name the group itself carries twice (a group saved before groups refused that), so
+    // this path can never put the same name in a race twice.
+    const already = new Set(players.map((p) => playerNameKey(p.name)));
+    const incoming = [];
+    for (const n of group.players) {
+      const key = playerNameKey(n);
+      if (already.has(key)) continue;
+      already.add(key);
+      incoming.push(n);
+    }
     const duplicates = group.players.length - incoming.length;
 
     // ── REFUSE, DO NOT TRUNCATE (REFUSE-OVERSIZED-1, the owner's decision of 2026-09-04) ────────
@@ -114,7 +125,8 @@ function PlayerGroupPicker({ players, onChange, maxPlayers, fetchGroups = fetchP
       duplicates > 0
         ? `${duplicates} name${duplicates === 1 ? '' : 's'} in “${group.name}” ${
             duplicates === 1 ? 'was' : 'were'
-          } already in the field and ${duplicates === 1 ? 'was' : 'were'} not added twice.`
+          } already in the field and ${duplicates === 1 ? 'was' : 'were'} not added twice ` +
+            `(capitals and extra spaces do not make a name different).`
         : ''
     );
     onChange([...players, ...incoming.map((name) => ({ name, group: group.name }))]);

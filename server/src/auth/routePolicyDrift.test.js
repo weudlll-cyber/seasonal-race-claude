@@ -148,6 +148,14 @@ describe('route-surface drift guard', () => {
     ).toEqual([]);
   });
 
+  // PERIOD-EVALUATION-1 (the owner's decision of 2026-10-04): the points rule is read by everyone
+  // and set by admins only. Pinned both ways, so neither half can drift.
+  it('the points rule: setting it is admin-only, reading it is not', () => {
+    expect(requiredRole('PUT', '/api/races/evaluation/points-rule')).toBe('admin');
+    expect(requiredRole('GET', '/api/races/evaluation/points-rule')).toBeNull();
+    expect(requiredRole('GET', '/api/races/evaluation')).toBeNull();
+  });
+
   it('all /api/users mutating routes are admin-classified', () => {
     const usersMutating = allMutating.filter(({ path }) => path.startsWith('/api/users'));
     expect(usersMutating.length).toBeGreaterThan(0);

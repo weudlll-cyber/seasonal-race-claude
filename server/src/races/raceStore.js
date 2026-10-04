@@ -69,6 +69,7 @@ import { canonicalString, contentId } from './contentAddress.js';
 import { generateShortKey } from './shortKey.js';
 import { normalizeShortKey } from '../../../shared/raceShortKey.mjs';
 import { normalizeRaceSource } from '../../../shared/raceSource.mjs';
+import { doubledNames, doubledNamesMessage } from '../../../shared/playerNames.mjs';
 
 const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sqlite');
 
@@ -263,6 +264,16 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     }
     if (!Array.isArray(race.names) || race.names.length === 0) {
       const err = new Error('storeRace requires a non-empty roster ("names")');
+      err.code = 'INVALID_ROSTER';
+      throw err;
+    }
+    // THE SAME NAME TWICE IN ONE RACE IS NOT ALLOWED (the owner's decision of 2026-10-04), with
+    // names compared ignoring case and spaces (`shared/playerNames.mjs`). Every roster path in the
+    // client refuses one before the race starts; this is the server's half, so a race that got past
+    // them anyway — an old pending upload, a hand-made request — is refused rather than filed.
+    const doubled = doubledNames(race.names);
+    if (doubled.length > 0) {
+      const err = new Error(doubledNamesMessage(doubled));
       err.code = 'INVALID_ROSTER';
       throw err;
     }
@@ -527,6 +538,28 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   }
 
   /**
+   * Every race a team finished in a period — PERIOD-EVALUATION-1.
+   *
+   * The window is HALF-OPEN, `from <= finished_at < to`, in ISO-8601 instants the caller chose, so
+   * two adjacent periods never count a race twice and the server assumes no time zone: the client
+   * turns the user's local dates into instants. Oldest first. It reads the `races_by_team` index,
+   * whose shape (one team, ordered by finish) is exactly this query's.
+   *
+   * ★ NOT PAGINATED, unlike `listRacesPage`, because an evaluation needs every race of its period.
+   * The bound is the period the user chose; a period long enough to make that expensive is a
+   * question for the owner, recorded in the report rather than guessed at here.
+   */
+  function listRacesInPeriod(team, from, to) {
+    if (!isWellFormedTeam(team)) return [];
+    return db
+      .prepare(
+        'SELECT * FROM races WHERE team_normalized = ? AND finished_at >= ? AND finished_at < ? ORDER BY finished_at ASC, id ASC'
+      )
+      .all(normalizeTeam(team), from, to)
+      .map(hydrate);
+  }
+
+  /**
    * One PAGE of a team's races, newest first, with whether there is another.
    *
    * ★ PAGINATED FROM THE FIRST VERSION, on purpose, with three rows in the table. A list that is
@@ -569,6 +602,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     getRaceByShortKey,
     listRacesByTeam,
     listRacesPage,
+    listRacesInPeriod,
     getRacerTypes,
     counts,
     close: () => db.close(),

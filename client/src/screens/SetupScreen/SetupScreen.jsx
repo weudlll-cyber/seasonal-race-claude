@@ -41,6 +41,11 @@ import {
 } from '../../modules/raceIdentifier.js';
 import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
 import { looksLikeShortKey, normalizeShortKey } from '../../../../shared/raceShortKey.mjs';
+import {
+  doubledNames,
+  doubledNamesMessage,
+  playerNameKey,
+} from '../../../../shared/playerNames.mjs';
 import { identifierForStoredInputs, takeArmedRepeat } from '../../modules/repeatRace.js';
 import { fetchRaceByShortKey } from '../../services/racesApi.js';
 import { buildWorldConfig, defaultEffectiveRacerTypes } from '../../modules/exportRaceConfig.js';
@@ -350,6 +355,15 @@ function SetupScreen() {
   // no control was misused to get there. Refusing at the group picker alone would have left that
   // door open, and the failure would have arrived at the start line rather than while choosing.
   const overCap = players.length > effectiveMaxPlayers;
+  // ── THE SAME NAME TWICE IN ONE RACE IS NOT ALLOWED (the owner's decision of 2026-10-04) ──────
+  //
+  // Compared ignoring case and spaces (`shared/playerNames.mjs`). Typing a name and adding a group
+  // both refuse a doubled name already, but a roster also arrives WHOLE — the Dev Screen's "load
+  // group" hand-off, a run-again, a looked-up key — so the start line refuses too, the way
+  // `overCap` above does: said where the Start button is, and the button disabled. The server
+  // refuses such a race as well (400), so it could never be stored.
+  const doubledInField = doubledNames(players.map((p) => p.name));
+  const doubledMessage = doubledInField.length > 0 ? doubledNamesMessage(doubledInField) : '';
   // ── RACE-IDENTIFIER-3: PASTING THE IDENTIFIER IS ENOUGH ─────────────────────────────────────
   //
   // The owner's words: the racer list, the track and the lap count are inside the value, so he
@@ -476,7 +490,7 @@ function SetupScreen() {
   // race needs travels in the string, except the geometry, which must be on this device.
   const canStart = pastedIdentifier
     ? !!pastedIdentifier.decoded && pastedIdentifier.geometryHere
-    : canStartBase && !overCap;
+    : canStartBase && !overCap && !doubledMessage;
 
   // ── Canonical model inputs for the selected track ─────────────────────────────────────────
   // One normal speed (px/s) for every track; the race's PACE is that speed times the selected
@@ -822,6 +836,13 @@ function SetupScreen() {
       return;
     }
     const decoded = parsed.decoded;
+    // A race identifier carries its own roster, which never passed the checks above — refused here
+    // for the same reason, with the same sentence (the owner's decision of 2026-10-04).
+    const doubledInRace = doubledNames(decoded.names);
+    if (doubledInRace.length > 0) {
+      setIdentifierError(doubledNamesMessage(doubledInRace));
+      return;
+    }
     const geom = getTrack(decoded.geometryId);
     if (!geom) {
       // The one input an identifier cannot carry: the track's own geometry lives on this machine.
@@ -903,6 +924,11 @@ function SetupScreen() {
           `${normalizeShortKey(raceSeed)} is a race key, and it has not been looked up yet. ` +
           'Use "find this race" first — starting now would run a different race.',
       });
+      return;
+    }
+    // The doubled-name refusal, repeated here rather than trusted to the disabled button.
+    if (doubledMessage) {
+      console.warn(`[setup] Start refused: ${doubledMessage}`);
       return;
     }
     // QUIET-FAILURES-1 — the same refusal as Quick Test, for the same reason: `trackIsOpen`
@@ -1015,6 +1041,11 @@ function SetupScreen() {
       return;
     }
 
+    if (doubledMessage) {
+      console.warn(`[setup] Quick Test refused: ${doubledMessage}`);
+      return;
+    }
+
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     // Use the Quick Test racer selector; fall back to track default (backward-compatible).
     const effectiveTypeId =
@@ -1023,9 +1054,11 @@ function SetupScreen() {
         : defaultTypeId;
 
     const needed = Math.max(0, quickTestCount - players.length);
-    const existingNames = new Set(players.map((p) => p.name));
+    // A fill name that is already in the field is skipped, compared by the shared rule (capitals
+    // and spaces aside) so the fill can never double a name somebody typed.
+    const existingNames = new Set(players.map((p) => playerNameKey(p.name)));
     const fillNames = resolveNameSet(quickTestNameSet)
-      .filter((n) => !existingNames.has(n))
+      .filter((n) => !existingNames.has(playerNameKey(n)))
       .slice(0, needed);
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
 
@@ -1515,6 +1548,12 @@ function SetupScreen() {
               </span>
             </p>
           )}
+          {doubledMessage && (
+            <p role="alert" data-testid="doubled-name-refusal" className={styles.groupNotice}>
+              <span aria-hidden="true">⚠️</span>
+              <span>{doubledMessage}</span>
+            </p>
+          )}
           {rowLayoutHints.showCapacityWarn && (
             <div
               data-testid="capacity-warning"
@@ -1761,16 +1800,18 @@ function SetupScreen() {
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                disabled={!quickGeometryReady || quickOverCap}
+                disabled={!quickGeometryReady || quickOverCap || !!doubledMessage}
                 title={
                   quickOverCap
                     ? quickOverCapMessage
-                    : quickGeometryReady
-                      ? `Auto-fill to ${quickTestCount} test players and start race`
-                      : quickTrack?.geometryId
-                        ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
-                          'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
-                        : 'Draw a track in the Track Editor first'
+                    : doubledMessage
+                      ? doubledMessage
+                      : quickGeometryReady
+                        ? `Auto-fill to ${quickTestCount} test players and start race`
+                        : quickTrack?.geometryId
+                          ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
+                            'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                          : 'Draw a track in the Track Editor first'
                 }
               >
                 ⚡ Quick Test ({quickTestCount})
@@ -1791,7 +1832,9 @@ function SetupScreen() {
                     : overCap
                       ? // REFUSE-OVERSIZED-1: numbers, and the way out. Never names.
                         `${players.length} racers are in the field and this track allows ${effectiveMaxPlayers}. Remove ${players.length - effectiveMaxPlayers}, or pick a track that allows more.`
-                      : 'Add at least one player and select a track to start'
+                      : doubledMessage
+                        ? doubledMessage
+                        : 'Add at least one player and select a track to start'
               }
             >
               Start Race →

@@ -28,6 +28,7 @@ import { DefaultControls } from '../components/DefaultControls.jsx';
 import { migrateLocalPlayerGroupsToServer } from '../../../modules/storage/playerGroupMigration.js';
 // NAME-LIMIT-1: the limit's one home, the same module the server reads.
 import { tooLongNames, nameTooLongMessage } from '../../../../../shared/nameLimits.mjs';
+import { doubledNames, doubledNamesMessage } from '../../../../../shared/playerNames.mjs';
 import s from '../DevScreen.module.css';
 
 const BLANK_FORM = { name: '', playersText: '' };
@@ -97,6 +98,14 @@ function PlayerGroupsManager() {
     const overLong = tooLongNames(names);
     if (overLong.length > 0) {
       setActionError(nameTooLongMessage(overLong));
+      return;
+    }
+    // A group becomes a race's roster when it is loaded, and the same name twice in one race is not
+    // allowed (the owner's decision of 2026-10-04) — refused here, naming it, before a round trip.
+    // The server refuses it too.
+    const doubled = doubledNames(names);
+    if (doubled.length > 0) {
+      setActionError(doubledNamesMessage(doubled, 'group'));
       return;
     }
     setActionError(null);

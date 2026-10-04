@@ -111,6 +111,7 @@ server/utils/**/*.test.js
 # imports it at three payload sites. Named here per the rule above, even though `!shared/**` already
 # covers it — the per-file list is what makes each entry a decision rather than a sweep.
 !shared/raceSource.mjs
+!shared/playerNames.mjs
 
 # ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1, 2026-10-04) ────────────────────────────
 # The why is in `server/Dockerfile` ("THE RACE ENGINE"). `client/src/**` is already in the context

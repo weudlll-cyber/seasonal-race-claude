@@ -74,7 +74,7 @@ server.
 
 SetupScreen reads both `KEYS.BRANDING` and `KEYS.ACTIVE_SESSION` via `useStorage`. A `<select>`
 dropdown appears in the header **only when at least one profile exists**
-([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1103-L1129)):
+([`SetupScreen.jsx` → `brandingProfiles`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1136-L1162)):
 
 ```
 Branding: None ▼

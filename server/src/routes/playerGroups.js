@@ -27,6 +27,7 @@ import { seedTypeFromSnapshot } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isValidId } from '../../utils/isValidId.js';
 import { tooLongNames, nameTooLongMessage } from '../../../shared/nameLimits.mjs';
+import { doubledNames, doubledNamesMessage } from '../../../shared/playerNames.mjs';
 
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
@@ -87,6 +88,11 @@ export function validateBody(body) {
       // offenders because the operator has to know WHICH one to shorten.
       errors.push(nameTooLongMessage(overLong));
     }
+    // A group becomes a race's roster when it is loaded, and the same name twice in one race is not
+    // allowed (the owner's decision of 2026-10-04) — so a group that carries one is refused here,
+    // with the doubled name, rather than handed to the setup screen to refuse later.
+    const doubled = doubledNames(body.players);
+    if (doubled.length > 0) errors.push(doubledNamesMessage(doubled, 'group'));
   }
 
   return errors;

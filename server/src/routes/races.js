@@ -47,6 +47,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRaceStore } from '../races/raceStore.js';
 import { DATA_ROOT } from '../dataPaths.js';
+import { evaluatePeriod } from '../races/periodEvaluation.js';
+import { createPointsRuleStore, validatePointsRule } from '../races/pointsRule.js';
 
 // VERIFY-ON-DEMAND-1 (2026-10-04): the engine path that re-races a stored record. It lives in
 // `scripts/lib/storedRaceReplay.mjs`, shared with `scripts/diag/replay-stored-race.mjs` — one copy.
@@ -68,6 +70,14 @@ function readInstallTracks(dir = join(DATA_ROOT, 'tracks')) {
     .filter((t) => t && t.id);
 }
 
+/**
+ * The longest period an evaluation reads: 366 days, so a whole leap year fits and nothing longer
+ * does. The owner's decision of 2026-10-04 — a longer period is REFUSED with a sentence saying so,
+ * never quietly cut short. The server reads every race of the period, so this is also its bound.
+ */
+export const EVALUATION_MAX_DAYS = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** One store per process, opened lazily so importing this module opens no file. */
 let defaultStore = null;
 function getDefaultStore() {
@@ -75,11 +85,13 @@ function getDefaultStore() {
   return defaultStore;
 }
 
-export function createRacesRouter({ store, tracks } = {}) {
+export function createRacesRouter({ store, tracks, pointsRule } = {}) {
   const router = express.Router();
   const resolveStore = () => store ?? getDefaultStore();
   // Tests pass their track records; the server reads its own data directory.
   const resolveTracks = () => tracks ?? readInstallTracks();
+  let defaultPointsRule = null;
+  const resolvePointsRule = () => pointsRule ?? (defaultPointsRule ??= createPointsRuleStore());
 
   // POST / — store one finished race.
   //
@@ -165,6 +177,44 @@ export function createRacesRouter({ store, tracks } = {}) {
       offset: req.query.offset,
     });
     return res.json({ ...page, team });
+  });
+
+  // GET /evaluation?from=<ISO>&to=<ISO> — PERIOD-EVALUATION-1. The team's real races finished in
+  // the half-open window, counted by NAME (server/src/races/periodEvaluation.js). Quick Tests and
+  // unmarked races are left out and counted as such. ★ Declared BEFORE `/:shortKey`, or Express
+  // would read "evaluation" as a short key and answer 404.
+  router.get('/evaluation', (req, res) => {
+    const { from, to } = req.query;
+    const valid = (v) => typeof v === 'string' && !Number.isNaN(Date.parse(v));
+    if (!valid(from) || !valid(to) || !(Date.parse(from) < Date.parse(to))) {
+      return res.status(400).json({
+        error: 'A period needs "from" and "to" as dates or instants, with "from" before "to".',
+      });
+    }
+    if (Date.parse(to) - Date.parse(from) > EVALUATION_MAX_DAYS * DAY_MS) {
+      return res.status(400).json({
+        error: `A period can be at most ${EVALUATION_MAX_DAYS} days long. Choose a shorter period.`,
+      });
+    }
+    // The store compares `finished_at` as TEXT, which is right only when both sides have one form:
+    // every stored instant is `toISOString()` output, so the bounds are brought to the same form.
+    const fromIso = new Date(from).toISOString();
+    const toIso = new Date(to).toISOString();
+    const team = req.authUser?.team;
+    const races = team ? resolveStore().listRacesInPeriod(team, fromIso, toIso) : [];
+    return res.json({ from: fromIso, to: toIso, ...evaluatePeriod(races) });
+  });
+
+  // GET /evaluation/points-rule — the period evaluation's points rule, the ONE rule of this server
+  // (the owner's decision of 2026-10-04: server-wide, readable by every signed-in user).
+  router.get('/evaluation/points-rule', (_req, res) => res.json(resolvePointsRule().get()));
+
+  // PUT /evaluation/points-rule — set it. ADMIN-ONLY, by `ROUTE_POLICY` in `guards.js`; this
+  // handler never sees anyone else. A rule that does not check out is refused whole, never trimmed.
+  router.put('/evaluation/points-rule', (req, res) => {
+    const { rule, error } = validatePointsRule(req.body);
+    if (error) return res.status(400).json({ error });
+    return res.json(resolvePointsRule().set(rule));
   });
 
   // GET /:shortKey — one race, by the name a person can read aloud.

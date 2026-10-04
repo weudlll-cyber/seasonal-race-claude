@@ -59,6 +59,47 @@ export async function postRace(payload) {
 }
 
 /**
+ * PERIOD-EVALUATION-1: this team's real races finished in `[from, to)`, counted by name. The team is
+ * read from the session server-side, as for every race read. Quick Tests are left out by the server.
+ *
+ * @param {string} from  ISO instant, inclusive
+ * @param {string} to    ISO instant, exclusive
+ * @returns {Promise<{from: string, to: string, counted: number, quickTestsExcluded: number,
+ *   rows: Array<{name: string, races: number, wins: number, podiums: number, places: object}>}>}
+ */
+export async function fetchPeriodEvaluation(from, to) {
+  const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  const res = await apiCall(`${BASE_URL}/evaluation?${q}`, { _skipAuthRedirect: true });
+  return res.json();
+}
+
+/**
+ * The period evaluation's POINTS RULE — one for the whole server (the owner's decision of
+ * 2026-10-04). Every signed-in user reads it; only an admin may save it, and the server refuses
+ * anyone else.
+ *
+ * @returns {Promise<{pointsEnabled: boolean, pointsPerPlace: number[]}>}
+ */
+export async function fetchPointsRule() {
+  const res = await apiCall(`${BASE_URL}/evaluation/points-rule`, { _skipAuthRedirect: true });
+  return res.json();
+}
+
+/**
+ * @param {{pointsEnabled: boolean, pointsPerPlace: number[]}} rule
+ * @returns {Promise<{pointsEnabled: boolean, pointsPerPlace: number[]}>}  the rule as stored
+ */
+export async function savePointsRule(rule) {
+  const res = await apiCall(`${BASE_URL}/evaluation/points-rule`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+    _skipAuthRedirect: true,
+  });
+  return res.json();
+}
+
+/**
  * One page of THIS TEAM's races, newest first. The team is read from the session server-side; there
  * is no team parameter here and there must not be one.
  *
