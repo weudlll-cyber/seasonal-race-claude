@@ -70,7 +70,7 @@ async function aStoredKey(page) {
     .toBe('sent');
   const original = (await history(page))[0];
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Race History/i }).click();
+  await page.getByRole('button', { name: /History and evaluation/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
   const row = page
     .locator('[data-testid="history-row-stored"]')
     .filter({ has: page.locator('[data-testid="short-key"]') })

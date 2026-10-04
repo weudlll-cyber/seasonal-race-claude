@@ -35,7 +35,7 @@ const history = (page) =>
 
 async function openHistory(page) {
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Race History/i }).click();
+  await page.getByRole('button', { name: /History and evaluation/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
   await expect(page.getByRole('heading', { name: /Race History/i })).toBeVisible();
 }
 

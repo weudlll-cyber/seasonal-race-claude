@@ -16,8 +16,8 @@ import { test, expect } from '@playwright/test';
 
 async function goToDevRacerTypes(page) {
   await page.goto('/dev');
-  // Click the "Racer Types" nav item in the Dev-Screen sidebar
-  await page.getByRole('button', { name: /Racer Types/i }).click();
+  // Click the chapter that holds Racer Types (DEVSCREEN-CHAPTERS-1: the sidebar lists chapters)
+  await page.getByRole('button', { name: /Tracks, racers, brands and groups/i }).click();
 }
 
 async function getOverrides(page) {

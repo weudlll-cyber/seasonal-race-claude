@@ -21,7 +21,7 @@ import { withServerDataRetry } from './appReady.js';
 
 async function goToSurfaceClasses(page) {
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Surface Classes/i }).click();
+  await page.getByRole('button', { name: /Look, labels and effects/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
   // Wait for editor to be ready (label input populated)
   await page.locator('#sc-label').waitFor({ state: 'visible' });
 }
@@ -78,7 +78,7 @@ test.describe('V2 — Badge indicators', () => {
     // These should be 0 unless test pollution occurred — acceptable if test ordering varies
     // We just verify the badges are badge elements (not heading/label text)
     // This is a structural check, not a strict count check
-    await page.getByRole('button', { name: /Surface Classes/i }).click();
+    await page.getByRole('button', { name: /Look, labels and effects/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
     await page.locator('#sc-label').waitFor({ state: 'visible' });
     // All classes visible
     const allPressable = page.locator('[aria-pressed]');

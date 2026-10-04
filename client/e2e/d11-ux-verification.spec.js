@@ -76,8 +76,9 @@ const DEFAULT_CFG = {
 
 async function openBehaviorSection(page) {
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Race Tuning/ }).click();
-  await expect(page.getByRole('heading', { name: /race tuning/i })).toBeVisible();
+  // DEVSCREEN-CHAPTERS-1: racer behaviour is a sub-group of the race chapter now.
+  await page.getByRole('button', { name: /The race/ }).click();
+  await expect(page.getByRole('heading', { name: /Racers among each other/i })).toBeVisible();
 }
 
 // ── V1: Default values match spec ──────────────────────────────────────────
