@@ -70,9 +70,17 @@ const COMPOSE_SUBCONTEXT = (mounts) =>
 
 // The real tree's shape, and it must STAY the real tree's shape or these tests stop meaning
 // anything: `server/src`, `server/utils` and `server/seeds` are COPYed and mounted; `server/data` is
-// mounted only, which is the ONE entry the guard now ships declaring. `shared/` is neither — the
+// mounted only, which is one of the entries the guard now ships declaring. `shared/` is neither — the
 // image COPYs a single file from it and compose no longer mounts it (IMAGE-STANDALONE-1).
-const REAL_COPIES = ["server/src", "server/utils", "server/seeds"];
+// `client/src/modules` and `client/src/racer-types` are COPYed only — the race engine for "Verify
+// race", declared as divergences (VERIFY-ON-DEMAND-1, 2026-10-04).
+const REAL_COPIES = [
+  "server/src",
+  "server/utils",
+  "server/seeds",
+  "client/src/modules",
+  "client/src/racer-types",
+];
 const REAL_MOUNTS = [
   "./server/src:/app/src",
   "./server/utils:/app/utils",

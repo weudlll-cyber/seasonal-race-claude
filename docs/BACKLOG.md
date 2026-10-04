@@ -173,6 +173,10 @@ not an address which is right (§9.1).
       It reports agreement on positions and times; a falsified record is reported as not matching
       (tested). Open-track races were refused by the old replay and are not now. Cost: 0.8–1.8 s at
       20 racers, 3.9–6.5 s at 40. No button: where and for whom is his decision.
+      ★ **2026-10-04 — THE OWNER DECIDED: an admin-only "Verify race" button in the Dev Screen's
+      Race History, and the Docker image carries the race engine.** Both are built on the same
+      branch, not merged until he has looked. A container built from the image stored one race and
+      verified it: **match, 20 of 20 positions and 20 of 20 times**. Details in the same report.
 
 - [ ] ★ **B4 — the API binds all interfaces.** `docker-compose.yml:17-18` publishes `4000:4000`,
       so on a VPS the API is reachable directly unless a firewall or a proxy is put in front of it.

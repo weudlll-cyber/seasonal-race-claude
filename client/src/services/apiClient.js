@@ -71,10 +71,12 @@ function withTimeout(promise, ms) {
 }
 
 export async function apiCall(url, options = {}) {
-  const { _skipAuthRedirect = false, ...rest } = options;
+  // `_timeoutMs` is for the one call that is SLOW BY DESIGN — "Verify race" races a whole race on
+  // the server (VERIFY-ON-DEMAND-1) — and is never a way to wait longer for a server that is gone.
+  const { _skipAuthRedirect = false, _timeoutMs = TIMEOUT_MS, ...rest } = options;
   let res;
   try {
-    res = await withTimeout(fetch(url, { credentials: 'include', ...rest }), TIMEOUT_MS);
+    res = await withTimeout(fetch(url, { credentials: 'include', ...rest }), _timeoutMs);
   } catch (err) {
     // SERVER-GONE-1: the failure this function already knew about, said once where the interface
     // can hear it. Nothing new is requested and nothing is retried — this is the same throw as

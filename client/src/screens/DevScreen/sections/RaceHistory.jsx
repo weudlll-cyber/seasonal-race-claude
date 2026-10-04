@@ -20,6 +20,14 @@
 // whose races these are either: the team comes from the session, server-side, and this screen
 // cannot ask for another one.
 //
+// ── VERIFY RACE (VERIFY-ON-DEMAND-1; the owner's decision, 2026-10-04) ──────────────────────────
+// An ADMIN sees one more button on every STORED race: the server races it again from its own
+// record and the row says "match" or "no match" and where the first difference is. Only stored
+// races carry it — a race still on this device has no server record to verify. The button is
+// hidden from everyone else, and the server refuses them anyway (`guards.js` ROUTE_POLICY); hiding
+// it is courtesy, the server is the gate. A match says the ENGINE produces this result from these
+// inputs; it does not say the race happened, which is why the word is "match", never "genuine".
+//
 // Editing, deleting, sharing, favourites and search are deliberately absent. Export and Clear are
 // older than this piece, act on the LOCAL history only, and are left exactly as they were.
 //
@@ -39,7 +47,8 @@ import { DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { SYNC } from '../../../modules/raceHistory.js';
 import { armRepeat } from '../../../modules/repeatRace.js';
-import { fetchRacesPage } from '../../../services/racesApi.js';
+import { fetchRacesPage, verifyRace } from '../../../services/racesApi.js';
+import { useAuth } from '../../../contexts/AuthContext.jsx';
 import s from '../DevScreen.module.css';
 
 /** How many of the team's races one page holds. Paginated from the first version, by design. */
@@ -100,6 +109,44 @@ function rowFromLocalEntry(entry) {
   };
 }
 
+/** The admin's "Verify race" button and what the server said. See the header, VERIFY RACE. */
+function VerifyCell({ state, onVerify }) {
+  const r = state?.result;
+  return (
+    <div style={{ marginTop: '0.25rem' }}>
+      <button
+        className={`${s.btn} ${s.btnGhost}`}
+        data-testid="verify-race"
+        style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+        disabled={!!state?.busy}
+        title="Races this race again on the server from its own record and compares every position and every finishing time. Takes a few seconds."
+        onClick={onVerify}
+      >
+        {state?.busy ? 'Verifying…' : 'Verify race'}
+      </button>
+      {r && (
+        <div
+          data-testid="verify-result"
+          style={{ fontSize: '0.72rem', color: r.identical ? '#2a9d8f' : '#e63946' }}
+        >
+          <strong>{r.identical ? 'match' : 'no match'}</strong> — positions {r.positions.match}/
+          {r.positions.of}, times {r.finishTimes.match}/{r.finishTimes.of}
+          {r.firstDiff ? `; first difference: ${r.firstDiff}` : ''}
+        </div>
+      )}
+      {state?.error && (
+        <div
+          data-testid="verify-error"
+          role="alert"
+          style={{ fontSize: '0.72rem', color: '#e63946' }}
+        >
+          Could not verify: {state.error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RaceHistory() {
   const [history, setHistory] = useStorage(KEYS.RACE_HISTORY, DEFAULT_RACE_HISTORY);
   const tracks = useServerTracks();
@@ -112,6 +159,20 @@ function RaceHistory() {
   const [offset, setOffset] = useState(0);
   const [serverState, setServerState] = useState({ loading: true, error: null });
   const [repeatError, setRepeatError] = useState(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  // Per short key: { busy } while the server races it, then { result } or { error }.
+  const [verifications, setVerifications] = useState({});
+
+  async function handleVerify(shortKey) {
+    setVerifications((v) => ({ ...v, [shortKey]: { busy: true } }));
+    try {
+      const result = await verifyRace(shortKey);
+      setVerifications((v) => ({ ...v, [shortKey]: { result } }));
+    } catch (err) {
+      setVerifications((v) => ({ ...v, [shortKey]: { error: err?.message ?? String(err) } }));
+    }
+  }
 
   const loadPage = useCallback(async (at) => {
     setServerState({ loading: true, error: null });
@@ -459,6 +520,12 @@ function RaceHistory() {
                       >
                         Run again
                       </button>
+                      {isAdmin && row.state === 'stored' && row.shortKey && (
+                        <VerifyCell
+                          state={verifications[row.shortKey]}
+                          onVerify={() => handleVerify(row.shortKey)}
+                        />
+                      )}
                     </td>
                   </tr>
                 );

@@ -72,6 +72,31 @@ export async function fetchRacesPage({ limit = 20, offset = 0 } = {}) {
 }
 
 /**
+ * How long "Verify race" may take. It races the whole race again ON THE SERVER — measured 0.8–1.8 s
+ * at 20 racers and 3.9–6.5 s at 40 (reports/release/VERIFY-ON-DEMAND-1.md), more for 80 on an open
+ * track — so the ordinary 8 s limit would report a working server as unreachable.
+ */
+const VERIFY_TIMEOUT_MS = 120_000;
+
+/**
+ * VERIFY-ON-DEMAND-1 (admin only; the server refuses anyone else): race a stored race again from
+ * its own record and say whether every position and every finishing time agrees.
+ *
+ * @param {string} shortKey
+ * @returns {Promise<{shortKey: string, identical: boolean, positions: {match: number, of: number},
+ *   finishTimes: {match: number, of: number}, firstDiff: string|null, track: string,
+ *   racers: number, ms: number}>}
+ */
+export async function verifyRace(shortKey) {
+  const res = await apiCall(`${BASE_URL}/${encodeURIComponent(shortKey)}/verify`, {
+    method: 'POST',
+    _skipAuthRedirect: true,
+    _timeoutMs: VERIFY_TIMEOUT_MS,
+  });
+  return res.json();
+}
+
+/**
  * One race by the short key a person typed.
  *
  * Returns `null` for "no race with that key" — which the server answers for a key that was never

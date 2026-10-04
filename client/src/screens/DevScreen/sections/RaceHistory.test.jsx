@@ -35,6 +35,12 @@ vi.mock('../../../services/racesApi.js', () => ({
   })),
 }));
 
+// VERIFY-ON-DEMAND-1: the section reads the signed-in user for its admin-only button. These tests
+// are about local entries, so an operator is signed in; RaceHistory.verify.test.jsx covers the button.
+vi.mock('../../../contexts/AuthContext.jsx', () => ({
+  useAuth: () => ({ user: { username: 'op', role: 'operator' } }),
+}));
+
 import RaceHistory from './RaceHistory.jsx';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { SAMPLE_TRACKS } from '../../../test/fixtures/sampleTracks.js';

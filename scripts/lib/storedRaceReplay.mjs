@@ -66,16 +66,21 @@ const need = (v, what) => {
  * Race the stored record again and compare.
  *
  * @param {object} stored  the record, as `GET /api/races/:shortKey` returns it
- * @param {{worldArm?: "stored"|"default", stageArm?: string|null}} [arms]  diagnostics only
+ * @param {{worldArm?: "stored"|"default", stageArm?: string|null, tracks?: object[]|null}} [arms]
+ *   `worldArm`/`stageArm` are diagnostics only. `tracks` is the set of track records to find this
+ *   race's track in; omitted, it is read from the repository (`loadTracks`). The server passes its
+ *   OWN data directory's records, because an installation's tracks live there and the Docker image
+ *   has no repository layout to read them from.
  * @returns {{ key: string, track: string, laps: number, racers: number, worldLabel: string,
  *   posMatch: number, timeMatch: number, n: number, firstDiff: string|null, rows: object[] }}
  */
 export function replayStoredRace(
   stored,
-  { worldArm = "stored", stageArm = null } = {},
+  { worldArm = "stored", stageArm = null, tracks = null } = {},
 ) {
   const geo =
-    loadTracks().find((g) => g.geometryId === stored.geometryId) ?? null;
+    (tracks ?? loadTracks()).find((g) => g.geometryId === stored.geometryId) ??
+    null;
   if (!geo) {
     throw new StoredRaceRefusal(
       `no track record carries geometryId ${stored.geometryId}. The track this race ran on is not ` +

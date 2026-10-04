@@ -43,14 +43,30 @@
 // ============================================================
 
 import express from 'express';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createRaceStore } from '../races/raceStore.js';
+import { DATA_ROOT } from '../dataPaths.js';
 
 // VERIFY-ON-DEMAND-1 (2026-10-04): the engine path that re-races a stored record. It lives in
 // `scripts/lib/storedRaceReplay.mjs`, shared with `scripts/diag/replay-stored-race.mjs` — one copy.
-// Loaded LAZILY: it pulls in the race engine from `client/src`, which a source install carries and
-// the Docker image does not. Loading it at startup would take the whole server down on the image;
-// loading it on demand turns that into one route answering 501.
+// Loaded LAZILY: it pulls in the race engine from `client/src`. A source install carries it, and so
+// does the Docker image since 2026-10-04 (the owner's decision; `server/Dockerfile`, "THE RACE
+// ENGINE"). Lazily anyway: an image built without those lines must still start, with this one route
+// answering 501, rather than take the whole server down at boot.
 const loadReplay = () => import('../../../scripts/lib/storedRaceReplay.mjs');
+
+/**
+ * This installation's track records, read from ITS data directory — the tracks its races ran on.
+ * Read per verify, not cached: an admin may have edited a track since boot, and a verify is rare.
+ * The replay matches by `geometryId`, so an edited shape is a different track and is refused there.
+ */
+function readInstallTracks(dir = join(DATA_ROOT, 'tracks')) {
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')))
+    .filter((t) => t && t.id);
+}
 
 /** One store per process, opened lazily so importing this module opens no file. */
 let defaultStore = null;
@@ -59,9 +75,11 @@ function getDefaultStore() {
   return defaultStore;
 }
 
-export function createRacesRouter({ store } = {}) {
+export function createRacesRouter({ store, tracks } = {}) {
   const router = express.Router();
   const resolveStore = () => store ?? getDefaultStore();
+  // Tests pass their track records; the server reads its own data directory.
+  const resolveTracks = () => tracks ?? readInstallTracks();
 
   // POST / — store one finished race.
   //
@@ -191,7 +209,7 @@ export function createRacesRouter({ store } = {}) {
     }
     const started = performance.now();
     try {
-      const r = replay.replayStoredRace(race);
+      const r = replay.replayStoredRace(race, { tracks: resolveTracks() });
       return res.json({
         shortKey: race.shortKey,
         identical: r.firstDiff === null,

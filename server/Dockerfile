@@ -92,6 +92,39 @@ COPY shared/raceShortKey.mjs /shared/raceShortKey.mjs
 # the half-done version of exactly this change, with the file allowed into the context and no COPY.
 COPY shared/raceSource.mjs /shared/raceSource.mjs
 
+# ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1; the owner's decision, 2026-10-04) ────
+#
+# `POST /api/races/:shortKey/verify` races a stored race again, and the race engine lives in the
+# CLIENT's source, shared with the browser — there is one engine, not a server copy of it. The route
+# reaches it through `scripts/lib/storedRaceReplay.mjs`, which resolves the engine from the
+# REPOSITORY ROOT (`scripts/lib/raceDriver.mjs`, `ROOT` = two directories up). So the files land at
+# the root of the filesystem in the repository's layout: `/scripts/lib/` and `/client/src/…`, the
+# same reasoning as `/shared/` below. From `/app/src/routes/` the route's `../../../scripts/lib/`
+# resolves to exactly there.
+#
+# WHAT IT NEEDS, established by TRACING the imports of a real replay (a resolve hook logging every
+# module loaded), not by reading: the three `scripts/lib` files below, 84 files under
+# `client/src/modules/` and `client/src/racer-types/`, and ONE from `client/src/utils/` — NO npm
+# package. The two directories are copied whole rather than file by file: the engine is a moving set
+# (a camera split added eleven files in one merge) and a missing file here only shows when an admin
+# presses the button. Their tests stay out through the root `.dockerignore`, as for the server.
+# ★ The `utils` file was MISSED by the first build of this — the trace listing was read truncated —
+# and the container answered 501. `server/src/routes/racesVerify.test.js` now pins the set: it
+# loads the replay with only these paths reachable.
+#
+# `client/package.json` comes too, for ONE field: `"type": "module"`. Without it Node reads the
+# engine's `.js` files as CommonJS and the first `import` fails. Nothing installs from it here.
+#
+# The track records are NOT read from here: the route hands the replay this installation's own
+# tracks from /app/data — the ones its races ran on.
+COPY scripts/lib/storedRaceReplay.mjs /scripts/lib/storedRaceReplay.mjs
+COPY scripts/lib/raceDriver.mjs /scripts/lib/raceDriver.mjs
+COPY scripts/lib/cameraPlanDelivery.mjs /scripts/lib/cameraPlanDelivery.mjs
+COPY client/package.json /client/package.json
+COPY client/src/modules/ /client/src/modules/
+COPY client/src/racer-types/ /client/src/racer-types/
+COPY client/src/utils/mathUtils.js /client/src/utils/mathUtils.js
+
 # SERVE-SPA-1 — THE BUILT CLIENT, FROM A NAMED BUILD CONTEXT.
 #
 # The client build arrives through a NAMED BUILD CONTEXT, and still should even now that the primary

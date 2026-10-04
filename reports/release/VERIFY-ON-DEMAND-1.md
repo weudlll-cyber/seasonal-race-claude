@@ -4,6 +4,7 @@
 the server stays a second store and goes on accepting results without recomputing them, and a stored
 race becomes verifiable on demand — re-raced from its own record and compared. **This is the server
 half only. There is no button:** where it appears and for whom is the owner's decision.
+**Part two, the same day, follows his decision:** the button, and the image carrying the engine.
 
 ## What was built
 
@@ -77,11 +78,74 @@ This machine, three runs each, the replay alone. It is one full race on the serv
 `runRace` also drives the camera director every frame, which the result does not need. A
 physics-only replay path would be the lever if the cost matters.
 
+## Part two — the button and the image (the owner's decision of 2026-10-04)
+
+**He decided:** an admin-only button in the Dev Screen's Race History, and the Docker image carries
+the race engine.
+
+### The button
+
+- **Where:** Dev Screen → Race History, on every **stored** race (one with a short key), under
+  **Run again**. A race still only on this device has no server record, so it has no button.
+- **Who:** shown to admins only (`useAuth`, role `admin`). The server refuses everyone else anyway;
+  hiding it is courtesy, the route policy is the gate.
+- **What it says:** **match** or **no match**, positions and finishing times agreeing out of how
+  many, and the first difference when there is one. A refusal (422, 501, or no answer) is shown as
+  "Could not verify: …".
+- **The wait:** the ordinary request limit is 8 s, and a verify at 40 racers takes up to 6.5 s, more
+  at 80. So `apiCall` gained an optional per-call limit, and only this call uses it (120 s).
+
+| test (`client/src/screens/DevScreen/sections/RaceHistory.verify.test.jsx`, 5) | sabotage | went red |
+| --- | --- | --- |
+| an admin sees it on the stored race only | — | — |
+| an operator does not see it | the button shown to every role | yes |
+| a match says "match", positions 20/20 | — | — |
+| a mismatch says "no match" and the first difference | always "match" | yes |
+| a refusal is shown instead of a result | — | — |
+
+### The image carries the engine
+
+- **What is copied:** `scripts/lib/` (three files), `client/src/modules/`,
+  `client/src/racer-types/`, one file from `client/src/utils/`, and `client/package.json` (only for
+  `"type": "module"`). No npm package is needed. Tests stay out through `.dockerignore`.
+- **Where:** at the filesystem root, in the repository's layout (`/scripts/lib`, `/client/src`),
+  because the replay finds the engine two directories above itself — the same reasoning as
+  `/shared`.
+- **How the set was found:** by tracing every module a real replay loads, not by reading imports.
+  **The first build missed one file** (`client/src/utils/mathUtils.js`; the trace listing was read
+  truncated) and the container answered 501. A new server test now rebuilds exactly what the
+  Dockerfile's COPY lines provide, with nothing else of the repository reachable, and replays a race
+  there in a separate process. **Sabotage:** deleting that COPY line turns it red with the same
+  missing module.
+- **The tracks come from the installation.** The route now hands the replay the track records in
+  ITS data directory, rather than the replay reading a repository layout the image does not have.
+  Tested: a race whose track the installation does not hold is refused (422). **Sabotage:** the
+  route ignoring its tracks → red.
+- **The container-paths guard** flagged the two engine directories as copied but not mounted in the
+  dev compose. That divergence is correct and is declared with its reason: the engine must be the one
+  the image serves, built from the same source as `client-dist`, so a dev container never verifies
+  against an engine newer than the browser it serves.
+
+### The proof in a container
+
+The image built from this branch, run on `127.0.0.1:4110` with no mounts, production mode:
+
+| step | answer |
+| --- | --- |
+| health | 200 |
+| first admin (bootstrap token) | 201 |
+| sign in, store one race the engine ran (dirt-oval, 20 racers, seed 424242) | 201, key `VQD77F` |
+| `POST /api/races/VQD77F/verify` | **200 — `identical: true`, positions 20/20, times 20/20, 2.2 s** |
+
+The first run of this answered **501**: that was the missing `mathUtils.js` above. The container
+and the image were removed afterwards.
+
+**A note for the proxy work:** in production on plain http the server sends no session cookie at
+all (it is Secure), so the proof ran with `RA_COOKIE_SECURE=false`. Behind an https proxy that
+setting is not needed.
+
 ## What it does NOT do, and why
 
-- **No button and no client code.** The owner decides where and for whom.
-- **Not in the Docker image.** The engine lives in `client/src`, which the image does not carry, so
-  the route answers 501 there. Carrying it is a packaging decision for the owner, not a fix.
 - **Synchronous.** A verification blocks the server's thread for its duration. Admin-only and on
   demand is what keeps that acceptable; a queue or a worker thread would be the next step if it is
   ever used often.
@@ -96,3 +160,18 @@ physics-only replay path would be the lever if the cost matters.
 | `server/src/auth/guards.js` | 184 | 194 |
 | `server/src/auth/routePolicyDrift.test.js` | 166 | 177 |
 | `server/src/routes/racesVerify.test.js` | new | 128 |
+
+**Part two** (the button and the image):
+
+| file | before | after |
+| --- | --- | --- |
+| `client/src/screens/DevScreen/sections/RaceHistory.jsx` | 499 | 566 |
+| `client/src/screens/DevScreen/sections/RaceHistory.verify.test.jsx` | new | 125 |
+| `client/src/services/racesApi.js` | 95 | 120 |
+| `client/src/services/apiClient.js` | 107 | 109 |
+| `server/src/routes/races.js` | 214 | 232 |
+| `server/src/routes/racesVerify.test.js` | 128 | 188 |
+| `scripts/lib/storedRaceReplay.mjs` | 200 | 205 |
+| `server/Dockerfile` | 173 | 206 |
+| `.dockerignore` | 133 | 147 |
+| `scripts/check-container-paths.mjs` | 313 | 325 |
