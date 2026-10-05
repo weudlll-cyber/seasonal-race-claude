@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **222 files that can change the race** — the engine's own imports AND the imports of every
+the **223 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -273,6 +273,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/battleSlowmo.js` | The slow-motion clock RaceScreen runs during BATTLE_ZOOM and PHOTO_FINISH: when it engages and releases, its fade in and out, the BATTLE focus fade that shares its duration, and… |
 | `screens/RaceScreen/burstParticles.js` | One frame of the finish-line burst particles (the ones `emitBurst` in drawing/particleRendering.js spawns when a racer crosses): move, fall, fade, and remove the faded ones. |
 | `screens/RaceScreen/drawing/battleDiagRendering.js` | Canvas renderer for battle-diagnostics markers; draws world-space overlays and records a 20-frame snapshot during BATTLE_ZOOM state. |
+| `screens/RaceScreen/drawing/dotSprites.js` | Cached images of a filled circle and of a soft glowing dot, one per colour, so the race canvas can draw thousands of small round marks per frame as scaled images (`drawImage`) i… |
 | `screens/RaceScreen/drawing/overlayRendering.js` | Canvas renderer for race overlays — event title, lap counter, position results panel, and camera-debug info. |
 | `screens/RaceScreen/drawing/particleRendering.js` | Canvas renderer for burst and trail particles — pure draw/emit functions, no game state. |
 | `screens/RaceScreen/drawing/racerRendering.js` | Canvas renderer for racers, name tags, and dust trails in world coordinates. |
@@ -353,7 +354,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-222 files, 24 of them UNKNOWN.
+223 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

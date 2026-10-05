@@ -1,0 +1,38 @@
+
+## Luger hill, 80 racers
+| arm | N races | frames | frames > 33 ms | p95 ms | p99 ms | ending wide shot: frames > 33 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| master | 30 | 141063 | 12739 (9.03 %) | 33.3 | 50.1 | 2693 of 11469 (23.48 %) |
+| all | 30 | 143166 | 10732 (7.50 %) | 33.3 | 49.1 | 1677 of 13419 (12.50 %) |
+| a | 5 | 22098 | 3077 (13.92 %) | 33.5 | 65.1 | 503 of 1853 (27.15 %) |
+| b | 5 | 22349 | 2638 (11.80 %) | 33.4 | 49.9 | 357 of 2128 (16.78 %) |
+| c | 5 | 22616 | 2505 (11.08 %) | 33.4 | 51.1 | 510 of 1870 (27.27 %) |
+| d | 5 | 22274 | 2939 (13.19 %) | 33.4 | 64.3 | 500 of 1863 (26.84 %) |
+
+Paired against master on the same seeds (arm − master, slow-frame share):
+- all: N = 30 seeds, mean -1.49 points (95 % interval -2.80 to 0.21); fewer slow frames than master on 28 of 30 seeds
+- a: N = 5 seeds, mean 2.57 points (95 % interval -0.52 to 5.82); fewer slow frames than master on 2 of 5 seeds
+- b: N = 5 seeds, mean -0.10 points (95 % interval -3.27 to 3.87); fewer slow frames than master on 3 of 5 seeds
+- c: N = 5 seeds, mean -0.38 points (95 % interval -1.04 to 0.02); fewer slow frames than master on 4 of 5 seeds
+- d: N = 5 seeds, mean 1.70 points (95 % interval -0.78 to 4.73); fewer slow frames than master on 2 of 5 seeds
+
+Quick Test seeds: 344284, 577792, 388357, 631521, 935605, 125672, 278440, 9930, 429604, 935723, 588404, 46680, 13427, 426224, 307153, 150588, 581681, 311555, 246310, 754486, 324991, 851129, 4286, 597738, 887185, 141942, 474879, 554486, 870560, 857735
+
+## Mountainstreet, 80 racers
+| arm | N races | frames | frames > 33 ms | p95 ms | p99 ms | ending wide shot: frames > 33 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| master | 30 | 133275 | 25379 (19.04 %) | 35.7 | 53.4 | 2807 of 11782 (23.82 %) |
+| all | 30 | 137049 | 19717 (14.39 %) | 34.1 | 50.0 | 1638 of 14045 (11.66 %) |
+| a | 5 | 21330 | 3959 (18.56 %) | 48.4 | 66.6 | 442 of 1831 (24.14 %) |
+| b | 5 | 19941 | 4082 (20.47 %) | 49.2 | 50.2 | 302 of 2117 (14.27 %) |
+| c | 5 | 21614 | 3853 (17.83 %) | 43.2 | 52.8 | 443 of 1916 (23.12 %) |
+| d | 5 | 20028 | 3856 (19.25 %) | 49.5 | 71.7 | 421 of 1768 (23.81 %) |
+
+Paired against master on the same seeds (arm − master, slow-frame share):
+- all: N = 30 seeds, mean -5.16 points (95 % interval -7.58 to -3.30); fewer slow frames than master on 29 of 30 seeds
+- a: N = 5 seeds, mean -4.48 points (95 % interval -16.65 to 2.67); fewer slow frames than master on 2 of 5 seeds
+- b: N = 5 seeds, mean -0.81 points (95 % interval -17.56 to 16.11); fewer slow frames than master on 4 of 5 seeds
+- c: N = 5 seeds, mean -5.04 points (95 % interval -15.08 to 0.24); fewer slow frames than master on 3 of 5 seeds
+- d: N = 5 seeds, mean -2.57 points (95 % interval -18.94 to 11.82); fewer slow frames than master on 4 of 5 seeds
+
+Quick Test seeds: 270753, 400076, 188944, 1282, 387573, 535748, 376525, 680896, 379351, 698089, 40877, 889055, 76056, 548403, 348682, 785049, 82581, 59445, 492546, 632864, 99397, 995911, 822505, 347222, 859443, 703751, 812000, 927199, 745525, 544328

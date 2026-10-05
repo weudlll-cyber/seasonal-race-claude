@@ -1,0 +1,212 @@
+
+## Luger hill 40 — N = 5 traced races, 25925 frames, 166 over 33 ms
+Quick Test seeds: 942358, 93643, 87869, 239979, 146509
+mean frame time of a slow frame: 36.2 ms
+| per frame, ms | slow frame (N = 166) | normal frame (N = 25759) | slow frame in the ending wide shot (N = 77) |
+| --- | --- | --- | --- |
+| GPU process main thread: busy | 33.7 | 12.0 | 33.3 |
+| canvas raster (2D draw calls executed) | 17.5 | 4.6 | 16.7 |
+| canvas raster flush | 11.8 | 2.8 | 14.1 |
+| page main thread: busy | 11.4 | 4.5 | 6.4 |
+| page: rAF callbacks (our JavaScript) | 7.9 | 3.0 | 3.9 |
+| page compositor thread: busy | 2.1 | 1.3 | 1.7 |
+| compositing: present | 1.8 | 3.6 | 0.3 |
+| compositing: drawing the layers | 1.6 | 0.6 | 1.5 |
+| display compositor (viz): busy | 1.5 | 0.9 | 1.3 |
+| viz: draw and swap | 1.0 | 0.6 | 0.8 |
+| page: update layers | 0.7 | 0.3 | 0.6 |
+| page: paint | 0.4 | 0.2 | 0.3 |
+
+## Luger hill 80 — N = 5 traced races, 25768 frames, 924 over 33 ms
+Quick Test seeds: 170767, 955724, 918686, 625497, 141942
+mean frame time of a slow frame: 36.0 ms
+| per frame, ms | slow frame (N = 924) | normal frame (N = 24844) | slow frame in the ending wide shot (N = 513) |
+| --- | --- | --- | --- |
+| GPU process main thread: busy | 35.5 | 11.6 | 36.4 |
+| canvas raster (2D draw calls executed) | 19.2 | 5.4 | 18.0 |
+| canvas raster flush | 14.3 | 3.6 | 16.6 |
+| page main thread: busy | 10.7 | 6.1 | 8.5 |
+| page: rAF callbacks (our JavaScript) | 7.2 | 4.4 | 5.6 |
+| page compositor thread: busy | 2.0 | 1.5 | 1.7 |
+| display compositor (viz): busy | 1.3 | 0.9 | 1.2 |
+| compositing: drawing the layers | 1.2 | 0.6 | 1.1 |
+| page: update layers | 0.9 | 0.4 | 0.9 |
+| viz: draw and swap | 0.8 | 0.6 | 0.7 |
+| page: paint | 0.4 | 0.2 | 0.4 |
+| compositing: present | 0.2 | 1.5 | 0.2 |
+
+## Mountainstreet 40 — N = 5 traced races, 26383 frames, 142 over 33 ms
+Quick Test seeds: 40884, 416737, 223467, 923614, 720655
+mean frame time of a slow frame: 39.8 ms
+| per frame, ms | slow frame (N = 142) | normal frame (N = 26241) | slow frame in the ending wide shot (N = 42) |
+| --- | --- | --- | --- |
+| GPU process main thread: busy | 34.2 | 12.0 | 33.3 |
+| canvas raster (2D draw calls executed) | 16.8 | 5.5 | 14.8 |
+| page main thread: busy | 15.9 | 4.6 | 6.9 |
+| canvas raster flush | 12.2 | 3.3 | 15.9 |
+| page: rAF callbacks (our JavaScript) | 11.9 | 3.2 | 3.9 |
+| compositing: present | 2.7 | 2.2 | 0.3 |
+| page compositor thread: busy | 2.3 | 1.2 | 1.6 |
+| display compositor (viz): busy | 1.7 | 0.9 | 1.3 |
+| compositing: drawing the layers | 1.4 | 0.6 | 1.5 |
+| viz: draw and swap | 1.0 | 0.6 | 0.8 |
+| page: update layers | 0.8 | 0.3 | 0.6 |
+| page: paint | 0.4 | 0.2 | 0.3 |
+
+## Mountainstreet 80 — N = 5 traced races, 25367 frames, 2333 over 33 ms
+Quick Test seeds: 477662, 524497, 906411, 304256, 544859
+mean frame time of a slow frame: 35.1 ms
+| per frame, ms | slow frame (N = 2333) | normal frame (N = 23034) | slow frame in the ending wide shot (N = 447) |
+| --- | --- | --- | --- |
+| GPU process main thread: busy | 34.5 | 12.3 | 35.5 |
+| canvas raster (2D draw calls executed) | 19.7 | 6.1 | 16.2 |
+| canvas raster flush | 12.5 | 4.2 | 17.3 |
+| page main thread: busy | 10.5 | 6.3 | 8.8 |
+| page: rAF callbacks (our JavaScript) | 7.1 | 4.6 | 5.7 |
+| page compositor thread: busy | 2.0 | 1.5 | 1.7 |
+| display compositor (viz): busy | 1.3 | 0.9 | 1.3 |
+| compositing: drawing the layers | 1.1 | 0.6 | 1.2 |
+| page: update layers | 0.8 | 0.5 | 0.9 |
+| viz: draw and swap | 0.7 | 0.6 | 0.7 |
+| compositing: present | 0.4 | 1.0 | 0.2 |
+| page: paint | 0.3 | 0.2 | 0.4 |
+
+## census Luger hill 40 — N = 2 races (Quick Test seeds 942358, 93643), 9379 frames
+canvases: background (absolute) backing 4096x2728 on screen 1037x583; race-canvas backing 1280x720 on screen 1037x583 · devicePixelRatio 1.5 · layers 55, 55
+2D calls per frame (mean over all frames · last tenth of the race):
+  beginPath                    2174.0  ·  2387.3
+  fill                         2119.2  ·  2348.4
+  arc                          1850.2  ·  2090.1
+  save                          131.3  ·  128.2
+  restore                       131.3  ·  128.2
+  stroke                         51.7  ·  38.9
+  fillText                       43.4  ·  40.1
+  drawImage                      42.9  ·  40.0
+  fillRect                       36.1  ·  39.7
+  shadowBlur                     33.2  ·  254.1
+  clip                            3.1  ·  0.0
+  clearRect                       1.0  ·  1.0
+  createRadialGradient            1.0  ·  1.0
+  strokeRect                      0.8  ·  1.0
+  globalCompositeOperation        0.0  ·  0.0
+  createLinearGradient            0.0  ·  0.0
+call sites of the expensive kinds (sampled every 97th call; N = 219044 samples):
+   67038   30.6 %  fill @ client/src/modules/trackLights.js:147 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   66999   30.6 %  fill @ client/src/modules/trackLights.js:152 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   38738   17.7 %  fill @ client/src/screens/RaceScreen/drawing/racerRendering.js:173 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+   18614    8.5 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:109 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+    7095    3.2 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:279
+    4161    1.9 %  drawImage @ client/src/racer-types/SpriteRacerType.js:238 ← client/src/racer-types/SpriteRacerType.js:358
+    3789    1.7 %  stroke @ client/src/modules/surface-effects/generators/line.js:135 ← client/src/screens/RaceScreen/drawing/particleRendering.js:69
+    3012    1.4 %  fill @ client/src/modules/camera/Minimap.js:218 ← client/src/screens/RaceScreen/renderRaceFrame.js:440
+    2641    1.2 %  fill @ client/src/screens/RaceScreen/drawing/particleRendering.js:55 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    2627    1.2 %  shadowBlur @ client/src/screens/RaceScreen/drawing/particleRendering.js:50 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    1266    0.6 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:94 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+     768    0.4 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:298
+     393    0.2 %  stroke @ client/src/screens/RaceScreen/drawing/racerRendering.js:199 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+     361    0.2 %  shadowBlur @ client/src/screens/RaceScreen/drawing/racerRendering.js:196 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+
+## census Luger hill 80 — N = 2 races (Quick Test seeds 170767, 955724), 8862 frames
+canvases: background (absolute) backing 4096x2728 on screen 1037x583; race-canvas backing 1280x720 on screen 1037x583 · devicePixelRatio 1.5 · layers 96, 96, 96, 96
+2D calls per frame (mean over all frames · last tenth of the race):
+  beginPath                    2636.8  ·  3126.6
+  fill                         2568.4  ·  3062.9
+  arc                          2303.7  ·  2804.7
+  save                          257.7  ·  241.8
+  restore                       257.7  ·  241.8
+  drawImage                      89.5  ·  80.0
+  fillText                       84.2  ·  74.2
+  fillRect                       63.4  ·  73.8
+  shadowBlur                     63.1  ·  528.7
+  stroke                         58.6  ·  63.7
+  clip                            9.9  ·  0.0
+  clearRect                       1.0  ·  1.0
+  createRadialGradient            1.0  ·  1.0
+  strokeRect                      0.7  ·  1.0
+  globalCompositeOperation        0.0  ·  0.0
+  createLinearGradient            0.0  ·  0.0
+call sites of the expensive kinds (sampled every 97th call; N = 255946 samples):
+   73166   28.6 %  fill @ client/src/screens/RaceScreen/drawing/racerRendering.js:173 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+   63319   24.7 %  fill @ client/src/modules/trackLights.js:152 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   63316   24.7 %  fill @ client/src/modules/trackLights.js:147 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   17597    6.9 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:109 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+    8259    3.2 %  drawImage @ client/src/racer-types/SpriteRacerType.js:238 ← client/src/racer-types/SpriteRacerType.js:358
+    6255    2.4 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:279
+    5286    2.1 %  fill @ client/src/screens/RaceScreen/drawing/particleRendering.js:55 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    5265    2.1 %  shadowBlur @ client/src/screens/RaceScreen/drawing/particleRendering.js:50 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    5261    2.1 %  fill @ client/src/modules/camera/Minimap.js:218 ← client/src/screens/RaceScreen/renderRaceFrame.js:440
+    4244    1.7 %  stroke @ client/src/modules/surface-effects/generators/line.js:135 ← client/src/screens/RaceScreen/drawing/particleRendering.js:69
+    1205    0.5 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:94 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+     760    0.3 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:298
+     314    0.1 %  shadowBlur @ client/src/screens/RaceScreen/drawing/racerRendering.js:196 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+     311    0.1 %  stroke @ client/src/screens/RaceScreen/drawing/racerRendering.js:199 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+
+## census Mountainstreet 40 — N = 2 races (Quick Test seeds 40884, 416737), 9114 frames
+canvases: background (absolute) backing 6144x4096 on screen 1037x583; race-canvas backing 1280x720 on screen 1037x583 · devicePixelRatio 1.5 · layers 55, 55, 55, 55
+2D calls per frame (mean over all frames · last tenth of the race):
+  beginPath                    2998.2  ·  3166.2
+  fill                         2929.1  ·  3135.1
+  arc                          2557.4  ·  2772.6
+  save                          134.0  ·  129.7
+  restore                       134.0  ·  129.7
+  stroke                         65.9  ·  31.1
+  fillText                       46.1  ·  41.6
+  drawImage                      43.0  ·  40.0
+  fillRect                       38.6  ·  41.2
+  shadowBlur                     33.9  ·  226.6
+  clip                            3.2  ·  0.0
+  clearRect                       1.0  ·  1.0
+  createRadialGradient            1.0  ·  1.0
+  strokeRect                      0.8  ·  1.0
+  globalCompositeOperation        0.0  ·  0.0
+  createLinearGradient            0.0  ·  0.0
+call sites of the expensive kinds (sampled every 97th call; N = 291134 samples):
+   98719   33.9 %  fill @ client/src/modules/trackLights.js:152 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   98652   33.9 %  fill @ client/src/modules/trackLights.js:147 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   37615   12.9 %  fill @ client/src/screens/RaceScreen/drawing/racerRendering.js:173 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+   27148    9.3 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:109 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+    7554    2.6 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:279
+    5020    1.7 %  stroke @ client/src/modules/surface-effects/generators/line.js:135 ← client/src/screens/RaceScreen/drawing/particleRendering.js:69
+    4073    1.4 %  drawImage @ client/src/racer-types/SpriteRacerType.js:238 ← client/src/racer-types/SpriteRacerType.js:358
+    2855    1.0 %  fill @ client/src/modules/camera/Minimap.js:218 ← client/src/screens/RaceScreen/renderRaceFrame.js:440
+    2643    0.9 %  shadowBlur @ client/src/screens/RaceScreen/drawing/particleRendering.js:50 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    2625    0.9 %  fill @ client/src/screens/RaceScreen/drawing/particleRendering.js:55 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    1244    0.4 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:94 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+     745    0.3 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:298
+     367    0.1 %  stroke @ client/src/screens/RaceScreen/drawing/racerRendering.js:199 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+     326    0.1 %  shadowBlur @ client/src/screens/RaceScreen/drawing/racerRendering.js:196 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+
+## census Mountainstreet 80 — N = 2 races (Quick Test seeds 477662, 524497), 8456 frames
+canvases: background (absolute) backing 6144x4096 on screen 1037x583; race-canvas backing 1280x720 on screen 1037x583 · devicePixelRatio 1.5 · layers 96, 96, 96, 96
+2D calls per frame (mean over all frames · last tenth of the race):
+  beginPath                    3472.2  ·  3975.6
+  fill                         3377.6  ·  3925.5
+  arc                          3007.1  ·  3562.6
+  save                          265.9  ·  242.9
+  restore                       265.9  ·  242.9
+  fillText                       92.7  ·  75.3
+  drawImage                      89.6  ·  80.0
+  stroke                         84.5  ·  50.1
+  fillRect                       71.2  ·  74.9
+  shadowBlur                     65.7  ·  576.6
+  clip                           10.1  ·  0.0
+  clearRect                       1.0  ·  1.0
+  createRadialGradient            1.0  ·  1.0
+  strokeRect                      0.7  ·  1.0
+  globalCompositeOperation        0.1  ·  0.0
+  createLinearGradient            0.0  ·  0.0
+call sites of the expensive kinds (sampled every 97th call; N = 318973 samples):
+   91664   28.7 %  fill @ client/src/modules/trackLights.js:147 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   91626   28.7 %  fill @ client/src/modules/trackLights.js:152 ← client/src/screens/RaceScreen/renderRaceFrame.js:170
+   69957   21.9 %  fill @ client/src/screens/RaceScreen/drawing/racerRendering.js:173 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+   25236    7.9 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:109 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+    7930    2.5 %  drawImage @ client/src/racer-types/SpriteRacerType.js:238 ← client/src/racer-types/SpriteRacerType.js:358
+    6955    2.2 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:279
+    6339    2.0 %  stroke @ client/src/modules/surface-effects/generators/line.js:135 ← client/src/screens/RaceScreen/drawing/particleRendering.js:69
+    5265    1.7 %  shadowBlur @ client/src/screens/RaceScreen/drawing/particleRendering.js:50 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    5260    1.6 %  fill @ client/src/screens/RaceScreen/drawing/particleRendering.js:55 ← client/src/screens/RaceScreen/renderRaceFrame.js:173
+    4992    1.6 %  fill @ client/src/modules/camera/Minimap.js:218 ← client/src/screens/RaceScreen/renderRaceFrame.js:440
+    1132    0.4 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:94 ← client/src/screens/RaceScreen/renderRaceFrame.js:160
+     681    0.2 %  fill @ client/src/screens/RaceScreen/drawing/trackRendering.js:259 ← client/src/screens/RaceScreen/drawing/trackRendering.js:298
+     290    0.1 %  stroke @ client/src/screens/RaceScreen/drawing/racerRendering.js:199 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288
+     287    0.1 %  shadowBlur @ client/src/screens/RaceScreen/drawing/racerRendering.js:196 ← client/src/screens/RaceScreen/drawing/racerRendering.js:288

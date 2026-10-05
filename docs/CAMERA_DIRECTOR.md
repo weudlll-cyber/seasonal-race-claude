@@ -1063,7 +1063,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 9043556e 2026-10-04 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eb1eea1d 2026-10-05 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-05 (FRAME-DROPS-80), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. `raceBehavior.js` and `mathUtils.js`, in the closure, now take each racer's `tFrac` once for the avoidance pair loop; the race is bit-identical (all four fingerprints equal), and so is this. Run rather than argued.
 
 ★★ **RE-MEASURED 2026-10-04 (PERIOD-EVALUATION-1), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. The branch had added a period-evaluation key to `defaults.js` and `storage.js`, both in the closure; the owner's decision moved that setting to the server, and both files are back to master's content. Run rather than argued.
 

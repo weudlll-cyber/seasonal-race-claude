@@ -9,7 +9,13 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
-import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT, tFrac } from '../utils/mathUtils.js';
+import {
+  arcDeltaFromFrac,
+  easeInOutCubic,
+  shortestArcDeltaT,
+  signedArcDeltaT,
+  tFrac,
+} from '../utils/mathUtils.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './raceBehaviorConfig.js';
 
@@ -328,6 +334,9 @@ function chooseSingleSideDirection(canLeft, canRight) {
 // INDEX order, which is unrelated to track position, so an insertion sort would be O(n^2) on an
 // effectively random permutation and would eat the win this block exists to get. The near-sortedness
 // is a property of the field BETWEEN STEPS, not of `active` WITHIN one.
+/** Each active racer's `tFrac`, for `applyRacerBehavior`'s pair loop (FRAME-DROPS-80 (c)). */
+let _pairTf = new Float64Array(0);
+
 function buildTIndex(active) {
   const n = active.length;
   if (_tIndexRacer.length < n) {
@@ -686,6 +695,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   const boundT = minBodyLen > 0 ? geometricBoundT : Math.max(geometricBoundT, DEGENERATE_BRAKE_T);
   const boundY = minTrackWidth > 0 ? (maxBodyWid / (minTrackWidth / 2)) * boundYMult : Infinity;
 
+  // FRAME-DROPS-80 (c): each racer's `tFrac`, once, for the pair loop below — which used to take it
+  // twice per PAIR (3,160 pairs at 80 racers). Nothing writes a racer's `t` until the hard-separation
+  // pass further down, so these are exactly the values the per-pair calls computed: the race is
+  // unchanged to the bit. A module-level array, grown as needed, so a call allocates nothing.
+  if (_pairTf.length < active.length) _pairTf = new Float64Array(active.length);
+  for (let i = 0; i < active.length; i++) _pairTf[i] = tFrac(active[i].t);
+
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
@@ -693,7 +709,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const rB = active[j];
 
       // Anisotropic distance in (t, physicalY) space — lap-normalized shortest arc.
-      const dT = shortestArcDeltaT(rA.t, rB.t);
+      const dT = arcDeltaFromFrac(_pairTf[i], _pairTf[j]);
       // PAIR-PREFILTER-1: before ANY geometry. See the bound above for why this is a superset.
       if (dT > boundT) continue;
       const dY = rA.physicalY - rB.physicalY;

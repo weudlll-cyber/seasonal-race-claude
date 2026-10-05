@@ -35,7 +35,14 @@ export const tFrac = (t) => ((t % 1) + 1) % 1;
 // Shortest-arc t-distance on a closed loop (≥0), lap-normalized. Use instead of a raw
 // `|a−b|; if(>0.5) 1−` wrap, which is only correct for inputs already in [0,1].
 export function shortestArcDeltaT(a, b) {
-  let dT = Math.abs(tFrac(a) - tFrac(b));
+  return arcDeltaFromFrac(tFrac(a), tFrac(b));
+}
+
+// The same shortest arc, from two values ALREADY passed through `tFrac`. FRAME-DROPS-80 (c): a loop
+// that compares every pair of racers can then take each racer's `tFrac` once instead of once per pair.
+// `shortestArcDeltaT` is defined through this, so the two cannot drift: same operations, same floats.
+export function arcDeltaFromFrac(fa, fb) {
+  let dT = Math.abs(fa - fb);
   if (dT > 0.5) dT = 1 - dT;
   return dT;
 }
