@@ -1,5 +1,7 @@
 # DEVSCREEN INVENTORY — every control the screen renders, and whether it still does what it says
 
+**This is the 2026-09-25 stock-take. The Dev Screen's layout of record is now [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md) (348 controls).**
+
 **Owns:** what the Dev Panel actually renders, verified against source.
 
 ★★ **THIS IS A STOCK-TAKE, TAKEN 2026-09-25 (DEVSCREEN-STOCKTAKE). IT IS NOT A DESIGN.** It proposes
