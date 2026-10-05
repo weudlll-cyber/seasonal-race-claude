@@ -951,6 +951,16 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
+- [ ] ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS — opened 2026-10-05.** At 80 racers, frames over
+      33 ms are 9.5 % on Mountainstreet and 4.0 % on Luger hill (N = 5 races each), against under 1 % at
+      40; on Luger hill half of them fall in the ending's wide shot. About two thirds of the slow frames'
+      time the page's main thread is idle, waiting on the GPU/compositor; our own code is the smaller
+      part (physics on Mountainstreet, track effects on Luger hill) —
+      [LARGE-FIELD-PERF-2](../reports/evolution/LARGE-FIELD-PERF-2.md). Where the GPU time goes, and
+      the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged):
+      [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md). **verify:** the slow-frame share
+      at 80 racers on both tracks, master against the branch, N = 30 races per track per arm.
+
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further

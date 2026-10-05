@@ -6,6 +6,7 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in 
 
 ## Performance at large fields (2026-10-04)
 
+- [LARGE-FIELD-PERF-3.md](LARGE-FIELD-PERF-3.md) — where the GPU time goes in the slow frames at 80 racers (Chrome performance traces), and the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged).
 - [LARGE-FIELD-PERF-2.md](LARGE-FIELD-PERF-2.md) — 30 real browser races, Mountainstreet and Luger
   hill at 80 and 40, Chrome's CPU profiler mapped through source maps → two thirds of the slow frames'
   time the main thread is idle, waiting on the GPU/compositor; of our own code, physics (the avoidance
