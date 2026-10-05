@@ -1,0 +1,170 @@
+[
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 477662,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 170767,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 40884,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 942358,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 524497,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 955724,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 416737,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 93643,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 906411,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 918686,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 223467,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 87869,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 304256,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 625497,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 923614,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 239979,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 544859,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 141942,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 720655,
+  "trace": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 146509,
+  "trace": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 477662,
+  "census": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 170767,
+  "census": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 40884,
+  "census": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 942358,
+  "census": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 80,
+  "seed": 524497,
+  "census": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 80,
+  "seed": 955724,
+  "census": true
+ },
+ {
+  "track": "Mountainstreet",
+  "n": 40,
+  "seed": 416737,
+  "census": true
+ },
+ {
+  "track": "Luger hill",
+  "n": 40,
+  "seed": 93643,
+  "census": true
+ }
+]
