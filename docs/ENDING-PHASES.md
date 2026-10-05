@@ -49,7 +49,9 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ eed6acca 2026-10-04 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ c11ffa25 2026-10-05 depends=client/src/modules/camera/CameraDirector.js via=scripts/straggler-truth.mjs -->
+
+★★ **RE-MEASURED 2026-10-05 (FRAME-DROPS-80), IDENTICAL TO THE DIGIT** — to the row below. `raceBehavior.js` and `mathUtils.js`, in the closure, now take each racer's `tFrac` once for the avoidance pair loop; the race is bit-identical (all four fingerprints equal), and so is this. Run rather than argued.
 
 ★★ **RE-MEASURED 2026-10-04 (EXACT-FIELD-SIZE-1), IDENTICAL TO THE DIGIT** to the row below — `racerNames.js`, in the closure, gained the Quick Test fill; the measurement races numbered rosters and does not reach it. Run rather than argued.
 

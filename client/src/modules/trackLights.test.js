@@ -8,13 +8,16 @@
 // Description: Unit tests for track boundary light sampling and animation.
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   sampleBoundaryAtInterval,
   getLightAlpha,
   DEFAULT_TRACK_LIGHTS,
   VALID_LIGHT_STYLES,
   LIGHT_SPACING_PX,
+  drawTrackLights,
+  glowSpriteFor,
+  _setGlowCanvasFactory,
 } from './trackLights.js';
 
 // ── sampleBoundaryAtInterval ──────────────────────────────────────────────────
@@ -268,5 +271,90 @@ describe('VALID_LIGHT_STYLES', () => {
     expect(VALID_LIGHT_STYLES).toContain('sync_pulse');
     expect(VALID_LIGHT_STYLES).toContain('random_flash');
     expect(VALID_LIGHT_STYLES).toHaveLength(4);
+  });
+});
+
+// ── FRAME-DROPS-80 (a): the lights skip what the shot cannot show, and draw from a cached image ──
+describe('drawTrackLights — cull and glow image (FRAME-DROPS-80 a)', () => {
+  /** A 2D context double: records draw calls; its transform is the camera's (scale, offset). */
+  function ctxDouble({ scale = 1, ox = 0, oy = 0, w = 100, h = 100 } = {}) {
+    const calls = [];
+    return {
+      calls,
+      canvas: { width: w, height: h },
+      // A scale-and-offset matrix with the one method the cull reads (this suite has no DOMMatrix).
+      getTransform: () => ({
+        inverse: () => ({ a: 1 / scale, b: 0, c: 0, d: 1 / scale, e: -ox / scale, f: -oy / scale }),
+      }),
+      save() {},
+      restore() {},
+      beginPath() {},
+      arc: (x, y) => calls.push(['arc', x, y]),
+      fill: () => calls.push(['fill']),
+      drawImage: (img, x, y, w2, h2) => calls.push(['drawImage', img, x, y, w2, h2]),
+    };
+  }
+  let made;
+  let prev;
+  beforeEach(() => {
+    made = [];
+    prev = _setGlowCanvasFactory((size) => {
+      const g = { fillStyle: '', globalAlpha: 1, beginPath() {}, arc() {}, fill() {} };
+      const c = { size, getContext: () => g };
+      made.push(c);
+      return c;
+    });
+  });
+  afterEach(() => _setGlowCanvasFactory(prev));
+
+  const lights = {
+    outer: [
+      { x: 10, y: 10 },
+      { x: 90, y: 90 },
+      { x: 500, y: 500 },
+    ],
+    inner: [],
+  };
+  const cfg = { color: '#ff0000', style: 'steady', speed: 1 };
+
+  it('skips a light outside the shot and draws the rest as ONE image each', () => {
+    const ctx = ctxDouble();
+    drawTrackLights(ctx, lights, cfg, 0, true, 1);
+    const images = ctx.calls.filter((c) => c[0] === 'drawImage');
+    expect(images.map((c) => [c[2] + c[4] / 2, c[3] + c[5] / 2])).toEqual([
+      [10, 10],
+      [90, 90],
+    ]);
+    expect(ctx.calls.some((c) => c[0] === 'arc')).toBe(false);
+  });
+
+  it('a camera zoomed and moved shows a different set — the cull reads the transform', () => {
+    // scale 4, moved so world (400..425, 400..425) fills the 100 px canvas
+    const ctx = ctxDouble({ scale: 4, ox: -1600, oy: -1600 });
+    drawTrackLights(ctx, lights, cfg, 0, true, 4);
+    const centres = ctx.calls.filter((c) => c[0] === 'drawImage').map((c) => c[2] + c[4] / 2);
+    expect(centres).toEqual([]);
+    const ctx2 = ctxDouble({ scale: 4, ox: -1960, oy: -1960 }); // world 490..515
+    drawTrackLights(ctx2, lights, cfg, 0, true, 4);
+    expect(ctx2.calls.filter((c) => c[0] === 'drawImage').map((c) => c[2] + c[4] / 2)).toEqual([
+      500,
+    ]);
+  });
+
+  it('the image is made once per colour and zoom bucket, and again when either changes', () => {
+    const a = glowSpriteFor('#ff0000', 2.66);
+    expect(glowSpriteFor('#ff0000', 2.66)).toBe(a);
+    expect(glowSpriteFor('#ff0000', 2.7)).toBe(a); // same quarter bucket
+    expect(glowSpriteFor('#00ff00', 2.66)).not.toBe(a); // another colour
+    expect(glowSpriteFor('#ff0000', 4)).not.toBe(a); // another zoom
+    expect(made).toHaveLength(3);
+  });
+
+  it('with no 2D canvas to draw an image on, the original two circles are drawn', () => {
+    _setGlowCanvasFactory(() => null);
+    const ctx = ctxDouble();
+    drawTrackLights(ctx, lights, cfg, 0, true, 1);
+    expect(ctx.calls.filter((c) => c[0] === 'arc')).toHaveLength(4); // two lights in shot × 2
+    expect(ctx.calls.some((c) => c[0] === 'drawImage')).toBe(false);
   });
 });

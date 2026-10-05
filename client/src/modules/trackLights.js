@@ -131,6 +131,12 @@ export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, ef
   // Convert the original 8 CSS-pixel glow into world-pixel radius.
   // At ezoom=2.5: glowR=3.2 wp → 8 screen px. At ezoom=0.5: glowR=16 wp → 8 screen px.
   const glowR = Math.max(LIGHT_RADIUS * 2, SHADOW_BLUR_PX / effectiveZoom);
+  // FRAME-DROPS-80 (a): the lights were about half of the canvas work the GPU executes at 80 racers
+  // (LARGE-FIELD-PERF-3) — two antialiased circles per light, for every light, on screen or not.
+  // Now a light the shot cannot show is skipped, and a light it can show is ONE image of its halo and
+  // core, drawn once per colour and size ratio and reused (`glowSpriteFor`).
+  const view = visibleWorldRect(ctx, glowR);
+  const sprite = glowSpriteFor(color, glowR / LIGHT_RADIUS);
 
   ctx.save();
   ctx.fillStyle = color;
@@ -138,8 +144,17 @@ export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, ef
   for (const boundary of [cachedLights.outer, cachedLights.inner]) {
     const total = boundary.length;
     for (let i = 0; i < total; i++) {
-      const alpha = getLightAlpha(style, i, total, ts, speed, isClosed);
       const { x, y } = boundary[i];
+      if (view && (x < view.minX || x > view.maxX || y < view.minY || y > view.maxY)) continue;
+      // The alpha is taken AFTER the cull test only because it is the same pure function of (i, ts)
+      // either way: skipping a light skips nothing that a later light depends on.
+      const alpha = getLightAlpha(style, i, total, ts, speed, isClosed);
+      if (sprite) {
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(sprite, x - glowR, y - glowR, glowR * 2, glowR * 2);
+        continue;
+      }
+      // No image could be made (no 2D canvas — a test environment): the original two circles.
       // Soft halo ring — replaces shadowBlur=8 (no GPU offscreen blur pass needed)
       ctx.globalAlpha = alpha * 0.35;
       ctx.beginPath();
@@ -154,4 +169,100 @@ export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, ef
   }
 
   ctx.restore();
+}
+
+/**
+ * The world rectangle the canvas currently shows, widened by `margin`, read off the context's own
+ * transform — the camera's. `null` when the context cannot say (a test double without
+ * `getTransform`), which draws every light, as before.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} margin  world px a light may extend past its centre
+ * @returns {{minX:number,maxX:number,minY:number,maxY:number}|null}
+ */
+export function visibleWorldRect(ctx, margin) {
+  if (typeof ctx.getTransform !== 'function' || !ctx.canvas) return null;
+  const inv = ctx.getTransform().inverse();
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const [cx, cy] of [
+    [0, 0],
+    [w, 0],
+    [0, h],
+    [w, h],
+  ]) {
+    const x = inv.a * cx + inv.c * cy + inv.e;
+    const y = inv.b * cx + inv.d * cy + inv.f;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  return { minX: minX - margin, maxX: maxX + margin, minY: minY - margin, maxY: maxY + margin };
+}
+
+// ── the glow image cache ───────────────────────────────────────────────────────────────────────
+// One image per (colour, halo-to-core ratio). The ratio follows the zoom (the halo keeps a constant
+// SCREEN size, the core a constant WORLD size), so it is bucketed to a quarter: a camera move that
+// changes it by less than that reuses the image. The image is drawn at a fixed resolution and scaled
+// by `drawImage`, which is what the GPU does cheaply.
+const GLOW_SPRITE_PX = 64;
+const RATIO_STEP = 0.25;
+const MAX_SPRITES = 64;
+const _glowSprites = new Map();
+
+// How a glow image's canvas is made: an OffscreenCanvas where there is one, else a DOM canvas, else
+// nothing (no 2D canvas — then the lights fall back to the original circles).
+let _makeCanvas = (size) => {
+  if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(size, size);
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  return c;
+};
+/** Swap the image factory (tests). Clears the cache; returns the previous factory. */
+export function _setGlowCanvasFactory(fn) {
+  const prev = _makeCanvas;
+  _makeCanvas = fn;
+  _glowSprites.clear();
+  return prev;
+}
+
+/**
+ * The cached halo-and-core image for one colour at one halo-to-core ratio, or `null` when no 2D
+ * canvas can be made. The halo is the old soft ring at 0.35 opacity; the core sits on it at full
+ * opacity; the whole image is then drawn at the light's own alpha.
+ *
+ * @param {string} color
+ * @param {number} ratio  halo radius / core radius
+ */
+export function glowSpriteFor(color, ratio) {
+  const bucket = Math.round(ratio / RATIO_STEP) * RATIO_STEP;
+  const key = `${color}|${bucket}`;
+  const hit = _glowSprites.get(key);
+  if (hit !== undefined) return hit;
+  const canvas = _makeCanvas(GLOW_SPRITE_PX);
+  const g = canvas?.getContext?.('2d') ?? null;
+  let sprite = null;
+  if (g) {
+    const half = GLOW_SPRITE_PX / 2;
+    g.fillStyle = color;
+    g.globalAlpha = 0.35;
+    g.beginPath();
+    g.arc(half, half, half, 0, Math.PI * 2);
+    g.fill();
+    g.globalAlpha = 1;
+    g.beginPath();
+    g.arc(half, half, half / bucket, 0, Math.PI * 2);
+    g.fill();
+    sprite = canvas;
+  }
+  if (_glowSprites.size >= MAX_SPRITES) _glowSprites.clear();
+  _glowSprites.set(key, sprite);
+  return sprite;
 }
