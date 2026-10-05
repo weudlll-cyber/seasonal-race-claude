@@ -11,11 +11,16 @@ beforeEach(() => {
   prev = _setDotCanvasFactory((size) => {
     const g = {
       fillStyle: '',
+      globalCompositeOperation: 'source-over',
+      stops: [],
+      gradientFills: [],
       beginPath() {},
       arc() {},
       fill() {},
-      fillRect() {},
-      createRadialGradient: () => ({ addColorStop() {} }),
+      fillRect() {
+        if (typeof g.fillStyle === 'object') g.gradientFills.push(g.globalCompositeOperation);
+      },
+      createRadialGradient: () => ({ addColorStop: (at, c) => g.stops.push(c) }),
     };
     const c = { size, getContext: () => g };
     made.push(c);
@@ -37,6 +42,16 @@ describe('dotSprites', () => {
     _setDotCanvasFactory(() => null);
     expect(dotSprite('#f00')).toBeNull();
     expect(glowDotSprite('#f00')).toBeNull();
+  });
+
+  it("the glow fades only the colour's opacity, never towards another colour", () => {
+    glowDotSprite('#ffd700');
+    const g = made[0].getContext();
+    // Every gradient stop is pure alpha, and the gradient is applied as a mask: a fade towards
+    // transparent BLACK drawn over the colour rings each dot grey on a light ground.
+    expect(g.stops.length).toBeGreaterThan(0);
+    for (const c of g.stops) expect(c).toMatch(/^rgba\(0,0,0,[\d.]+\)$/);
+    expect(g.gradientFills).toEqual(['destination-in']);
   });
 });
 

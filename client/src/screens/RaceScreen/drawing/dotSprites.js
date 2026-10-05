@@ -74,11 +74,17 @@ export function dotSprite(color) {
  */
 export function glowDotSprite(color) {
   return cached(_glows, color, (g, half) => {
-    const grad = g.createRadialGradient(half, half, 0, half, half, half);
-    grad.addColorStop(0, color);
-    grad.addColorStop(0.5, color);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = grad;
+    // The colour fills the image; a radial ALPHA mask then fades it. A gradient from the colour to
+    // transparent black would pass through grey on the way and ring every dot dark on a light ground.
+    g.fillStyle = color;
     g.fillRect(0, 0, half * 2, half * 2);
+    const mask = g.createRadialGradient(half, half, 0, half, half, half);
+    mask.addColorStop(0, 'rgba(0,0,0,1)');
+    mask.addColorStop(0.5, 'rgba(0,0,0,1)');
+    mask.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'destination-in';
+    g.fillStyle = mask;
+    g.fillRect(0, 0, half * 2, half * 2);
+    g.globalCompositeOperation = 'source-over';
   });
 }
