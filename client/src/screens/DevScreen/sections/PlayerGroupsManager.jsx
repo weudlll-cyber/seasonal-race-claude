@@ -14,7 +14,7 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import {
   fetchPlayerGroups,
   createPlayerGroup,
@@ -177,9 +177,11 @@ function PlayerGroupsManager() {
           </span>
           <span className={s.spacer} />
           {!showForm && (
-            <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
-              + New Group
-            </button>
+            <Ctl id="PlayerGroupsManager:setShowForm">
+              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setShowForm(true)}>
+                + New Group
+              </button>
+            </Ctl>
           )}
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
@@ -232,22 +234,27 @@ function PlayerGroupsManager() {
                   </span>
                 )}
                 <span className={s.spacer} />
-                <button
-                  className={`${s.btn} ${s.btnSecondary}`}
-                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
-                  onClick={() => handleLoad(group)}
-                  title="Load this group into the Setup Screen"
-                >
-                  ▶ Load to Setup
-                </button>
-                <button
-                  className={`${s.btnIconOnly}`}
-                  onClick={() => handleEdit(group)}
-                  title="Edit"
-                >
-                  ✏️
-                </button>
+                <Ctl id="PlayerGroupsManager:handleLoad">
+                  <button
+                    className={`${s.btn} ${s.btnSecondary}`}
+                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}
+                    onClick={() => handleLoad(group)}
+                    title="Load this group into the Setup Screen"
+                  >
+                    ▶ Load to Setup
+                  </button>
+                </Ctl>
+                <Ctl id="PlayerGroupsManager:handleEdit">
+                  <button
+                    className={`${s.btnIconOnly}`}
+                    onClick={() => handleEdit(group)}
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                </Ctl>
                 <DefaultControls
+                  controlSection="PlayerGroupsManager"
                   id={group.id}
                   isDefault={group.isDefault}
                   onChanged={refresh}
@@ -256,13 +263,15 @@ function PlayerGroupsManager() {
                   exportSeed={exportPlayerGroupSeed}
                   seedFilename={`group-${group.id}.json`}
                 />
-                <button
-                  className={`${s.btnIconOnly} ${s.danger}`}
-                  onClick={() => handleDelete(group.id, group.isDefault)}
-                  title="Delete"
-                >
-                  🗑
-                </button>
+                <Ctl id="PlayerGroupsManager:handleDelete">
+                  <button
+                    className={`${s.btnIconOnly} ${s.danger}`}
+                    onClick={() => handleDelete(group.id, group.isDefault)}
+                    title="Delete"
+                  >
+                    🗑
+                  </button>
+                </Ctl>
               </div>
             ))}
           </div>
@@ -276,13 +285,13 @@ function PlayerGroupsManager() {
             {editId ? 'Edit Group' : 'New Group'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="PlayerGroupsManager:name">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 Group Name
-                <InfoTooltip text="What this group is called. Choose a short, recognizable name that you'll see in race setup." />
+                <Info id="PlayerGroupsManager:name" />
               </label>
               <input
                 className={s.input}
@@ -292,13 +301,12 @@ function PlayerGroupsManager() {
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="PlayerGroupsManager:playersText">
               <label
                 className={s.label}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                Player Names{' '}
-                <InfoTooltip text="The players in this group. Add anyone who frequently races together so you can pick them all with one click." />
+                Player Names <Info id="PlayerGroupsManager:playersText" />
                 <span
                   style={{ textTransform: 'none', fontWeight: 400, color: 'var(--color-muted)' }}
                 >
@@ -316,16 +324,20 @@ function PlayerGroupsManager() {
               </span>
             </div>
             <div className={s.btnRow}>
-              <button
-                className={`${s.btn} ${s.btnPrimary}`}
-                onClick={handleSave}
-                disabled={!form.name.trim() || parseNames(form.playersText).length === 0}
-              >
-                {editId ? 'Save Changes' : 'Create Group'}
-              </button>
-              <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
-                Cancel
-              </button>
+              <Ctl id="PlayerGroupsManager:handleSave">
+                <button
+                  className={`${s.btn} ${s.btnPrimary}`}
+                  onClick={handleSave}
+                  disabled={!form.name.trim() || parseNames(form.playersText).length === 0}
+                >
+                  {editId ? 'Save Changes' : 'Create Group'}
+                </button>
+              </Ctl>
+              <Ctl id="PlayerGroupsManager:handleCancel">
+                <button className={`${s.btn} ${s.btnGhost}`} onClick={handleCancel}>
+                  Cancel
+                </button>
+              </Ctl>
             </div>
           </div>
         </div>

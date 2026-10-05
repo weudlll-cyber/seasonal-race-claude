@@ -4,6 +4,18 @@ One line per report: what it tried → verdict → the lesson/outcome. This is t
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **the `world` role in [docs/fingerprints.json](../../docs/fingerprints.json)**, which is its one home — COMBO15 + margin hysteresis + lateral acceleration cap and everything minted since (lineage in [SIM.md](../../docs/SIM.md)).
 
+## Dev Screen rebuild — Plan D, chapters (2026-10-04)
+
+- [DEVSCREEN-CHAPTERS-1.md](DEVSCREEN-CHAPTERS-1.md) — **the Plan D design, decided 2026-10-04: 348
+  controls in seven chapters, each placed once, an info text each.** A mechanical count
+  (`DEVSCREEN-CHAPTERS-1/count-controls.mjs`) finds 348 controls against the inventory's 205: +93
+  buttons that act, +7 new since (Period Evaluation, Verify race), the rest values the inventory did
+  not count. Chapters: the race (101), camera start to ending (84), look and effects (38), tracks,
+  racers, brands and groups (69), history and evaluation (15), diagnostics (17), accounts and system
+  (24). Info texts 104 NEW / 194 REWRITTEN / 50 KEPT, none stating a value. No key renamed; the
+  `minTargetScreenPx` collision resolved by placement and wording; tiers unchanged. Machine-readable
+  table in `DEVSCREEN-CHAPTERS-1/design.json`. Design only — nothing built.
+
 ## Performance at large fields (2026-10-04)
 
 - [LARGE-FIELD-PERF-3.md](LARGE-FIELD-PERF-3.md) — where the GPU time goes in the slow frames at 80 racers (Chrome performance traces), and the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged).

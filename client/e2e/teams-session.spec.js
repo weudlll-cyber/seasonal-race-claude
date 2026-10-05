@@ -98,8 +98,8 @@ test.describe('TEAMS-1 — the admin assigns a team and the session carries it',
     expect(admin.body.team, 'setup founds the first team').toBe(FOUNDING_TEAM);
 
     // ── 2. Create the user THROUGH THE ADMIN'S OWN FORM.
-    await page.getByRole('button', { name: /User Management/i }).click();
-    await expect(page.getByRole('heading', { name: /User Management/i })).toBeVisible();
+    await page.getByRole('button', { name: /Accounts and system/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
+    await expect(page.getByRole('heading', { name: /Race directors/i })).toBeVisible();
 
     const teamSelect = page.locator('#um-team');
     await expect(teamSelect, 'the Team control is a picker, not a free-text box').toBeVisible();
@@ -140,7 +140,7 @@ test.describe('TEAMS-1 — the admin assigns a team and the session carries it',
 
     await signInAsAdmin(page);
     await page.goto('/dev');
-    await page.getByRole('button', { name: /User Management/i }).click();
+    await page.getByRole('button', { name: /Accounts and system/i }).click(); // DEVSCREEN-CHAPTERS-1: by chapter
 
     await page.locator('#um-username').fill(operator.username);
     await page.locator('#um-password').fill(operator.password);

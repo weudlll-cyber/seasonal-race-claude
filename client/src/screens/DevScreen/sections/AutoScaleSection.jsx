@@ -8,7 +8,7 @@
 //              to defaults, InfoTooltip for non-obvious fields.
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import RangeRejectionNotice from './RangeRejectionNotice.jsx';
 import {
   loadAutoScaleConfig,
@@ -17,18 +17,22 @@ import {
   computeAutoScaleFactor,
 } from '../../../modules/autoSpriteScale.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import s from '../DevScreen.module.css';
 
 function AutoScaleSection() {
   // ★ POLISH-3f: what was rejected, so a typed value that does nothing says why.
   const [rejected, setRejected] = useState(null);
-  const [config, setConfig] = useState(() => loadAutoScaleConfig());
+  // Synced, so the race chapter's master reset (which writes storage directly) shows here at once.
+  const [config, setConfig] = useSyncedConfig(
+    KEYS.AUTO_SCALE_CONFIG,
+    loadAutoScaleConfig,
+    saveAutoScaleConfig
+  );
   const [previewRacers, setPreviewRacers] = useState(6);
   const [previewWidth, setPreviewWidth] = useState(140);
-
-  useEffect(() => {
-    saveAutoScaleConfig(config);
-  }, [config]);
 
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));
@@ -51,17 +55,19 @@ function AutoScaleSection() {
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Auto-Sprite-Scaling</span>
           <InfoTooltip text="When enabled, racer display size is automatically scaled based on track width and racer count. Formula: clamp((trackWidth / racerCount) / referenceValue, minScale, maxScale). Operator overrides from the Racer Types editor always take priority." />
           <span className={s.spacer} />
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            onClick={handleReset}
-            style={{ fontSize: '0.75rem' }}
-          >
-            Reset Defaults
-          </button>
+          <Ctl id="AutoScaleSection:handleReset">
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              onClick={handleReset}
+              style={{ fontSize: '0.75rem' }}
+            >
+              Reset Defaults
+            </button>
+          </Ctl>
         </div>
 
         <div className={s.formGrid}>
-          <div className={s.formGroupFull}>
+          <div className={s.formGroupFull} data-control-id="AutoScaleSection:enabled">
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
@@ -73,17 +79,21 @@ function AutoScaleSection() {
                 style={{ cursor: 'pointer' }}
               />
               Enabled
-              <InfoTooltip text="When off, racer display size is unchanged (1× factor). Enable to have sizes auto-adapt per race." />
+              <Info id="AutoScaleSection:enabled" />
             </label>
           </div>
 
-          <div className={s.formGroup} style={{ opacity: config.enabled ? 1 : 0.45 }}>
+          <div
+            className={s.formGroup}
+            style={{ opacity: config.enabled ? 1 : 0.45 }}
+            data-control-id="AutoScaleSection:referenceValue"
+          >
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Reference Value
-              <InfoTooltip text="The track-width-per-racer ratio that yields a neutral scale factor of 1.0. Below the ratio, the factor scales UP; above it, the factor scales down." />
+              <Info id="AutoScaleSection:referenceValue" />
             </label>
             <input
               type="number"
@@ -100,13 +110,17 @@ function AutoScaleSection() {
             />
           </div>
 
-          <div className={s.formGroup} style={{ opacity: config.enabled ? 1 : 0.45 }}>
+          <div
+            className={s.formGroup}
+            style={{ opacity: config.enabled ? 1 : 0.45 }}
+            data-control-id="AutoScaleSection:minScale"
+          >
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Min Scale
-              <InfoTooltip text="Minimum sprite scale factor (clamp lower bound), expressed as a share of the neutral 1.0 factor." />
+              <Info id="AutoScaleSection:minScale" />
             </label>
             <input
               type="number"
@@ -130,37 +144,17 @@ function AutoScaleSection() {
             />
           </div>
 
-          <div className={s.formGroup} style={{ opacity: config.enabled ? 1 : 0.45 }}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Min Target Screen Px
-              <InfoTooltip text="Minimum sprite diameter on screen in pixels. Acts as a floor in the render pipeline: on very large tracks where the camera zooms far out, sprites are enlarged to stay at least this many pixels." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Min Target Screen Px"
-              min={8}
-              max={120}
-              step={4}
-              value={config.minTargetScreenPx}
-              disabled={!config.enabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v > 0) set('minTargetScreenPx', v);
-              }}
-            />
-          </div>
-
-          <div className={s.formGroup} style={{ opacity: config.enabled ? 1 : 0.45 }}>
+          <div
+            className={s.formGroup}
+            style={{ opacity: config.enabled ? 1 : 0.45 }}
+            data-control-id="AutoScaleSection:maxScale"
+          >
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Max Scale
-              <InfoTooltip text="Maximum sprite scale factor (clamp upper bound), expressed as a multiple of the neutral 1.0 factor." />
+              <Info id="AutoScaleSection:maxScale" />
             </label>
             <input
               type="number"
@@ -183,6 +177,33 @@ function AutoScaleSection() {
               }}
             />
           </div>
+          <div
+            className={s.formGroup}
+            style={{ opacity: config.enabled ? 1 : 0.45 }}
+            data-control-id="AutoScaleSection:minTargetScreenPx"
+          >
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Size floor — every racer type
+              <Info id="AutoScaleSection:minTargetScreenPx" />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Size floor — every racer type"
+              min={8}
+              max={120}
+              step={4}
+              value={config.minTargetScreenPx}
+              disabled={!config.enabled}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v > 0) set('minTargetScreenPx', v);
+              }}
+            />
+          </div>
         </div>
         <RangeRejectionNotice message={rejected} testId="autoscale-range-rejection" />
       </div>
@@ -193,8 +214,14 @@ function AutoScaleSection() {
           Formula Preview
         </p>
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label className={s.label}>Track Width (px)</label>
+          <div className={s.formGroup} data-control-id="AutoScaleSection:setPreviewWidth">
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Track Width (px)
+              <Info id="AutoScaleSection:setPreviewWidth" />
+            </label>
             <input
               type="number"
               className={s.input}
@@ -205,8 +232,14 @@ function AutoScaleSection() {
               onChange={(e) => setPreviewWidth(Number(e.target.value))}
             />
           </div>
-          <div className={s.formGroup}>
-            <label className={s.label}>Racer Count</label>
+          <div className={s.formGroup} data-control-id="AutoScaleSection:setPreviewRacers">
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Racer Count
+              <Info id="AutoScaleSection:setPreviewRacers" />
+            </label>
             <input
               type="number"
               className={s.input}

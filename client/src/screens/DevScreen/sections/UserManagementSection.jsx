@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from 'react';
 import { fetchUsers, createUser, updateUser, deleteUser } from '../../../services/usersApi.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
 const ROLES = ['operator', 'admin'];
@@ -224,14 +224,16 @@ function UserManagementSection() {
           <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
             Race Directors <span className={s.badge}>{users.length}</span>
           </span>
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            onClick={loadUsers}
-            disabled={isLoading || isBusy}
-            style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-          >
-            Refresh
-          </button>
+          <Ctl id="UserManagementSection:loadUsers">
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              onClick={loadUsers}
+              disabled={isLoading || isBusy}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+            >
+              Refresh
+            </button>
+          </Ctl>
         </div>
 
         {isLoading && users.length === 0 && <p className={s.emptyState}>Loading…</p>}
@@ -275,53 +277,61 @@ function UserManagementSection() {
                     no team
                   </span>
                 )}
-                <select
-                  aria-label={`Team for ${user.username}`}
-                  className={s.select}
-                  value={user.team ?? ''}
-                  disabled={isBusy || teams.length === 0}
-                  onChange={(e) => handleTeamChange(user.id, e.target.value)}
-                  style={{ width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
-                >
-                  {!user.team && <option value="">— no team —</option>}
-                  {teams.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label={`Role for ${user.username}`}
-                  className={s.select}
-                  value={user.role}
-                  disabled={isBusy}
-                  onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                  style={{ width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  onClick={() => openResetForm(user.id)}
-                  disabled={isBusy}
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                  aria-label={`Reset password for ${user.username}`}
-                >
-                  Reset Password
-                </button>
-                <button
-                  className={`${s.btn} ${s.btnDanger}`}
-                  onClick={() => handleDelete(user.id, user.username)}
-                  disabled={isBusy}
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                  aria-label={`Delete ${user.username}`}
-                >
-                  Delete
-                </button>
+                <Ctl id="UserManagementSection:handleTeamChange">
+                  <select
+                    aria-label={`Team for ${user.username}`}
+                    className={s.select}
+                    value={user.team ?? ''}
+                    disabled={isBusy || teams.length === 0}
+                    onChange={(e) => handleTeamChange(user.id, e.target.value)}
+                    style={{ width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                  >
+                    {!user.team && <option value="">— no team —</option>}
+                    {teams.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </Ctl>
+                <Ctl id="UserManagementSection:handleRoleChange">
+                  <select
+                    aria-label={`Role for ${user.username}`}
+                    className={s.select}
+                    value={user.role}
+                    disabled={isBusy}
+                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                    style={{ width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </Ctl>
+                <Ctl id="UserManagementSection:openResetForm">
+                  <button
+                    className={`${s.btn} ${s.btnGhost}`}
+                    onClick={() => openResetForm(user.id)}
+                    disabled={isBusy}
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                    aria-label={`Reset password for ${user.username}`}
+                  >
+                    Reset Password
+                  </button>
+                </Ctl>
+                <Ctl id="UserManagementSection:handleDelete">
+                  <button
+                    className={`${s.btn} ${s.btnDanger}`}
+                    onClick={() => handleDelete(user.id, user.username)}
+                    disabled={isBusy}
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                    aria-label={`Delete ${user.username}`}
+                  >
+                    Delete
+                  </button>
+                </Ctl>
               </div>
 
               {resetForId === user.id && (
@@ -334,24 +344,28 @@ function UserManagementSection() {
                     borderRadius: '0 0 6px 6px',
                   }}
                 >
-                  <input
-                    className={s.input}
-                    type="password"
-                    placeholder="New password"
-                    value={resetPassword}
-                    onChange={(e) => setResetPassword(e.target.value)}
-                    aria-label={`New password for ${user.username}`}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    className={`${s.btn} ${s.btnPrimary}`}
-                    onClick={() => handlePasswordReset(user.id)}
-                    disabled={isBusy || !resetPassword}
-                    aria-label={`Confirm password reset for ${user.username}`}
-                    style={{ fontSize: '0.8rem' }}
-                  >
-                    Confirm
-                  </button>
+                  <Ctl id="UserManagementSection:setResetPassword">
+                    <input
+                      className={s.input}
+                      type="password"
+                      placeholder="New password"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      aria-label={`New password for ${user.username}`}
+                      style={{ flex: 1 }}
+                    />
+                  </Ctl>
+                  <Ctl id="UserManagementSection:handlePasswordReset">
+                    <button
+                      className={`${s.btn} ${s.btnPrimary}`}
+                      onClick={() => handlePasswordReset(user.id)}
+                      disabled={isBusy || !resetPassword}
+                      aria-label={`Confirm password reset for ${user.username}`}
+                      style={{ fontSize: '0.8rem' }}
+                    >
+                      Confirm
+                    </button>
+                  </Ctl>
                 </div>
               )}
             </div>
@@ -366,10 +380,9 @@ function UserManagementSection() {
         </div>
         <form onSubmit={handleCreate}>
           <div className={s.formGrid}>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="UserManagementSection:setNewUsername">
               <label className={s.label} htmlFor="um-username">
-                Username{' '}
-                <InfoTooltip text="The name the new user signs in with. Server-enforced uniqueness — a duplicate is refused." />
+                Username <Info id="UserManagementSection:setNewUsername" />
               </label>
               <input
                 id="um-username"
@@ -379,10 +392,9 @@ function UserManagementSection() {
                 autoComplete="off"
               />
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="UserManagementSection:setNewPassword">
               <label className={s.label} htmlFor="um-password">
-                Password{' '}
-                <InfoTooltip text="Initial password for the new account. Same rule the server applies everywhere; the user can change it themselves later from this same screen." />
+                Password <Info id="UserManagementSection:setNewPassword" />
               </label>
               <input
                 id="um-password"
@@ -393,10 +405,9 @@ function UserManagementSection() {
                 autoComplete="new-password"
               />
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="UserManagementSection:setNewRole">
               <label className={s.label} htmlFor="um-role">
-                Role{' '}
-                <InfoTooltip text="operator (default) sees the ordinary Dev Screen; admin also sees this User Management section and any other admin-only affordance." />
+                Role <Info id="UserManagementSection:setNewRole" />
               </label>
               <select
                 id="um-role"
@@ -412,10 +423,9 @@ function UserManagementSection() {
                 ))}
               </select>
             </div>
-            <div className={s.formGroup}>
+            <div className={s.formGroup} data-control-id="UserManagementSection:setNewTeam">
               <label className={s.label} htmlFor="um-team">
-                Team{' '}
-                <InfoTooltip text="The team the new account joins. The picker only lists teams that already exist — pick 'New team…' to found one, which is the only way to type a name. Guards against a typo silently splitting a team in two." />
+                Team <Info id="UserManagementSection:setNewTeam" />
               </label>
               <select
                 id="um-team"
@@ -438,10 +448,13 @@ function UserManagementSection() {
               adding somebody to the team that already exists — never offers a box to mistype a
               team name into. */}
           {newTeam === NEW_TEAM && (
-            <div className={s.formGroup} style={{ marginTop: '0.75rem' }}>
+            <div
+              className={s.formGroup}
+              style={{ marginTop: '0.75rem' }}
+              data-control-id="UserManagementSection:setNewTeamName"
+            >
               <label className={s.label} htmlFor="um-new-team">
-                New team name{' '}
-                <InfoTooltip text="The name of the team you are founding. Only shown when you picked 'New team…'; the server tags this create request as an explicit new-team act so a typo cannot slip past." />
+                New team name <Info id="UserManagementSection:setNewTeamName" />
               </label>
               <input
                 id="um-new-team"
@@ -454,14 +467,16 @@ function UserManagementSection() {
             </div>
           )}
           <div className={s.btnRow} style={{ marginTop: '1rem' }}>
-            <button
-              type="submit"
-              className={`${s.btn} ${s.btnPrimary}`}
-              disabled={isBusy || !newTeam || (newTeam === NEW_TEAM && !newTeamName.trim())}
-              aria-label="Add user"
-            >
-              {isBusy ? 'Saving…' : 'Add User'}
-            </button>
+            <Ctl id="UserManagementSection:handleCreate">
+              <button
+                type="submit"
+                className={`${s.btn} ${s.btnPrimary}`}
+                disabled={isBusy || !newTeam || (newTeam === NEW_TEAM && !newTeamName.trim())}
+                aria-label="Add user"
+              >
+                {isBusy ? 'Saving…' : 'Add User'}
+              </button>
+            </Ctl>
           </div>
         </form>
       </div>

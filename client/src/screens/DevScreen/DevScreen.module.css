@@ -82,7 +82,7 @@
   text-align: center;
 }
 
-/* ── Tier Toggle ── */
+/* ── Tier Toggle — the view switch, in the sidebar under the header (admins only) ── */
 .tierToggle {
   display: flex;
   align-items: center;
@@ -128,38 +128,7 @@
   color: #fff;
 }
 
-/* ── Tier Divider ── */
-.tierDivider {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.25rem 0.25rem;
-  margin-top: 0.25rem;
-}
-
-.tierDividerLabel {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #444;
-  white-space: nowrap;
-}
-
-.tierDivider::before {
-  content: '';
-  flex: 0 0 auto;
-  height: 1px;
-  width: 0.5rem;
-  background: #2a2a35;
-}
-
-.tierDivider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #2a2a35;
-}
-
+/* ── Back to Setup and Log out, directly under the chapters in the sidebar ── */
 .backBtn {
   display: flex;
   align-items: center;
@@ -173,7 +142,6 @@
   cursor: pointer;
   width: 100%;
   text-align: left;
-  margin-top: auto;
   transition: color var(--transition);
 }
 
@@ -207,6 +175,38 @@
   font-size: 0.8rem;
   color: var(--color-muted);
   margin-top: 0.2rem;
+}
+
+/* ── Chapters (DEVSCREEN-CHAPTERS-1): a sub-group heading, its parts, the admin's tier tag ── */
+.subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.subgroupTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  border-bottom: 1px solid #2a2a35;
+  padding-bottom: 0.35rem;
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.advancedTag {
+  align-self: flex-start;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-muted);
+  border: 1px solid #2a2a35;
+  border-radius: 99px;
+  padding: 0.05rem 0.45rem;
 }
 
 /* ── Generic card/row ── */

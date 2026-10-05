@@ -7,22 +7,24 @@
 //              Controls how many name tags appear during the race.
 // ============================================================
 
-import { useState, useEffect } from 'react';
 import {
   loadCameraConfig,
   saveCameraConfig,
   // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_CAMERA_CONFIG,
 } from '../../../modules/cameraConfig.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
+import { KEYS } from '../../../modules/storage/storage.js';
+import { useSyncedConfig } from './useSyncedConfig.js';
 import s from '../DevScreen.module.css';
 
 function NameTagVisibilitySection() {
-  const [config, setConfig] = useState(() => loadCameraConfig());
-
-  useEffect(() => {
-    saveCameraConfig(config);
-  }, [config]);
+  // Kept in step with every other mounted camera part (useSyncedConfig).
+  const [config, setConfig] = useSyncedConfig(
+    KEYS.CAMERA_CONFIG,
+    loadCameraConfig,
+    saveCameraConfig
+  );
 
   function set(key, val) {
     setConfig((prev) => ({ ...prev, [key]: val }));
@@ -43,21 +45,23 @@ function NameTagVisibilitySection() {
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.2rem' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Name Tag Visibility</span>
           <span className={s.spacer} />
-          <button
-            onClick={handleReset}
-            data-testid="reset-nametag-visibility"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-muted)',
-              fontSize: '0.72rem',
-              cursor: 'pointer',
-              padding: '0.1rem 0.2rem',
-              opacity: 0.7,
-            }}
-          >
-            Reset Name Tag Visibility
-          </button>
+          <Ctl id="NameTagVisibilitySection:reset-nametag-visibility">
+            <button
+              onClick={handleReset}
+              data-testid="reset-nametag-visibility"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-muted)',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                padding: '0.1rem 0.2rem',
+                opacity: 0.7,
+              }}
+            >
+              Reset Name Tag Visibility
+            </button>
+          </Ctl>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
           Every racer on screen is offered a name tag; a tag is dropped only when it would land on
@@ -67,15 +71,13 @@ function NameTagVisibilitySection() {
         </p>
 
         <div className={s.formGrid}>
-          <div className={s.formGroup}>
+          <div className={s.formGroup} data-control-id="NameTagVisibilitySection:nameTagFrameFrac">
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Name size (% of frame)
-              <InfoTooltip
-                text={`How big a name tag is drawn, as a share of the frame height — the same size on screen at every zoom and on every track. ${((config.nameTagFrameFrac ?? DEFAULT_CAMERA_CONFIG.nameTagFrameFrac) * 100).toFixed(1)}% = ${Math.round((config.nameTagFrameFrac ?? DEFAULT_CAMERA_CONFIG.nameTagFrameFrac) * 720)} px on a 720-tall frame. Bigger names are easier to read but collide sooner, so fewer of them fit.`}
-              />
+              <Info id="NameTagVisibilitySection:nameTagFrameFrac" />
             </label>
             <input
               type="number"
@@ -94,15 +96,13 @@ function NameTagVisibilitySection() {
               }}
             />
           </div>
-          <div className={s.formGroup}>
+          <div className={s.formGroup} data-control-id="NameTagVisibilitySection:nameTagMarginPx">
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Gap above racer (px)
-              <InfoTooltip
-                text={`The breathing space between the top of a racer and the bottom of its tag. The rest of the distance is not a setting: a tag sits half the racer's DRAWN height above its centre, so the gap follows the RACER — a bigger racer gets a bigger gap, on every track and at every zoom, with no per-track number. This margin is only the space above that edge, and it exists because the drawn height measures the racer's narrow body while a neck or a fin reaches past it. Value: ${config.nameTagMarginPx ?? DEFAULT_CAMERA_CONFIG.nameTagMarginPx} px.`}
-              />
+              <Info id="NameTagVisibilitySection:nameTagMarginPx" />
             </label>
             <input
               type="number"
@@ -118,15 +118,13 @@ function NameTagVisibilitySection() {
               }}
             />
           </div>
-          <div className={s.formGroup}>
+          <div className={s.formGroup} data-control-id="NameTagVisibilitySection:nameTagAllUntilMs">
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Show all names for (s)
-              <InfoTooltip
-                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. The shipped value is measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; the shipped hold picks the point at which decluttering drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs) / 1000).toFixed(1)} s.`}
-              />
+              <Info id="NameTagVisibilitySection:nameTagAllUntilMs" />
             </label>
             <input
               type="number"

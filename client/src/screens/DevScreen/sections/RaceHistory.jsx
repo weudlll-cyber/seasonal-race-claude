@@ -44,7 +44,7 @@ import { useStorage } from '../../../modules/storage/useStorage.js';
 import { useServerTracks } from '../../../modules/storage/useServerTracks.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { DEFAULT_RACE_HISTORY } from '../../../modules/storage/defaults.js';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import { SYNC } from '../../../modules/raceHistory.js';
 import { armRepeat } from '../../../modules/repeatRace.js';
 import { fetchRacesPage, verifyRace } from '../../../services/racesApi.js';
@@ -114,16 +114,18 @@ function VerifyCell({ state, onVerify }) {
   const r = state?.result;
   return (
     <div style={{ marginTop: '0.25rem' }}>
-      <button
-        className={`${s.btn} ${s.btnGhost}`}
-        data-testid="verify-race"
-        style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-        disabled={!!state?.busy}
-        title="Races this race again on the server from its own record and compares every position and every finishing time. Takes a few seconds."
-        onClick={onVerify}
-      >
-        {state?.busy ? 'Verifying…' : 'Verify race'}
-      </button>
+      <Ctl id="RaceHistory:verify-race">
+        <button
+          className={`${s.btn} ${s.btnGhost}`}
+          data-testid="verify-race"
+          style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+          disabled={!!state?.busy}
+          title="Races this race again on the server from its own record and compares every position and every finishing time. Takes a few seconds."
+          onClick={onVerify}
+        >
+          {state?.busy ? 'Verifying…' : 'Verify race'}
+        </button>
+      </Ctl>
       {r && (
         <div
           data-testid="verify-result"
@@ -350,13 +352,17 @@ function RaceHistory() {
           whatever this machine is set to now.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+          <div
+            className={s.formGroup}
+            style={{ minWidth: '160px' }}
+            data-control-id="RaceHistory:setFilterTrack"
+          >
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Filter by Track
-              <InfoTooltip text="Show only races on the selected track. Pick 'All tracks' to see every race regardless of track." />
+              <Info id="RaceHistory:setFilterTrack" />
             </label>
             <select
               className={s.select}
@@ -371,13 +377,17 @@ function RaceHistory() {
               ))}
             </select>
           </div>
-          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+          <div
+            className={s.formGroup}
+            style={{ minWidth: '160px' }}
+            data-control-id="RaceHistory:setFilterDate"
+          >
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Filter by Date
-              <InfoTooltip text="Show only races within this time period. Useful for narrowing down to a specific event day or recent weeks." />
+              <Info id="RaceHistory:setFilterDate" />
             </label>
             <input
               className={s.input}
@@ -387,29 +397,35 @@ function RaceHistory() {
             />
           </div>
           <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
-            <button
-              className={`${s.btn} ${s.btnGhost}`}
-              onClick={() => {
-                setFilterTrack('');
-                setFilterDate('');
-              }}
-            >
-              Clear Filters
-            </button>
-            <button
-              className={`${s.btn} ${s.btnSecondary}`}
-              onClick={handleExportCSV}
-              disabled={filtered.length === 0}
-            >
-              Export CSV
-            </button>
-            <button
-              className={`${s.btn} ${s.btnDanger}`}
-              onClick={handleClear}
-              disabled={history.length === 0}
-            >
-              Clear History
-            </button>
+            <Ctl id="RaceHistory:setFilterTrack+setFilterDate">
+              <button
+                className={`${s.btn} ${s.btnGhost}`}
+                onClick={() => {
+                  setFilterTrack('');
+                  setFilterDate('');
+                }}
+              >
+                Clear Filters
+              </button>
+            </Ctl>
+            <Ctl id="RaceHistory:handleExportCSV">
+              <button
+                className={`${s.btn} ${s.btnSecondary}`}
+                onClick={handleExportCSV}
+                disabled={filtered.length === 0}
+              >
+                Export CSV
+              </button>
+            </Ctl>
+            <Ctl id="RaceHistory:handleClear">
+              <button
+                className={`${s.btn} ${s.btnDanger}`}
+                onClick={handleClear}
+                disabled={history.length === 0}
+              >
+                Clear History
+              </button>
+            </Ctl>
           </div>
         </div>
       </div>
@@ -504,22 +520,24 @@ function RaceHistory() {
                       )}
                     </td>
                     <td>
-                      <button
-                        className={`${s.btn} ${s.btnGhost}`}
-                        data-testid="run-again"
-                        style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                        // A race with no recorded inputs — an entry from before RACE-SAVE-3 — cannot
-                        // be repeated, and the button says so rather than starting something else.
-                        disabled={!row.inputs}
-                        title={
-                          row.inputs
-                            ? 'Runs this race again exactly as it ran, whatever this machine is set to now.'
-                            : 'This race was recorded before its settings were kept, so it cannot be repeated exactly.'
-                        }
-                        onClick={() => handleRepeat(row)}
-                      >
-                        Run again
-                      </button>
+                      <Ctl id="RaceHistory:run-again">
+                        <button
+                          className={`${s.btn} ${s.btnGhost}`}
+                          data-testid="run-again"
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                          // A race with no recorded inputs — an entry from before RACE-SAVE-3 — cannot
+                          // be repeated, and the button says so rather than starting something else.
+                          disabled={!row.inputs}
+                          title={
+                            row.inputs
+                              ? 'Runs this race again exactly as it ran, whatever this machine is set to now.'
+                              : 'This race was recorded before its settings were kept, so it cannot be repeated exactly.'
+                          }
+                          onClick={() => handleRepeat(row)}
+                        >
+                          Run again
+                        </button>
+                      </Ctl>
                       {isAdmin && row.state === 'stored' && row.shortKey && (
                         <VerifyCell
                           state={verifications[row.shortKey]}
@@ -536,22 +554,26 @@ function RaceHistory() {
 
         {/* ★ Paginated from the first version, even with three rows. */}
         <div className={s.btnRow} style={{ marginTop: '0.75rem', alignItems: 'center' }}>
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            data-testid="history-prev"
-            disabled={offset === 0 || serverState.loading}
-            onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-          >
-            ← Newer
-          </button>
-          <button
-            className={`${s.btn} ${s.btnGhost}`}
-            data-testid="history-next"
-            disabled={!page.hasMore || serverState.loading}
-            onClick={() => setOffset((o) => o + PAGE_SIZE)}
-          >
-            Older →
-          </button>
+          <Ctl id="RaceHistory:history-prev">
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              data-testid="history-prev"
+              disabled={offset === 0 || serverState.loading}
+              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+            >
+              ← Newer
+            </button>
+          </Ctl>
+          <Ctl id="RaceHistory:history-next">
+            <button
+              className={`${s.btn} ${s.btnGhost}`}
+              data-testid="history-next"
+              disabled={!page.hasMore || serverState.loading}
+              onClick={() => setOffset((o) => o + PAGE_SIZE)}
+            >
+              Older →
+            </button>
+          </Ctl>
           <span style={{ fontSize: '0.72rem', color: 'var(--color-muted)' }}>
             {page.races.length > 0
               ? `stored races ${offset + 1}–${offset + page.races.length}`

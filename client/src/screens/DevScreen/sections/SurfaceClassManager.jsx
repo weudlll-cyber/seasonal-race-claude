@@ -21,7 +21,7 @@ import {
 import { slugify, uniqueSlug } from '../../../utils/slugify.js';
 import { SurfaceClassPreview } from './SurfaceClassPreview.jsx';
 import { RangeSlider } from '../components/RangeSlider.jsx';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
 const GENERATOR_OPTIONS = Object.values(GENERATORS).map((g) => ({ id: g.id, label: g.label }));
@@ -64,14 +64,49 @@ function KindBadge({ kind }) {
 
 // ── Config field editor ───────────────────────────────────────────────────────
 
+// The order generator fields are shown in, the same for every generator, so a field sits in the same
+// place whichever generator draws the class (the design's order, DEVSCREEN-CHAPTERS-1). A field not
+// listed here keeps its schema position after the listed ones.
+const FIELD_ORDER = [
+  'color',
+  'startSize',
+  'endSize',
+  'lifetimeFrames',
+  'spawnProbability',
+  'driftDirection',
+  'opacity',
+  'thickness',
+  'sizeMin',
+  'sizeMax',
+  'drift',
+  'gravity',
+  'count',
+  'spreadAngle',
+];
+const fieldRank = (key) => {
+  const i = FIELD_ORDER.indexOf(key);
+  return i === -1 ? FIELD_ORDER.length : i;
+};
+
 function ConfigFields({ schema, config, onChange }) {
+  const ordered = [...schema].sort((a, b) => fieldRank(a.key) - fieldRank(b.key));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-      {schema.map((field) => {
+      {ordered.map((field) => {
         const value = config[field.key] ?? field.default;
         return (
-          <div key={field.key} className={s.formGroup}>
-            <label className={s.label}>{field.label}</label>
+          <div
+            key={field.key}
+            className={s.formGroup}
+            data-control-id={`SurfaceClassManager:${field.key}`}
+          >
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              {field.label}
+              <Info id={`SurfaceClassManager:${field.key}`} />
+            </label>
 
             {field.type === 'color' && (
               <div className={s.colorRow}>
@@ -304,14 +339,18 @@ function SurfaceClassManager() {
           gap: '0.5rem',
         }}
       >
-        <div className={s.card} style={{ padding: '0.75rem' }}>
+        <div
+          className={s.card}
+          style={{ padding: '0.75rem' }}
+          data-control-id="SurfaceClassManager:openClass"
+        >
           <div
             style={{ display: 'flex', alignItems: 'center', marginBottom: '0.6rem', gap: '0.4rem' }}
           >
             <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
               Classes <span className={s.badge}>{classes.length}</span>
             </span>
-            <InfoTooltip text="Surface classes are the palette a track paints its ground from. A Default is a code-shipped class; Modified is a code-default the operator has overridden on the server; Custom is one you created here." />
+            <Info id="SurfaceClassManager:openClass" />
           </div>
 
           {isLoading && classes.length === 0 && (
@@ -359,14 +398,16 @@ function SurfaceClassManager() {
           </div>
         </div>
 
-        <button
-          className={`${s.btn} ${isNew ? s.btnPrimary : s.btnGhost}`}
-          onClick={handleNewClass}
-          style={{ width: '100%' }}
-          aria-label="New Surface Class"
-        >
-          + New Surface Class
-        </button>
+        <Ctl id="SurfaceClassManager:handleNewClass" style={{ width: '100%' }}>
+          <button
+            className={`${s.btn} ${isNew ? s.btnPrimary : s.btnGhost}`}
+            onClick={handleNewClass}
+            style={{ width: '100%' }}
+            aria-label="New Surface Class"
+          >
+            + New Surface Class
+          </button>
+        </Ctl>
       </div>
 
       {/* ── Right column: preview + editor ── */}
@@ -411,10 +452,9 @@ function SurfaceClassManager() {
 
               <div className={s.formGrid}>
                 {/* Label */}
-                <div className={s.formGroup}>
+                <div className={s.formGroup} data-control-id="SurfaceClassManager:label">
                   <label className={s.label} htmlFor="sc-label">
-                    Label{' '}
-                    <InfoTooltip text="Human-readable name shown in the list and in the track editor's paint picker. Max 40 characters; the internal id is auto-derived from this label by slugify and stays stable when you rename." />
+                    Label <Info id="SurfaceClassManager:label" />
                   </label>
                   <input
                     id="sc-label"
@@ -427,10 +467,12 @@ function SurfaceClassManager() {
                 </div>
 
                 {/* Generator */}
-                <div className={s.formGroup}>
+                <div
+                  className={s.formGroup}
+                  data-control-id="SurfaceClassManager:handleGeneratorChange"
+                >
                   <label className={s.label} htmlFor="sc-generator">
-                    Generator{' '}
-                    <InfoTooltip text="Which surface-effect generator draws this class — particle, wave, dust, and so on. Changing this replaces the Generator Settings below with the new generator's defaults." />
+                    Generator <Info id="SurfaceClassManager:handleGeneratorChange" />
                   </label>
                   <select
                     id="sc-generator"
@@ -464,41 +506,48 @@ function SurfaceClassManager() {
 
               {/* Actions */}
               <div className={s.btnRow} style={{ marginTop: '1.25rem', flexWrap: 'wrap' }}>
-                <button
-                  className={`${s.btn} ${s.btnPrimary}`}
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  aria-label="Save surface class"
-                >
-                  {isSaving ? 'Saving…' : 'Save'}
-                </button>
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                >
-                  Cancel
-                </button>
-                {kind === 'custom' && (
+                <Ctl id="SurfaceClassManager:handleSave">
                   <button
-                    className={`${s.btn} ${s.btnDanger}`}
-                    onClick={handleDelete}
+                    className={`${s.btn} ${s.btnPrimary}`}
+                    onClick={handleSave}
                     disabled={isSaving}
-                    aria-label="Delete surface class"
+                    aria-label="Save surface class"
                   >
-                    Delete
+                    {isSaving ? 'Saving…' : 'Save'}
                   </button>
-                )}
-                {kind === 'modified' && (
+                </Ctl>
+                <Ctl id="SurfaceClassManager:handleCancel">
                   <button
                     className={`${s.btn} ${s.btnGhost}`}
-                    onClick={handleResetToDefault}
+                    onClick={handleCancel}
                     disabled={isSaving}
-                    title="Remove the backend override — class reverts to code default"
-                    aria-label="Reset to default"
                   >
-                    Reset to Default
+                    Cancel
                   </button>
+                </Ctl>
+                {kind === 'custom' && (
+                  <Ctl id="SurfaceClassManager:handleDelete">
+                    <button
+                      className={`${s.btn} ${s.btnDanger}`}
+                      onClick={handleDelete}
+                      disabled={isSaving}
+                      aria-label="Delete surface class"
+                    >
+                      Delete
+                    </button>
+                  </Ctl>
+                )}
+                {kind === 'modified' && (
+                  <Ctl id="SurfaceClassManager:handleResetToDefault">
+                    <button
+                      className={`${s.btn} ${s.btnGhost}`}
+                      onClick={handleResetToDefault}
+                      disabled={isSaving}
+                      aria-label="Reset to default"
+                    >
+                      Reset to Default
+                    </button>
+                  </Ctl>
                 )}
               </div>
 

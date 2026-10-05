@@ -20,7 +20,7 @@
 // ============================================================
 
 import { useEffect, useState } from 'react';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import {
   fetchPeriodEvaluation,
@@ -175,14 +175,18 @@ export default function PeriodEvaluation() {
           only racers who finished count. Days are UTC days.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+          <div
+            className={s.formGroup}
+            style={{ minWidth: '160px' }}
+            data-control-id="PeriodEvaluation:from"
+          >
             <label
               className={s.label}
               htmlFor="pe-from"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               From
-              <InfoTooltip text="The first day of the period, counted whole. Days are UTC days, so everyone gets the same table." />
+              <Info id="PeriodEvaluation:from" />
             </label>
             <input
               id="pe-from"
@@ -192,14 +196,18 @@ export default function PeriodEvaluation() {
               onChange={(e) => setPeriod((p) => ({ ...p, from: e.target.value }))}
             />
           </div>
-          <div className={s.formGroup} style={{ minWidth: '160px' }}>
+          <div
+            className={s.formGroup}
+            style={{ minWidth: '160px' }}
+            data-control-id="PeriodEvaluation:to"
+          >
             <label
               className={s.label}
               htmlFor="pe-to"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               To
-              <InfoTooltip text="The last day of the period, counted whole (UTC). A race finished on this day is included. At most 366 days in all." />
+              <Info id="PeriodEvaluation:to" />
             </label>
             <input
               id="pe-to"
@@ -210,15 +218,17 @@ export default function PeriodEvaluation() {
             />
           </div>
           <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
-            <button
-              type="button"
-              className={`${s.btn} ${s.btnPrimary}`}
-              onClick={load}
-              disabled={loading}
-              data-testid="period-evaluation-load"
-            >
-              {loading ? 'Loading…' : 'Evaluate this period'}
-            </button>
+            <Ctl id="PeriodEvaluation:period-evaluation-load">
+              <button
+                type="button"
+                className={`${s.btn} ${s.btnPrimary}`}
+                onClick={load}
+                disabled={loading}
+                data-testid="period-evaluation-load"
+              >
+                {loading ? 'Loading…' : 'Evaluate this period'}
+              </button>
+            </Ctl>
           </div>
         </div>
         {error && (
@@ -300,6 +310,7 @@ export default function PeriodEvaluation() {
               gap: '0.5rem',
               marginBottom: '0.55rem',
             }}
+            data-control-id="PeriodEvaluation:setDraftOn"
           >
             <input
               id="pe-points-on"
@@ -309,16 +320,20 @@ export default function PeriodEvaluation() {
               onChange={(e) => setDraftOn(e.target.checked)}
             />
             Award points
-            <InfoTooltip text="Off by default: the evaluation shows races, wins, 2nd and 3rd places and podiums only. On, it adds a Points column from the ladder and orders by it." />
+            <Info id="PeriodEvaluation:setDraftOn" />
           </label>
-          <div className={s.formGroup} style={{ minWidth: '220px', flex: 1 }}>
+          <div
+            className={s.formGroup}
+            style={{ minWidth: '220px', flex: 1 }}
+            data-control-id="PeriodEvaluation:setLadderText"
+          >
             <label
               className={s.label}
               htmlFor="pe-points-ladder"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Points per place
-              <InfoTooltip text="Comma-separated, 1st place first. A place beyond the list scores 0. No ladder is set by default." />
+              <Info id="PeriodEvaluation:setLadderText" />
             </label>
             <input
               id="pe-points-ladder"
@@ -331,15 +346,17 @@ export default function PeriodEvaluation() {
           </div>
           {isAdmin && (
             <div className={s.btnRow} style={{ marginBottom: '0.05rem' }}>
-              <button
-                type="button"
-                className={`${s.btn} ${s.btnSecondary}`}
-                onClick={saveRule}
-                disabled={!rule}
-                data-testid="points-rule-save"
-              >
-                Save points rule
-              </button>
+              <Ctl id="PeriodEvaluation:points-rule-save">
+                <button
+                  type="button"
+                  className={`${s.btn} ${s.btnSecondary}`}
+                  onClick={saveRule}
+                  disabled={!rule}
+                  data-testid="points-rule-save"
+                >
+                  Save points rule
+                </button>
+              </Ctl>
             </div>
           )}
         </div>

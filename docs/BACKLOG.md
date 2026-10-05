@@ -1431,184 +1431,6 @@ already-settled questions.
 
   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unbuilt — no pause/resume path exists in `RaceScreen`. Waiting on the camera phase, by its own priority.
 
-- [ ] ★★ **`B-UX2` — THE DEV SCREEN'S REORGANISATION: COMMISSIONED BY THE OWNER, 2026-09-25.** It
-      stops being a planned item waiting on a spec and becomes work he has asked for. **`B-UX3`, the
-      detailed variable documentation, is FOLDED IN HERE** — the two entries had already said they
-      belonged together ("the help screen can reference or embed the documentation"), and carrying
-      them apart meant two rows for one subject.
-      ★★ **2026-10-04 — THE OWNER DECIDED: the Dev Screen is rebuilt as PLAN D, chapters.** Everything
-      that belongs together sits in one chapter, each chapter has a sensible order inside it, every
-      control has a fitting info text, nothing is left out and there is no "top ten" view. The three
-      candidate groupings A, B and C of DEVSCREEN-GROUPINGS-1 are **not taken**. The design is
-      DEVSCREEN-CHAPTERS-1 (branch `feat/devscreen-chapters`); every stored key, default and tier stays.
-
-      ★★ **THE AGREED NEXT STEP IS AN INVENTORY, and it is the only next step.** Before anything is
-      moved, grouped, hidden or renamed, there is to be a written list of what the dev screen
-      actually renders today — every section, every control, every value — verified against source.
-      **Nothing can be reorganised that has not first been counted.**
-
-      ★★ **A LAYOUT IS DELIBERATELY NOT DESIGNED HERE, and must not be.** No grouping, no ordering,
-      no beginner/advanced split, no section names are decided in this row. The old entry's "planned"
-      bullets below are kept as the record of what was once sketched, **not** as a design to build:
-      what the reorganisation looks like is a question for after the inventory, and it is his.
-
-      ★ **WHAT EXISTS OF THE INVENTORY ALREADY, and what it does not cover.**
-      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) is a real, source-verified inventory — but of
-      **ONE SECTION ONLY.** Its own subtitle says so: *"the race-dynamics controls"*, rebuilt against
-      `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered. **There are 23
-      non-test section files** under `client/src/screens/DevScreen/sections/` (counted 2026-09-25) —
-      camera, sprite sizing, auto-scale, name tags, branding, player groups, racers, tracks, surface
-      classes, users, system settings and the rest. **So the existing document is a model for the
-      work, not a head start on most of it**, and reading it as coverage would understate the job by
-      more than an order of magnitude.
-
-      ★ **What the inventory should inherit from the one that exists**, because it already solved
-      two problems: the durable identifiers are the **label + key + testId**, and **line numbers are
-      deliberately not recorded** — an inventory pinned to line numbers is stale on the next commit.
-
-      ★ **What this row does NOT claim:** that the dev screen is broken. It is not. The entry's
-      original finding stands unchanged — the values are hard to place in context, and tooltips alone
-      do not fix that — and the reorganisation answers that, not a defect.
-
-      ★ **SEQUENCING.** The **PERIOD EVALUATION** row, commissioned the same day, needs controls of
-      its own (the period, the points rule). They belong in the screen this row produces, so this
-      row's inventory comes first.
-
-      ★★ **THE INVENTORY IS TAKEN — DEVSCREEN-STOCKTAKE, 2026-09-25. The agreed next step is DONE and
-      the row STAYS OPEN: the reorganisation itself is untouched, and no layout is designed.**
-      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) now covers **the whole screen** instead of one
-      section. The section list came from `DevScreen.jsx`'s `SECTIONS` registry — what the screen
-      MOUNTS — and a reachability closure found **24 files reachable under `sections/` and 0 not**, so
-      the folder and the mount graph agree.
-
-      ★★ **206 CONTROLS.** This row was written against *"30+ tunable values"*; the screen carries
-      nearly **seven times** that. **And the shape matters more than the total:** one section holds
-      **77 of the 206**, three hold **134** between them, and five hold one control or none. By the
-      project's own line, **the biggest section is COSMETIC** — 77 controls change the picture, not
-      the race, while the race is tuned by about 60 in two and a half cards.
-
-      ★ **Verdicts: 194 MATCHES · 9 MISLEADING · 3 SUSPECTED DEAD · 0 UNTRACED.** Traced from source
-      only; no race was run, and every control whose magnitude needs one is on a list in the document
-      that nothing acted on.
-
-      ★★ **THE NINE MISLEADING, NAMED HERE because a knob that lies is worse than a dead one — it gets
-      turned and then trusted. NOT FIXED: each is its own decision, and this stock-take changed no
-      source file.**
-      - **Default Race Duration** (Race Defaults) — read only where the track has no geometry, which
-        cannot start a race; every path that can start one ignores it.
-      - **Display Size (px)** (Racer Editor) — setting it turns auto-scaling OFF and changes
-        `physicalSpriteSize`, which feeds the starting grid. The tooltip says only "sprite size in
-        pixels". *(The behaviour is settled — `B-UX4` was dropped 2026-09-25. What is open is that the
-        control does not say it.)*
-      - **Enabled** (Auto-Scale) — the tooltip opens *"Disabled by default"*; it ships `true`.
-      - **Bonus active until** and **P-Controller starts** (Dynamics) — both tooltips state
-        *"Default: 67%"*; they ship 0.75 and 0.55.
-      - **The four director weights** (Camera Advanced) — the group blurb describes a pool of competing
-        events and says mandatory states are unweighted. Neither is true: the accept is a per-offer
-        coin flip on ONE candidate, eligibility decides ~90% of selections, and the endgame exception
-        is weighted too.
-
-      ★★ **THE THREE SUSPECTED DEAD, NAMED:** `autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all
-      in **Race Defaults**. Searched uncapped across the whole repository including the snake-case
-      spellings; every hit is the declaration, the control, or one test fixture. **They are the only
-      dead controls on the screen** — all 143 keys in the six config-backed tuning sections have a
-      behavioural product reader.
-
-      ★ **One structural cause worth keeping:** five of the nine MISLEADING are a claim about a NUMBER
-      that drifted. `check-config-claims` holds DOCUMENTS to stating no config values; **tooltips are
-      source and outside it**, and 38 tooltips state a default with nothing checking them.
-
-      ★ **One name collision:** `minTargetScreenPx` is a control in **Auto-Scale** (a floor for every
-      racer) and a different control in the **Racer Editor** (per racer type) — two settings, one name,
-      two stores, two scopes.
-
-      ★ **`B-UX3`'s raw material, counted and not written:** **59 of the 206 controls have no
-      explanation anywhere**, and **45 of those 59 are in two sections**. The screen is not uniformly
-      undocumented; it has two holes.
-
-      ★★ **THREE OF THE TWELVE ARE ALREADY RESOLVED — STAY-ON-THE-FINISH-1, 2026-09-25, on the
-      owner's decisions of that day. The row STAYS OPEN: the reorganisation is still untouched.**
-      - **`autoAdvance` — REPAIRED to MATCHES.** The switch does something now: ON hands over to the
-        results when the camera ending closes (today's behaviour, so it ships ON), OFF leaves the
-        finish picture standing until he clicks it. The way off already existed — the left click on
-        the race picture that CEREMONY-SKIP-1 put on the canvas wrapper — so no key, no number and no
-        new element were added. Its label and tooltip are true now, and the tooltip states no value.
-      - **`autoAdvanceDelay` — REMOVED.** A second number for a wait the camera ending already owns.
-        One value decides how long the picture stands, by his decision, and it is the ending he
-        already adjusts.
-      - **`soundEffects` — RESERVED, not dead.** He is sourcing the sounds; the control is the seat
-        they will be switched on from. A new and deliberately narrow verdict in the inventory, so a
-        later cleanup grepping for readers does not remove it.
-
-      ★ **What remains of the twelve: nine, and they are the nine MISLEADING.** None was touched — each
-      is its own decision. **No SUSPECTED DEAD control is left on the screen.** The total is now
-      **205**, and the inventory states both columns rather than editing the old figures away.
-
-      ★ **Recorded because the opposite had been stated to him:** adjusting the finish hold in the dev
-      screen **moves no fingerprint**. `scripts/camera-fingerprint.mjs` imports `DEFAULT_CAMERA_CONFIG`
-      (`:77`) and builds from it (`:131`) — the shipped defaults, never the stored settings. A print
-      moves only when a shipped DEFAULT changes.
-
-      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECES 1, 2, 5 and 6.** Four subjects the row was
-      carrying were narrowed on this night; the row STAYS OPEN — the reorganisation itself is still
-      untouched, and no layout is designed here.
-
-      - **PIECE 1: the nine MISLEADING tooltips are repaired.** Text-only, no behaviour changed;
-        the five that stated a stale config value had the number removed and the effect described,
-        the Camera Advanced group blurb was rewritten to describe the per-offer accept probability
-        the code implements, and the Race Defaults + Racer Editor tooltips describe what the
-        control actually does. Tally column 3 in the inventory: **204 MATCHES · 0 MISLEADING · 1
-        SUSPECTED DEAD · 1 RESERVED = 205.**
-      - **PIECE 2: the structural cause is closed.** `scripts/check-tooltip-values.mjs` (new)
-        refuses any Dev Screen tooltip stating a config value, wired into
-        `.github/workflows/ci.yml` and force-run under `verify --premerge`. Guard test 5/5 green.
-        Running it on the whole screen found 46 more tooltips beyond the nine PIECE 1 fixed; 45
-        were fixed in the same piece as a removal-of-a-number, 1 sits on a dated comment line as
-        history.
-      - **PIECE 5: the two structural oddities are established, not acted on.** `minTargetScreenPx`
-        writes to two stores at two scopes and — as traced from source — reaches no reader on the
-        race path; both values feed only their own preview / seed. The reset-scope mismatch is
-        precise: the master reset covers the five RACE-RELEVANT blocks (including Auto-Scale in
-        its own tab) and deliberately excludes the two COSMETIC blocks (Frame Timing inside Race
-        Tuning, Camera in its own card). Written into DEVSCREEN-INVENTORY.md § *Structural
-        oddities established 2026-09-26*.
-      - **PIECE 6: three candidate groupings are on his desk.** Candidate A re-tags with a
-        fingerprint's-own-line badge and moves nothing (~1 day). Candidate B lifts Frame Timing to
-        a new "What Watches It" group (~2-3 days, 2 controls moved). Candidate C splits Camera
-        Advanced into six timeline cards (~1 week, 79 controls moved, test-id churn). No candidate
-        renames a stored key. No recommendation. Report:
-        [DEVSCREEN-GROUPINGS-1](../reports/evolution/DEVSCREEN-GROUPINGS-1.md).
-
-      **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
-      work:**
-
-      > - **B-UX2** — Dev screen cleanup + help screen
-      >   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
-      >     User finding: "the individual values are hard to contextualize, tooltips alone add little value"
-      >   - Planned (spec still pending):
-      >     - Structural reordering: race behavior sliders together, visual sliders together, etc.
-      >     - Help modal per section with more detailed explanations (more than InfoTooltip)
-      >     - Optional: beginner / advanced separation (power user sees everything, standard only key values)
-      >     - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
-      >   - Priority: medium-high. Should be tackled before D8 (full racer config editor),
-      >     so D8 is not built into a disorganized dev screen environment.
-      >
-      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
-      >
-      > - **B-UX3** — Detailed variable documentation
-      >   - User finding: "I need an explanation that says more than the tooltip — what do all
-      >     the variables in the dev screen actually do"
-      >   - Planned (spec still pending):
-      >     - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
-      >     - Per parameter: name, type, default, range, effect in plain language,
-      >       example values for different use cases (small race vs. large race, etc.)
-      >     - Diagrams/images where useful (e.g. comfortThreshold visualized)
-      >     - Cross-references to ARCHITECTURE.md pipeline sections
-      >   - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
-      >     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
-      >
-      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
-
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
   **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
   already renders *"Invalid: min must be > 0 and < max."* inline. **Neither section this item names
@@ -2134,6 +1956,195 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★★ **`B-UX2` — THE DEV SCREEN'S REORGANISATION — CLOSED 2026-10-05 (DEVSCREEN-CHAPTERS-1):
+      BUILT AND MERGED.** The Dev Screen is read by seven chapters — The race; Camera — start to
+      ending; Look, labels and effects; Tracks, racers, brands and groups; History and evaluation;
+      Diagnostics and verification; Accounts and system — plus a fixed sidebar: the view switch under
+      the header (admins only), the chapters, then Back to Setup and Log out directly under the
+      chapters. 348 controls, each placed exactly once and each with an info text. The chapter guard
+      test (`devScreenChapters.guard.test.jsx`) renders the screen and holds every control to the
+      design table (`design.json`): its place, its order, its info text, once. **On 2026-10-05 the
+      owner looked at the rebuilt screen and accepted it; the sidebar placement of the view switch,
+      Back to Setup and Log out was his decision of 2026-10-05.** The design and the build:
+      [DEVSCREEN-CHAPTERS-1](../reports/evolution/DEVSCREEN-CHAPTERS-1.md). The row as it stood:
+      ****`B-UX2` — THE DEV SCREEN'S REORGANISATION: COMMISSIONED BY THE OWNER, 2026-09-25.** It
+      stops being a planned item waiting on a spec and becomes work he has asked for. **`B-UX3`, the
+      detailed variable documentation, is FOLDED IN HERE** — the two entries had already said they
+      belonged together ("the help screen can reference or embed the documentation"), and carrying
+      them apart meant two rows for one subject.
+      ★★ **2026-10-04 — THE OWNER DECIDED: the Dev Screen is rebuilt as PLAN D, chapters.** Everything
+      that belongs together sits in one chapter, each chapter has a sensible order inside it, every
+      control has a fitting info text, nothing is left out and there is no "top ten" view. The three
+      candidate groupings A, B and C of DEVSCREEN-GROUPINGS-1 are **not taken**. The design is
+      DEVSCREEN-CHAPTERS-1 (branch `feat/devscreen-chapters`); every stored key, default and tier stays.
+
+      ★★ **THE AGREED NEXT STEP IS AN INVENTORY, and it is the only next step.** Before anything is
+      moved, grouped, hidden or renamed, there is to be a written list of what the dev screen
+      actually renders today — every section, every control, every value — verified against source.
+      **Nothing can be reorganised that has not first been counted.**
+
+      ★★ **A LAYOUT IS DELIBERATELY NOT DESIGNED HERE, and must not be.** No grouping, no ordering,
+      no beginner/advanced split, no section names are decided in this row. The old entry's "planned"
+      bullets below are kept as the record of what was once sketched, **not** as a design to build:
+      what the reorganisation looks like is a question for after the inventory, and it is his.
+
+      ★ **WHAT EXISTS OF THE INVENTORY ALREADY, and what it does not cover.**
+      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) is a real, source-verified inventory — but of
+      **ONE SECTION ONLY.** Its own subtitle says so: *"the race-dynamics controls"*, rebuilt against
+      `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered. **There are 23
+      non-test section files** under `client/src/screens/DevScreen/sections/` (counted 2026-09-25) —
+      camera, sprite sizing, auto-scale, name tags, branding, player groups, racers, tracks, surface
+      classes, users, system settings and the rest. **So the existing document is a model for the
+      work, not a head start on most of it**, and reading it as coverage would understate the job by
+      more than an order of magnitude.
+
+      ★ **What the inventory should inherit from the one that exists**, because it already solved
+      two problems: the durable identifiers are the **label + key + testId**, and **line numbers are
+      deliberately not recorded** — an inventory pinned to line numbers is stale on the next commit.
+
+      ★ **What this row does NOT claim:** that the dev screen is broken. It is not. The entry's
+      original finding stands unchanged — the values are hard to place in context, and tooltips alone
+      do not fix that — and the reorganisation answers that, not a defect.
+
+      ★ **SEQUENCING.** The **PERIOD EVALUATION** row, commissioned the same day, needs controls of
+      its own (the period, the points rule). They belong in the screen this row produces, so this
+      row's inventory comes first.
+
+      ★★ **THE INVENTORY IS TAKEN — DEVSCREEN-STOCKTAKE, 2026-09-25. The agreed next step is DONE and
+      the row STAYS OPEN: the reorganisation itself is untouched, and no layout is designed.**
+      [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md) now covers **the whole screen** instead of one
+      section. The section list came from `DevScreen.jsx`'s `SECTIONS` registry — what the screen
+      MOUNTS — and a reachability closure found **24 files reachable under `sections/` and 0 not**, so
+      the folder and the mount graph agree.
+
+      ★★ **206 CONTROLS.** This row was written against *"30+ tunable values"*; the screen carries
+      nearly **seven times** that. **And the shape matters more than the total:** one section holds
+      **77 of the 206**, three hold **134** between them, and five hold one control or none. By the
+      project's own line, **the biggest section is COSMETIC** — 77 controls change the picture, not
+      the race, while the race is tuned by about 60 in two and a half cards.
+
+      ★ **Verdicts: 194 MATCHES · 9 MISLEADING · 3 SUSPECTED DEAD · 0 UNTRACED.** Traced from source
+      only; no race was run, and every control whose magnitude needs one is on a list in the document
+      that nothing acted on.
+
+      ★★ **THE NINE MISLEADING, NAMED HERE because a knob that lies is worse than a dead one — it gets
+      turned and then trusted. NOT FIXED: each is its own decision, and this stock-take changed no
+      source file.**
+      - **Default Race Duration** (Race Defaults) — read only where the track has no geometry, which
+        cannot start a race; every path that can start one ignores it.
+      - **Display Size (px)** (Racer Editor) — setting it turns auto-scaling OFF and changes
+        `physicalSpriteSize`, which feeds the starting grid. The tooltip says only "sprite size in
+        pixels". *(The behaviour is settled — `B-UX4` was dropped 2026-09-25. What is open is that the
+        control does not say it.)*
+      - **Enabled** (Auto-Scale) — the tooltip opens *"Disabled by default"*; it ships `true`.
+      - **Bonus active until** and **P-Controller starts** (Dynamics) — both tooltips state
+        *"Default: 67%"*; they ship 0.75 and 0.55.
+      - **The four director weights** (Camera Advanced) — the group blurb describes a pool of competing
+        events and says mandatory states are unweighted. Neither is true: the accept is a per-offer
+        coin flip on ONE candidate, eligibility decides ~90% of selections, and the endgame exception
+        is weighted too.
+
+      ★★ **THE THREE SUSPECTED DEAD, NAMED:** `autoAdvance`, `autoAdvanceDelay` and `soundEffects`, all
+      in **Race Defaults**. Searched uncapped across the whole repository including the snake-case
+      spellings; every hit is the declaration, the control, or one test fixture. **They are the only
+      dead controls on the screen** — all 143 keys in the six config-backed tuning sections have a
+      behavioural product reader.
+
+      ★ **One structural cause worth keeping:** five of the nine MISLEADING are a claim about a NUMBER
+      that drifted. `check-config-claims` holds DOCUMENTS to stating no config values; **tooltips are
+      source and outside it**, and 38 tooltips state a default with nothing checking them.
+
+      ★ **One name collision:** `minTargetScreenPx` is a control in **Auto-Scale** (a floor for every
+      racer) and a different control in the **Racer Editor** (per racer type) — two settings, one name,
+      two stores, two scopes.
+
+      ★ **`B-UX3`'s raw material, counted and not written:** **59 of the 206 controls have no
+      explanation anywhere**, and **45 of those 59 are in two sections**. The screen is not uniformly
+      undocumented; it has two holes.
+
+      ★★ **THREE OF THE TWELVE ARE ALREADY RESOLVED — STAY-ON-THE-FINISH-1, 2026-09-25, on the
+      owner's decisions of that day. The row STAYS OPEN: the reorganisation is still untouched.**
+      - **`autoAdvance` — REPAIRED to MATCHES.** The switch does something now: ON hands over to the
+        results when the camera ending closes (today's behaviour, so it ships ON), OFF leaves the
+        finish picture standing until he clicks it. The way off already existed — the left click on
+        the race picture that CEREMONY-SKIP-1 put on the canvas wrapper — so no key, no number and no
+        new element were added. Its label and tooltip are true now, and the tooltip states no value.
+      - **`autoAdvanceDelay` — REMOVED.** A second number for a wait the camera ending already owns.
+        One value decides how long the picture stands, by his decision, and it is the ending he
+        already adjusts.
+      - **`soundEffects` — RESERVED, not dead.** He is sourcing the sounds; the control is the seat
+        they will be switched on from. A new and deliberately narrow verdict in the inventory, so a
+        later cleanup grepping for readers does not remove it.
+
+      ★ **What remains of the twelve: nine, and they are the nine MISLEADING.** None was touched — each
+      is its own decision. **No SUSPECTED DEAD control is left on the screen.** The total is now
+      **205**, and the inventory states both columns rather than editing the old figures away.
+
+      ★ **Recorded because the opposite had been stated to him:** adjusting the finish hold in the dev
+      screen **moves no fingerprint**. `scripts/camera-fingerprint.mjs` imports `DEFAULT_CAMERA_CONFIG`
+      (`:77`) and builds from it (`:131`) — the shipped defaults, never the stored settings. A print
+      moves only when a shipped DEFAULT changes.
+
+      ★★ **UPDATED 2026-09-26 by NIGHT-2026-09-26 PIECES 1, 2, 5 and 6.** Four subjects the row was
+      carrying were narrowed on this night; the row STAYS OPEN — the reorganisation itself is still
+      untouched, and no layout is designed here.
+
+      - **PIECE 1: the nine MISLEADING tooltips are repaired.** Text-only, no behaviour changed;
+        the five that stated a stale config value had the number removed and the effect described,
+        the Camera Advanced group blurb was rewritten to describe the per-offer accept probability
+        the code implements, and the Race Defaults + Racer Editor tooltips describe what the
+        control actually does. Tally column 3 in the inventory: **204 MATCHES · 0 MISLEADING · 1
+        SUSPECTED DEAD · 1 RESERVED = 205.**
+      - **PIECE 2: the structural cause is closed.** `scripts/check-tooltip-values.mjs` (new)
+        refuses any Dev Screen tooltip stating a config value, wired into
+        `.github/workflows/ci.yml` and force-run under `verify --premerge`. Guard test 5/5 green.
+        Running it on the whole screen found 46 more tooltips beyond the nine PIECE 1 fixed; 45
+        were fixed in the same piece as a removal-of-a-number, 1 sits on a dated comment line as
+        history.
+      - **PIECE 5: the two structural oddities are established, not acted on.** `minTargetScreenPx`
+        writes to two stores at two scopes and — as traced from source — reaches no reader on the
+        race path; both values feed only their own preview / seed. The reset-scope mismatch is
+        precise: the master reset covers the five RACE-RELEVANT blocks (including Auto-Scale in
+        its own tab) and deliberately excludes the two COSMETIC blocks (Frame Timing inside Race
+        Tuning, Camera in its own card). Written into DEVSCREEN-INVENTORY.md § *Structural
+        oddities established 2026-09-26*.
+      - **PIECE 6: three candidate groupings are on his desk.** Candidate A re-tags with a
+        fingerprint's-own-line badge and moves nothing (~1 day). Candidate B lifts Frame Timing to
+        a new "What Watches It" group (~2-3 days, 2 controls moved). Candidate C splits Camera
+        Advanced into six timeline cards (~1 week, 79 controls moved, test-id churn). No candidate
+        renames a stored key. No recommendation. Report:
+        [DEVSCREEN-GROUPINGS-1](../reports/evolution/DEVSCREEN-GROUPINGS-1.md).
+
+      **THE TWO ENTRIES AS THEY STOOD, kept because the original findings are the reason for the
+      work:**
+
+      > - **B-UX2** — Dev screen cleanup + help screen
+      >   - Dev screen has grown to 30+ tunable values across D9/D10/D11/D7a/D7b.
+      >     User finding: "the individual values are hard to contextualize, tooltips alone add little value"
+      >   - Planned (spec still pending):
+      >     - Structural reordering: race behavior sliders together, visual sliders together, etc.
+      >     - Help modal per section with more detailed explanations (more than InfoTooltip)
+      >     - Optional: beginner / advanced separation (power user sees everything, standard only key values)
+      >     - Optional: visual preview components in sections where useful (analogous to D7a-Plus)
+      >   - Priority: medium-high. Should be tackled before D8 (full racer config editor),
+      >     so D8 is not built into a disorganized dev screen environment.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
+      >
+      > - **B-UX3** — Detailed variable documentation
+      >   - User finding: "I need an explanation that says more than the tooltip — what do all
+      >     the variables in the dev screen actually do"
+      >   - Planned (spec still pending):
+      >     - A separate doc file per section or a central DEVSCREEN_REFERENCE.md under docs/
+      >     - Per parameter: name, type, default, range, effect in plain language,
+      >       example values for different use cases (small race vs. large race, etc.)
+      >     - Diagrams/images where useful (e.g. comfortThreshold visualized)
+      >     - Cross-references to ARCHITECTURE.md pipeline sections
+      >   - Priority: together with B-UX2 — the help screen can reference or embed the documentation.
+      >     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
+      >
+      >   **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** waiting on a spec, which the entry says is still pending.
 
 - [x] ★ **FRAME DROPS AT 80 RACERS — CLOSED 2026-10-05 (FRAME-DROPS-80): FOUR FIXES BUILT, MEASURED AND MERGED.**
       (a) the track lights skip the lights the shot cannot show and draw each visible light as one

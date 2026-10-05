@@ -19,7 +19,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
-import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { Ctl, Info } from './ControlInfo.jsx';
 import styles from '../../Auth/Auth.module.css';
 
 function ChangePasswordSection() {
@@ -69,10 +69,9 @@ function ChangePasswordSection() {
         out; this one stays.
       </p>
 
-      <div className={styles.field}>
+      <div className={styles.field} data-control-id="ChangePasswordSection:setCurrentPassword">
         <label className={styles.label} htmlFor="cp-current">
-          Current password{' '}
-          <InfoTooltip text="Your existing password. Verified by the server; a wrong value returns the same error the login screen uses." />
+          Current password <Info id="ChangePasswordSection:setCurrentPassword" />
         </label>
         <input
           id="cp-current"
@@ -84,10 +83,13 @@ function ChangePasswordSection() {
         />
       </div>
 
-      <div className={styles.field} style={{ marginTop: '0.5rem' }}>
+      <div
+        className={styles.field}
+        style={{ marginTop: '0.5rem' }}
+        data-control-id="ChangePasswordSection:setNewPassword"
+      >
         <label className={styles.label} htmlFor="cp-new">
-          New password{' '}
-          <InfoTooltip text="The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here." />
+          New password <Info id="ChangePasswordSection:setNewPassword" />
         </label>
         <input
           id="cp-new"
@@ -99,10 +101,13 @@ function ChangePasswordSection() {
         />
       </div>
 
-      <div className={styles.field} style={{ marginTop: '0.5rem' }}>
+      <div
+        className={styles.field}
+        style={{ marginTop: '0.5rem' }}
+        data-control-id="ChangePasswordSection:setConfirmPassword"
+      >
         <label className={styles.label} htmlFor="cp-confirm">
-          Repeat new password{' '}
-          <InfoTooltip text="Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit." />
+          Repeat new password <Info id="ChangePasswordSection:setConfirmPassword" />
         </label>
         <input
           id="cp-confirm"
@@ -123,13 +128,15 @@ function ChangePasswordSection() {
         </div>
       )}
 
-      <button
-        className={styles.button}
-        type="submit"
-        disabled={submitting || !currentPassword || !newPassword || !confirmPassword || mismatch}
-      >
-        {submitting ? 'Changing…' : 'Change password'}
-      </button>
+      <Ctl id="ChangePasswordSection:handleSubmit">
+        <button
+          className={styles.button}
+          type="submit"
+          disabled={submitting || !currentPassword || !newPassword || !confirmPassword || mismatch}
+        >
+          {submitting ? 'Changing…' : 'Change password'}
+        </button>
+      </Ctl>
     </form>
   );
 }

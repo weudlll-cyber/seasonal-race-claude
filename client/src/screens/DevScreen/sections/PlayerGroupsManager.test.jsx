@@ -364,7 +364,8 @@ describe('PlayerGroupsManager — tooltip render (pre-D2 parity)', () => {
     fireEvent.click(screen.getByText('+ New Group'));
     const tooltips = screen.getAllByRole('tooltip', { hidden: true });
     expect(tooltips.some((el) => el.textContent.includes('recognizable name'))).toBe(true);
-    expect(tooltips.some((el) => el.textContent.includes('frequently races together'))).toBe(true);
+    // DEVSCREEN-CHAPTERS-1 rewrote this field's info text; the locator matches the new wording.
+    expect(tooltips.some((el) => el.textContent.includes('separated by commas'))).toBe(true);
   });
 });
 
@@ -415,15 +416,15 @@ describe('PlayerGroupsManager — DefaultControls smoke test', () => {
   it('renders DefaultControls buttons per group row for admin user', async () => {
     renderManager();
     await waitFor(() => screen.getByText('Friday Crew'));
-    expect(screen.getByText('Als Default setzen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Set as default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 
-  it('renders "Default entfernen" for group with isDefault=true', async () => {
+  it('renders "Remove default" for group with isDefault=true', async () => {
     fetchPlayerGroups.mockResolvedValue([DEFAULT_GROUP]);
     renderManager();
     await waitFor(() => screen.getByText('Example Group'));
-    expect(screen.getByText('Default entfernen')).toBeInTheDocument();
-    expect(screen.getByText('Als Seed exportieren')).toBeInTheDocument();
+    expect(screen.getByText('Remove default')).toBeInTheDocument();
+    expect(screen.getByText('Export as seed')).toBeInTheDocument();
   });
 });

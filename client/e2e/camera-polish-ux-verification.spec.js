@@ -537,7 +537,8 @@ test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', ()
 
 async function goToSpeedRange(page) {
   await page.goto('/dev');
-  await page.getByRole('button', { name: /Race Tuning/ }).click();
+  // DEVSCREEN-CHAPTERS-1: the speed range sits in the race chapter (Pace).
+  await page.getByRole('button', { name: /The race/ }).click();
   await expect(page.getByTestId('min-speed-input')).toBeVisible();
 }
 

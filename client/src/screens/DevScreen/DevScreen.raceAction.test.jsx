@@ -93,11 +93,13 @@ describe('RACE-ACTION-CONTROL-1 — reachable for a RESTRICTED account', () => {
   // The negative half of the placement claim: the section that holds the two SLIDERS is the one an
   // operator must NOT see. If this ever passes for an operator the tiering has changed underneath
   // the control and the placement finding in the report is stale.
+  // DEVSCREEN-CHAPTERS-1: Race Tuning is a part of the race chapter now, under the sub-group heading
+  // below \u2014 the locator reads that heading where it used to read the sidebar label.
   it('the admin-only Race Tuning section stays out of an operator\u2019s reach', () => {
     renderAs('operator');
-    expect(screen.queryByText('Race Tuning')).toBeNull();
+    expect(screen.queryByText('Reset of the whole tuning')).toBeNull();
     renderAs('admin');
-    expect(screen.getAllByText('Race Tuning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reset of the whole tuning').length).toBeGreaterThan(0);
   });
 });
 

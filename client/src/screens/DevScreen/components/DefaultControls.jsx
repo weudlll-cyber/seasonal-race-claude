@@ -2,12 +2,14 @@
 // File:        DefaultControls.jsx
 // Path:        client/src/screens/DevScreen/components/DefaultControls.jsx
 // Project:     RaceArena
-// Description: Shared admin-only row controls: set/clear default + export seed.
+// Description: Shared admin-only row controls: set/clear default + export seed. Labels in
+//              English since DEVSCREEN-CHAPTERS-1 (they were German).
 //              Used by TrackManager, BrandingProfiles, PlayerGroupsManager (L129).
 // ============================================================
 
 import { useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { Ctl } from '../sections/ControlInfo.jsx';
 import s from '../DevScreen.module.css';
 
 /**
@@ -15,9 +17,12 @@ import s from '../DevScreen.module.css';
  *            setDefault: (id: string) => Promise<unknown>,
  *            clearDefault: (id: string) => Promise<unknown>,
  *            exportSeed: (id: string) => Promise<unknown>,
- *            seedFilename?: string }} props
+ *            seedFilename?: string, controlSection: string }} props
+ *   controlSection — the section file these buttons sit in (control ids "<section>:handleSetDefault"
+ *   and "<section>:handleExportSeed", DEVSCREEN-CHAPTERS-1); each section has its own info texts.
  */
 export function DefaultControls({
+  controlSection,
   id,
   isDefault,
   onChanged,
@@ -79,33 +84,38 @@ export function DefaultControls({
 
   return (
     <>
-      {isDefault ? (
+      {/* Set and remove are one control: the button shows whichever applies to this entry. */}
+      <Ctl id={`${controlSection}:handleSetDefault`}>
+        {isDefault ? (
+          <button
+            className={`${s.btn} ${s.btnGhost}`}
+            style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+            disabled={busy}
+            onClick={handleClearDefault}
+          >
+            Remove default
+          </button>
+        ) : (
+          <button
+            className={`${s.btn} ${s.btnGhost}`}
+            style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+            disabled={busy}
+            onClick={handleSetDefault}
+          >
+            Set as default
+          </button>
+        )}
+      </Ctl>
+      <Ctl id={`${controlSection}:handleExportSeed`}>
         <button
           className={`${s.btn} ${s.btnGhost}`}
           style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
           disabled={busy}
-          onClick={handleClearDefault}
+          onClick={handleExportSeed}
         >
-          Default entfernen
+          Export as seed
         </button>
-      ) : (
-        <button
-          className={`${s.btn} ${s.btnGhost}`}
-          style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-          disabled={busy}
-          onClick={handleSetDefault}
-        >
-          Als Default setzen
-        </button>
-      )}
-      <button
-        className={`${s.btn} ${s.btnGhost}`}
-        style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
-        disabled={busy}
-        onClick={handleExportSeed}
-      >
-        Als Seed exportieren
-      </button>
+      </Ctl>
       {actionError && <span style={{ color: '#f87171', fontSize: '0.75rem' }}>{actionError}</span>}
     </>
   );
