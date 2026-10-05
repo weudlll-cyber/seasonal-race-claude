@@ -5,7 +5,7 @@
 time at 80 racers the page's main thread waits on the GPU or compositor. Stage 1 measures what the
 GPU side is doing; stage 2 builds the cheapest fixes and measures them against master.
 
-**Status:** stage 1 and stage 2 done. Four fixes on the branch, all kept; three of them change the picture and need the owner's eye before anything merges.
+**Status:** stage 1 and stage 2 done; **merged 2026-10-05.** Four fixes, all kept. Three of them change the picture; on 2026-10-05 the owner looked at those drawing changes and accepted slight differences in appearance.
 
 ## Stage 1 — where the GPU time goes (measurement only)
 
@@ -133,7 +133,8 @@ backed by stage 1 (the trails, 22–29 % of the sampled calls); the crowd strip 
 
 ### Before and after, the same frame
 
-Same Quick Test seed, same moment:
+Same Quick Test seed, same moment. **The branch's race stills predate the burst-ring fix
+(`a98c9715`)**; the corrected bursts are shown by the isolated side-by-side in the last row.
 
 | | master | branch |
 | --- | --- | --- |

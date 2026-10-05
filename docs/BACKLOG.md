@@ -951,21 +951,6 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
-- [ ] ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS — opened 2026-10-05.** At 80 racers, frames over
-      33 ms are 9.5 % on Mountainstreet and 4.0 % on Luger hill (N = 5 races each), against under 1 % at
-      40; on Luger hill half of them fall in the ending's wide shot. About two thirds of the slow frames'
-      time the page's main thread is idle, waiting on the GPU/compositor; our own code is the smaller
-      part (physics on Mountainstreet, track effects on Luger hill) —
-      [LARGE-FIELD-PERF-2](../reports/evolution/LARGE-FIELD-PERF-2.md). Where the GPU time goes, and
-      the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged):
-      [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md). **verify:** the slow-frame share
-      at 80 racers on both tracks, master against the branch, N = 30 races per track per arm.
-      ★ **2026-10-05 — FOUR FIXES BUILT AND MEASURED, NOT MERGED.** Mountainstreet 19.0 % → 14.4 %
-      slow frames, Luger hill 9.0 % → 7.5 %, the Luger hill ending wide shot 23.5 % → 12.5 %
-      (N = 30 per track per arm, same seeds). Three of the fixes change the picture (track lights,
-      particles, trails) and wait for the owner's eye; the stills and the cautions for reading them
-      are in [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md).
-
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
@@ -2149,6 +2134,33 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **FRAME DROPS AT 80 RACERS — CLOSED 2026-10-05 (FRAME-DROPS-80): FOUR FIXES BUILT, MEASURED AND MERGED.**
+      (a) the track lights skip the lights the shot cannot show and draw each visible light as one
+      cached glow image; (b) dust and finish bursts are drawn from cached dot and glow images, with no
+      blur pass per burst particle; (c) each racer's `tFrac` is computed once per step for the
+      avoidance pair loop, not once per pair (bit-identical); (d) the racer trails are drawn from one
+      cached dot image per racer colour. World, camera, render and replay fingerprints unchanged.
+      **Results, N = 30 races per track per arm, master against the branch on the same Quick Test
+      seeds:** Mountainstreet 80 — slow frames 19.0 % → 14.4 % (paired −5.2 points, 95 % interval
+      −7.6 to −3.3), ending wide shot 23.8 % → 11.7 %; Luger hill 80 — 9.0 % → 7.5 % (paired −1.5
+      points, 95 % interval −2.8 to +0.2, **the interval touches zero**), ending wide shot 23.5 % →
+      12.5 %. **On 2026-10-05 the owner looked at the drawing changes (a), (b) and (d) and accepted
+      slight differences in appearance.** Full account:
+      [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md). The row as it stood: ****FRAME DROPS AT 80 RACERS ON OPEN TRACKS — opened 2026-10-05.** At 80 racers, frames over
+      33 ms are 9.5 % on Mountainstreet and 4.0 % on Luger hill (N = 5 races each), against under 1 % at
+      40; on Luger hill half of them fall in the ending's wide shot. About two thirds of the slow frames'
+      time the page's main thread is idle, waiting on the GPU/compositor; our own code is the smaller
+      part (physics on Mountainstreet, track effects on Luger hill) —
+      [LARGE-FIELD-PERF-2](../reports/evolution/LARGE-FIELD-PERF-2.md). Where the GPU time goes, and
+      the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged):
+      [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md). **verify:** the slow-frame share
+      at 80 racers on both tracks, master against the branch, N = 30 races per track per arm.
+      ★ **2026-10-05 — FOUR FIXES BUILT AND MEASURED, NOT MERGED.** Mountainstreet 19.0 % → 14.4 %
+      slow frames, Luger hill 9.0 % → 7.5 %, the Luger hill ending wide shot 23.5 % → 12.5 %
+      (N = 30 per track per arm, same seeds). Three of the fixes change the picture (track lights,
+      particles, trails) and wait for the owner's eye; the stills and the cautions for reading them
+      are in [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md).
 
 - [x] ★ **EXACT FIELD SIZE — CLOSED 2026-10-04 (EXACT-FIELD-SIZE-1): BUILT AND MERGED.** Quick Test fills from every existing name list, chosen list first, and refuses a count it cannot fill — [EXACT-FIELD-SIZE-1](../reports/release/EXACT-FIELD-SIZE-1.md). The row as it stood: **EXACT FIELD SIZE — DECIDED 2026-10-04: a race always starts with exactly the number of
       racers the user chose**, on Quick Test and on every other path. Found by LARGE-FIELD-PERF-1:
