@@ -8,6 +8,8 @@ import {
   easeInOutCubic,
   shortestArcDeltaT,
   signedArcDeltaT,
+  arcDeltaFromFrac,
+  tFrac,
 } from './mathUtils.js';
 
 describe('lerp', () => {
@@ -125,5 +127,33 @@ describe('signedArcDeltaT (lap-normalized, positive = b ahead of a)', () => {
 
   it('>1.5 raw apart needs normalization: a=2.8 (→0.8) vs b=0.5 → −0.3 (raw wrap gives −1.3)', () => {
     expect(signedArcDeltaT(2.8, 0.5)).toBeCloseTo(-0.3, 10);
+  });
+});
+
+// FRAME-DROPS-80 (c): the pair loop in raceBehavior.js takes each racer's tFrac once and compares
+// with arcDeltaFromFrac. The race stays bit-identical only if that equals the ORIGINAL shortest-arc
+// formula for every input, so it is checked against the formula as it was written before the change.
+describe('arcDeltaFromFrac — the shortest arc from precomputed fractions', () => {
+  const original = (a, b) => {
+    let dT = Math.abs((((a % 1) + 1) % 1) - (((b % 1) + 1) % 1));
+    if (dT > 0.5) dT = 1 - dT;
+    return dT;
+  };
+  it('is bit-identical to the original formula, including the half-lap edge', () => {
+    const cases = [
+      [0, 0.5],
+      [0.25, 0.75],
+      [0.1, 0.6],
+      [-0.2, 0.3],
+      [2.75, 0.25],
+      [3.5, 1],
+    ];
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 6 - 3;
+    for (let k = 0; k < 5000; k++) cases.push([rnd(), rnd()]);
+    for (const [a, b] of cases) {
+      expect(Object.is(arcDeltaFromFrac(tFrac(a), tFrac(b)), original(a, b))).toBe(true);
+      expect(Object.is(shortestArcDeltaT(a, b), original(a, b))).toBe(true);
+    }
   });
 });

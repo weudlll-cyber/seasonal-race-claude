@@ -7,6 +7,8 @@
 //              functions, no game state.
 // ============================================================
 
+import { dotSprite, glowDotSprite } from './dotSprites.js';
+
 /**
  * Appends a burst of 45 coloured particles at (x, y) to the burstParticles array.
  * Pure data mutation — no canvas context needed.
@@ -38,15 +40,31 @@ export function emitBurst(burstParticles, x, y) {
  * @param {Array} burstParticles
  */
 export function drawParticles(ctx, dustParticles, burstParticles) {
+  // FRAME-DROPS-80 (b): each particle is a cached image (`dotSprites.js`) instead of a path, and the
+  // finish bursts' glow is a cached glowing dot instead of `shadowBlur` — a blur pass per particle,
+  // about 550 per frame in the ending (LARGE-FIELD-PERF-3). Where no image can be made, the original
+  // circles.
   for (const p of dustParticles) {
+    const color = p.color ?? '#d4b880';
     ctx.globalAlpha = p.alpha;
-    ctx.fillStyle = p.color ?? '#d4b880';
+    const dot = dotSprite(color);
+    if (dot) {
+      ctx.drawImage(dot, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+      continue;
+    }
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
   }
   for (const p of burstParticles) {
     ctx.globalAlpha = p.alpha;
+    const glow = glowDotSprite(p.color);
+    if (glow) {
+      const R = p.r * 2;
+      ctx.drawImage(glow, p.x - R, p.y - R, R * 2, R * 2);
+      continue;
+    }
     ctx.shadowBlur = 6;
     ctx.shadowColor = p.color;
     ctx.fillStyle = p.color;

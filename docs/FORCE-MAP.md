@@ -124,18 +124,18 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A4. `boost` — drafting / slipstream
 
-- **Code**: the `draftingBoost` multiplier applies only while `r.draftingBoostActive` — [`raceCore.js:689`](../client/src/modules/raceCore.js#L689). Flag set in `raceBehavior.js` drafting block [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1112-L1140).
+- **Code**: the `draftingBoost` multiplier applies only while `r.draftingBoostActive` — [`raceCore.js:689`](../client/src/modules/raceCore.js#L689). Flag set in `raceBehavior.js` drafting block [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1128-L1156).
 - **What**: forward speed bonus when a follower sits in a leader's wake cone.
 - **When**: follower must be **behind** in `t` (`leader.t > follower.t`), within `draftingMaxDistance` world px, and inside the half-cone behind the leader's heading.
 - **Magnitude**: set by `draftingBoost` — a small forward multiplier while the flag is set.
 - **Config**: `draftingMaxDistance` **80** px, `draftingConeAngle` **30°**, `draftingBoost` **1.04**.
-- **Known weakness (documented in source)**: on tight curves the cone rotates fast and can miss a follower physically in the slipstream — [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1112-L1115). Drafting is also fed into the brake-to-match leader/trailer speed estimate ([`raceBehavior.js:526-527`](../client/src/modules/raceBehavior.js#L526-L527)).
+- **Known weakness (documented in source)**: on tight curves the cone rotates fast and can miss a follower physically in the slipstream — [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1128-L1131). Drafting is also fed into the brake-to-match leader/trailer speed estimate ([`raceBehavior.js:526-527`](../client/src/modules/raceBehavior.js#L535-L536)).
 
 ### A5. `brake` — speed brake (avoidance floor) + warmup ramp
 
 - **Code**: `r.avoidanceActive ? min(effectiveBrakeFactor, brakeMatchFactor) : 1.0` — [`raceCore.js:695-697`](../client/src/modules/raceCore.js#L695-L697). Floor + ramp from `computeEffectiveBrakeFactor()` [`raceBehaviorConfig.js` → `computeEffectiveBrakeFactor`](../client/src/modules/raceBehaviorConfig.js#L34-L38).
-- **What**: slows a trailer that is closing on a leader in the same lane. `avoidanceActive` is set when a pair is inside the body-based brake zone — [`raceBehavior.js:501-502`](../client/src/modules/raceBehavior.js#L501-L502).
-- **When (gate)**: `|dY| < brakeSameLaneY && dT < dynamicBrakeT`, both **body-based** ([`raceBehavior.js` → `trailerDenom`](../client/src/modules/raceBehavior.js#L497-L501)):
+- **What**: slows a trailer that is closing on a leader in the same lane. `avoidanceActive` is set when a pair is inside the body-based brake zone — [`raceBehavior.js:501-502`](../client/src/modules/raceBehavior.js#L510-L511).
+- **When (gate)**: `|dY| < brakeSameLaneY && dT < dynamicBrakeT`, both **body-based** ([`raceBehavior.js` → `trailerDenom`](../client/src/modules/raceBehavior.js#L506-L510)):
   - longitudinal zone = `(bodyContactLength / pathLength) × speedBrakeTMultiplier`
   - lateral filter = `pxToPhysicalY(bodyContactWidth)` (same-lane y/n only — never drives strength)
 - **Magnitude**: floor `speedBrakeFactor`. On **open** tracks it eases in over `avoidanceWarmupMs` from 1.0 to the floor via `easeInOutCubic`; **closed** tracks get full braking from frame 1.
@@ -144,16 +144,16 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A6. `brake` — brake-to-match cap (speed matching)
 
-- **Code**: `computeBrakeMatchFactor(leaderFwdSpeed, trailerDenom, …)` — [`raceBehavior.js` → `computeBrakeMatchFactor`](../client/src/modules/raceBehavior.js#L89-L100); selected as most-constraining leader [`raceBehavior.js` → `active`](../client/src/modules/raceBehavior.js#L549-L560); hold state machine [`raceBehavior.js` → `ssOffsetY`](../client/src/modules/raceBehavior.js#L1025-L1091). Applied via the `min()` at [`raceCore.js:696`](../client/src/modules/raceCore.js#L696).
+- **Code**: `computeBrakeMatchFactor(leaderFwdSpeed, trailerDenom, …)` — [`raceBehavior.js` → `computeBrakeMatchFactor`](../client/src/modules/raceBehavior.js#L95-L106); selected as most-constraining leader [`raceBehavior.js` → `active`](../client/src/modules/raceBehavior.js#L558-L569); hold state machine [`raceBehavior.js` → `ssOffsetY`](../client/src/modules/raceBehavior.js#L1041-L1107). Applied via the `min()` at [`raceCore.js:696`](../client/src/modules/raceCore.js#L696).
 - **What**: caps the trailer's speed to ≈ the leader's _actual_ advance speed (×0.999 safety) so a faster trailer settles in behind instead of telescoping into the leader. Distinct from A5: A5 is a fixed floor, A6 is a computed per-pair cap.
 - **When**:
-  - **Open** tracks: narrow zone `dT < bodyContactLength/pathLength × brakeMatchActivationTMultiplier` AND `|dY| < brakeMatchActivationYThreshold` ([`raceBehavior.js:511-519`](../client/src/modules/raceBehavior.js#L511-L519)).
-  - **Closed** tracks: every pair already inside the wide brake zone qualifies (`inBrakeMatchZone = true`, [`raceBehavior.js:521`](../client/src/modules/raceBehavior.js#L521)).
+  - **Open** tracks: narrow zone `dT < bodyContactLength/pathLength × brakeMatchActivationTMultiplier` AND `|dY| < brakeMatchActivationYThreshold` ([`raceBehavior.js:511-519`](../client/src/modules/raceBehavior.js#L520-L528)).
+  - **Closed** tracks: every pair already inside the wide brake zone qualifies (`inBrakeMatchZone = true`, [`raceBehavior.js:521`](../client/src/modules/raceBehavior.js#L530)).
   - Engages only if trailer is faster than leader by `> speedMatchMinDifferential`.
 - **Hold/escape**: locks one leader; anti-trap escape after `brakeHoldTimeoutFrames` → forced release `brakeHoldEscapeReleaseDurationFrames` + cooldown `brakeHoldEscapeCooldownFrames`; debounced release over `brakeReleaseDebounceFrames`; stale-leader guard resets instantly.
 - **Magnitude**: cap ∈ (0, 1]; 1.0 = no extra braking. Combined with A5 via `min()`.
 - **Config**: `brakeMatchActivationTMultiplier` **0.5**, `brakeMatchActivationYThreshold` **0.06**, `speedMatchMinDifferential` **0.005**, `speedMatchSafetyMargin` **0.001**, `brakeHoldTimeoutFrames` **90**, `brakeHoldEscapeReleaseDurationFrames` **15**, `brakeHoldEscapeCooldownFrames` **60**, `brakeReleaseDebounceFrames` **3**.
-- **Open-only subtlety**: on open tracks the cap targets the leader's _braked_ advance (`rawSpeed × min(0.945, leaderBrakeMatch)`); on closed tracks `leaderBrake = 1.0` to preserve the pre-rebuild baseline ([`raceBehavior.js` → `applyRacerBehavior`](../client/src/modules/raceBehavior.js#L540-L548)).
+- **Open-only subtlety**: on open tracks the cap targets the leader's _braked_ advance (`rawSpeed × min(0.945, leaderBrakeMatch)`); on closed tracks `leaderBrake = 1.0` to preserve the pre-rebuild baseline ([`raceBehavior.js` → `applyRacerBehavior`](../client/src/modules/raceBehavior.js#L549-L557)).
 
 ### A7. `trajectoryMult` — Race-Plan P-controller (OUTCOME steering)
 
@@ -258,7 +258,7 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L1. Home force — spring toward centerline — **REMOVED (Commit A; priority path Commit B)**
 
-- **Code**: legacy `−physicalY × homeForceStrength × overlapFactor` [`raceBehavior.js:807-810`](../client/src/modules/raceBehavior.js#L807-L810); priority path [`raceBehavior.js` → `vClose`](../client/src/modules/raceBehavior.js#L787-L800).
+- **Code**: legacy `−physicalY × homeForceStrength × overlapFactor` [`raceBehavior.js:807-810`](../client/src/modules/raceBehavior.js#L823-L826); priority path [`raceBehavior.js` → `vClose`](../client/src/modules/raceBehavior.js#L803-L816).
 - **What**: linear restoring force pulling every racer back to `physicalY = 0`.
 - **When**:
   - **Legacy path** (no `priorityExtras`): always on, but scaled by `homeForceReductionOnOverlap` (0.3) while in geometric overlap.
@@ -269,27 +269,27 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L2. Avoidance push — trailer yields, leader holds — **REMOVED (Commit A)**
 
-- **Code**: `yAvoidDeltas += pushDir × forceMag × lateralScale` [`raceBehavior.js` → `trailer`](../client/src/modules/raceBehavior.js#L724-L730).
+- **Code**: `yAvoidDeltas += pushDir × forceMag × lateralScale` [`raceBehavior.js` → `trailer`](../client/src/modules/raceBehavior.js#L740-L746).
 - **What**: asymmetric anisotropic repulsion. Only the **trailer** (lower `t`) is pushed away from the leader's `physicalY`; the leader holds its line.
-- **When (geometric gate)**: both axes inside buffered body contact — `latPx < contactWidth×(1+buffer)` AND `longPx < contactLength×(1+buffer)` ([`raceBehavior.js` → `speedBrakeSet`](../client/src/modules/raceBehavior.js#L570-L580)). Skipped when `|yDiff| < 1e-6` (no meaningful direction).
-- **Magnitude**: `forceMag = lateralForce × min(latFraction, longFraction)` — proximity-scaled, peaks at `lateralForce` when bodies touch, decays to 0 at the gate edge ([`raceBehavior.js` → `brakeMatchCaps`](../client/src/modules/raceBehavior.js#L587-L591)). Times `lateralScale` (L10).
-- **Dilution**: **YES** — divided by `sqrt(neighborCount)` ([`raceBehavior.js:816-819`](../client/src/modules/raceBehavior.js#L816-L819)).
+- **When (geometric gate)**: both axes inside buffered body contact — `latPx < contactWidth×(1+buffer)` AND `longPx < contactLength×(1+buffer)` ([`raceBehavior.js` → `speedBrakeSet`](../client/src/modules/raceBehavior.js#L579-L589)). Skipped when `|yDiff| < 1e-6` (no meaningful direction).
+- **Magnitude**: `forceMag = lateralForce × min(latFraction, longFraction)` — proximity-scaled, peaks at `lateralForce` when bodies touch, decays to 0 at the gate edge ([`raceBehavior.js` → `brakeMatchCaps`](../client/src/modules/raceBehavior.js#L596-L600)). Times `lateralScale` (L10).
+- **Dilution**: **YES** — divided by `sqrt(neighborCount)` ([`raceBehavior.js:816-819`](../client/src/modules/raceBehavior.js#L832-L835)).
 - **Config**: `lateralForce` **0.0114**, `avoidanceBufferPct` **0.2**.
 
 ### L3. Free-lane separation impulse — steer to a genuinely free side — **REMOVED (Commit A)**
 
-- **Code**: `yFreeLaneDeltas += dir × forceMag` [`raceBehavior.js:667-674`](../client/src/modules/raceBehavior.js#L667-L674); direction logic [`raceBehavior.js` → `maxBodyLen`](../client/src/modules/raceBehavior.js#L619-L659).
+- **Code**: `yFreeLaneDeltas += dir × forceMag` [`raceBehavior.js:667-674`](../client/src/modules/raceBehavior.js#L676-L683); direction logic [`raceBehavior.js` → `maxBodyLen`](../client/src/modules/raceBehavior.js#L628-L668).
 - **What**: occupancy-aware push toward whichever side (`isSideFree` checks the corridor) is actually clear. Symmetric (both members of a pair get a direction). Deadlock-safe: if both sides blocked, `dir = 0`.
 - **When**: on **true overlap** only. *(Corrected 2026-09-03: this described a `preOverlapFreeLane` option that would extend it to the approach zone. **That key exists nowhere in the tree** — control: the same query on `homeForceReductionOnOverlap`, its neighbour, finds its history. It went with Commit B, `f3116226`, 2026-06-28.)*
 - **Magnitude**: same `forceMag` as avoidance (proximity-scaled `lateralForce`). **Not** scaled by `lateralScale`.
-- **Dilution**: **YES** — divided by `sqrt(freeLaneCount)` ([`raceBehavior.js` → `heroPass`](../client/src/modules/raceBehavior.js#L820-L824)).
+- **Dilution**: **YES** — divided by `sqrt(freeLaneCount)` ([`raceBehavior.js` → `heroPass`](../client/src/modules/raceBehavior.js#L836-L840)).
 - **Config**: `maxLateral` — value in [`defaults.js`](../client/src/modules/storage/defaults.js) — caps the side-free target. *(Corrected 2026-09-03: `preOverlapFreeLane` was listed here and does not exist; `maxLateral`'s value is not restated, per this file's own rule.)*
 
 ### L4. Stage B/C committed lateral force — debounced same-lane side choice — **REMOVED (Commit A)**
 
-- **Code**: commit decision [`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L856-L918); injection `delta += approachCommitDir × injected` [`raceBehavior.js` → `longPx`](../client/src/modules/raceBehavior.js#L921-L951).
-- **What**: when a trailer is directly behind a leader in the **same lane** (`|yDiff| < sameLaneHH`, [`raceBehavior.js` → `pairTW`](../client/src/modules/raceBehavior.js#L701-L722)), it commits to one side and pushes there with debounce (anti-zigzag). Stage C may flip the side if the natural side is forward-blocked and the opposite side is clear both ahead and adjacent.
-- **Direction**: `naturalDir = sign(relPos)` outside the dead-zone, else the stable `pairTieDir` ([`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L868-L887)).
+- **Code**: commit decision [`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L872-L934); injection `delta += approachCommitDir × injected` [`raceBehavior.js` → `longPx`](../client/src/modules/raceBehavior.js#L937-L967).
+- **What**: when a trailer is directly behind a leader in the **same lane** (`|yDiff| < sameLaneHH`, [`raceBehavior.js` → `pairTW`](../client/src/modules/raceBehavior.js#L717-L738)), it commits to one side and pushes there with debounce (anti-zigzag). Stage C may flip the side if the natural side is forward-blocked and the opposite side is clear both ahead and adjacent.
+- **Direction**: `naturalDir = sign(relPos)` outside the dead-zone, else the stable `pairTieDir` ([`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L884-L903)).
 - **When**: trailer in `_sameLaneApproach`. Debounce: counter must decay before flipping; anti-starvation abandons after `brakeHoldTimeoutFrames`; decays over `brakeReleaseDebounceFrames` when the leader is gone.
 - **Magnitude**: `injected = _approachForceMag` (the max `forceMag` seen for this trailer) — i.e. on the order of `lateralForce`. **Injected directly into `delta`, AFTER the sqrt(N) normalization** — so it is **not** diluted.
 - **Config**: `commitDirDeadZoneY` **0.04**, `brakeHoldTimeoutFrames` **90**, `brakeReleaseDebounceFrames` **3**.
@@ -297,7 +297,7 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L5. Stage D gap-clearing force — self-limiting honest-clearance push — **REMOVED (Commit A)**
 
-- **Code**: [`raceBehavior.js` → `latTrigger`](../client/src/modules/raceBehavior.js#L924-L949).
+- **Code**: [`raceBehavior.js` → `latTrigger`](../client/src/modules/raceBehavior.js#L940-L965).
 - **What**: additive proportional push (on top of L4) that drives a same-lane trailer toward one honest body-width of lateral separation behind its leader.
 - **When (three gates)**: (1) `inSameLane`, (2) trailer in `speedBrakeSet` (actively braking, close in `t` — excludes "alongside" pairs), (3) fresh leader `physicalY`. Ramps from `lateralForce × gapForceStrength` at `|yDiff|=0` to 0 at `|yDiff| = 2× honestHalfSpan`.
 - **Magnitude**: `gapForce = lateralForce × gapForceStrength × gapRatio`; total L4+L5 capped at `lateralForce × gapForceCap`.
@@ -306,7 +306,7 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L6. OVL-C — sustained-overlap escape (the _leader_ side) — **REMOVED (Commit B)**
 
-- **Code**: [`raceBehavior.js` → `ssMargin`](../client/src/modules/raceBehavior.js#L954-L1004).
+- **Code**: [`raceBehavior.js` → `ssMargin`](../client/src/modules/raceBehavior.js#L970-L1020).
 - **What**: targets the **non-same-lane** member (the leader, which Stage D never reaches) of a pair locked in OVERLAP, so both racers separate simultaneously instead of one waiting forever. `!inSameLane` ensures a pair never gets both L5 and L6.
 - **When**: requires `priorityExtras`, `currentMode === OVERLAP`, and `currentModeFrameCount ≥ overlapEscapeTimeout` (120). Uses the free-side direction recorded during free-lane, with its own debounce latch.
 - **Magnitude**: `escForce = lateralForce × overlapEscapeStrength × gapRatio`, capped at `lateralForce × gapForceCap`.
@@ -315,7 +315,7 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L7. Soft repulsion — quadratic boundary cushion
 
-- **Code**: [`raceBehavior.js:1011-1016`](../client/src/modules/raceBehavior.js#L1011-L1016).
+- **Code**: [`raceBehavior.js:1011-1016`](../client/src/modules/raceBehavior.js#L1027-L1032).
 - **What**: as `|newY|` enters `[comfortThreshold, 1.0)`, a quadratic inward push grows toward the boundary — a soft wall before the hard clamp.
 - **When**: `comfortThreshold ≤ |newY| < 1.0`. Applied **after** velocity integration, directly on `newY`.
 - **Magnitude**: `−sign(newY) × softRepulsionStrength × pen²`, `pen = (|newY|−comfort)/(1−comfort)`.
@@ -323,31 +323,31 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L8. maxLateral clamp / hard boundary
 
-- **Code**: [`raceBehavior.js` → `bSingle`](../client/src/modules/raceBehavior.js#L1018-L1022).
+- **Code**: [`raceBehavior.js` → `bSingle`](../client/src/modules/raceBehavior.js#L1034-L1038).
 - **What**: hard clamp of `physicalY` to `±min(maxLateral, 1.0)`. On a boundary hit, `physicalYVelocity` is reset to 0 (kills bounce).
 - **Magnitude**: cap = **0.95** (`maxLateral`).
 - **Config**: `maxLateral` **0.95**.
 
 ### L9. Stuck-mode suppression — sandwich freeze — **REMOVED (Commit A; the Layer-1 "hold" target replaces it)**
 
-- **Code**: [`raceBehavior.js` → `dir`](../client/src/modules/raceBehavior.js#L830-L851).
+- **Code**: [`raceBehavior.js` → `dir`](../client/src/modules/raceBehavior.js#L846-L867).
 - **What**: when a racer is bilaterally sandwiched (pressure near-balanced from both sides AND near-zero velocity), **all** lateral delta is zeroed so it holds position instead of jittering. Resumes the instant space opens.
 - **When**: `stuckModeSuppress` true AND `totalPressure > STUCK_P_THRESH` AND `imbalance < STUCK_BALANCE_RATIO` AND `|velocity| < STUCK_VEL_THRESH`. Requires the `rawPos/rawNeg` breakdown to be computed.
 - **Magnitude**: sets `delta = 0` (a _gate_, not a force).
-- **Constants**: `STUCK_P_THRESH` **0.008**, `STUCK_BALANCE_RATIO` **0.25**, `STUCK_VEL_THRESH` **0.0015** ([`raceBehavior.js:27-29`](../client/src/modules/raceBehavior.js#L27-L29)).
+- **Constants**: `STUCK_P_THRESH` **0.008**, `STUCK_BALANCE_RATIO` **0.25**, `STUCK_VEL_THRESH` **0.0015** ([`raceBehavior.js:27-29`](../client/src/modules/raceBehavior.js#L33-L35)).
 - **Config**: `stuckModeSuppress` **true**.
 - **Note**: suppresses the _summed physics_ delta but runs **before** the Stage B/C/D and OVL-C injections (L4–L6), so those committed/escape forces are **not** suppressed — they can still move a "stuck" racer.
 
 ### L10. `lateralScale` — track-width normalization (avoidance only) — **REMOVED (Commit A, with avoidance)**
 
-- **Code**: [`raceBehavior.js` → `aLatMax`](../client/src/modules/raceBehavior.js#L582-L585), applied at [`raceBehavior.js:728`](../client/src/modules/raceBehavior.js#L728).
+- **Code**: [`raceBehavior.js` → `aLatMax`](../client/src/modules/raceBehavior.js#L591-L594), applied at [`raceBehavior.js:728`](../client/src/modules/raceBehavior.js#L744).
 - **What**: scales avoidance (L2 only) so the pixel-space push is consistent across track widths: `clamp(REFERENCE_TRACK_WIDTH / pairTW, 0.1, 3.0)`.
 - **Magnitude**: 1.0 at `pairTW = 98 px` (`REFERENCE_TRACK_WIDTH`); >1 on narrow, <1 on wide tracks.
 - **Note**: applies to **avoidance only** — free-lane (L3) and the commit/gap/escape injections (L4–L6) are **not** track-width-scaled. (Possible inconsistency, not a documented bug.)
 
 ### L11. Damping — lateral velocity decay
 
-- **Code**: [`raceBehavior.js:1008`](../client/src/modules/raceBehavior.js#L1008).
+- **Code**: [`raceBehavior.js:1008`](../client/src/modules/raceBehavior.js#L1024).
 - **What**: `physicalYVelocity = (physicalYVelocity + delta) × damping`. Retains only a fraction of velocity each frame → critically over-damped lateral motion.
 - **Magnitude**: `lateralDamping` **0.16** (only 16% of velocity carried over — heavy damping).
 - **Config**: `lateralDamping` **0.16**.
@@ -397,17 +397,17 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 ### C1. Commit-injection overpowers diluted avoidance + free-lane — **RESOLVED BY REMOVAL (Commit A)**
 
-- **What**: L2 (avoidance) and L3 (free-lane) are divided by `sqrt(N)` ([`raceBehavior.js` → `heroPass`](../client/src/modules/raceBehavior.js#L816-L824)) to prevent start-line stacking explosions. The Stage B/C/D commit injection (L4/L5) and OVL-C (L6) are added to `delta` **after** that normalization ([`raceBehavior.js` → `longPx`](../client/src/modules/raceBehavior.js#L921-L1004)) at full `lateralForce` magnitude (capped only by `gapForceCap` 1.5).
+- **What**: L2 (avoidance) and L3 (free-lane) are divided by `sqrt(N)` ([`raceBehavior.js` → `heroPass`](../client/src/modules/raceBehavior.js#L832-L840)) to prevent start-line stacking explosions. The Stage B/C/D commit injection (L4/L5) and OVL-C (L6) are added to `delta` **after** that normalization ([`raceBehavior.js` → `longPx`](../client/src/modules/raceBehavior.js#L937-L1020)) at full `lateralForce` magnitude (capped only by `gapForceCap` 1.5).
 - **Effect**: in dense fields the diluted physics push can be `lateralForce/√10 ≈ 0.31× lateralForce`, while the commit injection is up to `1.5× lateralForce` — roughly a **5× authority gap**. The committed side wins, and the occupancy-aware free-lane steer is effectively overridden. The task's framing — "Commit-Injection overrides Avoidance + Free-lane" — is confirmed by the code path.
 
 ### C2. Home force vs. commit direction at relPos≈0 — the lateral pendulum
 
 - **What**: Home force (L1) always pulls toward `physicalY = 0`. When a same-lane trailer sits near the centerline relative to its leader, `sign(relPos)` flips as home force drags it through center, flipping `naturalDir` and the committed push.
-- **Effect**: a slow lateral limit-cycle (pendulum). The `commitDirDeadZoneY` (0.04) band and `pairTieDir` were added specifically to hold a stable side inside the band ([`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L868-L877)); the dead-zone was _widened_ in the most recent commit (`0d21b4d fix(physics): widen commit-dir dead-zone to break lateral pendulum limit-cycle`). This is a **mitigated but structurally live** conflict.
+- **Effect**: a slow lateral limit-cycle (pendulum). The `commitDirDeadZoneY` (0.04) band and `pairTieDir` were added specifically to hold a stable side inside the band ([`raceBehavior.js` → `bmMultiplier`](../client/src/modules/raceBehavior.js#L884-L893)); the dead-zone was _widened_ in the most recent commit (`0d21b4d fix(physics): widen commit-dir dead-zone to break lateral pendulum limit-cycle`). This is a **mitigated but structurally live** conflict.
 
 ### C3. Avoidance (trailer-only) vs. free-lane (symmetric) push different members
 
-- **What**: L2 pushes **only the trailer** away from the leader's `physicalY` ([`raceBehavior.js` → `pairTW`](../client/src/modules/raceBehavior.js#L692-L730)). L3 pushes **both** members toward their free sides ([`raceBehavior.js:667-674`](../client/src/modules/raceBehavior.js#L667-L674)). For the same pair the two forces can point the trailer in **opposite** directions in the same frame (avoidance says "away from leader's Y", free-lane says "toward the open corridor", which may be the leader's side). They are summed, so the net can partially cancel.
+- **What**: L2 pushes **only the trailer** away from the leader's `physicalY` ([`raceBehavior.js` → `pairTW`](../client/src/modules/raceBehavior.js#L708-L746)). L3 pushes **both** members toward their free sides ([`raceBehavior.js:667-674`](../client/src/modules/raceBehavior.js#L676-L683)). For the same pair the two forces can point the trailer in **opposite** directions in the same frame (avoidance says "away from leader's Y", free-lane says "toward the open corridor", which may be the leader's side). They are summed, so the net can partially cancel.
 
 ### C4. Home force vs. soft repulsion vs. boundary clamp near the edge
 
@@ -415,7 +415,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 ### C5. Stuck-suppression zeroes physics but not injections
 
-- **What**: L9 sets the summed `delta` (home + avoid/√N + free-lane/√N) to 0 when sandwiched, but the Stage B/C/D and OVL-C injections (L4–L6) are added to `delta` _after_ the suppression check inside the same loop ([`raceBehavior.js` → `offsetY`](../client/src/modules/raceBehavior.js#L838-L1004)). A racer the suppressor deems "stuck and should wait" can still be moved by a committed push — the two subsystems disagree about whether the racer should hold.
+- **What**: L9 sets the summed `delta` (home + avoid/√N + free-lane/√N) to 0 when sandwiched, but the Stage B/C/D and OVL-C injections (L4–L6) are added to `delta` _after_ the suppression check inside the same loop ([`raceBehavior.js` → `offsetY`](../client/src/modules/raceBehavior.js#L854-L1020)). A racer the suppressor deems "stuck and should wait" can still be moved by a committed push — the two subsystems disagree about whether the racer should hold.
 
 ### C6. Brake-to-match cap vs. Race-Plan controller/area-bonus (longitudinal)
 
@@ -423,7 +423,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 ### C7. Drafting boost vs. speed/brake-match (longitudinal)
 
-- **What**: A4 (+4%) accelerates a follower _into_ the leader's wake; A5/A6 then brake it back when it closes to body contact. The drafting boost is also fed _into_ the brake-match speed estimate ([`raceBehavior.js:526-539`](../client/src/modules/raceBehavior.js#L526-L539)), so a drafting trailer both speeds up and raises its own brake cap — a coupled loop that can oscillate (speed up → close → brake → fall back → boost lost → repeat).
+- **What**: A4 (+4%) accelerates a follower _into_ the leader's wake; A5/A6 then brake it back when it closes to body contact. The drafting boost is also fed _into_ the brake-match speed estimate ([`raceBehavior.js:526-539`](../client/src/modules/raceBehavior.js#L535-L548)), so a drafting trailer both speeds up and raises its own brake cap — a coupled loop that can oscillate (speed up → close → brake → fall back → boost lost → repeat).
 
 ---
 
@@ -439,7 +439,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | `speedBrakeYThreshold`                                                       | **Retired** from browser brake gate (body-based same-lane filter replaced it); kept for sim/validation compat                                         | [`defaults.js:442`](../client/src/modules/storage/defaults.js#L442)               |
 | `_approachLeft/Right`, `_forwardLeft/Right` (Stage A corridor sets)          | **REMOVED (Commit A)** — the Stage A/C corridor-set + side-switch machinery is gone with the free-lane/commit stack (`grep` = 0 in `raceBehavior.js`) | —                                                                              |
 | `overlapEscapeStrength` / `overlapEscapeTimeout` / `gapForceCap` (OVL-C, L6) | **REMOVED (Commit B)** — config keys deleted from `defaults.js`                                                                                       | —                                                                              |
-| Drafting on tight curves                                                     | **Intermittently misses** — documented cone-geometry limitation, not fixed                                                                            | [`raceBehavior.js:912-915`](../client/src/modules/raceBehavior.js#L912-L915)      |
+| Drafting on tight curves                                                     | **Intermittently misses** — documented cone-geometry limitation, not fixed                                                                            | [`raceBehavior.js:912-915`](../client/src/modules/raceBehavior.js#L928-L931)      |
 
 ---
 

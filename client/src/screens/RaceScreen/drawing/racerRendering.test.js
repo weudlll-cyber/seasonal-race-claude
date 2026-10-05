@@ -20,6 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import { drawRacers } from './racerRendering.js';
 import { PHASE } from '../racePhase.js';
+import { _setDotCanvasFactory } from './dotSprites.js';
 
 /**
  * A context that records the ORDER of the marks made on it, and nothing else.
@@ -240,3 +241,45 @@ function drawWithFont(ctx, log, tagFontPx) {
     6
   );
 }
+
+// ── FRAME-DROPS-80 (d): the trail is drawn from one cached dot image per racer colour ───────────
+
+describe('the trail dots (FRAME-DROPS-80 d)', () => {
+  it('draws every trail dot as the racer colour’s cached image, sized as the circle was', () => {
+    const made = [];
+    const prev = _setDotCanvasFactory(() => {
+      const g = { fillStyle: '', beginPath() {}, arc() {}, fill() {} };
+      const c = { getContext: () => g };
+      made.push(c);
+      return c;
+    });
+    try {
+      const { ctx, log } = makeRecordingCtx();
+      const images = [];
+      ctx.drawImage = (img, x, y, w, h) => images.push({ img, x, y, w, h, alpha: ctx.globalAlpha });
+      ctx.arc = () => {
+        throw new Error('a trail dot drew a path although an image exists');
+      };
+      const st = makeState(2);
+      st.racers[0].color = '#ff0000';
+      st.racers[1].color = '#ff0000';
+      st.racers[0].trail = [
+        { x: 0, y: 0 },
+        { x: 4, y: 0 },
+      ];
+      st.racers[1].trail = [{ x: 10, y: 0 }];
+      draw(ctx, st, makeRacerType(log), { shown: new Set() });
+      // One image for the one colour, reused for all three dots.
+      expect(made).toHaveLength(1);
+      expect(images.every((d) => d.img === made[0])).toBe(true);
+      // Radius (frac * 5 + 1) at scale 1: racer 0's dots are 3.5 and 6, racer 1's single dot is 6.
+      expect(images.map((d) => [d.x, d.w])).toEqual([
+        [-3.5, 7],
+        [-2, 12],
+        [4, 12],
+      ]);
+    } finally {
+      _setDotCanvasFactory(prev);
+    }
+  });
+});
