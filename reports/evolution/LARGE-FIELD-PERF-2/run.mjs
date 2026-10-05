@@ -33,8 +33,12 @@
 //     census wraps the 2D context's methods, which costs time, so a census race is never a timed
 //     race: its frame times are not used. It also records the canvases' backing size, their size on
 //     screen, devicePixelRatio and the layer count (CDP LayerTree) twice during the race.
+//   · "stills": [s,…] — screenshots of the race picture (the race canvas and the background behind
+//     it) at s seconds after the race screen opened, as <base>-<s>s.jpg: the same moment of the same
+//     seed, to compare two builds by eye. A stills race is not a timed race.
 //   · "port": <n>     — serve this race from 127.0.0.1:<n> instead of the default port, so two builds
-//     (master and a branch) can be raced interleaved from one plan. Each port is signed in once.
+//     (master and a branch) can be raced interleaved from one plan. The harness signs in again on
+//     every change of server (one host shares its cookies across ports).
 //   The GPU string (WebGL's unmasked renderer, and chrome://gpu's feature status) is written once, to
 //   <out-dir>/gpu.json.
 //
@@ -179,10 +183,12 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
 
-// Each port (each build) is a separate origin with its own session; sign in to each once.
-const signedIn = new Set();
+// Each port is a separate origin for storage, but COOKIES ARE SHARED ACROSS PORTS of one host, and
+// every server names its session cookie the same: signing in to one build signs the browser out of
+// the others. So the harness signs in again whenever a race is on a different server than the last.
+let signedInTo = null;
 async function signInTo(base) {
-  if (signedIn.has(base)) return;
+  if (signedInTo === base) return;
   await page.goto(`${base}/login`);
   await page.getByLabel(/username/i).fill(USER);
   await page.getByLabel(/password/i).fill(PASS);
@@ -190,7 +196,7 @@ async function signInTo(base) {
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), {
     timeout: 20000,
   });
-  signedIn.add(base);
+  signedInTo = base;
 }
 await signInTo(BASE);
 
@@ -326,7 +332,24 @@ for (const [i, race] of plan.entries()) {
   let prevCount = null;
   let lost = 0;
   const shapes = []; // census races: canvases and layers, at about 30 s and 80 s into the race
+  const raceOpened = Date.now();
+  const stillsDue = [...(race.stills ?? [])].sort((a, b) => a - b);
   for (;;) {
+    // Stills are taken on their own schedule, ahead of the probe read, so their moment is exact.
+    while (
+      stillsDue.length &&
+      (Date.now() - raceOpened) / 1000 >= stillsDue[0]
+    ) {
+      const at = stillsDue.shift();
+      await page
+        .locator("canvas.race-canvas")
+        .locator("xpath=..")
+        .screenshot({
+          path: join(outDir, `${name}-${at}s.jpg`),
+          type: "jpeg",
+          quality: 90,
+        });
+    }
     await page.waitForTimeout(POLL_MS);
     const snap = await page.evaluate(() => ({
       c: window.__harnessTs.length,

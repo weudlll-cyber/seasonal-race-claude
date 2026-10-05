@@ -5,7 +5,7 @@
 time at 80 racers the page's main thread waits on the GPU or compositor. Stage 1 measures what the
 GPU side is doing; stage 2 builds the cheapest fixes and measures them against master.
 
-**Status:** stage 1 done; stage 2 running.
+**Status:** stage 1 and stage 2 done. Four fixes on the branch, all kept; three of them change the picture and need the owner's eye before anything merges.
 
 ## Stage 1 — where the GPU time goes (measurement only)
 
@@ -103,3 +103,112 @@ N = 8,862 frames, Mountainstreet 80 N = 8,456). The second figure is the last te
 **Seeds (Quick Test seeds).** Traced: Mountainstreet 80 — 477662, 524497, 906411, 304256, 544859;
 Luger hill 80 — 170767, 955724, 918686, 625497, 141942; Mountainstreet 40 — 40884, 416737, 223467,
 923614, 720655; Luger hill 40 — 942358, 93643, 87869, 239979, 146509. Census: the first two of each.
+
+## Stage 2 — cheap fixes, measured against master
+
+### The fixes
+
+One commit each, on top of master `3d1efa60`. "Fingerprints" is `check-fingerprints --mint` after the
+commit, which verifies the world, camera, render and replay fingerprints against
+`docs/fingerprints.json` without writing it; `engine-reach --check` put every changed file in reach,
+so all four ran every time.
+
+| fix | commit | what it does | lines before → after | fingerprints | kept? |
+| --- | --- | --- | --- | --- | --- |
+| **(a) track lights** | `eb1eea1d` | `drawTrackLights` skips every light outside the shot (the canvas corners through the inverse of the camera's transform, `visibleWorldRect`) and draws each visible light as ONE cached halo-and-core image (`glowSpriteFor`, per colour and halo-to-core ratio in quarter steps) instead of two antialiased circles. | `trackLights.js` 157 → 268; test 272 → 360 (4 new tests, 2 sabotages red) | all four equal; both measured stamps re-run, identical, restamped in `242fc8fc` | kept — **changes the picture, needs the owner's eye** |
+| **(b) particles** | `c26e3fd0`, corrected in `a98c9715` | dust and finish bursts drawn as cached images: a filled dot (`dotSprite`) and a soft glowing dot (`glowDotSprite`) per colour, in the new [`dotSprites.js`](../../client/src/screens/RaceScreen/drawing/dotSprites.js). **No `shadowBlur` per burst particle any more.** The correction: the glow first faded towards transparent BLACK, which ringed every burst dot grey on a light ground — found in the before/after render below, fixed with an alpha mask, and given its own test (sabotage red). | `particleRendering.js` 72 → 90; `dotSprites.js` new, 90; its test new, 100 (5 tests, 3 sabotages red) | all four equal, before and after the correction | kept — **changes the picture, needs the owner's eye** |
+| **(c) `tFrac` once per racer** | `c11ffa25` | the soft-avoidance pair loop in `raceBehavior.js` computed each racer's `tFrac` once per PAIR; it now fills a per-step array once per racer and compares those (`arcDeltaFromFrac`, extracted from `shortestArcDeltaT` in `mathUtils.js`, which now calls it). | `raceBehavior.js` 1419 → 1435; `mathUtils.js` 50 → 57; test 129 → 159 (identity over 5,000 random pairs plus the edges, sabotage red) | all four equal — **bit-identical** | kept — no visible change |
+| **(d) racer trails** | `6059215f` | the ten trail dots per racer drawn from the racer colour's cached `dotSprite` instead of ten paths. | `racerRendering.js` 291 → 301; test 242 → 285 (1 new test, sabotage red) | all four equal | kept — **changes the picture, needs the owner's eye** |
+
+**Why the render fingerprint cannot see (a), (b), (d).** Its harness draws into a recording context
+([`recordingContext.js`](../../client/src/modules/parity/recordingContext.js)) with no 2D canvas and
+no `getTransform`. There the image helpers return nothing and every fix falls back to the original
+circles — which is what the fallbacks are for, and also why "render equal" says nothing about the
+picture. These three fixes change what is drawn; only an eye can say whether it is acceptable.
+
+**Extracted:** `dotSprites.js` (the dot and glow image caches, shared by (b) and (d));
+`arcDeltaFromFrac` (from `shortestArcDeltaT`). **Removed:** nothing; each original drawing path stays
+as the fallback where no 2D canvas exists. **The further-fix budget:** (d) is the one further fix,
+backed by stage 1 (the trails, 22–29 % of the sampled calls); the crowd strip (7–8 %) was left.
+
+### Before and after, the same frame
+
+Same Quick Test seed, same moment:
+
+| | master | branch |
+| --- | --- | --- |
+| Luger hill 80, seed 344284, 20 s — lights and trails | [still](LARGE-FIELD-PERF-3/stills/00-Luger_hill-80-344284-p4621-20s.jpg) | [still](LARGE-FIELD-PERF-3/stills/01-Luger_hill-80-344284-p4622-20s.jpg) |
+| Luger hill 80, seed 344284, 84 s — the ending wide shot | [still](LARGE-FIELD-PERF-3/stills/00-Luger_hill-80-344284-p4621-84s.jpg) | [still](LARGE-FIELD-PERF-3/stills/01-Luger_hill-80-344284-p4622-84s.jpg) |
+| Mountainstreet 80, seed 270753, 20 s | [still](LARGE-FIELD-PERF-3/stills/02-Mountainstreet-80-270753-p4621-20s.jpg) | [still](LARGE-FIELD-PERF-3/stills/03-Mountainstreet-80-270753-p4622-20s.jpg) |
+| Mountainstreet 80, seed 270753, 84 s | [still](LARGE-FIELD-PERF-3/stills/02-Mountainstreet-80-270753-p4621-84s.jpg) | [still](LARGE-FIELD-PERF-3/stills/03-Mountainstreet-80-270753-p4622-84s.jpg) |
+| the finish bursts alone: seeded, frames 5/20/40/60, light and dark ground | [render](LARGE-FIELD-PERF-3/stills/bursts-isolated-master-left-branch-right.png), left column | same image, right column |
+
+**Read the race stills with two cautions.**
+1. **The branch's race stills were taken BEFORE the burst correction** (`a98c9715`), so their bursts
+   still carry the grey ring. The bursts' before/after is the isolated render, which uses the
+   corrected glow: same seed, same particle state, only the drawing differs. In it the branch's
+   bursts read **slightly larger and bolder in their first frames** than master's blur; from about
+   frame 20 on the two are close.
+2. **The ending stills show far fewer bursts on the branch, and that is not the drawing.** A burst
+   particle loses 0.014 alpha per FRAME
+   ([`burstParticles.js`](../../client/src/screens/RaceScreen/burstParticles.js)), so it lives about
+   71 frames, not a fixed time. Master runs the ending at a lower frame rate, so each burst stays on
+   screen longer in seconds and more of them overlap; faster frames shorten the confetti. This is
+   master's behaviour, unchanged here — but the branch's ending LOOKS different for a reason that is
+   in none of the four fixes, and the owner's eye should know that before judging it.
+
+### Slow frames, master against the branch (N = 30 races per track per arm)
+
+Quick Test, 80 racers, production builds of master and of the branch's four fixes, each on its own
+server, interleaved race by race on the same seeds; 160 races in all (the per-fix arms below
+included), 0 frames lost. The branch build predates the burst correction, which changes how the glow
+image is made once per colour, not what is drawn per frame. The unedited output is
+[`stage2-compare.txt`](LARGE-FIELD-PERF-3/stage2-compare.txt), the plan
+[`stage2-plan.json`](LARGE-FIELD-PERF-3/stage2-plan.json), the script
+[`compare.mjs`](LARGE-FIELD-PERF-3/compare.mjs); the raw frames are in
+`C:\Users\weudl\ra-measure\LARGE-FIELD-PERF-3\stage2-run2\`.
+
+| | frames over 33 ms | p95 | p99 | **ending wide shot**: frames over 33 ms |
+| --- | --- | --- | --- | --- |
+| **Luger hill, master** | 9.03 % (of 141,063) | 33.3 ms | 50.1 ms | **23.48 %** (of 11,469) |
+| **Luger hill, branch** | **7.50 %** (of 143,166) | 33.3 ms | 49.1 ms | **12.50 %** (of 13,419) |
+| **Mountainstreet, master** | 19.04 % (of 133,275) | 35.7 ms | 53.4 ms | 23.82 % (of 11,782) |
+| **Mountainstreet, branch** | **14.39 %** (of 137,049) | 34.1 ms | 50.0 ms | 11.66 % (of 14,045) |
+
+**Paired by seed** (branch minus master, slow-frame share, 95 % bootstrap interval):
+- **Mountainstreet: −5.16 points (−7.58 to −3.30)**, fewer slow frames on 29 of 30 seeds.
+- **Luger hill: −1.49 points (−2.80 to +0.21)**, fewer on 28 of 30 seeds; the interval touches zero.
+- **The Luger hill ending wide shot**, the moment LARGE-FIELD-PERF-2 named: slow frames about halve,
+  23.5 % → 12.5 %. Part of that is caution 2: fewer bursts are alive at once when frames are faster.
+
+**The machine was slower than in LARGE-FIELD-PERF-2.** Master's slow-frame share here is about twice
+what LARGE-FIELD-PERF-2 measured on the same tracks (9.0 % against 4.0 % on Luger hill). The arms were
+interleaved race by race on the same seeds, so the comparison holds; the absolute levels do not
+transfer between the two reports.
+
+**Per fix** (N = 5 races per track, the first five seeds, each fix alone on master): every interval
+crosses zero — five races cannot separate one fix. For the record, fix minus master in points: Luger
+hill (a) +2.57, (b) −0.10, (c) −0.38, (d) +1.70; Mountainstreet (a) −4.48, (b) −0.81, (c) −5.04,
+(d) −2.57. The one clear single-fix signal is (b) in the ending: ending slow frames 16.8 % on Luger
+hill and 14.3 % on Mountainstreet, against master's 23–24 %.
+
+**Seeds (Quick Test seeds).** Luger hill: 344284, 577792, 388357, 631521, 935605, 125672, 278440,
+9930, 429604, 935723, 588404, 46680, 13427, 426224, 307153, 150588, 581681, 311555, 246310, 754486,
+324991, 851129, 4286, 597738, 887185, 141942, 474879, 554486, 870560, 857735. Mountainstreet: 270753,
+400076, 188944, 1282, 387573, 535748, 376525, 680896, 379351, 698089, 40877, 889055, 76056, 548403,
+348682, 785049, 82581, 59445, 492546, 632864, 99397, 995911, 822505, 347222, 859443, 703751, 812000,
+927199, 745525, 544328.
+
+### What is open
+
+- **The owner's eye** on (a), (b) and (d): the light halos, the trail dots, and the bursts — larger
+  and bolder in their first frames, and shorter-lived on a faster ending (caution 2).
+- **Noticed, left:** the crowd strip (`trackRendering.js:109`, 7–8 % of the sampled calls, drawn
+  across the whole world width every frame); the background canvas backed at the track's world size
+  (not the bottleneck, stage 1); burst life counted in frames rather than time.
+- **The harness:** `run.mjs` now signs in again whenever a race moves to a different server (cookies
+  are shared across the ports of one host, so a later sign-in ended master's session and stopped the
+  first stage 2 run at race 7; all 160 races were re-run), and takes JPEG stills at given race
+  seconds (`stills`).
+- **One local commit was made with `--no-verify`:** a throwaway commit on a local branch, used only
+  to build the (d)-alone arm; deleted, never pushed.

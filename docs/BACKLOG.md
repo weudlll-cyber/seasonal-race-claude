@@ -960,6 +960,11 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       the cheap fixes built and measured on branch `perf/frame-drops-80` (not merged):
       [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md). **verify:** the slow-frame share
       at 80 racers on both tracks, master against the branch, N = 30 races per track per arm.
+      ★ **2026-10-05 — FOUR FIXES BUILT AND MEASURED, NOT MERGED.** Mountainstreet 19.0 % → 14.4 %
+      slow frames, Luger hill 9.0 % → 7.5 %, the Luger hill ending wide shot 23.5 % → 12.5 %
+      (N = 30 per track per arm, same seeds). Three of the fixes change the picture (track lights,
+      particles, trails) and wait for the owner's eye; the stills and the cautions for reading them
+      are in [LARGE-FIELD-PERF-3](../reports/evolution/LARGE-FIELD-PERF-3.md).
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
