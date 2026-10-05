@@ -26,6 +26,7 @@ import { labelBoxHeight, labelOffsetAbove, labelBoxWidth } from '../nameTagLayou
 import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 import { PHASE } from '../racePhase.js';
+import { dotSprite } from './dotSprites.js';
 const PHASE_RACING = PHASE.RACING;
 
 /**
@@ -164,12 +165,21 @@ export function drawRacers(
     const renderAngle = doInterp
       ? lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha)
       : r.angle;
+    // FRAME-DROPS-80 (d): the trail's dots are one cached image per racer colour (`dotSprites.js`),
+    // drawn scaled, instead of ten antialiased paths per racer per frame — about a quarter of the
+    // canvas work the GPU executes at 80 racers (LARGE-FIELD-PERF-3). No image: the original circles.
+    const dot = dotSprite(r.color);
     for (let i = 0; i < r.trail.length; i++) {
       const frac = (i + 1) / r.trail.length;
+      const rad = (frac * 5 + 1) * inv;
       ctx.globalAlpha = frac * 0.4 * dimAlpha;
+      if (dot) {
+        ctx.drawImage(dot, r.trail[i].x - rad, r.trail[i].y - rad, rad * 2, rad * 2);
+        continue;
+      }
       ctx.fillStyle = r.color;
       ctx.beginPath();
-      ctx.arc(r.trail[i].x, r.trail[i].y, (frac * 5 + 1) * inv, 0, Math.PI * 2);
+      ctx.arc(r.trail[i].x, r.trail[i].y, rad, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = dimAlpha;
