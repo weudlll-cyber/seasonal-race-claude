@@ -18,6 +18,7 @@ import {
   drawTrackLights,
   glowSpriteFor,
   _setGlowCanvasFactory,
+  visibleWorldRect,
 } from './trackLights.js';
 
 // ── sampleBoundaryAtInterval ──────────────────────────────────────────────────
@@ -356,5 +357,13 @@ describe('drawTrackLights — cull and glow image (FRAME-DROPS-80 a)', () => {
     drawTrackLights(ctx, lights, cfg, 0, true, 1);
     expect(ctx.calls.filter((c) => c[0] === 'arc')).toHaveLength(4); // two lights in shot × 2
     expect(ctx.calls.some((c) => c[0] === 'drawImage')).toBe(false);
+  });
+
+  it('a transform without an inverse (a canvas test double) culls nothing and never throws', () => {
+    const ctx = {
+      getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+      canvas: { width: 10, height: 10 },
+    };
+    expect(visibleWorldRect(ctx, 5)).toBeNull();
   });
 });

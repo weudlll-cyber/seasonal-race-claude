@@ -174,7 +174,7 @@ export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, ef
 /**
  * The world rectangle the canvas currently shows, widened by `margin`, read off the context's own
  * transform — the camera's. `null` when the context cannot say (a test double without
- * `getTransform`), which draws every light, as before.
+ * `getTransform`, or whose transform has no `inverse`), which draws every light, as before.
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} margin  world px a light may extend past its centre
@@ -182,7 +182,9 @@ export function drawTrackLights(ctx, cachedLights, trackLights, ts, isClosed, ef
  */
 export function visibleWorldRect(ctx, margin) {
   if (typeof ctx.getTransform !== 'function' || !ctx.canvas) return null;
-  const inv = ctx.getTransform().inverse();
+  const m = ctx.getTransform();
+  if (typeof m?.inverse !== 'function') return null;
+  const inv = m.inverse();
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   let minX = Infinity;
