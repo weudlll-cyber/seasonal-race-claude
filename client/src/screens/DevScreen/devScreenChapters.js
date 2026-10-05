@@ -234,15 +234,9 @@ export const CHAPTERS = [
     icon: '👤',
     title: 'Accounts and system',
     intro:
-      "Who may use the screen and what it keeps: your own sign-in, the race directors of the server, and backups of everything this browser stores. It also holds the screen's own frame — the view switch, signing out and the way back to Race Setup.",
+      'Who may use the screen and what it keeps: your own password, the race directors of the server, and backups of everything this browser stores.',
     subgroups: [
-      {
-        title: 'You and this screen',
-        parts: [
-          { own: 'screenFrame', tier: OP },
-          { component: ChangePasswordSection, tier: OP },
-        ],
-      },
+      { title: 'Your password', parts: [{ component: ChangePasswordSection, tier: OP }] },
       { title: 'Race directors', parts: [{ component: UserManagementSection, tier: ADV }] },
       { title: 'Backup and reset', parts: [{ component: SystemSettings, tier: ADV }] },
     ],

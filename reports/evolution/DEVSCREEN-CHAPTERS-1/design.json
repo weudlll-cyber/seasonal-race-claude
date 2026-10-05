@@ -3888,9 +3888,9 @@
     "textStatus": "REWRITTEN"
   },
   {
-    "chapter": "Accounts and system",
+    "chapter": "Sidebar (all chapters)",
     "position": 1,
-    "subgroup": "You and this screen",
+    "subgroup": "Sidebar (all chapters)",
     "section": "DevScreen.jsx",
     "label": "View: All / Operator",
     "id": "handleViewChange",
@@ -3900,9 +3900,9 @@
     "textStatus": "REWRITTEN"
   },
   {
-    "chapter": "Accounts and system",
+    "chapter": "Sidebar (all chapters)",
     "position": 2,
-    "subgroup": "You and this screen",
+    "subgroup": "Sidebar (all chapters)",
     "section": "DevScreen.jsx",
     "label": "← Back to Setup",
     "id": "navigate('/setup')",
@@ -3912,9 +3912,9 @@
     "textStatus": "NEW"
   },
   {
-    "chapter": "Accounts and system",
+    "chapter": "Sidebar (all chapters)",
     "position": 3,
-    "subgroup": "You and this screen",
+    "subgroup": "Sidebar (all chapters)",
     "section": "DevScreen.jsx",
     "label": "Log out",
     "id": "logout",
@@ -3926,7 +3926,7 @@
   {
     "chapter": "Accounts and system",
     "position": 4,
-    "subgroup": "You and this screen",
+    "subgroup": "Your password",
     "section": "sections/ChangePasswordSection.jsx",
     "label": "Current password",
     "id": "setCurrentPassword",
@@ -3938,7 +3938,7 @@
   {
     "chapter": "Accounts and system",
     "position": 5,
-    "subgroup": "You and this screen",
+    "subgroup": "Your password",
     "section": "sections/ChangePasswordSection.jsx",
     "label": "New password",
     "id": "setNewPassword",
@@ -3950,7 +3950,7 @@
   {
     "chapter": "Accounts and system",
     "position": 6,
-    "subgroup": "You and this screen",
+    "subgroup": "Your password",
     "section": "sections/ChangePasswordSection.jsx",
     "label": "Repeat new password",
     "id": "setConfirmPassword",
@@ -3962,7 +3962,7 @@
   {
     "chapter": "Accounts and system",
     "position": 7,
-    "subgroup": "You and this screen",
+    "subgroup": "Your password",
     "section": "sections/ChangePasswordSection.jsx",
     "label": "Change password",
     "id": "handleSubmit",

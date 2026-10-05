@@ -167,7 +167,8 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 4 | Tracks, racers, brands and groups | 69 | 63 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
 | 6 | Diagnostics and verification | 17 | 0 | changes neither |
-| 7 | Accounts and system | 24 | 6 (+1 for an admin) | changes neither |
+| 7 | Accounts and system | 21 | 4 | changes neither |
+| — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
 | | **Total** | **348** | **90** (+9 for an admin) | |
 
 ### 1 · The race — 101
@@ -238,15 +239,21 @@ verification in the simulator. None of them changes a race.
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
 them serve someone checking the game, none someone running an event.
 
-### 7 · Accounts and system — 24
+### 7 · Accounts and system — 21
 
-*Intro:* Who may use the screen and what it keeps: your own sign-in, the race directors of the
-server, and backups of everything this browser stores. It also holds the screen's own frame — the
-view switch, signing out and the way back to Race Setup.
+*Intro:* Who may use the screen and what it keeps: your own password, the race directors of the
+server, and backups of everything this browser stores.
 
 *Why one chapter.* Change Password, User Management and System are about access and storage, not
-racing. The sidebar's frame controls (view switch, Log out, Back to Setup) join them, so the screen's
-chrome is placed like everything else.
+racing.
+
+### The sidebar (all chapters) — 3
+
+The view switch (admins only, directly under the "Dev Panel / Configuration" header), "← Back to
+Setup" and "Log out" (at the foot of the sidebar, for every signed-in user) stay in the fixed sidebar
+and are reachable from every chapter. **The owner decided this on 2026-10-05**; the design first
+placed them in chapter 7 as "You and this screen". It is a placement of its own in `design.json`
+("Sidebar (all chapters)") and in the chapter guard.
 
 ### There is no "top ten" view
 
@@ -272,7 +279,7 @@ specific fine mechanics. A reset button sits at the head of the values it resets
 | 4 · Things a race is made of | Player groups → Tracks → Racer types → Brands | The order Race Setup asks for them: who races, where, as what, under which look. Inside each: the editor link, New, per-entry actions, the form fields, Save, Cancel. |
 | 5 · History and evaluation | Race history → Period evaluation | General → specific: the full record before the summary built on it. Filters before the actions they feed. |
 | 6 · Diagnostics | On-screen diagnostics → Logs → Race configuration export | What you see on screen while racing before what is written out afterwards. |
-| 7 · Accounts and system | You and this screen → Race directors → Backup and reset | General → specific, with the destructive reset last. |
+| 7 · Accounts and system | Your password → Race directors → Backup and reset | General → specific, with the destructive reset last. |
 
 ---
 
@@ -678,17 +685,20 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 6.16 | Race configuration export | `ConfigExportSection.jsx` | Export race config | `export-race-config` (testId) | advanced | Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration. | REWRITTEN |
 | 6.17 | Race configuration export | `ConfigExportSection.jsx` | ↻ refresh | `refresh` (handler) | advanced | Recomputes the configuration hash and the list of changed settings after you have changed something. | REWRITTEN |
 
-### 7 · Accounts and system — 24 controls
+### 7 · Accounts and system — 21 controls, and the sidebar's 3
+
+Rows 7.1–7.3 are placed in **Sidebar (all chapters)** (the owner's decision of 2026-10-05); their
+numbers are kept so earlier references still find them.
 
 | # | Sub-group | Today: file | Today: label | Id (kind) | Tier | Info text | Text |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 7.1 | You and this screen | `DevScreen.jsx` | View: All / Operator | `handleViewChange` (handler) | admin | Admin only. Operator shows only what is used on an event day; All adds every advanced setting. Your choice is remembered on this device. | REWRITTEN |
-| 7.2 | You and this screen | `DevScreen.jsx` | ← Back to Setup | `navigate('/setup')` (handler) | operator | Leaves the Dev Screen and returns to Race Setup. Settings are already saved. | NEW |
-| 7.3 | You and this screen | `DevScreen.jsx` | Log out | `logout` (handler) | operator | Signs you out of this browser. | NEW |
-| 7.4 | You and this screen | `ChangePasswordSection.jsx` | Current password | `setCurrentPassword` (handler) | operator | Your existing password. Verified by the server; a wrong value returns the same error the login screen uses. | KEPT |
-| 7.5 | You and this screen | `ChangePasswordSection.jsx` | New password | `setNewPassword` (handler) | operator | The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here. | KEPT |
-| 7.6 | You and this screen | `ChangePasswordSection.jsx` | Repeat new password | `setConfirmPassword` (handler) | operator | Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit. | KEPT |
-| 7.7 | You and this screen | `ChangePasswordSection.jsx` | Change password | `handleSubmit` (handler) | operator | Changes the password of the account you are signed in as. Your other sessions are signed out. | NEW |
+| 7.1 | Sidebar (all chapters) | `DevScreen.jsx` | View: All / Operator | `handleViewChange` (handler) | admin | Admin only. Operator shows only what is used on an event day; All adds every advanced setting. Your choice is remembered on this device. | REWRITTEN |
+| 7.2 | Sidebar (all chapters) | `DevScreen.jsx` | ← Back to Setup | `navigate('/setup')` (handler) | operator | Leaves the Dev Screen and returns to Race Setup. Settings are already saved. | NEW |
+| 7.3 | Sidebar (all chapters) | `DevScreen.jsx` | Log out | `logout` (handler) | operator | Signs you out of this browser. | NEW |
+| 7.4 | Your password | `ChangePasswordSection.jsx` | Current password | `setCurrentPassword` (handler) | operator | Your existing password. Verified by the server; a wrong value returns the same error the login screen uses. | KEPT |
+| 7.5 | Your password | `ChangePasswordSection.jsx` | New password | `setNewPassword` (handler) | operator | The password you want. The rule the server applies is the same one that governs new accounts; no extra rule is invented here. | KEPT |
+| 7.6 | Your password | `ChangePasswordSection.jsx` | Repeat new password | `setConfirmPassword` (handler) | operator | Typo guard, checked in the browser only. The server has no concept of a confirmation; if these two do not match, the form refuses to submit. | KEPT |
+| 7.7 | Your password | `ChangePasswordSection.jsx` | Change password | `handleSubmit` (handler) | operator | Changes the password of the account you are signed in as. Your other sessions are signed out. | NEW |
 | 7.8 | Race directors | `UserManagementSection.jsx` | Refresh (user list) | `loadUsers` (handler) | advanced | Reloads the list of race directors from the server. | NEW |
 | 7.9 | Race directors | `UserManagementSection.jsx` | Team (per user) | `handleTeamChange` (handler) | advanced | Moves this race director to another existing team. Their races are listed under the new team from then on. | NEW |
 | 7.10 | Race directors | `UserManagementSection.jsx` | Role (per user) | `handleRoleChange` (handler) | advanced | Makes this race director an operator or an admin. Admins also see the advanced settings and admin-only actions. | NEW |
@@ -994,3 +1004,38 @@ in `controlInfo.js`, `design.json` and the table above. `count-controls.mjs` pri
 tree because the source patterns it reads moved with the build; it counted the design's starting
 point (348). **The guard test, `devScreenChapters.guard.test.jsx`, is now the count of record** — it
 reaches all 348 controls by rendering.
+
+---
+
+## The sidebar frame — 2026-10-05
+
+**What moved.** The owner decided on 2026-10-05 that "← Back to Setup", "Log out" and the admin-only
+"View: All / Operator" switch leave chapter 7 for the fixed sidebar, so they can be reached from
+every chapter; the rest of the Plan D screen is accepted as built. The view switch sits directly
+under the "Dev Panel / Configuration" header, admins only, as on master before Plan D; Back to Setup
+and Log out sit at the foot of the sidebar for every signed-in user. Ids, handlers and info texts are
+unchanged; the styles are master's own `.tierToggle` and `.backBtn`, restored verbatim. Chapter 7's
+first sub-group is left with the password form and is now "Your password"; the chapter intro no
+longer mentions the moved controls. Counts: chapter 7 has 21 controls (4 in the operator view), the
+sidebar 3 (2, +1 for an admin); the total stays 348 and the operator view 90 (+9 for an admin).
+
+**The guard.** `devScreenChapters.guard.test.jsx` reads the sidebar as a placement of its own in
+every chapter state, so its three controls are checked exactly like the content's: placed once, in
+the design's place, with the design's info text. Moving Log out back into chapter 7 turns it red
+(WRONG PLACE, and the sidebar's own test).
+
+**The 348 / 337 mismatch — the script was wrong, not the table.** `count-controls.mjs` printed 337
+on the built tree while the rendering guard reached 348. Compared control by control with
+`design.json`, the difference is exactly three defects in the script's reading of source shapes that
+the build changed, not three changed controls:
+
+| | effect | cause | fix in the script |
+| --- | ---: | --- | --- |
+| the on-screen diagnostics and log switches | −14 | the build renders them through one local function mapped over two named lists (`ON_SCREEN_DIAGNOSTICS.map(renderDiagToggle)`, `LOG_TOGGLES.map(renderDiagToggle)`); the script looks for the array at the nearest `.map(` before a control, and the template sits above both calls, so it saw one control, `set` | rule 4 also expands the template of a local render function into the keys of every named list mapped over it |
+| `SubCard.jsx`'s shared Reset | +1 | the Reset template moved into a helper, `ResetButton`, which the script did not know as a template | `ResetButton` joins the template list; the Reset is counted where `onReset` is given, as before |
+| the chapter navigation button | +1 | the script skipped `setActiveId(section.id)`, the old sidebar; the chapter buttons call `setActiveId(chapter.id)` | the skip reads the chapter button |
+
+The design-time note above ("now prints 337 ... the view switch's buttons now call a prop (+1)")
+named the third cause wrongly and the first as −13; the table here is the comparison's result. The
+script now prints **348**, and its controls are the 348 rows of `design.json`, one for one. No control
+changed.

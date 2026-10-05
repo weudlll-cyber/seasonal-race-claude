@@ -20,15 +20,16 @@
 //      configSchema fields).
 //   2. Tags INSIDE those helpers' own definitions are templates, not controls, and are skipped; the
 //      helper is counted where it is USED. A hidden <input type="file"> is skipped (its visible
-//      button is the control). The sidebar's section-navigation button is skipped: it is the
-//      structure Plan D replaces, not a control to place.
+//      button is the control). The sidebar's chapter-navigation button is skipped: it is the
+//      screen's structure, not a control to place.
 //   3. Each control gets an IDENTITY: the config key it writes if a literal one is visible
 //      (set('key'), set({ key: }), setDynamics('key'), f('key'), ...); else its literal data-testid
 //      (testId=, resetTestId=); else the handler it calls. Controls are de-duplicated by identity
 //      within one file — so a pill row is ONE control, a −/+ stepper is ONE control, and a colour
 //      picker plus its hex field (both writing the same key) is ONE control.
 //   4. A control rendered inside a .map() over a literal array of { key: '...' } objects, whose key
-//      is a variable, is expanded to one control per key in that array.
+//      is a variable, is expanded to one control per key in that array — also when the control is
+//      the template of a local render function that the arrays map over (`LIST.map(renderX)`).
 //
 // WHAT CANNOT BE COUNTED BLIND, and how it is handled: nothing is counted by hand. The two
 // helper expansions that depend on data outside the file (PROFILE_FIELDS for the camera's zoom
@@ -68,6 +69,7 @@ const TEMPLATE_DEFS = [
   'ConfigFields',
   'SubHeading',
   'SubCard',
+  'ResetButton',
   'RangeSlider',
   'DefaultControls',
   'VerifyCell',
@@ -106,25 +108,23 @@ function openingTag(text, start) {
 }
 
 // The character ranges of `function Name(` ... matching `}` — template definitions.
+// The index of the `}` closing the body of the function declared at `at`.
+function functionBodyEnd(text, at) {
+  const bodyStart = text.indexOf('{', text.indexOf(')', at));
+  let depth = 0;
+  for (let i = bodyStart; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}' && --depth === 0) return i;
+  }
+  return text.length;
+}
+
 function defRanges(text) {
   const out = [];
   for (const name of TEMPLATE_DEFS) {
     const re = new RegExp(`(?:export\\s+)?function\\s+${name}\\s*\\(`, 'g');
     let m;
-    while ((m = re.exec(text))) {
-      const bodyStart = text.indexOf('{', text.indexOf(')', m.index));
-      let depth = 0;
-      for (let i = bodyStart; i < text.length; i++) {
-        if (text[i] === '{') depth++;
-        else if (text[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            out.push([m.index, i]);
-            break;
-          }
-        }
-      }
-    }
+    while ((m = re.exec(text))) out.push([m.index, functionBodyEnd(text, m.index)]);
   }
   return out;
 }
@@ -200,6 +200,13 @@ function dynamicArg(tag) {
 // Keys of the literal array a .map() iterates, for a control at `idx` whose key is a variable.
 function mappedKeys(text, idx) {
   const before = text.slice(0, idx);
+  // The template of a local render function: the keys of every named array mapped over it.
+  const fns = [...before.matchAll(/function\s+(\w+)\s*\(/g)];
+  const fn = fns[fns.length - 1];
+  if (fn && functionBodyEnd(text, fn.index) > idx) {
+    const lists = [...text.matchAll(new RegExp(`(\\w+)\\.map\\(${fn[1]}\\)`, 'g'))];
+    if (lists.length) return lists.flatMap((l) => arrayKeysOfConst(text, l[1]));
+  }
   const mapAt = before.lastIndexOf('.map(');
   if (mapAt < 0) return null;
   // Inline array literal `[ ... ].map(` — walk back to its `[`.
@@ -309,7 +316,7 @@ for (const abs of files) {
     const base = { file: rel, line, tag: tagName };
 
     if (tagName === 'input' && /type="file"/.test(tag)) continue; // hidden picker
-    if (tagName === 'button' && /setActiveId\(section\.id\)/.test(tag)) continue; // section nav
+    if (tagName === 'button' && /setActiveId\(chapter\.id\)/.test(tag)) continue; // chapter nav
 
     if (tagName === 'SubCard' || tagName === 'SubHeading') {
       if (!/\bonReset=/.test(tag)) continue;

@@ -11,9 +11,10 @@
 //              DEVSCREEN-CHAPTERS-1 (2026-10-05): the sidebar lists CHAPTERS now, and a section
 //              is found in the content of the chapter it is placed in — so the LOCATORS below
 //              open a chapter and look for the section's stub, where they used to read a sidebar
-//              label. The view switch moved into "Accounts and system". What each test asserts is
-//              unchanged, except the two order tests, which now read the chapter order the design
-//              sets (race, camera, look, the things a race is made of).
+//              label. What each test asserts is unchanged, except the two order tests, which now
+//              read the chapter order the design sets (race, camera, look, the things a race is
+//              made of). The view switch is in the sidebar, under its header, in every chapter (the
+//              owner's decision of 2026-10-05).
 // ============================================================
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -96,9 +97,8 @@ function openChapter(title) {
   if (button) fireEvent.click(button);
 }
 
-/** The view switch lives in "Accounts and system". */
+/** The view switch, in the sidebar — reachable from every chapter. */
 function switchView(label) {
-  openChapter(ACCOUNTS);
   fireEvent.click(screen.getByText(label));
 }
 
@@ -111,7 +111,6 @@ beforeEach(() => {
 describe('DevScreen tier toggle — UI rendering', () => {
   it('renders the View toggle with All and Operator buttons', () => {
     renderDevScreen();
-    openChapter(ACCOUNTS);
     expect(screen.getByText('All')).toBeTruthy();
     expect(screen.getByText('Operator')).toBeTruthy();
   });
@@ -195,17 +194,10 @@ describe('DevScreen tier toggle — persistence', () => {
 
 describe('DevScreen tier toggle — active section fallback', () => {
   it('switches active section to first operator section when switching to Operator while on advanced section', () => {
-    const { rerender } = renderDevScreen();
-    // Navigate to the advanced-only chapter. The view switch itself sits in an operator chapter, so
-    // the view is narrowed here by the account's role instead of the switch.
+    renderDevScreen();
+    // Navigate to the advanced-only chapter, then switch to Operator view from the sidebar
     openChapter(DIAGNOSTICS);
-    // Switch to Operator view
-    useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' }, logout: vi.fn() });
-    rerender(
-      <MemoryRouter>
-        <DevScreen />
-      </MemoryRouter>
-    );
+    switchView('Operator');
     // The active section content should now be Race Defaults (first operator section)
     expect(screen.getByTestId('section-racedefaults')).toBeTruthy();
   });
@@ -266,7 +258,6 @@ describe('DevScreen role gating — operator (C1-B/C)', () => {
   it('B: operator has no view toggle in the DOM', () => {
     useAuth.mockReturnValue({ user: { username: 'op', role: 'operator' } });
     renderDevScreen();
-    openChapter(ACCOUNTS);
     expect(screen.queryByText('All')).toBeNull();
     // "Operator" button absent (only toggle uses that label; sidebar labels differ)
     expect(screen.queryByRole('button', { name: 'Operator' })).toBeNull();

@@ -8,9 +8,10 @@
 //
 // DEVSCREEN-CHAPTERS-1 (decided 2026-10-04, built 2026-10-05): the screen is read by CHAPTER.
 //   The sidebar lists the chapters of `devScreenChapters.js`; a chapter shows its intro and its
-//   sub-groups in order, each sub-group the section parts placed in it. The controls the sidebar
-//   used to carry (the editor links, the view switch, Log out, Back to Setup) are parts like any
-//   other and sit where the design places them; this file renders those few itself (`own`).
+//   sub-groups in order, each sub-group the section parts placed in it. The two editor links are
+//   parts like any other and sit where the design places them; this file renders them itself
+//   (`own`). The view switch (admins only), Back to Setup and Log out stay in the sidebar, reachable
+//   from every chapter (the owner's decision of 2026-10-05).
 // ============================================================
 
 import { useState } from 'react';
@@ -39,10 +40,9 @@ function chaptersFor(view) {
   })).filter((chapter) => chapter.subgroups.length > 0);
 }
 
-/** The screen's own controls, placed as parts: the two editor links and the screen frame. */
-function OwnPart({ which, isAdmin, view, onViewChange }) {
+/** The screen's own controls placed as parts: the two editor links. */
+function OwnPart({ which }) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
 
   if (which === 'trackEditorLink') {
     return (
@@ -53,53 +53,19 @@ function OwnPart({ which, isAdmin, view, onViewChange }) {
       </Ctl>
     );
   }
-  if (which === 'racerEditorLink') {
-    return (
-      <Ctl id="DevScreen:navigate('/racer-editor')">
-        <button className={`${s.btn} ${s.btnSecondary}`} onClick={() => navigate('/racer-editor')}>
-          Racer Editor →
-        </button>
-      </Ctl>
-    );
-  }
-  // 'screenFrame' — the view switch (admins only, as before), the way back, signing out.
+  // 'racerEditorLink'
   return (
-    <div className={s.btnRow}>
-      {isAdmin && (
-        <Ctl id="DevScreen:handleViewChange" style={{ gap: '0.5rem' }}>
-          <span className={s.tierToggleLabel}>View:</span>
-          <span className={s.tierToggleBtns}>
-            <button
-              className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
-              onClick={() => onViewChange('all')}
-            >
-              All
-            </button>
-            <button
-              className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
-              onClick={() => onViewChange('operator')}
-            >
-              Operator
-            </button>
-          </span>
-        </Ctl>
-      )}
-      <Ctl id="DevScreen:navigate('/setup')">
-        <button className={`${s.btn} ${s.btnSecondary}`} onClick={() => navigate('/setup')}>
-          ← Back to Setup
-        </button>
-      </Ctl>
-      <Ctl id="DevScreen:logout">
-        <button className={`${s.btn} ${s.btnDanger}`} onClick={() => logout()}>
-          Log out
-        </button>
-      </Ctl>
-    </div>
+    <Ctl id="DevScreen:navigate('/racer-editor')">
+      <button className={`${s.btn} ${s.btnSecondary}`} onClick={() => navigate('/racer-editor')}>
+        Racer Editor →
+      </button>
+    </Ctl>
   );
 }
 
 function DevScreen() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [activeId, setActiveId] = useState(CHAPTERS[0].id);
@@ -119,7 +85,7 @@ function DevScreen() {
 
   return (
     <div className={s.screen}>
-      {/* Sidebar — the chapters */}
+      {/* Sidebar — the view switch, the chapters, and the way out, in every chapter */}
       <nav className={s.sidebar}>
         <div className={s.sidebarHeader}>
           <div>
@@ -127,6 +93,29 @@ function DevScreen() {
             <div className={s.sidebarSubtitle}>Configuration</div>
           </div>
         </div>
+
+        {/* View switch — admins only */}
+        {isAdmin && (
+          <div className={s.tierToggle}>
+            <Ctl id="DevScreen:handleViewChange" style={{ gap: '0.5rem' }}>
+              <span className={s.tierToggleLabel}>View:</span>
+              <span className={s.tierToggleBtns}>
+                <button
+                  className={`${s.tierToggleBtn} ${view === 'all' ? s.tierToggleBtnActive : ''}`}
+                  onClick={() => handleViewChange('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={`${s.tierToggleBtn} ${view === 'operator' ? s.tierToggleBtnActive : ''}`}
+                  onClick={() => handleViewChange('operator')}
+                >
+                  Operator
+                </button>
+              </span>
+            </Ctl>
+          </div>
+        )}
 
         {visibleChapters.map((chapter) => (
           <button
@@ -138,6 +127,18 @@ function DevScreen() {
             {chapter.title}
           </button>
         ))}
+
+        {/* The way out, at the foot of the sidebar: the first one's auto margin takes the free space. */}
+        <Ctl id="DevScreen:navigate('/setup')" style={{ marginTop: 'auto' }}>
+          <button className={s.backBtn} onClick={() => navigate('/setup')}>
+            ← Back to Setup
+          </button>
+        </Ctl>
+        <Ctl id="DevScreen:logout">
+          <button className={s.backBtn} onClick={() => logout()}>
+            Log out
+          </button>
+        </Ctl>
       </nav>
 
       {/* Content — the active chapter: intro, then its sub-groups in order */}
@@ -161,16 +162,7 @@ function DevScreen() {
                   {effectiveView === 'all' && !isOperatorTier(p.tier) && (
                     <span className={s.advancedTag}>Advanced</span>
                   )}
-                  {p.own ? (
-                    <OwnPart
-                      which={p.own}
-                      isAdmin={isAdmin}
-                      view={view}
-                      onViewChange={handleViewChange}
-                    />
-                  ) : (
-                    <Section part={p.part} />
-                  )}
+                  {p.own ? <OwnPart which={p.own} /> : <Section part={p.part} />}
                 </div>
               );
             })}

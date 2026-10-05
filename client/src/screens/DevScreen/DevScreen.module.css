@@ -82,7 +82,16 @@
   text-align: center;
 }
 
-/* ── View switch (Accounts and system → You and this screen) ── */
+/* ── Tier Toggle — the view switch, in the sidebar under the header (admins only) ── */
+.tierToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid #2a2a35;
+  margin-bottom: 0.25rem;
+}
+
 .tierToggleLabel {
   font-size: 0.72rem;
   color: var(--color-muted);
@@ -117,6 +126,28 @@
 .tierToggleBtnActive {
   background: var(--color-primary);
   color: #fff;
+}
+
+/* ── The sidebar's foot: Back to Setup and Log out ── */
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid #2a2a35;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  margin-top: auto;
+  transition: color var(--transition);
+}
+
+.backBtn:hover {
+  color: var(--color-text);
 }
 
 /* ── Main content ── */

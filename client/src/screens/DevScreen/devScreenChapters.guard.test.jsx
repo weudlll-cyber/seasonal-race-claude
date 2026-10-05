@@ -33,6 +33,12 @@
 //     - it holds an info icon whose text is the design's info text, character for character;
 //     - within the snapshot, controls appear in the design's position order.
 //   After the walk every design row must have been seen (else MISSING).
+//
+// THE SIDEBAR IS A PLACEMENT OF ITS OWN. The view switch, Back to Setup and Log out sit in the fixed
+// sidebar, reachable from every chapter (the owner's decision of 2026-10-05); design.json places
+// them in "Sidebar (all chapters)". Every snapshot reads the sidebar as that one placement, so they
+// are checked in every chapter state exactly like the content's controls — and one of them rendered
+// inside a chapter as well is a WRONG PLACE and a DUPLICATE.
 // ============================================================
 
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
@@ -209,16 +215,30 @@ const DESIGN = JSON.parse(
 const idOf = (row) => `${row.section.replace(/^sections\//, '').replace(/\.jsx$/, '')}:${row.id}`;
 const ROWS = new Map(DESIGN.map((r) => [idOf(r), r]));
 
+/** The placement the design gives the controls of the fixed sidebar. */
+const SIDEBAR = 'Sidebar (all chapters)';
+
+const infoTextsOf = (el) =>
+  [...el.querySelectorAll('[role="img"]')].map((i) => i.getAttribute('aria-label'));
+
 function snapshot() {
   const main = document.querySelector('main');
   const chapter = main.getAttribute('data-chapter');
-  return [...main.querySelectorAll('[data-control-id]')].map((el) => ({
+  const content = [...main.querySelectorAll('[data-control-id]')].map((el) => ({
     id: el.getAttribute('data-control-id'),
     chapter,
     subgroup: el.closest('section')?.querySelector('h2')?.textContent ?? null,
     part: el.closest('[data-part]')?.getAttribute('data-part') ?? null,
-    infoTexts: [...el.querySelectorAll('[role="img"]')].map((i) => i.getAttribute('aria-label')),
+    infoTexts: infoTextsOf(el),
   }));
+  const sidebar = [...document.querySelectorAll('nav [data-control-id]')].map((el) => ({
+    id: el.getAttribute('data-control-id'),
+    chapter: SIDEBAR,
+    subgroup: SIDEBAR,
+    part: 'sidebar',
+    infoTexts: infoTextsOf(el),
+  }));
+  return [...content, ...sidebar];
 }
 
 /** The control element(s) of a control id, for clicking. */
@@ -305,7 +325,20 @@ describe('DEVSCREEN-CHAPTERS-1 — the screen holds every control of the design,
   });
 
   it('the registry has the design chapters, in the design order', () => {
-    expect(CHAPTERS.map((c) => c.title)).toEqual([...new Set(DESIGN.map((r) => r.chapter))]);
+    const chapters = DESIGN.map((r) => r.chapter).filter((c) => c !== SIDEBAR);
+    expect(CHAPTERS.map((c) => c.title)).toEqual([...new Set(chapters)]);
+  });
+
+  it('the sidebar holds the three controls the design places there', () => {
+    const placed = DESIGN.filter((r) => r.chapter === SIDEBAR).map(idOf);
+    expect(placed).toEqual([
+      'DevScreen:handleViewChange',
+      "DevScreen:navigate('/setup')",
+      'DevScreen:logout',
+    ]);
+    // ...and every chapter state shows all three of them in the sidebar
+    for (const snap of snapshots)
+      expect(snap.filter((c) => c.part === 'sidebar').map((c) => c.id)).toEqual(placed);
   });
 
   it('no control the design does not list (EXTRA)', () => {
