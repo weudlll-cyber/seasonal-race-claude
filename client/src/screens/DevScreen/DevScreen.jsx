@@ -128,8 +128,8 @@ function DevScreen() {
           </button>
         ))}
 
-        {/* The way out, at the foot of the sidebar: the first one's auto margin takes the free space. */}
-        <Ctl id="DevScreen:navigate('/setup')" style={{ marginTop: 'auto' }}>
+        {/* The way out, directly under the chapters — never pushed down past a long chapter */}
+        <Ctl id="DevScreen:navigate('/setup')">
           <button className={s.backBtn} onClick={() => navigate('/setup')}>
             ← Back to Setup
           </button>

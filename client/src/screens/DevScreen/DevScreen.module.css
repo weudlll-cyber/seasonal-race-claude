@@ -128,7 +128,7 @@
   color: #fff;
 }
 
-/* ── The sidebar's foot: Back to Setup and Log out ── */
+/* ── Back to Setup and Log out, directly under the chapters in the sidebar ── */
 .backBtn {
   display: flex;
   align-items: center;
@@ -142,7 +142,6 @@
   cursor: pointer;
   width: 100%;
   text-align: left;
-  margin-top: auto;
   transition: color var(--transition);
 }
 

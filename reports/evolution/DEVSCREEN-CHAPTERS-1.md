@@ -250,9 +250,10 @@ racing.
 ### The sidebar (all chapters) — 3
 
 The view switch (admins only, directly under the "Dev Panel / Configuration" header), "← Back to
-Setup" and "Log out" (at the foot of the sidebar, for every signed-in user) stay in the fixed sidebar
-and are reachable from every chapter. **The owner decided this on 2026-10-05**; the design first
-placed them in chapter 7 as "You and this screen". It is a placement of its own in `design.json`
+Setup" and "Log out" (directly under the list of chapters, for every signed-in user) stay in the
+fixed sidebar and are reachable from every chapter. **The owner decided this on 2026-10-05**; the
+design first placed them in chapter 7 as "You and this screen". Sidebar order, top to bottom: the
+header, the view switch, the chapters, Back to Setup, Log out. It is a placement of its own in `design.json`
 ("Sidebar (all chapters)") and in the chapter guard.
 
 ### There is no "top ten" view
@@ -1013,8 +1014,9 @@ reaches all 348 controls by rendering.
 "View: All / Operator" switch leave chapter 7 for the fixed sidebar, so they can be reached from
 every chapter; the rest of the Plan D screen is accepted as built. The view switch sits directly
 under the "Dev Panel / Configuration" header, admins only, as on master before Plan D; Back to Setup
-and Log out sit at the foot of the sidebar for every signed-in user. Ids, handlers and info texts are
-unchanged; the styles are master's own `.tierToggle` and `.backBtn`, restored verbatim. Chapter 7's
+and Log out first sat at the foot of the sidebar for every signed-in user (see the next section for
+where they sit now). Ids, handlers and info texts are unchanged; the styles are master's own
+`.tierToggle` and `.backBtn`, restored verbatim. Chapter 7's
 first sub-group is left with the password form and is now "Your password"; the chapter intro no
 longer mentions the moved controls. Counts: chapter 7 has 21 controls (4 in the operator view), the
 sidebar 3 (2, +1 for an admin); the total stays 348 and the operator view 90 (+9 for an admin).
@@ -1039,3 +1041,13 @@ The design-time note above ("now prints 337 ... the view switch's buttons now ca
 named the third cause wrongly and the first as −13; the table here is the comparison's result. The
 script now prints **348**, and its controls are the 348 rows of `design.json`, one for one. No control
 changed.
+
+## The sidebar buttons — 2026-10-05
+
+**The owner decided on 2026-10-05** that "← Back to Setup" and "Log out" sit directly under the list
+of chapters in the sidebar, not at its foot: the foot was too far down while a long chapter is open.
+They now follow the last chapter entry, for every signed-in user; the view switch stays under the
+header. What pushed them down is gone — the auto top margin on the first of them, and `.backBtn`'s
+own `margin-top: auto`, which only ever acted when the button was a direct child of the sidebar.
+Ids, handlers, info texts and the rest of `.backBtn` are unchanged. The chapter guard already reads
+the sidebar in document order (view switch, Back to Setup, Log out) and is unchanged.
