@@ -31,7 +31,7 @@ import { parsePointsLadder, pointsActive, pointsFor } from '../../../modules/per
 import s from '../DevScreen.module.css';
 
 /** The longest period, in days — the server's `EVALUATION_MAX_DAYS`, which refuses anything longer. */
-export const PERIOD_MAX_DAYS = 366;
+const PERIOD_MAX_DAYS = 366;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A UTC calendar date as `YYYY-MM-DD`, for a date input. */
@@ -70,7 +70,7 @@ const NUM = { textAlign: 'right' };
  * equal wins, 2nd places, 3rd places and races — the server's order, without the name that only
  * breaks ties for a stable listing.
  */
-export function placesOf(rows, withPoints) {
+function placesOf(rows, withPoints) {
   const keyOf = (r) =>
     withPoints
       ? String(r.points)

@@ -45,6 +45,7 @@ export const RACE_SOURCE = Object.freeze({
 });
 
 /** Every value this vocabulary recognises. Exported so callers can validate without re-listing. */
+// A seam, unimported on purpose: reports/audit/DELIVERY-CLEAN-1.md §5.3.
 export const RACE_SOURCES = Object.freeze(Object.values(RACE_SOURCE));
 
 /**

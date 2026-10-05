@@ -108,7 +108,7 @@ export const CONTROL_INFO = {
   'AutoScaleSection:maxScale':
     'The largest racers may be grown to on a roomy track, as a multiple of their normal size.',
   'AutoScaleSection:minTargetScreenPx':
-    'The starting value for every racer type’s own “Size floor — this racer type only” in the racer editor (Tracks, racers, brands and groups → Racer types). A type that already has its own value keeps it. Not the same setting as that per-type one, although both carry the same stored name.',
+    'The size floor every racer type starts from in the racer editor (Tracks, racers, brands and groups → Racer types); a type with its own floor keeps it. This is the setting for every type, not the per-type one, although both are stored under the same name. Neither changes the race picture: the floor the race draws with is “Minimum racer size (% of frame)” under Look, labels and effects.',
   'AutoScaleSection:setPreviewWidth':
     'Try-out only, nothing is saved: enter a track width to see the scale the settings above would give.',
   'AutoScaleSection:setPreviewRacers':
@@ -509,7 +509,7 @@ export const CONTROL_INFO = {
   'RacerEditModal:handleFieldReset':
     'Appears beside a field you changed; puts that one field back to the type’s shipped value.',
   'RacerEditModal:handleMinSizeChange':
-    'The smallest this racer type should appear on screen, shown in the animated preview beside it. Starts from the size floor set for every type under The race → Start; a value set here belongs to this type alone. Not the same setting as that one, although both carry the same stored name.',
+    'This racer type’s own size floor, shown in the animated preview beside it. It starts from the floor set for every type under The race → Start; a value set here belongs to this type alone. This is the per-type setting, not the one for every type, although both are stored under the same name. Neither changes the race picture: the floor the race draws with is “Minimum racer size (% of frame)” under Look, labels and effects.',
   'RacerEditModal:handleMinSizeReset':
     'Removes this type’s own size floor so it follows the floor set for every type again.',
   'RacerEditModal:handleSurfaceClassToggle':

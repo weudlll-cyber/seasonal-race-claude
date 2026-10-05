@@ -75,7 +75,7 @@ function readInstallTracks(dir = join(DATA_ROOT, 'tracks')) {
  * does. The owner's decision of 2026-10-04 — a longer period is REFUSED with a sentence saying so,
  * never quietly cut short. The server reads every race of the period, so this is also its bound.
  */
-export const EVALUATION_MAX_DAYS = 366;
+const EVALUATION_MAX_DAYS = 366;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** One store per process, opened lazily so importing this module opens no file. */
