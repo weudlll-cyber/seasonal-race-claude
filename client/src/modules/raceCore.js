@@ -768,6 +768,7 @@ export function stepRacePhysics(st, cfg) {
  * @param {number} [opts.checkpointIntervalMs=5000] checkpoint cadence in physics ms
  * @returns {{results:Array, checkpoints:Map<number,Array>, meta:object}}
  */
+// A declared engine entry point, unimported on purpose: reports/evolution/HULL-FIX-1.md.
 export function runRaceHeadless(params, opts = {}) {
   const checkpointIntervalMs = opts.checkpointIntervalMs ?? 5000;
   const { state, config, meta } = createRaceFromIdentity(params);

@@ -207,7 +207,7 @@ export function racerFeasibility(racer, postChaos, finishT, config = GENERATOR_C
 // The rate that governs travel from `fromRank` to `toRank`: a SMALLER rank number is further
 // forward, so a decrease is a climb and an increase is a drop. A leg that goes nowhere costs no
 // time, and its rate is never consulted.
-export function rateForLeg(fromRank, toRank, rankRates) {
+function rateForLeg(fromRank, toRank, rankRates) {
   return toRank < fromRank ? rankRates.climb : rankRates.drop;
 }
 

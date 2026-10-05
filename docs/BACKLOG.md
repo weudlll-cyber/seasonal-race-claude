@@ -218,83 +218,6 @@ not an address which is right (§9.1).
       `serving the built client`, everything it created removed. The README's install section no
       longer contains an unexecuted command.
 
-- [ ] **C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
-      the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
-      in the root manifest, target from `RA_BACKUP_DIR` · ~~★ **NEW 2026-10-01:** `npm run data:export`
-      reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
-      install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
-      documents now say not to use it there~~ — ★ **CLOSED 2026-10-02 (DATA-EXPORT-DATADIR-1):** reads
-      `RA_DATA_DIR` through `resolveDataRoot`; the warnings are gone · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
-      the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
-      ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
-      `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
-      registry's naming convention. Genuinely reached by nothing: 89 tree-wide (36 top level,
-      53 in the declared hand-run `scripts/diag/`). 4 spent one-offs removed; the rest kept with
-      a reason each** · ~~19 of 39
-      top-level documents carry no OWNS line, which caps the document-overlap check at half the
-      corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
-      counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
-      different wordings. Normalised; 39 of 40 now carry a canonical line, `CLAUDE.md` excluded
-      deliberately.** · ~~`framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
-      config is 0.7, harmless while every caller passes it~~ — ★ **CLOSED 2026-10-02 (TIDY-C-1):**
-      the three defaults now read `DEFAULT_INNER_FRAME_PCT` (`framingConfig.js`, which reads
-      `targetInnerFramePct` from `defaults.js`), the same constant the director falls back to;
-      every caller still passes the value, and `check-fingerprints --mint` verified all four roles
-      unchanged · ~~`Dockerfile:22,33` pins a floating tag rather than a digest~~ — ★ **CLOSED
-      2026-10-02 (TIDY-C-1), ordered by the owner that day:** both `FROM` lines pin `node:20-alpine`
-      by its multi-arch index digest, with a comment saying a bump is manual; `check-image-starts`
-      built and booted the pinned image · ~~the backup writes no checksum~~ — ★ **CLOSED 2026-10-02
-      (TIDY-C-1):** `npm run backup` writes `<archive>.sha256` in `sha256sum` format, and
-      `npm run status` FAILS the backup check when the newest archive's checksum file is missing or
-      does not match · ~~the session cookie lives 30 days~~ — ★ **DECIDED 2026-10-04: 30 days stays.**
-      ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
-      client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
-      the server declaration is now `^4.1.4`, so all four vitest declarations across both
-      manifests are identical and `npm ls` reports no `invalid`. Both suites green on it
-      (server 869, client 4778).
-      ★★ **AND A DEVIATION FROM THE BRIEF, NAMED RATHER THAN HIDDEN.** It said to align to the
-      HIGHER range and refresh the lockfiles. That was attempted first and **could not be
-      verified on this machine: `npm install` reports success and does not materialise an
-      upgrade.** With both manifests set to `^4.1.11` and both lockfiles refreshed, the disk
-      stayed at client 4.1.5 / server 4.1.8 and `npm ls` said *invalid: "^4.1.11" from the root
-      project* — with `node_modules` writable, so it is not a permission fault. Shipping a
-      lockfile nobody here can install would have made CI the first to try it, and the piece's
-      own condition was *confirm both suites still run*. The attempt was reverted in full.
-      ★ The alignment taken instead achieves what the row asked — one declared range — and is
-      provable now. **A lower floor costs nothing in practice: `npm ci` installs from the
-      LOCKFILE, not the range, so CI keeps getting the pinned versions.** · `minTargetScreenPx` names two different settings
-      in two stores, `autoSpriteScale.js:23` and `racer-types/index.js:239`, not renamed because a
-      stored-key rename touches saved configs (§6.7) · ~~`label-bench-matrix.mjs:40` and `phys-bench-matrix.mjs:63` require `--master` on any machine
-      but the one they were written on and say nothing when it fails~~ — ★★ **REFUTED
-      2026-09-27 (DC3 piece 6), and it was my own claim.** They say so loudly:
-      `label-bench-matrix.mjs:55` and `phys-bench-matrix.mjs:90` check the target is a RaceArena
-      tree and print **`FAIL: --master=<path> is not a RaceArena tree.`** then `process.exit(2)`.
-      Both were RUN with a bogus `--master` to prove it. The claim came from §7.2, which asserted
-      it **without ever running them**. Closed as refuted, not done — there was nothing to build (§7.2) · ~~`client/e2e/` is outside `format:check`, which is
-      `prettier --check src`, and `d355-smoke.spec.js` fails prettier today, pre-existing at master
-      (§10 run 2)~~ — ★ **CLOSED 2026-10-04 (TIDY-C-2):** it was 19 files, not one; all formatted,
-      and `format` / `format:check` now cover `src e2e`. Sabotaged once: an unformatted line in an e2e
-      spec fails `format:check`. The browser gate passed on the reformatted specs · 8 exported symbols have no importer, never removed because an unimported
-      export may be a seam, and three of the eight are the auditor's own from the day before
-      (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
-      (§9.2).
-      ★ **Also open, from DC3 piece 4:** the vitest pair could be moved to a newer 4.1.x, but
-      **not from this machine** — `npm install` will not materialise an upgrade here (see the
-      struck-through `@vitest/coverage-v8` item above). One `npm install` on a machine where
-      that works, plus both suites, closes it.
-      ★ **TIDY-C-2, 2026-10-04 — what is still open, and why each one STAYS:** ~~the 30-day session
-      cookie~~ (decided 2026-10-04: it stays); `minTargetScreenPx` naming two settings (a rename touches saved configs, so
-      it is a behaviour change, not a tidy); the 8 unimported exports (each may be a seam, which is a
-      judgement); the 46 undocumented routes (documentation work, not one fix); the vitest upgrade
-      (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
-      is a defect with one obvious fix that he would not see.
-      ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
-      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
-      `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
-      1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
-      unestablished**; the breakpoints and the fixed field are both facts and nothing in the
-      repository reconciles them. Costs nothing today; recorded so the question has an address.
-
 ---
 
 ## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
@@ -950,6 +873,19 @@ several organizers on one server. **On 2026-10-01 the owner also decided that th
 will NOT be built:** organizers on one installation share everything that is shared today, and races
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
+
+- [ ] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — opened 2026-10-06 (TIDY-C-3).** Neither
+      is changed yet; both are written down in [API.md](API.md) where the route is.
+      (1) **`POST /api/races/:shortKey/verify` can stop the server.** Any error other than a refusal
+      is rethrown from an `async` handler (`server/src/routes/races.js:275`); Express 4 does not catch
+      a rejected promise, the app has no error middleware and no `unhandledRejection` handler, so under
+      Node's default the process exits. Admin-only — a malformed track file read during a verify is
+      enough. (2) **The stored-race duplicate check is not team-scoped.** `getRaceByClientId`
+      (`server/src/races/raceStore.js:500`) looks a `clientRaceId` up across every team, so
+      `POST /api/races` with another team's id answers 200 with that race's `id` and `shortKey` — the
+      one place where a team can learn of another team's race. The ids are random, so it is hard to
+      reach. **verify:** a test that a verify whose replay throws answers 500 and the server keeps
+      running; a test that a `clientRaceId` stored by one team is not recognised for another.
 
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
@@ -1956,6 +1892,110 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **C — THE TIDY LIST — CLOSED 2026-10-06 (TIDY-C-3), with its last three items done and two
+      remainders closed with it for the reasons below.**
+      ★ **The undocumented routes:** [API.md](API.md) now documents **all 63** routes, re-counted from
+      source (53 on the nine routers, 9 promote/export sub-routes, `/api/health`) — not 59: four were
+      added after the 2026-09-27 count. Each says who may call it, the request, the response and every
+      error, with `file:line`. No guard for API.md existed and none was built. Documenting them found
+      two defects, recorded as their own row in PART ONE (*SERVER — two defects found documenting the
+      API*), not changed here.
+      ★ **The unimported exports:** re-derived from source — **15**, not 8 (seven new since
+      2026-09-27). Four are named by a document as deliberate seams and keep their `export` with a
+      one-line pointer (`runRaceHeadless` → HULL-FIX-1; `RACE_SOURCE_COLUMN`, `hasRaceSourceColumn`,
+      `RACE_SOURCES` → DELIVERY-CLEAN-1 §5.3). Ten are used only in their own file and lose the
+      `export` keyword (`pruneStoredAutoScaleConfig`, `rateForLeg`, `PERIOD_MAX_DAYS`, `placesOf`,
+      overlayGeometry's `CANVAS_H`, `compareEvaluationRows`, `POINTS_LADDER_MAX`,
+      `EVALUATION_MAX_DAYS`, `API_PREFIX`, `CLIENT_DIST`). One, `_resetDeliveryForTests`, was called
+      by nothing and is removed. The verdicts, one by one, are in
+      [MORNING-2026-10-06](../reports/night/MORNING-2026-10-06.md).
+      ★ **`minTargetScreenPx`:** still two settings under one stored name — the auto-scale card's
+      value for every racer type (`autoSpriteScale.js`) and each type's own floor (`racer-types/
+      index.js` `TUNABLE_FIELDS`). **The name stays because a rename would touch every saved config.**
+      The comments at both places and both Dev Screen info texts now say which one each is — and that
+      neither changes the race picture any more: both feed only the racer editor, and the floor the
+      race draws with is `minDrawnFrameFrac` ("Minimum racer size (% of frame)").
+      ★ **Closed with the row, not built:** the vitest upgrade (CI installs from the lockfile, so
+      nothing is broken; one `npm install` on a machine where it upgrades still does it) and the
+      small-screen breakpoints (a question about phone use that has not been asked; it costs nothing
+      today). Both stay readable below. The row as it stood:
+      ****C — the tidy list, none of it costing anything today.** ~~No `npm run backup` entry in any of
+      the three manifests (§8.4)~~ — ★ **CLOSED 2026-10-01 (RELEASE-BASICS-1 (b)):** `npm run backup`
+      in the root manifest, target from `RA_BACKUP_DIR` · ~~★ **NEW 2026-10-01:** `npm run data:export`
+      reads a fixed `server/data` (`scripts/data-export.mjs:45`) and ignores `RA_DATA_DIR`, so on an
+      install laid out as [DEPLOYMENT.md](DEPLOYMENT.md) says it measures the wrong directory — the
+      documents now say not to use it there~~ — ★ **CLOSED 2026-10-02 (DATA-EXPORT-DATADIR-1):** reads
+      `RA_DATA_DIR` through `resolveDataRoot`; the warnings are gone · ~~65 scripts named by no invoker searched (§1.2)~~ — ★ **RE-PROVEN 2026-09-27 (DC2 arc 3) and
+      the 65 needs reading carefully: it is right for "top-level scripts named by no invoker", but
+      ~29 of them are DISCOVERED BY CONVENTION rather than named — `*.test.mjs` via
+      `scriptTestFiles()` (`verify.mjs:650`) and the top-level `check-*.mjs` guards via the
+      registry's naming convention. Genuinely reached by nothing: 89 tree-wide (36 top level,
+      53 in the declared hand-run `scripts/diag/`). 4 spent one-offs removed; the rest kept with
+      a reason each** · ~~19 of 39
+      top-level documents carry no OWNS line, which caps the document-overlap check at half the
+      corpus (§1.1)~~ — ★ **RESOLVED 2026-09-27 (DC2 arc 2), and the finding was itself wrong: 19
+      counted the literal string `**Owns:**`, while 37 of 39 already declared their reason in three
+      different wordings. Normalised; 39 of 40 now carry a canonical line, `CLAUDE.md` excluded
+      deliberately.** · ~~`framingRule.js:207,427,479` defaults `innerFramePct` to 1 where the shipped
+      config is 0.7, harmless while every caller passes it~~ — ★ **CLOSED 2026-10-02 (TIDY-C-1):**
+      the three defaults now read `DEFAULT_INNER_FRAME_PCT` (`framingConfig.js`, which reads
+      `targetInnerFramePct` from `defaults.js`), the same constant the director falls back to;
+      every caller still passes the value, and `check-fingerprints --mint` verified all four roles
+      unchanged · ~~`Dockerfile:22,33` pins a floating tag rather than a digest~~ — ★ **CLOSED
+      2026-10-02 (TIDY-C-1), ordered by the owner that day:** both `FROM` lines pin `node:20-alpine`
+      by its multi-arch index digest, with a comment saying a bump is manual; `check-image-starts`
+      built and booted the pinned image · ~~the backup writes no checksum~~ — ★ **CLOSED 2026-10-02
+      (TIDY-C-1):** `npm run backup` writes `<archive>.sha256` in `sha256sum` format, and
+      `npm run status` FAILS the backup check when the newest archive's checksum file is missing or
+      does not match · ~~the session cookie lives 30 days~~ — ★ **DECIDED 2026-10-04: 30 days stays.**
+      ★ **Six more added 2026-09-27 by the late pieces:** ~~`@vitest/coverage-v8` is `^4.1.4` in the
+      client and `^4.1.8` in the server (§6.6)~~ — ★ **CLOSED 2026-09-27 (DC3 piece 4):**
+      the server declaration is now `^4.1.4`, so all four vitest declarations across both
+      manifests are identical and `npm ls` reports no `invalid`. Both suites green on it
+      (server 869, client 4778).
+      ★★ **AND A DEVIATION FROM THE BRIEF, NAMED RATHER THAN HIDDEN.** It said to align to the
+      HIGHER range and refresh the lockfiles. That was attempted first and **could not be
+      verified on this machine: `npm install` reports success and does not materialise an
+      upgrade.** With both manifests set to `^4.1.11` and both lockfiles refreshed, the disk
+      stayed at client 4.1.5 / server 4.1.8 and `npm ls` said *invalid: "^4.1.11" from the root
+      project* — with `node_modules` writable, so it is not a permission fault. Shipping a
+      lockfile nobody here can install would have made CI the first to try it, and the piece's
+      own condition was *confirm both suites still run*. The attempt was reverted in full.
+      ★ The alignment taken instead achieves what the row asked — one declared range — and is
+      provable now. **A lower floor costs nothing in practice: `npm ci` installs from the
+      LOCKFILE, not the range, so CI keeps getting the pinned versions.** · `minTargetScreenPx` names two different settings
+      in two stores, `autoSpriteScale.js:23` and `racer-types/index.js:239`, not renamed because a
+      stored-key rename touches saved configs (§6.7) · ~~`label-bench-matrix.mjs:40` and `phys-bench-matrix.mjs:63` require `--master` on any machine
+      but the one they were written on and say nothing when it fails~~ — ★★ **REFUTED
+      2026-09-27 (DC3 piece 6), and it was my own claim.** They say so loudly:
+      `label-bench-matrix.mjs:55` and `phys-bench-matrix.mjs:90` check the target is a RaceArena
+      tree and print **`FAIL: --master=<path> is not a RaceArena tree.`** then `process.exit(2)`.
+      Both were RUN with a bogus `--master` to prove it. The claim came from §7.2, which asserted
+      it **without ever running them**. Closed as refuted, not done — there was nothing to build (§7.2) · ~~`client/e2e/` is outside `format:check`, which is
+      `prettier --check src`, and `d355-smoke.spec.js` fails prettier today, pre-existing at master
+      (§10 run 2)~~ — ★ **CLOSED 2026-10-04 (TIDY-C-2):** it was 19 files, not one; all formatted,
+      and `format` / `format:check` now cover `src e2e`. Sabotaged once: an unformatted line in an e2e
+      spec fails `format:check`. The browser gate passed on the reformatted specs · 8 exported symbols have no importer, never removed because an unimported
+      export may be a seam, and three of the eight are the auditor's own from the day before
+      (§5.3) · 46 of the 59 API routes are documented nowhere, which `API.md` now states correctly
+      (§9.2).
+      ★ **Also open, from DC3 piece 4:** the vitest pair could be moved to a newer 4.1.x, but
+      **not from this machine** — `npm install` will not materialise an upgrade here (see the
+      struck-through `@vitest/coverage-v8` item above). One `npm install` on a machine where
+      that works, plus both suites, closes it.
+      ★ **TIDY-C-2, 2026-10-04 — what is still open, and why each one STAYS:** ~~the 30-day session
+      cookie~~ (decided 2026-10-04: it stays); `minTargetScreenPx` naming two settings (a rename touches saved configs, so
+      it is a behaviour change, not a tidy); the 8 unimported exports (each may be a seam, which is a
+      judgement); the 46 undocumented routes (documentation work, not one fix); the vitest upgrade
+      (needs a machine where `npm install` upgrades); the breakpoints (a question about phone use). None
+      is a defect with one obvious fix that he would not see.
+      ★ **One more, 2026-09-27:** three screens carry a small-screen breakpoint —
+      `RaceScreen/RaceScreen.css:476` (640px), `ResultScreen/ResultScreen.css:494` (768px),
+      `RacerEditor/RacerEditor.module.css:49` (900px) — while the race picture is a fixed
+      1280×720 field (`camera/projection.js:37-38`). **Whether phone use is a goal is
+      unestablished**; the breakpoints and the fixed field are both facts and nothing in the
+      repository reconciles them. Costs nothing today; recorded so the question has an address.
 
 - [x] ★★ **`B-UX2` — THE DEV SCREEN'S REORGANISATION — CLOSED 2026-10-05 (DEVSCREEN-CHAPTERS-1):
       BUILT AND MERGED.** The Dev Screen is read by seven chapters — The race; Camera — start to

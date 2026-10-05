@@ -27,7 +27,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 export const DEFAULT_POINTS_RULE = Object.freeze({ pointsEnabled: false, pointsPerPlace: [] });
 
 /** No field is larger than 80 racers; a ladder longer than this is a mistake, not a rule. */
-export const POINTS_LADDER_MAX = 100;
+const POINTS_LADDER_MAX = 100;
 const POINTS_VALUE_MAX = 1_000_000;
 
 /**

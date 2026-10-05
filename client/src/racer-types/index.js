@@ -236,6 +236,9 @@ export const TUNABLE_FIELDS = [
   'leaderRingColor',
   'leaderEllipseRx',
   'leaderEllipseRy',
+  // ONE racer type's own size floor, set in the racer editor. NOT the auto-scale card's
+  // `minTargetScreenPx` for every type (autoSpriteScale.js), which shares the stored name and is
+  // only this one's starting value; the name stays because a rename would touch saved configs.
   'minTargetScreenPx',
   'surfaceClasses',
   'surfaceEffectOverrides',

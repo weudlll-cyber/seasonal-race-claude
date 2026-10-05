@@ -20,6 +20,11 @@ export const DEFAULT_AUTO_SCALE_CONFIG = {
   referenceValue: 23,
   minScale: 0.65,
   maxScale: 2.5,
+  // The size floor EVERY racer type starts from in the racer editor (RacerEditModal reads it as the
+  // value a type without its own shows). NOT the per-type `minTargetScreenPx` in a racer type's
+  // overrides (racer-types/index.js TUNABLE_FIELDS), which shares the stored name. The name stays:
+  // a rename would touch every saved config. The race draws with neither — its floor is
+  // `minDrawnFrameFrac` (see computeRenderDisplayScale below).
   minTargetScreenPx: 32,
 };
 
@@ -186,7 +191,7 @@ export function loadAutoScaleConfig() {
  *
  * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
  */
-export function pruneStoredAutoScaleConfig() {
+function pruneStoredAutoScaleConfig() {
   const { pruned, changed } = pruneStored(
     storageGet(KEYS.AUTO_SCALE_CONFIG),
     DEFAULT_AUTO_SCALE_CONFIG

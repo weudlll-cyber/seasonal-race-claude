@@ -36,6 +36,7 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 
 /** The column this migration adds, and the table it belongs to. Stated once. */
+// A seam, unimported on purpose: reports/audit/DELIVERY-CLEAN-1.md §5.3.
 export const RACE_SOURCE_COLUMN = 'race_source';
 const TABLE = 'races';
 
@@ -48,6 +49,7 @@ const TABLE = 'races';
  * @param {import('better-sqlite3').Database} db
  * @returns {boolean}
  */
+// A seam, unimported on purpose: reports/audit/DELIVERY-CLEAN-1.md §5.3.
 export function hasRaceSourceColumn(db) {
   const tableExists = db
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")

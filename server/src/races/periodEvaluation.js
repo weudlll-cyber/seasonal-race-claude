@@ -32,8 +32,8 @@ import { playerNameKey } from '../../../shared/playerNames.mjs';
 /** Did this result cross the line? See rule 3. */
 const finished = (result) => result?.finishTimeMs != null;
 
-/** Rule 6. Exported so the client and the tests read the one order. */
-export function compareEvaluationRows(a, b) {
+/** Rule 6 — the one order of the evaluation's rows. */
+function compareEvaluationRows(a, b) {
   return (
     b.wins - a.wins ||
     (b.places[2] ?? 0) - (a.places[2] ?? 0) ||

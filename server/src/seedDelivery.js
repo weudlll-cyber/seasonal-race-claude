@@ -197,7 +197,3 @@ export function deliverSeedsOnce(dataRoot = DATA_ROOT) {
   return deliverSeeds(dataRoot);
 }
 
-/** Tests only — forget that delivery has run in this process. */
-export function _resetDeliveryForTests() {
-  _done = false;
-}

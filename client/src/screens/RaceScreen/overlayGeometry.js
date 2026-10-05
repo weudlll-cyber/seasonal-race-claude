@@ -24,7 +24,7 @@ import { MINIMAP_W, MINIMAP_H, MINIMAP_MARGIN } from '../../modules/camera/Minim
 
 /** The fixed canvas store — the SAME numbers `RaceScreen/index.jsx` passes to `<canvas width/height>`. */
 export const CANVAS_W = 1280;
-export const CANVAS_H = 720;
+const CANVAS_H = 720;
 
 /**
  * The overlays that live inside `.race-canvas-wrapper`, in the anchors they were shipped with

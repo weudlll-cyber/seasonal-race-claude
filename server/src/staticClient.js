@@ -54,7 +54,7 @@ import { injectRuntimeConfig, resolvePublicOrigin } from './runtimeConfig.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Everything under this prefix belongs to the API and is never answered with the app's HTML. */
-export const API_PREFIX = '/api/';
+const API_PREFIX = '/api/';
 
 /**
  * Where the built client lives. `RA_CLIENT_DIST` redirects it without touching any consumer —
@@ -69,7 +69,7 @@ export function resolveClientDist(env = process.env) {
   return resolve(__dirname, '../../client/dist');
 }
 
-export const CLIENT_DIST = resolveClientDist();
+const CLIENT_DIST = resolveClientDist();
 
 /** True when there is a build to serve. Checked once at mount time, never per request. */
 export function clientBuildExists(dist = CLIENT_DIST) {
