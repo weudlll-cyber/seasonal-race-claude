@@ -772,6 +772,18 @@ async function authenticate(browser, stack) {
   await page.getByLabel(/password/i).fill(stack.password);
   await page.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL((url) => !/\/login/.test(url.pathname), { timeout: 20000 });
+  // TEST-AIDS-1: the viewer probe (`?viewerprobe=1`) is a test aid, and a fresh installation ships
+  // with the test-aids switch OFF. Turned ON here, as the admin this run created, through the real
+  // endpoint — every race context below signs in after it and reads ON.
+  await page.evaluate(async (api) => {
+    const r = await fetch(`${api}/api/settings/test-aids`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    if (!r.ok) throw new Error(`could not turn the test-aids switch on (${r.status})`);
+  }, `http://localhost:${stack.apiPort}`);
   const state = await ctx.storageState();
   await ctx.close();
   return state;

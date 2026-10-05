@@ -1,6 +1,7 @@
 # DEV-DISPLAYS-1 — every developer-only display and control, before delivery
 
-**2026-10-04, survey only — nothing was changed.** For the BACKLOG row *BEFORE DELIVERY: SWITCH OFF
+**2026-10-04, survey only — nothing was changed.** ★ **BUILT 2026-10-06 (TEST-AIDS-1), branch
+`feat/test-aids-switch`, not merged — the owner's look is owed;** see *Built 2026-10-06* at the end. For the BACKLOG row *BEFORE DELIVERY: SWITCH OFF
 THE DEVELOPER-ONLY DISPLAYS* (owner, 2026-10-02). Read on master `fe5c4a6e`. Paths are under
 `client/src/` unless written in full.
 
@@ -127,3 +128,35 @@ THE DEVELOPER-ONLY DISPLAYS*).
 
 **B6** (a race on non-default settings is not flagged) is folded into the same row: item 2, the
 settings badge, is hidden while the switch is OFF, and nothing else flags such a race in production.
+
+## Built 2026-10-06 — TEST-AIDS-1 (branch `feat/test-aids-switch`, not merged)
+
+Exactly the decision above. The switch is stored on the server (`server/src/settings/testAids.js`,
+`GET`/`PUT /api/settings/test-aids` — read by every signed-in user, set by admins only, the points
+rule's pattern); **missing or unreadable is OFF**, so a fresh installation ships OFF. The client reads
+it in ONE place, `client/src/modules/testAids.js`, which every gate asks; it is OFF until the server
+has answered. The control is the first of the Dev Screen chapter *Diagnostics and verification*
+(admins only; control 349 of the chapter design).
+
+| item | how it is gated while OFF |
+| --- | --- |
+| 1, 2, 3 | not passed to the renderer (`screens/RaceScreen/index.jsx`, the `renderRaceFrame` call); the settings badge got the build badge's null guard (`renderRaceFrame.js`) |
+| 4, 13–24 | the camera config is read through `withTestAids(…, TEST_AID_CAMERA_KEYS)` at mount — each key false whatever the browser stored; the detour log (a log beside 19 and 20) is on the same list |
+| 25 | the re-roll marker is not passed to the renderer |
+| 13–25 in the Dev Screen | the checkboxes are disabled, with one line saying the switch is off; item 5's checkbox, which shares the list, stays free |
+| 7 | `CameraMarkerHUD` is not mounted |
+| 9 | the Quick Test block of the setup screen is not rendered |
+| 11 | **admin-only whatever the switch** — the setup screen passes the server's role (`useAuth`) to `RaceSettings` |
+| 26 | `testAidUrlFlag('constSpeed')` — honoured only while ON |
+| 27 | the route waits for the server's answer, then sends anyone back to the setup screen while OFF |
+| console probes | `rAFProbe.js` (`?perfprobe`), `viewerProbe.js` (`?viewerprobe`), `racearena:raceInputsProbe` (RaceScreen), `racearena:holdProbe` (`raceLoopDiagnostics.js`) each start only while ON |
+| 5, 6, 8, 10, 12, the green comeback marker | unchanged |
+
+**The delivery check this report said did not exist now does:** `client/e2e/delivery-test-aids.spec.js`,
+in the Browser gate, runs first on a fresh browser profile against the gate's fresh data folder: with
+the switch OFF none of the gated items is there; an admin turns it on in the Dev Screen and they are.
+The canvas badges are read from what the page draws as text; the hero rings and the re-roll marker,
+which are shapes, are held by the unit tests. The other browser specs, and the two measurement scripts
+that drive a browser (`scripts/viewer-invariants.mjs`,
+`reports/evolution/LARGE-FIELD-PERF-2/run.mjs`), turn the switch ON for their own throwaway server.
+

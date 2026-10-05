@@ -608,6 +608,8 @@ export const CONTROL_INFO = {
     'Logs the frames around each change of view to the browser console, to diagnose a camera move in the wrong direction. It changes nothing on screen. Run a race, then copy the console lines.',
   'CameraAdvancedSection:enablePerfLog':
     'Measures how long each frame spends on physics, camera and drawing, and shows the live figures and the worst spikes on screen. Takes effect on the next race.',
+  'TestAidsSection:test-aids-switch':
+    'One switch for the whole installation, stored on the server. Off, as it ships: the build and settings badges, the race-plan pill, the hero rings, the camera marker, Quick Test, every diagnostic display and log below, the constant-speed address flag, the distribution page and the console probes are hidden or ignored for everyone, whatever a browser has stored. On: they all behave as they did before the switch existed. Admins only.',
   'ConfigExportSection:export-race-config':
     'Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration.',
   'ConfigExportSection:refresh':

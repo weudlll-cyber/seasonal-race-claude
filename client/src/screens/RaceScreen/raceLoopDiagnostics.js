@@ -21,6 +21,8 @@
 // comments are the ones that sat beside this code in RaceScreen.
 // ============================================================
 
+import { testAidsOn } from '../../modules/testAids.js';
+
 /**
  * The GovernorDiagHUD snapshot. RaceScreen stores the result in `governorDiagRef.current` — ONE
  * write site, EVERY frame a plan runs.
@@ -66,7 +68,8 @@ export function governorDiagSnapshot({
  */
 export function recordHoldProbe(st, racePlanController) {
   try {
-    if (localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
+    // TEST-AIDS-1: a console-only probe — ignored while the test-aids switch is OFF.
+    if (testAidsOn() && localStorage.getItem('racearena:holdProbe') === '1' && racePlanController) {
       const heldMap = racePlanController.getHeldRelease?.() ?? null;
       if (heldMap && heldMap.size) {
         const order = [...st.racers].sort((a, b) => b.t - a.t);

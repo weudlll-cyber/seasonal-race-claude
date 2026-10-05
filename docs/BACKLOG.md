@@ -844,7 +844,7 @@ are in PART TWO with what closed them; these are the ones still standing.
       ★★ **THE AUTH QUESTION, NARROWED TO TWO FALSIFIABLE ITEMS.** "Admin auth hardened for
       public-facing use" was an open row with no bar, which is why it could not be settled. The
       decisions behind it are settled; what is measurable is exactly two things:
-      **(1) CSP is switched off** — `server/src/app.js:35` runs
+      **(1) CSP is switched off** — `server/src/app.js:36` runs
       `helmet({ contentSecurityPolicy: false })`; **(2) no written pre-exposure bar exists** anywhere
       live in `docs/` — no threat model and no checklist of what must hold before the app is
       reachable. Both are checkable, and both belong to this purchase rather than to a separate row.
@@ -912,6 +912,14 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
       - **B6 is folded in here (2026-10-04):** a race on non-default settings is not flagged in
         production.
       - **Still built LAST**, after every other open row. Nothing of it is built yet.
+      ★★ **2026-10-06 — BUILT (TEST-AIDS-1), on branch `feat/test-aids-switch`, NOT MERGED; the row
+      stays open until the owner has looked.** Exactly the design above: the switch lives on the server
+      (`GET`/`PUT /api/settings/test-aids`, admins set it, missing or unreadable is OFF), the client
+      reads it in one place (`client/src/modules/testAids.js`), and the control is the first of the
+      Dev Screen chapter *Diagnostics and verification*. How each item is gated, and the delivery
+      check that now runs first in the Browser gate on a fresh profile and a fresh data folder:
+      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md), *Built 2026-10-06*. How an operator
+      uses it: [DEPLOYMENT.md](DEPLOYMENT.md), *Test aids*.
 
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads

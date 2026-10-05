@@ -102,6 +102,37 @@ their team (`server/src/auth/guards.js:22-26`, `server/src/auth/usersRouter.js:2
 per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:121-131`).
 Decided on 2026-10-01; there is no per-organizer separation beyond races.
 
+### Test aids — off as an installation ships
+
+**A new installation shows no developer aids.** One switch for the whole installation decides
+whether they are there at all; it is stored on the server (`<data folder>/test-aids.json`, so a
+backup carries it), and **it ships OFF**: with no file, or with a file that cannot be read, it is
+OFF. The owner decided the design on 2026-10-04 (the numbered list is
+[DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md)).
+
+**Where an admin turns it on:** Dev Screen → chapter **Diagnostics and verification** → **Test aids**,
+the first control of that chapter. Only an admin sees the chapter, and the server refuses anyone
+else's change (`PUT /api/settings/test-aids`, [API.md](API.md)).
+
+**While it is OFF, for everyone, whatever a browser has stored:**
+
+- the race screen's build badge, settings badge and "Race Plan" pill, and the hero rings;
+- the M-key camera marker;
+- **Quick Test** on the setup screen;
+- every diagnostic display and log (the Dev Screen's diagnostic and log switches are locked, with a
+  line saying why) and the gap re-roll marker;
+- the `?constSpeed=1` address flag (it changes the physics), the `/diagnose-verteilung` page, and the
+  console probes (`?perfprobe=1`, `?viewerprobe=1`, `racearena:raceInputsProbe`,
+  `racearena:holdProbe`).
+
+**ON** brings all of them back exactly as they were. **Not on the switch:** the seed, race-key and
+identifier tools on the setup screen are **admin-only whatever the switch says**; the camera-state
+pill, click-to-skip during the countdown, the result screen's seed and stage, the gear to the Dev
+Screen and the Track Editor's Test race are shown as before.
+
+The browser tests (`client/e2e/`) and the measurement scripts that drive a browser turn the switch
+ON for their own throwaway server first; on a real installation it stays as the admin leaves it.
+
 ### The layout: four places, and only one of them is replaced by an update
 
 | what | the example path used below | what an update does to it |

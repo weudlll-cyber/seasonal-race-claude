@@ -156,6 +156,13 @@ describe('route-surface drift guard', () => {
     expect(requiredRole('GET', '/api/races/evaluation')).toBeNull();
   });
 
+  // TEST-AIDS-1 (the owner's decision of 2026-10-04): the test-aids switch is read by every
+  // signed-in user and set by admins only. Pinned both ways.
+  it('the test-aids switch: setting it is admin-only, reading it is not', () => {
+    expect(requiredRole('PUT', '/api/settings/test-aids')).toBe('admin');
+    expect(requiredRole('GET', '/api/settings/test-aids')).toBeNull();
+  });
+
   it('all /api/users mutating routes are admin-classified', () => {
     const usersMutating = allMutating.filter(({ path }) => path.startsWith('/api/users'));
     expect(usersMutating.length).toBeGreaterThan(0);

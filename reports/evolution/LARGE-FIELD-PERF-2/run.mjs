@@ -196,6 +196,19 @@ async function signInTo(base) {
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), {
     timeout: 20000,
   });
+  // TEST-AIDS-1: the frame probe (`?perfprobe=1`) is a test aid and ships OFF. A build that has the
+  // switch is told to turn it on (this account must be an admin); a build without it answers 404,
+  // which is fine — there the probe was never gated.
+  const aids = await page.evaluate(async () => {
+    const r = await fetch("/api/settings/test-aids", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    return r.status;
+  });
+  if (aids !== 200 && aids !== 404)
+    throw new Error(`could not turn the test-aids switch on (${aids})`);
   signedInTo = base;
 }
 await signInTo(BASE);

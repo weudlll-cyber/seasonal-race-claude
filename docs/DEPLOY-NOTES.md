@@ -160,7 +160,7 @@ returns **nothing**. `server/src/index.js:16` is `app.listen(PORT, …)` — pla
 
 **But the server is TLS-aware and expects to sit behind a terminator:**
 
-- `server/src/app.js:36` — `if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)`
+- `server/src/app.js:34` — `if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1)`
 - `server/src/auth/session.js:23-29` — `resolveCookieSecure` marks the session cookie `Secure` in
   production, overridable with `RA_COOKIE_SECURE=true|false|auto`
 - `server/src/auth/session.js:35-43` — the cookie is named `__Host-ra.sid` when `Secure` is

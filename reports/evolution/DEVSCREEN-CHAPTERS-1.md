@@ -1,4 +1,6 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 348 controls in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 349 controls in seven chapters, each placed once, an info text each
+
+*(348 as designed and merged; the 349th, the test-aids switch, arrived with TEST-AIDS-1 on 2026-10-06 — see the last section.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -166,10 +168,10 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 | 3 | Look, labels and effects | 38 | 1 | changes the picture |
 | 4 | Tracks, racers, brands and groups | 69 | 63 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
-| 6 | Diagnostics and verification | 17 | 0 | changes neither |
+| 6 | Diagnostics and verification | 18 | 0 | changes neither |
 | 7 | Accounts and system | 21 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **348** | **90** (+9 for an admin) | |
+| | **Total** | **349** | **90** (+9 for an admin) | |
 
 ### 1 · The race — 101
 
@@ -229,11 +231,12 @@ here changes a setting; it reads the record.
 Evaluation was placed beside the history it reads from). Both read finished races; neither writes a
 setting.
 
-### 6 · Diagnostics and verification — 17
+### 6 · Diagnostics and verification — 18
 
 *Intro:* Tools for checking the game rather than running an event: overlays and logs that show what
 the camera and the race plan are doing, and an export of the exact race configuration for
-verification in the simulator. None of them changes a race.
+verification in the simulator. None of them changes a race. The test-aids switch at the top decides
+whether the overlays, the logs and every other test aid are shown at all.
 
 *Why one chapter.* Fourteen diagnostics switches and the hero highlight sit at the end of Camera
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
@@ -664,10 +667,11 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 5.14 | Period evaluation | `PeriodEvaluation.jsx` | Points per place | `setLadderText` (handler) | operator | The points for each place, first place first, separated by commas. A place beyond the list scores nothing. Only an admin can change it. | REWRITTEN |
 | 5.15 | Period evaluation | `PeriodEvaluation.jsx` | Save points rule | `points-rule-save` (testId) | admin | Admin only. Stores the points switch and ladder on the server for everyone. | NEW |
 
-### 6 · Diagnostics and verification — 17 controls
+### 6 · Diagnostics and verification — 18 controls
 
 | # | Sub-group | Today: file | Today: label | Id (kind) | Tier | Info text | Text |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 6.0 | Test aids | `TestAidsSection.jsx` | Test aids for the whole installation | `test-aids-switch` (testId) | advanced | One switch for the whole installation, stored on the server. Off, as it ships: the build and settings badges, the race-plan pill, the hero rings, the camera marker, Quick Test, every diagnostic display and log below, the constant-speed address flag, the distribution page and the console probes are hidden or ignored for everyone, whatever a browser has stored. On: they all behave as they did before the switch existed. Admins only. | NEW |
 | 6.1 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Highlight heroes | `highlightHeroes` (configKey) | advanced | Draws a ring around the racers the race plan has cast as heroes — green for an ordinary hero, red for an attacker — so you can follow them in an eye test. It does not change the race. | REWRITTEN |
 | 6.2 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Show camera state HUD | `showCameraStateHud` (configKey) | advanced | Shows the camera state indicator (OVERVIEW / BATTLE / etc.) in the top-left of the race canvas. | KEPT |
 | 6.3 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Show camera diagnostics | `showCameraDiagnostics` (configKey) | advanced | Diagnostics panel bottom-left: live zoom values. Logs state transitions to the browser console. | KEPT |
@@ -1051,3 +1055,17 @@ header. What pushed them down is gone — the auto top margin on the first of th
 own `margin-top: auto`, which only ever acted when the button was a direct child of the sidebar.
 Ids, handlers, info texts and the rest of `.backBtn` are unchanged. The chapter guard already reads
 the sidebar in document order (view switch, Back to Setup, Log out) and is unchanged.
+
+---
+
+## TEST-AIDS-1 — control 349, the test-aids switch (2026-10-06)
+
+The owner decided on 2026-10-04 that the developer displays and aids hang on ONE installation-wide
+switch, set by admins and shipped OFF; it was built on 2026-10-06 on branch `feat/test-aids-switch`.
+Its control is the first of *Diagnostics and verification*, in a sub-group of its own, *Test aids*
+(row 6.0 above, position 0 so the chapter's other rows keep their numbers). Chapter 6 has 18 controls,
+the screen 349; the operator view is unchanged (90, +9 for an admin), because the chapter is
+admin-only. `count-controls.mjs` counts it by its literal test id and prints 349; the chapter guard
+holds the 349 rows. While the switch is OFF the diagnostic and log switches of this chapter, and the
+re-roll marker in *The race*, are locked with one line saying why — placement and info texts unchanged.
+

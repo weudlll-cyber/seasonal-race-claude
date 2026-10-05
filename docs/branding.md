@@ -166,7 +166,7 @@ The canvas carrier chain in full:
    ([`SetupScreen.jsx:181–185`](../client/src/screens/SetupScreen/SetupScreen.jsx#L236-L240)).
 
 2. **SetupScreen header**: rendered in the header beside the RaceArena wordmark when non-empty
-   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1085-L1120)).
+   ([`SetupScreen.jsx` → `activeBrandProfile`](../client/src/screens/SetupScreen/SetupScreen.jsx#L1092-L1127)).
    `eventName` is styled in `var(--brand-primary)` and `subtitle` immediately below it in
    `var(--brand-secondary)`.
 
@@ -179,7 +179,7 @@ The canvas carrier chain in full:
    ```
 
 4. **Race canvas title overlay**: `RaceScreen` loads `raceData` from `sessionStorage.activeRace`
-   ([`index.jsx` → `activeRace`](../client/src/screens/RaceScreen/index.jsx#L372))
+   ([`index.jsx` → `activeRace`](../client/src/screens/RaceScreen/index.jsx#L383))
    and passes it to:
    - `drawTitle(ctx, shape, raceData)` for closed tracks
      ([`RaceScreen/renderRaceFrame.js:371`](../client/src/screens/RaceScreen/renderRaceFrame.js#L371),
