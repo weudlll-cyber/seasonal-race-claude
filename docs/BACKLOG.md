@@ -874,19 +874,6 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
-- [ ] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — opened 2026-10-06 (TIDY-C-3).** Neither
-      is changed yet; both are written down in [API.md](API.md) where the route is.
-      (1) **`POST /api/races/:shortKey/verify` can stop the server.** Any error other than a refusal
-      is rethrown from an `async` handler (`server/src/routes/races.js:275`); Express 4 does not catch
-      a rejected promise, the app has no error middleware and no `unhandledRejection` handler, so under
-      Node's default the process exits. Admin-only — a malformed track file read during a verify is
-      enough. (2) **The stored-race duplicate check is not team-scoped.** `getRaceByClientId`
-      (`server/src/races/raceStore.js:500`) looks a `clientRaceId` up across every team, so
-      `POST /api/races` with another team's id answers 200 with that race's `id` and `shortKey` — the
-      one place where a team can learn of another team's race. The ids are random, so it is hard to
-      reach. **verify:** a test that a verify whose replay throws answers 500 and the server keeps
-      running; a test that a `clientRaceId` stored by one team is not recognised for another.
-
 - [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
       items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
       on-screen build/source badge; the off-default settings badge; plus a sweep for any further
@@ -1900,6 +1887,33 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] ★ **SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — CLOSED 2026-10-06 (SERVER-DEFECTS-1):
+      BOTH FIXED AND MERGED.** (1) An `async` route whose unexpected error used to escape now answers
+      `500 { error: 'internal error' }`, logs the error with its route, and the server keeps running —
+      one shared helper, `server/utils/asyncRoute.js`, on the verify route and on the two auth routes
+      with the same exposure (`POST /api/auth/login` and `/change-password`, whose store reads sat
+      outside any `try`). No global `unhandledRejection` handler was added: every async route is
+      covered at the route. (2) A race's client id is looked up WITHIN THE TEAM, in the route's retry
+      check and in the store's own; another team's id is not recognised and the race is stored as
+      usual. The id is unique per team in the table (`UNIQUE (team_normalized, client_race_id)`); an
+      existing database is rebuilt by the migration `client-id-per-team-1`
+      (`server/src/races/migrateClientIdPerTeam.js`, every row and the immutability trigger kept).
+      Tests: a verify whose replay throws answers 500 and the next request succeeds
+      (`server/src/routes/racesVerify.test.js`); team A's id is not recognised for team B and still
+      is for A, and the migration rebuilds an old database (`racesClientIdScope.test.js`). The row
+      as it stood: ****SERVER — TWO DEFECTS FOUND DOCUMENTING THE API — opened 2026-10-06 (TIDY-C-3).** Neither
+      is changed yet; both are written down in [API.md](API.md) where the route is.
+      (1) **`POST /api/races/:shortKey/verify` can stop the server.** Any error other than a refusal
+      is rethrown from an `async` handler (`server/src/routes/races.js:275`); Express 4 does not catch
+      a rejected promise, the app has no error middleware and no `unhandledRejection` handler, so under
+      Node's default the process exits. Admin-only — a malformed track file read during a verify is
+      enough. (2) **The stored-race duplicate check is not team-scoped.** `getRaceByClientId`
+      (`server/src/races/raceStore.js:500`) looks a `clientRaceId` up across every team, so
+      `POST /api/races` with another team's id answers 200 with that race's `id` and `shortKey` — the
+      one place where a team can learn of another team's race. The ids are random, so it is hard to
+      reach. **verify:** a test that a verify whose replay throws answers 500 and the server keeps
+      running; a test that a `clientRaceId` stored by one team is not recognised for another.
 
 - [x] **C — THE TIDY LIST — CLOSED 2026-10-06 (TIDY-C-3), with its last three items done and two
       remainders closed with it for the reasons below.**
