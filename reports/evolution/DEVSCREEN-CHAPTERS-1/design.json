@@ -25,18 +25,6 @@
   },
   {
     "chapter": "The race",
-    "position": 3,
-    "subgroup": "Defaults for a new race",
-    "section": "sections/RaceDefaults.jsx",
-    "label": "Default Number of Winners (Podium Spots)",
-    "id": "winners",
-    "idKind": "configKey",
-    "tier": "operator",
-    "infoText": "How many top finishers the result screen celebrates as winners. Raise it and more places get a podium treatment; lower it and only the very front is honoured. Race Setup starts from this number and you can still change it per race.",
-    "textStatus": "REWRITTEN"
-  },
-  {
-    "chapter": "The race",
     "position": 4,
     "subgroup": "Defaults for a new race",
     "section": "sections/RaceDefaults.jsx",
@@ -2937,18 +2925,6 @@
     "idKind": "configKey",
     "tier": "operator",
     "infoText": "Open tracks only: how long a race on this track starts with in Race Setup.",
-    "textStatus": "NEW"
-  },
-  {
-    "chapter": "Tracks, racers, brands and groups",
-    "position": 23,
-    "subgroup": "Tracks",
-    "section": "sections/TrackManager.jsx",
-    "label": "Default Winners",
-    "id": "defaultWinners",
-    "idKind": "configKey",
-    "tier": "operator",
-    "infoText": "How many podium places a race on this track starts with in Race Setup.",
     "textStatus": "NEW"
   },
   {

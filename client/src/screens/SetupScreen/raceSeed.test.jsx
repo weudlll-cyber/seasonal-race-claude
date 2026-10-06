@@ -264,3 +264,21 @@ describe('SEED-REAL-RACE-1 — a race stored before this change still loads', ()
     expect(shownZero).toBeNull();
   });
 });
+
+// REMOVE-WINNERS-SETTING-1 (the owner's decision of 2026-10-06): the number-of-winners setting is
+// gone — the podium is three places everywhere. Nothing on this screen sets or shows a winners count,
+// and a race carries none, even when this browser still has an old stored value.
+describe('the winners setting is gone', () => {
+  it('no winners stepper, no "Top N", and the race payload carries no winners count', () => {
+    storageSet(KEYS.RACE_DEFAULTS, { winners: 7 }); // an old stored value, from before the removal
+    renderStartable();
+    // The start line rendered "Top" and the number in two elements, so read the page's whole text.
+    expect(document.body.textContent).not.toMatch(/Top\s*\d/);
+    openSettingsTab();
+    expect(document.body.textContent).not.toMatch(/Number of Winners|Podium Spots/);
+    clickStart();
+    const race = startedRace();
+    expect(race).not.toBeNull();
+    expect('winners' in race).toBe(false);
+  });
+});

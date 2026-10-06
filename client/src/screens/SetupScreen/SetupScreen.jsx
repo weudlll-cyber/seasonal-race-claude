@@ -121,7 +121,6 @@ function SetupScreen() {
   // Declared before the effect below, which is its first consumer.
   const [raceSettings, setRaceSettings] = useState({
     duration: raceDefaults.duration,
-    winners: raceDefaults.winners,
     eventName: '',
   });
 
@@ -699,7 +698,7 @@ function SetupScreen() {
    * RACE-IDENTIFIER-1 — start the race a string names, on this machine.
    *
    * Everything the payload needs comes from the decoded identifier. The fields that do NOT decide
-   * the race — the event name, the branding, how many winners the result screen lists — still come
+   * the race — the event name and the branding — still come
    * from this screen, because they are what this operator is showing tonight and reproducing a race
    * is not the same as reproducing somebody's poster.
    */
@@ -873,7 +872,6 @@ function SetupScreen() {
       eventName: raceSettings.eventName,
       subtitle: activeBrandProfile?.subtitle ?? '',
       sponsorText: activeBrandProfile?.sponsorText ?? '',
-      winners: raceSettings.winners,
       raceMode: decoded.targetDurationSec == null ? 'laps' : 'time',
       targetLaps: decoded.targetLaps,
       targetDurationSec: decoded.targetDurationSec,
@@ -975,7 +973,6 @@ function SetupScreen() {
       eventName: raceSettings.eventName,
       subtitle: activeBrandProfile?.subtitle ?? '',
       sponsorText: activeBrandProfile?.sponsorText ?? '',
-      winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       // The two canonical operator inputs. Exactly one is meaningful per race mode; the engine
       // re-derives everything else from them, so no derived scalar travels in this payload as
@@ -1611,8 +1608,7 @@ function SetupScreen() {
                 ·{' '}
                 <strong>{trackIsOpen ? effectiveOpenTrackDuration : raceSettings.duration}s</strong>
               </>
-            )}{' '}
-            · Top <strong>{raceSettings.winners}</strong>
+            )}
           </div>
           <div className={styles.startButtons}>
             <div

@@ -45,7 +45,6 @@ const BLANK = {
   color: '#e63946',
   defaultLaps: 2,
   defaultDurationSec: 60,
-  defaultWinners: 3,
   worldWidth: 1280,
   worldHeight: 720,
   maxRacers: null,
@@ -141,7 +140,6 @@ function TrackManager() {
       color: track.color,
       defaultLaps: trackDefaultLaps(track),
       defaultDurationSec: track.defaultDurationSec ?? track.defaultDuration ?? 60,
-      defaultWinners: track.defaultWinners,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
       maxRacers: storedMax ?? autoMax,
@@ -439,32 +437,6 @@ function TrackManager() {
                 </div>
               </div>
             )}
-            <div className={s.formGroup} data-control-id="TrackManager:defaultWinners">
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                Default Winners
-                <Info id="TrackManager:defaultWinners" />
-              </label>
-              <div className={s.stepper}>
-                <button
-                  className={s.stepperBtn}
-                  disabled={form.defaultWinners <= 1}
-                  onClick={() => f('defaultWinners', form.defaultWinners - 1)}
-                >
-                  −
-                </button>
-                <span className={s.stepperValue}>{form.defaultWinners}</span>
-                <button
-                  className={s.stepperBtn}
-                  disabled={form.defaultWinners >= 5}
-                  onClick={() => f('defaultWinners', form.defaultWinners + 1)}
-                >
-                  +
-                </button>
-              </div>
-            </div>
             <div className={s.formGroup} data-control-id="TrackManager:track-geometry-btn">
               <label
                 className={s.label}

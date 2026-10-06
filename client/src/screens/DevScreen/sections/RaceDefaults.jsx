@@ -3,7 +3,7 @@
 // Path:        client/src/screens/DevScreen/sections/RaceDefaults.jsx
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: Configure global race defaults — duration, winners, countdown,
+// Description: Configure global race defaults — duration, countdown,
 //              auto-advance, and sound effects. Rendered as three parts placed in three
 //              chapters (DEVSCREEN-CHAPTERS-1); `part` picks one, none renders all three.
 //
@@ -122,34 +122,6 @@ function RaceDefaults({ part }) {
                     {d}s
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Winners */}
-            <div className={s.formGroup} data-control-id="RaceDefaults:winners">
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                Default Number of Winners (Podium Spots)
-                <Info id="RaceDefaults:winners" />
-              </label>
-              <div className={s.stepper}>
-                <button
-                  className={s.stepperBtn}
-                  disabled={defaults.winners <= 1}
-                  onClick={() => set({ winners: defaults.winners - 1 })}
-                >
-                  −
-                </button>
-                <span className={s.stepperValue}>{defaults.winners}</span>
-                <button
-                  className={s.stepperBtn}
-                  disabled={defaults.winners >= 20}
-                  onClick={() => set({ winners: defaults.winners + 1 })}
-                >
-                  +
-                </button>
               </div>
             </div>
 

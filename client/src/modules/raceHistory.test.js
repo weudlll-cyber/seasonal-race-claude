@@ -42,7 +42,6 @@ function aParsedResult(overrides = {}) {
       raceActionStage: 'wild',
       targetDurationSec: 200,
       racePlanEnabled: true,
-      winners: 1,
     },
     worldConfig: {
       schemaVersion: 2,
@@ -65,6 +64,22 @@ afterEach(() => {
 // ── What the entry carries ────────────────────────────────────────────────────
 
 describe('buildHistoryEntry', () => {
+  // REMOVE-WINNERS-SETTING-1 (the owner's decision of 2026-10-06): the winners are the podium's three,
+  // always — `PODIUM_PLACES` in shared/podium.mjs. A payload from an older build may still carry a
+  // `winners` count; it is not read.
+  it('stores exactly the first three finishers as winners, whatever count a payload still carries', () => {
+    const five = ['Ada', 'Bo', 'Cy', 'Di', 'Ed'];
+    for (const stale of [undefined, 1, 5]) {
+      const base = aParsedResult();
+      const e = buildHistoryEntry({
+        ...base,
+        finishOrder: five.map((name, index) => ({ name, index })),
+        race: { ...base.race, racers: five.map((name) => ({ name })), winners: stale },
+      });
+      expect(e.winners).toEqual(['Ada', 'Bo', 'Cy']);
+    }
+  });
+
   it('keeps everything the history has always carried', () => {
     const e = buildHistoryEntry(aParsedResult());
     expect(e.trackId).toBe('garden-path-1');
@@ -72,7 +87,7 @@ describe('buildHistoryEntry', () => {
     expect(e.playerCount).toBe(2);
     expect(e.seed).toBe(4242);
     expect(e.raceActionStage).toBe('wild');
-    expect(e.winners).toEqual(['Grace']);
+    expect(e.winners).toEqual(['Grace', 'Ada']); // both finishers — fewer than the podium's three
     expect(e.finishOrder).toHaveLength(2);
     expect(e.id).toBeTruthy();
     expect(e.date).toBeTruthy();
@@ -98,7 +113,7 @@ describe('buildHistoryEntry', () => {
     const e = buildHistoryEntry(aParsedResult({ worldConfig: undefined }));
     expect(e.inputs).toBeNull();
     expect(e.sync).toBeNull(); // and it is not queued for sending
-    expect(e.winners).toEqual(['Grace']); // but it is still a normal history entry
+    expect(e.winners).toEqual(['Grace', 'Ada']); // but it is still a normal history entry
   });
 
   it('a race is PENDING the moment it is built — the server has not seen it', () => {
@@ -122,7 +137,7 @@ describe('toServerPayload', () => {
     expect(payload.finishedAt).toBe(e.date);
     expect(payload.geometryId).toBe('garden-path');
     expect(payload.results).toEqual(e.finishOrder);
-    expect(payload.winners).toEqual(['Grace']);
+    expect(payload.winners).toEqual(['Grace', 'Ada']);
     expect(payload.elapsedSec).toBe(187);
     // ★ The team is the server's to decide. A client that could name one could file a race into
     // somebody else's history.

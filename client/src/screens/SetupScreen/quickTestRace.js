@@ -80,7 +80,6 @@ export function buildQuickTestRace({
     worldHeight: track.worldHeight ?? 720,
     duration: raceDefaults.duration,
     eventName: 'Quick Test',
-    winners: raceDefaults.winners,
     raceMode: quickIsOpen ? 'time' : 'laps',
     targetLaps: quickIsOpen ? undefined : quickLaps,
     targetDurationSec: quickIsOpen ? quickSeconds : undefined,

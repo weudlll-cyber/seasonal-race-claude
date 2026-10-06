@@ -19,9 +19,6 @@ const DURATION_OPTIONS = [
   { value: 120, label: '120 s' },
 ];
 
-const MIN_WINNERS = 1;
-const MAX_WINNERS = 20;
-
 function RaceSettings({
   settings,
   onChange,
@@ -45,7 +42,7 @@ function RaceSettings({
 }) {
   // COPY-FEEDBACK-1
   const [copied, setCopied] = useState(false);
-  const { duration, winners, eventName } = settings;
+  const { duration, eventName } = settings;
 
   function set(patch) {
     onChange({ ...settings, ...patch });
@@ -68,28 +65,6 @@ function RaceSettings({
               {opt.label}
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Number of winners */}
-      <div className={styles.settingGroup}>
-        <span className={styles.settingLabel}>Number of Winners (Podium Spots)</span>
-        <div className={styles.winnersRow}>
-          <button
-            className={styles.stepperBtn}
-            disabled={winners <= MIN_WINNERS}
-            onClick={() => set({ winners: winners - 1 })}
-          >
-            −
-          </button>
-          <span className={styles.stepperValue}>{winners}</span>
-          <button
-            className={styles.stepperBtn}
-            disabled={winners >= MAX_WINNERS}
-            onClick={() => set({ winners: winners + 1 })}
-          >
-            +
-          </button>
         </div>
       </div>
 
