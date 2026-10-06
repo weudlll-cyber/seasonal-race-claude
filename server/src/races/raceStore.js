@@ -101,8 +101,9 @@ CREATE TABLE IF NOT EXISTS races (
   -- THE CLIENT'S OWN ID FOR THIS RACE, and the reason the same race cannot land twice.
   -- The result screen already mints one (newId(), ResultScreen:208) before anything is sent, so a
   -- retry, a double click or a second tab all carry the id the first attempt carried. UNIQUE makes
-  -- that a property of the table rather than of the code that happens to insert today.
-  client_race_id       TEXT NOT NULL UNIQUE,
+  -- that a property of the table rather than of the code that happens to insert today — UNIQUE PER
+  -- TEAM (the table constraint at the end, SERVER-DEFECTS-1): another team's id names nothing here.
+  client_race_id       TEXT NOT NULL,
 
   -- THE SHORT NAME a person can read aloud (RACE-HISTORY-4). Random, not sequential, and UNIQUE —
   -- the constraint is what makes uniqueness a fact rather than a hope, because a random key can
@@ -171,7 +172,11 @@ CREATE TABLE IF NOT EXISTS races (
   -- The outcome.
   elapsed_sec          REAL,
   results              TEXT NOT NULL,
-  winners              TEXT NOT NULL
+  winners              TEXT NOT NULL,
+
+  -- One race per client id WITHIN A TEAM. Databases created before SERVER-DEFECTS-1 had the id
+  -- unique across every team; migrateClientIdPerTeam.js rebuilds them to this.
+  UNIQUE (team_normalized, client_race_id)
 );
 
 CREATE INDEX IF NOT EXISTS races_by_team ON races(team_normalized, finished_at DESC);
@@ -301,9 +306,11 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     // build) while still being the same race. Keyed on the id the result screen minted, a second
     // arrival is recognised whatever else moved, and it is ACCEPTED QUIETLY — the caller gets the
     // race that is already stored, not an error, because a retry succeeding is the normal case.
-    const already = db
-      .prepare('SELECT * FROM races WHERE client_race_id = ?')
-      .get(String(race.clientRaceId ?? ''));
+    //
+    // ★ WITHIN THE TEAM (SERVER-DEFECTS-1). Another team's id is not this team's race: it is not
+    // recognised, and the race is stored as usual. A race with no well-formed team matches nothing
+    // and is refused below as INVALID_TEAM.
+    const already = getRaceRowByClientId(race.clientRaceId, race.team);
     if (already) {
       return {
         id: already.id,
@@ -497,8 +504,23 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   }
 
   /** One race by the id the CLIENT minted for it. `null` when it has not been stored. */
-  function getRaceByClientId(clientRaceId) {
-    return hydrate(db.prepare('SELECT * FROM races WHERE client_race_id = ?').get(clientRaceId));
+  /**
+   * One race by the CLIENT's id, WITHIN A TEAM — the retry check of `POST /api/races`.
+   *
+   * ★ THE TEAM IS A REQUIRED ARGUMENT, for the reason `getRaceByShortKey` gives: until
+   * SERVER-DEFECTS-1 this looked across every team, so a retry carrying another team's id was
+   * answered with THAT team's race id and short key. Another team's id now finds nothing.
+   */
+  function getRaceByClientId(clientRaceId, team) {
+    return hydrate(getRaceRowByClientId(clientRaceId, team));
+  }
+
+  /** The stored row for a client id within a team, or undefined. One query for both callers. */
+  function getRaceRowByClientId(clientRaceId, team) {
+    if (!isWellFormedTeam(team)) return undefined;
+    return db
+      .prepare('SELECT * FROM races WHERE client_race_id = ? AND team_normalized = ?')
+      .get(String(clientRaceId ?? ''), normalizeTeam(team));
   }
 
   /**
