@@ -11,7 +11,7 @@
 // route exists for. The store is a stand-in with the one method the route calls.
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -186,3 +186,33 @@ describe('the race engine the Docker image carries', () => {
     }
   }, 120_000);
 });
+
+describe('POST /api/races/:shortKey/verify — an unexpected error is answered (SERVER-DEFECTS-1)', () => {
+  it('a replay that throws answers 500, is logged, and the next request still succeeds', async () => {
+    // The installation's tracks, unreadable for exactly one access — what a damaged track file does
+    // to `readInstallTracks`. Not a refusal, so the route rethrows it; `asyncRoute` must answer it.
+    let broken = true;
+    const tracks = new Proxy(loadTracks(), {
+      get(target, prop, receiver) {
+        if (broken) {
+          broken = false;
+          throw new Error('a track file could not be read');
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const app = appWith([REC], undefined, tracks);
+
+    const first = await request(app).post('/api/races/TEST01/verify');
+    expect(first.status).toBe(500);
+    expect(first.body).toEqual({ error: 'internal error' });
+    expect(logged.mock.calls.flat().join(' ')).toMatch(/a track file could not be read/);
+    logged.mockRestore();
+
+    const second = await request(app).post('/api/races/TEST01/verify');
+    expect(second.status).toBe(200);
+    expect(second.body.identical).toBe(true);
+  }, 120_000);
+});
+

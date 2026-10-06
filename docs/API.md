@@ -89,6 +89,12 @@ The limiters are mounted after `requireAuth` (`server/src/app.js:62-66`). So a s
   body over 1 MB (413, `server/src/app.js:38`), or an exception thrown synchronously inside a handler
   (for example a failed disk write in `atomicWriteJson`) falls through to Express's default handler,
   which answers with an HTML page, not JSON.
+- **An `async` handler's unexpected error is answered, not lost** (SERVER-DEFECTS-1): `POST
+  /api/races/:shortKey/verify`, `POST /api/auth/login` and `POST /api/auth/change-password` run
+  through `asyncRoute` (`server/utils/asyncRoute.js`), which logs the error with its route and
+  answers `500 { error: 'internal error' }`; the server keeps running. The other `async` handlers
+  (`POST /api/auth/setup`, `POST`/`PUT`/`DELETE /api/users`) already answer every error inside their
+  own `try`.
 - Uploads (the three image routes) go through `uploadSingleImage` (`server/utils/imageUpload.js:105-122`)
   using multer with in-memory storage, a 10 MB limit (`:21`, `:64-76`) and a MIME pre-filter for
   `image/jpeg|png|webp` (`:19`, `:68-74`). It answers **413** for a file over 10 MB (`:109-112`),
@@ -125,7 +131,7 @@ the first admin (`server/src/auth/authRouter.js:6`).
 - **Who:** public (`server/src/auth/guards.js:15`).
 - **Request:** none.
 - **Response:** 200 `{setupNeeded: boolean}`. It is true only when the setup marker file is absent
-  **and** the user store is empty (`server/src/auth/authRouter.js:43-46`).
+  **and** the user store is empty (`server/src/auth/authRouter.js:44-47`).
 - **Errors:** none of its own.
 
 ### `POST /api/auth/setup`
@@ -133,22 +139,22 @@ the first admin (`server/src/auth/authRouter.js:6`).
 - **Who:** public (`server/src/auth/guards.js:16`), gated by a bootstrap token. Rate-limited per IP,
   counting every request (`server/src/app.js:63`, `server/src/auth/rateLimit.js:34-42`).
 - **Request:** header `x-bootstrap-token`, compared in constant time with `RA_BOOTSTRAP_TOKEN`. A
-  token in the body is not read (header read at `server/src/auth/authRouter.js:56`, constant-time compare at `:62`,
-  helper at `:27-31`). Body `{username: string, password: string}`, both required and
-  non-blank (`server/src/auth/authRouter.js:78-81`). The role is always `admin` and the team is the
-  founding constant `FOUNDING_TEAM`; neither is read from the body (`server/src/auth/authRouter.js:123-130`).
+  token in the body is not read (header read at `server/src/auth/authRouter.js:57`, constant-time compare at `:63`,
+  helper at `:28-32`). Body `{username: string, password: string}`, both required and
+  non-blank (`server/src/auth/authRouter.js:79-82`). The role is always `admin` and the team is the
+  founding constant `FOUNDING_TEAM`; neither is read from the body (`server/src/auth/authRouter.js:124-131`).
 - **Response:** 201 `{username, role, team}`, and the session is regenerated, which signs the caller
-  in (`server/src/auth/authRouter.js:143-157`). It is still 201 if that auto-login fails after the
-  commit (`:158-170`).
+  in (`server/src/auth/authRouter.js:144-158`). It is still 201 if that auto-login fails after the
+  commit (`:159-171`).
 - **Errors:**
-  - 409 `setup already complete`: the marker exists (`server/src/auth/authRouter.js:51-53`), it was
-    created by a concurrent request (`:88`), or users exist without the marker (`:97-107`).
-  - 403 `setup not available`: `RA_BOOTSTRAP_TOKEN` is unset (`server/src/auth/authRouter.js:58-61`)
-    or the token is wrong (`:62-75`). The two answers are deliberately identical.
-  - 400 `invalid username or password`: the body is missing or blank (`server/src/auth/authRouter.js:78-81`),
-    or the store rejects the username, password or role (`:189-191`).
-  - 500 `setup failed`: the marker could not be opened (`server/src/auth/authRouter.js:89-90`), or
-    any other failure before the commit (`:192`).
+  - 409 `setup already complete`: the marker exists (`server/src/auth/authRouter.js:52-54`), it was
+    created by a concurrent request (`:89`), or users exist without the marker (`:98-108`).
+  - 403 `setup not available`: `RA_BOOTSTRAP_TOKEN` is unset (`server/src/auth/authRouter.js:59-62`)
+    or the token is wrong (`:63-76`). The two answers are deliberately identical.
+  - 400 `invalid username or password`: the body is missing or blank (`server/src/auth/authRouter.js:79-82`),
+    or the store rejects the username, password or role (`:190-192`).
+  - 500 `setup failed`: the marker could not be opened (`server/src/auth/authRouter.js:90-91`), or
+    any other failure before the commit (`:193`).
   - 429 from the setup limiter (`server/src/auth/rateLimit.js:41-42`). CSRF 403.
 
 ### `POST /api/auth/login`
@@ -157,54 +163,54 @@ the first admin (`server/src/auth/authRouter.js:6`).
   (`server/src/app.js:62`, `server/src/auth/rateLimit.js:18-26`).
 - **Request:** body `{username, password}`. There is no explicit validation; a missing field simply
   fails to match. The username is looked up normalised (NFC, trimmed, lower-cased,
-  `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:199-200`).
+  `server/src/auth/usersStore.js:23-25`) (`server/src/auth/authRouter.js:204-205`).
 - **Response:** 200 `{username, role, team}` (`team` may be `null`), after the session is
-  regenerated (`server/src/auth/authRouter.js:213-219`).
+  regenerated (`server/src/auth/authRouter.js:218-224`).
 - **Errors:**
-  - 401 `invalid credentials`: unknown user (`server/src/auth/authRouter.js:202-205`, which
-    deliberately spends the same time on a dummy hash) or wrong password (`:207-210`).
-  - 500 `login failed`: session regenerate or save failed (`server/src/auth/authRouter.js:214`, `:218`).
+  - 401 `invalid credentials`: unknown user (`server/src/auth/authRouter.js:207-210`, which
+    deliberately spends the same time on a dummy hash) or wrong password (`:212-215`).
+  - 500 `login failed`: session regenerate or save failed (`server/src/auth/authRouter.js:219`, `:223`).
   - 429 from the login limiter (`server/src/auth/rateLimit.js:25-26`). CSRF 403.
 
 ### `POST /api/auth/logout`
 
 - **Who:** any signed-in user (not public, so `server/src/auth/guards.js:137`). The handler repeats
-  the check inline (`server/src/auth/authRouter.js:226-228`), but the guard always answers first.
+  the check inline (`server/src/auth/authRouter.js:232-234`), but the guard always answers first.
 - **Request:** none.
 - **Response:** 200 `{ok: true}`. The session is destroyed and the cookie cleared, as is the legacy
-  `ra.sid` cookie (`server/src/auth/authRouter.js:229-239`).
+  `ra.sid` cookie (`server/src/auth/authRouter.js:235-245`).
 - **Errors:** 401 from the guard (`server/src/auth/guards.js:138`, `:144`, `:151`). 500
-  `logout failed` when destroying the session fails (`server/src/auth/authRouter.js:230-233`). CSRF 403.
+  `logout failed` when destroying the session fails (`server/src/auth/authRouter.js:236-239`). CSRF 403.
 
 ### `POST /api/auth/change-password`
 
 - **Who:** any signed-in user, and only for **their own** password. The target is
-  `req.authUser.id` and never the body (`server/src/auth/authRouter.js:243-260`). It is not in
+  `req.authUser.id` and never the body (`server/src/auth/authRouter.js:249-269`). It is not in
   `ROUTE_POLICY`. Rate-limited to 5 failures per user (`server/src/app.js:66`,
   `server/src/auth/rateLimit.js:74-83`).
-- **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:256`).
+- **Request:** body `{currentPassword, newPassword}` (`server/src/auth/authRouter.js:265`).
   `newPassword` must be non-blank, by the store's rule (`server/src/auth/usersStore.js:270-281`,
   `:30-34`).
 - **Response:** 200 `{ok: true}`. The epoch bump ends the user's **other** sessions; this session is
-  re-stamped so it survives (`server/src/auth/authRouter.js:277-292`).
+  re-stamped so it survives (`server/src/auth/authRouter.js:286-301`).
 - **Errors:**
   - 401 from the guard (`server/src/auth/guards.js:138`, `:144`, `:151`). The inline 401s at
-    `server/src/auth/authRouter.js:261` and `:263-266` are defensive.
-  - 401 `invalid credentials`: wrong current password (`server/src/auth/authRouter.js:269-275`).
+    `server/src/auth/authRouter.js:270` and `:272-275` are defensive.
+  - 401 `invalid credentials`: wrong current password (`server/src/auth/authRouter.js:278-284`).
   - 400 `Password must not be empty`: `newPassword` is missing, empty or blank. The store raises
     `EMPTY_UPDATE`/`INVALID_PASSWORD`, and the handler maps both to this message
-    (`server/src/auth/authRouter.js:282-284`).
-  - 500 `internal error` (`server/src/auth/authRouter.js:285-286`).
+    (`server/src/auth/authRouter.js:291-293`).
+  - 500 `internal error` (`server/src/auth/authRouter.js:294-295`).
   - 429 from the change-password limiter (`server/src/auth/rateLimit.js:82-83`). CSRF 403.
 
 ### `GET /api/auth/me`
 
 - **Who:** any signed-in user (`server/src/auth/guards.js:137`). The handler repeats the check
-  inline (`server/src/auth/authRouter.js:297-305`).
+  inline (`server/src/auth/authRouter.js:307-315`).
 - **Request:** none.
-- **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js:306-308`).
+- **Response:** 200 `{username, role, team}`, where `team` may be `null` (`server/src/auth/authRouter.js:316-318`).
 - **Errors:** 401 from the guard (`server/src/auth/guards.js:138`, `:144`, `:151`). The handler's own
-  401s (`server/src/auth/authRouter.js:298`, `:303`) are defensive.
+  401s (`server/src/auth/authRouter.js:308`, `:313`) are defensive.
 
 ---
 
@@ -870,10 +876,10 @@ deliberately open to every signed-in user, operators included (`server/src/route
 
 Finished races written to the server and read back by their own team, plus the period evaluation and
 its points rule (`server/src/routes/races.js:6`). The router is built by `createRacesRouter`
-(`:88-280`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
+(`:89-288`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
 and never from the request (`:31-36`).
 
-A stored race (`hydrate`, `server/src/races/raceStore.js:450-492`) has these fields: `id, clientRaceId,
+A stored race (`hydrate`, `server/src/races/raceStore.js:457-499`) has these fields: `id, clientRaceId,
 shortKey, team, teamNormalized, finishedAt, identifierVersion, buildId, geometryId, racerTypeId,
 racePlanSeed, raceActionStage, racePlanEnabled, targetLaps?, targetDurationSec?, worldSchemaVersion,
 worldConfigs, elapsedSec?, results, winners, raceSource, rosterId, racerTypesId, names, fieldSize,
@@ -883,55 +889,58 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user (operator+). The prefix is deliberately left out of `ROUTE_POLICY`
   (`server/src/routes/races.js:38-42`). The race is filed under the caller's team, and a `team` in
-  the body is overwritten (`:130`).
-- **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js:259-290`, `:236-244`, `:355-364`):
+  the body is overwritten (`:131`).
+- **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js:264-295`, `:241-249`, `:362-371`):
   - `names`: a non-empty array with no name twice.
   - `results` and `winners`: arrays.
   - Non-empty `clientRaceId`, `finishedAt`, `identifierVersion`, `buildId`, `geometryId`,
     `racerTypeId`, `racePlanSeed`, `raceActionStage`.
   - Optional: `racePlanEnabled`, `targetLaps`, `targetDurationSec`, `worldSchemaVersion`,
     `worldConfigs`, `elapsedSec`, `racerTypeOverrides`, `effectiveRacerTypes`, `raceSource`. An
-    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:328-337`).
+    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:335-344`).
 - **Response:**
   - 201 `{id, shortKey, alreadyStored}`: newly stored, or identical content was already there
-    (`server/src/routes/races.js:130-137`).
+    (`server/src/routes/races.js:131-138`).
   - 200 `{id, shortKey, alreadyStored: true}`: the same `clientRaceId` was already stored, i.e. a
-    retry (`:119-128`). The duplicate check is **not** team-scoped: it looks up `clientRaceId` across
-    all teams (`server/src/races/raceStore.js:500-502`), so a caller sending another team's
-    `clientRaceId` gets that race's `id` and `shortKey`. A known defect, recorded in BACKLOG PART ONE
-    (*SERVER — two defects found documenting the API*); not changed here.
+    retry (`:120-129`). **The check is within the caller's team** (`server/src/races/raceStore.js:514-525`,
+    and the store's own check at `:313`): another team's `clientRaceId` is not recognised, and the
+    race is stored as usual (201). The id is unique per team in the table
+    (`UNIQUE (team_normalized, client_race_id)`, `:179`); a database from before this was rebuilt
+    by the migration `client-id-per-team-1` (`server/src/races/migrateClientIdPerTeam.js`).
+    *(Until SERVER-DEFECTS-1, 2026-10-06, the check looked across every team and answered another
+    team's id with that team's `id` and `shortKey`.)*
 - **Errors:**
-  - 503: the caller's account has no team (`server/src/routes/races.js:106-116`).
+  - 503: the caller's account has no team (`server/src/routes/races.js:107-117`).
   - 400 `{error, code}` with `code` one of `INVALID_RACE`, `INVALID_ROSTER`, `INVALID_RESULTS` or
-    `INVALID_TEAM` (`:142-149`). A 400 means do not retry.
-  - 500 `internal error` for anything else, which is retryable (`:150-153`).
+    `INVALID_TEAM` (`:143-150`). A 400 means do not retry.
+  - 500 `internal error` for anything else, which is retryable (`:151-154`).
   - 401. CSRF 403.
-  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:119`); better-sqlite3
+  - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:120`); better-sqlite3
     binds `undefined` as NULL, which matches no row, so the request falls through to the intended
-    400 `INVALID_RACE` (`server/src/races/raceStore.js:355`). Settled 2026-10-06 against
+    400 `INVALID_RACE` (`server/src/races/raceStore.js:362`). Settled 2026-10-06 against
     better-sqlite3 in an in-memory database.
 
 ### `GET /api/races`
 
-- **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:162-180`).
+- **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:163-181`).
 - **Request:** query `limit?`, clamped to 1–100 with a default of 20, and `offset?`, at least 0 with
-  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:571-576`).
+  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:593-598`).
 - **Response:** 200 `{races: [race…], hasMore, offset, limit, team}`, newest first
-  (`server/src/routes/races.js:175-179`, `server/src/races/raceStore.js:530-538`). A user with no
-  team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:166-173`).
+  (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:552-560`). A user with no
+  team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:167-174`).
 - **Errors:** 401.
 
 ### `GET /api/races/evaluation`
 
-- **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:203-204`).
+- **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:204-205`).
 - **Request:** query `from` and `to`, both required, each parsable by `Date.parse`, with
   `from < to` and a span of at most 366 days. The window is half-open: `from <= finishedAt < to`
-  (`server/src/routes/races.js:186-198`, `:78`, `server/src/races/raceStore.js:552-560`).
+  (`server/src/routes/races.js:187-199`, `:79`, `server/src/races/raceStore.js:574-582`).
 - **Response:** 200 `{from: <ISO>, to: <ISO>, counted, quickTestsExcluded, rows: [{name, races, wins,
-  podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:201-205`,
+  podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:202-206`,
   `server/src/races/periodEvaluation.js:55-91`). A user with no team gets an evaluation of zero races.
-- **Errors:** 400 for a missing, invalid or reversed period (`server/src/routes/races.js:189-193`).
-  400 for a period longer than 366 days (`:194-198`). 401.
+- **Errors:** 400 for a missing, invalid or reversed period (`server/src/routes/races.js:190-194`).
+  400 for a period longer than 366 days (`:195-199`). 401.
 
 ### `GET /api/races/evaluation/points-rule`
 
@@ -939,7 +948,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Request:** none.
 - **Response:** 200 `{pointsEnabled: boolean, pointsPerPlace: number[]}`. With no file, or an invalid
   one, the answer is the default `{pointsEnabled: false, pointsPerPlace: []}`
-  (`server/src/routes/races.js:210`, `server/src/races/pointsRule.js:27`, `:67-77`).
+  (`server/src/routes/races.js:211`, `server/src/races/pointsRule.js:27`, `:67-77`).
 - **Errors:** 401.
 
 ### `PUT /api/races/evaluation/points-rule`
@@ -949,45 +958,43 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Request:** body `{pointsEnabled: boolean, pointsPerPlace: number[]}`. The list holds at most 100
   values, each a finite number from 0 to 1,000,000 (`server/src/races/pointsRule.js:39-56`, `:30-31`).
   Extra fields are dropped (`:55`).
-- **Response:** 200 with the stored rule (`server/src/routes/races.js:214-218`, `server/src/races/pointsRule.js:78-82`).
-- **Errors:** 400 `{error}` with the validator's sentence (`server/src/routes/races.js:216`). 401. 403
+- **Response:** 200 with the stored rule (`server/src/routes/races.js:215-219`, `server/src/races/pointsRule.js:78-82`).
+- **Errors:** 400 `{error}` with the validator's sentence (`server/src/routes/races.js:217`). 401. 403
   (`server/src/auth/guards.js:192-193`). CSRF 403.
 
 ### `GET /api/races/:shortKey`
 
 - **Who:** any signed-in user. It finds only races of the caller's team; another team's key gets the
-  same 404 as a key that was never issued (`server/src/routes/races.js:220-233`,
-  `server/src/races/raceStore.js:513-521`).
+  same 404 as a key that was never issued (`server/src/routes/races.js:221-234`,
+  `server/src/races/raceStore.js:535-543`).
 - **Request:** path `shortKey`. It is normalised by trimming, upper-casing and removing spaces and
   hyphens, and must then be 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`
   (`shared/raceShortKey.mjs:54`, `:60`, `:68-76`).
-- **Response:** 200 with the race object (`server/src/routes/races.js:232`).
+- **Response:** 200 with the race object (`server/src/routes/races.js:233`).
 - **Errors:** 404 `No race with that key.`: no team, a malformed key, another team's race, or no
-  such race (`server/src/routes/races.js:228-231`). 401.
+  such race (`server/src/routes/races.js:229-232`). 401.
 
 ### `POST /api/races/:shortKey/verify`
 
 - **Who:** admin only (`server/src/auth/guards.js:66-71`). The lookup is team-scoped like the GET, so
-  an admin can verify only **their own team's** races (`server/src/routes/races.js:247-251`).
+  an admin can verify only **their own team's** races (`server/src/routes/races.js:253-257`).
 - **Request:** path `shortKey`; no body. It runs a full race replay synchronously on the server
-  thread (`server/src/routes/races.js:244-245`).
+  thread (`server/src/routes/races.js:245-246`).
 - **Response:** 200 `{shortKey, identical: boolean, positions: {match, of}, finishTimes: {match, of},
-  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:260-272`,
+  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:266-278`,
   `scripts/lib/storedRaceReplay.mjs:193-204`).
 - **Errors:**
-  - 404 `No race with that key.` (`server/src/routes/races.js:249-251`).
-  - 501: the race engine module is not present in this install (`:253-259`).
+  - 404 `No race with that key.` (`server/src/routes/races.js:255-257`).
+  - 501: the race engine module is not present in this install (`:259-265`).
   - 422 `{error}`: `StoredRaceRefusal`, meaning the record cannot be replayed honestly — no matching
-    `geometryId`, a lap mismatch, or a missing world block (`:274`,
-    `scripts/lib/storedRaceReplay.mjs:42`, `:54-62`, `:83-108`).
+    `geometryId`, a lap mismatch, or a missing world block (`:280-281`,
+    `scripts/lib/storedRaceReplay.mjs:42`, `:55-63`, `:84-109`).
   - 401. 403 (`server/src/auth/guards.js:192-193`). CSRF 403.
-  - Unhandled: any other error, including one thrown by `readInstallTracks` on a malformed track
-    file (`server/src/routes/races.js:66-71`), is rethrown from an `async` handler (`:275`). Express 4
-    does not catch a rejected promise, and the app has no error middleware and no
-    `unhandledRejection` handler (no `process.on` in `server/src/index.js`). The request then gets
-    no response, and under Node's default `--unhandled-rejections=throw` (Node 15 and later; the
-    image runs Node 20) **the server process exits**. A known defect, recorded in BACKLOG PART ONE
-    (*SERVER — two defects found documenting the API*); not changed here.
+  - 500 `{ error: 'internal error' }`: any other error, including one thrown by `readInstallTracks`
+    on a malformed track file (`server/src/routes/races.js:67-72`). The route rethrows it (`:282`)
+    and `asyncRoute` answers it (`:252`, `server/utils/asyncRoute.js:32-33`): logged server-side
+    with the route, and the server keeps running. *(Until SERVER-DEFECTS-1, 2026-10-06, the rethrow
+    escaped the async handler: the request got no answer and the process exited.)*
 
 ---
 

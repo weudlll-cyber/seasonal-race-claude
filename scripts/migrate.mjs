@@ -178,6 +178,22 @@ export async function buildDefaultMigrations() {
         return migrateRaceSource({ dbPath: racesDbPath(dataRoot), dryRun });
       },
     },
+    {
+      id: 'client-id-per-team-1',
+      description:
+        "A race's client id becomes unique per team, not across every team (SERVER-DEFECTS-1). " +
+        'The races table is rebuilt; every row is kept.',
+      /** The same file-existence probe as race-source-1, for the same reason (stated there). */
+      alreadyAppliedByObservableState({ dataRoot }) {
+        return !existsSync(racesDbPath(dataRoot));
+      },
+      async run({ dryRun, dataRoot }) {
+        const { migrateClientIdPerTeam } = await import(
+          pathToFileURL(join(ROOT, 'server/src/races/migrateClientIdPerTeam.js')).href
+        );
+        return migrateClientIdPerTeam({ dbPath: racesDbPath(dataRoot), dryRun });
+      },
+    },
   ];
 }
 

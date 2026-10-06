@@ -14,6 +14,7 @@ import { SETUP_MARKER_PATH } from './paths.js';
 import { resolveCookieSecure, getActiveCookieName } from './session.js';
 import { restampSession } from './restampSession.js';
 import { FOUNDING_TEAM } from './teams.js';
+import { asyncRoute } from '../../utils/asyncRoute.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
@@ -195,31 +196,36 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
   });
 
   // POST /login — public, timing-equalized
-  router.post('/login', async (req, res) => {
-    const { username, password } = req.body ?? {};
-    const record = store.findAuthRecordByUsername(username);
+  // SERVER-DEFECTS-1: `asyncRoute` answers a throw from the store reads outside any `try` (a 500,
+  // logged) instead of letting it escape the async handler and stop the process.
+  router.post(
+    '/login',
+    asyncRoute('auth', async (req, res) => {
+      const { username, password } = req.body ?? {};
+      const record = store.findAuthRecordByUsername(username);
 
-    if (!record) {
-      await verifyPassword(password, DUMMY_HASH); // timing equalization — result ignored
-      return res.status(401).json({ error: 'invalid credentials' });
-    }
+      if (!record) {
+        await verifyPassword(password, DUMMY_HASH); // timing equalization — result ignored
+        return res.status(401).json({ error: 'invalid credentials' });
+      }
 
-    const ok = await verifyPassword(password, record.passwordHash);
-    if (!ok) {
-      return res.status(401).json({ error: 'invalid credentials' });
-    }
+      const ok = await verifyPassword(password, record.passwordHash);
+      if (!ok) {
+        return res.status(401).json({ error: 'invalid credentials' });
+      }
 
-    // Regenerate on successful login (AUTH.md §4 MUST: anti session-fixation)
-    req.session.regenerate((err) => {
-      if (err) return res.status(500).json({ error: 'login failed' });
-      req.session.userId = record.id;
-      req.session.sessionEpoch = record.sessionEpoch ?? 0;
-      req.session.save((err2) => {
-        if (err2) return res.status(500).json({ error: 'login failed' });
-        res.json({ username: record.username, role: record.role, team: record.team ?? null });
+      // Regenerate on successful login (AUTH.md §4 MUST: anti session-fixation)
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ error: 'login failed' });
+        req.session.userId = record.id;
+        req.session.sessionEpoch = record.sessionEpoch ?? 0;
+        req.session.save((err2) => {
+          if (err2) return res.status(500).json({ error: 'login failed' });
+          res.json({ username: record.username, role: record.role, team: record.team ?? null });
+        });
       });
-    });
-  });
+    })
+  );
 
   // POST /logout — inline auth (global requireAuth arrives in step 4)
   router.post('/logout', (req, res) => {
@@ -252,45 +258,49 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
   // derived from the session cookie, and NEVER from the request body — a body-named target would
   // turn this into an unguarded admin reset. An admin resetting somebody else's password keeps
   // using PUT /api/users/:id.
-  router.post('/change-password', async (req, res) => {
-    const { currentPassword, newPassword } = req.body ?? {};
+  // SERVER-DEFECTS-1: answered by `asyncRoute` for the same reason as /login.
+  router.post(
+    '/change-password',
+    asyncRoute('auth', async (req, res) => {
+      const { currentPassword, newPassword } = req.body ?? {};
 
-    // requireAuth has already run (this path is not public), so authUser is present; the guard is
-    // kept for the case of this router being mounted without the stack, e.g. a future unit test.
-    const userId = req.authUser?.id ?? req.session?.userId;
-    if (!userId) return res.status(401).json({ error: 'not authenticated' });
+      // requireAuth has already run (this path is not public), so authUser is present; the guard is
+      // kept for the case of this router being mounted without the stack, e.g. a future unit test.
+      const userId = req.authUser?.id ?? req.session?.userId;
+      if (!userId) return res.status(401).json({ error: 'not authenticated' });
 
-    const record = store.findAuthRecordById(userId);
-    if (!record) {
-      return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
-    }
-
-    // Same comparison the login path uses — one implementation, not a second one.
-    const ok = await verifyPassword(currentPassword, record.passwordHash);
-    if (!ok) {
-      // Say exactly what the login path says to a wrong password, and no more. The server log is
-      // the only place the distinction exists.
-      console.warn(`[auth] change-password rejected: wrong current password for user ${userId}`);
-      return res.status(401).json({ error: 'invalid credentials' });
-    }
-
-    try {
-      // The store validates the new password with the same rule setup uses, hashes it, and bumps
-      // sessionEpoch — which is what ends this user's OTHER sessions. No session code here.
-      await store.updateUser(userId, { password: newPassword });
-    } catch (err) {
-      if (err.code === 'INVALID_PASSWORD' || err.code === 'EMPTY_UPDATE') {
-        return res.status(400).json({ error: 'Password must not be empty' });
+      const record = store.findAuthRecordById(userId);
+      if (!record) {
+        return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
       }
-      console.error('[auth] change-password failed:', err.code ?? err.message);
-      return res.status(500).json({ error: 'internal error' });
-    }
 
-    // Keep THIS session alive across the bump it just caused. Shared with PUT /api/users/:id.
-    await restampSession(req, store, userId);
+      // Same comparison the login path uses — one implementation, not a second one.
+      const ok = await verifyPassword(currentPassword, record.passwordHash);
+      if (!ok) {
+        // Say exactly what the login path says to a wrong password, and no more. The server log is
+        // the only place the distinction exists.
+        console.warn(`[auth] change-password rejected: wrong current password for user ${userId}`);
+        return res.status(401).json({ error: 'invalid credentials' });
+      }
 
-    res.json({ ok: true });
-  });
+      try {
+        // The store validates the new password with the same rule setup uses, hashes it, and bumps
+        // sessionEpoch — which is what ends this user's OTHER sessions. No session code here.
+        await store.updateUser(userId, { password: newPassword });
+      } catch (err) {
+        if (err.code === 'INVALID_PASSWORD' || err.code === 'EMPTY_UPDATE') {
+          return res.status(400).json({ error: 'Password must not be empty' });
+        }
+        console.error('[auth] change-password failed:', err.code ?? err.message);
+        return res.status(500).json({ error: 'internal error' });
+      }
+
+      // Keep THIS session alive across the bump it just caused. Shared with PUT /api/users/:id.
+      await restampSession(req, store, userId);
+
+      res.json({ ok: true });
+    })
+  );
 
   // GET /me — inline auth
   router.get('/me', (req, res) => {
