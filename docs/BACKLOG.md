@@ -257,7 +257,9 @@ line numbers are the address; read the value there.
   panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
   and carries THREE controls today — Race Duration, Number of Winners, and an optional Event Name.**
   This is the surface the requirement names, and it is nearly empty, which is the useful part of
-  this fact.
+  this fact. ★ **2026-10-06 (REMOVE-WINNERS-SETTING-1): Number of Winners is removed by the owner's
+  decision of that day** — the podium is three places everywhere — so the panel's own settings are
+  Race Duration and the Event Name.
   **CORRECTED 2026-08-23, re-counted at source.** It said *"exactly ONE control today — Race
   Duration, at `RaceSettings.jsx:32`"*. The line number was right and the count was wrong: the same
   file renders a winners stepper and an event-name field below it. **The correction is kept visible
@@ -1548,6 +1550,9 @@ already-settled questions.
   control and an InfoTooltip in `RaceDefaults.jsx` (decrement guarded at 1). The question this item
   asks has an answer at source; there is no work in it.
   **verify:** `git grep -n "winners" -- client/src/screens/DevScreen/sections/RaceDefaults.jsx`
+  ★ **SUPERSEDED 2026-10-06 (REMOVE-WINNERS-SETTING-1):** the owner decided that day to remove the
+  setting; the podium is three places everywhere (`PODIUM_PLACES`, `shared/podium.mjs`). The verify
+  above now finds nothing, which is the point.
 
 - **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth

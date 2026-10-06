@@ -4,12 +4,12 @@
 // Project:     RaceArena — DEVSCREEN-CHAPTERS-1
 // Created:     2026-10-05
 // Description: THE CHAPTER GUARD. Holds the rebuilt Dev Screen to the design table
-//              (reports/evolution/DEVSCREEN-CHAPTERS-1/design.json, 349 rows): every control
+//              (reports/evolution/DEVSCREEN-CHAPTERS-1/design.json, 347 rows): every control
 //              exactly once, in the chapter and sub-group the design gives it, in the design's
 //              order, carrying the design's info text.
 //
 // HOW EACH CONTROL IS CHECKED — every control carries `data-control-id="<file>:<id>"`, on the
-// control or on its row. ALL 349 ARE CHECKED BY RENDERING; none is covered by a source scan.
+// control or on its row. ALL 347 ARE CHECKED BY RENDERING; none is covered by a source scan.
 //
 //   The real DevScreen is rendered as an ADMIN in the All view, every section real. The data the
 //   server would send is given through mocked data modules, ONE ENTRY of each kind, shaped so that
@@ -319,9 +319,9 @@ beforeAll(async () => {
 });
 
 describe('DEVSCREEN-CHAPTERS-1 — the screen holds every control of the design, once, in place', () => {
-  it('design.json is the 349-row table', () => {
-    expect(DESIGN).toHaveLength(349);
-    expect(ROWS.size).toBe(349);
+  it('design.json is the 347-row table', () => {
+    expect(DESIGN).toHaveLength(347);
+    expect(ROWS.size).toBe(347);
   });
 
   it('the registry has the design chapters, in the design order', () => {

@@ -1063,7 +1063,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 87a5497e 2026-10-06 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ cd0be744 2026-10-06 depends=client/src/modules/camera/ via=scripts/tracking-lag.mjs -->
+
+★★ **RE-MEASURED 2026-10-06 (REMOVE-WINNERS-SETTING-1), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. `defaults.js`, in the closure, lost the `winners` race default; nothing in the race reads it. Run rather than argued.
 
 ★★ **RE-MEASURED 2026-10-06 (TIDY-C-3), IDENTICAL TO THE DIGIT** — the same four rows and ratio 2.89×. `autoSpriteScale.js`, `heroCurveGenerator.js`, `raceCore.js` and `racer-types/index.js`, in the closure, changed only comments and `export` keywords (all four fingerprints equal). Run rather than argued.
 

@@ -104,7 +104,6 @@ const activeRace = {
   worldHeight: geo.worldHeight ?? 720,
   duration: 60,
   eventName: "scoreboard-bench",
-  winners: 3,
   raceMode: "time",
   targetDurationSec: 60,
   realizedDurationSec: 60,

@@ -432,7 +432,6 @@ async function runOne(page, geo, seed, arm, N) {
     worldWidth: geo.worldWidth ?? 1280,
     worldHeight: geo.worldHeight ?? 720,
     duration: 60,
-    winners: 3,
     raceMode: isOpen ? "time" : "laps",
     targetDuration: 60,
     targetLaps: 2,

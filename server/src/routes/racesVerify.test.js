@@ -20,6 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import request from 'supertest';
 import { createRacesRouter } from './races.js';
+import { createRaceStore } from '../races/raceStore.js';
 import {
   resolveIdentity,
   loadTracks,
@@ -213,5 +214,45 @@ describe('POST /api/races/:shortKey/verify — an unexpected error is answered (
     const second = await request(app).post('/api/races/TEST01/verify');
     expect(second.status).toBe(200);
     expect(second.body.identical).toBe(true);
+  }, 120_000);
+});
+
+describe('an old race with a different winners count (REMOVE-WINNERS-SETTING-1)', () => {
+  it('a race stored with FIVE winners still loads with its five and still verifies', async () => {
+    // Before 2026-10-06 the number of winners was a setting; a race stored then may list any count.
+    // The owner's decision of that day fixed the podium at three going forward — a stored race keeps
+    // the winners it was stored with, and verifying it is unaffected.
+    const dir = mkdtempSync(join(tmpdir(), 'ra-old-winners-'));
+    const store = createRaceStore(join(dir, 'races.sqlite'));
+    try {
+      const winners = REC.results.slice(0, 5).map((r) => r.name);
+      const { shortKey } = store.storeRace({
+        ...REC,
+        clientRaceId: 'old-race-five-winners',
+        finishedAt: '2026-10-01T10:00:00.000Z',
+        identifierVersion: 1,
+        buildId: 'abc1234',
+        raceActionStage: 'quiet',
+        winners,
+      });
+      const a = express();
+      a.use(express.json());
+      a.use('/api/races', (req, _res, next) => {
+        req.authUser = { username: 'admin', role: 'admin', team: TEAM };
+        next();
+      });
+      a.use('/api/races', createRacesRouter({ store, tracks: loadTracks() }));
+
+      const got = await request(a).get(`/api/races/${shortKey}`);
+      expect(got.status).toBe(200);
+      expect(got.body.winners).toEqual(winners);
+
+      const verified = await request(a).post(`/api/races/${shortKey}/verify`);
+      expect(verified.status).toBe(200);
+      expect(verified.body.identical).toBe(true);
+    } finally {
+      store.close();
+      rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+    }
   }, 120_000);
 });

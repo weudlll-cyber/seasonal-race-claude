@@ -17,8 +17,6 @@ export const CONTROL_INFO = {
     'How eventful the racing is. Quiet is the shipped race. Medium and Wild push the front fight harder — the same fair finish, more of a contest getting there. The stage you pick here is stored with each race, so the result screen can tell you which one ran.',
   'RaceDefaults:duration':
     "Pre-fills the Duration field in Race Setup. The value that actually runs a race is derived by the track — closed tracks from laps and course length, open tracks from the setup slider or the track's own default — so this seed is not read once a race starts.",
-  'RaceDefaults:winners':
-    'How many top finishers the result screen celebrates as winners. Raise it and more places get a podium treatment; lower it and only the very front is honoured. Race Setup starts from this number and you can still change it per race.',
   'RaceDefaults:maxPlayersClosed':
     'The most player names Race Setup accepts for a closed-loop track. It is the only limit on field size for those tracks; a larger field is refused at setup, a smaller one is never padded.',
   'RaceDefaults:maxPlayersOpen':
@@ -473,8 +471,6 @@ export const CONTROL_INFO = {
     'Closed tracks only: how many laps a race on this track starts with in Race Setup. The race length follows from the laps and the course length.',
   'TrackManager:defaultDurationSec':
     'Open tracks only: how long a race on this track starts with in Race Setup.',
-  'TrackManager:defaultWinners':
-    'How many podium places a race on this track starts with in Race Setup.',
   'TrackManager:track-geometry-btn':
     'Opens this track in the Track Geometry Editor to draw or change its path.',
   'TrackManager:defaultRacerTypeId': 'The racer type Race Setup picks when this track is chosen.',

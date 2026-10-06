@@ -54,7 +54,7 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1881) holds exactly THREE unchecked `- [ ]` rows** — 2 in *Delivering to someone else*
+(lines 15–1886) holds exactly THREE unchecked `- [ ]` rows** — 2 in *Delivering to someone else*
 and 1 in *Build-identity residuals*.
 *(Re-counted 2026-10-06 after SERVER-DEFECTS-1 closed the server-defects row.)* Every current count on this page says three.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
