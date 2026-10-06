@@ -287,6 +287,11 @@ npm run status
 Until the first backup exists, `npm run status` reports the backup check as FAIL. That is
 expected. The backup section below fixes it.
 
+**9 · Add the race directors.** Signed in as the admin: Dev Screen → **Accounts and system** →
+**Race directors**. Each account gets a team; an `operator` runs races, an `admin` also manages
+accounts and settings. *(Added by PROBE-INSTALL-2, 2026-10-06: the guide said how to create the
+first admin and never where every other account comes from.)*
+
 ### Backups, and the status check — schedule both
 
 **Take a backup:**
@@ -527,9 +532,18 @@ decisions made elsewhere, and a stranger who stops here has neither:
   `./server/src` (with `node --watch`), `./server/utils`, `./server/seeds` and `./server/data` from
   the folder it is started in. **Your data is therefore the folder `server/data` beside the compose
   file**, not a Docker volume, and it survives `docker compose down`.
-- **Backups with this compose file run from the host**, because the image carries no `scripts/`:
-  from the repository folder, `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node
-  scripts/backup.mjs`. The databases are copied online, so the container may keep running. To
+- **The first admin needs a setup token in the override file too:** add
+  `RA_BOOTSTRAP_TOKEN=<openssl rand -hex 16>` to its `environment`, start, and send install step 6's
+  request to the published port (`http://127.0.0.1:4000/api/auth/setup`, with the `Origin` header of
+  the address browsers use). Then take the token out of the override file and `docker compose up -d`
+  again. *(Added by PROBE-INSTALL-2, 2026-10-06.)*
+- **Backups with this compose file run from the host**, because the image carries no `scripts/`.
+  ★ **Install the server's dependencies on the host once first: `npm ci --prefix server`.** The
+  backup copies the two databases through `better-sqlite3`, which it loads from `server/node_modules`;
+  a fresh folder has none, and the command stops with *Cannot find package 'better-sqlite3'*. The
+  container is not affected — compose mounts `server/src`, `server/utils`, `server/data` and
+  `server/seeds` only. *(Found by PROBE-INSTALL-2, 2026-10-06.)* Then, from the repository folder,
+  `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node scripts/backup.mjs`. The databases are copied online, so the container may keep running. To
   restore: `docker compose stop`, move `server/data` aside,
   `node scripts/backup.mjs --restore <archive> --into server/data`, then `docker compose start`.
   *(Run 2026-10-04, PROBE-INSTALL-1 part 3: the user and the stored race were back after the
