@@ -215,4 +215,3 @@ describe('POST /api/races/:shortKey/verify — an unexpected error is answered (
     expect(second.body.identical).toBe(true);
   }, 120_000);
 });
-

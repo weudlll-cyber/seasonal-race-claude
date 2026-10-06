@@ -18,10 +18,7 @@ import { existsSync, unlinkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { createRaceStore } from '../races/raceStore.js';
 import { createRacesRouter } from './races.js';
-import {
-  migrateClientIdPerTeam,
-  hasClientIdPerTeam,
-} from '../races/migrateClientIdPerTeam.js';
+import { migrateClientIdPerTeam, hasClientIdPerTeam } from '../races/migrateClientIdPerTeam.js';
 
 /** A race body as the client sends it (no team — the server reads that from the session). */
 function raceBody(clientRaceId) {
@@ -115,7 +112,7 @@ describe('migrateClientIdPerTeam — a database from before the fix', () => {
     const path = tempDb();
     const fresh = createRaceStore(tempDb());
     const rows = fresh._db
-      .prepare("SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid")
+      .prepare('SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid')
       .all();
     fresh.close();
     const old = new Database(path);
@@ -124,7 +121,10 @@ describe('migrateClientIdPerTeam — a database from before the fix', () => {
         name === 'races'
           ? sql
               .replace(/(client_race_id\s+TEXT NOT NULL),/, '$1 UNIQUE,')
-              .replace(/,\s*(--[^\n]*\n\s*)*UNIQUE \(team_normalized, client_race_id\)\s*\)\s*$/, '\n)')
+              .replace(
+                /,\s*(--[^\n]*\n\s*)*UNIQUE \(team_normalized, client_race_id\)\s*\)\s*$/,
+                '\n)'
+              )
           : sql
       );
     }
