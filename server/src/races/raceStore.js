@@ -570,15 +570,26 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
    * ★ NOT PAGINATED, unlike `listRacesPage`, because an evaluation needs every race of its period.
    * The bound is the period the user chose; a period long enough to make that expensive is a
    * question for the owner, recorded in the report rather than guessed at here.
+   *
+   * ★ STREAMED, ONE ROW AT A TIME, AND ONLY THE TWO FIELDS THE EVALUATION READS (BOUNDED-EVAL-1,
+   * 2026-10-07). This used to `.all()` the period and `hydrate` every race — roster, world
+   * configuration and all — so one evaluation held the whole period at once: 37.8 MiB for 5,071
+   * races, and the server's memory high-water mark grew ~30 MiB per 1,000 stored races
+   * (reports/release/SOAK-1.md). `evaluatePeriod` reads `raceSource` and `results` and nothing else,
+   * in this order, so a generator over `.iterate()` gives it the same races and holds one. The
+   * statement is closed when the consumer stops early: `for…of` calls `return()`, which ends the
+   * inner iteration too.
    */
-  function listRacesInPeriod(team, from, to) {
-    if (!isWellFormedTeam(team)) return [];
-    return db
+  function* raceResultsInPeriod(team, from, to) {
+    if (!isWellFormedTeam(team)) return;
+    const rows = db
       .prepare(
-        'SELECT * FROM races WHERE team_normalized = ? AND finished_at >= ? AND finished_at < ? ORDER BY finished_at ASC, id ASC'
+        'SELECT race_source, results FROM races WHERE team_normalized = ? AND finished_at >= ? AND finished_at < ? ORDER BY finished_at ASC, id ASC'
       )
-      .all(normalizeTeam(team), from, to)
-      .map(hydrate);
+      .iterate(normalizeTeam(team), from, to);
+    for (const row of rows) {
+      yield { raceSource: row.race_source ?? null, results: JSON.parse(row.results) };
+    }
   }
 
   /**
@@ -624,7 +635,7 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     getRaceByShortKey,
     listRacesByTeam,
     listRacesPage,
-    listRacesInPeriod,
+    raceResultsInPeriod,
     getRacerTypes,
     counts,
     close: () => db.close(),
