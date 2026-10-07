@@ -632,6 +632,23 @@ nothing is designed here, no key is added, and no change is implied.
       happens a third time, this row is the wrong suspect** and the next place to look is elsewhere.
       ★ The badge's content, the poll interval and what gets reported are all unchanged.
 
+      **VERDICT 2026-10-07 (SOAK-1 part C) — STILL OPEN, BY THIS ROW'S OWN RULE.** The rule:
+      close only if no git child is spawned per source save, the badge stays correct all night,
+      and no process-creation error occurs. A Vite dev server ran 9 hours in a clone with
+      `GIT_TRACE2_EVENT` recording every git it started, through 16,093 source saves (one every 2 s)
+      and 8 hourly commits.
+      - **git children per save: 0.** 86 git calls in all: 5 at start-up, 27 from the badge reads,
+        54 after the commits; none unexplained.
+      - **Process-creation errors: none.**
+      - **The badge: commit and branch right 10 times out of 10, but the dirty mark was wrong.** The
+        tree was modified almost all night and the badge never said `+dirty`.
+
+      The cause is the 2026-09-25 change itself: identity is re-read only when `.git/HEAD` or
+      `.git/index` move (`gitMoved()`), and a source save moves neither.
+      [reports/release/SOAK-1.md](../reports/release/SOAK-1.md), part C.
+      **verify:** modify a tracked file under a running dev server; the badge shows `+dirty` (today it
+      does not until the next git operation).
+
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -913,6 +930,58 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
 ## Before the VPS migration
+
+### What the long run found (SOAK-1, 2026-10-07)
+
+A 9-hour soak of the Docker image at `56bdb8d7` under 566,225 requests, plus a static audit of the
+production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No crash, restart or
+5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
+block.
+
+- [ ] ★★ **A VERIFY STOPS THE WHOLE SERVER FOR ITS LENGTH — 1.5 to 5.4 SECONDS.**
+      `POST /api/races/:shortKey/verify` replays the race synchronously on the server's only thread
+      (`server/src/routes/races.js:268`, `replayStoredRace`). Measured over 89 verifies:
+      - 20 racers: median 1.7 s (1.5–2.3 s);
+      - 40 racers: median 4.3 s (3.5–5.4 s).
+
+      Every other request waits for it, and every route group had minutes with a p99 over one
+      second, on the verify ticks. `reports/release/VERIFY-ON-DEMAND-1.md:150` records the blocking as
+      known; the soak measures what it costs.
+      **verify:** during a verify, `GET /api/health` answers; time it. Today: the verify's full
+      length.
+- [ ] ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
+      at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)
+      and 06:47 UTC, each after 4.3–5.4 s, which is a verify's length. The cause is established by
+      experiment in SOAK-1.md, *Causes*.
+      **verify:** `reports/release/SOAK-1/keepalive.mjs` against a server on your own port —
+      connection errors per arm.
+- [ ] ★ **THE PERIOD EVALUATION READS EVERY RACE OF THE PERIOD AT ONCE, IN FULL.**
+      `listRacesInPeriod` (`server/src/races/raceStore.js:574-582`) loads and hydrates every race —
+      roster, world configuration and all — though `evaluatePeriod` reads two fields of each.
+      - Its median grows by **36 ms per 1,000 stored races**: 242 ms at 13,424, held synchronously
+        on every call.
+      - The server's memory high-water mark grows by **~30 MiB per 1,000 races**: 183 → 544 MiB.
+      - The memory floor stays flat (92 → 96 MiB).
+      - At 60 races a day: ~197 ms and ~250 MiB after 90 days.
+
+      **verify:** the in-process probe in `reports/release/SOAK-1/inproc.mjs` — heap held by one
+      evaluation, against the race count.
+- [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
+      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
+      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
+      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
+      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
+      shrinks.
+- [ ] **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
+      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
+      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
+      have no ceiling.
+      **verify:** `docker compose config` shows no `logging:` under the service.
+- [ ] **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
+      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
+      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
+      rule is wanted is a decision, not a defect.
+      **verify:** `races.sqlite` size against the race count.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 

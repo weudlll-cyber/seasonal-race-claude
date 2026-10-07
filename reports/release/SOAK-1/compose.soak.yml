@@ -1,0 +1,36 @@
+# SOAK-1 — the production image run the way a VPS would run it, for the soak only.
+#
+# Started with its OWN project name, so nothing here can touch another compose project's
+# containers or volumes:
+#   docker compose -p ra-soak1      -f compose.soak.yml up -d    (the 8-hour run under load)
+#   docker compose -p ra-soak1-idle -f compose.soak.yml up -d    (the 30-minute run with no load)
+# The variables below come from the environment of the shell that starts it (the run notes in
+# SOAK-1.md give the exact lines); the secrets are generated per run and never written to the repo.
+#
+# What differs from the shipped docker-compose.yml, and why:
+# - the IMAGE as built, with NO bind mounts and the data on a named volume — the shipped file is a
+#   development setup (it mounts server/src and runs `node --watch`), which a VPS would not run;
+# - NODE_ENV=production and the settings docs/DEPLOYMENT.md's settings file names;
+# - the port is published on the host's loopback only.
+# - what is the SAME on purpose: the image's own CMD (`node src/index.js`), `restart:
+#   unless-stopped`, and no `logging:` options — the shipped file sets none, so the container log
+#   grows exactly as it would on an install.
+# - NO debugger port: the V8 heap is therefore NOT sampled, only the process's RSS (SOAK-1.md).
+services:
+  server:
+    image: ${SOAK_IMAGE:-ra-soak1-server:56bdb8d7}
+    ports:
+      - "127.0.0.1:${SOAK_PORT}:4000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - RA_PUBLIC_ORIGIN=http://127.0.0.1:${SOAK_PORT}
+      - RA_SESSION_SECRET=${SOAK_SESSION_SECRET}
+      - RA_BOOTSTRAP_TOKEN=${SOAK_BOOTSTRAP_TOKEN}
+      - RA_COOKIE_SECURE=auto
+      - RA_CSRF_STRICT=auto
+    volumes:
+      - data:/app/data
+volumes:
+  data: {}
