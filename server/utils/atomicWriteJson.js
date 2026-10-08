@@ -22,6 +22,9 @@ export function atomicWriteJson(filePath, data, { mode } = {}) {
     writeFileSync(filePath, json, { encoding: 'utf8', mode });
     try {
       unlinkSync(tmp);
-    } catch {}
+    } catch {
+      // Best effort: the data is already written in place; a stray .tmp is swept at the next boot
+      // (sweepOrphanTmp in server/src/index.js).
+    }
   }
 }
