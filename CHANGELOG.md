@@ -24,23 +24,24 @@ none of it should be relied on until it is merged. Each entry names its branch.
   version is not healthy within two minutes. *(branch `feat/vps-install`)*
 - A daily backup with the last 14 days kept, and a status check every 10 minutes that alerts by
   e-mail or in the system journal. *(branch `feat/vps-install`)*
-- fail2ban, guided SSH hardening and `racearena uninstall` are planned for the same branch (the
-  hardening set decided on 2026-10-08). **As fetched on 2026-10-09 the branch does not contain
-  them yet:** the installer leaves the SSH configuration unchanged and prints the recommended steps,
-  and there is no uninstall command. *(branch `feat/vps-install`)*
-- An admin status box in the Dev Screen is planned on branch `feat/admin-status-box`. **That branch
-  did not exist at the origin repository on 2026-10-09**, so nothing about its behaviour is stated
-  here beyond the plan recorded in the audit: it is to be the first outbound call the product makes,
-  to GitHub, to read release tags. *(branch `feat/admin-status-box`)*
+- fail2ban on that install: five failed SSH sign-ins within ten minutes ban the address for an hour.
+  *(branch `feat/vps-install`)*
+- `racearena harden-ssh`: switches off SSH passwords and root sign-in, but only after it has seen
+  the named user sign in with a key from a second session; it refuses otherwise.
+  *(branch `feat/vps-install`)*
+- `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
+  kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
+- An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
+  the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
+  the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*
 
 ### Security
 
 - A Content-Security-Policy on every page the server serves: scripts only from the server itself,
   no inline or `eval` scripts, no framing by other sites. A plain-HTTP install on a local network
   keeps working. *(branch `feat/csp`)*
-- The install folders on a single-server install are made private to their owner (audit finding
-  A5M-06) — planned on the install branch, not yet on it as of 2026-10-09. *(branch
-  `feat/vps-install`)*
+- The data and backup folders on a single-server install are private to the app's own account
+  (audit finding A5M-06), also after a restore. *(branch `feat/vps-install`)*
 
 ## [1.0.0] — not yet tagged
 

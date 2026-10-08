@@ -65,10 +65,12 @@ install path is in [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md), section 1.
 app), and the server makes no outbound network call. Nothing is sent anywhere unless the operator
 copies it — a backup moved to another machine is the operator's own transfer.
 
-★ **When the admin status box is merged** (planned on branch `feat/admin-status-box`), it will be the
-**first outbound call**: to GitHub, to read the project's release tags, and it is planned to carry no
-data from the installation. **That branch was not at the origin repository on 2026-10-09**, so this is
-the plan recorded in the audit, not a checked fact; check it again when it is merged.
+★ **When the admin status box is merged** (built on branch `feat/admin-status-box`, not yet merged), it
+will be the **first outbound call**: the server asks GitHub's public API for the project's tag list
+(`api.github.com/repos/weudlll-cyber/seasonal-race-claude/git/matching-refs/tags/v`), without
+credentials, at most once a day per server process, and only when an admin opens the Dev Screen. The
+request carries nothing from the installation beyond what any HTTPS request reveals (the server's IP
+address to GitHub).
 
 ## Removing a person's data
 

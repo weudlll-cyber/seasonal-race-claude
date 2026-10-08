@@ -240,12 +240,16 @@ a quiet moment. Keep the file that holds it readable by its owner only.
 | path | state |
 | --- | --- |
 | Node, Docker | outside this project; nothing in the repository configures SSH |
-| VPS install (branch feat/vps-install, not yet merged) | the installer **does not change** the SSH configuration. It prints these steps at the end: sign in with a key (put your public key in `~/.ssh/authorized_keys`), then set `PasswordAuthentication no` and `PermitRootLogin prohibit-password` in `/etc/ssh/sshd_config`, then `sudo systemctl reload ssh`. **Do it while still signed in, and test a second sign-in before closing the first.** A guided SSH hardening step is planned for the branch and is not on it as of 2026-10-09 |
+| VPS install (branch feat/vps-install, not yet merged) | the installer **does not change** the SSH configuration; it prints the guided step at the end. Put your public key in `~/.ssh/authorized_keys` of a non-root user who can use sudo, then: `sudo racearena harden-ssh --user <that user>` — it checks the user and prints the plan and a one-time code. In a **second** terminal, signed in as that user **with your key**, run `sudo racearena harden-ssh --confirm <code>`: it switches off password and root sign-in only if that session really used a key, and refuses otherwise. Keep both sessions open until a third sign-in with the key works. `--dry-run` shows the plan without a code |
 
 ### fail2ban
 
-**Not part of any path as of 2026-10-09.** It is planned for the VPS install branch and is not on it
-yet. The app itself limits failed sign-ins per IP address and failed password changes per user
+| path | state |
+| --- | --- |
+| Node, Docker | outside this project |
+| VPS install (branch feat/vps-install, not yet merged) | installed and on: five failed SSH sign-ins within ten minutes ban the address for one hour. `racearena status` shows how many addresses are banned |
+
+The app itself also limits failed sign-ins per IP address and failed password changes per user
 (AUTH.md §6).
 
 ### What the app keeps about people
@@ -312,4 +316,4 @@ you can fix by configuration.
 | --- | --- |
 | Node | stop the process and remove it from your process manager and cron; delete the release directories (`/opt/racearena/racearena-*` in DEPLOYMENT.md's example), the data folder (`RA_DATA_DIR`), the backups (`RA_BACKUP_DIR`) and the settings file. Those four places are everything the install wrote (DEPLOYMENT.md, *The layout*) |
 | Docker | `docker compose down --rmi local` in the repository folder, then delete the folder — it holds the data (`server/data`) and `docker-compose.override.yml` with the secrets — and your backup folder |
-| VPS install (branch feat/vps-install, not yet merged) | **there is no `racearena uninstall` yet**; it is planned for the branch. What the installer created, from `docs/VPS-INSTALL.md` and `deploy/install.sh` on the branch: the two containers and their images, `/opt/racearena`, `/var/lib/racearena`, `/var/backups/racearena`, `/etc/racearena`, `/usr/local/bin/racearena`, and five systemd units (`racearena-backup.service` and `.timer`, `racearena-status.service` and `.timer`, `racearena-alert.service`). It also installed Docker, ufw and unattended-upgrades, which other software may now rely on. No removal sequence has been tested |
+| VPS install (branch feat/vps-install, not yet merged) | `sudo racearena uninstall`: it takes a final backup (and removes nothing if that fails), asks you to type the domain, then removes the containers, the app images, Caddy's certificates, the timers, the fail2ban jail, `/opt/racearena`, `/etc/racearena` and the command itself. **The data (`/var/lib/racearena`) and the backups (`/var/backups/racearena`) are kept.** `--purge-data` deletes those too, after asking a second time. Docker, ufw and unattended-upgrades stay installed, since other software may rely on them. Tested end to end on a local Docker, with and without `--purge-data` |
