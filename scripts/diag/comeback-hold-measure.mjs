@@ -13,9 +13,9 @@
 //     director the way the product does (raceDriver.mjs:574); this script only READS the plan
 //   · the BROWSER's outcome-phase flag, wrapped exactly as comeback-beats.mjs does it
 //     (`--outcome=browser`, its default), so the comeback shot is offered when it is in the browser
-//   · the director's own `_lastTransitionReason` (CameraDirector.js:1059) — why each transition
+//   · the director's own `_lastTransitionReason` (CameraDirector.js) — why each transition
 //     fired, read, never re-derived
-//   · `racePlanController.getTargetRank` (racePlanner.js:1930) — the racer's DRAWN finishing place
+//   · `racePlanController.getTargetRank` (racePlanner.js) — the racer's DRAWN finishing place
 //
 // THE RACE IS A QUICK TEST's: seed, track, 20 racers, the track's default racer type. Its length is
 // the shared driver's (as in every earlier comeback measurement), and the camera is driven once per
