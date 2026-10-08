@@ -11,6 +11,7 @@
 //   read-race <user> <key>    sign in, read the race back; exit 1 unless it is the one stored
 //   signin <user>             sign in; exit 1 unless it works
 //   setup-refused             POST /api/auth/setup again; exit 0 when it is refused (the token is gone)
+//   test-aids-off <user>      sign in; exit 1 unless the test-aids switch reads OFF (a fresh install)
 // ============================================================
 
 import https from 'node:https';
@@ -99,6 +100,14 @@ const commands = {
     const race = JSON.parse(r.data);
     if (race.results[0].name !== 'Bob' || race.names.length !== 3) throw new Error(`read ${key}: not the race stored`);
     console.log(`race ${key}: read back, winner ${race.results[0].name}, ${race.names.length} racers`);
+  },
+  async 'test-aids-off'(user) {
+    // A fresh installation ships with the test-aids switch OFF (TEST-AIDS-1; docs/DEPLOYMENT.md).
+    const { cookie } = await signIn(user);
+    const r = await req('GET', '/api/settings/test-aids', { cookie });
+    if (r.status !== 200) throw new Error(`test-aids: ${r.status} ${r.data}`);
+    if (JSON.parse(r.data).enabled !== false) throw new Error(`test-aids is ON on a fresh install: ${r.data}`);
+    console.log('test-aids switch on the fresh install: OFF');
   },
   async 'setup-refused'() {
     const r = await req('POST', '/api/auth/setup', { body: { username: 'x', password: 'xxxxxxxxxxxx' }, headers: { 'x-bootstrap-token': 'anything' } });

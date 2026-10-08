@@ -65,6 +65,7 @@ check "first admin created through racearena first-admin" bash -c "printf '%s\n'
 check "the one-time token is removed from the settings file" bash -c "! grep -q '^RA_BOOTSTRAP_TOKEN=' '$RA_ETC/racearena.env'"
 check "setup is refused once the admin exists" visitor setup-refused
 check "racearena verify-signin works through https" bash -c "printf '%s\n' '$ADMIN_PW' | ${RACEARENA[*]} verify-signin --user $ADMIN"
+check "the test-aids switch is OFF on the fresh install" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' test-aids-off $ADMIN"
 check "a visitor's sign-in sets a Secure cookie" bash -c "printf '%s\n' '$ADMIN_PW' | node '$HERE/e2e-check.mjs' $DOMAIN '$(ca_file)' cookie $ADMIN"
 
 echo "── only 80 and 443 are published"
