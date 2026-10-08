@@ -3,7 +3,7 @@
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-06**, from PART ONE's **three** rows. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
+Re-derived on **2026-10-08**, from PART ONE's **eight** rows. ★ **`0xC0000142` closed on 2026-10-08** by the owner's decision on the SOAK-1 part C evidence (0 git children over 16,093 saves, no process-creation error, commit and branch right 10 of 10); the late `+dirty` mark is a recorded limitation of the Windows dev server — nine to **eight**. ★ **SOAK-1 opened six rows on 2026-10-07**: a 9-hour soak of the Docker image and a static audit of the server (reports/release/SOAK-1.md) — three to **nine**. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
 conflict-marker row: the hook now refuses them — thirteen to **twelve**. ★ **The 2026-10-03 hygiene pass opened one row**:
 the pre-commit hook does not detect committed conflict markers (a proposal, not built) — twelve to
 **thirteen**. ★ **The comeback-runaway row closed on 2026-10-03**
@@ -54,9 +54,9 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1886) holds exactly THREE unchecked `- [ ]` rows** — 2 in *Delivering to someone else*
-and 1 in *Build-identity residuals*.
-*(Re-counted 2026-10-06 after SERVER-DEFECTS-1 closed the server-defects row.)* Every current count on this page says three.
+(lines 15–1861) holds exactly EIGHT unchecked `- [ ]` rows** — 6 in *Before the VPS migration* and 2 in *Delivering to someone
+else*.
+*(Re-counted 2026-10-08 after `0xC0000142` closed.)* Every current count on this page says eight.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -73,7 +73,7 @@ the backlog for the detail. Nothing is added here that the backlog does not carr
 
 ★ **WHAT THE OWNER'S DECISIONS OF 2026-09-25 DID TO THIS PAGE.** Section 1, *needs only his word*, is
 was **EMPTY** — every question it held that day was answered, dropped or turned into commissioned
-work. **The three rows in section 0 are all WORK**, and that is still true.
+work. **The rows in section 0 are all WORK**, and that is still true.
 ★★ **§1 WENT FROM WRONGLY-EMPTY TO SIX TO EMPTY AGAIN, ALL ON 2026-09-27, and the middle step is
 worth keeping.** It went on saying *"Nothing is waiting on his word"* while
 `reports/audit/MORNING-2026-09-27.md` listed **six** things that were, and while row 6 of section 0
@@ -84,24 +84,28 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all three, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — all eight, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
-1. **`0xC0000142` — the dev server loses the ability to spawn any child.** It has now happened twice.
-   Narrowed 2026-09-25: the watcher no longer spawns (18 git children → 0 over a 20-save burst); the
-   Windows condition itself is not closed and cannot be closed from here.
-2. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
+1. **Going online.** One subject: a domain, a proxy choice, and four build items that do not exist
    yet. His word plus a purchase. ★ The plain-`node` install, update and rollback is written and
    proven by following it literally (RELEASE-BASICS-1, 2026-10-01). ★ **Decided 2026-10-04:** the
    default binding stays on every interface; behind a proxy the operator sets `RA_BIND_ADDRESS`
    (DEPLOYMENT.md, with a tested Caddy example). The domain, the proxy and HTTPS are still open.
-3. ★ **Before delivery, switch off the developer-only displays** — scheduled after everything else.
+2. ★ **Before delivery, switch off the developer-only displays** — scheduled after everything else.
    The sweep is done (DEV-DISPLAYS-1, 27 items). ★ **Decided 2026-10-04:** ONE test-aids switch for the
    whole installation, stored on the server, admin-only, shipped OFF; what it hides, what is
    admin-only regardless and what is always shown are listed on the row. B6 (races on non-default
-   settings not flagged) is folded in here. ★ **Built 2026-10-06 (TEST-AIDS-1) on branch
-   `feat/test-aids-switch`, not merged — open until the owner has looked.**
+   settings not flagged) is folded in here.
+3. ★★ **A verify stops the whole server for its length** — 1.5–5.4 s, every route waits (SOAK-1).
+4. ★★ **Eight requests failed with a connection error, every one during a verify** (SOAK-1; cause
+   in SOAK-1.md, *Causes*).
+5. ★ **The period evaluation reads every race of the period at once, in full** — +36 ms and ~30 MiB of
+   peak memory per 1,000 stored races (SOAK-1).
+6. **Track backups are never removed** — one full copy per track save (SOAK-1).
+7. **The shipped docker-compose.yml sets no log size limit** (SOAK-1).
+8. **The race store keeps every race for ever** — by design; 10 KB a race (SOAK-1).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
