@@ -121,6 +121,8 @@ The repository ships **one** compose file, `docker-compose.yml`, plus
 **[DEPLOY-NOTES.md](docs/DEPLOY-NOTES.md) owns the gap** between what the repository can do today
 and what a public install would need.
 
+**[OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) is for the person who runs the server**: health, logs, backups, restore, updates, accounts and trouble, task by task.
+
 ---
 
 ## How results are kept and restored

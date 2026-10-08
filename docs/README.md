@@ -70,6 +70,7 @@ What a stranger needs in order to understand and change RaceArena.
 | [ENVIRONMENT.md](ENVIRONMENT.md)   | Every environment variable, and what happens when one is missing or wrong. |
 | [DEPLOYMENT.md](DEPLOYMENT.md)     | Public same-origin hosting and the environment it needs.           |
 | [DEPLOY-NOTES.md](DEPLOY-NOTES.md) | What stands between here and a one-command deploy, priced — and which choices are the owner's. Not how-to; that is DEPLOYMENT.md's. |
+| [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md) | Running a server day to day, task by task, for each install path: health, logs, backups, restore, updates, accounts, trouble, uninstalling. |
 | [PRIVACY-FACTS.md](PRIVACY-FACTS.md) | The personal data an installation holds: what, where, for how long, who can read it, what is logged, what leaves the machine. A technical inventory, not legal advice. |
 
 ### The data model

@@ -43,7 +43,7 @@ is marked as such. Where this page and the code disagree, the code is right.
 | backups | **everything above that lives in the data folder**, including the password hashes | `racearena-backup-<time>.tar`, owner-only file, wherever the operator writes it | **until someone deletes it** | the host account, and anyone with access to wherever copies are kept |
 
 "The data folder" is the one directory a RaceArena server keeps everything in; where it is on each
-install path is in the operator guide, `docs/OPERATOR-GUIDE.md`, section 1.
+install path is in [OPERATOR-GUIDE.md](OPERATOR-GUIDE.md), section 1.
 
 ## What is logged
 
