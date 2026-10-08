@@ -768,8 +768,8 @@ went missing).
       > The old sentence had it exactly the wrong way round, and the conclusion drawn from it — that
       > extra races are cheap at the margin — does not follow from the fixed cost at all.
       >
-      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:814`
-      > runs races **six at a time** by default, and `:877` starts that many workers. Two races
+      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:849`
+      > runs races **six at a time** by default, and `:912` starts that many workers. Two races
       > therefore overlap: on the measured run one finished at 209.2 s and the other at 262.6 s, and
       > the run's wall clock is the SLOWER of them, not their sum.
       >

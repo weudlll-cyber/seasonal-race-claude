@@ -169,7 +169,7 @@ returns **nothing**. `server/src/index.js:16` is `app.listen(PORT, …)` — pla
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:199` reads
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:204` reads
 `username` and `password` from `req.body`), and the session cookie carries the session. Over plain
 HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
 so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become
@@ -301,7 +301,7 @@ his choice, with both sides, rather than taken.
 ★ **CLOSED 2026-10-02 (TIDY-C-1):** every archive now has a `<archive>.sha256` beside it in
 `sha256sum` format, and `npm run status` fails the backup check when the newest archive's checksum
 file is missing or does not match. How to use it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
-★ A precision that matters when reading the source: `scripts/backup.mjs:137` writes a *tar header*
+★ A precision that matters when reading the source: `scripts/backup.mjs:204-206` writes a *tar header*
 checksum, which is part of the tar format and **not** an integrity digest of the archive. Do not
 read that line as one.
 

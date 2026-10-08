@@ -244,12 +244,12 @@ line numbers are the address; read the value there.
 
 | candidate key | where | what it plausibly governs |
 | --- | --- | --- |
-| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1021-1024` | how hard a gap is closed by re-drawing |
-| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:996-998` | how many attackers rise, and how far |
-| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:892-894` | how much and how often tempo is re-drawn |
-| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:954-955` | how strongly the plan shapes the field |
-| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:929-1029` | the lead-rotation mechanism's reach and its realism clamp |
-| `chaosSteerGain` | `defaults.js:922` | the steering noise added to the field |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1206-1209` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1181-1183` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1032-1034` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1132-1133` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1077-1084`, `:1321` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `defaults.js:1062` | the steering noise added to the field |
 
 ### The two surfaces, with addresses
 
@@ -457,7 +457,7 @@ source before it was moved rather than taken from a report:**
   pretending to be a safety net. Verified 2026-09-05: no `check-guard-imports` exists anywhere in
   `scripts/` or `package.json`. See [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
 - **`lint` and `format:check` are not in `verify`** — **DONE for the client, and the server needs
-  nothing.** `scripts/lib/routing.mjs:224` and `:239` declare `client-lint` and `client-format-check`,
+  nothing.** `scripts/lib/routing.mjs:226` and `:241` declare `client-lint` and `client-format-check`,
   both scoped to `client/` outside `client/e2e/`, and both were selected and passed in this chain's
   verify runs. ★ **The server is not a gap:** `server/package.json` declares exactly four scripts —
   `dev`, `restart`, `start`, `test` — so it has no `lint` or `format:check` to run.
@@ -722,7 +722,7 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:64,72`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js:64,221`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
 (`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
