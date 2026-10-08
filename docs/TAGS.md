@@ -1281,7 +1281,8 @@ the correctness proof for a cull rather than a side note. **CAMERA and RENDER mo
   ship has no merge commit, so there is no first parent to derive a return point from.
 - `pre/ship-the-night` (`24d1ed2c`, 2026-08-10) — master immediately BEFORE the ship. Reset here to
   restore the 0.65 decisive phase and the unculled pair loop.
-- `v-ship-the-night` (`a4cb669a`, 2026-08-10) — **the ship.** The race costs about 20 % less to
+- `v-ship-the-night` (`1d575759`, 2026-08-10) — **the ship** (the mint commit the tag points at; the
+  night's merge under it is `a4cb669a`). The race costs about 20 % less to
   compute (fixed-work measurement: the world fingerprint's own ten-track run, 128.3 s against
   160.4 s), and the camera treats the last quarter of the leader's run as decisive instead of the
   last third. See [../reports/night/PAIR-PREFILTER-1.md](../reports/night/PAIR-PREFILTER-1.md) and
@@ -1563,7 +1564,7 @@ Lesson 193 protection with no versioning at all. `WORLD_SCHEMA_VERSION` in `race
 different thing and STAYS: a browser<->sim handshake on the exported world, which must abort loudly
 rather than be half-honoured, and which never touches his settings.
 
-- `pre/no-schema` (`41d2ed38`, 2026-08-03) — the last state carrying `schemaVersion: 21`, its equality
+- `pre/no-schema` (`7b195070`, 2026-08-03) — the last state carrying `schemaVersion: 21`, its equality
   check in the loader and its save-time stamp. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides.
 
@@ -1919,7 +1920,7 @@ It is not a leftover and must not be swept.
 ## Complete tag set (after the parity phase close, 2026-07-25)
 
 This was the FULL tag set **at the 2026-07-25 parity-phase close — 25 tags**. It is a dated snapshot;
-the current origin set is **41 tags** (the 16 additions since are listed in the addendum below). The 13
+the origin set was **41 tags** on 2026-07-29 (the 16 additions by then are listed in the addendum below). The 13
 parity `pre/*`+`backup/*` step-tags were collapsed onto **`v-parity-complete`** and deleted (see the _Parity
 phase — COLLAPSED_ record above); everything else is a permanent keeper:
 
@@ -1951,7 +1952,7 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
 
 ### Ships since the gap-brake line (2026-09-17)
 
-- **`archive/gap-leader-brake-2026-09-17`** — the archive of `feat/gap-leader-brake`, merged to master
+- `archive/gap-leader-brake-2026-09-17` (`862bb15a`, 2026-09-17) — the archive of `feat/gap-leader-brake`, merged to master
   as **`be7e6872`**. The branch that gave the engine its only mechanism for slowing a racer who is too
   far AHEAD: past the PULK window the outcome servo steers toward a DRAWN rank and cannot see a gap at
   all, so a leader who broke away stayed away. It carries the brake and its RATE law (size decides
@@ -2006,7 +2007,7 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
 
 ### NOT a ship — the group gap brake, refused (2026-09-22)
 
-- **`archive/group-gap-brake-1`** — the archive of `feat/group-gap-brake-1`, tip **`c2e8c54f`**,
+- `archive/group-gap-brake-1` (`c2e8c54f`, 2026-09-22) — the archive of `feat/group-gap-brake-1`, tip **`c2e8c54f`**,
   **NOT merged and it must not be.** The owner refused it on 2026-09-22. It built a second mode for
   the gap leader brake, behind one key defaulting to today's behaviour: the brake reads the distance
   he actually sees — the largest gap among the first six live positions, the back of the leading
@@ -2021,7 +2022,7 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
 
 ### NOT a ship — the cast's strictness range, measured and closed (2026-09-22)
 
-- **`archive/hero-strictness-1`** — the archive of `feat/hero-strictness-1`, tip **`daab471f`**,
+- `archive/hero-strictness-1` (`daab471f`, 2026-09-22) — the archive of `feat/hero-strictness-1`, tip **`daab471f`**,
   **NOT merged and it must not be.** Refused under the owner's standing rule because **no arm
   survived**. It added ONE key, `choreoHeroStrictness` (default 1.0 = the literal it replaced), to
   the cast's half of the blend at `racePlanner.js:1434`, and measured the one part of that range
@@ -2033,7 +2034,7 @@ phase — COLLAPSED_ record above); everything else is a permanent keeper:
   [DEAD-ENDS.md](DEAD-ENDS.md) §T; measurement in `reports/night/HERO-STRICTNESS-1.md`. All four
   fingerprints unmoved at the default across every commit on it, so **nothing was minted.**
 
-### Additions since 2026-07-25 (current origin total: 45 tags)
+### Additions since 2026-07-25 (origin total on 2026-07-31: 45 tags)
 
 Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
 was 41. The 4 tags added since DOC-SYNC-1:
@@ -2076,9 +2077,14 @@ The **36 older `pre/*` / `backup/*` step-tags** from unrelated earlier phases (a
 background-cache, recover-admin, and the 19–20 June sim-parity / overlap / band lead-in) were **not**
 touched.
 
-The full list of the 177 retired tags is recorded below for the archive.
+The full list of the 191 retired tags is recorded below for the archive.
 
-### Retired tags (177)
+### Retired tags (191)
+
+★ **14 of these names were later re-created as LIVE tags** and are registered above: `pre/camera-hygiene`,
+`pre/camera-hygiene-2`, `pre/company`, `pre/company-2`, `pre/framing`, `pre/lateral`, `pre/min-draw`,
+`pre/no-schema`, `pre/picture-fixes`, `pre/reference-width`, `pre/render-fingerprint`, `pre/tags`,
+`pre/weights`, `pre/zoom-unit`. An entry here records the retired tag of that name, not the live one.
 
 - `backup/4a-asymmetric-fix`
 - `backup/4a-cleanup-docs-and-test`

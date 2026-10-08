@@ -1444,7 +1444,7 @@ on a ~2000px oval at zoom 4×. Fix: 3 lines of linear interpolation + angle wrap
 
 **Process:** Before the root cause was identified, Python frame analysis scripts,
 Playwright frame capture specs, 20 PNGs, and several bisect sprints on browser state artifacts
-were executed (L65, L68). The diagnostic process stretched over several Etappen because the visual
+were executed (L65, L68). The diagnostic process stretched over several stages because the visual
 observation ("double image", "twitching") without quantitative measurement led early into false bisects and
 hypothesis roulette.
 
