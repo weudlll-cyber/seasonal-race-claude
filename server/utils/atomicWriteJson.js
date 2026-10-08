@@ -1,3 +1,10 @@
+// ============================================================
+// File:        atomicWriteJson.js
+// Path:        server/utils/atomicWriteJson.js
+// Project:     RaceArena
+// Description: Write a JSON file atomically (temp file, then rename).
+// ============================================================
+
 import { writeFileSync, renameSync, unlinkSync } from 'node:fs';
 
 // Write JSON atomically: write to .tmp then rename.
@@ -13,6 +20,8 @@ export function atomicWriteJson(filePath, data, { mode } = {}) {
     renameSync(tmp, filePath);
   } catch {
     writeFileSync(filePath, json, { encoding: 'utf8', mode });
-    try { unlinkSync(tmp); } catch {}
+    try {
+      unlinkSync(tmp);
+    } catch {}
   }
 }
