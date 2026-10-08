@@ -51,14 +51,16 @@ kept in `/etc/racearena/install.conf`, so **running the command again never asks
 | --- | --- |
 | checks | run as root, on a supported system |
 | DNS | the domain must point at this server; otherwise it explains what to set at the domain provider and stops |
-| installs | **Docker Engine and its compose plugin** from Docker's own repository; **ufw**, letting in only 22 (SSH), 80 and 443 — SSH is allowed **first**, so your session never drops; **unattended-upgrades** for security updates |
-| lays out | `/opt/racearena` the program (a git checkout) · `/var/lib/racearena` **the data** · `/var/backups/racearena` **the backups** · `/etc/racearena/racearena.env` the settings (readable by root only), with a generated session secret and a one-time setup token |
+| installs | **Docker Engine and its compose plugin** from Docker's own repository; **ufw**, letting in only 22 (SSH), 80 and 443 — SSH is allowed **first**, so your session never drops; **unattended-upgrades** for security updates; **fail2ban**, which bans an address for an hour after five failed SSH sign-ins within ten minutes |
+| lays out | `/opt/racearena` the program (a git checkout) · `/var/lib/racearena` **the data** · `/var/backups/racearena` **the backups** — both readable by the app's own account only · `/etc/racearena/racearena.env` the settings (readable by root only), with a generated session secret and a one-time setup token |
 | starts | two containers: the app, and **Caddy** in front of it, which obtains and renews the **HTTPS certificate** by itself. Only Caddy is reachable from outside (80, 443); the app is not |
 | first admin | created with the one-time token, which is then **removed** from the settings file; sign-in is checked over `https://<your domain>` |
 | schedules | a **backup every day** (the last 14 days are kept) and a **status check every 10 minutes**. When the check fails: an e-mail if SMTP was given, otherwise an error in the system journal that `racearena status` shows. The end of the run says which of the two is active |
 
-**It never changes the SSH configuration.** The recommended steps are printed at the end; do them
-yourself, while signed in, and test a second sign-in before closing the first.
+**It never changes the SSH configuration.** At the end it prints the one command that does, guided:
+`sudo racearena harden-ssh --user <you>`. That switches off password and root sign-in over SSH —
+but only after it has seen you sign in **with a key** in a second session (below). Until you run it,
+fail2ban is what stands between the internet and a password guesser.
 
 **Running it again** on an installed server repairs or confirms: each step it finished is recorded in
 `/etc/racearena/install.state`, the settings and the session secret are kept, and the program is
@@ -75,6 +77,8 @@ moved to another version only by `racearena update`.
 | `racearena update [ref]` | another version: **a backup first**, then the new version is built, its migrations run, it starts and is checked. **If it is not healthy within two minutes, it goes back by itself** to the previous version and to that backup, and says so |
 | `racearena rollback` | back to the version before the last update and to the backup taken just before it (the newer data is moved aside, not deleted) |
 | `racearena version` | what runs here, the version before it, and where things are |
+| `racearena harden-ssh --user <name>` | switches off SSH passwords and root sign-in, **proving first** that `<name>` (a non-root user who can use sudo) signs in with a key: it prints the plan and a one-time code; you sign in as `<name>` with your key in a **second** terminal and run `sudo racearena harden-ssh --confirm <code>` there. It refuses when that session did not use a key, and checks the result with `sshd -t` and the effective settings before reloading SSH. `--dry-run` stops after the checks |
+| `racearena uninstall [--purge-data]` | removes RaceArena: **a final backup first** (if it fails, nothing is removed), then you type the domain to confirm. The containers, the timers, the fail2ban jail, the program and the settings go; **the data and the backups are kept**. `--purge-data` deletes them too, after asking a second time |
 
 `racearena <command> --help` explains each one. Backups, restores, migrations and the status check
 are the project's own tools ([DEPLOYMENT.md](DEPLOYMENT.md)), run inside the app's container — the

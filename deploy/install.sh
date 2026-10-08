@@ -22,13 +22,16 @@
 #    3. DNS: the domain must already point at this server, or it explains what to set and stops
 #    4. installs Docker Engine + compose (Docker's own apt repository), ufw (22, 80, 443 only;
 #       22 is allowed FIRST so SSH never drops), unattended-upgrades for security updates
+#   4b. installs fail2ban with an SSH jail (deploy/fail2ban/racearena-sshd.local: 5 tries, 1 hour)
 #    5. lays out /opt/racearena (the checkout), /var/lib/racearena (data), /var/backups/racearena,
 #       /etc/racearena (settings, 600)
 #    6. starts the stack, creates the first admin, removes the one-time token, checks sign-in over
 #       https — through `racearena`, the helper this installs to /usr/local/bin
 #    7. schedules a daily backup (14 days kept) and a status check every 10 minutes (systemd)
 #
-# IT NEVER TOUCHES THE SSH CONFIGURATION. The recommended hardening is printed at the end.
+# IT NEVER TOUCHES THE SSH CONFIGURATION. The guided hardening (`racearena harden-ssh`) is printed
+# at the end as a next step and is never run from here: it must be run by a person who has a second
+# session open, because it is the one step that can lock the server's owner out.
 # The stack itself — compose file, Caddy, the tools — is deploy/racearena's; see its header.
 # ============================================================
 set -euo pipefail
@@ -243,6 +246,22 @@ install_os() {
   mark_done os
 }
 
+# ── 4b · fail2ban for SSH ────────────────────────────────────────────────────────────────────────
+# Its OWN step, not part of step 4, so a server installed before it existed gets it from a re-run:
+# step 4 is recorded as done there and would never run again. Re-running it is harmless — the jail
+# file is rewritten with the same content and fail2ban reloaded.
+install_fail2ban() {
+  step "4b · fail2ban: five failed SSH sign-ins in ten minutes ban the address for an hour"
+  if done_step fail2ban; then say "done in an earlier run"; return 0; fi
+  export DEBIAN_FRONTEND=noninteractive
+  # python3-systemd: the jail reads the journal (backend = systemd), the one source Debian 12 has.
+  run apt-get install -y -q fail2ban python3-systemd
+  write_file /etc/fail2ban/jail.d/racearena-sshd.local 644 <"$(deploy_dir)/fail2ban/racearena-sshd.local"
+  run systemctl enable --now fail2ban
+  run systemctl reload-or-restart fail2ban
+  mark_done fail2ban
+}
+
 # ── 5 · layout, checkout, settings ───────────────────────────────────────────────────────────────
 resolve_default_ref() {
   [[ -n "$REF" ]] && return 0
@@ -271,8 +290,11 @@ checkout_ref() {
 lay_out() {
   step "5 · directories, the checkout, the settings"
   run mkdir -p "$RA_HOME" "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/state"
-  # The app runs as uid $APP_UID in its container; its two directories are its own.
+  # The app runs as uid $APP_UID in its container; its two directories are its own — and ONLY its
+  # own (AUDIT-1 A5M-06): the data holds the session store and every race, the backups hold the
+  # password hashes, and under the usual umask mkdir leaves both readable by every local account.
   run chown "$APP_UID:$APP_UID" "$RA_DATA" "$RA_BACKUPS"
+  run chmod 700 "$RA_DATA" "$RA_BACKUPS"
   run chmod 700 "$RA_ETC"
   if [[ -d "$RA_HOME/.git" ]]; then
     say "the checkout exists; it is moved to a version only by 'racearena update'"
@@ -366,13 +388,13 @@ summary() {
   racearena update [ref]        move to another version (backup first, rolls back by itself)
   racearena rollback            back to the version before the last update
   racearena version             what runs here
+  racearena uninstall           remove RaceArena (a final backup first; the data is kept)
   racearena <command> --help    explains one
 
-  Next, for SSH (this installer did NOT change it — do it while still signed in, and test a second
-  login before closing the first):
-    1. sign in with a key instead of a password: put your public key in ~/.ssh/authorized_keys
-    2. then in /etc/ssh/sshd_config set:  PasswordAuthentication no   and   PermitRootLogin prohibit-password
-    3. sudo systemctl reload ssh"
+  SSH: fail2ban now bans an address after 5 failed sign-ins (1 hour). This installer did NOT change
+  the SSH configuration itself. When you sign in with a key, let RaceArena switch passwords and
+  root sign-in off — it checks your key login from a second session first and refuses otherwise:
+    sudo racearena harden-ssh --user <your non-root sudo user>"
 }
 
 main() {
@@ -382,6 +404,7 @@ main() {
   ask_questions
   check_dns
   install_os
+  install_fail2ban
   lay_out
   start_stack
   install_timers

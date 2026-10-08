@@ -1,0 +1,20 @@
+# ============================================================
+# File:        racearena-sshd.local
+# Path:        deploy/fail2ban/racearena-sshd.local   (installed to /etc/fail2ban/jail.d/ by install.sh)
+# Project:     RaceArena — AUDIT-1 hardening (2026-10-09)
+# Description: fail2ban's SSH jail for a RaceArena server: five failed sign-ins within ten minutes
+#              ban the address for one hour.
+#
+# backend = systemd: Debian 12 keeps no /var/log/auth.log by default, so the journal is the one
+# source every supported system has (Ubuntu 22.04 and 24.04 write both). install.sh installs
+# python3-systemd beside fail2ban for exactly this.
+# The ban covers SSH only. RaceArena's own sign-in has its own limiter in the app
+# (server/src/auth/rateLimit.js); this jail is about the server's door, not the app's.
+# ============================================================
+
+[sshd]
+enabled  = true
+backend  = systemd
+maxretry = 5
+findtime = 10m
+bantime  = 1h

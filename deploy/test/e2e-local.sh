@@ -120,5 +120,42 @@ for c in racearena-app-1 racearena-caddy-1; do
   check "$c rotates its log at 10m × 5" bash -c "docker inspect -f '{{json .HostConfig.LogConfig}}' $c | grep -q '\"max-file\":\"5\"' && docker inspect -f '{{json .HostConfig.LogConfig}}' $c | grep -q '\"max-size\":\"10m\"'"
 done
 
+echo "── the Linux-only hardening, in a throwaway Debian 12 (fail2ban jail, harden-ssh refusals, install.sh --dry-run)"
+docker run --rm -v "$HERE/..:/deploy:ro" \
+  debian@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 \
+  bash /deploy/test/hardening-check.sh 2>/dev/null | grep -E '^(PASS|FAIL) ' | tee -a "$RESULTS"
+
+echo "── racearena uninstall keeps the data"
+export RA_BIN="$E2E/bin/racearena"
+BACKUPS_BEFORE="$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar' | wc -l)"
+check "a wrong domain is refused and removes nothing" bash -c "! printf 'not-the-domain\n' | ${RACEARENA[*]} uninstall && [ -d '$RA_HOME' ] && [ -n \"\$(docker ps -q --filter label=com.docker.compose.project=racearena)\" ]"
+check "racearena uninstall (the domain typed)" bash -c "printf '%s\n' '$DOMAIN' | ${RACEARENA[*]} uninstall"
+check "it took a final backup first" test "$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar' | wc -l)" -gt "$BACKUPS_BEFORE"
+check "no container of the stack is left" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+check "the checkout and the settings are gone" bash -c "[ ! -e '$RA_HOME' ] && [ ! -e '$RA_ETC' ]"
+check "the helper removed itself" test ! -e "$RA_BIN"
+check "the data is KEPT" test -f "$RA_DATA/users.json"
+check "the backups are KEPT" test -n "$(find "$RA_BACKUPS" -name 'racearena-backup-*.tar')"
+
+echo "── racearena uninstall --purge-data, on a fresh copy of the stack"
+git clone --quiet "$CLONE" "$RA_HOME"
+git -C "$RA_HOME" checkout --quiet --detach "$REF_A"
+mkdir -p "$RA_ETC/state"
+{
+  printf 'RA_PUBLIC_ORIGIN=https://%s\n' "$DOMAIN"
+  printf 'RA_SESSION_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+} >"$RA_ETC/racearena.env"
+sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|tls internal|' \
+  "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
+printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
+  "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
+cp "$RA_HOME/deploy/racearena" "$RA_BIN"
+check "the stack starts again on the kept data" "${RACEARENA[@]}" start
+check "--purge-data refuses without the second confirmation" bash -c "! printf '%s\nno\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data && [ -f '$RA_DATA/users.json' ]"
+check "racearena uninstall --purge-data (both confirmations)" bash -c "printf '%s\ndelete all data\n' '$DOMAIN' | ${RACEARENA[*]} uninstall --purge-data"
+check "the data is gone" test ! -e "$RA_DATA"
+check "the backups are gone" test ! -e "$RA_BACKUPS"
+check "no container of the stack is left" bash -c "[ -z \"\$(docker ps -aq --filter label=com.docker.compose.project=racearena)\" ]"
+
 echo
 echo "summary: $(grep -c '^PASS' "$RESULTS") passed, $(grep -c '^FAIL' "$RESULTS") failed — $RESULTS"

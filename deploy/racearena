@@ -4,7 +4,8 @@
 # Path:        deploy/racearena   (installed to /usr/local/bin/racearena by deploy/install.sh)
 # Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
 # Description: The one command an operator of a single-server install uses: status, logs, backup,
-#              restore, update, rollback, version. Every command explains itself with --help.
+#              restore, update, rollback, version, harden-ssh, uninstall. Every command explains
+#              itself with --help.
 #
 # ★ THE TOOLS ARE THE PROJECT'S OWN, run in a one-off container of the app image (the host has no
 #   Node): scripts/backup.mjs (backup and restore), scripts/migrate.mjs (migrations),
@@ -125,6 +126,13 @@ cmd_status() {
   compose ps --format '{{.Service}}: {{.Status}}' || rc=1
   say "── https"
   ra_admin health --https || rc=1
+  # The SSH jail (install.sh step 4b). Shown, not judged: a missing jail is a hardening gap, not an
+  # unhealthy app, so it never fails the status check.
+  if command -v fail2ban-client >/dev/null 2>&1; then
+    say "── fail2ban (SSH: 5 tries, 1 hour)"
+    fail2ban-client status sshd 2>/dev/null | grep -E 'Currently (failed|banned)|Total banned' ||
+      say "the sshd jail is not running — re-run install.sh, or: systemctl restart fail2ban"
+  fi
   if command -v journalctl >/dev/null 2>&1; then
     say "── alerts in the last 24 hours (journal tag racearena-alert)"
     journalctl -t racearena-alert --since '-24h' --no-pager -q -o short-iso 2>/dev/null | tail -n 5 || true
@@ -205,6 +213,8 @@ restore_archive() {
   mv -- "$RA_DATA" "$aside"
   mkdir -p -- "$RA_DATA"
   if [[ "$(id -u)" == 0 ]]; then chown "$APP_UID:$APP_UID" "$RA_DATA"; fi
+  # Owner-only, as install.sh lays it out (AUDIT-1 A5M-06); a restore must not loosen it.
+  chmod 700 -- "$RA_DATA"
   say "the data before the restore is kept in $aside"
   tool app node /scripts/backup.mjs --restore "/backups/$name" --into /app/data
   say "starting the app"
@@ -305,6 +315,182 @@ cmd_version() {
   say "backups:  $RA_BACKUPS"
 }
 
+# ── SSH hardening, guided (never run by install.sh) ──────────────────────────────────────────────
+#
+# ★ THE ONE COMMAND HERE THAT CAN LOCK THE OWNER OUT, so it proves the way back in BEFORE it closes
+# the old one. Two phases, two sessions:
+#   1. `harden-ssh --user <name>` (the first session): checks the user, prints the plan, and hands
+#      out a one-time code. Nothing is changed.
+#   2. `harden-ssh --confirm <code>` (a SECOND session, signed in as that user WITH A KEY, via sudo):
+#      it finds that session's own SSH connection and requires sshd's "Accepted publickey" line for
+#      exactly that client address and port. Only then are passwords and root sign-in switched off.
+# Anything unproven is a refusal, and a refusal changes nothing.
+SSHD_DROPIN="${RA_SSHD_DROPIN:-/etc/ssh/sshd_config.d/00-racearena-hardening.conf}"
+HARDEN_TTL_S=900
+
+help_harden_ssh() { say "racearena harden-ssh --user <name> [--dry-run]   then   racearena harden-ssh --confirm <code>
+  Switches off password and root sign-in over SSH — but only after it has seen <name> (a non-root
+  user who can use sudo) sign in WITH A KEY in a second session.
+  1. sudo racearena harden-ssh --user <name>     checks <name>, prints the plan and a one-time code
+  2. in a SECOND terminal, signed in as <name> with your key:
+     sudo racearena harden-ssh --confirm <code>   proves that session used a key, then applies
+  Keep the first session open until a third sign-in with the key works. --dry-run stops after the
+  checks and the plan. Written to $SSHD_DROPIN; nothing else in the SSH configuration is touched."; }
+
+harden_plan() {
+  printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin no\n'
+}
+
+# The checks of phase 1, every one a refusal. Echoes nothing on success.
+harden_check_user() {
+  local user="$1" entry uid home
+  entry="$(getent passwd "$user" || true)"
+  [[ -n "$entry" ]] || die "refused: there is no user '$user' on this server"
+  uid="$(cut -d: -f3 <<<"$entry")"
+  home="$(cut -d: -f6 <<<"$entry")"
+  [[ "$uid" != 0 ]] || die "refused: '$user' is root — name the non-root user you will sign in as"
+  id -nG "$user" | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel' ||
+    die "refused: '$user' cannot use sudo (not in the sudo group) — after this, root cannot sign in, so that user must be able to"
+  grep -qE '^(ssh-|ecdsa-|sk-)' "$home/.ssh/authorized_keys" 2>/dev/null ||
+    die "refused: '$user' has no public key in $home/.ssh/authorized_keys — add yours first (ssh-copy-id from your computer)"
+  grep -qE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config 2>/dev/null ||
+    die "refused: /etc/ssh/sshd_config does not include sshd_config.d/*.conf, so a file there would be ignored"
+}
+
+# SSH_CONNECTION of the session this command was started from. sudo removes it from the
+# environment, so it is read from the nearest ancestor process that still has it.
+session_ssh_connection() {
+  local pid="$$" conn
+  while [[ "$pid" -gt 1 ]]; do
+    conn="$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | sed -n 's/^SSH_CONNECTION=//p' | head -n 1)"
+    [[ -n "$conn" ]] && { printf '%s\n' "$conn"; return 0; }
+    pid="$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null || echo 1)"
+  done
+  return 1
+}
+
+cmd_harden_ssh() {
+  local user="" code="" dry=0
+  while (($#)); do
+    case "$1" in
+      --user) user="${2:-}"; shift 2 ;;
+      --confirm) code="${2:-}"; shift 2 ;;
+      --dry-run) dry=1; shift ;;
+      *) die "unknown argument: $1 (see racearena harden-ssh --help)" ;;
+    esac
+  done
+  if [[ -n "$code" ]]; then harden_confirm "$code"; return; fi
+  [[ -n "$user" ]] || die "usage: racearena harden-ssh --user <name>   (see --help)"
+  ((dry)) || [[ "$(id -u)" == 0 ]] || die "run it with sudo"
+  harden_check_user "$user"
+  say "checks passed: '$user' is not root, can use sudo, and has a public key.
+the plan — written to $SSHD_DROPIN, then 'sshd -t' and the effective settings are checked:"
+  harden_plan | sed 's/^/    /'
+  if ((dry)); then say "(dry run: nothing changed, no code issued)"; return 0; fi
+  code="$(od -An -N4 -tx4 /dev/urandom | tr -d ' ')"
+  state_set harden-ssh "$user $code $((EPOCHSECONDS + HARDEN_TTL_S))"
+  chmod 600 "$RA_ETC/state/harden-ssh"
+  say "
+NOTHING IS CHANGED YET. Keep this session open, and in a SECOND terminal:
+  1. sign in as $user WITH YOUR KEY:   ssh $user@$(hostname -f 2>/dev/null || hostname)
+  2. run:                              sudo racearena harden-ssh --confirm $code
+The code is valid for $((HARDEN_TTL_S / 60)) minutes."
+}
+
+harden_confirm() {
+  local code="$1" user want expiry conn ip port accepted
+  [[ "$(id -u)" == 0 ]] || die "run it with sudo"
+  read -r user want expiry <<<"$(state_get harden-ssh)"
+  [[ -n "${want:-}" ]] || die "refused: no plan is waiting — run 'racearena harden-ssh --user <name>' first"
+  [[ "$code" == "$want" ]] || die "refused: that is not the code this server issued"
+  ((EPOCHSECONDS <= expiry)) || die "refused: the code has expired — run 'racearena harden-ssh --user $user' again"
+  [[ "${SUDO_USER:-}" == "$user" ]] || die "refused: run it as $user (signed in as $user, through sudo), not as ${SUDO_USER:-root}"
+  conn="$(session_ssh_connection)" || die "refused: this is not an SSH session — open the second session over SSH"
+  read -r ip port _ <<<"$conn"
+  # sshd itself up to OpenSSH 9.7; from 9.8 the "Accepted" line comes from its sshd-session process.
+  accepted="$(journalctl -q --no-pager --since '-1day' _COMM=sshd + _COMM=sshd-session 2>/dev/null |
+    grep -E "Accepted [a-z-]+ for $user from $ip port $port( |$)" | tail -n 1 || true)"
+  [[ -n "$accepted" ]] || die "refused: sshd has no record of how this session ($ip port $port) signed in"
+  grep -q "Accepted publickey" <<<"$accepted" ||
+    die "refused: this session signed in WITHOUT a key ($(grep -oE 'Accepted [a-z-]+' <<<"$accepted")) — sign in with your key and confirm from that session"
+  say "proved: $user signed in from $ip port $port with a key."
+  if [[ -e "$SSHD_DROPIN" ]]; then cp -p -- "$SSHD_DROPIN" "$SSHD_DROPIN.before-$(date -u +%Y%m%dT%H%M%SZ)"; fi
+  harden_plan | install -m 644 /dev/stdin "$SSHD_DROPIN"
+  local eff
+  if ! sshd -t 2>/dev/null; then
+    rm -f -- "$SSHD_DROPIN"
+    die "refused: sshd rejected the configuration (sshd -t); the file was removed again, nothing changed"
+  fi
+  # First value wins in sshd: another drop-in read earlier would silently override this one.
+  eff="$(sshd -T 2>/dev/null | grep -Ei '^(passwordauthentication|permitrootlogin|kbdinteractiveauthentication) ' | sort | tr '\n' ' ')"
+  if [[ "$eff" != "kbdinteractiveauthentication no passwordauthentication no permitrootlogin no " ]]; then
+    rm -f -- "$SSHD_DROPIN"
+    die "refused: another SSH setting overrides this one (effective: $eff); the file was removed again, nothing changed"
+  fi
+  systemctl reload ssh 2>/dev/null || systemctl reload sshd
+  rm -f -- "$RA_ETC/state/harden-ssh"
+  say "done: password and root sign-in are OFF. Keep both sessions open and check that a THIRD sign-in
+with your key works before closing either. To undo: sudo rm $SSHD_DROPIN && sudo systemctl reload ssh"
+}
+
+# ── uninstall ──────────────────────────────────────────────────────────────────────────────────
+RA_BIN="${RA_BIN:-/usr/local/bin/racearena}"
+
+help_uninstall() { say "racearena uninstall [--purge-data] — remove RaceArena from this server.
+  1. a final backup into $RA_BACKUPS (if it fails, nothing is removed)
+  2. you type the domain to confirm
+  3. removed: the containers, the app images, Caddy's certificates, the timers, the fail2ban jail,
+     the checkout ($RA_HOME), the settings ($RA_ETC, which hold the session secret) and this command
+  KEPT: the data ($RA_DATA) and the backups ($RA_BACKUPS), and Docker itself.
+  --purge-data deletes the data and every backup too, after asking a SECOND time. It cannot be undone."; }
+
+cmd_uninstall() {
+  require_installed
+  export_image_tag
+  local purge=0 domain answer
+  for a in "$@"; do
+    case "$a" in --purge-data) purge=1 ;; *) die "unknown argument: $a" ;; esac
+  done
+  domain="$(grep -E '^RA_PUBLIC_ORIGIN=' "$RA_ETC/racearena.env" | cut -d= -f2- | sed 's|^https\?://||')"
+  [[ -n "$domain" ]] || die "cannot read this install's domain from $RA_ETC/racearena.env"
+  say "── 1/4 a final backup"
+  cmd_backup || die "the final backup failed; NOTHING was removed"
+  say "── 2/4 confirm"
+  read -r -p "type the domain, $domain, to remove RaceArena: " answer
+  [[ "$answer" == "$domain" ]] || die "not confirmed; nothing was removed"
+  if ((purge)); then
+    read -r -p "and delete ALL DATA and EVERY BACKUP too? type: delete all data: " answer
+    [[ "$answer" == "delete all data" ]] || die "not confirmed; nothing was removed"
+  fi
+  say "── 3/4 the stack, the timers, the jail"
+  compose down --volumes --remove-orphans || true
+  docker image ls --format '{{.Repository}}:{{.Tag}}' racearena-app | xargs -r docker image rm -f >/dev/null || true
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl disable --now racearena-backup.timer racearena-status.timer 2>/dev/null || true
+    rm -f /etc/systemd/system/racearena-{backup,status,alert}.{service,timer}
+    systemctl daemon-reload 2>/dev/null || true
+  fi
+  if [[ -f /etc/fail2ban/jail.d/racearena-sshd.local ]]; then
+    rm -f /etc/fail2ban/jail.d/racearena-sshd.local
+    systemctl reload-or-restart fail2ban 2>/dev/null || true
+  fi
+  say "── 4/4 the checkout, the settings, this command"
+  rm -rf -- "$RA_HOME" "$RA_ETC"
+  if ((purge)); then
+    rm -rf -- "$RA_DATA" "$RA_DATA".before-restore-* "$RA_BACKUPS"
+    say "RaceArena is removed, with ALL its data and backups."
+  else
+    # The glob sorts by name, and the name carries the UTC stamp — so the last one is the newest.
+    local newest="" f
+    for f in "$RA_BACKUPS"/racearena-backup-*.tar; do [[ -e "$f" ]] && newest="$f"; done
+    say "RaceArena is removed. KEPT: the data in $RA_DATA and the backups in $RA_BACKUPS
+(the newest: ${newest:-none})."
+  fi
+  # Last, because this very file is running. Linux allows it; where a system does not, say so
+  # rather than turn a finished uninstall into a failure.
+  rm -f -- "$RA_BIN" 2>/dev/null || say "remove $RA_BIN by hand (it could not delete itself here)"
+}
+
 # ── the steps install.sh runs through this file ────────────────────────────────────────────────
 
 help_start() { say "racearena start — build the image of the checked-out version and start both services,
@@ -370,6 +556,8 @@ usage() { say "racearena — run this RaceArena server.
   racearena update [ref]        move to another version (backup first; rolls back by itself on failure)
   racearena rollback            return to the version before the last update
   racearena version             what runs here, and where things are
+  racearena harden-ssh          switch off SSH passwords and root sign-in, after proving a key login
+  racearena uninstall           remove RaceArena (a final backup first; the data is kept)
 
   racearena <command> --help    explains one command"; }
 
