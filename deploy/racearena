@@ -50,7 +50,8 @@ tool() { compose run --rm --no-deps -T "$@"; }
 # Caddy's own root certificate when it signs for itself (`tls internal`, the local test). With a
 # public certificate the file does not exist and nothing is added.
 caddy_local_ca() {
-  compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt 2>/dev/null || true
+  # </dev/null: `exec` reads standard input, and a password on its way to ra-admin must not be swallowed here.
+  compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt 2>/dev/null </dev/null || true
 }
 
 # The HTTP helper, deploy/ra-admin.mjs, in a one-off container. Standard input is passed through:
@@ -58,6 +59,10 @@ caddy_local_ca() {
 ra_admin() {
   tool -v "$RA_HOME/deploy:/deploy:ro" -e "RA_EXTRA_CA=$(caddy_local_ca)" app node /deploy/ra-admin.mjs "$@"
 }
+
+# Caddy waits for the app to be healthy, so `up` itself fails while the app is not. That is not the
+# verdict: wait_healthy decides, and an update rolls back on it.
+up_detached() { compose up -d || say "(the app is not healthy yet — the health check decides)"; }
 
 state_get() { cat "$RA_ETC/state/$1" 2>/dev/null || true; }
 state_set() { mkdir -p "$RA_ETC/state"; printf '%s\n' "$2" > "$RA_ETC/state/$1"; }
@@ -203,7 +208,7 @@ restore_archive() {
   say "the data before the restore is kept in $aside"
   tool app node /scripts/backup.mjs --restore "/backups/$name" --into /app/data
   say "starting the app"
-  compose up -d
+  up_detached
 }
 
 help_update() { say "racearena update [ref] — move to another version, safely.
@@ -243,7 +248,7 @@ cmd_update() {
     die "update to $ref failed in its migrations; rolled back (see above)"
   fi
   say "── 5/6 start"
-  compose up -d
+  up_detached
   say "── 6/6 health"
   if wait_healthy; then
     state_set previous-ref "$prev"
@@ -267,7 +272,7 @@ rollback_to() {
   if [[ -n "$archive" ]]; then
     restore_archive "$archive"
   else
-    compose up -d
+    up_detached
   fi
   wait_healthy || die "rolled back to $RA_IMAGE_TAG, but it is not healthy either — see: racearena logs app"
   say "rolled back to $RA_IMAGE_TAG${archive:+ and the backup $archive}"
@@ -308,7 +313,7 @@ cmd_start() {
   require_installed
   export_image_tag
   compose build app
-  compose up -d
+  up_detached
   wait_healthy || die "the stack did not become healthy within ${HEALTH_TIMEOUT_S}s — see: racearena logs"
 }
 
@@ -324,7 +329,7 @@ cmd_first_admin() {
     # The token opens an empty install; once an admin exists it must not stay on disk.
     sed -i '/^RA_BOOTSTRAP_TOKEN=/d' "$RA_ETC/racearena.env"
     say "the one-time setup token is removed from $RA_ETC/racearena.env"
-    compose up -d --force-recreate app
+    compose up -d --force-recreate app || true
     wait_healthy || die "the app did not come back healthy after the token was removed"
   fi
 }

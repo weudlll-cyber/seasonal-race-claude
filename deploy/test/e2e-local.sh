@@ -20,7 +20,9 @@
 set -uo pipefail
 
 E2E="$1" CLONE="$2" REF_A="$3" REF_B="$4" REF_C="$5"
-HERE="$(cd "$(dirname "$0")" && pwd)"
+# Windows form (pwd -W) under Git Bash: node is a Windows program and, with path conversion off
+# (MSYS_NO_PATHCONV below), would read /c/tmp/… as C:c	mp….
+HERE="$(cd "$(dirname "$0")" && { pwd -W 2>/dev/null || pwd; })"
 DOMAIN=racearena.test
 ADMIN=e2e-admin
 # A test-only password, held in memory and piped; never written to disk.
@@ -28,7 +30,7 @@ ADMIN_PW="$(node -e "console.log(require('crypto').randomBytes(12).toString('bas
 
 export RA_HOME="$E2E/home" RA_ETC="$E2E/etc" RA_DATA="$E2E/data" RA_BACKUPS="$E2E/backups"
 export MSYS_NO_PATHCONV=1
-RACEARENA=(bash "$RA_HOME/deploy/racearena")
+mkdir -p "$E2E"
 RESULTS="$E2E/results.txt"
 : >"$RESULTS"
 
@@ -51,6 +53,11 @@ sed -e "s|{{DOMAIN}}|$DOMAIN|" -e "s|{{EMAIL}}|e2e@$DOMAIN|" -e 's|{{TLS_LINE}}|
   "$RA_HOME/deploy/Caddyfile.template" >"$RA_ETC/Caddyfile"
 printf 'RA_DATA_HOST=%s\nRA_BACKUP_HOST=%s\nRA_ENV_FILE=%s\nRA_CADDYFILE=%s\n' \
   "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/racearena.env" "$RA_ETC/Caddyfile" >"$RA_ETC/compose.env"
+# install.sh installs racearena to /usr/local/bin, a COPY: the checkout changes under it during an
+# update, and bash reads a script while it runs it. The test runs a copy for the same reason.
+mkdir -p "$E2E/bin"
+cp "$RA_HOME/deploy/racearena" "$E2E/bin/racearena"
+RACEARENA=(bash "$E2E/bin/racearena")
 
 echo "── install.sh step 6: start, first admin, sign-in over https"
 check "racearena start: both services up and healthy" "${RACEARENA[@]}" start
