@@ -51,7 +51,8 @@ describe('the build identity has ONE source', () => {
     expect(code).toContain('build: RA_BUILD.commit');
     expect(code).toContain('const commit = RA_BUILD.commit');
     // the HUD pill
-    expect(code).toContain('buildBadge: RA_BUILD');
+    // TEST-AIDS-1: the badge is shown only while the test-aids switch is ON; its source is unchanged.
+    expect(code).toContain('buildBadge: aids ? RA_BUILD : null');
   });
 
   it('THE ARTEFACTS CANNOT DISAGREE — pill, console line and marker are the same value', () => {

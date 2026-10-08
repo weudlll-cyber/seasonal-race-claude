@@ -49,10 +49,9 @@
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import RaceScreen from './index.jsx';
+// The scaffolding the five points above describe — moved to one place when a second file needed it.
+import { stubCanvas2d, boundedFrameClock, seedRace } from '../../test/raceScreenMount.js';
 
 /** The screen under the one context it actually requires. Nothing else is provided. */
 const mount = () =>
@@ -62,99 +61,15 @@ const mount = () =>
     </MemoryRouter>
   );
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..', '..', '..');
-
-/** The shipped record for a closed track, used as the geometry exactly as the harnesses use it. */
-const GEOMETRY = JSON.parse(
-  readFileSync(join(REPO, 'server', 'seeds', 'tracks', 'dirt-oval.json'), 'utf8')
-);
-
-/**
- * A 2D context that answers every call. jsdom implements no canvas, so without this the very first
- * line of the animation effect (`ctx.imageSmoothingQuality = 'low'`) throws on null.
- *
- * It records nothing and asserts nothing on purpose — the moment a test here starts checking draw
- * calls it has become a worse copy of `render-fingerprint.mjs`.
- */
-function stubCanvas2d() {
-  // PARTICLES-VISIBILITY-4: track effects cull against the canvas under the current transform, so the
-  // stub answers both the way a real 2D context does — the race canvas's fixed 1280x720 store and an
-  // identity matrix — instead of null and undefined.
-  const ctx = new Proxy(
-    { canvas: { width: 1280, height: 720 } },
-    {
-      get(target, prop) {
-        if (prop in target) return target[prop];
-        if (prop === 'measureText') return () => ({ width: 10 });
-        if (prop === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
-        if (prop === 'getImageData')
-          return (x, y, w, h) => new globalThis.ImageData(w || 1, h || 1);
-        if (prop === 'createLinearGradient' || prop === 'createRadialGradient')
-          return () => ({ addColorStop() {} });
-        if (prop === 'createPattern') return () => null;
-        if (typeof prop === 'string') return () => undefined;
-        return undefined;
-      },
-      set(target, prop, value) {
-        target[prop] = value;
-        return true;
-      },
-    }
-  );
-  return vi
-    .spyOn(HTMLCanvasElement.prototype, 'getContext')
-    .mockImplementation(function get2d(kind) {
-      return kind === '2d' ? ctx : null;
-    });
-}
-
-/** The payload SetupScreen writes, reduced to the fields RaceScreen reads on the way in. */
-function activeRace(overrides = {}) {
-  return {
-    racers: Array.from({ length: 6 }, (_, i) => ({ name: `Racer ${i + 1}` })),
-    trackId: GEOMETRY.id,
-    trackName: GEOMETRY.name,
-    geometryId: GEOMETRY.id,
-    racerTypeId: GEOMETRY.defaultRacerTypeId,
-    worldWidth: GEOMETRY.worldWidth ?? 1280,
-    worldHeight: GEOMETRY.worldHeight ?? 720,
-    duration: 60,
-    winners: 3,
-    raceMode: 'laps',
-    targetLaps: 2,
-    realizedDurationSec: 60,
-    paceScale: 1,
-    trackSurfaceClasses: GEOMETRY.surfaceClasses ?? [],
-    racePlanEnabled: true,
-    racePlanSeed: 5601,
-    raceActionStage: 'quiet',
-    timestamp: '2026-09-04T00:00:00.000Z',
-    ...overrides,
-  };
-}
-
 let restoreCanvas;
-let rafHandles;
+let framesHanded;
 
 beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   restoreCanvas = stubCanvas2d();
-
-  // A BOUNDED frame clock. Unbounded, the draw loop would spin for the whole test; zero frames and
-  // the loop is scheduled but never entered, which would make this a weaker test than it looks.
-  rafHandles = 0;
-  vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
-    if (rafHandles >= 3) return 0;
-    rafHandles += 1;
-    const id = setTimeout(() => cb(performance.now()), 0);
-    return Number(id);
-  });
-  vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation((id) => clearTimeout(id));
-
-  localStorage.setItem(`racearena:trackGeometries:${GEOMETRY.id}`, JSON.stringify(GEOMETRY));
-  sessionStorage.setItem('activeRace', JSON.stringify(activeRace()));
+  framesHanded = boundedFrameClock(3);
+  seedRace();
 });
 
 afterEach(() => {
@@ -191,7 +106,7 @@ describe('RaceScreen — it mounts', () => {
   it('enters the draw loop rather than only scheduling it', async () => {
     mount();
     await screen.findByTestId('race-canvas-wrapper');
-    await waitFor(() => expect(rafHandles).toBeGreaterThan(0));
+    await waitFor(() => expect(framesHanded()).toBeGreaterThan(0));
   });
 
   // What breaks if deleted: the two tests above could both pass against a screen that renders its

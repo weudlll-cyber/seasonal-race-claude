@@ -23,11 +23,23 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import { useActiveBrandProfile } from './modules/branding/useActiveBrandProfile.js';
 import BrandingSyncOnAuth from './components/BrandingSyncOnAuth.jsx';
 import RacerSyncOnAuth from './components/RacerSyncOnAuth.jsx';
+import TestAidsSyncOnAuth from './components/TestAidsSyncOnAuth.jsx';
 import RacersReadyGate from './components/RacersReadyGate.jsx';
 import ServerStatusBanner from './components/ServerStatusBanner.jsx';
 import PendingRaceSync from './components/PendingRaceSync.jsx';
+import { useTestAidsState } from './modules/testAids.js';
 
 const DEFAULT_TITLE = 'RaceArena';
+
+/**
+ * TEST-AIDS-1, item 27: a page that only exists while the test-aids switch is ON. It waits for the
+ * server's answer rather than turning an admin away while that answer is on its way.
+ */
+function TestAidsOnly({ children }) {
+  const aids = useTestAidsState();
+  if (aids === 'unknown') return null;
+  return aids === 'on' ? children : <Navigate to="/" replace />;
+}
 
 function App() {
   const brandEventName = useActiveBrandProfile()?.eventName ?? null;
@@ -63,6 +75,7 @@ function App() {
         <PendingRaceSync />
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />
+        <TestAidsSyncOnAuth />
         <TransitionProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/setup" replace />} />
@@ -120,12 +133,15 @@ function App() {
             />
             {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
               via /diagnose-verteilung in the address bar. Headless simulator for distribution
-              analysis. Do not delete. */}
+              analysis. Do not delete. TEST-AIDS-1: admins only AND only while the test-aids switch
+              is ON (item 27 of DEV-DISPLAYS-1). */}
             <Route
               path="/diagnose-verteilung"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <DiagnoseVerteilung />
+                  <TestAidsOnly>
+                    <DiagnoseVerteilung />
+                  </TestAidsOnly>
                 </ProtectedRoute>
               }
             />

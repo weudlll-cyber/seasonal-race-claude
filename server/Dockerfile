@@ -94,6 +94,9 @@ COPY shared/raceSource.mjs /shared/raceSource.mjs
 # PERIOD-EVALUATION-1 (2026-10-04): when two player names are the same name — `raceStore.js`,
 # `playerGroups.js` and `periodEvaluation.js` import it. Named in both lists, as above.
 COPY shared/playerNames.mjs /shared/playerNames.mjs
+# REMOVE-WINNERS-SETTING-1 (2026-10-06): the podium's size, `PODIUM_PLACES` — `periodEvaluation.js`
+# imports it (and the client's race history). Named in both lists, as above.
+COPY shared/podium.mjs /shared/podium.mjs
 
 # ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1; the owner's decision, 2026-10-04) ────
 #

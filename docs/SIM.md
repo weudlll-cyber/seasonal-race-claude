@@ -120,7 +120,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 RACE HULL from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are
-the **223 files that can change the race** — the engine's own imports AND the imports of every
+the **227 files that can change the race** — the engine's own imports AND the imports of every
 file that drives it — and they are what the pre-commit tripwire prints. They are NOT the world
 fingerprint's trigger set: that guard declares a narrower `reach` of its own, so a file listed here
 can change a race and move no fingerprint. See `reports/evolution/HULL-FIX-1.md`.
@@ -207,6 +207,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/surface-effects/generators/spriteHelpers.js` | Shared cheap-draw helpers for surface-particle generators. |
 | `modules/surface-effects/registry.js` | Surface-class registry. |
 | `modules/surface-effects/trailResolver.js` | Resolves the active surface-class trail emitter for a racer. |
+| `modules/testAids.js` | THE ONE PLACE THE CLIENT READS THE TEST-AIDS SWITCH. |
 | `modules/track-editor/EditorShape.js` | Race-engine shape adapter for track-editor geometry; wraps inner/outer Catmull-Rom splines. |
 | `modules/track-editor/catmullRom.js` | Pure Catmull-Rom spline math — no DOM, no React. |
 | `modules/track-editor/trackStorage.js` | localStorage CRUD for editor-created track geometries. |
@@ -304,6 +305,9 @@ repository rather than a guess — give the FILE a header line and this table im
 | `screens/RaceScreen/viewerFrameProbe.js` | The per-frame payload RaceScreen hands `recordViewerFrame` (modules/viewerProbe.js): the transform the frame was DRAWN with, plus every director quantity the acceptance sheet gr… |
 | `screens/TrackEditor/testRaceRoute.js` | Where a test race returns to. |
 | `screens/TrackEditor/trackEditorSave.js` | Track export logic — validates editor state, builds the server-ready track object, extracts effects and track lights. |
+| `services/api.js` | THE ONE HOME for the address of the API. |
+| `services/apiClient.js` | Shared fetch boilerplate for API service modules. |
+| `services/settingsApi.js` | The installation-wide settings on the server — today the test-aids switch. |
 | `utils/formatRaceTime.js` | Format elapsed race milliseconds as m:ss.hh (1:05.32) or ss.hh (45.32). |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
 | `reports/evolution/breakaway-cast-split-data/cast-split.mjs` | Does a race that CASTS shape X break away more often than a race that does not? A read-only OBSERVATIONAL SPLIT. |
@@ -354,7 +358,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `shared/canonicalJson.mjs` | SHARED-CANONICAL-1 |
 | `shared/playerNames.mjs` | PERIOD-EVALUATION-1 (the owner's decisions of 2026-10-04) |
 
-223 files, 24 of them UNKNOWN.
+227 files, 24 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 

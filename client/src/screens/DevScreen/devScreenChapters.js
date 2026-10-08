@@ -35,6 +35,7 @@ import CameraAdvancedSection from './sections/CameraAdvancedSection.jsx';
 import SurfaceClassManager from './sections/SurfaceClassManager.jsx';
 import UserManagementSection from './sections/UserManagementSection.jsx';
 import ConfigExportSection from './sections/ConfigExportSection.jsx';
+import TestAidsSection from './sections/TestAidsSection.jsx';
 
 const OP = 'operator';
 const ADV = 'advanced';
@@ -216,8 +217,9 @@ export const CHAPTERS = [
     icon: '🔬',
     title: 'Diagnostics and verification',
     intro:
-      'Tools for checking the game rather than running an event: overlays and logs that show what the camera and the race plan are doing, and an export of the exact race configuration for verification in the simulator. None of them changes a race.',
+      'Tools for checking the game rather than running an event: overlays and logs that show what the camera and the race plan are doing, and an export of the exact race configuration for verification in the simulator. None of them changes a race. The test-aids switch at the top decides whether the overlays, the logs and every other test aid are shown at all.',
     subgroups: [
+      { title: 'Test aids', parts: [{ component: TestAidsSection, tier: ADV }] },
       {
         title: 'On-screen diagnostics',
         parts: [{ component: CameraAdvancedSection, part: 'diagnostics', tier: ADV }],

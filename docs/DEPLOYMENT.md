@@ -107,6 +107,37 @@ their team (`server/src/auth/guards.js:22-26`, `server/src/auth/usersRouter.js:2
 per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:121-131`).
 Decided on 2026-10-01; there is no per-organizer separation beyond races.
 
+### Test aids — off as an installation ships
+
+**A new installation shows no developer aids.** One switch for the whole installation decides
+whether they are there at all; it is stored on the server (`<data folder>/test-aids.json`, so a
+backup carries it), and **it ships OFF**: with no file, or with a file that cannot be read, it is
+OFF. The owner decided the design on 2026-10-04 (the numbered list is
+[DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md)).
+
+**Where an admin turns it on:** Dev Screen → chapter **Diagnostics and verification** → **Test aids**,
+the first control of that chapter. Only an admin sees the chapter, and the server refuses anyone
+else's change (`PUT /api/settings/test-aids`, [API.md](API.md)).
+
+**While it is OFF, for everyone, whatever a browser has stored:**
+
+- the race screen's build badge, settings badge and "Race Plan" pill, and the hero rings;
+- the M-key camera marker;
+- **Quick Test** on the setup screen;
+- every diagnostic display and log (the Dev Screen's diagnostic and log switches are locked, with a
+  line saying why) and the gap re-roll marker;
+- the `?constSpeed=1` address flag (it changes the physics), the `/diagnose-verteilung` page, and the
+  console probes (`?perfprobe=1`, `?viewerprobe=1`, `racearena:raceInputsProbe`,
+  `racearena:holdProbe`).
+
+**ON** brings all of them back exactly as they were. **Not on the switch:** the seed, race-key and
+identifier tools on the setup screen are **admin-only whatever the switch says**; the camera-state
+pill, click-to-skip during the countdown, the result screen's seed and stage, the gear to the Dev
+Screen and the Track Editor's Test race are shown as before.
+
+The browser tests (`client/e2e/`) and the measurement scripts that drive a browser turn the switch
+ON for their own throwaway server first; on a real installation it stays as the admin leaves it.
+
 ### The layout: four places, and only one of them is replaced by an update
 
 | what | the example path used below | what an update does to it |
@@ -261,6 +292,11 @@ npm run status
 Until the first backup exists, `npm run status` reports the backup check as FAIL. That is
 expected. The backup section below fixes it.
 
+**9 · Add the race directors.** Signed in as the admin: Dev Screen → **Accounts and system** →
+**Race directors**. Each account gets a team; an `operator` runs races, an `admin` also manages
+accounts and settings. *(Added by PROBE-INSTALL-2, 2026-10-06: the guide said how to create the
+first admin and never where every other account comes from.)*
+
 ### Backups, and the status check — schedule both
 
 **Take a backup:**
@@ -403,8 +439,10 @@ Every registered migration has a stable id (the teams backfill is `teams-1`). Th
 runs only the pending ones, appends each one to the ledger with a timestamp, and refuses to run
 any id twice — the rule is stated in full in the file header.
 
-The one existing migration, `scripts/migrate-teams.mjs`, still runs standalone; the runner calls
-into the same `migrateTeams` function so there is one home for the work. **Running the standalone
+Three migrations are registered: `teams-1`, `race-source-1` and `client-id-per-team-1`
+(`scripts/migrate.mjs`, `buildDefaultMigrations`). *(Corrected 2026-10-08: this said there was one.)*
+The teams backfill also exists as a standalone script, `scripts/migrate-teams.mjs`; the runner calls
+into the same `migrateTeams` function, so there is one home for the work. **Running the standalone
 script does NOT touch the ledger** — the next `node scripts/migrate.mjs` will see the state and
 backfill the ledger without re-running.
 
@@ -501,9 +539,18 @@ decisions made elsewhere, and a stranger who stops here has neither:
   `./server/src` (with `node --watch`), `./server/utils`, `./server/seeds` and `./server/data` from
   the folder it is started in. **Your data is therefore the folder `server/data` beside the compose
   file**, not a Docker volume, and it survives `docker compose down`.
-- **Backups with this compose file run from the host**, because the image carries no `scripts/`:
-  from the repository folder, `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node
-  scripts/backup.mjs`. The databases are copied online, so the container may keep running. To
+- **The first admin needs a setup token in the override file too:** add
+  `RA_BOOTSTRAP_TOKEN=<openssl rand -hex 16>` to its `environment`, start, and send install step 6's
+  request to the published port (`http://127.0.0.1:4000/api/auth/setup`, with the `Origin` header of
+  the address browsers use). Then take the token out of the override file and `docker compose up -d`
+  again. *(Added by PROBE-INSTALL-2, 2026-10-06.)*
+- **Backups with this compose file run from the host**, because the image carries no `scripts/`.
+  ★ **Install the server's dependencies on the host once first: `npm ci --prefix server`.** The
+  backup copies the two databases through `better-sqlite3`, which it loads from `server/node_modules`;
+  a fresh folder has none, and the command stops with *Cannot find package 'better-sqlite3'*. The
+  container is not affected — compose mounts `server/src`, `server/utils`, `server/data` and
+  `server/seeds` only. *(Found by PROBE-INSTALL-2, 2026-10-06.)* Then, from the repository folder,
+  `RA_DATA_DIR=server/data RA_BACKUP_DIR=<your backup folder> node scripts/backup.mjs`. The databases are copied online, so the container may keep running. To
   restore: `docker compose stop`, move `server/data` aside,
   `node scripts/backup.mjs --restore <archive> --into server/data`, then `docker compose start`.
   *(Run 2026-10-04, PROBE-INSTALL-1 part 3: the user and the stored race were back after the

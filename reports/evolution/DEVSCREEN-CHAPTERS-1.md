@@ -1,4 +1,6 @@
-# DEVSCREEN-CHAPTERS-1 — the Plan D design: 348 controls in seven chapters, each placed once, an info text each
+# DEVSCREEN-CHAPTERS-1 — the Plan D design: 347 controls in seven chapters, each placed once, an info text each
+
+*(348 as designed and merged. On 2026-10-06 the test-aids switch added one (TEST-AIDS-1) and two winners settings were removed (REMOVE-WINNERS-SETTING-1) — see the last two sections.)*
 
 **Owns:** the design of the Dev Screen rebuilt as chapters — which chapter every control goes into,
 in which order, and the info text each one carries. **It is a design. Nothing in it is built**: no
@@ -161,17 +163,17 @@ intro text, written to sit at the top of the chapter on the rebuilt screen.
 
 | # | Chapter | Controls | Operator view shows | Line |
 | --- | --- | ---: | ---: | --- |
-| 1 | The race | 101 | 6 | changes the race |
+| 1 | The race | 100 | 5 | changes the race |
 | 2 | Camera — start to ending | 84 | 1 | changes the picture |
 | 3 | Look, labels and effects | 38 | 1 | changes the picture |
-| 4 | Tracks, racers, brands and groups | 69 | 63 (+6 for an admin) | records and per-type settings |
+| 4 | Tracks, racers, brands and groups | 68 | 62 (+6 for an admin) | records and per-type settings |
 | 5 | History and evaluation | 15 | 13 (+2 for an admin) | reads the record |
-| 6 | Diagnostics and verification | 17 | 0 | changes neither |
+| 6 | Diagnostics and verification | 18 | 0 | changes neither |
 | 7 | Accounts and system | 21 | 4 | changes neither |
 | — | Sidebar (all chapters) | 3 | 2 (+1 for an admin) | the screen's frame |
-| | **Total** | **348** | **90** (+9 for an admin) | |
+| | **Total** | **347** | **88** (+9 for an admin) | |
 
-### 1 · The race — 101
+### 1 · The race — 100
 
 *Intro:* Everything that changes how a race runs, from the defaults a new race starts with to the
 mechanisms that shape the finish. Every control here, except the operator defaults at the top, sits
@@ -209,7 +211,7 @@ camera looks: Sprite Size Range, Name Tag Visibility, the track-label switches a
 that sit in Camera Advanced today, Frame Timing (cosmetic, today inside Race Tuning), the reserved
 sound switch, and Surface Classes — the palette of ground effects tracks and racer types draw from.
 
-### 4 · Tracks, racers, brands and groups — 69
+### 4 · Tracks, racers, brands and groups — 68
 
 *Intro:* The things a race is made of — who races, where, as what, and under which look. Each part
 lists what exists, the actions on each entry, and then the form for creating or editing one. These
@@ -229,11 +231,12 @@ here changes a setting; it reads the record.
 Evaluation was placed beside the history it reads from). Both read finished races; neither writes a
 setting.
 
-### 6 · Diagnostics and verification — 17
+### 6 · Diagnostics and verification — 18
 
 *Intro:* Tools for checking the game rather than running an event: overlays and logs that show what
 the camera and the race plan are doing, and an export of the exact race configuration for
-verification in the simulator. None of them changes a race.
+verification in the simulator. None of them changes a race. The test-aids switch at the top decides
+whether the overlays, the logs and every other test aid are shown at all.
 
 *Why one chapter.* Fourteen diagnostics switches and the hero highlight sit at the end of Camera
 Advanced today, where they read as camera settings; Export Race Config is a card of its own. All of
@@ -332,13 +335,12 @@ KEPT (the existing text, verbatim). **No info text states a config value**: ther
 of them. In `design.json` the same columns are the fields `chapter`, `position`, `subgroup`,
 `section` (the file path above), `label`, `id`, `idKind`, `tier`, `infoText` and `textStatus`.
 
-### 1 · The race — 101 controls
+### 1 · The race — 100 controls
 
 | # | Sub-group | Today: file | Today: label | Id (kind) | Tier | Info text | Text |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1.1 | Defaults for a new race | `RaceDefaults.jsx` | Race Action (Quiet / Medium / Wild) | `raceActionStage` (configKey) | operator | How eventful the racing is. Quiet is the shipped race. Medium and Wild push the front fight harder — the same fair finish, more of a contest getting there. The stage you pick here is stored with each race, so the result screen can tell you which one ran. | KEPT |
 | 1.2 | Defaults for a new race | `RaceDefaults.jsx` | Default Race Duration | `duration` (configKey) | operator | Pre-fills the Duration field in Race Setup. The value that actually runs a race is derived by the track — closed tracks from laps and course length, open tracks from the setup slider or the track's own default — so this seed is not read once a race starts. | KEPT |
-| 1.3 | Defaults for a new race | `RaceDefaults.jsx` | Default Number of Winners (Podium Spots) | `winners` (configKey) | operator | How many top finishers the result screen celebrates as winners. Raise it and more places get a podium treatment; lower it and only the very front is honoured. Race Setup starts from this number and you can still change it per race. | REWRITTEN |
 | 1.4 | Defaults for a new race | `RaceDefaults.jsx` | Max Players — Closed Tracks | `maxPlayersClosed` (configKey) | operator | The most player names Race Setup accepts for a closed-loop track. It is the only limit on field size for those tracks; a larger field is refused at setup, a smaller one is never padded. | REWRITTEN |
 | 1.5 | Defaults for a new race | `RaceDefaults.jsx` | Max Players — Open Tracks | `maxPlayersOpen` (configKey) | operator | The most player names Race Setup accepts for an open, start-to-finish track. Open tracks hold larger fields than closed ones, which is why the two limits are separate. | REWRITTEN |
 | 1.6 | Defaults for a new race | `RaceDefaults.jsx` | Reset Defaults | `handleReset` (handler) | operator | Puts every race default back to the shipped values — including the two that now sit in other chapters: “Go to the results on its own” (Camera, Ending) and “Sound effects” (Look, Sound). Nothing else on the screen is touched. | NEW |
@@ -570,7 +572,7 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 3.37 | Ground effects (surface classes) | `SurfaceClassManager.jsx` | Delete | `handleDelete` (handler) | advanced | Deletes a class you created. Built-in classes cannot be deleted. | NEW |
 | 3.38 | Ground effects (surface classes) | `SurfaceClassManager.jsx` | Reset to Default | `handleResetToDefault` (handler) | advanced | For a built-in class you changed: removes your change so the class looks as shipped again. | REWRITTEN |
 
-### 4 · Tracks, racers, brands and groups — 69 controls
+### 4 · Tracks, racers, brands and groups — 68 controls
 
 | # | Sub-group | Today: file | Today: label | Id (kind) | Tier | Info text | Text |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -596,7 +598,6 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 4.20 | Tracks | `TrackManager.jsx` | Color (track) | `color` (configKey) | operator | The track’s accent colour on its card, by picker or hex code. | NEW |
 | 4.21 | Tracks | `TrackManager.jsx` | Default Laps | `defaultLaps` (configKey) | operator | Closed tracks only: how many laps a race on this track starts with in Race Setup. The race length follows from the laps and the course length. | NEW |
 | 4.22 | Tracks | `TrackManager.jsx` | Default Duration | `defaultDurationSec` (configKey) | operator | Open tracks only: how long a race on this track starts with in Race Setup. | NEW |
-| 4.23 | Tracks | `TrackManager.jsx` | Default Winners | `defaultWinners` (configKey) | operator | How many podium places a race on this track starts with in Race Setup. | NEW |
 | 4.24 | Tracks | `TrackManager.jsx` | Edit Geometry / Draw Geometry | `track-geometry-btn` (testId) | operator | Opens this track in the Track Geometry Editor to draw or change its path. | REWRITTEN |
 | 4.25 | Tracks | `TrackManager.jsx` | Default Racer Type | `defaultRacerTypeId` (configKey) | operator | The racer type Race Setup picks when this track is chosen. | NEW |
 | 4.26 | Tracks | `TrackManager.jsx` | Surface Classes (track) | `surfaceClasses` (configKey) | operator | Which ground effects this track can show. At least one is required. Classes themselves are defined under Look, labels and effects. | REWRITTEN |
@@ -664,10 +665,11 @@ of them. In `design.json` the same columns are the fields `chapter`, `position`,
 | 5.14 | Period evaluation | `PeriodEvaluation.jsx` | Points per place | `setLadderText` (handler) | operator | The points for each place, first place first, separated by commas. A place beyond the list scores nothing. Only an admin can change it. | REWRITTEN |
 | 5.15 | Period evaluation | `PeriodEvaluation.jsx` | Save points rule | `points-rule-save` (testId) | admin | Admin only. Stores the points switch and ladder on the server for everyone. | NEW |
 
-### 6 · Diagnostics and verification — 17 controls
+### 6 · Diagnostics and verification — 18 controls
 
 | # | Sub-group | Today: file | Today: label | Id (kind) | Tier | Info text | Text |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| 6.0 | Test aids | `TestAidsSection.jsx` | Test aids for the whole installation | `test-aids-switch` (testId) | advanced | One switch for the whole installation, stored on the server. Off, as it ships: the build and settings badges, the race-plan pill, the hero rings, the camera marker, Quick Test, every diagnostic display and log below, the constant-speed address flag, the distribution page and the console probes are hidden or ignored for everyone, whatever a browser has stored. On: they all behave as they did before the switch existed. Admins only. | NEW |
 | 6.1 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Highlight heroes | `highlightHeroes` (configKey) | advanced | Draws a ring around the racers the race plan has cast as heroes — green for an ordinary hero, red for an attacker — so you can follow them in an eye test. It does not change the race. | REWRITTEN |
 | 6.2 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Show camera state HUD | `showCameraStateHud` (configKey) | advanced | Shows the camera state indicator (OVERVIEW / BATTLE / etc.) in the top-left of the race canvas. | KEPT |
 | 6.3 | On-screen diagnostics | `CameraAdvancedSection.jsx` | Show camera diagnostics | `showCameraDiagnostics` (configKey) | advanced | Diagnostics panel bottom-left: live zoom values. Logs state transitions to the browser console. | KEPT |
@@ -1051,3 +1053,38 @@ header. What pushed them down is gone — the auto top margin on the first of th
 own `margin-top: auto`, which only ever acted when the button was a direct child of the sidebar.
 Ids, handlers, info texts and the rest of `.backBtn` are unchanged. The chapter guard already reads
 the sidebar in document order (view switch, Back to Setup, Log out) and is unchanged.
+
+---
+
+## TEST-AIDS-1 — control 349, the test-aids switch (2026-10-06)
+
+The owner decided on 2026-10-04 that the developer displays and aids hang on ONE installation-wide
+switch, set by admins and shipped OFF; it was built on 2026-10-06 on branch `feat/test-aids-switch`.
+Its control is the first of *Diagnostics and verification*, in a sub-group of its own, *Test aids*
+(row 6.0 above, position 0 so the chapter's other rows keep their numbers). Chapter 6 has 18 controls,
+the screen 349; the operator view is unchanged (90, +9 for an admin), because the chapter is
+admin-only. `count-controls.mjs` counts it by its literal test id and prints 349; the chapter guard
+holds the 349 rows. While the switch is OFF the diagnostic and log switches of this chapter, and the
+re-roll marker in *The race*, are locked with one line saying why — placement and info texts unchanged.
+
+---
+
+## Two winners settings removed — 2026-10-06 (REMOVE-WINNERS-SETTING-1)
+
+The owner decided on 2026-10-06 that the number-of-winners setting is removed: the podium has three
+places everywhere (`PODIUM_PLACES`, `shared/podium.mjs`). Two controls went, and their rows are gone
+from the tables above (their numbers are not reused):
+
+- **1.3** *Default Number of Winners (Podium Spots)* — `RaceDefaults.jsx`, `winners`. Its info text said
+  the result screen celebrates that many winners; the result screen's podium was always three places
+  and never read it.
+- **4.23** *Default Winners* — `TrackManager.jsx`, `defaultWinners`, the same setting per track. Read by
+  nothing at all; tracks that stored a value keep it, unread.
+
+The setup screen's per-race stepper and the "Top N" in the start line went with them; they were never
+Dev Screen controls. Counts: **The race 100** (operator view 5), **Tracks, racers, brands and groups
+68** (62, +6 for an admin), the screen **346** (88, +9 for an admin). `count-controls.mjs` prints 346
+and the chapter guard holds the 346 rows.
+
+**Where the two meet** (`review/2026-10-06`): the switch's +1 and these −2 — **347 controls**, operator view 88 (+9 for an admin); `count-controls.mjs` prints 347 and the chapter guard holds the 347 rows.
+

@@ -36,6 +36,15 @@ import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 import { forbidNetwork } from '../../test/mockServerTracks.js';
 import { validateActiveRace } from '../RaceScreen/raceSession.js';
 import { QUICK_TEST_SEED_MIN, QUICK_TEST_SEED_MAX } from './quickTestSeed.js';
+import { _setTestAidsForTests } from '../../modules/testAids.js';
+
+// TEST-AIDS-1: these tests describe the setup screen an ADMIN sees with the test-aids switch ON —
+// the screen exactly as it was before the switch. The switch's own OFF/ON and role cases are in
+// testAidsGates.test.jsx.
+vi.mock('../../contexts/AuthContext.jsx', async () =>
+  (await import('../../test/mockAuth.js')).authMock('admin')
+);
+beforeEach(() => _setTestAidsForTests(true));
 
 vi.mock('../../modules/storage/useServerTracks.js', async () => {
   const { serverTracksMock } = await import('../../test/mockServerTracks.js');
@@ -262,5 +271,23 @@ describe('SEED-REAL-RACE-1 — a race stored before this change still loads', ()
     expect(shown).toBeNull();
     const shownZero = Number(0) > 0 ? 0 : null;
     expect(shownZero).toBeNull();
+  });
+});
+
+// REMOVE-WINNERS-SETTING-1 (the owner's decision of 2026-10-06): the number-of-winners setting is
+// gone — the podium is three places everywhere. Nothing on this screen sets or shows a winners count,
+// and a race carries none, even when this browser still has an old stored value.
+describe('the winners setting is gone', () => {
+  it('no winners stepper, no "Top N", and the race payload carries no winners count', () => {
+    storageSet(KEYS.RACE_DEFAULTS, { winners: 7 }); // an old stored value, from before the removal
+    renderStartable();
+    // The start line rendered "Top" and the number in two elements, so read the page's whole text.
+    expect(document.body.textContent).not.toMatch(/Top\s*\d/);
+    openSettingsTab();
+    expect(document.body.textContent).not.toMatch(/Number of Winners|Podium Spots/);
+    clickStart();
+    const race = startedRace();
+    expect(race).not.toBeNull();
+    expect('winners' in race).toBe(false);
   });
 });

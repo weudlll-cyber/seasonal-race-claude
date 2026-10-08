@@ -38,7 +38,7 @@ import { storageGet, storageSet, KEYS, newId } from './storage/storage';
 import { normalizeRaceActionStage } from './raceActionStage.js';
 import { RACE_IDENTIFIER_VERSION } from './raceIdentifier.js';
 import { raceIdentifierBuildId } from './raceIdentifierBuild.js';
-import { DEFAULT_RACE_DEFAULTS } from './storage/defaults.js';
+import { PODIUM_PLACES } from '../../../shared/podium.mjs';
 
 /** How many races the list keeps — the cap that has always been here. */
 export const HISTORY_CAP = 100;
@@ -105,7 +105,7 @@ export function buildHistoryEntry(parsed) {
     // a value here would be this file inventing the one fact the marker exists to stop anyone
     // inventing.
     raceSource: race.raceSource ?? null,
-    winners: order.slice(0, race.winners ?? DEFAULT_RACE_DEFAULTS.winners).map((r) => r.name),
+    winners: order.slice(0, PODIUM_PLACES).map((r) => r.name),
     finishOrder: order,
 
     // ── RACE-SAVE-3: what re-running needs ──

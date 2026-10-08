@@ -65,6 +65,12 @@ import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { cacheTrackLights, createTrackEffects } from './trackScene.js';
 import { TEST_RACE_RETURN_ROUTE } from '../TrackEditor/testRaceRoute.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
+import {
+  testAidsOn,
+  testAidUrlFlag,
+  withTestAids,
+  TEST_AID_CAMERA_KEYS,
+} from '../../modules/testAids.js';
 import { buildCameraMarker } from '../../modules/camera/cameraMarker.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
@@ -235,8 +241,13 @@ export default function RaceScreen() {
   const prevCamAnchorRef = useRef(null);
   const truthEntryLoggedRef = useRef(false); // CAMERA-FOCUS-4: one-shot observer-phase log per race
   const perfLogRef = useRef(null);
-  // Camera config as React state so updateConfig() is called whenever it changes.
-  const [cameraConfig] = useState(() => loadCameraConfig());
+  // TEST-AIDS-1: the test-aids switch, read ONCE at mount like the camera config below — a race in
+  // progress keeps the answer it started with. OFF (the shipped state) hides every developer display
+  // and aid of DEV-DISPLAYS-1 on this screen; ON is the screen exactly as it was before the switch.
+  const [aids] = useState(() => testAidsOn());
+  // Camera config as React state so updateConfig() is called whenever it changes. TEST-AIDS-1: with
+  // the switch OFF the diagnostic keys (hero rings, items 13–24) read false, whatever is stored.
+  const [cameraConfig] = useState(() => withTestAids(loadCameraConfig(), TEST_AID_CAMERA_KEYS));
   const cameraConfigRef = useRef(cameraConfig);
   // STAY-ON-THE-FINISH-1: the operator's race defaults, read ONCE at mount for the same reason the
   // camera config is — a setting changed mid-race must not alter the race that is already running.
@@ -408,7 +419,8 @@ export default function RaceScreen() {
       return;
     }
 
-    const constSpeedActive = new URLSearchParams(window.location.search).get('constSpeed') === '1';
+    // TEST-AIDS-1, item 26: `?constSpeed=1` changes the physics, so it is honoured only while ON.
+    const constSpeedActive = testAidUrlFlag('constSpeed');
     diagDataRef.current.constSpeed = constSpeedActive;
 
     shapeRef.current = new EditorShape(geometry);
@@ -496,7 +508,8 @@ export default function RaceScreen() {
     // It reports the values that actually reached `createRaceFromIdentity` above, so it cannot
     // drift from them: it is read from the same variables, one line later.
     try {
-      if (localStorage.getItem('racearena:raceInputsProbe') === '1') {
+      // TEST-AIDS-1: a console-only probe — ignored while the switch is OFF.
+      if (aids && localStorage.getItem('racearena:raceInputsProbe') === '1') {
         window.__raRaceInputs = {
           racerTypeId: typeId,
           speedMultiplier,
@@ -1271,12 +1284,15 @@ export default function RaceScreen() {
         tagWideForms: tagWideFormsRef.current,
         tagFormHold: tagFormHoldRef.current,
         leaderDiag: leaderDiagRef.current,
-        cfgBadge,
-        buildBadge: RA_BUILD,
-        racePlanActive: !!racePlanController,
+        // TEST-AIDS-1, items 1–3 and 25: the settings and build badges, the race-plan pill and the
+        // gap re-roll marker are drawn only while the switch is ON.
+        cfgBadge: aids ? cfgBadge : null,
+        buildBadge: aids ? RA_BUILD : null,
+        racePlanActive: aids && !!racePlanController,
         racePlanSeed,
         gapRerollDevMarker:
-          dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
+          aids &&
+          (dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker),
         // CANVAS-SCALE-1 — a FINDING, not a tidy-up, and the one thing that block left behind.
         // These read `canvas.width/height` until now, and the renderer spends them on LAYOUT: the
         // name-tag font size, the minimum drawn racer size, the label layout's screen box, where the
@@ -1563,7 +1579,8 @@ export default function RaceScreen() {
             showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
-          <CameraMarkerHUD buildRef={markerBuildRef} />
+          {/* TEST-AIDS-1, item 7: the M-key camera marker is not mounted while the switch is OFF. */}
+          {aids && <CameraMarkerHUD buildRef={markerBuildRef} />}
           <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} getContext={getPerfContext} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />

@@ -40,6 +40,15 @@ import { raceIdentifierBuildId } from '../../modules/raceIdentifierBuild.js';
 // The expected values come from the shared vocabulary, not from string literals retyped here: a
 // test carrying its own copy of the spelling cannot catch the spelling changing on one side.
 import { RACE_SOURCE } from '../../../../shared/raceSource.mjs';
+import { _setTestAidsForTests } from '../../modules/testAids.js';
+
+// TEST-AIDS-1: these tests describe the setup screen an ADMIN sees with the test-aids switch ON —
+// the screen exactly as it was before the switch. The switch's own OFF/ON and role cases are in
+// testAidsGates.test.jsx.
+vi.mock('../../contexts/AuthContext.jsx', async () =>
+  (await import('../../test/mockAuth.js')).authMock('admin')
+);
+beforeEach(() => _setTestAidsForTests(true));
 
 vi.mock('../../modules/storage/useServerTracks.js', async () => {
   const { serverTracksMock } = await import('../../test/mockServerTracks.js');
