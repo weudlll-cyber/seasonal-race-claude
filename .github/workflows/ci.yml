@@ -80,7 +80,7 @@ jobs:
     steps:
       # fetch-depth 0 so the scope step below can diff the push range. Measured at 3 s on this
       # repository — the same depth the docs job has needed since ONE-TRUTH-2 stage 4.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -99,7 +99,7 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: echo "docs_only=$(node scripts/ci-docs-only.mjs)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -156,7 +156,7 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -169,7 +169,7 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: echo "docs_only=$(node scripts/ci-docs-only.mjs)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -242,11 +242,11 @@ jobs:
       # only real history can answer. Under depth 1 every stamp reported its commit as missing, so
       # the guard failed for an environmental reason and said something untrue about the document.
       # The guard now refuses to give a verdict in a shallow clone; this is the other half of it.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
