@@ -8,7 +8,7 @@
 // Created:     2026-06-10
 // Description: Contract tests for statsHelpers.js — avg, median, p95, stddev.
 //              These helpers were extracted from duplicate implementations in
-//              headlessRaceSimulator.js and DiagnoseVerteilung.jsx. Tests cover
+//              headlessRaceSimulator.js and DistributionDiagnostics.jsx. Tests cover
 //              the sorting contract (internal sort), the p95 index formula, and
 //              the bounds-clamping guard.
 // ============================================================

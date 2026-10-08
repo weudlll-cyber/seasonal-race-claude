@@ -129,12 +129,12 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **When**: follower must be **behind** in `t` (`leader.t > follower.t`), within `draftingMaxDistance` world px, and inside the half-cone behind the leader's heading.
 - **Magnitude**: set by `draftingBoost` — a small forward multiplier while the flag is set.
 - **Config**: `draftingMaxDistance` **80** px, `draftingConeAngle` **30°**, `draftingBoost` **1.04**.
-- **Known weakness (documented in source)**: on tight curves the cone rotates fast and can miss a follower physically in the slipstream — [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1128-L1131). Drafting is also fed into the brake-to-match leader/trailer speed estimate ([`raceBehavior.js:526-527`](../client/src/modules/raceBehavior.js#L535-L536)).
+- **Known weakness (documented in source)**: on tight curves the cone rotates fast and can miss a follower physically in the slipstream — [`raceBehavior.js` → `passStrength`](../client/src/modules/raceBehavior.js#L1128-L1131). Drafting is also fed into the brake-to-match leader/trailer speed estimate ([`raceBehavior.js:501-502`](../client/src/modules/raceBehavior.js#L501-L502)).
 
 ### A5. `brake` — speed brake (avoidance floor) + warmup ramp
 
 - **Code**: `r.avoidanceActive ? min(effectiveBrakeFactor, brakeMatchFactor) : 1.0` — [`raceCore.js:695-697`](../client/src/modules/raceCore.js#L695-L697). Floor + ramp from `computeEffectiveBrakeFactor()` [`raceBehaviorConfig.js` → `computeEffectiveBrakeFactor`](../client/src/modules/raceBehaviorConfig.js#L34-L38).
-- **What**: slows a trailer that is closing on a leader in the same lane. `avoidanceActive` is set when a pair is inside the body-based brake zone — [`raceBehavior.js:501-502`](../client/src/modules/raceBehavior.js#L510-L511).
+- **What**: slows a trailer that is closing on a leader in the same lane. `avoidanceActive` is set when a pair is inside the body-based brake zone — [`raceBehavior.js:1208`](../client/src/modules/raceBehavior.js#L1208).
 - **When (gate)**: `|dY| < brakeSameLaneY && dT < dynamicBrakeT`, both **body-based** ([`raceBehavior.js` → `trailerDenom`](../client/src/modules/raceBehavior.js#L506-L510)):
   - longitudinal zone = `(bodyContactLength / pathLength) × speedBrakeTMultiplier`
   - lateral filter = `pxToPhysicalY(bodyContactWidth)` (same-lane y/n only — never drives strength)
@@ -147,8 +147,8 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **Code**: `computeBrakeMatchFactor(leaderFwdSpeed, trailerDenom, …)` — [`raceBehavior.js` → `computeBrakeMatchFactor`](../client/src/modules/raceBehavior.js#L95-L106); selected as most-constraining leader [`raceBehavior.js` → `active`](../client/src/modules/raceBehavior.js#L558-L569); hold state machine [`raceBehavior.js` → `ssOffsetY`](../client/src/modules/raceBehavior.js#L1041-L1107). Applied via the `min()` at [`raceCore.js:696`](../client/src/modules/raceCore.js#L696).
 - **What**: caps the trailer's speed to ≈ the leader's _actual_ advance speed (×0.999 safety) so a faster trailer settles in behind instead of telescoping into the leader. Distinct from A5: A5 is a fixed floor, A6 is a computed per-pair cap.
 - **When**:
-  - **Open** tracks: narrow zone `dT < bodyContactLength/pathLength × brakeMatchActivationTMultiplier` AND `|dY| < brakeMatchActivationYThreshold` ([`raceBehavior.js:511-519`](../client/src/modules/raceBehavior.js#L520-L528)).
-  - **Closed** tracks: every pair already inside the wide brake zone qualifies (`inBrakeMatchZone = true`, [`raceBehavior.js:521`](../client/src/modules/raceBehavior.js#L530)).
+  - **Open** tracks: narrow zone `dT < bodyContactLength/pathLength × brakeMatchActivationTMultiplier` AND `|dY| < brakeMatchActivationYThreshold` ([`raceBehavior.js:883-891`](../client/src/modules/raceBehavior.js#L883-L891)).
+  - **Closed** tracks: every pair already inside the wide brake zone qualifies (`inBrakeMatchZone = true`, [`raceBehavior.js:893`](../client/src/modules/raceBehavior.js#L893)).
   - Engages only if trailer is faster than leader by `> speedMatchMinDifferential`.
 - **Hold/escape**: locks one leader; anti-trap escape after `brakeHoldTimeoutFrames` → forced release `brakeHoldEscapeReleaseDurationFrames` + cooldown `brakeHoldEscapeCooldownFrames`; debounced release over `brakeReleaseDebounceFrames`; stale-leader guard resets instantly.
 - **Magnitude**: cap ∈ (0, 1]; 1.0 = no extra braking. Combined with A5 via `min()`.
@@ -165,7 +165,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A8. `areaBonusMult` — Race-Plan band bonus (early/mid steering)
 
-- **Code**: set per racer from target band, then `easeInOutCubic` fade to 1.0 after `transitionEnd` — [`racePlanner.js` → `transitionEnd`](../client/src/modules/racePlanner.js#L84-L93); read at [`raceCore.js:728`](../client/src/modules/raceCore.js#L728).
+- **Code**: set per racer from target band, then `easeInOutCubic` fade to 1.0 after `transitionEnd` — [`racePlanner.js` → `transitionEnd`](../client/src/modules/racePlanner.js#L84-L93); read at [`raceStep.js:130`](../client/src/modules/raceStep.js#L130).
 - **What**: constant-per-band forward bonus that biases racers toward their assigned area before the OUTCOME controller takes over.
 - **When**: full strength until `racePlanBonusTransitionEnd`, then fades over `racePlanBonusFadeDuration`.
 - **Magnitude**: base deltas × `bonusStrengthMultiplier` (default **2.0**): B1 +0.03, B2 +0.02, B3 +0.01, B4 0, B5 −0.01 → at ×2.0 that is roughly +6% (B1) to −2% (B5).
@@ -198,7 +198,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 
 ### A13. `governorMult` — PulkLeadRotation, the PULK-phase contest director (**active, unconditional in PULK**)
 
-- **Code**: `applyPulkLeadRotation(racers, finishT, phaseCtx, cfg)` — [`raceGovernor.js` → `applyPulkLeadRotation`](../client/src/modules/raceGovernor.js#L170-L380); called at [`raceCore.js:615`](../client/src/modules/raceCore.js#L615) whenever `pulkLeadRotationOn = racePlanEnabled` ([`raceCore.js:376`](../client/src/modules/raceCore.js#L376)); `governorMult` then enters the shared t-update at [`raceStep.js:83`](../client/src/modules/raceStep.js#L83). This is the **one surviving writer of `governorMult`** — the classic reactive `applyGovernor` (tail-lift cohesion + contest-injector director) was removed; there is no `applyGovernor`, `governorEnabled`, `governorDirector*`, `directorStreamKey`, `GOVERNOR_SEED_XOR`, or `DIRECTOR_SEED_XOR` in the source anymore (those names survive only as inert storage-key → `pulk*` migration aliases in `raceDynamicsConfig.js`).
+- **Code**: `applyPulkLeadRotation(racers, finishT, phaseCtx, cfg)` — [`raceGovernor.js` → `applyPulkLeadRotation`](../client/src/modules/raceGovernor.js#L170-L380); called at [`raceCore.js:615`](../client/src/modules/raceCore.js#L615) whenever `pulkLeadRotationOn = racePlanEnabled` ([`raceCore.js:376`](../client/src/modules/raceCore.js#L376)); `governorMult` then enters the shared t-update at [`raceStep.js:131`](../client/src/modules/raceStep.js#L131). This is the **one surviving writer of `governorMult`** — the classic reactive `applyGovernor` (tail-lift cohesion + contest-injector director) was removed; there is no `applyGovernor`, `governorEnabled`, `governorDirector*`, `directorStreamKey`, `GOVERNOR_SEED_XOR`, or `DIRECTOR_SEED_XOR` in the source anymore (those names survive only as inert storage-key → `pulk*` migration aliases in `raceDynamicsConfig.js`).
 - **What**: a deterministic, rank-based **lead-rotation contest** that _completes_ lead changes instead of herding the field. Selection is by **live rank + signed lap-aware distance + index** (no `Math.random`), and reads **position + seed only, NEVER the target-rank assignment** — so who contests the front never correlates with who is scripted to win (the finish order is still imposed later by the OUTCOME trajectory controller, A7). Three roles, all writing `governorMult`:
   - **Attacker slots (1–2, `pulkLeadRotationAttackerSlots`)** — boost the live P2 (and P3) with a **flat `pulkChallengerBoost`** UNTIL it becomes live P1; on success the slot advances to the new P2. Candidates are drawn from the front group (first `pulkFrontPool − 1` non-hero racers behind the leader) and must be **draw-reachable** (`directorReachable`: their best boosted speed factor can out-pace the braked leader's).
   - **Outsider slot (permanent fresh blood)** — boost the DEEPEST still-reachable racer OUTSIDE the front group, within `pulkLeadRotationOutsiderMaxReachLengths`, until it takes the lead; then draw the next-deepest. Provably disjoint from the attacker window.
@@ -253,8 +253,8 @@ the historical record; removed ones are marked **REMOVED**.
 - **Warmup**: strength eases 0→full over `avoidanceWarmupMs` (`easeInOutCubic`), on open AND
   closed tracks. The race clock for this ramp is `priorityExtras?.currentTs` — the **only**
   surviving consumer of the third argument.
-- **Config**: `hardSeparationEnabled`, `hardSeparationRelaxation` **0.15**,
-  `hardSeparationTolerancePct` **0.1**, `avoidanceWarmupMs` **3000**.
+- **Config**: `hardSeparationEnabled`, `hardSeparationRelaxation`,
+  `hardSeparationTolerancePct`, `avoidanceWarmupMs` (values in `defaults.js`).
 
 ### L1. Home force — spring toward centerline — **REMOVED (Commit A; priority path Commit B)**
 
@@ -315,18 +315,18 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L7. Soft repulsion — quadratic boundary cushion
 
-- **Code**: [`raceBehavior.js:1011-1016`](../client/src/modules/raceBehavior.js#L1027-L1032).
+- **Code**: [`raceBehavior.js:1161-1166`](../client/src/modules/raceBehavior.js#L1161-L1166).
 - **What**: as `|newY|` enters `[comfortThreshold, 1.0)`, a quadratic inward push grows toward the boundary — a soft wall before the hard clamp.
 - **When**: `comfortThreshold ≤ |newY| < 1.0`. Applied **after** velocity integration, directly on `newY`.
 - **Magnitude**: `−sign(newY) × softRepulsionStrength × pen²`, `pen = (|newY|−comfort)/(1−comfort)`.
-- **Config**: `comfortThreshold` **0.7**, `softRepulsionStrength` **0.1**.
+- **Config**: `comfortThreshold`, `softRepulsionStrength` (values in `defaults.js`).
 
 ### L8. maxLateral clamp / hard boundary
 
 - **Code**: [`raceBehavior.js` → `bSingle`](../client/src/modules/raceBehavior.js#L1034-L1038).
 - **What**: hard clamp of `physicalY` to `±min(maxLateral, 1.0)`. On a boundary hit, `physicalYVelocity` is reset to 0 (kills bounce).
-- **Magnitude**: cap = **0.95** (`maxLateral`).
-- **Config**: `maxLateral` **0.95**.
+- **Magnitude**: cap = `maxLateral` (value in `defaults.js`).
+- **Config**: `maxLateral` (value in `defaults.js`).
 
 ### L9. Stuck-mode suppression — sandwich freeze — **REMOVED (Commit A; the Layer-1 "hold" target replaces it)**
 
@@ -347,7 +347,7 @@ the historical record; removed ones are marked **REMOVED**.
 
 ### L11. Damping — lateral velocity decay
 
-- **Code**: [`raceBehavior.js:1008`](../client/src/modules/raceBehavior.js#L1024).
+- **Code**: [`raceBehavior.js:1158`](../client/src/modules/raceBehavior.js#L1158).
 - **What**: `physicalYVelocity = (physicalYVelocity + delta) × damping`. Retains only a fraction of velocity each frame → critically over-damped lateral motion.
 - **Magnitude**: `lateralDamping` **0.16** (only 16% of velocity carried over — heavy damping).
 - **Config**: `lateralDamping` **0.16**.
@@ -419,11 +419,11 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 ### C6. Brake-to-match cap vs. Race-Plan controller/area-bonus (longitudinal)
 
-- **What**: A6 caps trailer speed to the leader's advance; A7/A8 simultaneously _boost_ the same racer toward an assigned rank/band. In OUTCOME phase a racer scripted to advance (trajectoryMult up to 1.10) can be simultaneously brake-capped to ≈leader speed when stuck behind a slower body. The `min()` brake wins on the brake term, but the controller keeps demanding a boost — the scripted finish order can fight the physical brake. (`racersBlockedInOutcome` telemetry exists precisely to measure this — [`racePlanner.js:394, 463`](../client/src/modules/racePlanner.js#L394).)
+- **What**: A6 caps trailer speed to the leader's advance; A7/A8 simultaneously _boost_ the same racer toward an assigned rank/band. In OUTCOME phase a racer scripted to advance (trajectoryMult up to 1.10) can be simultaneously brake-capped to ≈leader speed when stuck behind a slower body. The `min()` brake wins on the brake term, but the controller keeps demanding a boost — the scripted finish order can fight the physical brake. (`racersBlockedInOutcome` telemetry exists precisely to measure this — [`racePlanner.js:591, 1494, 1758`](../client/src/modules/racePlanner.js#L591).)
 
 ### C7. Drafting boost vs. speed/brake-match (longitudinal)
 
-- **What**: A4 (+4%) accelerates a follower _into_ the leader's wake; A5/A6 then brake it back when it closes to body contact. The drafting boost is also fed _into_ the brake-match speed estimate ([`raceBehavior.js:526-539`](../client/src/modules/raceBehavior.js#L535-L548)), so a drafting trailer both speeds up and raises its own brake cap — a coupled loop that can oscillate (speed up → close → brake → fall back → boost lost → repeat).
+- **What**: A4 (+4%) accelerates a follower _into_ the leader's wake; A5/A6 then brake it back when it closes to body contact. The drafting boost is also fed _into_ the brake-match speed estimate ([`raceBehavior.js:500-520`](../client/src/modules/raceBehavior.js#L500-L520)), so a drafting trailer both speeds up and raises its own brake cap — a coupled loop that can oscillate (speed up → close → brake → fall back → boost lost → repeat).
 
 ---
 
@@ -436,10 +436,10 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | `preOverlapFreeLane` approach-zone steering (part of L3)                     | **REMOVED** (Commit B, `f3116226`, 2026-06-28) — the key exists nowhere in the tree; every other row in this table says REMOVED and this one still read as a live default until 2026-09-03                                                                                         | [`defaults.js` → `endgameThreshold`](../client/src/modules/storage/defaults.js#L351-L354)          |
 | Legacy home-force path (`homeForceReductionOnOverlap`)                       | **REMOVED (Commit A)** — the entire home force and `overlapSet`→`homeForceReductionOnOverlap` path is gone                                            | —                                                                              |
 | `tWeight` / `yWeight` / `avoidanceDistance`                                  | **Retired** from browser gate (geometric gate replaced them); kept only for sim-script back-compat                                                    | [`defaults.js` → `leadChangeDebounceMs`](../client/src/modules/storage/defaults.js#L442-L443) |
-| `speedBrakeYThreshold`                                                       | **Retired** from browser brake gate (body-based same-lane filter replaced it); kept for sim/validation compat                                         | [`defaults.js:442`](../client/src/modules/storage/defaults.js#L442)               |
+| `speedBrakeYThreshold`                                                       | **Retired** from browser brake gate (body-based same-lane filter replaced it); kept for sim/validation compat                                         | [`defaults.js:1479`](../client/src/modules/storage/defaults.js#L1479)               |
 | `_approachLeft/Right`, `_forwardLeft/Right` (Stage A corridor sets)          | **REMOVED (Commit A)** — the Stage A/C corridor-set + side-switch machinery is gone with the free-lane/commit stack (`grep` = 0 in `raceBehavior.js`) | —                                                                              |
 | `overlapEscapeStrength` / `overlapEscapeTimeout` / `gapForceCap` (OVL-C, L6) | **REMOVED (Commit B)** — config keys deleted from `defaults.js`                                                                                       | —                                                                              |
-| Drafting on tight curves                                                     | **Intermittently misses** — documented cone-geometry limitation, not fixed                                                                            | [`raceBehavior.js:912-915`](../client/src/modules/raceBehavior.js#L928-L931)      |
+| Drafting on tight curves                                                     | **Intermittently misses** — documented cone-geometry limitation, not fixed                                                                            | [`raceBehavior.js:1286-1287`](../client/src/modules/raceBehavior.js#L1286-L1287)      |
 
 ---
 
@@ -455,14 +455,14 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A3  | speedBonusMult (row)                                                  | 1.0 factor                                                           | always                                  | index.jsx:578       |
 | A4  | drafting boost                                                        | 1.04                                                                 | in wake cone                            | index.jsx:961       |
 | A5  | speed brake floor + warmup                                            | 0.945, ramp 3 s open                                                 | same-lane close                         | index.jsx:972       |
-| A6  | brake-to-match cap                                                    | targets leader speed                                                 | faster trailer                          | raceBehavior.js:549 |
-| A7  | trajectoryMult (controller)                                           | [0.85,1.10]                                                          | OUTCOME [choreoOutcomeStart, corridorEnd] | racePlanner.js:362  |
-| A8  | areaBonusMult (band)                                                  | +6%…−2% (×2.0)                                                       | until 0.75 then fade                    | racePlanner.js:312  |
+| A6  | brake-to-match cap                                                    | targets leader speed                                                 | faster trailer                          | raceBehavior.js:909-915 |
+| A7  | trajectoryMult (controller)                                           | [0.85,1.10]                                                          | OUTCOME [choreoOutcomeStart, corridorEnd] | racePlanner.js:546  |
+| A8  | areaBonusMult (band)                                                  | +6%…−2% (×2.0)                                                       | until 0.75 then fade                    | racePlanner.js:112  |
 | A9  | rubberBandMult (cap-the-lead brake)                                   | **REMOVED** (raceRubberBand.js deleted)                              | —                                       | —                   |
 | A10 | zoneMult (race zone)                                                  | **REMOVED** (raceZones.js deleted)                                   | —                                       | —                   |
 | A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | index.jsx:995       |
 | A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:824       |
-| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:170 |
+| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost `pulkChallengerBoost` / leader brake `pulkLeaderBrake`, envelope `pulkEnvelopeMaxEffect` (values in `defaults.js`), ceiling `NATURALNESS_CEILING` | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:244 |
 | A14 | gapBrakeStrength — the GAP leader brake (**shipped ON 2026-09-17**)   | bounded by `gapBrakeMaxAuthority`; silent below `gapBrakeAllowedGapPx` | [choreoOutcomeStart, `gapBrakeWindowEnd`], leader only | racePlanner.js:_computeGapLeaderBrake |
 
 ### Lateral (current: Soft Steering spring → repulsion/clamp/damping → Hard Separation)

@@ -19,7 +19,9 @@ vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }));
 vi.mock('./screens/ResultScreen/index.jsx', () => ({ default: () => null }));
 vi.mock('./screens/TrackEditor/TrackEditor.jsx', () => ({ default: () => null }));
 vi.mock('./screens/RacerEditor/RacerEditor.jsx', () => ({ default: () => null }));
-vi.mock('./screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx', () => ({ default: () => null }));
+vi.mock('./screens/DistributionDiagnostics/DistributionDiagnostics.jsx', () => ({
+  default: () => null,
+}));
 vi.mock('./screens/Auth/LoginScreen.jsx', () => ({ default: () => null }));
 vi.mock('./screens/Auth/SetupAdminScreen.jsx', () => ({ default: () => null }));
 

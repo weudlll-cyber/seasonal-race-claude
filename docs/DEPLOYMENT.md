@@ -100,11 +100,11 @@ POSIX shell. On Windows they run unchanged in Git Bash.
 
 **One installation is one shared space.** Every signed-in user sees and can change all tracks, brands,
 player groups — **including the names of the people in them** — and racer types: the list routes
-answer every caller with the whole collection (`server/src/routes/tracks.js:457`,
-`server/src/routes/brands.js:160`, `server/src/routes/playerGroups.js:100`,
-`server/src/routes/racers.js:125`). **An `admin` manages every user on the installation**, whatever
-their team (`server/src/auth/guards.js:22-26`, `server/src/auth/usersRouter.js:21-24`). **Race lists are
-per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:121-131`).
+answer every caller with the whole collection (`server/src/routes/tracks.js:454`,
+`server/src/routes/brands.js:161`, `server/src/routes/playerGroups.js:106`,
+`server/src/routes/racers.js:126`). **An `admin` manages every user on the installation**, whatever
+their team (`server/src/auth/guards.js:25-30`, `server/src/auth/usersRouter.js:21-24`). **Race lists are
+per team**: a user sees only the races stored by their own team (`server/src/routes/races.js:164-181`).
 Decided on 2026-10-01; there is no per-organizer separation beyond races.
 
 ### Test aids — off as an installation ships
@@ -522,7 +522,7 @@ the Dockerfile could reach `shared/nameLimits.mjs`; `server/Dockerfile`'s own he
   *(Corrected 2026-10-04: the command carried `--build-context client=./client`, for the named
   context that no longer exists.)*
 - The image **IS standalone**: `server/utils/` and `shared/nameLimits.mjs` are COPYed in
-  (`server/Dockerfile:32` and `:42`), so it runs with no mounts and no repository beside it.
+  (`server/Dockerfile:86` and `:103`), so it runs with no mounts and no repository beside it.
   *(Corrected 2026-09-03. This said the opposite — that both came from bind mounts and that closing
   it was "separate work" — and IMAGE-STANDALONE-1 and COPY-UTILS-1 closed it on 2026-09-01.
   `docker-compose.yml` already stated the property this denied: "run the image with no mounts at all

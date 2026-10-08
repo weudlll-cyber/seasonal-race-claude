@@ -116,7 +116,7 @@ export const GUARD = {
   // them — it matches by PREFIX, and the repo root is the prefix of every path — so they are named.
   // `scripts/verify.test.mjs` fails if this list stops matching the tracked root *.md set, which is
   // what stops a NEW root document from being silently unrouted.
-  files: ["README.md", "CLAUDE.md"],
+  files: ["README.md", "CLAUDE.md", "CHANGELOG.md"],
 };
 if (process.argv.includes("--declare")) {
   console.log(JSON.stringify(GUARD));

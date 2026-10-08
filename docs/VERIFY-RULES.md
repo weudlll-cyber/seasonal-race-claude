@@ -860,7 +860,7 @@ this is not deferred work:
   a record is the thing this project refuses everywhere else.
 - The remainder name no symbol at all, and deciding what each meant is the judgement CITATIONS-1
   measured as un-automatable: `getPhase`'s first occurrence in `racePlanner.js` is a **comment** at
-  `:165` and its definition is at `:524`.
+  `:169` and its definition is at `:695`.
 
 **So the old citations stay, and nothing pretends they are checkable.** Rule F's count is a count of
 citations that OPTED IN, and its output says so, because "0 disagree" read as a statement about every

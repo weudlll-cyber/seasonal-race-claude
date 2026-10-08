@@ -49,7 +49,7 @@ function resultsFor(race) {
       { name: 'Bob', icon: '🐎', color: '#00f', index: 1, progress: 95, finishTimeMs: 31_200 },
     ],
     elapsedTime: 62,
-    race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60, ...race },
+    race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, duration: 60, ...race },
   });
 }
 

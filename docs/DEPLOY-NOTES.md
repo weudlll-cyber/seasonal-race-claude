@@ -77,7 +77,13 @@ This is a straight trade and it has already been written up rather than taken.
 **This is the hurdle.** The other three are configuration; this one decides whether "one command" is
 possible at all.
 
-**What is true.** `client/src/services/api.js:16-18` is the whole of it:
+★ **BUILT since (D30, option C): the address is resolved at START time.** The server stamps every page it
+serves with the API's address (`injectRuntimeConfig`, `server/src/runtimeConfig.js`), and `client/src/services/api.js:99` reads
+`API_BASE_URL = runtimeApiBaseUrl() ?? buildTimeApiBaseUrl() ?? DEFAULT_API_BASE_URL`, so one image
+works at any address. The rest of this section is the hurdle as it stood on 2026-09-04, kept as the
+record of what D30 chose between.
+
+**What was true on 2026-09-04.** `client/src/services/api.js` was, in full:
 
 ```js
 export const API_BASE_URL =
@@ -156,7 +162,7 @@ without `RA_CLIENT_ORIGIN` would break the same-origin deployment the project is
 **What is true, and it was searched for rather than assumed.** An uncapped search of `server/`,
 `client/`, `scripts/` and `shared/` for `https.createServer`, `node:https`, `require('https')`,
 `from 'https'`, `createSecureServer`, `tls.`, `node:tls`, key/cert pairs, `letsencrypt` and `certbot`
-returns **nothing**. `server/src/index.js:16` is `app.listen(PORT, …)` — plain HTTP.
+returns **nothing**. `server/src/index.js:60` is `listenOn(app, PORT, bindAddress, …)` — plain HTTP.
 
 **But the server is TLS-aware and expects to sit behind a terminator:**
 
@@ -169,7 +175,7 @@ returns **nothing**. `server/src/index.js:16` is `app.listen(PORT, …)` — pla
 So the intended arrangement is: **a reverse proxy terminates TLS and forwards; the app never sees a
 certificate.** That is the ordinary and correct shape, and it is why there is no TLS code to find.
 
-**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:199` reads
+**What is at stake without it.** The sign-in POST carries the password (`authRouter.js:204` reads
 `username` and `password` from `req.body`), and the session cookie carries the session. Over plain
 HTTP both are readable by anything on the path. **`Secure` cookies are not sent over HTTP at all**,
 so an install that sets `NODE_ENV=production` without HTTPS in front does not merely become
@@ -238,7 +244,8 @@ behind a proxy. The Docker publish `4000:4000` below is untouched.
 rented server — **but it would remove a mode that works today.** The shipped model is same-origin:
 the server serves the built app *and* the API on one port (`DEPLOYMENT.md:9-13`), so a browser on
 another machine reaches `http://<host>:4000` directly, and a reverse proxy is described as optional
-(`DEPLOYMENT.md:242`, *"if sitting behind nginx/Caddy"*). Binding to loopback breaks direct access
+(`DEPLOYMENT.md:227-228` recommends `RA_BIND_ADDRESS=127.0.0.1` behind one; the tested example is
+`:452`). Binding to loopback breaks direct access
 and makes a proxy mandatory. **That is a decision about how the product may be run, so it is his.**
 
 **What to do on a VPS, whichever he decides:** put nginx or Caddy in front and make port 4000
@@ -301,7 +308,7 @@ his choice, with both sides, rather than taken.
 ★ **CLOSED 2026-10-02 (TIDY-C-1):** every archive now has a `<archive>.sha256` beside it in
 `sha256sum` format, and `npm run status` fails the backup check when the newest archive's checksum
 file is missing or does not match. How to use it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
-★ A precision that matters when reading the source: `scripts/backup.mjs:137` writes a *tar header*
+★ A precision that matters when reading the source: `scripts/backup.mjs:204-206` writes a *tar header*
 checksum, which is part of the tar format and **not** an integrity digest of the archive. Do not
 read that line as one.
 

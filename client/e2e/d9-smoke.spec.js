@@ -392,7 +392,6 @@ test.describe('D9 — race screen startup', () => {
           racerTypeId: 'horse',
           worldWidth: 1280,
           duration: 60,
-          winners: 3,
           raceMode: 'laps',
           targetLaps: 2,
           eventName: 'D9 Test',

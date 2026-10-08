@@ -33,7 +33,9 @@
 // asks the director and the projection for their own answers and does arithmetic on nothing else:
 //
 //   the line's world point   `cd._finishLineWorldPoint(st.finishT)`  — the SAME call `_lineCeiling`
-//                            makes to decide the bound. Not `shape.getPosition` re-derived here.
+//                            makes to decide the bound. It gates the sample and is recorded as the
+//                            row's centre; the BAND itself is sampled with `shape.getPosition` (see
+//                            below), at the finish T resolved exactly as the director resolves it.
 //   world -> screen          `cd._proj.toScreen(pt, cd.zoom, cd.offsetX, cd.offsetY)` — declared in
 //                            projection.js as "THE only sanctioned world->screen call", given the
 //                            zoom and offsets the director DELIVERED this frame.
@@ -44,11 +46,12 @@
 // The only judgement this file adds is the comparison to the canvas rectangle, which is not a rule
 // the product owns — it is what "on screen" means.
 //
-// WHAT IT MEASURES IS THE POINT, NOT THE PAINTED BAND. `_lineCeiling` guarantees the finish line's
-// SPINE POINT, so that is what is graded; the drawn checkerboard straddles it across the corridor
-// and can clip at the edges while the point is still inside. A margin near zero therefore means the
-// band is already half out. That is a deliberate floor, not an oversight — grading the painted band
-// would mean reconstructing how it is drawn, which is exactly what the paragraph above forbids.
+// WHAT IT MEASURES IS THE BAND, SAMPLED ACROSS THE CORRIDOR. `BAND_SAMPLES + 1` points from edge to
+// edge at the finish T, each projected with the director's own projection; a frame's margin is the
+// BEST of them, so any part of the band on the canvas counts ("part of the band is enough", his
+// verdict below). The band's extent is the track's width — geometry the race owns — not how the
+// checkerboard is drawn, so nothing about the renderer is reconstructed. (This paragraph used to
+// say the spine POINT was graded; the band sampling replaced that.)
 //
 // THE TWO HALVES ARE NOT EQUALLY STRONG, and it is worth knowing which one to trust.
 //
@@ -339,6 +342,10 @@ for (const c of CASES) {
 // window. His words: "it need not be fully visible — cut at the edge is fine, PART OF THE BAND IS
 // ENOUGH". So the question is asked of the band and not of one point on it.
 //
+// ★ THE VERDICT HAS SINCE MOVED TO THE CANVAS (VIEWER-INVARIANTS-2): a frame fails when the band is
+// OFF THE CANVAS (`const ok = offCanvas === 0` below). The `COMPANY_FRAME_PCT` region is still
+// measured and printed on every row; the paragraphs here record why that region was chosen.
+//
 // THE FIRST CUT GRADED THE SPINE POINT ALONE AND WAS WRONG AT THE ONE MOMENT THAT MATTERS MOST.
 // `_finishLineWorldPoint` returns the CENTRE of the line, and at the crossing the leader is in his
 // own lane — up to half a corridor off the spine. Requirement 2 puts the shot at the photo finish's
@@ -369,7 +376,6 @@ for (const c of CASES) {
 // that offset is the whole reason the line leaves the frame sideways.
 
 const LINE_SEED = 9;
-// this question grades. A limit nobody has seen both fail and pass is a guess.
 // SABOTAGE ARMS, so this file can be shown to go RED on BOTH halves of the requirement rather than
 // merely to be satisfied. They are not a mode anything ships with; they displace the measured point,
 // which is the same thing the defect does to the picture.

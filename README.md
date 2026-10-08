@@ -27,30 +27,28 @@ and race defaults.
 ## How to run it
 
 **You need Node.js 20 or newer and Docker.** The Node floor is declared in the `engines` field of
-all three `package.json` files.
+all three `package.json` files. On the Docker path Node runs only `npm run configure`; the image
+builds the app itself.
 
 ```bash
 git clone https://github.com/weudlll-cyber/seasonal-race-claude.git
 cd seasonal-race-claude
 
-cd client && npm install && npm run build && cd ..   # build the app
-docker compose up -d                                 # serves the app AND the API on one port
+npm run configure -- --origin=http://localhost:4000   # this install's secrets, never printed
+docker compose up -d                                  # builds the image, serves the app AND the API on one port
 ```
-
-Then open **`http://localhost:4000`**.
 
 **There is no default login.** The first account is created through a bootstrap token, and the
-backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set. Generate this install's secrets
-first — they are never printed, and `npm run configure` writes them into
-`docker-compose.override.yml`, which is gitignored and belongs to this install alone:
+backend refuses to create one unless `RA_BOOTSTRAP_TOKEN` is set. That is why `npm run configure`
+comes first: it generates this install's secrets and writes them into
+`docker-compose.override.yml`, which is gitignored and belongs to this install alone.
+`http://localhost:4000` is a valid answer to its address question; `--origin=` above skips the
+prompt.
 
-```bash
-npm run configure -- --origin=http://localhost:4000
-docker compose up -d       # restart so the server picks them up
-```
-
-`http://localhost:4000` is a valid answer to the address question; `--origin=` above skips the
-prompt. Then read the token out of that file and use it once to create your admin account.
+Then open **`http://localhost:4000`**. On a fresh install the app shows a one-time **Create the
+first admin** page that asks for a username, a password and the bootstrap token: copy the
+`RA_BOOTSTRAP_TOKEN` value out of `docker-compose.override.yml`, and the account you create there is
+the first administrator.
 
 > **`docker-compose.override.yml` is not optional on a first install.** It is the only home of
 > `RA_BOOTSTRAP_TOKEN`, and without it `POST /api/auth/setup` answers `403` and the install can
@@ -115,11 +113,14 @@ The repository ships **one** compose file, `docker-compose.yml`, plus
   way by something outside this repository.
 - ★ **The published port binds all interfaces.** On a rented server the API is reachable directly
   unless a firewall or a proxy is put in front of it.
-- The base image is pinned to a floating tag, not a digest, so a rebuild can change it.
+- The base image is pinned by digest (the note above the first `FROM` in `server/Dockerfile`), so a
+  rebuild is reproducible and a bump is manual.
 
 **[DEPLOYMENT.md](docs/DEPLOYMENT.md) owns deployment** and
 **[DEPLOY-NOTES.md](docs/DEPLOY-NOTES.md) owns the gap** between what the repository can do today
 and what a public install would need.
+
+**[OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) is for the person who runs the server**: health, logs, backups, restore, updates, accounts and trouble, task by task.
 
 ---
 
@@ -127,7 +128,9 @@ and what a public install would need.
 
 A finished race is stored by the backend in `races.sqlite` inside the data root, together with the
 roster, the finishing order and the whole resolved world configuration the race ran under. Accounts,
-sessions, tracks, brands, player groups and uploaded images live in that same data root.
+sessions, tracks, brands, player groups and uploaded images live in that same data root. **With the
+shipped `docker-compose.yml` the data root is `./server/data` in your checkout**, bind-mounted into
+the container; [DEPLOYMENT.md](docs/DEPLOYMENT.md) describes a production layout.
 
 ```bash
 npm run backup -- --out <dir>                             # writes <dir>/racearena-backup-<UTC>.tar
@@ -169,7 +172,7 @@ them in. If you read one thing, read that. Then:
 | [SETUP.md](docs/SETUP.md) | getting it running locally: client, backend, ports, first account |
 | [ENVIRONMENT.md](docs/ENVIRONMENT.md) | every environment variable, and what breaks without it |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | deploying to a public same-origin host |
-| [API.md](docs/API.md) | the backend's HTTP surface — **and it states plainly which endpoints it does not cover** |
+| [API.md](docs/API.md) | the backend's HTTP surface — every route the server registers |
 | [AUTH.md](docs/AUTH.md) | how RaceArena authenticates and what an operator must supply |
 | [FAIRNESS.md](docs/FAIRNESS.md) | what the game is trying to do. Every racer is identical, so "fair" means something specific |
 | [PROJECT-PRINCIPLES.md](docs/PROJECT-PRINCIPLES.md) | the rules that override convenience |

@@ -1,5 +1,5 @@
 // ============================================================
-// File:        nameLimits.js
+// File:        nameLimits.mjs
 // Path:        shared/nameLimits.mjs
 // Project:     RaceArena — NAME-LIMIT-1
 //

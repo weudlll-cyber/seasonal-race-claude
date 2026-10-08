@@ -3,11 +3,12 @@
 // Path:        server/src/races/raceStore.js
 // Project:     RaceArena — RACE-STORE-2
 // Created:     2026-09-06
-// Description: The database races live in. THE SHELF ONLY — as of this piece nothing writes to it
-//              and nothing reads it: there is no route, and no race path calls any of this.
+// Description: The database races live in. Written by POST /api/races and read by the GET routes
+//              in routes/races.js (list, evaluation, one race by short key). RACE-STORE-2 built
+//              it as the shelf only; the routes came later.
 //
 // ── WHY ITS OWN FILE AND NOT THE SESSION DATABASE ───────────────────────────────────────────────
-// `server/src/auth/session.js:79` opens the only other SQLite database in the project, and putting
+// `server/src/auth/session.js` (`createSessionMiddleware`) opens the only other SQLite database in the project, and putting
 // these tables beside its one is the obvious economy. It is refused, for four reasons, and the
 // first is on its own decisive:
 //
@@ -540,7 +541,6 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     return hydrate(db.prepare('SELECT * FROM races WHERE id = ?').get(id));
   }
 
-  /** One race by the id the CLIENT minted for it. `null` when it has not been stored. */
   /**
    * One race by the CLIENT's id, WITHIN A TEAM — the retry check of `POST /api/races`.
    *
@@ -580,7 +580,8 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
   }
 
   /**
-   * Every race belonging to a team, newest first.
+   * A team's races, newest first — at most `limit` of them (default 100) from `offset`; the
+   * paginated caller is `listRacesPage`.
    *
    * Matched on the NORMALISED key, so a caller that types the team in a different case gets the
    * same races — the same rule TEAMS-1 established for deciding that two users are colleagues, and

@@ -244,12 +244,12 @@ line numbers are the address; read the value there.
 
 | candidate key | where | what it plausibly governs |
 | --- | --- | --- |
-| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1021-1024` | how hard a gap is closed by re-drawing |
-| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:996-998` | how many attackers rise, and how far |
-| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:892-894` | how much and how often tempo is re-drawn |
-| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:954-955` | how strongly the plan shapes the field |
-| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:929-1029` | the lead-rotation mechanism's reach and its realism clamp |
-| `chaosSteerGain` | `defaults.js:922` | the steering noise added to the field |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1206-1209` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1181-1183` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1032-1034` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1132-1133` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1077-1084`, `:1321` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `defaults.js:1062` | the steering noise added to the field |
 
 ### The two surfaces, with addresses
 
@@ -457,7 +457,7 @@ source before it was moved rather than taken from a report:**
   pretending to be a safety net. Verified 2026-09-05: no `check-guard-imports` exists anywhere in
   `scripts/` or `package.json`. See [INVISIBLE-FOUR-1](../reports/evolution/INVISIBLE-FOUR-1.md).
 - **`lint` and `format:check` are not in `verify`** — **DONE for the client, and the server needs
-  nothing.** `scripts/lib/routing.mjs:224` and `:239` declare `client-lint` and `client-format-check`,
+  nothing.** `scripts/lib/routing.mjs:226` and `:241` declare `client-lint` and `client-format-check`,
   both scoped to `client/` outside `client/e2e/`, and both were selected and passed in this chain's
   verify runs. ★ **The server is not a gap:** `server/package.json` declares exactly four scripts —
   `dev`, `restart`, `start`, `test` — so it has no `lint` or `format:check` to run.
@@ -722,7 +722,7 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:64,72`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js:64,221`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
 (`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
@@ -1941,6 +1941,29 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 - [ ] **AUDIT-1 A4-03 · seven tests read source files relative to the working directory** and fail
       unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
       passes)*
+
+### What the cleanup (piece B) could not land
+
+- [ ] **AUDIT-1 B · comment fixes held back by the measured-stamp guard — his word.** About 40 of the
+      audit's comment corrections are in files inside the import closure of `scripts/tracking-lag.mjs`
+      and `scripts/straggler-truth.mjs` (the camera, the race engine, `defaults.js`, `raceDriver.mjs`).
+      `check-measured-stamps` marks those two stamps stale on ANY commit there, comment-only included,
+      by design; re-stamping was refused by this session's permission check on 2026-10-09, and it is
+      not a cleanup's decision to make. Every edit is ready and proven token-inert:
+      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
+      (17 files; applies cleanly on top of the cleanup merge). Choose: re-measure the two stamps after
+      applying it, or re-stamp them as unchanged because the edits are comments only. *(verify:
+      `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0 stale)*
+- [ ] **AUDIT-1 B · the rest left on purpose.** A2-25 and A2-26 (variables holding seconds named "Ms")
+      are in engine-hull scripts, where a rename is a code change; A2-60's unquoted items could not be
+      located without the group-B notes; A2-04 and A2-05 (header conventions in `scripts/` and tests);
+      A3-20 (`check-language-closed`'s declared scope changes when verify selects it); A3-24, -26, -27
+      (OPEN.md items, which are row A3-25's decision). Also found while cleaning, not in the audit:
+      single German words the language guard cannot see — a report table heading
+      (`scripts/sim/observers/report.mjs`, around line 78), a log line (`scripts/sim-fairness.mjs`,
+      around line 5713), and two comments (`client/src/modules/raceGovernor.js:38`, inside the
+      stamped closure; `DynamicsTuningSection.jsx`, around line 1230). *(verify: each item closed or
+      struck with a reason)*
 
 ---
 

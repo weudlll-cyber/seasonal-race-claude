@@ -53,10 +53,10 @@ const RACING_STATE = 'LEADER_ZOOM';
  * The race camera's ordinary racing zoom for a track, as world→screen scales of the race canvas.
  *
  * THE ZOOM SOURCE. This is the director's own conversion, called the way the director calls it:
- * `CameraDirector._computeZoomForCorridors` (CameraDirector.js:522) → `resolveZoomForCorridors`
- * (zoomUnit.js:160) with the state's `visibleCorridors` from `resolveFramingConfig`
- * (framingConfig.js:99), `referenceWidthFor` (zoomUnit.js:83) and the track's projection from
- * `projectionForTrack` (projection.js:179). The per-frame guarantees the director applies on top
+ * `CameraDirector._computeZoomForCorridors` (CameraDirector.js) → `resolveZoomForCorridors`
+ * (zoomUnit.js) with the state's `visibleCorridors` from `resolveFramingConfig`
+ * (framingConfig.js), `referenceWidthFor` (zoomUnit.js) and the track's projection from
+ * `projectionForTrack` (projection.js). The per-frame guarantees the director applies on top
  * (corridor, pair, company — `_setTargets`) can only WIDEN a shot around the racers, and there are no
  * racers here, so they are not applied.
  *
