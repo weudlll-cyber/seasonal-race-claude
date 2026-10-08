@@ -22,6 +22,14 @@ services:
     # reports healthy/unhealthy rather than merely "Up", and this line brings it back when it dies.
     # `unless-stopped` rather than `always`, so an operator who deliberately stops it stays stopped.
     restart: unless-stopped
+    # ── LOG ROTATION (2026-10-08): without it Docker's json-file log has no ceiling (SOAK-1 found no
+    # `logging:` here). Five files of 10 MB each, then the oldest goes — the same as
+    # deploy/docker-compose.prod.yml on feat/vps-install.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       - PORT=4000
       # ★ `RA_BOOTSTRAP_TOKEN=dev-bootstrap-token-not-for-production` STOOD HERE AND IS GONE

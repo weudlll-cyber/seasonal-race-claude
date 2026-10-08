@@ -831,18 +831,7 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 A 9-hour soak of the Docker image at `56bdb8d7` under 566,225 requests, plus a static audit of the
 production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No crash, restart or
 5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
-block.
-
-- [ ] **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
-      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
-      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
-      have no ceiling.
-      **verify:** `docker compose config` shows no `logging:` under the service.
-- [ ] **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
-      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
-      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
-      rule is wanted is a decision, not a defect.
-      **verify:** `races.sqlite` size against the race count.
+block. ★ **All six are closed as of 2026-10-08**, and are in PART TWO under the same heading.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
@@ -5020,6 +5009,26 @@ lines and no rewrite is implied, proposed or wanted.
 ---
 
 ## Before the VPS migration
+
+- [x] **CLOSED 2026-10-08.** **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
+      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
+      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
+      have no ceiling.
+      **verify:** `docker compose config` shows no `logging:` under the service.
+      ★★ **CLOSED 2026-10-08.** The shipped `docker-compose.yml` now rotates its service's log:
+      `json-file`, `max-size: 10m`, `max-file: 5`, the same as `deploy/docker-compose.prod.yml` on
+      `feat/vps-install`. Nothing else in the file changed. `docker compose config` shows the `logging:`
+      block under the service.
+
+- [x] **CLOSED 2026-10-08 (decided: every race is kept for ever, by design).** **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
+      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
+      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
+      rule is wanted is a decision, not a defect.
+      **verify:** `races.sqlite` size against the race count.
+      ★★ **CLOSED 2026-10-08 — decided: the race store keeps every race for ever, by design.** No
+      retention is built. **Why the size is acceptable:** SOAK-1 measured **10,125 bytes per stored
+      race**, over 12,558 races (reports/release/SOAK-1.md, part B). That is about 54 MiB after 90 days
+      at a generous 60 races a day, and about 0.2 GiB a year: far inside any VPS disk.
 
 - [x] **CLOSED 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged).** **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
       full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
