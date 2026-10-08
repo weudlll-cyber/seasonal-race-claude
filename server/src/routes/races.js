@@ -202,7 +202,7 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
     const fromIso = new Date(from).toISOString();
     const toIso = new Date(to).toISOString();
     const team = req.authUser?.team;
-    const races = team ? resolveStore().listRacesInPeriod(team, fromIso, toIso) : [];
+    const races = team ? resolveStore().raceResultsInPeriod(team, fromIso, toIso) : [];
     return res.json({ from: fromIso, to: toIso, ...evaluatePeriod(races) });
   });
 

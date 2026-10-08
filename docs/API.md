@@ -925,7 +925,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:163-181`).
 - **Request:** query `limit?`, clamped to 1–100 with a default of 20, and `offset?`, at least 0 with
-  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:593-598`).
+  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:604-609`).
 - **Response:** 200 `{races: [race…], hasMore, offset, limit, team}`, newest first
   (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:552-560`). A user with no
   team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:167-174`).
@@ -936,7 +936,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:204-205`).
 - **Request:** query `from` and `to`, both required, each parsable by `Date.parse`, with
   `from < to` and a span of at most 366 days. The window is half-open: `from <= finishedAt < to`
-  (`server/src/routes/races.js:187-199`, `:79`, `server/src/races/raceStore.js:574-582`).
+  (`server/src/routes/races.js:187-199`, `:79`, `server/src/races/raceStore.js:583-593`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
 - **Response:** 200 `{from: <ISO>, to: <ISO>, counted, quickTestsExcluded, rows: [{name, races, wins,
   podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:202-206`,
   `server/src/races/periodEvaluation.js:55-91`). A user with no team gets an evaluation of zero races.

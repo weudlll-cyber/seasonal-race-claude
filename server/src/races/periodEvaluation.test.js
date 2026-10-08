@@ -165,18 +165,78 @@ function appAs(team) {
   return a;
 }
 
-describe('the store: listRacesInPeriod is a half-open window over one team', () => {
+describe('the store: raceResultsInPeriod is a half-open window over one team', () => {
   it('includes `from`, excludes `to`, and leaves other teams out', () => {
     stored('2026-10-01T00:00:00.000Z', 'race', ['Ada']); // exactly at from → in
     stored('2026-10-01T12:00:00.000Z', 'race', ['Bob']); // inside → in
     stored('2026-10-02T00:00:00.000Z', 'race', ['Cy']); // exactly at to → out
     stored('2026-10-01T12:00:00.000Z', 'race', ['Dee'], 'Team B'); // other team → out
-    const races = store.listRacesInPeriod(
+    const races = store.raceResultsInPeriod(
       'Team A',
       '2026-10-01T00:00:00.000Z',
       '2026-10-02T00:00:00.000Z'
     );
-    expect(races.map((r) => r.names[0])).toEqual(['Ada', 'Bob']);
+    expect([...races].map((r) => r.results[0].name)).toEqual(['Ada', 'Bob']);
+  });
+
+  // BOUNDED-EVAL-1: an evaluation must not hold its whole period. The store hands out a lazy
+  // iterator of the two fields the evaluation reads — never an array of hydrated races.
+  it('streams: a lazy iterator of { raceSource, results } only, not an array of whole races', () => {
+    stored('2026-10-01T10:00:00.000Z', 'race', ['Ada', 'Bob']);
+    const races = store.raceResultsInPeriod(
+      'Team A',
+      '2026-10-01T00:00:00.000Z',
+      '2026-10-02T00:00:00.000Z'
+    );
+    expect(Array.isArray(races)).toBe(false);
+    expect(typeof races.next).toBe('function');
+    const first = races.next().value;
+    expect(Object.keys(first).sort()).toEqual(['raceSource', 'results']);
+    races.return();
+  });
+});
+
+describe('BOUNDED-EVAL-1: the streamed evaluation answers exactly what the hydrated one did', () => {
+  it('byte-identical on his kind of data: real, Quick Test and unmarked races, DNFs, case and doubles', async () => {
+    const FROM = '2026-10-01T00:00:00.000Z';
+    const TO = '2026-10-08T00:00:00.000Z';
+    stored('2026-10-01T10:00:00.000Z', 'race', ['Ada', 'Bob', 'Cy', 'Dee']);
+    stored('2026-10-01T10:00:00.000Z', 'race', ['Bob', 'ada', 'Cy']); // same instant: id breaks the tie
+    stored('2026-10-02T09:00:00.000Z', 'quick-test', ['Cy', 'Ada']);
+    stored('2026-10-03T09:00:00.000Z', null, ['Dee', 'Bob']); // stored before race sources existed
+    stored('2026-10-04T09:00:00.000Z', 'race', ['  Eve  ', 'Cy', 'Ada', 'Bob', 'Dee']);
+    stored('2026-10-05T08:00:00.000Z', 'race', ['EVE', 'Ada']); // the same name, written later
+    stored('2026-10-05T09:00:00.000Z', 'race', ['Bob', 'Ada'], 'Team B'); // another team
+    stored('2026-10-09T09:00:00.000Z', 'race', ['Ada']); // after the period
+    const dnf = store.storeRace({
+      ...store.getRaceById(stored('2026-10-06T09:00:00.000Z', 'race', ['Fay', 'Gus', 'Hal']).id),
+      clientRaceId: randomUUID(),
+      finishedAt: '2026-10-06T10:00:00.000Z',
+      results: [
+        { name: 'Gus', finishTimeMs: 61_000 },
+        { name: 'Fay', finishTimeMs: 62_000 },
+        { name: 'Hal', finishTimeMs: null },
+      ],
+    });
+    expect(dnf.stored.race).toBe(true);
+
+    // The path this replaced: every race of the team hydrated, the period cut out, oldest first
+    // with the id breaking ties — the order of the query it used.
+    const hydrated = store
+      .listRacesByTeam('Team A', { limit: 1000 })
+      .filter((r) => r.finishedAt >= FROM && r.finishedAt < TO)
+      .sort((a, b) =>
+        a.finishedAt < b.finishedAt ? -1 : a.finishedAt > b.finishedAt ? 1 : a.id < b.id ? -1 : 1
+      );
+    const before = JSON.stringify({ from: FROM, to: TO, ...evaluatePeriod(hydrated) });
+
+    const res = await request(appAs('Team A')).get(`/api/races/evaluation?from=${FROM}&to=${TO}`);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(before);
+    expect(res.body.counted).toBe(6);
+    expect(res.body.quickTestsExcluded).toBe(2);
+    // The name as FIRST written in the period — so the order the races are read in is part of the answer.
+    expect(res.body.rows.map((r) => r.name)).toContain('Eve');
   });
 });
 

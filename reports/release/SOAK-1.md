@@ -412,6 +412,49 @@ better and nothing else worse; outputs identical; no fingerprint moved; no visib
 
 Neither branch meets every condition as measured. Both stay pushed and unmerged.
 
+## The period-evaluation fix — heap check, and merged (2026-10-08)
+
+The SOAK-1 step-2a method, run as one command each by [heap-run.mjs](SOAK-1/heap-run.mjs) and summed
+up by [heap-summary.mjs](SOAK-1/heap-summary.mjs):
+- the server imported into a node process ([inproc.mjs](SOAK-1/inproc.mjs)), on a fresh copy of the
+  15,215-race starting data;
+- the soak's load for 60 minutes;
+- `process.memoryUsage()` every 60 s, plus the heap kept after a full GC;
+- heap snapshots at 0, 30 and 61 minutes.
+
+Master (`705d01c0`) ran first, then the fix rebased onto it (`6f58bab3`), one after the other.
+
+| | master | the fix |
+| --- | --- | --- |
+| run (UTC) | 06:55–07:56, 61 samples | 10:53–11:53, 61 samples |
+| heap kept after a GC: minute 30 → 60 | 17.58 → 16.95 MiB (−0.63) | 17.67 → 17.07 MiB (**−0.60**) |
+| snapshots 0 · 30 · 61 min (heap used after GC) | 10.01 · 17.19 · 16.95 MiB | 10.01 · 17.16 · 17.07 MiB |
+| live heap max · RSS max under load | 423 · 783 MiB | **74 · 333 MiB** |
+| event loop: worst minute's p99 | 10,888 ms | 350 ms |
+| requests served in 60 minutes | 15,998 | **60,480** |
+| period evaluation, median of the minute medians | 2,552 ms | **370 ms** |
+| 5xx · verifies identical | 0 · 9 of 9 | 0 · 9 of 9 |
+
+**What the snapshot diff found** ([heapdiff.mjs](SOAK-1/heapdiff.mjs), the fix):
+- **From 0 to 30 minutes:** +3.4 MiB of compiled code and +2.8 MiB of strings, which is JIT warm-up
+  and the same on master.
+- **From 30 to 61 minutes:** the total went DOWN (20.10 → 20.02 MiB). The only increase was V8's
+  internal `WeakArrayList`, +40 entries (25 KiB). No Map, array, object or generator of the server
+  grows.
+
+**One run was thrown away.** The fix's first run (07:57–10:51) was suspended by the machine for 115
+minutes, from 08:09 to 10:04. When it resumed, the load had passed its end time and stopped, so
+minutes 14–60 ran with no load. That run cannot answer the question asked. Its raw data is kept in
+`HEAP-2026-10-08/fix`, and the run above is a full rerun on a fresh copy.
+
+**The merge conditions of 2026-10-08:**
+1. Heap kept after GC grows ≤ 2 MiB over minutes 30–60: **−0.60 MiB**, met.
+2. The snapshot diff names no structure that grows with requests: **met**.
+3. The outputs are byte-identical: **met** (the fixture test; 9 of 9 on the soak's data).
+4. No 5xx: **met**.
+
+**Merged.** The BACKLOG row is closed.
+
 ## The harness
 
 | file | what it does |
@@ -426,3 +469,4 @@ Neither branch meets every condition as measured. Both stay pushed and unmerged.
 | [keepalive.mjs](SOAK-1/keepalive.mjs), [browser-wait.mjs](SOAK-1/browser-wait.mjs) | step 2: the connection-error experiment, and what a browser sees |
 | [compare-eval.mjs](SOAK-1/compare-eval.mjs), [compare-verify.mjs](SOAK-1/compare-verify.mjs) | step 3: old against new on the soak's data — identical answers, memory, and the event-loop block |
 | [ab-arm.sh](SOAK-1/ab-arm.sh) | step 4: one arm of an A/B soak from the same starting data |
+| [heap-run.mjs](SOAK-1/heap-run.mjs), [heap-summary.mjs](SOAK-1/heap-summary.mjs) | 2026-10-08: one in-process heap check as one command, and its summary |
