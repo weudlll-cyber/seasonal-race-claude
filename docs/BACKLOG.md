@@ -568,70 +568,6 @@ nothing is designed here, no key is added, and no change is implied.
       fail. Both sites are corrected in place. **WHAT THE GATE RUNS IS NOT CHANGED** — that decides
       what reddens a build and is the owner's; it is on the morning sheet as his.
 
-## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
-
-- [ ] ★★ **`0xC0000142` — IT HAPPENED AGAIN. The watch this row set has FIRED, and the row is no
-      longer an anecdote. — ESCALATED 2026-09-25.**
-      ★ **Second occurrence: 2026-09-19**, six weeks after the first —
-      `reports/night/BREAKAWAY-GROWTH-1.md:457`, a running dev server reporting `build unknown` with
-      `git rev-parse --short HEAD: exit 3221225794`, so its badge named no commit and **every eye test
-      taken on 5173 before the restart was taken on a build whose identity the badge could not
-      state.** Written up as a lesson at `docs/LESSONS.md:3641`.
-      ★ **The work is narrower than the row implies: the POLL half already exists.**
-      `client/vite-plugin-ra-build.js` reads mtime at `:177` without spawning; what still spawns a git
-      child per check is the watcher path at `:331-333`. That one path is the whole of it.
-      ★ Not claimed: that the two occurrences share a cause. Two is not a pattern either — it is the
-      end of the anecdote. The original text follows. A 15-hour dev server became permanently unable to spawn ANY child process
-      (STATUS_DLL_INIT_FAILED) while the machine was otherwise healthy: 1485 handles, 485 MB, 9.7 GB
-      free. Restarting the process cleared it. The plugin spawns three `git` children per watcher
-      re-check, throttled to 400 ms, which over fifteen hours is a lot of process creation — the
-      leading suspect is a session-level resource (desktop heap) rather than anything in this repo.
-      **Not acted on:** one occurrence is an anecdote. If it happens again, the fix is to stop
-      spawning per-event — read `.git/HEAD` and `.git/index` directly for the common case and shell
-      out only when they change.
-      **AND IT IS NOT THE OneDrive/ReparsePoint CONDITION — folded in here 2026-08-23, because it
-      was a separate open item and is not a separate observation.** `.git` IS a reparse point on this
-      machine and the worktree stubs already resist deletion for that reason, so it was the natural
-      suspect and was TESTED: a fresh process on the same tree, with the failing server's exact
-      104-variable environment, read the identity correctly. The exit code names a process-creation
-      failure, not a filesystem one. **Two OneDrive findings, not three** — and this half exists to
-      stop the third being invented every time somebody meets the first.
-      **verify:** none — this is a WATCH, and it closes when a second occurrence happens or the
-      machine is retired, neither of which a command can tell you. Said explicitly rather than
-      carrying a check that cannot fail.
-
-      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is a WATCH by construction and closes on a second occurrence or on the machine being retired. One occurrence still.
-
-      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, AND THIS ROW'S OWN WATCH CONDITION HAS FIRED.**
-      The row says "one occurrence is an anecdote" and sets the trigger: watch for a second. **There
-      was a second, and nobody came back to this row.**
-      ★ **2026-09-19, six weeks after the first**
-      (**`reports/night/BREAKAWAY-GROWTH-1.md:457`**): a running dev server reported `build unknown`
-      with `git rev-parse --short HEAD: exit 3221225794` — the same `0xC0000142` — so its badge named
-      no commit, and every eye test taken on 5173 before the restart was taken on a build whose
-      identity the badge could not state. It is written up as a lesson at **`docs/LESSONS.md:3641`**.
-      ★ **The named fix is still not done:** `client/vite-plugin-ra-build.js:79` still shells out to
-      git per check rather than reading `.git/HEAD` and `.git/index` directly.
-      ★ **What is NOT claimed here:** that the two share a cause. Two is not a pattern either; it is
-      the end of the anecdote, and this row's own condition for looking again.
-
-      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. The spawning path is closed; the Windows
-      condition is not, and cannot be closed from here.**
-      ★ **What was done:** the watcher no longer spawns. `client/vite-plugin-ra-build.js`'s
-      change/add/unlink handlers used to call `recheck()` directly, so every source save past the
-      400 ms throttle ran `readBuildInfo()` and **three git children**. They now consult the SAME
-      `gitMoved()` mtime comparison the interval already owned — shared, not copied, so the two can
-      never disagree about whether a git file moved.
-      ★ **MEASURED, because a fix to a spawn-volume problem that does not measure spawn volume has
-      not been demonstrated.** A burst of **20 source saves 120 ms apart**, no git file moving:
-      **6 `readBuildInfo` calls = 18 git children BEFORE, 0 calls = 0 children AFTER.** Counted by
-      driving the plugin's own exported `makeMtimePoll` and `recheck`'s real 400 ms throttle through
-      both wirings; the x3 is the three `spawnSync` sites at `:124`, `:127`, `:135`.
-      ★ **WHAT IS NOT CLAIMED:** that this fixes `0xC0000142`. That is a Windows session-resource
-      failure under sustained process creation; what is removed is the sustained part. **If it
-      happens a third time, this row is the wrong suspect** and the next place to look is elsewhere.
-      ★ The badge's content, the poll interval and what gets reported are all unchanged.
-
 ## Measurement and guard residuals (2026-08-05)
 
 **verify (section-wide):** each item names its own instrument in its text. **The two standing-rule proposals that used to sit here are GONE from PART ONE** — both were adopted on 2026-08-23 (D19, D20) and are now [VERIFY-RULES.md](VERIFY-RULES.md) R16 and R17; the line that said "a rule is adopted, not checked" was true and no longer has a subject here.
@@ -913,6 +849,58 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 ## Three production-arm specs fail, and nothing has been saying so (2026-09-25)
 
 ## Before the VPS migration
+
+### What the long run found (SOAK-1, 2026-10-07)
+
+A 9-hour soak of the Docker image at `56bdb8d7` under 566,225 requests, plus a static audit of the
+production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No crash, restart or
+5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
+block.
+
+- [ ] ★★ **A VERIFY STOPS THE WHOLE SERVER FOR ITS LENGTH — 1.5 to 5.4 SECONDS.**
+      `POST /api/races/:shortKey/verify` replays the race synchronously on the server's only thread
+      (`server/src/routes/races.js:268`, `replayStoredRace`). Measured over 89 verifies:
+      - 20 racers: median 1.7 s (1.5–2.3 s);
+      - 40 racers: median 4.3 s (3.5–5.4 s).
+
+      Every other request waits for it, and every route group had minutes with a p99 over one
+      second, on the verify ticks. `reports/release/VERIFY-ON-DEMAND-1.md:150` records the blocking as
+      known; the soak measures what it costs.
+      **verify:** during a verify, `GET /api/health` answers; time it. Today: the verify's full
+      length.
+- [ ] ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
+      at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)
+      and 06:47 UTC, each after 4.3–5.4 s, which is a verify's length. The cause is established by
+      experiment in SOAK-1.md, *Causes*.
+      **verify:** `reports/release/SOAK-1/keepalive.mjs` against a server on your own port —
+      connection errors per arm.
+- [ ] ★ **THE PERIOD EVALUATION READS EVERY RACE OF THE PERIOD AT ONCE, IN FULL.**
+      `listRacesInPeriod` (`server/src/races/raceStore.js:574-582`) loads and hydrates every race —
+      roster, world configuration and all — though `evaluatePeriod` reads two fields of each.
+      - Its median grows by **36 ms per 1,000 stored races**: 242 ms at 13,424, held synchronously
+        on every call.
+      - The server's memory high-water mark grows by **~30 MiB per 1,000 races**: 183 → 544 MiB.
+      - The memory floor stays flat (92 → 96 MiB).
+      - At 60 races a day: ~197 ms and ~250 MiB after 90 days.
+
+      **verify:** the in-process probe in `reports/release/SOAK-1/inproc.mjs` — heap held by one
+      evaluation, against the race count.
+- [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
+      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
+      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
+      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
+      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
+      shrinks.
+- [ ] **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
+      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
+      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
+      have no ceiling.
+      **verify:** `docker compose config` shows no `logging:` under the service.
+- [ ] **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
+      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
+      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
+      rule is wanted is a decision, not a defect.
+      **verify:** `races.sqlite` size against the race count.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
@@ -4887,6 +4875,93 @@ lines and no rewrite is implied, proposed or wanted.
       header argues against on reproducibility grounds ("fixed indices, never events").
 
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
+
+- [x] ★★ **`0xC0000142` — CLOSED 2026-10-08 (owner's decision, on the SOAK-1 part C evidence). Was: IT HAPPENED AGAIN. The watch this row set has FIRED, and the row is no
+      longer an anecdote. — ESCALATED 2026-09-25.**
+      ★ **Second occurrence: 2026-09-19**, six weeks after the first —
+      `reports/night/BREAKAWAY-GROWTH-1.md:457`, a running dev server reporting `build unknown` with
+      `git rev-parse --short HEAD: exit 3221225794`, so its badge named no commit and **every eye test
+      taken on 5173 before the restart was taken on a build whose identity the badge could not
+      state.** Written up as a lesson at `docs/LESSONS.md:3641`.
+      ★ **The work is narrower than the row implies: the POLL half already exists.**
+      `client/vite-plugin-ra-build.js` reads mtime at `:177` without spawning; what still spawns a git
+      child per check is the watcher path at `:331-333`. That one path is the whole of it.
+      ★ Not claimed: that the two occurrences share a cause. Two is not a pattern either — it is the
+      end of the anecdote. The original text follows. A 15-hour dev server became permanently unable to spawn ANY child process
+      (STATUS_DLL_INIT_FAILED) while the machine was otherwise healthy: 1485 handles, 485 MB, 9.7 GB
+      free. Restarting the process cleared it. The plugin spawns three `git` children per watcher
+      re-check, throttled to 400 ms, which over fifteen hours is a lot of process creation — the
+      leading suspect is a session-level resource (desktop heap) rather than anything in this repo.
+      **Not acted on:** one occurrence is an anecdote. If it happens again, the fix is to stop
+      spawning per-event — read `.git/HEAD` and `.git/index` directly for the common case and shell
+      out only when they change.
+      **AND IT IS NOT THE OneDrive/ReparsePoint CONDITION — folded in here 2026-08-23, because it
+      was a separate open item and is not a separate observation.** `.git` IS a reparse point on this
+      machine and the worktree stubs already resist deletion for that reason, so it was the natural
+      suspect and was TESTED: a fresh process on the same tree, with the failing server's exact
+      104-variable environment, read the identity correctly. The exit code names a process-creation
+      failure, not a filesystem one. **Two OneDrive findings, not three** — and this half exists to
+      stop the third being invented every time somebody meets the first.
+      **verify:** none — this is a WATCH, and it closes when a second occurrence happens or the
+      machine is retired, neither of which a command can tell you. Said explicitly rather than
+      carrying a check that cannot fail.
+
+      **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** it is a WATCH by construction and closes on a second occurrence or on the machine being retired. One occurrence still.
+
+      **VERDICT 2026-09-25 (BACKLOG-TRUTH-1) — STILL OPEN, AND THIS ROW'S OWN WATCH CONDITION HAS FIRED.**
+      The row says "one occurrence is an anecdote" and sets the trigger: watch for a second. **There
+      was a second, and nobody came back to this row.**
+      ★ **2026-09-19, six weeks after the first**
+      (**`reports/night/BREAKAWAY-GROWTH-1.md:457`**): a running dev server reported `build unknown`
+      with `git rev-parse --short HEAD: exit 3221225794` — the same `0xC0000142` — so its badge named
+      no commit, and every eye test taken on 5173 before the restart was taken on a build whose
+      identity the badge could not state. It is written up as a lesson at **`docs/LESSONS.md:3641`**.
+      ★ **The named fix is still not done:** `client/vite-plugin-ra-build.js:79` still shells out to
+      git per check rather than reading `.git/HEAD` and `.git/index` directly.
+      ★ **What is NOT claimed here:** that the two share a cause. Two is not a pattern either; it is
+      the end of the anecdote, and this row's own condition for looking again.
+
+      **VERDICT 2026-09-25 (WORKBENCH-THREE) — NARROWED. The spawning path is closed; the Windows
+      condition is not, and cannot be closed from here.**
+      ★ **What was done:** the watcher no longer spawns. `client/vite-plugin-ra-build.js`'s
+      change/add/unlink handlers used to call `recheck()` directly, so every source save past the
+      400 ms throttle ran `readBuildInfo()` and **three git children**. They now consult the SAME
+      `gitMoved()` mtime comparison the interval already owned — shared, not copied, so the two can
+      never disagree about whether a git file moved.
+      ★ **MEASURED, because a fix to a spawn-volume problem that does not measure spawn volume has
+      not been demonstrated.** A burst of **20 source saves 120 ms apart**, no git file moving:
+      **6 `readBuildInfo` calls = 18 git children BEFORE, 0 calls = 0 children AFTER.** Counted by
+      driving the plugin's own exported `makeMtimePoll` and `recheck`'s real 400 ms throttle through
+      both wirings; the x3 is the three `spawnSync` sites at `:124`, `:127`, `:135`.
+      ★ **WHAT IS NOT CLAIMED:** that this fixes `0xC0000142`. That is a Windows session-resource
+      failure under sustained process creation; what is removed is the sustained part. **If it
+      happens a third time, this row is the wrong suspect** and the next place to look is elsewhere.
+      ★ The badge's content, the poll interval and what gets reported are all unchanged.
+
+      **VERDICT 2026-10-07 (SOAK-1 part C) — STILL OPEN, BY THIS ROW'S OWN RULE.** The rule:
+      close only if no git child is spawned per source save, the badge stays correct all night,
+      and no process-creation error occurs. A Vite dev server ran 9 hours in a clone with
+      `GIT_TRACE2_EVENT` recording every git it started, through 16,093 source saves (one every 2 s)
+      and 8 hourly commits.
+      - **git children per save: 0.** 86 git calls in all: 5 at start-up, 27 from the badge reads,
+        54 after the commits; none unexplained.
+      - **Process-creation errors: none.**
+      - **The badge: commit and branch right 10 times out of 10, but the dirty mark was wrong.** The
+        tree was modified almost all night and the badge never said `+dirty`.
+
+      The cause is the 2026-09-25 change itself: identity is re-read only when `.git/HEAD` or
+      `.git/index` move (`gitMoved()`), and a source save moves neither.
+      [reports/release/SOAK-1.md](../reports/release/SOAK-1.md), part C.
+      **verify:** modify a tracked file under a running dev server; the badge shows `+dirty` (today it
+      does not until the next git operation).
+
+      **CLOSED 2026-10-08 — the owner's decision, on the SOAK-1 part C evidence.** A Vite dev server
+      ran 9 hours with every git it started recorded: **0 git children over 16,093 source saves**, **no
+      process-creation error**, and the badge's **commit and branch right 10 times out of 10**.
+      ★ **Recorded as a known limitation, with no fix:** on the Windows dev server the badge's `+dirty`
+      mark appears only after the next git operation, because the identity is re-read only when
+      `.git/HEAD` or `.git/index` move. It does not exist on a production install, where the build
+      identity comes from the build, and the test-aids switch hides the badge there.
 
 - [x] **DONE — the build badge's failure path carries its reason.** `git()` captured stderr and the
       exit status instead of discarding both; every failure returns the unknown identity WITH a
