@@ -2,7 +2,8 @@
 // File:        runtime-node.test.mjs
 // Path:        scripts/runtime-node.test.mjs
 // Project:     RaceArena — AUDIT-1 A7 (2026-10-09)
-// Description: The shipped image and CI run ONE supported Node major, the same one.
+// Description: The shipped image and CI run ONE supported Node major, the same one — and the image
+//              ships `node` without the npm that came with its base.
 //
 // AUDIT-1 found both on Node 20 five months after its end of life (2026-04-30), because nothing
 // tied them to anything: the image's base is pinned by digest (a manual bump, TIDY-C-1) and CI's
@@ -41,4 +42,14 @@ test('the image ships the Node major CI tests', () => {
 
 test(`that major still receives security fixes (>= ${FLOOR})`, () => {
   assert.ok(imageMajors[0] >= FLOOR, `Node ${imageMajors[0]} is past its end of life`);
+});
+
+// AUDIT-1 A5: the npm bundled with the base image carried every package advisory trivy found in the
+// image; the server runs `node` only, so the runtime stage deletes npm, npx and corepack.
+test('the shipped stage removes the bundled npm, npx and corepack', () => {
+  const stages = readFileSync(join(ROOT, 'server/Dockerfile'), 'utf8').split(/^FROM\s/m);
+  const runtime = stages[stages.length - 1];
+  for (const path of ['/usr/local/lib/node_modules/npm', '/usr/local/bin/npm', '/usr/local/bin/npx', '/usr/local/bin/corepack']) {
+    assert.ok(runtime.includes(path), `the runtime stage must rm -rf ${path}`);
+  }
 });

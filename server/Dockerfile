@@ -70,8 +70,15 @@ RUN apk add --no-cache --virtual .build-deps python3 make g++
 # build, so two builds of one commit could ship different code — and the tree that was audited and
 # tested (server/package-lock.json) was not the tree in the image. `npm ci` also fails loudly when the
 # lockfile and the manifest disagree, rather than quietly reconciling them.
+# ★ NPM LEAVES THE IMAGE IN THE SAME LAYER (AUDIT-1 A5, 2026-10-09). The running server needs `node`
+# and nothing else — CMD, HEALTHCHECK and every `racearena` tool call are `node …` — while the npm
+# bundled with the base image carried every remaining package advisory trivy found in the image (21
+# on node:24-alpine, 8 high: tar, undici, brace-expansion, ip-address, …; none in the app's own tree).
+# Removing npm, npx and corepack after the install takes those out of what ships.
 COPY server/package.json server/package-lock.json ./
-RUN npm ci --omit=dev  && apk del .build-deps
+RUN npm ci --omit=dev  && apk del .build-deps \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+            /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 COPY server/src/ ./src/
 # COPY-UTILS-1: `utils/` was only ever supplied by a bind mount, which meant the image could not run
