@@ -2,9 +2,9 @@
 
 **Owns:** the backend's HTTP surface — the shape of the endpoints it documents, and what they persist. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Complete as of 2026-10-06: all 65 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
-the two settings routes). Counted from source, not from earlier counts: the `router.<verb>(` calls in
-the ten routers `server/src/app.js` mounts under `/api` (55), the three promote/export sub-routes
+**Complete as of 2026-10-09: all 66 routes the server registers** (63 at TIDY-C-3; TEST-AIDS-1 added
+the two settings routes, AUDIT-1 D2 the admin status route). Counted from source, not from earlier
+counts: the `router.<verb>(` calls in the eleven routers `server/src/app.js` mounts under `/api` (56), the three promote/export sub-routes
 `attachPromoteExport`
 (`server/src/routes/_defaultPromote.js`) adds to each of tracks, player groups and brands (9), and
 `GET /api/health` (1). Every entry says who may call it, what it takes, what it answers and every
@@ -1037,6 +1037,28 @@ points rule above. TEST-AIDS-1, the owner's decision of 2026-10-04.
 
 ---
 
+## Admin (`/api/admin`)
+
+Read-only facts about the installation for the status box at the top of the Dev Screen's
+"Accounts and system" chapter (`server/src/routes/adminStatus.js`). AUDIT-1 D2, 2026-10-09.
+
+### `GET /api/admin/status`
+
+- **Who:** admin only — the whole `/api/admin` namespace, every method, is in `ROUTE_POLICY`
+  (`server/src/auth/guards.js`).
+- **Request:** none.
+- **Response:** 200 `{ build, backup: { newest, visible }, status: { ok, checks }, release: { newest,
+  current, newer, checkedAt, state } }`. `build` is what `GET /api/health` reports. `backup.visible`
+  is false when `RA_BACKUP_DIR` is unset or unreadable from the server. `status.checks` are the
+  checks of `npm run status` (`shared/statusChecks.mjs`) without the API check: disk and writable
+  always, backup only when visible. `release` comes from GitHub, asked at most once a day per
+  process (`server/src/releaseCheck.js`); any failure is `state: 'unknown'`, never an error.
+  `newer` is null when this build's version cannot be determined (it is a version only when
+  `RA_BUILD_BRANCH` is a release tag).
+- **Errors:** 401. 403 (operator).
+
+---
+
 ## All routes
 
 | # | Method | Path | Who |
@@ -1106,6 +1128,7 @@ points rule above. TEST-AIDS-1, the owner's decision of 2026-10-04.
 | 63 | POST | `/api/races/:shortKey/verify` | admin (own team) |
 | 64 | GET | `/api/settings/test-aids` | signed-in |
 | 65 | PUT | `/api/settings/test-aids` | admin |
+| 66 | GET | `/api/admin/status` | admin |
 ---
 
 ## Planned (Phase 5)

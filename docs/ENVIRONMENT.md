@@ -120,5 +120,5 @@ are set by the test harness. Do not set them on a running install.
 
 These affect scripts in `scripts/`, never the running application: `RA_SCRATCH_DIR` (where
 measurements write, kept off the synced tree), `RA_RECOVERY_PASSWORD` (`recover-admin.mjs`), `RA_BACKUP_DIR` (where `npm run backup` writes and where
-`npm run status` looks for the newest backup — see [DEPLOYMENT.md](DEPLOYMENT.md)),
+`npm run status` looks for the newest backup — see [DEPLOYMENT.md](DEPLOYMENT.md); the one exception to this heading: the server reads it too, only to show the newest backup in the admin status box, and without it the box says the backup is not visible from the app),
 `RA_EXPORT_VERBOSE` (`data-export.mjs`), and `CI`, `BASE_SHA`, `HEAD_SHA` (set by the CI runner).

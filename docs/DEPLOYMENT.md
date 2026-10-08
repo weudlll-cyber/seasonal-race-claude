@@ -75,7 +75,7 @@ exactly as it always has.
 | `RA_DATA_DIR`      | `/var/lib/racearena`            | Redirects the whole runtime store. **See the warning below.**                                                                                  |
 | `PORT`             | `4000`                          | Listen port. Defaults to 4000.                                                                                                                 |
 | `RA_BIND_ADDRESS`  | `127.0.0.1`                     | The IP address the API listens on. Unset = every interface, as before. **Recommended `127.0.0.1` behind a reverse proxy.** Not an IP address → the server refuses to start. |
-| `RA_BACKUP_DIR`    | `/var/backups/racearena`        | Where `npm run backup` writes and where `npm run status` looks for the newest backup. Read by those two commands only, never by the server. |
+| `RA_BACKUP_DIR`    | `/var/backups/racearena`        | Where `npm run backup` writes and where `npm run status` looks for the newest backup. Read by those two commands, and by the server only to show the newest backup in the admin status box on the Dev Screen (`GET /api/admin/status`); when the server cannot see this directory, the box says the backup is not visible from the app. |
 
 ## Install, update and roll back — from a release download
 
