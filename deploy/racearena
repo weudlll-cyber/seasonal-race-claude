@@ -1,0 +1,388 @@
+#!/usr/bin/env bash
+# ============================================================
+# File:        racearena
+# Path:        deploy/racearena   (installed to /usr/local/bin/racearena by deploy/install.sh)
+# Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
+# Description: The one command an operator of a single-server install uses: status, logs, backup,
+#              restore, update, rollback, version. Every command explains itself with --help.
+#
+# ★ THE TOOLS ARE THE PROJECT'S OWN, run in a one-off container of the app image (the host has no
+#   Node): scripts/backup.mjs (backup and restore), scripts/migrate.mjs (migrations),
+#   scripts/status.mjs (the status check), and deploy/ra-admin.mjs for the HTTP steps. Nothing here
+#   re-implements what they do; this file only orders them and decides what happens when one fails.
+#
+# ★ install.sh calls THIS FILE for every step that touches the stack (start, first-admin,
+#   verify-signin), so a test of these commands is a test of the install's own code path.
+#
+# The places, with their production defaults. The variables exist so a test can point them at
+# its own directories; on a server nothing sets them.
+#   RA_HOME     /opt/racearena            the checkout (git), and deploy/ in it
+#   RA_ETC      /etc/racearena            settings: racearena.env (600), Caddyfile, compose.env, state
+#   RA_DATA     /var/lib/racearena        the data directory (mounted at /app/data)
+#   RA_BACKUPS  /var/backups/racearena    the backups (mounted at /backups)
+# ============================================================
+set -euo pipefail
+
+RA_HOME="${RA_HOME:-/opt/racearena}"
+RA_ETC="${RA_ETC:-/etc/racearena}"
+RA_DATA="${RA_DATA:-/var/lib/racearena}"
+RA_BACKUPS="${RA_BACKUPS:-/var/backups/racearena}"
+REPO_URL="https://github.com/weudlll-cyber/seasonal-race-claude.git"
+BACKUP_KEEP_DAYS=14
+HEALTH_TIMEOUT_S=120
+# The app image runs as `node`, uid 1000 (server/Dockerfile); its two host directories must be its own.
+APP_UID=1000
+
+say() { printf '%s\n' "$*"; }
+die() { printf 'racearena: %s\n' "$*" >&2; exit 1; }
+
+compose() {
+  docker compose -p racearena -f "$RA_HOME/deploy/docker-compose.prod.yml" --env-file "$RA_ETC/compose.env" "$@"
+}
+
+# The image tag is the checked-out commit, so a rollback can reuse the previous image.
+current_sha() { git -C "$RA_HOME" rev-parse --short=12 HEAD; }
+export_image_tag() { RA_IMAGE_TAG="$(current_sha)"; export RA_IMAGE_TAG; }
+
+# A one-off container of the app image: its settings, its data and backup mounts, on its network.
+tool() { compose run --rm --no-deps -T "$@"; }
+
+# Caddy's own root certificate when it signs for itself (`tls internal`, the local test). With a
+# public certificate the file does not exist and nothing is added.
+caddy_local_ca() {
+  compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt 2>/dev/null || true
+}
+
+# The HTTP helper, deploy/ra-admin.mjs, in a one-off container. Standard input is passed through:
+# the password reaches it there and nowhere else.
+ra_admin() {
+  tool -v "$RA_HOME/deploy:/deploy:ro" -e "RA_EXTRA_CA=$(caddy_local_ca)" app node /deploy/ra-admin.mjs "$@"
+}
+
+state_get() { cat "$RA_ETC/state/$1" 2>/dev/null || true; }
+state_set() { mkdir -p "$RA_ETC/state"; printf '%s\n' "$2" > "$RA_ETC/state/$1"; }
+
+require_installed() {
+  [[ -f "$RA_ETC/compose.env" && -d "$RA_HOME/.git" ]] || die "no install found ($RA_ETC/compose.env, $RA_HOME). Run install.sh first."
+}
+
+app_health_status() {
+  local id
+  id="$(compose ps -q app 2>/dev/null || true)"
+  [[ -n "$id" ]] || { echo "absent"; return; }
+  docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id"
+}
+
+# Healthy means BOTH: the container's own check passes, and /api/health answers through Caddy over
+# https — what a visitor reaches. Gives up after HEALTH_TIMEOUT_S seconds.
+wait_healthy() {
+  local deadline=$((SECONDS + HEALTH_TIMEOUT_S))
+  while ((SECONDS < deadline)); do
+    if [[ "$(app_health_status)" == "healthy" ]] && ra_admin health --https >/dev/null 2>&1; then
+      say "healthy: the app answers, and https through Caddy answers"
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+# The newest release tag: v<major>.<minor>[.<patch>]. ★ NOT every tag starting with "v": this
+# repository carries dozens of ship markers (v-…-complete) that are not releases.
+newest_release_tag() {
+  git ls-remote --tags --refs "$REPO_URL" 'v*' | sed 's|.*refs/tags/||' |
+    grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -n 1 || true
+}
+
+# A tag, a branch or a commit → the commit it names, after fetching.
+resolve_ref() {
+  local ref="$1"
+  git -C "$RA_HOME" fetch --quiet --tags origin
+  git -C "$RA_HOME" rev-parse --verify --quiet "origin/$ref^{commit}" ||
+    git -C "$RA_HOME" rev-parse --verify --quiet "$ref^{commit}" ||
+    die "no tag, branch or commit called '$ref'"
+}
+
+# ── commands ─────────────────────────────────────────────────────────────────────────────────────
+
+help_status() { say "racearena status — is this install healthy?
+  The project's status check (scripts/status.mjs): the app answers, free disk at the data
+  directory, the data directory is writable, the newest backup is recent and intact. Then the
+  two containers, https through Caddy, and any alerts of the last 24 hours.
+  Exit 0 when everything passed, 1 when something failed."; }
+cmd_status() {
+  require_installed
+  export_image_tag
+  local rc=0
+  say "── the status check (scripts/status.mjs)"
+  tool app node /scripts/status.mjs --url http://app:4000 --backups /backups || rc=1
+  say "── containers"
+  compose ps --format '{{.Service}}: {{.Status}}' || rc=1
+  say "── https"
+  ra_admin health --https || rc=1
+  if command -v journalctl >/dev/null 2>&1; then
+    say "── alerts in the last 24 hours (journal tag racearena-alert)"
+    journalctl -t racearena-alert --since '-24h' --no-pager -q -o short-iso 2>/dev/null | tail -n 5 || true
+  fi
+  return "$rc"
+}
+
+help_logs() { say "racearena logs [app|caddy] [-f] — the containers' logs (the last 200 lines; -f follows).
+  Both rotate at 10 MB, five files each."; }
+cmd_logs() {
+  require_installed
+  export_image_tag
+  local follow=() svc=()
+  for a in "$@"; do
+    case "$a" in -f) follow=(-f) ;; app | caddy) svc=("$a") ;; *) die "unknown argument: $a" ;; esac
+  done
+  compose logs --tail 200 "${follow[@]}" "${svc[@]}"
+}
+
+help_backup() { say "racearena backup — one archive of all the data, taken while the app runs.
+  The project's backup tool (scripts/backup.mjs) writes racearena-backup-<UTC>.tar and its .sha256
+  into $RA_BACKUPS, then archives older than $BACKUP_KEEP_DAYS days are deleted (by the date in
+  their name). Copy backups OFF this server as well: a copy on the same disk does not survive
+  losing the disk."; }
+cmd_backup() {
+  require_installed
+  export_image_tag
+  local out name
+  out="$(tool app node /scripts/backup.mjs --out /backups)"
+  say "$out"
+  name="$(printf '%s\n' "$out" | grep -o 'racearena-backup-[0-9TZ]*\.tar' | tail -n 1)"
+  [[ -n "$name" ]] || die "the backup tool did not name an archive"
+  state_set last-backup "$name"
+  prune_backups
+  say "backup: $RA_BACKUPS/$name"
+}
+
+prune_backups() {
+  # The age comes from the NAME, as scripts/status.mjs reads it, never from the file's mtime: a copy
+  # resets the mtime and would make a stale backup look fresh (status.mjs header).
+  local cutoff f stamp
+  cutoff="$(date -u -d "-$BACKUP_KEEP_DAYS days" +%Y%m%dT%H%M%SZ)"
+  for f in "$RA_BACKUPS"/racearena-backup-*.tar; do
+    [[ -e "$f" ]] || continue
+    stamp="$(basename "$f" .tar)"
+    stamp="${stamp#racearena-backup-}"
+    if [[ "$stamp" < "$cutoff" ]]; then
+      rm -f -- "$f" "$f.sha256"
+      say "removed (older than $BACKUP_KEEP_DAYS days): $(basename "$f")"
+    fi
+  done
+}
+
+help_restore() { say "racearena restore <archive> — put the data back from a backup.
+  <archive> is a file name in $RA_BACKUPS (or a path inside it). The app is stopped, the current
+  data is MOVED aside to $RA_DATA.before-restore-<UTC> (kept, not deleted), the archive is
+  restored with the project's backup tool into the empty directory, the app is started and its
+  health is checked."; }
+cmd_restore() {
+  require_installed
+  export_image_tag
+  [[ $# -eq 1 ]] || die "usage: racearena restore <archive>"
+  local name
+  name="$(basename "$1")"
+  [[ -f "$RA_BACKUPS/$name" ]] || die "no such archive in $RA_BACKUPS: $name"
+  if [[ -f "$RA_BACKUPS/$name.sha256" ]] && command -v sha256sum >/dev/null 2>&1; then
+    (cd "$RA_BACKUPS" && sha256sum -c --quiet "$name.sha256") || die "the archive does not match its checksum: $name"
+  fi
+  restore_archive "$name"
+  wait_healthy || die "restored, but the app is not healthy within ${HEALTH_TIMEOUT_S}s — see: racearena logs app"
+}
+
+restore_archive() {
+  local name="$1" aside
+  say "stopping the app"
+  compose stop app
+  aside="$RA_DATA.before-restore-$(date -u +%Y%m%dT%H%M%SZ)"
+  mv -- "$RA_DATA" "$aside"
+  mkdir -p -- "$RA_DATA"
+  if [[ "$(id -u)" == 0 ]]; then chown "$APP_UID:$APP_UID" "$RA_DATA"; fi
+  say "the data before the restore is kept in $aside"
+  tool app node /scripts/backup.mjs --restore "/backups/$name" --into /app/data
+  say "starting the app"
+  compose up -d
+}
+
+help_update() { say "racearena update [ref] — move to another version, safely.
+  [ref] is a tag, branch or commit; without it, the newest release tag (v<major>.<minor>[.<patch>]).
+  Order: a backup first → fetch the ref → build its image → stop the app → run the project's
+  migrations (scripts/migrate.mjs) → start → health check. If the app is not healthy within
+  ${HEALTH_TIMEOUT_S} seconds, it goes back BY ITSELF to the previous version and to the backup taken
+  at the start, and says so."; }
+cmd_update() {
+  require_installed
+  local ref="${1:-}" target prev archive
+  if [[ -z "$ref" ]]; then
+    ref="$(newest_release_tag)"
+    [[ -n "$ref" ]] || die "no release tag (v<major>.<minor>[.<patch>]) exists yet — name one: racearena update <ref>"
+  fi
+  target="$(resolve_ref "$ref")"
+  prev="$(git -C "$RA_HOME" rev-parse HEAD)"
+  if [[ "$target" == "$prev" ]]; then
+    say "already at $ref ($(git -C "$RA_HOME" rev-parse --short=12 HEAD))"
+    export_image_tag
+    wait_healthy || die "the app is not healthy — see: racearena status"
+    return 0
+  fi
+  say "── 1/6 backup before the update"
+  cmd_backup
+  archive="$(state_get last-backup)"
+  say "── 2/6 fetch $ref ($target)"
+  git -C "$RA_HOME" checkout --quiet --detach "$target"
+  export_image_tag
+  say "── 3/6 build the image racearena-app:$RA_IMAGE_TAG"
+  compose build app
+  say "── 4/6 stop the app and run the migrations"
+  compose stop app
+  if ! tool app node /scripts/migrate.mjs; then
+    say "the migrations FAILED"
+    rollback_to "$prev" "$archive"
+    die "update to $ref failed in its migrations; rolled back (see above)"
+  fi
+  say "── 5/6 start"
+  compose up -d
+  say "── 6/6 health"
+  if wait_healthy; then
+    state_set previous-ref "$prev"
+    state_set previous-backup "$archive"
+    say "updated to $ref ($RA_IMAGE_TAG). The backup taken before it: $RA_BACKUPS/$archive"
+    return 0
+  fi
+  say "the app is NOT healthy within ${HEALTH_TIMEOUT_S}s after the update — rolling back automatically"
+  rollback_to "$prev" "$archive"
+  die "update to $ref failed its health check; ROLLED BACK to $(git -C "$RA_HOME" rev-parse --short=12 HEAD) and the backup $archive"
+}
+
+# Back to a commit and, when given, to a backup. Reuses the previous image when it still exists.
+rollback_to() {
+  local sha="$1" archive="${2:-}"
+  git -C "$RA_HOME" checkout --quiet --detach "$sha"
+  export_image_tag
+  if ! docker image inspect "racearena-app:$RA_IMAGE_TAG" >/dev/null 2>&1; then
+    compose build app
+  fi
+  if [[ -n "$archive" ]]; then
+    restore_archive "$archive"
+  else
+    compose up -d
+  fi
+  wait_healthy || die "rolled back to $RA_IMAGE_TAG, but it is not healthy either — see: racearena logs app"
+  say "rolled back to $RA_IMAGE_TAG${archive:+ and the backup $archive}"
+}
+
+help_rollback() { say "racearena rollback — return to the version before the last update, and to its data.
+  As docs/DEPLOYMENT.md 'Roll back a bad update' says: the app is stopped, the current data is MOVED
+  aside (kept, not deleted — anything created since the update is in it), the backup taken just
+  before the update is restored into the empty directory, and the previous version starts."; }
+cmd_rollback() {
+  require_installed
+  local prev archive cur
+  prev="$(state_get previous-ref)"
+  archive="$(state_get previous-backup)"
+  [[ -n "$prev" && -n "$archive" ]] || die "no previous version is recorded (no update has been made yet)"
+  cur="$(git -C "$RA_HOME" rev-parse HEAD)"
+  rollback_to "$prev" "$archive"
+  state_set previous-ref "$cur"
+}
+
+help_version() { say "racearena version — the version this server runs, the one before it, and where things are."; }
+cmd_version() {
+  require_installed
+  say "version:  $(git -C "$RA_HOME" describe --tags --always 2>/dev/null) ($(git -C "$RA_HOME" rev-parse --short=12 HEAD))"
+  local prev
+  prev="$(state_get previous-ref)"
+  say "previous: ${prev:-none}"
+  say "address:  $(grep -E '^RA_PUBLIC_ORIGIN=' "$RA_ETC/racearena.env" | cut -d= -f2-)"
+  say "data:     $RA_DATA"
+  say "backups:  $RA_BACKUPS"
+}
+
+# ── the steps install.sh runs through this file ────────────────────────────────────────────────
+
+help_start() { say "racearena start — build the image of the checked-out version and start both services,
+  then wait until they are healthy. Used by install.sh; safe to run again."; }
+cmd_start() {
+  require_installed
+  export_image_tag
+  compose build app
+  compose up -d
+  wait_healthy || die "the stack did not become healthy within ${HEALTH_TIMEOUT_S}s — see: racearena logs"
+}
+
+help_first_admin() { say "racearena first-admin --user <name> — create the first admin (password on standard input),
+  through the server's own setup route and its one-time token. Then the token is REMOVED from
+  $RA_ETC/racearena.env and the app restarted without it. Used by install.sh."; }
+cmd_first_admin() {
+  require_installed
+  export_image_tag
+  [[ "${1:-}" == "--user" && -n "${2:-}" ]] || die "usage: racearena first-admin --user <name>  (password on stdin)"
+  ra_admin setup --user "$2"
+  if grep -q '^RA_BOOTSTRAP_TOKEN=' "$RA_ETC/racearena.env"; then
+    # The token opens an empty install; once an admin exists it must not stay on disk.
+    sed -i '/^RA_BOOTSTRAP_TOKEN=/d' "$RA_ETC/racearena.env"
+    say "the one-time setup token is removed from $RA_ETC/racearena.env"
+    compose up -d --force-recreate app
+    wait_healthy || die "the app did not come back healthy after the token was removed"
+  fi
+}
+
+help_verify_signin() { say "racearena verify-signin --user <name> — sign in through https://<domain> (password on
+  standard input), check the session cookie is Secure, read the signed-in user, sign out."; }
+cmd_verify_signin() {
+  require_installed
+  export_image_tag
+  [[ "${1:-}" == "--user" && -n "${2:-}" ]] || die "usage: racearena verify-signin --user <name>  (password on stdin)"
+  ra_admin signin --user "$2"
+}
+
+help_alert() { say "racearena alert — what the 10-minute status timer runs when the check fails: one e-mail when
+  SMTP was configured at install ($RA_ETC/msmtprc), otherwise an error in the system journal
+  (tag racearena-alert), which 'racearena status' shows."; }
+cmd_alert() {
+  local body
+  body="$(cmd_status 2>&1 || true)"
+  if [[ -f "$RA_ETC/msmtprc" ]] && command -v msmtp >/dev/null 2>&1; then
+    local to
+    to="$(state_get alert-email)"
+    printf 'To: %s\nSubject: RaceArena on %s: the status check FAILED\n\n%s\n' "$to" "$(hostname)" "$body" |
+      msmtp -C "$RA_ETC/msmtprc" -t
+    say "alert e-mailed to $to"
+  else
+    logger -t racearena-alert -p user.err "the status check FAILED on $(hostname): $(printf '%s' "$body" | tr '\n' ' ' | cut -c1-900)"
+    say "alert written to the system journal (tag racearena-alert)"
+  fi
+}
+
+usage() { say "racearena — run this RaceArena server.
+
+  racearena status              is it healthy?
+  racearena logs [app|caddy]    the containers' logs (-f follows)
+  racearena backup              one archive of all the data, now
+  racearena restore <archive>   put the data back from a backup
+  racearena update [ref]        move to another version (backup first; rolls back by itself on failure)
+  racearena rollback            return to the version before the last update
+  racearena version             what runs here, and where things are
+
+  racearena <command> --help    explains one command"; }
+
+main() {
+  local cmd="${1:-}"
+  [[ -n "$cmd" ]] || { usage; exit 2; }
+  shift
+  local fn="${cmd//-/_}"
+  if ! declare -F "cmd_$fn" >/dev/null; then
+    [[ "$cmd" == "--help" || "$cmd" == "-h" || "$cmd" == "help" ]] && { usage; exit 0; }
+    usage
+    exit 2
+  fi
+  if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    "help_$fn"
+    exit 0
+  fi
+  "cmd_$fn" "$@"
+}
+
+main "$@"

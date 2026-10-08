@@ -120,6 +120,10 @@ server/utils/**/*.test.js
 !scripts/lib/storedRaceReplay.mjs
 !scripts/lib/raceDriver.mjs
 !scripts/lib/cameraPlanDelivery.mjs
+# VPS-INSTALL-1: the operator's three tools run from the image (server/Dockerfile, "THE OPERATOR'S THREE TOOLS").
+!scripts/backup.mjs
+!scripts/migrate.mjs
+!scripts/status.mjs
 
 # The engine's tests stay out, for the reason given above for the server's: the stage-2 image copies
 # `client/src/modules/` and `client/src/racer-types/` whole, and a test beside each file would ride

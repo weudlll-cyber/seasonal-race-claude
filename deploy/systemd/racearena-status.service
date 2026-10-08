@@ -1,0 +1,12 @@
+# VPS-INSTALL-1 (2026-10-07) — the status check every 10 minutes: `racearena status` runs the
+# project's status check (scripts/status.mjs) and more. When it FAILS, racearena-alert.service
+# runs: an e-mail when SMTP was set up at install, otherwise an error in the system journal.
+[Unit]
+Description=RaceArena status check
+Requires=docker.service
+After=docker.service
+OnFailure=racearena-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/racearena status

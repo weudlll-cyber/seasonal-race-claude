@@ -1,0 +1,10 @@
+# VPS-INSTALL-1 (2026-10-07) — runs racearena-status.service every 10 minutes.
+[Unit]
+Description=RaceArena status check every 10 minutes
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=10m
+
+[Install]
+WantedBy=timers.target

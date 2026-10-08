@@ -1,0 +1,10 @@
+# VPS-INSTALL-1 (2026-10-07) — the daily backup: `racearena backup` runs the project's backup tool
+# (scripts/backup.mjs) and keeps the last 14 days. Installed by deploy/install.sh.
+[Unit]
+Description=RaceArena daily backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/racearena backup

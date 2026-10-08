@@ -1,0 +1,84 @@
+# ============================================================
+# File:        docker-compose.prod.yml
+# Path:        deploy/docker-compose.prod.yml
+# Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
+# Description: The production stack of a single-server install: the app and Caddy in front of it.
+#              Started and managed ONLY through `deploy/racearena` (installed by `deploy/install.sh`),
+#              which passes the project name `racearena` and the settings file below.
+#
+# WHAT IS DIFFERENT FROM THE ROOT `docker-compose.yml`, which is a DEVELOPMENT setup:
+#   · the app is the image as built from the checked-out ref — no source mounts, no `--watch`;
+#   · the app is NOT published to the host. Caddy reaches it on the compose network as `app:4000`,
+#     so the only way in from outside is 80/443 through Caddy;
+#   · both services rotate their logs (json-file, 10 MB × 5), which the development file does not.
+#
+# THE PATHS ARE VARIABLES with the production values as defaults. `racearena` passes
+# `--env-file /etc/racearena/compose.env`, which install.sh writes; a test passes its own.
+#   RA_DATA_HOST    the data directory          default /var/lib/racearena
+#   RA_BACKUP_HOST  the backup directory        default /var/backups/racearena
+#   RA_ENV_FILE     the app's settings (600)    default /etc/racearena/racearena.env
+#   RA_CADDYFILE    Caddy's configuration       default /etc/racearena/Caddyfile
+#   RA_IMAGE_TAG    the app image's tag — the checked-out commit, so a rollback can reuse the
+#                   previous image instead of rebuilding it
+# ============================================================
+
+name: racearena
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  app:
+    build:
+      # The repository root, as server/Dockerfile requires (it copies shared/, scripts/ and client/).
+      context: ..
+      dockerfile: server/Dockerfile
+    image: racearena-app:${RA_IMAGE_TAG:-local}
+    env_file:
+      - ${RA_ENV_FILE:-/etc/racearena/racearena.env}
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      RA_DATA_DIR: /app/data
+    volumes:
+      - ${RA_DATA_HOST:-/var/lib/racearena}:/app/data
+      # The backup tool writes here when `racearena backup` runs it in a one-off container of this
+      # service; the status check reads the newest archive from here. The app itself never does.
+      - ${RA_BACKUP_HOST:-/var/backups/racearena}:/backups
+    # No `ports:` — reachable only on the compose network.
+    expose:
+      - "4000"
+    healthcheck:
+      # The image's own check, run more often so an update knows within seconds. process.exitCode,
+      # never process.exit right after a fetch (a crash on some platforms).
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>{process.exitCode=r.ok?0:1}).catch(()=>{process.exitCode=1})"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    logging: *logging
+
+  caddy:
+    # The official image, pinned by digest (Caddy v2.11.7, the version PROXY-PROBE-1 tested).
+    image: caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${RA_CADDYFILE:-/etc/racearena/Caddyfile}:/etc/caddy/Caddyfile:ro
+      # Certificates and Caddy's state live here, so a recreated container keeps its certificate.
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

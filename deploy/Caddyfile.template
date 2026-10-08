@@ -1,0 +1,23 @@
+# ============================================================
+# File:        Caddyfile.template
+# Path:        deploy/Caddyfile.template
+# Project:     RaceArena — VPS-INSTALL-1 (2026-10-07)
+# Description: Caddy's configuration for a single-server install. `deploy/install.sh` fills in the
+#              three placeholders and writes the result to /etc/racearena/Caddyfile.
+#
+# It is the tested configuration of docs/DEPLOYMENT.md, "Behind a reverse proxy" (PROXY-PROBE-1),
+# with one change: Caddy runs in its own container, so it reaches the app as `app:4000` on the
+# compose network instead of `127.0.0.1:4000`.
+#   {{EMAIL}}     the address Let's Encrypt writes to about the certificate
+#   {{DOMAIN}}    the name visitors type, e.g. racearena.example.com
+#   {{TLS_LINE}}  empty on a real server, so Caddy obtains and renews a public certificate itself.
+#                 A local test sets it to `tls internal`, as PROXY-PROBE-1 did.
+# ============================================================
+{
+	email {{EMAIL}}
+}
+
+{{DOMAIN}} {
+	{{TLS_LINE}}
+	reverse_proxy app:4000
+}

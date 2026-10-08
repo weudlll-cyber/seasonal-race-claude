@@ -124,6 +124,19 @@ COPY scripts/lib/storedRaceReplay.mjs /scripts/lib/storedRaceReplay.mjs
 COPY scripts/lib/raceDriver.mjs /scripts/lib/raceDriver.mjs
 COPY scripts/lib/cameraPlanDelivery.mjs /scripts/lib/cameraPlanDelivery.mjs
 COPY client/package.json /client/package.json
+
+# ── VPS-INSTALL-1 (2026-10-07): THE OPERATOR'S THREE TOOLS RUN FROM THIS IMAGE ──────────────────────
+# A server installed by `deploy/install.sh` has NO Node on the host, only Docker. Backups, migrations
+# and the status check are the existing tools, unchanged — `scripts/backup.mjs`, `scripts/migrate.mjs`,
+# `scripts/status.mjs` — run in a one-off container from THIS image (`deploy/racearena`). Each of them
+# resolves the repository root as the directory above `scripts/` and imports `<root>/server/src/…` and
+# `<root>/server/node_modules/better-sqlite3`; here the root is `/`, so ONE link, `/server` → `/app`,
+# gives them the layout they expect without a second copy of anything. `status.mjs` imports
+# `backup.mjs` from beside itself, which is why the two travel together.
+COPY scripts/backup.mjs /scripts/backup.mjs
+COPY scripts/migrate.mjs /scripts/migrate.mjs
+COPY scripts/status.mjs /scripts/status.mjs
+RUN ln -s /app /server
 COPY client/src/modules/ /client/src/modules/
 COPY client/src/racer-types/ /client/src/racer-types/
 COPY client/src/utils/mathUtils.js /client/src/utils/mathUtils.js
