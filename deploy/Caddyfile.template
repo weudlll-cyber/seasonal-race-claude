@@ -19,5 +19,12 @@
 
 {{DOMAIN}} {
 	{{TLS_LINE}}
+	# Baseline headers (AUDIT-1 D1). The app sends its own (helmet: CSP, nosniff, Referrer-Policy,
+	# frame-ancestors); these are the ones only the HTTPS edge can state truthfully. HSTS tells a
+	# browser to use https for this name for a year; the Server banner is dropped.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
 	reverse_proxy app:4000
 }
