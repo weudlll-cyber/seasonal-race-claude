@@ -1902,6 +1902,29 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
       unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
       passes)*
 
+### What the cleanup (piece B) could not land
+
+- [ ] **AUDIT-1 B · comment fixes held back by the measured-stamp guard — his word.** About 40 of the
+      audit's comment corrections are in files inside the import closure of `scripts/tracking-lag.mjs`
+      and `scripts/straggler-truth.mjs` (the camera, the race engine, `defaults.js`, `raceDriver.mjs`).
+      `check-measured-stamps` marks those two stamps stale on ANY commit there, comment-only included,
+      by design; re-stamping was refused by this session's permission check on 2026-10-09, and it is
+      not a cleanup's decision to make. Every edit is ready and proven token-inert:
+      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
+      (17 files; applies cleanly on top of the cleanup merge). Choose: re-measure the two stamps after
+      applying it, or re-stamp them as unchanged because the edits are comments only. *(verify:
+      `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0 stale)*
+- [ ] **AUDIT-1 B · the rest left on purpose.** A2-25 and A2-26 (variables holding seconds named "Ms")
+      are in engine-hull scripts, where a rename is a code change; A2-60's unquoted items could not be
+      located without the group-B notes; A2-04 and A2-05 (header conventions in `scripts/` and tests);
+      A3-20 (`check-language-closed`'s declared scope changes when verify selects it); A3-24, -26, -27
+      (OPEN.md items, which are row A3-25's decision). Also found while cleaning, not in the audit:
+      single German words the language guard cannot see — a report table heading
+      (`scripts/sim/observers/report.mjs`, around line 78), a log line (`scripts/sim-fairness.mjs`,
+      around line 5713), and two comments (`client/src/modules/raceGovernor.js:38`, inside the
+      stamped closure; `DynamicsTuningSection.jsx`, around line 1230). *(verify: each item closed or
+      struck with a reason)*
+
 ---
 
 # PART TWO — CLOSED
