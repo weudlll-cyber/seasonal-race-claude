@@ -1232,5 +1232,5 @@ verified at the cited source.
 - **`headlessRaceSimulator.js` is a SIMPLIFIED STATISTICAL MODEL, not the game.** It self-declares this
   (its header): it deliberately OMITS `trajectoryMult`, `areaBonusMult`, `governorMult` and the racer
   type's `speedMultiplier`, and uses a circular world approximation. It exists only to measure the
-  "racers side-by-side" distribution for DiagnoseVerteilung. **Its numbers do not describe the game** and
+  "racers side-by-side" distribution for DistributionDiagnostics (route `/diagnose-verteilung`). **Its numbers do not describe the game** and
   its t-update must NOT be unified with the shared formula — it is a different model on purpose.

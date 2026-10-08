@@ -163,7 +163,7 @@ export const EXCEPTIONS = [
   //
   // Every caller was read before the deletion rather than assumed: the browser passes
   // `loadRaceDynamicsConfig()`; six harness scripts pass `DEFAULT_CONFIG_WORLD.raceDynamicsConfig`,
-  // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DiagnoseVerteilung`
+  // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DistributionDiagnostics`
   // uses the loader. No test passes a partial config to `createRaceFromIdentity`. WORLD and
   // WORLD-OFF measured either side and byte-identical.
   // The three pulk numbers — `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkBoostHeadroom` — stood
