@@ -65,9 +65,10 @@ describe('the Content-Security-Policy (AUDIT-1 D1)', () => {
     });
   }
 
-  it('admits no inline or eval script, no plugin, no framing, no foreign base', async () => {
+  it('admits no inline or eval script, no inline style, no plugin, no framing, no foreign base', async () => {
     const p = policyOf(await request(shellApp({})).get('/'));
     expect(p['script-src'].join(' ')).not.toMatch(/unsafe-inline|unsafe-eval/);
+    expect(p['style-src']).toEqual(["'self'"]);
     expect(p['object-src']).toEqual(["'none'"]);
     expect(p['frame-ancestors']).toEqual(["'none'"]);
     expect(p['base-uri']).toEqual(["'self'"]);

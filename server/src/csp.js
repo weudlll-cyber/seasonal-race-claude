@@ -13,8 +13,11 @@
 //                process — it depends only on RA_PUBLIC_ORIGIN, read once — so a HASH covers it
 //                exactly; a per-request nonce would buy nothing and cost a re-render per request.
 //                No 'unsafe-inline', no 'unsafe-eval': the bundle uses neither.
-//   style-src    'self' 'unsafe-inline'. React's `style={{…}}` writes style ATTRIBUTES, which only
-//                'unsafe-inline' admits; styles cannot run code, so this is the one loosening kept.
+//   style-src    'self' only. React's `style={{…}}` sets styles through the CSSOM
+//                (`element.style.x = …`), which CSP does not govern; nothing in the client or the
+//                built shell creates a <style> element or a markup style attribute. MEASURED, not
+//                assumed: with style-src 'self' the browser spec (csp-no-violations) saw zero
+//                violations across every main screen and a race.
 //   img-src      'self' data: blob:. Sprites are turned into blob: URLs (spriteLoader.js), stored
 //                sprites may be data: URLs, and logo and sprite previews use blob: before upload.
 //   connect-src  'self' plus the configured public origin, in case a page is reached at another
@@ -38,7 +41,7 @@ export function cspDirectives(env = process.env) {
   return {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", runtimeConfigScriptHash(origin)],
-    styleSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'"],
     imgSrc: ["'self'", 'data:', 'blob:'],
     connectSrc: origin ? ["'self'", origin] : ["'self'"],
     fontSrc: ["'self'"],
