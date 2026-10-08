@@ -254,6 +254,20 @@ resolve_default_ref() {
   sudo bash install.sh --ref <tag, branch or commit>"
 }
 
+# A tag, a branch or a commit. A fresh clone holds a branch only as origin/<branch>, so that is
+# tried first — the same rule as `racearena update`.
+checkout_ref() {
+  if ((DRY_RUN)); then
+    say "[dry-run] git -C $RA_HOME checkout --quiet --detach <the commit $REF names>"
+    return 0
+  fi
+  local sha
+  sha="$(git -C "$RA_HOME" rev-parse --verify --quiet "origin/$REF^{commit}" ||
+    git -C "$RA_HOME" rev-parse --verify --quiet "$REF^{commit}")" ||
+    die "no tag, branch or commit called '$REF' in $REPO_URL"
+  git -C "$RA_HOME" checkout --quiet --detach "$sha"
+}
+
 lay_out() {
   step "5 · directories, the checkout, the settings"
   run mkdir -p "$RA_HOME" "$RA_DATA" "$RA_BACKUPS" "$RA_ETC/state"
@@ -266,7 +280,7 @@ lay_out() {
     resolve_default_ref
     say "installing version $REF"
     run git clone --quiet "$REPO_URL" "$RA_HOME"
-    run git -C "$RA_HOME" checkout --quiet --detach "$REF"
+    checkout_ref
   fi
   if [[ -f "$RA_ETC/racearena.env" ]]; then
     say "settings exist: $RA_ETC/racearena.env (kept — its session secret signs everybody's sign-in)"
@@ -332,9 +346,11 @@ install_timers() {
 summary() {
   local alerts="written to the system journal (tag racearena-alert) and shown by 'racearena status' — no SMTP was given"
   [[ -n "$SMTP_HOST" ]] && alerts="e-mailed to $EMAIL through $SMTP_HOST"
+  local title="RaceArena is installed"
+  ((DRY_RUN)) && title="(dry run) what the end of a real run prints"
   say "
 
-══ RaceArena is installed ══
+══ $title ══
 
   Address:   https://$DOMAIN   (sign in as $ADMIN)
   Data:      $RA_DATA
