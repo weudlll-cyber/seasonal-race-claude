@@ -1,5 +1,8 @@
 // ============================================================
-// Sweep driver: avoidanceBufferPct (Gate D) + optional avoidanceNormExponent (Gate G)
+// File:        sweep-bufferPct-driver.mjs
+// Path:        client/scripts/sweep-bufferPct-driver.mjs
+// Project:     RaceArena
+// Description: Sweep driver: avoidanceBufferPct (Gate D) + optional avoidanceNormExponent (Gate G)
 // Fully automatic. Writes results/sweep-bufferPct/SUMMARY.md incrementally.
 // Decisions (no user input) documented in SUMMARY.md:
 //   - Per-track DEFAULT racer (snail is grass-only → "snail on all" invalid; per-track

@@ -90,22 +90,21 @@ card-level **Reset Defaults** button restores the whole block. Every control car
 `COSMETIC_CONFIG_KEYS` — it is not part of the config world the fingerprint hashes at all. It is
 *operator defaults*, and three of its eight controls turn out to reach nothing.
 
-**7 controls** (8 until 2026-09-25 — see the update below).
+**6 controls** (8 until 2026-09-25, 7 until 2026-10-06 — see the updates below).
 
 | Control | Config key | Shipped default | Tooltip | Verdict |
 | --- | --- | --- | --- | --- |
 | Race Action (pills: Quiet / Medium / Wild) | `raceActionStage` | `'quiet'` | yes | **MATCHES** |
 | Default Race Duration (pills: 30 / 60 / 90 / 120) | `duration` | 60 | yes | ★ **MATCHES** — tooltip repaired 2026-09-26 (was MISLEADING) |
-| Default Number of Winners (Podium Spots) | `winners` | 3 | yes | **MATCHES** |
+| ~~Default Number of Winners (Podium Spots)~~ | ~~`winners`~~ | — | — | **REMOVED 2026-10-06** (REMOVE-WINNERS-SETTING-1): the control and the key are gone; the podium is `PODIUM_PLACES` in `shared/podium.mjs` |
 | Max Players — Closed Tracks | `maxPlayersClosed` | 40 | yes | **MATCHES** |
 | Max Players — Open Tracks | `maxPlayersOpen` | 100 | yes | **MATCHES** |
 | Go to the results on its own | `autoAdvance` | on | yes | **MATCHES** — repaired 2026-09-25 |
 | Sound effects | `soundEffects` | on | yes | ★ **RESERVED** — 2026-09-25 |
 
-**Readers, for the four that have one.** `raceActionStage` is normalised at the boundary
+**Readers, for the three that have one.** `raceActionStage` is normalised at the boundary
 (`normalizeRaceActionStage`) into the race payload and travels with the race to the engine, and it is
-one of the nine identifier inputs. `winners` reaches the payload and the result screen slices the
-finish order by it. `maxPlayersClosed` / `maxPlayersOpen` are read by `fieldCap.js` (`fieldCapFor`),
+one of the nine identifier inputs. `maxPlayersClosed` / `maxPlayersOpen` are read by `fieldCap.js` (`fieldCapFor`),
 which is the only limit on a field size.
 
 ### ★ MISLEADING → MATCHES 2026-09-26 — "Default Race Duration"
@@ -1178,17 +1177,16 @@ and is its own decision"* — the brief's own rule.
 **Where the layout and the scope disagree.**
 
 - **Frame Timing** is COSMETIC and lives INSIDE the Race Tuning card. Reset All Defaults sits at
-  the top of Race Tuning, its tooltip states *"Camera and frame-timing overlays are left
-  untouched"*, and `DynamicsTuningSection.resetAll()` explicitly does not touch frame-timing state
-  (comments at :259-266 say so). The card's copy is accurate. The mismatch is that a reader
+  the top of Race Tuning, and the master reset it calls, `resetRaceRelevantToDefault`
+  (`raceRelevantReset.js:44-50`), writes the five race-relevant blocks and no frame-timing state
+  (`RaceTuningSection.jsx:19-20` says so). The code is accurate. The mismatch is that a reader
   scanning the card visually will find Frame Timing under the Reset All button whose scope
   deliberately excludes it. Not a defect in code; a defect in what the layout leads a reader to
   expect.
 - **Auto-Scale** is RACE-RELEVANT and lives in a card of its OWN (§12), separate from Race Tuning.
-  Reset All Defaults reaches it anyway — via `resetAutoScaleToDefault()`, which writes the default
-  straight to storage without touching the Auto-Scale card's own React state. The Auto-Scale
-  card's local state re-syncs from storage on its next mount (the comment in
-  `raceRelevantReset.js:36-40` states this). The mismatch is that a reader inside Auto-Scale will
+  Reset All Defaults reaches it anyway — `resetRaceRelevantToDefault` writes the Auto-Scale default
+  straight to storage like the other four blocks, and every mounted part re-reads its block from
+  storage at once (`useSyncedConfig`; the comment at `raceRelevantReset.js:40-43` states this). The mismatch is that a reader inside Auto-Scale will
   see a shipped-default state after clicking a button in a card they cannot see.
 
 **Neither is proposed to move.** Both are the fingerprint's own line (race vs cosmetic) held to

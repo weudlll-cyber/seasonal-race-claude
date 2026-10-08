@@ -8,12 +8,14 @@
 //              racer types, with speedBonusMult (catch-up) fully active.
 //
 //              Key design choices:
-//              - baseSpeed uses the N-calibrated natural formula identical
-//                to the browser race engine (BASE_SPEED_MEAN / expectedMinSF)
-//              - finishT is SHIFTED (not speed) to create 30s / 120s races:
-//                  finishT = naturalSpeed × REFERENCE_FPS × targetSeconds
-//                This keeps speedBonusMult meaningful and comparable across
-//                racer types and durations.
+//              - finishT, the race base speed and the clock come from the SAME
+//                shared call the browser makes, `deriveRaceDuration`
+//                (client/src/modules/durationModel.js) — see "THE canonical
+//                speed/duration derivation" in runSingleRace. (The old
+//                sim-only finishT = naturalSpeed × REFERENCE_FPS × targetSeconds
+//                formula is gone with it.)
+//              - the per-step advance is the browser's own, raceCore.js
+//                `stepRacePhysics` (see "STEP-ORDER ALIGNMENT").
 //              - speedBonusMult is always applied (that's what we're testing).
 //              - No PNG output, no camera, no rendering — pure physics.
 //
@@ -525,7 +527,11 @@ const B2_ATTACK_BAND_ARRIVAL =
     String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival),
   ) === "true";
 // ── Front distance leash (SIM-ONLY; no DevScreen/defaults entry — activated only here) ──────────────
-// --frontLeashMaxLengths engages the leash (gap-space brake on the runaway leader); --frontLeashGainPct
+// ★ INERT TODAY: the flag is still parsed and handed to createRacePlan, but the leash also needs the
+// leader→P2 length passed to `controller.update` as a 4th argument, and that hook went with the swap
+// to `stepRacePhysics` (see "are GONE with the swap" in runSingleRace). The text below describes
+// what it did before that.
+// --frontLeashMaxLengths engaged the leash (gap-space brake on the runaway leader); --frontLeashGainPct
 // sets the brake per excess length (default 3). Absent --frontLeashMaxLengths → FRONT_LEASH off → the
 // controller is never passed the leader→P2 length and never sets leash config → byte-identical.
 const FRONT_LEASH_MAX = argVal("frontLeashMaxLengths", null);
@@ -643,7 +649,8 @@ const DYNAMICS_OVERRIDES = {
       "pulkCeilingCap",
       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap),
     ) === "true",
-  // Additive boost-headroom above the natural band max for the pulk ceiling (0 = shipped baseline).
+  // Additive boost-headroom above the natural band max for the pulk ceiling (0 = the pre-headroom
+  // baseline; the shipped value is the defaults.js one read below).
   pulkBoostHeadroom: Number(
     argVal(
       "pulkBoostHeadroom",
@@ -657,7 +664,8 @@ const DYNAMICS_OVERRIDES = {
       "enableRowEnvSmooth",
       String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? true),
     ) === "true",
-  // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
+  // PulkLeadRotation (the PULK-phase lead-rotation core loop). Always live — it has no on/off switch;
+  // these flags tune it.
   pulkLeadRotationAttackerSlots: Number(
     argVal(
       "pulkLeadRotationAttackerSlots",
@@ -697,6 +705,8 @@ const DYNAMICS_OVERRIDES = {
 // deleted while the unchanged OUTCOME P-controller keeps the finish fair. Nothing here touches the
 // browser or any shipped default; a no-flag run is bit-identical to a normal fairness run.
 //
+//   ★ --rerollVariant is INERT TODAY: REROLL_VARIANT is parsed and echoed into the output, and
+//     nothing else reads it. The description below is what it once selected.
 //   --rerollVariant=1|2   re-roll TARGET draw only (transition machinery unchanged for both):
 //                         1 = current + (rand−0.5)·2·halfWidth      → byte-identical "sticks".
 //                         2 = current + v·(freshDrawAroundMean − current), v = variationPercent/100,
@@ -720,6 +730,8 @@ const PHASE_SPLIT_BONUS_ENABLED =
 const AREA_BONUS_EARLY = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly ?? 1.0;
 const AREA_BONUS_PULK = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk ?? 0;
 const AREA_BONUS_POST = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost ?? 1.0;
+// ★ INERT TODAY: HERO_CHAOS_AREABONUS_OFF is parsed and never read — the suppression hook went with
+// the swap to `stepRacePhysics` (see "are GONE with the swap" in runSingleRace). What it did:
 // PRE-STAGE-1 Q2 (--heroChaosAreaBonus=on|off, default on = byte-neutral): suppress the HERO POOL's
 // areaBonus during CHAOS ONLY (raceProgress < pulkStartLive, the live choreo boundary). §4b: the CHAOS
 // areaBonus is band-graded (B1 = +6% at bonusMult 2.0), so it washes the future B1 heroes forward
@@ -781,7 +793,7 @@ const EARLY_DECIDED = argv.includes("--early-decided");
 // lever. Records, over the same PULK window action-metrics uses: the minimum realised speed factor,
 // the minimum governorMult, and the share of racer-frames sitting AT the brake's lower bound.
 //
-// THE BOUND IS NOT THE ±12% ENVELOPE. raceGovernor.js:357 computes
+// THE BOUND IS NOT THE ±12% ENVELOPE. raceGovernor.js (applyPulkLeadRotation) computes
 // `brakeLoBound = 1 - max(maxEffect, leaderBrake)`, so for a braked racer the floor EXPANDS with
 // leaderBrake and the ±maxEffect clamp never binds it once leaderBrake >= maxEffect. What binds is
 // the brake value itself, which is why this observer reports depth rather than clamp hits.
@@ -801,8 +813,10 @@ const rpRaces = []; // per-race runaway/parade raw records (filled only when RUN
 // distance lost to avoidance braking, as a fraction of the distance it would otherwise have covered,
 // plus a per-decile-of-progress profile. Feeds sigma — the share of the natural speed band that live
 // physics already eats, and therefore the reserve any open-loop composer must not spend. Definitions
-// live in sim/observers/physics-tax.mjs; only the per-frame capture is here (it needs the
-// advanceRacerT call site). Fully flag-gated → a no-flag run does zero extra work.
+// live in sim/observers/physics-tax.mjs. ★ DEGRADED: the per-racer capture needed the sim's own
+// advanceRacerT call site, which went with Pass 2 into `stepRacePhysics` (see "Pass 2 — the per-racer
+// advanceRacerT — now runs INSIDE stepRacePhysics" in runSingleRace); only the whole-field geometry
+// is still recorded. Fully flag-gated → a no-flag run does zero extra work.
 // SCREEN escape-latency (read-only, --escape-latency): per race, the max P1->P2 gap the leader
 // reached BEFORE the first gap-reroll DOWN-tilt landed on it, plus the per-event tilt magnitudes.
 // Answers "how far does the escapee get before the brake arrives, and how hard is that brake".
@@ -813,14 +827,15 @@ const ptRaces = []; // per-race physics-tax raw records (filled only when PHYSIC
 const elRaces = []; // per-race escape-latency records (filled only when ESCAPE_LATENCY)
 // SPEED-SOURCE (read-only, --speed-source): decompose the late-race speed of the top-15 live ranks into
 // its multiplicative factors at fixed samples (0.70..0.95), with clamp saturation + headroom. Pure
-// read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
+// read-only. ★ DEGRADED: it captured at the sim's own advanceRacerT call site (Pass 2), which now runs
+// inside `stepRacePhysics`, so it records no factors any more (see the note in runSingleRace).
 const SPEED_SOURCE = argv.includes("--speed-source");
 const ssRaces = []; // per-race top-15 speed decomposition (filled only when SPEED_SOURCE)
 // --dump-frames=<path>: read-only per-frame POSITION recorder for the FIRST race only. Installs a
 // frameHook that captures [{index,x,y,t,finished}] per frame (after the shared step's computePositions,
 // exactly the array the browser hands the camera) plus race meta, then writes <path> as JSON. Purpose:
 // a faithful camera replay — feed the SAME real race into any CameraDirector version (CAMERA-FOCUS-2
-// bisect ladder). Observer only: no engine touched, no fingerprint. Pair with --races=1 --tracks=<one>.
+// bisect ladder). Observer only: no engine touched, no fingerprint. Pair with --races=1 --track=<one>.
 const DUMP_FRAMES = argVal("dump-frames", null);
 // RACER-FLAPPING-1: optional browser roster names (comma-separated, index order) for faithful repro.
 const _rn = argVal("racer-names", null);
@@ -847,7 +862,9 @@ const SD_PULK_START = 0.25; // chaos → PULK boundary — strip-metrics OBSERVA
 const SD_PULK_END = 0.5; // PULK → post boundary — strip-metrics OBSERVATION only
 // NOTE: the phase-split MECHANIC (areaBonus/rowBonus) reads the LIVE plan pulkStart/pulkEnd fractions
 // per race (see pulkStartLive/pulkEndLive) so bonuses follow the phases; SD_* above are the pinned
-// strip-down observation checkpoints. Both equal 0.25/0.5 by default → byte-identical.
+// strip-down observation checkpoints. They equalled each other when this was written; the shipped
+// `racePlanPulkStart` / `choreoOutcomeStart` have since moved, so the live mechanic and these pinned
+// checkpoints now differ by default.
 const SD_CORR_START = RP_CORRIDOR_START; // 0.55 — PULK action-window upper bound = OUTCOME start
 const SM_HOLD_MS = 750; // a P1 change counts as a CLEAN overtake only if the new
 // leader holds P1 ≥ this long (filters flicker vs raw leadΔ)
@@ -1237,7 +1254,8 @@ export function runSingleRace({
         angle: 0,
         frameSizePx: effectiveDisplaySize,
         drawnBodyWidthPx: bodyRef.bodyNarrow,
-        // Same formula as RaceScreen/index.jsx line 610-612 (report 39 parity fix):
+        // Same formula as the browser's `drawnBodyLengthPx` in raceCore.js `createRaceFromIdentity`
+        // (report 39 parity fix):
         // drawnBodyLengthPx = drawnBodyWidthRefPx × bodyFillLong / bodyFillNarrow.
         drawnBodyLengthPx:
           bodyFillNarrow > 0
@@ -1277,7 +1295,7 @@ export function runSingleRace({
       }
     }
 
-    const DT = 16; // ms per frame — matches game FIXED_DT (index.jsx:138)
+    const DT = 16; // ms per frame — matches game FIXED_DT (raceCore.js / RaceScreen index.jsx)
     const maxTime = Math.max(realizedDurationSec * 3, 600) * 1000; // safety cap: 3× or 10 min
     let raceTs = 0;
     let raceProgress = 0; // monotonic leader track-progress [0,1]; drives WHEN phases switch
@@ -1530,7 +1548,8 @@ export function runSingleRace({
     };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
-    // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
+    // The shipped boundaries are no longer 0.25 / 0.5, so the live fractions differ from the pinned
+    // SD_* values (they only fall back to SD_* when the controller reports no fractions).
     // (The strip-metrics OBSERVATION windows below intentionally stay on the pinned SD_* constants.)
     const pulkStartLive = govFractions?.pulkStartFrac ?? SD_PULK_START;
     const pulkEndLive = govFractions?.pulkEndFrac ?? SD_PULK_END;
@@ -1548,9 +1567,9 @@ export function runSingleRace({
       smooth: dynamicsConfig.enableRowEnvSmooth ?? false, // ease the step over 1s (default false = instant)
     };
     // Per-race director state. ★ THE GOVERNOR IS NOT CALLED IN THIS FILE — it is called by raceCore's
-    // `stepRacePhysics` (raceCore.js:544), which this race loop invokes below, so the sim reaches it
+    // `stepRacePhysics` (raceCore.js), which this race loop invokes below, so the sim reaches it
     // transitively and `applyPulkLeadRotation` is deliberately NOT imported here (an unused import
-    // sat at :183 until 2026-09-23 and made it look as though the sim ran the governor itself — it
+    // sat among this file's imports until 2026-09-23 and made it look as though the sim ran the governor itself — it
     // is the other way round). That function lazily attaches its own `leadRot` sub-state on first
     // call, so an empty object is all that is needed (parity with the browser `dirState` shape).
     const dirState = {};
@@ -1686,7 +1705,8 @@ export function runSingleRace({
         }
       : null;
     // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
-    // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
+    // It was fed once per racer per frame at the sim's advanceRacerT call site, which went with Pass 2
+    // into `stepRacePhysics`; it now receives only the whole-field samples. Never mutates race state.
     const pt = physicsTax ? makePhysicsTaxTracker() : null;
     let ptPrevMeanT = null; // prev-frame mean live-racer t, for the field-speed sample (physics-tax)
     // ── SCREEN escape-latency (read-only) ──────────────────────────────────────────────────────
@@ -1907,7 +1927,7 @@ export function runSingleRace({
       // P1 lead changes + distinct P1 holders + top-3 podium shuffle, and per-racer time
       // at the front — the owner's priority-1 "contested, lead-changing front" signal. No
       // force, no state written back to racers; pure observation (mirrors the governor's own
-      // live-order read at :894). Front-reach gaps are reused from the governor block above.
+      // live-order read). Front-reach gaps are reused from the governor block above.
       if (frontAction && raceProgress < BREAKAWAY_CORRIDOR_START) {
         const live = racers
           .filter((r) => !r.finished)
@@ -2658,7 +2678,7 @@ export function runSingleRace({
         // brakeMatchFailureCount: open-track pass-through telemetry (after 4s warmup).
         // Fires when brake-to-match is engaged on a trailer AND the trailer still advances
         // faster than its locked leader for 5 consecutive frames while in the brake zone.
-        // natPrevT (saved at line 676 before the t-update) gives the previous t for delta.
+        // natPrevT (the PRE-STEP snapshot at the top of the loop) gives the previous t for delta.
         if (raceTs > 4000 && isOpen) {
           for (let ri = 0; ri < racers.length; ri++) {
             const trailer = racers[ri];
@@ -4502,15 +4522,17 @@ if (isMain) {
                 // Front act window (the sustained-P1-battle measurement window's own key).
                 contestWindowStart: CONTEST_WINDOW_START,
                 // ★ THE TRACK'S PATH LENGTH, AND WHY IT IS HERE. `_computeGapLeaderBrake` returns at
-                // its own guard (racePlanner.js:886, `!(pathPx > 0)`) before reading anything, so a
+                // its own guard (racePlanner.js, `!(pathPx > 0)`) before reading anything, so a
                 // plan built without this value cannot run the gap brake AT ALL. The browser hands it
-                // over at raceCore.js:177; the sim did not, which made the sim run a world the browser
+                // over in raceCore.js `createRaceFromIdentity`; the sim did not, which made the sim run a world the browser
                 // does not the moment that brake is switched on — measured in PARITY-AGE-1 as a
                 // browser/sim byte-parity break. It is NOT a new quantity: `pathLengthPx` is already
-                // resolved for this track at :4288 and already passed to `runSingleRace` below.
-                // ★ INERT WHILE THE BRAKE IS OFF, which is its shipped default: with
+                // resolved for this track (`const pathLengthPx` above) and already passed to
+                // `runSingleRace` below.
+                // ★ It was INERT WHILE THE BRAKE WAS OFF, its default when this was written: with
                 // `gapBrakeEnabled` false the brake's first guard returns before this is read. Proven
-                // byte-identical on 300 races and all four fingerprints (PARITY-CLOSE-1).
+                // byte-identical on 300 races and all four fingerprints (PARITY-CLOSE-1). The brake
+                // ships ON since 2026-09-17, so this is now LIVE on every sim race.
                 pathLengthPx,
                 // ★ BLIND-SITE-1 — THE BRAKE'S OWN FOUR KEYS AND ITS RATE WINDOW. The path length
                 // above got the brake past its FIRST guard; without these it still never ran,
@@ -4519,10 +4541,11 @@ if (isMain) {
                 // (PARITY-CLOSE-1). The sim then reported fairness for a world the browser does not
                 // race the moment the owner switches the brake on, which is the whole defect.
                 // ★ NO NEW VALUE AND NO NEW FLAG. These read `DEFAULT_RACE_DYNAMICS_CONFIG`, which
-                // at :278 is already the OWNER'S world when `--config` supplied one and the shipped
+                // (`mergeCfg`, near the top) is already the OWNER'S world when `--config` supplied one and the shipped
                 // defaults otherwise — the same source every other dynamics key here uses, and the
-                // same `dynamicsConfig.X ?? default` shape raceCore.js:290-297 uses.
-                // ★ INERT TODAY: the shipped default is `gapBrakeEnabled: false`.
+                // same `dynamicsConfig.X ?? default` shape raceCore.js uses for the gap-brake keys.
+                // ★ LIVE: the shipped default is `gapBrakeEnabled: true` (since 2026-09-17); these
+                // were inert only while it was false.
                 gapBrakeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeEnabled,
                 gapBrakeAllowedGapPx:
                   DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeAllowedGapPx,
@@ -4530,8 +4553,8 @@ if (isMain) {
                 gapBrakeMaxAuthority:
                   DEFAULT_RACE_DYNAMICS_CONFIG.gapBrakeMaxAuthority,
                 // The brake's rate window is the trajectory ease's own duration, so it reuses the
-                // override already resolved at :582 — the same object `reRollTransitionDuration`
-                // above reads. Seconds, as the store holds it; racePlanner.js:414 converts once.
+                // override already resolved in `DYNAMICS_OVERRIDES` — the same object `reRollTransitionDuration`
+                // above reads. Seconds, as the store holds it; racePlanner.js converts once.
                 trajectoryTransitionDuration:
                   DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
                 servoNoiseBlindEnabled:

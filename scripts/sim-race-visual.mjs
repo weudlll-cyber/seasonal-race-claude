@@ -183,7 +183,6 @@ function drawLine(buf, W, H, x0, y0, x1, y1, r, g, b) {
   const sx = x0 < x1 ? 1 : -1,
     sy = y0 < y1 ? 1 : -1;
   let err = dx - dy;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     setPixel(buf, W, x0, y0, r, g, b);
     if (x0 === x1 && y0 === y1) break;

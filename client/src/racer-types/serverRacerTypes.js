@@ -1,5 +1,6 @@
 // ============================================================
-// File:        client/src/racer-types/serverRacerTypes.js
+// File:        serverRacerTypes.js
+// Path:        client/src/racer-types/serverRacerTypes.js
 // Project:     RaceArena — RACER-TYPES-SPLIT-1
 //
 // WHAT THIS OWNS: the SERVER CONVERSATION about user-created racer types — loading them, creating

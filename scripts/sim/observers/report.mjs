@@ -18,10 +18,10 @@ function sigLabel(p) {
   if (p < 0.05) return "* (p<0.05)";
   return "n.s.";
 }
-// ── Diagnostic tables A-E (race-plan mode only) ───────────────────────────────
+// ── Diagnostic tables A-D (race-plan mode only) ───────────────────────────────
 /**
- * Build Markdown tables A-E from rawData rows for one combo.
- * Only called when sollBereich is present (RACE_PLAN_ACTIVE).
+ * Build Markdown tables A, B.1, B.2, C and D from rawData rows for one combo.
+ * Only called with rows that carry a target band (the `sollBereich` field, race-plan runs).
  *
  * @param {object[]} rawRows  rawData filtered for one trackId x racerType x durationSec
  * @param {object[]} rowStats computeFairnessStats rowStats (for row count/expected)
@@ -350,7 +350,7 @@ function buildReport(
     }
     lines.push("");
 
-    // Diagnostic tables A-E (only when race-plan sollBereich data is available)
+    // Diagnostic tables A-D (only when race-plan target-band (`sollBereich`) data is available)
     const comboRaw = rawData
       ? rawData.filter(
           (r) =>

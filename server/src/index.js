@@ -60,10 +60,10 @@ const PORT = process.env.PORT || 4000;
 const server = listenOn(app, PORT, bindAddress, () => {
   // ★ STDOUT BY DECISION (the owner, 2026-09-06), not by oversight. This is the "it started" line,
   // and normal output belongs on stdout; stderr is for what is wrong. This file already draws that
-  // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js:95)
+  // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js)
   // precisely because it reports what this install CANNOT do. WHAT WAITS ON THIS LINE IS A PERSON,
   // not a process: nothing in the tree parses it (Playwright waits on a URL —
-  // client/playwright.config.js:64 — and neither server/Dockerfile nor docker-compose.yml declares
+  // `webServer[].url` in client/playwright.config.js — and neither server/Dockerfile nor docker-compose.yml declares
   // a HEALTHCHECK), while `.claude/skills/dev-start/SKILL.md:33` names it as the expected log line
   // and the line after it names the warning that must NOT appear beside it. That reading only works
   // while the go-ahead and the warnings are on different streams.

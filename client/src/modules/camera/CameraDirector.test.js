@@ -2457,7 +2457,7 @@ describe('CameraDirector — convergence fix: threshold and timeout', () => {
   });
 });
 
-// ── Etappe 6: Observer Phase (Lead-In / Mitlaufen / Lead-Out) ────────────────
+// ── Stage 6: Observer Phase (Lead-In / follow / Lead-Out) ────────────────────
 
 // Minimal shape stub: straight track from x=0 to x=trackLen at y=360.
 // getTotalLength() returns trackLen; getPosition(t, _) returns {x: t*trackLen, y: 360}.
@@ -2485,7 +2485,7 @@ const phasedConfig = {
   },
 };
 
-describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
+describe('CameraDirector — Stage 9: observer phase (time-based)', () => {
   it('constructor: _camT is null, _observerPhase is "idle"', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
     expect(cd._camT).toBeNull();
@@ -2836,7 +2836,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
   });
 });
 
-describe('CameraDirector — Etappe 10: diagnostic fields', () => {
+describe('CameraDirector — Stage 10: diagnostic fields', () => {
   it('transitionCount60f is 0 on construction', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
     expect(cd.transitionCount60f).toBe(0);
@@ -3013,7 +3013,7 @@ describe('CameraDirector — Etappe 10: diagnostic fields', () => {
   });
 });
 
-describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () => {
+describe('CameraDirector — Stage 11: BATTLE_ZOOM pin-lock convergence', () => {
   // phasedConfig has BATTLE_ZOOM: leadInDuration=0.5, leadOutDuration=1.0
   // profileConfig has all leadInDuration=0, leadOutDuration=0
 
@@ -4057,7 +4057,7 @@ describe('CameraDirector — lead-in → follow snap fix (Phenomenon 4)', () => 
 // leadOutEnabled: false → trigger block is bypassed; _observerPhase stays
 //   'follow' until the state transition — camera continues tracking the racer.
 // leadOutEnabled: true  → existing lead-out behavior is unchanged (analog to
-//   the existing lead-out tests in the Etappe 9 block above).
+//   the existing lead-out tests in the Stage 9 block above).
 
 describe('CameraDirector — lead-out toggle', () => {
   // phasedConfig has LEADER_ZOOM: leadOutDuration=1.5, BATTLE_ZOOM: leadOutDuration=1.0.

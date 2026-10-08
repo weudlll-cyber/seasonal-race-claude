@@ -66,7 +66,7 @@ server.
 - Per-browser, per-device. A profile created on one machine is not visible on another.
 - The browser's localStorage quota is typically ~5 MB. Base64 logos are large (a 200 KB PNG becomes
   ~270 KB as a data URL). A few logos can consume the quota; the app logs a warning and silently
-  skips the write if the quota is exceeded (`storage.js:45–47`). Operators with large logos should
+  skips the write if the quota is exceeded (`storage.js:96-98`). Operators with large logos should
   compress before uploading.
 - No server backup. Clearing browser data deletes all profiles.
 

@@ -407,7 +407,7 @@ reason is in the source beside it.
 - **#6 the wait for the stragglers** — it ends when the last racer arrives. Its length is a property
   of the RACE (the note under the phase table has the MEASURED figures; it is not ~2.9 s).
   *(Corrected 2026-09-03: this said "the ~2.9 s figure is UNVERIFIED", while the note it points at —
-  at `:198` of this same document — says that figure "was wrong" and gives the measurement that
+  at `:336` of this same document — says that figure "was wrong" and gives the measurement that
   replaced it. `de524663` (STRAGGLER-TRUTH-1, 2026-08-19) wrote the correcting note higher up and did
   not update this back-reference, so the document contradicted itself for 15 days. The numbers are
   deliberately not restated here — the note is their one home in this file.)*

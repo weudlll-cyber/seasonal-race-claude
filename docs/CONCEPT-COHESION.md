@@ -39,7 +39,7 @@ metric; every number is set by the owner's eye, in racer lengths.
 
 - **Nothing in the race looks at gaps today.** A car's speed comes from its own dice-roll and a servo
   that only asks "am I in the right _place in the order_?" — never "how big is the hole in front of me?"
-  So the field's spacing is nobody's job; it drifts. _Verified: racePlanner.js:566,577,579; raceStep.js._
+  So the field's spacing is nobody's job; it drifts. _Verified: racePlanner.js:1362,1434,1447; raceStep.js._
 - **The field is not spreading evenly — it is a tight bunch with one or two cars broken off the front.**
   The typical gap between neighbours is about **one-tenth of a car length**; only ~1–2 gaps out of 39 are
   wide. The dead race you watched was a lone leader **seventeen car-lengths** up the road from a packed
@@ -147,17 +147,17 @@ C3 satisfied for free).
 **Three channels, in strict order of preference (owner's decision D2):**
 
 1. **Re-roll bias — the primary mechanism.** At each re-roll the draw is
-   `spreadFactor + U(−halfWidth, +halfWidth)` (halfWidth = 0.75·spreadRange, index.jsx:931,1083), eased to
-   the new value over `reRollTransitionDuration` (defaults.js; index.jsx:623,1109-1122), then
+   `spreadFactor + U(−halfWidth, +halfWidth)` (halfWidth = 0.75·spreadRange, raceCore.js:477,642), eased to
+   the new value over `reRollTransitionDuration` (defaults.js; raceCore.js:202,680-686), then
    clamped to `[spreadMin, spreadMax]` (±8.1 %). **Symmetric bias (D3) — per the NORMATIVE DIRECTION table
    in §0:** a car whose gap **to the racer behind** > G (it has opened a hole behind itself) tilts the draw
    **down** (slower); in symmetric mode a car whose gap **to the racer ahead** > G (it has been dropped)
    tilts it **up** (faster) — always inside the honest band. This is the
-   generalisation of the existing `computePulkBiasedTarget` (racePlanner.js:615) from `slice(0,3)`/PULK
-   (racePlanner.js:208) to the whole pack, whole race, with a dead zone. _Continuous, invisible, no new
+   generalisation of the existing `computePulkBiasedTarget` (racePlanner.js:1567) from `slice(0,3)`/PULK
+   (racePlanner.js:221-235) to the whole pack, whole race, with a dead zone. _Continuous, invisible, no new
    force._
 2. **Early re-draw — when the interval is too slow (S3/S7).** A band-edge car drifts **2.4–4.4 lengths per
-   9.5 s interval** (0.081 × 3.1–5.7 L/s × 9.5 s; rollInterval verified index.jsx:535-540, defaults.js:260-261).
+   9.5 s interval** (0.081 × 3.1–5.7 L/s × 9.5 s; rollInterval verified raceCore.js:158-163, defaults.js:1034-1035).
    That exceeds a 3 L cap between draws. Fix: a car over the cap re-draws **early** (biased down), so the
    response is ~3 s (the eased transition, verified) and the overshoot falls to ~0.8–1.4 lengths. Still the
    dice — no new force. The code already sets `spreadFactorTarget` + `transitionStartTime` + `nextRollTime`;
@@ -165,15 +165,15 @@ C3 satisfied for free).
    answers:**
    - **Everything it depends on is a LIVE, owner-tunable DevScreen control — read it live, never a literal
      and never a race-start snapshot** (this is the `corridorStart 0.55` lesson: a loose timing constant
-     survived for months). All four shaping knobs are editable in `DynamicsTuningSection.jsx:108-111`
+     survived for months). All four shaping knobs are editable in `DynamicsTuningSection.jsx:158-161`
      (`reRollIntervalDivisor`, `reRollLastPositionPercent`, `reRollTransitionDuration`,
-     `reRollVariationPercent`; e.g. transition editable 0.5–10 s, :444-447). State the behaviour **as a
+     `reRollVariationPercent`; e.g. transition editable 0.5–10 s, :592-595). State the behaviour **as a
      function of the knobs**: the achievable overshoot above the cap ≈ **bandEdge × lengthsPerSecond ×
      `reRollTransitionDuration`** — it scales with a slider the owner can move. **Double the transition
      duration and the cap holds twice as loosely.** _Verified: the four controls are live (DynamicsTuningSection);
      interval/overshoot arithmetic re-derived at source._
    - **(a) An early re-draw is ADDITIONAL, not a consume.** Firing the block early resets
-     `nextRollTime = raceTs + rollInterval + jOff` (sim-fairness.mjs:1086; index.jsx:1086), so a chronic
+     `nextRollTime = raceTs + rollInterval + jOff` (raceCore.js:678), so a chronic
      offender receives **more total draws than the field**. _Verified._ Fairness argument: the endpoint is
      still owned by the servo (band-reach), and _which_ car breaks away is transient and uncorrelated with
      start-row or identity over many races, so the extra draws are symmetric at the endpoint — **but this
@@ -240,7 +240,7 @@ different quantities, different timescales (servo per-frame, bias per-draw). A l
 rank 1 while P2 closes is exactly the win; they meet only when a rank actually flips — the race we want.
 
 **But the hierarchy is load-bearing (S5, verified):** the servo clamp is `[0.85, 1.10]`
-(racePlanner.js:74-75) — **more speed authority (−15 %/+10 %) than the ±8.1 % re-roll band.** Therefore:
+(racePlanner.js:102-103) — **more speed authority (−15 %/+10 %) than the ±8.1 % re-roll band.** Therefore:
 
 - A gap the servo **actively drives** (a hero curve boosting a car toward the front at +10 %) **cannot be
   policed by the dice** — the re-roll is the weaker actuator. Only _drift_ gaps can (a rank-1 leader gets
@@ -255,8 +255,8 @@ pushes it up. Rare ⇒ harmless. Constant ⇒ the servo must yield at the front,
 
 ## 8. Interaction with the heroes — NO exemption (D4/S4; corrects the earlier draft)
 
-Heroes are cast from the B1 pool (`finalRanks.get(p.index) <= BAND_EDGES[0]`, heroCurveGenerator.js:407-408);
-the winner sits at cluster rank 2 and rank 1 is left to the run-out (:378-382). **So the front band IS
+Heroes are cast from the B1 pool (`finalRanks.get(p.index) <= BAND_EDGES[0]`, heroCurveGenerator.js:673-674);
+the winner sits at cluster rank 2 and rank 1 is left to the run-out (:645-648). **So the front band IS
 heroes**, and the 17-length chasm is leader→P2 — _between two front-cluster heroes_. An earlier draft
 exempted heroes from the reference; that would make the **motivating failure invisible**. **Withdrawn.**
 
@@ -301,7 +301,7 @@ CONCEPT. Do not keep tuning."_
   resurrect the removed reactive director as a spreader; **NOT** a single-gap rip-closer; **NOT** band-strictness
   as a spreader.
 - **DELETE / SUBSUME** once validated: `pulkRacerIds = shuffled.slice(0,3)` and the pool selection
-  (racePlanner.js:208); the **PULK-phase gate inside `computePulkBiasedTarget`** (racePlanner.js:615, the
+  (racePlanner.js:235); the **PULK-phase gate inside `computePulkBiasedTarget`** (racePlanner.js:1595, the
   `getPhase(...) !== 'PULK'` early return) — it becomes the general mechanism; **`pulkBiasGain` as a
   separate control** — folded into the one bias-strength trim (D5).
 - **LEAVE ALONE:** the lateral layer; the servo's rank job; the hero curves' authorship (add an

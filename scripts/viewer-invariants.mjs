@@ -2,7 +2,9 @@
 // File:        scripts/viewer-invariants.mjs
 // Project:     RaceArena — VIEWER-INVARIANTS-1
 //
-// THE FIVE SENTENCES, CHECKED IN A REAL BROWSER ON THE PRODUCTION BUILD, REPORTED AS EVENTS.
+// THE VIEWER SENTENCES (five when this was written, six since invariant 6 — the run-in leader in
+// the inner frame — was added), CHECKED IN A REAL BROWSER ON THE PRODUCTION BUILD, REPORTED AS
+// EVENTS.
 //
 // ── WHY THE BROWSER, AND WHY THIS FILE EXISTS AT ALL ──────────────────────────────────────────
 //
@@ -459,7 +461,6 @@ async function runOne(page, geo, seed, arm, N) {
       if (sabOld.line) sessionStorage.setItem("_ra_viewersabline", "1");
       if (sabOld.panstep) sessionStorage.setItem("_ra_viewersabpanstep", "1");
       if (sabOld.toowide) sessionStorage.setItem("_ra_viewersabtoowide", "1");
-      // eslint-disable-next-line no-eval
       (0, eval)(clock);
     },
     {

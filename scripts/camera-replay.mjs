@@ -198,9 +198,8 @@ function buildRace(marker, world, geometry) {
   // ── RACE-PARAMS-2: THE TRANSCRIPTION IS GONE ───────────────────────────────────────────────────
   //
   // Everything between here and `createRaceFromIdentity` used to be this file's own copy of
-  // `RaceScreen/index.jsx`'s derivation, and the block above still says so — "RaceScreen's own
-  // derivation, transcribed". It is now the same function the browser calls, so the two cannot
-  // drift. The override question is answered from the MARKER's recorded config rather than from
+  // `RaceScreen/index.jsx`'s derivation ("RaceScreen's own derivation, transcribed", as the block
+  // above once said). It is now the same function the browser calls, so the two cannot drift. The override question is answered from the MARKER's recorded config rather than from
   // storage, which is this script's whole job and is why it is a parameter.
   const { displaySizeScale: _displaySizeScale, ...raceCoreParams } = buildRaceCoreParams({
     shape,
@@ -232,8 +231,10 @@ function buildRace(marker, world, geometry) {
 
   const built = createRaceFromIdentity(raceCoreParams);
 
-  // Names are render-only in the browser (coats/labels hash the name; the physics stream never
-  // reads it), so attaching them here changes nothing and makes the output readable.
+  // Names are NOT render-only: raceBehavior.js `stablePairBit` hashes `r.name` to pick a passing
+  // side, so the roster is a physics input. They are attached here after init, as RaceScreen
+  // attaches its roster, so a marker that recorded its names replays the browser's race; a marker
+  // without names races `#i`, which is a different race from the browser's.
   const names = race.names ?? null;
   built.state.racers.forEach((r, i) => {
     r.name = names?.[i] ?? `#${i}`;

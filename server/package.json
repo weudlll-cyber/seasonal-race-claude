@@ -15,8 +15,8 @@
     "dev:once": "node scripts/dev-start.js",
     "restart": "node scripts/restart-dev.js",
     "test": "vitest run",
-    "lint": "node ../client/node_modules/eslint/bin/eslint.js src",
-    "lint:fix": "node ../client/node_modules/eslint/bin/eslint.js src --fix",
+    "lint": "node ../client/node_modules/eslint/bin/eslint.js src utils",
+    "lint:fix": "node ../client/node_modules/eslint/bin/eslint.js src utils --fix",
     "format": "node ../client/node_modules/prettier/bin/prettier.cjs --config ../client/.prettierrc --write src",
     "format:check": "node ../client/node_modules/prettier/bin/prettier.cjs --config ../client/.prettierrc --check src"
   },

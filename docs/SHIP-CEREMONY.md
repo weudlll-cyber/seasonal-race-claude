@@ -88,9 +88,10 @@ stays silent on files that can, in both directions at once, and it never looked 
   DRIVERS import. **It will now tell you.**
 - **Which fingerprint, if any, can actually SEE the change.** The tripwire answers "can this change a
   race", and that is not the same question as "will a hash move". A hull file can change a race and
-  move no fingerprint: `scripts/sim-fairness.mjs:1120` carries its own `Math.min(285, …)` copy of
-  `raceParams.js`'s `W_REF_MAX`, so the world fingerprint is blind to the file that decides every
-  start position. **A green fingerprint is not a clearance for a hull file the instrument does not
+  move no fingerprint. The example this used to give is closed: `scripts/sim-fairness.mjs` carried
+  its own `Math.min(285, …)` copy of `raceParams.js`'s `W_REF_MAX`, so the world fingerprint was blind
+  to the file that decides every start position, until W-REF-ONE-HOME-1 made it import the constant
+  (`scripts/sim-fairness.mjs:85-91`). **A green fingerprint is not a clearance for a hull file the instrument does not
   read.** See HULL-FIX-1 for which ones those are.
 - **Dynamic imports whose specifier is not a literal.** A static walk follows
   `import(u("client/src/modules/raceCore.js"))` — that is how every instrument reaches the engine —
@@ -768,8 +769,8 @@ went missing).
       > The old sentence had it exactly the wrong way round, and the conclusion drawn from it — that
       > extra races are cheap at the margin — does not follow from the fixed cost at all.
       >
-      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:814`
-      > runs races **six at a time** by default, and `:877` starts that many workers. Two races
+      > **WHAT MAKES EXTRA TRACKS CHEAP IS CONCURRENCY, NOT SETUP.** `viewer-invariants.mjs:849`
+      > runs races **six at a time** by default, and `:912` starts that many workers. Two races
       > therefore overlap: on the measured run one finished at 209.2 s and the other at 262.6 s, and
       > the run's wall clock is the SLOWER of them, not their sum.
       >

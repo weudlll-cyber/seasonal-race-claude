@@ -14,7 +14,7 @@ import { _setTestAidsForTests } from './modules/testAids.js';
 
 // The screens are stand-ins — this is about which one the route reaches.
 vi.mock('./screens/SetupScreen/SetupScreen.jsx', () => ({ default: () => <p>setup screen</p> }));
-vi.mock('./screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx', () => ({
+vi.mock('./screens/DistributionDiagnostics/DistributionDiagnostics.jsx', () => ({
   default: () => <p>distribution page</p>,
 }));
 vi.mock('./screens/DevScreen/DevScreen.jsx', () => ({ default: () => null }));

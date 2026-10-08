@@ -29,7 +29,9 @@
 // see DIVERGENCE-AUDIT.md §2f). Use browserArm==simArm for the derivation guard; use realArm to see the
 // real browser↔sim residual.
 //
-// Imported by client/src/modules/parity/goldenEquality.test.js and scripts/parity/soak.mjs.
+// Imported by the golden tests in client/src/modules/parity/ (goldenEquality, goldenRealArm,
+// goldenNegative, goldenCoverage, planConfigMirror) and by scripts/parity/soak.mjs,
+// scripts/parity/replay.mjs, scripts/golden/goldenRace.mjs and scripts/diag/outcome-parity.mjs.
 // ============================================================
 
 import { readFileSync } from "fs";
@@ -231,7 +233,12 @@ export function loadTrack(trackId) {
   return ctx;
 }
 
-/** A deterministic roster of N names — the browser's Quick-Test fill, in order. */
+/**
+ * A deterministic roster of N names — the browser's Quick-Test fill for the DEFAULT set, in order,
+ * as far as `QUICK_TEST_NAMES` reaches. Past its end the browser continues from the other lists
+ * (`fillRosterFor` in racerNames.js) while this falls back to `Racer${i}`, which is a different race
+ * (a racer's name is physics).
+ */
 export function rosterOf(n) {
   return Array.from({ length: n }, (_, i) => ({
     name: QUICK_TEST_NAMES[i] ?? `Racer${i}`,

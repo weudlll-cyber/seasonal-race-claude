@@ -65,14 +65,16 @@
 //                  ELIGIBILITY — so a subject still crossing the entry margin was refused a label
 //                  and never reached the rule that says he must have one. Exempt racers are now held
 //                  to the incumbent's margin instead. See the eligibility loop.
-//                • AT THE PHOTO FINISH every labelled racer carries its name. His reasoning is the
-//                  design: at that zoom everything stays recognisable even when labels overlap, so
-//                  overlap is ACCEPTABLE there and is not a defect.
+//                • AT THE CLOSING SHOT every labelled racer carries its name (`exemptAll`). It was
+//                  keyed to the PHOTO_FINISH state and removed (LABEL-OVERLAP-FIX-1); RUNIN-NAMES-1
+//                  restored it on the run-in's arrival latch instead (renderRaceFrame.js). His
+//                  reasoning is the design: at that zoom everything stays recognisable even when
+//                  labels overlap, so overlap is ACCEPTABLE there and is not a defect.
 //              An exempt name is drawn whatever it covers and whatever the hold says, and its box
 //              still enters `claimed`, so everyone decided after it avoids it.
 //
-//              THE HOLD GOVERNS PROMOTION ONLY (LABEL-OCCLUSION-2). A name is EARNED by two seconds
-//              of clear geometry and GIVEN UP the instant it stops being clear: this module refuses
+//              THE HOLD GOVERNS PROMOTION ONLY (LABEL-OCCLUSION-2). A name is EARNED by the
+//              `labelFormHoldMs` hold of clear geometry and GIVEN UP the instant it stops being clear: this module refuses
 //              to draw a name that is not clear in the frame being drawn, whatever the hold says. A
 //              symmetric hold kept a name over a racer for up to a full window after that racer
 //              arrived underneath — 592 and 1006 drawn overlaps per race — which is the defect the
@@ -234,11 +236,11 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  *        LABEL-OCCLUSION-2 draws the name only if it is ALSO clear in this frame.
  * @param {Set<number>|null} [p.exempt]  LABEL-FOCUS-1: racer indices whose name is drawn regardless
  *        of the criterion and of the hold — the racer the camera is on.
- * @param {boolean} [p.exemptAll=false]  the same for EVERY labelled racer. NO SHIPPED CALLER SETS
- *        IT any more (LABEL-OVERLAP-FIX-1): it was the photo finish's, on the reading that at that
- *        zoom overlap is acceptable, and the measurement refuted the premise — that shot is now the
- *        WIDEST of the race. The parameter is kept because the layout should still be able to say
- *        what "exempt everyone" means, and `nameTagLayout.test.js` pins both arms of it.
+ * @param {boolean} [p.exemptAll=false]  the same for EVERY labelled racer. It was the photo
+ *        finish's, keyed to that STATE, until LABEL-OVERLAP-FIX-1 removed it (that shot had become
+ *        the WIDEST of the race). RUNIN-NAMES-1 brought it back with a width trigger: renderRaceFrame.js
+ *        sets it from the run-in's arrival latch (`namesFromArrival`). `nameTagLayout.test.js` pins
+ *        both arms of it.
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
  * @param {number} [p.yieldOverlapFrac=0]  how much of its own box an incumbent tolerates before yielding
  * @param {boolean} [p.showAll=false]  the START-FORMATION exception: label everyone, no decluttering
@@ -538,8 +540,8 @@ export function computeTagLayout({
     // ── A NAME IS NEVER DRAWN UNLESS IT IS CLEAR IN THIS FRAME (LABEL-OCCLUSION-2) ─────────────
     //
     // TWO CONDITIONS, AND THEY GOVERN OPPOSITE DIRECTIONS. `wideForms` is what `labelFormHold`
-    // settled from earlier frames — it says the name has been EARNED, and earning takes two seconds
-    // of clear geometry. `nameClear` is this frame's geometry — it says the name is STILL clear, and
+    // settled from earlier frames — it says the name has been EARNED, and earning takes the
+    // `labelFormHoldMs` hold of clear geometry. `nameClear` is this frame's geometry — it says the name is STILL clear, and
     // it is checked with no window at all.
     //
     // WHY THE HOLD MAY NOT GOVERN THE WITHDRAWAL. A symmetric hold keeps a name over a racer for up

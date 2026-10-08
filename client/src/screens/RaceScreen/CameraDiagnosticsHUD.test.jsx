@@ -167,7 +167,7 @@ describe('CameraDiagnosticsHUD — undefined-safety (toFixed regression)', () =>
   });
 
   it('does not crash when leaderSnapshots contain entries missing dispX (removed in cleanup)', () => {
-    // The _display* cleanup (Etappe 27) removed dispX from snapshot pushes.
+    // The _display* cleanup (Stage 27) removed dispX from snapshot pushes.
     // This test ensures the HUD does not crash on snapshots without dispX.
     const leaderDiagRef = {
       current: {

@@ -1,6 +1,12 @@
-// Dev-Launcher: sets local default env so the server is reachable from the Vite client
-// (localhost:5173) without setting variables per shell. Never overwrites already-set values.
-// DEV ONLY — production uses `npm start` and MUST set its own secrets.
+// ============================================================
+// File:        dev-start.js
+// Path:        server/scripts/dev-start.js
+// Project:     RaceArena
+// Description: Dev launcher: sets local default env so the server is reachable from the Vite
+//              client (localhost:5173) without setting variables per shell. Never overwrites
+//              already-set values. DEV ONLY — production uses `npm start` and MUST set its own
+//              secrets.
+// ============================================================
 import { readBuildInfo } from '../../client/vite-plugin-ra-build.js';
 
 process.env.RA_CLIENT_ORIGIN ??= 'http://localhost:5173';
