@@ -87,6 +87,9 @@ server needs no other software.
 ★ **Copy the backups off the server too** — to another machine, or to storage you rent. A backup on the
 same disk is lost together with the disk.
 
+**Running the server day to day** — health, backups, updates, accounts, security, what to do when
+something goes wrong — is in the [operator guide](OPERATOR-GUIDE.md).
+
 ## If it stops
 
 - **"does not point at this server yet"** — set the A record as the message says, wait, and run the
