@@ -101,7 +101,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -171,7 +171,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: server/package-lock.json
 
@@ -248,7 +248,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 20
+          node-version: 24
 
       # THE ONE DEPENDENCY THIS JOB HAS, and it is here rather than assumed (FP-PAYLOAD-1).
       # Every guard below was deliberately built with relative imports only, so this job needed no

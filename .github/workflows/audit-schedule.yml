@@ -85,7 +85,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 20
+          node-version: 24
 
       # `npm audit` reads the lockfile, but it is run here after a real install for one reason: this
       # job must produce the SAME verdict as the CI gate, and the CI gate audits an installed tree.

@@ -19,12 +19,16 @@
 # died with six UNRESOLVED_IMPORT errors. Found by running it, not by reading it.
 # So `client/` goes to /build/client and `shared/` to /build/shared, exactly as they sit in the
 # repository, and the relative specifiers resolve unchanged.
-# ★ BASE IMAGE PINNED BY DIGEST (TIDY-C-1, ordered by the owner 2026-10-02). Tag `node:20-alpine`,
-# multi-arch index digest sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293, read from the registry on 2026-10-02
-# (`docker buildx imagetools inspect node:20-alpine`). Both stages use the same digest. A rebuild is
-# now reproducible, and Alpine/Node patches no longer arrive on their own: a BUMP IS MANUAL — re-read
-# the digest of the tag the same way and replace it on both `FROM` lines. Nothing watches it for you.
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS client-build
+# ★ BASE IMAGE PINNED BY DIGEST (TIDY-C-1, ordered by the owner 2026-10-02). Tag `node:24-alpine`,
+# multi-arch index digest sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1, read from the registry on 2026-10-09
+# (`docker buildx imagetools inspect node:24-alpine`; built 2026-09-17 on alpine 3.24). Both stages use
+# the same digest. A rebuild is reproducible, and Alpine/Node patches no longer arrive on their own:
+# a BUMP IS MANUAL — re-read the digest of the tag the same way and replace it on both `FROM` lines.
+# Nothing watches it for you.
+# ★ NODE 24, NOT 20 (AUDIT-1 A7, 2026-10-09): Node 20 reached end of life on 2026-04-30 and gets no
+# security fixes. 24 is the active LTS, and it is the version every suite and fingerprint check in
+# this repository already runs on locally. The first pin was `node:20-alpine@sha256:fb4cd12c…`.
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS client-build
 WORKDIR /build/client
 # The manifest and lockfile FIRST, as their own layer: dependencies change far less often than
 # source, so an edit to a component reuses the install layer instead of repeating it.
@@ -36,7 +40,7 @@ RUN npm run build
 
 # ── STAGE 2: THE RUNTIME IMAGE ─────────────────────────────────────────────────────────────────
 # Same pinned digest as stage 1 — see the note above the first `FROM` (TIDY-C-1).
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
 
 WORKDIR /app
 
@@ -206,7 +210,7 @@ EXPOSE 4000
 # route `scripts/check-image-starts.mjs` uses to decide the image booted, so the container and that
 # check agree about what "alive" means by construction.
 #
-# `node -e` rather than curl or wget, because this is a `node:20-alpine` image and neither is
+# `node -e` rather than curl or wget, because this is a `node:24-alpine` image and neither is
 # installed — a HEALTHCHECK that cannot run reports unhealthy forever, which is worse than none.
 # The port is read from the environment so it follows PORT rather than repeating 4000.
 #
