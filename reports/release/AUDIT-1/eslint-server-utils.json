@@ -1,0 +1,82 @@
+[
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\asyncRoute.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\atomicWriteJson.js",
+  "messages": [
+   {
+    "ruleId": "no-empty",
+    "severity": 2,
+    "message": "Empty block statement.",
+    "line": 16,
+    "column": 36,
+    "nodeType": "BlockStatement",
+    "messageId": "unexpected",
+    "endLine": 16,
+    "endColumn": 38,
+    "suggestions": [
+     {
+      "messageId": "suggestComment",
+      "data": {
+       "type": "block"
+      },
+      "fix": {
+       "range": [
+        790,
+        790
+       ],
+       "text": " /* empty */ "
+      },
+      "desc": "Add comment inside empty block statement."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\imageUpload.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\imageUpload.test.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\isSafeAssetFilename.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\isSafeAssetFilename.test.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\isValidId.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\jsonDirStore.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\jsonSettingStore.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\sweepOrphanTmp.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\sweepOrphanTmp.test.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\trackBackupRetention.js",
+  "messages": []
+ },
+ {
+  "filePath": "C:\\tmp\\a1\\server\\utils\\trackBackupRetention.test.js",
+  "messages": []
+ }
+]

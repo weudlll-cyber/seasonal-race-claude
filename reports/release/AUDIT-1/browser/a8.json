@@ -1,0 +1,137 @@
+{
+  "overflowX": {
+    "390 /login": false,
+    "390 /setup": true,
+    "390 /dev": false,
+    "390 /track-editor": false,
+    "768 /login": false,
+    "768 /setup": false,
+    "768 /dev": false,
+    "768 /track-editor": false,
+    "desktop /login": false,
+    "desktop /setup": false,
+    "desktop /dev": false,
+    "desktop /track-editor": false
+  },
+  "axe": {
+    "390 /login": [],
+    "390 /setup": [],
+    "390 /dev": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "nodes": 14,
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "sample": [
+          "._tierToggleBtnActive_1poek_126",
+          "button[data-testid=\"reset-speed-range\"]",
+          "button[data-testid=\"reset-drafting\"]"
+        ]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "nodes": 10,
+        "help": "Form elements must have labels",
+        "sample": [
+          "input[value=\"40\"]",
+          "input[value=\"100\"][max=\"100\"][step=\"1\"]",
+          "input[data-testid=\"normal-speed-input\"]"
+        ]
+      }
+    ],
+    "390 /track-editor": [
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "nodes": 2,
+        "help": "Select element must have an accessible name",
+        "sample": [
+          "select[data-testid=\"track-lights-style\"]",
+          "._loadSelect_qa18y_253"
+        ]
+      }
+    ],
+    "desktop /login": [],
+    "desktop /setup": [],
+    "desktop /dev": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "nodes": 19,
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "sample": [
+          "._tierToggleBtnActive_1poek_126",
+          "button[data-testid=\"reset-normal-speed\"]",
+          "button[data-testid=\"reset-speed-range\"]"
+        ]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "nodes": 10,
+        "help": "Form elements must have labels",
+        "sample": [
+          "input[value=\"40\"]",
+          "input[value=\"100\"][max=\"100\"][step=\"1\"]",
+          "input[data-testid=\"normal-speed-input\"]"
+        ]
+      }
+    ],
+    "desktop /track-editor": [
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "nodes": 2,
+        "help": "Select element must have an accessible name",
+        "sample": [
+          "select[data-testid=\"track-lights-style\"]",
+          "._loadSelect_qa18y_253"
+        ]
+      }
+    ]
+  },
+  "keyboardLogin": [
+    "input[text] \"Username\" focus-style=none/none",
+    "input[password] \"Password\" focus-style=none/none",
+    "body \"RaceArenaSign inUsernamePasswo\" focus-style=none/none",
+    "input[text] \"Username\" focus-style=none/none",
+    "input[password] \"Password\" focus-style=none/none",
+    "body \"RaceArenaSign inUsernamePasswo\" focus-style=none/none",
+    "input[text] \"Username\" focus-style=none/none",
+    "input[password] \"Password\" focus-style=none/none"
+  ],
+  "keyboardOnlySignIn": true,
+  "keyboardSetup": [
+    "select \"Active branding profile\"",
+    "a \"⚙️\"",
+    "button \"Players\"",
+    "button \"Track\"",
+    "button \"Settings\"",
+    "button \"+ Example Group5\"",
+    "input \"\"",
+    "body \"RaceArenaBranding: NoneSeasona\"",
+    "select \"Active branding profile\"",
+    "a \"⚙️\"",
+    "button \"Players\"",
+    "button \"Track\"",
+    "button \"Settings\"",
+    "button \"+ Example Group5\"",
+    "input \"\"",
+    "body \"RaceArenaBranding: NoneSeasona\"",
+    "select \"Active branding profile\"",
+    "a \"⚙️\"",
+    "button \"Players\"",
+    "button \"Track\"",
+    "button \"Settings\"",
+    "button \"+ Example Group5\"",
+    "input \"\"",
+    "body \"RaceArenaBranding: NoneSeasona\"",
+    "select \"Active branding profile\"",
+    "a \"⚙️\"",
+    "button \"Players\"",
+    "button \"Track\"",
+    "button \"Settings\"",
+    "button \"+ Example Group5\""
+  ]
+}

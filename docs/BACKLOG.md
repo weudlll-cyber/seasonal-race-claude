@@ -1793,6 +1793,117 @@ owner's hand**: parked here with enough context to be actionable months from now
 
 ---
 
+## AUDIT-1 — what the audit of 2026-10-09 leaves open
+
+★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
+for every row below. Its security fixes were merged as `980b13d4`; its safe cleanups land in
+`chore/audit-1-cleanup`. What remains here is what needs the owner's word, plus two pieces of test
+hygiene. **Ids are the report's; each row's evidence is in the report and its appendices.**
+
+### Security and access — his word
+
+- [ ] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one
+      proxy hop whenever `NODE_ENV=production`; on a source install with the port reachable directly,
+      `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
+      explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
+      logins against a directly exposed production-mode install — refused only after the fix)*
+- [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
+      10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
+- [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
+      body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
+      *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
+- [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
+      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
+- [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
+      asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
+- [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
+      (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
+- [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
+      it is used by two sprite-generation scripts and never shipped. *(verify: `npm audit --prefix .`
+      reports 0 high)*
+- [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
+      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
+      is not `[]`)*
+- [ ] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md are all
+      absent.** *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
+- [ ] **AUDIT-1 A5T-08 · the "require SHA pinning" Actions setting is off**; every workflow pins
+      anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
+      `"sha_pinning_required": true`)*
+- [ ] **AUDIT-1 A6-06 · licensing note:** the project is AGPL-3.0-or-later and the session store
+      `better-sqlite3-session-store` is GPL-3.0-only; the combination is permitted, and the "-only"
+      pins the shipped image's combined work to version 3. *(verify: a decision — accept, or replace
+      the store)*
+
+### Robustness — his word
+
+- [ ] **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
+      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks the
+      event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
+      live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
+      <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
+- [ ] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in.** With `users.json` damaged the
+      server starts and `/api/health` answers ok. The VPS update and rollback read health, so what it
+      reports is a decision. *(verify: `a10-corrupt.mjs` — health is not ok with a damaged store)*
+- [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
+      database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
+      *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
+- [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
+      no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
+      rule with a test)*
+
+### Visible changes — his eye
+
+- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
+      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
+      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
+- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
+      *(verify: the same run reports 0 on `/track-editor`)*
+- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
+      reports no overflow at 390)*
+- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
+      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
+      counts for the three files are 0)*
+- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
+      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
+      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
+      *(verify: each text read against `defaults.js`)*
+- [ ] **AUDIT-1 A9-01 · one 1,007 KB JavaScript chunk** (295 KB gzipped). Code splitting changes how
+      the app loads. *(verify: `npm run build` prints no chunk over 500 KB)*
+
+### Records and decisions
+
+- [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
+      and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
+      the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
+- [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
+      (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
+      *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
+- [ ] **AUDIT-1 A3-22 · CLAUDE.md's closing inventory** names two FINISH-PAIR-1 quotations in
+      `docs/fingerprints.json`, which carries none; CLAUDE.md forbids editing that list.
+      *(verify: a decision — annotate or leave)*
+- [ ] **AUDIT-1 A3-25 · OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and resume",
+      "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE row)*
+- [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
+      SHA. *(verify: a decision)*
+- [ ] **AUDIT-1 A7-02 · the source-install floor still says Node 20**, which ended 2026-04-30; the image
+      and CI run 24 since `c2530f29`. *(verify: `engines` reads `>=22` in all three manifests)*
+- [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
+      better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
+      package)*
+- [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
+      covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
+
+### Test hygiene (no decision needed; not urgent)
+
+- [ ] **AUDIT-1 A4-02 · two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit** and
+      time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
+      run with a parallel `docker build`)*
+- [ ] **AUDIT-1 A4-03 · seven tests read source files relative to the working directory** and fail
+      unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
+      passes)*
+
+---
+
 # PART TWO — CLOSED
 
 **Nothing here is deleted** — that is the owner's decision of 2026-08-23 (D4 below). Every item

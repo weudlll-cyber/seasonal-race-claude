@@ -1,0 +1,58 @@
+{
+  "@vitest/coverage-v8": {
+    "current": "4.1.8",
+    "wanted": "4.1.11",
+    "latest": "5.0.3",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\@vitest\\coverage-v8"
+  },
+  "better-sqlite3": {
+    "current": "12.10.0",
+    "wanted": "12.11.1",
+    "latest": "13.0.3",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\better-sqlite3"
+  },
+  "express": {
+    "current": "4.22.2",
+    "wanted": "4.22.3",
+    "latest": "5.2.1",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\express"
+  },
+  "express-rate-limit": {
+    "current": "8.5.2",
+    "wanted": "8.7.1",
+    "latest": "8.7.1",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\express-rate-limit"
+  },
+  "helmet": {
+    "current": "8.2.0",
+    "wanted": "8.3.0",
+    "latest": "8.3.0",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\helmet"
+  },
+  "multer": {
+    "current": "2.3.0",
+    "wanted": "2.4.0",
+    "latest": "2.4.0",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\multer"
+  },
+  "supertest": {
+    "current": "7.2.2",
+    "wanted": "7.3.1",
+    "latest": "7.3.1",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\supertest"
+  },
+  "vitest": {
+    "current": "4.1.8",
+    "wanted": "4.1.11",
+    "latest": "5.0.3",
+    "dependent": "server",
+    "location": "C:\\tmp\\a1\\server\\node_modules\\vitest"
+  }
+}

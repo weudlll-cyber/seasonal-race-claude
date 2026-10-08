@@ -1,0 +1,20 @@
+{
+  "navigateWhileDown": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4611/setup",
+  "serverDown": {
+    "url": "http://127.0.0.1:4611/setup"
+  },
+  "afterRestart": {
+    "url": "http://127.0.0.1:4611/setup",
+    "stillSignedIn": true
+  },
+  "offlineReload": "page.reload: net::ERR_INTERNET_DISCONNECTED",
+  "backOnline": {
+    "url": "http://127.0.0.1:4611/dev",
+    "text": "⚙️ Dev Panel Configuration View: All Operator i 🏁 The race 🎥 Camera — start to ending 🎨 Look, labels and effects 🗺️ "
+  },
+  "twoTabs": {
+    "logoutStatus": 200,
+    "otherTabUrl": "http://127.0.0.1:4611/login",
+    "otherTabSentToLogin": true
+  }
+}
