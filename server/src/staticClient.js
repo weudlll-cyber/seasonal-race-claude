@@ -50,6 +50,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectRuntimeConfig, resolvePublicOrigin } from './runtimeConfig.js';
+import { isApiPath } from '../utils/apiPath.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -136,7 +137,8 @@ export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
   const injectedHtml = injectRuntimeConfig(readFileSync(indexFile, 'utf8'), publicOrigin);
   app.use((req, res, next) => {
     // THE API IS NEVER ANSWERED WITH THE APP. This is the whole guard, and it is first.
-    if (req.path === '/api' || req.path.startsWith(API_PREFIX)) return next();
+    // In ANY letter case, as Express routes it (AUDIT-1 A5M-01, server/utils/apiPath.js).
+    if (isApiPath(req.path)) return next();
     // Only navigations. A failed POST or a missing asset must not come back as a page of HTML.
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     // A request that wants JSON is asking a machine question; answering it with a page is the same
