@@ -36,6 +36,7 @@ import {
 } from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { Info } from './ControlInfo.jsx';
+import { useTestAids } from '../../../modules/testAids.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { useSyncedConfig } from './useSyncedConfig.js';
 import { SubCard, SubHeading } from './SubCard.jsx';
@@ -79,6 +80,8 @@ const RACE_PLAN_TIMING_WARNING_STYLE = {
 };
 
 function DynamicsTuningSection({ part }) {
+  // TEST-AIDS-1: the gap re-roll marker (item 25) is locked while the test-aids switch is OFF.
+  const aids = useTestAids();
   // Each block through its own loader and saver, kept in step with every other mounted part of
   // this section (useSyncedConfig) — the chapters mount several at once.
   const [speedConfig, setSpeedConfig] = useSyncedConfig(
@@ -835,12 +838,20 @@ function DynamicsTuningSection({ part }) {
                       dynamicsConfig.gapRerollDevMarker ??
                       DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker
                     }
+                    disabled={!aids}
                     onChange={(e) => setDynamics('gapRerollDevMarker', e.target.checked)}
                     data-testid="gap-reroll-devmarker-toggle"
                   />
                   Gap-Reroll dev marker
                   <Info id="DynamicsTuningSection:gapRerollDevMarker" />
                 </label>
+                {!aids && (
+                  <p className={s.sectionDesc} data-testid="test-aids-off-reroll-marker">
+                    {
+                      'The test-aids switch is off, so this stays off in every race and cannot be switched on here. An admin turns it on at the top of Diagnostics and verification.'
+                    }
+                  </p>
+                )}
               </div>
             </div>
           </div>

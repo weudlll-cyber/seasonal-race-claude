@@ -473,7 +473,7 @@ function drawHudPills(
   const showRest = st.phase !== PHASE.COUNTDOWN;
   const rows = hudRightColumn(canvasW, canvasH, {
     racePlan: showRacePlan,
-    cfg: showRest,
+    cfg: showRest && !!cfgBadge,
     lap: showRest && !!lapText,
     build: showRest && !!buildBadge,
   });
@@ -502,7 +502,8 @@ function drawHudPills(
 
   // Row 2 - config-fingerprint badge. RED means "NOT apples-to-apples with a default-config sim
   // run" - RACE-relevant drift only. Cosmetic drift is reported quietly and never turns it red.
-  if (showRest) {
+  // Absent (null) when the caller does not show it - the test-aids switch OFF (TEST-AIDS-1).
+  if (showRest && cfgBadge) {
     const off = cfgBadge.raceCount > 0;
     const label =
       cfgBadge.raceCount === 0 && cfgBadge.cosmeticCount === 0

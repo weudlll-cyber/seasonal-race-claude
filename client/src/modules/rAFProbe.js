@@ -18,6 +18,8 @@
 //                   → Uint8Array-based raw data dump for offline analysis
 // ============================================================
 
+import { testAidsOn } from './testAids.js';
+
 const RING = 600; // ~10 s at 60 fps
 
 const _buf = new Float32Array(RING);
@@ -66,8 +68,11 @@ if (typeof window !== 'undefined') {
  */
 export function initProbe() {
   try {
+    // TEST-AIDS-1: a console-only probe — active only while the test-aids switch is ON.
     _active =
-      typeof sessionStorage !== 'undefined' && sessionStorage.getItem('_ra_perfprobe') === '1';
+      testAidsOn() &&
+      typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem('_ra_perfprobe') === '1';
   } catch {
     _active = false;
   }

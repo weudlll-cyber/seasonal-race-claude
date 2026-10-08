@@ -76,6 +76,8 @@ import {
   QUICK_TEST_SEED_MAX,
 } from './quickTestSeed.js';
 import { buildQuickTestRace } from './quickTestRace.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useTestAids } from '../../modules/testAids.js';
 import styles from './SetupScreen.module.css';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { fillRosterFor, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
@@ -88,6 +90,11 @@ const LAP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
 
 function SetupScreen() {
   const navigate = useNavigate();
+  // TEST-AIDS-1: the role is the SERVER's (`/api/auth/me`, through AuthContext) — the seed and
+  // identifier tools are admin-only, whatever the switch; Quick Test follows the switch.
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const aids = useTestAids();
   // RACE-IDENTIFIER-1: why the last identifier was refused. Shown beside the field, because a
   // refusal the operator cannot see is indistinguishable from a button that does nothing.
   const [identifierError, setIdentifierError] = useState(null);
@@ -121,7 +128,6 @@ function SetupScreen() {
   // Declared before the effect below, which is its first consumer.
   const [raceSettings, setRaceSettings] = useState({
     duration: raceDefaults.duration,
-    winners: raceDefaults.winners,
     eventName: '',
   });
 
@@ -699,7 +705,7 @@ function SetupScreen() {
    * RACE-IDENTIFIER-1 — start the race a string names, on this machine.
    *
    * Everything the payload needs comes from the decoded identifier. The fields that do NOT decide
-   * the race — the event name, the branding, how many winners the result screen lists — still come
+   * the race — the event name and the branding — still come
    * from this screen, because they are what this operator is showing tonight and reproducing a race
    * is not the same as reproducing somebody's poster.
    */
@@ -873,7 +879,6 @@ function SetupScreen() {
       eventName: raceSettings.eventName,
       subtitle: activeBrandProfile?.subtitle ?? '',
       sponsorText: activeBrandProfile?.sponsorText ?? '',
-      winners: raceSettings.winners,
       raceMode: decoded.targetDurationSec == null ? 'laps' : 'time',
       targetLaps: decoded.targetLaps,
       targetDurationSec: decoded.targetDurationSec,
@@ -975,7 +980,6 @@ function SetupScreen() {
       eventName: raceSettings.eventName,
       subtitle: activeBrandProfile?.subtitle ?? '',
       sponsorText: activeBrandProfile?.sponsorText ?? '',
-      winners: raceSettings.winners,
       raceMode: trackIsOpen ? 'time' : 'laps',
       // The two canonical operator inputs. Exactly one is meaningful per race mode; the engine
       // re-derives everything else from them, so no derived scalar travels in this payload as
@@ -1509,6 +1513,7 @@ function SetupScreen() {
               <RaceSettings
                 settings={raceSettings}
                 onChange={setRaceSettings}
+                seedTools={isAdmin}
                 seed={raceSeed}
                 onSeedChange={handleSeedChange}
                 typedShortKey={typedShortKey}
@@ -1611,227 +1616,239 @@ function SetupScreen() {
                 ·{' '}
                 <strong>{trackIsOpen ? effectiveOpenTrackDuration : raceSettings.duration}s</strong>
               </>
-            )}{' '}
-            · Top <strong>{raceSettings.winners}</strong>
+            )}
           </div>
           <div className={styles.startButtons}>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                alignItems: 'flex-start',
-              }}
-            >
-              {/* Track switcher for Quick Test */}
-              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {tracks.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setQuickTrackId(t.id)}
-                    title={t.name}
-                    style={{
-                      padding: '2px 7px',
-                      fontSize: '11px',
-                      border: `1px solid ${(quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : 'rgba(255,255,255,0.15)'}`,
-                      borderRadius: '4px',
-                      background:
-                        (quickTrack?.id ?? tracks[0]?.id) === t.id ? `${t.color}33` : 'transparent',
-                      color: (quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : '#aaa',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {getRacerType(t.defaultRacerTypeId ?? 'horse').getEmoji()} {t.name}
-                  </button>
-                ))}
-              </div>
-              {/* Racer selector for Quick Test — surface-compatible types only */}
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-                <label
-                  style={{
-                    fontSize: '11px',
-                    color: '#aaa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                >
-                  Racer:
-                  <select
-                    data-testid="quick-test-racer-select"
-                    value={
-                      quickCompatibleRacerTypeIds.includes(
-                        quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse'
-                      )
-                        ? (quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse')
-                        : (quickCompatibleRacerTypeIds[0] ?? 'horse')
-                    }
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setQuickTestRacerTypeId(
-                        val === (quickTrack?.defaultRacerTypeId ?? 'horse') ? null : val
-                      );
-                    }}
-                    style={{
-                      fontSize: '11px',
-                      padding: '1px 4px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '3px',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {quickCompatibleRacerTypeIds.map((id) => (
-                      <option key={id} value={id}>
-                        {getRacerType(id).getEmoji()} {getRacerTypeLabel(id)}
-                        {id === (quickTrack?.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {/* QUICKTEST-NAMES-1: the roster Quick Test fills empty slots from. A label box is
-                    as wide as the name inside it, so this is the control that sets the
-                    start-formation geometry — and because a racer's name is an engine input, it
-                    changes the RACE too, exactly as editing the roster would. Default = original. */}
-                <label
-                  style={{
-                    fontSize: '11px',
-                    color: '#aaa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                  title="Which roster fills empty Quick Test slots. Names are an engine input - changing this changes the race, not only the labels."
-                >
-                  Names:
-                  <select
-                    data-testid="quick-test-nameset-select"
-                    value={quickTestNameSet}
-                    onChange={(e) => setQuickTestNameSet(e.target.value)}
-                    style={{
-                      fontSize: '11px',
-                      padding: '1px 4px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '3px',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="current">current (default)</option>
-                    <option value="long">long</option>
-                    <option value="mixed">mixed</option>
-                  </select>
-                </label>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-                <label
-                  style={{
-                    fontSize: '11px',
-                    color: '#aaa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                >
-                  N:
-                  {/* QUICKTEST-CAP-1: the ceiling is the TRACK's, not a hardcoded 100. The clamp is
-                      the enforcing one — a browser treats `max` on a number input as advice when a
-                      value is typed — and it mirrors PlayerSetup's Add button, which has always
-                      stopped at the cap rather than accepting and then refusing. */}
-                  <input
-                    type="number"
-                    min={1}
-                    max={quickMaxPlayers}
-                    value={quickTestCount}
-                    onChange={(e) =>
-                      setQuickTestCount(
-                        Math.max(1, Math.min(quickMaxPlayers, Number(e.target.value) || 1))
-                      )
-                    }
-                    style={{
-                      width: '46px',
-                      fontSize: '11px',
-                      padding: '1px 4px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '3px',
-                      color: 'inherit',
-                      textAlign: 'right',
-                    }}
-                  />
-                </label>
-                <label
-                  style={{
-                    fontSize: '11px',
-                    color: '#aaa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                >
-                  Seed:
-                  {/* Text + numeric keypad rather than type="number": an empty field is a real,
-                      meaningful state here ("random"), and number inputs make emptiness awkward. */}
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="random"
-                    title={`Leave empty for a fresh random seed each race (shown in the race HUD, so you can replay it). Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to fix the race.`}
-                    value={quickTestSeed}
-                    onChange={(e) => setQuickTestSeed(sanitizeQuickTestSeedInput(e.target.value))}
-                    style={{
-                      width: '52px',
-                      fontSize: '11px',
-                      padding: '1px 4px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '3px',
-                      color: 'inherit',
-                      textAlign: 'right',
-                    }}
-                  />
-                </label>
-              </div>
-              {/* QUICKTEST-CAP-1: the HARD cap, said where the Quick Test button is, in the same
-                  warning treatment the Start button's refusal uses — numbers and the way out, never
-                  names. */}
-              {quickOverCap && (
-                <p role="alert" data-testid="quick-over-cap-refusal" className={styles.groupNotice}>
-                  <span aria-hidden="true">⚠️</span>
-                  <span>{quickOverCapMessage}</span>
-                </p>
-              )}
-              {quickShort && !quickOverCap && (
-                <p role="alert" data-testid="quick-short-refusal" className={styles.groupNotice}>
-                  <span aria-hidden="true">⚠️</span>
-                  <span>{quickShortMessage}</span>
-                </p>
-              )}
-              <button
-                className={styles.quickTestBtn}
-                onClick={handleQuickTest}
-                disabled={!quickGeometryReady || quickOverCap || quickShort || !!doubledMessage}
-                title={
-                  quickOverCap
-                    ? quickOverCapMessage
-                    : quickShort
-                      ? quickShortMessage
-                      : doubledMessage
-                        ? doubledMessage
-                        : quickGeometryReady
-                          ? `Auto-fill to ${quickTestCount} test players and start race`
-                          : quickTrack?.geometryId
-                            ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
-                              'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
-                            : 'Draw a track in the Track Editor first'
-                }
+            {/* TEST-AIDS-1, item 9: Quick Test is a test aid — shown only while the switch is ON. */}
+            {aids && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  alignItems: 'flex-start',
+                }}
               >
-                ⚡ Quick Test ({quickTestCount})
-              </button>
-            </div>
+                {/* Track switcher for Quick Test */}
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {tracks.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setQuickTrackId(t.id)}
+                      title={t.name}
+                      style={{
+                        padding: '2px 7px',
+                        fontSize: '11px',
+                        border: `1px solid ${(quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : 'rgba(255,255,255,0.15)'}`,
+                        borderRadius: '4px',
+                        background:
+                          (quickTrack?.id ?? tracks[0]?.id) === t.id
+                            ? `${t.color}33`
+                            : 'transparent',
+                        color: (quickTrack?.id ?? tracks[0]?.id) === t.id ? t.color : '#aaa',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {getRacerType(t.defaultRacerTypeId ?? 'horse').getEmoji()} {t.name}
+                    </button>
+                  ))}
+                </div>
+                {/* Racer selector for Quick Test — surface-compatible types only */}
+                <div
+                  style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}
+                >
+                  <label
+                    style={{
+                      fontSize: '11px',
+                      color: '#aaa',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    Racer:
+                    <select
+                      data-testid="quick-test-racer-select"
+                      value={
+                        quickCompatibleRacerTypeIds.includes(
+                          quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse'
+                        )
+                          ? (quickTestRacerTypeId ?? quickTrack?.defaultRacerTypeId ?? 'horse')
+                          : (quickCompatibleRacerTypeIds[0] ?? 'horse')
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setQuickTestRacerTypeId(
+                          val === (quickTrack?.defaultRacerTypeId ?? 'horse') ? null : val
+                        );
+                      }}
+                      style={{
+                        fontSize: '11px',
+                        padding: '1px 4px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '3px',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {quickCompatibleRacerTypeIds.map((id) => (
+                        <option key={id} value={id}>
+                          {getRacerType(id).getEmoji()} {getRacerTypeLabel(id)}
+                          {id === (quickTrack?.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {/* QUICKTEST-NAMES-1: the roster Quick Test fills empty slots from. A label box is
+                      as wide as the name inside it, so this is the control that sets the
+                      start-formation geometry — and because a racer's name is an engine input, it
+                      changes the RACE too, exactly as editing the roster would. Default = original. */}
+                  <label
+                    style={{
+                      fontSize: '11px',
+                      color: '#aaa',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                    title="Which roster fills empty Quick Test slots. Names are an engine input - changing this changes the race, not only the labels."
+                  >
+                    Names:
+                    <select
+                      data-testid="quick-test-nameset-select"
+                      value={quickTestNameSet}
+                      onChange={(e) => setQuickTestNameSet(e.target.value)}
+                      style={{
+                        fontSize: '11px',
+                        padding: '1px 4px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '3px',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="current">current (default)</option>
+                      <option value="long">long</option>
+                      <option value="mixed">mixed</option>
+                    </select>
+                  </label>
+                </div>
+                <div
+                  style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}
+                >
+                  <label
+                    style={{
+                      fontSize: '11px',
+                      color: '#aaa',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    N:
+                    {/* QUICKTEST-CAP-1: the ceiling is the TRACK's, not a hardcoded 100. The clamp is
+                        the enforcing one — a browser treats `max` on a number input as advice when a
+                        value is typed — and it mirrors PlayerSetup's Add button, which has always
+                        stopped at the cap rather than accepting and then refusing. */}
+                    <input
+                      type="number"
+                      min={1}
+                      max={quickMaxPlayers}
+                      value={quickTestCount}
+                      onChange={(e) =>
+                        setQuickTestCount(
+                          Math.max(1, Math.min(quickMaxPlayers, Number(e.target.value) || 1))
+                        )
+                      }
+                      style={{
+                        width: '46px',
+                        fontSize: '11px',
+                        padding: '1px 4px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '3px',
+                        color: 'inherit',
+                        textAlign: 'right',
+                      }}
+                    />
+                  </label>
+                  <label
+                    style={{
+                      fontSize: '11px',
+                      color: '#aaa',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    Seed:
+                    {/* Text + numeric keypad rather than type="number": an empty field is a real,
+                        meaningful state here ("random"), and number inputs make emptiness awkward. */}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="random"
+                      title={`Leave empty for a fresh random seed each race (shown in the race HUD, so you can replay it). Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to fix the race.`}
+                      value={quickTestSeed}
+                      onChange={(e) => setQuickTestSeed(sanitizeQuickTestSeedInput(e.target.value))}
+                      style={{
+                        width: '52px',
+                        fontSize: '11px',
+                        padding: '1px 4px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '3px',
+                        color: 'inherit',
+                        textAlign: 'right',
+                      }}
+                    />
+                  </label>
+                </div>
+                {/* QUICKTEST-CAP-1: the HARD cap, said where the Quick Test button is, in the same
+                    warning treatment the Start button's refusal uses — numbers and the way out, never
+                    names. */}
+                {quickOverCap && (
+                  <p
+                    role="alert"
+                    data-testid="quick-over-cap-refusal"
+                    className={styles.groupNotice}
+                  >
+                    <span aria-hidden="true">⚠️</span>
+                    <span>{quickOverCapMessage}</span>
+                  </p>
+                )}
+                {quickShort && !quickOverCap && (
+                  <p role="alert" data-testid="quick-short-refusal" className={styles.groupNotice}>
+                    <span aria-hidden="true">⚠️</span>
+                    <span>{quickShortMessage}</span>
+                  </p>
+                )}
+                <button
+                  className={styles.quickTestBtn}
+                  onClick={handleQuickTest}
+                  disabled={!quickGeometryReady || quickOverCap || quickShort || !!doubledMessage}
+                  title={
+                    quickOverCap
+                      ? quickOverCapMessage
+                      : quickShort
+                        ? quickShortMessage
+                        : doubledMessage
+                          ? doubledMessage
+                          : quickGeometryReady
+                            ? `Auto-fill to ${quickTestCount} test players and start race`
+                            : quickTrack?.geometryId
+                              ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
+                                'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                              : 'Draw a track in the Track Editor first'
+                  }
+                >
+                  ⚡ Quick Test ({quickTestCount})
+                </button>
+              </div>
+            )}
             <button
               className={styles.startBtn}
               data-testid="start-race"

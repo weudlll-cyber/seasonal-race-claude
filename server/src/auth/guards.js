@@ -77,6 +77,14 @@ const ROUTE_POLICY = [
     role: 'admin',
     desc: 'period evaluation points rule — admin sets, everyone reads (PERIOD-EVALUATION-1)',
   },
+  // The test-aids switch is INSTALLATION-WIDE: every signed-in user reads it (every gate in the client
+  // does), only an admin sets it (the owner's decision of 2026-10-04, TEST-AIDS-1). GET stays operator+.
+  {
+    methods: ['PUT'],
+    test: (p) => /^\/api\/settings\/test-aids$/.test(p),
+    role: 'admin',
+    desc: 'the test-aids switch — admin sets, everyone reads (TEST-AIDS-1)',
+  },
 ];
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────

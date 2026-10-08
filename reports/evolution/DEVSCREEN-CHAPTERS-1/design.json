@@ -25,18 +25,6 @@
   },
   {
     "chapter": "The race",
-    "position": 3,
-    "subgroup": "Defaults for a new race",
-    "section": "sections/RaceDefaults.jsx",
-    "label": "Default Number of Winners (Podium Spots)",
-    "id": "winners",
-    "idKind": "configKey",
-    "tier": "operator",
-    "infoText": "How many top finishers the result screen celebrates as winners. Raise it and more places get a podium treatment; lower it and only the very front is honoured. Race Setup starts from this number and you can still change it per race.",
-    "textStatus": "REWRITTEN"
-  },
-  {
-    "chapter": "The race",
     "position": 4,
     "subgroup": "Defaults for a new race",
     "section": "sections/RaceDefaults.jsx",
@@ -2941,18 +2929,6 @@
   },
   {
     "chapter": "Tracks, racers, brands and groups",
-    "position": 23,
-    "subgroup": "Tracks",
-    "section": "sections/TrackManager.jsx",
-    "label": "Default Winners",
-    "id": "defaultWinners",
-    "idKind": "configKey",
-    "tier": "operator",
-    "infoText": "How many podium places a race on this track starts with in Race Setup.",
-    "textStatus": "NEW"
-  },
-  {
-    "chapter": "Tracks, racers, brands and groups",
     "position": 24,
     "subgroup": "Tracks",
     "section": "sections/TrackManager.jsx",
@@ -3681,6 +3657,18 @@
     "idKind": "testId",
     "tier": "admin",
     "infoText": "Admin only. Stores the points switch and ladder on the server for everyone.",
+    "textStatus": "NEW"
+  },
+  {
+    "chapter": "Diagnostics and verification",
+    "position": 0,
+    "subgroup": "Test aids",
+    "section": "sections/TestAidsSection.jsx",
+    "label": "Test aids for the whole installation",
+    "id": "test-aids-switch",
+    "idKind": "testId",
+    "tier": "advanced",
+    "infoText": "One switch for the whole installation, stored on the server. Off, as it ships: the build and settings badges, the race-plan pill, the hero rings, the camera marker, Quick Test, every diagnostic display and log below, the constant-speed address flag, the distribution page and the console probes are hidden or ignored for everyone, whatever a browser has stored. On: they all behave as they did before the switch existed. Admins only.",
     "textStatus": "NEW"
   },
   {

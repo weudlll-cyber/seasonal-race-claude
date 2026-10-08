@@ -19,7 +19,7 @@
 //    stored `results` are in finishing order with the finishers first.
 // 4. THE SAME NAME TWICE IN ONE RACE is not allowed any more, and every roster path refuses it. A
 //    race stored BEFORE that refusal may still carry one; it counts ONCE, at its better place.
-// 5. PODIUM = places 1 to 3.
+// 5. PODIUM = places 1 to 3 (`PODIUM_PLACES`, shared/podium.mjs).
 // 6. THE ORDER: wins, then 2nd places, then 3rd places, then races. A tie on all four is broken by
 //    the name, so the table is the same every time it is asked for.
 // 7. NO POINTS ARE COMPUTED HERE. The points rule is a server-wide setting (`pointsRule.js`) that
@@ -28,6 +28,7 @@
 
 import { isRealRace } from '../../../shared/raceSource.mjs';
 import { playerNameKey } from '../../../shared/playerNames.mjs';
+import { PODIUM_PLACES } from '../../../shared/podium.mjs';
 
 /** Did this result cross the line? See rule 3. */
 const finished = (result) => result?.finishTimeMs != null;
@@ -82,7 +83,7 @@ export function evaluatePeriod(races) {
       }
       row.races++;
       if (place === 1) row.wins++;
-      if (place <= 3) row.podiums++;
+      if (place <= PODIUM_PLACES) row.podiums++;
       row.places[place] = (row.places[place] ?? 0) + 1;
     });
   }

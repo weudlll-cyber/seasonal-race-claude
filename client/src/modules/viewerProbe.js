@@ -52,8 +52,11 @@ import { COMPANY_FRAME_PCT } from './camera/framingRule.js';
 // it directly while it graded the crossing from the guard side; now that the grading is here, so is
 // the import. No value is copied and no second number exists.
 import { DEFAULT_INNER_FRAME_PCT } from './camera/framingConfig.js';
+import { testAidsOn } from './testAids.js';
 
 let _active = false;
+// Whether THIS race's run was started — the URL flag AND the test-aids switch (beginViewerProbe).
+let _running = false;
 if (typeof window !== 'undefined') {
   try {
     if (new URLSearchParams(window.location.search).get('viewerprobe') === '1') {
@@ -170,7 +173,9 @@ let _sabTooWide = false; // arms invariant 5: force the picture wider than the w
  *   names the race it happened in without the driver having to correlate anything.
  */
 export function beginViewerProbe(run) {
-  if (!_active) return;
+  // TEST-AIDS-1: a console-only probe — a run starts only while the test-aids switch is ON.
+  _running = _active && testAidsOn();
+  if (!_running) return;
   _events = [];
   _frames = 0;
   _prev = null;
@@ -241,7 +246,7 @@ export function beginViewerProbe(run) {
  * @param {string} f.binding       the term that placed the width, for the event's diagnosis
  */
 export function recordViewerFrame(f) {
-  if (!_active) return;
+  if (!_running) return;
   if (!f || !(f.effZoomX > 0) || !(f.effZoomY > 0) || !f.shape || !f.racers?.length) return;
   const { canvasW: CW, canvasH: CH } = f;
 
@@ -779,7 +784,7 @@ function readViewerProbe() {
   const byInvariant = {};
   for (const e of _events) byInvariant[e.invariant] = (byInvariant[e.invariant] ?? 0) + 1;
   return {
-    active: _active,
+    active: _running,
     run: _run,
     frames: _frames,
     // The driver stops here: after the first crossing the finish ceremony runs, and these five

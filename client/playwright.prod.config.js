@@ -87,10 +87,26 @@ export default defineConfig({
 
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.js/ },
+    // TEST-AIDS-1: the DELIVERY CHECK first — a fresh profile against the installation exactly as it
+    // ships, before anyone has touched the test-aids switch — then the switch is turned ON for every
+    // other spec, which use test aids (Quick Test, the probes, the camera marker).
+    {
+      name: 'delivery',
+      testMatch: /delivery-test-aids\.spec\.js/,
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'test-aids-on',
+      testMatch: /testAids\.setup\.js/,
+      use: { ...devices['Desktop Chrome'], storageState: STATE_FILE },
+      dependencies: ['delivery'],
+    },
     {
       name: 'chromium-production',
       use: { ...devices['Desktop Chrome'], storageState: STATE_FILE },
-      dependencies: ['setup'],
+      dependencies: ['test-aids-on'],
+      testIgnore: /delivery-test-aids\.spec\.js/,
     },
   ],
 

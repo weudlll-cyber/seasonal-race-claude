@@ -24,7 +24,7 @@ import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';
 
 export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
-  winners: 3,
+  // `winners` removed 2026-10-06 (REMOVE-WINNERS-SETTING-1): the podium is `PODIUM_PLACES`, shared/podium.mjs.
   // ── THE FIELD CAP: how many racers one race may hold. TWO values, because a closed track's
   //    lap geometry holds fewer than an open track's length. This is the ONLY limit on this screen
   //    that governs a FIELD (MAX-FIELD-1, 2026-09-04).

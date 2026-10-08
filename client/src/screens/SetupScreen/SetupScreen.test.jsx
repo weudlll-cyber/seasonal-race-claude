@@ -15,6 +15,15 @@ import { storageSet, KEYS } from '../../modules/storage/storage.js';
 import { SAMPLE_TRACKS } from '../../test/fixtures/sampleTracks.js';
 import { CACHE_KEY } from '../../modules/storage/trackLoader.js';
 import { forbidNetwork } from '../../test/mockServerTracks.js';
+import { _setTestAidsForTests } from '../../modules/testAids.js';
+
+// TEST-AIDS-1: these tests describe the setup screen an ADMIN sees with the test-aids switch ON —
+// the screen exactly as it was before the switch. The switch's own OFF/ON and role cases are in
+// testAidsGates.test.jsx.
+vi.mock('../../contexts/AuthContext.jsx', async () =>
+  (await import('../../test/mockAuth.js')).authMock('admin')
+);
+beforeEach(() => _setTestAidsForTests(true));
 
 // TEARDOWN-INFLIGHT-1: the server-tracks hooks, without the network. These tests were making a REAL
 // request to localhost:4000 (the suite printed `HTTP 401` — a live dev server answered it), and

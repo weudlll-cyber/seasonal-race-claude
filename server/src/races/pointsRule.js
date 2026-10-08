@@ -19,9 +19,8 @@
 // evaluation shows plain counts until an admin sets a rule.
 // ============================================================
 
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { atomicWriteJson } from '../../utils/atomicWriteJson.js';
+import { join } from 'node:path';
+import { createJsonSettingStore } from '../../utils/jsonSettingStore.js';
 import { DATA_ROOT } from '../dataPaths.js';
 
 export const DEFAULT_POINTS_RULE = Object.freeze({ pointsEnabled: false, pointsPerPlace: [] });
@@ -63,22 +62,11 @@ export function validatePointsRule(body) {
  * @param {string} [filePath]
  */
 export function createPointsRuleStore(filePath = join(DATA_ROOT, 'period-points-rule.json')) {
-  return {
-    get() {
-      if (!existsSync(filePath)) return { ...DEFAULT_POINTS_RULE, pointsPerPlace: [] };
-      try {
-        const { rule } = validatePointsRule(JSON.parse(readFileSync(filePath, 'utf8')));
-        if (rule) return rule;
-      } catch {
-        // fall through to the default below
-      }
-      console.warn(`[points-rule] ${filePath} is not a valid points rule; the default is used.`);
-      return { ...DEFAULT_POINTS_RULE, pointsPerPlace: [] };
-    },
-    set(rule) {
-      mkdirSync(dirname(filePath), { recursive: true });
-      atomicWriteJson(filePath, rule);
-      return rule;
-    },
-  };
+  return createJsonSettingStore({
+    filePath,
+    validate: (raw) => validatePointsRule(raw).rule ?? null,
+    fallback: () => ({ ...DEFAULT_POINTS_RULE, pointsPerPlace: [] }),
+    tag: 'points-rule',
+    name: 'points rule',
+  });
 }

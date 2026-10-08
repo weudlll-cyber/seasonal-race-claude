@@ -16,6 +16,7 @@ import brandsRouter from './routes/brands.js';
 import racersRouter from './routes/racers.js';
 import seedNoticesRouter from './routes/seedNotices.js';
 import racesRouter from './routes/races.js';
+import settingsRouter from './routes/settings.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
@@ -73,6 +74,7 @@ export function createApp() {
   app.use('/api/racers', racersRouter);
   app.use('/api/seed-notices', seedNoticesRouter);
   app.use('/api/races', racesRouter);
+  app.use('/api/settings', settingsRouter);
 
   // SERVE-SPA-1: LAST, so every real route above wins. An unknown path under /api/ now answers as
   // the API rather than as Express's default HTML error page.

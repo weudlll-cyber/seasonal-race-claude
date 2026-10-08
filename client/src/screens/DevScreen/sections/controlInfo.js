@@ -17,8 +17,6 @@ export const CONTROL_INFO = {
     'How eventful the racing is. Quiet is the shipped race. Medium and Wild push the front fight harder — the same fair finish, more of a contest getting there. The stage you pick here is stored with each race, so the result screen can tell you which one ran.',
   'RaceDefaults:duration':
     "Pre-fills the Duration field in Race Setup. The value that actually runs a race is derived by the track — closed tracks from laps and course length, open tracks from the setup slider or the track's own default — so this seed is not read once a race starts.",
-  'RaceDefaults:winners':
-    'How many top finishers the result screen celebrates as winners. Raise it and more places get a podium treatment; lower it and only the very front is honoured. Race Setup starts from this number and you can still change it per race.',
   'RaceDefaults:maxPlayersClosed':
     'The most player names Race Setup accepts for a closed-loop track. It is the only limit on field size for those tracks; a larger field is refused at setup, a smaller one is never padded.',
   'RaceDefaults:maxPlayersOpen':
@@ -473,8 +471,6 @@ export const CONTROL_INFO = {
     'Closed tracks only: how many laps a race on this track starts with in Race Setup. The race length follows from the laps and the course length.',
   'TrackManager:defaultDurationSec':
     'Open tracks only: how long a race on this track starts with in Race Setup.',
-  'TrackManager:defaultWinners':
-    'How many podium places a race on this track starts with in Race Setup.',
   'TrackManager:track-geometry-btn':
     'Opens this track in the Track Geometry Editor to draw or change its path.',
   'TrackManager:defaultRacerTypeId': 'The racer type Race Setup picks when this track is chosen.',
@@ -608,6 +604,8 @@ export const CONTROL_INFO = {
     'Logs the frames around each change of view to the browser console, to diagnose a camera move in the wrong direction. It changes nothing on screen. Run a race, then copy the console lines.',
   'CameraAdvancedSection:enablePerfLog':
     'Measures how long each frame spends on physics, camera and drawing, and shows the live figures and the worst spikes on screen. Takes effect on the next race.',
+  'TestAidsSection:test-aids-switch':
+    'One switch for the whole installation, stored on the server. Off, as it ships: the build and settings badges, the race-plan pill, the hero rings, the camera marker, Quick Test, every diagnostic display and log below, the constant-speed address flag, the distribution page and the console probes are hidden or ignored for everyone, whatever a browser has stored. On: they all behave as they did before the switch existed. Admins only.',
   'ConfigExportSection:export-race-config':
     'Downloads world.json — the exact configuration the game reads when a race starts — so a simulator run can be checked against it, and copies it to the clipboard where it can. The hash beside it names that configuration.',
   'ConfigExportSection:refresh':

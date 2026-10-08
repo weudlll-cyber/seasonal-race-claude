@@ -17,6 +17,7 @@ import {
   saveCameraConfig,
 } from '../../../modules/cameraConfig.js';
 import { Ctl, Info } from './ControlInfo.jsx';
+import { useTestAids, TEST_AID_CAMERA_KEYS } from '../../../modules/testAids.js';
 import { KEYS } from '../../../modules/storage/storage.js';
 import { useSyncedConfig } from './useSyncedConfig.js';
 // CEREMONY-OPENING-2: the total is READ from the same function the race uses, never re-added here.
@@ -334,6 +335,10 @@ function CameraAdvancedSection({ part }) {
   // Which parts this mount shows (DEVSCREEN-CHAPTERS-1); without `part` it shows them all, in the
   // order of the camera chapter, then the parts placed in Look and in Diagnostics.
   const show = (name) => !part || part === name;
+  // TEST-AIDS-1: while the test-aids switch is OFF the diagnostic switches below are locked — exactly
+  // the keys the race forces off (`TEST_AID_CAMERA_KEYS`), so the camera-state pill (item 5), which
+  // is not on the switch, stays free.
+  const aids = useTestAids();
 
   // One diagnostics switch: a checkbox over a camera-config key, its id and its info icon.
   function renderDiagToggle({ key, testId, label }) {
@@ -354,6 +359,7 @@ function CameraAdvancedSection({ part }) {
           type="checkbox"
           data-testid={testId}
           checked={config[key] ?? false}
+          disabled={!aids && TEST_AID_CAMERA_KEYS.includes(key)}
           onChange={(e) => set(key, e.target.checked)}
         />
         <span>{label}</span>
@@ -2091,6 +2097,13 @@ function CameraAdvancedSection({ part }) {
         <>
           {/* ── Diagnostics — on screen ── */}
           <div className={s.card}>
+            {!aids && (
+              <p className={s.sectionDesc} data-testid="test-aids-off-diagnostics">
+                {
+                  'The test-aids switch is off, so these diagnostics — all but the camera-state pill, which is not a test aid — stay off in every race and cannot be switched on here. An admin turns it on at the top of Diagnostics and verification. The hero rings are not drawn either.'
+                }
+              </p>
+            )}
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
@@ -2113,7 +2126,16 @@ function CameraAdvancedSection({ part }) {
       {show('logs') && (
         <>
           {/* ── Diagnostics — logs ── */}
-          <div className={s.card}>{LOG_TOGGLES.map(renderDiagToggle)}</div>
+          <div className={s.card}>
+            {!aids && (
+              <p className={s.sectionDesc} data-testid="test-aids-off-logs">
+                {
+                  'The test-aids switch is off, so these stay off in every race and cannot be switched on here. An admin turns it on at the top of Diagnostics and verification.'
+                }
+              </p>
+            )}
+            {LOG_TOGGLES.map(renderDiagToggle)}
+          </div>
         </>
       )}
     </div>
