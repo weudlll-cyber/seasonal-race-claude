@@ -183,7 +183,7 @@ function SetupScreen() {
   //
   // ★ IT ENCODES THE SAME VALUES THE PAYLOAD CARRIES, from the payload itself, so the recorded
   // identifier cannot describe a different race from the one that starts. The world is read the
-  // same way the race path reads it moments later (`RaceScreen/index.jsx:476-503` with no override
+  // same way the race path reads it moments later (`RaceScreen/raceWorldSetup.js` with no override
   // in play), which is what makes this a record of THIS race rather than of this screen.
   //
   // A failure here must never stop a race: the race is the point, the record is a convenience, so
@@ -887,11 +887,11 @@ function SetupScreen() {
       racePlanSeed: decoded.racePlanSeed,
       raceActionStage: decoded.raceActionStage,
       // ★ The half a seed never carried: the config world this race was recorded with. RaceScreen
-      // prefers it over this machine's stored config — see the note at `RaceScreen/index.jsx:466`.
+      // prefers it over this machine's stored config — see `overrideConfigs` in `RaceScreen/raceWorldSetup.js`.
       worldConfigOverride: decoded.world,
       // ★ RACE-SOURCE-1 — AN IDENTIFIER START IS AN ORDINARY RACE, and this is the writer that
-      // looks like an exception and is not. Reaching here means `handleStartRace` handed off at
-      // `:873-876` because the field held a race rather than a seed; what changed is where the
+      // looks like an exception and is not. Reaching here means `handleStartRace` handed off (its
+      // `looksLikeRaceIdentifier` branch) because the field held a race rather than a seed; what changed is where the
       // inputs came FROM, not what kind of race it is. A host who starts somebody else's race is
       // running a real race, so it counts like one. Marking it separately would invent a third
       // kind, and this is the one `setItem` a careless change misses.

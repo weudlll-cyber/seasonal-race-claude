@@ -1409,23 +1409,23 @@ export default function RaceScreen() {
   // WHAT "LEAVES NOTHING BEHIND" MEANS HERE was established by reading the START path rather than
   // guessed, and every item is unwound by somebody:
   //
-  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx:684` (and `:796` for Quick
-  //     Test). Removed here. Left in place it is a race payload with no race, and the next mount of
-  //     this screen would start it again.
+  //   * `sessionStorage['activeRace']` — written by `SetupScreen.jsx` (`handleStartRace`,
+  //     `startRaceFromIdentifier`, `handleQuickTest`). Removed here. Left in place it is a race
+  //     payload with no race, and the next mount of this screen would start it again.
   //   * the rAF loop, the finish-nav timer, the winner-card timers, the long-task observer, the
   //     camera markers and the effect instances — all released by the animation effect's own
-  //     cleanup on unmount (:1760-1773), which navigating away runs. Nothing to do here, and doing
+  //     cleanup on unmount (the race-loop effect's `return () => {…}`), which navigating away runs. Nothing to do here, and doing
   //     it here as well would be a second owner for state that already has one.
-  //   * the `fullscreenchange` listener — removed by its own effect cleanup (:378).
+  //   * the `fullscreenchange` listener — removed by its own effect cleanup.
   //   * ★ FULLSCREEN ITSELF — nobody unwound this, and it is the whole reason this function exists.
   //     `toggleFullscreen` above puts the document into fullscreen on `screenRef`; leaving the
   //     screen does not take it out, so the operator landed back on Setup with the browser still
   //     fullscreen and the only control that could undo it left behind on the race screen.
   //
-  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx:180`
+  // NOT unwound, deliberately: `KEYS.LAST_RACE_SEED`, written at start by `SetupScreen.jsx`
   // into a store that outlives the tab. It is the RECORD of a seed that really was used — a race did
   // run — and erasing it would destroy the only trace of a drawn seed. And `raceResults`, which this
-  // race never wrote: it is written only once every racer has finished (:1108), so a cancelled race
+  // race never wrote: it is written only once every racer has finished (the `'raceResults'` write below), so a cancelled race
   // leaves no result of its own. Clearing an EARLIER race's result would be touching the result
   // recording, which this piece must not do.
   function cancelRace() {
