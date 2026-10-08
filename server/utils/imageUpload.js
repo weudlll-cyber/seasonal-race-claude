@@ -64,7 +64,13 @@ export function detectMagicType(buf) {
 export function createUpload({ maxBytes = MAX_IMAGE_BYTES } = {}) {
   return multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: maxBytes },
+    // ONE file part and nothing else — all three clients send exactly that (brandApi.js,
+    // racerApi.js, trackApi.js). busboy's own defaults leave the field and part counts UNBOUNDED,
+    // all held in memory, so a signed-in caller could stream any number of 1 MB text fields
+    // alongside an image (AUDIT-1 A5M-04). A breach is answered 400 'File upload failed.' below.
+    // No `parts`: every part is a file or a field, so these two bound it — and busboy raises
+    // `partsLimit` on REACHING the count, so `parts: 1` would refuse the one legitimate file.
+    limits: { fileSize: maxBytes, files: 1, fields: 0, headerPairs: 20 },
     fileFilter(_req, file, cb) {
       if (ALLOWED_IMAGE_TYPES.has(file.mimetype)) {
         cb(null, true);

@@ -209,7 +209,7 @@ test("ENGINE: the hull selects the world fingerprint — and a camera file IS in
 // now route to exactly ONE guard are asserted to route to exactly THAT one, so a matcher that
 // quietly widens is still caught for every guard that is supposed to be narrow.
 test("ROUTED NOWHERE: the paths no narrow guard covers select nothing at all", () => {
-  for (const f of [".github/workflows/ci.yml", "package-lock.json"]) {
+  for (const f of ["package-lock.json"]) {
     // ALWAYS-ON guards are excluded BY THEIR DECLARATION rather than by name, so "routes
     // nowhere" means "selects no guard that CAN be skipped". It was a hand-written list of two and
     // needed editing BOTH times an always-on guard was added (check-language-closed, then
@@ -236,6 +236,16 @@ const routesTo = (f) =>
     .filter((t) => t.run && !t.everything)
     .map((t) => t.id)
     .sort();
+
+// AUDIT-1 (2026-10-09) SPLIT THE ROUTED-NOWHERE TEST A THIRD TIME, and again the split is the
+// finding. `ci.yml` used to select nothing; `scripts/workflow-pinning.test.mjs` and
+// `scripts/runtime-node.test.mjs` now READ the workflows (every action pinned to a SHA; CI's Node
+// major equals the image's), so by `dataReach`'s rule — a suite whose code names a path is selected
+// by a change to it — a workflow edit now runs the script suite, and ONLY that. Asserting exactly
+// that one keeps a quietly widening matcher caught.
+test("ROUTED TO THE SCRIPT SUITE: a workflow change selects the suite whose tests read it", () => {
+  assert.deepEqual(routesTo(".github/workflows/ci.yml"), ["script-suite"]);
+});
 
 // WIRE-SUITES-1 SPLIT THIS TEST AGAIN, and again the split is the finding. It used to assert that
 // `server/index.js` selects the language guard and NOTHING else — true only while 19 server test

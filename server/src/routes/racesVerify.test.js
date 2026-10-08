@@ -21,6 +21,7 @@ import express from 'express';
 import request from 'supertest';
 import { createRacesRouter } from './races.js';
 import { createRaceStore } from '../races/raceStore.js';
+import { verifyOffMainThread, BUSY } from '../races/verifyOffMainThread.js';
 import {
   resolveIdentity,
   loadTracks,
@@ -314,6 +315,23 @@ describe('POST /api/races/:shortKey/verify — off the main thread (VERIFY-OFF-M
       await close();
     }
   }, 180_000);
+
+  // AUDIT-1 A5M-10: the worker is bounded in wall clock and in heap.
+  it('a verify past its time bound is stopped and answered, and the slot is free again', async () => {
+    const tracks = loadTracks();
+    const stopped = await verifyOffMainThread(REC, tracks, { timeoutMs: 1 });
+    expect(stopped.error).toMatch(/did not finish within 1 ms/);
+    const next = verifyOffMainThread(REC, tracks);
+    expect(next).not.toBe(BUSY);
+    expect((await next).result.firstDiff).toBeNull();
+  }, 120_000);
+
+  it('the heap cap leaves room for a real 40-racer race', async () => {
+    const big = recordedRace({ racers: 40, shortKey: 'TEST40' });
+    const res = await request(appWith([big])).post('/api/races/TEST40/verify');
+    expect(res.status).toBe(200);
+    expect(res.body.identical).toBe(true);
+  }, 120_000);
 
   it('answers exactly what the replay itself answers, field by field', async () => {
     const { replayStoredRace } = await import('../../../scripts/lib/storedRaceReplay.mjs');

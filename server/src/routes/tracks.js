@@ -31,6 +31,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot, readSeedType } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
+import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
 import { pruneTrackBackups } from '../../utils/trackBackupRetention.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
@@ -288,17 +289,8 @@ function writeTrackBackup(trackId, trackData) {
  * harm by a wide margin, and doing it silently would be the same defect one level down.
  */
 export function removeBackgroundFile(track) {
-  const name = track.backgroundImageFile;
-  if (!name) return;
-  if (!isSafeAssetFilename(name)) {
-    console.warn(
-      `[tracks] refusing to delete background for "${track.id}": stored filename ${JSON.stringify(name)} ` +
-        'is not a plain filename this server could have written. The file was left in place.'
-    );
-    return;
-  }
-  const bgPath = join(BG_DIR, name);
-  if (existsSync(bgPath)) unlinkSync(bgPath);
+  // The check and the unlink are the shared helper's (AUDIT-1 A5M-09, server/utils/removeStoredAsset.js).
+  removeStoredAsset(BG_DIR, track.backgroundImageFile, 'tracks', `background for "${track.id}"`);
 }
 
 // Copy committed snapshot files (server/seeds/) into DATA_ROOT on first boot.
@@ -619,10 +611,7 @@ router.post('/:id/background', uploadSingleImage(upload, 'background'), (req, re
   if (!existsSync(BG_DIR)) mkdirSync(BG_DIR, { recursive: true });
 
   // Delete old background file if it had a different name (e.g. jpg → png swap)
-  if (track.backgroundImageFile && track.backgroundImageFile !== filename) {
-    const oldPath = join(BG_DIR, track.backgroundImageFile);
-    if (existsSync(oldPath)) unlinkSync(oldPath);
-  }
+  if (track.backgroundImageFile !== filename) removeBackgroundFile(track);
 
   writeFileSync(bgPath, req.file.buffer);
 

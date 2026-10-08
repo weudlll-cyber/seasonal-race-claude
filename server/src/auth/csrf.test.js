@@ -108,6 +108,16 @@ describe('normalizeOrigin', () => {
   it('leaves a plain origin unchanged', () => {
     expect(normalizeOrigin('https://example.com')).toBe('https://example.com');
   });
+
+  // AUDIT-1 A5M-02: the old `/\/+$/` took 371 ms on a 16 KB header of slashes (quadratic
+  // backtracking); a loop is linear. The input is 4x that so the quadratic shape costs ~16x and the
+  // bound separates the two SHAPES with a wide margin, not two machines.
+  it('a long run of slashes is normalised in linear time (ReDoS)', () => {
+    const hostile = 'http://a/' + '/'.repeat(64000) + 'x';
+    const t0 = performance.now();
+    normalizeOrigin(hostile);
+    expect(performance.now() - t0).toBeLessThan(50);
+  });
 });
 
 // ── Part A2 — resolveCsrfStrict unit tests ────────────────────────────────────

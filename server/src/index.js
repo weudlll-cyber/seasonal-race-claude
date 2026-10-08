@@ -13,6 +13,7 @@ import { assertPublicOriginUsable } from './runtimeConfig.js';
 import { sweepOrphanTmp } from '../utils/sweepOrphanTmp.js';
 import { resolveDataRoot } from './dataPaths.js';
 import { resolveBindAddress, listenOn } from './bindAddress.js';
+import { installGracefulShutdown } from './gracefulShutdown.js';
 
 // ── RUNTIME-API-URL-1: THE ADDRESS IS JUDGED BEFORE ANYTHING LISTENS ───────────────────────────
 //
@@ -56,7 +57,7 @@ const app = createApp();
 const PORT = process.env.PORT || 4000;
 
 // Unset RA_BIND_ADDRESS → the same `listen(PORT, cb)` call as before; see bindAddress.js.
-listenOn(app, PORT, bindAddress, () => {
+const server = listenOn(app, PORT, bindAddress, () => {
   // ★ STDOUT BY DECISION (the owner, 2026-09-06), not by oversight. This is the "it started" line,
   // and normal output belongs on stdout; stderr is for what is wrong. This file already draws that
   // line — `reportStartupReadiness` below defaults to `console.warn` (startupReadiness.js:95)
@@ -76,3 +77,8 @@ listenOn(app, PORT, bindAddress, () => {
   // reasoning is in startupReadiness.js; nothing here changes what the server does.
   reportStartupReadiness({ env: process.env, servingClient: clientBuildExists() });
 });
+
+// AUDIT-1 A10-01: a SIGTERM (docker stop, compose down, `racearena update`) or a Ctrl+C lets the
+// requests in flight finish and exits 0, instead of the container being SIGKILLed (exit 137) — node
+// is PID 1 in the image and gets no default signal handling. See gracefulShutdown.js.
+installGracefulShutdown(server);

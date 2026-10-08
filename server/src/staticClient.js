@@ -50,6 +50,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectRuntimeConfig, resolvePublicOrigin } from './runtimeConfig.js';
+import { isApiPath } from '../utils/apiPath.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -104,6 +105,18 @@ export function mountClientAssets(app, dist = CLIENT_DIST, log = console.log) {
 }
 
 /**
+ * True when the path's LAST segment carries an extension: a dot with at least one character after
+ * it — exactly what `/\.[^/]+$/` matched. That regex ran on every anonymous navigation and
+ * backtracks quadratically on a path of dots (16 000 of them held the event loop 555 ms, AUDIT-1
+ * A5M-03), so the segment is cut out once and searched instead.
+ */
+export function lastSegmentHasExtension(path) {
+  const last = path.slice(path.lastIndexOf('/') + 1);
+  const dot = last.indexOf('.');
+  return dot !== -1 && dot < last.length - 1;
+}
+
+/**
  * Mount the SPA fallback. Call BEFORE the auth guards, AFTER the static mount.
  * @returns {boolean} whether anything was mounted
  */
@@ -136,7 +149,8 @@ export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
   const injectedHtml = injectRuntimeConfig(readFileSync(indexFile, 'utf8'), publicOrigin);
   app.use((req, res, next) => {
     // THE API IS NEVER ANSWERED WITH THE APP. This is the whole guard, and it is first.
-    if (req.path === '/api' || req.path.startsWith(API_PREFIX)) return next();
+    // In ANY letter case, as Express routes it (AUDIT-1 A5M-01, server/utils/apiPath.js).
+    if (isApiPath(req.path)) return next();
     // Only navigations. A failed POST or a missing asset must not come back as a page of HTML.
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     // A request that wants JSON is asking a machine question; answering it with a page is the same
@@ -152,7 +166,7 @@ export function mountSpaFallback(app, dist = CLIENT_DIST, env = process.env) {
     // THE COST, stated because it is a real trade: a deep link whose LAST segment contains a dot
     // (`/track/my.track`) is treated as an asset and 404s instead of loading the app. No route in
     // this client has that shape; if one ever does, this is the line that decides it.
-    if (/\.[^/]+$/.test(req.path)) return next();
+    if (lastSegmentHasExtension(req.path)) return next();
     if (injectedHtml === null) return res.sendFile(indexFile);
     res.type('html').send(injectedHtml);
   });

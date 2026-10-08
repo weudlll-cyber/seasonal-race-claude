@@ -7,6 +7,7 @@
 // ============================================================
 
 import defaultStore from './usersStore.js';
+import { routingPath, isApiPath } from '../../utils/apiPath.js';
 
 // ── Allow-list (no auth required) ────────────────────────────────────────────
 
@@ -93,8 +94,12 @@ function normalizeMethod(m) {
   return String(m).toUpperCase();
 }
 
+// Lower case first: Express routes paths ignoring case, so the policy must judge them the same way,
+// or `/api/Users` reaches the users router while the admin rule for `/api/users` never matches
+// (AUDIT-1 A5M-01, server/utils/apiPath.js).
 function normalizePath(p) {
-  return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+  const l = routingPath(p);
+  return l.length > 1 && l.endsWith('/') ? l.slice(0, -1) : l;
 }
 
 // HEAD → GET: Express routes HEAD requests to the matching GET handler, so HEAD
@@ -132,7 +137,8 @@ export function createRequireAuth({ publicPaths = PUBLIC_PATHS, store = defaultS
 
     // Scope: this guard only governs /api/*. Non-/api requests pass through.
     // This is scoping, NOT an auth wildcard — the allowlist is still exact-match.
-    if (path !== '/api' && !path.startsWith('/api/')) return next();
+    // In ANY letter case: `/API/users` is routed to the users router too (AUDIT-1 A5M-01).
+    if (!isApiPath(path)) return next();
 
     if (
       publicPaths.some(

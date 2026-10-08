@@ -86,10 +86,12 @@ The limiters are mounted after `requireAuth` (`server/src/app.js:63-67`). So a s
 
 - An unknown path under `/api/` answers `404 {"error":"no such API route: <METHOD> <url>"}`
   (`server/src/staticClient.js:169-173`), but only after the guards: a signed-out caller gets 401.
-- There is **no application error handler** in `server/src/app.js`. A malformed JSON body (400), a
-  body over 1 MB (413, `server/src/app.js:39`), or an exception thrown synchronously inside a handler
-  (for example a failed disk write in `atomicWriteJson`) falls through to Express's default handler,
-  which answers with an HTML page, not JSON.
+- **Every other error is answered as JSON with no stack trace** (AUDIT-1 A5M-08): a malformed JSON
+  body (400), a body over 1 MB (413), or an exception thrown synchronously inside a handler (for
+  example a failed disk write in `atomicWriteJson`) reaches `apiErrorHandler`
+  (`server/src/apiErrorHandler.js`), mounted last in `createApp`. It keeps the status and answers
+  `{ "error": "HTTP <status>" }` — the same text the client showed when this was Express's HTML page.
+  A 5xx is logged with its stack; a 4xx is logged without its message, which can quote the body.
 - **An `async` handler's unexpected error is answered, not lost** (SERVER-DEFECTS-1): `POST
   /api/races/:shortKey/verify`, `POST /api/auth/login` and `POST /api/auth/change-password` run
   through `asyncRoute` (`server/utils/asyncRoute.js`), which logs the error with its route and
@@ -100,7 +102,8 @@ The limiters are mounted after `requireAuth` (`server/src/app.js:63-67`). So a s
   using multer with in-memory storage, a 10 MB limit (`:21`, `:64-76`) and a MIME pre-filter for
   `image/jpeg|png|webp` (`:19`, `:68-74`). It answers **413** for a file over 10 MB (`:109-112`),
   **400** "File type not allowed…" for a disallowed MIME type (`:114-117`), and **400** "File upload
-  failed." for any other multer error, such as a wrong field name (`:119`). The upload runs **before**
+  failed." for any other multer error, such as a wrong field name (`:119`), a second file or any text
+  field beside the image (one file part and nothing else is accepted, AUDIT-1 A5M-04). The upload runs **before**
   the handler looks up the record, so these errors come before the record's 404. The handler then
   checks the magic bytes (`server/utils/imageUpload.js:27-56`); the client's `Content-Type` is
   ignored.
