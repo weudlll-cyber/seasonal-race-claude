@@ -108,7 +108,7 @@ describe('computeRowLayout', () => {
     expect(totalRows).toBe(5);
   });
 
-  it('Weltall-Strecke: geometric width 300 world-px, spriteSize 26 → all 20 fit in 1 row', () => {
+  it('Space track: geometric width 300 world-px, spriteSize 26 → all 20 fit in 1 row', () => {
     // D7c-fix-v2: world-space formula gives perRow=23, so 20 racers → 1 row
     const perRow = computeRacersPerRow(300, 26); // 23
     const { totalRows } = computeRowLayout(20, perRow);
