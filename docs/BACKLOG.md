@@ -867,6 +867,45 @@ are in PART TWO with what closed them; these are the ones still standing.
       [DEPLOYMENT.md](DEPLOYMENT.md), which carries a tested Caddy example (PROXY-PROBE-1). B4 is closed
       on that decision. **The domain, the proxy and HTTPS are still open, and so is this row.**
 
+      **2026-10-07/08 (VPS-INSTALL-1) — THE INSTALL IS BUILT, NOT MERGED, AND NOT YET RUN ON THE VPS.**
+      **Decided 2026-10-07:** the game goes online on the owner's own VPS (Contabo); he installs it
+      himself, with one command from GitHub; Docker is used inside it.
+      **Built on `feat/vps-install`** ([docs/VPS-INSTALL.md](VPS-INSTALL.md),
+      [reports/release/VPS-INSTALL-1.md](../reports/release/VPS-INSTALL-1.md)):
+      - `deploy/install.sh` (the one command);
+      - `deploy/racearena` (status, logs, backup, restore, update with automatic rollback,
+        rollback, version);
+      - `deploy/docker-compose.prod.yml`, with Caddy in front and only 80/443 published.
+
+      **It answers the four items of [DEPLOY-NOTES.md](DEPLOY-NOTES.md):195-200 for a single
+      server:**
+      - a compose file WITH the proxy (Caddy, pinned by digest);
+      - secrets generated at install, not copied;
+      - the data in `/var/lib/racearena` on the host;
+      - the image built on the server from the checked-out version.
+
+      **Still open:**
+      - the domain itself;
+      - the first run on the VPS with the owner, which tests what a local Docker cannot (system
+        detection, Docker install, ufw, unattended-upgrades, the DNS check, the real certificate,
+        the systemd timers, alert e-mails);
+      - the two auth items above (CSP off; no written pre-exposure bar).
+- [ ] ★ **COPY THE BACKUPS OFF THE SERVER (VPS-INSTALL-1, 2026-10-07).** The install makes a backup
+      every day into `/var/backups/racearena` on the SAME disk as the data, keeping 14 days. A copy
+      on the same disk does not survive losing the disk. Nothing copies them elsewhere yet. The
+      install's closing text and [VPS-INSTALL.md](VPS-INSTALL.md) say so. Where they go — another
+      machine, storage he rents — is the owner's choice.
+      **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
+- [ ] ★ **SSH HARDENING — MANUAL, WITH THE OWNER (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
+      deliberately does not change the SSH configuration: a mistake there locks the owner out of his
+      own server. It prints the steps at the end:
+      1. sign in with a key;
+      2. `PasswordAuthentication no` and `PermitRootLogin prohibit-password`;
+      3. reload SSH and test a second sign-in before closing the first.
+
+      **verify:** on the VPS, `sshd -T | grep -E 'passwordauthentication|permitrootlogin'` prints
+      `no` and `prohibit-password`.
+
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
 several organizers on one server. **On 2026-10-01 the owner also decided that the tenancy boundary
