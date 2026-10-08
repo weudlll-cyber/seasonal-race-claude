@@ -434,8 +434,10 @@ Every registered migration has a stable id (the teams backfill is `teams-1`). Th
 runs only the pending ones, appends each one to the ledger with a timestamp, and refuses to run
 any id twice — the rule is stated in full in the file header.
 
-The one existing migration, `scripts/migrate-teams.mjs`, still runs standalone; the runner calls
-into the same `migrateTeams` function so there is one home for the work. **Running the standalone
+Three migrations are registered: `teams-1`, `race-source-1` and `client-id-per-team-1`
+(`scripts/migrate.mjs`, `buildDefaultMigrations`). *(Corrected 2026-10-08: this said there was one.)*
+The teams backfill also exists as a standalone script, `scripts/migrate-teams.mjs`; the runner calls
+into the same `migrateTeams` function, so there is one home for the work. **Running the standalone
 script does NOT touch the ledger** — the next `node scripts/migrate.mjs` will see the state and
 backfill the ledger without re-running.
 

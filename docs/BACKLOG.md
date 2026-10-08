@@ -812,40 +812,6 @@ will NOT be built:** organizers on one installation share everything that is sha
 stay scoped per team as already built (the TENANCY row, PART TWO).
 [reports/release/](../reports/release/INDEX.md) is where the release work reports.
 
-- [ ] ★ **BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
-      items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
-      on-screen build/source badge; the off-default settings badge; plus a sweep for any further
-      developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
-      work and names a check per display.
-      ★ **2026-10-04 — THE SWEEP IS DONE: [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md).**
-      27 items, each with file:line, its default, who sees it and its one switch. Nothing switched
-      off yet. Ten have no switch at all; three of his items are on by default for every viewer.
-      Open for him: what "the dots" are (the only dots, the battle diagnostics, ship off with the
-      BATTLE shot); which borderline items count as developer displays.
-      ★★ **2026-10-04 — THE OWNER DECIDED THE DESIGN: ONE TEST-AIDS SWITCH.** Item numbers are
-      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md)'s, where the same list is written out.
-      - **One switch for the whole installation, stored on the server** (not per browser), flipped by
-        admins only, **shipped OFF**.
-      - **OFF hides:** items 1, 2, 3, **4 (the red and green hero rings — these are the "dots" of this
-        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`) and the
-        console-only probes. **While OFF, items 13–25 cannot be switched on in the Dev Screen either.**
-      - **Admin-only regardless of the switch:** all of item 11 (the seed field, the copy row, the
-        run-it-again line, the build-mismatch alert).
-      - **Unchanged, always shown, not on the switch:** items 5, 6 and 8; item 10, the gear (admins see
-        everything, other signed-in users the operator tier, as today); item 12, Test race, for anyone
-        allowed to edit a track; and the green comeback marker.
-      - **B6 is folded in here (2026-10-04):** a race on non-default settings is not flagged in
-        production.
-      - **Still built LAST**, after every other open row. Nothing of it is built yet.
-      ★★ **2026-10-06 — BUILT (TEST-AIDS-1), on branch `feat/test-aids-switch`, NOT MERGED; the row
-      stays open until the owner has looked.** Exactly the design above: the switch lives on the server
-      (`GET`/`PUT /api/settings/test-aids`, admins set it, missing or unreadable is OFF), the client
-      reads it in one place (`client/src/modules/testAids.js`), and the control is the first of the
-      Dev Screen chapter *Diagnostics and verification*. How each item is gated, and the delivery
-      check that now runs first in the Browser gate on a fresh profile and a fresh data folder:
-      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md), *Built 2026-10-06*. How an operator
-      uses it: [DEPLOYMENT.md](DEPLOYMENT.md), *Test aids*.
-
 - [x] **~~Nothing records which migrations an instance has already applied~~ — CLOSED 2026-09-24
       (NIGHT-2026-09-24D, PIECE 4).** `scripts/migrate.mjs` is the runner: it reads
       `<dataRoot>/migrations.json`, applies only pending ids, and REFUSES to run any id twice.
@@ -3946,6 +3912,57 @@ closes made a factual claim, what that claim really was when it was checked at t
 **Three of the five delivery gaps NIGHT-2026-09-24 found are closed. What still stands is in PART
 ONE**, under the same heading, so the subject is in exactly one of the two parts as this document's
 contract requires.
+
+- [x] ★ **CLOSED 2026-10-08 — BEFORE DELIVERY: SWITCH OFF THE DEVELOPER-ONLY DISPLAYS — scheduled after all other open
+      items (owner, 2026-10-02).** Quick Test; the rings and dots on director-steered racers; the
+      on-screen build/source badge; the off-default settings badge; plus a sweep for any further
+      developer-only display. Not started. **verify:** none yet — the sweep is the first piece of the
+      work and names a check per display.
+      ★ **2026-10-04 — THE SWEEP IS DONE: [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md).**
+      27 items, each with file:line, its default, who sees it and its one switch. Nothing switched
+      off yet. Ten have no switch at all; three of his items are on by default for every viewer.
+      Open for him: what "the dots" are (the only dots, the battle diagnostics, ship off with the
+      BATTLE shot); which borderline items count as developer displays.
+      ★★ **2026-10-04 — THE OWNER DECIDED THE DESIGN: ONE TEST-AIDS SWITCH.** Item numbers are
+      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md)'s, where the same list is written out.
+      - **One switch for the whole installation, stored on the server** (not per browser), flipped by
+        admins only, **shipped OFF**.
+      - **OFF hides:** items 1, 2, 3, **4 (the red and green hero rings — these are the "dots" of this
+        row)**, 7, **9 (Quick Test)**, 13–25, 26 (`?constSpeed`), 27 (`/diagnose-verteilung`) and the
+        console-only probes. **While OFF, items 13–25 cannot be switched on in the Dev Screen either.**
+      - **Admin-only regardless of the switch:** all of item 11 (the seed field, the copy row, the
+        run-it-again line, the build-mismatch alert).
+      - **Unchanged, always shown, not on the switch:** items 5, 6 and 8; item 10, the gear (admins see
+        everything, other signed-in users the operator tier, as today); item 12, Test race, for anyone
+        allowed to edit a track; and the green comeback marker.
+      - **B6 is folded in here (2026-10-04):** a race on non-default settings is not flagged in
+        production.
+      - **Still built LAST**, after every other open row. Nothing of it is built yet.
+      ★★ **2026-10-06 — BUILT (TEST-AIDS-1), on branch `feat/test-aids-switch`, NOT MERGED; the row
+      stays open until the owner has looked.** Exactly the design above: the switch lives on the server
+      (`GET`/`PUT /api/settings/test-aids`, admins set it, missing or unreadable is OFF), the client
+      reads it in one place (`client/src/modules/testAids.js`), and the control is the first of the
+      Dev Screen chapter *Diagnostics and verification*. How each item is gated, and the delivery
+      check that now runs first in the Browser gate on a fresh profile and a fresh data folder:
+      [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md), *Built 2026-10-06*. How an operator
+      uses it: [DEPLOYMENT.md](DEPLOYMENT.md), *Test aids*.
+      ★★★ **CLOSED 2026-10-08.** The owner looked at `review/2026-10-06` on the production preview (4173)
+      on 2026-10-08 and accepted it: the test-aids switch works. Merged to master that day with the
+      branch it was reviewed on. **As built:** one switch per installation, stored on the server in
+      `<data>/test-aids.json`; `GET`/`PUT /api/settings/test-aids`, admins set it; missing or unreadable
+      is OFF, so an installation ships with it OFF. The client reads it in one place
+      (`client/src/modules/testAids.js`); the control is the first of the Dev Screen chapter
+      *Diagnostics and verification*. Item by item: [DEV-DISPLAYS-1](../reports/release/DEV-DISPLAYS-1.md),
+      *Built 2026-10-06*.
+
+- [x] **THE NUMBER-OF-WINNERS SETTING IS GONE — the podium is three places everywhere.** Decided
+      2026-10-06 (REMOVE-WINNERS-SETTING-1), accepted by the owner on the production preview on
+      2026-10-08, merged that day. Removed: the Dev Screen's "Podium Spots" stepper, the setup
+      screen's per-race stepper and its "Top N", the race default `winners`, and — beyond the brief,
+      by the same decision — the Track Manager's per-track "Default Winners" stepper, which nothing
+      read. The podium size is `PODIUM_PLACES` (`shared/podium.mjs`), used by the race history and the
+      period evaluation. Old races keep the winners they were stored with; a stored `winners` race
+      default and a track's stored `defaultWinners` are left in place, unread.
 
 - [x] **A BACKUP PROCEDURE, AND A RESTORE THAT HAS BEEN PERFORMED** — closed by DELIVERY-BACKUP-1,
       merge **`616f6ea8`**. `scripts/backup.mjs` archives the whole resolved data root as one tar
