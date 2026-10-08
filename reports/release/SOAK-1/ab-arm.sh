@@ -30,7 +30,8 @@ export SOAK_IMAGE="$IMAGE" SOAK_PORT="$PORT"
 export SOAK_SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 export SOAK_BOOTSTRAP_TOKEN=$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'))")
 docker compose -p "$PROJECT" -f "$HERE/compose.soak.yml" up -d
-until node -e "fetch('http://127.0.0.1:$PORT/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; do sleep 2; done
+# process.exitCode, never process.exit right after a fetch: on Windows that crashes node (libuv).
+until node -e "fetch('http://127.0.0.1:$PORT/api/health').then(r=>{process.exitCode=r.ok?0:1}).catch(()=>{process.exitCode=1})"; do sleep 2; done
 
 date -u +%FT%TZ > "$RAW/started.txt"
 MINUTES=$(node -e "console.log(Math.round($HOURS*60)+1)")

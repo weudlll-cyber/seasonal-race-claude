@@ -352,6 +352,66 @@ Chromium, through Playwright, against the same server: 8 fetch loops on the page
   waits and never sees the error.
 - The soak's Node client does not resend, which is why it counted them.
 
+## The two fixes, and their A/B soaks (2026-10-07)
+
+Each fix is on its own branch from master (`c9ca4584`), pushed and **not merged**. The merges come
+later, with the owner present.
+
+| | `fix/bounded-period-evaluation` (`0e8b38c7`) | `fix/verify-off-main-thread` (`e3138785`) |
+| --- | --- | --- |
+| what changed | the store streams `race_source` and `results`, one row at a time, instead of hydrating the whole period (`server/src/races/raceStore.js`, `raceResultsInPeriod`) | the replay runs on a worker thread (`server/src/races/verifyOffMainThread.js`, `verifyReplay.worker.js`); one verify at a time per server, a second one gets 429; the replay code is unchanged |
+| answers against the old path, on the soak's data | **byte-identical** in 9 of 9 (3 teams × a full year, one hour, an empty period; [compare-eval.mjs](SOAK-1/compare-eval.mjs)) | **identical** in 24 of 24 stored races ([compare-verify.mjs](SOAK-1/compare-verify.mjs)) |
+| the targeted measure, directly | live memory during a 5,072-race evaluation: **37.79 → 0.02 MiB**; time 643–657 → 125–152 ms | the main thread's longest block during a verify: **1.8–5.4 s → 20–26 ms** (n = 6) |
+| new tests, each sabotaged red once | streaming (red when the old body returns), byte-identical on a fixture of his kind of data (red when the order or the source field is wrong) | health answers in < 200 ms during a verify, a second verify gets 429 (both red with the replay back on the main thread / without the one-at-a-time check), answer = the replay's own |
+| server suite · premerge · Browser gate | 924/924 · 21 pass, 0 fail, no fingerprint in reach · 125 passed, 1 skipped | 925/925 · 21 pass, 0 fail, no fingerprint in reach · 125 passed, 1 skipped |
+
+**The A/B soaks.** Two hours per arm, one after the other, never two at once: master, then each fix.
+- Each arm started from **the same copy** of the soak's data: 15,215 races, made after step 2a.
+- The load was the soak's mix; the sampler was the soak's.
+- The arms ran from 2026-10-07 18:10 to 2026-10-08 00:11 UTC.
+- The test-aids route is not on master or on either branch yet (`feat/test-aids-switch` is
+  unmerged), so its reads were 404 in every arm alike. They are left out below.
+
+| per arm, 2 h | master | evaluation fix | verify fix |
+| --- | --- | --- | --- |
+| requests sent (each lane waits for its answer) | 37,540 | **121,974** | 59,888 |
+| 5xx · restarts · OOM | 0 · 0 · no | 0 · 0 · no | 0 · 0 · no |
+| verifies, all identical | 19 of 19 | 19 of 19 | 19 of 19 |
+| period evaluation, median of the minute medians · p99 | 2,930 ms · 4,731 ms | **183 ms · 424 ms** | 1,657 ms · 3,849 ms |
+| RSS maximum · high-water mark | 603 · 637 MiB | **168 · 193 MiB** | 554 · 671 MiB |
+| RSS floor after each idle phase | 96.7 / 97.5 MiB | **133.9 / 138.6 MiB** | 90.8 / 91.5 MiB |
+| minutes with a p99 over 1 s, five ordinary route groups | 433 | **70** | 406 |
+| connection errors · of them inside a verify | 74 · 42 | 32 · — | **256 · 25** |
+| a verify, median wall time | 10.0 s | 4.7 s | 12.0 s |
+
+**What the arms show.**
+- **At 15,215 races the old period evaluation saturates the server.** Each call holds the event
+  loop for 1.6–3 s, and the load asks for one every two seconds. Master therefore sent less than a
+  third of the evaluation fix's requests in the same two hours.
+- **The evaluation fix removes that.** It cut the evaluation 16× at the median, the memory peak 3.6×,
+  the slow minutes 6×, and the connection errors by more than half.
+- **Its one worse line is the idle floor:** 134–139 MiB against 97, over 3.2× as many requests
+  served. It is not explained here. The step-2 heap evidence (no structure grows) was taken on
+  master's code.
+- **The verify fix cannot show its effect under this load.** The old evaluation, still on that
+  branch, blocks the loop anyway:
+  - only 25 of its 256 connection errors fell inside a verify (master: 42 of 74);
+  - the other 231 are the same keep-alive resets, caused by the evaluation's blocks;
+  - more requests got through than on master (59,888 against 37,540), so more were exposed.
+
+  Its targeted measure is the direct one above (20–26 ms against 1.8–5.4 s). An A/B that isolates
+  it would run it on top of the evaluation fix.
+
+**Against the follow-on block's merge conditions** (no 5xx or crash; the targeted measure clearly
+better and nothing else worse; outputs identical; no fingerprint moved; no visible change):
+
+| | conditions met | not met |
+| --- | --- | --- |
+| evaluation fix | no 5xx or crash; targeted measure clearly better; outputs identical; no fingerprint; no visible change | **"nothing else worse"**: the idle floor is 37–41 MiB higher |
+| verify fix | no 5xx or crash; outputs identical; no fingerprint; no visible change (the button's answer is unchanged; a second simultaneous verify now gets 429) | **"targeted measure clearly better" is not visible in this A/B**, and **connection errors are higher** (256 against 74), for the cause above |
+
+Neither branch meets every condition as measured. Both stay pushed and unmerged.
+
 ## The harness
 
 | file | what it does |
