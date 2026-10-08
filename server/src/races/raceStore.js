@@ -76,6 +76,22 @@ const DEFAULT_RACES_PATH = process.env.RA_RACES_DB ?? join(DATA_ROOT, 'races.sql
 /** How many short keys to draw before declaring the random source broken. See the insert loop. */
 const SHORT_KEY_ATTEMPTS = 8;
 
+/** The race fields stored in a scalar column as sent — each must be a string or a finite number. */
+const SCALAR_FIELDS = [
+  'clientRaceId',
+  'finishedAt',
+  'identifierVersion',
+  'buildId',
+  'geometryId',
+  'racerTypeId',
+  'racePlanSeed',
+  'raceActionStage',
+  'targetLaps',
+  'targetDurationSec',
+  'worldSchemaVersion',
+  'elapsedSec',
+];
+
 // ── The schema ────────────────────────────────────────────────────────────────
 //
 // Column-per-fact for everything a person reads or a query filters on, and a canonical JSON string
@@ -290,6 +306,27 @@ export function createRaceStore(filePath = DEFAULT_RACES_PATH) {
     if (!Array.isArray(race.winners)) {
       const err = new Error('storeRace requires "winners" as an array');
       err.code = 'INVALID_RESULTS';
+      throw err;
+    }
+    // ★ EVERY SCALAR COLUMN GETS A SCALAR (AUDIT-1 A5M-11). An object, an array or a boolean cannot
+    // be bound by SQLite, so it threw at the insert — a 500, which the route's contract calls
+    // RETRYABLE, so the client re-sent a race that could never be stored, forever. Checked HERE,
+    // before the first statement binds `clientRaceId`. Deliberately no stricter than "a string or a
+    // finite number": a pending entry from an older client must still store exactly as it did.
+    for (const field of SCALAR_FIELDS) {
+      const v = race[field];
+      if (v === undefined || v === null) continue; // presence is `required()`'s question, below
+      if (typeof v !== 'string' && !(typeof v === 'number' && Number.isFinite(v))) {
+        const err = new Error(`storeRace requires "${field}" as a string or a number`);
+        err.code = 'INVALID_RACE';
+        throw err;
+      }
+    }
+    // The client stamps it with toISOString(); anything that is not a date would sort and filter
+    // as text in the history (`finished_at` is compared as a string).
+    if (race.finishedAt != null && !Number.isFinite(Date.parse(race.finishedAt))) {
+      const err = new Error('storeRace requires "finishedAt" as a date');
+      err.code = 'INVALID_RACE';
       throw err;
     }
 
