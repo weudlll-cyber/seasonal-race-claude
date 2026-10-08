@@ -283,6 +283,11 @@ is now the accepted one: base-image patches arrive only when somebody re-reads t
 replaces it on both lines.** Nothing in the repository does that for you. The paragraph below is
 the reasoning as it stood before the order, kept as the record of the trade.
 
+**BUMPED 2026-10-09 (AUDIT-1 A7): `node:20-alpine` → `node:24-alpine`**, re-read the same way and
+still pinned by digest. Node 20 reached end of life on 2026-04-30; 24 is the active LTS and the
+version this repository's suites already run on. CI (`node-version`) moved with it. The source-install
+floor (`engines: >=20`, "Node 20 or newer") is unchanged — raising it is a row for the owner.
+
 ~~**Base image — a floating tag**~~ (`server/Dockerfile:22` and `:33` before TIDY-C-1, both `FROM node:20-alpine`).
 ★★ **The brief asked me to pin it to a digest "if that is purely safer". It is NOT purely safer,
 so it was not pinned.** A digest makes a rebuild reproducible — the same input gives the same image

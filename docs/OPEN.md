@@ -1,9 +1,9 @@
-# What is open — DERIVED from BACKLOG PART ONE, 2026-10-02
+# What is open — DERIVED from BACKLOG PART ONE, 2026-10-09
 
 **Owns:** nothing of its own — this is the short view DERIVED from [BACKLOG.md](BACKLOG.md) PART ONE, which is the list. Where the two disagree, the backlog wins.
 
 ★★★ **THIS PAGE IS DERIVED. `docs/BACKLOG.md` PART ONE IS THE LIST; this is the short view over it.**
-Re-derived on **2026-10-08**, from PART ONE's **six** rows. ★ **On `feat/vps-install` only (not merged), VPS-INSTALL-1 adds two rows**: copying the backups off the server, and SSH hardening with the owner — four to **six**. ★ **Two rows closed on 2026-10-08 (VERIFY-OFF-MAIN-1, merged)**: a verify replays on a worker thread, so the server's thread is held 17–27 ms instead of seconds, and the connection errors it caused are gone (0 in the 2-hour A/B arm) — six to **four**. ★ **The period-evaluation row closed on 2026-10-08 (BOUNDED-EVAL-1, merged)**: the evaluation streams two fields per race; byte-identical answers; retained heap flat, live heap 423 → 74 MiB at 15,215 races — seven to **six**. ★ **The developer-displays row closed on 2026-10-08**: the owner accepted the test-aids switch on the production preview, and it is merged together with the winners-setting removal — eight to **seven**. ★ **`0xC0000142` closed on 2026-10-08** by the owner's decision on the SOAK-1 part C evidence (0 git children over 16,093 saves, no process-creation error, commit and branch right 10 of 10); the late `+dirty` mark is a recorded limitation of the Windows dev server — nine to **eight**. ★ **SOAK-1 opened six rows on 2026-10-07**: a 9-hour soak of the Docker image and a static audit of the server (reports/release/SOAK-1.md) — three to **nine**. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
+Re-derived on **2026-10-09**, from PART ONE's **thirty-four** rows. ★ **On `feat/vps-install` only (not merged), VPS-INSTALL-1 adds two rows**: copying the backups off the server, and running the (now guided) SSH hardening with the owner on the VPS — thirty-two to **thirty-four**. ★ **AUDIT-1 opened thirty-one rows on 2026-10-09**: the complete audit (reports/release/AUDIT-1.md) left 29 decisions for the owner and two pieces of test hygiene; its security fixes were merged first (`980b13d4`) and its safe cleanups are their own piece — one to **thirty-two**. ★ **Two rows closed on 2026-10-08**: the race store keeps every race for ever, as decided that day (about 10 KB a race, SOAK-1), and the shipped `docker-compose.yml` now rotates its log (json-file, 10 MB × 5) — three to **one**. ★ **The track-backups row closed on 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged)**: the newest 20 backups per track are kept, older ones of that track removed at each new backup — four to **three**. ★ **Two rows closed on 2026-10-08 (VERIFY-OFF-MAIN-1, merged)**: a verify replays on a worker thread, so the server's thread is held 17–27 ms instead of seconds, and the connection errors it caused are gone (0 in the 2-hour A/B arm) — six to **four**. ★ **The period-evaluation row closed on 2026-10-08 (BOUNDED-EVAL-1, merged)**: the evaluation streams two fields per race; byte-identical answers; retained heap flat, live heap 423 → 74 MiB at 15,215 races — seven to **six**. ★ **The developer-displays row closed on 2026-10-08**: the owner accepted the test-aids switch on the production preview, and it is merged together with the winners-setting removal — eight to **seven**. ★ **`0xC0000142` closed on 2026-10-08** by the owner's decision on the SOAK-1 part C evidence (0 git children over 16,093 saves, no process-creation error, commit and branch right 10 of 10); the late `+dirty` mark is a recorded limitation of the Windows dev server — nine to **eight**. ★ **SOAK-1 opened six rows on 2026-10-07**: a 9-hour soak of the Docker image and a static audit of the server (reports/release/SOAK-1.md) — three to **nine**. ★ **The two server defects closed on 2026-10-06 (SERVER-DEFECTS-1)**: both fixed and merged — four to **three**. ★ **The tidy list (row C) closed on 2026-10-06 (TIDY-C-3)**: every route documented, the unimported exports decided one by one, the two `minTargetScreenPx` settings told apart — four to **three**; documenting the routes found two server defects, opened as one row the same day — three to **four**. ★ **`B-UX2`, THE DEV SCREEN'S REORGANISATION, closed on 2026-10-05 (DEVSCREEN-CHAPTERS-1)**: seven chapters and a fixed sidebar, 348 controls, built and merged after the owner looked at the rebuilt screen that day — five to **four**. ★ **FRAME DROPS AT 80 RACERS closed on 2026-10-05 (FRAME-DROPS-80)**: four fixes built, measured and merged, after the owner looked at the drawing changes that day — six to **five**. ★ **FRAME DROPS AT 80 RACERS ON OPEN TRACKS opened on 2026-10-05** (FRAME-DROPS-80, branch `perf/frame-drops-80`) — five to **six**. ★ **EXACT FIELD SIZE closed on 2026-10-04 (EXACT-FIELD-SIZE-1)**: built and merged the same day — six to **five**. ★ **The owner's decisions of 2026-10-04 (recorded by DECISIONS-2026-10-04)** closed three rows — B4 (the default binding stays), PERSONAL DATA (no deletion function) and B6 (folded into the developer-displays row) — and opened one, EXACT FIELD SIZE: eight to **six**. ★ **The period evaluation closed on 2026-10-04 (PERIOD-EVALUATION-1)**: built and merged, after the owner looked at it that day — nine to **eight**. ★ **B1 closed on 2026-10-04 (VERIFY-ON-DEMAND-1)**: verifying a race on demand is built and merged, after the owner looked at it that day — ten to **nine**. ★ **The delivery-plan row closed on 2026-10-04 (DELIVERY-SHIP-1)**: searound and seatrack ship as on his installation; the brand and test groups do not, by his decision — eleven to **ten**. ★ **B8 closed (DEVSCREEN-TIER-1, 2026-10-04)**: the Dev Screen's admin view reads the server-confirmed session — twelve to **eleven**. ★ **HOOK-CONFLICT-MARKERS-1 (2026-10-04)** closed the
 conflict-marker row: the hook now refuses them — thirteen to **twelve**. ★ **The 2026-10-03 hygiene pass opened one row**:
 the pre-commit hook does not detect committed conflict markers (a proposal, not built) — twelve to
 **thirteen**. ★ **The comeback-runaway row closed on 2026-10-03**
@@ -54,9 +54,10 @@ closed the note above read *"Re-derived from PART ONE today: **thirteen**"*, whi
 day it was written and went stale twice over as the count moved to fifteen and back to fourteen.
 A paragraph whose whole subject is a page disagreeing with itself became the disagreement.
 **Counted mechanically from the authority rather than restated: `docs/BACKLOG.md` PART ONE
-(lines 15–1851) holds exactly SIX unchecked `- [ ]` rows** — 3 in *Before the VPS migration* and 3 in *Delivering to someone
-else*.
-*(Re-counted 2026-10-08 on `feat/vps-install` after master `dcd837ef` was merged in.)* Every current count on this page says six.
+(lines 15–1945) holds exactly THIRTY-FOUR unchecked `- [ ]` rows** — three in *Delivering to someone
+else* (two of them VPS-INSTALL-1's, on this branch only), thirty-one in *AUDIT-1 — what the audit of
+2026-10-09 leaves open*.
+*(Re-counted 2026-10-09 on `feat/vps-install` after master `290e6db3` was merged in.)* Every current count on this page says thirty-four.
 Where the two disagree, **the backlog wins** — and the date above is how a reader tells at a glance
 whether this has gone stale again.
 
@@ -84,7 +85,7 @@ because nobody looked.**
 
 ---
 
-## 0 · THE OPEN LIST — all six, from BACKLOG PART ONE
+## 0 · THE OPEN LIST — thirty-four rows, from BACKLOG PART ONE
 
 *One line each. The backlog row is the detail; this is only the map.*
 
@@ -96,13 +97,59 @@ because nobody looked.**
    ★ **Built 2026-10-07/08 (VPS-INSTALL-1, `feat/vps-install`, not merged):** one command installs it on
    the VPS with Caddy and a real certificate ([VPS-INSTALL.md](VPS-INSTALL.md)); its first run on the VPS
    is with the owner.
-2. ★ **Copy the backups off the server** — daily backups stay on the same disk until they are copied
-   elsewhere; where to is the owner's choice (VPS-INSTALL-1).
-3. ★ **SSH hardening — manual, with the owner.** The install does not touch SSH; the steps are printed
-   at its end (VPS-INSTALL-1).
-4. **Track backups are never removed** — one full copy per track save (SOAK-1).
-5. **The shipped docker-compose.yml sets no log size limit** (SOAK-1).
-6. **The race store keeps every race for ever** — by design; 10 KB a race (SOAK-1).
+
+**VPS-INSTALL-1 (`feat/vps-install` only):**
+
+- ★ **Copy the backups off the server** — daily backups stay on the same disk until they are copied
+  elsewhere; where to is the owner's choice.
+- ★ **SSH hardening, with the owner on the VPS** — guided since 2026-10-09: `sudo racearena harden-ssh`
+  proves a key sign-in from a second session before switching passwords and root sign-in off.
+
+**AUDIT-1 (2026-10-09) — security and access, his word:**
+
+2. A5M-07 — trust the proxy by an explicit setting rather than by `NODE_ENV`.
+3. A5M-12 — per-user write limits or a disk alarm.
+4. A5M-13 — an allow-list of record fields and the editors' numeric bounds.
+5. A5M-14 — whether tracks, brands, racers and player groups become team-scoped.
+6. A5M-15 — a server-side minimum password length.
+7. A5M-16 — a per-account sign-in failure counter.
+8. A5T-02 — root `sharp` 0.34 → 0.35 (dev scripts only).
+9. A5T-06 — protect master.
+10. A5T-07 — Dependabot alerts, private vulnerability reporting, a SECURITY.md contact.
+11. A5T-08 — require SHA pinning in the Actions settings.
+12. A6-06 — the GPL-3.0-only session store in an AGPL-3.0-or-later project.
+
+**AUDIT-1 — robustness, his word:**
+
+13. A10-02 — WAL mode for the race store (a held lock blocks the server 6.9 s).
+14. A10-05 — health that sees a damaged store.
+15. A10-07 — start fresh when the sessions file is damaged.
+16. A12 — retention for player names in stored races and for backup archives.
+
+**AUDIT-1 — visible changes, his eye:**
+
+17. A8-01 — Dev Screen contrast and labels.
+18. A8-02 — Track Editor select labels.
+19. A8-03 — the setup screen's 3 px overflow at 390 px.
+20. A3-19 — the three German alerts users see.
+21. A2 — Dev Screen info texts that contradict the shipped settings.
+22. A9-01 — code-split the 1 MB client bundle.
+
+**AUDIT-1 — records and decisions:**
+
+23. A2-14 — stop writing `defaultWinners`.
+24. A2-50 — `viewerProbe.js` invariant 3 (a probable bug in a diagnostic).
+25. A3-22 — CLAUDE.md's inventory and `fingerprints.json`.
+26. A3-25 — the un-struck items on this page's §2-§5.
+27. A6-03 — whether to shrink the repository history.
+28. A7-02 — raise the source-install floor to Node 22.
+29. A7-03 — the major upgrades (React 19, Express 5, ESLint 10, vitest 5, better-sqlite3 13).
+30. A4-04 — a test for the race-source migration.
+
+**AUDIT-1 — test hygiene, no decision:**
+
+31. A4-02 — two Dev Screen test hooks with thin headroom under load.
+32. A4-03 — seven tests that depend on the working directory.
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
@@ -124,6 +171,10 @@ fabricated result would reproduce the fabrication faithfully. Now in
 ## 1 · NEEDS ONLY HIS WORD
 
 *A sentence from him and it can proceed. Nothing has to be built or measured first.*
+
+★★ **NOT EMPTY SINCE 2026-10-09: AUDIT-1's decisions are rows 2-30 of §0.** They are listed there,
+not repeated here, because §0 is the one list; the text below is the record of how this section
+emptied before.
 
 ★★ **EMPTY AGAIN, 2026-09-27 — ALL SIX WERE ANSWERED, and this time the emptiness is dated to the
 answers rather than asserted.** The section held six questions for one day. Each is now a decision

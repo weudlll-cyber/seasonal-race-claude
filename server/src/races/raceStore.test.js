@@ -309,9 +309,23 @@ describe('what storeRace refuses', () => {
     ['no buildId', { buildId: null }, 'INVALID_RACE'],
     ['no seed', { racePlanSeed: null }, 'INVALID_RACE'],
     ['no clientRaceId', { clientRaceId: null }, 'INVALID_RACE'],
+    // AUDIT-1 A5M-11: a value SQLite cannot bind threw at the insert as a RETRYABLE 500. Now refused.
+    ['an object for a seed', { racePlanSeed: { n: 1 } }, 'INVALID_RACE'],
+    ['an array for a clientRaceId', { clientRaceId: ['x'] }, 'INVALID_RACE'],
+    ['a boolean for laps', { targetLaps: true }, 'INVALID_RACE'],
+    ['an infinite elapsed time', { elapsedSec: Infinity }, 'INVALID_RACE'],
+    ['a finishedAt that is not a date', { finishedAt: 'yesterday-ish' }, 'INVALID_RACE'],
   ])('refuses a race with %s', (_label, override, code) => {
     expect(() => store.storeRace(aRace(override))).toThrow(expect.objectContaining({ code }));
     expect(store.counts().races).toBe(0);
+  });
+
+  it('still stores a string seed and a numeric-string laps value, as an older client may send', () => {
+    // The check refuses what can NEVER be stored, nothing more: a pending entry from an older
+    // build must store exactly as it did before (AUDIT-1 A5M-11).
+    expect(store.storeRace(aRace({ racePlanSeed: '5601', targetLaps: '3' })).stored.race).toBe(
+      true
+    );
   });
 
   it('a refused race leaves NOTHING behind — the roster is rolled back with it', () => {

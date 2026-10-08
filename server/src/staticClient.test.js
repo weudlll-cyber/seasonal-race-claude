@@ -24,6 +24,7 @@ import {
   mountApiNotFound,
   clientBuildExists,
   resolveClientDist,
+  lastSegmentHasExtension,
 } from './staticClient.js';
 
 let dist;
@@ -147,6 +148,36 @@ describe('a MISSING asset 404s rather than becoming the shell', () => {
       expect(r.status, p).toBe(404);
       expect(r.text, p).not.toContain('APP SHELL');
     }
+  });
+});
+
+describe('lastSegmentHasExtension (AUDIT-1 A5M-03)', () => {
+  // The cases are the old regex's own answers, so the helper is a drop-in for `/\.[^/]+$/`.
+  const OLD = /\.[^/]+$/;
+  const cases = [
+    '/',
+    '/setup',
+    '/assets/real.js',
+    '/a.b/c',
+    '/a/b.',
+    '/a/.x',
+    '/a.b.',
+    '/x.y/',
+    '.',
+    'a.b',
+  ];
+
+  it('answers exactly as the regex it replaces', () => {
+    for (const p of cases) expect(lastSegmentHasExtension(p), p).toBe(OLD.test(p));
+  });
+
+  // The old regex took 555 ms on 16 000 dots (quadratic); the input is 4x that so the bound
+  // separates the two SHAPES with a wide margin, not two machines.
+  it('a long path of dots is judged in linear time (ReDoS)', () => {
+    const hostile = '/' + '.'.repeat(64000) + '/';
+    const t0 = performance.now();
+    lastSegmentHasExtension(hostile);
+    expect(performance.now() - t0).toBeLessThan(50);
   });
 });
 

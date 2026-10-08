@@ -7,6 +7,7 @@
 // ============================================================
 
 import { resolvePublicOrigin } from '../runtimeConfig.js';
+import { isApiPath } from '../../utils/apiPath.js';
 
 // ── Allowed client origins ────────────────────────────────────────────────────
 
@@ -43,8 +44,13 @@ export function getAllowedClientOrigins() {
 
 // ── CORS options ──────────────────────────────────────────────────────────────
 
+// Trailing slashes are cut by a LOOP, not by `/\/+$/`: this runs on the caller's raw `Origin`
+// header before sign-in, and that regex backtracks quadratically — a 16 KB header of slashes held
+// the event loop for 371 ms (AUDIT-1 A5M-02).
 export function normalizeOrigin(o) {
-  return String(o).trim().toLowerCase().replace(/\/+$/, '');
+  let s = String(o).trim().toLowerCase();
+  while (s.endsWith('/')) s = s.slice(0, -1);
+  return s;
 }
 
 // Built once at module load. origin:false → CORS disabled → same-origin only, cross-origin browsers
@@ -74,8 +80,8 @@ export function createCsrfOriginGuard({
   selfOrigin = process.env.RA_PUBLIC_ORIGIN || null,
 } = {}) {
   return function csrfOriginGuard(req, res, next) {
-    const path = req.path;
-    if (path !== '/api' && !path.startsWith('/api/')) return next(); // scope: /api only
+    // Scope: /api only — in ANY letter case, as Express routes it (AUDIT-1 A5M-01).
+    if (!isApiPath(req.path)) return next();
 
     const method = String(req.method).toUpperCase();
     if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) return next(); // mutating only

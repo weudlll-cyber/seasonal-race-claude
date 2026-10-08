@@ -834,15 +834,16 @@ are in PART TWO with what closed them; these are the ones still standing.
       install's closing text and [VPS-INSTALL.md](VPS-INSTALL.md) say so. Where they go — another
       machine, storage he rents — is the owner's choice.
       **verify:** a backup archive exists somewhere other than the server, newer than 2 days.
-- [ ] ★ **SSH HARDENING — MANUAL, WITH THE OWNER (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
+- [ ] ★ **SSH HARDENING — WITH THE OWNER, ON THE VPS (VPS-INSTALL-1, 2026-10-07).** `deploy/install.sh`
       deliberately does not change the SSH configuration: a mistake there locks the owner out of his
-      own server. It prints the steps at the end:
-      1. sign in with a key;
-      2. `PasswordAuthentication no` and `PermitRootLogin prohibit-password`;
-      3. reload SSH and test a second sign-in before closing the first.
+      own server. ★ **Since 2026-10-09 (AUDIT-1 piece E) it is GUIDED, not manual:**
+      `sudo racearena harden-ssh --user <him>` plans it, and a confirmation run from a SECOND session
+      — which sshd's journal must show signed in with a key — switches off passwords and root sign-in
+      (refusals and the dry run tested in Debian 12, `deploy/test/hardening-check.sh`). fail2ban guards
+      SSH from the install on. What remains is running it, with him, on the VPS.
 
       **verify:** on the VPS, `sshd -T | grep -E 'passwordauthentication|permitrootlogin'` prints
-      `no` and `prohibit-password`.
+      `passwordauthentication no` and `permitrootlogin no`.
 
 ★★ **THE OWNER'S FACTS OF 2026-10-01, recorded here because they set this section's scope.** The
 software is to be downloadable for many server operators, and every operator must be able to host
@@ -870,24 +871,7 @@ stay scoped per team as already built (the TENANCY row, PART TWO).
 A 9-hour soak of the Docker image at `56bdb8d7` under 566,225 requests, plus a static audit of the
 production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No crash, restart or
 5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
-block.
-
-- [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
-      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
-      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
-      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
-      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
-      shrinks.
-- [ ] **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
-      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
-      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
-      have no ceiling.
-      **verify:** `docker compose config` shows no `logging:` under the service.
-- [ ] **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
-      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
-      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
-      rule is wanted is a decision, not a defect.
-      **verify:** `races.sqlite` size against the race count.
+block. ★ **All six are closed as of 2026-10-08**, and are in PART TWO under the same heading.
 
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
@@ -1846,6 +1830,117 @@ owner's hand**: parked here with enough context to be actionable months from now
   [HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md)). Candidate direction on record if it ever
   opens: **chaos traffic for the rear rows** (give the back rows more chaos-window mixing), which would aim to
   raise the bar to "silent even at N=300". Do NOT start without the owner's explicit word.
+
+---
+
+## AUDIT-1 — what the audit of 2026-10-09 leaves open
+
+★ **Source: [reports/release/AUDIT-1.md](../reports/release/AUDIT-1.md)**, which carries the evidence
+for every row below. Its security fixes were merged as `980b13d4`; its safe cleanups land in
+`chore/audit-1-cleanup`. What remains here is what needs the owner's word, plus two pieces of test
+hygiene. **Ids are the report's; each row's evidence is in the report and its appendices.**
+
+### Security and access — his word
+
+- [ ] **AUDIT-1 A5M-07 · trusting the proxy by `NODE_ENV` alone.** `server/src/app.js:34` trusts one
+      proxy hop whenever `NODE_ENV=production`; on a source install with the port reachable directly,
+      `X-Forwarded-For` then picks the rate-limiter key. Not reachable in the VPS stack. Proposal: an
+      explicit `RA_TRUST_PROXY` setting. *(verify: `curl -H "X-Forwarded-For: 1.2.3.4"` eleven failed
+      logins against a directly exposed production-mode install — refused only after the fix)*
+- [ ] **AUDIT-1 A5M-12 · no write quota.** Any signed-in user can store unlimited races, tracks and
+      10 MB images. Proposal: per-user write limits or a disk alarm. *(verify: a decision, then a test)*
+- [ ] **AUDIT-1 A5M-13 · records accept any field and any number.** `tracks.js:504` stores every extra
+      body field; `racers.js:93` checks no ranges. Proposal: an allow-list and the editors' own bounds.
+      *(verify: `PUT /api/tracks/x` with `worldWidth: 1e9` refused 400)*
+- [ ] **AUDIT-1 A5M-14 · tracks, brands, racers and player groups are not team-scoped.** Any operator
+      edits any team's records (`docs/API.md:294`). *(verify: a decision — scope them, or record it)*
+- [ ] **AUDIT-1 A5M-15 · the only password rule is "not blank".** `usersStore.js:30`; the installer
+      asks for 10 characters. *(verify: `POST /api/users` with a 3-character password refused 400)*
+- [ ] **AUDIT-1 A5M-16 · no per-account sign-in counter.** The limiter keys on the IP only
+      (`rateLimit.js:16`). It can lock out a real user, hence his word. *(verify: a decision)*
+- [ ] **AUDIT-1 A5T-02 · root `sharp` has a high advisory** fixable only by 0.34 → 0.35 (a major);
+      it is used by two sprite-generation scripts and never shipped. *(verify: `npm audit --prefix .`
+      reports 0 high)*
+- [ ] **AUDIT-1 A5T-06 · master is unprotected** — no branch protection, no ruleset. Proposal: forbid
+      force-push and deletion. *(verify: `gh api repos/weudlll-cyber/seasonal-race-claude/rulesets`
+      is not `[]`)*
+- [ ] **AUDIT-1 A5T-07 · Dependabot alerts, private vulnerability reporting and a SECURITY.md are all
+      absent.** *(verify: `gh api …/vulnerability-alerts` answers 204; a SECURITY.md names a contact)*
+- [ ] **AUDIT-1 A5T-08 · the "require SHA pinning" Actions setting is off**; every workflow pins
+      anyway since `c369ea81`. *(verify: `gh api …/actions/permissions` shows
+      `"sha_pinning_required": true`)*
+- [ ] **AUDIT-1 A6-06 · licensing note:** the project is AGPL-3.0-or-later and the session store
+      `better-sqlite3-session-store` is GPL-3.0-only; the combination is permitted, and the "-only"
+      pins the shipped image's combined work to version 3. *(verify: a decision — accept, or replace
+      the store)*
+
+### Robustness — his word
+
+- [ ] **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
+      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks the
+      event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
+      live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
+      <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
+- [ ] **AUDIT-1 A10-05 · health says "ok" while nobody can sign in.** With `users.json` damaged the
+      server starts and `/api/health` answers ok. The VPS update and rollback read health, so what it
+      reports is a decision. *(verify: `a10-corrupt.mjs` — health is not ok with a damaged store)*
+- [ ] **AUDIT-1 A10-07 · a damaged sessions file stops the server.** `SqliteError: file is not a
+      database`, exit 1. Proposal: move it aside and start fresh (everyone signs in again).
+      *(verify: `a10-corrupt.mjs` — "starts: yes" for the sessions scenario)*
+- [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
+      no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
+      rule with a test)*
+
+### Visible changes — his eye
+
+- [ ] **AUDIT-1 A8-01 · Dev Screen accessibility:** colour contrast fails on the active tier toggle
+      and the reset buttons (19 nodes) and 10 numeric inputs have no label (axe 4.10.2).
+      *(verify: `browser-audit.mjs <clone> <out> a8` reports 0 rules on `/dev`)*
+- [ ] **AUDIT-1 A8-02 · Track Editor:** two `<select>` elements without an accessible name.
+      *(verify: the same run reports 0 on `/track-editor`)*
+- [ ] **AUDIT-1 A8-03 · the setup screen is 3 px wider than a 390 px phone.** *(verify: the same run
+      reports no overflow at 390)*
+- [ ] **AUDIT-1 A3-19 · three German alerts users see** (BrandingProfiles, PlayerGroupsManager,
+      TrackManager), frozen by the language allowlist. *(verify: `check-language-closed` allowlist
+      counts for the three files are 0)*
+- [ ] **AUDIT-1 A2 · Dev Screen info texts that contradict the shipped settings** — "shipped OFF"
+      for settings now ON, the camera-lerp help text, the race-plan duration (A2-34, -40, -41, -42,
+      -43). The comments beside them are corrected in the cleanup; the visible texts wait for him.
+      *(verify: each text read against `defaults.js`)*
+- [ ] **AUDIT-1 A9-01 · one 1,007 KB JavaScript chunk** (295 KB gzipped). Code splitting changes how
+      the app loads. *(verify: `npm run build` prints no chunk over 500 KB)*
+
+### Records and decisions
+
+- [ ] **AUDIT-1 A2-14 · `defaultWinners: 3` is still written** into every new track (`tracks.js:515`)
+      and carried by the 10 seed records, though nothing reads it since 2026-10-06. Removing it changes
+      the seed records. *(verify: `grep -r defaultWinners server/` finds nothing)*
+- [ ] **AUDIT-1 A2-50 · `viewerProbe.js:414` passes world pixels where a normalised value belongs**
+      (the file's own rule), so invariant 3 is too lenient. Fixing it changes the instrument's verdicts.
+      *(verify: the probe's invariant-3 call uses the normalised band, re-measured)*
+- [ ] **AUDIT-1 A3-22 · CLAUDE.md's closing inventory** names two FINISH-PAIR-1 quotations in
+      `docs/fingerprints.json`, which carries none; CLAUDE.md forbids editing that list.
+      *(verify: a decision — annotate or leave)*
+- [ ] **AUDIT-1 A3-25 · OPEN.md §2-§5 still show un-struck items** no row backs ("Pause and resume",
+      "HTTPS is not arranged", …). *(verify: each item either struck or backed by a PART ONE row)*
+- [ ] **AUDIT-1 A6-03 · about 200 MB of old measurement blobs in history.** Shrinking it rewrites every
+      SHA. *(verify: a decision)*
+- [ ] **AUDIT-1 A7-02 · the source-install floor still says Node 20**, which ended 2026-04-30; the image
+      and CI run 24 since `c2530f29`. *(verify: `engines` reads `>=22` in all three manifests)*
+- [ ] **AUDIT-1 A7-03 · major upgrades available:** React 19, Express 5, ESLint 10, vitest 5,
+      better-sqlite3 13 — each a migration, none a security fix today. *(verify: a decision per
+      package)*
+- [ ] **AUDIT-1 A4-04 · the race-source migration has no test** (`migrateRaceSource.js`, 0 %
+      covered; it already ran on his database). *(verify: a test that runs it twice on a copy)*
+
+### Test hygiene (no decision needed; not urgent)
+
+- [ ] **AUDIT-1 A4-02 · two Dev Screen test files run ~9.5 s against a 10 s `beforeAll` limit** and
+      time out under load (twice during the audit). *(verify: `client-suite` green in a `verify`
+      run with a parallel `docker build`)*
+- [ ] **AUDIT-1 A4-03 · seven tests read source files relative to the working directory** and fail
+      unless run from `client/`. *(verify: `npx vitest run --root client` from the repository root
+      passes)*
 
 ---
 
@@ -5065,6 +5160,44 @@ lines and no rewrite is implied, proposed or wanted.
 ---
 
 ## Before the VPS migration
+
+- [x] **CLOSED 2026-10-08.** **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
+      Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
+      logs per request), so this is a limit missing, not a log growing. A burst of warnings would
+      have no ceiling.
+      **verify:** `docker compose config` shows no `logging:` under the service.
+      ★★ **CLOSED 2026-10-08.** The shipped `docker-compose.yml` now rotates its service's log:
+      `json-file`, `max-size: 10m`, `max-file: 5`, the same as `deploy/docker-compose.prod.yml` on
+      `feat/vps-install`. Nothing else in the file changed. `docker compose config` shows the `logging:`
+      block under the service.
+
+- [x] **CLOSED 2026-10-08 (decided: every race is kept for ever, by design).** **THE RACE STORE KEEPS EVERY RACE FOR EVER — by design, and unbounded.** Rows are immutable
+      by trigger (`server/src/races/raceStore.js:211`), and no retention exists. 10,125 bytes per
+      race measured over 12,558 races; 54 MiB after 90 days at 60 races a day. Whether a retention
+      rule is wanted is a decision, not a defect.
+      **verify:** `races.sqlite` size against the race count.
+      ★★ **CLOSED 2026-10-08 — decided: the race store keeps every race for ever, by design.** No
+      retention is built. **Why the size is acceptable:** SOAK-1 measured **10,125 bytes per stored
+      race**, over 12,558 races (reports/release/SOAK-1.md, part B). That is about 54 MiB after 90 days
+      at a generous 60 races a day, and about 0.2 GiB a year: far inside any VPS disk.
+
+- [x] **CLOSED 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged).** **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
+      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
+      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
+      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
+      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
+      shrinks.
+      ★★ **CLOSED 2026-10-08 — TRACK-BACKUP-RETENTION-1, merged; decided that day: keep the newest
+      20 per track.** `writeTrackBackup` (`server/src/routes/tracks.js`) calls `pruneTrackBackups`
+      (`server/utils/trackBackupRetention.js`) right after each backup.
+      - It keeps that track's newest 20 and removes its older ones, ordered by the day folder and the
+        time in the name, never by mtime.
+      - It never removes the backup just written, another track's backups, or the live track file.
+      - It is non-fatal. An existing excess is pruned at the track's next save; there is no start-up
+        sweep.
+      - Six tests, sabotaged once (oldest-first instead of newest-first: red). Documented in
+        DEPLOYMENT.md, TRACK_LIFECYCLE.md and ARCHITECTURE.md, whose "no auto-cleanup" lines are
+        corrected.
 
 - [x] **CLOSED 2026-10-08 (VERIFY-OFF-MAIN-1, merged).** ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
       at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)

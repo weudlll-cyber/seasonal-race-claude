@@ -25,6 +25,7 @@ import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
 import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
 import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
+import { apiErrorHandler } from './apiErrorHandler.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -79,6 +80,10 @@ export function createApp() {
   // SERVE-SPA-1: LAST, so every real route above wins. An unknown path under /api/ now answers as
   // the API rather than as Express's default HTML error page.
   mountApiNotFound(app);
+
+  // AUDIT-1 A5M-08: LAST of all, so every error from any layer above is answered as JSON with no
+  // stack trace, instead of by Express's default HTML page. See apiErrorHandler.js.
+  app.use(apiErrorHandler);
 
   return app;
 }

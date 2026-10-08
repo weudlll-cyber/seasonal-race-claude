@@ -31,6 +31,8 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot, readSeedType } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
+import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
+import { pruneTrackBackups } from '../../utils/trackBackupRetention.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
 const BG_DIR = join(DATA_ROOT, 'backgrounds');
@@ -250,6 +252,8 @@ function generateGeometryId() {
 
 // Write a timestamped backup of a track record. Called after every POST/PUT write.
 // Failures are non-fatal — a backup miss must never prevent the primary save.
+// TRACK-BACKUP-RETENTION-1 (2026-10-08): after the write, only that track's newest
+// `TRACK_BACKUPS_KEPT` backups are kept (server/utils/trackBackupRetention.js); older ones go.
 function writeTrackBackup(trackId, trackData) {
   try {
     const now = new Date();
@@ -257,7 +261,9 @@ function writeTrackBackup(trackId, trackData) {
     const timeStr = now.toISOString().slice(11, 23).replace(/[:.]/g, '-'); // HH-MM-SS-mmm
     const dayDir = join(BACKUP_DIR, dateStr);
     if (!existsSync(dayDir)) mkdirSync(dayDir, { recursive: true });
-    atomicWriteJson(join(dayDir, `${timeStr}-${trackId}.json`), trackData);
+    const written = join(dayDir, `${timeStr}-${trackId}.json`);
+    atomicWriteJson(written, trackData);
+    pruneTrackBackups({ dir: BACKUP_DIR, trackId, keepPath: written });
   } catch (err) {
     console.warn(`[RaceArena] Backup write failed for ${trackId}: ${err.message}`);
   }
@@ -283,17 +289,8 @@ function writeTrackBackup(trackId, trackData) {
  * harm by a wide margin, and doing it silently would be the same defect one level down.
  */
 export function removeBackgroundFile(track) {
-  const name = track.backgroundImageFile;
-  if (!name) return;
-  if (!isSafeAssetFilename(name)) {
-    console.warn(
-      `[tracks] refusing to delete background for "${track.id}": stored filename ${JSON.stringify(name)} ` +
-        'is not a plain filename this server could have written. The file was left in place.'
-    );
-    return;
-  }
-  const bgPath = join(BG_DIR, name);
-  if (existsSync(bgPath)) unlinkSync(bgPath);
+  // The check and the unlink are the shared helper's (AUDIT-1 A5M-09, server/utils/removeStoredAsset.js).
+  removeStoredAsset(BG_DIR, track.backgroundImageFile, 'tracks', `background for "${track.id}"`);
 }
 
 // Copy committed snapshot files (server/seeds/) into DATA_ROOT on first boot.
@@ -614,10 +611,7 @@ router.post('/:id/background', uploadSingleImage(upload, 'background'), (req, re
   if (!existsSync(BG_DIR)) mkdirSync(BG_DIR, { recursive: true });
 
   // Delete old background file if it had a different name (e.g. jpg → png swap)
-  if (track.backgroundImageFile && track.backgroundImageFile !== filename) {
-    const oldPath = join(BG_DIR, track.backgroundImageFile);
-    if (existsSync(oldPath)) unlinkSync(oldPath);
-  }
+  if (track.backgroundImageFile !== filename) removeBackgroundFile(track);
 
   writeFileSync(bgPath, req.file.buffer);
 

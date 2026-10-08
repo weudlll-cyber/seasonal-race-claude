@@ -154,6 +154,12 @@ directory would delete the data. Everything this install owns lives under that o
 accounts, sessions, stored races, uploaded sprites and logos, tracks, brands and player groups.
 **Nothing outside it is yours.**
 
+**Track backups inside it keep themselves small.** Every time a track is created, edited or gets a
+new background, a copy of it goes into `tracks-backups/<day>/`. The newest 20 copies of each track
+are kept and older ones of that track are removed at that moment (decided 2026-10-08,
+`server/utils/trackBackupRetention.js`); other tracks' copies and the live track files are never
+touched. These copies are separate from the whole-install backups below.
+
 ### What a release download is
 
 A release is a tagged version of the repository. Its download is GitHub's source archive:

@@ -34,6 +34,7 @@ import {
   uploadSingleImage,
 } from '../../utils/imageUpload.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
+import { removeStoredAsset } from '../../utils/removeStoredAsset.js';
 import { BUILTIN_RACER_IDS } from '../constants/builtinRacerIds.js';
 import { isValidId } from '../../utils/isValidId.js';
 import { DATA_ROOT } from '../dataPaths.js';
@@ -227,10 +228,7 @@ router.delete('/:id', (req, res) => {
   const racer = racersMap.get(req.params.id);
   if (!racer) return res.status(404).json({ error: 'Racer not found' });
 
-  if (racer.spriteFile) {
-    const spritePath = join(SPRITE_DIR, racer.spriteFile);
-    if (existsSync(spritePath)) unlinkSync(spritePath);
-  }
+  removeStoredAsset(SPRITE_DIR, racer.spriteFile, 'racers', `sprite for "${racer.id}"`);
 
   const path = filePath(req.params.id);
   if (existsSync(path)) unlinkSync(path);
@@ -280,9 +278,8 @@ router.post('/:id/sprite', uploadSingleImage(upload, 'sprite'), (req, res) => {
   const spritePath = join(SPRITE_DIR, filename);
 
   // Delete old sprite file if format changed (e.g. jpg → png swap).
-  if (racer.spriteFile && racer.spriteFile !== filename) {
-    const oldPath = join(SPRITE_DIR, racer.spriteFile);
-    if (existsSync(oldPath)) unlinkSync(oldPath);
+  if (racer.spriteFile !== filename) {
+    removeStoredAsset(SPRITE_DIR, racer.spriteFile, 'racers', `sprite for "${racer.id}"`);
   }
 
   writeFileSync(spritePath, req.file.buffer);
@@ -299,10 +296,7 @@ router.delete('/:id/sprite', (req, res) => {
   const racer = racersMap.get(req.params.id);
   if (!racer) return res.status(404).json({ error: 'Racer not found' });
 
-  if (racer.spriteFile && isSafeAssetFilename(racer.spriteFile)) {
-    const spritePath = join(SPRITE_DIR, racer.spriteFile);
-    if (existsSync(spritePath)) unlinkSync(spritePath);
-  }
+  removeStoredAsset(SPRITE_DIR, racer.spriteFile, 'racers', `sprite for "${racer.id}"`);
 
   const updatedRacer = { ...racer, spriteFile: null, updatedAt: new Date().toISOString() };
   atomicWriteJson(filePath(racer.id), updatedRacer);
