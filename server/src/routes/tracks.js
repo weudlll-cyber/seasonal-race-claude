@@ -31,6 +31,7 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot, readSeedType } from '../seedRuntime.js';
 import { deliverSeedsOnce } from '../seedDelivery.js';
 import { isSafeAssetFilename } from '../../utils/isSafeAssetFilename.js';
+import { pruneTrackBackups } from '../../utils/trackBackupRetention.js';
 
 const DATA_DIR = join(DATA_ROOT, 'tracks');
 const BG_DIR = join(DATA_ROOT, 'backgrounds');
@@ -250,6 +251,8 @@ function generateGeometryId() {
 
 // Write a timestamped backup of a track record. Called after every POST/PUT write.
 // Failures are non-fatal — a backup miss must never prevent the primary save.
+// TRACK-BACKUP-RETENTION-1 (2026-10-08): after the write, only that track's newest
+// `TRACK_BACKUPS_KEPT` backups are kept (server/utils/trackBackupRetention.js); older ones go.
 function writeTrackBackup(trackId, trackData) {
   try {
     const now = new Date();
@@ -257,7 +260,9 @@ function writeTrackBackup(trackId, trackData) {
     const timeStr = now.toISOString().slice(11, 23).replace(/[:.]/g, '-'); // HH-MM-SS-mmm
     const dayDir = join(BACKUP_DIR, dateStr);
     if (!existsSync(dayDir)) mkdirSync(dayDir, { recursive: true });
-    atomicWriteJson(join(dayDir, `${timeStr}-${trackId}.json`), trackData);
+    const written = join(dayDir, `${timeStr}-${trackId}.json`);
+    atomicWriteJson(written, trackData);
+    pruneTrackBackups({ dir: BACKUP_DIR, trackId, keepPath: written });
   } catch (err) {
     console.warn(`[RaceArena] Backup write failed for ${trackId}: ${err.message}`);
   }
