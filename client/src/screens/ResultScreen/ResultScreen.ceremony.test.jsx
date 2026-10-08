@@ -39,7 +39,7 @@ const RESULTS = JSON.stringify({
     { name: 'Dave', icon: '🐎', index: 3, progress: 85, finishTimeMs: 35_800 },
   ],
   elapsedTime: 62,
-  race: { trackId: 't1', trackName: 'Dirt Oval', winners: 3, sponsorText: 'Sponsored by Acme' },
+  race: { trackId: 't1', trackName: 'Dirt Oval', sponsorText: 'Sponsored by Acme' },
 });
 
 /** Set the one config key. `undefined` leaves storage empty so the default applies. */
