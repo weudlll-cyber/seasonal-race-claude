@@ -57,6 +57,7 @@ import {
   statSync,
   readFileSync,
   writeFileSync,
+  chmodSync,
   rmSync,
   accessSync,
   constants as FS,
@@ -70,6 +71,17 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 // then never fired and the tool exited 0 having done nothing at all.
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
+
+// ★ OWNER-ONLY, EVERY FILE THIS TOOL WRITES (AUDIT-1 A5M-05). An archive holds `users.json` (the
+// password hashes) and both databases; under the usual umask a plain write left it, and every file
+// a restore put back, readable by any local account (0644). `mode` covers a new file, the chmod
+// covers one a `--force` restore overwrote. Windows ignores both, harmlessly. The restore runs as
+// the app's own user (`racearena restore` uses the app image, `USER node`), so the app still reads.
+const PRIVATE_MODE = 0o600;
+function writePrivate(path, bytes) {
+  writeFileSync(path, bytes, { mode: PRIVATE_MODE });
+  chmodSync(path, PRIVATE_MODE);
+}
 
 /** The databases that must go through SQLite's own backup API rather than a file copy. */
 export const SQLITE_FILES = ['sessions.sqlite', 'races.sqlite'];
@@ -179,7 +191,7 @@ function tarHeader(name, size, mtime) {
       throw new BackupRefusal(`path too long for a tar entry: ${name}`);
   }
   put(nm, 0, 100);
-  put('0000644', 100, 7);
+  put('0000600', 100, 7); // owner-only, as the files themselves (A5M-05); a system `tar` honours it
   put('0000000', 108, 7);
   put('0000000', 116, 7);
   put(size.toString(8).padStart(11, '0'), 124, 12);
@@ -242,7 +254,8 @@ export async function backup({ dataRoot, outDir, env = process.env, now = new Da
 
   // ── 1 · the databases, through SQLite's own online backup ────────────────────────────────────
   const staging = join(out, `.ra-backup-staging-${stampUtc(now)}`);
-  mkdirSync(staging, { recursive: true });
+  // 0700: SQLite writes its copies here with the default mode; the folder keeps them owner-only (A5M-05).
+  mkdirSync(staging, { recursive: true, mode: 0o700 });
   const items = [];
   try {
     let Database = null;
@@ -304,10 +317,10 @@ export async function backup({ dataRoot, outDir, env = process.env, now = new Da
     }
     chunks.push(Buffer.alloc(1024)); // two empty blocks end a tar
     const archiveBytes = Buffer.concat(chunks);
-    writeFileSync(archivePath, archiveBytes);
+    writePrivate(archivePath, archiveBytes);
     // TIDY-C-1: the checksum is computed from the SAME bytes just written, not re-read, and written
     // after the archive so a checksum file never exists for an archive that does not.
-    writeFileSync(checksumPath(archivePath), checksumLine(archiveBytes, basename(archivePath)));
+    writePrivate(checksumPath(archivePath), checksumLine(archiveBytes, basename(archivePath)));
   } finally {
     rmSync(staging, { recursive: true, force: true });
   }
@@ -350,7 +363,7 @@ export function restore({ archivePath, into, force = false, log = () => {} }) {
     if (!resolve(target).startsWith(dst + sep) && resolve(target) !== dst)
       throw new BackupRefusal(`archive entry escapes the target directory: ${full}`);
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, body);
+    writePrivate(target, body);
     written.push({ name: full, bytes: size });
   }
   log(`restored  : ${written.length} item(s) into ${dst}`);

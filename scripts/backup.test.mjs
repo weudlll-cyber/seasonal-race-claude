@@ -15,7 +15,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, chmodSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, chmodSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -179,6 +179,32 @@ test('ROUND TRIP: a database with rows survives backup → destroy → restore',
     } finally {
       db.close();
     }
+  } finally {
+    rmSync(s, { recursive: true, force: true });
+  }
+});
+
+// ── AUDIT-1 A5M-05: every file the tool writes is owner-only ──────────────────────────────────
+// The archive carries the password hashes; a 0644 archive, or a 0644 users.json put back by a
+// restore, is readable by every local account. The overwrite case is the one a `mode` option alone
+// misses: an existing file keeps its old mode, which is why the tool also chmods.
+test('the archive, its checksum and every restored file are 0600 — also over an existing file', async (t) => {
+  if (process.platform === 'win32') return t.skip('Windows does not honour POSIX modes');
+  const s = scratch();
+  const root = join(s, 'data');
+  const out = join(s, 'archives');
+  const back = join(s, 'restored');
+  seedRoot(root);
+  try {
+    const res = await backup({ dataRoot: root, outDir: out });
+    const mode = (p) => statSync(p).mode & 0o777;
+    assert.equal(mode(res.archivePath), 0o600, 'archive');
+    assert.equal(mode(res.checksumPath), 0o600, 'checksum');
+    mkdirSync(back, { recursive: true });
+    writeFileSync(join(back, 'users.json'), 'old', { mode: 0o644 });
+    restore({ archivePath: res.archivePath, into: back, force: true });
+    assert.equal(mode(join(back, 'users.json')), 0o600, 'users.json overwritten by a --force restore');
+    assert.equal(mode(join(back, 'tracks', 't1.json')), 0o600, 'a newly restored file');
   } finally {
     rmSync(s, { recursive: true, force: true });
   }
