@@ -59,14 +59,18 @@ if (mode === 'serve') {
   await new Promise((r) => app.listen(port, '127.0.0.1', r));
   console.log(`serving on 127.0.0.1:${port} from ${process.env.RA_DATA_DIR}`);
   snap('00min');
-  const t0 = Date.now();
   let i = 0;
   const timer = setInterval(() => {
     i += 1;
+    // The memory as it is, then the heap that survives a full GC — what the process KEPT
+    // (2026-10-08: the retained-heap condition of the period-evaluation fix is read from this).
+    const before = mem();
+    globalThis.gc();
     appendFileSync(out, JSON.stringify({
       t: new Date().toISOString(),
       minute: i,
-      mem: mem(),
+      mem: before,
+      heapUsedAfterGcMiB: MiB(process.memoryUsage().heapUsed),
       loopDelayMs: { p50: +(eld.percentile(50) / 1e6).toFixed(1), p99: +(eld.percentile(99) / 1e6).toFixed(1), max: +(eld.max / 1e6).toFixed(1) },
     }) + '\n');
     eld.reset();
@@ -77,7 +81,6 @@ if (mode === 'serve') {
       process.exit(0);
     }
   }, 60_000);
-  void t0;
 } else if (mode === 'probe') {
   const [rawDir] = rest;
   const { createRaceStore } = await import(u('server/src/races/raceStore.js'));

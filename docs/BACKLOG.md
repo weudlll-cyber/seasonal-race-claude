@@ -850,17 +850,6 @@ block.
       experiment in SOAK-1.md, *Causes*.
       **verify:** `reports/release/SOAK-1/keepalive.mjs` against a server on your own port —
       connection errors per arm.
-- [ ] ★ **THE PERIOD EVALUATION READS EVERY RACE OF THE PERIOD AT ONCE, IN FULL.**
-      `listRacesInPeriod` (`server/src/races/raceStore.js:574-582`) loads and hydrates every race —
-      roster, world configuration and all — though `evaluatePeriod` reads two fields of each.
-      - Its median grows by **36 ms per 1,000 stored races**: 242 ms at 13,424, held synchronously
-        on every call.
-      - The server's memory high-water mark grows by **~30 MiB per 1,000 races**: 183 → 544 MiB.
-      - The memory floor stays flat (92 → 96 MiB).
-      - At 60 races a day: ~197 ms and ~250 MiB after 90 days.
-
-      **verify:** the in-process probe in `reports/release/SOAK-1/inproc.mjs` — heap held by one
-      evaluation, against the race count.
 - [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
       full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
       `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
@@ -5054,6 +5043,30 @@ lines and no rewrite is implied, proposed or wanted.
 ---
 
 ## Before the VPS migration
+
+- [x] **CLOSED 2026-10-08 (BOUNDED-EVAL-1, merged).** ★ **THE PERIOD EVALUATION READS EVERY RACE OF THE PERIOD AT ONCE, IN FULL.**
+      `listRacesInPeriod` (`server/src/races/raceStore.js:574-582`) loads and hydrates every race —
+      roster, world configuration and all — though `evaluatePeriod` reads two fields of each.
+      - Its median grows by **36 ms per 1,000 stored races**: 242 ms at 13,424, held synchronously
+        on every call.
+      - The server's memory high-water mark grows by **~30 MiB per 1,000 races**: 183 → 544 MiB.
+      - The memory floor stays flat (92 → 96 MiB).
+      - At 60 races a day: ~197 ms and ~250 MiB after 90 days.
+
+      **verify:** the in-process probe in `reports/release/SOAK-1/inproc.mjs` — heap held by one
+      evaluation, against the race count.
+      ★★ **CLOSED 2026-10-08 — BOUNDED-EVAL-1, merged.** `raceResultsInPeriod` (`server/src/races/raceStore.js`)
+      streams `race_source` and `results`, one row at a time, instead of hydrating the whole period.
+      - **Byte-identical** answers: 9 of 9 on the soak's data (3 teams × full year, one hour, empty
+        period) and the fixture test `periodEvaluation.test.js`.
+      - Live heap for a 5,072-race evaluation: **37.79 → 0.02 MiB**.
+      - **In-process heap check, 60 min of the soak's load on the 15,215-race starting copy** (SOAK-1.md,
+        *The period-evaluation fix — heap check*):
+        - retained heap after a GC over minutes 30–60 went 17.67 → 17.07 MiB (master 17.58 → 16.95);
+        - the snapshot diff from minute 30 to 61 names nothing of the server that grows;
+        - live heap max 74 MiB (master 423), RSS max 333 MiB (master 783);
+        - the evaluation's median was 370 ms (master 2,552 ms);
+        - 60,480 requests were served (master 15,998), with 0 5xx.
 
 - [x] ~~**`server/` is audited by nothing.**~~ **CLOSED — confirmed at source 2026-08-23:**
       `ci.yml:212` runs `audit-gate.mjs --tree=server`, the `Server tests` job (`ci.yml:151`) runs
