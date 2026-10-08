@@ -253,8 +253,8 @@ the historical record; removed ones are marked **REMOVED**.
 - **Warmup**: strength eases 0→full over `avoidanceWarmupMs` (`easeInOutCubic`), on open AND
   closed tracks. The race clock for this ramp is `priorityExtras?.currentTs` — the **only**
   surviving consumer of the third argument.
-- **Config**: `hardSeparationEnabled`, `hardSeparationRelaxation` **0.15**,
-  `hardSeparationTolerancePct` **0.1**, `avoidanceWarmupMs` **3000**.
+- **Config**: `hardSeparationEnabled`, `hardSeparationRelaxation`,
+  `hardSeparationTolerancePct`, `avoidanceWarmupMs` (values in `defaults.js`).
 
 ### L1. Home force — spring toward centerline — **REMOVED (Commit A; priority path Commit B)**
 
@@ -319,14 +319,14 @@ the historical record; removed ones are marked **REMOVED**.
 - **What**: as `|newY|` enters `[comfortThreshold, 1.0)`, a quadratic inward push grows toward the boundary — a soft wall before the hard clamp.
 - **When**: `comfortThreshold ≤ |newY| < 1.0`. Applied **after** velocity integration, directly on `newY`.
 - **Magnitude**: `−sign(newY) × softRepulsionStrength × pen²`, `pen = (|newY|−comfort)/(1−comfort)`.
-- **Config**: `comfortThreshold` **0.7**, `softRepulsionStrength` **0.1**.
+- **Config**: `comfortThreshold`, `softRepulsionStrength` (values in `defaults.js`).
 
 ### L8. maxLateral clamp / hard boundary
 
 - **Code**: [`raceBehavior.js` → `bSingle`](../client/src/modules/raceBehavior.js#L1034-L1038).
 - **What**: hard clamp of `physicalY` to `±min(maxLateral, 1.0)`. On a boundary hit, `physicalYVelocity` is reset to 0 (kills bounce).
-- **Magnitude**: cap = **0.95** (`maxLateral`).
-- **Config**: `maxLateral` **0.95**.
+- **Magnitude**: cap = `maxLateral` (value in `defaults.js`).
+- **Config**: `maxLateral` (value in `defaults.js`).
 
 ### L9. Stuck-mode suppression — sandwich freeze — **REMOVED (Commit A; the Layer-1 "hold" target replaces it)**
 
@@ -462,7 +462,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 | A10 | zoneMult (race zone)                                                  | **REMOVED** (raceZones.js deleted)                                   | —                                       | —                   |
 | A11 | runoutDecay                                                           | ×0.97/frame                                                          | after finish                            | index.jsx:995       |
 | A12 | BATTLE slowmo (global clock)                                          | 0.5                                                                  | BATTLE_ZOOM                             | index.jsx:824       |
-| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost 0.06 / leader brake 0.10, ±0.12 envelope, ceiling 1.2 | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:244 |
+| A13 | governorMult — PulkLeadRotation contest director (**active in PULK**) | attacker boost `pulkChallengerBoost` / leader brake `pulkLeaderBrake`, envelope `pulkEnvelopeMaxEffect` (values in `defaults.js`), ceiling `NATURALNESS_CEILING` | PULK [pulkStart, choreoOutcomeStart), faded→1.0 at corrStart | raceGovernor.js:244 |
 | A14 | gapBrakeStrength — the GAP leader brake (**shipped ON 2026-09-17**)   | bounded by `gapBrakeMaxAuthority`; silent below `gapBrakeAllowedGapPx` | [choreoOutcomeStart, `gapBrakeWindowEnd`], leader only | racePlanner.js:_computeGapLeaderBrake |
 
 ### Lateral (current: Soft Steering spring → repulsion/clamp/damping → Hard Separation)
