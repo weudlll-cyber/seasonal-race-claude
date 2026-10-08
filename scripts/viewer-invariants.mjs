@@ -461,7 +461,6 @@ async function runOne(page, geo, seed, arm, N) {
       if (sabOld.line) sessionStorage.setItem("_ra_viewersabline", "1");
       if (sabOld.panstep) sessionStorage.setItem("_ra_viewersabpanstep", "1");
       if (sabOld.toowide) sessionStorage.setItem("_ra_viewersabtoowide", "1");
-      // eslint-disable-next-line no-eval
       (0, eval)(clock);
     },
     {
