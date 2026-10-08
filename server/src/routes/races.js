@@ -50,14 +50,15 @@ import { DATA_ROOT } from '../dataPaths.js';
 import { evaluatePeriod } from '../races/periodEvaluation.js';
 import { createPointsRuleStore, validatePointsRule } from '../races/pointsRule.js';
 import { asyncRoute } from '../../utils/asyncRoute.js';
+import { verifyOffMainThread, BUSY } from '../races/verifyOffMainThread.js';
 
 // VERIFY-ON-DEMAND-1 (2026-10-04): the engine path that re-races a stored record. It lives in
 // `scripts/lib/storedRaceReplay.mjs`, shared with `scripts/diag/replay-stored-race.mjs` — one copy.
-// Loaded LAZILY: it pulls in the race engine from `client/src`. A source install carries it, and so
-// does the Docker image since 2026-10-04 (the owner's decision; `server/Dockerfile`, "THE RACE
-// ENGINE"). Lazily anyway: an image built without those lines must still start, with this one route
-// answering 501, rather than take the whole server down at boot.
-const loadReplay = () => import('../../../scripts/lib/storedRaceReplay.mjs');
+// Loaded LAZILY, and since VERIFY-OFF-MAIN-1 (2026-10-07) by the verify's WORKER THREAD
+// (`server/src/races/verifyReplay.worker.js`): it pulls in the race engine from `client/src`. A
+// source install carries it, and so does the Docker image since 2026-10-04 (the owner's decision;
+// `server/Dockerfile`, "THE RACE ENGINE"). Lazily anyway: an image built without those lines must
+// still start, with this one route answering 501, rather than take the whole server down at boot.
 
 /**
  * This installation's track records, read from ITS data directory — the tracks its races ran on.
@@ -242,8 +243,10 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
   // inputs. It never proves the race happened — a fabricated record replays faithfully. That limit
   // is the BACKLOG row's own wording, and it is why the answer is "agrees", never "genuine".
   //
-  // ★ IT IS SYNCHRONOUS AND COSTS SECONDS: one full race on the server's thread (measured in
-  // reports/release/VERIFY-ON-DEMAND-1.md). Admin-only and on demand is what keeps that acceptable.
+  // ★ IT COSTS SECONDS: one full race (measured in reports/release/VERIFY-ON-DEMAND-1.md). It ran on
+  // the server's thread until VERIFY-OFF-MAIN-1 (2026-10-07), and every other request waited out
+  // its 1.5–5.4 s (reports/release/SOAK-1.md). It now runs on a worker thread, one at a time per
+  // server; a second verify while one runs is answered 429 (`verifyOffMainThread.js`).
   //
   // ★ SERVER-DEFECTS-1: any error that is not a refusal is rethrown below and ANSWERED by
   // `asyncRoute` — logged, 500 — instead of escaping an async handler and stopping the process.
@@ -255,32 +258,35 @@ export function createRacesRouter({ store, tracks, pointsRule } = {}) {
       if (!race) {
         return res.status(404).json({ error: 'No race with that key.' });
       }
-      let replay;
-      try {
-        replay = await loadReplay();
-      } catch {
+      // A plain copy of the track list: the worker receives a structured clone, and the list must
+      // be read HERE, so a track file that cannot be read fails this request on this thread.
+      const tracks = Array.from(resolveTracks());
+      const started = performance.now();
+      const job = verifyOffMainThread(race, tracks);
+      if (job === BUSY) {
+        return res.status(429).json({
+          error: 'Another race is being verified right now. Try again when it has finished.',
+        });
+      }
+      const outcome = await job;
+      if (outcome.unavailable) {
         return res.status(501).json({
           error: 'Verifying a race needs the race engine, which this installation does not carry.',
         });
       }
-      const started = performance.now();
-      try {
-        const r = replay.replayStoredRace(race, { tracks: resolveTracks() });
-        return res.json({
-          shortKey: race.shortKey,
-          identical: r.firstDiff === null,
-          positions: { match: r.posMatch, of: r.n },
-          finishTimes: { match: r.timeMatch, of: r.n },
-          firstDiff: r.firstDiff,
-          track: r.track,
-          racers: r.racers,
-          ms: Math.round(performance.now() - started),
-        });
-      } catch (e) {
-        if (e instanceof replay.StoredRaceRefusal)
-          return res.status(422).json({ error: e.message });
-        throw e;
-      }
+      if (outcome.refusal) return res.status(422).json({ error: outcome.refusal });
+      if (outcome.error) throw new Error(outcome.error);
+      const r = outcome.result;
+      return res.json({
+        shortKey: race.shortKey,
+        identical: r.firstDiff === null,
+        positions: { match: r.posMatch, of: r.n },
+        finishTimes: { match: r.timeMatch, of: r.n },
+        firstDiff: r.firstDiff,
+        track: r.track,
+        racers: r.racers,
+        ms: Math.round(performance.now() - started),
+      });
     })
   );
 

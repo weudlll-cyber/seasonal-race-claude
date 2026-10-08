@@ -256,3 +256,79 @@ describe('an old race with a different winners count (REMOVE-WINNERS-SETTING-1)'
     }
   }, 120_000);
 });
+
+// VERIFY-OFF-MAIN-1 (2026-10-07): the replay runs on a worker thread, one at a time per server. A
+// 9-hour soak measured every other request waiting out each verify on the server's thread — 1.5 to
+// 5.4 s (reports/release/SOAK-1.md). These need ONE listening server, so they do not use supertest.
+describe('POST /api/races/:shortKey/verify — off the main thread (VERIFY-OFF-MAIN-1)', () => {
+  async function listening() {
+    const a = appWith([REC]);
+    a.get('/health', (_req, res) => res.json({ ok: true }));
+    const server = await new Promise((resolve) => {
+      const s = a.listen(0, '127.0.0.1', () => resolve(s));
+    });
+    const base = `http://127.0.0.1:${server.address().port}`;
+    return { base, close: () => new Promise((r) => server.close(r)) };
+  }
+
+  it('while a verify runs, another request is answered in under 200 ms', async () => {
+    const { base, close } = await listening();
+    try {
+      let verifyDone = false;
+      const verify = fetch(`${base}/api/races/TEST01/verify`, { method: 'POST' }).then(
+        async (r) => {
+          verifyDone = true;
+          return { status: r.status, body: await r.json() };
+        }
+      );
+      await new Promise((r) => setTimeout(r, 300)); // the replay is under way by now
+      const t0 = performance.now();
+      const health = await fetch(`${base}/health`);
+      const ms = performance.now() - t0;
+      expect(health.status).toBe(200);
+      expect(verifyDone).toBe(false); // the health answer came WHILE the replay was running
+      expect(ms).toBeLessThan(200);
+      const v = await verify;
+      expect(v.status).toBe(200);
+      expect(v.body.identical).toBe(true);
+    } finally {
+      await close();
+    }
+  }, 120_000);
+
+  it('a second verify while one runs is answered 429; the first still completes', async () => {
+    const { base, close } = await listening();
+    try {
+      const first = fetch(`${base}/api/races/TEST01/verify`, { method: 'POST' });
+      await new Promise((r) => setTimeout(r, 100));
+      const second = await fetch(`${base}/api/races/TEST01/verify`, { method: 'POST' });
+      expect(second.status).toBe(429);
+      expect((await second.json()).error).toMatch(/being verified/);
+      const one = await first;
+      expect(one.status).toBe(200);
+      expect((await one.json()).identical).toBe(true);
+      // Free again once the first has answered.
+      const third = await fetch(`${base}/api/races/TEST01/verify`, { method: 'POST' });
+      expect(third.status).toBe(200);
+    } finally {
+      await close();
+    }
+  }, 180_000);
+
+  it('answers exactly what the replay itself answers, field by field', async () => {
+    const { replayStoredRace } = await import('../../../scripts/lib/storedRaceReplay.mjs');
+    const direct = replayStoredRace(REC, { tracks: loadTracks() });
+    const res = await request(appWith([REC])).post('/api/races/TEST01/verify');
+    expect(res.status).toBe(200);
+    const { ms: _ms, ...answered } = res.body;
+    expect(answered).toEqual({
+      shortKey: 'TEST01',
+      identical: direct.firstDiff === null,
+      positions: { match: direct.posMatch, of: direct.n },
+      finishTimes: { match: direct.timeMatch, of: direct.n },
+      firstDiff: direct.firstDiff,
+      track: direct.track,
+      racers: direct.racers,
+    });
+  }, 120_000);
+});

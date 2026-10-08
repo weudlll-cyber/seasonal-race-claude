@@ -978,22 +978,27 @@ racerTypeOverrides, effectiveRacerTypes`.
 ### `POST /api/races/:shortKey/verify`
 
 - **Who:** admin only (`server/src/auth/guards.js:66-71`). The lookup is team-scoped like the GET, so
-  an admin can verify only **their own team's** races (`server/src/routes/races.js:253-257`).
-- **Request:** path `shortKey`; no body. It runs a full race replay synchronously on the server
-  thread (`server/src/routes/races.js:245-246`).
+  an admin can verify only **their own team's** races (`server/src/routes/races.js:256-260`).
+- **Request:** path `shortKey`; no body. It runs a full race replay on a **worker thread**, one at a
+  time per server (`server/src/races/verifyOffMainThread.js`, `verifyReplay.worker.js`), so other
+  requests are answered while it runs. *(Until VERIFY-OFF-MAIN-1, 2026-10-07, it ran on the server's
+  own thread, and every other request waited for it: 1.5–5.4 s, reports/release/SOAK-1.md.)*
 - **Response:** 200 `{shortKey, identical: boolean, positions: {match, of}, finishTimes: {match, of},
-  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:266-278`,
+  firstDiff: string|null, track: <track id>, racers: <number>, ms}` (`server/src/routes/races.js:279-289`,
   `scripts/lib/storedRaceReplay.mjs:193-204`).
 - **Errors:**
-  - 404 `No race with that key.` (`server/src/routes/races.js:255-257`).
-  - 501: the race engine module is not present in this install (`:259-265`).
+  - 404 `No race with that key.` (`server/src/routes/races.js:258-260`).
+  - 429 `{error}`: another verify is running on this server (`:266-270`).
+  - 501: the race engine module is not present in this install (`:272-276`; the worker reports it,
+    `server/src/races/verifyReplay.worker.js`).
   - 422 `{error}`: `StoredRaceRefusal`, meaning the record cannot be replayed honestly — no matching
-    `geometryId`, a lap mismatch, or a missing world block (`:280-281`,
-    `scripts/lib/storedRaceReplay.mjs:42`, `:54-62`, `:83-108`).
+    `geometryId`, a lap mismatch, or a missing world block (`:277`,
+    `scripts/lib/storedRaceReplay.mjs:42`, `:55-63`, `:84-111`).
   - 401. 403 (`server/src/auth/guards.js:200-201`). CSRF 403.
   - 500 `{ error: 'internal error' }`: any other error, including one thrown by `readInstallTracks`
-    on a malformed track file (`server/src/routes/races.js:67-72`). The route rethrows it (`:282`)
-    and `asyncRoute` answers it (`:252`, `server/utils/asyncRoute.js:32-33`): logged server-side
+    on a malformed track file (`server/src/routes/races.js:68-73`), read on the server's thread
+    before the worker starts (`:263`). An error inside the worker is rethrown (`:278`) and `asyncRoute`
+    answers it (`:255`, `server/utils/asyncRoute.js:32-33`): logged server-side
     with the route, and the server keeps running. *(Until SERVER-DEFECTS-1, 2026-10-06, the rethrow
     escaped the async handler: the request got no answer and the process exited.)*
 

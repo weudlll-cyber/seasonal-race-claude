@@ -833,23 +833,6 @@ production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No
 5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
 block.
 
-- [ ] ★★ **A VERIFY STOPS THE WHOLE SERVER FOR ITS LENGTH — 1.5 to 5.4 SECONDS.**
-      `POST /api/races/:shortKey/verify` replays the race synchronously on the server's only thread
-      (`server/src/routes/races.js:268`, `replayStoredRace`). Measured over 89 verifies:
-      - 20 racers: median 1.7 s (1.5–2.3 s);
-      - 40 racers: median 4.3 s (3.5–5.4 s).
-
-      Every other request waits for it, and every route group had minutes with a p99 over one
-      second, on the verify ticks. `reports/release/VERIFY-ON-DEMAND-1.md:150` records the blocking as
-      known; the soak measures what it costs.
-      **verify:** during a verify, `GET /api/health` answers; time it. Today: the verify's full
-      length.
-- [ ] ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
-      at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)
-      and 06:47 UTC, each after 4.3–5.4 s, which is a verify's length. The cause is established by
-      experiment in SOAK-1.md, *Causes*.
-      **verify:** `reports/release/SOAK-1/keepalive.mjs` against a server on your own port —
-      connection errors per arm.
 - [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
       full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
       `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
@@ -5043,6 +5026,43 @@ lines and no rewrite is implied, proposed or wanted.
 ---
 
 ## Before the VPS migration
+
+- [x] **CLOSED 2026-10-08 (VERIFY-OFF-MAIN-1, merged).** ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
+      at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)
+      and 06:47 UTC, each after 4.3–5.4 s, which is a verify's length. The cause is established by
+      experiment in SOAK-1.md, *Causes*.
+      **verify:** `reports/release/SOAK-1/keepalive.mjs` against a server on your own port —
+      connection errors per arm.
+      ★★ **CLOSED 2026-10-08 — by the verify fix (VERIFY-OFF-MAIN-1), merged.** The cause was established
+      in SOAK-1 (*Causes*): keep-alive connections closed by the server's 5-second timer, which fires
+      late after an event-loop block. A browser only waited (Chromium, 0 errors in 829 requests).
+      - **A/B, 2 h per arm:** arm B (the fix) had **0 connection errors**, none of them inside a verify,
+        in 130,336 requests.
+      - Arm A (master) had 11 network errors in 112,546 requests, every one inside a verify, plus 10
+        timeouts. The 10 timeouts are an artefact of the host being suspended for 11 minutes, and are
+        not counted.
+      - No keep-alive or timeout setting was changed: the errors did not reproduce after the fix.
+
+- [x] **CLOSED 2026-10-08 (VERIFY-OFF-MAIN-1, merged).** ★★ **A VERIFY STOPS THE WHOLE SERVER FOR ITS LENGTH — 1.5 to 5.4 SECONDS.**
+      `POST /api/races/:shortKey/verify` replays the race synchronously on the server's only thread
+      (`server/src/routes/races.js:268`, `replayStoredRace`). Measured over 89 verifies:
+      - 20 racers: median 1.7 s (1.5–2.3 s);
+      - 40 racers: median 4.3 s (3.5–5.4 s).
+
+      Every other request waits for it, and every route group had minutes with a p99 over one
+      second, on the verify ticks. `reports/release/VERIFY-ON-DEMAND-1.md:150` records the blocking as
+      known; the soak measures what it costs.
+      **verify:** during a verify, `GET /api/health` answers; time it. Today: the verify's full
+      length.
+      ★★ **CLOSED 2026-10-08 — VERIFY-OFF-MAIN-1, merged.** The replay runs on a worker thread
+      (`server/src/races/verifyOffMainThread.js`, `verifyReplay.worker.js`), one at a time per server; a
+      second verify while one runs gets 429. The replay code is unchanged.
+      - **The main thread's longest block during a verify:** 17–27 ms against 1,544–5,897 ms on master
+        (n = 12 stored races of the soak's data, `compare-verify.mjs`). All 12 answers are identical.
+      - **A/B, 2 h per arm, the same 15,215-race starting copy** (SOAK-1.md, *The verify fix — A/B*):
+        - the longest wait of a request during a verify was 560 ms (master 11,543 ms);
+        - minutes with a p99 over 1 s: 0 (master 18);
+        - 0 5xx, all 19 verifies identical.
 
 - [x] **CLOSED 2026-10-08 (BOUNDED-EVAL-1, merged).** ★ **THE PERIOD EVALUATION READS EVERY RACE OF THE PERIOD AT ONCE, IN FULL.**
       `listRacesInPeriod` (`server/src/races/raceStore.js:574-582`) loads and hydrates every race —
