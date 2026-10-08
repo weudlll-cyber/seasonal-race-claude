@@ -237,7 +237,7 @@ function SetupScreen() {
   }, []);
 
   const [behaviorConfig] = useState(() => loadRaceBehaviorConfig());
-  // Race-plan enable threshold — single source with the runtime gate (index.jsx reads the same
+  // Race-plan enable threshold — single source with the runtime gate (raceCore.js reads the same
   // racePlanMinDurationSec). Last-resort ?? 30 mirrors the runtime gate's fallback and the default.
   const [racePlanMinDur] = useState(() => loadRaceDynamicsConfig().racePlanMinDurationSec ?? 30);
 

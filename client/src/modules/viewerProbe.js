@@ -3,7 +3,7 @@
 // Path:        client/src/modules/viewerProbe.js
 // Project:     RaceArena — VIEWER-INVARIANTS-1
 //
-// WHAT THE VIEWER SEES, AS EVENTS. Five sentences that must be true of EVERY frame, checked in the
+// WHAT THE VIEWER SEES, AS EVENTS. Six sentences that must be true of EVERY frame, checked in the
 // REAL BROWSER against the transform the frame was actually DRAWN with, and reported as individual
 // violations — never as a share.
 //
@@ -88,9 +88,9 @@ if (typeof window !== 'undefined') {
 //                        requirement 5's own window.
 //   4 STEP BOUNDS        a single frame may not HALVE OR DOUBLE the picture (|d ln width| > ln 2),
 //                        and may not replace the whole picture sideways (pan step >= the canvas
-//                        width). Both are the lines ENDGAME-REPAIR-1's `wild-frame.mjs` already
-//                        uses, and both are stated as "this is not a camera move" rather than as a
-//                        smoothness taste. THEY ARE DELIBERATELY FAR LOOSER THAN THE SMOOTHNESS
+//                        width). Both are the lines the retired scripts/diag/wild-frame.mjs
+//                        (ENDGAME-REPAIR-1 report) used, and both are stated as "this is not a
+//                        camera move" rather than as a smoothness taste. THEY ARE DELIBERATELY FAR LOOSER THAN THE SMOOTHNESS
 //                        BUDGET — 0.693 against the 0.0230 ln the owner's eye was reacting to.
 //                        This file is a floor beneath the framing measurements, not a replacement
 //                        for them: it catches catastrophes, and `endgame-spec.mjs` prices texture.
@@ -787,7 +787,7 @@ function readViewerProbe() {
     active: _running,
     run: _run,
     frames: _frames,
-    // The driver stops here: after the first crossing the finish ceremony runs, and these five
+    // The driver stops here: after the first crossing the finish ceremony runs, and these six
     // sentences do not govern it — invariant 3's own window closes at the crossing by definition.
     crossed: _crossed,
     crossing: _crossing,

@@ -207,8 +207,8 @@ export default function RaceScreen() {
     []
   );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
-  // HISTORY-MISSING-2: true once the race is past the point the rest of the project treats as
-  // impossible. It only drives the banner below — no physics, no phase, no navigation reads it.
+  // HISTORY-MISSING-2's overrun flag and its banner were removed on 2026-09-13 (see
+  // modules/raceOverrun.test.js); nothing in this screen holds an overrun state any more.
   const [countdown, setCountdown] = useState(3);
   // SCOREBOARD-SLOT-LAYER: React state now holds only what a card SAYS — its identity and its finish.
   // It no longer holds the RANKING, which changes constantly and would re-render the list four times
@@ -806,7 +806,7 @@ export default function RaceScreen() {
       let renderAlpha = 0;
       st.lastTs = ts;
 
-      // EMA smoothing for cosmetic updates (camera lerp, track effects).
+      // EMA smoothing for the track effects only (the camera is fed `rawDt`, see below).
       // Physics uses FIXED_DT instead — smoothDt never enters the physics accumulator.
       st.smoothDt =
         frameTimingConfig.dtSmoothingAlpha * st.smoothDt +
@@ -1372,7 +1372,7 @@ export default function RaceScreen() {
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
-      // No global RNG to restore — the race stream is the local `raceRng` above (parity step 1),
+      // No global RNG to restore — the race stream is `raceRng` in raceCore.js (parity step 1),
       // so `Math.random` was never swapped and the rest of the app stays non-deterministic.
       cancelled = true;
       stopLongTaskObserver(perfLogRef.current); // FRAME-GAP-1: never outlive the race
