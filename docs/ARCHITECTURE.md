@@ -1085,7 +1085,7 @@ Every `POST /api/tracks` and `PUT /api/tracks/:id` writes a timestamped backup c
 server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json
 ```
 
-No auto-cleanup. Backups accumulate indefinitely (storage is cheap; data loss is expensive). Manual cleanup by deleting backup directories is always safe.
+The newest 20 backups of each track are kept; that track's older ones are removed right after each new backup (TRACK-BACKUP-RETENTION-1, 2026-10-08; `server/utils/trackBackupRetention.js`). *(Until 2026-10-08: no cleanup.)*
 
 ### Status-Banner in Code-Bundle Fallback Mode (TLH-3)
 

@@ -833,12 +833,6 @@ production server: [reports/release/SOAK-1.md](../reports/release/SOAK-1.md). No
 5xx. Each row below is a FAIL or an unbounded structure from it, opened here and not fixed in that
 block.
 
-- [ ] **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
-      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
-      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
-      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
-      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
-      shrinks.
 - [ ] **THE SHIPPED `docker-compose.yml` SETS NO LOG SIZE LIMIT.** It has no `logging:` options, so
       Docker's `json-file` log grows without a bound. The server wrote 94 bytes in 9 hours (nothing
       logs per request), so this is a limit missing, not a log growing. A burst of warnings would
@@ -5026,6 +5020,24 @@ lines and no rewrite is implied, proposed or wanted.
 ---
 
 ## Before the VPS migration
+
+- [x] **CLOSED 2026-10-08 (TRACK-BACKUP-RETENTION-1, merged).** **TRACK BACKUPS ARE NEVER REMOVED.** Every track create, edit and background change writes a
+      full copy to `tracks-backups/YYYY-MM-DD/` (`server/src/routes/tracks.js:253`, called at `:525`,
+      `:553`, `:589`, `:631`). `docs/TRACK_LIFECYCLE.md:158` states "No auto-cleanup". A 30 KB track
+      saved 30,000 times is 1 GB. Not reached in practice; unbounded by construction.
+      **verify:** `find <data>/tracks-backups -type f | wc -l` grows by one per track save and never
+      shrinks.
+      ★★ **CLOSED 2026-10-08 — TRACK-BACKUP-RETENTION-1, merged; decided that day: keep the newest
+      20 per track.** `writeTrackBackup` (`server/src/routes/tracks.js`) calls `pruneTrackBackups`
+      (`server/utils/trackBackupRetention.js`) right after each backup.
+      - It keeps that track's newest 20 and removes its older ones, ordered by the day folder and the
+        time in the name, never by mtime.
+      - It never removes the backup just written, another track's backups, or the live track file.
+      - It is non-fatal. An existing excess is pruned at the track's next save; there is no start-up
+        sweep.
+      - Six tests, sabotaged once (oldest-first instead of newest-first: red). Documented in
+        DEPLOYMENT.md, TRACK_LIFECYCLE.md and ARCHITECTURE.md, whose "no auto-cleanup" lines are
+        corrected.
 
 - [x] **CLOSED 2026-10-08 (VERIFY-OFF-MAIN-1, merged).** ★★ **EIGHT REQUESTS FAILED WITH A CONNECTION ERROR, EVERY ONE DURING A VERIFY.** No HTTP status
       at all — the client's connection ended. 8 of 566,225, at 22:47, 23:52, 00:17 (×2), 04:12 (×3)

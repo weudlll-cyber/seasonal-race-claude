@@ -155,7 +155,7 @@ look at the diagram.)*
 - **Boot migration** — One-shot: if `server/data/.default-tracks-seeded` absent, create server records for all 10 default tracks. Each record includes full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry arrays (`innerPoints: [], outerPoints: [], centerPoints: [], closed: false`). Write marker file on completion. Idempotent — safe to run twice.
 - **PUT handler** — When `geometryId` is present in request body: use client value. When absent: keep `existing.geometryId`. Remove the hardcoded `existing.geometryId` override.
 - **DELETE handler** — Removes track JSON + background image only. Does not call `removeCachedTrackData` for geometry. On the frontend, `removeCachedTrackData(geometryId)` is called only from TrackEditor Delete (useTrackIO); TrackManager Delete calls only `refresh()`.
-- **Auto-backup** — Before every `PUT /api/tracks/:id` and `POST /api/tracks`: write backup copy to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. No auto-cleanup.
+- **Auto-backup** — Before every `PUT /api/tracks/:id` and `POST /api/tracks`: write backup copy to `server/data/tracks-backups/YYYY-MM-DD/HH-MM-SS-<id>.json`. The newest 20 per track are kept (since 2026-10-08; see *Retention* below).
 
 **Test scope:** Backend unit tests for PUT geometryId behavior, DELETE non-geometry-deletion, backup file creation, migration idempotency.
 
@@ -254,7 +254,7 @@ server/data/tracks-backups/
     15-01-44-city-circuit.json
 ```
 
-**Retention:** No auto-cleanup. Backup directories accumulate indefinitely. Manual deletion of old date-directories is safe. Rationale: storage is cheap, data loss is expensive.
+**Retention (since 2026-10-08, TRACK-BACKUP-RETENTION-1):** the newest 20 backups of each track are kept. Right after a track's backup is written, that track's older backups are removed — ordered by the day folder and the time in the name, never by file date. Other tracks' backups and the live track file are never touched; an existing excess is pruned at the track's next save (`server/utils/trackBackupRetention.js`). *(Until then there was no cleanup and backups accumulated for ever.)*
 
 **Recovery:** To restore a backup, copy the desired `.json` file to `server/data/tracks/<id>.json` and restart the server (or send `GET /api/tracks/:id` to reload from disk).
 
