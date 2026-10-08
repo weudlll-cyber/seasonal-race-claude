@@ -149,6 +149,9 @@ async function run(hours) {
     minute.set(group, g);
     g.lat.push(r.ms);
     if (!r.duringVerify) g.latNoVerify.push(r.ms);
+    // The longest wait of a request that overlapped a verify: from outside the container, the
+    // visible trace of the server's thread being held (2026-10-08, the verify fix's A/B).
+    else g.maxDuringVerify = Math.max(g.maxDuringVerify ?? 0, r.ms);
     g.status[r.status] = (g.status[r.status] ?? 0) + 1;
     totals.byKind[kind] = (totals.byKind[kind] ?? 0) + 1;
     totals.byStatus[r.status] = (totals.byStatus[r.status] ?? 0) + 1;
@@ -173,6 +176,7 @@ async function run(hours) {
         max: pct(g.lat, 100),
         nNoVerify: g.latNoVerify.length,
         p99NoVerify: pct(g.latNoVerify, 99),
+        maxDuringVerify: g.maxDuringVerify === undefined ? null : Math.round(g.maxDuringVerify),
         status: g.status,
       };
     }

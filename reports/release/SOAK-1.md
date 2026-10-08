@@ -455,6 +455,47 @@ minutes 14–60 ran with no load. That run cannot answer the question asked. Its
 
 **Merged.** The BACKLOG row is closed.
 
+## The verify fix — A/B, and merged (2026-10-08)
+
+The fix was rebased onto master `7892e051`, which already carries the evaluation fix (`9449b2b7`).
+Two arms, 2 hours each, one after the other, from the same 15,215-race starting copy, with the same
+load and sampler ([ab-arm.sh](SOAK-1/ab-arm.sh), summed up by [ab-summary.mjs](SOAK-1/ab-summary.mjs)):
+- **arm A** = master;
+- **arm B** = master + the verify fix.
+
+| per arm, 2 h | A · master | B · + the verify fix |
+| --- | --- | --- |
+| run (UTC) | 12:15–14:15 | 14:15–16:15 |
+| requests sent | 112,546 | **130,336** |
+| 5xx · restarts · OOM | 0 · 0 · no | 0 · 0 · no |
+| connection errors · of them inside a verify | 11 · 11 (+10 timeouts at 12:57:19 — the suspend, see below) | **0 · 0** |
+| minutes with a p99 over 1 s (seven ordinary route groups) | 18 of 90 active | **0 of 100** |
+| a verify's wall time, median · max | 4.5 s · 18.4 s | 3.2 s · 6.1 s |
+| verifies identical | 18 of 18 | 19 of 19 |
+| the longest wait of a request during a verify | 11,543 ms | **560 ms** |
+
+**The main thread during a verify, measured directly.** [compare-verify.mjs](SOAK-1/compare-verify.mjs)
+ran in-process, with event-loop delay monitoring, on 12 stored races of the starting data:
+- **the fix:** the longest block was **17–27 ms**;
+- **master:** **1,544–5,897 ms**, the whole replay;
+- the answers were identical in 12 of 12.
+
+The 560 ms in the arm is a request queued behind other work, not a held thread.
+
+**Arm A was suspended for 11 minutes.** The host slept from 12:46 to 12:57. Its 10 timeouts, each
+663 s long, are that sleep, and it ran 90 active minutes instead of 100. Arm B ran without a gap.
+Arm B's zeros are not higher than arm A's figures, whatever the suspension did to A, so arm A was not
+rerun.
+
+**The merge conditions of 2026-10-08:**
+1. No 5xx and no crash: **met**.
+2. All verifies identical: **met**.
+3. Arm B's connection errors (0) and slow minutes (0) are not higher than arm A's: **met**.
+4. The longest main-thread block during a verify is ≤ 100 ms: **27 ms**, met.
+
+**Merged.** Both rows are closed. The connection-error row closes because arm B had no connection
+error inside a verify. No keep-alive or timeout setting was changed.
+
 ## The harness
 
 | file | what it does |
@@ -470,3 +511,4 @@ minutes 14–60 ran with no load. That run cannot answer the question asked. Its
 | [compare-eval.mjs](SOAK-1/compare-eval.mjs), [compare-verify.mjs](SOAK-1/compare-verify.mjs) | step 3: old against new on the soak's data — identical answers, memory, and the event-loop block |
 | [ab-arm.sh](SOAK-1/ab-arm.sh) | step 4: one arm of an A/B soak from the same starting data |
 | [heap-run.mjs](SOAK-1/heap-run.mjs), [heap-summary.mjs](SOAK-1/heap-summary.mjs) | 2026-10-08: one in-process heap check as one command, and its summary |
+| [ab-summary.mjs](SOAK-1/ab-summary.mjs) | 2026-10-08: one A/B arm in the numbers of the verify fix's merge conditions (`load.mjs` now records the longest wait of a request during a verify) |
