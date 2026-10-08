@@ -1,6 +1,6 @@
 // ============================================================
-// File:        DiagnoseVerteilung.jsx
-// Path:        client/src/screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx
+// File:        DistributionDiagnostics.jsx
+// Path:        client/src/screens/DistributionDiagnostics/DistributionDiagnostics.jsx
 // Project:     RaceArena
 // Description: Hidden diagnostic route /diagnose-verteilung.
 //              Runs 50 headless race simulations and reports the empirical
@@ -93,7 +93,7 @@ function AsciiHistogram({ histogram, nRuns }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function DiagnoseVerteilung() {
+export default function DistributionDiagnostics() {
   const [status, setStatus] = useState('idle');
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState(null);

@@ -7,7 +7,8 @@
 //
 //   1 TIMING     by 95% of the race AT THE LATEST, the winner and the finish line are both visible.
 //   2 ARRIVAL    at the crossing the shot is at the ACTIVE STATE'S OWN zoom — the leader view (0.75
-//                corridors) or the photo finish (0.4) — and not at a new value.
+//                corridors on the day; that default has since moved) or the photo finish (0.4) —
+//                and not at a new value. Measured against `cd._stateCamZoom()`, so it follows.
 //   3 CONTINUITY between those two points the shot closes CONTINUOUSLY. Measured as STANDSTILL, and
 //                as MONOTONICITY after the turn.
 //   4 WIDTH      it must not open as far as today. Reported per track against today.
@@ -98,7 +99,7 @@ const SEED = 9;
 const FPS = 60;
 const WINDOW_FROM = 0.9; // where the measurement window opens, in race progress
 // REQUIREMENT 1'S DEADLINE IS `endgameThreshold`, NOT A NUMBER THAT HAPPENS TO EQUAL IT.
-// CameraDirector.js:2990 states the identity: the widen ends AT `endgameThreshold`, and
+// CameraDirectorRunIn.js (the run-in's WIDEN / CLOSE doc block) states the identity: the widen ends AT `endgameThreshold`, and
 // his requirement 1 makes that instant a deadline. It was written here as a literal 0.95
 // and in defaults.js as `endgameThreshold: 0.95`; they agreed, so a change to the default
 // would have moved the shipped behaviour while this measurement kept scoring against the

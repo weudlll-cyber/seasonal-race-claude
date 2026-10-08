@@ -21,6 +21,10 @@
 //   node scripts/exp-runaway-leader.mjs [--races=100] [--seed=1] [--dur=60] [--jobs=4]
 //                                       [--only=<trackId>] [--out=<results dir>] [--tmp=<sim out dir>]
 //   --only=<trackId> runs a single track (used by the determinism re-run check).
+//   MODES — each runs its own experiment INSTEAD of the baseline above, and each block below has its
+//   own header: --speed-source-diag, --formation-diag, --gapreroll-confirm, --release-sweep,
+//   --p1-contest, --p1-criteria, --smallg-diag, --gapreroll-phase2b, --gapreroll-phase2,
+//   --leash-phase1.
 // ============================================================
 import { execFile } from "child_process";
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
@@ -1886,7 +1890,9 @@ if (argv.includes("--release-sweep")) {
 // stretch of the final act, which is what the eye actually rewards. This mode measures that with
 // the five primitives + classifier in sim/observers/outcome-front-battle.mjs, on exactly two arms:
 //
-//   V0      everything off — the reproduction gate (23.5% overall, 18/18/30/28) and the baseline.
+//   V0      the gap re-roll OFF (`--gapRerollEnabled=false`, since the shipped default is now ON),
+//           every other key at its shipped default — the reproduction gate (23.5% overall,
+//           18/18/30/28 when written) and the baseline.
 //   R97-ON  gap-reroll symmetric G=1.5 s=1.0 at the default release — the confirmed winner, so the
 //           delta below shows how much sustained P1 action the CURRENT candidate already buys.
 //

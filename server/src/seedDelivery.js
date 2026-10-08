@@ -8,8 +8,8 @@
 //              when — and only when — the shipped version is higher.
 //
 //              THE RULE THE OWNER DECIDED, and it is deliberately the simple one:
-//                · A shipped record is delivered WHOLE. Laps, default racer, winners, max
-//                  racers, everything. NO field-level merge and no exceptions. He chose the
+//                · A shipped record is delivered WHOLE. Laps, default racer, max racers,
+//                  everything. NO field-level merge and no exceptions. He chose the
 //                  rule an operator can understand over the one that is right in every case.
 //                · The operator is WARNED, by name, and the warning persists until dismissed.
 //                  This module only RECORDS the notice (seedNotices.js); showing it is the

@@ -2457,7 +2457,7 @@ describe('CameraDirector — convergence fix: threshold and timeout', () => {
   });
 });
 
-// ── Stage 6: Observer Phase (Lead-In / Follow / Lead-Out) ────────────────
+// ── Stage 6: Observer Phase (Lead-In / follow / Lead-Out) ────────────────────
 
 // Minimal shape stub: straight track from x=0 to x=trackLen at y=360.
 // getTotalLength() returns trackLen; getPosition(t, _) returns {x: t*trackLen, y: 360}.

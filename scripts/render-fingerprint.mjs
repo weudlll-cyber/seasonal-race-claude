@@ -26,8 +26,9 @@
 //     used, which is already the thing this whole script holds fixed; letting them vary would make
 //     the hash report its own inputs back at itself.
 //
-// WHAT IT IS BLIND TO. Three things, MEASURED rather than assumed — the first two were expected,
-// the third was found by the sensitivity proof and is the honest limit of this instrument:
+// WHAT IT IS BLIND TO. Five things, MEASURED rather than assumed — the first two were expected,
+// the third was found by the sensitivity proof and is the honest limit of this instrument, and the
+// last two (numbered 5 and 4 below, in the order they were written in) were recorded later:
 //   1. THE RASTERISER. If `fillRect` started painting the wrong pixels, this would not know.
 //   2. THE ARTWORK. Sprites are recorded by identity, not content. Redraw a rocket and the hash
 //      does not move. The owner's eye is the right instrument for that.

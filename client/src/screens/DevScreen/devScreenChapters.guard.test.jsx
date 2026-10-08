@@ -104,7 +104,6 @@ const TRACK = {
   description: '',
   defaultRacerTypeId: 'horse',
   surfaceClasses: ['guard-cloud'],
-  defaultWinners: 3,
   worldWidth: 1280,
   worldHeight: 720,
   isDefault: false,

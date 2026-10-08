@@ -24,12 +24,12 @@ import { W_REF_MAX } from './raceParams.js';
 // ── computeRacersPerRow ────────────────────────────────────────────────────
 
 describe('computeRacersPerRow', () => {
-  it('Weltall regression: geometricWidth=300 world-px, spriteSize=26 → 23 per row', () => {
+  it('space track regression: geometricWidth=300 world-px, spriteSize=26 → 23 per row', () => {
     // D7c-fix-v2: world-space formula floor(2×300/26)=23 — old screen-space formula gave 3
     expect(computeRacersPerRow(300, 26)).toBe(23);
   });
 
-  it('Weltall regression: 20 racers fit in 1 row (≥ 20)', () => {
+  it('space track regression: 20 racers fit in 1 row (≥ 20)', () => {
     expect(computeRacersPerRow(300, 26)).toBeGreaterThanOrEqual(20);
   });
 
@@ -108,7 +108,7 @@ describe('computeRowLayout', () => {
     expect(totalRows).toBe(5);
   });
 
-  it('Space track: geometric width 300 world-px, spriteSize 26 → all 20 fit in 1 row', () => {
+  it('space track: geometric width 300 world-px, spriteSize 26 → all 20 fit in 1 row', () => {
     // D7c-fix-v2: world-space formula gives perRow=23, so 20 racers → 1 row
     const perRow = computeRacersPerRow(300, 26); // 23
     const { totalRows } = computeRowLayout(20, perRow);
@@ -235,8 +235,8 @@ describe('computeSpeedBonus — finite checks', () => {
 // ── computeSpeedBonus — open track formula (HIGH auflage) ─────────────────
 
 describe('computeSpeedBonus — open track formula', () => {
-  it('standard open track: bonus = N × tOffset / row0Distance (Weltall numbers)', () => {
-    // Weltall: pathLen=15986, rowGap=75 (50px×1.5), finishT=0.95, totalRows=2
+  it('standard open track: bonus = N × tOffset / row0Distance (space track numbers)', () => {
+    // space track: pathLen=15986, rowGap=75 (50px×1.5), finishT=0.95, totalRows=2
     const rowGapPx = 75,
       pathLengthPx = 15986,
       finishT = 0.95,
@@ -350,7 +350,7 @@ describe('computeSpeedBonus — correctness properties', () => {
 // ── D7c Phase 4: effectiveWidth + open-track assembly area ────────────────
 
 describe('effectiveWidth = geometricWidth × startSpreadRange', () => {
-  it('Weltall: geometricWidth=300, spread=0.95, spriteSize=50 → 11 per row', () => {
+  it('space track: geometricWidth=300, spread=0.95, spriteSize=50 → 11 per row', () => {
     // floor(2 × 285 / 50) = floor(11.4) = 11
     expect(computeRacersPerRow(300 * 0.95, 50)).toBe(11);
   });
@@ -362,7 +362,7 @@ describe('effectiveWidth = geometricWidth × startSpreadRange', () => {
     expect(perRowEff).toBe(11);
   });
 
-  it('Weltall with effectiveWidth: 20 racers → 2 rows', () => {
+  it('space track with effectiveWidth: 20 racers → 2 rows', () => {
     const perRow = computeRacersPerRow(300 * 0.95, 50); // 11
     const { totalRows } = computeRowLayout(20, perRow);
     expect(totalRows).toBe(2);
@@ -370,7 +370,7 @@ describe('effectiveWidth = geometricWidth × startSpreadRange', () => {
 });
 
 describe('open-track assembly area: tStart formula', () => {
-  it('all rows have positive tStart on open track (Weltall numbers)', () => {
+  it('all rows have positive tStart on open track (space track numbers)', () => {
     // pathLengthPx=15986, rowGapPx=spriteSize×rowGapMultiplier=50×1.5=75
     const pathLengthPx = 15986;
     const rowGapPx = 75;

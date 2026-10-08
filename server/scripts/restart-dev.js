@@ -1,7 +1,11 @@
-// server/scripts/restart-dev.js
-// One-command dev restart: frees port 4000 (best-effort), then starts via dev-start.js.
-// Works on Windows and Unix. Env defaults live solely in dev-start.js (L129 — no duplication).
-// DEV ONLY — production never calls this script.
+// ============================================================
+// File:        restart-dev.js
+// Path:        server/scripts/restart-dev.js
+// Project:     RaceArena
+// Description: One-command dev restart: frees port 4000 (best-effort), then starts via
+//              dev-start.js. Works on Windows and Unix. Env defaults live solely in dev-start.js
+//              (no duplication). DEV ONLY — production never calls this script.
+// ============================================================
 
 import { execSync } from 'node:child_process';
 

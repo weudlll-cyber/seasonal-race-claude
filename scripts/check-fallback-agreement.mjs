@@ -107,13 +107,11 @@ const LIST = process.argv.includes("--list");
 //
 // EVERY KNOWN DISAGREEMENT, WITH BOTH VALUES AND A REASON. It is not an allowlist and it is not
 // permission: it is a WORKLIST. A bare allowlist rots into a list nobody reads; a list of unanswered
-// questions is something a person can pick up. One of these cannot be "brought in step" without
-// deciding a behaviour question, which is exactly why this guard ships green rather than shipping a
-// silent alignment:
-//   - `outcomePhaseThreshold` shapes the race.
-// `postStartHoldMs` was the second, and POST-START-HOLD-UNIFY answered it: the planner's reading was
-// removed, so there is no longer a second site to be out of step with. The worklist got shorter by
-// being worked, which is what it is for.
+// questions is something a person can pick up. The behaviour questions it once held are ANSWERED:
+// `outcomePhaseThreshold` (its entries are gone since OUTCOME-PHASE-75, 2026-08-10 — see below) and
+// `postStartHoldMs` (POST-START-HOLD-UNIFY removed the planner's reading, so there is no longer a
+// second site to be out of step with). The worklist got shorter by being worked, which is what it
+// is for.
 //
 // A NEW disagreement — in any file, including these — is RED. The exception is keyed on
 // (file, key, both values), so changing either side of a listed pair makes it stop matching and the
@@ -165,7 +163,7 @@ export const EXCEPTIONS = [
   //
   // Every caller was read before the deletion rather than assumed: the browser passes
   // `loadRaceDynamicsConfig()`; six harness scripts pass `DEFAULT_CONFIG_WORLD.raceDynamicsConfig`,
-  // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DiagnoseVerteilung`
+  // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DistributionDiagnostics`
   // uses the loader. No test passes a partial config to `createRaceFromIdentity`. WORLD and
   // WORLD-OFF measured either side and byte-identical.
   // The three pulk numbers — `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkBoostHeadroom` — stood

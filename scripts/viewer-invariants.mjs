@@ -2,7 +2,9 @@
 // File:        scripts/viewer-invariants.mjs
 // Project:     RaceArena — VIEWER-INVARIANTS-1
 //
-// THE FIVE SENTENCES, CHECKED IN A REAL BROWSER ON THE PRODUCTION BUILD, REPORTED AS EVENTS.
+// THE VIEWER SENTENCES (five when this was written, six since invariant 6 — the run-in leader in
+// the inner frame — was added), CHECKED IN A REAL BROWSER ON THE PRODUCTION BUILD, REPORTED AS
+// EVENTS.
 //
 // ── WHY THE BROWSER, AND WHY THIS FILE EXISTS AT ALL ──────────────────────────────────────────
 //

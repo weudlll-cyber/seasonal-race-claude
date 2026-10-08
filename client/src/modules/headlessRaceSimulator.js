@@ -10,7 +10,7 @@
 //              governorMult from the t-update, and its baseSpeed omits the racer type's
 //              speedMultiplier; world positions use a simplified circular approximation.
 //              It exists only to measure the empirical "racers side-by-side" distribution
-//              for DiagnoseVerteilung. Do NOT read its output as the game, and do NOT unify
+//              for DistributionDiagnostics. Do NOT read its output as the game, and do NOT unify
 //              its t-update with the shared browser/sim formula — it is a different model on
 //              purpose.
 //

@@ -21,7 +21,7 @@
 //
 // NOT asserted: anything about the picture, the camera, the physics or the finish. The unmount
 // cleanup that releases the rAF loop, the timers, the observer and the effects is React's to run and
-// `index.jsx:1760-1773` already owns it; a test here that re-checked it would be asserting the
+// `index.jsx` (the race loop effect's cleanup) already owns it; a test here that re-checked it would be asserting the
 // framework. The scaffolding (canvas, geometry, bounded rAF) is `mount.test.jsx`'s, repeated here
 // because the two files must be able to fail independently.
 // ============================================================
@@ -91,7 +91,6 @@ const activeRace = () => ({
   worldWidth: GEOMETRY.worldWidth ?? 1280,
   worldHeight: GEOMETRY.worldHeight ?? 720,
   duration: 60,
-  winners: 3,
   raceMode: 'laps',
   targetLaps: 2,
   realizedDurationSec: 60,
