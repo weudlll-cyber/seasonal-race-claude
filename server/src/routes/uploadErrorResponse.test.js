@@ -83,6 +83,23 @@ describe('upload errors — the three routes answer with ONE response (P2)', () 
     expect(JSON.parse(answers[0]).error).toMatch(/File type not allowed/);
   });
 
+  // AUDIT-1 A5M-04: anything beyond the ONE file part is refused by the middleware. Unbounded, it
+  // would pass through to the entity lookup and answer 404 — which is what makes this distinguishable.
+  it('★ a text field beside the image, or a second file: every route answers 400', async () => {
+    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const opts = { filename: 'x.png', contentType: 'image/png' };
+    for (const { path, field } of ROUTES) {
+      const withField = await admin
+        .post(path)
+        .field('extra', 'x'.repeat(1000))
+        .attach(field, PNG, opts);
+      expect(withField.status, `${path} with a text field`).toBe(400);
+      expect(withField.body.error).toBe('File upload failed.');
+      const twoFiles = await admin.post(path).attach(field, PNG, opts).attach(field, PNG, opts);
+      expect(twoFiles.status, `${path} with two files`).toBe(400);
+    }
+  });
+
   it('the size message names the limit from the one home, not a hardcoded number', async () => {
     const res = await admin
       .post(ROUTES[0].path)
