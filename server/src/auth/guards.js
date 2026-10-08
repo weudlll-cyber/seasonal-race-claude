@@ -86,6 +86,15 @@ const ROUTE_POLICY = [
     role: 'admin',
     desc: 'the test-aids switch — admin sets, everyone reads (TEST-AIDS-1)',
   },
+  // AUDIT-1 D2: the admin status box (`GET /api/admin/status`) reports paths, free disk, backup
+  // ages and the build — install facts an operator has no business reading. The WHOLE namespace,
+  // every method, so a later route under /api/admin is admin-only before anyone thinks about it.
+  {
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    test: (p) => /^\/api\/admin(\/.*)?$/.test(p),
+    role: 'admin',
+    desc: 'admin status and anything else under /api/admin — admin only (AUDIT-1 D2)',
+  },
 ];
 
 // ── Path / method normalizers (exported for unit tests) ──────────────────────

@@ -4,12 +4,12 @@
 // Project:     RaceArena — DEVSCREEN-CHAPTERS-1
 // Created:     2026-10-05
 // Description: THE CHAPTER GUARD. Holds the rebuilt Dev Screen to the design table
-//              (reports/evolution/DEVSCREEN-CHAPTERS-1/design.json, 347 rows): every control
+//              (reports/evolution/DEVSCREEN-CHAPTERS-1/design.json, 348 rows): every control
 //              exactly once, in the chapter and sub-group the design gives it, in the design's
 //              order, carrying the design's info text.
 //
 // HOW EACH CONTROL IS CHECKED — every control carries `data-control-id="<file>:<id>"`, on the
-// control or on its row. ALL 347 ARE CHECKED BY RENDERING; none is covered by a source scan.
+// control or on its row. ALL 348 ARE CHECKED BY RENDERING; none is covered by a source scan.
 //
 //   The real DevScreen is rendered as an ADMIN in the All view, every section real. The data the
 //   server would send is given through mocked data modules, ONE ENTRY of each kind, shaped so that
@@ -21,7 +21,9 @@
 //       editor appear (the last standard field, the size floor, the surface classes, the cloud);
 //     - two surface classes — one MODIFIED cloud class (Reset to Default) and one CUSTOM class
 //       (Delete) — plus a generator switch through every generator, so every generator field shows;
-//     - one stored race with a short key (Verify race shows for an admin on a stored race).
+//     - one stored race with a short key (Verify race shows for an admin on a stored race);
+//     - one admin status answer (the read-only status box, AUDIT-1 D2 — row 348, the one row that is
+//       a display rather than something to press; it carries its id and info text like a control).
 //   Every chapter is opened from the sidebar, then every form, modal and editor is OPENED by
 //   clicking (Edit on each list, + the class list, Reset Password, the "New team…" choice). Each
 //   state is a SNAPSHOT of the content. For every control in every snapshot:
@@ -181,6 +183,21 @@ vi.mock('../../services/racesApi.js', () => ({
   savePointsRule: async (rule) => rule,
 }));
 
+vi.mock('../../services/adminStatusApi.js', () => ({
+  fetchAdminStatus: async () => ({
+    build: { commit: 'abc1234', branch: 'master' },
+    backup: { newest: null, visible: false },
+    status: { ok: true, checks: [{ name: 'disk', ok: true, detail: 'ok' }] },
+    release: {
+      newest: null,
+      current: null,
+      newer: false,
+      checkedAt: '2026-10-09T00:00:00.000Z',
+      state: 'ok',
+    },
+  }),
+}));
+
 vi.mock('../../services/usersApi.js', () => ({
   fetchUsers: async () => [{ id: 'u1', username: 'ada', role: 'operator', team: 'T' }],
   createUser: async () => ({}),
@@ -318,9 +335,9 @@ beforeAll(async () => {
 });
 
 describe('DEVSCREEN-CHAPTERS-1 — the screen holds every control of the design, once, in place', () => {
-  it('design.json is the 347-row table', () => {
-    expect(DESIGN).toHaveLength(347);
-    expect(ROWS.size).toBe(347);
+  it('design.json is the 348-row table', () => {
+    expect(DESIGN).toHaveLength(348);
+    expect(ROWS.size).toBe(348);
   });
 
   it('the registry has the design chapters, in the design order', () => {

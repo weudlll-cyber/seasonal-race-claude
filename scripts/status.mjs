@@ -17,26 +17,18 @@
 // ── ★ WHAT IS REUSED RATHER THAN REBUILT ───────────────────────────────────────────────────────
 //   · `server/src/dataPaths.js` `resolveDataRoot()` — THE data-root resolver, as `backup.mjs` uses
 //     it, so status checks the directory the server writes and not a second guess at it.
-//   · `scripts/backup.mjs` `archiveTakenAt()` — the archive NAME is the backup's timestamp, and the
-//     format lives in that file only. Ages come from the name, not from mtimes, because copying an
-//     archive to another disk resets its mtime and would make a stale backup look fresh.
-//   · `scripts/backup.mjs` `verifyChecksum()` — the checksum file's name and format live there too,
-//     beside the writer, so status never re-derives them. (TIDY-C-1)
+//   · `shared/statusChecks.mjs` — checks 2, 3 and 4 (AUDIT-1 D2). They lived in this file until the
+//     admin status box on the Dev Screen needed the same logic; the server image has no `scripts/`,
+//     so they moved to `shared/` and BOTH callers import them. They are re-exported below, so this
+//     file's exports and its output are unchanged. The reasons each check works the way it does
+//     (why the writable check writes, why no backup directory FAILS) moved with them.
+//   · `shared/backupArchive.mjs` (through statusChecks) — the archive NAME is the backup's
+//     timestamp, and its checksum file's name and format live there; ages come from the name, not
+//     from mtimes, because copying an archive to another disk resets its mtime. `scripts/backup.mjs`
+//     writes with the same module.
 //   · `RA_BACKUP_DIR` — the same setting `npm run backup` writes into, so one value schedules both.
 //   · `GET /api/health` — the existing public route (`server/src/auth/guards.js:14`); nothing new
 //     is added to the server for this.
-//
-// ── WHY THE WRITABLE CHECK WRITES ──────────────────────────────────────────────────────────────
-// Permissions, a read-only remount and a full quota all fail the same way: only at write time.
-// `accessSync(W_OK)` answers from mode bits and is wrong on the cases that matter (ACLs, a
-// read-only filesystem on some platforms). So a uniquely named probe file is written and removed
-// immediately. Its name ends in neither `.tmp` nor a store's name, so nothing in the server reads
-// it, and `sweepOrphanTmp` at boot is not involved.
-//
-// ── WHY NO BACKUP DIRECTORY IS A FAILURE, NOT A SKIP ───────────────────────────────────────────
-// A status run with no backup directory configured cannot say the install is backed up. A green
-// line there would be the silent pass this command exists to prevent, so it FAILS and says how to
-// configure it.
 //
 // ── USAGE ──────────────────────────────────────────────────────────────────────────────────────
 //   npm run status                                   # all defaults, backups from $RA_BACKUP_DIR
@@ -46,16 +38,14 @@
 //           --min-free-mb 1024, --max-backup-age-hours 26 (a daily backup plus two hours' slack).
 // ============================================================
 
-import { statfsSync, readdirSync, writeFileSync, rmSync, existsSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { DEFAULTS, ok, fail, checkDisk, checkWritable, checkBackup } from '../shared/statusChecks.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 
-const { archiveTakenAt, verifyChecksum } = await import(pathToFileURL(join(HERE, 'backup.mjs')).href);
-
-export const DEFAULTS = { minFreeMb: 1024, maxBackupAgeHours: 26, healthTimeoutMs: 5000 };
+export { DEFAULTS, checkDisk, checkWritable, checkBackup };
 
 /** The URL the API should answer on, from the same settings the server reads. A wildcard or unset
  *  bind address means "every interface", and loopback is one of them. */
@@ -65,9 +55,6 @@ export function defaultUrl(env = process.env) {
   const host = !addr || addr === '0.0.0.0' || addr === '::' ? '127.0.0.1' : addr.includes(':') ? `[${addr}]` : addr;
   return `http://${host}:${port}`;
 }
-
-const ok = (name, detail) => ({ name, ok: true, detail });
-const fail = (name, detail) => ({ name, ok: false, detail });
 
 export async function checkHealth(url, timeoutMs = DEFAULTS.healthTimeoutMs) {
   const target = `${url.replace(/\/+$/, '')}/api/health`;
@@ -80,60 +67,6 @@ export async function checkHealth(url, timeoutMs = DEFAULTS.healthTimeoutMs) {
   } catch (e) {
     return fail('api', `${target} did not answer: ${e.cause?.code ?? e.name ?? e.message}`);
   }
-}
-
-export function checkDisk(dataRoot, minFreeMb = DEFAULTS.minFreeMb) {
-  try {
-    const s = statfsSync(dataRoot);
-    const freeMb = Math.floor((Number(s.bavail) * Number(s.bsize)) / (1024 * 1024));
-    return freeMb >= minFreeMb
-      ? ok('disk', `${freeMb} MB free at ${dataRoot} (minimum ${minFreeMb})`)
-      : fail('disk', `only ${freeMb} MB free at ${dataRoot} (minimum ${minFreeMb})`);
-  } catch (e) {
-    return fail('disk', `cannot read free space at ${dataRoot}: ${e.code ?? e.message}`);
-  }
-}
-
-export function checkWritable(dataRoot) {
-  if (!existsSync(dataRoot) || !statSync(dataRoot).isDirectory())
-    return fail('writable', `data directory does not exist: ${dataRoot}`);
-  const probe = join(dataRoot, `.ra-status-probe-${process.pid}-${Date.now()}`);
-  try {
-    writeFileSync(probe, 'probe');
-    return ok('writable', `${dataRoot} is writable`);
-  } catch (e) {
-    return fail('writable', `cannot write into ${dataRoot}: ${e.code ?? e.message}`);
-  } finally {
-    rmSync(probe, { force: true });
-  }
-}
-
-export function checkBackup(backupsDir, maxAgeHours = DEFAULTS.maxBackupAgeHours, now = new Date()) {
-  if (!backupsDir)
-    return fail('backup', 'no backup directory given — pass --backups <dir> or set RA_BACKUP_DIR');
-  let names;
-  try {
-    names = readdirSync(backupsDir);
-  } catch (e) {
-    return fail('backup', `cannot read backup directory ${backupsDir}: ${e.code ?? e.message}`);
-  }
-  // The NAME is kept beside its instant so the newest archive's checksum can be checked (TIDY-C-1).
-  const taken = names
-    .map((name) => ({ name, at: archiveTakenAt(name) }))
-    .filter((t) => t.at)
-    .sort((a, b) => b.at - a.at);
-  if (!taken.length) return fail('backup', `no racearena-backup-*.tar in ${backupsDir}`);
-  const newest = taken[0];
-  const ageHours = (now - newest.at) / 3_600_000;
-  const shown = `${ageHours.toFixed(1)} h old (${newest.at.toISOString()})`;
-  if (ageHours > maxAgeHours)
-    return fail('backup', `newest backup is ${shown}, older than the maximum ${maxAgeHours} h`);
-  // TIDY-C-1: a recent archive that is missing its checksum, or no longer matches it, is not a backup
-  // anyone can rely on, so it FAILS the same line rather than passing on age alone.
-  const sum = verifyChecksum(join(backupsDir, newest.name));
-  return sum.ok
-    ? ok('backup', `newest backup is ${shown}, maximum ${maxAgeHours} h; ${sum.detail}`)
-    : fail('backup', `newest backup is ${shown}, but ${sum.detail}`);
 }
 
 /** All four checks. Exported so the tests drive it without a process. */

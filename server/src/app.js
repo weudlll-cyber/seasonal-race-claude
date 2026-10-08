@@ -17,6 +17,7 @@ import racersRouter from './routes/racers.js';
 import seedNoticesRouter from './routes/seedNotices.js';
 import racesRouter from './routes/races.js';
 import settingsRouter from './routes/settings.js';
+import adminStatusRouter from './routes/adminStatus.js';
 import { createSessionMiddleware } from './auth/session.js';
 import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
@@ -82,6 +83,8 @@ export function createApp() {
   app.use('/api/seed-notices', seedNoticesRouter);
   app.use('/api/races', racesRouter);
   app.use('/api/settings', settingsRouter);
+  // AUDIT-1 D2: the admin status box — read-only, admin-only by ROUTE_POLICY (all of /api/admin).
+  app.use('/api/admin', adminStatusRouter);
 
   // SERVE-SPA-1: LAST, so every real route above wins. An unknown path under /api/ now answers as
   // the API rather than as Express's default HTML error page.

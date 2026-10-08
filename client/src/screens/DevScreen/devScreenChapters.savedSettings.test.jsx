@@ -33,6 +33,8 @@ vi.mock('../../services/playerGroupApi.js', () => ({ fetchPlayerGroups: async ()
 vi.mock('../../modules/storage/playerGroupMigration.js', () => ({
   migrateLocalPlayerGroupsToServer: async () => true,
 }));
+// AUDIT-1 D2: the status box reads the server; never the real one from a test.
+vi.mock('../../services/adminStatusApi.js', () => ({ fetchAdminStatus: async () => null }));
 vi.mock('../../services/brandApi.js', () => ({ fetchBrands: async () => [] }));
 vi.mock('../../modules/branding/brandingSync.js', () => ({ syncBrandingMirror: async () => {} }));
 vi.mock('../../modules/storage/useServerTracks.js', () => ({

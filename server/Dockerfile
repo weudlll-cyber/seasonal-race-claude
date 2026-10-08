@@ -113,6 +113,10 @@ COPY shared/playerNames.mjs /shared/playerNames.mjs
 # REMOVE-WINNERS-SETTING-1 (2026-10-06): the podium's size, `PODIUM_PLACES` — `periodEvaluation.js`
 # imports it (and the client's race history). Named in both lists, as above.
 COPY shared/podium.mjs /shared/podium.mjs
+# AUDIT-1 D2 (2026-10-09): the admin status box — `routes/adminStatus.js` imports the status checks
+# `npm run status` runs, and they import the backup archive format. Named in both lists, as above.
+COPY shared/statusChecks.mjs /shared/statusChecks.mjs
+COPY shared/backupArchive.mjs /shared/backupArchive.mjs
 
 # ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1; the owner's decision, 2026-10-04) ────
 #
