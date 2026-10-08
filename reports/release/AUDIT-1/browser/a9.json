@@ -1,0 +1,44 @@
+{
+  "chromium": {
+    "signIn": true,
+    "screens": {
+      "/setup": true,
+      "/dev": true
+    },
+    "race": {
+      "canvas": true,
+      "size": "9157x5151"
+    },
+    "errors": [
+      "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  },
+  "firefox": {
+    "signIn": true,
+    "screens": {
+      "/setup": true,
+      "/dev": true
+    },
+    "race": {
+      "canvas": true,
+      "size": "9157x5151"
+    },
+    "errors": [
+      "console: [RaceArena] loadServerRacerTypes: failed to fetch from server — Server not reachable. Try again in a moment — the banner at the top of the screen says what still works without it."
+    ]
+  },
+  "webkit": {
+    "signIn": true,
+    "screens": {
+      "/setup": true,
+      "/dev": true
+    },
+    "race": {
+      "canvas": true,
+      "size": "1196x673"
+    },
+    "errors": [
+      "console: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ]
+  }
+}

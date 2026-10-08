@@ -1,0 +1,16 @@
+{
+  "acorn": {
+    "current": "8.16.0",
+    "wanted": "8.19.0",
+    "latest": "8.19.0",
+    "dependent": "a1",
+    "location": "C:\\tmp\\a1\\node_modules\\acorn"
+  },
+  "sharp": {
+    "current": "0.34.5",
+    "wanted": "0.34.5",
+    "latest": "0.35.5",
+    "dependent": "a1",
+    "location": "C:\\tmp\\a1\\node_modules\\sharp"
+  }
+}

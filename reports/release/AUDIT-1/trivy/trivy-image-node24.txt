@@ -1,0 +1,104 @@
+
+/in/image.tar (alpine 3.24.2)
+=============================
+Total: 1 (UNKNOWN: 0, LOW: 0, MEDIUM: 1, HIGH: 0, CRITICAL: 0)
+
+┌─────────┬────────────────┬──────────┬────────┬───────────────────┬───────────────┬───────────────────────────────────────────────────────────┐
+│ Library │ Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version │                           Title                           │
+├─────────┼────────────────┼──────────┼────────┼───────────────────┼───────────────┼───────────────────────────────────────────────────────────┤
+│ zlib    │ CVE-2026-85091 │ MEDIUM   │ fixed  │ 1.3.2-r0          │ 1.3.2-r1      │ zlib versions 1.3.1.2 through 1.3.2 contain a heap buffer │
+│         │                │          │        │                   │               │ overflow vul ......                                       │
+│         │                │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-85091                │
+└─────────┴────────────────┴──────────┴────────┴───────────────────┴───────────────┴───────────────────────────────────────────────────────────┘
+
+Node.js (node-pkg)
+==================
+Total: 21 (UNKNOWN: 0, LOW: 1, MEDIUM: 12, HIGH: 8, CRITICAL: 0)
+
+┌────────────────────────────────────────┬─────────────────┬──────────┬──────────┬───────────────────┬──────────────────────────────┬──────────────────────────────────────────────────────────────┐
+│                Library                 │  Vulnerability  │ Severity │  Status  │ Installed Version │        Fixed Version         │                            Title                             │
+├────────────────────────────────────────┼─────────────────┼──────────┼──────────┼───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ brace-expansion (package.json)         │ CVE-2026-102276 │ HIGH     │ fixed    │ 5.0.7             │ 5.0.10, 3.0.7, 2.1.5, 1.1.19 │ brace-expansion: brace-expansion: Denial of Service via      │
+│                                        │                 │          │          │                   │                              │ stack exhaustion from crafted brace patterns...              │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-102276                  │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-102278 │          │          │                   │ 5.0.11, 3.0.8, 2.1.6, 1.1.20 │ brace-expansion: brace-expansion: Denial of Service via      │
+│                                        │                 │          │          │                   │                              │ uncontrolled recursion in nested brace patterns...           │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-102278                  │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-14257  │          │          │                   │ 5.0.8, 3.0.3, 2.1.3, 1.1.17  │ brace-expansion: Brace-expansion: Denial of Service via      │
+│                                        │                 │          │          │                   │                              │ memory exhaustion in expand() function                       │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-14257                   │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-69152  │          │          │                   │ 1.1.18, 2.1.4, 3.0.6, 5.0.9  │ brace-expansion: DoS via unbounded intermediate arrays,      │
+│                                        │                 │          │          │                   │                              │ bypassing the CVE-2026-14257 mitigation                      │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-69152                   │
+│                                        ├─────────────────┼──────────┤          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-102277 │ MEDIUM   │          │                   │ 5.0.12, 3.0.9, 2.1.7, 1.1.21 │ brace-expansion: brace-expansion: Denial of Service via      │
+│                                        │                 │          │          │                   │                              │ crafted brace patterns                                       │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-102277                  │
+├────────────────────────────────────────┼─────────────────┼──────────┼──────────┼───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ http-cache-semantics (package.json)    │ CVE-2026-93748  │ HIGH     │ affected │ 4.2.0             │                              │ http-cache-semantics: http-cache-semantics: Information      │
+│                                        │                 │          │          │                   │                              │ Disclosure via max-stale directive                           │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-93748                   │
+├────────────────────────────────────────┼─────────────────┤          ├──────────┼───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ ip-address (package.json)              │ CVE-2026-69192  │          │ fixed    │ 10.2.0            │ 10.3.1                       │ ip-address: ip-address: Inconsistent IP address parsing      │
+│                                        │                 │          │          │                   │                              │ leads to Server-Side Request Forgery (SSRF)...               │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-69192                   │
+│                                        ├─────────────────┼──────────┤          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-101910 │ MEDIUM   │          │                   │ 10.5.1                       │ ip-address: ip-address: Security boundary bypass via         │
+│                                        │                 │          │          │                   │                              │ unclassified NAT64 local-use address range                   │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-101910                  │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-101911 │          │          │                   │ 10.7.1                       │ ip-address: ip-address: Denial of Service via unbounded IPv6 │
+│                                        │                 │          │          │                   │                              │ address parsing                                              │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-101911                  │
+│                                        ├─────────────────┤          │          │                   │                              ├──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-101912 │          │          │                   │                              │ ip-address: ip-address: Access control bypass via            │
+│                                        │                 │          │          │                   │                              │ cross-family subnet comparison                               │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-101912                  │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-101913 │          │          │                   │ 10.5.1                       │ ip-address: ip-address: Security bypass via incomplete IPv6  │
+│                                        │                 │          │          │                   │                              │ link-local address validation                                │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-101913                  │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-54272  │          │          │                   │ 10.2.1                       │ ip-address: ip-address: Server-Side Request Forgery via      │
+│                                        │                 │          │          │                   │                              │ IPv4-mapped/NAT64 IPv6 address misclassification             │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-54272                   │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-69198  │          │          │                   │ 10.2.2                       │ ip-address: ip-address: Server-Side Request Forgery (SSRF)   │
+│                                        │                 │          │          │                   │                              │ and trust-boundary bypass                                    │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-69198                   │
+├────────────────────────────────────────┼─────────────────┤          │          ├───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ postcss-selector-parser (package.json) │ CVE-2026-104844 │          │          │ 7.1.4             │ 7.1.6                        │ postcss-selector-parser: postcss-selector-parser: Denial of  │
+│                                        │                 │          │          │                   │                              │ Service via crafted CSS selectors                            │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-104844                  │
+├────────────────────────────────────────┼─────────────────┼──────────┤          ├───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ tar (package.json)                     │ CVE-2026-73566  │ HIGH     │          │ 7.5.19            │ 7.5.21                       │ tar: node-tar: Denial of Service via crafted long-path tar   │
+│                                        │                 │          │          │                   │                              │ archive                                                      │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-73566                   │
+├────────────────────────────────────────┼─────────────────┤          │          ├───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ undici (package.json)                  │ CVE-2026-19534  │          │          │ 6.27.0            │ 6.28.1, 7.29.1, 8.10.2       │ undici: undici: Denial of Service via unrequested WebSocket  │
+│                                        │                 │          │          │                   │                              │ subprotocol                                                  │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-19534                   │
+│                                        ├─────────────────┼──────────┤          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-15157  │ MEDIUM   │          │                   │ 6.28.0, 7.29.0, 8.9.0        │ undici: undici: HTTP header injection via unvalidated        │
+│                                        │                 │          │          │                   │                              │ blob-like body type property                                 │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-15157                   │
+│                                        ├─────────────────┤          │          │                   │                              ├──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-16728  │          │          │                   │                              │ undici: undici: Response desynchronization via retry         │
+│                                        │                 │          │          │                   │                              │ interceptor with mismatched Content-Length                   │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-16728                   │
+│                                        ├─────────────────┤          │          │                   │                              ├──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-16729  │          │          │                   │                              │ undici: Undici: Cookie attribute injection allows bypassing  │
+│                                        │                 │          │          │                   │                              │ security protections                                         │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-16729                   │
+│                                        ├─────────────────┤          │          │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-85024  │          │          │                   │ 6.28.1, 7.29.1, 8.10.2       │ undici: undici: Denial of Service via unhandled error in     │
+│                                        │                 │          │          │                   │                              │ WebSocket permessage-deflate decompression...                │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-85024                   │
+│                                        ├─────────────────┼──────────┤          │                   │                              ├──────────────────────────────────────────────────────────────┤
+│                                        │ CVE-2026-18540  │ LOW      │          │                   │                              │ undici: undici: HTTP response splitting via retry            │
+│                                        │                 │          │          │                   │                              │ interceptor                                                  │
+│                                        │                 │          │          │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-18540                   │
+└────────────────────────────────────────┴─────────────────┴──────────┴──────────┴───────────────────┴──────────────────────────────┴──────────────────────────────────────────────────────────────┘
