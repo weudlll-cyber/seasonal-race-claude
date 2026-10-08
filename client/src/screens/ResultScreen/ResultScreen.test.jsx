@@ -61,7 +61,7 @@ const VALID_RACE_RESULTS = JSON.stringify({
     },
   ],
   elapsedTime: 62,
-  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, duration: 60 },
 });
 
 const FOUR_FINISHER_RESULTS = JSON.stringify({
@@ -72,7 +72,7 @@ const FOUR_FINISHER_RESULTS = JSON.stringify({
     { name: 'Dave', icon: '🐎', color: '#ff0', index: 3, progress: 85, finishTimeMs: 35_800 },
   ],
   elapsedTime: 62,
-  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+  race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, duration: 60 },
 });
 
 beforeEach(() => {
@@ -124,7 +124,6 @@ describe('ResultScreen — double-save regression', () => {
       race: {
         trackId: DIRT_OVAL.id,
         trackName: DIRT_OVAL.name,
-        winners: 3,
         duration: 60,
         sponsorText: 'Sponsored by Acme',
       },
@@ -206,7 +205,7 @@ describe('ResultScreen — podium finish times', () => {
         { name: 'Bob', icon: '🐎', index: 1, progress: 95 },
       ],
       elapsedTime: 62,
-      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, duration: 60 },
     });
     sessionStorage.setItem('raceResults', noTimes);
     render(<ResultScreen />);
@@ -234,7 +233,7 @@ describe('ResultScreen — per-racer finish time', () => {
         { name: 'Eve', icon: '🐎', index: 4, progress: 80 }, // finishTimeMs absent
       ],
       elapsedTime: 62,
-      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, winners: 3, duration: 60 },
+      race: { trackId: DIRT_OVAL.id, trackName: DIRT_OVAL.name, duration: 60 },
     });
     sessionStorage.setItem('raceResults', withNull);
     render(<ResultScreen />);

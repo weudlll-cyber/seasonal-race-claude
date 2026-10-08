@@ -21,7 +21,7 @@ client/playwright-report/
 client/test-results/
 .playwright-mcp/
 /tmp/
-AUDIT.md
+/AUDIT.md
 audit-temp/
 diagnosis/
 # server/data is a pure runtime dir (gitignored). Shipped defaults live in server/seeds/

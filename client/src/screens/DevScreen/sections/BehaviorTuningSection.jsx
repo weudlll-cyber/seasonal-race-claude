@@ -4,7 +4,8 @@
 // Project:     RaceArena
 // Created:     2026-05-25
 // Description: DevScreen section — UI controls for racer behavior tuning
-//              (avoidance, drafting, and priority mode config).
+//              (drafting, comfort zone, avoidance, speed brake, look-before-you-brake,
+//              soft steering and start layout).
 // ============================================================
 
 import {

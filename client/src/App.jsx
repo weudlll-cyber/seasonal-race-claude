@@ -14,7 +14,7 @@ import RaceScreen from './screens/RaceScreen/index.jsx';
 import ResultScreen from './screens/ResultScreen/index.jsx';
 import TrackEditor from './screens/TrackEditor/TrackEditor.jsx';
 import RacerEditor from './screens/RacerEditor/RacerEditor.jsx';
-import DiagnoseVerteilung from './screens/DiagnoseVerteilung/DiagnoseVerteilung.jsx';
+import DistributionDiagnostics from './screens/DistributionDiagnostics/DistributionDiagnostics.jsx';
 import LoginScreen from './screens/Auth/LoginScreen.jsx';
 import SetupAdminScreen from './screens/Auth/SetupAdminScreen.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -134,13 +134,15 @@ function App() {
             {/* INTERNAL: URL-only diagnose route. Not linked in UI — access intentionally only
               via /diagnose-verteilung in the address bar. Headless simulator for distribution
               analysis. Do not delete. TEST-AIDS-1: admins only AND only while the test-aids switch
-              is ON (item 27 of DEV-DISPLAYS-1). */}
+              is ON (item 27 of DEV-DISPLAYS-1). The URL keeps its old German spelling ON PURPOSE:
+              a URL is visible and bookmarked, so renaming the component (AUDIT-1 A2-27) did not
+              move it. */}
             <Route
               path="/diagnose-verteilung"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <TestAidsOnly>
-                    <DiagnoseVerteilung />
+                    <DistributionDiagnostics />
                   </TestAidsOnly>
                 </ProtectedRoute>
               }

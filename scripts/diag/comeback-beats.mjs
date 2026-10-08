@@ -24,14 +24,19 @@
 //
 // ── HOW THIS HARNESS DELIVERS THE PLAN, and why that detail decides the measurement ──────────
 //
-// ★ `scripts/lib/raceDriver.mjs` DOES NOT DELIVER THE AUTHORED PLAN. At `:374` it calls
+// ★ SUPERSEDED SINCE THIS WAS WRITTEN: the shared driver now DOES deliver the plan, the product's
+// way (CAMERA-PLAN-BLIND-1: `makeCameraPlanDelivery` from scripts/lib/cameraPlanDelivery.mjs,
+// called every frame before `cd.update`). The paragraph below is the record of why this harness
+// delivers it itself; the delivery here and the driver's now agree.
+//
+// `scripts/lib/raceDriver.mjs` DID NOT DELIVER THE AUTHORED PLAN. It called
 // `cd.updateRacePlan(b1Indices)` — the OLD Set channel — and never `setCameraPlan`. A race driven
-// by it therefore has `_cast === null` and `best()` falls back to `_b1`, which is NOT the camera
+// by it therefore had `_cast === null` and `best()` falls back to `_b1`, which is NOT the camera
 // the browser runs. Measuring on that path would answer a question nobody asked.
 //
-// The browser delivers the plan at `RaceScreen/index.jsx:1008-1014`, once `getCameraPlan()` returns
-// non-null (heroes are cast MID-RACE, so it is null at race start). `scripts/camera-replay.mjs:363-370`
-// already reproduces that. THIS HARNESS DOES THE SAME, from `onFrame`, which runs immediately after
+// The browser delivers the plan in `RaceScreen/index.jsx` (its `getCameraPlan()` call), once
+// `getCameraPlan()` returns non-null (heroes are cast MID-RACE, so it is null at race start).
+// `scripts/camera-replay.mjs` (its `setCameraPlan` call) already reproduces that. THIS HARNESS DOES THE SAME, from `onFrame`, which runs immediately after
 // the frame's physics steps. That is at most one frame later than the browser's delivery point, and
 // it is stated rather than hidden.
 //
@@ -59,7 +64,12 @@
 //
 // ── ★ AND THE DRIVER'S CAMERA IS NOT THE BROWSER'S CAMERA FOR THIS SHOT ──────────────────────
 //
-// `raceDriver.mjs:500` hands the director `isOutcomePhase: false` — a hard-coded literal. The
+// ★ SUPERSEDED SINCE THIS WAS WRITTEN: the driver now hands the director the browser's value,
+// `racePlanController.getPhase(...) === "OUTCOME"` (OUTCOME-WINDOW-1 / HARNESS-OUTCOME-1 in
+// raceDriver.mjs), so `--outcome=driver` no longer reproduces a hard-coded `false`. The account
+// below is the record of the gap as it stood.
+//
+// `raceDriver.mjs` handed the director `isOutcomePhase: false` — a hard-coded literal. The
 // browser hands it `diagDataRef.current.rpPhase === 'OUTCOME'` (`RaceScreen/index.jsx:1417`), and
 // that field is written on every physics frame the plan is on: the guard above it is
 // `if (racePlanController)` (`:1170`), not a diagnostics flag.
@@ -366,7 +376,7 @@ for (const geo of tracks) {
         frameOffers.push([w, a]);
         return a;
       };
-      // `_pickNextState` (CameraDirector.js:1624) is the decision itself. Wrapping it separates
+      // `_pickNextState` (CameraDirector.js) is the decision itself. Wrapping it separates
       // "the director never asked the question this frame" — the hold gate at :960 did not open —
       // from "it asked and returned before the candidate pool was ever built", which is what its
       // start-window and endgame branches do. Without this the two collapse into one unreadable

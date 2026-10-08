@@ -121,7 +121,8 @@ i=0
 for guard in $guards
 do
   i=$((i + 1))
-  # shellcheck disable=SC2046 - guard_args returns a flag or nothing, and must word-split.
+  # guard_args returns a flag or nothing, and must word-split — hence the directive below.
+  # shellcheck disable=SC2046
   node "$guard" $(guard_args "$guard") >"/tmp/ra-guard-$i.out" 2>&1 &
   eval "pid_$i=\$!"
 done
@@ -161,6 +162,9 @@ fi
 # "can this diff change the race?" is information the committer needs, not a veto: plenty of
 # legitimate commits touch the engine and mint afterwards.
 staged=$(git diff --cached --name-only)
+# $staged is a list of paths and must word-split into one argument each (tracked paths carry no
+# spaces) — hence the directive.
+# shellcheck disable=SC2086
 if [ -n "$staged" ]; then
   if node scripts/engine-reach.mjs --check $staged >/dev/null 2>&1; then
     echo ""

@@ -52,7 +52,9 @@ import s from '../DevScreen.module.css';
 // ★ THE YARDSTICK IS THE LEADER SHOT. `visibleWorldPx = corridors * referenceWidthPx` by
 // construction (zoomUnit.js:44, where the world size cancels), so a canvas width is only a fixed
 // distance once a shot is named. The one to name is LEADER_ZOOM, which defaults.js calls "the
-// reference shot, the owner's own eye" — 0.75 x 300 = 225 world px. Both halves are READ from the
+// reference shot, the owner's own eye" — LEADER_ZOOM.visibleCorridors x referenceCorridorPx world
+// px (0.75 x 300 = 225 when this was written; the LEADER default moved on 2026-10-01, which is
+// exactly why it is read and not restated). Both halves are READ from the
 // shipped camera defaults rather than restated (MIRRORS-BY-REFERENCE, L207), so the conversion
 // follows the picture if either ever moves.
 //
@@ -178,7 +180,7 @@ function DynamicsTuningSection({ part }) {
   }
 
   // Gap-based leader brake (GAP-BRAKE-1) — its own group: the switch, the allowance and the
-  // window end are one mechanism. Resetting returns it to SHIPPED, which is OFF.
+  // window end are one mechanism. Resetting returns it to SHIPPED, which is ON (decided 2026-09-16).
   function resetGapBrake() {
     setDynamicsConfig((prev) => ({
       ...prev,
@@ -228,7 +230,7 @@ function DynamicsTuningSection({ part }) {
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
       choreoIntensity: DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
       // CHASE-AFTER-OUTCOME lives in this group because it IS the PULK governor, just past its
-      // boundary — one press returns all three to shipped, which is the extension OFF.
+      // boundary — one press returns all three to shipped, which is the extension ON.
       chaseAfterOutcomeEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeEnabled,
       chaseAfterOutcomeSelection: DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSelection,
       chaseAfterOutcomeSlots: DEFAULT_RACE_DYNAMICS_CONFIG.chaseAfterOutcomeSlots,
@@ -1225,7 +1227,7 @@ function DynamicsTuningSection({ part }) {
       )}
       {show('pulk') && (
         <>
-          {/* ── Section 5: PULK Phase — the 5 rotation controls + the PULK bonuses (Weg B, one card) ── */}
+          {/* ── Section 5: PULK Phase — the 7 controls in the list below + the PULK bonuses (Weg B, one card) ── */}
           <SubCard
             title="PULK Phase"
             onReset={resetPulk}
@@ -1596,8 +1598,8 @@ function DynamicsTuningSection({ part }) {
                     The stored key is WORLD PX. A canvas width is canvasH / (camZoom * axisY)
                     (camera/zoomUnit.js:119) — it depends on the LIVE camera zoom, which is not
                     deterministic from the race seed and must never reach the physics. So the engine
-                    compares world px and this control does the conversion, against the one fixed
-                    yardstick the camera system is defined in: referenceCorridorPx. The world-px value
+                    compares world px and this control does the conversion, against the LEADER shot
+                    (GAP_BRAKE_REFERENCE_PX: LEADER_ZOOM.visibleCorridors x referenceCorridorPx). The world-px value
                     actually stored is printed underneath, so the knob hides nothing. */}
                 <input
                   type="number"

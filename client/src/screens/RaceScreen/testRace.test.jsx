@@ -83,7 +83,6 @@ const race = (extra = {}) => ({
   worldWidth: GEOMETRY.worldWidth ?? 1280,
   worldHeight: GEOMETRY.worldHeight ?? 720,
   duration: 60,
-  winners: 3,
   raceMode: 'laps',
   targetLaps: 2,
   realizedDurationSec: 60,

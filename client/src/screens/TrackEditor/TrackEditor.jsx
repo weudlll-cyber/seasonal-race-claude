@@ -718,7 +718,7 @@ export default function TrackEditor() {
     if (activeEffects.length === 0) return;
 
     // PARTICLES-VISIBILITY-9: the preview places effects over the WORLD, as the race does
-    // (RaceScreen/index.jsx, `effectWorld`), and draws them inside the loop's world transform below.
+    // (RaceScreen/trackScene.js, `effectWorld`), and draws them inside the loop's world transform below.
     // Created with the canvas alone, it packed the race's whole-track amount into one screen and
     // drew each item at its world size in screen pixels, so it showed far more than the race.
     const effectWorld = { width: editorWorldW, height: editorWorldH };

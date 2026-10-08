@@ -47,7 +47,8 @@ const { DEFAULT_INNER_FRAME_PCT } = await import(u("client/src/modules/camera/fr
 //           reaches, supplied with --baseline-widest. No invented ceiling.
 //  item 5   the visible SHARE of the band, per his wording. No margin distance.
 //  item 6   the worst SINGLE FRAME, never an average. The bound is ln 2 — halving or doubling the
-//           picture between two frames is not a camera move — which is `wild-frame.mjs`'s own line.
+//           picture between two frames is not a camera move — which was the own line of the
+//           retired scripts/diag/wild-frame.mjs (ENDGAME-REPAIR-1 report).
 //  item 8   `95 / (canvasW / 2)` = 0.1484 ln/s, RUNIN-HOLD-1's own perceptibility figure.
 //  item 9   HIS FIGURE: 0.60 of the frame. Stated by him and not re-derived here. "Never cut" is
 //           the SUBJECT's own inner region, `innerFramePct`, which framingRule.js says exists so

@@ -97,7 +97,7 @@ curl -X POST http://localhost:4000/api/auth/setup \
 re-running it on a live install cannot roll your session secret or your token.
 
 *(Corrected 2026-09-19, INSTALL-DOCS-1: this step said `docker-compose.yml` "already sets it, so copy
-the value from there". INSTALL-SECRETS-1 removed that shared token on 2026-09-08 — `docker-compose.yml:27`
+the value from there". INSTALL-SECRETS-1 removed that shared token on 2026-09-08 — `docker-compose.yml:35-38`
 records the removal — so following this page gave you a working server you could never sign into.)*
 
 What you will see:

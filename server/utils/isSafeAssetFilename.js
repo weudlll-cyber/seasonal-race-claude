@@ -1,4 +1,10 @@
-// Defense-in-depth guard for record-stored asset filenames.
+// ============================================================
+// File:        isSafeAssetFilename.js
+// Path:        server/utils/isSafeAssetFilename.js
+// Project:     RaceArena
+// Description: Defense-in-depth guard for record-stored asset filenames.
+// ============================================================
+
 // Asset dirs are flat (filename only, no sub-paths), so any separator or
 // special character is a sign of a corrupt or malicious stored value.
 export function isSafeAssetFilename(name) {

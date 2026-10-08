@@ -1,0 +1,1020 @@
+diff --git a/client/src/modules/camera/CameraDirector.js b/client/src/modules/camera/CameraDirector.js
+index 1be88c3f..7830d15b 100644
+--- a/client/src/modules/camera/CameraDirector.js
++++ b/client/src/modules/camera/CameraDirector.js
+@@ -160,7 +160,7 @@ function _shortestTDelta(from, to) {
+ 
+ /**
+  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
+- * 90% convergence ≈ 3.45 × TC. Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
++ * 90% convergence at exactly 1 × TC. Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
+  * Exported for unit tests.
+  * @param {number} tc  Time constant in seconds (must be > 0)
+  * @returns {number}   Per-frame lerp factor in (0, 1)
+@@ -553,7 +553,7 @@ export class CameraDirector {
+   /**
+    * Derive every state's cam.zoom from its TRACK-WIDTHS setting (CAMERA-ZOOM-UNIT-1).
+    *
+-   * All five states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
++   * All six states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
+    * shot at the widest setting. The three things that used to make them incommensurable are gone:
+    * the absolute `spriteScale` screen-scale, OVERVIEW's target-SPRITE-SIZE derivation, and the
+    * `2 x W_ref / racersPerRow` racer-count division that came with it.
+@@ -945,7 +945,7 @@ export class CameraDirector {
+     }
+     // RUNIN-NAMES-1: latch the closing zoom's ARRIVAL. Both terms already exist and neither is a
+     // number chosen here: `_runInAfterDeadline` is the schedule's own "the close is running" (it is
+-    // set in `_scheduleTargetZoom` and, being a latch, survives the frames the schedule does not
++    // set in `_updateRunIn` (CameraDirectorRunIn.js) and, being a latch, survives the frames the schedule does not
+     // run), and the leader reaching the line is where §3b says the close arrives — "both the close's
+     // parameter and the leader's walk back reach 1 exactly at the line".
+     //
+@@ -1167,7 +1167,7 @@ export class CameraDirector {
+         if (this._prevFocusT !== null) {
+           this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
+         }
+-        this._prevFocusT = fT; // first write this frame; _computePhasedPanTarget reads it at the lead-out transition (~line 1833) then overwrites at every exit
++        this._prevFocusT = fT; // first write this frame; _computePhasedPanTarget reads it at the lead-out transition (in _computePhasedPanTarget) then overwrites at every exit
+         // Update target every frame: focusT moves with the racer, lead-ahead offset scales
+         // with the measured speed so the camera lands at the right lead-ahead position.
+         const prof = this._phasedByState?.[this.state];
+@@ -2070,7 +2070,7 @@ export class CameraDirector {
+       // Nothing about OVERVIEW outside the endgame changes; `_runInComposingNow` is false there.
+       if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode && !this._scheduleComposing()) {
+         // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
+-        // four states run. What stood here before derived the zoom from a target sprite size
++        // five states run. What stood here before derived the zoom from a target sprite size
+         // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
+         // on how many racers were in the race — non-monotonically. There is no sprite size and no
+         // racer count in this path any more.
+@@ -2309,7 +2309,8 @@ export class CameraDirector {
+    * WHERE THE NULL BITES, because it is not obvious and it has cost this project a repair
+    * (RUNIN-OWNS-1): update()'s zoom-about-the-anchor correction is SKIPPED when this returns null.
+    * A group shot whose zoom is steady does not care. A group shot whose zoom is MOVING does — the
+-   * pan target then runs away from the pan lerp and the frame empties. See `_runInAnchorPoint`.
++   * pan target then runs away from the pan lerp and the frame empties. See the RUNIN-OWNS-1 anchor
++   * block in update().
+    */
+   _focusAnchorRacer(racers) {
+     if (!racers || racers.length === 0) return null;
+@@ -3207,8 +3208,9 @@ export class CameraDirector {
+     // EVERY TERM NAMED, so the probe below can say WHICH ONE decided the width instead of leaving a
+     // reader to infer it from the total. `Math.min` over an object's values is the same computation
+     // it always was — this only stops the answer being unrecoverable one line after it is produced.
+-    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside the
+-    // pair states and whenever the key is off, so the composition below is a no-op there.
++    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside
++    // PHOTO_FINISH (its weight, `_corridorCapWeight`, is 0 there) and whenever the key is off, so the
++    // composition below is a no-op there.
+     const _corridorCap = this._contenderZoom ? this._corridorWidthCap(subjects, frameSize) : null;
+     // ── ENDGAME-SCHEDULE-1: THE SCHEDULE OWNS THE WIDTH, IT DOES NOT COMPETE FOR IT ───────────
+     //
+@@ -3233,10 +3235,11 @@ export class CameraDirector {
+       // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
+       // so this line costs nothing for the rest of the race.
+       field: this._fieldCeiling(subjects, racers, frameSize),
+-      // RUNIN-OWNS-1: the run-in. Infinity outside the endgame window, so this line costs nothing
+-      // for the rest of the race either — and INSIDE the window it is one more ceiling among the
+-      // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
+-      // `stateZoom` above IS the run-in's second bound; it needed no code.
++      // RUNIN-OWNS-1: the run-in. In practice this term is ALWAYS Infinity: `_updateRunIn` returns
++      // Infinity whenever the schedule is not composing, and whenever it is composing with a finite
++      // width `_scheduled` is true and the schedule takes the `state` slot above instead. It was
++      // written as "one more ceiling among the others" before ENDGAME-SCHEDULE-2 made the schedule
++      // the sole author; the `'line-after-cap'` label below is therefore unreachable.
+       line: _scheduled ? Infinity : _runInCeiling,
+     };
+     // ── ENDGAME-SCHEDULE-2: DURING THE SCHEDULED ENDGAME THE SCHEDULE IS THE SOLE AUTHOR ──────
+@@ -3279,7 +3282,8 @@ export class CameraDirector {
+     // `max`. That asymmetry is the whole reason this cannot be another entry in `_ceilings` — it
+     // would silently mean the opposite of every line beside it.
+     //
+-    // WHY IT IS SCOPED TO THE PAIR STATES. On the single-anchor shots the road already lost, and for
++    // WHY IT IS SCOPED TO THE PAIR STATES (in fact to PHOTO_FINISH alone — `_corridorCapWeight`
++    // is 0 in every other state). On the single-anchor shots the road already lost, and for
+     // the owner's own reason: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE (CAMERA-COMPANY-ONLY-3,
+     // approved 2026-08-05). Re-imposing it there would overturn a decision he has already made. The
+     // finish is the one place he has now said the road IS the sufficient bound.
+@@ -3301,7 +3305,8 @@ export class CameraDirector {
+       // THE BLEND IS IN LOG SPACE, and that is the same reasoning the diagnosis rested on: a scale
+       // change is perceived logarithmically, so a linear blend of zooms would still arrive as an
+       // uneven move. `w = 0` leaves the shot untouched; `w = 1` is the full cap; in between the
+-      // demand grows smoothly with the leader's approach.
++      // demand grows smoothly over `_corridorCapArriveMs` from the photo finish's entry (see
++      // `_corridorCapWeight`).
+       const w = this._corridorCapWeight();
+       if (w > 0 && _corridorCap > guaranteed) {
+         guaranteed = guaranteed * Math.pow(_corridorCap / guaranteed, w);
+@@ -3635,8 +3640,9 @@ export class CameraDirector {
+       this._observerPhase = 'lead-out';
+       this._leadOutStartCamT = this._camT;
+       // Camera moves at ~half racer speed during lead-out, decelerating via EMA.
+-      // _prevFocusT here is update()'s first write this frame (~line 723); _computePhasedPanTarget
+-      // has not yet written it on this code path — all its writes come at the exits below.
++      // _prevFocusT here is update()'s first write this frame (its `_prevFocusT = fT`);
++      // _computePhasedPanTarget has not yet written it on this code path — all its writes come at
++      // the exits below.
+       const speed =
+         this._prevFocusT !== null ? Math.max(0, focusT - this._prevFocusT) : NOMINAL_T_PER_FRAME;
+       this._leadOutDistanceT = speed * FRAME_RATE * prof.leadOutDuration * 0.5;
+@@ -3648,7 +3654,7 @@ export class CameraDirector {
+         const decayDt = 1 - Math.pow(1 - LEAD_OUT_DECAY, (dt * FRAME_RATE) / 1000);
+         this._camT += (leadOutTargetT - this._camT) * decayDt;
+       }
+-      this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
++      this._prevFocusT = focusT; // second write this frame (update() wrote first, `_prevFocusT = fT`)
+       return;
+     }
+ 
+@@ -3680,7 +3686,7 @@ export class CameraDirector {
+     // next frame. targetOffsetX/Y are owned exclusively by _setTargets; pixel-lerp closes any
+     // remaining gap smoothly — no hard-pin here (would cause a visible jump on the follow frame).
+     this._camT = focusT;
+-    this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
++    this._prevFocusT = focusT; // second write this frame (update() wrote first, `_prevFocusT = fT`)
+   }
+ 
+   // ── THE START CEREMONY lives in CameraDirectorCeremony.js (P1-CAMERADIRECTOR-SPLIT-1) ──────────
+diff --git a/client/src/modules/camera/CameraDirectorCeilings.js b/client/src/modules/camera/CameraDirectorCeilings.js
+index 49d6a9c6..3ba4c71b 100644
+--- a/client/src/modules/camera/CameraDirectorCeilings.js
++++ b/client/src/modules/camera/CameraDirectorCeilings.js
+@@ -68,10 +68,9 @@ export const ceilingsMixin = {
+       // CONTENDER-ZOOM-1: THE CONTENDERS ARE THE BINDING REQUIREMENT, however many there are.
+       //
+       // `subjects.pair` is the pinned set. `contenderGuarantee` is `pairGuarantee` over every pair in
+-      // it and reduces to exactly `pairGuarantee` at two — which is what the set holds today, so this
+-      // line changes no picture until the capture widens. It is here rather than waiting for that
+-      // widening because the guarantee is the half that can be built without a membership rule; the
+-      // membership rule is the half that cannot. See the block above `_photoFinishContenders`.
++      // it and reduces to exactly `pairGuarantee` at two. With `contenderZoom` ON (the shipped
++      // default) the capture is `_abreastContenders(...)` and can hold more than two; only the OFF arm
++      // keeps `slice(0, 2)`. See the block above `_photoFinishContenders`.
+       //
+       // THE PADDING IS THE NARROW BODY REFERENCE, and that is stated rather than assumed adequate:
+       // `_drawnBodyWidthRefPx` covers a MEDIAN 44.6% of the drawn sprite (measured across ten tracks,
+@@ -148,13 +147,12 @@ export const ceilingsMixin = {
+    * construction: on the frame the state changed it went from absent to fully applied and took the
+    * target from 2.47 to 10.02 — measured, the whole of the "leap" the owner objects to.
+    *
+-   * SO IT HANGS ON A CONTINUOUS QUANTITY INSTEAD, and the run-in already owns exactly one:
+-   * `_runInProgress`, 0 where the endgame window opens and 1 at the line, clamped monotone. **No
+-   * duration, no easing and no new number** — the cap's demand simply grows with the leader's own
+-   * approach, which is the quantity the whole endgame is already written in.
++   * WHAT IT DOES TODAY: 0 outside `PHOTO_FINISH`; inside it, a smoothstep from 0 to 1 over
++   * `_corridorCapArriveMs` from `_photoFinishEnteredTs` (1 at once when either is missing). The scope
++   * stays the state and the ONSET gets a duration — see the body.
+    *
+-   * PAST THE RUN-IN it is 1. The run-in releases at the crossing, by which point progress has
+-   * already reached 1, so the hand-over is continuous rather than another step.
++   * (The first design hung the weight on `_runInProgress` with no duration; that was tried and failed,
++   * as the body records, so the two paragraphs that used to stand here no longer describe the code.)
+    */
+   _corridorCapWeight() {
+     // ── (b) WAS TRIED FIRST AND IT FAILED — recorded so it is not tried again ──────────────────
+@@ -261,10 +259,11 @@ export const ceilingsMixin = {
+    * and degrades silently. So the fix is not "pass it everywhere"; it is to make an aim
+    * uncomputable without the floor.
+    *
+-   * **HOW THAT IS ENFORCED, and it is the whole point:** `anchorScreenPoint` is **no longer
+-   * imported into this file**. There is no raw function here to call with four arguments. A future
+-   * call site must either use this method — which cannot omit the floor, because it does not take
+-   * it — or re-add the import, which is a visible, reviewable act rather than a silent omission.
++   * **HOW THAT IS ENFORCED, and it is the whole point:** `anchorScreenPoint` is imported into this
++   * file only under the alias `anchorScreenPointRaw`, and the one call to it is the one in this
++   * method, which always passes the floor. A future call site must either use this method — which
++   * cannot omit the floor, because it does not take it — or call the alias directly, which is a
++   * visible, reviewable act rather than a silent omission.
+    *
+    * **WHAT IT COSTS.** The parameter was not made *required* in `framingRule.js`, which would have
+    * been the loudest shape: `anchorScreenPoint` has around twenty callers outside this file — six
+@@ -333,7 +332,9 @@ export const ceilingsMixin = {
+    *   `hudState` — none of them are touched. As the leader closes, `room / distance` rises past the
+    *   state's own setting, this term stops being the smallest in `_setTargets`'s `Math.min`, and
+    *   what is left is the shot that was always there, bit for bit. There is nothing to hand over
+-   *   and nothing to switch off.
++   *   and nothing to switch off. (Since ENDGAME-SCHEDULE-2 this term no longer enters that
++   *   `Math.min` itself: the run-in schedule reads it and places the width, and the `line` slot in
++   *   `_setTargets` is always Infinity.)
+    *
+    *   THE PHOTO FINISH IS STILL THE PHOTO FINISH. RaceScreen starts the slow motion on
+    *   `hudState === 'PHOTO_FINISH'`. The previous shape of this repair made RUN_IN a camera STATE
+@@ -358,7 +359,9 @@ export const ceilingsMixin = {
+    * OVERVIEW's width (bound so hard it cost the design its point). Bounding at the projection's own
+    * minimum measured IDENTICAL to no bound, which is the proof the downstream clamp is the real one.
+    *
+-   * @returns {number} cam.zoom ceiling; Infinity when the run-in is not composing this frame
++   * @returns {number} cam.zoom ceiling; Infinity when there is no subject point or no finish-line
++   *   point. It does NOT check whether the run-in is composing — `_scheduleEngaged` relies on a
++   *   finite value before engagement.
+    */
+   _lineCeiling(subjects, frameSize, raceState, framePct = null, atOverride = null) {
+     if (!subjects?.point) return Infinity;
+diff --git a/client/src/modules/camera/CameraDirectorLevelSet.js b/client/src/modules/camera/CameraDirectorLevelSet.js
+index ee999330..032d6829 100644
+--- a/client/src/modules/camera/CameraDirectorLevelSet.js
++++ b/client/src/modules/camera/CameraDirectorLevelSet.js
+@@ -264,8 +264,10 @@ export const levelSetMixin = {
+    * members, which two racers running wide TOGETHER satisfy while both are off screen: measured over
+    * 1,260 races, span removes 11 of 126 winner-off races and presence removes 93.
+    *
+-   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing, so **every frame before the
+-   * closing stretch is what it was, to the pixel** — asserted by a test rather than asserted here.
++   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing AND no eased width is still
++   * held, so **every frame before the closing stretch is what it was, to the pixel** — asserted by a
++   * test rather than asserted here. After the run-in stops composing a held width eases out over up
++   * to `runInOpenMs` (RUNIN-EASED-ADMIT-1, in the body) instead of dropping.
+    *
+    * WIDEN-ONLY BY CONSTRUCTION: it returns a CEILING on cam.zoom, and the caller composes it with
+    * `Math.min`. It can make the shot wider and it has no way to make it tighter. That is what keeps
+@@ -275,9 +277,9 @@ export const levelSetMixin = {
+    * ── THE RELEASE IS EASED, WHICH IS WHAT MAKES A LIVE SET SAFE ─────────────────────────────────
+    *
+    * Membership is live, so a racer hovering at exactly one body length joins and leaves repeatedly.
+-   * Admitting him is instant — he must not be cut while the camera thinks about it — but RELEASING
+-   * him is eased, so the width cannot pump. The ceiling may FALL (widen) on any frame and may RISE
+-   * (tighten) only along a smoothstep.
++   * Both directions are eased now: `_levelEaseTo` re-anchors on every target change and moves along a
++   * smoothstep whether the ceiling falls (widen, admitting him) or rises (tighten, releasing him),
++   * so the width cannot pump and an admit is not a step either.
+    *
+    * **NO NEW CONSTANT.** The span is `runInOpenMs`, the owner's own 1-1.5 s, which already paces the
+    * opening glide and already times `_contentionWeight`'s release of a racer who has dropped out of
+@@ -460,8 +462,9 @@ export const levelSetMixin = {
+    * THE LOOP IS NOT DUPLICATED. `_abreastContenders` calls this and then applies its own guards and
+    * its fallback, so there is exactly one copy of the level test and the lane test.
+    *
+-   * NO CALLER IN THE CAMERA USES THIS. It is read by the probe payload, beside the director's other
+-   * fields, and it changes no framing decision.
++   * Its one framing caller is `_abreastContenders` (below), which applies its own guards and
++   * fallback to the result; it is also read by the probe payload, beside the director's other
++   * fields.
+    *
+    * @param {object[]} ordered racers sorted by `t`, leader first
+    * @returns {object[]} the survivors, leader first; possibly just the leader
+diff --git a/client/src/modules/camera/CameraDirectorRunIn.js b/client/src/modules/camera/CameraDirectorRunIn.js
+index db427a95..a0d19a26 100644
+--- a/client/src/modules/camera/CameraDirectorRunIn.js
++++ b/client/src/modules/camera/CameraDirectorRunIn.js
+@@ -78,9 +78,10 @@ export const runInMixin = {
+    *          of the race at the latest the winner and the line are both visible. So the move that
+    *          makes them visible must be FINISHED there, not started there — which is why the run-in
+    *          now begins before the threshold rather than at it.
+-   *   CLOSE, from the threshold to the crossing, landing on the ACTIVE STATE'S OWN zoom. That is
+-   *          requirement 2 and it introduces no value: `_stateCamZoom()` is the leader view's 0.75
+-   *          corridors or the photo finish's 0.4, whichever is running.
++   *   CLOSE, from the threshold to the crossing, landing on the leader view's zoom or the photo
++   *          finish's, whichever is running. That is requirement 2 and it introduces no value: the
++   *          endpoint is `_inPhotoFinish ? _photoFinishZoom : _leaderZoom` (see `_updateRunIn`),
++   *          deliberately NOT `_stateCamZoom()`, which could still be OVERVIEW's.
+    *
+    * -- THE EASE IS A SMOOTHSTEP, WHICH IS REQUIREMENTS 3 AND 6 BY CONSTRUCTION -------------------
+    *
+@@ -138,8 +139,8 @@ export const runInMixin = {
+     // `runInOpenMs` of (time, progress) samples, evaluated at NOW. It is a smoothing with no new
+     // constant — the window is the opening's own duration — and it is UNBIASED, unlike an average
+     // or an EMA, because it extrapolates the fitted line to the current instant rather than
+-    // reporting the window's middle. Progress is very nearly linear in time over a fifth of a
+-    // second, which is what makes a straight line the right model rather than a chosen filter.
++    // reporting the window's middle. Progress is very nearly linear in time over the window
++    // (`runInOpenMs`), which is what makes a straight line the right model rather than a chosen filter.
+     //
+     // IT REMAINS MONOTONE AND IT STILL LANDS: `_runInProgressOf` clamps monotone, and the fit is
+     // fed the real progress, so it converges on it at the line.
+@@ -156,6 +157,9 @@ export const runInMixin = {
+     // and a 1.43x tax on every frame) is the wrong region. `COMPANY_FRAME_PCT` is what this project
+     // already means by "in frame, near the edge is acceptable": it is the region a COMPANION must
+     // be inside, 5% off each edge, and it costs 1.11x instead of 1.43x.
++    // ★ WITH `bandFloor` ON — the shipped default — `_lineCeiling` maps a COMPANY_FRAME_PCT request
++    // back to the subject's `innerFramePct`, so the shipped run-in guarantees the line inside the
++    // 0.7 region after all; the 1.11x figure is the `bandFloor`-OFF arm.
+     //
+     // 1.0 WAS TRIED FIRST AND IS THE CHEAPER-LOOKING WRONG ANSWER: it puts the line EXACTLY on the
+     // frame edge, where the pan's own lag takes it straight back out — measured, requirement 1's
+@@ -340,7 +344,7 @@ export const runInMixin = {
+    * IT INTRODUCES NO CONSTANT. The window is the trail the schedule already keeps, whose length is
+    * the opening's own duration. And it is UNBIASED, unlike an average or an EMA, because it
+    * extrapolates the fitted line to the current instant rather than reporting the window's middle —
+-   * progress is very nearly linear in time over a fifth of a second, which is what makes a straight
++   * progress is very nearly linear in time over the window (`runInOpenMs`), which is what makes a straight
+    * line the right model rather than a chosen filter.
+    *
+    * IT REMAINS MONOTONE AND IT STILL LANDS: `_runInProgressOf` clamps monotone, and the fit is fed
+@@ -521,7 +525,8 @@ export const runInMixin = {
+    */
+   _scheduleClose(demand, endZoom) {
+     // -- CLOSE -----------------------------------------------------------------------------
+-    // The width reached at the deadline is the start; the state's own zoom is the end. Latched
++    // The width reached at the deadline is the start; `endZoom` (the leader view's or the photo
++    // finish's zoom, chosen in `_updateRunIn`) is the end. Latched
+     // once, because interpolating from a live value would let the start of the ramp move under it.
+     // THE CLOSE STARTS FROM THE DELIVERED WIDTH, NOT FROM THE WIDEN'S OWN LAST VALUE. They differ
+     // wherever a guarantee widened the shot during the widen, and starting the ramp from the value
+@@ -571,7 +576,8 @@ export const runInMixin = {
+     // always tell where the finish line is. It need not be whole — cut at the edge is fine, part of
+     // the band is enough — but it never becomes unfindable.
+     //
+-    // THE CONDITION: the line's CENTRE POINT stays inside the frame at `COMPANY_FRAME_PCT`. The
++    // THE CONDITION: the line's CENTRE POINT stays inside the frame at `COMPANY_FRAME_PCT` (with
++    // `bandFloor` ON, the shipped default, `_lineCeiling` uses the subject's `innerFramePct` instead). The
+     // band runs THROUGH that point, so if the point is in shot the band is in shot, cut at its ends
+     // by the frame edge — which is exactly what he allows. It is far looser than the promise the
+     // old `check-runin-frame` held (the point inside the subject's 0.7 box, a 1.43x tax on every
+diff --git a/client/src/modules/camera/cameraTimingComputation.js b/client/src/modules/camera/cameraTimingComputation.js
+index 948e6549..db4950d6 100644
+--- a/client/src/modules/camera/cameraTimingComputation.js
++++ b/client/src/modules/camera/cameraTimingComputation.js
+@@ -31,8 +31,8 @@ const MAX_STATE_DURATION = 8000;
+ // These three are duplicated in `storage/defaults.js`, which is this module's established
+ // arrangement rather than an oversight — see the header: it holds the fallback for a director built
+ // with NO config, and defaults.js holds the shipped value. The duplication is GUARDED by a test that
+-// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. That is one
+-// better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
++// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. (The
++// duplicated and unguarded `POST_START_HOLD_MS` that once sat beside it is retired.)
+ // CEREMONY-OPENING-2: 1400 -> 3000, in step with defaults.js. The guard that made this edit
+ // necessary is the reason the arrangement is safe at all — `startCeremony.test.js` failed the moment
+ // the shipped default moved and this mirror did not, which is exactly what it is for.
+diff --git a/client/src/modules/camera/framingConfig.js b/client/src/modules/camera/framingConfig.js
+index 41cc3702..f7d3e636 100644
+--- a/client/src/modules/camera/framingConfig.js
++++ b/client/src/modules/camera/framingConfig.js
+@@ -140,8 +140,9 @@ export function resolveFramingConfig(config) {
+     leaderForwardFrac: Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null,
+     leaderLateralMaxPx: Number.isFinite(lmax) && lmax >= 0 ? lmax : dflt.leaderLateralMaxPx,
+     leaderLateralMarginPx: Number.isFinite(lmar) && lmar >= 0 ? lmar : dflt.leaderLateralMarginPx,
+-    // AIM-ROOM-1 (LEVER B). Absent/invalid/negative degrades to 0, which is OFF — the shipped
+-    // behaviour — rather than to some other number, so a malformed config cannot quietly enable it.
++    // AIM-ROOM-1 (LEVER B). Absent/invalid/negative degrades to 0, which is OFF — rather than to some
++    // other number, so a malformed config cannot quietly enable it. (OFF is not the shipped
++    // behaviour: `leaderAimRoomFloorPx` ships ON in defaults.js.)
+     leaderAimRoomFloorPx:
+       Number.isFinite(config?.leaderAimRoomFloorPx) && config.leaderAimRoomFloorPx > 0
+         ? config.leaderAimRoomFloorPx
+diff --git a/client/src/modules/camera/framingRule.js b/client/src/modules/camera/framingRule.js
+index be7465b3..0406aba8 100644
+--- a/client/src/modules/camera/framingRule.js
++++ b/client/src/modules/camera/framingRule.js
+@@ -398,8 +398,9 @@ function halfCorridorCeiling(
+  *
+  * **AT n = 2 IT IS `pairGuarantee`, EXACTLY** — one pair, one call, the same arguments. That is what
+  * makes this block's off arm byte-identical rather than approximately so, and it is why the shipped
+- * picture cannot move until the contender SET grows beyond two. Today it never does: see
+- * `_photoFinishContenders`, which is captured as `slice(0, 2)`.
++ * picture cannot move until the contender SET grows beyond two. With `contenderZoom` ON (the shipped
++ * default) it does: `_photoFinishContenders` is captured as `_abreastContenders(...)`, and only the
++ * OFF arm keeps `slice(0, 2)` (CameraDirector.js).
+  *
+  * WHY NOT A BOUNDING BOX: an axis-aligned box assumes the worst orientation, which is precisely what
+  * `pairGuarantee` was written to stop doing — two racers side by side across a diagonal corridor need
+@@ -620,7 +621,8 @@ export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen, ro
+  *
+  * @param {number|null} forwardFrac  the configured fraction
+  * @param {number} span              the frame's chord along the heading, in screen px
+- * @param {number} roomFloorPx       0/absent = OFF, the shipped default
++ * @param {number} roomFloorPx       0/absent = OFF (the shipped default is ON: `leaderAimRoomFloorPx`
++ *                                   in defaults.js)
+  * @returns {number|null} the fraction to use
+  */
+ export function forwardFracForRoomFloor(forwardFrac, span, roomFloorPx = 0) {
+diff --git a/client/src/modules/heroCurveGenerator.js b/client/src/modules/heroCurveGenerator.js
+index 73f64fc0..fbe7502b 100644
+--- a/client/src/modules/heroCurveGenerator.js
++++ b/client/src/modules/heroCurveGenerator.js
+@@ -10,14 +10,15 @@
+ //              final-band multiset is preserved (role pairing = same-band endpoint swap only). During
+ //              the race a curve may cross ANY bands — a deep comeback (rank 20 → 3) is the action.
+ //
+-//              Feasibility is DENSITY-based, not a fixed rank-rate: the ±20% speed band over the
+-//              remaining time is a DISTANCE budget, converted to ranks via the ACTUAL post-chaos
++//              Feasibility is DENSITY-based, not a fixed rank-rate: the speed authority over the
++//              remaining time (`speedBudgetFrac` to climb, `dropBudgetFrac` to fall) is a DISTANCE budget, converted to ranks via the ACTUAL post-chaos
+ //              position (t) distribution. A bunched field lets a racer pass many (deep comeback
+ //              feasible); a spread field lets it pass few (deep comeback refused). Only the
+ //              physically impossible is refused. Positive OUTCOME handoff budget is a hard constraint
+ //              (resolve into band before the checkpoint — no late rescue).
+ //
+-//              ISOLATED: not wired into the race path (Step 3). Reuses Step-1 primitives
++//              Wired into the race path: racePlanner.js imports `generateHeroCurves` and calls it
++//              once per race when the heroes are cast. Reuses Step-1 primitives
+ //              (makeHeroCurve / anchorHeroCurve / sampleHeroCurve) and the shared BAND_EDGES /
+ //              mulberry32. Pure + deterministic + fingerprintable. Decomposed into small tested units.
+ // ============================================================
+@@ -156,7 +157,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+ const lerp = (range, t) => range.at0 + (range.at1 - range.at0) * t;
+ 
+ // ── DENSITY-BASED feasibility: the reachable rank window + per-progress rank rate for one racer,
+-// from the ±20% distance budget over the remaining race, counted against the live t-distribution. ─
++// from the directional distance budgets over the remaining race (`speedBudgetFrac` to climb,
++// `dropBudgetFrac` to fall), counted against the live t-distribution. ─
+ export function racerFeasibility(racer, postChaos, finishT, config = GENERATOR_CONFIG) {
+   const n = postChaos.length;
+   const remaining = 1 - config.anchorProgress;
+@@ -518,9 +520,9 @@ export function shouldCastFaller(seed, config = GENERATOR_CONFIG) {
+ // front racer (`cr + peakDepthFrac * (n - 1)`) — it was simply labelled `sovereign-lead`.
+ //
+ // ★ NO HOLD ARM IS BUILT, DELIBERATELY, and this is a departure from the brief worth stating. The
+-// measurement arms needed one because the racer they held was NOT a hero and `racePlanner.js:805`
+-// pins a non-hero to 1.0 before OUTCOME. A CAST hero is already exempt from that pin and already
+-// tracks its curve through the pulk phase. Rebuilding the arm would be a second mechanism doing the
++// measurement arms needed one because the racer they held was NOT a hero and the pre-OUTCOME pin
++// in racePlanner.js `update` holds a non-hero at 1.0 before OUTCOME. A CAST hero is already exempt
++// from that pin and already tracks its curve through the pulk phase. Rebuilding the arm would be a second mechanism doing the
+ // job the curve already does, and the chain rule is that nothing is built twice.
+ //
+ // ★ WHERE THE NUMBERS COME FROM — HOLD-GRID-1, read for TOP-5 REACH because that is his
+@@ -614,7 +616,7 @@ function castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config = G
+   // ★★ THE OWNER'S DECISION, 2026-09-19: A COMEBACK IS SHOWN WHEN ONE WAS PLANNED, NOT WHEN ONE
+   // HAPPENS. This site used to emit `comebacker` whenever the drawn winner was not already inside
+   // the front cluster — `wr > cr`, and `cr` starts at 2, so a winner sitting THIRD after chaos was
+-  // one. `comebackDetector.js:110` matches `'comebacker'` exactly, so that string was the entire
++  // one. `comebackDetector.js` matches `'comebacker'` exactly, so that string was the entire
+   // reason the camera forced a comeback shot on a racer whose comeback nobody had authored: 29 of
+   // the 153 COMEBACK_ZOOM shots in a 200-race sweep were his (PLANNED-COMEBACK-ONLY-1 §3).
+   //
+diff --git a/client/src/modules/raceBehavior.js b/client/src/modules/raceBehavior.js
+index 865321e2..0ec48612 100644
+--- a/client/src/modules/raceBehavior.js
++++ b/client/src/modules/raceBehavior.js
+@@ -39,16 +39,16 @@ const _passCandidate = new Map();
+ // SIDE-FREE-CULL-1: the free-lane scan's neighbour index — racers sorted by their position ON THE
+ // LOOP. Two parallel arrays rather than an array of objects, reused across steps, because this is
+ // rebuilt inside the physics step and a per-step allocation of 100 objects is the cost this block
+-// exists to remove. `_tIndexOrder` holds slots into `_tIndexRacer`/`_tIndexTf`. See buildTIndex.
++// exists to remove. `_tIndexSlots` holds slots into `_tIndexRacer`/`_tIndexTf`. See buildTIndex.
+ let _tIndexRacer = [];
+ let _tIndexTf = new Float64Array(0);
+ let _tIndexSrcTf = new Float64Array(0);
+ let _tIndexSlots = [];
+ let _tIndexLen = 0;
+ 
+-// Layer 1 spring-constant fallback when config.softSteeringStrength is absent
+-// (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
+-
++// Layer 1 spring-constant fallback when config.softSteeringStrength is absent (partial-config
++// callers in sim/unit paths): there is no local constant any more — the read site in
++// applyRacerBehavior falls back to DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength directly.
+ // Lateral feel smoothing (Stage A2). Fallbacks mirror defaults.js for partial-config
+ // callers (sim/unit). LATERAL_STEP_MS is the fixed physics step (index.jsx FIXED_DT /
+ // sim DT = 16ms); the target ease advances one step per applyRacerBehavior call, so it
+@@ -68,8 +68,8 @@ const DEGENERATE_BRAKE_T = 0.014;
+ 
+ // Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
+ // units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
+-// constant. Mirrors the defaults.js value for partial-config callers (sim/unit). The dodge
+-// trigger (dT_start) is derived from this cap so a capped glide always clears in time.
++// constant, read as `vLatMax` in applyRacerBehavior (DEFAULT_RACE_BEHAVIOR_CONFIG fallback for
++// partial-config sim/unit callers). The dodge trigger (dT_start) is derived from it so a glide clears.
+ // NOTE: vLatMax's sweet-spot (field-fanning vs brake-frequency vs glide-feel) is tuned in
+ // the governor sweep, NOT here — this fallback is a mild, conservative default. 0.028 sits
+ // modestly below today's front-loaded dodge peak (~0.033/step = pass spring 0.5 × damping
+@@ -83,7 +83,7 @@ const DEGENERATE_BRAKE_T = 0.014;
+  * Returns 1.0 (no braking) when the trailer is not meaningfully faster than the
+  * leader, keeping the existing fixed-% brake as the effective floor.
+  *
+- * The returned cap is applied in index.jsx as:
++ * The returned cap is applied in raceCore.js (stepRacePhysics) as:
+  *   brake = min(computeEffectiveBrakeFactor(...), computeBrakeMatchFactor(...))
+  * so the warmup ramp and the cap interact correctly (Flag 3, report 06).
+  *
+@@ -110,7 +110,7 @@ export function computeBrakeMatchFactor(
+ 
+ /**
+  * Initialise per-racer behavior state. Call once per racer at race start.
+- * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
++ * Resets physicalY to 0; raceCore.js sets it via computeRowPhysicalY (rowLayout.js) AFTERWARDS.
+  * @param {{ [key: string]: unknown }} racer
+  */
+ export function initRacerBehavior(racer) {
+@@ -130,7 +130,7 @@ export function initRacerBehavior(racer) {
+   // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
+   // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
+   //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
+-  // brakeMatchFactor: current cap written by raceBehavior.js, read by index.jsx
++  // brakeMatchFactor: current cap written by raceBehavior.js, read by raceCore.js
+   //   (same cross-file pattern as avoidanceActive — one-frame lag is intentional).
+   // brakeMatchFrames: consecutive hold frames (anti-trap counter); negative = escape/cooldown countdown.
+   // brakeReleaseFrames: consecutive clear frames counted toward debounced release.
+@@ -761,7 +761,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
+         // enumerated here in the SAME order the gate evaluates them, all keyed on parity-safe
+         // (t, physicalY, per-step speed) fields only:
+         //   (a) LAG-SAFE LONGITUDINAL RE-ENGAGE (the NO-GO fix) — the SOLE non-penetration
+-        //       guarantee. The physics loop applies the brake one frame late (index.jsx:
++        //       guarantee. The physics loop applies the brake one frame late (raceCore.js:
+         //       avoidanceActive/brakeMatchFactor are read on the step AFTER they are
+         //       written). So suppression is only safe while there is enough longitudinal
+         //       lead that, after the unbraked lag frame(s), a re-engaged brake still prevents
+@@ -952,7 +952,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
+       // ── Layer 1 (Soft Steering) §4a: non-overlap target accumulation ────────
+       // INSERT-ONLY. For the most-constraining obstacle (highest forceMag), store a
+       // target one contact width to the side it is already on. Always asymmetric
+-      // (trailer only) regardless of softSteeringSymmetric — see lines 398-402. The
++      // (trailer only) regardless of softSteeringSymmetric — see the §4a note below. The
+       // overlap block (§4b) may later override this for the same pair (it uses >= so
+       // overlap wins on equal forceMag).
+       if (trackWidth > 0) {
+@@ -989,7 +989,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
+         };
+         // §4a is always asymmetric: trailer yields to leader, leader
+         // holds its line. The leader's target stays 0 (centerline reset
+-        // at line 241) so the home spring pulls it back to centre when
++        // in applyRacerBehavior) so the home spring pulls it back to centre when
+         // no body overlap is active. softSteeringSymmetric applies only
+         // to §4b (actual body contact), where both racers must separate.
+         assignSoftTarget(trailer, leader);
+@@ -1404,8 +1404,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
+           // when both racers share an intent direction — pushing a trailer that "wants to
+           // overtake" forward THROUGH its leader is exactly the pass-through this layer
+           // exists to prevent. Non-penetration is the GOAL, so it wins. Intent is read from
+-          // r.trajectoryMult (the controller's own output — exactly 1.0 outside OUTCOME, so a
+-          // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
++          // r.trajectoryMult (the controller's own output — a non-1.0 value means the controller is
++          // steering that racer; before OUTCOME that is only the choreo heroes and the chaos steer,
++          // see racePlanner.js `update`; no fixed-percentage phase check here).
+           const overlapT = (longTarget - longPx) / pairPL; // t-units, > 0
+           const halfPushT = 0.5 * overlapT * effectiveRelax;
+           const sd = signedArcDeltaT(rA.t, rB.t); // signed shortest-arc A→B (positive = B ahead)
+diff --git a/client/src/modules/raceCore.js b/client/src/modules/raceCore.js
+index 292d0a7e..e6c2c7fd 100644
+--- a/client/src/modules/raceCore.js
++++ b/client/src/modules/raceCore.js
+@@ -1,5 +1,6 @@
+ // ============================================================
+-// File:        client/src/modules/raceCore.js
++// File:        raceCore.js
++// Path:        client/src/modules/raceCore.js
+ // Project:     RaceArena — the REAL race init + per-step advance, extracted from
+ //              screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM.
+ //
+@@ -9,9 +10,12 @@
+ // but it could never expose a divergence that lives in the ORDER RaceScreen executes its own
+ // loop — because neither arm ran RaceScreen's loop. This module is that loop, lifted out
+ // verbatim: RaceScreen now renders through `createRaceFromIdentity()` + `stepRacePhysics()`
+-// (a pure refactor — byte-identical browser physics), and the harness calls the SAME functions
+-// headless via `runRaceHeadless()`. What the browser runs and what the harness measures are now
+-// the same code, by construction — not a hand-built mirror.
++// (a pure refactor — byte-identical browser physics), and the headless instruments call the SAME
++// functions: sim-fairness.mjs and goldenRunner.mjs step `stepRacePhysics()` directly, and
++// `runRaceHeadless()` below is the full-race convenience wrapper (nothing in the tree calls it
++// today). What the browser
++// runs and what the harness measures are now the same code, by construction — not a hand-built
++// mirror.
+ //
+ // SCOPE — this is the PHYSICS core only. Rendering, camera, particles, the fixed-timestep
+ // accumulator, the 2-step catch-up cap and BATTLE/PHOTO-FINISH slow-motion stay in RaceScreen:
+@@ -19,14 +23,14 @@
+ // (a seeded race is frame-rate / slow-mo independent — see seedDeterminism.test.js). The
+ // headless runner steps FIXED_DT to the finish exactly as a browser under no frame stall would.
+ //
+-// KEY DIFFERENCE FROM THE SIM (this is deliberate, and is the whole point of the extraction):
+-//   RaceScreen order per step:  controller.update() → re-roll draw (reads live field + plan
+-//                               state) → advanceRacerT, INTERLEAVED per racer.
+-//   sim (runSingleRace) order:  re-roll draw (Pass 1) → controller.update() → advanceRacerT
+-//                               (Pass 2), each a SEPARATE pass over the field.
+-// When a Race Plan is running, the re-roll's pulk/gap bias reads the controller + neighbour
+-// positions at a one-frame offset between the two orders. That offset is the residual the
+-// harness now makes machine-visible. This module reproduces the BROWSER order.
++// THE STEP ORDER — and it is now the SIM's order too:
++//   per step:  controller.update() → re-roll draw (reads live field + plan state) →
++//              advanceRacerT, INTERLEAVED per racer.
++// The sim (runSingleRace) once ran its own SEPARATE passes in a different order (re-roll draw →
++// controller.update() → advanceRacerT), which put the re-roll's pulk/gap bias one frame out of step
++// with the browser. Since the step-order alignment of 2026-07-24 the sim imports and calls
++// `stepRacePhysics` itself (sim-fairness.mjs, "STEP-ORDER ALIGNMENT"), so there is ONE order, the
++// BROWSER's, and this module is it.
+ // ============================================================
+ 
+ import { deriveRaceDuration } from './durationModel.js';
+@@ -50,7 +54,7 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
+ /** Fixed physics timestep in ms — the one quantum. Mirrors RaceScreen/index.jsx FIXED_DT. */
+ export const FIXED_DT = 16;
+ 
+-/** Closed-track t-wrap helper — identical to RaceScreen/index.jsx:139 and sim tPos. */
++/** Closed-track t-wrap helper — identical to the sim's own `tPos` (sim-fairness.mjs). */
+ const tPos = (t) => ((t % 1) + 1) % 1;
+ 
+ /**
+@@ -283,8 +287,8 @@ export function createRaceFromIdentity(p) {
+         corridorEnd:
+           dynamicsConfig.racePlanCorridorEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
+         pulkBiasGain: dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
+-        // ── GAP-BRAKE-1 — the gap-based leader brake. Default OFF, so a store that has never heard
+-        // of it produces today's race byte-identically. `pathLengthPx` is handed over with the keys
++        // ── GAP-BRAKE-1 — the gap-based leader brake. Shipped ON (decided 2026-09-16,
++        // landed 2026-09-17; `gapBrakeEnabled` in defaults.js), so a store that has never heard of it gets the brake. `pathLengthPx` is handed over with the keys
+         // because the brake measures a DISTANCE: `t` counts path lengths, and this turns the
+         // leader->2nd t-gap into world px without the physics ever reading the camera.
+         gapBrakeEnabled:
+@@ -469,7 +473,7 @@ export function createRaceFromIdentity(p) {
+     }
+   };
+ 
+-  // Frame-constant re-roll scalars (RaceScreen computes these per-rAF at :941-944; they never
++  // Frame-constant re-roll scalars (RaceScreen used to compute these per-rAF; they never
+   // change during a race, so hoisting them here is byte-identical).
+   const lastRollDeadline =
+     rerollDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+@@ -713,7 +717,7 @@ export function stepRacePhysics(st, cfg) {
+       r.t += r.baseSpeed * r.runoutDecay;
+     }
+     // ★ THE REALIZED SPEED FACTOR, and it must carry EVERY term the step applies. `governorMult`
+-    // was missing here until 2026-09-17 while `raceStep.js:131` multiplies by it, so this understated
++    // was missing here until 2026-09-17 while `raceStep.js` `advanceRacerT` multiplies by it, so this understated
+     // the speed of any racer the PULK contest director was acting on.
+     // ★ NOTHING READS `vt` TODAY — it is written here, at the constSpeed diagnostic below, and in
+     // scripts/sim-race-visual.mjs, and read nowhere in the tree. So this correction cannot move a
+diff --git a/client/src/modules/raceGovernor.js b/client/src/modules/raceGovernor.js
+index f0ab763f..c4f7cf5e 100644
+--- a/client/src/modules/raceGovernor.js
++++ b/client/src/modules/raceGovernor.js
+@@ -12,7 +12,7 @@
+ //              naturalness ceiling-cap (computeDirectorCeiling / NATURALNESS_CEILING). Position +
+ //              seed only — NEVER the target-rank assignment.
+ //
+-//              Shared by the browser engine (RaceScreen/index.jsx) and the headless sim
++//              Shared by the browser engine (raceCore.js `stepRacePhysics`) and the headless sim
+ //              (sim-fairness.mjs) so both drive the identical mechanism (single source). Reuses
+ //              easeInOutCubic. DETERMINISTIC (selection by live rank + signed distance + index; no
+ //              Math.random) and hero-INCLUSIVE for the leader brake (heroes are never boosted).
+@@ -69,7 +69,9 @@ export function computeDirectorCeiling(baseSpeedMax, baseSpeedMean, boostHeadroo
+ // The mirror of NATURALNESS_CEILING. `docs/RACE-ACTION.md` §6 recorded for a month that the envelope
+ // is guarded on ONE SIDE ONLY: the fast side is hard-clamped at 1.20 and *"the SLOW side has no
+ // ceiling of its own at all — a configuration may brake a racer far below the −20 percent line and
+-// nothing in the code objects."* This is the code objecting.
++// nothing in the code objects."* This is the check that can object — but note that nothing on the
++// race path calls it yet: `assertNaturalnessFloor` / `isWithinNaturalnessFloor` are exercised only by
++// naturalnessFloor.test.js.
+ export const NATURALNESS_FLOOR = 0.8;
+ 
+ /**
+@@ -89,7 +91,8 @@ export const NATURALNESS_FLOOR = 0.8;
+  *
+  * At every shipped stage the answer is comfortably inside it — quiet and medium brake 0.10 (floor
+  * 0.88), wild brakes 0.15 (floor 0.85) — so nothing shipped is refused and the three race
+- * fingerprints are unmoved. It refuses a configuration that has never existed, which is the point.
++ * fingerprints are unmoved. It WOULD refuse a configuration that has never existed, which is the
++ * point — but no race-path caller invokes `assertNaturalnessFloor` today; only its test does.
+  *
+  * @param {number} maxEffect  pulkEnvelopeMaxEffect
+  * @param {number} leaderBrake  pulkLeaderBrake
+@@ -400,8 +403,8 @@ export function applyPulkLeadRotation(racers, finishT, phaseCtx, cfg) {
+   // ATTACKERS — the front group is the first (frontPool − 1) NON-HERO racers behind the leader; HEROES
+   // do NOT consume a window slot (S1: a hero-clogged front no longer starves the attacker slots — the
+   // scan reaches the real chasers behind the heroes instead of stopping at raw rank frontPool). The
+-  // window is still BOUNDED (≤ frontPool − 1 non-heroes, so ≤ 4 heroes can push it only a few ranks
+-  // deeper), and every admitted attacker is still reachability-gated: we trade "no attacker" for a
++  // window is still BOUNDED (≤ frontPool − 1 non-heroes, so the heroes — the `maxHeroes` budget plus
++  // the `b2AttackHeroes` attackers — can push it only a few ranks deeper), and every admitted attacker is still reachability-gated: we trade "no attacker" for a
+   // REAL attacker, never a hopeless one parked in a 12 s deadlock. `frontWindow` doubles as the
+   // front-group boundary for the outsider below, so the two selections stay provably DISJOINT (an
+   // attacker is always in frontWindow; the outsider always skips frontWindow → never the same racer).
+diff --git a/client/src/modules/raceLengths.js b/client/src/modules/raceLengths.js
+index 848904d8..115ada16 100644
+--- a/client/src/modules/raceLengths.js
++++ b/client/src/modules/raceLengths.js
+@@ -1,5 +1,8 @@
+ // ============================================================
+-// raceLengths.js — the ONE source for the racer-LENGTH unit.
++// File:        raceLengths.js
++// Path:        client/src/modules/raceLengths.js
++// Project:     RaceArena
++// Description: The ONE source for the racer-LENGTH unit.
+ //
+ // "Racer lengths" = how many racer bodies fit in a gap on the track. It is what the owner has
+ // reasoned in for the whole project and what the DIRECTOR-DIAG HUD shows on screen: a spatial,
+diff --git a/client/src/modules/racePlanner.js b/client/src/modules/racePlanner.js
+index a548b67d..d3533a39 100644
+--- a/client/src/modules/racePlanner.js
++++ b/client/src/modules/racePlanner.js
+@@ -19,8 +19,9 @@ import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-c
+ import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js'; // single source for phase-boundary defaults (no raw drift)
+ 
+ // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
+-// Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
+-// introducing a second RNG — with its own distinct XOR-seed constant.
++// Exported so other modules (heroCurveGenerator.js, raceNumbers.js, the camera director) reuse the
++// SAME PRNG helper instead of introducing a second RNG, each with its own distinct XOR-seed
++// constant. The governor (raceGovernor.js) does not use it.
+ export function mulberry32(seed) {
+   let s = seed >>> 0;
+   return () => {
+@@ -183,7 +184,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
+   // corridorEnd clamp (min against corridorEnd is preserved as the upper bound). No-op for
+   // well-ordered configs — DEFAULT_PHASE_FRACTIONS above is already ordered, so the chain is a no-op
+   // on it whatever those values are (they are not restated here; they moved once already). Single source: the
+-  // sim imports createRacePlan (sim-fairness.mjs:59), so browser and sim inherit this identically.
++  // sim imports createRacePlan (sim-fairness.mjs), so browser and sim inherit this identically.
+   // No hardcoded fractions — every bound reads the live resolved phaseFractions.
+   const resolvedCorridorStart = phaseFractions.corridorStart ?? phaseFractions.transitionEnd;
+   // pulkStart is now ownable (DevScreen "PULK begins here"); anchor it to [0, corridorEnd] first so the
+@@ -535,10 +536,12 @@ export function arrivalCeiling(
+  *
+  * Usage:
+  *   const ctrl = createTrajectoryController(plan);
+- *   // Each physics step:
+- *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
+- *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
+- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * dt
++ *   // Each physics step (raceCore.js `stepRacePhysics`):
++ *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs, raceProgress)
++ *   //   Per racer:         re-roll draw (ctrl.computePulkBiasedTarget() for pulk racers),
++ *   //                      then the t-update — raceStep.js `advanceRacerT`:
++ *   //                      baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult
++ *   //                      · governorMult · dt
+  *
+  * @param {object} racePlan  output of createRacePlan
+  * @returns {object} TrajectoryController
+@@ -618,9 +621,9 @@ export function createTrajectoryController(racePlan) {
+   // therefore STRUCTURAL, not empirical — it says the fix is still in place, NOT that a search was
+   // run and found nothing. Read it that way and it is informative; read it as evidence and it is
+   // the opposite. It is deliberately NOT deleted: it is exported by `collectTelemetry()` below and
+-  // read by `scripts/sim-fairness.mjs:5038` and `scripts/exp-runaway-leader.mjs:2517`
+-  // (`--smallg-diag`), and a field removed from under a `?? 0` would leave both instruments
+-  // printing the same 0 with nothing to say the measurement had gone.
++  // read by `scripts/sim-fairness.mjs` and `scripts/exp-runaway-leader.mjs` (`--smallg-diag`),
++  // and a field removed from under a `?? 0` would leave both instruments printing the same 0 with
++  // nothing to say the measurement had gone.
+   let _gapDownAheadGtBehind = 0;
+   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
+   // SCREEN-tier escape-latency telemetry (read-only). One entry per DOWN-tilt applied to the LIVE
+@@ -646,12 +649,12 @@ export function createTrajectoryController(racePlan) {
+   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
+   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
+   let _attackerFreeEvents = 0;
+-  // ── ★ E (ARRIVAL-VARIANTS-1, the owner's shape) telemetry. All zero for every other variant,
+-  // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
+-  // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
+-  // — the direct test of whether the taper finished before he got there (it should read 1.0).
+-  // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
+-  // for EVERY variant — see the block in `update`. One entry per held comebacker per race.
++  // ── ★ ARRIVAL observations (ARRIVAL-SHAPE-E-1). Per-held-comebacker records, keyed by racer
++  // index: one entry per held comebacker per race. Read-only measurement, filled for EVERY variant
++  // (the block in `update` sits behind `heldFree`, outside the variant branches). Each entry's
++  // `arrivalMult` is the pace multiplier he carried the first frame he reached his drawn place — the
++  // direct test of whether the taper finished before he got there (it should read 1.0); the
++  // `eArrivalMults` diagnostic is derived from these entries.
+   const _arrivalObs = new Map();
+   // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
+   // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
+@@ -735,8 +738,8 @@ export function createTrajectoryController(racePlan) {
+    *
+    * So while the brake is the binding constraint on a racer, the target is moved and the CLOCK IS
+    * LEFT ALONE. The ease then runs to completion exactly as designed; once `elapsed` passes the
+-   * transition duration, raceCore.js:565-574 returns the target itself and the held value tracks
+-   * the command step for step.
++   * transition duration, the trajectoryMult transition in raceCore.js (stepRacePhysics) returns
++   * the target itself and the held value tracks the command step for step.
+    *
+    * ★ THIS IS NOT A SECOND TRANSITION MECHANISM. It writes no multiplier and carries no rate of
+    * its own — it is the SAME ease, with the restart omitted. There is no new number here.
+@@ -785,8 +788,8 @@ export function createTrajectoryController(racePlan) {
+    * suppresses only the noise. See reports/night/SERVO-NARROW-1.md.
+    *
+    * ★★ IT DOES NOT COMPOSE WITH A MECHANISM THAT MOVES THE TARGET DISCONTINUOUSLY. Once the
+-   * transition clock is older than the transition duration, raceCore.js:584-591 returns the target
+-   * itself, so the held multiplier tracks the written target step for step — which is what makes
++   * transition clock is older than the transition duration, the trajectoryMult transition in
++   * raceCore.js (stepRacePhysics) returns the target itself, so the held multiplier tracks the written target step for step — which is what makes
+    * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
+    * the gap brake ON, its engage/release moves the target by its whole authority at once and the
+    * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
+@@ -797,7 +800,7 @@ export function createTrajectoryController(racePlan) {
+    * written when it did. `gapBrakeEnabled` has been `true` since the owner's decision of 2026-09-16,
+    * landed on master 2026-09-17 (`be7e6872`).
+    *
+-   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (`defaults.js:1220`) is `false`, and
++   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (defaults.js) is `false`, and
+    * the interaction above is no longer hypothetical — it is the REASON that key stays false.
+    * PICK-WINNER-1 measured V1 ALONE keeping parity; only V1 **and** the gap brake together break it,
+    * at the 7.6x cost named above. The two must never both be on.
+@@ -994,7 +997,7 @@ export function createTrajectoryController(racePlan) {
+     // from the chaos boundary (pulkStart) onward, for EVERY racer (pack and heroes alike, so the
+     // measured headwind asymmetry disappears). The boundary is READ from the phase structure
+     // (pulkStartFrac), never a literal (A4). No fade past it (C-2). Under choreo `bonusFadeDuration`
+-    // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (:156) — neither is
++    // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (`resolvedCorridorStart`) — neither is
+     // deleted (C-3). choreo-OFF falls through to the shipped transEnd fade below → byte-identical.
+     if (plan._choreoEnabled) {
+       const inChaos = phaseProgress != null ? phaseProgress < pulkStartFrac : elapsedMs < pulkStart;
+@@ -1349,9 +1352,9 @@ export function createTrajectoryController(racePlan) {
+           : (plan._racerTargetRank.get(r.index) ?? currentRank);
+       // ── ★ THE ARRIVAL — see the block above createTrajectoryController ────────────────────────
+       // Everything here is inside `heldFree`, so no other role is reached.
+-      // (b) FREE means UNSTEERED, and it is expressed as band steering rather than as a hard 1.0:
+-      // inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the block's edge
+-      // the SAME expression is already the net. One mechanism, two jobs.
++      // The arrival only latches `arrived` here; it does NOT change his strictness. After he arrives
++      // he is steered like any other racer (exact-rank, see ARRIVAL-STEERED-AGAIN-1 below) — the
++      // latch only lifts his own arrival ceiling.
+       let arrived = false;
+       if (heldFree) {
+         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
+@@ -1768,8 +1771,7 @@ export function createTrajectoryController(racePlan) {
+       attackerCast: _atkCast,
+       attackerPeakReached: _atkPeak,
+       attackerFreed: _attackerFreeEvents,
+-      // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
+-      // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
++      // ★ Arrival diagnostics, filled under every variant (see `_arrivalObs`).
+       // ★ One row per held comebacker: his drawn place, the pace he carried across it, the peak gap
+       // he opened while leading, and how far he drifted afterwards. The arm-vs-arm table is built
+       // from these; they are recorded identically under every variant.
+@@ -1922,8 +1924,9 @@ export function createTrajectoryController(racePlan) {
+     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
+     getHeroRoles: () => plan._heroRoles ?? null,
+     // Diagnostics-only: index → release progress for HELD heroes (null until heroes are cast, empty
+-    // when none was cast). The role label alone cannot tell a HELD comebacker from the fall-back
+-    // one — both are 'comebacker' — and an instrument that guessed from the race would be guessing.
++    // when none was cast). Since 2026-09-18 the fall-back hero is labelled 'pursuer' rather than
++    // 'comebacker' (heroCurveGenerator.js), but this map is still the direct answer to "is he held,
++    // and when is he released" — an instrument that guessed from the race would be guessing.
+     getHeldRelease: () => plan._heldRelease ?? null,
+     // The DRAWN place for one racer. Read-only, for the browser hold probe, which otherwise has no
+     // way to say "two ranks before his place" without recomputing the thing it is observing.
+diff --git a/client/src/modules/raceStep.js b/client/src/modules/raceStep.js
+index afd3119c..db2cf981 100644
+--- a/client/src/modules/raceStep.js
++++ b/client/src/modules/raceStep.js
+@@ -1,6 +1,9 @@
+ // ============================================================
+-// raceStep.js — the ONE per-frame t-update, imported by BOTH the browser race
+-// loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).
++// File:        raceStep.js
++// Path:        client/src/modules/raceStep.js
++// Project:     RaceArena
++// Description: The ONE per-frame t-update, imported by BOTH the browser race
++//              loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).
+ //
+ // WHY THIS FILE EXISTS
+ // Before this module the advance formula lived inline in two places. The factor
+diff --git a/client/src/modules/storage/defaults.js b/client/src/modules/storage/defaults.js
+index edb098db..d324b690 100644
+--- a/client/src/modules/storage/defaults.js
++++ b/client/src/modules/storage/defaults.js
+@@ -576,7 +576,7 @@ export const DEFAULT_CAMERA_CONFIG = {
+   // settled picture, and builds the podium up. A scrim over all of that contradicts every part of
+   // it. Moving it to the last moments before navigation was considered and rejected as redundant:
+   // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
+-  // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
++  // screens/RaceScreen/endingSchedule.js), so those moments are covered by something that fades rather than snaps.
+   finishedSplashEnabled: false,
+   finishOverviewLookbackPx: 150, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
+   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
+@@ -802,6 +802,11 @@ export const DEFAULT_CAMERA_CONFIG = {
+   // rather than a minimum — never wider than the track is wide, because the full width certainly
+   // shows everyone, and if the full width is not needed the shot closes in further.
+   //
++  // ★ SUPERSEDED (merged 2026-08-14, CONTENDER-ZOOM-1): `contenderZoom` ships ON (below), and with
++  //   it ON the membership is `_abreastContenders` in CameraDirector.js, not `slice(0, 2)`. The two
++  //   paragraphs that follow ("ONLY ONE OF THEM COULD BE BUILT", "DEFAULT OFF") are the record of the
++  //   first draft's verdict, not a description of today.
++  //
+   // TWO HALVES, AND ONLY ONE OF THEM COULD BE BUILT. The GUARANTEE half is here: the pair rule is
+   // generalised to however many contenders the set holds, and the corridor becomes a cap on width.
+   // The MEMBERSHIP half is NOT: `_photoFinishContenders` is captured as `slice(0, 2)`, and widening
+@@ -1085,16 +1090,18 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+   pulkCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
+   // Additive headroom (speed-factor points) ABOVE the natural band max for the pulk ceiling: lets
+   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
+-  // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
++  // 0 = the pre-headroom baseline (cap = band max, byte-identical to before the key existed); the
++  // shipped value is below. Hard-clamped to +20% (NATURALNESS_CEILING).
+   pulkBoostHeadroom: 0.1,
+   // ── ★★ CHASE-AFTER-OUTCOME (NIGHT-2026-09-23) — the chase past the OUTCOME boundary ───────────
+   // The owner's question of 2026-09-23: how many racers to accelerate, and which, for a race with as
+   // many overtakes as possible and no breakaways. CHASE-REACH-1 measured that the BOOST SIZE is not
+   // the constraint — raising `pulkChallengerBoost` changes no race, and at wild it already sits AT
+   // `pulkEnvelopeMaxEffect`. The constraint is that the governor is OFF for the whole of his
+-  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js:182-187),
+-  // `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js:174), and `governorPhaseWeight` returns
+-  // exactly 0.0 from that boundary on (raceGovernor.js:92-97).
++  // [0.70, finish] window: it runs only while `progress < pulkEndFrac` (raceGovernor.js, `inPulk`
++  // in applyPulkLeadRotation), `pulkEnd` IS `choreoOutcomeStart` = 0.6 (racePlanner.js,
++  // `phaseFractions.pulkEnd`), and `governorPhaseWeight` returns exactly 0.0 from that boundary on
++  // (raceGovernor.js `governorPhaseWeight` / `governorFadeStart`).
+   //
+   // ★ THE OWNER'S SCOPE, 2026-09-22, and it bounds all three keys: extend ONLY the boost part past
+   // 0.6. The PULK end does not move, the OUTCOME start does not move, and THE LEADER BRAKE IS NEVER
+@@ -1122,7 +1129,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+   // FASTER — every arm measured that way failed the solo-share rule, at +424% to +1461% front churn.
+   chaseAfterOutcomeSelection: 'gap',
+   // Attacker slots INSIDE the extension only. The PULK phase keeps its own hard 1..2 clamp
+-  // (raceGovernor.js:197) untouched. Total boosted is this + the single outsider slot — so the
++  // (raceGovernor.js, `attackerSlots` in applyPulkLeadRotation) untouched. Total boosted is this + the single outsider slot — so the
+   // shipped 5 accelerates SIX racers. 2 was the pre-ship value.
+   chaseAfterOutcomeSlots: 5,
+   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
+@@ -1277,7 +1284,8 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+   // x four authorities over 6,300 races: below 56 the brake works almost continuously on leads
+   // nobody would call a runaway (at 40 px it commands in 289 of 300 races with 100% of its work
+   // under 90 px), and above it the brake is too rarely obeyed to move anything. 56 is the last
+-  // value at which it is still selective. In his unit that is 0.249 canvas widths.
++  // value at which it is still selective. In his unit that was 0.249 canvas widths on the day; the
++  // LEADER default moved on 2026-10-01 (see the ★ note above), so the same 56 px now reads as fewer.
+   gapBrakeAllowedGapPx: 56,
+   // Where the brake's window ENDS, as a progress fraction. Its START is not a key: it is bound to
+   // `choreoOutcomeStart` — the same quantity that ends the PULK brake — so if that boundary moves,
+@@ -1290,7 +1298,7 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+   // it is the ONLY column that moves. The finish does not pay for it: contested finishes go 129
+   // -> 124 at 0.95 and back to 125 at 0.97, and the brake is still pulling as the winner crosses
+   // in 0 of 300 races at every value — `raceProgress` is the leader's own t/finishT
+-  // (raceCore.js:577), so the winner crosses at 1.0 and the window has always released by then.
++  // (raceCore.js, `st.raceProgress` in stepRacePhysics), so the winner crosses at 1.0 and the window has always released by then.
+   gapBrakeWindowEnd: 0.97,
+   // ── The brake's MAXIMUM AUTHORITY, as a fraction of natural speed. Target floor = 1 - this. ──
+   //
+@@ -1331,8 +1339,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
+   pulkLeadRotationDeadlockTimeoutMs: 12000, // per-boost safety net (never the normal path)
+   pulkLeadRotationMinHoldMs: 750, // fresh-P1 hold = smart-camera SM_HOLD_MS → no sub-750ms P1 flicker
+   // Phase-split bonuses: areaBonus/rowBonus strength gated by race phase (chaos EARLY / PULK / post
+-  // POST). areaBonus strengths are in bonusStrengthMultiplier units (2.0 = shipped full, 0 = off);
+-  // rowBonus strengths are fractions (1 = full, 0 = off). Winning set: EARLY + POST full, PULK off.
++  // POST). areaBonus strengths are in bonusStrengthMultiplier units, scaled against the reference
++  // `racePlanBonusStrengthMultiplier` (racePlanner.js: `scale = phaseStrength / _areaRefStrength`),
++  // so a value equal to the reference is full strength, half of it is half strength, and 0 = off;
++  // rowBonus strengths are fractions (1 = full, 0 = off). PULK is off; EARLY and POST run at the
++  // value below, which is half the reference.
+   phaseSplitBonusEnabled: true,
+   areaBonusEarly: 1.0,
+   areaBonusPulk: 0,
+@@ -1505,7 +1516,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
+   // LAST step of applyRacerBehavior — after every force (L1–L11) and after the
+   // velocity/clamp integration. It resolves a fraction of any residual body overlap
+   // each frame, acting as a BACKSTOP behind the normal avoidance/free-lane forces.
+-  // Opt-in for testing.
++  // Shipped ON (see the master switch below).
+   //   hardSeparationEnabled:    master switch. Default TRUE = hard separation active as a
+   //                             pure backstop (verified fair + effective across the full
+   //                             track×racer matrix). Set FALSE to reproduce the pre-feature
+diff --git a/docs/SIM.md b/docs/SIM.md
+index 20dfae26..0b966f47 100644
+--- a/docs/SIM.md
++++ b/docs/SIM.md
+@@ -181,12 +181,12 @@ repository rather than a guess — give the FILE a header line and this table im
+ | `modules/raceCore.js` | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM. |
+ | `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config. |
+ | `modules/raceGovernor.js` | The PULK-phase contest director. |
+-| `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
++| `modules/raceLengths.js` | The ONE source for the racer-LENGTH unit. |
+ | `modules/raceNumbers.js` | RACE-NUMBERS-1 |
+ | `modules/raceOverrun.test.js` | HISTORY-MISSING-2 |
+ | `modules/raceParams.js` | ONE-HOME-RACE-PARAMS-1 — the sprite geometry every `createRaceFromIdentity` caller has to derive before it can call. |
+ | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
+-| `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
++| `modules/raceStep.js` | The ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
+ | `modules/racerNames.js` | THE quick-test roster. |
+ | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
+ | `modules/rowLayoutConfig.js` | Storage CRUD for D7c row-start layout config. |
+diff --git a/scripts/lib/raceDriver.mjs b/scripts/lib/raceDriver.mjs
+index 0f8aab5d..bb28cf4b 100644
+--- a/scripts/lib/raceDriver.mjs
++++ b/scripts/lib/raceDriver.mjs
+@@ -3,8 +3,9 @@
+ // Project:     RaceArena — ONE-DRIVER-1
+ //
+ // WHAT THIS IS FOR: building and running one seeded race for a MEASUREMENT harness, and returning the
+-// RACE IDENTITY it ran so the harness can print it. One driver, so four scripts cannot drift apart
+-// while their numbers are read side by side.
++// RACE IDENTITY it ran so the harness can print it. One driver, so the scripts that use it cannot
++// drift apart while their numbers are read side by side. (It was written for four callers; dozens
++// of measurement scripts import it now. "The four callers" below is that original set.)
+ //
+ // WHY THE IDENTITY IS THE POINT, not the deduplication. The four callers were never identical and
+ // were not meant to be: `his-shot-truth` runs the OWNER'S real race context (n=65, boarder, his
+@@ -87,10 +88,10 @@ export const TRACK_DEFAULT_RACER = "track-default";
+  *
+  * ── THIS IS THE BROWSER'S OWN APPLICATION, NOT A SECOND ONE (HARNESS-WORLD-1) ───────────────────
+  *
+- * The browser applies the stage in exactly one place — `exportRaceConfig.js:buildWorldConfig`, one
+- * line: `raceDynamicsConfig: applyRaceActionStage(loadRaceDynamicsConfig(), stage)`. That function
+- * cannot be called from here: it reaches into `localStorage` through the config loaders, and there is
+- * no localStorage in node. So this reuses the thing UNDER it — `applyRaceActionStage` itself, in
++ * The browser applies the stage in two places that read the same way — the race itself in
++ * `RaceScreen/raceWorldSetup.js` and the recorded world in `exportRaceConfig.js` `buildWorldConfig`,
++ * both `applyRaceActionStage(loadRaceDynamicsConfig(), stage)`. Neither can be called from here:
++ * both reach into `localStorage` through the config loaders, and there is no localStorage in node. So this reuses the thing UNDER it — `applyRaceActionStage` itself, in
+  * `client/src/modules/raceActionStage.js`, which is the single author of the two keys and carries
+  * the whole decision in its own header.
+  *
+@@ -473,7 +474,7 @@ export function buildRace(geo, identity, cameraConfig, configWorld = DEFAULT_CON
+ /**
+  * Drive the countdown and then the race, calling `onFrame` once per rendered frame.
+  *
+- * The loop is the one all four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
++ * The loop is the one the original four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
+  * steps per frame, and a 200 s wall-clock ceiling so a stuck race cannot hang a sweep.
+  *
+  * TWO ADDITIVE HOOKS, for harnesses that measure a WINDOW rather than a race. `onCountdownFrame`
+@@ -582,9 +583,9 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
+         finishT: st.finishT,
+         // ── OUTCOME-WINDOW-1 / HARNESS-OUTCOME-1: THE BROWSER'S VALUE, NOT A CONSTANT ──────────
+         // This read `false` unconditionally, so the camera here was measured with the outcome
+-        // window permanently SHUT — a shot the product never takes. The browser derives it at
+-        // `RaceScreen/index.jsx:1492` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
+-        // `racePlanController.getPhase(physicsTs, raceProgress)` (`index.jsx:1271`). Same call,
++        // window permanently SHUT — a shot the product never takes. The browser derives it in
++        // `RaceScreen/index.jsx` as `rpPhase === 'OUTCOME'`, where `rpPhase` is
++        // `racePlanController.getPhase(physicsTs, raceProgress)`. Same call,
+         // same two arguments, so the harness and the product cannot disagree about the window.
+         isOutcomePhase:
+           raceCfg.racePlanController?.getPhase(st.physicsTs, st.raceProgress) === "OUTCOME",

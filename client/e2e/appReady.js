@@ -41,9 +41,9 @@
 // reader comes to understand the flake and it was describing a tree that no longer exists:
 //
 //   · **"an open track ... runs as a laps race" is NO LONGER TRUE.** QUIET-FAILURES-1 gave
-//     `SetupScreen` a readiness flag and wired it to the refusal: `selectedGeometryReady`
-//     (`SetupScreen.jsx:263`) gates `canStartBase` (`:265`) and both start paths (`:720`, `:899`),
-//     and `quickGeometryReady` (`:588`) disables the Quick Test button (`:1786`). A missing geometry
+//     `SetupScreen` a readiness flag and wired it to the refusal: in `SetupScreen.jsx`,
+//     `selectedGeometryReady` gates `canStartBase` and both start paths, and `quickGeometryReady`
+//     disables the Quick Test button. A missing geometry
 //     now REFUSES the race instead of guessing at it, and `trackLoader.js:59-64` says so out loud
 //     with a `console.warn` — which is where the "could not be cached" line in the logs comes from.
 //     The `geom ? !geom.closed : false` expressions are still there and still answer `false`, but

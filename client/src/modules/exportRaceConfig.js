@@ -1,6 +1,10 @@
 // ============================================================
-// exportRaceConfig.js — Stage 0 (browser side): assemble the "world" blob for `Export race config`.
-// Browser-only (reads localStorage via the SAME loaders the race path uses). Changes NO race behaviour.
+// File:        exportRaceConfig.js
+// Path:        client/src/modules/exportRaceConfig.js
+// Project:     RaceArena
+// Description: Stage 0 (browser side): assemble the "world" blob for `Export race config`.
+//              Browser-only (reads localStorage via the SAME loaders the race path uses).
+//              Changes NO race behaviour.
 //
 // The hash + schema + simulatability come from the SHARED module raceConfigWorld.js — imported, NEVER
 // re-implemented, so a hash produced here matches one the sim recomputes for the same blob by

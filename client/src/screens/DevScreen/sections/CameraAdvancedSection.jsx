@@ -62,7 +62,8 @@ const PROFILE_FIELDS = [
     //  min 0.25 — at 0.25 the largest creature (the luge, 59 px) already fills 79% of the frame
     //             height; below that a racer is a portrait rather than a shot.
     //  max 13   — the widest track needs 12.55 corridors to be fully in frame (Seatrack).
-    //  step 0.05 — 7% of the shot at the LEADER default, 3% at OVERVIEW; roughly the smallest
+    //  step 0.05 — about 6% of the shot at the LEADER default (7% when written, before that
+    //             default moved on 2026-10-01), 3% at OVERVIEW; roughly the smallest
     //             change the eye separates. The old min of 1.0 was the full-track-width guarantee's
     //             threshold and is gone with it: the guarantee now computes on its own.
     min: 0.25,
@@ -1996,9 +1997,10 @@ function CameraAdvancedSection({ part }) {
         <>
           {/* ── Look — track labels ── */}
           <div className={s.card}>
-            {/* LABEL-OCCLUSION-1 — the name on the track when it covers nothing. The KEY and the OFF
-            default are LABEL-DEGRADE-1's and are deliberately unchanged; what the switch DOES is
-            not, so its text is. See reports/night/LABEL-OCCLUSION-1.md. */}
+            {/* LABEL-OCCLUSION-1 — the name on the track when it covers nothing. The KEY is
+            LABEL-DEGRADE-1's and is deliberately unchanged; its default was OFF then and ships ON
+            now (`labelNamesWhenRoom` in defaults.js). What the switch DOES changed, so its text
+            did. See reports/night/LABEL-OCCLUSION-1.md. */}
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}

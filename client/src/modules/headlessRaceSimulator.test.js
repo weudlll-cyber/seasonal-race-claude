@@ -147,7 +147,7 @@ describe('simulateRace — spriteLengthInT geometry guards (TC-06/K1)', () => {
   // ── K1-5: Different type (Rocket) — type selector has real effect ────────────
 
   it('rocket type (bodyFillX=0.278, bodyFillY=0.801): spriteLengthInT differs from horse ≈ 0.00784', () => {
-    // Guard: the type selector in DiagnoseVerteilung must produce different thresholds
+    // Guard: the type selector in DistributionDiagnostics must produce different thresholds
     // per type, not a fixed horse value. Rocket's narrow bodyFill packs more racers per
     // row (20 vs 14 for horse), yielding a smaller bodyNarrow and thus a smaller threshold.
     // If type-specific bodyFill is ignored, the result collapses to the horse value ≈ 0.00881.

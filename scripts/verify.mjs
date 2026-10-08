@@ -27,6 +27,9 @@
 //   npm run verify -- --dry        # print the plan and exit; runs nothing
 //   npm run verify -- --no-format  # skip the formatting pass (prints that it did)
 //   npm run verify -- --jobs=2     # cap concurrency (default: all chosen guards at once)
+//   npm run verify -- --cheap      # forward --cheap to the fingerprint jobs (one track; see
+//                                  # scripts/lib/cheapMode.mjs)
+//   npm run verify -- --cheap --cheap-track=<id>   # the same, on a named track
 //   npm run verify -- --premerge   # the PRE-MERGE run: the browser ship gate if the diff reaches
 //                                  # it, PLUS everything ci.yml runs unconditionally
 // ============================================================
@@ -446,9 +449,15 @@ export function commandFor(g) {
     return { cmd: ["node", g.source, "--check-counts"] };
   // ── GUARD-CONTEXT-RACE-1: `check-client-build` RUNS ALONE, AND IT IS AN ORDERING FIX ──────────
   //
+  // ★ SUPERSEDED IN ITS PREMISE (2026-09-23): `server/Dockerfile` now builds the client in its own
+  // first stage and copies it with `COPY --from=client-build` (see the SERVE-SPA-1 note there); it
+  // no longer reads the named `client` build context. `check-image-starts` still passes
+  // `--build-context`, and the exclusive scheduling below is kept, but the account that follows is
+  // the record of the arrangement it was written for.
+  //
   // THE RACE, reproduced rather than reasoned about. `check-image-starts` builds the server image
   // passing `--build-context client=./client` (`check-image-starts.mjs`), because
-  // `server/Dockerfile:68` is `COPY --from=client dist/`. BuildKit INGESTS that named context at
+  // `server/Dockerfile` then had `COPY --from=client dist/`. BuildKit INGESTS that named context at
   // the START of the build, holding `client/dist` open. `check-client-build` runs the vite build,
   // whose first act is `emptyDir(client/dist)`. Two guards, one directory, and this scheduler runs
   // up to 14 at once with nothing between them: launched simultaneously against a cold image build,
@@ -623,8 +632,12 @@ export function plan(
 
   // ── GUARD-CONTEXT-RACE-1: THE PRODUCER IS PULLED IN BY THE CONSUMER ───────────────────────────
   //
+  // ★ SUPERSEDED IN ITS PREMISE (2026-09-23), as the GUARD-CONTEXT-RACE-1 note above says: the
+  // Dockerfile now builds the client itself (`COPY --from=client-build`), so it no longer copies
+  // `dist/` out of the named context. The pull-in is kept; the account below is its history.
+  //
   // `check-image-starts` builds the server image from a named `client` build context, and
-  // `server/Dockerfile:68` copies `dist/` out of it. If `client/dist` does not exist the image
+  // `server/Dockerfile` copied `dist/` out of it. If `client/dist` did not exist the image
   // build fails `"/dist": not found` — through no fault of the diff, and with a message that names
   // Docker rather than the missing build. That is a PRE-EXISTING dependency (it predates this
   // block), but routing could select the consumer without the producer, so it surfaced as a red
