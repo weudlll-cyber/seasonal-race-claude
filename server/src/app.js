@@ -26,6 +26,7 @@ import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
 import { mountClientAssets, mountSpaFallback, mountApiNotFound } from './staticClient.js';
 import { apiErrorHandler } from './apiErrorHandler.js';
+import { cspDirectives } from './csp.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -33,8 +34,13 @@ const sessionMiddleware = createSessionMiddleware();
 export function createApp() {
   const app = express();
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  // AUDIT-1 D1: the Content-Security-Policy is ON; its directives and why each is what it is live in
+  // csp.js. CORP stays `cross-origin` for the development split (5173 → 4000).
   app.use(
-    helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } })
+    helmet({
+      contentSecurityPolicy: { useDefaults: false, directives: cspDirectives() },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
   );
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
