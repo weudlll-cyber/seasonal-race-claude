@@ -115,6 +115,9 @@ server/utils/**/*.test.js
 !shared/raceSource.mjs
 !shared/playerNames.mjs
 !shared/podium.mjs
+# AUDIT-1 D2 (2026-10-09): the admin status route imports the first, the first imports the second.
+!shared/statusChecks.mjs
+!shared/backupArchive.mjs
 
 # ── THE RACE ENGINE, FOR "VERIFY RACE" (VERIFY-ON-DEMAND-1, 2026-10-04) ────────────────────────────
 # The why is in `server/Dockerfile` ("THE RACE ENGINE"). `client/src/**` is already in the context
