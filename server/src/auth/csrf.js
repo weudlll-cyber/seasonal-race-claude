@@ -44,8 +44,13 @@ export function getAllowedClientOrigins() {
 
 // ── CORS options ──────────────────────────────────────────────────────────────
 
+// Trailing slashes are cut by a LOOP, not by `/\/+$/`: this runs on the caller's raw `Origin`
+// header before sign-in, and that regex backtracks quadratically — a 16 KB header of slashes held
+// the event loop for 371 ms (AUDIT-1 A5M-02).
 export function normalizeOrigin(o) {
-  return String(o).trim().toLowerCase().replace(/\/+$/, '');
+  let s = String(o).trim().toLowerCase();
+  while (s.endsWith('/')) s = s.slice(0, -1);
+  return s;
 }
 
 // Built once at module load. origin:false → CORS disabled → same-origin only, cross-origin browsers
