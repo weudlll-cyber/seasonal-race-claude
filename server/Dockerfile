@@ -61,8 +61,13 @@ RUN apk add --no-cache --virtual .build-deps python3 make g++
 # WHAT IS SENT is decided by the ROOT `.dockerignore`, which is an allow-list. Read it before adding
 # a COPY here: a path not re-included there does not exist as far as this file is concerned, and the
 # build will fail on it loudly. That is deliberate.
-COPY server/package.json ./
-RUN npm install --omit=dev  && apk del .build-deps
+# AUDIT-1 A5M-19: the LOCKFILE comes too, and `npm ci` installs exactly what it records. With the
+# manifest alone, `npm install` resolved the dependency tree afresh within the semver ranges on every
+# build, so two builds of one commit could ship different code — and the tree that was audited and
+# tested (server/package-lock.json) was not the tree in the image. `npm ci` also fails loudly when the
+# lockfile and the manifest disagree, rather than quietly reconciling them.
+COPY server/package.json server/package-lock.json ./
+RUN npm ci --omit=dev  && apk del .build-deps
 
 COPY server/src/ ./src/
 # COPY-UTILS-1: `utils/` was only ever supplied by a bind mount, which meant the image could not run

@@ -43,8 +43,10 @@
 
 # ── What the server image actually needs, and nothing else ───────────────────────────────────────
 
-# Its dependency manifest. `npm install --omit=dev` runs against this.
+# Its dependency manifest and its lockfile. `npm ci --omit=dev` installs exactly what the lockfile
+# records (AUDIT-1 A5M-19); without it every build resolved the tree afresh.
 !server/package.json
+!server/package-lock.json
 
 # The server itself.
 !server/src/**
@@ -137,7 +139,7 @@ client/src/**/*.test.jsx
 #   *.test.js         THE TESTS THAT LIVE BESIDE THE SOURCE, re-excluded above after `server/src/**`
 #                     and `server/utils/**` admit their directories whole (IMAGE-NO-TESTS-1). 31
 #                     files, measured in the running container, and they cannot run in the image:
-#                     `vitest` is a devDependency and `npm install --omit=dev` never installs it.
+#                     `vitest` is a devDependency and `npm ci --omit=dev` never installs it.
 #                     What they cost is not bytes — 0.64% of the context — it is that they hand a
 #                     recipient a description of the internals with the game.
 #   server/scripts/** `dev-start.js` and `restart-dev.js`, the local dev-loop wrappers. Already
