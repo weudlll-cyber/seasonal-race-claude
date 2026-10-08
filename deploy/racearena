@@ -454,7 +454,9 @@ cmd_uninstall() {
   domain="$(grep -E '^RA_PUBLIC_ORIGIN=' "$RA_ETC/racearena.env" | cut -d= -f2- | sed 's|^https\?://||')"
   [[ -n "$domain" ]] || die "cannot read this install's domain from $RA_ETC/racearena.env"
   say "── 1/4 a final backup"
-  cmd_backup || die "the final backup failed; NOTHING was removed"
+  # </dev/null: the backup runs in a one-off container that reads standard input, and would swallow
+  # the confirmation typed (or piped) for step 2 — found by the end-to-end test.
+  cmd_backup </dev/null || die "the final backup failed; NOTHING was removed"
   say "── 2/4 confirm"
   read -r -p "type the domain, $domain, to remove RaceArena: " answer
   [[ "$answer" == "$domain" ]] || die "not confirmed; nothing was removed"
