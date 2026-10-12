@@ -1850,20 +1850,30 @@ a row here; the detail stays where it already lives in this part.
 
 - [ ] **Pause and resume a running race (`B-UX-Pause`).** Unbuilt: there is no pause or resume path in
       `client/src/screens/RaceScreen/` (searched 2026-10-12). Its description and priority are under
-      *Phase B* in this part. *(verify: in the browser, pausing freezes the race loop and resuming
-      continues the same race)*
+      *Phase B* in this part. Proposal 2026-10-12 (OLD-ITEMS-1): leave open as a question for the
+      owner — whether he wants it at all has not been asked since 2026-05-03; about 1 to 1.5 days if
+      yes ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §1). *(verify: in the browser, pausing
+      freezes the race loop and resuming continues the same race)*
 - [ ] **The Phase V verification sittings — his eye.** Manual checks of shipped work that nobody has
       performed: loading a saved player list (`V-1`), a track with missing geometry being refused
       (`V-2`), backup → restore → reset end to end (`V-5`/`B-5`), the Dev Screen sections (`V-6`),
       physics and collisions (`V-7`), storage edge cases (`V-8`), fullscreen (`V-9`). Each entry is
-      in this part under its id. *(verify: each id recorded as performed, with the date and the
-      result)*
+      in this part under its id. Proposal 2026-10-12 (OLD-ITEMS-1): narrow it — close `V-1`, `V-6`
+      and `V-8` as obsolete and `V-2` and `V-7` as covered by tests, and keep `V-5` and `V-9` as one
+      15-minute sitting or one browser spec, `V-5` with the finding that the backup texts promise
+      tracks, racers, groups and branding that live on the server
+      ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §2). *(verify: each id recorded as
+      performed, with the date and the result)*
 - [ ] **`Q-19` — the `TrackEditor.effects.test.jsx` flake, NARROWED and not closed.** 0 failures in 20
       local full-suite runs (2026-09-24), and 0 in the 62 CI runs since then in which the client suite
       ran (all 62 green; the 4 red CI runs of that period failed in the audit gate or the script
       suite, not here) — 0 in 82. A one-in-five flake is refuted; a one-in-fifty one would still be
       missed 19% of the time (0.98^82). Its own rule stands: close it on a much larger N, or when the
-      file goes. The entry is under *Phase Q* in this part. *(verify: a recorded N at which a
+      file goes. The entry is under *Phase Q* in this part. Proposal 2026-10-12 (OLD-ITEMS-1): close
+      as fixed — both causes ever named were fixed in code (`00e09ba0`, `ac8d50c5`), the last
+      recorded failure is 2026-05-16, and 20 more runs of the file alone were green (0 in 102,
+      0.98^102 ≈ 13%); by this row's own rule it is 48 runs from 150
+      ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md) §3). *(verify: a recorded N at which a
       one-in-fifty flake would be missed less than 5% of the time — 150 runs — with 0 failures)*
 
 ---

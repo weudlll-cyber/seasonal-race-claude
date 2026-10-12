@@ -117,9 +117,12 @@ owner on review/2026-10-12 and merged with it — BACKLOG PART TWO has each.)*
 
 **Carried over from this page's §2-§5 (A3-25, 2026-10-12):**
 
-6. Pause and resume a running race (`B-UX-Pause`) — unbuilt.
-7. The Phase V verification sittings — his eye, on shipped work.
-8. `Q-19` — the editor-test flake, narrowed (0 in 82) and not closed.
+6. Pause and resume a running race (`B-UX-Pause`) — unbuilt. Proposed 2026-10-12: ask him whether
+   he wants it ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md)).
+7. The Phase V verification sittings — his eye, on shipped work. Proposed 2026-10-12: narrow to
+   `V-5` and `V-9` ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md)).
+8. `Q-19` — the editor-test flake, narrowed (0 in 82) and not closed. Proposed 2026-10-12: close as
+   fixed ([OLD-ITEMS-1](../reports/release/OLD-ITEMS-1.md)).
 
 ★ **AND B9 LEFT IT THE SAME DAY (DELIVERY-CLEAN-3 piece 1): the startup now warns when sign-in
 would travel unencrypted.** The cookie default is unchanged — only an advisory line appears — so
