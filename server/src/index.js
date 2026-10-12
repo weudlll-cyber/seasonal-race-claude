@@ -15,6 +15,7 @@ import { resolveDataRoot } from './dataPaths.js';
 import { resolveBindAddress, listenOn } from './bindAddress.js';
 import { installGracefulShutdown } from './gracefulShutdown.js';
 import { resolveTrustProxy, trustProxyNotice } from './trustProxy.js';
+import { resolveRacesWal } from './races/raceStore.js';
 
 // ── RUNTIME-API-URL-1: THE ADDRESS IS JUDGED BEFORE ANYTHING LISTENS ───────────────────────────
 //
@@ -38,6 +39,7 @@ try {
   assertPublicOriginUsable(process.env);
   bindAddress = resolveBindAddress(process.env);
   resolveTrustProxy(process.env); // AUDIT-1 A5M-07: a value that is not a hop count stops here
+  resolveRacesWal(process.env); // AUDIT-1 A10-02: a value that is not 1/true/0/false stops here
 } catch (err) {
   // Deliberate: a refusal to start is what stderr is for. No eslint-disable is needed here —
   // `no-console` is configured as `["warn", { allow: ["warn", "error"] }]`

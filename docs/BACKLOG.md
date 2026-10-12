@@ -722,7 +722,7 @@ here because BACKLOG now owns the open work and ROADMAP is a REDIRECT that owns 
 **verify (section-wide):** ★★ **CORRECTED 2026-09-25 (BACKLOG-TRUTH-1) — this line said "nothing
 here is built" and that is no longer true.** Three of the thirteen are PARTLY built and the section
 was still denying it: race outcomes ARE persisted, in a real database
-(`server/src/races/raceStore.js:64,221`, served by `server/src/routes/races.js`); branding profiles
+(`server/src/races/raceStore.js:262`, `createRaceStore`, served by `server/src/routes/races.js`); branding profiles
 ARE built (`server/src/routes/brands.js`); and server-side data isolation IS enforced for races
 (`server/src/routes/races.js:32-35`). Each of those rows now claims only the half that remains.
 **What survives of the original line:** for the rows that are genuinely unbuilt, no command can check
@@ -1829,11 +1829,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### Robustness — his word
 
-- [ ] **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
-      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks the
-      event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk, and his
-      live data folder is in OneDrive. *(verify: `node reports/release/AUDIT-1/tools/a10-store.mjs
-      <clone>` prints `journal_mode: wal` and a save under a held read lock succeeds)*
 - [ ] **AUDIT-1 A12 · retention.** Player names are stored forever in `races.sqlite` (immutable rows,
       no delete route) and backup archives are never pruned. *(verify: a decision; then a retention
       rule with a test)*
@@ -1920,6 +1915,27 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 A10-02 · a held lock blocks the whole server — CLOSED 2026-10-12 (AUDIT-1
+      DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.
+      `RA_RACES_WAL` (`1`/`true` on, unset/`0`/`false` off, anything else refuses to start):
+      `resolveRacesWal` and `applyJournalMode` in `server/src/races/raceStore.js`;
+      `createRaceStore(path, { wal })`. Off is today's behaviour exactly (on a rollback-journal file
+      only `journal_mode` is read); turning it off again switches a WAL file back at the next open.
+      The backup is unchanged — SQLite's online backup API reads through the WAL and side files are
+      never archived; `scripts/backup.test.mjs` round-trips 25 rows that existed only in the `-wal`
+      file (sabotage, a plain file copy instead of `.backup()`: red, `SQLITE_ERROR`). Server test
+      `server/src/races/raceStoreWal.test.js`: with WAL a save goes through under a held READ
+      transaction (sabotage, WAL never set: red, `expected 'delete' to be 'wal'`). `a10-store.mjs`
+      gained the read-lock case (what a backup holds) and with `RA_RACES_WAL=1` prints
+      `journal_mode: wal` and `read lock: the save went through while another connection held a READ
+      transaction (21 ms)`; without it the same save failed after 5840 ms. The row as it stood:
+      **AUDIT-1 A10-02 · a held lock blocks the whole server.** The race store runs a rollback
+      journal with a 5 s busy timeout; while another connection (a backup) holds it, a save blocks
+      the event loop 6.9 s and fails. WAL mode would end most of it but changes the files on disk,
+      and his live data folder is in OneDrive. *(verify: `node
+      reports/release/AUDIT-1/tools/a10-store.mjs <clone>` prints `journal_mode: wal` and a save
+      under a held read lock succeeds)*
 
 - [x] **AUDIT-1 A10-07 · a damaged sessions file stops the server — CLOSED 2026-10-12 (AUDIT-1
       DECISIONS):** the owner's decision of 2026-10-12, built on `fix/audit-1-decisions-server`.

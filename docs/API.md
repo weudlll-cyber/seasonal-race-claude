@@ -898,7 +898,7 @@ its points rule (`server/src/routes/races.js:6`). The router is built by `create
 (`:90-294`). **This is the only team-scoped router.** The team always comes from `req.authUser.team`
 and never from the request (`:31-36`).
 
-A stored race (`hydrate`, `server/src/races/raceStore.js:494-536`) has these fields: `id, clientRaceId,
+A stored race (`hydrate`, `server/src/races/raceStore.js:536-578`) has these fields: `id, clientRaceId,
 shortKey, team, teamNormalized, finishedAt, identifierVersion, buildId, geometryId, racerTypeId,
 racePlanSeed, raceActionStage, racePlanEnabled, targetLaps?, targetDurationSec?, worldSchemaVersion,
 worldConfigs, elapsedSec?, results, winners, raceSource, rosterId, racerTypesId, names, fieldSize,
@@ -909,22 +909,22 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Who:** any signed-in user (operator+). The prefix is deliberately left out of `ROUTE_POLICY`
   (`server/src/routes/races.js:38-42`). The race is filed under the caller's team, and a `team` in
   the body is overwritten (`:132`).
-- **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js:280-331`, `:257-265`, `:399-408`):
+- **Request:** a JSON race record. The store requires (`server/src/races/raceStore.js:322-373`, `:299-307`, `:441-450`):
   - `names`: a non-empty array with no name twice.
   - `results` and `winners`: arrays.
   - Non-empty `clientRaceId`, `finishedAt`, `identifierVersion`, `buildId`, `geometryId`,
     `racerTypeId`, `racePlanSeed`, `raceActionStage`.
   - Every scalar field that is present is a string or a finite number, and `finishedAt` a date
-    (`:316-331`); anything else is 400 `INVALID_RACE`.
+    (`:358-373`); anything else is 400 `INVALID_RACE`.
   - Optional: `racePlanEnabled`, `targetLaps`, `targetDurationSec`, `worldSchemaVersion`,
     `worldConfigs`, `elapsedSec`, `racerTypeOverrides`, `effectiveRacerTypes`, `raceSource`. An
-    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:372-381`).
+    unrecognised `raceSource` is stored with no marker, which counts as a test race (`:414-423`).
 - **Response:**
   - 201 `{id, shortKey, alreadyStored}`: newly stored, or identical content was already there
     (`server/src/routes/races.js:131-138`).
   - 200 `{id, shortKey, alreadyStored: true}`: the same `clientRaceId` was already stored, i.e. a
-    retry (`:120-129`). **The check is within the caller's team** (`server/src/races/raceStore.js:551-562`,
-    and the store's own check at `:350`): another team's `clientRaceId` is not recognised, and the
+    retry (`:120-129`). **The check is within the caller's team** (`server/src/races/raceStore.js:593-604`,
+    and the store's own check at `:392`): another team's `clientRaceId` is not recognised, and the
     race is stored as usual (201). The id is unique per team in the table
     (`UNIQUE (team_normalized, client_race_id)`, `:195`); a database from before this was rebuilt
     by the migration `client-id-per-team-1` (`server/src/races/migrateClientIdPerTeam.js`).
@@ -937,18 +937,18 @@ racerTypeOverrides, effectiveRacerTypes`.
   - 500 `internal error` for anything else, which is retryable (`:152-155`).
   - 401. CSRF 403.
   - With `clientRaceId` missing, `getRaceByClientId(undefined)` runs first (`:121`); the store
-    binds it as an empty string (`server/src/races/raceStore.js:560`), which matches no row, so the
+    binds it as an empty string (`server/src/races/raceStore.js:602`), which matches no row, so the
     request falls through to the intended
-    400 `INVALID_RACE` (`server/src/races/raceStore.js:399`). Settled 2026-10-06 against
+    400 `INVALID_RACE` (`server/src/races/raceStore.js:441`). Settled 2026-10-06 against
     better-sqlite3 in an in-memory database.
 
 ### `GET /api/races`
 
 - **Who:** any signed-in user; it returns **the caller's team only** (`server/src/routes/races.js:163-181`).
 - **Request:** query `limit?`, clamped to 1–100 with a default of 20, and `offset?`, at least 0 with
-  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:641-646`).
+  a default of 0. Non-numeric values fall back to the defaults (`server/src/races/raceStore.js:683-688`).
 - **Response:** 200 `{races: [race…], hasMore, offset, limit, team}`, newest first
-  (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:589-597`). A user with no
+  (`server/src/routes/races.js:176-180`, `server/src/races/raceStore.js:631-639`). A user with no
   team gets `{races: [], hasMore: false, offset: 0, limit: 0, team: null}` (`server/src/routes/races.js:167-174`).
 - **Errors:** 401.
 
@@ -957,7 +957,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 - **Who:** any signed-in user; it covers the caller's team only (`server/src/routes/races.js:204-205`).
 - **Request:** query `from` and `to`, both required, each parsable by `Date.parse`, with
   `from < to` and a span of at most 366 days. The window is half-open: `from <= finishedAt < to`
-  (`server/src/routes/races.js:187-199`, `:80`, `server/src/races/raceStore.js:620-630`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
+  (`server/src/routes/races.js:187-199`, `:80`, `server/src/races/raceStore.js:662-672`). The races are read one at a time, two fields each (BOUNDED-EVAL-1, 2026-10-07).
 - **Response:** 200 `{from: <ISO>, to: <ISO>, counted, quickTestsExcluded, rows: [{name, races, wins,
   podiums, places: {<place>: count}}]}` (`server/src/routes/races.js:203-207`,
   `server/src/races/periodEvaluation.js:55-91`). A user with no team gets an evaluation of zero races.
@@ -989,7 +989,7 @@ racerTypeOverrides, effectiveRacerTypes`.
 
 - **Who:** any signed-in user. It finds only races of the caller's team; another team's key gets the
   same 404 as a key that was never issued (`server/src/routes/races.js:221-234`,
-  `server/src/races/raceStore.js:572-580`).
+  `server/src/races/raceStore.js:614-622`).
 - **Request:** path `shortKey`. It is normalised by trimming, upper-casing and removing spaces and
   hyphens, and must then be 6 characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ`
   (`shared/raceShortKey.mjs:54`, `:60`, `:68-76`).

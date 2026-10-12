@@ -61,7 +61,9 @@ so on an install that already has an admin a wrong token is never reported as su
 | --- | --- | --- |
 | `RA_DATA_DIR` | `server/data`, resolved relative to the server's own module | The whole runtime store. **It holds your accounts as well as the seeded content** — see the warning below. |
 | `RA_USERS_DB` | `users.json` inside the data root | The account store. |
-| `RA_SESSION_DB` | `sessions.sqlite` inside the data root | The session store. In-memory under test. |
+| `RA_SESSION_DB` | `sessions.sqlite` inside the data root | The session store. In-memory under test. A damaged file is moved aside and a fresh one started (see [AUTH.md](AUTH.md)). |
+| `RA_RACES_DB` | `races.sqlite` inside the data root | The race store. For test isolation; `npm run backup` refuses when it points outside the data root. |
+| `RA_RACES_WAL` | unset — **off**: the rollback journal, as it always was | `1` or `true` runs the race store in WAL (write-ahead log) mode, so a save is no longer blocked while a backup reads the database (AUDIT-1 A10-02: about 7 s and a failed save without it). WAL keeps `races.sqlite-wal` and `-shm` beside the file while the server runs — **do not use it with the data folder in a synced folder** such as OneDrive. `npm run backup` reads through the WAL and works in both modes. Turning it off again switches the file back at the next start. `0`/`false` = off. **Anything else → the server refuses to start**, naming the variable. Added 2026-10-12. |
 
 **Your accounts live beside the seeded records.** `users.json`, `sessions.sqlite` and
 `setup-complete.json` sit in the same directory as the tracks, backgrounds, brands and player groups.

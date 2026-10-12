@@ -37,6 +37,9 @@ none of it should be relied on until it is merged. Each entry names its branch.
 - A damaged session file no longer stops the server: it is renamed `sessions.sqlite.damaged-<time>`, a
   fresh one is started, one log line says so, and everyone signs in again (audit finding A10-07).
   *(branch `fix/audit-1-decisions-server`)*
+- `RA_RACES_WAL=1`: the race history database in write-ahead-log mode, so saving a race is no longer
+  held up (about 7 s, then a failure) while a backup reads it. Off by default; backups and restores
+  work in both modes (audit finding A10-02). *(branch `fix/audit-1-decisions-server`)*
 - An admin-only status box at the top of the Dev Screen's "Accounts and system" chapter: the build,
   the newest backup, the overall status, and whether a newer release exists on GitHub (checked by
   the server at most once a day; "unknown" when the check fails). *(branch `feat/admin-status-box`)*

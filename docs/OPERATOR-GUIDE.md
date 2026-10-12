@@ -306,8 +306,11 @@ nothing deletes them. Copy them off the server before deleting them.
 into an empty folder, and what you set aside may still hold something the backup does not.
 
 ★ **A save can hold the server for several seconds** when something else holds the race database open
-(measured: about 7 seconds, then the save fails). This is an open decision in the audit, not a fault
-you can fix by configuration.
+(measured: about 7 seconds, then the save fails) — a running backup is enough. **`RA_RACES_WAL=1` ends
+that**: the race database then uses write-ahead logging, and a save goes through while a backup
+reads (measured: about 20 ms). It is off by default because it keeps two more files beside
+`races.sqlite` while the server runs (`-wal`, `-shm`); do not put the data folder in a synced folder
+(OneDrive, Dropbox) with it on. Backups and restores work in both modes ([ENVIRONMENT.md](ENVIRONMENT.md)).
 
 ---
 

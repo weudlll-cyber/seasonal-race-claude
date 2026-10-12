@@ -102,7 +102,7 @@ describe('the trust boundary — the server stores, it does not adjudicate', () 
 
     const out = store.storeRace(fabricated);
 
-    // `stored` reports which ROWS were newly written (raceStore.js:253-256), not a boolean.
+    // `stored` reports which ROWS were newly written (`storeRace` in raceStore.js), not a boolean.
     expect(out.stored.race).toBe(true);
     expect(out.id).toBeTruthy();
 
