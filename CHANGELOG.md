@@ -30,6 +30,9 @@ is.
 - `racearena harden-ssh`: switches off SSH passwords and root sign-in, but only after it has seen
   the named user sign in with a key from a second session; it refuses otherwise.
   *(branch `feat/vps-install`)*
+- On that install the app trusts exactly one proxy, Caddy (`RA_TRUST_PROXY=1`), and keeps its race
+  history in write-ahead-log mode (`RA_RACES_WAL=1`), so a backup no longer holds up a race being
+  saved. *(branch `feat/vps-install`)*
 - `racearena uninstall`: a final backup first, the domain typed to confirm; the data and backups are
   kept unless `--purge-data`, which asks a second time. *(branch `feat/vps-install`)*
 - `/api/health` answers `503`, status `error`, when the account store (`users.json`) cannot be read, so

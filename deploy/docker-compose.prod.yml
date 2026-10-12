@@ -46,6 +46,12 @@ services:
       # Where the backups are inside the container (mounted below), so the admin status box in the
       # Dev Screen can show the newest one instead of "not visible from the app" (AUDIT-1 D2).
       RA_BACKUP_DIR: /backups
+      # Exactly one proxy, Caddy, stands in front of the app, so the visitor's address is the last
+      # X-Forwarded-For entry and nothing before it is trusted (AUDIT-1 A5M-07; docs/ENVIRONMENT.md).
+      RA_TRUST_PROXY: "1"
+      # The race store in write-ahead-log mode: a race is saved while a backup reads the store,
+      # instead of waiting about 7 s and failing (AUDIT-1 A10-02; docs/ENVIRONMENT.md).
+      RA_RACES_WAL: "1"
     volumes:
       - ${RA_DATA_HOST:-/var/lib/racearena}:/app/data
       # The backup tool writes here when `racearena backup` runs it in a one-off container of this

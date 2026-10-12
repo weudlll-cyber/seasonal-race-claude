@@ -318,6 +318,8 @@ that**: the race database then uses write-ahead logging, and a save goes through
 reads (measured: about 20 ms). It is off by default because it keeps two more files beside
 `races.sqlite` while the server runs (`-wal`, `-shm`); do not put the data folder in a synced folder
 (OneDrive, Dropbox) with it on. Backups and restores work in both modes ([ENVIRONMENT.md](ENVIRONMENT.md)).
+The single-server (VPS) install turns it on, together with `RA_TRUST_PROXY=1` for its one proxy,
+Caddy (`deploy/docker-compose.prod.yml`).
 
 ---
 
