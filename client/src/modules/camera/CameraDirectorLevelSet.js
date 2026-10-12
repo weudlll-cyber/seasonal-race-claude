@@ -264,8 +264,10 @@ export const levelSetMixin = {
    * members, which two racers running wide TOGETHER satisfy while both are off screen: measured over
    * 1,260 races, span removes 11 of 126 winner-off races and presence removes 93.
    *
-   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing, so **every frame before the
-   * closing stretch is what it was, to the pixel** — asserted by a test rather than asserted here.
+   * SCOPED TO THE RUN-IN. Infinity whenever the run-in is not composing AND no eased width is still
+   * held, so **every frame before the closing stretch is what it was, to the pixel** — asserted by a
+   * test rather than asserted here. After the run-in stops composing a held width eases out over up
+   * to `runInOpenMs` (RUNIN-EASED-ADMIT-1, in the body) instead of dropping.
    *
    * WIDEN-ONLY BY CONSTRUCTION: it returns a CEILING on cam.zoom, and the caller composes it with
    * `Math.min`. It can make the shot wider and it has no way to make it tighter. That is what keeps
@@ -275,9 +277,9 @@ export const levelSetMixin = {
    * ── THE RELEASE IS EASED, WHICH IS WHAT MAKES A LIVE SET SAFE ─────────────────────────────────
    *
    * Membership is live, so a racer hovering at exactly one body length joins and leaves repeatedly.
-   * Admitting him is instant — he must not be cut while the camera thinks about it — but RELEASING
-   * him is eased, so the width cannot pump. The ceiling may FALL (widen) on any frame and may RISE
-   * (tighten) only along a smoothstep.
+   * Both directions are eased now: `_levelEaseTo` re-anchors on every target change and moves along a
+   * smoothstep whether the ceiling falls (widen, admitting him) or rises (tighten, releasing him),
+   * so the width cannot pump and an admit is not a step either.
    *
    * **NO NEW CONSTANT.** The span is `runInOpenMs`, the owner's own 1-1.5 s, which already paces the
    * opening glide and already times `_contentionWeight`'s release of a racer who has dropped out of
@@ -460,8 +462,9 @@ export const levelSetMixin = {
    * THE LOOP IS NOT DUPLICATED. `_abreastContenders` calls this and then applies its own guards and
    * its fallback, so there is exactly one copy of the level test and the lane test.
    *
-   * NO CALLER IN THE CAMERA USES THIS. It is read by the probe payload, beside the director's other
-   * fields, and it changes no framing decision.
+   * Its one framing caller is `_abreastContenders` (below), which applies its own guards and
+   * fallback to the result; it is also read by the probe payload, beside the director's other
+   * fields.
    *
    * @param {object[]} ordered racers sorted by `t`, leader first
    * @returns {object[]} the survivors, leader first; possibly just the leader

@@ -19,8 +19,9 @@ import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-c
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js'; // single source for phase-boundary defaults (no raw drift)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
-// Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
-// introducing a second RNG — with its own distinct XOR-seed constant.
+// Exported so other modules (heroCurveGenerator.js, raceNumbers.js, the camera director) reuse the
+// SAME PRNG helper instead of introducing a second RNG, each with its own distinct XOR-seed
+// constant. The governor (raceGovernor.js) does not use it.
 export function mulberry32(seed) {
   let s = seed >>> 0;
   return () => {
@@ -183,7 +184,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // corridorEnd clamp (min against corridorEnd is preserved as the upper bound). No-op for
   // well-ordered configs — DEFAULT_PHASE_FRACTIONS above is already ordered, so the chain is a no-op
   // on it whatever those values are (they are not restated here; they moved once already). Single source: the
-  // sim imports createRacePlan (sim-fairness.mjs:59), so browser and sim inherit this identically.
+  // sim imports createRacePlan (sim-fairness.mjs), so browser and sim inherit this identically.
   // No hardcoded fractions — every bound reads the live resolved phaseFractions.
   const resolvedCorridorStart = phaseFractions.corridorStart ?? phaseFractions.transitionEnd;
   // pulkStart is now ownable (DevScreen "PULK begins here"); anchor it to [0, corridorEnd] first so the
@@ -535,10 +536,12 @@ export function arrivalCeiling(
  *
  * Usage:
  *   const ctrl = createTrajectoryController(plan);
- *   // Each physics step:
- *   //   Pass 1 (re-rolls): call ctrl.computePulkBiasedTarget() for pulk racers
- *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs)
- *   //   Pass 2 (t-update): r.t += r.baseSpeed * boost * brake * r.trajectoryMult * r.areaBonusMult * dt
+ *   // Each physics step (raceCore.js `stepRacePhysics`):
+ *   //   Controller-Pass:   call ctrl.update(racers, elapsedMs, raceProgress)
+ *   //   Per racer:         re-roll draw (ctrl.computePulkBiasedTarget() for pulk racers),
+ *   //                      then the t-update — raceStep.js `advanceRacerT`:
+ *   //                      baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult
+ *   //                      · governorMult · dt
  *
  * @param {object} racePlan  output of createRacePlan
  * @returns {object} TrajectoryController
@@ -618,9 +621,9 @@ export function createTrajectoryController(racePlan) {
   // therefore STRUCTURAL, not empirical — it says the fix is still in place, NOT that a search was
   // run and found nothing. Read it that way and it is informative; read it as evidence and it is
   // the opposite. It is deliberately NOT deleted: it is exported by `collectTelemetry()` below and
-  // read by `scripts/sim-fairness.mjs:5038` and `scripts/exp-runaway-leader.mjs:2517`
-  // (`--smallg-diag`), and a field removed from under a `?? 0` would leave both instruments
-  // printing the same 0 with nothing to say the measurement had gone.
+  // read by `scripts/sim-fairness.mjs` and `scripts/exp-runaway-leader.mjs` (`--smallg-diag`),
+  // and a field removed from under a `?? 0` would leave both instruments printing the same 0 with
+  // nothing to say the measurement had gone.
   let _gapDownAheadGtBehind = 0;
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
   // SCREEN-tier escape-latency telemetry (read-only). One entry per DOWN-tilt applied to the LIVE
@@ -646,12 +649,12 @@ export function createTrajectoryController(racePlan) {
   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
   let _attackerFreeEvents = 0;
-  // ── ★ E (ARRIVAL-VARIANTS-1, the owner's shape) telemetry. All zero for every other variant,
-  // because every increment sits behind `heldFree`. `_eArrivalMults` holds one entry
-  // per staged comebacker: the pace multiplier he carried the first frame he reached his drawn place
-  // — the direct test of whether the taper finished before he got there (it should read 1.0).
-  // Per-held-comebacker arrival observations, keyed by racer index. Read-only measurement, filled
-  // for EVERY variant — see the block in `update`. One entry per held comebacker per race.
+  // ── ★ ARRIVAL observations (ARRIVAL-SHAPE-E-1). Per-held-comebacker records, keyed by racer
+  // index: one entry per held comebacker per race. Read-only measurement, filled for EVERY variant
+  // (the block in `update` sits behind `heldFree`, outside the variant branches). Each entry's
+  // `arrivalMult` is the pace multiplier he carried the first frame he reached his drawn place — the
+  // direct test of whether the taper finished before he got there (it should read 1.0); the
+  // `eArrivalMults` diagnostic is derived from these entries.
   const _arrivalObs = new Map();
   // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
   // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
@@ -735,8 +738,8 @@ export function createTrajectoryController(racePlan) {
    *
    * So while the brake is the binding constraint on a racer, the target is moved and the CLOCK IS
    * LEFT ALONE. The ease then runs to completion exactly as designed; once `elapsed` passes the
-   * transition duration, raceCore.js:565-574 returns the target itself and the held value tracks
-   * the command step for step.
+   * transition duration, the trajectoryMult transition in raceCore.js (stepRacePhysics) returns
+   * the target itself and the held value tracks the command step for step.
    *
    * ★ THIS IS NOT A SECOND TRANSITION MECHANISM. It writes no multiplier and carries no rate of
    * its own — it is the SAME ease, with the restart omitted. There is no new number here.
@@ -785,8 +788,8 @@ export function createTrajectoryController(racePlan) {
    * suppresses only the noise. See reports/night/SERVO-NARROW-1.md.
    *
    * ★★ IT DOES NOT COMPOSE WITH A MECHANISM THAT MOVES THE TARGET DISCONTINUOUSLY. Once the
-   * transition clock is older than the transition duration, raceCore.js:584-591 returns the target
-   * itself, so the held multiplier tracks the written target step for step — which is what makes
+   * transition clock is older than the transition duration, the trajectoryMult transition in
+   * raceCore.js (stepRacePhysics) returns the target itself, so the held multiplier tracks the written target step for step — which is what makes
    * the command arrive, and also means a DISCONTINUOUS target lands in a single 16 ms step. With
    * the gap brake ON, its engage/release moves the target by its whole authority at once and the
    * largest single-step multiplier move measured **7.6x** the shipped maximum (PICK-WINNER-1),
@@ -797,7 +800,7 @@ export function createTrajectoryController(racePlan) {
    * written when it did. `gapBrakeEnabled` has been `true` since the owner's decision of 2026-09-16,
    * landed on master 2026-09-17 (`be7e6872`).
    *
-   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (`defaults.js:1220`) is `false`, and
+   * ★ WHAT SHIPS OFF IS THIS MECHANISM: `servoNoiseBlindEnabled` (defaults.js) is `false`, and
    * the interaction above is no longer hypothetical — it is the REASON that key stays false.
    * PICK-WINNER-1 measured V1 ALONE keeping parity; only V1 **and** the gap brake together break it,
    * at the 7.6x cost named above. The two must never both be on.
@@ -994,7 +997,7 @@ export function createTrajectoryController(racePlan) {
     // from the chaos boundary (pulkStart) onward, for EVERY racer (pack and heroes alike, so the
     // measured headwind asymmetry disappears). The boundary is READ from the phase structure
     // (pulkStartFrac), never a literal (A4). No fade past it (C-2). Under choreo `bonusFadeDuration`
-    // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (:156) — neither is
+    // becomes functionless; `transitionEnd` keeps its corridorStart-fallback role (`resolvedCorridorStart`) — neither is
     // deleted (C-3). choreo-OFF falls through to the shipped transEnd fade below → byte-identical.
     if (plan._choreoEnabled) {
       const inChaos = phaseProgress != null ? phaseProgress < pulkStartFrac : elapsedMs < pulkStart;
@@ -1349,9 +1352,9 @@ export function createTrajectoryController(racePlan) {
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // ── ★ THE ARRIVAL — see the block above createTrajectoryController ────────────────────────
       // Everything here is inside `heldFree`, so no other role is reached.
-      // (b) FREE means UNSTEERED, and it is expressed as band steering rather than as a hard 1.0:
-      // inside his block `bandError` is 0, so the servo commands 1.0 anyway, and at the block's edge
-      // the SAME expression is already the net. One mechanism, two jobs.
+      // The arrival only latches `arrived` here; it does NOT change his strictness. After he arrives
+      // he is steered like any other racer (exact-rank, see ARRIVAL-STEERED-AGAIN-1 below) — the
+      // latch only lifts his own arrival ceiling.
       let arrived = false;
       if (heldFree) {
         const drawnPlace = plan._racerTargetRank.get(r.index) ?? currentRank;
@@ -1768,8 +1771,7 @@ export function createTrajectoryController(racePlan) {
       attackerCast: _atkCast,
       attackerPeakReached: _atkPeak,
       attackerFreed: _attackerFreeEvents,
-      // ★ E-variant diagnostics (all 0 under A–D). netFrameFraction is the question the owner's
-      // addendum asks: OFTEN means band steering is a second hold, RARELY means it is a net.
+      // ★ Arrival diagnostics, filled under every variant (see `_arrivalObs`).
       // ★ One row per held comebacker: his drawn place, the pace he carried across it, the peak gap
       // he opened while leading, and how far he drifted afterwards. The arm-vs-arm table is built
       // from these; they are recorded identically under every variant.
@@ -1922,8 +1924,9 @@ export function createTrajectoryController(racePlan) {
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
     getHeroRoles: () => plan._heroRoles ?? null,
     // Diagnostics-only: index → release progress for HELD heroes (null until heroes are cast, empty
-    // when none was cast). The role label alone cannot tell a HELD comebacker from the fall-back
-    // one — both are 'comebacker' — and an instrument that guessed from the race would be guessing.
+    // when none was cast). Since 2026-09-18 the fall-back hero is labelled 'pursuer' rather than
+    // 'comebacker' (heroCurveGenerator.js), but this map is still the direct answer to "is he held,
+    // and when is he released" — an instrument that guessed from the race would be guessing.
     getHeldRelease: () => plan._heldRelease ?? null,
     // The DRAWN place for one racer. Read-only, for the browser hold probe, which otherwise has no
     // way to say "two ranks before his place" without recomputing the thing it is observing.

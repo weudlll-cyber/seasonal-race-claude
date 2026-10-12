@@ -160,7 +160,7 @@ function _shortestTDelta(from, to) {
 
 /**
  * Convert a lerp time-constant (seconds) to a per-frame lerp factor at FRAME_RATE fps.
- * 90% convergence ≈ 3.45 × TC. Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
+ * 90% convergence at exactly 1 × TC. Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
  * Exported for unit tests.
  * @param {number} tc  Time constant in seconds (must be > 0)
  * @returns {number}   Per-frame lerp factor in (0, 1)
@@ -553,7 +553,7 @@ export class CameraDirector {
   /**
    * Derive every state's cam.zoom from its TRACK-WIDTHS setting (CAMERA-ZOOM-UNIT-1).
    *
-   * All five states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
+   * All six states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
    * shot at the widest setting. The three things that used to make them incommensurable are gone:
    * the absolute `spriteScale` screen-scale, OVERVIEW's target-SPRITE-SIZE derivation, and the
    * `2 x W_ref / racersPerRow` racer-count division that came with it.
@@ -945,7 +945,7 @@ export class CameraDirector {
     }
     // RUNIN-NAMES-1: latch the closing zoom's ARRIVAL. Both terms already exist and neither is a
     // number chosen here: `_runInAfterDeadline` is the schedule's own "the close is running" (it is
-    // set in `_scheduleTargetZoom` and, being a latch, survives the frames the schedule does not
+    // set in `_updateRunIn` (CameraDirectorRunIn.js) and, being a latch, survives the frames the schedule does not
     // run), and the leader reaching the line is where §3b says the close arrives — "both the close's
     // parameter and the leader's walk back reach 1 exactly at the line".
     //
@@ -1167,7 +1167,7 @@ export class CameraDirector {
         if (this._prevFocusT !== null) {
           this._entrySpeedEstimate = Math.max(0, fT - this._prevFocusT);
         }
-        this._prevFocusT = fT; // first write this frame; _computePhasedPanTarget reads it at the lead-out transition (~line 1833) then overwrites at every exit
+        this._prevFocusT = fT; // first write this frame; _computePhasedPanTarget reads it at the lead-out transition (in _computePhasedPanTarget) then overwrites at every exit
         // Update target every frame: focusT moves with the racer, lead-ahead offset scales
         // with the measured speed so the camera lands at the right lead-ahead position.
         const prof = this._phasedByState?.[this.state];
@@ -2070,7 +2070,7 @@ export class CameraDirector {
       // Nothing about OVERVIEW outside the endgame changes; `_runInComposingNow` is false there.
       if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode && !this._scheduleComposing()) {
         // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
-        // four states run. What stood here before derived the zoom from a target sprite size
+        // five states run. What stood here before derived the zoom from a target sprite size
         // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
         // on how many racers were in the race — non-monotonically. There is no sprite size and no
         // racer count in this path any more.
@@ -2309,7 +2309,8 @@ export class CameraDirector {
    * WHERE THE NULL BITES, because it is not obvious and it has cost this project a repair
    * (RUNIN-OWNS-1): update()'s zoom-about-the-anchor correction is SKIPPED when this returns null.
    * A group shot whose zoom is steady does not care. A group shot whose zoom is MOVING does — the
-   * pan target then runs away from the pan lerp and the frame empties. See `_runInAnchorPoint`.
+   * pan target then runs away from the pan lerp and the frame empties. See the RUNIN-OWNS-1 anchor
+   * block in update().
    */
   _focusAnchorRacer(racers) {
     if (!racers || racers.length === 0) return null;
@@ -3207,8 +3208,9 @@ export class CameraDirector {
     // EVERY TERM NAMED, so the probe below can say WHICH ONE decided the width instead of leaving a
     // reader to infer it from the total. `Math.min` over an object's values is the same computation
     // it always was — this only stops the answer being unrecoverable one line after it is produced.
-    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside the
-    // pair states and whenever the key is off, so the composition below is a no-op there.
+    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside
+    // PHOTO_FINISH (its weight, `_corridorCapWeight`, is 0 there) and whenever the key is off, so the
+    // composition below is a no-op there.
     const _corridorCap = this._contenderZoom ? this._corridorWidthCap(subjects, frameSize) : null;
     // ── ENDGAME-SCHEDULE-1: THE SCHEDULE OWNS THE WIDTH, IT DOES NOT COMPETE FOR IT ───────────
     //
@@ -3233,10 +3235,11 @@ export class CameraDirector {
       // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
       // so this line costs nothing for the rest of the race.
       field: this._fieldCeiling(subjects, racers, frameSize),
-      // RUNIN-OWNS-1: the run-in. Infinity outside the endgame window, so this line costs nothing
-      // for the rest of the race either — and INSIDE the window it is one more ceiling among the
-      // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
-      // `stateZoom` above IS the run-in's second bound; it needed no code.
+      // RUNIN-OWNS-1: the run-in. In practice this term is ALWAYS Infinity: `_updateRunIn` returns
+      // Infinity whenever the schedule is not composing, and whenever it is composing with a finite
+      // width `_scheduled` is true and the schedule takes the `state` slot above instead. It was
+      // written as "one more ceiling among the others" before ENDGAME-SCHEDULE-2 made the schedule
+      // the sole author; the `'line-after-cap'` label below is therefore unreachable.
       line: _scheduled ? Infinity : _runInCeiling,
     };
     // ── ENDGAME-SCHEDULE-2: DURING THE SCHEDULED ENDGAME THE SCHEDULE IS THE SOLE AUTHOR ──────
@@ -3279,7 +3282,8 @@ export class CameraDirector {
     // `max`. That asymmetry is the whole reason this cannot be another entry in `_ceilings` — it
     // would silently mean the opposite of every line beside it.
     //
-    // WHY IT IS SCOPED TO THE PAIR STATES. On the single-anchor shots the road already lost, and for
+    // WHY IT IS SCOPED TO THE PAIR STATES (in fact to PHOTO_FINISH alone — `_corridorCapWeight`
+    // is 0 in every other state). On the single-anchor shots the road already lost, and for
     // the owner's own reason: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE (CAMERA-COMPANY-ONLY-3,
     // approved 2026-08-05). Re-imposing it there would overturn a decision he has already made. The
     // finish is the one place he has now said the road IS the sufficient bound.
@@ -3301,7 +3305,8 @@ export class CameraDirector {
       // THE BLEND IS IN LOG SPACE, and that is the same reasoning the diagnosis rested on: a scale
       // change is perceived logarithmically, so a linear blend of zooms would still arrive as an
       // uneven move. `w = 0` leaves the shot untouched; `w = 1` is the full cap; in between the
-      // demand grows smoothly with the leader's approach.
+      // demand grows smoothly over `_corridorCapArriveMs` from the photo finish's entry (see
+      // `_corridorCapWeight`).
       const w = this._corridorCapWeight();
       if (w > 0 && _corridorCap > guaranteed) {
         guaranteed = guaranteed * Math.pow(_corridorCap / guaranteed, w);
@@ -3635,8 +3640,9 @@ export class CameraDirector {
       this._observerPhase = 'lead-out';
       this._leadOutStartCamT = this._camT;
       // Camera moves at ~half racer speed during lead-out, decelerating via EMA.
-      // _prevFocusT here is update()'s first write this frame (~line 723); _computePhasedPanTarget
-      // has not yet written it on this code path — all its writes come at the exits below.
+      // _prevFocusT here is update()'s first write this frame (its `_prevFocusT = fT`);
+      // _computePhasedPanTarget has not yet written it on this code path — all its writes come at
+      // the exits below.
       const speed =
         this._prevFocusT !== null ? Math.max(0, focusT - this._prevFocusT) : NOMINAL_T_PER_FRAME;
       this._leadOutDistanceT = speed * FRAME_RATE * prof.leadOutDuration * 0.5;
@@ -3648,7 +3654,7 @@ export class CameraDirector {
         const decayDt = 1 - Math.pow(1 - LEAD_OUT_DECAY, (dt * FRAME_RATE) / 1000);
         this._camT += (leadOutTargetT - this._camT) * decayDt;
       }
-      this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
+      this._prevFocusT = focusT; // second write this frame (update() wrote first, `_prevFocusT = fT`)
       return;
     }
 
@@ -3680,7 +3686,7 @@ export class CameraDirector {
     // next frame. targetOffsetX/Y are owned exclusively by _setTargets; pixel-lerp closes any
     // remaining gap smoothly — no hard-pin here (would cause a visible jump on the follow frame).
     this._camT = focusT;
-    this._prevFocusT = focusT; // second write this frame (update() wrote first at ~line 723)
+    this._prevFocusT = focusT; // second write this frame (update() wrote first, `_prevFocusT = fT`)
   }
 
   // ── THE START CEREMONY lives in CameraDirectorCeremony.js (P1-CAMERADIRECTOR-SPLIT-1) ──────────

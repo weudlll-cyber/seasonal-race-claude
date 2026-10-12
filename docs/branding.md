@@ -234,7 +234,7 @@ The ResultScreen is no longer a bare `<h1>`. As of `b9a2f03`:
 Every racer's physics-clock timestamp is recorded the moment they cross the finish line:
 
 ```js
-r.finishTimeMs = physicsTs; // modules/raceCore.js:754
+r.finishTimeMs = physicsTs; // modules/raceCore.js:758
 ```
 
 It is carried into the `finishOrder` array written to `sessionStorage.raceResults`:

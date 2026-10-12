@@ -39,16 +39,16 @@ const _passCandidate = new Map();
 // SIDE-FREE-CULL-1: the free-lane scan's neighbour index — racers sorted by their position ON THE
 // LOOP. Two parallel arrays rather than an array of objects, reused across steps, because this is
 // rebuilt inside the physics step and a per-step allocation of 100 objects is the cost this block
-// exists to remove. `_tIndexOrder` holds slots into `_tIndexRacer`/`_tIndexTf`. See buildTIndex.
+// exists to remove. `_tIndexSlots` holds slots into `_tIndexRacer`/`_tIndexTf`. See buildTIndex.
 let _tIndexRacer = [];
 let _tIndexTf = new Float64Array(0);
 let _tIndexSrcTf = new Float64Array(0);
 let _tIndexSlots = [];
 let _tIndexLen = 0;
 
-// Layer 1 spring-constant fallback when config.softSteeringStrength is absent
-// (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
-
+// Layer 1 spring-constant fallback when config.softSteeringStrength is absent (partial-config
+// callers in sim/unit paths): there is no local constant any more — the read site in
+// applyRacerBehavior falls back to DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength directly.
 // Lateral feel smoothing (Stage A2). Fallbacks mirror defaults.js for partial-config
 // callers (sim/unit). LATERAL_STEP_MS is the fixed physics step (index.jsx FIXED_DT /
 // sim DT = 16ms); the target ease advances one step per applyRacerBehavior call, so it
@@ -68,8 +68,8 @@ const DEGENERATE_BRAKE_T = 0.014;
 
 // Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
 // units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
-// constant. Mirrors the defaults.js value for partial-config callers (sim/unit). The dodge
-// trigger (dT_start) is derived from this cap so a capped glide always clears in time.
+// constant, read as `vLatMax` in applyRacerBehavior (DEFAULT_RACE_BEHAVIOR_CONFIG fallback for
+// partial-config sim/unit callers). The dodge trigger (dT_start) is derived from it so a glide clears.
 // NOTE: vLatMax's sweet-spot (field-fanning vs brake-frequency vs glide-feel) is tuned in
 // the governor sweep, NOT here — this fallback is a mild, conservative default. 0.028 sits
 // modestly below today's front-loaded dodge peak (~0.033/step = pass spring 0.5 × damping
@@ -83,7 +83,7 @@ const DEGENERATE_BRAKE_T = 0.014;
  * Returns 1.0 (no braking) when the trailer is not meaningfully faster than the
  * leader, keeping the existing fixed-% brake as the effective floor.
  *
- * The returned cap is applied in index.jsx as:
+ * The returned cap is applied in raceCore.js (stepRacePhysics) as:
  *   brake = min(computeEffectiveBrakeFactor(...), computeBrakeMatchFactor(...))
  * so the warmup ramp and the cap interact correctly (Flag 3, report 06).
  *
@@ -110,7 +110,7 @@ export function computeBrakeMatchFactor(
 
 /**
  * Initialise per-racer behavior state. Call once per racer at race start.
- * physicalY is set by computeRowPhysicalY (rowLayout.js) before this is called.
+ * Resets physicalY to 0; raceCore.js sets it via computeRowPhysicalY (rowLayout.js) AFTERWARDS.
  * @param {{ [key: string]: unknown }} racer
  */
 export function initRacerBehavior(racer) {
@@ -130,7 +130,7 @@ export function initRacerBehavior(racer) {
   // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
   // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
   //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
-  // brakeMatchFactor: current cap written by raceBehavior.js, read by index.jsx
+  // brakeMatchFactor: current cap written by raceBehavior.js, read by raceCore.js
   //   (same cross-file pattern as avoidanceActive — one-frame lag is intentional).
   // brakeMatchFrames: consecutive hold frames (anti-trap counter); negative = escape/cooldown countdown.
   // brakeReleaseFrames: consecutive clear frames counted toward debounced release.
@@ -761,7 +761,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         // enumerated here in the SAME order the gate evaluates them, all keyed on parity-safe
         // (t, physicalY, per-step speed) fields only:
         //   (a) LAG-SAFE LONGITUDINAL RE-ENGAGE (the NO-GO fix) — the SOLE non-penetration
-        //       guarantee. The physics loop applies the brake one frame late (index.jsx:
+        //       guarantee. The physics loop applies the brake one frame late (raceCore.js:
         //       avoidanceActive/brakeMatchFactor are read on the step AFTER they are
         //       written). So suppression is only safe while there is enough longitudinal
         //       lead that, after the unbraked lag frame(s), a re-engaged brake still prevents
@@ -952,7 +952,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // ── Layer 1 (Soft Steering) §4a: non-overlap target accumulation ────────
       // INSERT-ONLY. For the most-constraining obstacle (highest forceMag), store a
       // target one contact width to the side it is already on. Always asymmetric
-      // (trailer only) regardless of softSteeringSymmetric — see lines 398-402. The
+      // (trailer only) regardless of softSteeringSymmetric — see the §4a note below. The
       // overlap block (§4b) may later override this for the same pair (it uses >= so
       // overlap wins on equal forceMag).
       if (trackWidth > 0) {
@@ -989,7 +989,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         };
         // §4a is always asymmetric: trailer yields to leader, leader
         // holds its line. The leader's target stays 0 (centerline reset
-        // at line 241) so the home spring pulls it back to centre when
+        // in applyRacerBehavior) so the home spring pulls it back to centre when
         // no body overlap is active. softSteeringSymmetric applies only
         // to §4b (actual body contact), where both racers must separate.
         assignSoftTarget(trailer, leader);
@@ -1404,8 +1404,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           // when both racers share an intent direction — pushing a trailer that "wants to
           // overtake" forward THROUGH its leader is exactly the pass-through this layer
           // exists to prevent. Non-penetration is the GOAL, so it wins. Intent is read from
-          // r.trajectoryMult (the controller's own output — exactly 1.0 outside OUTCOME, so a
-          // non-1.0 value IS the OUTCOME-phase signal; no fixed-percentage phase check here).
+          // r.trajectoryMult (the controller's own output — a non-1.0 value means the controller is
+          // steering that racer; before OUTCOME that is only the choreo heroes and the chaos steer,
+          // see racePlanner.js `update`; no fixed-percentage phase check here).
           const overlapT = (longTarget - longPx) / pairPL; // t-units, > 0
           const halfPushT = 0.5 * overlapT * effectiveRelax;
           const sd = signedArcDeltaT(rA.t, rB.t); // signed shortest-arc A→B (positive = B ahead)

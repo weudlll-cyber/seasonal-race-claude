@@ -244,12 +244,12 @@ line numbers are the address; read the value there.
 
 | candidate key | where | what it plausibly governs |
 | --- | --- | --- |
-| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1206-1209` | how hard a gap is closed by re-drawing |
-| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1181-1183` | how many attackers rise, and how far |
-| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1032-1034` | how much and how often tempo is re-drawn |
-| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1132-1133` | how strongly the plan shapes the field |
-| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1077-1084`, `:1321` | the lead-rotation mechanism's reach and its realism clamp |
-| `chaosSteerGain` | `defaults.js:1062` | the steering noise added to the field |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1213-1216` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:1188-1190` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:1037-1039` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:1139-1140` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:1082-1089`, `:1329` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `defaults.js:1067` | the steering noise added to the field |
 
 ### The two surfaces, with addresses
 
@@ -963,9 +963,9 @@ verified against `git log` / `git tag`.
 
 **🔜 / ⏳ Open**
 
-- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
+- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:148/155) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :459). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 
-  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:166`) still produces one `realizedIntensity` for the whole cast at `:533`. Waiting on the eye-test the entry itself asks for before building.
+  **VERDICT 2026-09-02 (BACKLOG-VERDICTS-1) — STILL TRUE:** unchanged at source — `clampIntensityToBudget` (`client/src/modules/heroCurveGenerator.js:168`) still produces one `realizedIntensity` for the whole cast at `:535`. Waiting on the eye-test the entry itself asks for before building.
 
 - **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest. **AND SO DOES THE OPEN POINT IT NOW CARRIES (PART TWO D14):** the beats a faller shot would need are delivered to the director and discarded by `comebackDetector.setPlan` along with everybody else's.
 
@@ -1895,16 +1895,6 @@ hygiene. **Ids are the report's; each row's evidence is in the report and its ap
 
 ### What the cleanup (piece B) could not land
 
-- [ ] **AUDIT-1 B · comment fixes held back by the measured-stamp guard — his word.** About 40 of the
-      audit's comment corrections are in files inside the import closure of `scripts/tracking-lag.mjs`
-      and `scripts/straggler-truth.mjs` (the camera, the race engine, `defaults.js`, `raceDriver.mjs`).
-      `check-measured-stamps` marks those two stamps stale on ANY commit there, comment-only included,
-      by design; re-stamping was refused by this session's permission check on 2026-10-09, and it is
-      not a cleanup's decision to make. Every edit is ready and proven token-inert:
-      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
-      (17 files; applies cleanly on top of the cleanup merge). Choose: re-measure the two stamps after
-      applying it, or re-stamp them as unchanged because the edits are comments only. *(verify:
-      `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0 stale)*
 - [ ] **AUDIT-1 B · the rest left on purpose.** A2-25 and A2-26 (variables holding seconds named "Ms")
       are in engine-hull scripts, where a rename is a code change; A2-60's unquoted items could not be
       located without the group-B notes; A2-04 and A2-05 (header conventions in `scripts/` and tests);
@@ -1926,6 +1916,32 @@ rule outlives the item.
 
 **Why keep it at all:** a struck claim with its cause is the only thing that stops the same
 proposal arriving again in six months looking new.
+
+- [x] **AUDIT-1 B · the comment fixes held back by the measured-stamp guard — APPLIED AND RE-STAMPED
+      AS UNCHANGED, 2026-10-12 (decided that day: re-stamp, do not re-measure; branch
+      `chore/audit-1-decisions-repo`).** `git apply --check` passed on master and the patch
+      [reports/release/AUDIT-1/b-stamp-blocked.patch](../reports/release/AUDIT-1/b-stamp-blocked.patch)
+      (17 files) was applied as it stood. In the same commit: the German word in
+      `client/src/modules/raceGovernor.js` (four comments: "guardrail"), and **139 `file:line`
+      citations** in living documents and code comments that the edits shifted, rewritten through the
+      diff's own line map (a citation that was right stays right; dated records — `reports/`, the
+      archive, the morning sheet, the tag register and this part — keep their numbers). One shifted
+      citation was left on purpose: `GovernorDiagHUD.jsx` cites `heroCurveGenerator.js:722` (now
+      `:724`), but the file is in the engine hull and the inertness predicate cannot read JSX, so
+      touching it would make `engine-reach` call the diff race-changing. ★ **The proof that nothing
+      executable moved:** all 38 changed JavaScript files have the identical token stream and the
+      identical line breaks between tokens before and after, by `scripts/lib/inertChange.mjs`'s own
+      predicate (acorn), which was shown to fire on a one-token change; `engine-reach --check` over
+      the diff reports none of its 49 paths able to change the race (21 in the hull, all inert). The
+      `tracking-lag` and `straggler-truth` stamps were then re-stamped with a dated note beside each
+      ([CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md), [ENDING-PHASES.md](ENDING-PHASES.md)); their
+      numbers are the 2026-10-06 runs. The row as it stood: **comment fixes held back by the
+      measured-stamp guard — his word.** About 40 of the audit's comment corrections are in files
+      inside the import closure of `scripts/tracking-lag.mjs` and `scripts/straggler-truth.mjs`;
+      re-stamping was refused by that session's permission check on 2026-10-09. Choose: re-measure the
+      two stamps after applying it, or re-stamp them as unchanged because the edits are comments only.
+      *(verify: `git apply --check` the patch, then `node scripts/check-measured-stamps.mjs` reports 0
+      stale)*
 
 - [x] **AUDIT-1 A7-02 · the source-install floor is Node 22 — CLOSED 2026-10-12 (AUDIT-1 decisions,
       branch `chore/audit-1-decisions-repo`).** `engines.node` reads `>=22` in `package.json`,
