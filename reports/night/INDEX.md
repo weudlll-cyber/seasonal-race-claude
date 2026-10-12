@@ -8,6 +8,9 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MORNING-2026-10-12.md](MORNING-2026-10-12.md) — the morning sheet for the owner's AUDIT-1
+  decisions of 2026-10-12: the GitHub settings, pieces 1-4, the review branch, the handover.
+
 - [MORNING-2026-10-09.md](MORNING-2026-10-09.md) — the morning sheet for AUDIT-1 and the hardening
   set of 2026-10-09: done / running / open / needs the owner, appended after every piece.
 
